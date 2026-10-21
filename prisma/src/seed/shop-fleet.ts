@@ -50,6 +50,18 @@ export interface VehicleUnit {
   approved: boolean;
 }
 
+/**
+ * Id của phiếu bảo dưỡng ĐÃ HOÀN TẤT mà seed dựng cho mỗi xe — nguồn DUY NHẤT của khoá này.
+ *
+ * `buildMoney` dùng lại nó để chỉ lập phiếu chi cho phiếu bảo dưỡng của CHÍNH seed: trên một DB
+ * dev đã dùng, gian hàng demo còn có phiếu bảo dưỡng người dùng tạo qua giao diện, và app đã
+ * tự lập phiếu chi cho chúng (`receipts_source_ref_uniq` trên `(tenant_id, source,
+ * source_ref_id)`). Seed mà lập thêm một phiếu cho cùng phiếu bảo dưỡng đó là đâm vào unique.
+ */
+export function completedMaintenanceSeedId(specKey: string, unitCode: string): string {
+  return seedId(`${specKey}:maint:${unitCode}:done`);
+}
+
 /** Xe 16 chỗ không cho thuê tự lái — luật vận tải, và cũng là một ca dữ liệu cần có thật. */
 const DRIVER_ONLY_SEAT_THRESHOLD = 16;
 
@@ -517,7 +529,7 @@ async function buildMaintenance(
     });
 
     // Một phiếu bảo dưỡng ĐÃ HOÀN TẤT cho mọi xe — lịch sử chi phí của đội xe.
-    const doneId = seedId(`${spec.key}:maint:${unit.code}:done`);
+    const doneId = completedMaintenanceSeedId(spec.key, unit.code);
     const doneFields = {
       type: MAINTENANCE_TYPE.OIL_CHANGE,
       title: 'Thay nhớt và lọc gió định kỳ',

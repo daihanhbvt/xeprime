@@ -119,6 +119,8 @@ async function seedTrip(opts: {
   total: number;
   deposit: number;
   tax: number;
+  /** Hoa hồng `H` đã đóng băng trên đơn (tuyến hoa hồng — ADR 0064 điều 3). Mặc định 0. */
+  commission?: number;
   days?: number;
   longTermMonthly?: string;
   withSnapshot?: boolean;
@@ -148,6 +150,7 @@ async function seedTrip(opts: {
       baseAmount: dec(opts.total),
       totalAmount: dec(opts.total),
       taxAmount: dec(opts.tax),
+      ownerCommissionAmount: dec(opts.commission ?? 0),
       depositAmountOnline: dec(opts.deposit),
       ownerPayableAmount: dec(opts.deposit - opts.tax),
       ...(withSnapshot
@@ -380,6 +383,7 @@ describe('Cộng dồn của kỳ', () => {
 
     const december = await statement.tenantStatement(tenantId, owner(), { period: '2026-12' });
     expect(december.totals.revenueTotal).toBe('4000000');
+    expect(december.totals.ownerCommissionTotal).toBe('0');
     expect(december.totals.taxTotal).toBe('200000');
     // `B − D` = 4.000.000 − 1.200.000
     expect(december.totals.payAtPickupTotal).toBe('2800000');
@@ -388,6 +392,29 @@ describe('Cộng dồn của kỳ', () => {
     expect(december.totals.ownerIncome).toBe('2800000');
     expect(december.totals.balanceChangeTotal).toBe('1000000');
     expect(december.totals.ownerIncome).not.toBe(december.totals.balanceChangeTotal);
+  });
+
+  /**
+   * Tuyến hoa hồng (ADR 0064 điều 3, 5): `H` do CHỦ XE chịu — XePrime giữ lại từ khoản online. Bảng
+   * phải hiện nó ở từng chuyến và trừ nó khỏi thu nhập: `ownerNet = B − H − T`.
+   */
+  maybe('hoa hồng `H` hiện ở từng chuyến và bị trừ khỏi thu nhập', async () => {
+    await seedTrip({
+      returnAt: new Date('2027-01-10T03:00:00.000Z'),
+      total: 2_000_000,
+      deposit: 600_000,
+      tax: 200_000,
+      commission: 140_000,
+      days: 2,
+    });
+
+    const january = await statement.tenantStatement(tenantId, owner(), { period: '2027-01' });
+    expect(january.items).toHaveLength(1);
+    expect(january.items[0]!.ownerCommissionAmount).toBe('140000');
+    expect(january.items[0]!.taxAmount).toBe('200000');
+    expect(january.totals.ownerCommissionTotal).toBe('140000');
+    // 2.000.000 − H 140.000 − T 200.000 − phí gói 0
+    expect(january.totals.ownerIncome).toBe('1660000');
   });
 
   /** Sổ là nguồn sự thật của cột số dư: một bút toán đảo phải kéo con số xuống. */

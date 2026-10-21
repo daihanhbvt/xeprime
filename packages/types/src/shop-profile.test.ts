@@ -104,7 +104,6 @@ const PACKAGE_SHOP_COMPLETE: PackageShopListingInput = {
   displayName: 'Cho thuê xe Bình Minh',
   contactPhone: '0901234567',
   provinceCode: '79',
-  wardCode: '26734',
   addressLine: '12 Nguyễn Huệ',
   logoUrl: 'https://cdn.xeprime.vn/logo.png',
 };

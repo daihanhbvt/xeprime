@@ -1,0 +1,106 @@
+/* Thẻ bậc doanh nghiệp — cùng khung với một làn gói, viền vàng khi đang dùng. */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.card[data-active='true'] {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.headText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-xs);
+  overflow-wrap: anywhere;
+}
+
+.tag {
+  margin: 0;
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.benefits {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.benefits li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.benefits :global(.anticon) {
+  color: var(--xp-color-primary-active);
+}
+
+.term {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.hint {
+  min-width: 0;
+  flex: 1 1 220px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}

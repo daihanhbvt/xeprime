@@ -7,7 +7,7 @@ import { CarOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { HOLD_COUNTDOWN_SEGMENT_MINUTES } from '@xeprime/types';
+import { HOLD_COUNTDOWN_URGENT_MINUTES } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -58,7 +58,8 @@ export function UnpaidHoldList({
               <Countdown
                 className={styles.countdown}
                 deadline={item.expiresAt}
-                urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+                // Cùng ngưỡng cam với mọi đồng hồ giữ chỗ khác — trùng lượt nhắc CUỐI của worker.
+                urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
                 labels={{
                   remaining: t('hold.countdownRemaining'),
                   expired: t('hold.countdownExpired'),

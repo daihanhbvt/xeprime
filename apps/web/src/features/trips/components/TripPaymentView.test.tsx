@@ -49,6 +49,8 @@ const HOLD: NonNullable<CustomerTripDetail['hold']> = {
   remainingAmount: '140800',
   expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
   freeCancelUntil: new Date(Date.now() + 4 * 3600_000).toISOString(),
+  freeCancelAvailable: true,
+  lateCancelRefundAmount: '0',
   paidAt: null,
   paidVia: null,
   allocation: [],

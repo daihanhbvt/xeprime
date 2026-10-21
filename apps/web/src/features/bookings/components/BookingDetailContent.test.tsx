@@ -69,6 +69,9 @@ const BOOKING: BookingDetail = {
   customerTotalAmount: '477360',
   holdPaidAmount: '102960',
   payAtPickupAmount: '374400',
+  ownerCommissionAmount: null,
+  ownerTaxAmount: null,
+  ownerNetAmount: null,
   actualPickupAt: null,
   actualReturnAt: null,
   note: null,
@@ -108,5 +111,21 @@ describe('BookingDetailContent — khoản giữ chỗ qua XePrime', () => {
     });
 
     expect(screen.queryByRole('region', { name: 'Thanh toán giữ chỗ' })).toBeNull();
+  });
+
+  it('hiện hoa hồng, thuế và số chủ xe thực nhận khi snapshot có (ADR 0064)', () => {
+    renderDetail({
+      ...BOOKING,
+      ownerCommissionAmount: '46800',
+      ownerTaxAmount: '0',
+      ownerNetAmount: '421200',
+    });
+
+    const share = screen.getByRole('region', { name: 'Phần của bạn' });
+    expect(within(share).getByText('Hoa hồng XePrime')).toBeTruthy();
+    expect(share.textContent).toContain('46.800');
+    // Thuế 0đ thì không vẽ dòng — không bày một khoản trừ không tồn tại.
+    expect(within(share).queryByText('Thuế khấu trừ')).toBeNull();
+    expect(share.textContent).toContain('421.200');
   });
 });

@@ -4,7 +4,6 @@ import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
-import { cx } from '@/lib/cx';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from './LocationPicker';
 import { QuickFilterPills } from './QuickFilterPills';
@@ -77,7 +76,7 @@ export function SearchHeroBanner({
                 onChange={setRentalRange}
                 mode={draft.rental.mode}
                 onModeChange={setRentalMode}
-                prefix={<CalendarOutlined style={{ color: 'var(--xp-color-primary)' }} aria-hidden />}
+                prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
                 compactPoint
               />
             </div>

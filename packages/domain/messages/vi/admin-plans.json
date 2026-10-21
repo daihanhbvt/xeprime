@@ -3,7 +3,7 @@
     "title": "Gói dịch vụ",
     "subtitle": "Quản lý các gói dịch vụ, cấu hình giá và trạng thái hiển thị cho người dùng.",
     "introLabel": "Giải thích về các loại gói",
-    "introBody": "“Tuyến hoa hồng mặc định” là cửa vào của mọi chủ xe cá nhân — luôn hoạt động, không tắt được và chỉ có một. Các gói còn lại là gói gian hàng bán theo số xe và kỳ hạn. Tắt một gói chỉ chặn việc mua MỚI; thuê bao đang chạy vẫn giữ nguyên giá và hạn mức đã chốt tới hết kỳ.",
+    "introBody": "“Tuyến hoa hồng mặc định” là cửa vào của mọi chủ xe cá nhân — luôn hoạt động, không tắt được và chỉ có một. Các gói còn lại là gói gian hàng bán theo LOẠI XE (xe máy hoặc ô tô) và số xe trong loại đó, cộng một gói doanh nghiệp phủ cả hai loại bán qua tư vấn. Tắt một gói chỉ chặn việc mua MỚI; thuê bao đang chạy vẫn giữ nguyên giá và hạn mức đã chốt tới hết kỳ.",
     "createButton": "Tạo gói dịch vụ",
     "stats": {
       "total": "Tổng gói dịch vụ",
@@ -58,18 +58,47 @@
       "deactivateOk": "Ngừng hoạt động",
       "activateTitle": "Mở lại gói “{name}”?",
       "activateBody": "Gói hiện lại trên bảng giá gian hàng và mua được ngay với bảng giá đang lưu.",
-      "activateOk": "Mở lại gói"
+      "activateOk": "Mở lại gói",
+      "publishTitle": "Mở bán gói “{name}”?",
+      "publishBody": "Gói hiện lên bảng giá gian hàng và mua được ngay với bảng giá đang lưu. Kiểm tra lại giá từng kỳ hạn trước khi mở bán.",
+      "publishOk": "Mở bán"
     },
     "toast": {
       "activated": "Đã mở lại gói “{name}”",
-      "deactivated": "Đã ngừng hoạt động gói “{name}”"
+      "deactivated": "Đã ngừng hoạt động gói “{name}”",
+      "published": "Đã mở bán gói “{name}”"
     },
     "editAction": "Chỉnh sửa",
     "duplicateAction": "Nhân bản",
     "showing": "Hiển thị {count} / {total} gói dịch vụ",
     "loadError": "Không tải được danh sách gói",
     "empty": "Chưa có gói nào",
-    "noResults": "Không có gói nào khớp bộ lọc"
+    "noResults": "Không có gói nào khớp bộ lọc",
+    "view": {
+      "label": "Sổ gói",
+      "selling": "Đang bán",
+      "retired": "Đã ngừng",
+      "draft": "Chưa mở bán"
+    },
+    "emptyRetired": "Chưa có gói nào đã ngừng",
+    "groups": {
+      "motorbike": "Xe máy",
+      "car": "Ô tô",
+      "enterprise": "Doanh nghiệp",
+      "commission": "Hoa hồng"
+    },
+    "groupHints": {
+      "motorbike": "Gói gian hàng chỉ gác số XE MÁY — dùng song song được với một gói ô tô.",
+      "car": "Gói gian hàng chỉ gác số Ô TÔ — dùng song song được với một gói xe máy.",
+      "enterprise": "Phủ cả xe máy lẫn ô tô và loại trừ hai nhóm trên; thường bán qua tư vấn với giá đàm phán.",
+      "commission": "Tuyến vào cửa của chủ xe cá nhân — không bán, gán tự động."
+    },
+    "vehicleLimitMotorbike": "Tối đa {value} xe máy",
+    "vehicleLimitCar": "Tối đa {value} ô tô",
+    "emptyDraft": "Không có gói nào đang chờ mở bán",
+    "draftHint": "Gói chưa mở bán không hiện với gian hàng. Nhập bảng giá cho gói (trừ gói chỉ bán qua tư vấn) rồi bấm “Mở bán”.",
+    "publishAction": "Mở bán",
+    "publishNeedsPrice": "Nhập giá ít nhất một kỳ hạn trước khi mở bán."
   },
   "form": {
     "titleCreate": "Tạo gói dịch vụ",
@@ -143,7 +172,15 @@
       "commissionRequired": "Nhập % hoa hồng",
       "integer": "Số nguyên",
       "nonNegative": "Không âm"
-    }
+    },
+    "vehicleScope": "Loại xe áp dụng",
+    "scopeOption": {
+      "motorbike": "Xe máy",
+      "car": "Ô tô",
+      "all": "Mọi loại xe (doanh nghiệp)"
+    },
+    "vehicleScopeHintLabel": "Giải thích về loại xe áp dụng",
+    "vehicleScopeHint": "Gói chỉ gác số xe của loại đã chọn: gian hàng giữ được đồng thời một gói xe máy và một gói ô tô; gói “Mọi loại xe” phủ cả hai và loại trừ chúng. Số xe tối đa đếm trong đúng loại này. Không đổi được sau khi tạo."
   },
   "tenant": {
     "title": "Gói dịch vụ",
@@ -208,7 +245,11 @@
         "renew": "Đã gia hạn gói",
         "schedule_change": "Đã xếp lịch đổi gói từ kỳ sau",
         "change_now": "Đã đổi gói"
-      }
+      },
+      "scopeContext": "{scope}: {plan}, hết hạn {date}.",
+      "enterpriseNote": "Gói doanh nghiệp phủ cả xe máy lẫn ô tô: hoá đơn đang mở của gói xe máy / ô tô bị huỷ, và nếu áp dụng ngay thì các kỳ xe máy / ô tô còn hạn kết thúc luôn. Giá đàm phán là bắt buộc.",
+      "draftOption": "{label} · chưa mở bán",
+      "priceRequiredDraftHelp": "Gói này chưa mở bán — nhập giá cả kỳ đã thoả thuận với gian hàng."
     },
     "termMonths": "{months} tháng",
     "currentLabel": "Đang hiệu lực",
@@ -222,12 +263,22 @@
     "historyTitle": "Lịch sử các kỳ",
     "cancelScheduledAction": "Huỷ lịch",
     "cancelCurrentTitle": "Huỷ kỳ đang hiệu lực?",
-    "cancelCurrentBody": "Gian hàng mất gói này ngay khi xác nhận và chuyển về tuyến hoa hồng mặc định. Tiền đã thu không tự hoàn.",
+    "cancelCurrentBody": "Kỳ gói này kết thúc ngay khi xác nhận. Nếu đây là kỳ gói cuối cùng còn hạn, gian hàng chuyển về tuyến hoa hồng mặc định. Tiền đã thu không tự hoàn.",
     "cancelScheduledTitle": "Huỷ kỳ đã xếp lịch?",
     "cancelScheduledBody": "Kỳ này sẽ không bắt đầu; gói hiện tại vẫn chạy tới hết hạn. Tiền đã thu không tự hoàn.",
     "origin": {
       "payment": "Kích hoạt tự động khi nhận đủ tiền",
       "system": "Hệ thống gán tuyến hoa hồng mặc định"
+    },
+    "scope": {
+      "motorbike": "Xe máy",
+      "car": "Ô tô",
+      "all": "Mọi loại xe"
+    },
+    "quotaScoped": {
+      "motorbike": "tối đa {vehicles} xe máy",
+      "car": "tối đa {vehicles} ô tô",
+      "all": "tối đa {vehicles} xe"
     }
   }
 }

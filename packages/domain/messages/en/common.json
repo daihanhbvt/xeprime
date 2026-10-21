@@ -124,7 +124,8 @@
     "pickupWishDate": "{label}: {date}",
     "pickupWishWindow": "{label}: {start} – {end}",
     "pickupWishShopDecides": "The shop confirms the pickup date and time on approval",
-    "dateTime": "{date} {time}"
+    "dateTime": "{date} {time}",
+    "hourAndMinute": "{hours, plural, one {# hour} other {# hours}} {minutes, plural, one {# minute} other {# minutes}}"
   },
   "pagination": {
     "total": "{count, plural, one {# item} other {# items}}",
@@ -187,7 +188,8 @@
       "viewDetails": "View price details",
       "collapse": "Collapse",
       "depositHintLabel": "What the security deposit is",
-      "holdHintLabel": "What the reservation payment is"
+      "holdHintLabel": "What the reservation payment is",
+      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}"
     },
     "filterBar": {
       "allOf": "{label}: All",

@@ -10,12 +10,13 @@ import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 
 import { ROUTES, paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePurchaseErrorMessage } from '../use-plan-quota-gate-message';
 import { cx } from '@/lib/cx';
 
-import { usePlanPurchase } from '../plan-purchase';
+import { useScopedPlanPurchase } from '../plan-purchase';
+import { useCreateScopedInvoices } from '../use-create-scoped-invoices';
 import {
-  usePendingInvoice,
+  usePendingInvoices,
   usePurchaseSubscription,
   useSyncScopeWhenInvoiceSettles,
   useTenantPlans,
@@ -67,7 +68,7 @@ export function PackageUpgradeWizard() {
   const t = useTranslations('Subscription');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const errorMessage = useErrorMessage();
+  const errorMessage = usePurchaseErrorMessage();
 
   /**
    * Người dùng chủ động quay lại SỬA trong khi đang có hoá đơn chờ.
@@ -80,8 +81,9 @@ export function PackageUpgradeWizard() {
   /** Bước người dùng đã bấm tới. Bước THẬT vẫn do dữ liệu quyết định — xem `step`. */
   const [reachedShopInfo, setReachedShopInfo] = useState(false);
 
-  const pending = usePendingInvoice();
-  const invoice = pending.data ?? null;
+  const pending = usePendingInvoices();
+  const invoices = pending.data ?? [];
+  const hasInvoices = invoices.length > 0;
   /*
    * Danh mục gói chỉ tải khi bảng giá thật sự sắp hiện ra: chưa có hoá đơn chờ, HOẶC người dùng
    * vừa bấm "Chọn lại gói". Khi đang đứng ở màn chuyển khoản thì bảng giá không còn là thứ họ
@@ -90,9 +92,12 @@ export function PackageUpgradeWizard() {
    * Thiếu vế `editing`, bấm "Chọn lại gói" sẽ mở ra một bảng giá RỖNG kèm câu "Chưa có gói nào
    * đang bán" — query vẫn tắt vì hoá đơn cũ chưa mất đi đâu cả.
    */
-  const plans = useTenantPlans(!pending.isLoading && (invoice === null || editing));
-  const selection = usePlanPurchase(plans.data ?? []);
+  const plans = useTenantPlans(!pending.isLoading && (!hasInvoices || editing));
+  const selection = useScopedPlanPurchase(plans.data ?? []);
   const purchase = usePurchaseSubscription();
+  const create = useCreateScopedInvoices(purchase);
+  /** Đã chọn đủ ít nhất một làn và không làn nào chọn dở. */
+  const readyToContinue = selection.selections.length > 0 && !selection.incomplete;
   const router = useRouter();
 
   /*
@@ -111,7 +116,7 @@ export function PackageUpgradeWizard() {
    *    ở một form mà nút cuối cùng không có gì để mua.
    */
   const step: UpgradeStep =
-    invoice && !editing ? 'payment' : reachedShopInfo && selection.selection ? 'shopInfo' : 'plan';
+    hasInvoices && !editing ? 'payment' : reachedShopInfo && readyToContinue ? 'shopInfo' : 'plan';
 
   /**
    * Được phép quay lại SỬA khi đang chờ chuyển khoản.
@@ -121,7 +126,8 @@ export function PackageUpgradeWizard() {
    * bắt chuyển nốt theo mã cũ — void một hoá đơn đã nhận tiền là xoá dấu vết khoản khách đã
    * chuyển. Giao diện phải nói cùng một luật, nếu không người dùng đi hết hai bước rồi mới ăn lỗi.
    */
-  const canEditInvoice = invoice?.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED;
+  const canEditInvoice =
+    hasInvoices && invoices.every((item) => item.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED);
 
   /** Đang ở bước hồ sơ ⇒ lùi về bảng giá là an toàn. */
   const canGoBackToPlan = step === 'shopInfo';
@@ -208,11 +214,14 @@ export function PackageUpgradeWizard() {
         Đang sửa trong khi một mã vẫn chờ tiền: nói thẳng hệ quả TRƯỚC khi họ bấm tạo hoá đơn mới,
         và chừa đường quay lại chính mã đó.
       */}
-      {editing && invoice ? (
+      {editing && hasInvoices ? (
         <Alert
           type="warning"
           showIcon
-          title={t('upgrade.editWarnTitle', { code: invoice.code })}
+          title={t('upgrade.editWarnTitle', {
+            code: invoices.map((item) => item.code).join(', '),
+            count: invoices.length,
+          })}
           description={t('upgrade.editWarnBody')}
           action={
             <Button size="small" onClick={() => setEditing(false)}>
@@ -256,10 +265,23 @@ export function PackageUpgradeWizard() {
       Bước 2 và 3 đi trong một thẻ trắng; bước 1 thì KHÔNG — ba thẻ bậc gói đã là ba thẻ, và một
       khung nữa bọc ngoài chúng là hai lớp viền cho cùng một nội dung.
     */
-    if (step === 'payment' && invoice) {
+    if (step === 'payment' && hasInvoices) {
       return (
         <div className={styles.stepCard}>
-          <InvoiceWaitingPanel invoice={invoice} />
+          {/* Mỗi loại xe đã chọn một hoá đơn (ADR 0065) — trả xong MỘT là đã lên tuyến gói. */}
+          {invoices.map((item) => (
+            <InvoiceWaitingPanel key={item.id} invoice={item} />
+          ))}
+          {create.failed ? (
+            <Alert
+              type="error"
+              showIcon
+              title={t('upgrade.partialFailure', {
+                scope: t(`lanes.title.${create.failed.scope}`),
+                error: errorMessage(create.failed.error),
+              })}
+            />
+          ) : null}
           {/*
             Lối SỬA cho người chọn nhầm gói. Chỉ mở khi hoá đơn chưa nhận đồng nào — đã nhận một
             phần thì server từ chối tạo mã mới, và một nút dẫn tới lỗi đó là một nút nói dối.
@@ -273,18 +295,25 @@ export function PackageUpgradeWizard() {
       );
     }
 
-    const chosen = selection.selection;
-    if (step === 'shopInfo' && chosen) {
+    const chosen = selection.selections;
+    if (step === 'shopInfo' && chosen.length > 0) {
       return (
         <div className={styles.stepCard}>
           <UpgradeShopInfoStep
-            planSummary={t('upgrade.chosenPlan', {
-              plan: selection.selected?.plan.name ?? '',
-              months: chosen.body.termMonths,
-              amount: fmt.money(String(chosen.total)),
+            planSummary={t('upgrade.chosenPlans', {
+              plans: chosen
+                .map((item) =>
+                  t('upgrade.chosenPlanItem', {
+                    scope: t(`lanes.title.${item.scope}`),
+                    plan: item.planName,
+                    months: item.body.termMonths,
+                  }),
+                )
+                .join(' · '),
+              amount: fmt.money(String(selection.total ?? 0)),
             })}
-            submitting={purchase.isPending}
-            purchaseError={purchase.isError ? errorMessage(purchase.error) : null}
+            submitting={create.running}
+            purchaseError={create.failed && !hasInvoices ? errorMessage(create.failed.error) : null}
             onBack={() => setReachedShopInfo(false)}
             /*
              * Hoá đơn tạo SAU khi cả hồ sơ lẫn chi nhánh đã lưu xong — `onSaved` chỉ chạy ở nhánh
@@ -294,17 +323,23 @@ export function PackageUpgradeWizard() {
              * Không truyền giá: server đọc lại bảng giá của chính bậc + kỳ hạn này (ADR 0041 điều 2).
              */
             /*
-             * Hoá đơn mới về ⇒ sang thẳng trang thanh toán của nó. `setEditing(false)` vẫn cần:
-             * quay lại wizard thì cờ sửa còn bật sẽ che mất bước thanh toán của mã vừa tạo.
+             * Mỗi làn đã chọn một hoá đơn, tạo lần lượt. MỘT hoá đơn ⇒ sang thẳng trang thanh toán
+             * của nó; hai ⇒ ở lại bước 3, mỗi mã một nút "Thanh toán". `setEditing(false)` vẫn cần:
+             * cờ sửa còn bật sẽ che mất bước thanh toán của mã vừa tạo.
              */
-            onSaved={() =>
-              purchase.mutate(chosen.body, {
-                onSuccess: (created) => {
-                  setEditing(false);
-                  router.push(paymentPath.invoice(created.id));
-                },
-              })
-            }
+            onSaved={() => {
+              if (create.running) return;
+              void create.run(chosen).then((result) => {
+                if (result.created.length === 0) return;
+                setEditing(false);
+                selection.reset();
+                setReachedShopInfo(false);
+                const [only] = result.created;
+                if (result.created.length === 1 && only && !result.failed) {
+                  router.push(paymentPath.invoice(only.id));
+                }
+              });
+            }}
           />
         </div>
       );
@@ -337,7 +372,7 @@ export function PackageUpgradeWizard() {
           Dải chốt đơn chỉ hiện khi đã chọn một bậc: trước đó không có tổng nào để nói, và một
           dải rỗng nằm sẵn chỉ chiếm chỗ của thứ người dùng đang đọc.
         */}
-        {selection.planId != null ? (
+        {selection.selections.length > 0 || selection.incomplete ? (
           <div className={styles.checkoutBar}>
             <p className={styles.total} aria-live="polite">
               <span className={styles.totalLabel}>{t('upgrade.totalLabel')}</span>
@@ -345,9 +380,9 @@ export function PackageUpgradeWizard() {
                 {selection.total == null ? '—' : fmt.money(String(selection.total))}
               </span>
               <span className={styles.totalFor}>
-                {selection.termMonths == null
+                {selection.incomplete
                   ? t('purchase.pickTerm')
-                  : t('upgrade.totalFor', { months: selection.termMonths })}
+                  : t('upgrade.totalForPlans', { count: selection.selections.length })}
               </span>
             </p>
 
@@ -364,7 +399,7 @@ export function PackageUpgradeWizard() {
               <Button
                 type="primary"
                 size="large"
-                disabled={!selection.selection}
+                disabled={!readyToContinue}
                 onClick={() => setReachedShopInfo(true)}
               >
                 {t('upgrade.continue')} <ArrowRightOutlined aria-hidden="true" />

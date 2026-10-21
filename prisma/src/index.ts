@@ -108,3 +108,35 @@ export {
   isPlanPromotionEnabled,
   type EnqueuePlanGuideEmailInput,
 } from './plan-guide-outbox';
+
+/**
+ * Phát hành bảo hiểm chuyến (ADR 0032 điều 4 · ADR 0064) — chiếm, gọi đối tác, ghi kết quả. Dùng
+ * chung cho worker (vòng quét mỗi phút) và API (`InsuranceService` là lớp vỏ tiêm được). Xem
+ * docblock của `insurance-issue.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
+ */
+export {
+  INSURANCE_PARTNER_MODE,
+  MIC_CERTIFICATE_PREFIX,
+  MIC_MOCK_CERTIFICATE_URL_TEMPLATE,
+  MicMockInsurancePartner,
+  NoopInsurancePartner,
+  activeInsuranceProductSnapshots,
+  applyInsuranceIssueResult,
+  claimDueInsurancePolicies,
+  createInsurancePartner,
+  freezeInsuranceProducts,
+  insuranceIssuingStaleBefore,
+  issueInsurancePolicy,
+  readInsuranceProductSnapshot,
+  sweepDueInsurancePolicies,
+  toInsuranceProductSnapshot,
+  type InsuranceIssueOutcome,
+  type InsuranceLogger,
+  type InsurancePartner,
+  type InsurancePartnerMode,
+  type InsuranceProductRow,
+  type InsuranceProductSnapshot,
+  type InsuranceSweepResult,
+  type IssuePolicyRequest,
+  type IssuePolicyResult,
+} from './insurance-issue';

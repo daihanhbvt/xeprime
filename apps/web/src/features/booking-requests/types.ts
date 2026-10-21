@@ -39,6 +39,7 @@ export type BookingRequestDecisionTarget = Omit<
     | 'pickupWindowStartDate'
     | 'pickupWindowEndDate'
     | 'pricing'
+    | 'approvalPreview'
   >,
   'customerPhone' | 'serviceType' | 'pickupPreference'
 > & {

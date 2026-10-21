@@ -32,7 +32,8 @@ import {
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { toQueryBool } from '../../../common/dto/query-transforms';
-import { CustomerFeeBreakdownDto } from '../../pricing/dto/pricing.dto';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
+import { PublicCustomerFeeBreakdownDto } from '../../pricing/dto/pricing.dto';
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
@@ -82,6 +83,8 @@ export class UpsertPromoCodeDto {
   })
   @ValidateIf((o: UpsertPromoCodeDto) => o.discountType === PROMO_DISCOUNT_TYPE.FIXED)
   @IsNumberString()
+  // Đi thẳng vào mã QR (holdAmount = grossOnline − P) — bước giá 1.000đ (ADR 0064).
+  @IsMoneyStep({ message: 'Số tiền giảm phải là bội của 1.000đ' })
   discountAmount?: string | null;
 
   @ApiPropertyOptional({
@@ -105,6 +108,7 @@ export class UpsertPromoCodeDto {
   })
   @IsOptional()
   @IsNumberString()
+  @IsMoneyStep({ message: 'Trần giảm phải là bội của 1.000đ' })
   maxDiscountAmount?: string | null;
 
   @ApiProperty({
@@ -448,8 +452,8 @@ export class PromoPreviewDto {
    * Báo giá công khai KHÔNG nhận mã (`PricingModule` không biết gì về khuyến mãi, và chiều phụ
    * thuộc đó là cố ý), nên đây là nơi duy nhất sinh ra bảng phí có mã cho một chuyến chưa gửi.
    */
-  @ApiPropertyOptional({ type: () => CustomerFeeBreakdownDto, nullable: true })
-  fees!: CustomerFeeBreakdownDto | null;
+  @ApiPropertyOptional({ type: () => PublicCustomerFeeBreakdownDto, nullable: true })
+  fees!: PublicCustomerFeeBreakdownDto | null;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiProperty({ enum: PROMO_DISCOUNT_TYPE_VALUES }) discountType!: string;

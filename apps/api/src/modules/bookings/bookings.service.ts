@@ -1367,6 +1367,10 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     customerTotalAmount: b.customerTotalAmount as unknown as string | null,
     holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
     payAtPickupAmount: internalSnapshot?.fees?.payAtPickupAmount ?? null,
+    // Kinh tế của CHỦ XE đã đóng băng trong snapshot (ADR 0024) — DTO nội bộ gian hàng (ADR 0064).
+    ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
+    ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,
+    ownerNetAmount: internalSnapshot?.fees?.ownerNetAmount ?? null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
     pickupLocation: addressViewOf({

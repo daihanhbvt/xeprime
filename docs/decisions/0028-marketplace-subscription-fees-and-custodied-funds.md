@@ -2,6 +2,8 @@
 
 Ngày: 03/09/2026 · Trạng thái: **Partially superseded** — điều 1 (cột thuê bao theo số chỗ) và điều 2 (giá pilot theo chỗ) bị [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) rồi [ADR 0041](0041-plan-tiers-by-vehicle-count.md) thay; điều 6 và tên gọi ở điều 8 bị [ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè ("Ví điểm"); điều 7 (phương án B — XePrime thu hộ phần còn lại) và dòng giữ chỗ của điều 1 bị [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) điều 2 thay. **Điều 3, 4, 5, 9, 10 và release gate còn hiệu lực**; tiền thật bị chặn bởi release gate pháp lý/thanh toán.
 
+> ⚠️ **[ADR 0064](0064-financial-flow-v2.md) (21/10/2026):** dòng "Phí dịch vụ XePrime/chuyến — giả thuyết 10%" ở điều 1 bị thay bằng phí sàn `S` cố định (phía khách, cả hai tuyến) + hoa hồng lũy tiến `H` (phía chủ xe, chỉ tuyến hoa hồng). Điều 5 được làm rõ: hai lớp bảo hiểm đều TUỲ CHỌN do khách trả, đối tác dự kiến là MIC, và server chỉ cộng phí khi `INSURANCE_PARTNER` khác `none`.
+
 ## Bối cảnh
 
 XePrime cần phục vụ đồng thời:

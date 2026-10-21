@@ -1,9 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { buildPlanPricingCards, type PlanPricingCard } from '@xeprime/domain';
-import type { PlanLimitsJson, SubscriptionTermMonths } from '@xeprime/types';
+import { buildPlanPricingCards, sumMoney, type PlanPricingCard } from '@xeprime/domain';
+import {
+  PLAN_VEHICLE_SCOPE,
+  type MoneyString,
+  type PlanLimitsJson,
+  type SubscriptionTermMonths,
+} from '@xeprime/types';
 
+import { PLAN_LANE_SCOPES, packagePlansForScope, type PlanLaneScope } from './plan-lanes';
 import type { PurchaseSubscriptionInput, TenantPlan } from './types';
 
 /**
@@ -29,14 +35,17 @@ import type { PurchaseSubscriptionInput, TenantPlan } from './types';
 export interface PlanPurchaseSelection {
   /** Đúng hình dạng `PurchaseSubscriptionDto` — nơi gọi không nhào nặn gì. */
   body: PurchaseSubscriptionInput;
-  /** Tiền cả kỳ (VND, số nguyên) — chỉ để HIỂN THỊ; server đọc lại bảng giá và đó là số quyết định. */
-  total: number;
+  /**
+   * Tiền cả kỳ — CHUỖI tiền nguyên văn của bảng giá (ADR 0007), chỉ để HIỂN THỊ; server đọc lại bảng
+   * giá và đó là số quyết định.
+   */
+  total: MoneyString;
 }
 
 /** Một thẻ kỳ hạn của bậc đang xem: giá cả kỳ + % tiết kiệm so với mua từng tháng. */
 export interface PlanTermChoice {
   months: SubscriptionTermMonths;
-  total: number;
+  total: MoneyString;
   savingPercent: number;
 }
 
@@ -66,7 +75,7 @@ export interface PlanPurchaseState {
   planId: string | null;
   selected: PlanTier | undefined;
   termMonths: SubscriptionTermMonths | null;
-  total: number | null;
+  total: MoneyString | null;
   /** `null` = chưa đủ để mua (chưa chọn bậc/kỳ hạn, hoặc bậc đang chọn bán bằng tư vấn). */
   selection: PlanPurchaseSelection | null;
   selectPlan: (id: string) => void;
@@ -105,7 +114,7 @@ export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState
     selfServe: card.selfServe,
     terms: card.terms.map((term) => ({
       months: term.months as SubscriptionTermMonths,
-      total: Number(term.price),
+      total: term.price,
       savingPercent: term.savingPercent,
     })),
     card,
@@ -149,4 +158,93 @@ export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState
       setTermMonths(null);
     },
   };
+}
+
+/**
+ * Một lựa chọn đã đủ để mua, kèm phạm vi của nó — mỗi phạm vi sinh MỘT hoá đơn riêng (ADR 0065).
+ */
+export interface ScopedPlanSelection extends PlanPurchaseSelection {
+  scope: PlanLaneScope;
+  planName: string;
+}
+
+export interface ScopedPlanLane {
+  scope: PlanLaneScope;
+  state: PlanPurchaseState;
+}
+
+/**
+ * BỘ CHỌN HAI LÀN — tối đa một bậc xe máy VÀ một bậc ô tô (ADR 0065 điều 2), dùng ở onboarding
+ * tuyến gói và luồng nâng cấp từ tuyến hoa hồng.
+ *
+ * Hai `usePlanPurchase` độc lập, KHÔNG một state gộp: mỗi làn có bảng giá, kỳ hạn và nút bỏ chọn
+ * của riêng nó, và người dùng mua một làn thì làn kia phải giữ nguyên trạng thái "chưa chọn". Số
+ * hook cố định (hai) nên thứ tự hook ổn định qua mọi lần render.
+ *
+ * Bậc doanh nghiệp (`all`, `salesOnly`) KHÔNG nằm trong làn nào: nó không tự mua được, nên nơi vẽ
+ * dựng một thẻ "Liên hệ tư vấn" riêng từ `enterprise`.
+ */
+export interface ScopedPlanPurchaseState {
+  lanes: readonly ScopedPlanLane[];
+  /** Bậc tư vấn phủ cả hai loại xe — `undefined` khi danh mục không bán bậc đó. */
+  enterprise: PlanTier | undefined;
+  /** Các làn đã chọn đủ (bậc tự mua + kỳ hạn), theo thứ tự làn. Rỗng = chưa có gì để mua. */
+  selections: readonly ScopedPlanSelection[];
+  /** Tổng mọi làn đã chọn (`sumMoney`, không qua `Number`) — chỉ để HIỂN THỊ; server đọc lại bảng giá của từng hoá đơn. */
+  total: MoneyString | null;
+  /** Có làn nào đang chọn dở (đã chọn bậc nhưng chưa chọn kỳ hạn) — nút mua phải khoá. */
+  incomplete: boolean;
+  /** Có ít nhất một bậc tự mua được trong danh mục — `false` = danh mục rỗng (lỗi cấu hình). */
+  hasSellable: boolean;
+  reset: () => void;
+}
+
+export function useScopedPlanPurchase(
+  plans: readonly TenantPlan[],
+  /** Chỉ dựng các làn này — vd onboarding thêm gói cho loại xe CÒN LẠI sau khi đã có hoá đơn một làn. */
+  scopes: readonly PlanLaneScope[] = PLAN_LANE_SCOPES,
+): ScopedPlanPurchaseState {
+  const motorbike = usePlanPurchase(packagePlansForScope(plans, PLAN_VEHICLE_SCOPE.MOTORBIKE));
+  const car = usePlanPurchase(packagePlansForScope(plans, PLAN_VEHICLE_SCOPE.CAR));
+  const enterprise = enterpriseTierOf(plans);
+
+  const byScope: Record<PlanLaneScope, PlanPurchaseState> = {
+    [PLAN_VEHICLE_SCOPE.MOTORBIKE]: motorbike,
+    [PLAN_VEHICLE_SCOPE.CAR]: car,
+  };
+  const lanes = PLAN_LANE_SCOPES.filter((scope) => scopes.includes(scope))
+    .map((scope) => ({ scope, state: byScope[scope] }))
+    .filter((lane) => lane.state.tiers.length > 0);
+
+  const selections: ScopedPlanSelection[] = lanes.flatMap(({ scope, state }) =>
+    state.selection
+      ? [{ ...state.selection, scope, planName: state.selected?.plan.name ?? '' }]
+      : [],
+  );
+  const total =
+    selections.length > 0 ? sumMoney(selections.map((item) => item.total)) : null;
+
+  return {
+    lanes,
+    enterprise,
+    selections,
+    total,
+    incomplete: lanes.some(({ state }) => state.planId != null && state.selection == null),
+    hasSellable: lanes.some(({ state }) => state.tiers.some((tier) => tier.selfServe)),
+    reset: () => {
+      motorbike.reset();
+      car.reset();
+    },
+  };
+}
+
+/**
+ * Bậc doanh nghiệp (`all`, bán bằng tư vấn) của danh mục — `undefined` khi không bán. Thẻ của nó
+ * không có kỳ hạn nào để chọn (`terms: []`), chỉ có lối "Liên hệ tư vấn".
+ */
+export function enterpriseTierOf(plans: readonly TenantPlan[]): PlanTier | undefined {
+  const card = buildPlanPricingCards(packagePlansForScope(plans, PLAN_VEHICLE_SCOPE.ALL))[0];
+  return card
+    ? { plan: card.plan, limits: card.limits, selfServe: card.selfServe, terms: [], card }
+    : undefined;
 }

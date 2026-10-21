@@ -36,6 +36,7 @@ import {
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { BranchIdQuery } from '../../../common/dto/branch-scope';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 import { VehicleAlertDto } from './vehicle-alert.dto';
 
 /** Cách sắp xếp danh sách xe của gian hàng. */
@@ -667,6 +668,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekdayPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'weekdayPrice phải là bội của 1.000đ' })
   weekdayPrice?: string;
 
   @ApiPropertyOptional({
@@ -677,6 +679,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekendPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'weekendPrice phải là bội của 1.000đ' })
   weekendPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -687,6 +690,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'hourlyPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'hourlyPrice phải là bội của 1.000đ' })
   hourlyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -698,6 +702,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'monthlyPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'monthlyPrice phải là bội của 1.000đ' })
   monthlyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -709,6 +714,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'withDriverDailyPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'withDriverDailyPrice phải là bội của 1.000đ' })
   withDriverDailyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -719,6 +725,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'withDriverInterCityPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'withDriverInterCityPrice phải là bội của 1.000đ' })
   withDriverInterCityPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -729,6 +736,7 @@ export class CreateVehicleDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'withDriverOneWayPrice phải là số tiền hợp lệ' })
+  @IsMoneyStep({ message: 'withDriverOneWayPrice phải là bội của 1.000đ' })
   withDriverOneWayPrice?: string | null;
 
   @ApiPropertyOptional({ description: 'Chủ xe hỗ trợ giao xe tận nơi' })

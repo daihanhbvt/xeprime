@@ -74,7 +74,7 @@
           "items": {
             "request": "You send a rental request with your time window and where you want the vehicle. This charges nothing and holds nothing — the vehicle stays open to other renters.",
             "decision": "The shop accepts or declines. Vehicles with instant booking are accepted automatically. Only an acceptance holds the calendar and fixes the price.",
-            "holdPayment": "You transfer the holding amount within the payment window — currently 120 minutes from the moment the shop accepts, and never past the pick-up time. We remind you twice before it closes. When it closes, it closes; there is no extension.",
+            "holdPayment": "You transfer the holding amount within the payment window, which runs from the moment the shop accepts and never past the pick-up time. It is 120 minutes when pick-up is 24 hours or more away and shorter when you book close to pick-up (at least 15 minutes) — see the Cancellation and Refund Policy. We remind you before it closes. When it closes, it closes; there is no extension.",
             "bookingCreated": "The booking itself is created only once reconciliation confirms the holding amount arrived in full — not when you press a button or scan a code.",
             "slotLost": "If the time window has gone to another renter, the remaining requests for it are closed and you are told. This is not the shop declining you."
           }
@@ -309,24 +309,36 @@
           "body": "Sending a request charges nothing and holds nothing. You may withdraw it at any time before the shop decides, at no cost, and that withdrawal does not count against the shop’s reputation metrics."
         },
         "paymentWindow": {
-          "heading": "3. The payment window",
-          "body": "Once the shop accepts, you have a window to transfer the holding amount — currently 120 minutes from acceptance, and never past the pick-up time. We remind you twice before it closes. If the money has not arrived when the window closes, the slot is released to other renters and the trip does not go ahead; you lose nothing, because you transferred nothing. This window cannot be extended."
+          "heading": "3. The payment and free-cancellation windows",
+          "body": "Once the shop accepts, you get a window to transfer the holding amount and a free-cancellation window. How long both last depends on the time between the shop's acceptance and the pick-up time; both run FORWARD from acceptance and never past pick-up. Current terms:",
+          "items": {
+            "far": "Pick-up 24 hours or more away: 120 minutes to pay, free cancellation for 4 hours.",
+            "near": "Pick-up between 2 and 24 hours away: the payment window is 40% of the time left until pick-up (at least 15 minutes, at most 120 minutes); free cancellation is 30% of that time (at most 4 hours).",
+            "urgent": "Pick-up less than 2 hours away: the payment window is worked out the same way (at least 15 minutes) and there is NO free-cancellation window. If too little time is left to pay, the trip cannot be held through XePrime.",
+            "expiry": "We remind you before the payment window closes. If the full amount has not arrived by then, the slot is released to other renters and the trip does not go ahead; anything you already transferred is refunded in full to your Points wallet. The payment window cannot be extended."
+          }
         },
         "freeCancel": {
-          "heading": "4. Free cancellation in the first 4 hours",
-          "body": "After you have transferred the holding amount, you may cancel and have 100% of it refunded if you cancel within 4 hours of the shop accepting. This runs FORWARD from acceptance rather than backwards from pick-up, so every renter gets the same window; for a trip starting soon it is capped by the pick-up time itself. The exact deadline for your trip is shown on the booking."
+          "heading": "4. Free cancellation",
+          "body": "After you have transferred the holding amount, you may cancel and have 100% of it refunded to your Points wallet if you cancel before your trip's free-cancellation deadline (section 3). That deadline is fixed once, when the shop accepts: paying, or the shop moving the pick-up time, does not change it. The exact deadline for your trip — or a note that it has no free-cancellation window — is shown before you pay."
         },
         "afterFreeCancel": {
-          "heading": "5. Cancelling after the free window",
-          "body": "After the free window, what is refunded depends on the policy recorded on the booking when it was fixed — read that section on your booking before you transfer. Not turning up without notice is treated as a last-minute cancellation. The part payable directly to the owner at pick-up has not been paid yet, so there is nothing to refund there."
+          "heading": "5. Cancelling after the free-cancellation deadline",
+          "body": "Cancelling after the free-cancellation deadline, or cancelling after paying for a trip that has no free-cancellation window, works as follows. The cancellation dialog always shows what will and will not be refunded before you confirm.",
+          "items": {
+            "insurance": "Any insurance you chose is refunded 100% to your Points wallet, because the policy is only issued at pick-up.",
+            "split": "The rest of the holding amount is not refunded: half compensates the owner for holding the car for you, and half goes to XePrime.",
+            "noShow": "Not turning up without notice is treated as cancelling after the free-cancellation deadline.",
+            "direct": "The part payable directly to the owner at pick-up has not been paid yet, so there is nothing to refund there."
+          }
         },
         "ownerCancel": {
           "heading": "6. When the owner cancels",
           "body": "What an owner may do depends on the stage, and the later the stage the heavier the consequence for the renter — so the rules tighten accordingly.",
           "items": {
             "beforeDecision": "Not yet decided: the shop may DECLINE the request. Nobody loses money, because none has moved.",
-            "beforePayment": "Accepted but not yet paid in full: the shop may cancel the trip. The calendar is released and anything you already transferred is refunded.",
-            "afterBooking": "Already a booking: if the shop cancels, you are refunded 100% of what you transferred, and the cancellation is recorded against the shop’s reputation metrics.",
+            "beforePayment": "Accepted but not yet paid in full: the shop may cancel the trip. The calendar is released and anything you already transferred is refunded in full to your Points wallet.",
+            "afterBooking": "Already a booking: if the shop cancels, you are refunded 100% of what you transferred to your Points wallet — even after the free-cancellation deadline — and the cancellation is recorded against the shop's reputation metrics.",
             "duringTrip": "Trip in progress: it cannot be cancelled. The vehicle is out on the road with the renter, so ending early has to go through the return handover and settlement."
           }
         },
@@ -336,7 +348,7 @@
         },
         "refund": {
           "heading": "8. How refunds are made",
-          "body": "What is refunded is the amount you TRANSFERRED to XePrime, returned to the bank account you provide. The part paid directly to the owner at pick-up, and any security deposit, are handed over between the two of you and so are settled between the two of you. If you used a XePrime promo code, the refund does not include the value of that code — it is a platform-funded discount, not money you paid."
+          "body": "What is refunded is the amount you transferred to XePrime, credited straight to the Points wallet of the account that booked the trip (1 point = 1 VND, never expires); you can withdraw your Points wallet to a bank account at any time. The part paid directly to the owner at pick-up, and any security deposit, are handed over between the two of you and so are settled between the two of you. If you used a XePrime promo code, the refund does not include the value of that code — it is a platform-funded discount, not money you paid."
         },
         "dispute": {
           "heading": "9. When the two of you disagree",

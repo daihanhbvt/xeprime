@@ -191,11 +191,11 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
   /** Đặt `ends_at` của dòng thuê bao rồi đọc lại đúng bằng `select` mà guard và `me()` dùng. */
   async function atMilestone(endsAt: Date) {
     await prisma.tenantSubscription.updateMany({ where: { tenantId }, data: { endsAt } });
-    const row = await asService.tenantSubscription.findFirst({
+    const rows = await asService.tenantSubscription.findMany({
       where: { tenantId, ...effectiveSubscriptionWhere(new Date()) },
       ...EFFECTIVE_SUBSCRIPTION_ARGS,
     });
-    return resolveTenantFeatures(row, [PLAN_FEATURE.FINANCE]);
+    return resolveTenantFeatures(rows, [PLAN_FEATURE.FINANCE]);
   }
 
   beforeEach(async () => {
@@ -299,11 +299,11 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
         },
       });
 
-      const row = await asService.tenantSubscription.findFirst({
+      const rows = await asService.tenantSubscription.findMany({
         where: { tenantId, ...effectiveSubscriptionWhere(new Date()) },
         ...EFFECTIVE_SUBSCRIPTION_ARGS,
       });
-      const plan = resolveTenantFeatures(row, [PLAN_FEATURE.FINANCE]);
+      const plan = resolveTenantFeatures(rows, [PLAN_FEATURE.FINANCE]);
 
       // Worker chạy KHÔNG làm đổi câu trả lời — mốc 4 và mốc 5 phải giống hệt nhau về tuyến và
       // năng lực. Nếu khác, nghĩa là có một cửa sổ mà hành vi phụ thuộc việc job đã chạy hay chưa.

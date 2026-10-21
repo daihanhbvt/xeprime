@@ -582,6 +582,19 @@ export const queryKeys = {
   platformInsurance: {
     all: ['platform-insurance'] as const,
     list: (params: QueryParams) => ['platform-insurance', 'list', params] as const,
+    /** Chi tiết một hợp đồng kèm payload đối tác (ADR 0064). */
+    detail: (id: string) => ['platform-insurance', 'detail', id] as const,
+    /** Danh mục sản phẩm phía quản trị (ADR 0064). */
+    products: ['platform-insurance', 'products'] as const,
+  },
+  /** Bảo hiểm phía khách/gian hàng — danh mục công khai + GCN của một đơn (ADR 0064). */
+  insurance: {
+    all: ['insurance'] as const,
+    publicProducts: (vehicleType: string) => ['insurance', 'public-products', vehicleType] as const,
+    bookingCertificates: (bookingId: string) =>
+      ['insurance', 'booking-certificates', bookingId] as const,
+    /** Tình trạng bảo hiểm theo từng sản phẩm của một đơn — phía gian hàng. */
+    bookingCoverage: (bookingId: string) => ['insurance', 'booking-coverage', bookingId] as const,
   },
   bankAccounts: {
     all: ['bank-accounts'] as const,

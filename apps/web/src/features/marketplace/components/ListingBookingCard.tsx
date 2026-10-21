@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarOutlined,
@@ -9,17 +9,19 @@ import {
   GiftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { Checkbox, DatePicker, Skeleton } from 'antd';
+import { DatePicker, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   addCalendarMonthsVn,
   COLLATERAL_MODE,
+  INSURANCE_PRODUCT_KIND,
   isRouteType,
   PICKUP_PREFERENCE,
   PRICE_ROW,
   ROUTE_TYPE,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
+  type InsuranceProductKind,
   type RouteType,
 } from '@xeprime/types';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
@@ -37,6 +39,8 @@ import {
 } from '@/features/booking-requests/hooks/use-public-quote';
 import { PICKUP_METHOD } from '@/features/booking-requests/schema';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
+import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
@@ -280,6 +284,22 @@ export function ListingBookingCard({
   });
   const quoteQ = usePublicQuote(listing.id, quoteParams);
   const quote = useQuoteWithPromo(quoteQ.data, promo.applied?.fees);
+
+  // Bảo hiểm ĐANG được chào cho báo giá này (ADR 0064) — gỡ lựa chọn khi sản phẩm không còn chào.
+  const setInsuranceSelected = useCallback((kind: InsuranceProductKind, checked: boolean) => {
+    if (kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP) setVehicleProtectionSelected(checked);
+    else setPersonalAccidentSelected(checked);
+  }, []);
+  const deselectInsurance = useCallback(
+    (kind: InsuranceProductKind) => setInsuranceSelected(kind, false),
+    [setInsuranceSelected],
+  );
+  const insuranceOffer = useInsuranceOffer(
+    quoteQ.data,
+    listing.vehicleType,
+    { vehicleProtectionSelected, personalAccidentSelected },
+    deselectInsurance,
+  );
   const cost = useCustomerCostView({
     listing,
     breakdown: quote?.breakdown ?? null,
@@ -602,46 +622,25 @@ export function ListingBookingCard({
             </div>
           )}
 
-          {/* Tuỳ chọn bảo hiểm MIC */}
-          <div className={styles.insuranceSection}>
-            <h4 className={styles.sectionTitle}>{t('insurance.title')}</h4>
-            <div className={styles.insuranceOptions}>
-              <label className={styles.insuranceItem}>
-                <Checkbox
-                  checked={vehicleProtectionSelected}
-                  onChange={(e) => setVehicleProtectionSelected(e.target.checked)}
-                />
-                <div className={styles.insuranceItemContent}>
-                  <div className={styles.insuranceItemRow}>
-                    <span className={styles.insuranceItemName}>{t('insurance.vehicleProtection')}</span>
-                    <span className={styles.insuranceItemRate}>
-                      {listing.vehicleType === 'motorbike'
-                        ? t('insurance.vehicleProtectionHintMoto')
-                        : t('insurance.vehicleProtectionHintCar')}
-                    </span>
-                  </div>
-                </div>
-              </label>
-
-              <label className={styles.insuranceItem}>
-                <Checkbox
-                  checked={personalAccidentSelected}
-                  onChange={(e) => setPersonalAccidentSelected(e.target.checked)}
-                />
-                <div className={styles.insuranceItemContent}>
-                  <div className={styles.insuranceItemRow}>
-                    <span className={styles.insuranceItemName}>{t('insurance.personalAccident')}</span>
-                    <span className={styles.insuranceItemRate}>
-                      {listing.vehicleType === 'motorbike'
-                        ? t('insurance.personalAccidentHintMoto')
-                        : t('insurance.personalAccidentHintCar')}
-                    </span>
-                  </div>
-                </div>
-              </label>
+          {/*
+            Tuỳ chọn bảo hiểm (ADR 0064) — chỉ hiện khi báo giá nói nền tảng ĐANG bán bảo hiểm
+            (có đối tác phát hành) và chính sách phí mở dòng đó. Phí ngày đọc từ báo giá, tên và
+            quyền lợi từ danh mục sản phẩm; không có số nào viết cứng.
+          */}
+          {insuranceOffer.items.length > 0 ? (
+            <div className={styles.insuranceSection}>
+              <h4 className={styles.sectionTitle}>{t('insurance.title')}</h4>
+              <InsuranceOptionList
+                items={insuranceOffer.items}
+                selected={{
+                  [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: vehicleProtectionSelected,
+                  [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: personalAccidentSelected,
+                }}
+                onChange={setInsuranceSelected}
+              />
+              <p className={styles.insuranceNote}>{t('insurance.note')}</p>
             </div>
-            <p className={styles.insuranceNote}>{t('insurance.note')}</p>
-          </div>
+          ) : null}
         </div>
       </div>
 

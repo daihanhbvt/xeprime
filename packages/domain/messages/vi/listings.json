@@ -232,12 +232,6 @@
       },
       "insurance": {
         "title": "Bảo hiểm chuyến đi (MIC)",
-        "vehicleProtection": "Bảo hiểm vật chất xe MIC",
-        "vehicleProtectionHintCar": "+50.000 đ/ngày",
-        "vehicleProtectionHintMoto": "+15.000 đ/ngày",
-        "personalAccident": "Bảo hiểm tai nạn người ngồi trên xe MIC",
-        "personalAccidentHintCar": "+20.000 đ/ngày",
-        "personalAccidentHintMoto": "+5.000 đ/ngày",
         "note": "Bảo hiểm tự nguyện bảo vệ toàn diện trong suốt chuyến đi."
       },
       "costs": {

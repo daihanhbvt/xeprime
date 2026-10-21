@@ -14,6 +14,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
+import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
@@ -86,6 +87,7 @@ const trips = new CustomerTripsService(
   notifications,
   audit,
   new CancellationsService(),
+  new InsuranceReadService(asService),
 );
 
 let dbAvailable = false;
@@ -265,6 +267,7 @@ async function seedPendingRefund(customerUserId: string): Promise<{ requestId: s
       bookingRequestId: requestId,
       customerUserId,
       vehicleId,
+      depositRequired: true,
       amount: new Prisma.Decimal('500000'),
       paidAmount: new Prisma.Decimal('500000'),
       depositAmount: new Prisma.Decimal('500000'),

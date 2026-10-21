@@ -1,14 +1,17 @@
 import {
   backfillBadgeSignals,
+  createInsurancePartner,
   createPrismaClient,
   oldestBadgeSignalAgeMs,
 } from '@xeprime/prisma';
 import { HOLIDAY_SYNC_STATUS } from '@xeprime/types';
 import {
+  APP_ENV,
   FIRESTORE_ENABLED,
   GOOGLE_HOLIDAY_API_KEY,
   GOOGLE_HOLIDAY_CALENDAR_ID,
   HOLIDAY_SYNC_ENABLED,
+  INSURANCE_PARTNER,
   PUSH_ENABLED,
   assertWorkerEnv,
   requireEnv,
@@ -233,6 +236,17 @@ function loop(
 
 async function main(): Promise<void> {
   assertWorkerEnv();
+  /*
+   * Adapter bảo hiểm chọn MỘT lần lúc boot (ADR 0064). Ném ở đây — trước khi nối DB — khi cấu
+   * hình sai (`mic_mock` ở production, giá trị lạ): process manager thấy worker chết ngay.
+   */
+  const insurancePartner = createInsurancePartner(INSURANCE_PARTNER, {
+    appEnv: APP_ENV,
+    logger: { warn: (message, meta) => console.warn(message, meta ?? '') },
+  });
+  if (insurancePartner.configured) {
+    console.warn('bảo hiểm: INSURANCE_PARTNER=mic_mock — GCN GIẢ LẬP (TEST-…), không có hiệu lực thật');
+  }
   await prisma.$connect();
   healthServer = startHealthServer(health);
 
@@ -300,14 +314,15 @@ async function main(): Promise<void> {
      * thì hợp đồng nên có trong vòng một phút, và nhanh hơn nữa cũng không giúp gì vì mốc phát
      * hành là lúc bàn giao chứ không phải lúc đặt.
      *
-     * KHÔNG `critical`: chưa cắm đối tác nên lượt nào cũng ra `failed`, và một job "hỏng theo
-     * thiết kế" mà bị đánh dấu critical sẽ làm health check của worker đỏ vĩnh viễn — rồi không
-     * ai tin nó nữa.
+     * KHÔNG `critical`: với `INSURANCE_PARTNER=none` lượt nào cũng ra `failed`, và một job "hỏng
+     * theo thiết kế" mà bị đánh dấu critical sẽ làm health check của worker đỏ vĩnh viễn.
      */
     loop('phát hành bảo hiểm', LOCK_INSURANCE_ISSUE, INSURANCE_ISSUE_INTERVAL_MS, async () => {
-      const result = await sweepInsuranceIssue(prisma);
+      const result = await sweepInsuranceIssue(prisma, insurancePartner);
       if (result.claimed) {
-        console.log(`bảo hiểm: xử lý ${result.claimed}, lỗi ${result.failed}`);
+        console.log(
+          `bảo hiểm: xử lý ${result.claimed}, cấp ${result.issued}, lỗi ${result.failed}`,
+        );
       }
     }),
     loop('xếp hạng chợ xe', LOCK_LISTING_RANK, LISTING_RANK_INTERVAL_MS, async () => {

@@ -3,7 +3,7 @@
     "title": "Service plans",
     "subtitle": "Manage service plans, their pricing and whether shops can see them.",
     "introLabel": "About the kinds of plans",
-    "introBody": "The “Default commission track” is how every individual owner enters — it is always active, cannot be turned off, and there is only one. The other plans are shop plans sold by vehicle count and term. Turning a plan off only blocks NEW purchases; running subscriptions keep the price and limits they locked in until the term ends.",
+    "introBody": "The “default commission track” is how every individual owner joins — always on, cannot be turned off, and there is only one. The other plans are shop plans sold by VEHICLE TYPE (motorbike or car) and the number of vehicles of that type, plus one enterprise plan covering both types, sold through sales. Turning a plan off only blocks NEW purchases; running subscriptions keep their locked price and limits until the term ends.",
     "createButton": "Create service plan",
     "stats": {
       "total": "Total plans",
@@ -58,18 +58,47 @@
       "deactivateOk": "Turn off",
       "activateTitle": "Reopen plan “{name}”?",
       "activateBody": "The plan reappears on the shop pricing table and can be bought right away at its saved prices.",
-      "activateOk": "Reopen plan"
+      "activateOk": "Reopen plan",
+      "publishTitle": "Put plan “{name}” on sale?",
+      "publishBody": "The plan appears on the shop price list and can be bought right away at the saved prices. Double-check each term's price before putting it on sale.",
+      "publishOk": "Put on sale"
     },
     "toast": {
       "activated": "Plan “{name}” reopened",
-      "deactivated": "Plan “{name}” turned off"
+      "deactivated": "Plan “{name}” turned off",
+      "published": "Plan “{name}” is now on sale"
     },
     "editAction": "Edit",
     "duplicateAction": "Duplicate",
     "showing": "Showing {count} of {total} service plans",
     "loadError": "Could not load the plan list",
     "empty": "No plans yet",
-    "noResults": "No plans match these filters"
+    "noResults": "No plans match these filters",
+    "view": {
+      "label": "Plan book",
+      "selling": "On sale",
+      "retired": "Retired",
+      "draft": "Not on sale"
+    },
+    "emptyRetired": "No retired plans",
+    "groups": {
+      "motorbike": "Motorbikes",
+      "car": "Cars",
+      "enterprise": "Enterprise",
+      "commission": "Commission"
+    },
+    "groupHints": {
+      "motorbike": "Shop plans that cap MOTORBIKES only — can run alongside one car plan.",
+      "car": "Shop plans that cap CARS only — can run alongside one motorbike plan.",
+      "enterprise": "Covers both motorbikes and cars and excludes the two groups above; usually sold through sales at a negotiated price.",
+      "commission": "The entry track for individual owners — not sold, assigned automatically."
+    },
+    "vehicleLimitMotorbike": "Up to {value} motorbikes",
+    "vehicleLimitCar": "Up to {value} cars",
+    "emptyDraft": "No plans waiting to go on sale",
+    "draftHint": "Plans not on sale are hidden from shops. Enter the plan's prices (except for sales-only plans), then click “Put on sale”.",
+    "publishAction": "Put on sale",
+    "publishNeedsPrice": "Enter a price for at least one term before putting this plan on sale."
   },
   "form": {
     "titleCreate": "Create service plan",
@@ -143,7 +172,15 @@
       "commissionRequired": "Enter the commission %",
       "integer": "Whole number",
       "nonNegative": "Cannot be negative"
-    }
+    },
+    "vehicleScope": "Vehicle type",
+    "scopeOption": {
+      "motorbike": "Motorbikes",
+      "car": "Cars",
+      "all": "All vehicle types (enterprise)"
+    },
+    "vehicleScopeHintLabel": "About the vehicle type",
+    "vehicleScopeHint": "The plan only caps vehicles of the selected type: a shop can hold one motorbike plan and one car plan at the same time; an “All vehicle types” plan covers both and excludes them. The vehicle limit counts within this type only. Cannot be changed after creation."
   },
   "tenant": {
     "title": "Subscription",
@@ -208,7 +245,11 @@
         "renew": "Plan renewed",
         "schedule_change": "Plan change scheduled for the next term",
         "change_now": "Plan changed"
-      }
+      },
+      "scopeContext": "{scope}: {plan}, ends {date}.",
+      "enterpriseNote": "The enterprise plan covers both motorbikes and cars: open motorbike / car plan invoices are cancelled, and if applied now the running motorbike / car terms end immediately. A negotiated price is required.",
+      "draftOption": "{label} · not on sale",
+      "priceRequiredDraftHelp": "This plan is not on sale yet — enter the full-term price agreed with the shop."
     },
     "termMonths": "{months} months",
     "currentLabel": "Active",
@@ -222,12 +263,22 @@
     "historyTitle": "Term history",
     "cancelScheduledAction": "Cancel schedule",
     "cancelCurrentTitle": "Cancel the active term?",
-    "cancelCurrentBody": "The shop loses this plan as soon as you confirm and moves to the default commission track. Money already collected is not refunded automatically.",
+    "cancelCurrentBody": "This plan term ends as soon as you confirm. If it is the last running plan term, the shop moves back to the default commission track. Money already collected is not refunded automatically.",
     "cancelScheduledTitle": "Cancel the scheduled term?",
     "cancelScheduledBody": "This term will not start; the current plan keeps running until it ends. Money already collected is not refunded automatically.",
     "origin": {
       "payment": "Activated automatically when paid in full",
       "system": "Default commission track assigned by the system"
+    },
+    "scope": {
+      "motorbike": "Motorbikes",
+      "car": "Cars",
+      "all": "All vehicle types"
+    },
+    "quotaScoped": {
+      "motorbike": "up to {vehicles} motorbikes",
+      "car": "up to {vehicles} cars",
+      "all": "up to {vehicles} vehicles"
     }
   }
 }

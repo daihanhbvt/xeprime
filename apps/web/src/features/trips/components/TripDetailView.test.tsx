@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BOOKING_HOLD_STATUS,
+  CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_TRIP_STAGE,
   DEPOSIT_STATUS,
   STOREFRONT_KIND,
@@ -29,6 +30,16 @@ const query = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+
+/**
+ * Xem trước lượt huỷ (ADR 0064) — server tính; test đặt thẳng kết quả. Mặc định chưa có dữ liệu:
+ * hộp xác nhận không vẽ khối tiền nào.
+ */
+const cancelPreview = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  isError: false,
+}));
 
 const cancelMutation = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -64,6 +75,7 @@ vi.mock('@/features/catalog/use-catalog', async () =>
 vi.mock('../hooks', () => ({
   useTrip: () => query,
   useCancelTrip: () => cancelMutation,
+  useTripCancelPreview: () => cancelPreview,
   // Khối bằng chứng bàn giao có test riêng (`TripHandoverEvidence.test.tsx`); ở đây chỉ cần
   // nó im lặng để không kéo một truy vấn thật vào test của trang.
   useTripHandoverEvidence: () => ({
@@ -97,6 +109,9 @@ const TRIP: CustomerTripDetail = {
   renter: null,
   respondBy: null,
   canContact: true,
+  // GCN bảo hiểm (ADR 0064) — chuyến này chưa bàn giao nên chưa có giấy nào.
+  insuranceCertificates: [],
+  insuranceCoverage: [],
   // Chuyến đã có đơn ⇒ giá đã chốt, không phải số tạm tính.
   totalIsEstimate: false,
   bookingId: 'BK1',
@@ -393,6 +408,8 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
       remainingAmount: '500000',
       expiresAt: new Date(now + 90 * 60_000).toISOString(),
       freeCancelUntil: new Date(now + 4 * 60 * 60_000).toISOString(),
+      freeCancelAvailable: true,
+      lateCancelRefundAmount: '0',
       paidAt: null,
       allocation: [],
       refund: null,
@@ -547,7 +564,7 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     expect(screen.getByRole('link', { name: SUPPORT_HOTLINE.display }).getAttribute('href')).toBe(
       `tel:${SUPPORT_HOTLINE.tel}`,
     );
-    expect(screen.getByText(/Sau khi thanh toán, huỷ trước .+ vẫn được hoàn 100%/)).toBeTruthy();
+    expect(screen.getByText(/Sau khi thanh toán: Huỷ trước .+ được hoàn 100%/)).toBeTruthy();
   });
 
   it('huỷ: nói đúng hệ quả của chặng — nhả xe đang giữ, không phải "huỷ đơn"', () => {
@@ -568,10 +585,23 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
         remainingAmount: '300000',
       }),
     });
+    cancelPreview.data = {
+      allowed: true,
+      kind: CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND,
+      paidAmount: '200000',
+      refundAmount: '200000',
+      insuranceRefundAmount: '0',
+      forfeitAmount: '0',
+      ownerCompensationAmount: '0',
+      freeCancelUntil: null,
+      freeCancelAvailable: true,
+      deferred: false,
+    };
     renderView();
     fireEvent.click(screen.getByRole('button', { name: CANCEL_TRIP }));
     expect(screen.getByText(/Bạn đã chuyển 200\.000.* tiền giữ chỗ/)).toBeTruthy();
-    expect(screen.getByText(/được hoàn đủ sau khi huỷ/)).toBeTruthy();
+    expect(screen.getByText(/Bạn được hoàn 200.000.* vào Ví điểm/)).toBeTruthy();
+    cancelPreview.data = undefined;
   });
 });
 
@@ -593,6 +623,8 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
     remainingAmount: '0',
     expiresAt: '2026-08-01T03:00:00.000Z',
     freeCancelUntil: '2026-08-01T05:00:00.000Z',
+    freeCancelAvailable: true,
+    lateCancelRefundAmount: '0',
     paidAt: '2026-08-01T02:30:00.000Z',
     paidVia: 'vnpay',
     allocation: [],
@@ -791,6 +823,8 @@ describe('Bố cục theo có/không QR chuyển khoản', () => {
     remainingAmount: '100000',
     expiresAt: '2026-09-08T03:00:00.000Z',
     freeCancelUntil: '2026-09-16T03:00:00.000Z',
+    freeCancelAvailable: true,
+    lateCancelRefundAmount: '0',
     paidAt: null,
     allocation: [],
     refund: null,

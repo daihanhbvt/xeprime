@@ -16,6 +16,7 @@ import { queryKeys } from '@/services/query-keys';
 import {
   cancelTrip,
   fetchTrip,
+  fetchTripCancelPreview,
   fetchTripHandoverEvidence,
   fetchUnpaidHolds,
   fetchTripHandoverPhotoUrl,
@@ -162,6 +163,21 @@ export function useTripHandoverPhotos(
 /** Khoá của MỘT ô ảnh trong khối: chiều bàn giao + góc chụp. Dùng chung hook ↔ component. */
 export function photoKey(type: string, slot: string): string {
   return `${type}:${slot}`;
+}
+
+/**
+ * Xem trước lượt huỷ — chỉ nạp khi hộp xác nhận MỞ (`enabled`), và luôn nạp lại mỗi lần mở
+ * (`staleTime: 0`): mốc huỷ miễn phí có thể vừa trôi qua giữa hai lần mở, và con số hứa với khách
+ * phải là con số lượt bấm sẽ ghi. Khoá con của `trips.detail` nên lượt huỷ làm mới luôn nó.
+ */
+export function useTripCancelPreview(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.trips.detail(id), 'cancel-preview'],
+    queryFn: () => fetchTripCancelPreview(id),
+    enabled: Boolean(id) && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
 }
 
 /**

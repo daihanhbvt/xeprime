@@ -226,12 +226,6 @@
     },
     "insurance": {
       "title": "Bảo hiểm chuyến đi (MIC)",
-      "vehicleProtection": "Bảo hiểm vật chất xe MIC",
-      "vehicleProtectionHintCar": "+50.000 đ/ngày",
-      "vehicleProtectionHintMoto": "+15.000 đ/ngày",
-      "personalAccident": "Bảo hiểm tai nạn người ngồi trên xe MIC",
-      "personalAccidentHintCar": "+20.000 đ/ngày",
-      "personalAccidentHintMoto": "+5.000 đ/ngày",
       "note": "Bảo hiểm tự nguyện bảo vệ toàn diện trong suốt chuyến đi."
     },
     "contact": {
@@ -496,6 +490,13 @@
         "hold": "Chủ xe xem và phản hồi yêu cầu của bạn. Khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ — chuyến đi chỉ được xác nhận khi XePrime nhận đủ khoản này.",
         "general": "XePrime hoặc chủ xe sẽ liên hệ để kiểm tra thông tin, xác nhận tình trạng xe và hướng dẫn bước tiếp theo. Chuyến đi chỉ được xác nhận sau khi hoàn tất các bước được hướng dẫn."
       }
+    },
+    "nearPickup": {
+      "title": "Bạn đang đặt sát giờ nhận xe",
+      "short": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và được huỷ miễn phí trong khoảng {freeCancel} sau lúc chủ xe nhận. Chủ xe nhận càng muộn, hai khoảng này càng ngắn.",
+      "noFreeCancel": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và không có thời gian huỷ miễn phí: huỷ sau khi thanh toán chỉ được hoàn tiền bảo hiểm (nếu có).",
+      "tooShort": "Giờ nhận xe quá gần để kịp thanh toán tiền giữ chỗ qua XePrime — chủ xe có thể không nhận được chuyến này. Hãy chọn giờ nhận muộn hơn.",
+      "estimate": "Đây là ước tính; mốc chính xác hiện ngay khi chủ xe nhận chuyến."
     }
   },
   "approved": {
@@ -566,5 +567,22 @@
   },
   "contactNote": {
     "differentPhone": "Khách để lại số liên hệ khác số đăng ký tài khoản. Số tài khoản {phone} đã xác thực; số liên hệ thì chưa."
+  },
+  "approvalPreview": {
+    "title": "Nếu duyệt ngay",
+    "estimate": "Ước tính",
+    "online": "Khách chuyển qua QR (tiền giữ chỗ)",
+    "payAtPickup": "Khách trả bạn lúc nhận xe",
+    "commission": "Hoa hồng XePrime",
+    "tax": "Thuế khấu trừ",
+    "walletCredit": "Vào Ví điểm của bạn khi hoàn thành chuyến",
+    "ownerNet": "Bạn thực nhận cho tiền thuê",
+    "noHold": "Chuyến này không thu tiền giữ chỗ online — đơn thuê được tạo ngay khi bạn duyệt, không có mã QR.",
+    "paymentWindow": "Khách có {duration} để chuyển tiền giữ chỗ (tới khoảng {time}); quá hạn thì lịch tự nhả.",
+    "freeCancel": "Khách được huỷ miễn phí trong {duration} sau khi bạn duyệt (tới khoảng {time}).",
+    "noFreeCancel": "Nhận xe sát giờ nên khách không có thời gian huỷ miễn phí.",
+    "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn được đền một nửa tiền giữ chỗ (phần ngoài bảo hiểm) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
+    "tooShort": "Giờ nhận xe quá gần để khách kịp chuyển tiền giữ chỗ — lượt duyệt sẽ không thành công. Hãy liên hệ khách để thoả thuận trực tiếp.",
+    "longTermPickPickup": "Chọn giờ nhận xe để xem khách có bao lâu để thanh toán. Mã QR tiền giữ chỗ chỉ được gửi cho khách sau khi bạn chốt lịch và bấm duyệt."
   }
 }

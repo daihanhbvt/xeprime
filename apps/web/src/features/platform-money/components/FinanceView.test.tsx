@@ -98,9 +98,6 @@ vi.mock('../hooks/use-platform-money', () => ({
     data: { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
   }),
   useWithdrawalQueue: () => withdrawals,
-  useInsuranceQueue: () => ({
-    data: { data: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
-  }),
   useSaveBankBalance: () => saveBalance,
   useSettleHold: idle,
   useMarkRefundPaid: idle,
@@ -109,8 +106,6 @@ vi.mock('../hooks/use-platform-money', () => ({
   useRejectWithdrawal: () => rejectWithdrawal,
   useReverseWithdrawal: idle,
   useMarkWithdrawalPaid: () => markWithdrawalPaid,
-  useRetryInsurance: idle,
-  useVoidInsurance: idle,
 }));
 
 vi.mock('@/features/bank-transactions/hooks/use-bank-transactions', () => ({

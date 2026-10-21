@@ -24,7 +24,7 @@ import { useSyncScopeWhenInvoiceSettles } from './use-subscription';
  *  2. **Chưa từng có hoá đơn thì KHÔNG làm mới.** `data === null` ở cả hai tình huống ("vừa trả
  *     xong" và "chưa bắt đầu"); không phân biệt được thì mỗi lần mở trang là một lượt gọi vô ích.
  */
-const fetchPendingInvoice = vi.hoisted(() => vi.fn());
+const fetchPendingInvoices = vi.hoisted(() => vi.fn());
 
 // Nhịp hỏi lại đọc trạng thái bản chiếu realtime; ở đây không có provider Firestore nào.
 vi.mock('@/features/badges/BadgeRealtimeProvider', () => ({
@@ -32,7 +32,7 @@ vi.mock('@/features/badges/BadgeRealtimeProvider', () => ({
 }));
 
 vi.mock('../api', () => ({
-  fetchPendingInvoice,
+  fetchPendingInvoices,
   fetchInvoice: vi.fn(),
   fetchInvoices: vi.fn(),
   fetchPaymentInfo: vi.fn(),
@@ -62,7 +62,7 @@ function setup() {
 }
 
 beforeEach(() => {
-  fetchPendingInvoice.mockReset();
+  fetchPendingInvoices.mockReset();
 });
 
 afterEach(() => {
@@ -71,7 +71,7 @@ afterEach(() => {
 
 describe('useSyncScopeWhenInvoiceSettles', () => {
   it('hoá đơn rời trạng thái chờ ⇒ làm mới scope và gói hiện hành', async () => {
-    fetchPendingInvoice.mockResolvedValue(INVOICE);
+    fetchPendingInvoices.mockResolvedValue([INVOICE]);
     const { client, invalidate } = setup();
 
     // Còn đang chờ tiền: chưa có gì để làm mới.
@@ -81,20 +81,37 @@ describe('useSyncScopeWhenInvoiceSettles', () => {
     expect(invalidate).not.toHaveBeenCalled();
 
     // Lượt hỏi kế tiếp trả `null` — webhook đã lật hoá đơn sang `paid`.
-    fetchPendingInvoice.mockResolvedValue(null);
+    fetchPendingInvoices.mockResolvedValue([]);
     await client.refetchQueries({ queryKey: queryKeys.subscription.pendingInvoice() });
 
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all }),
-    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.subscription.all });
   });
 
   it('chưa từng tạo hoá đơn ⇒ KHÔNG làm mới gì', async () => {
-    fetchPendingInvoice.mockResolvedValue(null);
+    fetchPendingInvoices.mockResolvedValue([]);
     const { invalidate } = setup();
 
-    await waitFor(() => expect(fetchPendingInvoice).toHaveBeenCalled());
+    await waitFor(() => expect(fetchPendingInvoices).toHaveBeenCalled());
     expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Hai hoá đơn chờ cùng lúc — xe máy + ô tô (ADR 0065). Trả xong MỘT thì danh sách vẫn còn một
+   * phần tử: một cờ "còn chờ / hết chờ" sẽ không thấy gì đổi, và gói xe máy vừa bật không hiện ra.
+   */
+  it('một trong HAI hoá đơn chờ được trả ⇒ vẫn làm mới scope', async () => {
+    const CAR = { ...INVOICE, id: 'INV2', code: 'XPG654321' } as SubscriptionInvoice;
+    fetchPendingInvoices.mockResolvedValue([INVOICE, CAR]);
+    const { client, invalidate } = setup();
+    await waitFor(() =>
+      expect(client.getQueryData(queryKeys.subscription.pendingInvoice())).toHaveLength(2),
+    );
+    expect(invalidate).not.toHaveBeenCalled();
+
+    fetchPendingInvoices.mockResolvedValue([CAR]);
+    await client.refetchQueries({ queryKey: queryKeys.subscription.pendingInvoice() });
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all }));
   });
 });

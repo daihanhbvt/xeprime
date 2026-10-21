@@ -14,8 +14,6 @@ import type {
   MarkWithdrawalPaidInput,
   PlatformWithdrawalPage,
   WithdrawalFilters,
-  InsuranceFilters,
-  PlatformInsurancePage,
   GatewayOrderFilters,
   PlatformPaymentOrder,
   PlatformPaymentOrderDetail,
@@ -107,25 +105,6 @@ export const reverseWithdrawal = (
   id: string,
   body: { reason: string; rowVersion: number },
 ): Promise<void> => apiPost<void>(`/platform/money/withdrawals/${id}/reverse`, body);
-
-// ── Hàng đợi bảo hiểm (ADR 0032 điều 4 — Phase 7) ───────────────────────────
-
-export function insuranceFiltersToParams(filters: InsuranceFilters): QueryParams {
-  return {
-    status: filters.status ?? null,
-    page: filters.page ?? 1,
-    limit: MONEY_DEFAULT_LIMIT,
-  };
-}
-
-export const fetchInsuranceQueue = (params: QueryParams): Promise<PlatformInsurancePage> =>
-  apiGet<PlatformInsurancePage>('/platform/money/insurance', params);
-
-export const retryInsurance = (id: string): Promise<void> =>
-  apiPost<void>(`/platform/money/insurance/${id}/retry`);
-
-export const voidInsurance = (id: string, body: { reason: string }): Promise<void> =>
-  apiPost<void>(`/platform/money/insurance/${id}/void`, body);
 
 // ── Cổng thanh toán MoMo/VNPAY (ADR 0058) ───────────────────────────────────
 

@@ -1,10 +1,56 @@
-/* Bộ chọn gói + nút hành động — dùng chung cho onboarding gian hàng và luồng nâng cấp. */
+/* Bộ chọn gói hai làn + nút hành động — dùng chung cho onboarding gian hàng và luồng nâng cấp. */
 
 .panel {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: var(--xp-space-md);
+}
+
+/* Một làn: tiêu đề loại xe + bảng giá của làn đó. */
+.lane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.laneHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.laneIcon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.laneText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.laneTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.laneHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .consent {

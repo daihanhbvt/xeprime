@@ -1,0 +1,46 @@
+{
+  "option": {
+    "dailyRate": "+{price}",
+    "benefits": "Quyền lợi"
+  },
+  "benefits": {
+    "coverage": "Phạm vi bảo vệ",
+    "deductible": "Mức khấu trừ",
+    "deductiblePerIncident": "{amount}/vụ",
+    "noDeductible": "Không áp dụng khấu trừ",
+    "maxPayout": "Bồi thường tối đa",
+    "maxPayoutWithNote": "{amount} · {note}"
+  },
+  "certificate": {
+    "title": "Giấy chứng nhận bảo hiểm",
+    "number": "Số chứng nhận",
+    "copyNumber": "Sao chép số chứng nhận",
+    "coverage": "Hiệu lực",
+    "partner": "Đơn vị bảo hiểm",
+    "view": "Xem giấy chứng nhận bảo hiểm",
+    "testTag": "THỬ NGHIỆM",
+    "testNote": "Giấy chứng nhận thử nghiệm — không có hiệu lực bảo hiểm.",
+    "loadError": "Không tải được giấy chứng nhận bảo hiểm."
+  },
+  "coverage": {
+    "title": "Bảo hiểm chuyến",
+    "premium": "Phí đã trả",
+    "status": {
+      "pending_issue": "Chờ phát hành",
+      "issuing": "Đang phát hành",
+      "issued": "Đã cấp",
+      "failed": "Phát hành lỗi",
+      "voided": "Đã thu hồi",
+      "refunded": "Đã hoàn phí"
+    },
+    "note": {
+      "pending_issue": "Giấy chứng nhận được cấp khi bàn giao xe.",
+      "issuing": "XePrime đang phát hành giấy chứng nhận — thường chỉ mất vài phút.",
+      "issued": "Giấy chứng nhận đã được cấp.",
+      "failed": "Phát hành lỗi — XePrime đang xử lý. Bạn không cần làm gì thêm.",
+      "voided": "Giấy chứng nhận đã bị thu hồi.",
+      "refunded": "Chuyến huỷ trước khi bàn giao — phí bảo hiểm đã được hoàn."
+    },
+    "loadError": "Không tải được thông tin bảo hiểm."
+  }
+}

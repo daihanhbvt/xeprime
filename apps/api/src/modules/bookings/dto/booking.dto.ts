@@ -260,6 +260,28 @@ export class BookingDetailDto extends BookingListItemDto {
   /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
   @ApiPropertyOptional({ type: String, nullable: true })
   payAtPickupAmount!: string | null;
+  /**
+   * Kinh tế của CHỦ XE, đóng băng trong snapshot lúc đặt (ADR 0024) — DTO nội bộ của gian hàng nên
+   * hiện ở đây là đúng chỗ (ADR 0064). `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '`H` — hoa hồng XePrime giữ lại từ phần của chủ xe',
+  })
+  ownerCommissionAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '`T` — thuế khấu trừ khỏi tiền chủ xe',
+  })
+  ownerTaxAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '`B − H − T` — chủ xe thực nhận cả chuyến',
+  })
+  ownerNetAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;

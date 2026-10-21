@@ -31,7 +31,12 @@
     "unknown": "Not provided",
     "noteBlock": "Note",
     "cardTitle": "Booking details",
-    "pageSubtitle": "Manage the trip and the current rental"
+    "pageSubtitle": "Manage the trip and the current rental",
+    "forbiddenTitle": "You don't have permission to view bookings",
+    "forbiddenBody": "Contact your administrator if you need this permission.",
+    "viewVehicle": "View vehicle profile",
+    "addDocuments": "Add documents",
+    "packageValue": "{label} package"
   },
   "actionBar": {
     "contract": "Contract",
@@ -53,8 +58,8 @@
     "dialog": {
       "cancelTitle": "Cancel booking {code}",
       "noShowTitle": "Mark as no-show — booking {code}",
-      "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot.",
-      "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot.",
+      "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot. Any reservation payment the customer made through XePrime is refunded 100% to their Points wallet.",
+      "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot. Any insurance is refunded to the customer; the rest of the reservation payment is split between you and XePrime.",
       "cancelOk": "Cancel booking",
       "noShowOk": "Mark as no-show",
       "keep": "Keep the booking",
@@ -153,6 +158,13 @@
       "holdPaid": "Held via XePrime",
       "payAtPickup": "Due to the owner at pickup",
       "note": "The hold is collected by XePrime, so it is not part of the shop’s “Collected” line."
+    },
+    "ownerEconomics": {
+      "title": "Your share",
+      "commission": "XePrime commission",
+      "tax": "Tax withheld",
+      "ownerNet": "You receive for the rental",
+      "note": "Fixed when the booking was made. Commission and tax are withheld from the reservation payment before the rest goes to your Points wallet when the trip completes."
     }
   },
   "driver": {

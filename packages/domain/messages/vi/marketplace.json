@@ -119,7 +119,7 @@
     "loadMore": "Tải thêm xe",
     "endNote": "Đã hiển thị tất cả {count, plural, other {# xe}}",
     "title": "Tìm xe cho thuê",
-    "bannerTitle": "Lựa chọn xe & nhu cầu của bạn",
+    "bannerTitle": "Lựa chọn xe & nhu cầu",
     "foundCount": "Đã tìm thấy {count, plural, other {# kết quả}}",
     "sortRelevant": "Liên quan nhất",
     "allViewed": "Bạn đã xem tất cả xe",
@@ -188,7 +188,11 @@
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "xe",
     "applyWithCount": "Áp dụng ({count, plural, other {# xe}})",
-    "motorbikeCategory": "Phân khúc xe máy"
+    "motorbikeCategory": "Phân khúc xe máy",
+    "priceUnder": "Dưới {max}",
+    "priceOver": "Trên {min}",
+    "vatInvoice": "Xuất hoá đơn VAT",
+    "labelWithCount": "{label} ({count})"
   },
   "searchDialog": {
     "title": "Tìm kiếm",

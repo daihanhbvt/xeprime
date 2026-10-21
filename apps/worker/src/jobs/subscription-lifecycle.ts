@@ -18,7 +18,13 @@ import {
   addCalendarMonthsVn,
   parsePlanLimits,
   PLAN_GUIDE_REASON,
+  PLAN_VEHICLE_SCOPE,
+  VEHICLE_TYPE,
+  graceEndsAtFor,
+  planVehicleScopeOf,
+  smallestSelfServePlanFor,
   type PlanInvoiceSnapshot,
+  type PlanVehicleScope,
 } from '@xeprime/types';
 import { notifyTenantMembers, recordSystemAudit } from '../lib/notify';
 import { newReferenceCode } from '../lib/reference-code';
@@ -74,6 +80,35 @@ export async function sweepSubscriptionLifecycle(
   };
 }
 
+/**
+ * Gom các dòng ứng viên theo TENANT, giữ thứ tự `ends_at`.
+ *
+ * Từ ADR 0065 một gian hàng có thể mang hai kỳ gói (ô tô + xe máy) hết hạn CÙNG lúc — điển hình là
+ * cặp dòng do migration ánh xạ từ một bậc cũ. Báo từng dòng là hai tin "gói … sắp hết hạn" liền nhau
+ * cho cùng một quyết định gia hạn; gom lại là một tin nói đủ cả hai loại xe.
+ */
+function groupByTenant<T extends { tenantId: string }>(rows: readonly T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = groups.get(row.tenantId) ?? [];
+    list.push(row);
+    groups.set(row.tenantId, list);
+  }
+  return [...groups.values()];
+}
+
+/** "Gói Ô tô · 5 xe và Xe máy · 1 xe" — tên các gói trong MỘT tin. */
+function planNamesOf(rows: readonly { plan: { name: string } }[]): string {
+  return [...new Set(rows.map((row) => row.plan.name))].join(' và ');
+}
+
+/** "ô tô và xe máy" — loại xe mà các kỳ này gác (tin vòng đời lưu tiếng Việt như mọi tin hệ thống). */
+function scopeLabelsOf(rows: readonly { vehicleScope: string }[]): string {
+  return [...new Set(rows.map((row) => vehicleScopeLabel(planVehicleScopeOf(row.vehicleScope))))].join(
+    ' và ',
+  );
+}
+
 /** Chỉ nhắc gói TUYẾN GÓI — thuê bao hoa hồng 0đ hết hạn không có gì để "gia hạn". */
 async function remindRenewal(prisma: PrismaClient, now: Date): Promise<number> {
   const dueBefore = new Date(now.getTime() + SUBSCRIPTION_RENEWAL_REMINDER_DAYS * MS_PER_DAY);
@@ -86,27 +121,39 @@ async function remindRenewal(prisma: PrismaClient, now: Date): Promise<number> {
     },
     orderBy: { endsAt: 'asc' },
     take: BATCH,
-    select: { id: true, tenantId: true, endsAt: true, plan: { select: { name: true } } },
+    select: {
+      id: true,
+      tenantId: true,
+      endsAt: true,
+      vehicleScope: true,
+      plan: { select: { name: true } },
+    },
   });
 
   let sent = 0;
-  for (const sub of candidates) {
-    const claimed = await prisma.tenantSubscription.updateMany({
-      where: { id: sub.id, status: SUBSCRIPTION_STATUS.ACTIVE, renewalRemindedAt: null },
-      data: { renewalRemindedAt: now },
-    });
-    if (claimed.count === 0) continue;
+  for (const group of groupByTenant(candidates)) {
+    const claimed: typeof group = [];
+    for (const sub of group) {
+      const res = await prisma.tenantSubscription.updateMany({
+        where: { id: sub.id, status: SUBSCRIPTION_STATUS.ACTIVE, renewalRemindedAt: null },
+        data: { renewalRemindedAt: now },
+      });
+      if (res.count > 0) claimed.push(sub);
+    }
+    const first = claimed[0];
+    if (!first) continue;
 
-    await notifyTenantMembers(prisma, sub.tenantId, {
+    await notifyTenantMembers(prisma, first.tenantId, {
       type: NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING,
-      title: `Gói ${sub.plan.name} sắp hết hạn`,
-      body: `Hết hạn ${sub.endsAt.toLocaleDateString('vi-VN')} — gia hạn ở màn "Gói của tôi" để giữ 0đ trên chuyến.`,
-      tenantId: sub.tenantId,
+      title: `Gói ${planNamesOf(claimed)} sắp hết hạn`,
+      body: `Hết hạn ${first.endsAt.toLocaleDateString('vi-VN')} — gia hạn gói ${scopeLabelsOf(claimed)} ở màn "Gói của tôi" để giữ 0đ trên chuyến.`,
+      tenantId: first.tenantId,
     });
+    // MỘT thư hướng dẫn cho cả nhóm — dedupe của outbox theo thuê bao, nên neo vào dòng đầu.
     await enqueuePlanGuideForSubscription(prisma, {
-      tenantId: sub.tenantId,
-      subscriptionId: sub.id,
-      endsAt: sub.endsAt,
+      tenantId: first.tenantId,
+      subscriptionId: first.id,
+      endsAt: first.endsAt,
       reason: PLAN_GUIDE_REASON.EXPIRING,
     });
     sent += 1;
@@ -129,32 +176,54 @@ async function notifyExpiry(prisma: PrismaClient, now: Date): Promise<number> {
       id: true,
       tenantId: true,
       endsAt: true,
+      vehicleScope: true,
       plan: { select: { name: true, limitsJson: true } },
     },
   });
 
   let sent = 0;
-  for (const sub of candidates) {
-    const claimed = await prisma.tenantSubscription.updateMany({
-      where: { id: sub.id, status: SUBSCRIPTION_STATUS.ACTIVE, expiryNotifiedAt: null },
-      data: { expiryNotifiedAt: now },
-    });
-    if (claimed.count === 0) continue;
+  for (const group of groupByTenant(candidates)) {
+    const claimed: typeof group = [];
+    for (const sub of group) {
+      const res = await prisma.tenantSubscription.updateMany({
+        where: { id: sub.id, status: SUBSCRIPTION_STATUS.ACTIVE, expiryNotifiedAt: null },
+        data: { expiryNotifiedAt: now },
+      });
+      if (res.count > 0) claimed.push(sub);
+    }
+    const first = claimed[0];
+    if (!first) continue;
 
-    const graceDays = parsePlanLimits(sub.plan.limitsJson).graceDays;
-    await notifyTenantMembers(prisma, sub.tenantId, {
+    const graceDays = Math.min(...claimed.map((sub) => parsePlanLimits(sub.plan.limitsJson).graceDays));
+    const typeLabel = scopeLabelsOf(claimed);
+    /*
+     * Gói của MỘT loại xe hết hạn trong khi gói loại kia còn chạy (ADR 0065): gian hàng KHÔNG
+     * chuyển sang hoa hồng — thứ mất đi khi hết ân hạn là đăng thêm và đưa thêm xe loại đó lên chợ.
+     * Nói "sẽ tính hoa hồng" lúc đó là doạ một hậu quả không xảy ra.
+     */
+    const keepsPackageTrack = await otherPackageTermRunning(
+      prisma,
+      first.tenantId,
+      claimed.map((sub) => sub.id),
+      now,
+    );
+    const body = keepsPackageTrack
+      ? graceDays > 0
+        ? `Còn ${graceDays} ngày ân hạn — gia hạn để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
+        : `Gia hạn để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
+      : graceDays > 0
+        ? `Còn ${graceDays} ngày ân hạn — gia hạn gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`
+        : `Gia hạn gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`;
+    await notifyTenantMembers(prisma, first.tenantId, {
       type: NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED,
-      title: `Gói ${sub.plan.name} đã hết hạn`,
-      body:
-        graceDays > 0
-          ? `Còn ${graceDays} ngày ân hạn — gia hạn ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`
-          : 'Gia hạn ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.',
-      tenantId: sub.tenantId,
+      title: `Gói ${planNamesOf(claimed)} đã hết hạn`,
+      body,
+      tenantId: first.tenantId,
     });
     await enqueuePlanGuideForSubscription(prisma, {
-      tenantId: sub.tenantId,
-      subscriptionId: sub.id,
-      endsAt: sub.endsAt,
+      tenantId: first.tenantId,
+      subscriptionId: first.id,
+      endsAt: first.endsAt,
       reason: PLAN_GUIDE_REASON.EXPIRED,
     });
     sent += 1;
@@ -335,6 +404,22 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
       });
       if (hasCurrent) return true;
 
+      /*
+       * Gói của LOẠI XE KIA còn đang ân hạn (ADR 0065) ⇒ gian hàng vẫn ở tuyến gói: chưa hạ. Dòng
+       * này đã claim xong, nên chính dòng còn lại — khi tới lượt nó hết ân hạn — mới là dòng gán
+       * hoa hồng, nối liền từ mốc hết ân hạn MUỘN NHẤT. Chỉ hạ tuyến khi KHÔNG còn phạm vi nào
+       * giữ được gói (`resolveEffectiveBilling` đọc đúng luật đó).
+       */
+      if (await otherPackageTermInGrace(tx, sub.tenantId, sub.id, now)) return true;
+
+      /*
+       * Hai phạm vi cùng qua ân hạn trong MỘT lượt (cặp dòng ánh xạ, hay job dừng vài ngày): dòng
+       * hoa hồng phải nối từ mốc hết ân hạn MUỘN NHẤT của các kỳ gói chưa xử lý, đọc TRONG khoá —
+       * nối từ mốc của dòng đang xét (sớm hơn) là ghi lùi tuyến hoa hồng vào những ngày gói kia
+       * vẫn còn giữ tuyến.
+       */
+      const startFrom = await latestLapsedGraceEnd(tx, sub.tenantId, chainFrom, now);
+
       const commissionSub = await tx.tenantSubscription.create({
         data: {
           id: newId(),
@@ -345,6 +430,8 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
           termMonths: COMMISSION_TRACK_TERM_MONTHS,
           billingMode: BILLING_MODE.COMMISSION,
           commissionPercent: fallbackPlan.commissionPercent,
+          // Tuyến hoa hồng phủ mọi loại xe (CHECK `plans_commission_scope_all`).
+          vehicleScope: PLAN_VEHICLE_SCOPE.ALL,
           /*
            * Nối LIỀN vào dòng vừa hết hạn, không bắt đầu từ `now`.
            *
@@ -356,8 +443,8 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
            * `startsAt` ở quá khứ hoàn toàn hợp lệ với vị từ `startsAt <= now`, và `endsAt` vẫn
            * đếm đủ 12 tháng lịch kể từ mốc đó (ADR 0011: cộng THÁNG LỊCH, không nhân 30 ngày).
            */
-          startsAt: chainFrom,
-          endsAt: addCalendarMonthsVn(chainFrom, COMMISSION_TRACK_TERM_MONTHS),
+          startsAt: startFrom,
+          endsAt: addCalendarMonthsVn(startFrom, COMMISSION_TRACK_TERM_MONTHS),
           // Không ghi chú chữ: dòng hệ thống nói bằng `origin` và giao diện tự dịch (ADR 0012).
           // Dấu vết "vì sao" nằm ở audit `subscription.lapse_to_commission` ngay dưới.
           note: null,
@@ -430,22 +517,18 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
   if (candidates.length === 0) return 0;
 
   /*
-   * Bậc để CHÀO: bậc `package` đang bán, sort_order nhỏ nhất, VÀ có bảng giá.
-   *
-   * Điều kiện cuối là bậc `salesOnly` (ADR 0041 điều 5): nó bán bằng tư vấn nên không có giá để
-   * dựng hoá đơn, và nếu nó tình cờ đứng đầu `sort_order` thì mọi lời chào sẽ rơi về "chỉ nhắc".
-   * Lọc ở Postgres thay vì đọc hết rồi lọc trong JS — `jsonb_array_length` không có ở Prisma
-   * query API, nên dùng chính vị từ `termPrices` khác mảng rỗng.
+   * Bậc để CHÀO (ADR 0065): bậc `package` đang bán, TỰ MUA được (có bảng giá, không `salesOnly`),
+   * theo phạm vi loại xe. Gian hàng mua gói theo từng loại xe, nên lời chào cũng theo từng loại
+   * xe gian hàng ĐANG CÓ — bậc nhỏ nhất chứa được đội xe loại đó (`smallestSelfServePlanFor`).
+   * Đội xe vượt mọi bậc tự phục vụ ⇒ không chào giá nào (bậc doanh nghiệp bán bằng tư vấn).
    */
-  const offerPlan = await prisma.plan.findFirst({
-    where: {
-      status: PLAN_STATUS.ACTIVE,
-      billingMode: BILLING_MODE.PACKAGE,
-      NOT: { limitsJson: { path: ['termPrices'], equals: [] } },
-    },
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, code: true, name: true, limitsJson: true },
-  });
+  const offerPlans = (
+    await prisma.plan.findMany({
+      where: { status: PLAN_STATUS.ACTIVE, billingMode: BILLING_MODE.PACKAGE },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, code: true, name: true, vehicleScope: true, limitsJson: true },
+    })
+  ).map((plan) => ({ ...plan, limits: parsePlanLimits(plan.limitsJson) }));
 
   let offered = 0;
   for (const tenant of candidates) {
@@ -481,15 +564,11 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
       /*
        * Đã có hoá đơn gói đang chờ tiền ⇒ CHỈ NHẮC, không chào thêm một hoá đơn nữa (16/09/2026).
        *
-       * Bất biến của `subscription_invoices`: mỗi tenant tối đa MỘT hoá đơn trả được
-       * (`issued`/`partially_paid`) — `BillingService.purchase` giữ nó ở đường người dùng, và từ
-       * migration `…_subscription_invoice_single_payable` chính DB giữ nó. Job này là writer THỨ
-       * HAI của bảng đó, nên nếu chào bừa một hoá đơn nữa thì hoặc sinh hai mã XPG cùng kích hoạt
-       * được gói (trước khi có index), hoặc chết cả transaction vì đụng unique (sau khi có).
-       *
-       * Vì sao NHẮC chứ không void hoá đơn cũ: hoá đơn đang chờ là thứ gian hàng có thể đang
-       * chuyển khoản ngay lúc này, và nó có thể đã nhận một phần tiền. Lời nhắc chung vẫn dẫn họ
-       * về màn gói — nơi hoá đơn đó đang nằm sẵn với QR của nó.
+       * Bất biến của `subscription_invoices`: mỗi tenant tối đa MỘT hoá đơn trả được cho mỗi phạm
+       * vi loại xe (`…_one_payable_per_tenant_scope`). Job này là writer THỨ HAI của bảng đó, nên
+       * chào bừa một hoá đơn nữa là chết cả transaction vì đụng unique. Và vì sao NHẮC chứ không
+       * void: hoá đơn đang chờ là thứ gian hàng có thể đang chuyển khoản ngay lúc này — kể cả
+       * hoá đơn của phạm vi khác, đó là gian hàng đã tự chọn gói, không cần job chọn hộ.
        */
       const pendingInvoice = await tx.subscriptionInvoice.findFirst({
         where: {
@@ -502,36 +581,39 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
       });
 
       let body =
-        'Từ đơn tiếp theo, mỗi chuyến chịu hoa hồng của nền tảng. Mua gói theo chỗ ở màn "Gói của tôi" để về 0đ trên chuyến.';
+        'Từ đơn tiếp theo, mỗi chuyến chịu hoa hồng của nền tảng. Mua gói theo loại xe ở màn "Gói của tôi" để về 0đ trên chuyến.';
 
-      if (offerPlan && !pendingInvoice) {
-        /*
-         * ADR 0041 — bậc gói bán theo TRẦN SỐ XE và KỲ HẠN, giá là con số niêm yết của kỳ hạn.
-         *
-         * Lời chào dựng ở kỳ hạn NHỎ NHẤT mà bậc còn bán: mời một chủ xe vừa hết lượt miễn phí
-         * trả trước 12 tháng là mời họ bỏ đi. Bậc `salesOnly` (bán bằng tư vấn) không có bảng giá
-         * nên không chào được — `offerPlan` đã lọc nó ra bằng chính điều kiện "có termPrices".
-         *
-         * Bản trước (mô hình chỗ xe) đếm đội xe rồi nhân đơn giá; ở mô hình bậc thì đội xe không
-         * vào giá, nó chỉ quyết bậc NÀO phù hợp — và việc chọn bậc là của người dùng, không phải
-         * của một job. Job chào bậc rẻ nhất; họ đổi bậc ở màn "Gói của tôi".
-         */
-        const limits = parsePlanLimits(offerPlan.limitsJson);
-        const cheapest = limits.termPrices[0];
+      if (!pendingInvoice) {
+        const fleet = await tx.vehicle.groupBy({
+          by: ['vehicleType'],
+          where: { tenantId: tenant.id, deletedAt: null },
+          _count: { _all: true },
+        });
+        const offers: string[] = [];
+        for (const [vehicleType, scope] of [
+          [VEHICLE_TYPE.CAR, PLAN_VEHICLE_SCOPE.CAR],
+          [VEHICLE_TYPE.MOTORBIKE, PLAN_VEHICLE_SCOPE.MOTORBIKE],
+        ] as const) {
+          const count = fleet.find((row) => row.vehicleType === vehicleType)?._count._all ?? 0;
+          if (count === 0) continue;
+          const plan = smallestSelfServePlanFor(offerPlans, scope, count);
+          // Kỳ hạn NHỎ NHẤT bậc còn bán: mời một chủ xe vừa hết lượt miễn phí trả trước 12 tháng là
+          // mời họ bỏ đi. Không có bảng giá = không có gì để chào; một hoá đơn 0đ là rác trong sổ.
+          const cheapest = plan?.limits.termPrices[0];
+          if (!plan || !cheapest || Number(cheapest.price) <= 0) continue;
 
-        // Không có bảng giá = không có gì để chào, chỉ nhắc. Một hoá đơn 0đ là rác trong sổ và
-        // webhook không có gì để khớp.
-        if (cheapest && Number(cheapest.price) > 0) {
           const termMonths = cheapest.months;
           const total = new Prisma.Decimal(cheapest.price).toDecimalPlaces(2);
+          const vehicleScope = planVehicleScopeOf(plan.vehicleScope);
           const snapshot: PlanInvoiceSnapshot = {
-            planId: offerPlan.id,
-            planCode: offerPlan.code,
+            planId: plan.id,
+            planCode: plan.code,
             termMonths,
+            vehicleScope,
             quota: {
-              maxVehicles: limits.maxVehicles,
-              maxBranches: limits.maxBranches,
-              maxMembers: limits.maxMembers,
+              maxVehicles: plan.limits.maxVehicles,
+              maxBranches: plan.limits.maxBranches,
+              maxMembers: plan.limits.maxMembers,
             },
             lines: [
               {
@@ -551,6 +633,7 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
               code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE),
               periodFrom: now,
               periodTo: addCalendarMonthsVn(now, termMonths),
+              vehicleScope,
               linesJson: snapshot as unknown as Prisma.InputJsonValue,
               subtotal: total,
               // Giá niêm yết của kỳ hạn LÀ tổng phải trả — không có khoản giảm nào trên một giá
@@ -563,7 +646,12 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
             },
             select: { code: true, totalAmount: true },
           });
-          body = `Từ đơn tiếp theo, mỗi chuyến chịu phí dịch vụ của nền tảng. Đã tạo sẵn hoá đơn gói ${offerPlan.name} (${invoice.totalAmount.toString()}đ/${termMonths} tháng) — chuyển khoản với nội dung ${invoice.code} để kích hoạt, hoặc chọn gói khác ở màn "Gói của tôi".`;
+          offers.push(
+            `gói ${plan.name} (${invoice.totalAmount.toString()}đ/${termMonths} tháng) — nội dung chuyển khoản ${invoice.code}`,
+          );
+        }
+        if (offers.length > 0) {
+          body = `Từ đơn tiếp theo, mỗi chuyến chịu phí dịch vụ của nền tảng. Đã tạo sẵn hoá đơn ${offers.join('; ')}. Chuyển khoản đúng nội dung để kích hoạt, hoặc chọn gói khác ở màn "Gói của tôi".`;
         }
       }
 
@@ -578,4 +666,88 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
     if (done) offered += 1;
   }
   return offered;
+}
+
+/** Nhãn loại xe trong tin vòng đời gói (tin lưu tiếng Việt như mọi tin hệ thống của job này). */
+function vehicleScopeLabel(scope: PlanVehicleScope): string {
+  return scope === PLAN_VEHICLE_SCOPE.MOTORBIKE
+    ? 'xe máy'
+    : scope === PLAN_VEHICLE_SCOPE.CAR
+      ? 'ô tô'
+      : 'xe';
+}
+
+/** Tenant còn một kỳ GÓI khác đang chạy (phạm vi loại xe khác — ADR 0065) không. */
+async function otherPackageTermRunning(
+  client: PrismaClient | Prisma.TransactionClient,
+  tenantId: string,
+  exceptIds: readonly string[],
+  now: Date,
+): Promise<boolean> {
+  const row = await client.tenantSubscription.findFirst({
+    where: {
+      tenantId,
+      id: { notIn: [...exceptIds] },
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      startsAt: { lte: now },
+      endsAt: { gt: now },
+    },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
+/**
+ * Tenant còn một kỳ GÓI khác ĐANG ÂN HẠN không (ADR 0065: gói ô tô và gói xe máy hết hạn lệch
+ * ngày nhau). Kỳ đang ân hạn chưa bao giờ được claim `lapse_handled_at` (vòng lặp chính bỏ qua
+ * nó), nên chỉ cần soát các kỳ CHƯA xử lý — số dòng mỗi tenant là một-hai.
+ */
+async function otherPackageTermInGrace(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  exceptId: string,
+  now: Date,
+): Promise<boolean> {
+  const rows = await tx.tenantSubscription.findMany({
+    where: {
+      tenantId,
+      id: { not: exceptId },
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      lapseHandledAt: null,
+      endsAt: { lte: now },
+    },
+    select: { endsAt: true, plan: { select: { limitsJson: true } } },
+  });
+  return rows.some(
+    (row) => graceEndsAtFor(row.endsAt, parsePlanLimits(row.plan.limitsJson).graceDays) > now,
+  );
+}
+
+/**
+ * Mốc hết ân hạn muộn nhất trong các kỳ GÓI đã hết hạn mà job chưa xử lý của tenant, không sớm hơn
+ * `floor` (mốc của chính dòng đang xét). Chỉ xét kỳ đã QUA ân hạn — kỳ còn ân hạn đã khiến lượt
+ * này dừng ở `otherPackageTermInGrace`.
+ */
+async function latestLapsedGraceEnd(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  floor: Date,
+  now: Date,
+): Promise<Date> {
+  const rows = await tx.tenantSubscription.findMany({
+    where: {
+      tenantId,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      lapseHandledAt: null,
+      endsAt: { lte: now },
+    },
+    select: { endsAt: true, plan: { select: { limitsJson: true } } },
+  });
+  return rows.reduce<Date>((latest, row) => {
+    const graceEnd = graceEndsAtFor(row.endsAt, parsePlanLimits(row.plan.limitsJson).graceDays);
+    return graceEnd <= now && graceEnd > latest ? graceEnd : latest;
+  }, floor);
 }

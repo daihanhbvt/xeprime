@@ -100,7 +100,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
   it('CHỦ XE đọc: dòng họ chịu hiện ra, đánh dấu riêng, không nằm trong tổng khách', () => {
     renderIt(OWNER_BORNE, 'owner');
 
-    expect(screen.getByText('Bảo vệ xe')).toBeTruthy();
+    expect(screen.getByText('Bảo hiểm vật chất xe')).toBeTruthy();
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
     // Tên đối tác bảo hiểm hiện ngay tại dòng — không được thu dưới danh nghĩa một hãng không có.
     expect(screen.getByText(/Đối tác BH/)).toBeTruthy();
@@ -116,7 +116,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
   it('KHÁCH đọc: KHÔNG thấy dòng do chủ xe chịu, tổng vẫn nguyên', () => {
     renderIt(OWNER_BORNE);
 
-    expect(screen.queryByText('Bảo vệ xe')).toBeNull();
+    expect(screen.queryByText('Bảo hiểm vật chất xe')).toBeNull();
     expect(screen.queryByText(/Đối tác BH/)).toBeNull();
     // Tổng khách KHÔNG đổi vì dòng đó vốn chưa từng nằm trong đó.
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();

@@ -237,6 +237,11 @@ export const PARTNER_QUOTA_KIND = {
   UNLIMITED: 'unlimited',
   /** Tuyến/bậc hiện tại không có khái niệm này. */
   NOT_APPLICABLE: 'not_applicable',
+  /**
+   * Gian hàng TUYẾN GÓI chưa có gói cho loại xe này (ADR 0065) — tạo xe / đưa lên chợ bị từ chối
+   * `PLAN_SCOPE_REQUIRED`. Chỉ xuất hiện ở hạn mức THEO LOẠI xe, không ở trần gộp.
+   */
+  NOT_COVERED: 'not_covered',
 } as const;
 
 export type PartnerQuotaKind = (typeof PARTNER_QUOTA_KIND)[keyof typeof PARTNER_QUOTA_KIND];

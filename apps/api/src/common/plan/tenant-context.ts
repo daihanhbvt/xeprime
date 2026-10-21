@@ -48,7 +48,7 @@ export function buildTenantContext(
   allowedBranchIds: readonly string[] | null,
   support?: SupportScope,
 ): TenantContext {
-  const plan = resolveTenantFeatures(tenant.subscriptions[0] ?? null, tenant.usedFeatures, now);
+  const plan = resolveTenantFeatures(tenant.subscriptions, tenant.usedFeatures, now);
   return {
     tenantId: tenant.id,
     tenantStatus: tenant.status,

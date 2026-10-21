@@ -10,6 +10,8 @@ import { packageShopListingGateFrom } from '@xeprime/domain';
 
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
+import { PlanQuotaGateAlert } from '@/features/subscription/components/PlanQuotaGateAlert';
+import { planQuotaGateFrom, type PlanQuotaGate } from '@/features/subscription/plan-quota-gate';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -67,6 +69,9 @@ export function VehiclePublicationTaskItem({
     typeof packageShopListingGateFrom
   > | null>(null);
 
+  /** Gói chưa phủ loại xe này / đã hết suất (ADR 0065) — cùng lý do đứng lại như `listingGate`. */
+  const [planGate, setPlanGate] = useState<PlanQuotaGate | null>(null);
+
   const canSubmit = has(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
 
@@ -74,6 +79,7 @@ export function VehiclePublicationTaskItem({
     submit.mutate(undefined, {
       onSuccess: () => {
         setListingGate(null);
+        setPlanGate(null);
         message.success(t('submitted'));
       },
       onError: (err) => {
@@ -81,7 +87,10 @@ export function VehiclePublicationTaskItem({
         // Mọi lỗi khác vẫn là một toast — chúng không có lối đi tiếp nào ngoài "thử lại".
         const gate = packageShopListingGateFrom(err);
         setListingGate(gate);
-        if (!gate) message.error(errorMessage(err));
+        // Cổng GÓI (ADR 0065) cũng cần một link — tới đúng làn gói của loại xe bị chặn.
+        const quotaGate = planQuotaGateFrom(err);
+        setPlanGate(quotaGate);
+        if (!gate && !quotaGate) message.error(errorMessage(err));
       },
     });
   }
@@ -174,6 +183,7 @@ export function VehiclePublicationTaskItem({
       {task.reason ? <p className={styles.reason}>{task.reason}</p> : null}
 
       {listingGate ? <ShopListingGateAlert missing={listingGate} /> : null}
+      {planGate ? <PlanQuotaGateAlert gate={planGate} /> : null}
 
       {primary || secondary ? (
         <div className={styles.actions}>

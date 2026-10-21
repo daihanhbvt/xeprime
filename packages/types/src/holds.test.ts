@@ -17,6 +17,10 @@ import {
   holdPaymentWindowMinutes,
   holdRemainingMs,
   holdWindowsFor,
+  hasFreeCancelWindow,
+  holdWindowsPreview,
+  CUSTOMER_CANCEL_PREVIEW_KIND,
+  CUSTOMER_CANCEL_PREVIEW_KIND_VALUES,
   clockText,
   countdownSegment,
   countdownState,
@@ -230,6 +234,42 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng 
     const w = holdWindowsFor({ acceptedAt, pickupAt, freeCancelHours: 4, paymentWindowMinutes: 120 });
     expect(w.leadMinutes).toBe(0);
     expect(w.expiresAt.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
+  });
+
+  it('đặt gấp không có cửa sổ huỷ miễn phí — `hasFreeCancelWindow` đọc đúng điều đó từ hai mốc', () => {
+    const urgent = windowsAt(1.5);
+    expect(hasFreeCancelWindow(urgent.freeCancelUntil, acceptedAt)).toBe(false);
+    const near = windowsAt(4);
+    expect(hasFreeCancelWindow(near.freeCancelUntil, acceptedAt)).toBe(true);
+    // Chuỗi ISO từ API đi cùng đường với Date.
+    expect(
+      hasFreeCancelWindow(near.freeCancelUntil.toISOString(), acceptedAt.toISOString()),
+    ).toBe(true);
+  });
+
+  it('xem trước cửa sổ: cùng `holdWindowsFor`, `tooShort` theo CÙNG ngưỡng lượt tạo hold', () => {
+    const now = acceptedAt;
+    const ok = holdWindowsPreview({
+      now,
+      pickupAt: new Date(now.getTime() + 4 * 3_600_000),
+      freeCancelHours: 4,
+      paymentWindowMinutes: 120,
+    });
+    expect(ok.paymentWindowMinutes).toBe(96);
+    expect(ok.tooShort).toBe(false);
+    const tight = holdWindowsPreview({
+      now,
+      pickupAt: new Date(now.getTime() + 10 * 60_000),
+      freeCancelHours: 4,
+      paymentWindowMinutes: 120,
+    });
+    // Hạn bị kẹp về giờ nhận xe còn 10′ < 15′ ⇒ lượt duyệt sẽ nhận HOLD_WINDOW_TOO_SHORT.
+    expect(tight.tooShort).toBe(true);
+  });
+
+  it('bốn kết quả xem trước lượt huỷ — mã đi trên dây, không trùng nhau', () => {
+    expect(new Set(CUSTOMER_CANCEL_PREVIEW_KIND_VALUES).size).toBe(4);
+    expect(CUSTOMER_CANCEL_PREVIEW_KIND_VALUES).toContain(CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL);
   });
 });
 

@@ -319,3 +319,19 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* Hạn mức xe theo loại (ADR 0065): một dòng mỗi loại — nhãn loại, rồi trần do server cưỡng chế. */
+.quotaByType {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.quotaByTypeRow {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(56px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--xp-space-sm);
+}

@@ -7,11 +7,16 @@ import {
   FEE_SCHEDULE_DEFAULTS,
   allocationTotals,
   computeCustomerFees,
+  customerHoldAllocation,
+  insuranceOfferedByKind,
   computeTieredOwnerCommission,
   feePolicyActivationBlockers,
   ownerCommissionPercentForDay,
+  floorToThousand,
+  isThousandStep,
   resolveHoldAllocation,
   roundToThousand,
+  toPublicFeeBreakdown,
   type CustomerFeeBreakdown,
   type FeeLineKey,
   type FeePolicySnapshot,
@@ -57,6 +62,7 @@ function fees(over: Partial<FeeInput> = {}): CustomerFeeBreakdown {
     vehicleType: VEHICLE_TYPE.CAR,
     baseAmount: '5000000',
     rentalDays: 5,
+    insuranceOffered: true,
     ...over,
   });
 }
@@ -92,6 +98,19 @@ describe('roundToThousand — bước giá 1.000đ', () => {
     for (const [input, expected] of cases) {
       expect({ input, out: roundToThousand(input) }).toEqual({ input, out: expected });
     }
+  });
+});
+
+describe('floorToThousand / isThousandStep', () => {
+  it('làm tròn XUỐNG tới bước 1.000đ', () => {
+    expect([0, 999, 1000, 1999, 50_590, 88_515].map(floorToThousand)).toEqual([
+      0, 0, 1000, 1000, 50_000, 88_000,
+    ]);
+  });
+
+  it('bội không âm của 1.000đ — nhận số lẫn chuỗi, rác/âm/rỗng là sai', () => {
+    expect([0, 1000, '50000', '1000000'].every(isThousandStep)).toBe(true);
+    expect([500, 1500, '50500', '-1000', '', 'abc', Number.NaN].some(isThousandStep)).toBe(false);
   });
 });
 
@@ -206,6 +225,222 @@ describe('computeCustomerFees — ví dụ chuẩn: ô tô 5 ngày × 1.000.000�
     expect(r.ownerCommissionAmount).toBe('284000');
     // Chia đều 3.200.000 / 3 ngày sẽ ra 288.000 — khác, và đó là lý do có tham số này.
     expect(fees({ baseAmount: '3200000', rentalDays: 3 }).ownerCommissionAmount).toBe('288000');
+  });
+});
+
+describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên tiền thuê, giao xe 200.000 trả tận tay', () => {
+  /**
+   * Ô tô 5 ngày × 1.000.000đ, giao xe tận nơi 200.000đ, phí sàn 50.000đ, thuế 10%.
+   *
+   * Hai quyết định 21/10/2026 khoá ở đây bằng chính con số: (1) thuế và hoa hồng tính trên TIỀN
+   * THUÊ 5.000.000 — không trên 5.200.000; (2) phí giao không vào mẫu số cọc 30% và không bao giờ
+   * nằm trong mã QR — nó rơi trọn vào phần khách trả tận tay chủ xe. Không sửa số để test xanh.
+   */
+  const TAX10: FeePolicySnapshot = {
+    ...PILOT,
+    taxEnabled: true,
+    taxPercent: 10,
+    taxLabel: 'Thuế khấu trừ',
+  };
+  const trip = (over: Partial<FeeInput> = {}) =>
+    fees({
+      policy: TAX10,
+      baseAmount: '5200000',
+      deliveryAmount: '200000',
+      dayAmounts: Array(5).fill('1000000'),
+      ...over,
+    });
+  const settled = (r: CustomerFeeBreakdown) =>
+    allocationTotals(resolveHoldAllocation(holdLinesOf(r), 'settled', r.taxAmount));
+
+  it('tuyến hoa hồng, không bảo hiểm: H 410.000 · T 500.000 · QR 1.515.000 · trả tay 3.735.000', () => {
+    const r = trip();
+    expect(r.deliveryAmount).toBe('200000');
+    expect(r.ownerCommissionAmount).toBe('410000');
+    expect(r.taxAmount).toBe('500000');
+    expect(r.customerTotalAmount).toBe('5250000');
+    // 30% × (5.250.000 − 200.000 giao xe) = 1.515.000 — phí giao không vào mẫu số.
+    expect(r.onlineAmount).toBe('1515000');
+    expect(r.holdAmount).toBe('1515000');
+    expect(r.payAtPickupAmount).toBe('3735000'); // gồm trọn 200.000 phí giao
+    expect(r.depositAmount).toBe('1055000'); // D = 1.515.000 − 50.000 − 410.000
+    expect(r.platformRetainedAmount).toBe('460000');
+    expect(r.ownerPayableAmount).toBe('555000'); // D − T
+    // Chủ xe nhận cho TIỀN THUÊ = R − H − T = 5.000.000 − 410.000 − 500.000; phí giao 200.000 đi riêng.
+    expect(r.ownerNetAmount).toBe('4090000');
+    expect(r.taxableBaseAmount).toBe('5000000');
+    const totals = settled(r);
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('555000'); // ví chủ xe
+    expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('500000');
+    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
+  });
+
+  it('tuyến hoa hồng, bảo hiểm vật chất 50.000/ngày: QR 1.590.000 · trả tay 3.910.000', () => {
+    const r = trip({ vehicleProtectionSelected: true });
+    expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(250000);
+    expect(r.ownerCommissionAmount).toBe('410000');
+    expect(r.taxAmount).toBe('500000');
+    expect(r.customerTotalAmount).toBe('5500000');
+    expect(r.onlineAmount).toBe('1590000'); // 30% × 5.300.000
+    expect(r.payAtPickupAmount).toBe('3910000');
+    expect(r.depositAmount).toBe('880000');
+    expect(r.ownerPayableAmount).toBe('380000');
+    expect(r.ownerNetAmount).toBe('4090000');
+    const totals = settled(r);
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('380000');
+    expect(totals[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('250000');
+    expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('500000');
+    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
+  });
+
+  it('tuyến gói, bật thu cọc: H = 0 · QR 1.515.000 · ví chủ xe 965.000 · chủ xe nhận 4.500.000', () => {
+    const r = trip({ billingMode: BILLING_MODE.PACKAGE, depositRequired: true });
+    expect(lineOf(r, FEE_LINE.OWNER_COMMISSION)).toBeUndefined();
+    expect(r.ownerCommissionAmount).toBe('0');
+    expect(r.taxAmount).toBe('500000');
+    expect(r.onlineAmount).toBe('1515000');
+    expect(r.payAtPickupAmount).toBe('3735000');
+    expect(r.depositAmount).toBe('1465000');
+    expect(r.platformRetainedAmount).toBe('50000');
+    expect(r.ownerPayableAmount).toBe('965000');
+    expect(r.ownerNetAmount).toBe('4500000'); // R − T, phí giao 200.000 đi riêng
+    expect(settled(r)[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('965000');
+  });
+
+  it('phí giao KHÔNG vào mã QR: thêm 200.000 giao xe chỉ đổi phần trả tay, đúng 200.000', () => {
+    const withDelivery = trip();
+    const without = fees({
+      policy: TAX10,
+      baseAmount: '5000000',
+      dayAmounts: Array(5).fill('1000000'),
+    });
+    expect(withDelivery.onlineAmount).toBe(without.onlineAmount);
+    expect(withDelivery.taxAmount).toBe(without.taxAmount);
+    expect(withDelivery.ownerCommissionAmount).toBe(without.ownerCommissionAmount);
+    expect(Number(withDelivery.payAtPickupAmount) - Number(without.payAtPickupAmount)).toBe(200000);
+    // Phí giao là tiền mặt chủ xe nhận tận tay, hiện riêng — không đổi "chủ xe nhận cho tiền thuê".
+    expect(withDelivery.ownerNetAmount).toBe(without.ownerNetAmount);
+    expect(withDelivery.taxableBaseAmount).toBe('5000000');
+  });
+
+  it('không có giá từng ngày ⇒ chia đều TIỀN THUÊ, không chia đều cả phí giao', () => {
+    // 5.200.000 / 5 = 1.040.000/ngày sẽ ra H = 426.400 — thu hoa hồng trên phí giao.
+    const r = fees({ policy: TAX10, baseAmount: '5200000', deliveryAmount: '200000' });
+    expect(r.ownerCommissionAmount).toBe('410000');
+  });
+
+  it('sàn cọc vượt 30%: xe máy 1 ngày 100.000, hai gói bảo hiểm, thuế 10%, giao 50.000', () => {
+    /*
+     * S 30.000 + H 10.000 + IV 15.000 + IP 5.000 + T 10.000 = 70.000 > 30% × 150.000 = 45.000:
+     * cọc nâng lên đủ phần không phải của chủ xe, và phí giao vẫn nằm trọn ngoài mã QR.
+     */
+    const r = fees({
+      policy: TAX10,
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      baseAmount: '150000',
+      deliveryAmount: '50000',
+      rentalDays: 1,
+      vehicleProtectionSelected: true,
+      personalAccidentSelected: true,
+    });
+    expect(r.taxAmount).toBe('10000');
+    expect(r.onlineAmount).toBe('70000');
+    expect(r.depositAmount).toBe('10000');
+    expect(r.ownerPayableAmount).toBe('0');
+    expect(r.payAtPickupAmount).toBe('130000');
+    // R − H − T = 100.000 − 10.000 − 10.000; phí giao 50.000 chủ xe nhận tận tay, đi riêng.
+    expect(r.ownerNetAmount).toBe('80000');
+  });
+
+  it('phí giao âm, rác hoặc lớn hơn cả B ⇒ ném', () => {
+    expect(() => trip({ deliveryAmount: '-1000' })).toThrow();
+    expect(() => trip({ deliveryAmount: 'abc' })).toThrow();
+    expect(() => trip({ deliveryAmount: '6000000' })).toThrow();
+  });
+});
+
+describe('computeCustomerFees — insuranceOffered là cổng của NỀN TẢNG', () => {
+  it('false ⇒ không bao giờ có IV/IP, dù khách tích và chính sách đang mở', () => {
+    const r = fees({
+      insuranceOffered: false,
+      vehicleProtectionSelected: true,
+      personalAccidentSelected: true,
+    });
+    expect(lineOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBeUndefined();
+    expect(lineOf(r, FEE_LINE.TRIP_INSURANCE)).toBeUndefined();
+    expect(r.customerTotalAmount).toBe('5050000');
+    expect(r.onlineAmount).toBe('1515000');
+  });
+
+  it('true + khách tích ⇒ có dòng (đối chứng)', () => {
+    const r = fees({ insuranceOffered: true, vehicleProtectionSelected: true });
+    expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(250000);
+  });
+
+  it('theo TỪNG sản phẩm (ADR 0064): sản phẩm bị tắt ⇒ không thu dù client cũ gửi selected', () => {
+    const onlyIp = fees({
+      insuranceOffered: { vehicleProtection: false, tripInsurance: true },
+      vehicleProtectionSelected: true,
+      personalAccidentSelected: true,
+    });
+    expect(lineOf(onlyIp, FEE_LINE.VEHICLE_PROTECTION)).toBeUndefined();
+    expect(lineOf(onlyIp, FEE_LINE.TRIP_INSURANCE)).toBeDefined();
+
+    const onlyIv = fees({
+      insuranceOffered: { vehicleProtection: true, tripInsurance: false },
+      vehicleProtectionSelected: true,
+      personalAccidentSelected: true,
+    });
+    expect(lineOf(onlyIv, FEE_LINE.VEHICLE_PROTECTION)).toBeDefined();
+    expect(lineOf(onlyIv, FEE_LINE.TRIP_INSURANCE)).toBeUndefined();
+  });
+
+  it('insuranceOfferedByKind: boolean áp cho cả hai sản phẩm', () => {
+    expect(insuranceOfferedByKind(true)).toEqual({ vehicleProtection: true, tripInsurance: true });
+    expect(insuranceOfferedByKind(false)).toEqual({ vehicleProtection: false, tripInsurance: false });
+  });
+});
+
+describe('toPublicFeeBreakdown — khách KHÔNG thấy kinh tế của chủ xe', () => {
+  it('bỏ H, T, D, ví chủ xe, chủ xe thực nhận, sàn giữ lại, phần tài trợ được và nấc hoa hồng', () => {
+    const full = fees({
+      policy: { ...PILOT, taxEnabled: true, taxPercent: 10, taxLabel: 'T' },
+      vehicleProtectionSelected: true,
+    });
+    const pub = toPublicFeeBreakdown(full) as unknown as Record<string, unknown>;
+    for (const key of [
+      'ownerCommissionAmount',
+      'platformRetainedAmount',
+      'ownerNetAmount',
+      'ownerPayableAmount',
+      'taxAmount',
+      'taxableBaseAmount',
+      'depositAmount',
+      'sponsorableAmount',
+      'billingMode',
+    ]) {
+      expect({ key, present: key in pub }).toEqual({ key, present: false });
+    }
+    const policy = pub.policy as Record<string, unknown>;
+    for (const key of ['ownerCommissionTiers', 'taxEnabled', 'taxPercent', 'serviceFeePercent']) {
+      expect({ key, present: key in policy }).toEqual({ key, present: false });
+    }
+    const lines = pub.lines as { bearer: string; key: string }[];
+    expect(lines.every((line) => line.bearer === FEE_BEARER.CUSTOMER)).toBe(true);
+    expect(lines.map((line) => line.key)).toEqual([
+      FEE_LINE.SERVICE_FEE,
+      FEE_LINE.VEHICLE_PROTECTION,
+    ]);
+  });
+
+  it('các con số khách trả giữ NGUYÊN', () => {
+    const full = fees({ vehicleProtectionSelected: true });
+    const pub = toPublicFeeBreakdown(full);
+    expect(pub.customerTotalAmount).toBe(full.customerTotalAmount);
+    expect(pub.onlineAmount).toBe(full.onlineAmount);
+    expect(pub.holdAmount).toBe(full.holdAmount);
+    expect(pub.payAtPickupAmount).toBe(full.payAtPickupAmount);
+    expect(pub.customerFeeTotal).toBe(full.customerFeeTotal);
   });
 });
 
@@ -455,55 +690,65 @@ describe('computeCustomerFees — BẤT BIẾN trên một lưới đầu vào',
               [false, true],
               [true, true],
             ] as const)
-              for (const policy of [PILOT, taxed]) {
-                const r = fees({
-                  ...track,
-                  policy,
-                  vehicleType,
-                  rentalDays,
-                  baseAmount: String(dailyPrice * rentalDays),
-                  vehicleProtectionSelected,
-                  personalAccidentSelected,
-                });
-                const n = (v: string) => Number(v);
-                const insurance =
-                  amountOf(r, FEE_LINE.VEHICLE_PROTECTION) + amountOf(r, FEE_LINE.TRIP_INSURANCE);
-                const checks: Record<string, boolean> = {
-                  onlinePlusPickupIsTotal:
-                    n(r.onlineAmount) + n(r.payAtPickupAmount) === n(r.customerTotalAmount),
-                  grossOnlineIsSumOfLines:
-                    n(r.grossOnlineAmount) ===
-                    n(r.depositAmount) + n(r.platformRetainedAmount) + insurance,
-                  pickupPlusPayableIsOwnerNet:
-                    n(r.payAtPickupAmount) + n(r.ownerPayableAmount) === n(r.ownerNetAmount),
-                  ownerNetIsBaseMinusDeductions:
-                    n(r.ownerNetAmount) ===
-                    n(r.baseAmount) - n(r.ownerCommissionAmount) - n(r.taxAmount),
-                  thousandStep: [
-                    r.customerTotalAmount,
-                    r.onlineAmount,
-                    r.payAtPickupAmount,
-                    r.depositAmount,
-                    r.ownerCommissionAmount,
-                    r.ownerPayableAmount,
-                    r.ownerNetAmount,
-                    r.taxAmount,
-                    ...r.lines.map((l) => l.amount),
-                  ].every((v) => n(v) % 1000 === 0),
-                  nonNegative: [r.depositAmount, r.ownerPayableAmount, r.payAtPickupAmount].every(
-                    (v) => n(v) >= 0,
-                  ),
-                  collectsOnline: r.holdAmount === r.onlineAmount,
-                };
-                const failed = Object.keys(checks).filter((k) => !checks[k]);
-                if (failed.length) {
-                  violations.push(
-                    `${vehicleType}/${track.billingMode}/${track.depositRequired}/${rentalDays}d/` +
-                      `${dailyPrice}/${vehicleProtectionSelected}/${personalAccidentSelected}/` +
-                      `${policy.taxEnabled}: ${failed.join(',')}`,
-                  );
+              for (const policy of [PILOT, taxed])
+                for (const delivery of [0, 150_000]) {
+                  const r = fees({
+                    ...track,
+                    policy,
+                    vehicleType,
+                    rentalDays,
+                    baseAmount: String(dailyPrice * rentalDays + delivery),
+                    deliveryAmount: String(delivery),
+                    vehicleProtectionSelected,
+                    personalAccidentSelected,
+                  });
+                  const n = (v: string) => Number(v);
+                  const insurance =
+                    amountOf(r, FEE_LINE.VEHICLE_PROTECTION) + amountOf(r, FEE_LINE.TRIP_INSURANCE);
+                  const checks: Record<string, boolean> = {
+                    onlinePlusPickupIsTotal:
+                      n(r.onlineAmount) + n(r.payAtPickupAmount) === n(r.customerTotalAmount),
+                    grossOnlineIsSumOfLines:
+                      n(r.grossOnlineAmount) ===
+                      n(r.depositAmount) + n(r.platformRetainedAmount) + insurance,
+                    pickupPlusPayableIsOwnerNetPlusDelivery:
+                      n(r.payAtPickupAmount) + n(r.ownerPayableAmount) ===
+                      n(r.ownerNetAmount) + delivery,
+                    ownerNetIsRentMinusDeductions:
+                      n(r.ownerNetAmount) ===
+                      n(r.baseAmount) - delivery - n(r.ownerCommissionAmount) - n(r.taxAmount),
+                    taxableBaseIsRent: n(r.taxableBaseAmount!) === n(r.baseAmount) - delivery,
+                    thousandStep: [
+                      r.customerTotalAmount,
+                      r.onlineAmount,
+                      r.payAtPickupAmount,
+                      r.depositAmount,
+                      r.ownerCommissionAmount,
+                      r.ownerPayableAmount,
+                      r.ownerNetAmount,
+                      r.taxAmount,
+                      ...r.lines.map((l) => l.amount),
+                    ].every((v) => n(v) % 1000 === 0),
+                    nonNegative: [r.depositAmount, r.ownerPayableAmount, r.payAtPickupAmount].every(
+                      (v) => n(v) >= 0,
+                    ),
+                    collectsOnline: r.holdAmount === r.onlineAmount,
+                    // Phí giao luôn rơi trọn vào phần trả tay — không bao giờ vào mã QR.
+                    deliveryAtPickup: n(r.payAtPickupAmount) >= delivery,
+                    // Thuế tính trên TIỀN THUÊ, không trên phí giao (ADR 0064).
+                    taxOnRentOnly:
+                      !policy.taxEnabled ||
+                      n(r.taxAmount) === roundToThousand((dailyPrice * rentalDays * 7) / 100),
+                  };
+                  const failed = Object.keys(checks).filter((k) => !checks[k]);
+                  if (failed.length) {
+                    violations.push(
+                      `${vehicleType}/${track.billingMode}/${track.depositRequired}/${rentalDays}d/` +
+                        `${dailyPrice}/${vehicleProtectionSelected}/${personalAccidentSelected}/` +
+                        `${policy.taxEnabled}/${delivery}: ${failed.join(',')}`,
+                    );
+                  }
                 }
-              }
     expect(violations).toEqual([]);
   });
 });
@@ -825,5 +1070,46 @@ describe('feePolicyActivationBlockers — ADR 0028 điều 4–5, ADR 0033, lu�
         holdPaymentWindowMinutes: HOLD_MIN_USABLE_WINDOW_MINUTES,
       }),
     ).not.toContain('hold_window_out_of_range');
+  });
+});
+
+describe('customerHoldAllocation — khoản giữ chỗ như khách thấy (ADR 0064 điều 11)', () => {
+  /** Hình dạng `allocation_json` thật: D 1.055.000 · H 410.000 · S 50.000 · IV 250.000 · P 30.000. */
+  const lines = [
+    { key: FEE_LINE.DEPOSIT, beneficiary: 'owner', bearer: 'customer', amount: '1055000' },
+    { key: FEE_LINE.OWNER_COMMISSION, beneficiary: 'platform', bearer: 'owner', amount: '410000' },
+    { key: FEE_LINE.PROMO, beneficiary: 'platform', bearer: 'customer', amount: '30000' },
+    { key: FEE_LINE.SERVICE_FEE, beneficiary: 'platform', bearer: 'customer', amount: '50000' },
+    { key: FEE_LINE.VEHICLE_PROTECTION, beneficiary: 'insurer', bearer: 'customer', amount: '250000' },
+  ];
+  const amount = 1055000 + 410000 + 50000 + 250000 - 30000;
+
+  it('gộp D + H thành MỘT dòng; không dòng nào mang riêng D hay H', () => {
+    const shown = customerHoldAllocation(lines);
+    expect(shown.map((l) => l.key)).toEqual([
+      FEE_LINE.RENT_PREPAID,
+      FEE_LINE.PROMO,
+      FEE_LINE.SERVICE_FEE,
+      FEE_LINE.VEHICLE_PROTECTION,
+    ]);
+    expect(shown[0]!.amount).toBe('1465000');
+    expect(shown.some((l) => l.amount === '1055000' || l.amount === '410000')).toBe(false);
+  });
+
+  it('các dòng vẫn cộng đúng bằng số khách chuyển (PROMO là dòng trừ)', () => {
+    const sum = customerHoldAllocation(lines).reduce(
+      (s, l) => s + (l.key === FEE_LINE.PROMO ? -1 : 1) * Number(l.amount),
+      0,
+    );
+    expect(sum).toBe(amount);
+  });
+
+  it('dòng phía chủ xe khác (bearer = owner) không lọt; danh sách rỗng/null ⇒ rỗng', () => {
+    expect(
+      customerHoldAllocation([
+        { key: FEE_LINE.TAX, beneficiary: 'tax_authority', bearer: 'owner', amount: '1000' },
+      ]),
+    ).toEqual([]);
+    expect(customerHoldAllocation(null)).toEqual([]);
   });
 });

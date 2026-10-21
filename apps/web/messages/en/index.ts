@@ -69,6 +69,8 @@ import supportCases from '@xeprime/domain/messages/en/support-cases.json';
 import feePolicies from '@xeprime/domain/messages/en/fee-policies.json';
 import promoCodes from '@xeprime/domain/messages/en/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/en/platform-money.json';
+import insurance from '@xeprime/domain/messages/en/insurance.json';
+import adminInsurance from '@xeprime/domain/messages/en/admin-insurance.json';
 import platformSellers from '@xeprime/domain/messages/en/platform-sellers.json';
 import adminDriverLicences from '@xeprime/domain/messages/en/admin-driver-licences.json';
 import adminAppConfig from '@xeprime/domain/messages/en/admin-app-config.json';
@@ -135,6 +137,8 @@ const messages = {
   FeePolicies: feePolicies,
   PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
+  Insurance: insurance,
+  AdminInsurance: adminInsurance,
   PlatformSellers: platformSellers,
   AdminDriverLicences: adminDriverLicences,
   AdminAppConfig: adminAppConfig,

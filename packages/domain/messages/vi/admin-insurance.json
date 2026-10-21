@@ -1,0 +1,178 @@
+{
+  "page": {
+    "title": "Bảo hiểm chuyến",
+    "subtitle": "Danh mục sản phẩm MIC hiện cho khách và hàng đợi giấy chứng nhận đã bán.",
+    "tabsLabel": "Khu vực quản trị bảo hiểm"
+  },
+  "tabs": {
+    "products": "Sản phẩm",
+    "certificates": "Chứng nhận"
+  },
+  "products": {
+    "tableLabel": "Danh mục sản phẩm bảo hiểm",
+    "feePolicyNote": "Biểu phí theo ngày (ô tô / xe máy) cấu hình ở Chính sách phí và có phiên bản. Ở đây chỉ sửa phần mô tả hiện cho khách và bật/tắt sản phẩm.",
+    "openFeePolicies": "Mở Chính sách phí",
+    "columns": {
+      "product": "Sản phẩm",
+      "deductible": "Khấu trừ / vụ",
+      "maxPayout": "Bồi thường tối đa",
+      "status": "Trạng thái",
+      "updatedAt": "Cập nhật"
+    },
+    "perVehicle": "Ô tô {car} · Xe máy {motorbike}",
+    "noDeductible": "Không áp dụng",
+    "active": "Đang bật",
+    "inactive": "Đang tắt",
+    "edit": "Sửa",
+    "empty": {
+      "title": "Chưa có sản phẩm bảo hiểm nào",
+      "description": "Danh mục được nạp khi chạy seed dữ liệu nền (SEED_MODE=system)."
+    },
+    "loadError": "Không tải được danh mục sản phẩm."
+  },
+  "form": {
+    "title": "Sửa sản phẩm · {name}",
+    "submit": "Lưu thay đổi",
+    "intro": "Hợp đồng đã bán giữ bản chụp sản phẩm của riêng nó — sửa ở đây chỉ áp cho các chuyến từ nay về sau.",
+    "sections": {
+      "naming": "Tên hiển thị",
+      "coverage": "Quyền lợi",
+      "amounts": "Khấu trừ & bồi thường",
+      "operation": "Vận hành"
+    },
+    "fields": {
+      "nameVi": "Tên (tiếng Việt)",
+      "nameEn": "Tên (tiếng Anh)",
+      "coverageVi": "Phạm vi bảo vệ (tiếng Việt)",
+      "coverageEn": "Phạm vi bảo vệ (tiếng Anh)",
+      "deductibleCar": "Khấu trừ / vụ — ô tô",
+      "deductibleMotorbike": "Khấu trừ / vụ — xe máy",
+      "maxPayoutCar": "Bồi thường tối đa — ô tô",
+      "maxPayoutMotorbike": "Bồi thường tối đa — xe máy",
+      "maxPayoutNoteVi": "Ghi chú bồi thường (tiếng Việt)",
+      "maxPayoutNoteEn": "Ghi chú bồi thường (tiếng Anh)",
+      "partnerProductCode": "Mã sản phẩm đối tác",
+      "certificateUrlTemplate": "Mẫu URL tra cứu giấy chứng nhận",
+      "displayOrder": "Thứ tự hiển thị",
+      "isActive": "Đang bật",
+      "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng."
+    },
+    "help": {
+      "amountEmpty": "Để trống nếu không áp dụng.",
+      "maxPayoutNote": "Ví dụ: “Theo giá trị thực tế của xe”, “Mỗi người, mỗi vụ”.",
+      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' — chỗ thay số chứng nhận."
+    },
+    "validation": {
+      "required": "Bắt buộc nhập.",
+      "tooShort": "Tối thiểu {min} ký tự.",
+      "tooLong": "Tối đa {max} ký tự.",
+      "amountStep": "Số tiền phải là bội số của 1.000 đ.",
+      "amountMin": "Số tiền không được âm.",
+      "urlTemplate": "Mẫu phải bắt đầu bằng https:// và chứa '{certCode}'.",
+      "displayOrder": "Thứ tự từ {min} đến {max}.",
+      "amountMax": "Số tiền quá lớn."
+    },
+    "saved": "Đã lưu sản phẩm {name}."
+  },
+  "certificates": {
+    "tableLabel": "Hàng đợi giấy chứng nhận bảo hiểm",
+    "filters": {
+      "search": "Tìm kiếm",
+      "searchPlaceholder": "Mã đơn hoặc số chứng nhận",
+      "status": "Trạng thái",
+      "productKind": "Sản phẩm"
+    },
+    "defaultViewHint": "Đang xem hợp đồng LỖI — việc cần xử lý. Chuyển sang \"Tất cả\" để xem lịch sử.",
+    "columns": {
+      "booking": "Đơn",
+      "tenant": "Gian hàng · xe",
+      "product": "Sản phẩm",
+      "premium": "Phí đã thu",
+      "status": "Trạng thái",
+      "certificate": "Chứng nhận",
+      "attempts": "Lần thử",
+      "open": "Mở chi tiết"
+    },
+    "testTag": "THỬ NGHIỆM",
+    "noCertificate": "Chưa có",
+    "attemptCount": "{count, plural, =0 {Chưa thử} other {# lần}}",
+    "noAutoRetry": "Không tự thử lại",
+    "nextAttempt": "Thử lại lúc {time}",
+    "empty": {
+      "title": "Không có hợp đồng nào cần xử lý",
+      "description": "Hợp đồng lỗi phát hành sẽ hiện ở đây."
+    },
+    "noResults": "Không có hợp đồng nào khớp bộ lọc.",
+    "loadError": "Không tải được hàng đợi giấy chứng nhận.",
+    "total": "{count, plural, other {# hợp đồng}}",
+    "partnerMissing": {
+      "title": "Chưa cắm đối tác bảo hiểm",
+      "body": "Môi trường này chưa có đối tác phát hành nên các hợp đồng dừng ở trạng thái lỗi. Phí đã thu đang được giữ hộ; thử lại sẽ không cấp được giấy chứng nhận cho tới khi cắm đối tác."
+    },
+    "view": {
+      "label": "Góc nhìn hàng đợi",
+      "todo": "Cần xử lý",
+      "all": "Tất cả"
+    },
+    "emptyAll": {
+      "title": "Chưa có hợp đồng bảo hiểm nào",
+      "description": "Hợp đồng bảo hiểm của các chuyến sẽ hiện ở đây."
+    }
+  },
+  "drawer": {
+    "title": "Hợp đồng bảo hiểm",
+    "previous": "Hợp đồng trước",
+    "next": "Hợp đồng sau",
+    "sideLabel": "Bằng chứng với đối tác",
+    "loadError": "Không tải được hợp đồng.",
+    "facts": {
+      "booking": "Đơn",
+      "tenant": "Gian hàng",
+      "customer": "Khách",
+      "vehicle": "Xe",
+      "product": "Sản phẩm",
+      "premium": "Phí đã thu",
+      "partner": "Đối tác",
+      "partnerProductCode": "Mã sản phẩm đối tác",
+      "certificate": "Số chứng nhận",
+      "coverage": "Hiệu lực",
+      "issuedAt": "Cấp lúc",
+      "consentAt": "Khách chọn lúc",
+      "attempts": "Số lần gọi đối tác",
+      "lastAttemptAt": "Lần gọi gần nhất",
+      "nextAttemptAt": "Lần thử kế tiếp",
+      "lastError": "Lỗi gần nhất",
+      "idempotencyKey": "Khoá chống mua đôi",
+      "createdAt": "Tạo lúc",
+      "cancelledAt": "Huỷ lúc",
+      "voidedAt": "Thu hồi lúc"
+    },
+    "payload": {
+      "request": "Yêu cầu gửi đối tác",
+      "response": "Phản hồi của đối tác",
+      "product": "Bản chụp sản phẩm lúc bán",
+      "empty": "Chưa có"
+    },
+    "testNote": "Giấy chứng nhận THỬ NGHIỆM do adapter giả lập cấp — không có hiệu lực bảo hiểm.",
+    "copy": "Sao chép",
+    "openBooking": "Mở đơn",
+    "viewCertificate": "Xem giấy chứng nhận",
+    "footer": {
+      "failed": "Hợp đồng lỗi: thử phát hành lại, hoặc thu hồi nếu không thể cấp.",
+      "issued": "Đã cấp chứng nhận. Thu hồi khi chuyến bị huỷ sau bàn giao.",
+      "other": "Không có thao tác nào cho trạng thái này."
+    },
+    "retry": "Thử phát hành lại",
+    "retryQueued": "Đã xếp lượt phát hành lại — worker xử lý trong khoảng một phút.",
+    "void": "Thu hồi",
+    "voidDialog": {
+      "title": "Thu hồi hợp đồng bảo hiểm",
+      "summary": "Phí {amount} của đơn {code} sẽ quyết toán riêng với đối tác.",
+      "hint": "Lý do được ghi vào nhật ký hệ thống và hồ sơ làm việc với đối tác.",
+      "reasonLabel": "Lý do thu hồi",
+      "reasonPlaceholder": "VD: Chuyến bị huỷ sau bàn giao, đối tác xác nhận huỷ hợp đồng",
+      "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự).",
+      "done": "Đã thu hồi hợp đồng."
+    }
+  }
+}

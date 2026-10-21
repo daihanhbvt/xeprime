@@ -31,7 +31,12 @@
     "unknown": "Chưa có thông tin",
     "noteBlock": "Ghi chú",
     "cardTitle": "Chi tiết đơn đặt xe",
-    "pageSubtitle": "Quản lý chuyến đi và quá trình cho thuê hiện tại"
+    "pageSubtitle": "Quản lý chuyến đi và quá trình cho thuê hiện tại",
+    "forbiddenTitle": "Không có quyền xem đơn thuê",
+    "forbiddenBody": "Liên hệ quản trị viên nếu bạn cần quyền này.",
+    "viewVehicle": "Xem hồ sơ xe",
+    "addDocuments": "Bổ sung giấy tờ",
+    "packageValue": "Gói {label}"
   },
   "actionBar": {
     "contract": "Hợp đồng",
@@ -53,8 +58,8 @@
     "dialog": {
       "cancelTitle": "Hủy đơn {code}",
       "noShowTitle": "Ghi nhận khách không đến — đơn {code}",
-      "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất.",
-      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất.",
+      "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền giữ chỗ khách đã chuyển qua XePrime (nếu có) được hoàn 100% vào Ví điểm của khách.",
+      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; phần còn lại của tiền giữ chỗ chia đôi giữa bạn và XePrime.",
       "cancelOk": "Hủy đơn",
       "noShowOk": "Ghi nhận không đến",
       "keep": "Giữ nguyên đơn",
@@ -153,6 +158,13 @@
       "holdPaid": "Đã giữ chỗ qua XePrime",
       "payAtPickup": "Còn trả chủ xe khi nhận xe",
       "note": "Khoản giữ chỗ do XePrime thu nên không nằm trong dòng “Đã thu” của gian hàng."
+    },
+    "ownerEconomics": {
+      "title": "Phần của bạn",
+      "commission": "Hoa hồng XePrime",
+      "tax": "Thuế khấu trừ",
+      "ownerNet": "Bạn thực nhận cho tiền thuê",
+      "note": "Số đã chốt lúc đặt. Hoa hồng và thuế được giữ lại từ tiền giữ chỗ trước khi phần còn lại vào Ví điểm của bạn khi chuyến hoàn thành."
     }
   },
   "driver": {

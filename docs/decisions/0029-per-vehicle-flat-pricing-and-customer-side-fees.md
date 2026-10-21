@@ -2,6 +2,8 @@
 
 Ngày: 04/09/2026 · Trạng thái: **Partially superseded — điều 3 (giá phẳng theo chỗ) bị [ADR 0041](0041-plan-tiers-by-vehicle-count.md) ghi đè**; điều 2 được [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) làm rõ (thuế `T` khấu trừ phía chủ xe, không cộng vào tổng khách; bảo hiểm do khách trả); điều 1, 4 còn hiệu lực · Ghi đè ADR 0020 (đã gỡ) điều 2 và phép kiểm điểm giao · Cụ thể hoá giá pilot của [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 2
 
+> ⚠️ **[ADR 0064](0064-financial-flow-v2.md) (21/10/2026) ghi đè điều 1 và dòng "Phí dịch vụ XePrime 10%" ở điều 2:** phía khách chỉ còn phí sàn `S` cố định theo loại xe; phần tỉ lệ thành hoa hồng lũy tiến `H` trừ vào tiền chủ xe tuyến hoa hồng.
+
 ## Bối cảnh
 
 Giá pilot của ADR 0028 ("100.000đ/ô tô/tháng, 40.000đ/xe máy/tháng, tối thiểu 3 tháng") không

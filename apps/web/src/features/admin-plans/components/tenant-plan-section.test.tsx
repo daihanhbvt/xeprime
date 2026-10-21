@@ -43,7 +43,8 @@ vi.mock('../hooks/use-plans', () => ({
       isLoading: false,
       isError: false,
       data: hooks.items.filter(
-        (item) => item.status === 'active' && new Date(item.endsAt as string).getTime() > Date.now(),
+        (item) =>
+          item.status === 'active' && new Date(item.endsAt as string).getTime() > Date.now(),
       ),
       refetch: vi.fn(),
     };
@@ -103,6 +104,7 @@ function sub(over: Record<string, unknown>) {
     planId: 'p-basic',
     planCode: 'shop-basic',
     planName: 'Gói cơ bản',
+    vehicleScope: 'motorbike',
     status: 'active',
     price: '250000',
     termMonths: 3,
@@ -138,6 +140,7 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
         id: 'old',
         planName: 'Tuyến hoa hồng mặc định',
         billingMode: 'commission',
+        vehicleScope: 'all',
         status: 'cancelled',
         price: '0',
         startsAt: at(-5),
@@ -155,7 +158,7 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
     expect(within(rows[1]!).getByText('Đang hiệu lực')).toBeTruthy();
     expect(within(rows[2]!).getByText('Đã huỷ')).toBeTruthy();
     // Thẻ tóm tắt: kỳ đang chạy + kỳ kế tiếp.
-    expect(screen.getByText('Kỳ kế tiếp · đã xếp lịch')).toBeTruthy();
+    expect(screen.getByText(/Kỳ kế tiếp · đã xếp lịch · Xe máy/)).toBeTruthy();
   });
 
   it('chỉ huỷ được kỳ cuối chuỗi: kỳ xếp lịch có "Huỷ lịch", kỳ đang chạy thì không', () => {
@@ -174,10 +177,12 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
 
   it('kỳ server chấm "đang hiệu lực" giữ nguyên dù đồng hồ client chậm hơn ngày bắt đầu', () => {
     // Kỳ vừa "đổi gói ngay": startsAt nhích sau đồng hồ client vài giây.
-    hooks.items = [sub({ id: 'fresh', startsAt: at(0.0001), endsAt: at(30), termState: 'current' })];
+    hooks.items = [
+      sub({ id: 'fresh', startsAt: at(0.0001), endsAt: at(30), termState: 'current' }),
+    ];
     renderSection();
     expect(screen.getByText('Đang hiệu lực', { selector: '.ant-tag' })).toBeTruthy();
-    expect(screen.queryByText('Kỳ kế tiếp · đã xếp lịch')).toBeNull();
+    expect(screen.queryByText(/Kỳ kế tiếp · đã xếp lịch/)).toBeNull();
   });
 
   it('hộp gia hạn nói rõ kỳ trả phí cuối cùng mà kỳ mới sẽ nối theo', () => {
@@ -186,6 +191,7 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
         id: 'p-adv',
         code: 'shop-advanced',
         name: 'Gói nâng cao',
+        vehicleScope: 'motorbike',
         billingMode: 'package',
         commissionPercent: null,
         limits: { maxVehicles: 10, maxBranches: 3, termPrices: [{ months: 1, price: '250000' }] },
@@ -194,7 +200,149 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
     renderSection();
     fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
     expect(screen.getByText('Gia hạn hoặc đổi gói')).toBeTruthy();
-    // Nối sau kỳ XẾP LỊCH (ends muộn nhất), không phải sau kỳ đang chạy.
-    expect(screen.getByText(/Kỳ trả phí cuối cùng: Gói nâng cao/)).toBeTruthy();
+    // Mọi kỳ trả phí còn hạn, mỗi kỳ một dòng có nhãn loại xe.
+    expect(screen.getByText(/Xe máy: Gói nâng cao, hết hạn/)).toBeTruthy();
+    expect(screen.getByText(/Xe máy: Gói cơ bản, hết hạn/)).toBeTruthy();
+  });
+});
+
+describe('TenantPlanSection — kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
+  const carPlan = {
+    id: 'p-car',
+    code: 'car_5',
+    name: 'Ô tô 5 xe',
+    vehicleScope: 'car',
+    billingMode: 'package',
+    commissionPercent: null,
+    status: 'active',
+    limits: { maxVehicles: 5, termPrices: [{ months: 1, price: '500000' }] },
+  };
+  const enterprise = {
+    id: 'p-ent',
+    code: 'enterprise_contact',
+    name: 'Doanh nghiệp',
+    vehicleScope: 'all',
+    billingMode: 'package',
+    commissionPercent: null,
+    status: 'active',
+    limits: { maxVehicles: null, termPrices: [], salesOnly: true },
+  };
+
+  beforeEach(() => {
+    permissions.granted = new Set([PERMISSION.PLATFORM_BILLING_MANAGE]);
+    hooks.items = [sub({ id: 'moto', startsAt: at(-2), endsAt: at(30), termState: 'current' })];
+    hooks.plans = [carPlan, enterprise];
+  });
+
+  /** Chọn một bậc trong ô Select của hộp gán gói. */
+  function choosePlan(label: RegExp) {
+    const dialog = screen.getByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox'));
+    fireEvent.click(screen.getByTitle(label));
+  }
+
+  it('hai kỳ đang hiệu lực (xe máy + ô tô): hai thẻ, mỗi thẻ một nhãn loại xe', () => {
+    hooks.items = [
+      ...hooks.items,
+      sub({
+        id: 'car',
+        planName: 'Ô tô 5 xe',
+        vehicleScope: 'car',
+        quota: { maxVehicles: 5, maxBranches: null, maxMembers: null },
+        startsAt: at(-1),
+        endsAt: at(60),
+        termState: 'current',
+      }),
+    ];
+    renderSection();
+    expect(screen.getByText(/Đang hiệu lực · Xe máy/)).toBeTruthy();
+    expect(screen.getByText(/Đang hiệu lực · Ô tô/)).toBeTruthy();
+    expect(screen.getByText(/tối đa 5 ô tô/)).toBeTruthy();
+    // Không còn trần chi nhánh ở thẻ.
+    expect(screen.queryByText(/chi nhánh/)).toBeNull();
+  });
+
+  it('gán gói Ô TÔ khi đang có gói xe máy: bắt đầu ngay, không hỏi "nối sau / đổi ngay"', () => {
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
+    choosePlan(/Ô tô 5 xe/);
+
+    expect(screen.queryByText('Thời điểm áp dụng')).toBeNull();
+    expect(screen.getByText('Gán gói mới')).toBeTruthy();
+  });
+
+  it('gán DOANH NGHIỆP: cảnh báo phủ cả hai loại, giá đàm phán bắt buộc, hỏi thời điểm', () => {
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
+    choosePlan(/Doanh nghiệp — bán qua tư vấn/);
+
+    expect(screen.getByText(/phủ cả xe máy lẫn ô tô/)).toBeTruthy();
+    expect(screen.getByText('Thời điểm áp dụng')).toBeTruthy();
+    const submit = within(screen.getByRole('dialog'))
+      .getAllByRole('button')
+      .at(-1) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+  });
+
+  it('bậc CHƯA MỞ BÁN gán được nhưng giá đàm phán là bắt buộc', () => {
+    hooks.plans = [{ ...carPlan, id: 'p-draft', name: 'Ô tô 10 xe', status: 'draft' }];
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
+    choosePlan(/Ô tô 10 xe.*chưa mở bán/);
+
+    expect(screen.getByText(/Gói này chưa mở bán — nhập giá/)).toBeTruthy();
+    const submit = within(screen.getByRole('dialog'))
+      .getAllByRole('button')
+      .at(-1) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+  });
+
+  it('bậc ĐÃ NGỪNG không có trong hộp gán', () => {
+    hooks.plans = [carPlan, { ...carPlan, id: 'p-old', name: 'Gói cũ', status: 'archived' }];
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
+    fireEvent.mouseDown(within(screen.getByRole('dialog')).getByRole('combobox'));
+    expect(screen.queryByTitle(/Gói cũ/)).toBeNull();
+  });
+
+  it('không có quyền gói: thẻ đọc từ `terms` của chi tiết gian hàng, mỗi phạm vi một thẻ', () => {
+    permissions.granted = new Set([PERMISSION.PLATFORM_TENANT_VIEW]);
+    // Thiếu quyền ⇒ lượt đọc chuỗi kỳ bị tắt ở thật; mock trả rỗng cho đúng ca đó.
+    hooks.items = [];
+    renderWithIntl(
+      <App>
+        <TenantPlanSection
+          tenantId="tenant-1"
+          currentPlan={plan}
+          terms={[
+            {
+              vehicleScope: 'motorbike',
+              subscriptionId: 's1',
+              planCode: 'moto_5',
+              planName: 'Xe máy 5 xe',
+              phase: 'current',
+              startsAt: at(-1),
+              endsAt: at(30),
+              vehicleLimitKind: 'total',
+              vehicleLimit: 5,
+            },
+            {
+              vehicleScope: 'car',
+              subscriptionId: 's2',
+              planCode: 'car_1',
+              planName: 'Ô tô 1 xe',
+              phase: 'current',
+              startsAt: at(-1),
+              endsAt: at(30),
+              vehicleLimitKind: 'total',
+              vehicleLimit: 5,
+            },
+          ]}
+        />
+      </App>,
+    );
+    expect(screen.getByText('Xe máy 5 xe')).toBeTruthy();
+    expect(screen.getByText('Ô tô 1 xe')).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

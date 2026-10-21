@@ -123,10 +123,6 @@ function benefitLabel(locale: AppLocale, line: PlanBenefitLine): string {
       return line.count == null
         ? msg(locale, 'limitVehiclesUnlimited')
         : msg(locale, 'limitVehicles', { count: line.count });
-    case 'branches':
-      return line.count == null
-        ? msg(locale, 'limitBranchesUnlimited')
-        : msg(locale, 'limitBranches', { count: line.count });
     case 'feature':
       return CARD_MESSAGES[locale].planFeature[line.feature as PlanFeature] ?? line.feature;
   }

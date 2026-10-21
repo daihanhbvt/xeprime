@@ -31,6 +31,7 @@ function trip(overrides: Partial<WalletStatementTrip> = {}): WalletStatementTrip
     unitAmount: '900000',
     unitKind: WALLET_STATEMENT_UNIT.DAY,
     revenueAmount: '900000',
+    ownerCommissionAmount: '0',
     taxAmount: '90000',
     payAtPickupAmount: '0',
     balanceChange: '810000',
@@ -51,6 +52,7 @@ function statement(): WalletStatement {
     },
     totals: {
       revenueTotal: '900000',
+      ownerCommissionTotal: '0',
       taxTotal: '90000',
       payAtPickupTotal: '0',
       balanceChangeTotal: '810000',

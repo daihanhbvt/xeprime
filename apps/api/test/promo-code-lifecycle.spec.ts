@@ -29,6 +29,7 @@ import { PromoQuoteService } from '../src/modules/promo-codes/promo-quote.servic
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { ensureInsuranceProducts } from './helpers/insurance-products';
 import {
   makeBookingHoldsService,
   makeBookingRequestsService,
@@ -278,6 +279,8 @@ beforeAll(async () => {
     console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
     return;
   }
+  // Báo giá IV/IP cần hai sản phẩm MIC trong danh mục — DB test có thể chưa seed.
+  await ensureInsuranceProducts(asService);
 
   ownerId = newId();
   tenantId = newId();

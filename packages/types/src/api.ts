@@ -138,6 +138,13 @@ export const API_ERROR_CODE = {
 
   // Dữ liệu
   VALIDATION_FAILED: 'VALIDATION_FAILED',
+  /**
+   * Số tiền cấu hình (giá xe, phí giao xe, mã khuyến mãi…) không phải bội của 1.000đ (ADR 0064 —
+   * `@IsMoneyStep`). Mã riêng thay vì `VALIDATION_FAILED` khi đó là lỗi DUY NHẤT của request: chủ
+   * xe cần đọc ĐÚNG câu "Giá phải là bội số 1.000đ" chứ không phải "dữ liệu chưa hợp lệ".
+   * `details` giữ nguyên dạng của `VALIDATION_FAILED` (`[{ field, constraints }]`).
+   */
+  MONEY_STEP_1000: 'MONEY_STEP_1000',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   /**
@@ -261,6 +268,29 @@ export const API_ERROR_CODE = {
    * được và mã lỗi phải nói đúng việc cần làm.
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
+  /**
+   * Bậc gói đang ở trạng thái CHƯA MỞ BÁN (`draft`) — gian hàng chưa mua được (ADR 0065: sáu bậc
+   * seed chờ admin nhập giá rồi mới mở bán). 409, `details` mang `{ planCode }`.
+   *
+   * Mã riêng chứ không phải `CONFLICT` + `details.planStatus`: người mua cần một câu nói thẳng "chọn
+   * gói khác", và web không phải đọc một chi tiết phụ để phân biệt ca này với "dữ liệu vừa đổi".
+   */
+  PLAN_NOT_PUBLISHED: 'PLAN_NOT_PUBLISHED',
+  /**
+   * Gian hàng TUYẾN GÓI chưa có gói hiệu lực cho LOẠI XE này (ADR 0065) — tạo xe hoặc đưa xe lên
+   * chợ bị từ chối. `details` mang `{ vehicleType }`.
+   *
+   * Không rơi về trần Owner Lite: một gian hàng đang trả gói ô tô mà đăng được xe máy theo luật
+   * hoa hồng là hai tuyến trên cùng một gian hàng. Lối đi tiếp là MUA gói cho loại xe đó.
+   */
+  PLAN_SCOPE_REQUIRED: 'PLAN_SCOPE_REQUIRED',
+  /**
+   * Lượt ghi đụng EXCLUDE `tenant_subscriptions_package_scope_no_overlap` (ADR 0065): hai kỳ gói
+   * chồng thời gian ở phạm vi xung đột (cùng loại xe, hoặc một bên là `all`). Chuỗi kỳ ở
+   * `BillingService` không bao giờ đề xuất điều đó — mã này là lưới cuối của DB, không phải luồng
+   * thường. 409.
+   */
+  SUBSCRIPTION_TERM_CONFLICT: 'SUBSCRIPTION_TERM_CONFLICT',
   /**
    * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
    * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
@@ -1022,6 +1052,12 @@ export const API_ERROR_CODE = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   /** Upload ảnh cần đủ bộ env R2 — thiếu thì endpoint presign trả 503 kèm mã này. */
   UPLOADS_NOT_CONFIGURED: 'UPLOADS_NOT_CONFIGURED',
+  /**
+   * Admin bấm "Thử phát hành lại" GCN bảo hiểm khi môi trường chưa cắm đối tác
+   * (`INSURANCE_PARTNER=none`) — lượt thử chắc chắn hỏng lại, nên từ chối ngay thay vì xếp một
+   * việc vô ích vào hàng đợi worker (ADR 0064).
+   */
+  INSURANCE_PARTNER_NOT_CONFIGURED: 'INSURANCE_PARTNER_NOT_CONFIGURED',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

@@ -38,6 +38,7 @@ const PLAN: Plan = {
   description: 'Mô tả',
   billingMode: BILLING_MODE.PACKAGE,
   commissionPercent: null,
+  vehicleScope: 'car',
   limits: {
     maxVehicles: 3,
     maxBranches: 1,
@@ -71,7 +72,10 @@ const COMMISSION_PLAN: Plan = {
 
 function renderModal(
   plan: Plan | null,
-  { template = null, allowCommission = false }: { template?: Plan | null; allowCommission?: boolean } = {},
+  {
+    template = null,
+    allowCommission = false,
+  }: { template?: Plan | null; allowCommission?: boolean } = {},
 ) {
   const onClose = vi.fn();
   renderWithIntl(
@@ -125,7 +129,9 @@ describe('PlanFormModal — chế độ tạo', () => {
   it('ô trống của trần xe hiện "Không giới hạn", lời giải thích nằm sau dấu "i"', () => {
     renderModal(null);
     expect(byLabel('Số xe tối đa').placeholder).toBe('Không giới hạn');
-    expect(screen.getAllByRole('button', { name: 'Giải thích về ô để trống' }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Giải thích về ô để trống' }).length,
+    ).toBeGreaterThan(0);
     // Không còn dòng ghi chú hiện thẳng dưới ô.
     expect(screen.queryByText('Bỏ trống = không giới hạn')).toBeNull();
   });
@@ -150,6 +156,9 @@ describe('PlanFormModal — chế độ tạo', () => {
     ]);
     // ADR 0007: tiền qua API là string, không phải number.
     expect(typeof payload.limits.termPrices[0].price).toBe('string');
+    // Phạm vi gửi LÚC TẠO — mặc định bậc xe máy (làn đầu tiên); không còn trần chi nhánh.
+    expect(payload.vehicleScope).toBe('motorbike');
+    expect(payload.limits).not.toHaveProperty('maxBranches');
   });
 
   it('kỳ 1 tháng là "Giá tham chiếu"; % tiết kiệm tính NGAY từ giá đang gõ', async () => {
@@ -327,7 +336,13 @@ describe('PlanFormModal — chế độ sửa', () => {
 });
 
 describe('PlanFormModal — xoá gói nháp', () => {
-  const DRAFT = { ...PLAN, id: 'P-draft', name: 'Gói nháp', subscriptionCount: 0, deletable: true } as Plan;
+  const DRAFT = {
+    ...PLAN,
+    id: 'P-draft',
+    name: 'Gói nháp',
+    subscriptionCount: 0,
+    deletable: true,
+  } as Plan;
 
   it('chỉ gói server báo `deletable` mới có nút "Xoá gói"', () => {
     renderModal({ ...PLAN, deletable: false } as Plan);
@@ -393,7 +408,8 @@ describe('PlanFormModal — tuyến hoa hồng', () => {
   it('hiện trần Owner Lite dưới dạng thông tin, không phải ô nhập', () => {
     renderModal(COMMISSION_PLAN);
     expect(screen.getByText('3 xe')).toBeTruthy();
-    expect(screen.getByText('1 chi nhánh')).toBeTruthy();
+    // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1) — không in, không có ô nhập.
+    expect(screen.queryByText(/chi nhánh/)).toBeNull();
   });
 
   /*
@@ -438,5 +454,40 @@ describe('PlanFormModal — vỏ dialog', () => {
     const { onClose } = renderModal(PLAN);
     fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PlanFormModal — phạm vi loại xe (ADR 0065)', () => {
+  it('tạo mới: có ô "Loại xe áp dụng" chọn được, KHÔNG có ô chi nhánh', () => {
+    renderModal(null);
+    const scope = byLabel('Loại xe áp dụng');
+    expect(scope).toBeTruthy();
+    expect(scope.closest('.ant-select')?.className).not.toContain('ant-select-disabled');
+    expect(queryLabel('Số chi nhánh tối đa')).toBeNull();
+  });
+
+  it('sửa: phạm vi hiện đúng của bậc nhưng bị KHOÁ; payload update không mang phạm vi', async () => {
+    renderModal(PLAN);
+    const scope = byLabel('Loại xe áp dụng');
+    expect(scope.closest('.ant-select')?.className).toContain('ant-select-disabled');
+    expect(screen.getByText('Ô tô')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Lưu/ }));
+    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
+    expect(update.mutate.mock.calls[0]![0]).not.toHaveProperty('vehicleScope');
+  });
+
+  it('nhân bản: mang theo phạm vi của bậc gốc vào lượt TẠO', async () => {
+    renderModal(null, { template: PLAN });
+    fireEvent.change(byLabel('Mã gói'), { target: { value: 'car-5-copy' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo gói' }));
+
+    await waitFor(() => expect(create.mutate).toHaveBeenCalledTimes(1));
+    expect(create.mutate.mock.calls[0]![0].vehicleScope).toBe('car');
+  });
+
+  it('tuyến hoa hồng: không có ô phạm vi (luôn mọi loại xe)', () => {
+    renderModal(COMMISSION_PLAN);
+    expect(queryLabel('Loại xe áp dụng')).toBeNull();
   });
 });

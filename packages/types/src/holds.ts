@@ -315,6 +315,61 @@ export function holdWindowsFor(input: {
 }
 
 /**
+ * XEM TRƯỚC hai cửa sổ nếu chuyến được nhận NGAY lúc `now` — `holdWindowsFor` với `acceptedAt = now`,
+ * kèm cờ `tooShort` theo CÙNG ngưỡng lượt tạo hold dùng để từ chối (`HOLD_WINDOW_TOO_SHORT`).
+ *
+ * Dùng cho màn duyệt của gian hàng và cảnh báo đặt sát giờ của khách — đều là ƯỚC TÍNH: mốc thật
+ * được tính và LƯU một lần lúc lượt duyệt chạy (không có đường nào đọc lại hàm này để quyết tiền).
+ */
+export function holdWindowsPreview(input: {
+  now: Date;
+  pickupAt: Date;
+  freeCancelHours: number;
+  paymentWindowMinutes: number;
+}): HoldWindows & { tooShort: boolean } {
+  const windows = holdWindowsFor({
+    acceptedAt: input.now,
+    pickupAt: input.pickupAt,
+    freeCancelHours: input.freeCancelHours,
+    paymentWindowMinutes: input.paymentWindowMinutes,
+  });
+  return {
+    ...windows,
+    tooShort:
+      windows.expiresAt.getTime() - input.now.getTime() <
+      HOLD_MIN_USABLE_WINDOW_MINUTES * MS_PER_MINUTE,
+  };
+}
+
+/** Hai cửa sổ xem trước ở dạng ĐI TRÊN DÂY — mốc là chuỗi ISO, số phút đã làm tròn. */
+export interface HoldWindowsPreviewDto {
+  leadMinutes: number;
+  paymentWindowMinutes: number;
+  freeCancelMinutes: number;
+  expiresAt: string;
+  freeCancelUntil: string;
+  tooShort: boolean;
+}
+
+/**
+ * Kết quả `holdWindowsPreview` ⇒ dạng DTO. Một hàm cho cả server (`approvalPreview.windows`) lẫn
+ * màn duyệt dài hạn của web (tự ước khi gian hàng chọn giờ nhận) — hai bên không tự map lệch nhau.
+ */
+export function toHoldWindowsPreviewDto(
+  windows: HoldWindows & { tooShort: boolean },
+): HoldWindowsPreviewDto {
+  return {
+    leadMinutes: Math.round(windows.leadMinutes),
+    paymentWindowMinutes: windows.paymentWindowMinutes,
+    freeCancelMinutes: windows.freeCancelMinutes,
+    expiresAt: windows.expiresAt.toISOString(),
+    freeCancelUntil: windows.freeCancelUntil.toISOString(),
+    // CÙNG ngưỡng lượt tạo hold dùng để từ chối (`HOLD_WINDOW_TOO_SHORT`).
+    tooShort: windows.tooShort,
+  };
+}
+
+/**
  * Còn được huỷ miễn phí không — so MỐC ĐÃ LƯU, không bao giờ tính lại.
  *
  * Gian hàng dời giờ nhận xe **không** được nới hay xoá quyền khách đã có, và một lần chuyển
@@ -398,6 +453,39 @@ export function countdownSegment(
     total: Math.ceil(remainingMs / segmentMs),
     remainingInSegment: rest === 0 ? segmentMs : rest,
   };
+}
+
+/**
+ * Kết quả XEM TRƯỚC một lượt khách tự huỷ (`GET /trips/:id/cancel-preview` — ADR 0064). Server tính
+ * bằng đúng luật kết cục + phép chia mà lượt huỷ thật dùng; client chỉ chọn câu chữ theo mã này.
+ */
+export const CUSTOMER_CANCEL_PREVIEW_KIND = {
+  /** Chưa có đồng nào qua XePrime (yêu cầu chờ duyệt, hoặc đã nhận mà chưa chuyển) — huỷ không mất gì. */
+  NO_CHARGE: 'no_charge',
+  /** Huỷ trong cửa sổ miễn phí, hoặc huỷ lúc chưa trả đủ — hoàn đủ số đã chuyển vào ví điểm. */
+  FULL_REFUND: 'full_refund',
+  /** Huỷ SAU mốc miễn phí — bảo hiểm hoàn đủ, `D + S + H` chia đôi chủ xe / XePrime. */
+  LATE_CANCEL: 'late_cancel',
+  /** Chặng này không huỷ được nữa (đã giao xe / đã khép). */
+  NOT_ALLOWED: 'not_allowed',
+} as const;
+
+export type CustomerCancelPreviewKind =
+  (typeof CUSTOMER_CANCEL_PREVIEW_KIND)[keyof typeof CUSTOMER_CANCEL_PREVIEW_KIND];
+export const CUSTOMER_CANCEL_PREVIEW_KIND_VALUES = Object.values(
+  CUSTOMER_CANCEL_PREVIEW_KIND,
+) as CustomerCancelPreviewKind[];
+
+/**
+ * Chuyến có cửa sổ huỷ miễn phí không — so HAI MỐC ĐÃ LƯU (`freeCancelUntil` với mốc nhận chuyến).
+ * Đặt gấp (ΔT < `HOLD_DYNAMIC_WINDOW.URGENT_LEAD_HOURS`) cho `freeCancelMinutes = 0` nên
+ * `freeCancelUntil = acceptedAt`: mọi lượt huỷ sau khi trả đều là huỷ muộn.
+ */
+export function hasFreeCancelWindow(
+  freeCancelUntil: Date | string,
+  acceptedAt: Date | string,
+): boolean {
+  return new Date(freeCancelUntil).getTime() > new Date(acceptedAt).getTime();
 }
 
 /**

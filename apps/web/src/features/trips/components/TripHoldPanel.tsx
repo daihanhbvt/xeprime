@@ -11,13 +11,13 @@ import {
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
   HOLD_REFUND_STATUS,
-  isFreeCancelWindowShort,
 } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { RefundAccountDialog } from './RefundAccountDialog';
+import { useFreeCancelNote } from '../use-free-cancel-note';
 import type { CustomerTripDetail } from '../types';
 import styles from './TripHoldPanel.module.css';
 
@@ -64,8 +64,8 @@ export function TripHoldPanel({
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
   const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
-  // Chuyến sát giờ: cửa sổ huỷ miễn phí bị kẹp bởi giờ nhận xe (ADR 0032 điều 5).
-  const freeCancelIsShort = isFreeCancelWindowShort(hold);
+  // Ba trạng thái huỷ miễn phí (không có · ngắn · thường lệ) + hệ quả huỷ muộn — ADR 0064.
+  const freeCancelNote = useFreeCancelNote();
 
   /*
    * Bức tranh đầy đủ, CÙNG chữ dùng ở bảng "Chi tiết giá" (`PriceBreakdown`) — khách hỏi hoài
@@ -134,11 +134,7 @@ export function TripHoldPanel({
 
       <ul className={styles.notes}>
         <li>{t('expires')}</li>
-        <li>
-          {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
-            time: fmt.dateTime(hold.freeCancelUntil),
-          })}
-        </li>
+        <li>{freeCancelNote(hold)}</li>
         {summary ? null : <li>{t('restAtHandover')}</li>}
       </ul>
     </section>

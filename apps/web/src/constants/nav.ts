@@ -15,6 +15,7 @@ import {
   GiftOutlined,
   HistoryOutlined,
   IdcardOutlined,
+  InsuranceOutlined,
   InboxOutlined,
   LineChartOutlined,
   MobileOutlined,
@@ -625,6 +626,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         // gói vẫn thấy mục này — và trong màn chỉ thấy hàng đợi tiền vào.
         permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
         icon: WalletOutlined,
+      },
+      {
+        /*
+         * Bảo hiểm chuyến (ADR 0064) đứng cạnh Tài chính: hàng đợi giấy chứng nhận là phí khách đã
+         * trả đang giữ hộ (quyền tiền), danh mục sản phẩm là nội dung hiện cho khách (quyền bảo
+         * hiểm). Có MỘT trong hai quyền là thấy mục — trong màn, mỗi tab tự gác theo quyền của nó.
+         */
+        key: 'admin-insurance',
+        labelKey: 'platform.insurance',
+        href: ROUTES.ADMIN.INSURANCE,
+        permission: [PERMISSION.PLATFORM_INSURANCE_MANAGE, PERMISSION.PLATFORM_MONEY_MANAGE],
+        icon: InsuranceOutlined,
       },
       {
         /*

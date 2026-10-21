@@ -76,3 +76,13 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
   }
   return value;
 }
+
+/**
+ * Đối tác phát hành bảo hiểm chuyến (ADR 0064) — CÙNG biến với API (hai tiến trình đọc chung một
+ * file env, `docker-compose.prod.yml`). `createInsurancePartner` ở `@xeprime/prisma` kiểm giá trị
+ * và ném khi `mic_mock` gặp `APP_ENV=production`, nên worker chết lúc boot thay vì phát GCN giả.
+ */
+export const INSURANCE_PARTNER = process.env.INSURANCE_PARTNER?.trim() || 'none';
+
+/** Môi trường đang chạy — thiếu thì coi là production (an toàn đi về phía không phát GCN giả). */
+export const APP_ENV = process.env.APP_ENV?.trim() || 'production';

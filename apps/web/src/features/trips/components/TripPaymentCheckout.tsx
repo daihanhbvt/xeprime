@@ -20,7 +20,6 @@ import {
   BOOKING_HOLD_STATUS,
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
-  isFreeCancelWindowShort,
   PAYMENT_GATEWAY_PROVIDER,
   PAYMENT_RETURN_PARAM,
   SERVICE_TYPE,
@@ -45,6 +44,7 @@ import { cx } from '@/lib/cx';
 import { payAtPickupAmount } from '@/lib/customer-price-view';
 import { dayjs } from '@/lib/datetime';
 import type { CustomerTripDetail } from '../types';
+import { useFreeCancelNote } from '../use-free-cancel-note';
 import { TripColumns } from './TripRequestLayout';
 import styles from './TripPaymentCheckout.module.css';
 
@@ -129,8 +129,11 @@ export function TripPaymentCheckout({
 
   const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
   const fees = trip.estimate?.fees ?? null;
-  // Chuyến sát giờ: cửa sổ huỷ miễn phí bị kẹp bởi giờ nhận xe — báo TRƯỚC khi trả (ADR 0032 điều 5).
-  const freeCancelIsShort = isFreeCancelWindowShort(hold);
+  /*
+   * Huỷ miễn phí tới khi nào — hoặc KHÔNG có (đặt gấp) — và huỷ muộn thì mất gì: báo TRƯỚC khi trả
+   * (ADR 0032 điều 5 · ADR 0064).
+   */
+  const freeCancelNote = useFreeCancelNote()(hold);
 
   function toggle(next: MethodGroup) {
     setGroup((current) => (current === next ? null : next));
@@ -298,7 +301,7 @@ export function TripPaymentCheckout({
           </div>
         ) : null
       }
-      freeCancelIsShort={freeCancelIsShort}
+      freeCancelNote={freeCancelNote}
     />
   );
 
@@ -367,7 +370,7 @@ function PaymentSummaryCard({
   payOwner,
   amountLabel,
   action,
-  freeCancelIsShort,
+  freeCancelNote,
 }: {
   trip: CustomerTripDetail;
   hold: Hold;
@@ -377,7 +380,8 @@ function PaymentSummaryCard({
   amountLabel: string;
   /** Nút trả qua ví — chỉ khi thẻ ví đang mở. */
   action: ReactNode;
-  freeCancelIsShort: boolean;
+  /** Câu huỷ miễn phí + huỷ muộn — `useFreeCancelNote`. */
+  freeCancelNote: string;
 }) {
   const t = useTranslations('Trips.payment');
   const tCheckout = useTranslations('PaymentGateway.checkout');
@@ -482,14 +486,7 @@ function PaymentSummaryCard({
         <p>{t('summary.notes.auto')}</p>
         <ul className={styles.noteList}>
           <li>{t('summary.notes.expires')}</li>
-          <li>
-            {freeCancelIsShort
-              ? tHold('freeCancelSoon', { time: fmt.dateTime(hold.freeCancelUntil) })
-              : t.rich('summary.notes.freeCancel', {
-                  time: fmt.dateTime(hold.freeCancelUntil),
-                  b: (chunks) => <b>{chunks}</b>,
-                })}
-          </li>
+          <li>{freeCancelNote}</li>
           {payOwner ? null : <li>{tHold('restAtHandover')}</li>}
         </ul>
         <p className={styles.safety}>

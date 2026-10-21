@@ -167,6 +167,7 @@ async function makeHold(): Promise<{ requestId: string; holdId: string; code: st
       snapshot: snapshotOf(),
       acceptedAt,
       actorUserId: ownerId,
+      depositRequired: true,
     }),
   );
   await prisma.bookingRequest.update({

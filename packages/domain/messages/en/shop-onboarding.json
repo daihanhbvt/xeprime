@@ -110,7 +110,14 @@
     "noPlans": "No shop plan is on sale right now",
     "noPlansHint": "Contact XePrime support to have a plan opened for your shop.",
     "createInvoice": "Create invoice and get the transfer code",
-    "pickTermFirst": "Pick a term to create the invoice."
+    "pickTermFirst": "Pick a term to create the invoice.",
+    "partialFailure": "Could not create the {scope} invoice: {error} The invoices already created are still valid.",
+    "scope": {
+      "motorbike": "motorbike plan",
+      "car": "car plan"
+    },
+    "addOtherScope": "Add a {scope}",
+    "addPlan": "Add a plan for another vehicle type"
   },
   "packageWaiting": {
     "title": "Shop registered successfully!",

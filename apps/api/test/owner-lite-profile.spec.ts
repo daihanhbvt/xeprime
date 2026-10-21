@@ -97,7 +97,7 @@ async function profileOf(tenantId: string) {
       },
     },
   });
-  return resolveTenantFeatures(tenant.subscriptions[0] ?? null, tenant.usedFeatures);
+  return resolveTenantFeatures(tenant.subscriptions, tenant.usedFeatures);
 }
 
 beforeAll(async () => {

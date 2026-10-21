@@ -8,7 +8,6 @@ import {
   BOOKING_HOLD_STATUS,
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
-  isFreeCancelWindowShort,
   holdRemainingMs,
   isAwaitingPayment,
   type BookingHoldStatus,
@@ -28,6 +27,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import { payAtPickupAmount } from '@/lib/customer-price-view';
 import type { CustomerTripDetail } from '../types';
+import { useFreeCancelNote } from '../use-free-cancel-note';
 import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
 import { TripHoldPanel } from './TripHoldPanel';
 import {
@@ -87,11 +87,13 @@ export function TripAwaitingHoldView({
   const awaitingHold = hold && isAwaitingPayment(hold.status as BookingHoldStatus) ? hold : null;
   const fees = trip.estimate?.fees ?? null;
 
-  // Chuyến sát giờ: cửa sổ huỷ miễn phí bị kẹp bởi giờ nhận xe (ADR 0032 điều 5).
+  /*
+   * Hai chặng của lượt huỷ: CHƯA trả đủ (hoàn đủ phần đã chuyển) và SAU khi trả (huỷ miễn phí tới
+   * mốc nào — hoặc không có, khi đặt gấp — và huỷ muộn thì mất gì). ADR 0032 điều 5 · ADR 0064.
+   */
+  const freeCancelNote = useFreeCancelNote();
   const policyBody = awaitingHold
-    ? t(isFreeCancelWindowShort(awaitingHold) ? 'policy.bodySoon' : 'policy.body', {
-        time: fmt.dateTime(awaitingHold.freeCancelUntil),
-      })
+    ? t('policy.afterPaid', { note: freeCancelNote(awaitingHold) })
     : t('policy.bodyClosed');
 
   return (

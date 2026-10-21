@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEE_POLICY_STATUS } from '@xeprime/types';
 
@@ -51,7 +51,10 @@ function policy(over: Partial<FeePolicy> = {}): FeePolicy {
     status: FEE_POLICY_STATUS.ACTIVE,
     name: 'Pilot — phí dịch vụ 10%',
     note: null,
-    serviceFeePercent: 10,
+    serviceFeePercent: 0,
+    depositPercent: 30,
+    depositMinAmount: '50000',
+    depositMaxPercent: 30,
     holdMinAmount: '20000',
     holdPaymentWindowMinutes: 1440,
     freeCancelHours: 4,
@@ -63,6 +66,14 @@ function policy(over: Partial<FeePolicy> = {}): FeePolicy {
     vehicleProtectionEnabled: false,
     vehicleProtectionPercent: null,
     insurancePartnerName: null,
+    customerPlatformFee: { car: '50000', motorbike: '30000' },
+    ownerCommissionTiers: [
+      { fromDay: 1, percent: 10 },
+      { fromDay: 3, percent: 7 },
+      { fromDay: 8, percent: 3 },
+    ],
+    vehicleProtectionDailyAmount: { car: '50000', motorbike: '15000' },
+    tripInsuranceDailyAmount: { car: '20000', motorbike: '5000' },
     effectiveFrom: '2026-09-01T00:00:00.000Z',
     effectiveTo: null,
     activatedByName: 'Admin',
@@ -99,11 +110,32 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('/manage/admin/fee-policies — bản đang hiệu lực', () => {
-  it('hiện % phí dịch vụ và sàn giữ chỗ đã định dạng', () => {
+  it('hiện tóm tắt luồng tiền v2: phí sàn, nấc hoa hồng, cọc, bảo hiểm, thuế', () => {
     renderPage();
 
-    expect(screen.getByText('10%')).toBeTruthy();
-    expect(screen.getByText('20.000 ₫')).toBeTruthy();
+    const row = rowOf('Pilot — phí dịch vụ 10%');
+    expect(within(row).getByText('50.000 ₫ / 30.000 ₫')).toBeTruthy();
+    expect(within(row).getByText('10% · 7% · 3%')).toBeTruthy();
+    expect(within(row).getByText('30%')).toBeTruthy();
+    // Bảo hiểm và thuế đều tắt — nói "chưa áp dụng", không nói 0%.
+    expect(within(row).getAllByText('Chưa áp dụng')).toHaveLength(2);
+  });
+
+  it('bật bảo hiểm thì cột bảo hiểm gọi tên từng loại', () => {
+    query.data = [policy({ vehicleProtectionEnabled: true, tripInsuranceEnabled: true })];
+    renderPage();
+
+    expect(screen.getByText('Vật chất xe · Tai nạn người')).toBeTruthy();
+  });
+
+  it('xem chi tiết mở panel đủ số v2', async () => {
+    renderPage();
+
+    fireEvent.click(within(rowOf('Pilot — phí dịch vụ 10%')).getByRole('button', { name: 'Xem chi tiết' }));
+
+    expect(await screen.findByText('Hoa hồng chủ xe lũy tiến (H)')).toBeTruthy();
+    expect(screen.getByText('Ngày 1–2')).toBeTruthy();
+    expect(screen.getByText('Từ ngày 8')).toBeTruthy();
   });
 
   it('KHÔNG có lối sửa — bản đã hiệu lực là bất biến', () => {

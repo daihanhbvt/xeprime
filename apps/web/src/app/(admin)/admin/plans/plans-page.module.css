@@ -56,3 +56,36 @@
     border-radius: var(--xp-border-radius);
   }
 }
+
+/* Một NHÓM phạm vi loại xe (ADR 0065): tiêu đề + số bậc + một câu giải thích, rồi bảng của nhóm. */
+.group {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+}
+
+.groupCount {
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.groupHint {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}

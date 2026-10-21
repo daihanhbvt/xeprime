@@ -599,9 +599,10 @@ describe('URL bị KHỐI KHÁC trên trang chủ đổi', () => {
 
 describe('nạp lại ngữ cảnh từ URL', () => {
   it('mở link chia sẻ dài hạn: đúng tab, đúng tỉnh, và không dựng ô lịch nào', async () => {
-    nav.searchParams = new URLSearchParams(
-      `serviceType=${SERVICE_TYPE.LONG_TERM}&vehicleType=${VEHICLE_TYPE.MOTORBIKE}&provinceCode=48`,
-    );
+    const shared = `serviceType=${SERVICE_TYPE.LONG_TERM}&vehicleType=${VEHICLE_TYPE.MOTORBIKE}&provinceCode=48`;
+    // Mở link = thanh địa chỉ VÀ router cùng mang query đó (hook bộ lọc đọc `window.location`).
+    nav.searchParams = new URLSearchParams(shared);
+    window.history.replaceState(null, '', `/?${shared}`);
     await renderExperience();
 
     expect(

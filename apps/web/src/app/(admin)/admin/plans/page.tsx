@@ -1,10 +1,10 @@
 'use client';
 
 import { CodeSandboxOutlined, CopyOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button } from 'antd';
+import { Alert, App, Button } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BILLING_MODE, PLAN_STATUS, PLAN_STATUS_VALUES } from '@xeprime/types';
+import { BILLING_MODE, PLAN_STATUS } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
@@ -19,22 +19,25 @@ import {
   usePlanKindLabel,
 } from '@/features/admin-plans/components/PlanCells';
 import { PlanFormModal } from '@/features/admin-plans/components/PlanFormModal';
+import { QueueViewSwitch } from '@/features/platform-money/components/QueueViewSwitch';
 import { useSetPlanStatus } from '@/features/admin-plans/hooks/use-plan-mutations';
 import { usePlans } from '@/features/admin-plans/hooks/use-plans';
 import {
+  PLAN_CATALOG_VIEW,
   PLAN_KIND,
   PLAN_KIND_VALUES,
   filterPlans,
+  groupPlans,
   hasActivePlanFilters,
   parsePlanCatalogFilters,
   planKindOf,
   summarizePlans,
   type PlanCatalogFilters,
+  type PlanCatalogView,
 } from '@/features/admin-plans/plan-catalog';
 import type { Plan } from '@/features/admin-plans/types';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from './plans-page.module.css';
 
@@ -45,9 +48,7 @@ const MIN_TABLE_WIDTH = 1180;
  * Hộp tạo/sửa đang mở. `duplicate` là TẠO MỚI điền sẵn từ một bậc có sẵn — không phải sửa nó.
  */
 type DialogState =
-  | { mode: 'create' }
-  | { mode: 'edit'; plan: Plan }
-  | { mode: 'duplicate'; plan: Plan };
+  { mode: 'create' } | { mode: 'edit'; plan: Plan } | { mode: 'duplicate'; plan: Plan };
 
 /**
  * Danh mục gói dịch vụ — ADR 0041.
@@ -70,7 +71,6 @@ export default function AdminPlansPage() {
   const t = useTranslations('AdminPlans');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const kindLabel = usePlanKindLabel();
   const errorMessage = useErrorMessage();
   const { message, modal } = App.useApp();
@@ -93,6 +93,8 @@ export default function AdminPlansPage() {
 
   const plans = data ?? [];
   const items = filterPlans(plans, filters);
+  const groups = groupPlans(items);
+  const view: PlanCatalogView = filters.view ?? PLAN_CATALOG_VIEW.SELLING;
   /*
    * Hộp sửa nhận bản MỚI NHẤT của gói từ danh sách, không phải ảnh chụp lúc mở: cờ `deletable`
    * có thể đổi sau một lượt làm mới (vừa có người mua, hoặc xoá bị từ chối `PLAN_IN_USE`) và nút
@@ -125,15 +127,6 @@ export default function AdminPlansPage() {
       label: t('page.filters.kind'),
       options: PLAN_KIND_VALUES.map((kind) => ({ value: kind, label: kindLabel(kind) })),
     },
-    {
-      kind: 'select',
-      key: 'status',
-      label: t('page.filters.status'),
-      options: PLAN_STATUS_VALUES.map((status) => ({
-        value: status,
-        label: domainLabel('planStatus', status),
-      })),
-    },
   ];
 
   /**
@@ -142,13 +135,25 @@ export default function AdminPlansPage() {
    */
   function confirmToggle(plan: Plan) {
     const activating = plan.status !== PLAN_STATUS.ACTIVE;
+    /* Mở bán LẦN ĐẦU một bậc nháp (draft → active) nói khác với mở lại một bậc đã ngừng. */
+    const publishing = plan.status === PLAN_STATUS.DRAFT;
     const next = activating ? PLAN_STATUS.ACTIVE : PLAN_STATUS.ARCHIVED;
     modal.confirm({
-      title: activating
-        ? t('page.confirm.activateTitle', { name: plan.name })
-        : t('page.confirm.deactivateTitle', { name: plan.name }),
-      content: activating ? t('page.confirm.activateBody') : t('page.confirm.deactivateBody'),
-      okText: activating ? t('page.confirm.activateOk') : t('page.confirm.deactivateOk'),
+      title: publishing
+        ? t('page.confirm.publishTitle', { name: plan.name })
+        : activating
+          ? t('page.confirm.activateTitle', { name: plan.name })
+          : t('page.confirm.deactivateTitle', { name: plan.name }),
+      content: publishing
+        ? t('page.confirm.publishBody')
+        : activating
+          ? t('page.confirm.activateBody')
+          : t('page.confirm.deactivateBody'),
+      okText: publishing
+        ? t('page.confirm.publishOk')
+        : activating
+          ? t('page.confirm.activateOk')
+          : t('page.confirm.deactivateOk'),
       cancelText: tCommon('actions.close'),
       okButtonProps: activating ? undefined : { danger: true },
       onOk: () =>
@@ -158,9 +163,11 @@ export default function AdminPlansPage() {
             {
               onSuccess: () => {
                 message.success(
-                  activating
-                    ? t('page.toast.activated', { name: plan.name })
-                    : t('page.toast.deactivated', { name: plan.name }),
+                  publishing
+                    ? t('page.toast.published', { name: plan.name })
+                    : activating
+                      ? t('page.toast.activated', { name: plan.name })
+                      : t('page.toast.deactivated', { name: plan.name }),
                 );
                 resolve();
               },
@@ -254,6 +261,48 @@ export default function AdminPlansPage() {
     actionColumn<Plan>(rowActions, { width: 110, maxInline: 2 }),
   ];
 
+  /** Một bảng của danh mục — dùng cho từng nhóm, và cho trạng thái rỗng / lỗi chung. */
+  function renderTable(rows: Plan[], label: string) {
+    return (
+      <DataTable<Plan>
+        label={label}
+        columns={columns}
+        items={rows}
+        onRowClick={(plan) => openDialog({ mode: 'edit', plan })}
+        minWidth={MIN_TABLE_WIDTH}
+        loading={isFetching}
+        error={loadFailed ? { title: t('page.loadError'), onRetry: () => void refetch() } : null}
+        filtered={filtered}
+        empty={
+          view === PLAN_CATALOG_VIEW.RETIRED
+            ? { title: t('page.emptyRetired') }
+            : view === PLAN_CATALOG_VIEW.DRAFT
+              ? { title: t('page.emptyDraft') }
+              : { title: t('page.empty'), action: createButton }
+        }
+        noResults={{
+          title: t('page.noResults'),
+          action: (
+            <Button onClick={() => setFilters({ q: undefined, kind: undefined })}>
+              {tCommon('actions.clear')}
+            </Button>
+          ),
+        }}
+        renderCard={(plan) => (
+          <div className={styles.card}>
+            <PlanNameCell plan={plan} />
+            <div className={styles.cardMeta}>
+              <PlanKindCell plan={plan} />
+              <PlanStatusCell plan={plan} pending={isPending(plan)} onToggle={confirmToggle} />
+            </div>
+            <PlanPriceCell plan={plan} />
+            <RowActions actions={rowActions(plan)} maxInline={2} variant="filled" align="start" />
+          </div>
+        )}
+      />
+    );
+  }
+
   return (
     <div>
       <ManagePageHeader
@@ -274,46 +323,55 @@ export default function AdminPlansPage() {
           <PlanCatalogStats summary={summarizePlans(plans)} loading={isFetching && !data} />
         )}
 
+        {/*
+          Đang bán · chưa mở bán · đã ngừng là ba SỔ, không phải một bộ lọc (`QueueViewSwitch`): bậc
+          nháp (chưa có giá) và ba bậc ADR 0041 đã nghỉ hưu không được lẫn vào bảng đang bán.
+        */}
+        <QueueViewSwitch<PlanCatalogView>
+          label={t('page.view.label')}
+          value={view}
+          options={[
+            { value: PLAN_CATALOG_VIEW.SELLING, label: t('page.view.selling') },
+            { value: PLAN_CATALOG_VIEW.DRAFT, label: t('page.view.draft') },
+            { value: PLAN_CATALOG_VIEW.RETIRED, label: t('page.view.retired') },
+          ]}
+          onChange={(next) =>
+            setFilters({ view: next === PLAN_CATALOG_VIEW.SELLING ? undefined : next })
+          }
+        />
+
+        {/*
+          Sổ nháp: một câu nói đúng việc phải làm — gian hàng không thấy bậc nháp, và bậc tự mua phải
+          có bảng giá trước khi mở bán (nút "Mở bán" khoá tới lúc đó).
+        */}
+        {view === PLAN_CATALOG_VIEW.DRAFT ? (
+          <Alert type="info" showIcon title={t('page.draftHint')} />
+        ) : null}
+
         <FilterBar
           className={styles.filters}
           fields={filterFields}
-          values={{ q: filters.q, kind: filters.kind, status: filters.status }}
+          values={{ q: filters.q, kind: filters.kind }}
           onChange={(patch) => setFilters(patch as Partial<PlanCatalogFilters>)}
-          onClear={() => setFilters({ q: undefined, kind: undefined, status: undefined })}
+          onClear={() => setFilters({ q: undefined, kind: undefined })}
         />
 
-        <DataTable<Plan>
-          label={t('page.title')}
-          columns={columns}
-          items={items}
-          onRowClick={(plan) => openDialog({ mode: 'edit', plan })}
-          minWidth={MIN_TABLE_WIDTH}
-          loading={isFetching}
-          error={loadFailed ? { title: t('page.loadError'), onRetry: () => void refetch() } : null}
-          filtered={filtered}
-          empty={{ title: t('page.empty'), action: createButton }}
-          noResults={{
-            title: t('page.noResults'),
-            action: (
-              <Button
-                onClick={() => setFilters({ q: undefined, kind: undefined, status: undefined })}
-              >
-                {tCommon('actions.clear')}
-              </Button>
-            ),
-          }}
-          renderCard={(plan) => (
-            <div className={styles.card}>
-              <PlanNameCell plan={plan} />
-              <div className={styles.cardMeta}>
-                <PlanKindCell plan={plan} />
-                <PlanStatusCell plan={plan} pending={isPending(plan)} onToggle={confirmToggle} />
-              </div>
-              <PlanPriceCell plan={plan} />
-              <RowActions actions={rowActions(plan)} maxInline={2} variant="filled" align="start" />
-            </div>
-          )}
-        />
+        {/*
+          Bảng CHIA NHÓM theo phạm vi loại xe (ADR 0065): xe máy · ô tô · doanh nghiệp · tuyến hoa
+          hồng — mỗi nhóm một bảng nhỏ có tiêu đề. Rỗng / lỗi / không khớp: MỘT bảng nói trạng thái đó.
+        */}
+        {loadFailed || groups.length === 0
+          ? renderTable(items, t('page.title'))
+          : groups.map(({ group, plans: rows }) => (
+              <section key={group} className={styles.group} aria-labelledby={`plan-group-${group}`}>
+                <h2 id={`plan-group-${group}`} className={styles.groupTitle}>
+                  {t(`page.groups.${group}`)}
+                  <span className={styles.groupCount}>{fmt.count(rows.length)}</span>
+                </h2>
+                <p className={styles.groupHint}>{t(`page.groupHints.${group}`)}</p>
+                {renderTable(rows, t(`page.groups.${group}`))}
+              </section>
+            ))}
 
         {items.length > 0 ? (
           <p className={styles.footer}>

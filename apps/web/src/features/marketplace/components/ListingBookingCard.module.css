@@ -289,52 +289,6 @@
   border-top: 1px dashed var(--xp-color-border, #e9eaeb);
 }
 
-.insuranceOptions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.insuranceItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--xp-color-bg-layout, #f9fafb);
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.insuranceItem:hover {
-  border-color: var(--xp-color-primary, #e9ac29);
-}
-
-.insuranceItemContent {
-  flex: 1;
-}
-
-.insuranceItemRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.insuranceItemName {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--xp-color-text, #0e0f12);
-}
-
-.insuranceItemRate {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--xp-color-primary, #e9ac29);
-  white-space: nowrap;
-}
-
 .insuranceNote {
   margin: 0;
   font-size: 12px;

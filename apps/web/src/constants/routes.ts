@@ -332,6 +332,8 @@ export const ROUTES = {
     APP_CONFIG: admin('/app-config'),
     /** Màn Tài chính: tiền vào, giữ chỗ, hoàn, rút, bảo hiểm, thuế, đối soát ngày (`?queue=`). */
     MONEY: admin('/money'),
+    /** Bảo hiểm chuyến (ADR 0064): danh mục sản phẩm MIC + hàng đợi giấy chứng nhận (`?tab=`). */
+    INSURANCE: admin('/insurance'),
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
     SUPPORT: admin('/support'),
     /**

@@ -1,0 +1,5 @@
+.intro {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}

@@ -1,5 +1,7 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   API_ERROR_CODE,
@@ -23,6 +25,20 @@ import type { BookingRequestItem } from '../types';
  *     Vị từ ở đây phải là `respondBy`, KHÔNG phải cột `status`: worker chạy theo nhịp nên có
  *     một cửa sổ mà bản ghi vẫn còn `pending_host_approval` trong khi giờ đã hết.
  */
+
+/*
+ * Hộp thoại duyệt đọc LẠI yêu cầu mỗi lần mở (cửa sổ "nếu duyệt ngay" không được cũ). Ở đây không
+ * có server: lượt đọc lại treo mãi, hộp thoại hiện bản của dòng hộp thư — đúng hành vi lúc đang tải.
+ */
+vi.mock('../api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api')>()),
+  fetchBookingRequest: () => new Promise(() => {}),
+}));
+
+function withQueryClient(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
 
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
@@ -215,15 +231,17 @@ describe('Lỗi khi duyệt', () => {
 
     // Hộp thoại GIỮ nguyên khi có lỗi — người trực cần đọc nó rồi mới quyết định tiếp.
     render(
-      <App>
-        <ApproveBookingRequestDialog
-          request={request()}
-          submitting={false}
-          error="Xe đã bận khung giờ này"
-          onCancel={vi.fn()}
-          onConfirm={vi.fn()}
-        />
-      </App>,
+      withQueryClient(
+        <App>
+          <ApproveBookingRequestDialog
+            request={request()}
+            submitting={false}
+            error="Xe đã bận khung giờ này"
+            onCancel={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </App>,
+      ),
     );
 
     const dialog = await screen.findByRole('dialog');
@@ -234,15 +252,17 @@ describe('Lỗi khi duyệt', () => {
   it('đang gửi: nút chính vào trạng thái chờ, không bấm được lần hai', async () => {
     const { ApproveBookingRequestDialog } = await import('./ApproveBookingRequestDialog');
     render(
-      <App>
-        <ApproveBookingRequestDialog
-          request={request()}
-          submitting
-          error={null}
-          onCancel={vi.fn()}
-          onConfirm={vi.fn()}
-        />
-      </App>,
+      withQueryClient(
+        <App>
+          <ApproveBookingRequestDialog
+            request={request()}
+            submitting
+            error={null}
+            onCancel={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </App>,
+      ),
     );
 
     const dialog = await screen.findByRole('dialog');

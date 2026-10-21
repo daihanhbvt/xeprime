@@ -9,16 +9,17 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Checkbox, Radio, Segmented, Spin } from 'antd';
+import { Alert, App, Button, Radio, Segmented, Spin } from 'antd';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
+  INSURANCE_PRODUCT_KIND,
   LONG_TERM_PACKAGE_MONTHS,
   LOCATION_SOURCE,
   PICKUP_PREFERENCE,
@@ -30,6 +31,7 @@ import {
   longTermPickupWindow,
   serviceRequiresDriverLicence,
   vnDateKey,
+  type InsuranceProductKind,
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
@@ -87,9 +89,12 @@ import {
 import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../booking-draft';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
+import { NearPickupHoldNotice } from './NearPickupHoldNotice';
 import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { publicQuoteParams, usePublicQuote, useQuoteWithPromo } from '../hooks/use-public-quote';
+import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { BookingJourney } from './BookingJourney';
 import { BookingReviewStep, type BookingReviewNextStep } from './BookingReviewStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
@@ -727,6 +732,35 @@ export function RequestBookingFlow({
 
   /** Báo giá đã ÁP MÃ — nguồn duy nhất cho mọi con số trong bảng giá (`useQuoteWithPromo`). */
   const quoteWithPromo = useQuoteWithPromo(quoteQ.data, promo.applied?.fees);
+
+  /*
+   * Bảo hiểm ĐANG được chào cho báo giá này (ADR 0064): nền tảng có đối tác phát hành, chính sách
+   * mở dòng đó, sản phẩm đang bật. Không còn chào ⇒ gỡ lựa chọn khỏi form để nó không đi lên server.
+   */
+  const setInsuranceSelected = useCallback(
+    (kind: InsuranceProductKind, checked: boolean) =>
+      setValue(
+        kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP
+          ? 'vehicleProtectionSelected'
+          : 'personalAccidentSelected',
+        checked,
+        { shouldValidate: true },
+      ),
+    [setValue],
+  );
+  const deselectInsurance = useCallback(
+    (kind: InsuranceProductKind) => setInsuranceSelected(kind, false),
+    [setInsuranceSelected],
+  );
+  const insuranceOffer = useInsuranceOffer(
+    quoteQ.data,
+    listing?.vehicleType,
+    {
+      vehicleProtectionSelected: watchedVehicleProtection,
+      personalAccidentSelected: watchedPersonalAccident,
+    },
+    deselectInsurance,
+  );
 
   /*
    * Mã khuyến mãi phải được đánh giá lại cho ĐÚNG NGƯỜI sau lượt đăng nhập. Kết quả xem trước phụ
@@ -1647,7 +1681,18 @@ export function RequestBookingFlow({
         }
         agreementCoversHostTerms={agreementCoversHostTerms}
         journey={<BookingJourney current="request" hasHoldStage={hasHoldStage} />}
-        costs={<BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />}
+        costs={
+          <>
+            <BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />
+            {/*
+              Đặt sát giờ ⇒ hạn thanh toán ngắn, có thể không có huỷ miễn phí — nói TRƯỚC khi gửi
+              (ADR 0032 điều 5 · ADR 0064). Dài hạn chưa có giờ nhận nên không ước được.
+            */}
+            {watchedService === SERVICE_TYPE.LONG_TERM ? null : (
+              <NearPickupHoldNotice pickupAt={watchedPickup} fees={quoteWithPromo?.breakdown.fees} />
+            )}
+          </>
+        }
         nextStep={nextStep}
         agreementMissing={agreementMissing && !watchedAccepted}
         stepError={stepError}
@@ -1938,49 +1983,20 @@ export function RequestBookingFlow({
               </div>
             ) : null}
 
-            {/* ── Tuỳ chọn bảo hiểm MIC ─────────────────────────────────── */}
-            <div className={styles.insuranceBlock}>
-              <span className={styles.rangeFieldLabel}>{t('insurance.title')}</span>
-              <div className={styles.insuranceList}>
-                <label className={styles.insuranceItem}>
-                  <Checkbox
-                    checked={watchedVehicleProtection}
-                    onChange={(e) =>
-                      setValue('vehicleProtectionSelected', e.target.checked, { shouldValidate: true })
-                    }
-                  />
-                  <div className={styles.insuranceText}>
-                    <div className={styles.insuranceNameRow}>
-                      <span className={styles.insuranceName}>{t('insurance.vehicleProtection')}</span>
-                      <span className={styles.insuranceRate}>
-                        {listing?.vehicleType === 'motorbike'
-                          ? t('insurance.vehicleProtectionHintMoto')
-                          : t('insurance.vehicleProtectionHintCar')}
-                      </span>
-                    </div>
-                  </div>
-                </label>
-
-                <label className={styles.insuranceItem}>
-                  <Checkbox
-                    checked={watchedPersonalAccident}
-                    onChange={(e) =>
-                      setValue('personalAccidentSelected', e.target.checked, { shouldValidate: true })
-                    }
-                  />
-                  <div className={styles.insuranceText}>
-                    <div className={styles.insuranceNameRow}>
-                      <span className={styles.insuranceName}>{t('insurance.personalAccident')}</span>
-                      <span className={styles.insuranceRate}>
-                        {listing?.vehicleType === 'motorbike'
-                          ? t('insurance.personalAccidentHintMoto')
-                          : t('insurance.personalAccidentHintCar')}
-                      </span>
-                    </div>
-                  </div>
-                </label>
+            {/* ── Tuỳ chọn bảo hiểm (ADR 0064) — chỉ khi báo giá đang chào ─────── */}
+            {insuranceOffer.items.length > 0 ? (
+              <div className={styles.insuranceBlock}>
+                <span className={styles.rangeFieldLabel}>{t('insurance.title')}</span>
+                <InsuranceOptionList
+                  items={insuranceOffer.items}
+                  selected={{
+                    [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: watchedVehicleProtection,
+                    [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: watchedPersonalAccident,
+                  }}
+                  onChange={setInsuranceSelected}
+                />
               </div>
-            </div>
+            ) : null}
 
             {stepError ? (
               <Alert

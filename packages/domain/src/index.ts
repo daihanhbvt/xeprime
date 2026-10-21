@@ -30,8 +30,10 @@ export {
 export {
   CURRENCY_SUFFIX,
   subtractMoney,
+  sumMoney,
   absoluteMoney,
   isNegativeMoney,
+  isPositiveMoney,
   isZeroMoney,
   formatMoneyVnd,
   formatMoneyVndVi,
@@ -237,9 +239,12 @@ export { LIST_SEPARATOR, vehicleLabel } from './display';
 
 export {
   deliverySummaryText,
+  deliveryTierFee,
   deliveryTierRanges,
   freeDeliveryWithinKm,
   isFreeDeliveryFee,
+  isPerKmTier,
+  type DeliveryTierLike,
   type DeliveryTierRange,
 } from './rental-policy';
 
@@ -361,15 +366,18 @@ export { countChangePercent } from './period-change';
 export {
   PLAN_CARD_FEATURE_LINES,
   PLAN_TIER_ICON,
+  PLAN_VEHICLES_LINE_MESSAGE,
   buildPlanPricingCards,
   planBenefitLines,
   planTierIcon,
+  planVehiclesLineMessage,
   type PlanBenefitLine,
   type PlanCardHeadline,
   type PlanCardSource,
   type PlanCardTerm,
   type PlanPricingCard,
   type PlanTierIcon,
+  type PlanVehiclesLineMessageKey,
 } from './plan-pricing-card';
 export {
   canStartAnotherCheckout,

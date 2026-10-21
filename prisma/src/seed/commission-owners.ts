@@ -2,7 +2,7 @@
  * Chủ xe cá nhân TUYẾN HOA HỒNG của dữ liệu demo — ba người: 1 xe, 2 xe, 3 xe.
  *
  * File này SINH bản khai từ một bảng compact thay vì viết tay như `shops.ts`: các chủ xe cá nhân chỉ
- * khác nhau ở con người, chỗ ở và mấy chiếc xe — những thứ PHẢI giống nhau (`planCode`,
+ * khác nhau ở con người, chỗ ở và mấy chiếc xe — những thứ PHẢI giống nhau (`planCodes`,
  * `tenantType`, một chi nhánh là chỗ ở) thì giống nhau theo cấu trúc, và thêm một người là thêm
  * một dòng. Bản khai ra ngoài vẫn là `ShopSpec` như mọi gian hàng khác.
  */
@@ -127,7 +127,7 @@ function toShopSpec(input: OwnerInput, index: number): ShopSpec {
       },
     ],
     fleet: input.fleet.map((model) => ({ model, count: 1 })),
-    planCode: DEFAULT_COMMISSION_PLAN_CODE,
+    planCodes: [DEFAULT_COMMISSION_PLAN_CODE],
     depth: input.depth,
     // Cá nhân thì không thuê tài xế — chuyến có tài xế là chính chủ cầm lái.
     driverCount: 0,

@@ -6,6 +6,7 @@ import {
   APPROVAL_DECISION,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
+  BILLING_MODE,
   API_ERROR_CODE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -230,7 +231,9 @@ export class PlatformApprovalService {
             subscriptions: {
               where: currentSubscriptionWhere(new Date()),
               orderBy: { endsAt: 'desc' },
-              take: 1,
+              // Nhiều kỳ có thể cùng chạy (ADR 0065: gói ô tô + gói xe máy, dòng hoa hồng còn sót) —
+              // một kỳ GÓI đang chạy là cả gian hàng ở tuyến gói.
+              take: 4,
               select: { billingMode: true },
             },
             _count: {
@@ -283,7 +286,11 @@ export class PlatformApprovalService {
             status: task.tenant.status,
             phone: task.tenant.phone,
             email: task.tenant.email,
-            billingMode: task.tenant.subscriptions[0]?.billingMode ?? null,
+            billingMode: task.tenant.subscriptions.some(
+              (sub) => sub.billingMode === BILLING_MODE.PACKAGE,
+            )
+              ? BILLING_MODE.PACKAGE
+              : (task.tenant.subscriptions[0]?.billingMode ?? null),
             publicVehicleCount: task.tenant._count.vehicles,
           }
         : null,

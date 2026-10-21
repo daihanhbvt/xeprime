@@ -1,34 +1,38 @@
 'use client';
 
-import {
-  CarOutlined,
-  CloseOutlined,
-  ReloadOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Checkbox, InputNumber, Radio } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   CATALOG_TYPE,
-  FUEL_TYPE_VALUES,
+  FUEL_TYPE_LABEL,
   MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
-  SERVICE_TYPE_LABEL,
+  SERVICE_TYPE_VALUES,
+  TRANSMISSION_TYPE_EXT_LABEL,
   VEHICLE_TYPE,
-  type SeatBucket,
+  VEHICLE_TYPE_LABEL,
+  VEHICLE_TYPE_VALUES,
+  vehicleFuelTypesFor,
+  vehicleServiceTypesFor,
   type ServiceType,
-  type VehicleType,
+  type TransmissionTypeExt,
 } from '@xeprime/types';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
-import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
+import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
+import { catalogItemAppliesTo } from '@/features/catalog/types';
+import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
+import { isPriceBandSelected, priceBandsFor, quickTransmissionsFor } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from '../search/LocationPicker';
+import { resolveServiceType } from '../search/search-draft';
 import { useSearchExperience } from '../search/search-context';
+import { usePriceBandLabel } from '../search/use-price-band-label';
 import type { MarketplaceFilters } from '../types';
 import styles from './FilterModal.module.css';
 
@@ -77,39 +81,81 @@ function initDraft(filters: MarketplaceFilters): ModalDraft {
 
 export function FilterModal({ open, onClose }: FilterModalProps) {
   const t = useTranslations('Marketplace.filterPanel');
+  const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
+  const priceBandLabel = usePriceBandLabel();
   const { filters, setFilters } = useMarketplaceFilters();
   const { draft: searchDraft, setRentalRange, setRentalMode } = useSearchExperience();
   const { catalog } = useCatalog();
-  const { brandLabel } = useCatalogLabels();
 
   const [draft, setDraft] = useState<ModalDraft>(() => initDraft(filters));
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [showAllBodyTypes, setShowAllBodyTypes] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
-  useEffect(() => {
+  /*
+   * Nạp lại nháp đúng lúc panel MỞ — điều chỉnh state ngay trong render, không phải effect.
+   *
+   * Không theo dõi `filters`: ô địa điểm/thời gian trong chính panel này ghi thẳng vào URL, nên
+   * reset theo `filters` sẽ xoá sạch các hãng/hộp số khách vừa tick mà chưa bấm "Áp dụng".
+   */
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setDraft(initDraft(filters));
       setShowAllBrands(false);
       setShowAllBodyTypes(false);
       setShowAllFeatures(false);
     }
-  }, [open, filters]);
+  }
 
   if (!open) return null;
 
   const isMotorbike = draft.vehicleType === VEHICLE_TYPE.MOTORBIKE;
-  const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND] ?? [];
-  const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
-  const featureItems = catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? [];
+  /*
+   * Hãng và tiện ích theo loại xe đọc từ `catalog_items.vehicle_types`. Mục ĐANG CHỌN luôn còn
+   * hiện để khách bỏ chọn được, kể cả khi vừa đổi sang loại xe mà nó không áp dụng.
+   */
+  const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND].filter(
+    (b) => draft.brand.includes(b.key) || catalogItemAppliesTo(b, draft.vehicleType),
+  );
+  const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE];
+  const featureItems = catalog[CATALOG_TYPE.VEHICLE_FEATURE].filter(
+    (f) => draft.features.includes(f.key) || catalogItemAppliesTo(f, draft.vehicleType),
+  );
+  /* Hai chiều đọc CÙNG một bảng (`vehicleServiceTypesFor`) với thẻ tìm kiếm: xe máy không có "có tài xế". */
+  const serviceTypes = SERVICE_TYPE_VALUES.filter((value) =>
+    vehicleServiceTypesFor(draft.vehicleType ?? VEHICLE_TYPE.CAR).includes(value),
+  );
+  const vehicleTypes = VEHICLE_TYPE_VALUES.filter((value) =>
+    vehicleServiceTypesFor(value).includes(
+      (draft.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
+    ),
+  );
+  const priceBands = priceBandsFor(draft.vehicleType);
+  const transmissions = quickTransmissionsFor(draft.vehicleType);
+  const fuelTypes = vehicleFuelTypesFor(draft.vehicleType ?? VEHICLE_TYPE.CAR);
+  const transmissionLabel = (code: string) =>
+    domainLabel(
+      'transmissionType',
+      code,
+      TRANSMISSION_TYPE_EXT_LABEL[code as TransmissionTypeExt] ?? code,
+    );
 
   const displayedBrands = showAllBrands ? brandItems : brandItems.slice(0, 6);
   const displayedBodyTypes = showAllBodyTypes ? bodyTypeItems : bodyTypeItems.slice(0, 6);
   const displayedFeatures = showAllFeatures ? featureItems : featureItems.slice(0, 6);
 
   const toggleItem = (
-    field: 'brand' | 'bodyType' | 'motorbikeCategory' | 'seats' | 'fuelType' | 'features' | 'transmission',
+    field:
+      | 'brand'
+      | 'bodyType'
+      | 'motorbikeCategory'
+      | 'seats'
+      | 'fuelType'
+      | 'features'
+      | 'transmission',
     value: string,
   ) => {
     setDraft((prev) => {
@@ -120,16 +166,25 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
   };
 
   const handleApply = () => {
+    // Nhiên liệu / hộp số không thuộc loại xe vừa chọn (diesel khi đã sang xe máy) bị bỏ, không
+    // trở thành một bộ lọc vô hình làm rỗng kết quả.
+    const fuelType = draft.fuelType.filter((code) =>
+      (fuelTypes as readonly string[]).includes(code),
+    );
+    const transmission = draft.transmission.filter((code) =>
+      (transmissions as readonly string[]).includes(code),
+    );
     setFilters({
       vehicleType: draft.vehicleType,
       serviceType: draft.serviceType,
       brand: draft.brand.length > 0 ? draft.brand : undefined,
       bodyType: !isMotorbike && draft.bodyType.length > 0 ? draft.bodyType : undefined,
-      motorbikeCategory: isMotorbike && draft.motorbikeCategory.length > 0 ? draft.motorbikeCategory : undefined,
+      motorbikeCategory:
+        isMotorbike && draft.motorbikeCategory.length > 0 ? draft.motorbikeCategory : undefined,
       seats: !isMotorbike && draft.seats.length > 0 ? draft.seats : undefined,
-      fuelType: draft.fuelType.length > 0 ? draft.fuelType : undefined,
+      fuelType: fuelType.length > 0 ? fuelType : undefined,
       features: draft.features.length > 0 ? draft.features : undefined,
-      transmission: draft.transmission.length > 0 ? draft.transmission : undefined,
+      transmission: transmission.length > 0 ? transmission : undefined,
       priceMin: draft.priceMin,
       priceMax: draft.priceMax,
       delivery: draft.delivery,
@@ -161,15 +216,28 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="filter-modal-title">
+    <div
+      className={styles.overlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="filter-modal-title"
+    >
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.titleArea}>
-            <h2 id="filter-modal-title" className={styles.title}>{t('title')}</h2>
+            <h2 id="filter-modal-title" className={styles.title}>
+              {t('title')}
+            </h2>
             <p className={styles.subtitle}>{t('subtitle')}</p>
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label={tCommon('actions.close')}
+          >
             <CloseOutlined />
           </button>
         </div>
@@ -178,64 +246,52 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
         <div className={styles.content}>
           {/* 1. Dải tab Dịch vụ */}
           <div className={styles.serviceSegmented}>
-            <button
-              type="button"
-              className={cx(
-                styles.serviceTab,
-                draft.serviceType === SERVICE_TYPE.SELF_DRIVE && styles.serviceTabActive,
-              )}
-              onClick={() => setDraft((p) => ({ ...p, serviceType: SERVICE_TYPE.SELF_DRIVE }))}
-            >
-              <span>{domainLabel('serviceType', SERVICE_TYPE.SELF_DRIVE)}</span>
-            </button>
-            <button
-              type="button"
-              className={cx(
-                styles.serviceTab,
-                draft.serviceType === SERVICE_TYPE.WITH_DRIVER && styles.serviceTabActive,
-              )}
-              onClick={() => setDraft((p) => ({ ...p, serviceType: SERVICE_TYPE.WITH_DRIVER }))}
-            >
-              <span>{domainLabel('serviceType', SERVICE_TYPE.WITH_DRIVER)}</span>
-            </button>
-            <button
-              type="button"
-              className={cx(
-                styles.serviceTab,
-                draft.serviceType === SERVICE_TYPE.LONG_TERM && styles.serviceTabActive,
-              )}
-              onClick={() => setDraft((p) => ({ ...p, serviceType: SERVICE_TYPE.LONG_TERM }))}
-            >
-              <span>{domainLabel('serviceType', SERVICE_TYPE.LONG_TERM)}</span>
-            </button>
+            {serviceTypes.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={cx(
+                  styles.serviceTab,
+                  draft.serviceType === value && styles.serviceTabActive,
+                )}
+                onClick={() => setDraft((p) => ({ ...p, serviceType: value }))}
+              >
+                <span>{domainLabel('serviceType', value)}</span>
+              </button>
+            ))}
           </div>
 
           {/* 2. Loại xe (Ô tô / Xe máy) */}
           <div className={styles.vehicleTypeRow}>
             <span className={styles.rowLabel}>{t('vehicleType')}</span>
             <div className={styles.vehicleTypeSegmented}>
-              <button
-                type="button"
-                className={cx(
-                  styles.vehicleTypeTab,
-                  draft.vehicleType === VEHICLE_TYPE.CAR && styles.vehicleTypeTabActive,
-                )}
-                onClick={() => setDraft((p) => ({ ...p, vehicleType: VEHICLE_TYPE.CAR }))}
-              >
-                <CarOutlined />
-                <span>Ô tô</span>
-              </button>
-              <button
-                type="button"
-                className={cx(
-                  styles.vehicleTypeTab,
-                  draft.vehicleType === VEHICLE_TYPE.MOTORBIKE && styles.vehicleTypeTabActive,
-                )}
-                onClick={() => setDraft((p) => ({ ...p, vehicleType: VEHICLE_TYPE.MOTORBIKE }))}
-              >
-                <ThunderboltOutlined />
-                <span>Xe máy</span>
-              </button>
+              {vehicleTypes.map((value) => {
+                const Icon = VEHICLE_TYPE_ICON[value];
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    className={cx(
+                      styles.vehicleTypeTab,
+                      draft.vehicleType === value && styles.vehicleTypeTabActive,
+                    )}
+                    onClick={() =>
+                      setDraft((p) => ({
+                        ...p,
+                        vehicleType: value,
+                        // Xe máy không có "có tài xế" — rơi về tự lái, cùng luật với thẻ tìm kiếm.
+                        serviceType: resolveServiceType(
+                          value,
+                          (p.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
+                        ),
+                      }))
+                    }
+                  >
+                    <Icon aria-hidden />
+                    <span>{domainLabel('vehicleType', value, VEHICLE_TYPE_LABEL[value])}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -338,85 +394,29 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                   <span className={styles.sectionHint}>{t('single')}</span>
                 </div>
                 <div className={styles.radioGroup}>
-                  {!isMotorbike ? (
-                    <>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin == null && draft.priceMax == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
-                          }
-                        />
-                        <span>{t('any')}</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMax === 500_000 && draft.priceMin == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: undefined, priceMax: 500_000 }))
-                          }
-                        />
-                        <span>Dưới 500k</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin === 500_000 && draft.priceMax === 1_000_000}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: 500_000, priceMax: 1_000_000 }))
-                          }
-                        />
-                        <span>500k – 1 triệu</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin === 1_000_000 && draft.priceMax == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: 1_000_000, priceMax: undefined }))
-                          }
-                        />
-                        <span>Trên 1 triệu</span>
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin == null && draft.priceMax == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
-                          }
-                        />
-                        <span>{t('any')}</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMax === 100_000 && draft.priceMin == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: undefined, priceMax: 100_000 }))
-                          }
-                        />
-                        <span>Dưới 100k</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin === 100_000 && draft.priceMax === 200_000}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: 100_000, priceMax: 200_000 }))
-                          }
-                        />
-                        <span>100k – 200k</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.priceMin === 200_000 && draft.priceMax == null}
-                          onChange={() =>
-                            setDraft((p) => ({ ...p, priceMin: 200_000, priceMax: undefined }))
-                          }
-                        />
-                        <span>Trên 200k</span>
-                      </label>
-                    </>
-                  )}
+                  <label className={styles.radioLabel}>
+                    <Radio
+                      checked={draft.priceMin == null && draft.priceMax == null}
+                      onChange={() =>
+                        setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
+                      }
+                    />
+                    <span>{t('any')}</span>
+                  </label>
+                  {priceBands.map((band) => (
+                    <label
+                      key={`${band.min ?? ''}-${band.max ?? ''}`}
+                      className={styles.radioLabel}
+                    >
+                      <Radio
+                        checked={isPriceBandSelected(band, draft.priceMin, draft.priceMax)}
+                        onChange={() =>
+                          setDraft((p) => ({ ...p, priceMin: band.min, priceMax: band.max }))
+                        }
+                      />
+                      <span>{priceBandLabel(band)}</span>
+                    </label>
+                  ))}
                 </div>
 
                 <div className={styles.priceInputsRow}>
@@ -455,25 +455,28 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                       className={styles.selectedChip}
                       onClick={() => toggleItem('transmission', tr)}
                     >
-                      <span>{tr === 'automatic' ? 'Số tự động' : tr === 'manual' ? 'Số sàn' : tr}</span>
-                      <CloseOutlined style={{ fontSize: 10 }} />
+                      <span>{transmissionLabel(tr)}</span>
+                      <CloseOutlined className={styles.chipCloseIcon} aria-hidden />
                     </button>
                   ))}
-                  {draft.priceMax ? (
+                  {draft.priceMin != null || draft.priceMax != null ? (
                     <button
                       type="button"
                       className={styles.selectedChip}
-                      onClick={() => setDraft((p) => ({ ...p, priceMax: undefined }))}
+                      onClick={() =>
+                        setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
+                      }
                     >
-                      <span>{`Dưới ${draft.priceMax / 1000}k`}</span>
-                      <CloseOutlined style={{ fontSize: 10 }} />
+                      <span>{priceBandLabel({ min: draft.priceMin, max: draft.priceMax })}</span>
+                      <CloseOutlined className={styles.chipCloseIcon} aria-hidden />
                     </button>
                   ) : null}
                   <button
                     type="button"
                     className={styles.resetIconBtn}
                     onClick={handleClear}
-                    title="Xóa lựa chọn"
+                    title={tCommon('actions.clearSelection')}
+                    aria-label={tCommon('actions.clearSelection')}
                   >
                     <ReloadOutlined />
                   </button>
@@ -490,62 +493,22 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                   <span className={styles.sectionHint}>{t('single')}</span>
                 </div>
                 <div className={styles.radioGroup}>
-                  {!isMotorbike ? (
-                    <>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.length === 0}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: [] }))}
-                        />
-                        <span>{t('any')}</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.includes('automatic')}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: ['automatic'] }))}
-                        />
-                        <span>Số tự động</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.includes('manual')}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: ['manual'] }))}
-                        />
-                        <span>Số sàn</span>
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.length === 0}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: [] }))}
-                        />
-                        <span>{t('any')}</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.includes('automatic_cvt')}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: ['automatic_cvt'] }))}
-                        />
-                        <span>Tự động (tay ga)</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.includes('semi_automatic')}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: ['semi_automatic'] }))}
-                        />
-                        <span>Bán tự động</span>
-                      </label>
-                      <label className={styles.radioLabel}>
-                        <Radio
-                          checked={draft.transmission.includes('manual_clutch')}
-                          onChange={() => setDraft((p) => ({ ...p, transmission: ['manual_clutch'] }))}
-                        />
-                        <span>Côn tay</span>
-                      </label>
-                    </>
-                  )}
+                  <label className={styles.radioLabel}>
+                    <Radio
+                      checked={draft.transmission.length === 0}
+                      onChange={() => setDraft((p) => ({ ...p, transmission: [] }))}
+                    />
+                    <span>{t('any')}</span>
+                  </label>
+                  {transmissions.map((code) => (
+                    <label key={code} className={styles.radioLabel}>
+                      <Radio
+                        checked={draft.transmission.includes(code)}
+                        onChange={() => setDraft((p) => ({ ...p, transmission: [code] }))}
+                      />
+                      <span>{transmissionLabel(code)}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -577,55 +540,15 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                   <span className={styles.sectionHint}>{t('multiple')}</span>
                 </div>
                 <div className={styles.optionsGrid}>
-                  {!isMotorbike ? (
-                    <>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('petrol')}
-                          onChange={() => toggleItem('fuelType', 'petrol')}
-                        />
-                        <span>Xăng</span>
-                      </label>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('diesel')}
-                          onChange={() => toggleItem('fuelType', 'diesel')}
-                        />
-                        <span>Dầu diesel</span>
-                      </label>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('electric')}
-                          onChange={() => toggleItem('fuelType', 'electric')}
-                        />
-                        <span>Điện</span>
-                      </label>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('hybrid')}
-                          onChange={() => toggleItem('fuelType', 'hybrid')}
-                        />
-                        <span>Hybrid</span>
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('petrol')}
-                          onChange={() => toggleItem('fuelType', 'petrol')}
-                        />
-                        <span>Xăng</span>
-                      </label>
-                      <label className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.fuelType.includes('electric')}
-                          onChange={() => toggleItem('fuelType', 'electric')}
-                        />
-                        <span>Điện</span>
-                      </label>
-                    </>
-                  )}
+                  {fuelTypes.map((code) => (
+                    <label key={code} className={styles.checkboxLabel}>
+                      <Checkbox
+                        checked={draft.fuelType.includes(code)}
+                        onChange={() => toggleItem('fuelType', code)}
+                      />
+                      <span>{domainLabel('fuelType', code, FUEL_TYPE_LABEL[code])}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -639,28 +562,36 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                   <label className={styles.checkboxLabel}>
                     <Checkbox
                       checked={Boolean(draft.delivery)}
-                      onChange={(e) => setDraft((p) => ({ ...p, delivery: e.target.checked || undefined }))}
+                      onChange={(e) =>
+                        setDraft((p) => ({ ...p, delivery: e.target.checked || undefined }))
+                      }
                     />
                     <span>{t('amenityDesc.delivery')}</span>
                   </label>
                   <label className={styles.checkboxLabel}>
                     <Checkbox
                       checked={Boolean(draft.noCollateral)}
-                      onChange={(e) => setDraft((p) => ({ ...p, noCollateral: e.target.checked || undefined }))}
+                      onChange={(e) =>
+                        setDraft((p) => ({ ...p, noCollateral: e.target.checked || undefined }))
+                      }
                     />
                     <span>{t('amenityDesc.noCollateral')}</span>
                   </label>
                   <label className={styles.checkboxLabel}>
                     <Checkbox
                       checked={Boolean(draft.vatInvoice)}
-                      onChange={(e) => setDraft((p) => ({ ...p, vatInvoice: e.target.checked || undefined }))}
+                      onChange={(e) =>
+                        setDraft((p) => ({ ...p, vatInvoice: e.target.checked || undefined }))
+                      }
                     />
-                    <span>Xuất hoá đơn VAT</span>
+                    <span>{t('vatInvoice')}</span>
                   </label>
                   <label className={styles.checkboxLabel}>
                     <Checkbox
                       checked={Boolean(draft.discount)}
-                      onChange={(e) => setDraft((p) => ({ ...p, discount: e.target.checked || undefined }))}
+                      onChange={(e) =>
+                        setDraft((p) => ({ ...p, discount: e.target.checked || undefined }))
+                      }
                     />
                     <span>{t('amenityDesc.discount')}</span>
                   </label>

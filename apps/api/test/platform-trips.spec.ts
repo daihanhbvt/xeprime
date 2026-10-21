@@ -161,6 +161,7 @@ beforeAll(async () => {
           tenantId,
           bookingRequestId: id,
           vehicleId,
+          depositRequired: true,
           amount: new Prisma.Decimal('500000'),
           depositAmount: new Prisma.Decimal('500000'),
           feePolicyId: policyId,
