@@ -171,7 +171,7 @@ export async function ListingDetailView({
                     <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
                   ) : null}
                 </div>
-                <ListingHeaderActions />
+                <ListingHeaderActions vehicleId={listing.id} vehicleName={listing.name} />
               </div>
 
               {locationLine ? (

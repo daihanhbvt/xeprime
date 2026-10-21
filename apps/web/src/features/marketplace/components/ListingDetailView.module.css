@@ -139,6 +139,13 @@
   color: var(--xp-color-primary, #e9ac29);
 }
 
+/* Trái tim đã lưu — cùng sắc đỏ với tim trên thẻ xe. */
+.actionBtnActive,
+.actionBtnActive:hover {
+  border-color: var(--xp-color-error);
+  color: var(--xp-color-error);
+}
+
 /* Thẻ khối chung cho cột trái - phẳng theo Figma v2 (Images 2 & 4) */
 .sectionCard {
   background: transparent;

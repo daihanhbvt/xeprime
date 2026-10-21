@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "Xe yêu thích"
+  },
+  "tabs": {
+    "label": "Loại xe",
+    "withCount": "{type} ({count, plural, other {# xe}})",
+    "showMore": "Xem thêm"
+  },
+  "button": {
+    "save": "Lưu {name} vào Xe yêu thích",
+    "remove": "Bỏ {name} khỏi Xe yêu thích"
+  },
+  "card": {
+    "remove": "Bỏ thích",
+    "removeAria": "Bỏ {name} khỏi Xe yêu thích",
+    "viewDetail": "Xem chi tiết",
+    "viewDetailAria": "Xem chi tiết {name}",
+    "servicesLabel": "Dịch vụ của xe",
+    "serviceLinkAria": "Xem {name} với dịch vụ {service}",
+    "highlightsLabel": "Tiện ích của xe",
+    "savedAt": "Đã lưu {dateTime}",
+    "viewDetail": "Xem chi tiết"
+  },
+  "empty": {
+    "car": "Chưa có ô tô nào trong danh sách yêu thích",
+    "motorbike": "Chưa có xe máy nào trong danh sách yêu thích",
+    "body": "Bấm biểu tượng trái tim trên xe bạn quan tâm để lưu lại và xem sau.",
+    "cta": "Tìm xe"
+  },
+  "error": {
+    "title": "Không tải được danh sách xe yêu thích",
+    "loadMore": "Không tải thêm được. {reason}"
+  },
+  "toast": {
+    "saved": "Đã lưu xe vào Xe yêu thích.",
+    "saveFailed": "Chưa lưu được xe vào yêu thích. {reason}",
+    "removeFailed": "Chưa bỏ được xe khỏi yêu thích. {reason}"
+  }
+}

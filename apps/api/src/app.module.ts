@@ -54,6 +54,7 @@ import { VehicleSettingsModule } from './modules/vehicle-settings/vehicle-settin
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
 import { CustomerTripsModule } from './modules/customer-trips/customer-trips.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { PhoneVerificationModule } from './modules/phone-verification/phone-verification.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -134,6 +135,7 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
     BookingsModule,
     BookingRequestsModule,
     CustomerTripsModule,
+    FavoritesModule,
     PhoneVerificationModule,
     FinanceModule,
     PaymentsModule,

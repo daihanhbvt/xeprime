@@ -9,7 +9,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import { Button, Select, Skeleton } from 'antd';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_LISTING_SORT,
   LISTING_AMENITY_LABEL,

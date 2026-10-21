@@ -113,8 +113,6 @@ const CUSTOMER_TOTAL = RENTAL + SERVICE_FEE;
 const GROSS_ONLINE = roundToThousand(CUSTOMER_TOTAL * 0.3);
 /** `D` — phần của chủ xe trong cọc = cọc − S − H. */
 const DEPOSIT = GROSS_ONLINE - SERVICE_FEE - COMMISSION;
-/** `D + S + H` — phần tài trợ được; bảo hiểm là tiền giữ hộ, không tài trợ được (ADR 0033 điều 4). */
-const SPONSORABLE = DEPOSIT + SERVICE_FEE + COMMISSION;
 
 let dbAvailable = false;
 let mainCustomer: string;

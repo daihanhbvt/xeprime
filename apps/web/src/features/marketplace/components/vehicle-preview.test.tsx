@@ -3,6 +3,13 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MarketplaceFilters, PublicDestination, PublicListing } from '../types';
 
+/** Trái tim cần phiên + QueryClient + hộp đăng nhập — có test riêng ở `features/favorites`. */
+vi.mock('@/features/favorites/components/FavoriteButton', () => ({
+  FavoriteButton: ({ vehicleId }: { vehicleId: string }) => (
+    <button type="button" data-testid={`favorite-${vehicleId}`} />
+  ),
+}));
+
 /**
  * Khối "Xe phù hợp với bạn" ở trang chủ.
  *
