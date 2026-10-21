@@ -15,7 +15,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { AccountSection } from '@/navigation/account-section';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { AccountSecuritySections, SectionHead } from './components/AccountSecuritySections';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
 import { OwnerProfileScreen } from './OwnerProfileScreen';
@@ -67,6 +68,7 @@ export function ManageAccountScreen({ section }: { section?: AccountSection } = 
 }
 
 function PartnerAccountScreen() {
+  const colors = useColors();
   const tHub = useTranslations('Account.hub');
   const canOpenShopSettings = useShopSettingsAccess();
   const navigateOnce = useNavigateOnce();

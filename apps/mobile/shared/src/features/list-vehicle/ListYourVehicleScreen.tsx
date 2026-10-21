@@ -19,7 +19,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Số xe tối đa của chủ xe tuyến hoa hồng và mức phí dịch vụ thí điểm (ADR 0028).
@@ -79,6 +80,7 @@ export function ListYourVehicleScreen({
   /** Phần đuôi riêng của nơi dùng (vd. dòng Đăng xuất ở app Partner). */
   footer?: ReactNode;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.landing');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
@@ -265,6 +267,7 @@ function Hero({
   stepsTitle: string;
   steps: HeroStep[];
 }) {
+  const colors = useColors();
   return (
     <Card tone="accent">
       <YStack gap={space.md}>
@@ -343,6 +346,7 @@ function TrackOption({
   selectedLabel: string;
   onSelect: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onSelect}
@@ -428,6 +432,7 @@ function TrackDetail({
   offerTitle: string;
   offerBody: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <Card>
       <YStack gap={space.md}>

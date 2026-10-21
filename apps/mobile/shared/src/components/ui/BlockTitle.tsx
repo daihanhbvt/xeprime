@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { useTranslations } from 'use-intl';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Nhãn của một KHỐI bên trong thẻ — nhỏ, viết hoa, mờ, có vạch gold dẫn đầu.
@@ -42,6 +43,7 @@ export function BlockTitle({
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
 }) {
+  const colors = useColors();
   const tActions = useTranslations('Common.actions');
   const head = (
     /*
@@ -149,6 +151,7 @@ export function BlockLink({
   /** Nhãn đọc màn hình khi chữ hiện quá ngắn để tự đứng một mình ("Xem đầy đủ" — đầy đủ cái gì?). */
   accessibilityLabel?: string;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}

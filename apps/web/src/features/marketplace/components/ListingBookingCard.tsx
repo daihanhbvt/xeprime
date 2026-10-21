@@ -12,6 +12,7 @@ import {
 import { Checkbox, DatePicker, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
+  RENTAL_MODE,
   addCalendarMonthsVn,
   COLLATERAL_MODE,
   isRouteType,
@@ -117,7 +118,7 @@ export function ListingBookingCard({
       returnAt: returnAt ? toAppTz(returnAt) : fallback.returnAt,
     };
   });
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
 
   // 3. Quản lý lộ trình cho dịch vụ "Có tài xế"
   const [currentRouteType, setCurrentRouteType] = useState<RouteType>(() => {

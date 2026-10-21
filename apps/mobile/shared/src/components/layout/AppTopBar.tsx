@@ -3,7 +3,8 @@ import { XStack, YStack } from 'tamagui';
 import { images, logoWidth } from '@/assets';
 import { HeaderActions } from './HeaderActions';
 import { APP_NAME } from '@/lib/app-name';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { HEADER_RULE, HEADER_RULE_OPACITY } from './AppHeader';
 
 /** Logo thanh gốc của app, lớn hơn logo header màn con (`AppHeader` dùng 24). */
@@ -14,6 +15,7 @@ const styles = StyleSheet.create({
 });
 
 export function AppTopBar() {
+  const colors = useColors();
   return (
     /*
       Cùng vạch gold đóng đáy như `AppHeader`: thanh gốc của tab và thanh của màn con là CÙNG một

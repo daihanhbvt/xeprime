@@ -12,7 +12,8 @@ import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { PublicListing } from './api';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { ShopHeader } from './components/ShopHeader';
@@ -43,6 +44,7 @@ const Separator = () => <YStack h={layout.block} />;
  * vốn là thứ khách vào đây tìm.
  */
 export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Shops.vehicles');
   const tResults = useTranslations('Marketplace.results');
   const tShops = useTranslations('Shops.header');

@@ -2,7 +2,7 @@ import { createAnimations } from '@tamagui/animations-react-native';
 import { createTamagui, createFont, createTokens } from 'tamagui';
 import { FONT_FAMILY } from './fonts';
 import { duration } from './motion';
-import { colors, fontSize, fontWeight, radius, sizing, space } from './tokens';
+import { PALETTES, fontSize, fontWeight, radius, sizing, space, type AppColors } from './tokens';
 
 /**
  * Tamagui đọc CHÍNH bảng token native ở `./tokens.ts`, tức vẫn là `XP_TOKENS` của
@@ -26,33 +26,43 @@ const size = {
 };
 
 const tokens = createTokens({
-  color: colors,
-  space: { 0: 0, xs: space.xs, sm: space.sm, md: space.md, lg: space.lg, xl: space.xl, true: space.md },
+  color: PALETTES.light.colors,
+  space: {
+    0: 0,
+    xs: space.xs,
+    sm: space.sm,
+    md: space.md,
+    lg: space.lg,
+    xl: space.xl,
+    true: space.md,
+  },
   size,
   radius: { 0: 0, sm: radius.sm, md: radius.md, lg: radius.lg, pill: radius.pill, true: radius.md },
   zIndex: { 0: 0, sticky: 10, overlay: 100, modal: 200, toast: 300 },
 });
 
 /**
- * Một theme duy nhất (sáng). `app.json` khoá `userInterfaceStyle: "light"` vì `@xeprime/ui`
- * chưa có palette tối — mở dark mode phải làm ở package dùng chung trước, không phải ở đây.
+ * Theme sáng/tối THẬT — layout gốc bọc app trong theme theo `useAppScheme()`, nên màu theme của
+ * Tamagui (nền/viền mặc định của control) đổi ngay cùng `useColors()`.
  */
-const light = {
-  background: colors.background,
-  backgroundHover: colors.surfaceMuted,
-  backgroundPress: colors.surfaceSelected,
-  backgroundFocus: colors.surfaceSelected,
-  color: colors.text,
-  colorHover: colors.text,
-  colorPress: colors.text,
-  colorFocus: colors.text,
-  borderColor: colors.border,
-  borderColorHover: colors.borderInput,
-  borderColorFocus: colors.primary,
-  borderColorPress: colors.borderInput,
-  placeholderColor: colors.placeholder,
-  shadowColor: 'rgba(0,0,0,0.12)',
-};
+function themeFrom(colors: AppColors) {
+  return {
+    background: colors.background,
+    backgroundHover: colors.surfaceMuted,
+    backgroundPress: colors.surfaceSelected,
+    backgroundFocus: colors.surfaceSelected,
+    color: colors.text,
+    colorHover: colors.text,
+    colorPress: colors.text,
+    colorFocus: colors.text,
+    borderColor: colors.border,
+    borderColorHover: colors.borderInput,
+    borderColorFocus: colors.primary,
+    borderColorPress: colors.borderInput,
+    placeholderColor: colors.placeholder,
+    shadowColor: 'rgba(0,0,0,0.12)',
+  };
+}
 
 const bodyFont = createFont({
   family: FONT_FAMILY.body,
@@ -130,7 +140,7 @@ const TEXT_DEFAULTS: Record<string, Record<string, unknown>> = {
 export const tamaguiConfig = createTamagui({
   animations,
   tokens,
-  themes: { light, dark: light },
+  themes: { light: themeFrom(PALETTES.light.colors), dark: themeFrom(PALETTES.dark.colors) },
   fonts: { body: bodyFont, heading: displayFont },
   /*
    * `defaultFont` PHẢI nằm trong `settings` — Tamagui v2 đổi chỗ nó.

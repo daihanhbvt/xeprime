@@ -34,7 +34,8 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   BasicStep,
   MediaStep,
@@ -169,6 +170,7 @@ const WIZARD_FIELDS: ReadonlyArray<keyof VehicleFormValues> = Object.values(STEP
  * phải nói rõ điều đó — báo "lỗi tạo xe" sẽ khiến người dùng bấm lại và tạo xe thứ hai.
  */
 export function CreateVehicleScreen() {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
@@ -280,7 +282,9 @@ export function CreateVehicleScreen() {
     const missing = publishGaps();
     setPublishMissing(missing);
     if (missing.length > 0) {
-      const target = steps.findIndex((candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!]);
+      const target = steps.findIndex(
+        (candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!],
+      );
       if (target >= 0) setStep(target);
       return;
     }
@@ -519,6 +523,7 @@ function ReviewStep({
   values: VehicleFormValues;
   onEditStep: (step: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.review');
   const tUnits = useTranslations('Common.units');
   const tLabels = useTranslations('Common.labels');

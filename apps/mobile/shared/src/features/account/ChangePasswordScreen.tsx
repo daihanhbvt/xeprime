@@ -29,7 +29,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 interface ChangePasswordValues {
   currentPassword: string;
@@ -53,6 +54,7 @@ interface ChangePasswordValues {
  * tự chuyển từ "đặt lần đầu" sang "đổi" mà không cần mở lại màn.
  */
 export function ChangePasswordScreen() {
+  const colors = useColors();
   const t = useTranslations('Account.changePassword');
   const router = useRouter();
   const toast = useAppToast();

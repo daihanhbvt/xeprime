@@ -17,10 +17,10 @@ import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
+import { useAppStyles } from '@/theme/styles';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import {
-  colors,
   fieldFontSize,
   fontSize,
   fontWeight,
@@ -71,6 +71,9 @@ interface LocationPickerProps {
  * xe — app không có danh sách tỉnh riêng, nên tỉnh bị admin ẩn biến mất khỏi cả hai client.
  */
 export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('HomeSearch.location');
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -146,6 +149,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={insets.bottom}
           >
             <YStack
@@ -262,6 +266,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
 }
 
 function GroupTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold} pt={space.xs}>
       {children.toLocaleUpperCase()}
@@ -296,6 +301,7 @@ const Row = memo(function Row({
   value: string;
   onPress: (value: string) => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={() => onPress(value)}

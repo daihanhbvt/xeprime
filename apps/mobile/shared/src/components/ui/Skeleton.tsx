@@ -10,7 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
 import { SHOP_COVER_RATIO, SHOP_LOGO } from './ShopCover';
-import { colors, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 
 interface SkeletonProps {
@@ -97,6 +98,7 @@ export function Skeleton({
   fill = false,
   round = false,
 }: SkeletonProps) {
+  const colors = useColors();
   /*
    * Giữ nhịp sống đúng bằng vòng đời của khung chờ. Effect chạy SAU khung hình đầu, nên khung
    * hình đó vẽ ở `opacity: 0.5` — đứng yên một nhịp rồi mới thở, thay vì nhấp nháy.
@@ -142,6 +144,7 @@ export function SkeletonText({ lines = 3, height = 13 }: { lines?: number; heigh
 
 /** Khung chờ cho một thẻ xe — cùng tỉ lệ ảnh và cùng số dòng với thẻ thật. */
 export function VehicleCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <Skeleton height={190} />
@@ -164,6 +167,7 @@ export function VehicleCardSkeleton() {
  * về.
  */
 export function FleetVehicleCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <Skeleton aspectRatio={2} />
@@ -184,6 +188,7 @@ export function FleetVehicleCardSkeleton() {
 
 /** Khung chờ cho một dòng danh sách có avatar (địa điểm, gian hàng). */
 export function ListRowSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.md} bw={1} bc={colors.border} p={space.md}>
       <YStack gap={space.xs}>
@@ -202,6 +207,7 @@ export function ListRowSkeleton() {
  * ra và cả khối đổi hình. Số dòng lấy đúng số dòng sắp hiện.
  */
 export function MiniRowsSkeleton({ rows = 3 }: { rows?: number }) {
+  const colors = useColors();
   return (
     <YStack>
       {Array.from({ length: rows }, (_, i) => (
@@ -225,6 +231,7 @@ export function MiniRowsSkeleton({ rows = 3 }: { rows?: number }) {
 
 /** Khung chờ cho một thẻ chuyến — ảnh vuông trái, ba dòng phải, hàng tiền dưới cùng. */
 export function TripCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack
       bg={colors.surface}
@@ -250,6 +257,7 @@ export function TripCardSkeleton() {
 
 /** Khung chờ cho một thẻ đơn/yêu cầu ở khu quản lý — hàng trạng thái + hai cột thông tin. */
 export function RecordCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack
       bg={colors.surface}
@@ -279,6 +287,7 @@ export function RecordCardSkeleton() {
  * ra để tránh.
  */
 export function ActionCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <XStack>
@@ -310,6 +319,7 @@ export function ActionCardSkeleton() {
 
 /** Khung chờ cho trang chi tiết xe — dựng đúng hình dạng thật để nội dung về không đẩy trang. */
 export function ListingDetailSkeleton() {
+  const colors = useColors();
   return (
     <YStack f={1} bg={colors.background}>
       <Skeleton height={260} />
@@ -375,6 +385,7 @@ export function ListingDetailSkeleton() {
 
 /** Khung chờ màn hồ sơ gian hàng: bìa tràn viền · logo tròn đè lên · tên · các khối biểu mẫu. */
 export function ShopProfileSkeleton() {
+  const colors = useColors();
   return (
     <YStack>
       <Skeleton aspectRatio={SHOP_COVER_RATIO} />
@@ -402,6 +413,7 @@ export function ShopProfileSkeleton() {
 
 /** Khung chờ cho màn tài khoản: avatar + tên/email, rồi các hàng thiết lập. */
 export function ProfileSkeleton() {
+  const colors = useColors();
   return (
     <YStack gap={space.lg}>
       <XStack ai="center" gap={space.md}>

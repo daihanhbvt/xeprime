@@ -173,6 +173,7 @@ export function OpenCaseSheet({
 
         <YStack gap={space.sm}>
           <Button
+            icon="send-outline"
             label={t('submit')}
             loading={openCase.isPending}
             onPress={() => void onSubmit()}

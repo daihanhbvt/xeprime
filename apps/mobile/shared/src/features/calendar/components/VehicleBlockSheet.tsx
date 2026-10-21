@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  RENTAL_MODE,
   API_ERROR_CODE,
   VEHICLE_BLOCK_REASON,
   VEHICLE_BLOCK_REASON_VALUES,
@@ -107,7 +108,7 @@ function BlockForm({
     const dayStart = startOfAppDay(state.mode === 'create' ? state.date : '');
     return { pickupAt: dayStart, returnAt: dayStart.add(1, 'day') };
   });
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   const [picking, setPicking] = useState(false);
   const [reason, setReason] = useState<VehicleBlockReason>(
     (editing?.reason as VehicleBlockReason | undefined) ??

@@ -13,7 +13,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { PublicShopSummary } from '../api';
 import { useShopSuggestions } from '../hooks/use-shop-suggestions';
 
@@ -46,6 +47,7 @@ export function KeywordSearch({
   onApply: (q: string | undefined) => void;
   onOpenShop: (slug: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.results.keyword');
   const appliedQ = value ?? '';
   const [text, setText] = useState(appliedQ);
@@ -184,6 +186,7 @@ function HostSuggestion({
   tokens: string[];
   onPress: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.results.keyword');
   const meta = [
     t(host.verified ? 'shop' : 'owner'),

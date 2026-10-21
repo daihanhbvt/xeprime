@@ -1,6 +1,7 @@
 import { Text, YStack } from 'tamagui';
 import { StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Đường kính tối thiểu — một chữ số ra hình TRÒN, hai chữ số nở ngang thành viên thuốc.
@@ -17,12 +18,15 @@ const SIZES = {
 /** Quá ngưỡng thì con số thành "99+" — viên huy hiệu không được nở dài ra ngoài thanh trên. */
 const MAX = 99;
 
-const TONE = {
-  /** Đếm thứ người dùng TỰ đặt (bộ lọc đang bật) — nhấn thương hiệu, không phải cảnh báo. */
-  primary: { bg: colors.primary, fg: colors.onPrimary },
-  /** Đếm việc CẦN LÀM — đỏ, đúng `<Badge count>` mặc định của AntD bên web. */
-  danger: { bg: colors.danger, fg: colors.textInverse },
-} as const;
+const useTone = themed(
+  (colors) =>
+    ({
+      /** Đếm thứ người dùng TỰ đặt (bộ lọc đang bật) — nhấn thương hiệu, không phải cảnh báo. */
+      primary: { bg: colors.primary, fg: colors.onPrimary },
+      /** Đếm việc CẦN LÀM — đỏ, đúng `<Badge count>` mặc định của AntD bên web. */
+      danger: { bg: colors.danger, fg: colors.textInverse },
+    }) as const,
+);
 
 const styles = StyleSheet.create({
   /*
@@ -55,12 +59,13 @@ export function CountBadge({
   max = MAX,
 }: {
   count: number;
-  tone?: keyof typeof TONE;
+  tone?: keyof ReturnType<typeof useTone>;
   /** `sm` khi viên đè lên một biểu tượng ở thanh trên — xem `SIZES`. */
   size?: keyof typeof SIZES;
   /** Trần hiện số — quá trần thì thành "<trần>+". Mặc định 99; thanh tab dùng 9 (web `overflowCount`). */
   max?: number;
 }) {
+  const TONE = useTone();
   const skin = TONE[tone];
   const dim = SIZES[size];
 

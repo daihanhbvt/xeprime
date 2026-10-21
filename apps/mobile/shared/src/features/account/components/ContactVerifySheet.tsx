@@ -17,7 +17,8 @@ import { TextField } from '@/components/ui/TextField';
 import { OtpCodeInput, OTP_LENGTH } from '@/features/phone-verification/components/OtpCodeInput';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CONTACT_CHANNEL, type ContactChannel } from '../api';
 import { useContactVerify } from '../hooks/use-contact-verify';
 
@@ -47,6 +48,7 @@ interface Props {
  * đã có sẵn nội dung đúng thì mời người dùng bấm "Gửi mã" cho chính cái họ đang có.
  */
 export function ContactVerifySheet({ channel, open, onClose, current, required }: Props) {
+  const colors = useColors();
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();

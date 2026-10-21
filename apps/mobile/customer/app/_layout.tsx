@@ -10,7 +10,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
-import { TamaguiProvider } from 'tamagui';
 // Side-effect import, KHÔNG xoá: expo-router dùng reanimated cho animation của navigator.
 import 'react-native-reanimated';
 
@@ -27,8 +26,11 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
-import { colors } from '@/theme/tokens';
-import { tamaguiConfig } from '@/theme/tamagui.config';
+import { useColors } from '@/theme/ThemeProvider';
+import type { ReactNode } from 'react';
+import { enableFreeze } from 'react-native-screens';
+import { AppThemeProvider } from '@/theme/AppThemeProvider';
+import { ThemeBootstrap } from '@/theme/ThemeBootstrap';
 import { duration } from '@/theme/motion';
 
 patchDayjsTimezone();
@@ -52,6 +54,9 @@ patchDayjsTimezone();
  */
 registerPushBackgroundHandler();
 
+// Bật `freezeOnBlur` của các navigator: tab bị che không vẽ lại khi đổi sáng/tối, chỉ khi hiện lại.
+enableFreeze(true);
+
 /**
  * expo-router bắt lỗi render của cả cây qua export TÊN `ErrorBoundary` ở layout gốc. Nó nằm
  * NGOÀI các provider bên dưới (lỗi có thể đến từ chính chúng), nên `AppErrorScreen` phải tự
@@ -59,6 +64,31 @@ registerPushBackgroundHandler();
  */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return <AppErrorScreen error={error} onRetry={() => void retry()} />;
+}
+
+/**
+ * `RootLayout` nằm NGOÀI `AppThemeProvider` nên không đọc được bảng màu sống — Stack gốc đọc
+ * nền ở component con này để đổi theme là đổi ngay.
+ */
+function ThemedStack({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        // `ios_from_right` chứ không phải `slide_from_right`: bản kia giữ màn cũ đứng
+        // yên nên lúc lui, màn dưới bật ra nguyên khối và đọc thành một cú nháy.
+        // Không đặt `animationDuration` — nó chạy theo đường cong native.
+        animation: 'ios_from_right',
+        gestureEnabled: true,
+        // KHÔNG bật `freezeOnBlur`: chi phí dựng lại cây rơi đúng vào khung hình
+        // của animation lui — push mượt hơn chút, pop giật hẳn.
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      {children}
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -69,7 +99,7 @@ export default function RootLayout() {
     // `initialMetrics` lấy inset đồng bộ lúc khởi động; thiếu nó thì frame đầu render với
     // inset = 0 rồi nhảy khi giá trị thật về từ native.
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+      <AppThemeProvider>
         <ReduxProvider store={store}>
           <I18nProvider>
             <QueryClientProvider client={queryClient}>
@@ -80,20 +110,21 @@ export default function RootLayout() {
               */}
               <AppToastProvider>
                 <PushBootstrap />
+                <ThemeBootstrap />
                 {/*
                   Máy ảnh TRONG app, mount một lần ở đây vì nơi gọi là `pickImages` — một hàm
                   async trong `src/lib`, không phải component (xem `in-app-camera.ts`). Bọc cả
                   `Stack` để khung ngắm sống qua điều hướng. Không vẽ gì khi chưa ai gọi.
                 */}
                 <InAppCameraProvider />
-              <SessionBoundary>
-                {/*
+                <SessionBoundary>
+                  {/*
                   BÊN TRONG `SessionBoundary`: nó cần phiên (custom token xin bằng chính phiên
                   đó) và phải nghe được lúc phiên đổi. Bọc cả `Stack` để listener Firestore sống
                   qua điều hướng — gắn nó ở một màn thì rời màn là mất realtime.
                 */}
-                <ChatRealtimeProvider>
-                {/*
+                  <ChatRealtimeProvider>
+                    {/*
                   BÊN TRONG `ChatRealtimeProvider`: nó dùng lại ĐÚNG phiên Firebase của chat để nghe
                   `user_badges/{uid}`. Mở phiên thứ hai chỉ để nghe một document là trả tiền hai
                   lần cho đúng một kết nối.
@@ -101,57 +132,51 @@ export default function RootLayout() {
                   Và bọc cả `Stack`: chuông, biểu tượng chat và huy hiệu menu đều đọc con số
                   này, nên nó phải sống qua điều hướng — gắn ở một màn thì rời màn là mất.
                 */}
-                <BadgeRealtimeProvider>
-                {/*
+                    <BadgeRealtimeProvider>
+                      {/*
                   KHÔNG còn `ShopAccountGate` (tách app 25/09/2026): app này không có khu quản
                   lý để đẩy tài khoản gian hàng sang — họ dùng app Customer VỚI VAI KHÁCH, và
                   bộ quản lý của họ là app XePrime Partner (thẻ handoff ở màn tài khoản).
                 */}
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    // `ios_from_right` chứ không phải `slide_from_right`: bản kia giữ màn cũ đứng
-                    // yên nên lúc lui, màn dưới bật ra nguyên khối và đọc thành một cú nháy.
-                    // Không đặt `animationDuration` — nó chạy theo đường cong native.
-                    animation: 'ios_from_right',
-                    gestureEnabled: true,
-                    // KHÔNG bật `freezeOnBlur`: chi phí dựng lại cây rơi đúng vào khung hình
-                    // của animation lui — push mượt hơn chút, pop giật hẳn.
-                    contentStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  {/* Đăng nhập là việc chen ngang rồi quay lại, không phải một nấc sâu hơn. */}
-                  <Stack.Screen
-                    name="login"
-                    options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
-                  />
-                  {/*
+                      <ThemedStack>
+                        {/* Đăng nhập là việc chen ngang rồi quay lại, không phải một nấc sâu hơn. */}
+                        <Stack.Screen
+                          name="login"
+                          options={{
+                            animation: 'slide_from_bottom',
+                            animationDuration: duration.slow,
+                          }}
+                        />
+                        {/*
                     Đăng ký dùng CÙNG chuyển cảnh với đăng nhập: hai màn là hai chế độ của một
                     việc (web dựng chúng trong cùng một modal), và chúng thay thế nhau bằng
                     `replace` — một đường cong khác ở đây sẽ đọc thành "đi sâu thêm một nấc".
                   */}
-                  <Stack.Screen
-                    name="register"
-                    options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
-                  />
-                  {/*
+                        <Stack.Screen
+                          name="register"
+                          options={{
+                            animation: 'slide_from_bottom',
+                            animationDuration: duration.slow,
+                          }}
+                        />
+                        {/*
                     Chặng quay về của đăng nhập mạng xã hội. `animation: none` vì màn này chỉ
                     tồn tại vài trăm mili giây trước khi `enterApp()` đóng nó — một cú trượt
                     ở đây là chuyển động cho một thứ người dùng không cần thấy.
                   */}
-                  <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
-                  <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                </Stack>
-                {/* SAU `Stack` để tấm bắt buộc nằm trên mọi màn — ADR 0060, xem `AccountPhoneGate`. */}
-                <AccountPhoneGate />
-                </BadgeRealtimeProvider>
-                </ChatRealtimeProvider>
-              </SessionBoundary>
+                        <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
+                        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                      </ThemedStack>
+                      {/* SAU `Stack` để tấm bắt buộc nằm trên mọi màn — ADR 0060, xem `AccountPhoneGate`. */}
+                      <AccountPhoneGate />
+                    </BadgeRealtimeProvider>
+                  </ChatRealtimeProvider>
+                </SessionBoundary>
               </AppToastProvider>
             </QueryClientProvider>
           </I18nProvider>
         </ReduxProvider>
-      </TamaguiProvider>
+      </AppThemeProvider>
     </SafeAreaProvider>
   );
 }

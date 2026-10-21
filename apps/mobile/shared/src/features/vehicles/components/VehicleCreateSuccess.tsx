@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -16,7 +16,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { VehicleDetail } from '../api';
 
 const THUMB = 64;
@@ -52,14 +53,14 @@ const CHECKLIST = [
   },
 ] as const;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   thumb: {
     width: THUMB,
     height: THUMB,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));
 
 /**
  * Màn xác nhận sau khi tạo xe — nói rõ xe đang ở trạng thái nào (nháp hay đã gửi duyệt) rồi chỉ
@@ -79,6 +80,8 @@ export function VehicleCreateSuccess({
   onCreateAnother: () => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Vehicles.form.success');
   const router = useRouter();
   const domainLabel = useDomainLabel();

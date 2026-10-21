@@ -21,7 +21,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { deepLinkPended } from '@/features/shell/shell-scope.slice';
 import { useAppDispatch } from '@/store/hooks';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { useAnswerInvite, useInvitePreview } from './hooks/use-members';
 
 /**
@@ -43,6 +44,7 @@ import { useAnswerInvite, useInvitePreview } from './hooks/use-members';
  *     sẽ ghi đè màn cảm ơn bằng trạng thái "đã đóng" và người dùng tưởng mình bấm hụt.
  */
 export function InviteAnswerScreen({ token }: { token: string }) {
+  const colors = useColors();
   const t = useTranslations('Members.invitePage');
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();
@@ -190,6 +192,7 @@ export function InviteAnswerScreen({ token }: { token: string }) {
           {me ? (
             <YStack gap={space.sm}>
               <Button
+                icon="checkmark-circle-outline"
                 label={t('accept')}
                 size="lg"
                 loading={accept.isPending}
@@ -215,6 +218,7 @@ export function InviteAnswerScreen({ token }: { token: string }) {
                   : t('signInPartnerPrompt')}
               </Callout>
               <Button
+                icon="log-in-outline"
                 label={t('signIn')}
                 size="lg"
                 onPress={() => authenticateThenReturn(ROUTES.account.login())}

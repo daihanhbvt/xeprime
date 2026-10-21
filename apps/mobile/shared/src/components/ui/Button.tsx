@@ -1,8 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback } from 'react';
-import { ActivityIndicator, Keyboard, Pressable } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import {
+  buttonHeight,
+  buttonHitSlop,
+  fontSize,
+  fontWeight,
+  gradients,
+  iconSize,
+  radius,
+  space,
+} from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 /**
@@ -12,11 +23,24 @@ import type { IconName } from './Chip';
  * màn. Một nhóm nút phụ tô nền đặc sẽ cạnh tranh trực tiếp với nó và người dùng mất chỗ để mắt
  * rơi vào. `accent` giữ được sắc thái thương hiệu mà vẫn đọc ra là hạng dưới.
  */
-type Variant = 'primary' | 'secondary' | 'ghost' | 'ghostDanger' | 'danger' | 'accent';
 /**
- * `md` là mặc định và bằng đúng ngưỡng chạm 44pt. `sm` KHÔNG phá ngưỡng đó — nó giữ nguyên
- * chiều cao chạm được, chỉ rút CỠ CHỮ (12px thay vì 14px), để một lưới thao tác phụ (Lịch sử
- * tiền, Quyết toán, Ảnh bàn giao…) không đọc ra ngang hàng với hành động chính của màn.
+ * `gradient` = nút CHÍNH của bề mặt khách (`CtaButton variant="gradient"` web: dải
+ * `--xp-gradient-primary`, chữ `color-primary-contrast`). `outline` = `CtaButton variant="outline"`
+ * web: nền thẻ, viền `color-primary-muted`, chữ `color-primary`. Màn quản lý giữ `primary`
+ * phẳng vì Manage web là nút AntD phẳng.
+ */
+type Variant =
+  | 'primary'
+  | 'gradient'
+  | 'outline'
+  | 'secondary'
+  | 'ghost'
+  | 'ghostDanger'
+  | 'danger'
+  | 'accent';
+/**
+ * Chiều cao VẼ RA khớp web (`buttonHeight`): `sm` 32 · `md` 40 (mặc định) · `lg` 44. Vùng
+ * CHẠM vẫn ≥ `sizing.touchTarget` nhờ `hitSlop` dọc — không thổi phồng nút cho vừa ngón tay.
  *
  * Đệm ngang thì MỌI cỡ dùng chung `space.md` — xem lý do ở `px` trong phần dựng hình.
  */
@@ -30,15 +54,20 @@ type Size = 'sm' | 'md' | 'lg';
  */
 type Shape = 'pill' | 'square';
 
-const VARIANT: Record<Variant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
-  secondary: { bg: colors.surface, fg: colors.text, border: colors.borderInput },
-  ghost: { bg: 'transparent', fg: colors.primaryActive, border: 'transparent' },
-  /** Dáng `ghost` (không nền, không viền) nhưng mang màu nguy hiểm — lối phụ mà hệ quả thì nặng. */
-  ghostDanger: { bg: 'transparent', fg: colors.danger, border: 'transparent' },
-  danger: { bg: colors.dangerSurface, fg: colors.danger, border: colors.dangerSurface },
-  accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primary },
-};
+const useVariant = themed<Record<Variant, { bg: string; fg: string; border: string }>>(
+  (colors) => ({
+    primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
+    // Nền thật do `LinearGradient` vẽ; màu đặc chỉ là nền lót.
+    gradient: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
+    outline: { bg: colors.surface, fg: colors.primary, border: colors.primaryMuted },
+    secondary: { bg: colors.surface, fg: colors.text, border: colors.borderInput },
+    ghost: { bg: 'transparent', fg: colors.primaryActive, border: 'transparent' },
+    /** Dáng `ghost` (không nền, không viền) nhưng mang màu nguy hiểm — lối phụ mà hệ quả thì nặng. */
+    ghostDanger: { bg: 'transparent', fg: colors.danger, border: 'transparent' },
+    danger: { bg: colors.dangerSurface, fg: colors.danger, border: colors.dangerSurface },
+    accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primary },
+  }),
+);
 
 /*
  * KHÔNG dùng `adjustsFontSizeToFit` ở nút. Đây là một lựa chọn đã thử rồi gỡ, nên đừng thêm lại.
@@ -127,6 +156,8 @@ export function Button({
   align = 'start',
   accessibilityLabel,
 }: ButtonProps) {
+  const colors = useColors();
+  const VARIANT = useVariant();
   const blocked = disabled || loading;
 
   /**
@@ -148,6 +179,8 @@ export function Button({
     onPress();
   }, [onPress]);
   const skin = VARIANT[variant];
+  const height = buttonHeight[size];
+  const slop = buttonHitSlop(height);
   /** Hai biến thể KHÔNG nền, không viền — nền mờ lúc bị chặn cũng không áp cho chúng. */
   const borderless = variant === 'ghost' || variant === 'ghostDanger';
   /*
@@ -176,6 +209,7 @@ export function Button({
       */
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ busy: loading, disabled: blocked }}
+      hitSlop={{ top: slop, bottom: slop }}
       style={({ pressed }) => [
         block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] },
         pressed ? { opacity: 0.85 } : null,
@@ -185,6 +219,7 @@ export function Button({
         ai="center"
         jc="center"
         gap={space.xs}
+        overflow="hidden"
         bg={blocked && !borderless ? colors.surfaceMuted : skin.bg}
         bc={blocked ? colors.border : skin.border}
         bw={borderless ? 0 : 1}
@@ -199,8 +234,17 @@ export function Button({
           Nút full-width không mất gì: nhãn ở đó căn giữa nên đệm ngang không ai nhìn thấy.
         */
         px={space.md}
-        minHeight={size === 'lg' ? sizing.touchTarget + space.sm : sizing.touchTarget}
+        minHeight={height}
       >
+        {variant === 'gradient' && !blocked ? (
+          <LinearGradient
+            colors={gradients.primary.colors}
+            locations={gradients.primary.locations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
         {loading ? (
           <ActivityIndicator color={fg} size="small" />
         ) : (

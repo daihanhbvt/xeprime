@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 export function DataRow({
   label,
@@ -49,6 +50,7 @@ export function DataRow({
    */
   labelWide?: boolean;
 }) {
+  const colors = useColors();
   const valueColor =
     tone === 'price'
       ? colors.price
@@ -138,5 +140,6 @@ export function DataRow({
 }
 
 export function Divider() {
+  const colors = useColors();
   return <YStack height={1} bg={colors.borderSubtle} />;
 }

@@ -20,7 +20,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { TAX_PERIOD_FORMAT, type TaxRow } from '@/api/tax/api';
 import { useShopTaxSummary } from '../hooks/use-tax';
 
@@ -39,6 +40,7 @@ import { useShopTaxSummary } from '../hooks/use-tax';
  * bảo mật vừa buộc khối này phụ thuộc một hook không khối nào khác trên màn dùng.
  */
 export function ShopTaxWithheldCard() {
+  const colors = useColors();
   const t = useTranslations('Finance.taxWithheld');
   const fmt = useAppFormat();
   const { has } = usePermissions();
@@ -76,7 +78,7 @@ export function ShopTaxWithheldCard() {
         surface: colors.primaryLight,
       },
     ];
-  }, [data, fmt, t]);
+  }, [colors, data, fmt, t]);
 
   if (!canView) return null;
 
@@ -145,6 +147,7 @@ export function ShopTaxWithheldCard() {
  * nghĩa duy nhất: con số này ÂM.
  */
 function TaxRowLine({ row }: { row: TaxRow }) {
+  const colors = useColors();
   const t = useTranslations('Finance.taxWithheld');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

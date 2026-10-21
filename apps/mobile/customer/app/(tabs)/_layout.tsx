@@ -18,7 +18,8 @@ import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Thanh tab dưới đáy — chỉ tồn tại khi ĐÃ đăng nhập.
@@ -92,6 +93,7 @@ type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>
  * bằng `href: null` ⇒ `tabBarItemStyle.display = 'none'`), nên thanh này không giữ luật riêng nào.
  */
 function AppTabBar({ state, descriptors, navigation }: TabBarProps) {
+  const colors = useColors();
   const focusedOptions = descriptors[state.routes[state.index]!.key]!.options;
   const barStyle = focusedOptions.tabBarStyle as StyleProp<ViewStyle>;
   if (StyleSheet.flatten(barStyle)?.display === 'none') return null;
@@ -173,6 +175,7 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const colors = useColors();
   const t = useTranslations('Navigation.public');
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
@@ -201,6 +204,8 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           animation: 'none',
+          // Tab ẩn đứng yên (react-freeze): đổi sáng/tối chỉ vẽ lại tab đang xem, tab kia vẽ lúc quay lại.
+          freezeOnBlur: true,
           tabBarActiveTintColor: colors.primaryActive,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: user

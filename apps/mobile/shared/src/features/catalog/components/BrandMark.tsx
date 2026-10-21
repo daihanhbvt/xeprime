@@ -1,7 +1,8 @@
 import { Image, StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { vehicleBrandKey } from '@xeprime/types';
-import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius } from '@/theme/tokens';
 import { BRAND_ART } from '../brand-art';
 
 const SIZE = 18;
@@ -21,6 +22,7 @@ const styles = StyleSheet.create({
 });
 
 export function BrandMark({ brand }: { brand: string }) {
+  const colors = useColors();
   const key = vehicleBrandKey(brand);
   const art = key ? BRAND_ART[key] : undefined;
 

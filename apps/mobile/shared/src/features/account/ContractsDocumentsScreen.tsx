@@ -8,7 +8,8 @@ import { Screen } from '@/components/layout/Screen';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { ResourceList, openOwnerResource } from './components/ResourceList';
 
 /**
@@ -27,6 +28,7 @@ export function ContractsDocumentsScreen({
    */
   shell?: PageShell;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.contracts');
   const tResources = useTranslations('Account.resources');
 
@@ -69,12 +71,12 @@ export function ContractsDocumentsScreen({
                       br={radius.md}
                       bw={1}
                       bc={colors.primary}
-                      bg={colors.primaryLight}
+                      bg={colors.primary}
                     >
                       <Ionicons name="document-text" size={iconSize.sm} color={colors.danger} />
                       <Text
                         f={1}
-                        col={colors.primaryActive}
+                        col={colors.onPrimary}
                         fos={fontSize.bodySm}
                         fow={fontWeight.semibold}
                       >
@@ -83,7 +85,7 @@ export function ContractsDocumentsScreen({
                       <Ionicons
                         name="open-outline"
                         size={iconSize.sm}
-                        color={colors.primaryActive}
+                        color={colors.onPrimary}
                       />
                     </XStack>
                   </Pressable>

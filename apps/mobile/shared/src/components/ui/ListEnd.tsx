@@ -1,6 +1,7 @@
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 /**
  * Dấu chấm hết của một danh sách cuộn vô hạn.
@@ -13,6 +14,7 @@ import { colors, fontSize, space } from '@/theme/tokens';
  * của riêng nó, thêm dòng này vào đó là hai câu nói cùng một chuyện.
  */
 export function ListEnd() {
+  const colors = useColors();
   const t = useTranslations('Common.states');
 
   return (

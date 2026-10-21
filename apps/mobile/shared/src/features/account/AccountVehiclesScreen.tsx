@@ -37,7 +37,8 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import {
   DEFAULT_VEHICLE_SORT,
   VEHICLE_SORT_VALUES,
@@ -79,6 +80,7 @@ export function AccountVehiclesScreen({
 }: {
   shell?: 'account' | 'manage';
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.vehicles');
   const tVehicles = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
@@ -283,7 +285,6 @@ export function AccountVehiclesScreen({
     <YStack gap={space.md} pb={space.xs}>
       {/* Trang chủ Owner Lite mở đầu bằng dải tuyến như web `OwnerLiteHome`. */}
       <AccountTrackNotice />
-
 
       {/* Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN — web nói ra ở đầu lưới. */}
       {alerts.isError ? (

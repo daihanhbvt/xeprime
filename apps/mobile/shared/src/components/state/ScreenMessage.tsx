@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, YStack } from 'tamagui';
 import { Button } from '@/components/ui/Button';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Đường kính đĩa nền và cỡ biểu tượng bên trong — cố ý NHỎ: đĩa xám to là thứ nặng nhất trên một
@@ -39,6 +40,7 @@ export function ScreenMessage({
   actionIcon,
   onAction,
 }: ScreenMessageProps) {
+  const colors = useColors();
   return (
     <YStack f={1} ai="center" jc="center" gap={space.lg} p={space.lg}>
       {/*
@@ -46,14 +48,7 @@ export function ScreenMessage({
         hơn hẳn (`space.lg`) — cách đều cả ba thì nút trôi lơ lửng như phần tử thứ ba.
       */}
       <YStack ai="center" gap={space.sm}>
-        <YStack
-          w={DISC}
-          h={DISC}
-          br={radius.pill}
-          bg={colors.surfaceMuted}
-          ai="center"
-          jc="center"
-        >
+        <YStack w={DISC} h={DISC} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
           <Ionicons name={icon} size={GLYPH} color={colors.textMuted} />
         </YStack>
 

@@ -187,7 +187,8 @@
       "viewDetails": "Xem chi tiết giá",
       "collapse": "Thu gọn",
       "depositHintLabel": "Cọc thế chấp khi nhận xe là gì",
-      "holdHintLabel": "Tiền giữ chỗ là gì"
+      "holdHintLabel": "Tiền giữ chỗ là gì",
+      "perDayLine": "{quantity, plural, other {# ngày}} × {unit}"
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",

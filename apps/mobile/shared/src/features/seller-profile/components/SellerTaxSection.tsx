@@ -7,7 +7,8 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDomainLabel } from '@/i18n/domain';
 import { metaColor } from '@/lib/status-meta';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSellerProfile } from '../hooks/use-seller-profile';
 import { SellerTaxForm } from './SellerTaxForm';
 
@@ -21,6 +22,7 @@ import { SellerTaxForm } from './SellerTaxForm';
  * Khối có nút Lưu RIÊNG, đứng ngoài biểu mẫu hồ sơ gian hàng — hai bản ghi, hai endpoint.
  */
 export function SellerTaxSection() {
+  const colors = useColors();
   const t = useTranslations('Account.tax');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();

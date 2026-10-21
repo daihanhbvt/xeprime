@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "xeprimepartner",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "icon": "../shared/assets/images/xeprime-partner-icon.png",
     "ios": {
       "bundleIdentifier": "vn.xeprime.partner",

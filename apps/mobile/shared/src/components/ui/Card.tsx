@@ -9,16 +9,17 @@ import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { elevation } from '@/theme/elevation';
 import { duration, easing } from '@/theme/motion';
-import { colors, radius, space } from '@/theme/tokens';
+import { themed, useDarkAccentBorder } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 
 type Tone = 'surface' | 'muted' | 'accent';
 type Lift = 'flat' | 'card' | 'raised';
 
-const TONE: Record<Tone, { bg: string; border: string }> = {
+const useTone = themed<Record<Tone, { bg: string; border: string }>>((colors) => ({
   surface: { bg: colors.surface, border: colors.border },
   muted: { bg: colors.surfaceMuted, border: colors.borderSubtle },
   accent: { bg: colors.primaryLight, border: colors.primaryLight },
-};
+}));
 
 interface CardProps {
   children: ReactNode;
@@ -34,6 +35,13 @@ interface CardProps {
    * banner chẳng hạn); không đổi mặc định chung vì `radius.lg` đang khớp input/modal toàn app.
    */
   radius?: number;
+  /**
+   * Viền cùng màu nền thẻ (chỉ còn bóng) — thẻ trang chủ/kết quả của web (`.card` VehicleCard:
+   * `border: 1px solid bg-container`). Mặc định giữ viền `border` của toàn app.
+   */
+  seamless?: boolean;
+  /** Viền riêng của một thẻ cần nhấn (vd khoản giữ chỗ — `primary-border` web). */
+  borderColor?: string;
 }
 
 /**
@@ -51,16 +59,29 @@ export function Card({
   onPress,
   accessibilityLabel,
   radius: cornerRadius = radius.lg,
+  seamless = false,
+  borderColor: borderOverride,
 }: CardProps) {
+  const TONE = useTone();
   const skin = TONE[tone];
   const shadow: ViewStyle = lift === 'flat' ? {} : elevation[lift];
+  // Giao diện tối: thẻ nổi tách mục danh sách nhận viền vàng nhạt. Thẻ lồng (`flat`/`muted`),
+  // thẻ nhấn `accent` và thẻ `seamless` giữ nguyên — tránh vạch vàng khắp nơi.
+  const accentBorder = useDarkAccentBorder().borderColor;
+  const borderColor = borderOverride
+    ? borderOverride
+    : seamless
+    ? skin.bg
+    : tone === 'surface' && lift !== 'flat' && accentBorder
+      ? accentBorder
+      : skin.border;
 
   const body = (
     <YStack
       bg={skin.bg}
       br={cornerRadius}
       bw={1}
-      bc={skin.border}
+      bc={borderColor}
       ov="hidden"
       {...(padded ? { p: space.md } : {})}
       style={shadow}

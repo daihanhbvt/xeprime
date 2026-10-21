@@ -5,7 +5,8 @@ import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { BranchFilterState } from '../hooks/use-branch-filter';
 
 /** Sentinel của mục "Tất cả chi nhánh" — danh sách lựa chọn cần một khoá, `undefined` thì không. */
@@ -27,6 +28,7 @@ export function BranchFilterField({
   filter: BranchFilterState;
   value: string | undefined;
 }) {
+  const colors = useColors();
   const t = useTranslations('Branches');
   const [open, setOpen] = useState(false);
   if (!filter.visible) return null;

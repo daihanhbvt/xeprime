@@ -12,7 +12,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { roundedCount } from '@/lib/rounded-count';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { shopHighlightOf } from './shop-highlight';
 
 export interface ShopQuickInfoCardShop {
@@ -52,7 +53,11 @@ export function ShopQuickInfoCard({
 }: {
   shop: ShopQuickInfoCardShop;
   metrics: HostMetricsShape | null | undefined;
-  variant?: 'full' | 'compact';
+  /**
+   * `inline` = biến thể của trang chi tiết xe (web #212 `variant="inline"`): bố cục như `full`,
+   * nhưng nhãn chỉ số ngắn (`Shops.metrics.inlineLabel.*` — "Tỉ lệ đồng ý", "Phản hồi trong").
+   */
+  variant?: 'full' | 'compact' | 'inline';
   /** Nút nằm trong thẻ — `full` xếp xuống dưới, `compact` nằm cuối hàng danh tính. */
   actions?: ReactNode;
   /**
@@ -64,6 +69,7 @@ export function ShopQuickInfoCard({
    */
   openLabel?: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('Shops');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -103,100 +109,117 @@ export function ShopQuickInfoCard({
   */
   const body = (
     <YStack gap={space.sm}>
-        <XStack ai="center" gap={compact ? space.sm : space.md}>
-          <Avatar
-            name={shop.name}
-            url={shop.logoUrl}
-            size={compact ? 36 : 44}
-            verifiedLabel={shop.verified ? t('header.verified') : undefined}
-          />
-          <YStack f={1} gap={2}>
-            {/*
+      <XStack ai="center" gap={compact ? space.sm : space.md}>
+        <Avatar
+          name={shop.name}
+          url={shop.logoUrl}
+          size={compact ? 36 : 44}
+          verifiedLabel={shop.verified ? t('header.verified') : undefined}
+        />
+        <YStack f={1} gap={2}>
+          {/*
+              Hai tuyến trên một chợ (ADR 0028) — như web #212 (`Shops.card.type.*`): đã xác minh là
+              gian hàng, còn lại là chủ xe cá nhân. Cùng tín hiệu với thẻ xe ở trang kết quả.
+            */}
+          {compact ? null : (
+            <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
+              {shop.verified ? t('card.type.shop') : t('card.type.owner')}
+            </Text>
+          )}
+          {/*
               Dấu xác minh CÓ ĐIỀU KIỆN (ADR 0028): nó nói "gian hàng thuê bao đã xác minh", mà
               chủ xe cá nhân tuyến hoa hồng cũng lên chợ được. Gắn cho tất cả là làm dấu mất nghĩa.
             */}
-            <VerifiedName
-              name={shop.name}
-              verifiedLabel={shop.verified ? t('header.verified') : undefined}
-              size={compact ? fontSize.bodySm : fontSize.body}
-              markSize={16}
-              decorativeMark
-            />
-            {!compact && shop.province ? (
-              <XStack ai="center" gap={4}>
-                <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                  {shop.province}
-                </Text>
-              </XStack>
-            ) : null}
-            {!compact && shop.bio ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {shop.bio}
+          <VerifiedName
+            name={shop.name}
+            verifiedLabel={shop.verified ? t('header.verified') : undefined}
+            size={compact ? fontSize.bodySm : fontSize.body}
+            markSize={16}
+            decorativeMark
+          />
+          {/* Tỉnh + lời giới thiệu chỉ ở biến thể `full` — `inline` (trang chi tiết xe) bỏ cả hai như web. */}
+          {variant === 'full' && shop.province ? (
+            <XStack ai="center" gap={4}>
+              <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+              <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                {shop.province}
               </Text>
-            ) : null}
-            {/*
+            </XStack>
+          ) : null}
+          {variant === 'full' && shop.bio ? (
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {shop.bio}
+            </Text>
+          ) : null}
+          {/*
               Điểm đánh giá và số chuyến là của GIAN HÀNG (`shopRatingAvg`/`shopCompletedTripCount`),
               KHÔNG phải của chiếc xe đang xem — thẻ này nói về người bán.
             */}
-            {hasRating || hasTrips ? (
-              <XStack ai="center" gap={space.xs} flexWrap="wrap">
-                {hasRating ? (
-                  <XStack ai="center" gap={4}>
-                    <Ionicons name="star" size={12} color={colors.primary} />
-                    <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-                      {fmt.rating(ratingAvg as number)}
-                    </Text>
-                  </XStack>
-                ) : null}
-                {hasRating && hasTrips ? (
-                  <Text col={colors.borderSubtle} fos={fontSize.label}>
-                    •
+          {hasRating || hasTrips ? (
+            <XStack ai="center" gap={space.xs} flexWrap="wrap">
+              {hasRating ? (
+                <XStack ai="center" gap={4}>
+                  <Ionicons name="star" size={12} color={colors.primary} />
+                  <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+                    {fmt.rating(ratingAvg as number)}
+                    {shop.ratingCount ? (
+                      <Text col={colors.textMuted} fow={fontWeight.regular}>
+                        {` (${shop.ratingCount})`}
+                      </Text>
+                    ) : null}
                   </Text>
-                ) : null}
-                {hasTrips && trips ? (
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('card.trips', {
-                      count: trips.display,
-                      plus: trips.approximate ? '+' : '',
-                    })}
-                  </Text>
-                ) : null}
-              </XStack>
-            ) : null}
-          </YStack>
-          {/*
+                </XStack>
+              ) : null}
+              {hasRating && hasTrips ? (
+                <Text col={colors.borderSubtle} fos={fontSize.label}>
+                  •
+                </Text>
+              ) : null}
+              {hasTrips && trips ? (
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {t('card.trips', {
+                    count: trips.display,
+                    plus: trips.approximate ? '+' : '',
+                  })}
+                </Text>
+              ) : null}
+            </XStack>
+          ) : null}
+        </YStack>
+        {/*
             `compact` bày NHÃN hành động rồi mới tới mũi tên — web có một liên kết chữ "Xem gian
             hàng" ở đúng chỗ này, và một mũi tên trần thì trình đọc màn hình không đọc ra được.
             Nhãn là chữ THƯỜNG, không phải một nút lồng: cả hàng đã là đích chạm, và một nút bên
             trong một nút là hai đích cho cùng một việc.
           */}
-          {compact ? (
-            <XStack ai="center" gap={4}>
-              {openLabel ? (
-                <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
-                  {openLabel}
-                </Text>
-              ) : null}
-              {actions}
-              <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.placeholder} />
-            </XStack>
-          ) : null}
-        </XStack>
-
-        {compact ? null : <HostMetrics metrics={metrics} />}
-
-        {highlight ? (
-          <XStack ai="flex-start" gap={space.xs}>
-            <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
-            <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-              {t(`card.highlight.${highlight.key}`, {
-                rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-                count: highlight.count,
-              })}
-            </Text>
+        {compact ? (
+          <XStack ai="center" gap={4}>
+            {openLabel ? (
+              <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+                {openLabel}
+              </Text>
+            ) : null}
+            {actions}
+            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.placeholder} />
           </XStack>
         ) : null}
+      </XStack>
+
+      {compact ? null : (
+        <HostMetrics metrics={metrics} {...(variant === 'inline' ? { inlineLabels: true } : {})} />
+      )}
+
+      {highlight ? (
+        <XStack ai="flex-start" gap={space.xs}>
+          <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
+          <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+            {t(`card.highlight.${highlight.key}`, {
+              rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
+              count: highlight.count,
+            })}
+          </Text>
+        </XStack>
+      ) : null}
 
       {!compact && actions ? <YStack gap={space.xs}>{actions}</YStack> : null}
     </YStack>

@@ -268,6 +268,10 @@
       "notFoundTitle": "Không tra được tuyến đường tự động",
       "notFoundBody": "Hệ thống không tính được cự ly tự động cho địa chỉ này. Phí giao xe sẽ do chủ xe thông báo sau.",
       "confirm": "Xác nhận địa chỉ"
+    },
+    "sections": {
+      "features": "Tiện ích trên xe",
+      "host": "Chủ xe"
     }
   },
   "reviews": {

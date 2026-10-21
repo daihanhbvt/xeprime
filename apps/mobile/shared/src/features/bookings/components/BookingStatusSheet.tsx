@@ -19,7 +19,8 @@ import { Chip } from '@/components/ui/Chip';
 import { TextField } from '@/components/ui/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 /** Trần lý do — khớp DTO backend. */
@@ -73,6 +74,7 @@ export function BookingStatusSheet({
   onConfirm: (input: { reason: string; reasonCategory?: CancellationReasonCategory }) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.statusActions.dialog');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -230,6 +232,7 @@ export function BookingStatusSheet({
 }
 
 function Line({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack gap={2}>
       <Text col={colors.textMuted} fos={fontSize.label}>

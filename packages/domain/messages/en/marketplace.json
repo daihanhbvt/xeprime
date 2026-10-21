@@ -187,7 +187,10 @@
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "vehicles",
     "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})",
-    "motorbikeCategory": "Motorbike category"
+    "motorbikeCategory": "Motorbike category",
+    "priceUnder": "Under {amount}",
+    "priceBetween": "{min} – {max}",
+    "priceOver": "Over {amount}"
   },
   "searchDialog": {
     "title": "Search",

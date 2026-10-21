@@ -11,8 +11,9 @@ import {
   type ListingSort,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Bộ chọn thứ tự sắp xếp — **menu**, không phải hàng chip.
@@ -33,6 +34,9 @@ export function SortMenu({
   /** Chiếm trọn bề ngang, bo góc vuông hơn — dạng ô nhập trong tấm Bộ lọc. */
   block?: boolean;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Marketplace.results');
   const domainLabel = useDomainLabel();
   const insets = useSafeAreaInsets();
@@ -79,6 +83,7 @@ export function SortMenu({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={insets.bottom}
           >
             <XStack px={layoutX} py={space.sm} borderBottomWidth={1} bc={colors.borderSubtle}>

@@ -3,11 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  REGISTRATION_TRACK,
-  TENANT_TYPE,
-  type RegistrationTrack,
-} from '@xeprime/types';
+import { REGISTRATION_TRACK, TENANT_TYPE, type RegistrationTrack } from '@xeprime/types';
 import { partnerSignupSchema, type PartnerSignupValues } from '@xeprime/validators';
 import { AddressFields } from '@/components/form/AddressFields';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -27,7 +23,8 @@ import { ListYourVehicleScreen } from '@/features/list-vehicle/ListYourVehicleSc
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { queryKeys } from '@/queries/query-keys';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { tenantsApi } from './api';
 import { PartnerAccountFields } from './components/PartnerAccountFields';
 
@@ -43,7 +40,6 @@ const ADDRESS_PIN_NAMES = {
   longitude: 'longitude',
   locationSource: 'locationSource',
 } as const;
-
 
 /**
  * ĐĂNG KÝ ĐỐI TÁC trong app XePrime Partner — bản native của web `PartnerRegisterView`:
@@ -118,6 +114,7 @@ export function PartnerSignupForm({
   onChangeTrack: () => void;
   loginHint?: ReactNode;
 }) {
+  const colors = useColors();
   const t = useTranslations('ShopOnboarding');
   const queryClient = useQueryClient();
   const toast = useAppToast();
@@ -306,7 +303,9 @@ export function PartnerSignupForm({
                   name="name"
                   required
                   label={
-                    isPackageTrack ? t('form.fields.name.label') : t('signup.fields.ownerName.label')
+                    isPackageTrack
+                      ? t('form.fields.name.label')
+                      : t('signup.fields.ownerName.label')
                   }
                   placeholder={
                     isPackageTrack
@@ -341,4 +340,3 @@ export function PartnerSignupForm({
     </>
   );
 }
-

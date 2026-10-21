@@ -8,6 +8,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import {
+  API_ERROR_CODE,
   HOLD_POLL_FALLBACK_MS,
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
@@ -15,6 +16,7 @@ import {
 } from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { useBadgeRealtimeLive } from '@/features/badges/BadgeRealtimeProvider';
+import { getErrorCode } from '@/lib/api-client';
 import { queryKeys } from '@/queries/query-keys';
 import {
   reviewsApi,
@@ -205,6 +207,17 @@ export function useCancelTrip(id: string) {
     onSuccess: (trip) => {
       queryClient.setQueryData(queryKeys.trips.detail(id), trip);
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    /*
+     * Chặng đã đổi dưới tay khách (gian hàng vừa duyệt/giao xe, hoặc duyệt xen vào ĐÚNG lúc bấm
+     * huỷ ⇒ `CONFLICT`): ngoài báo lỗi phải kéo lại trạng thái thật, để nút "Huỷ chuyến" tự biến
+     * mất thay vì mời bấm lại một việc chắc chắn hỏng.
+     */
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+      }
     },
   });
 }

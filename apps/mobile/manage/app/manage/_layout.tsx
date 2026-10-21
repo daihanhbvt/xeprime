@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { ScopeGuard } from '@/features/shell/ScopeGuard';
 import { useTrackScopeRoute } from '@/features/shell/use-track-scope-route';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 
 /**
  * NAVIGATOR B — khu quản lý gian hàng.
@@ -24,6 +24,7 @@ import { colors } from '@/theme/tokens';
  * `/manage/bookings` giữ nguyên như cũ và như web.
  */
 export default function ManageLayout() {
+  const colors = useColors();
   useTrackScopeRoute(APP_SCOPE.MANAGE);
 
   return (

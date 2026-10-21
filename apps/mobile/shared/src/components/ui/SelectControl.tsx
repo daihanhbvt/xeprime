@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { MenuOption, MenuOptionList } from './MenuOption';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * `fontFamily` PHẢI khai: `TextInput` là primitive của RN, nằm NGOÀI cây Tamagui nên không nhận
@@ -16,14 +17,14 @@ import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/
  * Dựng MỘT lần ở module scope: ô tìm kiếm render lại theo từng ký tự người dùng gõ, và một object
  * style mới mỗi lần gõ là một lần `TextInput` không thể bỏ qua việc cập nhật.
  */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   searchInput: {
     flex: 1,
     fontSize: fieldFontSize.value,
     fontFamily: FONT_FAMILY.body,
     color: colors.text,
   },
-});
+}));
 
 export interface SelectControlOption {
   readonly value: string;
@@ -99,6 +100,8 @@ export function SelectControl({
    */
   allowClear?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Common.actions');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');

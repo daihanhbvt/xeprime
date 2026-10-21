@@ -1,18 +1,20 @@
-import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, Text as NativeText } from 'react-native';
+import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { Href } from 'expo-router';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { MenuOptionList } from '@/components/ui/MenuOption';
-import { resolveWorkspaceHref } from '@/features/account/account-nav';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { LegalDocLinks } from '@/features/legal/components/LegalDocLinks';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import type { ExploreSearchParams } from '@/navigation/routes-base';
 
 /**
  * Cột "XePrime" của chân trang — hai mục, cùng thứ tự với `FOOTER_COLUMNS` bên web.
@@ -26,6 +28,27 @@ const COMPANY_LINKS: readonly { key: 'about' | 'support'; href: () => Href }[] =
   { key: 'about', href: () => ROUTES.content.about() },
   { key: 'support', href: () => ROUTES.support.home() },
 ];
+
+/** Cột "Khám phá" — ba bộ lọc dịch vụ, cùng thứ tự và nhãn (`HomeSearch.service.*`) với `FOOTER_SERVICE_LINKS` web. */
+const EXPLORE_LINKS: readonly {
+  key: ServiceType;
+  labelKey: 'selfDrive' | 'withDriver' | 'longTerm';
+}[] = [
+  { key: SERVICE_TYPE.SELF_DRIVE, labelKey: 'selfDrive' },
+  { key: SERVICE_TYPE.WITH_DRIVER, labelKey: 'withDriver' },
+  { key: SERVICE_TYPE.LONG_TERM, labelKey: 'longTerm' },
+];
+
+/**
+ * Bốn biểu tượng mạng xã hội — như web: KHÔNG phải liên kết (XePrime chưa công bố kênh chính thức),
+ * không bắt chạm, chỉ có nhãn cho trình đọc màn hình.
+ */
+const SOCIALS = [
+  { key: 'facebook', icon: 'logo-facebook', label: 'Facebook' },
+  { key: 'instagram', icon: 'logo-instagram', label: 'Instagram' },
+  { key: 'twitter', icon: 'logo-twitter', label: 'X (Twitter)' },
+  { key: 'tiktok', icon: 'logo-tiktok', label: 'TikTok' },
+] as const;
 
 /**
  * Khối cuối màn chủ — bản native của HAI cột điều hướng trong `MarketFooter` bên web.
@@ -47,21 +70,32 @@ const COMPANY_LINKS: readonly { key: 'about' | 'support'; href: () => Href }[] =
  *
  * ## Những gì KHÔNG mang sang
  *
- * Mạng xã hội (web cố ý để chúng KHÔNG bấm được vì chưa có kênh thật) · cụm QR tải app · bộ đổi
- * ngôn ngữ (đã nằm trên thanh đầu màn) · "Lên đầu trang" (thao tác của con trỏ chuột) · cột
- * "Khám phá" (chính màn này là cột đó). Mỗi thứ bỏ đi là một thứ web có mà app không cần, không
+ * Cụm QR tải app · bộ đổi
+ * ngôn ngữ (đã nằm trên thanh đầu màn) · "Lên đầu trang" (thao tác của con trỏ chuột). Cột
+ * "Khám phá" và hàng biểu tượng mạng xã hội (không bấm được) có như web. Mỗi thứ bỏ đi là một thứ web có mà app không cần, không
  * phải một thứ app còn thiếu.
  */
-export function HomeFooter() {
+export function HomeFooter({ onExplore }: { onExplore: (params: ExploreSearchParams) => void }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.footer');
+  const tService = useTranslations('HomeSearch.service');
 
   return (
     <YStack gap={layout.block}>
-      <ListVehicleCta />
-
       {/* Thẻ chìm, cùng tông với "Thuê xe chỉ với 4 bước" ngay trên: cả hai là phần đóng màn. */}
       <Card tone="muted" lift="flat" padded={false}>
         <YStack px={space.md} py={space.sm} gap={space.sm}>
+          <ColumnTitle>{t('columns.explore.title')}</ColumnTitle>
+          <MenuOptionList>
+            {EXPLORE_LINKS.map(({ key, labelKey }) => (
+              <NavLink
+                key={key}
+                label={tService(labelKey)}
+                onPress={() => onExplore({ serviceType: key })}
+              />
+            ))}
+          </MenuOptionList>
+
           <ColumnTitle>{t('columns.company.title')}</ColumnTitle>
           <MenuOptionList>
             {COMPANY_LINKS.map(({ key, href }) => (
@@ -86,10 +120,24 @@ export function HomeFooter() {
         Năm lấy khi render: một hằng `2026` viết cứng sẽ sai ngay 01/01 năm sau. Truyền dạng CHUỖI
         vì ICU sẽ định dạng số có phân tách nhóm và biến 2026 thành "2.026".
       */}
-      <YStack ai="center" gap={2}>
-        <Text col={colors.textMuted} fos={fontSize.meta}>
-          {t('copyright', { year: String(new Date().getFullYear()) })}
-        </Text>
+      <YStack ai="center" gap={space.sm}>
+        <XStack gap={space.md} accessibilityLabel={t('socialsLabel')} accessible>
+          {SOCIALS.map(({ key, icon }) => (
+            <Ionicons key={key} name={icon} size={20} color={colors.textMuted} />
+          ))}
+        </XStack>
+        <NativeText
+          style={{ color: colors.textMuted, fontSize: fontSize.meta, fontFamily: FONT_FAMILY.body }}
+        >
+          {t.rich('copyrightCompany', {
+            year: String(new Date().getFullYear()),
+            brand: (chunks) => (
+              <NativeText style={{ color: colors.text, fontFamily: FONT_FAMILY.semibold }}>
+                {chunks}
+              </NativeText>
+            ),
+          })}
+        </NativeText>
         <Text col={colors.placeholder} fos={fontSize.meta} ta="center">
           {t('country')}
         </Text>
@@ -98,62 +146,9 @@ export function HomeFooter() {
   );
 }
 
-/**
- * Dải mời đăng xe — bản native của khối `cta.*` đứng ĐẦU chân trang web.
- *
- * ## Điều kiện hiện: giống web, chỉ khác lúc CHƯA BIẾT
- *
- * Web ẩn khối này khi `resolveWorkspaceHref(user) != null`, tức người đã có khu làm việc. Dùng
- * lại đúng hàm đó (bản native ở `account-nav.ts`) thay vì hỏi `tenant != null`: chủ xe tuyến hoa
- * hồng KHÔNG vào được cổng quản lý nhưng vẫn là chủ xe, và mời họ đăng xe lần nữa là mời họ làm
- * lại việc họ đã làm.
- *
- * Chỗ lệch duy nhất là lúc chưa biết người dùng là ai. Web render ở server nên `user` còn
- * `undefined` và khối NẰM TRONG HTML tĩnh — cố ý, để bot và khách vãng lai thấy nó; chủ xe mất nó
- * sau khi `/auth/me` trả lời. App không có bước đó: hiện rồi ẩn là một cú nháy ngay cuối màn, nên
- * `isLoading` thì chờ. Khách chưa đăng nhập vẫn thấy — `useCurrentUser` trả `null` rất nhanh và
- * khối này nằm dưới tầm nhìn đầu tiên.
- *
- * ## Vì sao nó ĐỨNG ĐẦU chân màn
- *
- * Đúng thứ tự web: lời mời trước, danh sách liên kết sau. Đây là cửa vào phễu thu phí của
- * ADR 0015, còn bốn văn bản pháp lý thì không ai chủ động đi tìm.
- */
-function ListVehicleCta() {
-  const t = useTranslations('Marketplace.footer.cta');
-  const navigateOnce = useNavigateOnce();
-  const { data: user, isLoading } = useCurrentUser();
-
-  if (isLoading || resolveWorkspaceHref(user ?? null) != null) return null;
-
-  return (
-    /* `accent` = nền gold nhạt: đây là LỜI MỜI, phải nổi hơn thẻ liên kết chìm ngay dưới. */
-    <Card tone="accent">
-      <YStack gap={space.sm}>
-        <YStack gap={2}>
-          <Text col={colors.primaryActive} fos={fontSize.meta} fow={fontWeight.semibold} letterSpacing={0.8}>
-            {t('eyebrow').toLocaleUpperCase()}
-          </Text>
-          <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-            {t('title')}
-          </Text>
-        </YStack>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('body')}
-        </Text>
-        {/*
-          KHÔNG mang mũi tên của web sang. Bên đó nó là trang trí (`aria-hidden`) đứng SAU chữ;
-          `Button` của app luôn đặt icon TRƯỚC nhãn, nên nó thành "→ Đăng xe cho thuê" — một mũi
-          tên chỉ sang phải nằm ở đầu câu. `ShopEntryCard` mời đúng việc này bằng một nút trần.
-        */}
-        <Button label={t('action')} onPress={() => navigateOnce(ROUTES.listYourVehicle.root())} />
-      </YStack>
-    </Card>
-  );
-}
-
 /** Tiêu đề một cột — nhỏ và mờ, cùng hình với tiêu đề nhóm của menu tài khoản. */
 function ColumnTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text
       col={colors.placeholder}
@@ -175,10 +170,15 @@ function ColumnTitle({ children }: { children: string }) {
  */
 function CompanyLink({ label, href }: { label: string; href: Href }) {
   const navigateOnce = useNavigateOnce();
+  return <NavLink label={label} onPress={() => navigateOnce(href)} />;
+}
+
+function NavLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
 
   return (
     <Pressable
-      onPress={() => navigateOnce(href)}
+      onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={label}
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}

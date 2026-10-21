@@ -21,7 +21,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource } from './api';
 import { BulkDayBlockSheet, type BulkDayBlockState } from './components/BulkDayBlockSheet';
 import { BulkDayPriceSheet, type BulkDayPriceState } from './components/BulkDayPriceSheet';
@@ -93,6 +94,7 @@ type SheetState =
 export type CalendarShell = 'manage' | 'account';
 
 export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } = {}) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const tAccount = useTranslations('Account.calendar');
   const tCommon = useTranslations('Common.actions');
@@ -694,6 +696,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
  * bên dưới, nơi biết lưới có đang lệch khoảng hay không.
  */
 function GridBusyOverlay() {
+  const colors = useColors();
   const t = useTranslations('Calendar');
 
   return (

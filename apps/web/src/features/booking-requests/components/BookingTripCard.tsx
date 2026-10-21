@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import {
+  RENTAL_MODE,
   ROUTE_TYPE,
   SERVICE_TYPE,
   appliesExcessMileage,
@@ -253,7 +254,7 @@ export function BookingTripCard({
     ? dl('serviceType', trip.serviceType)
     : isWithDriver
       ? `${dl('serviceType', trip.serviceType)}${LIST_SEPARATOR}${dl('routeType', trip.routeType)}`
-      : trip.rentalMode === 'hourly'
+      : trip.rentalMode === RENTAL_MODE.HOURLY
         ? t('time.modeHourly')
         : t('time.modeDaily');
   const durationText = isLongTerm

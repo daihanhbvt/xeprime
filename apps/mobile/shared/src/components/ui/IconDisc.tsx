@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { YStack } from 'tamagui';
-import { colors, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 /** Đường kính mặc định — bằng huy hiệu dẫn đầu một hàng `<StatGrid variant="list">`. */
@@ -48,6 +49,7 @@ export function IconDisc({
   glyph?: number;
   filled?: boolean;
 }) {
+  const colors = useColors();
   return (
     <YStack
       w={size}

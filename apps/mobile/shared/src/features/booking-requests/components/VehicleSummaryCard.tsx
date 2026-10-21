@@ -10,7 +10,8 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Thumbnail ngang giữ mốc nhận diện xe nhưng vẫn để step và trường đầu tiên nằm gần màn đầu. */
 const VEHICLE_THUMB = { width: 112, height: 84 } as const;
@@ -34,6 +35,7 @@ export function VehicleSummaryCard({
   /** Gói dài hạn đang chọn — có gói thì hiện giá gói THẬT thay cho giá cơ sở /tháng. */
   packageMonths: number | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

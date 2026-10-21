@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 /**
@@ -36,6 +37,7 @@ export function BookingMoneyCard({
    */
   onEditFee?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.money');
   const tActions = useTranslations('Common.actions');
   const tDetail = useTranslations('Bookings.detail');

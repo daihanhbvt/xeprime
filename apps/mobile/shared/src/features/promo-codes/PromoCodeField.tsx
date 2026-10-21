@@ -18,16 +18,13 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import {
-  colors,
-  fieldFontSize,
-  fontSize,
-  fontWeight,
-  iconSize,
-  radius,
-  space,
-} from '@/theme/tokens';
-import { availablePromoCodes, type PromoPreview, type PromoTripParams } from '@/api/promo-codes/api';
+  availablePromoCodes,
+  type PromoPreview,
+  type PromoTripParams,
+} from '@/api/promo-codes/api';
 
 /**
  * Ô ÁP MÃ KHUYẾN MÃI của luồng đặt xe trên APP — bản native của `PromoCodeField` bên web
@@ -64,6 +61,7 @@ export function PromoCodeField({
   onApply: (code: string) => void;
   onRemove: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const fmt = useAppFormat();
   const [draft, setDraft] = useState('');
@@ -125,7 +123,13 @@ export function PromoCodeField({
                 {applied.code}
               </Text>
             </XStack>
-            <Text f={1} flexShrink={1} col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            <Text
+              f={1}
+              flexShrink={1}
+              col={colors.textMuted}
+              fos={fontSize.label}
+              numberOfLines={1}
+            >
               {applied.name}
             </Text>
             <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.bold}>
@@ -217,12 +221,50 @@ export function PromoCodeField({
 }
 
 /**
+ * Ba dòng trạng thái của mã (đang kiểm · không áp được · bị gỡ) — bản native của
+ * `PromoStatusNote` web, dùng ở thẻ "Thành tiền" của trang chi tiết xe.
+ */
+export function PromoStatusNote({
+  checking,
+  reason,
+  hasApplied,
+  droppedCode,
+}: {
+  checking: boolean;
+  reason: string | null;
+  hasApplied: boolean;
+  droppedCode: string | null;
+}) {
+  const t = useTranslations('PromoCodes');
+  const colors = useColors();
+  return (
+    <>
+      {checking ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('field.checking')}
+        </Text>
+      ) : null}
+      {!checking && reason && !hasApplied ? (
+        <Text col={colors.danger} fos={fontSize.label} fow={fontWeight.semibold}>
+          {reasonText(t, reason)}
+        </Text>
+      ) : null}
+      {droppedCode ? (
+        <Text col={colors.warning} fos={fontSize.label} fow={fontWeight.semibold}>
+          {t('field.dropped', { code: droppedCode })}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * Tấm trượt chọn mã — gõ tay HOẶC chọn từ danh sách đã công bố.
  *
  * Chỉ dựng khi ĐÃ mở (`pickerOpen ? … : null` ở nơi gọi): một `Modal` ngủ đông trong màn đặt xe
  * là một cây DOM native nữa cho mỗi chuyến khách xem.
  */
-function PromoPickerSheet({
+export function PromoPickerSheet({
   trip,
   appliedCode,
   onClose,
@@ -233,6 +275,7 @@ function PromoPickerSheet({
   onClose: () => void;
   onApply: (code: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const fmt = useAppFormat();
   const [draft, setDraft] = useState('');
@@ -344,6 +387,7 @@ function PickerRow({
   money: (value: string) => string;
   onApply: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const disabled = !promo.applicable;
 
@@ -405,6 +449,7 @@ function PickerRow({
       </YStack>
       <YStack flexShrink={0} jc="center" alignSelf="center">
         <Button
+          icon="checkmark-outline"
           label={inUse ? t('picker.applied') : t('picker.apply')}
           variant="primary"
           size="sm"

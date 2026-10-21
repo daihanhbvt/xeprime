@@ -10,6 +10,7 @@ import {
   LISTING_AMENITY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
+  TRANSMISSION_TYPE_EXT,
   VEHICLE_TYPE,
   vehicleFuelTypesFor,
   type ListingSort,
@@ -28,14 +29,22 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { useListingFacets } from '../hooks/use-search-results';
 
 const PRICE_STEP = 50_000;
 /** Trần dự phòng khi chưa có dữ liệu giá (facet đang tải / chưa có xe). */
 const PRICE_FALLBACK_MAX = 3_000_000;
 const SHEET_RATIO = 0.9;
+
+const CAR_TRANSMISSION_FILTER = [TRANSMISSION_TYPE_EXT.AUTOMATIC, TRANSMISSION_TYPE_EXT.MANUAL];
+const MOTORBIKE_TRANSMISSION_FILTER = [
+  TRANSMISSION_TYPE_EXT.AUTOMATIC_CVT,
+  TRANSMISSION_TYPE_EXT.SEMI_AUTOMATIC,
+  TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH,
+];
 
 /** Phần filter mà tấm này SỞ HỮU — bản nháp cục bộ, chỉ áp khi bấm "Áp dụng". */
 interface FilterDraft {
@@ -47,6 +56,8 @@ interface FilterDraft {
   seats: string[];
   fuelType: string[];
   features: string[];
+  /** Hộp số — chọn MỘT (web `FilterModal` #213), mảng vì API nhận danh sách. */
+  transmission: string[];
   hourly: boolean;
   delivery: boolean;
   noCollateral: boolean;
@@ -64,6 +75,7 @@ function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
     seats: filters.seats ?? [],
     fuelType: filters.fuelType ?? [],
     features: filters.features ?? [],
+    transmission: filters.transmission ?? [],
     hourly: filters.hourly ?? false,
     delivery: filters.delivery ?? false,
     noCollateral: filters.noCollateral ?? false,
@@ -83,6 +95,7 @@ function draftToPatch(draft: FilterDraft): Partial<MarketplaceFilters> {
     seats: draft.seats,
     fuelType: draft.fuelType,
     features: draft.features,
+    transmission: draft.transmission,
     hourly: draft.hourly,
     delivery: draft.delivery,
     noCollateral: draft.noCollateral,
@@ -117,6 +130,9 @@ export function FilterSheet({
   onApply: (patch: Partial<MarketplaceFilters>) => void;
   onClose: () => void;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Marketplace.filterPanel');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -160,6 +176,7 @@ export function FilterSheet({
       seats: debounced.seats,
       fuelType: debounced.fuelType,
       features: debounced.features,
+      transmission: debounced.transmission,
       hourly: debounced.hourly,
       delivery: debounced.delivery,
       noCollateral: debounced.noCollateral,
@@ -181,6 +198,12 @@ export function FilterSheet({
     const allowed = vehicleFuelTypesFor(filters.vehicleType);
     return items.filter((item) => allowed.some((value) => value === item.key));
   }, [catalog, filters.vehicleType]);
+
+  /** Mã hộp số theo loại xe — đúng bộ web `FilterModal` dùng (ô tô AT/MT; xe máy ba kiểu). */
+  const transmissionOptions =
+    filters.vehicleType === VEHICLE_TYPE.MOTORBIKE
+      ? MOTORBIKE_TRANSMISSION_FILTER
+      : CAR_TRANSMISSION_FILTER;
 
   const countOf = useMemo(() => {
     const maps = {
@@ -224,6 +247,7 @@ export function FilterSheet({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={insets.bottom}
           >
             <XStack ai="center" gap={space.xs} px={space.sm} pt={space.sm}>
@@ -303,17 +327,43 @@ export function FilterSheet({
                 </Group>
               ) : null}
 
-              <Group title={t('seats')}>
-                <FacetChips
-                  options={SEAT_BUCKET_VALUES.map((value) => ({
-                    key: value,
-                    label: domainLabel('seatBucket', value, SEAT_BUCKET_LABEL[value]),
-                    count: countOf('seats', value),
-                  }))}
-                  selected={draft.seats}
-                  onToggle={(key) => set('seats', toggle(draft.seats, key))}
-                />
+              {/* Hộp số — chọn MỘT, bộ mã theo loại xe như web `FilterModal` (#213). */}
+              <Group title={t('transmission')}>
+                <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
+                  <Chip
+                    label={t('any')}
+                    selected={draft.transmission.length === 0}
+                    size="sm"
+                    variant="soft"
+                    onPress={() => set('transmission', [])}
+                  />
+                  {transmissionOptions.map((value) => (
+                    <Chip
+                      key={value}
+                      label={domainLabel('transmissionType', value)}
+                      selected={draft.transmission.includes(value)}
+                      size="sm"
+                      variant="soft"
+                      onPress={() => set('transmission', [value])}
+                    />
+                  ))}
+                </XStack>
               </Group>
+
+              {/* Số chỗ chỉ có nghĩa với ô tô — web #213 ẩn khối này khi lọc xe máy. */}
+              {filters.vehicleType !== VEHICLE_TYPE.MOTORBIKE ? (
+                <Group title={t('seats')}>
+                  <FacetChips
+                    options={SEAT_BUCKET_VALUES.map((value) => ({
+                      key: value,
+                      label: domainLabel('seatBucket', value, SEAT_BUCKET_LABEL[value]),
+                      count: countOf('seats', value),
+                    }))}
+                    selected={draft.seats}
+                    onToggle={(key) => set('seats', toggle(draft.seats, key))}
+                  />
+                </Group>
+              ) : null}
 
               <Group title={t('fuelType')}>
                 <FacetChips
@@ -396,6 +446,7 @@ export function FilterSheet({
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -435,6 +486,7 @@ function FacetChips({
               label={option.count === null ? option.label : `${option.label}  ${option.count}`}
               selected={isSelected}
               size="sm"
+              variant="soft"
               {...(option.leading ? { leading: option.leading } : {})}
               onPress={() => onToggle(option.key)}
             />
@@ -461,6 +513,7 @@ function AmenityRow({
   first: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onToggle}

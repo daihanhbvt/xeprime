@@ -40,7 +40,7 @@ export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
    * đứt mọi listener đang gắn.
    *
    * Đổi user và đăng xuất đi qua CÙNG nhánh này: `userId` đổi (hoặc về `null`) ⇒ cleanup chạy ⇒
-   * `signOutChat()`. Không có bước đó thì uid cũ còn nguyên trong tiến trình và người kế tiếp
+   * `signOutChat(userId)`. Không có bước đó thì uid cũ còn nguyên trong tiến trình và người kế tiếp
    * nghe Firestore bằng danh tính của người trước.
    */
   useEffect(() => {
@@ -76,7 +76,12 @@ export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
 
       try {
         await signInChat(token);
-        if (cancelled) return;
+        if (cancelled) {
+          // Đăng xuất tới TRONG LÚC đang đăng nhập: `signOutChat` ở cleanup có thể đã chạy trước
+          // khi phiên này kịp thành hình, nên phải tự rời lại — không thì phiên còn trong tiến trình.
+          await signOutChat(userId);
+          return;
+        }
         chatDebug.authReady();
         setReady(true);
       } catch (error) {
@@ -97,7 +102,7 @@ export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       setReady(false);
       chatDebug.authSignedOut();
-      void signOutChat();
+      void signOutChat(userId);
     };
   }, [userId]);
 

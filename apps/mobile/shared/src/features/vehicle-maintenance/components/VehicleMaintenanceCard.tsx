@@ -19,7 +19,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { useMaintenanceProfile } from '../hooks/use-maintenance';
 
 /**
@@ -34,6 +35,7 @@ import { useMaintenanceProfile } from '../hooks/use-maintenance';
  * kết có mục "Bảo dưỡng", nhưng một mục thì không nói được xe đang quá hạn bao nhiêu km.
  */
 export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
+  const colors = useColors();
   const t = useTranslations('Maintenance');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();

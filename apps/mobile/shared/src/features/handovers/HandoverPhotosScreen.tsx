@@ -16,7 +16,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import { HandoverPhotoGrid } from './components/HandoverPhotoGrid';
 import { useHandoverContext } from './hooks/use-handovers';
 import type { Handover } from './api';
@@ -119,6 +120,7 @@ function SupplementBody({
   onRefresh: () => void;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover.supplement');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

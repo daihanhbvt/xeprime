@@ -405,3 +405,26 @@ export function parseNumberInput(text: string): number | null {
   const value = Number(normalized);
   return Number.isNaN(value) ? null : value;
 }
+
+/**
+ * Phần khách trả TRỰC TIẾP chủ xe lúc nhận xe (`B − D`, ADR 0032). Server tính sẵn
+ * (`payAtPickupAmount`); đơn/snapshot cũ chưa có trường đó thì rơi về `tổng khách trả − tiền giữ
+ * chỗ`. Không có tiền giữ chỗ thì không có khái niệm "phần còn lại" ⇒ `null`.
+ *
+ * Ở package dùng chung vì web (`customer-price-view`) và app native (bảng giá, màn chuyến, khối
+ * thanh toán thành công) cùng cần đúng phép này — ba bản chép tay là ba chỗ để lệch nhau.
+ */
+export function payAtPickupAmount(
+  fees:
+    | {
+        payAtPickupAmount?: MoneyString | null;
+        holdAmount?: MoneyString | null;
+        customerTotalAmount: MoneyString;
+      }
+    | null
+    | undefined,
+): MoneyString | null {
+  if (!fees) return null;
+  if (fees.payAtPickupAmount) return fees.payAtPickupAmount;
+  return fees.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null;
+}

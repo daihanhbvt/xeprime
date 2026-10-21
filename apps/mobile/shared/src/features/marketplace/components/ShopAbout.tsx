@@ -7,7 +7,8 @@ import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
 import type { IconName } from '@/components/ui/Chip';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { PublicShop } from '../api';
 import { HostMetrics } from './HostMetrics';
 
@@ -53,6 +54,7 @@ const STATS_PER_ROW = 2;
  * docblock của nó nói rõ nội dung do nơi gọi quyết định, và đây là chỗ quyết định đó có nghĩa.
  */
 export function ShopAbout({ shop }: { shop: PublicShop }) {
+  const colors = useColors();
   const t = useTranslations('Shops');
   const fmt = useAppFormat();
   const [collapsed, setCollapsed] = useState(false);

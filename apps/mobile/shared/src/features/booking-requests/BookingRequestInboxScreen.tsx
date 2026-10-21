@@ -30,7 +30,8 @@ import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { cancelErrorKey, decisionErrorKey } from './decision-error';
 import { BookingRequestDetailScreen } from './BookingRequestDetailScreen';
@@ -77,6 +78,7 @@ const REQUEST_TAB_VALUES: readonly string[] = REQUEST_INBOX_TABS.map((tab) => ta
  * Lọc và phân trang đều ở SERVER. Không có chỗ nào kéo cả kho về rồi cắt tại chỗ.
  */
 export function BookingRequestInboxScreen() {
+  const colors = useColors();
   const t = useTranslations('BookingRequests');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();

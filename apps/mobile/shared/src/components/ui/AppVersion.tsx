@@ -2,7 +2,8 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 export type AppVersionInfo = { version: string; build: string | null };
 
@@ -34,6 +35,7 @@ export function readAppVersion(
  * trống còn tệ hơn không có.
  */
 export function AppVersion() {
+  const colors = useColors();
   const t = useTranslations('MobileShell.appVersion');
   const info = readAppVersion();
   if (!info) return null;

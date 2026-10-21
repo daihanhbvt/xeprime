@@ -9,7 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { ResourceList } from './components/ResourceList';
 
 /** Hai văn bản nói về chính sách đang có hiệu lực — cùng cặp web trưng ở khối "Cập nhật chính sách". */
@@ -31,6 +32,7 @@ export function HostGuideScreen({
    */
   shell?: PageShell;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.hostGuide');
   const tLegal = useTranslations('Legal.docs');
   const fmt = useAppFormat();

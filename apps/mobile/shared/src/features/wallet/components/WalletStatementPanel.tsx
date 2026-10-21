@@ -23,7 +23,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   WALLET_STATEMENT_PAGE_SIZE,
   type WalletStatementFilters,
@@ -60,6 +61,7 @@ export function WalletStatementPanel({
   filters: WalletStatementFilters;
   onFiltersChange: (patch: Partial<WalletStatementFilters>) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -259,6 +261,7 @@ export function WalletStatementPanel({
  * thiếu ba ký tự cuối thì vô dụng.
  */
 function TripCard({ trip }: { trip: WalletStatementTrip }) {
+  const colors = useColors();
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -349,6 +352,7 @@ function TripCard({ trip }: { trip: WalletStatementTrip }) {
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
       <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
@@ -370,6 +374,7 @@ function SummaryRow({
   value: React.ReactNode;
   highlight?: boolean;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" jc="space-between" gap={space.sm}>
       <YStack f={1} gap={2}>
@@ -404,6 +409,7 @@ function MetricCell({
   value: string;
   label: string;
 }) {
+  const colors = useColors();
   return (
     <YStack f={1} minWidth={0} ai="center" gap={space.xs} px={space.xs}>
       <IconDisc icon={icon} tone={tone} surface={surface} size={32} />
@@ -419,6 +425,7 @@ function MetricCell({
 
 /** Kẻ dọc giữ ba chỉ số thành một dải, thay vì ba mẩu chữ rời trên nền trắng. */
 function MetricDivider() {
+  const colors = useColors();
   return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" />;
 }
 
@@ -437,6 +444,7 @@ function SignedAmount({
   prominent?: boolean;
   strong?: boolean;
 }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const size = prominent ? fontSize.h4 : fontSize.bodySm;
   const weight = prominent || strong ? fontWeight.bold : fontWeight.regular;

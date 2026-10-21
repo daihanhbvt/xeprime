@@ -10,7 +10,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
-import { TamaguiProvider } from 'tamagui';
 // Side-effect import, KHÔNG xoá: expo-router dùng reanimated cho animation của navigator.
 import 'react-native-reanimated';
 
@@ -27,8 +26,11 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
-import { colors } from '@/theme/tokens';
-import { tamaguiConfig } from '@/theme/tamagui.config';
+import { useColors } from '@/theme/ThemeProvider';
+import type { ReactNode } from 'react';
+import { enableFreeze } from 'react-native-screens';
+import { AppThemeProvider } from '@/theme/AppThemeProvider';
+import { ThemeBootstrap } from '@/theme/ThemeBootstrap';
 import { duration } from '@/theme/motion';
 
 patchDayjsTimezone();
@@ -43,8 +45,31 @@ patchDayjsTimezone();
  */
 registerPushBackgroundHandler();
 
+// Bật `freezeOnBlur` của các navigator: tab bị che không vẽ lại khi đổi sáng/tối, chỉ khi hiện lại.
+enableFreeze(true);
+
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return <AppErrorScreen error={error} onRetry={() => void retry()} />;
+}
+
+/**
+ * `RootLayout` nằm NGOÀI `AppThemeProvider` nên không đọc được bảng màu sống — Stack gốc đọc
+ * nền ở component con này để đổi theme là đổi ngay.
+ */
+function ThemedStack({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'ios_from_right',
+        gestureEnabled: true,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      {children}
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -52,31 +77,28 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+      <AppThemeProvider>
         <ReduxProvider store={store}>
           <I18nProvider>
             <QueryClientProvider client={queryClient}>
               <AppToastProvider>
                 <PushBootstrap />
+                <ThemeBootstrap />
                 <InAppCameraProvider />
                 <SessionBoundary>
                   <ChatRealtimeProvider>
                     <BadgeRealtimeProvider>
-                      <Stack
-                        screenOptions={{
-                          headerShown: false,
-                          animation: 'ios_from_right',
-                          gestureEnabled: true,
-                          contentStyle: { backgroundColor: colors.background },
-                        }}
-                      >
+                      <ThemedStack>
                         <Stack.Screen
                           name="login"
-                          options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
+                          options={{
+                            animation: 'slide_from_bottom',
+                            animationDuration: duration.slow,
+                          }}
                         />
                         <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
                         <Stack.Screen name="manage" options={{ animation: 'fade' }} />
-                      </Stack>
+                      </ThemedStack>
                       {/* SAU `Stack` để tấm bắt buộc nằm trên mọi màn — ADR 0060, xem `AccountPhoneGate`. */}
                       <AccountPhoneGate />
                     </BadgeRealtimeProvider>
@@ -86,7 +108,7 @@ export default function RootLayout() {
             </QueryClientProvider>
           </I18nProvider>
         </ReduxProvider>
-      </TamaguiProvider>
+      </AppThemeProvider>
     </SafeAreaProvider>
   );
 }

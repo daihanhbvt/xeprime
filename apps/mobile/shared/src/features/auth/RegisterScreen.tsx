@@ -9,7 +9,8 @@ import { Screen } from '@/components/layout/Screen';
 import { type CurrentUser } from '@/features/auth/api';
 import { LegalConsentCheckbox } from '@/features/legal/components/LegalConsentCheckbox';
 import { APP_NAME } from '@/lib/app-name';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { RegisterForm } from './components/RegisterForm';
 import { RegisterSuccess } from './components/RegisterSuccess';
@@ -51,6 +52,7 @@ export function RegisterScreen({
    */
   chosenTrack?: RegistrationTrack | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const partner = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
   const [registered, setRegistered] = useState(false);

@@ -3,7 +3,8 @@ import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { CustomerTripEstimate } from '../api';
 
 /**
@@ -37,6 +38,7 @@ export function TripEstimateCard({
    */
   settled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.estimate');
   const fmt = useAppFormat();
 

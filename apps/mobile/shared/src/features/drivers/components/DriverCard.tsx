@@ -16,7 +16,8 @@ import type { IconName } from '@/components/ui/Chip';
 import { IconLine } from '@/components/ui/IconLine';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { Driver } from '../api';
 import { DriverLicenceDetail, DriverLicenceStateBadge } from './DriverLicenceStateBadge';
 
@@ -43,6 +44,7 @@ function DriverCardImpl({
   pending: boolean;
   onIntent: (driver: Driver, intent: DriverCardIntent) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();

@@ -13,7 +13,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { marketplaceApi, type ShopReviewItem } from '../api';
 
 /** Web lấy 6 — vừa một màn cuộn, đủ để đọc được giọng của gian hàng mà không thành một trang riêng. */
@@ -38,6 +39,7 @@ const MAX_STARS = 5;
  * làm hỏng cả trang vì một thứ không ai đang chờ.
  */
 export function ShopReviews({ slug }: { slug: string }) {
+  const colors = useColors();
   const t = useTranslations('Shops.reviews');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -122,6 +124,7 @@ function ReviewRow({
   divided: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={vehicleLabel} onPress={onPress}>
       <XStack
@@ -205,6 +208,7 @@ function ReviewRow({
  * Nhãn cho trình đọc màn hình vẫn là con số — năm hình vẽ giống nhau là năm lần lặp vô nghĩa.
  */
 function Stars({ rating }: { rating: number }) {
+  const colors = useColors();
   const t = useTranslations('Shops.reviews');
   return (
     <XStack ai="center" gap={1} accessibilityLabel={t('ratingValue', { rating })}>

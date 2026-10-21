@@ -30,7 +30,8 @@ import {
   VEHICLE_MANAGE_SECTION,
   type VehicleManageNavItem,
 } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { useServiceToggle } from './hooks/use-service-toggle';
 
 /**
@@ -113,6 +114,7 @@ function HubBody({
   canEdit: boolean;
   header: ReactNode;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tMenu = useTranslations('VehicleManage.menu');
   const toast = useAppToast();
@@ -250,6 +252,7 @@ function VehicleSummaryCard({
 }
 
 function ManageHeaderExtras({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.header');
   const fmt = useAppFormat();
   const stats = useVehicleSummary(vehicle.id).data?.stats;
@@ -280,6 +283,7 @@ function SectionRow({
   enabled: boolean;
   divided: boolean;
 }) {
+  const colors = useColors();
   const tMenu = useTranslations('VehicleManage.menu');
   const navigateOnce = useNavigateOnce();
   const label = tMenu(item.labelKey);

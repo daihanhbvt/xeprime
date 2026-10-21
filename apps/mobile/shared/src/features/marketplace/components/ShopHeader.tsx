@@ -7,7 +7,8 @@ import { LIST_SEPARATOR } from '@xeprime/domain';
 import { ShopCover, ShopLogo, SHOP_LOGO } from '@/components/ui/ShopCover';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { PublicShop } from '../api';
 
 /**
@@ -25,6 +26,7 @@ import type { PublicShop } from '../api';
  * quản lý, vì khối đó là bản xem trước của chính màn này.
  */
 export function ShopHeader({ shop }: { shop: PublicShop }) {
+  const colors = useColors();
   const t = useTranslations('Shops.header');
   const fmt = useAppFormat();
 

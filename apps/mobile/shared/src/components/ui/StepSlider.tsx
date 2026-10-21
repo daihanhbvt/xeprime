@@ -7,7 +7,8 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 const THUMB = 22;
 const TRACK_HEIGHT = 4;
@@ -76,6 +77,7 @@ export const StepSlider = memo(function StepSlider({
   /** Mốc hiện dưới ray. Mốc trùng giá trị đang chọn được tô đậm. */
   ticks?: readonly SliderTick[];
 }) {
+  const colors = useColors();
   const [width, setWidth] = useState(0);
 
   const span = Math.max(max - min, 1);

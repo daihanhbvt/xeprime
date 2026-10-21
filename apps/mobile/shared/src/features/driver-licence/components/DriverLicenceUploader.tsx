@@ -10,7 +10,8 @@ import { Callout } from '@/components/ui/Callout';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { IMAGE_SOURCE, type ImageSource } from '@/lib/r2-image-upload';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useDriverLicenceImage, useSubmitDriverLicence } from '../hooks/use-driver-licence';
 import {
   PrepareImageError,
@@ -44,6 +45,7 @@ export function DriverLicenceUploader({
   /** Tải xong (lượt nộp đã sang "đang đọc"). */
   onSubmitted?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('DriverLicence');
   const apiErrorMessage = useErrorMessage();
   const imageErrorMessage = useImageErrorMessage(apiErrorMessage);

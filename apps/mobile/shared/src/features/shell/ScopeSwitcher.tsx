@@ -13,7 +13,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { LogoutRow } from './LogoutRow';
 import { useShellScope } from './use-shell-scope';
 
@@ -31,6 +32,7 @@ const NAME_MARK = 16;
  * nó xám.
  */
 export function ScopeSwitcherButton({ compact = false }: { compact?: boolean }) {
+  const colors = useColors();
   const t = useTranslations('MobileShell.scope');
   const { tenant, isLoading } = useTenantScope();
   const [open, setOpen] = useState(false);
@@ -105,6 +107,7 @@ export function ScopeSwitcherButton({ compact = false }: { compact?: boolean }) 
  * Không có hộp xác nhận: thao tác đảo ngược được bằng đúng một chạm ở phía bên kia.
  */
 export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const colors = useColors();
   const t = useTranslations('MobileShell.scope');
   const domainLabel = useDomainLabel();
   const { tenant } = useTenantScope();
@@ -250,6 +253,7 @@ function ScopeOption({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}

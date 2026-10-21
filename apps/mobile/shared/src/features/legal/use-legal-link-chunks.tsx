@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text } from 'tamagui';
 import { LEGAL_DOC, type LegalDoc } from '@xeprime/domain';
-import { colors, fontWeight } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight } from '@/theme/tokens';
 import { useOpenLegalDoc } from './use-open-legal-doc';
 
 type Chunk = (chunks: ReactNode) => ReactNode;
@@ -17,7 +18,10 @@ type Chunk = (chunks: ReactNode) => ReactNode;
  * chúng phải mở văn bản y hệt nhau: hai bản sao là hai cơ hội để một chỗ còn mở trình duyệt
  * ngoài trong khi chỗ kia đã chuyển sang WebView.
  */
-export function useLegalLinkChunks(): Readonly<Record<'terms' | 'privacy' | 'rules' | 'cancellation', Chunk>> {
+export function useLegalLinkChunks(): Readonly<
+  Record<'terms' | 'privacy' | 'rules' | 'cancellation', Chunk>
+> {
+  const colors = useColors();
   const openDoc = useOpenLegalDoc();
 
   const link = (doc: LegalDoc): Chunk =>

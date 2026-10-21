@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import { StyleSheet } from 'react-native';
 import { useState, type ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius } from '@/theme/tokens';
 
 /**
  * Ảnh HỎNG (bị gỡ khỏi máy chủ, URL sai) phải rơi về ĐÚNG hình chưa-có-ảnh, chứ không phải một
@@ -58,6 +59,7 @@ const styles = StyleSheet.create({
  * `ShopProfileSkeleton`/`ShopDetailSkeleton` dựng khung chờ theo đúng hai hằng trên.
  */
 export function ShopCover({ url, children }: { url?: string | null; children?: ReactNode }) {
+  const colors = useColors();
   const { failed, onError } = useImageLoadFailure(url);
   const showImage = Boolean(url) && !failed;
 
@@ -95,6 +97,7 @@ export function ShopLogo({
   name: string;
   children?: ReactNode;
 }) {
+  const colors = useColors();
   const { failed, onError } = useImageLoadFailure(url);
   const showImage = Boolean(url) && !failed;
 

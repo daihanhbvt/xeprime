@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { XStack } from 'tamagui';
-import { colors, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius } from '@/theme/tokens';
 
 /**
  * Cạnh ô vuông — bằng đúng vòng chọn của `RadioOption`, để một form trộn cả hai loại không so le.
@@ -24,6 +25,7 @@ const TICK = 14;
  * mà bấm hai cái cùng sáng là hình nói dối, và người dùng sẽ bấm lại vì tưởng mình chọn nhầm.
  */
 export function CheckMark({ checked }: { checked: boolean }) {
+  const colors = useColors();
   return (
     <XStack
       width={BOX}

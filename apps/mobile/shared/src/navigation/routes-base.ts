@@ -211,10 +211,7 @@ export const ROUTES = {
      * Native không có URL để mang ngữ cảnh, nên nó đi qua tham số điều hướng, đúng cách
      * `serviceType` đang đi.
      */
-    request: (
-      vehicleId: string,
-      context?: { serviceType?: string; provinceCode?: string },
-    ): Href => ({
+    request: (vehicleId: string, context?: BookingRequestPrefillParams): Href => ({
       pathname: '/listings/[id]/request',
       /*
        * `id` khai TƯỜNG MINH trong object, không gom vào một `Record<string, string>` dựng dần:
@@ -225,6 +222,23 @@ export const ROUTES = {
         id: vehicleId,
         ...(context?.serviceType ? { serviceType: context.serviceType } : {}),
         ...(context?.provinceCode ? { provinceCode: context.provinceCode } : {}),
+        ...(context?.pickupAt ? { pickupAt: context.pickupAt } : {}),
+        ...(context?.returnAt ? { returnAt: context.returnAt } : {}),
+        ...(context?.rentalMode ? { rentalMode: context.rentalMode } : {}),
+        ...(context?.routeType ? { routeType: context.routeType } : {}),
+        ...(context?.packageMonths ? { packageMonths: context.packageMonths } : {}),
+        ...(context?.pickupPreference ? { pickupPreference: context.pickupPreference } : {}),
+        ...(context?.delivery ? { delivery: context.delivery } : {}),
+        ...(context?.deliveryAddressLine
+          ? { deliveryAddressLine: context.deliveryAddressLine }
+          : {}),
+        ...(context?.deliveryPlaceId ? { deliveryPlaceId: context.deliveryPlaceId } : {}),
+        ...(context?.deliveryLat ? { deliveryLat: context.deliveryLat } : {}),
+        ...(context?.deliveryLng ? { deliveryLng: context.deliveryLng } : {}),
+        ...(context?.promoCode ? { promoCode: context.promoCode } : {}),
+        ...(context?.vehicleProtection ? { vehicleProtection: context.vehicleProtection } : {}),
+        ...(context?.personalAccident ? { personalAccident: context.personalAccident } : {}),
+        ...(context?.autoContinue ? { autoContinue: context.autoContinue } : {}),
       },
     }),
   },
@@ -860,6 +874,37 @@ export type ReceiptRouteFilters = {
 };
 
 /**
+ * Chuyến khách đã cấu hình ở trang xe, mang sang luồng gửi yêu cầu — bản native của
+ * `RequestBookingPrefill` web (#205). Expo Router chỉ chuyển giá trị nguyên thuỷ nên mọi trường là
+ * chuỗi (`packageMonths` là số dạng chuỗi, `delivery` là cờ `'1'`); màn đặt xe ép kiểu lại khi đọc
+ * và CHỈ dùng chúng khi không có bản nháp đang dở.
+ */
+export type BookingRequestPrefillParams = {
+  serviceType?: string;
+  provinceCode?: string;
+  pickupAt?: string;
+  returnAt?: string;
+  rentalMode?: string;
+  routeType?: string;
+  packageMonths?: string;
+  pickupPreference?: string;
+  delivery?: string;
+  /** Địa chỉ giao xe đã xác nhận ở thẻ đặt xe (`prefill.delivery` web); tỉnh đi qua `provinceCode`. */
+  deliveryAddressLine?: string;
+  deliveryPlaceId?: string;
+  deliveryLat?: string;
+  deliveryLng?: string;
+  /** Mã khuyến mãi đang áp ở thẻ đặt xe. */
+  promoCode?: string;
+  /** `'1'` = khách tích bảo hiểm vật chất xe MIC ở thẻ đặt xe (`prefill.vehicleProtectionSelected` web). */
+  vehicleProtection?: string;
+  /** `'1'` = khách tích bảo hiểm tai nạn người ngồi trên xe MIC (`prefill.personalAccidentSelected` web). */
+  personalAccident?: string;
+  /** `'1'` = thẻ đã đủ chuyến ⇒ luồng tự chạy lượt "Tiếp tục" (`prefill.autoContinue` web). */
+  autoContinue?: string;
+};
+
+/**
  * Ngữ cảnh tìm kiếm đi qua route params. Expo Router chỉ chuyển được giá trị nguyên thuỷ, nên
  * `hourly` là cờ `'1'` chứ không phải boolean — màn `search` ép kiểu lại khi đọc.
  */
@@ -871,6 +916,8 @@ export type ExploreSearchParams = {
   pickupAt?: string;
   returnAt?: string;
   hourly?: string;
+  /** Kiểu dáng — danh sách KEY nối bằng dấu phẩy, cùng dạng `?bodyType=` của web. */
+  bodyType?: string;
 };
 
 /**

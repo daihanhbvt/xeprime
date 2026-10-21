@@ -6,7 +6,8 @@ import { Screen } from '@/components/layout/Screen';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { DriverLicenceVerifier } from './components/DriverLicenceVerifier';
 
 /**
@@ -15,16 +16,14 @@ import { DriverLicenceVerifier } from './components/DriverLicenceVerifier';
  * bộ xác thực, nên nộp ở đâu thì chỗ kia cũng thấy.
  */
 export function DriverLicenceScreen() {
+  const colors = useColors();
   const t = useTranslations('DriverLicence.page');
   const tn = useTranslations('Navigation.account');
   const router = useRouter();
 
   return (
     <>
-      <AppHeader
-        title={tn('documents')}
-        onBack={() => goBackOr(router, ROUTES.account.home())}
-      />
+      <AppHeader title={tn('documents')} onBack={() => goBackOr(router, ROUTES.account.home())} />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={layout.section}>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>

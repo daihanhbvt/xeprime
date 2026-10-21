@@ -28,7 +28,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   SUPPORT_SURFACE,
   type SupportCaseDetail,
@@ -103,6 +104,7 @@ export function SupportCaseDetailScreen({
 }
 
 function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: SupportSurface }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -193,6 +195,7 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
 }
 
 function TimelineEvent({ event }: { event: SupportCaseEvent }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -260,6 +263,7 @@ function ReplyBox({ row, surface }: { row: SupportCaseDetail; surface: SupportSu
       />
 
       <Button
+        icon="send-outline"
         label={t('send')}
         disabled={!body.trim()}
         loading={post.isPending}

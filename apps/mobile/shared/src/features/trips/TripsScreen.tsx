@@ -24,11 +24,13 @@ import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { isUnauthenticated } from '@xeprime/api-client';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
 import { UnpaidHoldsReminder } from './components/UnpaidHoldsReminder';
 import { useTripsInfinite } from './hooks/use-trips';
@@ -87,6 +89,7 @@ export function TripsScreen({
   /** Khối đứng trên cùng màn — bộ chuyển "thuê / lái" của app khách (ADR 0063). */
   header?: ReactNode;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const domainLabel = useDomainLabel();
 
@@ -155,7 +158,7 @@ export function TripsScreen({
         tintColor={colors.primaryActive}
       />
     ),
-    [isRefetching, onRefresh],
+    [colors, isRefetching, onRefresh],
   );
 
   /*
@@ -225,6 +228,15 @@ export function TripsScreen({
               <TripCardSkeleton key={i} />
             ))}
           </YStack>
+        ) : query.isError && isUnauthenticated(query.error) ? (
+          // Như web: hết phiên là chuyện đăng nhập, không phải lỗi tải — Thử lại chỉ lặp đúng lỗi đó.
+          <ScreenMessage
+            icon="log-in-outline"
+            title={t('auth.expiredTitle')}
+            description={t('auth.expiredList')}
+            actionLabel={t('auth.login')}
+            onAction={() => navigateOnce(ROUTES.account.login())}
+          />
         ) : query.isError ? (
           <ScreenError
             error={query.error}

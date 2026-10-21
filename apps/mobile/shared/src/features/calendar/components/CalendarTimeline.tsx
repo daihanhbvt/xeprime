@@ -15,9 +15,10 @@ import { OCCUPANCY_SOURCE_TYPE_META, type OccupancySourceType } from '@xeprime/t
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource, Holiday } from '../api';
-import { CAL_SURFACE, eventTone, isDashedEvent } from '../calendar-tone';
+import { useCalSurface, eventTone, isDashedEvent } from '../calendar-tone';
 import { EVENT_ICON, eventBarShowsLabel, eventStatusGroup } from '../event-tone';
 import { priceMarkerKey, type PriceMarker } from '../hooks/use-calendar-data';
 import type { CalendarRange, DayCell } from '../utils/calendar-date.util';
@@ -121,7 +122,7 @@ const LIST_WINDOW = {
  * quy đổi `height: '100%'` ra chiều cao thật. Vì vậy hàng/header/hàng tổng đều KHÔNG còn
  * `borderBottomWidth`; từng ô mang nét của chính nó.
  */
-const GRID_LINE = colors.borderInput;
+const useGridLine = themed((colors) => colors.borderInput);
 
 /**
  * Lá cờ ngày lễ — 9dp, GHIM ở góc trên phải ô, đúng `.holidayFlag` của web.
@@ -209,6 +210,9 @@ export function CalendarTimeline({
   onResourcePress,
   onDayPress,
 }: TimelineProps) {
+  const CAL_SURFACE = useCalSurface();
+  const colors = useColors();
+  const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
 
   const resourceW = collapsed ? RESOURCE_W_COLLAPSED : RESOURCE_W;
@@ -544,6 +548,9 @@ const DayHeaderCell = memo(function DayHeaderCell({
   width: number;
   onPress: ((day: DayCell) => void) | null;
 }) {
+  const CAL_SURFACE = useCalSurface();
+  const colors = useColors();
+  const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
   const fmt = useAppFormat();
 
@@ -630,6 +637,8 @@ const ResourceCell = memo(function ResourceCell({
   collapsed: boolean;
   onPress: (resource: CalendarResource) => void;
 }) {
+  const colors = useColors();
+  const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
 
   return (
@@ -705,6 +714,9 @@ const EventTrack = memo(function EventTrack({
   onCellPress: ((resource: CalendarResource, day: DayCell) => void) | null;
   onEventPress: (event: CalendarEvent, resource: CalendarResource) => void;
 }) {
+  const CAL_SURFACE = useCalSurface();
+  const colors = useColors();
+  const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
 
   const bars = useMemo(() => layoutEventBars(events, range, dayWidth), [events, range, dayWidth]);
@@ -829,7 +841,8 @@ const EventBar = memo(function EventBar({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
-  const tone = eventTone(event);
+  const colors = useColors();
+  const tone = eventTone(event, colors);
   const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
   const icon = EVENT_ICON[event.type as OccupancySourceType];
   /*

@@ -9,6 +9,15 @@ import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
 import partnerGuideChoose from '../assets/images/partner-guide/step-choose.png';
 import partnerGuidePublish from '../assets/images/partner-guide/step-publish.png';
+// Tranh minh hoạ trang chủ v2 — CHÉP NGUYÊN từ `apps/web/public/home/` (ADR 0062). Hai tấm là
+// SPRITE: mỗi thẻ cắt một ô bằng khung `overflow: hidden`, cùng vị trí cắt với CSS bên web.
+import homeHeroFallback from '../assets/images/home/hero-fallback.webp';
+import homeDestCities from '../assets/images/home/dest-cities.webp';
+import homeDestBg from '../assets/images/home/dest-bg.webp';
+import homeStepsSprite from '../assets/images/home/steps-sprite.webp';
+import homePartnerBackdrop from '../assets/images/home/partner-bg.webp';
+// Huy hiệu thẻ trạng thái của các màn chuyến — CHÉP NGUYÊN apps/web/public/booking/request-sent.webp.
+import bookingRequestSent from '../assets/images/booking/request-sent.webp';
 
 /**
  * Ảnh tĩnh gom một chỗ vì Metro nội suy đường dẫn lúc build — không dựng động được.
@@ -31,6 +40,12 @@ export const images = {
   partnerGuideAccount,
   partnerGuideChoose,
   partnerGuidePublish,
+  homeHeroFallback,
+  homeDestCities,
+  homeDestBg,
+  homeStepsSprite,
+  homePartnerBackdrop,
+  bookingRequestSent,
 } as const;
 
 /**

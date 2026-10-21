@@ -6,7 +6,8 @@ import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 /** Chiều cao một dòng của ô nhiều dòng — cùng nhịp dòng 1.5 mà Tamagui dùng cho chữ trong ô. */
@@ -98,6 +99,7 @@ export function TextField<T extends FieldValues>({
   afterControl,
   ...inputProps
 }: TextFieldProps<T>) {
+  const colors = useColors();
   /*
    * `editable={false}` là cách React Native khai "chỉ đọc"; vỏ ô cần biết để đổi hình.
    *
@@ -132,7 +134,7 @@ export function TextField<T extends FieldValues>({
       minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),
-    [multiline, rows],
+    [colors, multiline, rows],
   );
   const error = fieldState.error?.message;
 

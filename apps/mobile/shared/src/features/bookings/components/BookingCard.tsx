@@ -20,7 +20,8 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { BookingListItem } from '../api';
 
 /** Màu của mức khẩn — quá giờ là việc phải xử lý ngay, không phải một lỗi của khách. */
@@ -79,6 +80,7 @@ function BookingCardImpl({
    */
   awaitingPickup?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -257,6 +259,7 @@ function BookingCardImpl({
  * viên phải lên đường, đón khách là chuyến có tài xế, nhận tại chi nhánh là khách tự tới.
  */
 function HandoverPlaceLine({ booking }: { booking: BookingListItem }) {
+  const colors = useColors();
   const t = useTranslations('Bookings');
   const domainLabel = useDomainLabel();
 
@@ -289,6 +292,7 @@ function HandoverPlaceLine({ booking }: { booking: BookingListItem }) {
  * Chưa phân công ⇒ chữ màu cảnh báo, vì đơn đó chưa chạy được.
  */
 function DriverLine({ booking }: { booking: BookingListItem }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.driver');
   const domainLabel = useDomainLabel();
   const driver = booking.driver ?? null;
@@ -348,6 +352,7 @@ function FactLine({
   icon: keyof typeof Ionicons.glyphMap;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} />

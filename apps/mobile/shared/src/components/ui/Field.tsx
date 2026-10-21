@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 export function FieldLabel({
   label,
@@ -23,6 +24,7 @@ export function FieldLabel({
    */
   publishRequired?: boolean;
 }) {
+  const colors = useColors();
   const tMark = useTranslations('Vehicles.completeness');
 
   /*
@@ -52,6 +54,7 @@ export function FieldMessage({
   error?: string | undefined;
   hint?: string | undefined;
 }) {
+  const colors = useColors();
   if (error) {
     return (
       <XStack ai="center" gap={space.xs}>
@@ -98,6 +101,7 @@ export function FieldShell({
   accessibilityRole?: 'button';
   accessibilityLabel?: string;
 }) {
+  const colors = useColors();
   const active = invalid ? colors.danger : colors.primary;
 
   /*

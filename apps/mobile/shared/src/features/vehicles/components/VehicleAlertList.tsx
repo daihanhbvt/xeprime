@@ -10,13 +10,15 @@ import {
 import { useDomainLabel } from '@/i18n/domain';
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import type { AppColors } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import type { VehicleAlertItem } from '../api';
 
 const DOT_SIZE = 8;
 
-function dotColor(severity: VehicleAlertSeverity): string {
+function dotColor(severity: VehicleAlertSeverity, colors: AppColors): string {
   if (severity === VEHICLE_ALERT_SEVERITY.CRITICAL) return colors.danger;
   if (severity === VEHICLE_ALERT_SEVERITY.WARNING) return colors.warning;
   return colors.info;
@@ -52,6 +54,7 @@ export function VehicleAlertList({
    */
   leadAction?: ReactNode;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.alerts');
   const domainLabel = useDomainLabel();
   const [expanded, setExpanded] = useState(false);
@@ -85,7 +88,7 @@ export function VehicleAlertList({
                 w={DOT_SIZE}
                 h={DOT_SIZE}
                 br={radius.pill}
-                bg={dotColor(severity)}
+                bg={dotColor(severity, colors)}
                 mt={space.xs}
               />
               <YStack f={1} gap={1}>

@@ -4,6 +4,7 @@ import { YStack } from 'tamagui';
 import { Screen } from '@/components/layout/Screen';
 import { AppVersion } from '@/components/ui/AppVersion';
 import { Card } from '@/components/ui/Card';
+import { PreferenceRows } from '@/components/layout/PreferenceRows';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -35,9 +36,9 @@ import type { UserProfile } from './api';
  * nên họ sửa ngay tại đây. Một tài khoản chỉ có ĐÚNG MỘT bề mặt sửa được — hai bề mặt là hai chỗ
  * phải sửa mỗi lần đổi luật, và người dùng không đoán được cái nào là "thật".
  *
- * KHÔNG có bộ đổi ngôn ngữ ở cuối màn (gỡ 15/09/2026): `LocaleSwitcher` đã nằm ngay trên thanh
- * đầu màn (`HeaderActions`), nên thẻ ở chân trang là lối vào THỨ HAI cho cùng một công tắc —
- * người dùng phải đọc hết màn mới biết hai chỗ đó là một.
+ * Giao diện sáng/tối + ngôn ngữ (`PreferenceRows`) nằm NGAY SAU menu (20/10/2026): thanh trên của
+ * người đã đăng nhập chỉ còn tin nhắn + thông báo, nên đây là lối vào DUY NHẤT của hai công tắc
+ * đó với họ.
  *
  * Hồ sơ đọc từ `GET /users/me`, KHÔNG từ `/auth/me`: hai endpoint trả hai thứ khác nhau, và chỉ
  * cái đầu có `phone` + `phoneVerified` — hai trường màn này phải hiện.
@@ -125,6 +126,10 @@ function AccountBody({
         <AccountMoneyPanel />
 
         <AccountNav />
+
+        <Card padded={false}>
+          <PreferenceRows />
+        </Card>
 
         {/*
           YÊU CẦU XOÁ TÀI KHOẢN — chỗ hẹn mà ADR 0038 điều 9 nói tới khi đẩy mục này ra khỏi menu

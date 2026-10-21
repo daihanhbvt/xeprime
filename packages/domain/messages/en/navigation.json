@@ -23,7 +23,9 @@
     "loginOrRegister": "Sign in/<br></br>Sign up",
     "themeLight": "Light mode",
     "themeDark": "Dark mode",
-    "toggleTheme": "Toggle light/dark theme"
+    "toggleTheme": "Toggle light/dark theme",
+    "themeLabel": "Dark mode",
+    "moreOptions": "More options"
   },
   "account": {
     "menuLabel": "Account menu",

@@ -23,7 +23,9 @@
     "loginOrRegister": "Đăng nhập/<br></br>Đăng ký",
     "themeLight": "Giao diện sáng",
     "themeDark": "Giao diện tối",
-    "toggleTheme": "Đổi giao diện sáng/tối"
+    "toggleTheme": "Đổi giao diện sáng/tối",
+    "themeLabel": "Giao diện tối",
+    "moreOptions": "Tuỳ chọn khác"
   },
   "account": {
     "menuLabel": "Menu tài khoản",

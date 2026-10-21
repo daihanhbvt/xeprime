@@ -11,7 +11,8 @@ import { Countdown } from '@/components/ui/Countdown';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerUnpaidHold } from '../api';
 
 const THUMB_W = 64;
@@ -42,6 +43,7 @@ export function UnpaidHoldList({
    */
   replace?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -114,7 +116,7 @@ export function UnpaidHoldList({
                 {fmt.money(item.remainingAmount)}
               </Text>
             </YStack>
-            <Button
+            <Button variant="gradient"
               size="sm"
               icon="card-outline"
               label={t('unpaid.pay')}

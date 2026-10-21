@@ -4,7 +4,8 @@ import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { bookingRequestRemainingMs, isBookingRequestPastDue } from '@xeprime/types';
 import { useNow } from '@/hooks/use-now';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /** Dưới mốc này thì đổi sang màu cảnh báo: còn đủ để mở máy và bấm, không đủ để quên. */
 const URGENT_MS = 15 * 60_000;
@@ -16,6 +17,7 @@ const URGENT_MS = 15 * 60_000;
  * (tới một nhịp worker) mà yêu cầu đã chết nhưng vẫn còn `pending_host_approval` trong DB.
  */
 export function RespondDeadline({ respondBy }: { respondBy: string }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.deadline');
   /*
    * Giờ lấy từ đồng hồ CHUNG (`useNow`), không phải timer riêng của thẻ — xem chú thích ở hook.

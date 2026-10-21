@@ -8,7 +8,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { TextField } from '@/components/ui/TextField';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 const NOTE_MAX = 500;
@@ -38,6 +39,7 @@ export function DeliveryFeeSheet({
   onConfirm: (input: { deliveryFee: string; note?: string }) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.deliveryFee');
 
   const schema = useMemo(

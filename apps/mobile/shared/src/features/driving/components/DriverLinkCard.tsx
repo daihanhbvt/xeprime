@@ -12,7 +12,8 @@ import { InlineAction } from '@/components/ui/InlineAction';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MyDriverLink } from '../api';
 
 /** Ý định trên một liên kết — xác nhận (từ chối, ngừng) nằm ở MÀN, không ở thẻ. */
@@ -35,6 +36,7 @@ function DriverLinkCardImpl({
   onIntent: (link: MyDriverLink, intent: DriverLinkIntent) => void;
   onViewTrips: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Driving.links');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

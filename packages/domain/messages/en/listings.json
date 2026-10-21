@@ -268,6 +268,10 @@
       "notFoundTitle": "Couldn't find a route automatically",
       "notFoundBody": "We couldn't work out the distance for this address automatically. The owner will tell you the delivery fee later.",
       "confirm": "Confirm address"
+    },
+    "sections": {
+      "features": "Vehicle features",
+      "host": "Host"
     }
   },
   "reviews": {

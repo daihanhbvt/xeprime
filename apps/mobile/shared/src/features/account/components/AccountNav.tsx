@@ -14,7 +14,8 @@ import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAccountIdentityLabel } from '../use-account-identity-label';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import {
@@ -47,6 +48,7 @@ const RAIL_WIDTH = 3;
  * tạo bản dịch thứ hai cho cùng một từ.
  */
 export function AccountNav() {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
@@ -59,10 +61,7 @@ export function AccountNav() {
   // Lời mời tài xế (huy hiệu) + cờ `hasLinks` — chưa từng được mời làm tài xế thì ẩn mục tài xế.
   const driverCounts = useDriverPendingCounts(Boolean(user));
   const hasDriverLinks = driverCounts.data?.hasLinks ?? false;
-  const groups = useMemo(
-    () => resolveAccountNav(user, { hasDriverLinks }),
-    [user, hasDriverLinks],
-  );
+  const groups = useMemo(() => resolveAccountNav(user, { hasDriverLinks }), [user, hasDriverLinks]);
   const badgeCount = (item: AccountNavItem): number =>
     item.badge === ACCOUNT_NAV_BADGE.DRIVER_INVITES ? (driverCounts.data?.invites ?? 0) : 0;
   const activeKey = matchAccountNavKey(pathname ?? '', flattenAccountNav(groups));
@@ -221,6 +220,7 @@ export function AccountNav() {
 }
 
 function Divider() {
+  const colors = useColors();
   return <YStack h={1} bg={colors.borderSubtle} my={space.xs} />;
 }
 
@@ -234,6 +234,7 @@ function AccountNavRow({
   /** Việc cần làm ở mục này — 0 thì không vẽ viên. */
   badge?: number;
 }) {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();

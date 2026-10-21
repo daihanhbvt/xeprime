@@ -187,7 +187,10 @@
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "xe",
     "applyWithCount": "Áp dụng ({count, plural, other {# xe}})",
-    "motorbikeCategory": "Phân khúc xe máy"
+    "motorbikeCategory": "Phân khúc xe máy",
+    "priceUnder": "Dưới {amount}",
+    "priceBetween": "{min} – {max}",
+    "priceOver": "Trên {amount}"
   },
   "searchDialog": {
     "title": "Tìm kiếm",

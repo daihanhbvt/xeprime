@@ -19,7 +19,8 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { FINANCE_OVERVIEW_DEFAULT_PERIOD, FINANCE_OVERVIEW_PERIOD_VALUES } from '../constants';
 import { useFinanceSeries, useFinanceSummary } from '../hooks/use-finance';
 import { FinancePeriodBar } from './FinancePeriodBar';
@@ -63,6 +64,7 @@ export function FinanceEntityPanel({
    */
   canCreateReceipt?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.entity');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();

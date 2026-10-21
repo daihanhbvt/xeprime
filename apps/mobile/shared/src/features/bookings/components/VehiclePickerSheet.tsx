@@ -15,7 +15,8 @@ import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useVehiclePicker } from '../hooks/use-bookings';
 import type { VehicleListItem } from '../api';
 
@@ -47,6 +48,7 @@ export function VehiclePickerSheet({
   onSelect: (vehicle: VehicleListItem) => void;
   initialBranchId?: string | undefined;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.create.vehicle');
   const tPicker = useTranslations('BookingRequests.vehiclePicker');
   const tActions = useTranslations('Common.actions');
@@ -130,6 +132,7 @@ function VehicleRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.create.vehicle');
   const fmt = useAppFormat();
   const unavailable = vehicle.operationStatus !== VEHICLE_OPERATION_STATUS.AVAILABLE;

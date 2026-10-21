@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import type { IconName } from './Chip';
-import { colors, fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 export function FieldBox({
   label,
@@ -23,6 +24,7 @@ export function FieldBox({
   required?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const filled = value.length > 0;
 
   return (

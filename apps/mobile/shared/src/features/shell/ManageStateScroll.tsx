@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
 import type { CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
 
 /**
@@ -29,6 +29,7 @@ export function ManageStateScroll({
   onRefresh: () => void;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <Animated.ScrollView
       onScroll={onScroll}

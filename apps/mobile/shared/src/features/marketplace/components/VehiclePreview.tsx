@@ -5,18 +5,16 @@ import { Card } from '@/components/ui/Card';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
-import {
-  RECOMMENDED_LIMIT,
-  useRecommendedListings,
-} from '../hooks/use-recommended-listings';
+import { RECOMMENDED_LIMIT, useRecommendedListings } from '../hooks/use-recommended-listings';
 import type { PublicListing } from '../api';
 import { SectionError } from './SectionError';
-import { SectionHeader } from './SectionHeader';
+import { HomeCarousel } from './home/HomeCarousel';
+import { HomeSectionHeading } from './home/HomeSectionHeading';
+import { OutlineAction } from './home/GradientButton';
 import { VehicleCard } from './VehicleCard';
-
-const SKELETON_COUNT = 3;
 
 interface VehiclePreviewProps {
   /** Vắng mặt = thẻ xe chỉ hiển thị — trang chi tiết (MKT-04) chưa dựng. */
@@ -55,7 +53,9 @@ interface VehiclePreviewProps {
  * danh sách ảo hoá vào đó là hỏng đo chiều cao và mất luôn phần ảo hoá.
  */
 export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.available');
+  const tHome = useTranslations('Home.featured');
   const domainLabel = useDomainLabel();
   const { filters, draft, provinceName } = useSearchExperience();
 
@@ -86,20 +86,18 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
   const serviceLabel = filters.serviceType ? domainLabel('serviceType', filters.serviceType) : null;
 
   return (
-    <YStack gap={layout.block}>
-      <SectionHeader
-        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : t('title')}
-        {...(data ? { count: t('count', { count: data.meta.total }) } : {})}
-        {...(onExplore ? { action: { label: t('exploreAll'), onPress: onExplore } } : {})}
+    <YStack gap={layout.section}>
+      <HomeSectionHeading
+        kicker={tHome('kicker')}
+        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
       />
 
       {/*
-        Nói ra tỉnh nào đang được ưu tiên — và nói THÊM khi phải bù xe tỉnh khác.
-
-        Hứa "xe ở Hà Nội" rồi hiện xe An Giang là cách nhanh nhất mất lòng tin vào cả trang.
+        Khi phải bù xe ở tỉnh khác, khối NÓI RA điều đó — hứa "xe ở Hà Nội" rồi hiện xe An Giang là
+        cách nhanh nhất mất lòng tin. Trường hợp thường (đủ xe đúng tỉnh) thì im lặng, như web v2.
         Dải này chỉ dựng khi tra được TÊN tỉnh: không có tên thì không có câu nào đọc được.
       */}
-      {nearName ? (
+      {nearName && data?.meta.mixedProvinces ? (
         <XStack
           ai="flex-start"
           gap={space.xs}
@@ -115,9 +113,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
             accessibilityElementsHidden
           />
           <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-            {data?.meta.mixedProvinces
-              ? t('nearProvinceMixed', { province: nearName })
-              : t('nearProvince', { province: nearName })}
+            {t('nearProvinceMixed', { province: nearName })}
           </Text>
         </XStack>
       ) : null}
@@ -130,11 +126,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
           {...(onExplore ? { action: { label: t('openSearch'), onPress: onExplore } } : {})}
         />
       ) : isLoading ? (
-        <YStack gap={space.md}>
-          {Array.from({ length: SKELETON_COUNT }, (_, i) => (
-            <VehicleCardSkeleton key={i} />
-          ))}
-        </YStack>
+        <VehicleCardSkeleton />
       ) : items.length === 0 ? (
         <Card tone="muted" lift="flat">
           <Text col={colors.textMuted} fos={fontSize.body} ta="center">
@@ -142,7 +134,8 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
           </Text>
         </Card>
       ) : (
-        <YStack gap={space.md}>
+        // Băng chuyền thẻ-ở-giữa — đúng trình bày mobile của web v2 (`HomeCarousel` dưới 640px).
+        <HomeCarousel accessibilityLabel={tHome('title')}>
           {items.map((listing) => (
             <VehicleCard
               key={listing.id}
@@ -150,8 +143,11 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
               {...(onOpenListing ? { onPress: onOpenListing } : {})}
             />
           ))}
-        </YStack>
+        </HomeCarousel>
       )}
+
+      {/* "Xem tất cả xe" dưới băng chuyền, trải hết bề ngang — như web ở bề rộng điện thoại. */}
+      {onExplore ? <OutlineAction label={tHome('viewAll')} onPress={onExplore} fullWidth /> : null}
     </YStack>
   );
 }

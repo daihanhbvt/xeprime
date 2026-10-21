@@ -1,18 +1,36 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Provider as ReduxProvider } from 'react-redux';
-import { CUSTOMER_TRIP_STAGE, TRIP_ROLE } from '@xeprime/types';
+import { BOOKING_HOLD_STATUS, CUSTOMER_TRIP_STAGE, TRIP_ROLE } from '@xeprime/types';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { tripsApi, type CustomerTripDetail } from './api';
 import { TripDetailScreen } from './TripDetailScreen';
+import { ROUTES } from '@/navigation/routes';
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useLocalSearchParams: () => ({}),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }),
+  useFocusEffect: jest.fn(),
 }));
+
+/** Tin đăng của xe (điểm nhận, điều khoản) — các thẻ tự rơi về dữ liệu chuyến khi chưa có. */
+jest.mock('@/features/marketplace/hooks/use-marketplace-data', () => ({
+  useListing: () => ({ data: undefined, isLoading: false }),
+}));
+
+/** Thẻ người thuê đọc tài khoản — không thuộc phạm vi màn này. */
+jest.mock('@/features/auth/hooks/use-auth', () => ({
+  useCurrentUser: () => ({ data: null }),
+}));
+
+/** Đồng hồ có test riêng — ở đây chỉ cần nó không vẽ gì. */
+jest.mock('@/components/ui/Countdown', () => ({ Countdown: () => null }));
+
+const mockNavigate = jest.fn();
+jest.mock('@/hooks/use-navigate-once', () => ({ useNavigateOnce: () => mockNavigate }));
 
 /** Nút chat cần phiên + chat realtime — không thuộc phạm vi màn này. */
 jest.mock('@/features/chat/components/ChatWithShopButton', () => ({
@@ -86,11 +104,10 @@ beforeEach(() => jest.restoreAllMocks());
  * `POST /trips/:id/cancel` (khoá theo `customerUserId`) luôn trả 404.
  */
 describe('TripDetailScreen — cụm của khách chỉ dành cho khách', () => {
-  it('KHÁCH, chuyến chưa giao: có khối hỗ trợ và nút Huỷ', async () => {
-    const view = await renderTrip(trip());
+  it('KHÁCH, chuyến đang thuê (bố cục chung): có khối hỗ trợ', async () => {
+    const view = await renderTrip(trip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
 
     expect(await view.findByText(actions.title)).toBeTruthy();
-    expect(view.getByText(actions.cancel)).toBeTruthy();
   });
 
   it('CHỦ XE, cùng chuyến đó: KHÔNG có khối hỗ trợ, KHÔNG có nút Huỷ', async () => {
@@ -117,15 +134,12 @@ describe('TripDetailScreen — bằng chứng bàn giao', () => {
   it.each<CustomerTripDetail['stage']>([
     CUSTOMER_TRIP_STAGE.CANCELLED,
     CUSTOMER_TRIP_STAGE.REJECTED,
-  ])(
-    'chặng %s, chưa có mốc bàn giao: KHÔNG gọi API bằng chứng',
-    async (stage) => {
-      const view = await renderTrip(trip({ stage }));
+  ])('chặng %s, chưa có mốc bàn giao: KHÔNG gọi API bằng chứng', async (stage) => {
+    const view = await renderTrip(trip({ stage }));
 
-      expect(await view.findByText('Toyota Vios 2022')).toBeTruthy();
-      expect(view.evidenceSpy).not.toHaveBeenCalled();
-    },
-  );
+    expect(await view.findByText('Toyota Vios 2022')).toBeTruthy();
+    expect(view.evidenceSpy).not.toHaveBeenCalled();
+  });
 
   it('đã có mốc nhận xe thật: gọi API bằng chứng', async () => {
     const view = await renderTrip(
@@ -133,5 +147,74 @@ describe('TripDetailScreen — bằng chứng bàn giao', () => {
     );
 
     await waitFor(() => expect(view.evidenceSpy).toHaveBeenCalledWith(trip().id));
+  });
+});
+
+const HOLD = {
+  id: '01HOLD',
+  code: 'XPH23456789',
+  status: BOOKING_HOLD_STATUS.PENDING,
+  outcome: null,
+  amount: '140800',
+  paidAmount: '0',
+  remainingAmount: '140800',
+  expiresAt: '2099-01-01T00:00:00.000Z',
+  freeCancelUntil: '2099-01-01T00:00:00.000Z',
+  paidAt: null,
+  refund: null,
+} as unknown as NonNullable<CustomerTripDetail['hold']>;
+
+const PAY_LABEL = /Thanh toán giữ chỗ ·/;
+
+/*
+ * Ba màn design v2 của KHÁCH (web PR #207, `TripDetailView` ~L193): chọn theo CHẶNG; chủ xe luôn ở
+ * bố cục chung, nơi có cụm Duyệt/Từ chối.
+ */
+describe('TripDetailScreen — chặng → màn design v2', () => {
+  it('chờ phản hồi ⇒ màn "Đã gửi yêu cầu" + tiến trình + nút huỷ ở thẻ thay đổi kế hoạch', async () => {
+    const view = await renderTrip(
+      trip({ stage: CUSTOMER_TRIP_STAGE.PENDING_APPROVAL, canContact: false, bookingId: null }),
+    );
+
+    expect(await view.findByText(viTrips.pending.page.title)).toBeTruthy();
+    expect(view.getByText(viTrips.pending.status.title)).toBeTruthy();
+    expect(view.getByText(viTrips.requestProgress.title)).toBeTruthy();
+    expect(view.getByText(viTrips.requestView.policy.cancel)).toBeTruthy();
+    expect(view.queryByText(actions.title)).toBeNull();
+  });
+
+  it('chờ giữ chỗ ⇒ nút thanh toán KHOÁ tới khi tích ô xác nhận chính sách', async () => {
+    mockNavigate.mockClear();
+    const view = await renderTrip(
+      trip({ stage: CUSTOMER_TRIP_STAGE.AWAITING_HOLD, hold: HOLD, bookingId: null }),
+    );
+
+    expect(await view.findByText(viTrips.awaitingHold.page.title)).toBeTruthy();
+    expect(view.getByRole('button', { name: PAY_LABEL })).toBeDisabled();
+
+    fireEvent.press(view.getByRole('checkbox'));
+    await waitFor(() => expect(view.getByRole('button', { name: PAY_LABEL })).toBeEnabled());
+    fireEvent.press(view.getByRole('button', { name: PAY_LABEL }));
+    // Đích lấy từ CHÍNH bản đồ route của app đang chạy: Partner không có `/payment/[id]` (ra `/not-available`).
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.booking.payment(trip().id));
+  });
+
+  it('đã xác nhận ⇒ "Hẹn bạn vào ngày nhận xe" với checklist nhận xe', async () => {
+    const view = await renderTrip(trip({ stage: CUSTOMER_TRIP_STAGE.READY }));
+
+    expect(await view.findByText(viTrips.confirmed.status.title)).toBeTruthy();
+    expect(view.getByText(viTrips.confirmed.checklist.title)).toBeTruthy();
+    // Tự lái ⇒ có mục bằng lái.
+    expect(view.getByText(viTrips.confirmed.checklist.licence.title)).toBeTruthy();
+    expect(view.getByText(viTrips.requestView.policy.cancel)).toBeTruthy();
+  });
+
+  it('CHỦ XE ở chặng chờ phản hồi ⇒ bố cục chung, không có màn design v2', async () => {
+    const view = await renderTrip(
+      trip({ role: TRIP_ROLE.HOST, stage: CUSTOMER_TRIP_STAGE.PENDING_APPROVAL }),
+    );
+
+    expect(await view.findByText('Toyota Vios 2022')).toBeTruthy();
+    expect(view.queryByText(viTrips.pending.page.title)).toBeNull();
   });
 });

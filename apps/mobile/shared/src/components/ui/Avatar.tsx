@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { colors, fontWeight, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius } from '@/theme/tokens';
 import { VerifiedMark } from './VerifiedMark';
 
 interface AvatarProps {
@@ -76,6 +77,7 @@ const EDGE_45 = (1 - Math.SQRT1_2) / 2;
 const markOffsetFor = (size: number) => EDGE_45 * size - markSizeFor(size) / 2;
 
 export function Avatar({ name, url, size = 40, ring = false, verifiedLabel }: AvatarProps) {
+  const colors = useColors();
   const initial = name.trim().charAt(0).toLocaleUpperCase();
 
   const hasRing = ring || verifiedLabel != null;
@@ -92,7 +94,12 @@ export function Avatar({ name, url, size = 40, ring = false, verifiedLabel }: Av
       ov="hidden"
     >
       {url ? (
-        <Image source={{ uri: url }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
+        <Image
+          source={{ uri: url }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
       ) : (
         <Text col={colors.onPrimary} fos={inner / 2.5} fow={fontWeight.bold}>
           {initial || '?'}

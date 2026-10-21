@@ -6,6 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { components } from '@xeprime/types';
 import {
+  RENTAL_MODE,
   DELIVERY_DISTANCE_STATUS,
   DELIVERY_MANUAL_REASON,
   LOCATION_SOURCE,
@@ -27,6 +28,7 @@ import {
 } from '@xeprime/domain';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
+import { InsuranceOptions } from './InsuranceOptions';
 import { Chip } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldLabel, FieldMessage } from '@/components/ui/Field';
@@ -40,7 +42,8 @@ import { ServiceSelector } from '@/features/marketplace/components/ServiceSelect
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 import type { DeliveryDistance } from '../api';
 import { DELIVERY_ADDRESS_DEBOUNCE_MS, deliveryEstimateState } from '../delivery-estimate-state';
@@ -51,23 +54,23 @@ import type { RequestForm } from '../RequestBookingScreen';
 type LongTermPackageOption = components['schemas']['LongTermPackageOptionDto'];
 
 /** Tên trường của hai địa chỉ vật lý trong form — xem `AddressFields`. */
-const PICKUP_ADDRESS_NAMES = {
+export const PICKUP_ADDRESS_NAMES = {
   provinceCode: 'pickupProvinceCode',
   wardCode: 'pickupWardCode',
   addressLine: 'pickupAddressLine',
 } as const;
-const PICKUP_PIN_NAMES = {
+export const PICKUP_PIN_NAMES = {
   placeId: 'pickupPlaceId',
   latitude: 'pickupLatitude',
   longitude: 'pickupLongitude',
   locationSource: 'pickupLocationSource',
 } as const;
-const DELIVERY_ADDRESS_NAMES = {
+export const DELIVERY_ADDRESS_NAMES = {
   provinceCode: 'deliveryProvinceCode',
   wardCode: 'deliveryWardCode',
   addressLine: 'deliveryAddressLine',
 } as const;
-const DELIVERY_PIN_NAMES = {
+export const DELIVERY_PIN_NAMES = {
   placeId: 'deliveryPlaceId',
   latitude: 'deliveryLatitude',
   longitude: 'deliveryLongitude',
@@ -98,6 +101,7 @@ export function RequestTripStep({
   rentalMode: RentalMode;
   onRentalModeChange: (mode: RentalMode) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const domainLabel = useDomainLabel();
 
@@ -123,6 +127,14 @@ export function RequestTripStep({
   // `useWatch` chứ không phải `form.watch()` — xem ghi chú ở `RequestBookingScreen`.
   const serviceType = useWatch({ control: form.control, name: 'serviceType' });
   const routeType = useWatch({ control: form.control, name: 'routeType' });
+  const vehicleProtectionSelected = useWatch({
+    control: form.control,
+    name: 'vehicleProtectionSelected',
+  });
+  const personalAccidentSelected = useWatch({
+    control: form.control,
+    name: 'personalAccidentSelected',
+  });
   const deliveryRequested = useWatch({ control: form.control, name: 'deliveryRequested' });
 
   const deliveryAvailable = Boolean(listing.deliveryAvailable);
@@ -154,17 +166,8 @@ export function RequestTripStep({
               <ServiceSelector
                 services={services}
                 active={field.value}
-                onChange={(next) => {
-                  field.onChange(next);
-                  // Đổi dịch vụ là đổi MÔ HÌNH thời gian — giữ lại giá trị cũ sẽ gửi lên một
-                  // khoảng ngày cho gói tháng, hoặc ngược lại.
-                  form.setValue('pickupAt', '');
-                  form.setValue('returnAt', '');
-                  form.setValue('longTermPackageMonths', null);
-                  form.setValue('pickupPreference', null);
-                  form.setValue('requestedPickupDate', '');
-                  form.setValue('routeType', null);
-                }}
+                // Như `selectService` web: CHỈ đổi dịch vụ, giữ nguyên ngày/gói/nguyện vọng/lộ trình.
+                onChange={(next) => field.onChange(next)}
               />
             )}
           />
@@ -209,6 +212,7 @@ export function RequestTripStep({
             addressLineName={PICKUP_ADDRESS_NAMES.addressLine}
             pin={PICKUP_PIN_NAMES}
             label={t('driver.pickupAddressLabel')}
+            placeholder={t('driver.pickupAddressPlaceholder')}
             vehicleProvinceCode={vehicleProvinceCode}
             vehicleProvinceName={vehicleProvinceName}
             vehiclePoint={vehiclePoint}
@@ -265,7 +269,7 @@ export function RequestTripStep({
           (`.pickupGroup` là `fieldset` không viền), phần khai địa chỉ mới có khối riêng
           (`.deliveryBlock`).
         */
-        <FormSection title={t('pickup.groupLabel')} icon="location-outline" boxed={false}>
+        <FormSection title={t('pickup.legend')} icon="location-outline" boxed={false}>
           {/* THẺ chứ không phải chip: mỗi lựa chọn cần một dòng giải thích riêng. */}
           <Controller
             control={form.control}
@@ -298,6 +302,7 @@ export function RequestTripStep({
                   addressLineName={DELIVERY_ADDRESS_NAMES.addressLine}
                   pin={DELIVERY_PIN_NAMES}
                   label={t('pickup.addressLabel')}
+                  placeholder={t('pickup.addressPlaceholder')}
                   vehicleProvinceCode={vehicleProvinceCode}
                   vehicleProvinceName={vehicleProvinceName}
                   vehiclePoint={vehiclePoint}
@@ -314,7 +319,7 @@ export function RequestTripStep({
         phải câu hỏi — ẩn hẳn thì khách không biết phải tới đâu lấy xe cho tới bước Xác nhận.
       */}
       {!withDriver && !deliveryAvailable ? (
-        <FormSection title={t('pickup.groupLabel')} icon="location-outline" boxed={false}>
+        <FormSection title={t('pickup.legend')} icon="location-outline" boxed={false}>
           <XStack
             ai="center"
             gap={space.sm}
@@ -348,6 +353,28 @@ export function RequestTripStep({
         </FormSection>
       ) : null}
 
+      {/* Tuỳ chọn bảo hiểm MIC (#213) — như web: mọi dịch vụ, đi vào báo giá và lượt gửi. */}
+      <Card>
+        <InsuranceOptions
+          namespace="BookingRequests.flow.insurance"
+          vehicleType={listing.vehicleType}
+          vehicleProtection={vehicleProtectionSelected}
+          personalAccident={personalAccidentSelected}
+          onChange={(patch) => {
+            if (patch.vehicleProtection !== undefined) {
+              form.setValue('vehicleProtectionSelected', patch.vehicleProtection, {
+                shouldValidate: true,
+              });
+            }
+            if (patch.personalAccident !== undefined) {
+              form.setValue('personalAccidentSelected', patch.personalAccident, {
+                shouldValidate: true,
+              });
+            }
+          }}
+        />
+      </Card>
+
       {/*
         KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
         đang đăng nhập — bước Xác nhận hiện lại chúng thành một dòng "Người thuê".
@@ -375,6 +402,7 @@ function PickupOption({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
@@ -454,6 +482,7 @@ function pickupPointLabel(listing: PublicListingDetail): string | null {
  * nhau ở cả hai chỗ — cùng lý do khiến web tách nó ra thay vì chép lại.
  */
 export function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: string }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
 
@@ -558,6 +587,7 @@ export function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehic
  * nó thì một dải cảnh báo đọc ra như một lệnh cấm.
  */
 function ManualNotice({ delivery }: { delivery: DeliveryDistance }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
 
@@ -654,7 +684,12 @@ function TimeField({
         {...(pickupAt && returnAt
           ? { durationText: fmt.rentalDuration(dayjs(pickupAt), dayjs(returnAt)) }
           : {})}
-        hint={t('time.changeHint')}
+        // Như web: đã chọn ⇒ "Thuê theo ngày/giờ · bấm vào ô để đổi"; chưa chọn ⇒ `time.empty`.
+        hint={
+          pickupAt && returnAt
+            ? `${rentalMode === RENTAL_MODE.HOURLY ? t('time.modeHourly') : t('time.modeDaily')} · ${t('time.changeHint')}`
+            : t('time.empty')
+        }
         required
         {...(error?.message ? { error: error.message } : {})}
         onPress={() => setOpen(true)}
@@ -688,6 +723,7 @@ function LongTermFields({
   /** Sáu gói kèm giá và mốc ưu đãi — SERVER tính, client chỉ bày ra. */
   packages: readonly LongTermPackageOption[];
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const preference = useWatch({ control: form.control, name: 'pickupPreference' });
 
@@ -784,6 +820,7 @@ function LongTermFields({
  * dòng chữ đều gãy giữa từ.
  */
 function TrustPoints() {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow.longTerm.trust');
 
   const points = [
@@ -881,6 +918,7 @@ function PackageChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const label = fmt.packageLabel(months) ?? String(months);
 

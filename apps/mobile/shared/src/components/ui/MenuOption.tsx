@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { layout } from '@/theme/layout';
-import { colors, fieldFontSize, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
 /**
  * Một dòng trong MENU chọn giá trị — tấm trượt của `SelectControl`, bộ chọn chi nhánh, đổi ngôn
@@ -40,6 +41,7 @@ export function MenuOption({
   inset?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="radio"
@@ -107,6 +109,7 @@ const RULE_OPACITY = 0.2;
  * dụng gom nhóm. Gói cả danh sách thành MỘT con thì nhịp bên trong do đây quyết định.
  */
 export function MenuOptionList({ children }: { children: ReactNode }) {
+  const colors = useColors();
   const rows = Children.toArray(children);
 
   return (

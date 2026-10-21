@@ -66,7 +66,6 @@
   color: var(--xp-color-text, #0e0f12);
   line-height: 1.25;
   letter-spacing: -0.01em;
-  text-transform: uppercase;
 }
 
 .badgeNew {

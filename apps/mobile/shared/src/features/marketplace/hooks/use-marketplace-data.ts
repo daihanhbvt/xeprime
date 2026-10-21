@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { STALE_TIME } from '@xeprime/api-client';
-import type { PaginationMeta } from '@xeprime/types';
+import { BANNER_PLACEMENT, type BannerPlacement, type PaginationMeta } from '@xeprime/types';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { queryKeys } from '@/queries/query-keys';
 import {
   marketplaceApi,
   toListingQueryParams,
   DEFAULT_LISTING_LIMIT,
+  type FeaturedReview,
   type MarketplaceFilters,
   type PublicBanner,
   type PublicDestination,
@@ -96,13 +97,26 @@ export function useListingReviews(vehicleId: string, limit = REVIEW_LIMIT) {
 }
 
 /**
- * Banner hero. Lỗi KHÔNG ném lên: trang chủ rơi về hero mặc định chứ không sập vì một mục
- * marketing — cùng cách xử lý với `fetchBannersServer` bên web.
+ * Banner của một vị trí. Lỗi KHÔNG ném lên: trang chủ rơi về hero mặc định (đầu trang) hoặc ẩn
+ * khối (khuyến mãi) chứ không sập vì một mục marketing — cùng cách xử lý với
+ * `fetchBannersServer` bên web.
  */
-export function useBanners() {
+export function useBanners(placement: BannerPlacement = BANNER_PLACEMENT.HERO) {
   return useQuery({
-    queryKey: queryKeys.banners.list(),
-    queryFn: (): Promise<PublicBanner[]> => marketplaceApi.banners().catch(() => []),
+    queryKey: queryKeys.banners.list(placement),
+    queryFn: (): Promise<PublicBanner[]> => marketplaceApi.banners(placement).catch(() => []),
     staleTime: STALE_TIME.STANDARD,
+  });
+}
+
+/**
+ * Đánh giá nổi bật của trang chủ. Lỗi NÉM lên như web: khối hiện hộp lỗi riêng của nó.
+ * `staleTime` 10 phút — cùng con số web: đánh giá mới đổi theo ngày, không theo phút.
+ */
+export function useFeaturedReviews(limit: number) {
+  return useQuery({
+    queryKey: queryKeys.marketplace.featuredReviews(limit),
+    queryFn: (): Promise<FeaturedReview[]> => marketplaceApi.featuredReviews(limit),
+    staleTime: 10 * 60_000,
   });
 }

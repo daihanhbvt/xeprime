@@ -29,7 +29,8 @@ import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ExcessMileageFacts } from './ExcessMileageFacts';
 import { showsExcessMileageFacts } from '@/features/settlement/excess-mileage-visibility';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * "Phát sinh & tiền cọc" — bản native của `SettlementCard`.
@@ -44,6 +45,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
  * có sẵn cả ba form. Mọi con số và câu trạng thái thì giữ nguyên.
  */
 export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.settlement');
   const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -341,6 +343,7 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
 }
 
 function CardTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text f={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1}>
       {children}
@@ -357,6 +360,7 @@ function Notice({
   title?: string;
   tone?: 'info' | 'warning';
 }) {
+  const colors = useColors();
   const warning = tone === 'warning';
 
   return (

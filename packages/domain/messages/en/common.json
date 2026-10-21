@@ -187,7 +187,8 @@
       "viewDetails": "View price details",
       "collapse": "Collapse",
       "depositHintLabel": "What the security deposit is",
-      "holdHintLabel": "What the reservation payment is"
+      "holdHintLabel": "What the reservation payment is",
+      "perDayLine": "{quantity, plural, one {# day} other {# days}} × {unit}"
     },
     "filterBar": {
       "allOf": "{label}: All",

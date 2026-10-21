@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Dimensions, Keyboard, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Dimensions, Keyboard, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, {
   KeyboardState,
   runOnJS,
@@ -25,7 +25,8 @@ import {
   type KeyboardHold,
 } from './focus-reveal';
 import { layout } from '@/theme/layout';
-import { colors, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 
 /**
  * Đệm thêm dưới nội dung KHI bàn phím mở.
@@ -136,6 +137,8 @@ export function Screen({
   scrollRef,
   hideFooterWhileTyping = false,
 }: ScreenProps) {
+  const colors = useColors();
+  const styles = useStyles();
   /**
    * Chiều cao bàn phím đọc từ WINDOW INSET, không từ sự kiện `keyboardDidShow`.
    *
@@ -400,7 +403,7 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: {
     backgroundColor: colors.background,
     flex: 1,
@@ -424,4 +427,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
     paddingVertical: space.md,
   },
-});
+}));

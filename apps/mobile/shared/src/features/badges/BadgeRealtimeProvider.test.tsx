@@ -116,4 +116,20 @@ describe('BadgeRealtimeProvider', () => {
 
     await waitFor(() => expect(result.current.notificationsUnread).toBe(2));
   });
+
+  /**
+   * Bootstrap: 0 hiển thị tạm → N từ lượt REST đầu tiên là "biết được con số", không phải một
+   * thông báo mới — không được làm mới rộng mọi danh sách vừa tải xong.
+   */
+  it('lượt REST ĐẦU TIÊN có thông báo chưa đọc KHÔNG làm mới rộng; thông báo MỚI thì có', async () => {
+    api.me.mockResolvedValue(snapshot(3, 1));
+    const { result, queryClient } = await renderBadges();
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+
+    await waitFor(() => expect(result.current.notificationsUnread).toBe(3));
+    expect(invalidate).not.toHaveBeenCalled();
+
+    queryClient.setQueryData(['badges', 'me'], snapshot(4, 500));
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+  });
 });

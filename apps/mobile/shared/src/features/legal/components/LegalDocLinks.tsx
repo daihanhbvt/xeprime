@@ -4,7 +4,8 @@ import { useTranslations } from 'use-intl';
 import { LEGAL_DOC_VALUES, type LegalDoc } from '@xeprime/domain';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { MenuOptionList } from '@/components/ui/MenuOption';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { useOpenLegalDoc } from '../use-open-legal-doc';
 
 /**
@@ -20,6 +21,7 @@ import { useOpenLegalDoc } from '../use-open-legal-doc';
  * cùng nguồn với web, nên hai client không thể gọi một văn bản bằng hai tên.
  */
 export function LegalDocLinks({ exclude }: { exclude?: LegalDoc }) {
+  const colors = useColors();
   const t = useTranslations('Legal');
   const openDoc = useOpenLegalDoc();
   const docs = LEGAL_DOC_VALUES.filter((doc) => doc !== exclude);

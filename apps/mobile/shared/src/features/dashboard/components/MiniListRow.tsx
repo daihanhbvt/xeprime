@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Nền của một dòng đang bị nhấn — SÁNG lên, không mờ đi.
@@ -9,7 +10,7 @@ import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
  * Cùng lý do `StatGrid` chọn thế cho dòng sổ của nó: thứ người dùng cần thấy là "tôi đang chạm
  * vào ĐÚNG dòng này", không phải "dòng này đang tắt".
  */
-const pressedRow = { backgroundColor: colors.surfaceMuted } as const;
+const usePressedRow = themed((colors) => ({ backgroundColor: colors.surfaceMuted }) as const);
 
 /**
  * Một dòng xem nhanh trong khối Tổng quan — bản native của `.rowBtn` (`MiniList.module.css`).
@@ -37,7 +38,7 @@ export function MiniListRow({
   title,
   meta,
   amount,
-  amountTone = colors.price,
+  amountTone: amountToneProp,
   badge,
   accessibilityLabel,
   onPress,
@@ -52,6 +53,9 @@ export function MiniListRow({
   accessibilityLabel: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const amountTone = amountToneProp ?? colors.price;
+  const pressedRow = usePressedRow();
   return (
     <Pressable
       onPress={onPress}

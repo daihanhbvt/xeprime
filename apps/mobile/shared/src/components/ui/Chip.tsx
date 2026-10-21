@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -21,8 +22,15 @@ interface ChipProps {
    * đang chọn nổi lên. Dùng cho hai tầng loại xe / dịch vụ của thẻ tìm kiếm, giống web.
    *
    * `filled`: mục chưa chọn có nền chìm và viền — dùng khi các viên đứng rời nhau (lộ trình).
+   *
+   * `soft`: viên của bảng lọc web (`FilterPanel.module.css` `.chip`): bo `radius.sm`, viền
+   * `color-border`, chữ 600; đang chọn = nền `primaryLight` + viền `primary` + chữ
+   * `primaryActive` (không tô đặc).
+   *
+   * `quick`: như `filled` nhưng viền lúc chưa chọn là `color-border` — chip nhanh của trang
+   * kết quả web (`MarketplaceResults.module.css`).
    */
-  variant?: 'segmented' | 'filled';
+  variant?: 'segmented' | 'filled' | 'soft' | 'quick';
   /**
    * `accent`: viền, icon và chữ đều màu vàng đậm.
    *
@@ -73,8 +81,10 @@ export function Chip({
   role = 'tab',
   accessibilityLabel,
 }: ChipProps) {
+  const colors = useColors();
   const segmented = variant === 'segmented';
   const accent = tone === 'accent';
+  const soft = variant === 'soft';
   /*
     Chip CHƯA CHỌN dùng nền TRẮNG + viền, không phải mảng xám.
 
@@ -89,7 +99,11 @@ export function Chip({
     ? colors.primary
     : segmented
       ? 'transparent'
-      : colors.borderInput;
+      : soft || variant === 'quick'
+        ? colors.border
+        : colors.borderInput;
+  const selBg = soft ? colors.primaryLight : colors.primary;
+  const selFg = soft ? colors.primaryActive : colors.onPrimary;
   const idleFg = accent ? colors.primaryActive : colors.text;
 
   /*
@@ -103,10 +117,10 @@ export function Chip({
       ai="center"
       jc="center"
       gap={space.xs}
-      bg={selected ? colors.primary : pressed && accent ? colors.primaryLight : idleBg}
+      bg={selected ? selBg : pressed && accent ? colors.primaryLight : idleBg}
       bc={selected ? colors.primary : idleBorder}
       bw={1}
-      br={radius.pill}
+      br={soft ? radius.sm : radius.pill}
       px={size === 'sm' ? space.sm : space.md}
       minHeight={CHIP_HEIGHT[size]}
     >
@@ -115,13 +129,13 @@ export function Chip({
         <Ionicons
           name={icon}
           size={15}
-          color={selected ? colors.onPrimary : accent ? colors.primaryActive : colors.textMuted}
+          color={selected ? selFg : accent ? colors.primaryActive : colors.textMuted}
         />
       ) : null}
       <Text
-        col={selected ? colors.onPrimary : idleFg}
+        col={selected ? selFg : idleFg}
         fos={size === 'sm' ? fontSize.bodySm : fontSize.body}
-        fow={selected ? fontWeight.semibold : fontWeight.medium}
+        fow={selected || soft ? fontWeight.semibold : fontWeight.medium}
         numberOfLines={1}
         /*
          * Android cộng thêm đệm trên/dưới chữ theo font metric mặc định

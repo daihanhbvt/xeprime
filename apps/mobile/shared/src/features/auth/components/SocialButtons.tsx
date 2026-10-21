@@ -9,7 +9,7 @@ import {
 } from '@xeprime/types';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text as RNText } from 'react-native';
+import { ActivityIndicator, Pressable, Text as RNText } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useLocale, useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -18,7 +18,8 @@ import { useAppleLogin, useSocialLogin } from '@/features/auth/hooks/use-auth';
 import type { IconName } from '@/components/ui/Chip';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fontSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, sizing, space } from '@/theme/tokens';
 
 /** Độ mờ của nút đang bị chặn — MỘT giá trị cho cả nút Google/Facebook lẫn nút Apple. */
 const DISABLED_OPACITY = 0.55;
@@ -51,6 +52,8 @@ export function SocialButtons({
    */
   blocked?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Auth');
   const locale = useLocale();
   const errorMessage = useErrorMessage();
@@ -187,7 +190,7 @@ export function SocialButtons({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   button: {
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -216,4 +219,4 @@ const styles = StyleSheet.create({
    * một nút im lặng khi bấm đọc ra là máy treo chứ không phải "còn thiếu một bước ở trên".
    */
   blocked: { borderColor: colors.border, opacity: DISABLED_OPACITY },
-});
+}));

@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useFocusEffect } from 'expo-router';
-import { appStyles } from '@/theme/styles';
+import { useAppStyles } from '@/theme/styles';
 import { sidebar } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import { ManageDrawer } from './ManageDrawer';
@@ -122,6 +122,7 @@ function Scrim({
   visible: boolean;
   onPress: () => void;
 }) {
+  const appStyles = useAppStyles();
   const style = useAnimatedStyle(() => ({ opacity: progress.value }));
 
   /*

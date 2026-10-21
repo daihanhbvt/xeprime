@@ -38,6 +38,7 @@ export type BookingRequestDecisionTarget = Omit<
     | 'vehiclePlate'
     | 'customerName'
     | 'customerPhone'
+    | 'customerAccountPhone'
     | 'serviceType'
     | 'respondBy'
     | 'pickupAt'
@@ -48,6 +49,7 @@ export type BookingRequestDecisionTarget = Omit<
     | 'requestedPickupDate'
     | 'pickupWindowStartDate'
     | 'pickupWindowEndDate'
+    | 'pricing'
   >,
   'customerPhone' | 'serviceType' | 'pickupPreference' | 'respondBy'
 > & {

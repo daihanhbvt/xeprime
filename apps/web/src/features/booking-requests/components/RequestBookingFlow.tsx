@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  RENTAL_MODE,
   addDateKeyDays,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
@@ -281,7 +282,7 @@ export function RequestBookingFlow({
   });
 
   const [rentalMode, setRentalMode] = useState<RentalMode>(
-    restoredDraft?.rentalMode ?? seededRange?.mode ?? 'daily',
+    restoredDraft?.rentalMode ?? seededRange?.mode ?? RENTAL_MODE.DAILY,
   );
   /**
    * Khách đã bấm "Tiếp tục" khi CHƯA đăng nhập và đang ở hộp đăng nhập/đăng ký. Có phiên là luồng
@@ -1785,7 +1786,7 @@ export function RequestBookingFlow({
                   {hasRange ? (
                     <>
                       <ClockCircleOutlined aria-hidden />{' '}
-                      {rentalMode === 'hourly' ? t('time.modeHourly') : t('time.modeDaily')} ·{' '}
+                      {rentalMode === RENTAL_MODE.HOURLY ? t('time.modeHourly') : t('time.modeDaily')} ·{' '}
                       {t('time.changeHint')}
                     </>
                   ) : (

@@ -43,7 +43,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 const ALL = 'all';
 
@@ -71,6 +72,7 @@ const ALL = 'all';
  * (ADR 0004, mục "Screen filters").
  */
 export function AccountPaymentsScreen() {
+  const colors = useColors();
   const t = useTranslations('AccountPayments');
   const tNav = useTranslations('Navigation');
   const fmt = useAppFormat();
@@ -92,7 +94,8 @@ export function AccountPaymentsScreen() {
       kind: kind ?? null,
       limit: ACCOUNT_PAYMENT_LIMIT,
     }),
-    queryFn: ({ pageParam }) => accountPaymentsApi.list(accountPaymentParams({ kind, page: pageParam })),
+    queryFn: ({ pageParam }) =>
+      accountPaymentsApi.list(accountPaymentParams({ kind, page: pageParam })),
     initialPageParam: 1,
     getNextPageParam: (last: AccountPaymentPage) =>
       last.meta.hasNext ? last.meta.page + 1 : undefined,
@@ -215,6 +218,7 @@ const keyOf = (row: AccountPayment) => row.id;
  * cao không phải một khoản lỗ, và tô nó đỏ là báo động giả (lời giải thích nằm ở `depositNote`).
  */
 function PaymentTotals({ totals }: { totals: AccountPaymentTotals | undefined }) {
+  const colors = useColors();
   const t = useTranslations('AccountPayments.stats');
   const fmt = useAppFormat();
 
@@ -252,7 +256,7 @@ function PaymentTotals({ totals }: { totals: AccountPaymentTotals | undefined })
             },
           ]
         : [],
-    [totals, t, fmt],
+    [colors, totals, t, fmt],
   );
 
   if (cells.length === 0) return null;
@@ -294,8 +298,10 @@ function PaymentRow({
   paidAt: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const succeeded = payment.status === PAYMENT_STATUS.SUCCEEDED;
-  const statusColor: StatusColor = PAYMENT_STATUS_META[payment.status]?.color ?? STATUS_COLOR.NEUTRAL;
+  const statusColor: StatusColor =
+    PAYMENT_STATUS_META[payment.status]?.color ?? STATUS_COLOR.NEUTRAL;
 
   /*
    * LOẠI tiền đứng trước HÌNH THỨC: "cọc hay tiền thuê" đổi nghĩa của con số phía trên, còn
@@ -355,7 +361,13 @@ function PaymentRow({
 
           {/* Tầng 4 — gian hàng và mốc ghi nhận: thứ để TRA CỨU, mờ nhất thẻ. */}
           <XStack ai="center" gap={space.xs}>
-            <Text f={1} minWidth={0} col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+            <Text
+              f={1}
+              minWidth={0}
+              col={colors.placeholder}
+              fos={fontSize.label}
+              numberOfLines={1}
+            >
               {`${payment.tenantName}${LIST_SEPARATOR}${paidAt}`}
             </Text>
             <DetailChevron />

@@ -19,7 +19,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { withBranchParam, withBranchReturn } from '@/features/branches/branch-link';
-import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -31,7 +34,7 @@ import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
 import { BookingCard } from './components/BookingCard';
 import { useBookingsPage } from './hooks/use-bookings';
@@ -76,6 +79,7 @@ export function BookingListScreen({
    */
   preset?: BookingListPreset;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.list');
   const tRoot = useTranslations('Bookings');
   const tActions = useTranslations('Common.actions');
@@ -89,7 +93,10 @@ export function BookingListScreen({
    * Bộ lọc KHỞI TẠO từ tham số route — thẻ Tổng quan mở sẵn "Đang thuê, trả sớm nhất trước" như
    * `?status=active&sort=return_asc` của web. Giá trị lạ bị bỏ qua; người dùng vẫn đổi được.
    */
-  const routeStatus = useListParam('status', awaitingPickup ? [] : BOOKING_STATUS_SELECTABLE_VALUES);
+  const routeStatus = useListParam(
+    'status',
+    awaitingPickup ? [] : BOOKING_STATUS_SELECTABLE_VALUES,
+  );
   const routeSort = useListParam('sort', BOOKING_SORT_VALUES);
   const [status, setStatus] = useState<string>(routeStatus ?? STATUS_ALL);
   /*
@@ -283,7 +290,9 @@ export function BookingListScreen({
                 label={t('create')}
                 tone="primary"
                 // Bộ chọn xe mở sẵn ở chi nhánh đang lọc — gợi ý, đổi được (ADR 0052 điều 6).
-                onPress={() => navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))}
+                onPress={() =>
+                  navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))
+                }
               />
             ) : null
           }
@@ -373,7 +382,9 @@ export function BookingListScreen({
                     title={tRoot('awaitingPickup.emptyTitle')}
                     description={tRoot('awaitingPickup.emptyBody')}
                     actionLabel={tRoot('awaitingPickup.goToAll')}
-                    onAction={() => navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId))}
+                    onAction={() =>
+                      navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId))
+                    }
                   />
                 ) : (
                   <ScreenMessage

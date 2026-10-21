@@ -33,8 +33,8 @@ import { SelectControl } from '@/components/ui/SelectControl';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { themed, useColors } from '@/theme/ThemeProvider';
 import {
-  colors,
   fieldFontSize,
   fontSize,
   fontWeight,
@@ -61,13 +61,16 @@ interface SectionTone {
   icon: IconName;
 }
 
-const TONE = {
-  deposit: { fg: colors.info, surface: colors.infoSurface, icon: 'shield-checkmark' },
-  delivery: { fg: colors.primaryActive, surface: colors.primaryLight, icon: 'navigate' },
-  overtime: { fg: colors.warning, surface: colors.warningSurface, icon: 'time' },
-  mileage: { fg: colors.info, surface: colors.infoSurface, icon: 'speedometer' },
-  discount: { fg: colors.success, surface: colors.successSurface, icon: 'pricetags' },
-} as const satisfies Record<string, SectionTone>;
+const useTone = themed(
+  (colors) =>
+    ({
+      deposit: { fg: colors.info, surface: colors.infoSurface, icon: 'shield-checkmark' },
+      delivery: { fg: colors.primaryActive, surface: colors.primaryLight, icon: 'navigate' },
+      overtime: { fg: colors.warning, surface: colors.warningSurface, icon: 'time' },
+      mileage: { fg: colors.info, surface: colors.infoSurface, icon: 'speedometer' },
+      discount: { fg: colors.success, surface: colors.successSurface, icon: 'pricetags' },
+    }) as const satisfies Record<string, SectionTone>,
+);
 
 /**
  * Đầu một khối: đĩa hình mang tông + tiêu đề + (tuỳ khối) công tắc bật/tắt.
@@ -86,6 +89,7 @@ function SectionHead({
   hint: string;
   toggle?: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.sm}>
@@ -131,6 +135,7 @@ export function ToggleRow({
   disabled?: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm} py={space.xs}>
       <YStack f={1} gap={2}>
@@ -154,7 +159,7 @@ export function ToggleRow({
 }
 
 /** Màu rãnh công tắc. `false` phải ĐẬM hơn nền thẻ, nếu không công tắc tắt nhìn như không có. */
-const SWITCH_TRACK = { false: colors.borderInput, true: colors.primary };
+const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: colors.primary }));
 
 function PolicySwitch({
   label,
@@ -167,6 +172,8 @@ function PolicySwitch({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
+  const SWITCH_TRACK = useSwitchTrack();
   return (
     <Switch
       value={checked}
@@ -200,6 +207,7 @@ function arrayErrorOf(
  * không phải giá trị của dòng nào.
  */
 function TierStatus({ error, ok }: { error?: string; ok?: string }) {
+  const colors = useColors();
   if (error) {
     return (
       <IconLine icon="alert-circle" tone={colors.danger}>
@@ -293,6 +301,7 @@ function TierCard({
   onRemove: () => void;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack br={radius.md} bw={1} bc={colors.border} bg={colors.surface} ov="hidden">
       {/* Không đặt chiều cao: `alignItems: stretch` mặc định của RN cho vạch cao bằng cả dòng. */}
@@ -345,6 +354,7 @@ function TierCard({
 
 /** Nhãn của một NHÓM ô trong khối (bảng bậc), kèm câu giải thích quy tắc của nhóm. */
 function GroupLabel({ label, hint }: { label: string; hint?: string }) {
+  const colors = useColors();
   return (
     <YStack gap={2}>
       <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
@@ -377,6 +387,7 @@ function NotePanel({
   title: string;
   body: string;
 }) {
+  const colors = useColors();
   return (
     <XStack gap={space.sm} p={space.sm} br={radius.md} bw={1} bc={tone.fg} bg={tone.surface}>
       <YStack pt={1}>
@@ -520,6 +531,8 @@ function DepositSection({
   title?: string;
   optionDescriptions?: Partial<Record<string, string>>;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.deposit');
   const domainLabel = useDomainLabel();
   const mode = useWatch({ control, name: 'collateralMode' });
@@ -639,6 +652,7 @@ function DeliverySection({
   disabled: boolean;
   step: StepTitle;
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.delivery');
   const fmt = useAppFormat();
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
@@ -804,6 +818,8 @@ function MileageSection({
   /** Tiêu đề do nơi gọi đặt (web `MileagePolicySection title`). */
   title?: string;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.mileage');
   const fmt = useAppFormat();
   const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
@@ -888,6 +904,7 @@ function OvertimeSection({
   disabled: boolean;
   step: StepTitle;
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.overtime');
   const fmt = useAppFormat();
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
@@ -961,6 +978,7 @@ function LongTermDiscountSection({
   step: StepTitle;
   legacyTiers?: readonly LegacyTierView[];
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.longTermDiscount');
   const tUnits = useTranslations('Common.units');
   const enabled = useWatch({ control, name: 'discountEnabled' });

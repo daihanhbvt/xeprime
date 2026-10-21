@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack } from 'tamagui';
 import type { VehicleFeatureKey } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Biểu tượng cho mọi tiện ích của `VEHICLE_FEATURE_LABEL` (14 của ô tô + 8 của xe máy).
@@ -45,6 +46,7 @@ const FEATURE_ICON: Record<VehicleFeatureKey, IconName> = {
  * gold sáng không đỡ nổi chữ trắng.
  */
 export function FeatureChip({ featureKey, label }: { featureKey: string; label: string }) {
+  const colors = useColors();
   const icon = FEATURE_ICON[featureKey as VehicleFeatureKey] ?? 'checkmark-circle-outline';
 
   return (

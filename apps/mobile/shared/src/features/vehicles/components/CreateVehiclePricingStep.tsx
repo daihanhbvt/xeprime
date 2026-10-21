@@ -12,7 +12,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useShopPolicy } from '@/features/rental-policies/hooks/use-shop-policy';
 import { PricingStep } from './VehicleFormSteps';
 import type { RentalPolicyValues } from '../api';
@@ -31,6 +32,7 @@ export function CreateVehiclePricingStep({
   control: Control<VehicleFormValues>;
   isCar: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.pricingStep');
   const navigateOnce = useNavigateOnce();
 
@@ -95,6 +97,7 @@ function PolicyPreview({
   values: RentalPolicyValues;
   onOpenPolicies: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.pricingStep');
   const tUnits = useTranslations('Common.units');
   const fmt = useAppFormat();
@@ -158,6 +161,7 @@ function PolicyPreview({
 
 /** Một dòng của bảng xem trước: nhãn HOA nhỏ ở trên, giá trị đậm ở dưới. */
 function PreviewItem({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  const colors = useColors();
   return (
     <YStack gap={2}>
       <Text col={colors.textMuted} fos={fontSize.label} textTransform="uppercase">

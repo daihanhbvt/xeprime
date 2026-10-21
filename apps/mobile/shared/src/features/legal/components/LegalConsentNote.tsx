@@ -1,10 +1,12 @@
 import { Text } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize } from '@/theme/tokens';
 import { useLegalLinkChunks } from '../use-legal-link-chunks';
 
 /** Bốn thời điểm người dùng thật sự cam kết một điều gì đó — cùng bộ với web. */
-export type LegalConsentPlace = 'auth' | 'booking' | 'subscription' | 'shop';
+export type LegalConsentPlace =
+  'auth' | 'booking' | 'bookingCheck' | 'bookingCheckHost' | 'subscription' | 'shop';
 
 /**
  * Khoá message viết THÀNH CHỮ, không ghép từ `place` lúc chạy.
@@ -16,6 +18,10 @@ export type LegalConsentPlace = 'auth' | 'booking' | 'subscription' | 'shop';
 const CONSENT_KEY = {
   auth: 'consent.auth',
   booking: 'consent.booking',
+  // Nhãn của Ô ĐỒNG Ý bắt buộc ở màn Xem lại yêu cầu thuê (web #205); bản `Host` khi chủ xe có
+  // điều khoản riêng — cùng một ô phủ luôn điều khoản đó.
+  bookingCheck: 'consent.bookingCheck',
+  bookingCheckHost: 'consent.bookingCheckHost',
   subscription: 'consent.subscription',
   shop: 'consent.shop',
 } as const satisfies Record<LegalConsentPlace, string>;
@@ -36,6 +42,7 @@ const CONSENT_KEY = {
  * một biểu mẫu dở dang, nên đẩy người dùng ra trình duyệt hệ thống là mất những gì đã nhập.
  */
 export function LegalConsentNote({ place }: { place: LegalConsentPlace }) {
+  const colors = useColors();
   const t = useTranslations('Legal');
   const chunks = useLegalLinkChunks();
 

@@ -24,7 +24,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { useAssignDriver, useAssignableDrivers, useUpdateBooking } from '../hooks/use-bookings';
 import type { BookingDetail, UpdateBookingInput } from '../api';
 import { AssignDriverSheet } from './AssignDriverSheet';
@@ -73,6 +74,7 @@ export function EditBookingSheet({
   booking: BookingDetail;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.edit');
   const permissions = usePermissions();
   const tCreate = useTranslations('Bookings.create');
@@ -165,7 +167,7 @@ export function EditBookingSheet({
         onClose={onClose}
         title={t('title')}
         subtitle={booking.code}
-        footer={<Button label={t('save')} loading={pending} onPress={() => void submit()} />}
+        footer={<Button icon="save-outline" label={t('save')} loading={pending} onPress={() => void submit()} />}
       >
         {/* Phần đã chốt — đọc, không sửa; nói rõ vì sao ngay tại chỗ. */}
         <Card tone="muted" lift="flat">

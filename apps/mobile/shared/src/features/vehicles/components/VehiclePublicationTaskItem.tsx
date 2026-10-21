@@ -12,7 +12,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleEditPartHref } from '../workspace-links';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle';
 import {
   publicationEditTab,
@@ -25,11 +26,14 @@ import type { VehicleDetail } from '../api';
 const MISSING_PREVIEW = 2;
 
 /** Vạch mép trái theo mức độ — cùng ngôn ngữ thẻ với khu quản lý. */
-const TONE_COLOR = {
-  critical: colors.danger,
-  warning: colors.warning,
-  info: colors.info,
-} as const;
+const useToneColor = themed(
+  (colors) =>
+    ({
+      critical: colors.danger,
+      warning: colors.warning,
+      info: colors.info,
+    }) as const,
+);
 
 /**
  * MỘT việc "đưa xe lên chợ", nằm trong thẻ "Việc cần làm" ở đầu hồ sơ xe — bản native của
@@ -61,6 +65,8 @@ export function VehiclePublicationTaskItem({
    */
   customerScope?: boolean;
 }) {
+  const colors = useColors();
+  const TONE_COLOR = useToneColor();
   const t = useTranslations('Vehicles.publish.task');
   const tPublish = useTranslations('Vehicles.publish');
   const toast = useAppToast();

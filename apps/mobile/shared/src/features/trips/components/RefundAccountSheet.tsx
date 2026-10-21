@@ -91,6 +91,7 @@ export function RefundAccountSheet({
           ) : null}
 
           <Button
+            icon="send-outline"
             label={t('submit')}
             size="lg"
             disabled={!account}

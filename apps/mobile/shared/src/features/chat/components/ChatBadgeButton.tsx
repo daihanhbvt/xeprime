@@ -3,9 +3,11 @@ import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { Pressable, StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { HeaderChip } from '@/components/layout/HeaderChip';
 import { badgeOffset, CountBadge } from '@/components/ui/CountBadge';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { colors, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { iconSize, sizing, space } from '@/theme/tokens';
 import { useChatBadge } from '../hooks/use-chat';
 
 /**
@@ -23,17 +25,32 @@ import { useChatBadge } from '../hooks/use-chat';
 export function ChatBadgeButton({
   surface,
   compact = false,
+  chip = false,
 }: {
   surface: ChatSide;
   /** Vẽ nhỏ lại, vùng chạm giữ nguyên — cho thanh trên CHẬT của khu quản lý. */
   compact?: boolean;
+  /** Vòng tròn có viền + bóng như `HeaderIconButton` web — thanh trên khu khách. */
+  chip?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const navigateOnce = useNavigateOnce();
   const chat = useChatBadge(surface);
 
   // Nhãn theo bề mặt, đúng như web: "Tin nhắn" ở khu khách, "Trò chuyện" ở cổng quản lý.
   const label = surface === CHAT_SIDE.CUSTOMER ? t('public.chat') : t('manage.chat');
+
+  if (chip) {
+    return (
+      <HeaderChip
+        icon="chatbubble-ellipses-outline"
+        onPress={() => navigateOnce(chat.href)}
+        accessibilityLabel={label}
+        badgeCount={chat.count}
+      />
+    );
+  }
 
   return (
     <Pressable
@@ -49,7 +66,13 @@ export function ChatBadgeButton({
         color={colors.text}
       />
       {chat.count > 0 ? (
-        <YStack pos="absolute" {...badgeOffset(compact ? sizing.compactBox : sizing.touchTarget, compact ? iconSize.sm : iconSize.md)}>
+        <YStack
+          pos="absolute"
+          {...badgeOffset(
+            compact ? sizing.compactBox : sizing.touchTarget,
+            compact ? iconSize.sm : iconSize.md,
+          )}
+        >
           <CountBadge count={chat.count} tone="danger" size="sm" />
         </YStack>
       ) : null}

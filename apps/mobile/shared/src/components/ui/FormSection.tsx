@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { Card } from './Card';
 import type { IconName } from './Chip';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /** Tiêu đề KHÔNG viết hoa toàn bộ: tiếng Việt viết hoa hết thì dấu thanh chồng nhau ở cỡ chữ nhỏ. */
 export function FormSection({
@@ -18,6 +19,7 @@ export function FormSection({
   children: ReactNode;
   boxed?: boolean;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.xs}>

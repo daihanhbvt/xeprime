@@ -21,9 +21,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerRevenue } from '../api';
-import { METRIC_TONE, MetricStrip } from './MetricStrip';
+import { useMetricTone, MetricStrip } from './MetricStrip';
 
 const AVATAR_SIZE = 32;
 
@@ -61,6 +62,8 @@ export function CustomerRevenueList({
   onSortChange: (next: string) => void;
   onPageChange: (page: number) => void;
 }) {
+  const METRIC_TONE = useMetricTone();
+  const colors = useColors();
   const t = useTranslations('Finance.overview.customers');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();

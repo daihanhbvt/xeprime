@@ -30,10 +30,12 @@ import { useCollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useInfinitePublicListings } from './hooks/use-search-results';
@@ -43,6 +45,7 @@ import { LocationPicker } from './components/LocationPicker';
 import { RentalRangeSheet } from './components/RentalRangeSheet';
 import { SortMenu } from './components/SortMenu';
 import { VehicleCard } from './components/VehicleCard';
+import { QuickFilterPills } from './components/QuickFilterPills';
 import { ROUTES } from '@/navigation/routes';
 
 /** Các chiều thuộc tấm Bộ lọc — "Xoá tất cả" gỡ đúng nhóm này, giữ nguyên ngữ cảnh tìm kiếm. */
@@ -52,6 +55,7 @@ const FACET_KEYS = [
   'seats',
   'fuelType',
   'features',
+  'transmission',
   ...LISTING_AMENITY_VALUES,
   'priceMin',
   'priceMax',
@@ -92,7 +96,10 @@ export function SearchResultsScreen({
 }
 
 function ResultsBody({ onBack }: { onBack: () => void }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
   const t = useTranslations('Marketplace.results');
+  const errorMessage = useErrorMessage();
   const tPanel = useTranslations('Marketplace.filterPanel');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
@@ -172,7 +179,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
     const chips: { id: string; label: string; clear: () => void }[] = [];
 
     const listChip = (
-      dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features',
+      dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features' | 'transmission',
       label: (key: string) => string,
     ) => {
       for (const key of filters[dim] ?? []) {
@@ -189,6 +196,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
     listChip('seats', (key) => domainLabel('seatBucket', key, SEAT_BUCKET_LABEL[key as never]));
     listChip('fuelType', (key) => catalogLabel(catalog.fuel_type, key) ?? key);
     listChip('features', (key) => catalogLabel(catalog.vehicle_feature, key) ?? key);
+    listChip('transmission', (key) => domainLabel('transmissionType', key));
 
     for (const amenity of LISTING_AMENITY_VALUES) {
       if (!filters[amenity]) continue;
@@ -306,6 +314,10 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
               Ô TỪ KHOÁ (09/10, bản native của `KeywordSearch` web) đứng trên thanh ngữ cảnh: tên
               xe / hãng / model hoặc tên chủ xe, gian hàng. Áp thẳng vào bộ lọc, facet giữ nguyên.
             */}
+            {/* Tiêu đề banner trang tìm kiếm v3 (SearchHeroBanner web, khoá bannerTitle). */}
+            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} accessibilityRole="header">
+              {t('bannerTitle')}
+            </Text>
             <KeywordSearch
               value={filters.q}
               onApply={(q) => setFilters({ q })}
@@ -397,7 +409,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                   ? t('searching')
                   : filters.q
                     ? t('availableFor', { count: results.total, q: filters.q })
-                    : t('available', { count: results.total })}
+                    : t('foundCount', { count: results.total })}
               </Text>
               {filterCount > 0 ? (
                 <Text flexShrink={0} col={colors.textMuted} fos={fontSize.label}>
@@ -414,7 +426,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                   ai="center"
                   gap={space.xs}
                   bw={1}
-                  bc={filterCount > 0 ? colors.primary : colors.border}
+                  bc={colors.border}
                   br={radius.pill}
                   px={space.md}
                   minHeight={sizing.touchTarget - 8}
@@ -428,11 +440,11 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                       w={16}
                       h={16}
                       br={radius.pill}
-                      bg={colors.danger}
+                      bg={colors.primary}
                       ai="center"
                       jc="center"
                     >
-                      <Text col={colors.onDiscount} fos={9} fow={fontWeight.bold}>
+                      <Text col={colors.onPrimary} fos={9} fow={fontWeight.bold}>
                         {filterCount}
                       </Text>
                     </YStack>
@@ -455,6 +467,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                   selected={filters.vehicleType === value}
                   onPress={() => setVehicleType(value as VehicleType)}
                   size="sm"
+                  variant="quick"
                 />
               ))}
               <YStack w={1} bg={colors.border} my={space.xs} />
@@ -466,6 +479,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                 selected={!filters.serviceType}
                 onPress={() => setFilters({ serviceType: undefined, routeType: undefined })}
                 size="sm"
+                variant="quick"
               />
               {serviceItems.map((value) => (
                 <Chip
@@ -477,9 +491,18 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                     if (value !== SERVICE_TYPE.WITH_DRIVER) setFilters({ routeType: undefined });
                   }}
                   size="sm"
+                  variant="quick"
                 />
               ))}
             </ScrollView>
+
+            {/* Hàng viên lọc nhanh — QuickFilterPills web #213. */}
+            <QuickFilterPills
+              filters={filters}
+              onChange={setFilters}
+              onOpenFilters={() => setFilterOpen(true)}
+              appliedCount={filterCount}
+            />
 
             {activeChips.length > 0 ? (
               <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap" ai="center">
@@ -586,7 +609,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
               results.appendError ? (
                 <YStack py={layout.section} gap={space.sm} ai="center">
                   <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                    {t('appendError', { reason: '' })}
+                    {t('appendError', { reason: errorMessage(results.appendError) })}
                   </Text>
                   <Button
                     label={t('loadMore')}
@@ -602,9 +625,15 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                   <VehicleCardSkeleton />
                 </YStack>
               ) : !results.hasNextPage && results.total > 0 ? (
-                <Text col={colors.placeholder} fos={fontSize.label} ta="center" py={layout.section}>
-                  {t('endNote', { count: results.total })}
-                </Text>
+                // Như web #213: khối kết thúc "Bạn đã xem tất cả xe" + gợi ý đổi địa điểm/bộ lọc.
+                <YStack ai="center" gap={space.xs} py={layout.section}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
+                    {t('allViewed')}
+                  </Text>
+                  <Text col={colors.placeholder} fos={fontSize.label} ta="center">
+                    {t('allViewedDesc')}
+                  </Text>
+                </YStack>
               ) : null
             }
           />
@@ -662,7 +691,10 @@ function Empty({
   onClear: () => void;
   onChangeContext: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.results');
+  // Hai trạng thái rỗng dùng nhãn 'Xoá bộ lọc' của bộ lọc — như web.
+  const tFilters = useTranslations('Marketplace.filterPanel');
 
   if (keyword) {
     return (
@@ -677,7 +709,7 @@ function Empty({
         {filtered ? (
           <Pressable onPress={onClear} accessibilityRole="button" hitSlop={space.sm}>
             <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {t('clearAll')}
+              {tFilters('clear')}
             </Text>
           </Pressable>
         ) : null}
@@ -703,7 +735,7 @@ function Empty({
         icon="funnel-outline"
         title={t('emptyFilteredTitle')}
         description={t('emptyFilteredDesc')}
-        actionLabel={t('clearAll')}
+        actionLabel={tFilters('clear')}
         onAction={onClear}
       />
       <Pressable onPress={onChangeContext} accessibilityRole="button" hitSlop={space.sm}>

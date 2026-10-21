@@ -11,7 +11,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppLocale } from '@/i18n/I18nProvider';
 import { logger } from '@/lib/logger';
-import { colors } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
 
 /**
  * Ẩn phần vỏ của MARKETPLACE bên trong WebView.
@@ -98,6 +98,8 @@ export interface WebDocViewProps {
  * cùng một sửa chữa, và bản thứ hai đã bị bỏ sót đúng một vòng rà soát.
  */
 export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: WebDocViewProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const tCommon = useTranslations('Common');
   const { locale } = useAppLocale();
 
@@ -275,7 +277,7 @@ export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: We
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { backgroundColor: colors.background, flex: 1 },
   web: { backgroundColor: colors.background, flex: 1 },
-});
+}));

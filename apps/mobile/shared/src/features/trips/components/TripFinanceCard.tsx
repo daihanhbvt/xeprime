@@ -15,7 +15,8 @@ import { DataRow, Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerTripFinance } from '../api';
 
 /**
@@ -36,6 +37,7 @@ export function TripFinanceCard({
   /** Chuyến đã khép: hiện hoá đơn cuối (có phụ phí) thay cho bảng giá dự kiến. */
   closed: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.finance');
   const tPrice = useTranslations('Common.components.price');
   const domainLabel = useDomainLabel();
@@ -73,13 +75,13 @@ export function TripFinanceCard({
           accessibilityState={{ expanded }}
         >
           <XStack ai="center" gap={space.xs}>
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {expanded ? tPrice('collapse') : tPrice('viewDetails')}
             </Text>
             <Ionicons
               name={expanded ? 'chevron-up' : 'chevron-down'}
               size={iconSize.sm}
-              color={colors.primaryActive}
+              color={colors.primary}
             />
           </XStack>
         </Pressable>
@@ -189,6 +191,7 @@ function DepositBlock({
   finance: CustomerTripFinance;
   status: DepositStatus;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.finance');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
@@ -282,6 +285,7 @@ function Notice({
   text: string;
   hint?: string;
 }): ReactNode {
+  const colors = useColors();
   const skin =
     tone === 'warning'
       ? { fg: colors.warning, bg: colors.warningSurface, icon: 'alert-circle-outline' as const }

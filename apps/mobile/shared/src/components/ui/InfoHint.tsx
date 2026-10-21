@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { BottomSheet } from './BottomSheet';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Dấu "i" mở một lời giải thích BỔ SUNG — bản native của `InfoHint` bên web.
@@ -20,6 +21,7 @@ import { colors, fontSize, iconSize, space } from '@/theme/tokens';
  * đọc được mà không cần chạm gì.
  */
 export function InfoHint({ content, label }: { content: string; label: string }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,11 +32,7 @@ export function InfoHint({ content, label }: { content: string; label: string })
         accessibilityLabel={label}
         hitSlop={12}
       >
-        <Ionicons
-          name="information-circle-outline"
-          size={iconSize.sm}
-          color={colors.textMuted}
-        />
+        <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textMuted} />
       </Pressable>
       {/* Chỉ dựng khi ĐÃ mở: một màn có năm dấu "i" không nên mang theo năm `Modal` ngủ đông. */}
       {open ? (

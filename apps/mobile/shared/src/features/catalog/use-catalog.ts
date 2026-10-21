@@ -2,7 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { CATALOG_TYPE } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { catalogApi, catalogLabel, type CatalogMap, EMPTY_CATALOG } from '@/api/catalog';
+import { useLocale } from 'use-intl';
+import type { AppLocale } from '@xeprime/types';
+import {
+  catalogApi,
+  catalogLabel,
+  type CatalogMap,
+  EMPTY_CATALOG,
+  localizeCatalog,
+} from '@/api/catalog';
 import { queryKeys } from '@/queries/query-keys';
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
@@ -16,13 +24,19 @@ import '@/lib/api-client';
  * `STALE_TIME.REFERENCE`: đây là dữ liệu cấu hình, không phải dữ liệu giao dịch.
  */
 export function useCatalog(): { catalog: CatalogMap; isLoading: boolean } {
+  // Cache giữ bản gốc hai ngôn ngữ; nhãn chọn theo locale ở đây (như web `useCatalog`).
+  const locale = useLocale() as AppLocale;
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.catalog.list(),
     // Lỗi danh mục KHÔNG được làm hỏng thẻ xe: map rỗng ⇒ nhãn rơi về key thô.
     queryFn: () => catalogApi.list().catch(() => EMPTY_CATALOG),
     staleTime: STALE_TIME.REFERENCE,
   });
-  return { catalog: data ?? EMPTY_CATALOG, isLoading };
+  const catalog = useMemo(
+    () => (data ? localizeCatalog(data, locale) : EMPTY_CATALOG),
+    [data, locale],
+  );
+  return { catalog, isLoading };
 }
 
 export interface CatalogLabels {

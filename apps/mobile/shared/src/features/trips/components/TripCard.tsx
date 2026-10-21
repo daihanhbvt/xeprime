@@ -25,7 +25,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { RespondDeadline } from '@/features/booking-requests/components/RespondDeadline';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTrip } from '../api';
 
 /** Ảnh vuông nhỏ bên trái — thẻ chuyến ưu tiên THỜI GIAN và trạng thái, không phải ảnh xe. */
@@ -53,6 +54,7 @@ interface TripCardProps {
 
 /** Tài xế của chuyến (ADR 0063): tên + trạng thái lượt gán, hoặc "chưa phân công". */
 function TripDriverLine({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const t = useTranslations('Trips.card');
   const tDriver = useTranslations('Bookings.driver');
   const domainLabel = useDomainLabel();
@@ -103,6 +105,7 @@ function TripDriverLine({ trip }: { trip: CustomerTrip }) {
  * còn lại của cả hai phía chỉ có một lối đi tiếp là mở chi tiết.
  */
 function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -248,7 +251,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
           */}
             {trip.totalAmount ? (
               <YStack ai="flex-end">
-                <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                <Text col={colors.primaryActive} fos={fontSize.h4} fow={fontWeight.bold}>
                   {fmt.money(trip.totalAmount)}
                 </Text>
                 {/*
@@ -322,18 +325,22 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
 /**
  * Hình thức nhận xe — thứ khách phải biết trước khi tới ngày: **tự đi lấy hay xe mang tới**.
  *
- * Cùng ba nhánh với màn chi tiết và với web: có tài xế → xe đón tận nơi; còn lại → giao tận nơi
- * hoặc nhận tại đại lý.
+ * Cùng câu với thẻ chuyến web: "Tự lái · Nhận tại đại lý" / "… · Giao tận nơi"; có tài xế thì
+ * "Có tài xế · <lộ trình>".
  */
 function PickupLine({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const t = useTranslations('Trips.pickup');
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
+  const domainLabel = useDomainLabel();
+  // Như `TripCard` web: dịch vụ đứng trước — có tài xế kèm lộ trình, còn lại kèm cách nhận xe.
+  const service = domainLabel('serviceType', trip.serviceType);
   const label = withDriver
-    ? t('driverPickup')
-    : trip.deliveryRequested
-      ? t('delivery')
-      : t('agency');
+    ? trip.routeType
+      ? `${service}${LIST_SEPARATOR}${domainLabel('routeType', trip.routeType)}`
+      : service
+    : `${service}${LIST_SEPARATOR}${trip.deliveryRequested ? t('delivery') : t('agency')}`;
 
   return (
     <XStack ai="center" gap={space.xs}>
@@ -353,6 +360,7 @@ function PickupLine({ trip }: { trip: CustomerTrip }) {
  * vọng đó; đoán ở đây là mỗi màn ngụ ý một mức chắc chắn khác nhau với khách.
  */
 function ScheduleLine({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const fmt = useAppFormat();
 
   if (trip.pickupAt && trip.returnAt) {

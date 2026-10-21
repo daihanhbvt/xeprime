@@ -19,7 +19,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorCode } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useCorrectOdometer } from '../hooks/use-maintenance';
 
 /** Trần độ dài lý do — khớp `odometerCorrectionFormSchema.reason`. */
@@ -50,6 +51,7 @@ export function OdometerCorrectionSheet({
   onClose: () => void;
   onSaved?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.odometer');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Pressable, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,10 +8,11 @@ import { CountBadge } from '@/components/ui/CountBadge';
 import { Pagination } from '@/components/ui/Pagination';
 import { useCollapseOnScroll, type CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { activeFilterCount, ManageFilterSheet, type FilterGroup } from './ManageFilterSheet';
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   /**
    * Khối đầu trang ĐÈ lên danh sách, không nằm trong luồng layout.
    *
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
     dòng tự căn glyph theo baseline của nó, không theo tâm khung. Không có nó thì flexbox của
     khung cha làm việc căn giữa, và nó căn đúng.
   */
-});
+}));
 
 /**
  * Vỏ của một màn danh sách trong khu quản lý — gom bốn thứ mọi bảng dữ liệu ở đây đều cần: tiêu
@@ -173,6 +174,8 @@ export function ManageListShell({
     bindList: (node: unknown) => void;
   }) => ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Common.filters');
   const [filtering, setFiltering] = useState(false);
 
@@ -372,7 +375,6 @@ export function ManageListShell({
 
           {/* Dải tab là hàng CUỐI của khối đầu trang từ khi ô tìm kiếm dời vào tấm lọc. */}
           <YStack pb={space.sm}>{tabs}</YStack>
-
         </Animated.View>
       </YStack>
 

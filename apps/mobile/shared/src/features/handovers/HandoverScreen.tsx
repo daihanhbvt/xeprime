@@ -39,7 +39,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { HandoverPhotoGrid } from './components/HandoverPhotoGrid';
 import { ResolveOdometerSheet } from './components/ResolveOdometerSheet';
@@ -179,6 +180,7 @@ function HandoverForm({
   onRefresh: () => void;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover');
   const tOdoError = useTranslations('Bookings.handover.odometerError');
   const fmt = useAppFormat();
@@ -565,6 +567,7 @@ function AdvancedToggle({
   label: string;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   return (
     <XStack
       ai="center"
@@ -587,6 +590,7 @@ function AdvancedToggle({
 }
 
 function Notice({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" gap={space.sm} bg={colors.infoSurface} p={space.md} br={radius.md}>
       <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.info} />

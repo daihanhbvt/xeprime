@@ -5,8 +5,9 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from './Button';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Hộp XÁC NHẬN của app — thay cho `Alert.alert` của hệ điều hành.
@@ -53,6 +54,9 @@ export function AlertDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
 
@@ -79,6 +83,7 @@ export function AlertDialog({
           bg={colors.surface}
           borderTopLeftRadius={radius.lg}
           borderTopRightRadius={radius.lg}
+          {...floatingBorder}
           px={layout.screenX}
           pt={layout.screenX}
           pb={layout.screenX + insets.bottom}

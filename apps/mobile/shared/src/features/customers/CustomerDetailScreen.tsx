@@ -39,7 +39,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { CustomerBookingHistory } from './components/CustomerBookingHistory';
 import { CustomerDocumentsPanel } from './components/CustomerDocumentsPanel';
 import { CustomerFinancePanel } from './components/CustomerFinancePanel';
@@ -161,6 +162,7 @@ function CustomerProfile({
   customer: TenantCustomerDetail;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -326,6 +328,7 @@ function CustomerProfile({
 
     return list;
   }, [
+    colors,
     t,
     canManage,
     canCreateBooking,
@@ -460,7 +463,7 @@ function CustomerProfile({
         surface: colors.infoSurface,
       },
     ];
-  }, [customer, canViewFinance, t, fmt]);
+  }, [colors, customer, canViewFinance, t, fmt]);
 
   /**
    * Thẻ hồ sơ — bản native của `profileCard` bên web, đặt ĐÚNG chỗ web đặt nó ở màn hẹp: TRONG
@@ -914,6 +917,7 @@ function ProfileRow({
   lines?: number;
   actions?: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.sm}>
       {/*
@@ -988,6 +992,7 @@ function ActionPill({
   disabled = false,
   onPress,
 }: Omit<ActionPillSpec, 'key'>) {
+  const colors = useColors();
   const fg = disabled ? colors.textDisabled : primary ? colors.onPrimary : tone;
   const bg = disabled ? colors.surfaceMuted : primary ? colors.primary : surface;
   const border = disabled ? colors.border : primary ? colors.primary : tone;

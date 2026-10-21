@@ -8,8 +8,9 @@ import { useTranslations } from 'use-intl';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { LOCALES } from '@/i18n/config';
 import { useAppLocale } from '@/i18n/I18nProvider';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Đổi ngôn ngữ.
@@ -19,6 +20,9 @@ import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tok
  * mở ra trong một tấm trượt từ đáy, đúng chỗ ngón cái với tới.
  */
 export function LocaleSwitcher() {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Common.locale');
   const { locale, setLocale } = useAppLocale();
   const [open, setOpen] = useState(false);
@@ -63,13 +67,21 @@ export function LocaleSwitcher() {
               bg={colors.surface}
               borderTopLeftRadius={radius.lg}
               borderTopRightRadius={radius.lg}
+              {...floatingBorder}
               p={space.lg}
               gap={space.sm}
               // Cộng inset đáy: tấm trượt chạm mép dưới màn hình, mà thanh điều hướng của hệ
               // thống (hoặc vạch Home của iOS) nằm ĐÈ lên đó — lề cố định là mục cuối bị che.
               pb={insets.bottom + space.lg}
             >
-              <YStack w={40} h={4} br={radius.pill} bg={colors.border} alignSelf="center" mb={space.sm} />
+              <YStack
+                w={40}
+                h={4}
+                br={radius.pill}
+                bg={colors.border}
+                alignSelf="center"
+                mb={space.sm}
+              />
 
               <MenuOptionList>
                 {LOCALES.map((option) => (

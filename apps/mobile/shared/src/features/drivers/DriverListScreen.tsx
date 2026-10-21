@@ -30,7 +30,7 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import type { Driver } from './api';
 import { DriverCard, type DriverCardIntent } from './components/DriverCard';
 import { EditDriverSheet, InviteDriverSheet } from './components/DriverFormSheet';
@@ -63,6 +63,7 @@ const keyOf = (driver: Driver) => driver.id;
  * Bên thuê chỉ thấy TRẠNG THÁI bằng lái của tài xế, không ảnh, không số bằng.
  */
 export function DriverListScreen() {
+  const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');

@@ -25,6 +25,8 @@ export const SECURE_KEY = {
   GEO_PROVINCE: 'xp.geoProvince',
   /** Lượt cổng MoMo/VNPAY đang theo dõi theo chuyến — `features/payment-gateway/trip-order-memory`. */
   TRIP_PAYMENT_ORDERS: 'xp.tripPaymentOrders',
+  /** Giao diện khách chọn (Sáng · Tối) — `theme/color-scheme.ts`. Không phải bí mật. */
+  THEME_PREFERENCE: 'xp.themePreference',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];
@@ -82,5 +84,20 @@ export async function deleteSecureItem(key: SecureKey): Promise<void> {
     await SecureStore.deleteItemAsync(key);
   } catch {
     // Xoá thứ không tồn tại không phải lỗi — đăng xuất phải luôn đi tới cùng.
+  }
+}
+
+/**
+ * Đọc ĐỒNG BỘ — chỉ dành cho số ít giá trị phải có TRƯỚC khi module khác nạp (giao diện sáng/tối
+ * chọn bảng màu ngay lúc `theme/tokens.ts` được import). Lỗi Keystore ⇒ `null`, như bản bất
+ * đồng bộ.
+ */
+export function getSecureItemSync(key: SecureKey): string | null {
+  if (blockedOnWeb(key)) return null;
+  if (isWeb) return globalThis.localStorage?.getItem(key) ?? null;
+  try {
+    return SecureStore.getItem(key);
+  } catch {
+    return null;
   }
 }

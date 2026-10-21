@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XStack } from 'tamagui';
 import { elevation } from '@/theme/elevation';
 import { dwell } from '@/theme/motion';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors, useFloatingBorderColor } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 
 /**
@@ -43,7 +44,7 @@ interface PresetSkin {
 }
 
 /** Gold thương hiệu cố ý KHÔNG có mặt ở đây: nó là màu HÀNH ĐỘNG, không phải màu trạng thái. */
-const PRESET_SKIN: Readonly<Record<ToastPreset, PresetSkin>> = {
+const usePresetSkin = themed<Readonly<Record<ToastPreset, PresetSkin>>>((colors) => ({
   [TOAST_PRESET.SUCCESS]: {
     icon: 'checkmark-circle',
     accent: colors.success,
@@ -59,7 +60,7 @@ const PRESET_SKIN: Readonly<Record<ToastPreset, PresetSkin>> = {
     accent: colors.info,
     surface: colors.infoSurface,
   },
-};
+}));
 
 /** Vạch màu bên trái — thứ DUY NHẤT phân biệt ba preset khi liếc nhanh, nên nó có tên. */
 const ACCENT_BAR_WIDTH = 3;
@@ -73,6 +74,9 @@ const ACCENT_BAR_WIDTH = 3;
  * cắm ở `theme/tamagui.config.ts` cho hoạt cảnh và cử chỉ vuốt.
  */
 function AppToast() {
+  const colors = useColors();
+  const floatingBorderColor = useFloatingBorderColor();
+  const PRESET_SKIN = usePresetSkin();
   const toast = useToastState();
 
   // Toast bị thư viện xử lý bằng native (burnt) thì không có gì để render — ở đây luôn `false`
@@ -102,7 +106,21 @@ function AppToast() {
         bc={skin.accent}
         px={space.md}
         py={space.sm}
-        style={elevation.card}
+        style={
+          floatingBorderColor
+            ? [
+                elevation.card,
+                {
+                  borderTopWidth: 1,
+                  borderRightWidth: 1,
+                  borderBottomWidth: 1,
+                  borderTopColor: floatingBorderColor,
+                  borderRightColor: floatingBorderColor,
+                  borderBottomColor: floatingBorderColor,
+                },
+              ]
+            : elevation.card
+        }
       >
         <Ionicons name={skin.icon} size={iconSize.lg} color={skin.accent} />
         <Toast.Title
@@ -140,12 +158,7 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
       {/*
  
       */}
-      <ToastViewport
-        pos="absolute"
-        top={insets.top + space.xs}
-        left={space.md}
-        right={space.md}
-      />
+      <ToastViewport pos="absolute" top={insets.top + space.xs} left={space.md} right={space.md} />
     </ToastProvider>
   );
 }

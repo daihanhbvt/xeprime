@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { ManageDrawerHost } from '@/features/shell/ManageDrawerHost';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { duration } from '@/theme/motion';
 
 /**
@@ -20,6 +20,7 @@ import { duration } from '@/theme/motion';
  * sách mục hiện cho người dùng đến từ `manage-nav.ts`, không từ cây thư mục.
  */
 export default function ManageTabsLayout() {
+  const colors = useColors();
   return (
     <ManageDrawerHost>
       <Tabs
@@ -29,6 +30,8 @@ export default function ManageTabsLayout() {
           animation: 'fade',
           transitionSpec: { animation: 'timing', config: { duration: duration.fast } },
           sceneStyle: { backgroundColor: colors.background },
+          // Tab ẩn đứng yên (react-freeze): đổi sáng/tối chỉ vẽ lại tab đang xem.
+          freezeOnBlur: true,
         }}
       >
         <Tabs.Screen name="index" />

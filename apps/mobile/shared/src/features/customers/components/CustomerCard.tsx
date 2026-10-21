@@ -19,7 +19,8 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { TenantCustomer } from '../api';
 
 /** Cùng đường kính với `MemberCard` — hai màn nhân sự/khách hàng phải cùng một đường chân. */
@@ -58,6 +59,7 @@ function CustomerCardImpl({
   canViewFinance: boolean;
   onPress: (customer: TenantCustomer) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers.card');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -181,6 +183,7 @@ function CustomerCardImpl({
  * 30 node native cho thứ mà nhãn ngay bên cạnh đã nói rõ, và danh sách này cuộn.
  */
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} minWidth={0} gap={1}>
       <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>

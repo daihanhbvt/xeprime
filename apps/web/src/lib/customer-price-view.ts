@@ -1,4 +1,4 @@
-import { isZeroMoney, subtractMoney } from '@xeprime/domain';
+import { payAtPickupAmount as sharedPayAtPickupAmount, isZeroMoney } from '@xeprime/domain';
 import { FEE_BEARER, type MoneyString } from '@xeprime/types';
 
 /**
@@ -59,9 +59,7 @@ export function visibleFeeLines<T extends FeeLineLike>(
  * chỗ thì không có khái niệm "phần còn lại".
  */
 export function payAtPickupAmount(fees: FeesLike | null | undefined): MoneyString | null {
-  if (!fees) return null;
-  if (fees.payAtPickupAmount) return fees.payAtPickupAmount;
-  return fees.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null;
+  return sharedPayAtPickupAmount(fees);
 }
 
 /**

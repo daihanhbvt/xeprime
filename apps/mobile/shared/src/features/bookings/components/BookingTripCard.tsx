@@ -12,7 +12,8 @@ import type { Handover } from '@/features/handovers/api';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { toAppTz } from '@xeprime/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * "QUẢN LÝ CHUYẾN ĐI" — bản native của `BookingOperationPanel`: kể chuyến đã đi tới đâu và chặng
@@ -31,6 +32,7 @@ export function BookingTripCard({
   bookingId: string;
   bookingStatus: BookingStatus;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.trip');
   const tActions = useTranslations('Common.actions');
   const tPermission = useTranslations('ManageCommon.permission');
@@ -139,6 +141,7 @@ ${tPermission('requires')} ${PERMISSION.HANDOVER_VIEW}`}
 }
 
 function CardTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
       {children}
@@ -153,6 +156,7 @@ function CardTitle({ children }: { children: string }) {
  * HẲN 0: không đọc được đồng hồ là sự thật cần nói, "0 km" là con số sai.
  */
 function Milestone({ handover, kind }: { handover: Handover; kind: 'pickup' | 'return' }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.trip');
   const fmt = useAppFormat();
 
@@ -185,6 +189,7 @@ function Milestone({ handover, kind }: { handover: Handover; kind: 'pickup' | 'r
 }
 
 function Notice({ children, tone = 'default' }: { children: string; tone?: 'default' | 'info' }) {
+  const colors = useColors();
   return (
     <XStack
       ai="flex-start"

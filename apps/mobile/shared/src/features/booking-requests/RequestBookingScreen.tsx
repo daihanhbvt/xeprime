@@ -1,13 +1,18 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { ScreenLoading } from '@/components/state/ScreenLoading';
+import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  RENTAL_MODE,
   ADDRESS_LINE_MAX_LENGTH,
+  isRouteType,
+  LOCATION_SOURCE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
   SERVICE_TYPE,
@@ -16,6 +21,8 @@ import {
 } from '@xeprime/types';
 import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import {
+  appWallClockToIso,
+  dayjs,
   DRIVER_LICENCE_TRIP_GATE,
   evaluateDriverLicenceForTrip,
   type RentalMode,
@@ -35,6 +42,7 @@ import {
   buildBookingRequestSchema,
   DESTINATION_MAX,
   NOTE_MAX,
+  CUSTOMER_NAME_MAX,
   type BookingRequestFormValues,
 } from './booking-schema';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -47,14 +55,17 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import type { BookingRequestPrefillParams } from '@/navigation/routes-base';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { BookingPriceSummary } from './components/BookingPriceSummary';
 import { PromoCodeField } from '@/features/promo-codes/PromoCodeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { VehicleSummaryCard } from './components/VehicleSummaryCard';
 import { RequestTripStep } from './components/RequestTripStep';
-import { RequestReviewStep } from './components/RequestReviewStep';
+import { RequestReviewStep, type BookingReviewNextStep } from './components/RequestReviewStep';
+import { BookingJourney } from './components/BookingJourney';
 import { RequestResultStep } from './components/RequestResultStep';
 import {
   isAwaitingHoldReceipt,
@@ -62,6 +73,7 @@ import {
   REQUEST_STEP,
   useBookingRequestFlow,
   usePublicQuote,
+  useQuoteWithPromo,
   useVehicleBusyDays,
   type RequestStep,
 } from './hooks/use-booking-request-flow';
@@ -75,6 +87,34 @@ import { useUnpaidHolds } from '@/features/trips/hooks/use-trips';
  * resolver, nên bản viết tay lệch với bản thật ngay khi schema có một `transform`.
  */
 export type RequestForm = ReturnType<typeof useForm<BookingRequestFormValues>>;
+
+/** Mốc giờ mang từ trang xe — liên kết sâu hỏng thì bỏ, không đưa một ngày sai vào form. */
+function validInstant(raw: string | undefined): string {
+  return raw && dayjs(raw).isValid() ? raw : '';
+}
+
+/** Cặp giờ mang từ trang xe — giờ trả phải SAU giờ nhận, không thì bỏ CẢ CẶP. */
+function prefillRange(prefill: BookingRequestPrefillParams | undefined): {
+  pickupAt: string;
+  returnAt: string;
+} {
+  const pickupAt = validInstant(prefill?.pickupAt);
+  const returnAt = validInstant(prefill?.returnAt);
+  return pickupAt && returnAt && dayjs(returnAt).isAfter(dayjs(pickupAt))
+    ? { pickupAt, returnAt }
+    : { pickupAt: '', returnAt: '' };
+}
+
+/** Số tháng gói mang từ trang xe — chỉ nhận một gói chủ xe THẬT SỰ niêm yết. */
+function prefilledPackageMonths(
+  listing: PublicListingDetail,
+  raw: string | undefined,
+): number | null {
+  const months = raw ? Number(raw) : NaN;
+  return (listing.longTermPackages ?? []).some((pkg) => pkg.packageMonths === months)
+    ? months
+    : null;
+}
 
 /**
  * Wizard gửi yêu cầu thuê (BKG-01) — `trip` → (`licence`) → `review` → `done`.
@@ -94,9 +134,12 @@ export function RequestBookingScreen({
   vehicleId,
   initialServiceType,
   deliveryProvinceCode,
+  prefill,
 }: {
   vehicleId: string;
   initialServiceType?: string;
+  /** Chuyến đã cấu hình ở trang xe (web #205 `prefill`) — chỉ dùng khi KHÔNG có bản nháp. */
+  prefill?: BookingRequestPrefillParams;
   /**
    * Tỉnh GỢI Ý cho ô địa chỉ giao xe — tỉnh khách đang lọc, hoặc tỉnh của chính chiếc xe.
    * Native không có URL để mang ngữ cảnh nên nó đi qua tham số điều hướng (ADR 0035).
@@ -134,6 +177,7 @@ export function RequestBookingScreen({
       listing={listing.data}
       {...(initialServiceType ? { initialServiceType } : {})}
       {...(deliveryProvinceCode ? { deliveryProvinceCode } : {})}
+      {...(prefill ? { prefill } : {})}
     />
   );
 }
@@ -142,11 +186,14 @@ function RequestBookingBody({
   listing,
   initialServiceType,
   deliveryProvinceCode,
+  prefill,
 }: {
   listing: PublicListingDetail;
+  prefill?: BookingRequestPrefillParams;
   initialServiceType?: string;
   deliveryProvinceCode?: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const tFormErrors = useTranslations('BookingRequests.form.errors');
   const tCommon = useTranslations('Common.actions');
@@ -206,30 +253,32 @@ function RequestBookingBody({
    */
   const schema = useMemo(
     () =>
-      buildBookingRequestSchema(
-        {
-          /*
-           * Câu lỗi theo đúng `BookingRequests.form.errors.*` mà `requestFormSchema` bên web dùng.
-           * Chỉ những ô web KHÔNG có câu riêng mới còn đọc `flow.validation.*` (độ dài họ tên —
-           * web để yup tự sinh câu tiếng Anh; loại dịch vụ, lộ trình, nguyện vọng — web chọn sẵn
-           * mặc định nên không bao giờ báo thiếu).
-           */
-          serviceRequired: t('validation.serviceRequired'),
-          pickupAtRequired: tFormErrors('pickupAt'),
-          returnAtRequired: tFormErrors('returnAt'),
-          returnAfterPickup: tFormErrors('returnAfterPickup'),
-          packageRequired: tFormErrors('longTermPackage'),
-          pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
-          requestedPickupDateRequired: tFormErrors('requestedPickupDate'),
-          routeRequired: t('validation.routeRequired'),
-          pickupAddressRequired: tFormErrors('pickupAddressLine'),
-          destinationRequired: tFormErrors('destination'),
-          deliveryAddressRequired: tFormErrors('deliveryAddressLine'),
-          addressLineMax: tFormErrors('addressLineMax', { max: ADDRESS_LINE_MAX_LENGTH }),
-          destinationMax: tFormErrors('destinationMax', { max: DESTINATION_MAX }),
-          noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
-        },
-      ),
+      buildBookingRequestSchema({
+        /*
+         * Câu lỗi theo đúng `BookingRequests.form.errors.*` mà `requestFormSchema` bên web dùng.
+         * Chỉ những ô web KHÔNG có câu riêng mới còn đọc `flow.validation.*` (độ dài họ tên —
+         * web để yup tự sinh câu tiếng Anh; loại dịch vụ, lộ trình, nguyện vọng — web chọn sẵn
+         * mặc định nên không bao giờ báo thiếu).
+         */
+        serviceRequired: t('validation.serviceRequired'),
+        pickupAtRequired: tFormErrors('pickupAt'),
+        returnAtRequired: tFormErrors('returnAt'),
+        returnAfterPickup: tFormErrors('returnAfterPickup'),
+        packageRequired: tFormErrors('longTermPackage'),
+        pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
+        requestedPickupDateRequired: tFormErrors('requestedPickupDate'),
+        routeRequired: t('validation.routeRequired'),
+        pickupAddressRequired: tFormErrors('pickupAddressLine'),
+        destinationRequired: tFormErrors('destination'),
+        deliveryAddressRequired: tFormErrors('deliveryAddressLine'),
+        addressLineMax: tFormErrors('addressLineMax', { max: ADDRESS_LINE_MAX_LENGTH }),
+        destinationMax: tFormErrors('destinationMax', { max: DESTINATION_MAX }),
+        noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
+        customerNameRequired: tFormErrors('customerName'),
+        customerNameMax: tFormErrors('customerNameMax', { max: CUSTOMER_NAME_MAX }),
+        customerPhoneRequired: tFormErrors('customerPhone'),
+        customerPhoneFormat: tFormErrors('customerPhoneFormat'),
+      }),
     [t, tFormErrors],
   );
 
@@ -238,14 +287,19 @@ function RequestBookingBody({
     mode: 'onTouched',
     defaultValues: restoredDraft?.values ?? {
       acceptedTerms: false,
+      vehicleProtectionSelected: prefill?.vehicleProtection === '1',
+      personalAccidentSelected: prefill?.personalAccident === '1',
       serviceType: defaultService as BookingRequestFormValues['serviceType'],
-      pickupAt: '',
-      returnAt: '',
-      longTermPackageMonths: null,
+      pickupAt: prefillRange(prefill).pickupAt,
+      returnAt: prefillRange(prefill).returnAt,
+      longTermPackageMonths: prefilledPackageMonths(listing, prefill?.packageMonths),
       // Web chọn sẵn "trong 7 ngày" và "nội thành" (`requestFormSchema` `.default(...)`).
-      pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+      pickupPreference:
+        prefill?.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
+          ? PICKUP_PREFERENCE.SPECIFIC_DATE
+          : PICKUP_PREFERENCE.WITHIN_7_DAYS,
       requestedPickupDate: '',
-      routeType: ROUTE_TYPE.IN_CITY,
+      routeType: isRouteType(prefill?.routeType) ? prefill.routeType : ROUTE_TYPE.IN_CITY,
       pickupProvinceCode: '',
       pickupWardCode: '',
       pickupAddressLine: '',
@@ -254,7 +308,8 @@ function RequestBookingBody({
       pickupLongitude: null,
       pickupLocationSource: null,
       destination: '',
-      deliveryRequested: false,
+      // Chuyến có tài xế thì tài xế đón — cờ giao xe chỉ có nghĩa với dịch vụ còn lại.
+      deliveryRequested: prefill?.delivery === '1' && defaultService !== SERVICE_TYPE.WITH_DRIVER,
       deliveryProvinceCode: '',
       deliveryWardCode: '',
       deliveryAddressLine: '',
@@ -263,6 +318,8 @@ function RequestBookingBody({
       deliveryLongitude: null,
       deliveryLocationSource: null,
       note: '',
+      customerName: '',
+      customerPhone: '',
     },
   });
 
@@ -288,6 +345,31 @@ function RequestBookingBody({
     deliveryPrefilled.current = true;
     // Dựng lại từ bản nháp ⇒ địa chỉ khách đã nhập thắng mọi gợi ý.
     if (restoredDraft) return;
+    /*
+     * Địa chỉ khách vừa xác nhận ở thẻ đặt xe (`prefill.delivery` web) thắng bộ nhớ — chỉ khi khách
+     * chọn giao tận nơi. Ghim chỉ nhận khi đủ cả hai toạ độ.
+     */
+    const prefillLine = prefill?.delivery === '1' ? prefill.deliveryAddressLine?.trim() : '';
+    if (prefillLine) {
+      const quiet = { shouldDirty: false } as const;
+      const lat = Number(prefill?.deliveryLat);
+      const lng = Number(prefill?.deliveryLng);
+      const pinned =
+        Boolean(prefill?.deliveryLat && prefill?.deliveryLng) &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng);
+      form.setValue('deliveryProvinceCode', deliveryProvinceCode ?? '', quiet);
+      form.setValue('deliveryAddressLine', prefillLine, quiet);
+      form.setValue('deliveryPlaceId', prefill?.deliveryPlaceId ?? null, quiet);
+      form.setValue('deliveryLatitude', pinned ? lat : null, quiet);
+      form.setValue('deliveryLongitude', pinned ? lng : null, quiet);
+      form.setValue(
+        'deliveryLocationSource',
+        pinned ? LOCATION_SOURCE.GOOGLE_PLACE : LOCATION_SOURCE.MANUAL,
+        quiet,
+      );
+      return;
+    }
 
     let alive = true;
     void readDeliveryAddress().then((remembered) => {
@@ -334,7 +416,32 @@ function RequestBookingBody({
     }
   }, [form, vehicleProvinceCode]);
 
-  const [rentalMode, setRentalMode] = useState<RentalMode>(restoredDraft?.rentalMode ?? 'daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(restoredDraft?.rentalMode ?? RENTAL_MODE.DAILY);
+  /*
+   * Như `seededRange` web: không bản nháp, không có cặp giờ từ trang xe và không phải dài hạn ⇒
+   * điền khoảng thuê (kèm CHẾ ĐỘ ngày/giờ) từ bộ nhớ khoảng thuê. Có cặp giờ từ trang xe thì chế
+   * độ là "theo ngày" — web không mang chế độ sang luồng.
+   */
+  useEffect(() => {
+    if (restoredDraft) return;
+    if (prefillRange(prefill).pickupAt) return;
+    if (defaultService === SERVICE_TYPE.LONG_TERM) return;
+    let alive = true;
+    void rememberedOrDefaultRentalRange().then((range) => {
+      if (!alive) return;
+      const quiet = { shouldDirty: false } as const;
+      if (!form.getValues('pickupAt') && range.pickupAt && range.returnAt) {
+        form.setValue('pickupAt', appWallClockToIso(range.pickupAt), quiet);
+        form.setValue('returnAt', appWallClockToIso(range.returnAt), quiet);
+      }
+      setRentalMode(range.mode);
+    });
+    return () => {
+      alive = false;
+    };
+    // Một lần khi mở luồng.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /*
    * `useWatch` chứ không phải `form.watch()`: bản kia trả về một HÀM mà React Compiler không
    * memo hoá an toàn được, nên nó bỏ tối ưu cho cả component. Cùng dữ liệu, không mất gì.
@@ -349,6 +456,15 @@ function RequestBookingBody({
    */
   const activeTerms = listing.rentalTerms?.find((term) => term.serviceType === serviceType) ?? null;
   const requiresTermsAcceptance = Boolean(activeTerms?.requireTermsAcceptance);
+  /**
+   * Ô đồng ý của màn Xem lại có phủ ĐIỀU KHOẢN CỦA CHỦ XE không — chủ xe CÓ điều khoản (công bố,
+   * hoặc bắt buộc đồng ý). Không có thì ô chỉ là lời đồng ý văn bản của XePrime, và lượt gửi KHÔNG
+   * mang `acceptedTerms` (server đóng băng nó cùng nội dung điều khoản của chủ xe).
+   */
+  const agreementCoversHostTerms = Boolean(activeTerms?.termsText) || requiresTermsAcceptance;
+  /** Khách bấm gửi khi chưa tick — câu lỗi nằm ngay dưới ô, tắt khi khách tick. */
+  const [agreementMissing, setAgreementMissing] = useState(false);
+  const watchedAccepted = useWatch({ control: form.control, name: 'acceptedTerms' });
 
   /*
    * Lịch bận chỉ có nghĩa với dịch vụ theo NGÀY. Dài hạn chưa có khung giờ cụ thể — khách nêu
@@ -365,6 +481,14 @@ function RequestBookingBody({
   const deliveryRequested = useWatch({ control: form.control, name: 'deliveryRequested' });
   const pickupAt = useWatch({ control: form.control, name: 'pickupAt' });
   const returnAt = useWatch({ control: form.control, name: 'returnAt' });
+  const vehicleProtectionSelected = useWatch({
+    control: form.control,
+    name: 'vehicleProtectionSelected',
+  });
+  const personalAccidentSelected = useWatch({
+    control: form.control,
+    name: 'personalAccidentSelected',
+  });
 
   const quoteParams = toQuoteParams({
     serviceType,
@@ -372,6 +496,8 @@ function RequestBookingBody({
     pickupAt,
     returnAt,
     routeType,
+    vehicleProtectionSelected,
+    personalAccidentSelected,
   });
   const quote = usePublicQuote(listing.id, quoteParams);
 
@@ -397,12 +523,7 @@ function RequestBookingBody({
    * `fees` chứ không ghép từng số: ghép tay là lỗi 24/09/2026 — dòng giảm hiện ra mà tổng và
    * tiền giữ chỗ vẫn nguyên giá vì chúng đọc từ một bảng phí khác.
    */
-  const quoteWithPromo = useMemo(() => {
-    const q = quote.data ?? null;
-    const promoFees = promo.applied?.fees;
-    if (!q || !promoFees) return q;
-    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
-  }, [quote.data, promo.applied]);
+  const quoteWithPromo = useQuoteWithPromo(quote.data, promo.applied?.fees);
 
   const promoField = (
     <PromoCodeField
@@ -421,6 +542,19 @@ function RequestBookingBody({
   const queryClient = useQueryClient();
   const meQuery = useCurrentUser();
   const me = meQuery.data;
+  /*
+   * Liên hệ mặc định = của TÀI KHOẢN, điền khi `/auth/me` về — chỉ vào ô còn TRỐNG, để không đè lên
+   * thứ khách đã sửa hay bản nháp vừa khôi phục. Cùng hành vi `RequestBookingFlow` web (#207).
+   */
+  useEffect(() => {
+    if (!me) return;
+    if (!form.getValues('customerName') && me.displayName) {
+      form.setValue('customerName', me.displayName, { shouldValidate: false });
+    }
+    if (!form.getValues('customerPhone') && me.phone) {
+      form.setValue('customerPhone', me.phone, { shouldValidate: false });
+    }
+  }, [me, form]);
   /*
    * Khách đang giữ những chuyến nào chưa trả — đọc NGAY khi mở luồng (web `useUnpaidHolds`). Đã
    * chạm trần thì server từ chối mọi yêu cầu mới (`HOLD_LIMIT_REACHED`), nên nói trước khi khách
@@ -450,7 +584,14 @@ function RequestBookingBody({
         requestedPickupDate,
         returnAt,
       }),
-    [serviceType, listing.vehicleType, packageMonths, pickupPreference, requestedPickupDate, returnAt],
+    [
+      serviceType,
+      listing.vehicleType,
+      packageMonths,
+      pickupPreference,
+      requestedPickupDate,
+      returnAt,
+    ],
   );
 
   /** Đang đọc bằng lái để quyết định có cần bước bằng lái — giữ nút ở trạng thái chờ. */
@@ -511,7 +652,12 @@ function RequestBookingBody({
   }, [licenceTrip, needsLicence, queryClient, requestSignIn, setStep]);
 
   /** Bằng lái ở bước bằng lái — nút Tiếp tục chỉ mở khi bằng đã hợp lệ cho chuyến này. */
-  const licenceQ = useDriverLicence({ enabled: state.step === REQUEST_STEP.LICENCE && Boolean(me) });
+  const licenceQ = useDriverLicence({
+    enabled:
+      (state.step === REQUEST_STEP.LICENCE ||
+        (state.step === REQUEST_STEP.REVIEW && needsLicence)) &&
+      Boolean(me),
+  });
   const licenceReady =
     licenceTrip !== null &&
     licenceQ.data !== undefined &&
@@ -610,118 +756,134 @@ function RequestBookingBody({
    */
   const submitLock = useRef(false);
 
-  const submitRequest = useCallback(() => {
+  const submitRequest = useCallback(async () => {
     setError(null);
-    // Xe bắt đồng ý điều khoản cho dịch vụ này mà khách chưa tick ⇒ dừng lại, như web.
-    if (requiresTermsAcceptance && !form.getValues('acceptedTerms')) {
-      setError(t('review.termsRequired'));
+    /*
+     * Ô đồng ý của màn Xem lại là BẮT BUỘC cho mọi chuyến (web #205); khi chủ xe có điều khoản
+     * riêng, CÙNG ô đó phủ luôn điều khoản ấy và server kiểm lại khi xe bắt buộc.
+     */
+    if (!form.getValues('acceptedTerms')) {
+      setAgreementMissing(true);
       return;
     }
     if (submitLock.current) return;
+    // Khoá TRƯỚC lượt chờ kiểm lời nhắn — cú bấm thứ hai trong lúc chờ không được lọt qua.
     submitLock.current = true;
-    flow.submit.mutate(toRequestBody(form.getValues(), promo.appliedCode), {
-      onSettled: () => {
-        submitLock.current = false;
-      },
-      /*
-       * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
-       * `rememberDeliveryAddress`.
-       *
-       * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau; ghi khi
-       * gửi hỏng thì nhớ đúng cái địa chỉ vừa bị từ chối.
-       */
-      onSuccess: (receipt) => {
-        // Đã gửi — bản nháp (nếu còn) không được dựng lại ở lần mở màn sau.
-        clearBookingDraft();
-        const v = form.getValues();
-        if (v.deliveryRequested && v.deliveryProvinceCode) {
-          rememberDeliveryAddress({
-            provinceCode: v.deliveryProvinceCode,
-            wardCode: v.deliveryWardCode,
-            addressLine: v.deliveryAddressLine,
-            latitude: v.deliveryLatitude,
-            longitude: v.deliveryLongitude,
-            placeId: v.deliveryPlaceId,
-            locationSource: v.deliveryLocationSource,
-          });
-        }
+    // Lời nhắn là ô nhập duy nhất của màn này — quá trần thì báo ngay dưới ô, không gửi.
+    let noteValid = false;
+    try {
+      // Lời nhắn + liên hệ là các ô nhập của màn này — sai thì báo ngay dưới ô, không gửi.
+      noteValid = await form.trigger(['note', 'customerName', 'customerPhone']);
+    } finally {
+      if (!noteValid) submitLock.current = false;
+    }
+    if (!noteValid) return;
+    flow.submit.mutate(
+      toRequestBody(form.getValues(), promo.appliedCode, agreementCoversHostTerms),
+      {
+        onSettled: () => {
+          submitLock.current = false;
+        },
         /*
-         * Chuyến được NHẬN NGAY ⇒ sang thẳng MÀN THANH TOÁN của chuyến (web: `paymentPath.trip`):
-         * chuyển khoản VietQR và ví điện tử ở cùng một chỗ, đồng hồ đang chạy. Luồng đặt xe được
-         * THAY bằng chi tiết chuyến rồi mới đẩy màn thanh toán lên trên, để nút lui (cả phím lui
-         * Android) về "Chi tiết chuyến" như web — không về một luồng đặt xe đã xong.
+         * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
+         * `rememberDeliveryAddress`.
+         *
+         * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau; ghi khi
+         * gửi hỏng thì nhớ đúng cái địa chỉ vừa bị từ chối.
          */
-        if (isAwaitingHoldReceipt(receipt)) {
-          router.replace(ROUTES.booking.detail(receipt.id));
-          router.push(ROUTES.booking.payment(receipt.id));
-        }
-      },
-      onError: (error) => {
-        if (flow.isHoldLimit(error)) {
-          setSubmitHitHoldLimit(true);
-          void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
-          return;
-        }
-        // Trùng yêu cầu là một NHÁNH riêng, không phải lỗi đỏ: khách đã gửi yêu cầu này rồi.
-        if (flow.isDuplicate(error)) {
-          setDuplicate(true);
-          return;
-        }
-        /*
-         * Tài khoản gian hàng, hoặc xe của chính gian hàng mình (ADR 0038 điều 6). Thay CẢ luồng
-         * bằng một màn kết quả giải thích, không phải một dòng lỗi đỏ dưới nút Gửi: người dùng
-         * không sửa được gì trong biểu mẫu để qua được cổng này.
-         */
-        const blockedReason = flow.blockedReason(error);
-        if (blockedReason) {
-          setBlocked(blockedReason);
-          return;
-        }
-        /*
-         * MÃ KHUYẾN MÃI bị SERVER từ chối ở cửa gửi (ADR 0046) — mã vừa hết lượt, hoặc điều kiện
-         * vừa đổi. Bỏ mã, làm mới báo giá, và KHÔNG hiện thêm một lỗi chung: giao diện đã nói
-         * đúng chỗ (ngay cạnh ô mã), còn một dòng đỏ thứ hai chỉ làm người ta đi tìm hai vấn đề.
-         */
-        if (promo.rejectByServer(error)) {
-          void quote.refetch();
-          setError(null);
-          return;
-        }
-        /*
-         * Phiên vừa hết hạn giữa chừng ⇒ mời đăng nhập lại, GIỮ NGUYÊN mọi thứ đã nhập; đăng nhập
-         * xong luồng tự đi tiếp tới bước Xác nhận để khách bấm gửi lại.
-         */
-        if (isUnauthenticated(error)) {
-          backToTrip();
-          requestSignIn();
-          return;
-        }
-        /*
-         * Server nói SĐT của tài khoản chưa xác minh trong khi `/auth/me` đang giữ bản cũ. Làm mới
-         * nó để cổng xác minh số của app hiện ra, rồi khách bấm gửi lại.
-         */
-        if (flow.isPhoneUnverified(error)) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+        onSuccess: (receipt) => {
+          // Đã gửi — bản nháp (nếu còn) không được dựng lại ở lần mở màn sau.
+          clearBookingDraft();
+          const v = form.getValues();
+          if (v.deliveryRequested && v.deliveryProvinceCode) {
+            rememberDeliveryAddress({
+              provinceCode: v.deliveryProvinceCode,
+              wardCode: v.deliveryWardCode,
+              addressLine: v.deliveryAddressLine,
+              latitude: v.deliveryLatitude,
+              longitude: v.deliveryLongitude,
+              placeId: v.deliveryPlaceId,
+              locationSource: v.deliveryLocationSource,
+            });
+          }
+          /*
+           * Chuyến được NHẬN NGAY ⇒ sang thẳng MÀN THANH TOÁN của chuyến (web: `paymentPath.trip`):
+           * chuyển khoản VietQR và ví điện tử ở cùng một chỗ, đồng hồ đang chạy. Luồng đặt xe được
+           * THAY bằng chi tiết chuyến rồi mới đẩy màn thanh toán lên trên, để nút lui (cả phím lui
+           * Android) về "Chi tiết chuyến" như web — không về một luồng đặt xe đã xong.
+           */
+          if (isAwaitingHoldReceipt(receipt)) {
+            router.replace(ROUTES.booking.detail(receipt.id));
+            router.push(ROUTES.booking.payment(receipt.id));
+          }
+        },
+        onError: (error) => {
+          if (flow.isHoldLimit(error)) {
+            setSubmitHitHoldLimit(true);
+            void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
+            return;
+          }
+          // Trùng yêu cầu là một NHÁNH riêng, không phải lỗi đỏ: khách đã gửi yêu cầu này rồi.
+          if (flow.isDuplicate(error)) {
+            setDuplicate(true);
+            return;
+          }
+          /*
+           * Tài khoản gian hàng, hoặc xe của chính gian hàng mình (ADR 0038 điều 6). Thay CẢ luồng
+           * bằng một màn kết quả giải thích, không phải một dòng lỗi đỏ dưới nút Gửi: người dùng
+           * không sửa được gì trong biểu mẫu để qua được cổng này.
+           */
+          const blockedReason = flow.blockedReason(error);
+          if (blockedReason) {
+            setBlocked(blockedReason);
+            return;
+          }
+          /*
+           * MÃ KHUYẾN MÃI bị SERVER từ chối ở cửa gửi (ADR 0046) — mã vừa hết lượt, hoặc điều kiện
+           * vừa đổi. Bỏ mã, làm mới báo giá, và KHÔNG hiện thêm một lỗi chung: giao diện đã nói
+           * đúng chỗ (ngay cạnh ô mã), còn một dòng đỏ thứ hai chỉ làm người ta đi tìm hai vấn đề.
+           */
+          if (promo.rejectByServer(error)) {
+            void quote.refetch();
+            setError(null);
+            return;
+          }
+          /*
+           * Phiên vừa hết hạn giữa chừng ⇒ mời đăng nhập lại, GIỮ NGUYÊN mọi thứ đã nhập; đăng nhập
+           * xong luồng tự đi tiếp tới bước Xác nhận để khách bấm gửi lại.
+           */
+          if (isUnauthenticated(error)) {
+            backToTrip();
+            requestSignIn();
+            return;
+          }
+          /*
+           * Server nói SĐT của tài khoản chưa xác minh trong khi `/auth/me` đang giữ bản cũ. Làm mới
+           * nó để cổng xác minh số của app hiện ra, rồi khách bấm gửi lại.
+           */
+          if (flow.isPhoneUnverified(error)) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+            setError(errorMessage(error));
+            return;
+          }
+          /*
+           * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
+           * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI.
+           */
+          if (flow.isDriverLicenceGate(error)) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
+            setError(null);
+            setStep(REQUEST_STEP.LICENCE);
+            return;
+          }
           setError(errorMessage(error));
-          return;
-        }
-        /*
-         * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
-         * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI.
-         */
-        if (flow.isDriverLicenceGate(error)) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
-          setError(null);
-          setStep(REQUEST_STEP.LICENCE);
-          return;
-        }
-        setError(errorMessage(error));
+        },
       },
-    });
+    );
   }, [
     backToTrip,
     errorMessage,
-    requiresTermsAcceptance,
+    agreementCoversHostTerms,
     flow,
     form,
     promo,
@@ -733,7 +895,6 @@ function RequestBookingBody({
     setDuplicate,
     setError,
     setStep,
-    t,
   ]);
 
   /*
@@ -763,6 +924,44 @@ function RequestBookingBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeTick]);
 
+  /*
+   * Mã đang áp ở thẻ đặt xe (`prefill.promoCode` web) — áp MỘT lần khi chưa có bản nháp; bản nháp
+   * có mã riêng ở lượt quay lại sau đăng nhập.
+   */
+  /*
+   * TỰ ĐI TIẾP KHI MỞ — thẻ đặt xe đã đủ chuyến (`prefill.autoContinue` web): trong lúc chạy, màn
+   * hiện trạng thái chờ (`flow.preparing`) thay cho biểu mẫu, như hộp đặt xe web. Chạy MỘT lần sau
+   * khi `/auth/me` đã rõ; không bao giờ GỬI (ADR 0060). Bản nháp chờ đăng nhập có đường riêng.
+   */
+  const [preparing, setPreparing] = useState(
+    () => prefill?.autoContinue === '1' && restoredDraft === null,
+  );
+  const autoContinueStarted = useRef(false);
+  useEffect(() => {
+    if (!preparing || autoContinueStarted.current || meQuery.isPending) return;
+    autoContinueStarted.current = true;
+    void Promise.resolve()
+      .then(continueFromTrip)
+      .finally(() => setPreparing(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preparing, meQuery.isPending]);
+
+  /*
+   * Mã đang áp ở thẻ đặt xe (`prefill.promoCode`) — như web: chỉ xét khi KHÔNG chờ đăng nhập và
+   * KHÔNG đang tự đi tiếp, để lượt xem trước mã chạy dưới đúng phiên khách (ADR 0046 điều 5).
+   */
+  const promoToEvaluate = useRef<string | null>(
+    restoredDraft ? null : prefill?.promoCode?.trim() || null,
+  );
+  useEffect(() => {
+    if (awaitingAuth || preparing || !promoTrip) return;
+    const code = promoToEvaluate.current;
+    if (!code) return;
+    promoToEvaluate.current = null;
+    if (!promo.appliedCode) promo.apply(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingAuth, preparing, promoTrip !== null]);
+
   const closeFlow = useCallback(() => {
     clearBookingDraft();
     goBackOr(router, ROUTES.explore.listingDetail(listing.id));
@@ -775,6 +974,8 @@ function RequestBookingBody({
     submitHitHoldLimit,
   });
 
+  if (preparing) return <ScreenLoading label={t('preparing')} />;
+
   /** Các nhánh KẾT THÚC dùng chung một màn kết quả — không nhánh nào là lỗi đỏ. */
   if (holdLimitBlocked || state.blocked || state.duplicate || state.step === REQUEST_STEP.DONE) {
     return (
@@ -785,6 +986,7 @@ function RequestBookingBody({
         duplicate={state.duplicate}
         receipt={state.receipt}
         values={form.getValues()}
+        rentalMode={rentalMode}
         listing={listing}
         quote={quoteWithPromo}
         onClose={closeFlow}
@@ -793,7 +995,24 @@ function RequestBookingBody({
     );
   }
 
-  const stepIndex = state.step === REQUEST_STEP.REVIEW ? REVIEW_STEP_INDEX : TRIP_STEP_INDEX;
+  /**
+   * Chuyến có khoản thu trước không — `fees.holdAmount` của báo giá SERVER. Chưa có báo giá thì
+   * coi là CÓ (đa số chuyến có), như web: thanh không co lại rồi giãn ra khi báo giá về.
+   */
+  const hasHoldStage = quote.data ? quote.data.breakdown.fees?.holdAmount != null : true;
+  /*
+   * Câu "chuyện xảy ra sau khi gửi" thì KHÁC thanh tiến trình, như web (`quoteHasHold`): chỉ hứa
+   * bước thanh toán khi báo giá THẬT SỰ có khoản giữ chỗ — chưa có báo giá ⇒ `general`.
+   */
+  const quoteHasHold = quote.data?.breakdown.fees?.holdAmount != null;
+  /** Chuyện xảy ra sau khi gửi — "Đặt ngay" do server xem trước (`quote.autoAccept`). */
+  const nextStep: BookingReviewNextStep = quote.data?.autoAccept?.eligible
+    ? quoteHasHold
+      ? 'instantHold'
+      : 'instantConfirmed'
+    : quoteHasHold
+      ? 'hold'
+      : 'general';
 
   /*
    * Khối DÍNH ĐÁY (tiền + lỗi + nút) — bản native của `.dock` bên web: khách đổi lựa chọn ở nửa
@@ -805,7 +1024,11 @@ function RequestBookingBody({
   const footer =
     showDock || state.error || state.step === REQUEST_STEP.LICENCE ? (
       <>
-        {showDock ? (
+        {/*
+          Màn Xem lại có HAI THẺ TIỀN ngay trong trang (web develop `variant="review"`) — thanh tổng
+          dính đáy ở bước đó chỉ nói lại một con số đã có, nên dock chỉ còn hàng nút.
+        */}
+        {showDock && state.step !== REQUEST_STEP.REVIEW ? (
           <BookingPriceSummary
             listing={listing}
             serviceType={serviceType}
@@ -836,7 +1059,7 @@ function RequestBookingBody({
         ) : null}
 
         {state.step === REQUEST_STEP.TRIP ? (
-          <Button
+          <Button variant="gradient"
             label={flow.availability.isPending ? t('actions.checking') : t('actions.continue')}
             icon="arrow-forward"
             size="lg"
@@ -846,7 +1069,7 @@ function RequestBookingBody({
         ) : null}
 
         {state.step === REQUEST_STEP.LICENCE ? (
-          <Button
+          <Button variant="gradient"
             label={t('actions.continue')}
             icon="arrow-forward"
             size="lg"
@@ -876,12 +1099,12 @@ function RequestBookingBody({
               rộng hơn hẳn, nên "Gửi yêu cầu thuê" cần trọn phần còn lại của hàng.
             */}
             <YStack f={1}>
-              <Button
-                label={t('actions.submit')}
+              <Button variant="gradient"
+                label={t('reviewPage.submit.cta')}
                 icon="send-outline"
                 size="lg"
                 loading={flow.submit.isPending}
-                onPress={submitRequest}
+                onPress={() => void submitRequest()}
               />
             </YStack>
           </XStack>
@@ -909,7 +1132,10 @@ function RequestBookingBody({
             packageMonths={packageMonths}
           />
 
-          <StepIndicator current={stepIndex} />
+          <BookingJourney
+            current={state.step === REQUEST_STEP.REVIEW ? 'request' : 'trip'}
+            hasHoldStage={hasHoldStage}
+          />
 
           {state.step === REQUEST_STEP.TRIP ? (
             <RequestTripStep
@@ -943,15 +1169,37 @@ function RequestBookingBody({
                   ? {
                       name: me.displayName,
                       phone: me.phone ?? null,
+                      email: me.email ?? null,
                       verified: Boolean(me.phoneVerified),
                     }
                   : null
               }
+              licence={{ required: needsLicence, current: licenceQ.data?.verified ?? null }}
+              agreementCoversHostTerms={agreementCoversHostTerms}
+              nextStep={nextStep}
+              agreementMissing={agreementMissing && !watchedAccepted}
+              onEdit={backToTrip}
+              disabled={flow.submit.isPending}
+              costs={
+                <BookingPriceSummary
+                  listing={listing}
+                  serviceType={serviceType}
+                  routeType={routeType}
+                  quote={quoteWithPromo}
+                  quoteLoading={quote.isPending && quoteParams !== null}
+                  hasSelection={quoteParams !== null}
+                  isDelivery={deliveryRequested}
+                  variant="review"
+                  expanded
+                  onExpandedChange={setPriceExpanded}
+                  promoSlot={promoField}
+                />
+              }
             />
           ) : null}
 
-          {/* Chung một instance "chi tiết" cho cả hai bước — cùng cách web ghép `priceDetail`. */}
-          {state.step === REQUEST_STEP.TRIP || state.step === REQUEST_STEP.REVIEW ? (
+          {/* Bảng "chi tiết" của bước Chuyến đi — bước Xem lại có hai thẻ tiền riêng (`costs`). */}
+          {state.step === REQUEST_STEP.TRIP ? (
             <BookingPriceSummary
               listing={listing}
               serviceType={serviceType}
@@ -969,84 +1217,5 @@ function RequestBookingBody({
         </YStack>
       </Screen>
     </>
-  );
-}
-
-/** Đường kính viên số của thanh bước — vừa đủ chứa một chữ số hoặc dấu tích ở cỡ nhãn. */
-const STEP_DOT = 24;
-
-/** Vị trí hai bước NHÌN THẤY; bước bằng lái không có ô riêng vì chỉ một phần khách đi qua nó. */
-const TRIP_STEP_INDEX = 1;
-const REVIEW_STEP_INDEX = 2;
-
-/** Thanh tiến trình hai bước — bước đã qua hiện DẤU TÍCH thay cho số. */
-function StepIndicator({ current }: { current: number }) {
-  const t = useTranslations('BookingRequests.flow.steps');
-  const labels = [t('trip'), t('review')];
-
-  return (
-    <XStack
-      gap={space.sm}
-      ai="center"
-      px={space.md}
-      py={space.sm}
-      br={radius.lg}
-      bw={1}
-      bc={colors.borderSubtle}
-      bg={colors.surface}
-    >
-      {labels.map((label, index) => {
-        const step = index + 1;
-        const active = step <= current;
-        const done = step < current;
-
-        return (
-          <Fragment key={label}>
-            {index > 0 ? (
-              /* Vạch nối CHƯA qua dùng bậc viền đậm, cùng mức với `VehicleWizardBar` — nó nói
-                 còn mấy bước nữa nên phải liếc là thấy, không phải một đường ngăn cách. */
-              <YStack
-                f={1}
-                h={2}
-                br={radius.pill}
-                bg={active ? colors.primary : colors.borderInput}
-              />
-            ) : null}
-            <XStack ai="center" gap={space.xs}>
-              <YStack
-                w={STEP_DOT}
-                h={STEP_DOT}
-                br={radius.pill}
-                ai="center"
-                jc="center"
-                bw={1}
-                bc={done ? colors.success : active ? colors.primary : colors.border}
-                bg={done ? colors.successSurface : active ? colors.primary : colors.surfaceMuted}
-              >
-                {done ? (
-                  <Ionicons name="checkmark" size={iconSize.xs} color={colors.success} />
-                ) : (
-                  <Text
-                    col={active ? colors.onPrimary : colors.textMuted}
-                    fos={fontSize.label}
-                    fow={fontWeight.bold}
-                  >
-                    {step}
-                  </Text>
-                )}
-              </YStack>
-              <Text
-                col={active ? colors.text : colors.textMuted}
-                fos={fontSize.bodySm}
-                fow={active ? fontWeight.semibold : fontWeight.regular}
-                numberOfLines={1}
-              >
-                {label}
-              </Text>
-            </XStack>
-          </Fragment>
-        );
-      })}
-    </XStack>
   );
 }

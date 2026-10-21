@@ -4,7 +4,8 @@ import { MARKET_PRICE_BASIS } from '@xeprime/domain';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { MarketPriceParams } from '@/api/vehicles/api';
 import { useMarketPriceSuggestion } from '../hooks/use-market-price';
 
@@ -35,6 +36,7 @@ interface Props extends MarketPriceParams {
  *     nên không có trạng thái lỗi nào hiện ra.
  */
 export function MarketPriceHint({ provinceName, onApply, ...params }: Props) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.marketPrice');
   const fmt = useAppFormat();
   const { data, isLoading } = useMarketPriceSuggestion(params);

@@ -12,9 +12,14 @@ import { CardAccent } from '@/components/ui/CardAccent';
 import { IconLine } from '@/components/ui/IconLine';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { DriverTrip } from '../api';
-import { DrivingTripBookingBadge, DrivingTripStatusBadge, drivingTripColor } from './DrivingTripTags';
+import {
+  DrivingTripBookingBadge,
+  DrivingTripStatusBadge,
+  drivingTripColor,
+} from './DrivingTripTags';
 import { useAcceptDriverTrip, useDeclineDriverTrip } from '../hooks';
 
 /**
@@ -30,6 +35,7 @@ function DrivingTripCardImpl({
   trip: DriverTrip;
   onPress: (trip: DriverTrip) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Driving.trips');
   const tDetail = useTranslations('Driving.detail');
   const tToast = useTranslations('Driving.toast');
@@ -76,7 +82,9 @@ function DrivingTripCardImpl({
                 <IconLine icon="time-outline">
                   {fmt.dateTimeRange(trip.pickupAt, trip.returnAt)}
                 </IconLine>
-                <IconLine icon="briefcase-outline">{t('for', { name: trip.employer.name })}</IconLine>
+                <IconLine icon="briefcase-outline">
+                  {t('for', { name: trip.employer.name })}
+                </IconLine>
                 <IconLine icon="person-outline">
                   {trip.customer.phone
                     ? t('customerWithPhone', {

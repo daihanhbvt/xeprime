@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useUnpaidHolds } from '../hooks/use-trips';
 import { UnpaidHoldList } from './UnpaidHoldList';
 
@@ -14,6 +15,7 @@ import { UnpaidHoldList } from './UnpaidHoldList';
  * NGAY. Tải hỏng hoặc đang tải thì im lặng — danh sách chuyến ngay dưới vẫn có đủ từng chuyến.
  */
 export function UnpaidHoldsReminder() {
+  const colors = useColors();
   const t = useTranslations('Trips.unpaid');
   const unpaid = useUnpaidHolds();
   const data = unpaid.data;
@@ -39,7 +41,12 @@ export function UnpaidHoldsReminder() {
           color={tone}
         />
         <YStack f={1} gap={2}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} accessibilityRole="header">
+          <Text
+            col={colors.text}
+            fos={fontSize.body}
+            fow={fontWeight.bold}
+            accessibilityRole="header"
+          >
             {atLimit
               ? t('limitTitle', { limit: data.limit })
               : t('reminderTitle', { count: data.items.length })}

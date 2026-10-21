@@ -9,7 +9,8 @@ import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { Href } from 'expo-router';
 
 type StepKey = 'profile' | 'vehicle' | 'review';
@@ -46,6 +47,7 @@ const RAIL_WIDTH = 2;
  * quan hệ đó, và nó đổi sang màu xanh ở phần đã đi qua nên nhìn một cái là biết còn mấy bước.
  */
 export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | undefined }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.onboarding');
   const { tenant } = useTenantScope();
   const { has } = usePermissions();
@@ -181,6 +183,7 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
  * việc, cái cần đọc là kết quả.
  */
 function StepDisc({ index, state }: { index: number; state: StepState }) {
+  const colors = useColors();
   if (state === 'done') {
     return <IconDisc icon="checkmark" tone={colors.success} size={STEP_DISC} filled />;
   }

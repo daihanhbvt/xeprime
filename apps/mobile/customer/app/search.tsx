@@ -16,6 +16,7 @@ export default function SearchRoute() {
     pickupAt?: string;
     returnAt?: string;
     hourly?: string;
+    bodyType?: string;
   }>();
 
   return (
@@ -28,6 +29,7 @@ export default function SearchRoute() {
         ...(params.pickupAt ? { pickupAt: params.pickupAt } : {}),
         ...(params.returnAt ? { returnAt: params.returnAt } : {}),
         ...(params.hourly === '1' ? { hourly: true } : {}),
+        ...(params.bodyType ? { bodyType: params.bodyType.split(',').filter(Boolean) } : {}),
       }}
       onBack={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.explore.home()))}
     />

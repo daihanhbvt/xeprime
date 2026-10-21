@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, TextInput } from 'react-native';
 import { XStack } from 'tamagui';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Ô tìm kiếm KHÔNG gắn form — cho những danh sách lọc ở server.
@@ -36,6 +37,7 @@ export function SearchInput({
   onBlur?: () => void;
   maxLength?: number;
 }) {
+  const colors = useColors();
   const inputRef = useRef<TextInput>(null);
   const boxed = variant === 'boxed';
 

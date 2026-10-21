@@ -1,5 +1,8 @@
 import { XP_TOKENS, toPx, type XpTokenName } from '@xeprime/ui';
 
+/** Hai chế độ giao diện — cùng mô hình Sáng · Tối với web (#203). */
+export type ColorScheme = 'light' | 'dark';
+
 /**
  * Cầu nối giữa design token dùng chung (`@xeprime/ui`) và StyleSheet của React Native.
  *
@@ -21,8 +24,56 @@ const CSS_FUNCTION = /^(color-mix|linear-gradient|calc)\(/;
  * Vòng lặp có trần vì một bí danh trỏ vòng lại chính nó sẽ treo Metro lúc nạp module — hỏng
  * ở đây là hỏng trước khi màn hình đầu tiên kịp render, nên phải nói rõ đang hỏng cái gì.
  */
-function resolve(name: XpTokenName): string {
-  let value: string = XP_TOKENS[name];
+/**
+ * Bảng màu TỐI của app native — bản riêng của app, CÙNG giá trị với `XP_DARK_TOKENS` của web
+ * (`apps/web/src/styles/theme.ts`, #203/#207). Web giữ bảng tối ở file riêng của nó (không ở
+ * `@xeprime/ui`), nên app cũng giữ bản của mình; đổi một màu tối thì sửa CẢ HAI.
+ *
+ * Chỉ các token bề mặt · chữ · viền · nền nhạt được đảo; token không có ở đây giữ giá trị sáng — đúng
+ * cách khối `[data-theme="dark"]` của `tokens.css` hoạt động. Giá trị `var(--xp-…)` đi qua cùng
+ * bộ gỡ bí danh của `resolve()`.
+ */
+const DARK_TOKENS: Partial<Record<XpTokenName, string>> = {
+  'color-bg': '#080c10',
+  'color-bg-container': '#0f1620',
+  'color-bg-elevated': '#161f2c',
+  'color-bg-muted': '#1a2230',
+  'color-bg-selected': 'rgba(233, 172, 41, 0.15)',
+  'color-bg-hover': 'rgba(255, 255, 255, 0.06)',
+  'color-bg-active': 'rgba(255, 255, 255, 0.1)',
+  'color-primary-subtle': 'rgba(233, 172, 41, 0.12)',
+  'color-primary-light': 'rgba(233, 172, 41, 0.16)',
+  'color-primary-muted': '#946e1f',
+  'color-success-bg': 'rgba(3, 152, 85, 0.16)',
+  'color-success-subtle': 'rgba(3, 152, 85, 0.08)',
+  'color-warning-bg': 'rgba(224, 123, 38, 0.16)',
+  'color-error-bg': 'rgba(217, 45, 32, 0.16)',
+  'color-info-bg': 'rgba(37, 99, 235, 0.18)',
+  'color-processing-bg': 'rgba(14, 116, 144, 0.2)',
+  'color-neutral': '#d5d7da',
+  'color-neutral-bg': '#1a2230',
+  'color-price': 'var(--xp-color-primary)',
+  'color-primary-border': '#946e1f',
+  'color-success-border': 'rgba(108, 233, 166, 0.45)',
+  'color-warning-subtle': 'rgba(247, 144, 9, 0.1)',
+  'color-text': '#ffffff',
+  'color-text-secondary': '#d5d7da',
+  'color-text-tertiary': '#a4a7ae',
+  'color-text-placeholder': '#717680',
+  'color-text-disabled': 'rgba(255, 255, 255, 0.25)',
+  'color-text-inverse': '#0e0f12',
+  'color-border': '#333741',
+  'color-border-strong': '#414651',
+  'color-border-subtle': '#1f242f',
+};
+
+/** Giá trị gốc của một token ở một chế độ — bản tối trước, thiếu thì rơi về bản sáng. */
+function rawToken(name: XpTokenName, scheme: ColorScheme): string {
+  return (scheme === 'dark' ? DARK_TOKENS[name] : undefined) ?? XP_TOKENS[name];
+}
+
+function resolve(name: XpTokenName, scheme: ColorScheme = 'light'): string {
+  let value: string = rawToken(name, scheme);
 
   for (let depth = 0; depth < 8; depth += 1) {
     const alias = /^var\(--xp-([a-z0-9-]+)\)$/.exec(value);
@@ -39,7 +90,7 @@ function resolve(name: XpTokenName): string {
     if (!(target in XP_TOKENS)) {
       throw new Error(`Token '${name}' trỏ tới '--xp-${target}' không tồn tại.`);
     }
-    value = XP_TOKENS[target];
+    value = rawToken(target, scheme);
   }
 
   throw new Error(`Token '${name}' có chuỗi bí danh vòng lặp.`);
@@ -52,67 +103,76 @@ function px(name: XpTokenName): number {
 /**
  * Bảng màu của app native.
  *
- * CHỈ có palette sáng, nên `app.json` khoá `userInterfaceStyle: "light"`. Để "automatic" mà
- * không có palette tối thì máy đang ở dark mode sẽ render chữ tối trên nền tối. Mở lại
- * "automatic" cùng lúc với việc bổ sung palette tối ở `@xeprime/ui`, không sớm hơn.
+ * Hai palette — sáng (`XP_TOKENS`) và tối (`DARK_TOKENS`) — dựng sẵn cả hai trong `PALETTES`;
+ * component chọn bảng theo giao diện hiện hành qua `useColors()`. `app.json` để
+ * `userInterfaceStyle: "automatic"` để hệ thống (thanh trạng thái, bàn phím) đi cùng.
  */
-export const colors = {
-  background: resolve('color-bg'),
-  surface: resolve('color-bg-container'),
-  surfaceMuted: resolve('color-bg-muted'),
-  border: resolve('color-border'),
-  borderInput: resolve('color-border-strong'),
-  text: resolve('color-text'),
-  textMuted: resolve('color-text-secondary'),
-  placeholder: resolve('color-text-tertiary'),
-  textDisabled: resolve('color-text-disabled'),
-  primary: resolve('color-primary'),
-  /** Chữ trên nền gold là ĐEN, không phải trắng — gold sáng không đỡ nổi chữ trắng. */
-  onPrimary: resolve('color-primary-contrast'),
-  danger: resolve('color-error'),
-  dangerSurface: resolve('color-error-bg'),
-  primaryHover: resolve('color-primary-hover'),
-  primaryActive: resolve('color-primary-active'),
-  primaryLight: resolve('color-primary-light'),
-  surfaceElevated: resolve('color-bg-elevated'),
-  surfaceSelected: resolve('color-bg-selected'),
-  /** Lớp phủ sau modal/sheet. */
-  overlay: resolve('color-bg-overlay'),
-  borderSubtle: resolve('color-border-subtle'),
-  textInverse: resolve('color-text-inverse'),
-  link: resolve('color-link'),
-  success: resolve('color-success'),
-  successSurface: resolve('color-success-bg'),
-  warning: resolve('color-warning'),
-  warningSurface: resolve('color-warning-bg'),
-  info: resolve('color-info'),
-  infoSurface: resolve('color-info-bg'),
-  /**
-   * Bậc "đang chạy" — TÁCH khỏi `info`, không phải một sắc thái của nó.
-   *
-   * `STATUS_COLOR.PROCESSING` (đơn `active`) và `INFO` (đơn `confirmed`) là hai việc khác nhau
-   * của cùng một chiếc xe. Bảng `statusTone()` của viên nhãn từng gộp cả hai vào xanh dương vì
-   * nền sáng chưa có bậc thứ năm; nay `@xeprime/ui` đã có, và trên lưới lịch thì khác biệt đó là
-   * thứ DUY NHẤT nhìn thấy được giữa "đã chốt lịch" và "khách đang cầm xe đi".
-   */
-  processing: resolve('color-processing'),
-  processingSurface: resolve('color-processing-bg'),
-  /** Giá thuê có token riêng — web tô giá bằng chính màu này, không phải màu chữ thường. */
-  price: resolve('color-price'),
-  /**
-   * Hai vai màu của LỊCH — không phải màu trạng thái, và cố ý không mượn màu trạng thái.
-   *
-   * Bảo dưỡng mang `STATUS_COLOR.SPECIAL` và khoá xe mang `NEUTRAL` trong `@xeprime/types`; nếu
-   * lưới đọc thẳng hai vai đó qua `statusTone()` thì bảo dưỡng ra GOLD (bản native chưa có token
-   * tím nên `SPECIAL` rơi về nhấn thương hiệu) và trùng luôn với nền cột hôm nay, còn khoá xe ra
-   * xám phẳng. Web không làm vậy: nó có hai token riêng cho đúng hai loại này, và đó là lý do một
-   * thanh bảo dưỡng trên web tím còn trên app thì vàng.
-   */
-  eventMaintenance: resolve('color-event-maintenance'),
-  eventBlocked: resolve('color-event-blocked'),
-  discount: resolve('color-discount'),
-  onDiscount: resolve('color-discount-contrast'),
-} as const;
+function buildColors(scheme: ColorScheme) {
+  const r = (name: XpTokenName) => resolve(name, scheme);
+  return {
+    background: r('color-bg'),
+    surface: r('color-bg-container'),
+    surfaceMuted: r('color-bg-muted'),
+    border: r('color-border'),
+    borderInput: r('color-border-strong'),
+    text: r('color-text'),
+    textMuted: r('color-text-secondary'),
+    placeholder: r('color-text-tertiary'),
+    textDisabled: r('color-text-disabled'),
+    primary: r('color-primary'),
+    /** Chữ trên nền gold là ĐEN, không phải trắng — gold sáng không đỡ nổi chữ trắng. */
+    onPrimary: r('color-primary-contrast'),
+    danger: r('color-error'),
+    dangerSurface: r('color-error-bg'),
+    primaryHover: r('color-primary-hover'),
+    primaryActive: r('color-primary-active'),
+    primaryLight: r('color-primary-light'),
+    /** Nền gold nhạt nhất (ô avatar, mảng nền) — v2 BG/primary-25. */
+    primarySubtle: r('color-primary-subtle'),
+    /** Chữ gold đậm trên nền nhạt (chữ cái avatar). */
+    primaryStrong: r('color-primary-strong'),
+    /** Nền gold nhạt (avatar người đánh giá) — v2 BG/primary-100. */
+    primaryMuted: r('color-primary-muted'),
+    surfaceElevated: r('color-bg-elevated'),
+    surfaceSelected: r('color-bg-selected'),
+    /** Lớp phủ sau modal/sheet. */
+    overlay: r('color-bg-overlay'),
+    borderSubtle: r('color-border-subtle'),
+    textInverse: r('color-text-inverse'),
+    link: r('color-link'),
+    success: r('color-success'),
+    successSurface: r('color-success-bg'),
+    warning: r('color-warning'),
+    warningSurface: r('color-warning-bg'),
+    info: r('color-info'),
+    infoSurface: r('color-info-bg'),
+    /**
+     * Bậc "đang chạy" — TÁCH khỏi `info`, không phải một sắc thái của nó.
+     *
+     * `STATUS_COLOR.PROCESSING` (đơn `active`) và `INFO` (đơn `confirmed`) là hai việc khác nhau
+     * của cùng một chiếc xe. Bảng `statusTone()` của viên nhãn từng gộp cả hai vào xanh dương vì
+     * nền sáng chưa có bậc thứ năm; nay `@xeprime/ui` đã có, và trên lưới lịch thì khác biệt đó là
+     * thứ DUY NHẤT nhìn thấy được giữa "đã chốt lịch" và "khách đang cầm xe đi".
+     */
+    processing: r('color-processing'),
+    processingSurface: r('color-processing-bg'),
+    /** Giá thuê có token riêng — web tô giá bằng chính màu này, không phải màu chữ thường. */
+    price: r('color-price'),
+    /**
+     * Hai vai màu của LỊCH — không phải màu trạng thái, và cố ý không mượn màu trạng thái.
+     *
+     * Bảo dưỡng mang `STATUS_COLOR.SPECIAL` và khoá xe mang `NEUTRAL` trong `@xeprime/types`; nếu
+     * lưới đọc thẳng hai vai đó qua `statusTone()` thì bảo dưỡng ra GOLD (bản native chưa có token
+     * tím nên `SPECIAL` rơi về nhấn thương hiệu) và trùng luôn với nền cột hôm nay, còn khoá xe ra
+     * xám phẳng. Web không làm vậy: nó có hai token riêng cho đúng hai loại này, và đó là lý do một
+     * thanh bảo dưỡng trên web tím còn trên app thì vàng.
+     */
+    eventMaintenance: r('color-event-maintenance'),
+    eventBlocked: r('color-event-blocked'),
+    discount: r('color-discount'),
+    onDiscount: r('color-discount-contrast'),
+  } as const;
+}
 
 /**
  * Màu BIỂU ĐỒ — cùng token với web (`chart-theme.ts` đọc `var(--xp-color-viz-*)`).
@@ -123,13 +183,29 @@ export const colors = {
  * và app ra hai bộ màu khác hẳn, đúng ở bề mặt người dùng mở cả hai lên để đối chiếu; và một cột
  * chi phí bình thường bị mượn luôn sắc thái cảnh báo.
  */
-export const chartColors = {
-  revenue: resolve('color-viz-revenue'),
-  cost: resolve('color-viz-cost'),
-  profit: resolve('color-viz-profit'),
-  grid: resolve('color-viz-grid'),
-  axis: resolve('color-viz-axis'),
+function buildChartColors(scheme: ColorScheme) {
+  const r = (name: XpTokenName) => resolve(name, scheme);
+  return {
+    revenue: r('color-viz-revenue'),
+    cost: r('color-viz-cost'),
+    profit: r('color-viz-profit'),
+    grid: r('color-viz-grid'),
+    axis: r('color-viz-axis'),
+  } as const;
+}
+
+/**
+ * HAI bảng màu dựng sẵn lúc nạp module — đổi giao diện chỉ là chọn bảng kia, không tính lại gì.
+ * Component đọc qua `useColors()` / `useChartColors()` (`theme/ThemeProvider.tsx`) để đổi màu
+ * TỨC THÌ khi khách bấm đổi giao diện, như web đổi `data-theme`.
+ */
+export const PALETTES = {
+  light: { colors: buildColors('light'), chartColors: buildChartColors('light') },
+  dark: { colors: buildColors('dark'), chartColors: buildChartColors('dark') },
 } as const;
+
+export type AppColors = ReturnType<typeof buildColors>;
+export type AppChartColors = ReturnType<typeof buildChartColors>;
 
 /**
  * Bảng màu NỀN TỐI của vỏ khu quản lý — sidebar và thanh trên của nó.
@@ -158,6 +234,54 @@ export const sidebar = {
   selectedBg: '#382e19',
   muted: '#9b9891',
   border: '#3a3732',
+} as const;
+
+/**
+ * Màu của BỀ MẶT CHỢ v2 (trang chủ) — nhóm "Design v2" của `@xeprime/ui` (ADR 0062).
+ *
+ * Tách khỏi `colors` vì đây là màu của một bề mặt marketing (dải đối tác nền đen, thẻ điểm đến
+ * viền vàng), không phải màu giao diện chung của app: đưa vào `colors` là mời màn khác mượn.
+ */
+export const market = {
+  inverse: resolve('color-bg-inverse'),
+  onDark: resolve('color-text-on-dark'),
+  onDarkMuted: resolve('color-text-on-dark-muted'),
+  accent: resolve('color-primary-accent'),
+  /** Vành avatar gian hàng đã xác thực trên thẻ trang chủ. */
+  glow: resolve('color-primary-glow'),
+  destinationBorder: resolve('color-destination-border'),
+} as const;
+
+/** Một gradient CSS `linear-gradient(<deg>, <màu> <vị trí>%, …)` dịch sang `expo-linear-gradient`. */
+export interface NativeGradient {
+  colors: [string, string, ...string[]];
+  locations: [number, number, ...number[]];
+}
+
+/**
+ * Đọc điểm màu của một token gradient — `resolve()` cố ý ném với hàm CSS, nên gradient có cửa
+ * riêng thay vì một bảng hex chép tay: đổi điểm màu ở `@xeprime/ui` là app đổi theo.
+ *
+ * Chỉ đọc MÀU và VỊ TRÍ; hướng là việc của nơi vẽ (mọi gradient v2 dùng ở app là 90deg ⇒
+ * trái → phải).
+ */
+export function gradient(name: XpTokenName): NativeGradient {
+  const value: string = XP_TOKENS[name];
+  const stops = [...value.matchAll(/(#[0-9a-f]{3,8}|rgba?\([^)]+\))\s+(-?[\d.]+)%/gi)].map(
+    (match) => ({ color: match[1] as string, at: Number(match[2]) / 100 }),
+  );
+  if (stops.length < 2) throw new Error(`Token '${name}' không phải linear-gradient đọc được.`);
+  return {
+    colors: stops.map((stop) => stop.color) as NativeGradient['colors'],
+    locations: stops.map((stop) =>
+      Math.min(Math.max(stop.at, 0), 1),
+    ) as NativeGradient['locations'],
+  };
+}
+
+export const gradients = {
+  /** Nút chính v2 ("Đăng ký ngay", "Khám phá"). */
+  primary: gradient('gradient-primary'),
 } as const;
 
 /** Thang khoảng cách Figma: 4 · 8 · 16 · 24 · 32, không có giá trị nào khác. */
@@ -262,3 +386,15 @@ export const sizing = {
    */
   compactBox: 32,
 } as const;
+
+/**
+ * Chiều cao VẼ RA của `Button` theo cỡ — khớp web: `sm` = AntD `controlHeight` (32),
+ * `md` = `controlHeightLG` (40, ~ `CtaButton` md 42), `lg` = `CtaButton` lg (44).
+ * Vùng chạm vẫn đủ `touchTarget` nhờ `hitSlop` (xem `buttonHitSlop`).
+ */
+export const buttonHeight = { sm: px('control-height'), md: px('control-height-lg'), lg: px('touch-target-min') } as const;
+
+/** `hitSlop` dọc bù cho nút thấp hơn `touchTarget`, để vùng chạm luôn ≥ sàn chạm. */
+export function buttonHitSlop(height: number): number {
+  return Math.max(0, Math.ceil((sizing.touchTarget - height) / 2));
+}

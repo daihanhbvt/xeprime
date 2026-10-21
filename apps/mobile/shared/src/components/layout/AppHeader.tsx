@@ -6,7 +6,8 @@ import { useTranslations } from 'use-intl';
 import { images, logoWidth } from '@/assets';
 import { IconButton } from '@/components/ui/IconButton';
 import { APP_NAME } from '@/lib/app-name';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const APP_HEADER_HEIGHT = 56;
 /** Nhãn cạnh tiêu đề chiếm tối đa ngần này bề ngang hàng tiêu đề — phần còn lại luôn để cho tên. */
@@ -117,6 +118,7 @@ export function AppHeader({
   showTitle = true,
   flushTop = false,
 }: AppHeaderProps) {
+  const colors = useColors();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
   const overlay = variant === 'overlay';
@@ -235,8 +237,22 @@ export function AppHeader({
     );
   }
 
+  /*
+    Cuộn qua ảnh (`showTitle` bật) ⇒ thanh nổi ĐẶC NỀN, phủ cả dải thanh trạng thái: thanh trong
+    suốt để nội dung trang trôi xuyên dưới nút quay lại và dưới giờ/pin (so web 21/10/2026, header
+    web dính và có nền). Còn trên ảnh thì vẫn trong suốt như cũ.
+  */
+  const solid = Boolean(showTitle && title);
   return (
-    <YStack pos="absolute" top={0} left={0} right={0} zi={10} pt={insets.top}>
+    <YStack
+      pos="absolute"
+      top={0}
+      left={0}
+      right={0}
+      zi={10}
+      pt={insets.top}
+      {...(solid ? { bg, borderBottomWidth: 1, borderColor: colors.borderSubtle } : {})}
+    >
       {bar}
     </YStack>
   );
@@ -258,6 +274,7 @@ const styles = StyleSheet.create({
  * ở đó là biểu tượng vuông cộng tên viết bằng `onPrimary`.
  */
 function BrandMark({ tone }: { tone: Tone }) {
+  const colors = useColors();
   if (tone === 'brand') {
     return (
       <XStack ai="center" gap={space.xs}>

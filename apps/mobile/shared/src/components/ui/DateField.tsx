@@ -8,7 +8,8 @@ import { dayjs } from '@xeprime/domain';
 import { DatePickerSheet } from './DatePickerSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fieldFontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Sàn ngày MẶC ĐỊNH của mọi ô ngày trong form.
@@ -46,6 +47,7 @@ export function DateField<T extends FieldValues>({
   required?: boolean;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common');
   const fmt = useAppFormat();
   const { field, fieldState } = useController({ control, name });

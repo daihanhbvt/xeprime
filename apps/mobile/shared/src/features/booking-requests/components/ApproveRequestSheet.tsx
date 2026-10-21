@@ -5,15 +5,14 @@ import { useTranslations } from 'use-intl';
 import {
   isBookingRequestPastDue,
   LONG_TERM_PACKAGE_MONTHS,
-  longTermReturnAt,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
   type LongTermPackageMonths,
 } from '@xeprime/types';
 import {
-  appWallClockToInstant,
   appWallClockToIso,
   LIST_SEPARATOR,
+  longTermReturnFromWallClock,
   nowInAppTz,
   startOfAppDay,
   toAppTz,
@@ -31,7 +30,8 @@ import { DataRow } from '@/components/ui/DataRow';
 import { Chip } from '@/components/ui/Chip';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
 
 /** Giờ nhận mặc định khi điền sẵn từ một NGÀY nguyện vọng — cùng hằng với web. */
@@ -79,6 +79,7 @@ export function ApproveRequestSheet({
   onConfirm: (body?: ApproveBookingRequestInput) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -109,7 +110,7 @@ export function ApproveRequestSheet({
   const returnAt = useMemo(
     () =>
       pickupAt && effectivePackage != null
-        ? toAppTz(longTermReturnAt(appWallClockToInstant(pickupAt).toDate(), effectivePackage))
+        ? longTermReturnFromWallClock(pickupAt, effectivePackage)
         : null,
     [pickupAt, effectivePackage],
   );
@@ -192,9 +193,13 @@ export function ApproveRequestSheet({
           */}
           <DataRow
             label={t('approve.customer')}
-            value={[request.customerName, request.customerPhone]
-              .filter(Boolean)
-              .join(LIST_SEPARATOR)}
+            value={
+              [request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR) +
+              // Như web: số tài khoản đã xác minh đi kèm khi khách để lại số liên hệ khác nó.
+              (request.customerAccountPhone
+                ? ` (${t('customer.accountPhone', { phone: request.customerAccountPhone })})`
+                : '')
+            }
           />
           {longTerm ? (
             <DataRow
@@ -210,6 +215,17 @@ export function ApproveRequestSheet({
               label={t('approve.schedule')}
               value={fmt.shortDateTimeRange(request.pickupAt, request.returnAt)}
             />
+          ) : null}
+          {/* Như web `ApproveBookingRequestDialog` (#213): tiền thuê + tổng khách — số của server. */}
+          {request.pricing ? (
+            <>
+              <DataRow label={t('approve.rentalTotal')} value={fmt.money(request.pricing.rentalTotal)} />
+              <DataRow
+                label={t('approve.customerTotal')}
+                value={fmt.money(request.pricing.customerTotalAmount)}
+                strong
+              />
+            </>
           ) : null}
         </YStack>
       </Card>

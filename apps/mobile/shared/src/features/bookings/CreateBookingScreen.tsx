@@ -8,6 +8,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
+  RENTAL_MODE,
   API_ERROR_CODE,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
@@ -60,15 +61,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
-import {
-  colors,
-  fieldFontSize,
-  fontSize,
-  fontWeight,
-  iconSize,
-  radius,
-  space,
-} from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { VehiclePickerSheet } from './components/VehiclePickerSheet';
 import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
@@ -239,6 +233,7 @@ function StaffBookingFlow({
   onBack: () => void;
   prefill: StaffBookingPrefill;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.staffBooking');
   const tCreate = useTranslations('Bookings.create');
   const fmt = useAppFormat();
@@ -258,7 +253,7 @@ function StaffBookingFlow({
   const [scheduling, setScheduling] = useState(false);
   /** Tấm chọn MỘT MỐC — chỉ dùng cho đơn dài hạn, nơi không có ngày trả để chọn. */
   const [pickingPickup, setPickingPickup] = useState(false);
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
   const [packageMonths, setPackageMonths] = useState<LongTermPackageMonths | null>(null);
   const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>(() => ({
@@ -633,6 +628,7 @@ function StaffBookingFlow({
 
             <YStack alignSelf="stretch" gap={space.sm}>
               <Button
+                icon="document-text-outline"
                 label={t('viewBooking')}
                 size="lg"
                 onPress={() => router.replace(ROUTES.manage.bookingDetail(created.id))}
@@ -1083,6 +1079,7 @@ const STEP_DOT = 18;
  * GIÁC — web cũng gắn đúng chuỗi đó bằng một `span` ẩn.
  */
 function StepBar({ step }: { step: Step }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.staffBooking.steps');
   const tFlow = useTranslations('BookingRequests.flow');
   const order: readonly Step[] = [STEP.TIME, STEP.CONTACT, STEP.REVIEW];
@@ -1150,6 +1147,7 @@ function StepBar({ step }: { step: Step }) {
 
 /** Thông báo trung tính — dùng cho tình huống HỢP LỆ mà người dùng cần biết trước. */
 function InfoNote({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <YStack bg={colors.infoSurface} p={space.md} br={radius.md}>
       <Text col={colors.text} fos={fontSize.bodySm}>
@@ -1160,6 +1158,7 @@ function InfoNote({ children }: { children: string }) {
 }
 
 function ErrorNote({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <YStack bg={colors.dangerSurface} p={space.md} br={radius.md}>
       <Text col={colors.danger} fos={fontSize.bodySm} accessibilityRole="alert">

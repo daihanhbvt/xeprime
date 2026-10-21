@@ -5,7 +5,8 @@ import { STATUS_COLOR } from '@xeprime/types';
 import { bankInitials } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BankAccount } from '@/api/bank-accounts/api';
 import { bankAccountTitle } from '../current-account';
 
@@ -27,6 +28,7 @@ export function BankAccountCard({
   action?: ReactNode;
   emphasis?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BankAccounts');
   return (
     <Card tone={emphasis ? 'accent' : 'surface'} lift={emphasis ? 'flat' : 'card'}>

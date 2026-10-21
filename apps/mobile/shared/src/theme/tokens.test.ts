@@ -1,6 +1,8 @@
 import { XP_TOKENS } from '@xeprime/ui';
 import { elevation } from './elevation';
-import { colors, fieldFontSize, fontSize, fontWeight, radius, sizing, space } from './tokens';
+import { fieldFontSize, fontSize, fontWeight, PALETTES, radius, sizing, space } from './tokens';
+
+const colors = PALETTES.light.colors;
 
 /**
  * Token của hệ thiết kế viết bằng ngôn ngữ CSS; native đọc lại chúng qua hai bộ chuyển đổi

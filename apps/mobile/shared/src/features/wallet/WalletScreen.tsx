@@ -39,7 +39,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   WALLET_ENTRIES_PAGE_SIZE,
   WALLET_SCOPE,
@@ -91,6 +92,7 @@ export function WalletScreen({
   /** Mở bằng `?section=payout` (alias `/manage/bank-accounts`) ⇒ cuộn tới khối tài khoản nhận tiền. */
   focusPayout?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const tBank = useTranslations('BankAccounts');
   /*
@@ -331,6 +333,7 @@ function SectionCard({ children }: { children: ReactNode }) {
 }
 
 function EmptyNote({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Card tone="muted" lift="flat">
       <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
@@ -352,6 +355,7 @@ function EmptyNote({ children }: { children: string }) {
  * chỉ tạo ra một nút mà server luôn từ chối.
  */
 function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: WalletScope }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -482,6 +486,7 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
  * cả trang.
  */
 function EntryRow({ entry }: { entry: WalletEntry }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

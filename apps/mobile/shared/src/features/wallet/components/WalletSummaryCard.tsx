@@ -11,7 +11,8 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSellerProfile } from '@/features/seller-profile/hooks/use-seller-profile';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
 import { useWalletSummary } from '../hooks/use-wallet';
 
@@ -51,6 +52,7 @@ export function WalletSummaryCard({
    */
   pageVariant?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const { data, isPending, isError, error, refetch } = useWalletSummary(scope);
@@ -107,7 +109,7 @@ export function WalletSummaryCard({
               dòng đó thì một nút xám là một ngõ cụt câm — chỗ mà người ta gọi hỗ trợ.
             */}
             {pageVariant ? null : (
-              <Button label={t('withdraw.action')} disabled={!canWithdraw} onPress={onWithdraw} />
+              <Button icon="cash-outline" label={t('withdraw.action')} disabled={!canWithdraw} onPress={onWithdraw} />
             )}
             {/*
               Ví bị khoá thì dải cảnh báo ở ĐẦU THẺ đã nói rồi — khác web, nơi dải nằm trong thẻ
@@ -148,6 +150,7 @@ export function WalletSummaryCard({
  * dòng lỗi đỏ giữa thẻ số dư sẽ làm người dùng tưởng tiền của mình có vấn đề.
  */
 function VerifiedBadge() {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const { has } = usePermissions();
   // Thiếu quyền thì TẮT hẳn request: gọi rồi nhận 403 là một vòng mạng thừa cho một huy hiệu.
@@ -165,6 +168,7 @@ function VerifiedBadge() {
 }
 
 function Figure({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} minWidth={0} gap={2}>
       <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>

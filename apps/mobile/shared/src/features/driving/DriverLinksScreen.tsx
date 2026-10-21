@@ -17,7 +17,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { DRIVER_LINK_SCOPE, type DriverLinkScope, type MyDriverLink } from './api';
 import { DriverLinkCard, type DriverLinkIntent } from './components/DriverLinkCard';
 import {
@@ -46,6 +47,7 @@ const styles = StyleSheet.create({
  * cuộn vô hạn thay cho bộ số trang. Đồng ý ngay một chạm; từ chối và ngừng làm tài xế hỏi lại.
  */
 export function DriverLinksScreen() {
+  const colors = useColors();
   const t = useTranslations('Driving.links');
   const tToast = useTranslations('Driving.toast');
   const tActions = useTranslations('Common.actions');

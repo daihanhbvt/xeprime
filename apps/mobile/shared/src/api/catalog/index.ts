@@ -1,4 +1,4 @@
-import type { CatalogItemType, components } from '@xeprime/types';
+import type { AppLocale, CatalogItemType, components } from '@xeprime/types';
 import { getApiClient } from '@xeprime/api-client';
 
 /** Shape từ OpenAPI (ADR 0007) — không viết tay lại. */
@@ -13,6 +13,30 @@ export const EMPTY_CATALOG: CatalogMap = {
   fuel_type: [],
   vehicle_feature: [],
 };
+
+/**
+ * Nhãn theo NGÔN NGỮ đang hiển thị (ADR 0012) — bản native của `localizeCatalogItem` ở web
+ * (`apps/web/src/features/catalog/types.ts`). `/catalog` chở cả `label` lẫn `labelEn`; mục chưa
+ * có bản tiếng Anh (tên hãng) giữ nhãn gốc. Sửa một bên thì sửa CẢ HAI (ADR 0031).
+ */
+export function localizeCatalogItem(item: CatalogItem, locale: AppLocale): CatalogItem {
+  if (locale !== 'en') return item;
+  return {
+    ...item,
+    label: item.labelEn ?? item.label,
+    description: item.descriptionEn ?? item.description,
+  };
+}
+
+/** `localizeCatalogItem` cho cả map. */
+export function localizeCatalog(catalog: CatalogMap, locale: AppLocale): CatalogMap {
+  if (locale !== 'en') return catalog;
+  const localized: Record<string, CatalogItem[]> = {};
+  for (const [type, items] of Object.entries(catalog)) {
+    localized[type] = items.map((item) => localizeCatalogItem(item, locale));
+  }
+  return localized as unknown as CatalogMap;
+}
 
 /** Gom danh sách phẳng của API thành map theo chiều, giữ nguyên thứ tự admin đã sắp. */
 export function groupCatalog(items: readonly CatalogItem[]): CatalogMap {

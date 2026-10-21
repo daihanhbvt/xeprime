@@ -47,7 +47,8 @@ import {
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { DOCUMENT_TYPE_VALUES, isPreviewableImage } from '../constants';
 import {
   useCustomerDocumentPreviews,
@@ -91,6 +92,7 @@ export function CustomerDocumentsPanel({
   /** Hồ sơ đang lưu trữ — xem được, không tải lên/gỡ được (backend cũng chặn). */
   disabled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers');
   const tCommon = useTranslations('Common.actions');
   const tStates = useTranslations('Common.states');
@@ -550,6 +552,7 @@ function IconTile({
   onPress?: () => void;
   label?: string;
 }) {
+  const colors = useColors();
   const body = (
     <YStack
       w={THUMB}

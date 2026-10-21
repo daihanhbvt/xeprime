@@ -14,7 +14,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { uploadsApi } from '@/api/uploads/api';
 import type { AccountTrackInput } from '@xeprime/types';
 import { AccountIdentityHero } from './AccountIdentityHero';
@@ -65,6 +66,7 @@ export function PersonalProfileCard({
   tenant: AccountTrackInput | null | undefined;
   editable?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -336,6 +338,7 @@ function ContactRow({
   verified: boolean;
   onEdit?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Account');
 
   return (

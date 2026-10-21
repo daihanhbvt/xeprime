@@ -1,12 +1,7 @@
 import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  BRANCH_STATUS,
-  BRANCH_STATUS_META,
-  STATUS_COLOR,
-  type BranchStatus,
-} from '@xeprime/types';
+import { BRANCH_STATUS, BRANCH_STATUS_META, STATUS_COLOR, type BranchStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BadgeRows, type BadgeRowItem } from '@/components/ui/BadgeRows';
 import { Card } from '@/components/ui/Card';
@@ -16,7 +11,8 @@ import type { IconName } from '@/components/ui/Chip';
 import { IconLine } from '@/components/ui/IconLine';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { BRANCH_ACTION, type Branch, type BranchAction } from '../api';
 
 export interface BranchCardActionState {
@@ -73,6 +69,7 @@ function BranchCardImpl({
    */
   actionState: (branch: Branch) => Readonly<Record<BranchAction, BranchCardActionState>>;
 }) {
+  const colors = useColors();
   const t = useTranslations('Branches');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
@@ -157,8 +154,7 @@ function BranchCardImpl({
                 key: BRANCH_ACTION.SET_DEFAULT,
                 label: t('actions.setDefault'),
                 icon: 'checkmark-circle-outline' as IconName,
-                disabled:
-                  pendingAction !== null || !actionState[BRANCH_ACTION.SET_DEFAULT].enabled,
+                disabled: pendingAction !== null || !actionState[BRANCH_ACTION.SET_DEFAULT].enabled,
                 loading: pendingAction === BRANCH_ACTION.SET_DEFAULT,
                 onPress: () => onAction(branch, BRANCH_ACTION.SET_DEFAULT),
               },

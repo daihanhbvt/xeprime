@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
+  RENTAL_MODE,
   API_ERROR_CODE,
   PRICE_ROW,
   ROUTE_TYPE,
@@ -197,7 +198,7 @@ export function StaffBookingFlow({
 
   const router = useRouter();
   const [step, setStep] = useState<BookingStepKey>('time');
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   // Dịch vụ của ĐƠN (17/08) — mặc định tự lái; đối chiếu với năng lực xe khi hồ sơ về.
   const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
   /**
@@ -661,7 +662,7 @@ export function StaffBookingFlow({
                   {hasRange ? (
                     <>
                       <ClockCircleOutlined aria-hidden />{' '}
-                      {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
+                      {rentalMode === RENTAL_MODE.HOURLY ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
                       đổi
                     </>
                   ) : (

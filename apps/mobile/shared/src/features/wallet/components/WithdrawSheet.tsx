@@ -173,6 +173,7 @@ export function WithdrawSheet({
 
           <YStack gap={space.sm}>
             <Button
+              icon="send-outline"
               label={t('submit')}
               disabled={!valid}
               loading={create.isPending}

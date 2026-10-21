@@ -90,6 +90,22 @@ export function usePublicQuote(vehicleId: string, params: PublicQuoteParams | nu
 }
 
 /**
+ * Báo giá đã ÁP MÃ khuyến mãi — nguồn duy nhất cho mọi con số trong bảng giá (ADR 0046), bản
+ * native của `useQuoteWithPromo` web (#212). Thay CẢ `fees` bằng bảng phí của endpoint xem trước
+ * mã, không ghép từng số (lỗi 24/09/2026). Không có mã ⇒ báo giá gốc.
+ */
+export function useQuoteWithPromo(
+  quote: PublicQuote | null | undefined,
+  promoFees: PublicQuote['breakdown']['fees'] | null | undefined,
+): PublicQuote | null {
+  return useMemo(() => {
+    const q = quote ?? null;
+    if (!q || !promoFees) return q;
+    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
+  }, [quote, promoFees]);
+}
+
+/**
  * Khoảng cách + phí giao DỰ KIẾN cho một địa chỉ.
  *
  * Địa chỉ nằm TRONG khoá có chủ đích: mỗi địa chỉ là một câu trả lời riêng, và cache ở đây là

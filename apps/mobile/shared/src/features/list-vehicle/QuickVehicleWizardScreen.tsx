@@ -32,7 +32,8 @@ import {
   VEHICLE_REGISTRATION_SOURCE,
   type VehicleRegistrationSource,
 } from '@/navigation/vehicle-registration-source';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import {
   QUICK_VEHICLE_DEFAULTS,
   QUICK_VEHICLE_FIXED,
@@ -127,6 +128,7 @@ const REQUIREMENT_STEP: Record<PublishRequirement, StepKey> = {
  * nói ĐÚNG hành động sắp xảy ra ("Lưu & gửi duyệt" / "Lưu nháp"), không phải "Kế tiếp".
  */
 export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrationSource }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.wizard');
   const { formGaps } = usePublicationLabels();
   const tOwner = useTranslations('ListYourVehicle.ownerProfile');
@@ -539,12 +541,13 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
               <YStack f={1}>
                 {isLastStep ? (
                   <Button
+                    icon="checkmark-outline"
                     label={t('finish')}
                     loading={registration.pending}
                     onPress={() => void save(true)}
                   />
                 ) : (
-                  <Button label={tCommon('next')} onPress={() => void next()} />
+                  <Button icon="arrow-forward" label={tCommon('next')} onPress={() => void next()} />
                 )}
               </YStack>
             </XStack>

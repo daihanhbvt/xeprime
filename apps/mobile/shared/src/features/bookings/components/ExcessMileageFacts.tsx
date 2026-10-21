@@ -2,7 +2,8 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DataRow } from '@/components/ui/DataRow';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { ExcessMileageSuggestion } from '@/api/settlement/api';
 
 /**
@@ -16,6 +17,7 @@ import type { ExcessMileageSuggestion } from '@/api/settlement/api';
  * bàn giao với số ở đây trước khi trừ tiền.
  */
 export function ExcessMileageFacts({ suggestion }: { suggestion: ExcessMileageSuggestion }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.settlement.excessMileage');
   const fmt = useAppFormat();
 

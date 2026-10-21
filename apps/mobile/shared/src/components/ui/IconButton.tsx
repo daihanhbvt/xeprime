@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { XStack } from 'tamagui';
-import { colors, radius, sizing } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { radius, sizing } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 type Tone =
   'plain' | 'surface' | 'primary' | 'danger' | 'dangerSurface' | 'accent' | 'success' | 'info';
 
-const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
+const useTone = themed<Record<Tone, { bg: string; fg: string; border: string }>>((colors) => ({
   plain: { bg: 'transparent', fg: colors.text, border: 'transparent' },
   surface: { bg: colors.surfaceMuted, fg: colors.text, border: colors.border },
   primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
@@ -43,7 +44,7 @@ const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
   success: { bg: colors.successSurface, fg: colors.success, border: colors.success },
   info: { bg: colors.infoSurface, fg: colors.info, border: colors.info },
   dangerSurface: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },
-};
+}));
 
 /**
  * Cỡ VẼ RA của biến thể gọn — bằng đúng chiều cao `Chip` cỡ `sm` (32dp).
@@ -87,6 +88,8 @@ export function IconButton({
   loading = false,
   compact = false,
 }: IconButtonProps) {
+  const colors = useColors();
+  const TONE = useTone();
   const skin = TONE[tone];
   const blocked = disabled || loading;
   const box = compact ? sizing.compactBox : sizing.touchTarget;

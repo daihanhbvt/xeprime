@@ -1,5 +1,6 @@
 import { longTermReturnFromWallClock } from '@xeprime/domain';
 import {
+  RENTAL_MODE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
   type PickupPreference,
@@ -34,8 +35,8 @@ export function tripToBookingTrip(trip: CustomerTripDetail): BookingTrip {
      */
     rentalMode:
       pickupAt && returnAt && rentalDurationParts(pickupAt, returnAt).days === 0
-        ? 'hourly'
-        : 'daily',
+        ? RENTAL_MODE.HOURLY
+        : RENTAL_MODE.DAILY,
     pickupAt,
     returnAt,
     packageMonths,

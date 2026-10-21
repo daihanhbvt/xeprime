@@ -24,8 +24,10 @@ import { StripePattern } from '@/components/ui/StripePattern';
 import { MonthGrid, useDayAccessibilityLabel, visibleDays } from '@/components/ui/MonthGrid';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { themed, useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { RENTAL_MODE } from '@xeprime/types';
 
 /** Giờ theo bước 30 phút — cùng `TIME_OPTIONS` của web. */
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -43,10 +45,13 @@ const HOURLY_DURATIONS = Array.from({ length: 24 }, (_, i) => i + 1);
  * mờ đi ở hai chữ số cuối: 45% ≈ `73`, 35% ≈ `59`. Vân phải MỜ — nó nằm dưới con số ngày, đậm
  * lên là số hết đọc được.
  */
-const BUSY_STRIPE = {
-  full: `${colors.placeholder}73`,
-  partial: `${colors.warning}59`,
-} as const;
+const useBusyStripe = themed(
+  (colors) =>
+    ({
+      full: `${colors.placeholder}73`,
+      partial: `${colors.warning}59`,
+    }) as const,
+);
 
 /**
  * Tầm nhìn khi đi tìm ngày bận kế tiếp — một năm, đúng bằng `BUSY_LOOKAHEAD_DAYS` bên web.
@@ -156,6 +161,10 @@ export function RentalRangeSheet({
   minDays = 1,
   busyDays = EMPTY_BUSY_INDEX,
 }: RentalRangeSheetProps) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
+  const BUSY_STRIPE = useBusyStripe();
   const t = useTranslations('Common.components.rentalRange');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -246,7 +255,7 @@ export function RentalRangeSheet({
   function switchMode(next: RentalMode) {
     onModeChange(next);
     // Sang tab giờ: chuẩn hoá ngay về "bắt đầu + thời lượng" để hai tab không đá nhau.
-    if (next === 'hourly') setHourly(hourlyStart, hourlyDuration);
+    if (next === RENTAL_MODE.HOURLY) setHourly(hourlyStart, hourlyDuration);
   }
 
   const complete = Boolean(value.pickupAt && value.returnAt);
@@ -262,7 +271,7 @@ export function RentalRangeSheet({
    */
   const conflict = rangeBusyConflict(busyDays, value.pickupAt, value.returnAt);
 
-  const hourly = mode === 'hourly';
+  const hourly = mode === RENTAL_MODE.HOURLY;
 
   /**
    * Thời lượng HIỂN THỊ dùng `fmt.rentalDuration`, KHÔNG phải `chargedDays`.
@@ -364,7 +373,9 @@ export function RentalRangeSheet({
        */
       const afterPickup = Boolean(value.pickupAt && day.isAfter(value.pickupAt, 'day'));
       const belowFloor = Boolean(floorDay && afterPickup && day.isBefore(floorDay, 'day'));
-      const aboveCeiling = Boolean(returnCeiling && afterPickup && !day.isBefore(returnCeiling, 'day'));
+      const aboveCeiling = Boolean(
+        returnCeiling && afterPickup && !day.isBefore(returnCeiling, 'day'),
+      );
       out[day.format(DAY_PARAM_FORMAT)] = {
         busy,
         disabled: day.isBefore(today, 'day') || busy === 'full' || belowFloor || aboveCeiling,
@@ -442,6 +453,7 @@ export function RentalRangeSheet({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={Math.max(insets.bottom, space.md)}
           >
             <XStack ai="center" gap={space.xs} px={space.sm} pt={space.sm}>
@@ -463,12 +475,12 @@ export function RentalRangeSheet({
                 <ModeTab
                   label={t('modeDaily')}
                   active={!hourly}
-                  onPress={() => switchMode('daily')}
+                  onPress={() => switchMode(RENTAL_MODE.DAILY)}
                 />
                 <ModeTab
                   label={t('modeHourly')}
                   active={hourly}
-                  onPress={() => switchMode('hourly')}
+                  onPress={() => switchMode(RENTAL_MODE.HOURLY)}
                 />
               </XStack>
             ) : null}
@@ -722,6 +734,7 @@ function LegendItem({
   stripe?: string;
   bordered?: boolean;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={6}>
       <YStack
@@ -752,6 +765,7 @@ function ModeTab({
   active: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }}>
       <YStack
@@ -792,6 +806,8 @@ function DayCell({
   mark: RentalDayMark | undefined;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const BUSY_STRIPE = useBusyStripe();
   const dayLabel = useDayAccessibilityLabel();
   const tBusy = useTranslations('Common.components.rentalRange.busy');
 
@@ -875,6 +891,9 @@ function TimeSheet({
   onClose: () => void;
   onSelect: (hhmm: string) => void;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
@@ -889,6 +908,7 @@ function TimeSheet({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={Math.max(insets.bottom, space.md)}
           >
             <Text
@@ -929,6 +949,7 @@ function Field({
   grow?: boolean;
   children: React.ReactNode;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.xs} {...(grow ? { f: 1 } : {})}>
       <Text col={colors.textMuted} fos={fontSize.label}>
@@ -940,6 +961,7 @@ function Field({
 }
 
 function Box({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {
+  const colors = useColors();
   return (
     <XStack
       ai="center"

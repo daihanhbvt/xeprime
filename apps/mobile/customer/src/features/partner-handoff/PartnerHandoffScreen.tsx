@@ -24,7 +24,8 @@ import { fireAndForget } from '@/lib/fire-and-forget';
 import { goBackOr } from '@/navigation/go-back-or';
 import { PARTNER_HANDOFF_INTENT, ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
   PARTNER_APP_TARGET,
   PARTNER_AUTH_ENTRY,
@@ -101,6 +102,7 @@ type OpenState = 'idle' | 'notInstalled';
  * Không điều hướng nội bộ tới route Partner nào — app này không đăng ký chúng.
  */
 export function PartnerHandoffScreen() {
+  const colors = useColors();
   const t = useTranslations('MobileShell.partner');
   const tLanding = useTranslations('ListYourVehicle.landing');
   const router = useRouter();
@@ -365,6 +367,7 @@ export function PartnerHandoffScreen() {
  * gọi tính sao cho cả máy nằm gọn trong sân khấu.
  */
 function PhoneFrame({ source, width }: { source: ImageSourcePropType; width: number }) {
+  const colors = useColors();
   const inner = width - PHONE_BEZEL * 2;
   return (
     <YStack w={width} p={PHONE_BEZEL} br={PHONE_RADIUS} bg={colors.text}>
@@ -392,6 +395,7 @@ function PhoneFrame({ source, width }: { source: ImageSourcePropType; width: num
  * nói thẳng như vậy — hiện tại app chưa phát hành nên đây là nhánh người dùng thật sẽ gặp.
  */
 function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () => void }) {
+  const colors = useColors();
   const t = useTranslations('MobileShell.partner');
   const insets = useSafeAreaInsets();
   const storeUrl = partnerStoreUrl();

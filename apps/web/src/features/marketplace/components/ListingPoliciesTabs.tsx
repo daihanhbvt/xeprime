@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   COLLATERAL_MODE,
+  DRIVER_DEPOSIT_MODE,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
   IDENTITY_VERIFY_METHOD,
@@ -203,7 +204,7 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>
-                    {activeTerms.depositMode === 'none'
+                    {activeTerms.depositMode === DRIVER_DEPOSIT_MODE.NONE
                       ? t('terms.driverDepositNone')
                       : t('terms.driverDeposit', {
                           mode: domainLabel('driverDepositMode', activeTerms.depositMode),

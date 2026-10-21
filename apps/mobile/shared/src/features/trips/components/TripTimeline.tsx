@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { customerTripTimeline, type CustomerTripStage } from '@xeprime/types';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 const DOT = 24;
 
@@ -16,6 +17,7 @@ const DOT = 24;
  * đó cũng là nói dối.
  */
 export function TripTimeline({ stage }: { stage: CustomerTripStage }) {
+  const colors = useColors();
   const t = useTranslations('Trips.timeline');
   const state = customerTripTimeline(stage);
 
@@ -35,6 +37,7 @@ export function TripTimeline({ stage }: { stage: CustomerTripStage }) {
 }
 
 function Step({ label, done }: { label: string; done: boolean }) {
+  const colors = useColors();
   return (
     <YStack ai="center" gap={space.xs} width={96}>
       <YStack

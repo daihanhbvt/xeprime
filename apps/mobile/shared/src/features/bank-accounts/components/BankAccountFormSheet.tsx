@@ -187,7 +187,7 @@ export function BankAccountFormSheet({
           placeholder={t('labelPlaceholder')}
         />
         <YStack gap={space.sm}>
-          <Button label={t('submit')} loading={create.isPending} onPress={() => void onSubmit()} />
+          <Button icon="checkmark-outline" label={t('submit')} loading={create.isPending} onPress={() => void onSubmit()} />
           <Button
             label={tCommon('cancel')}
             variant="ghost"

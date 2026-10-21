@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -47,7 +47,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { AssignDriverSheet } from './components/AssignDriverSheet';
 import { BookingDriverHistory } from './components/BookingDriverHistory';
 import { BookingMoneyCard } from './components/BookingMoneyCard';
@@ -69,17 +70,18 @@ import { getErrorMessage } from '@/lib/get-error-message';
 const VEHICLE_IMAGE = { width: 96, height: 72 } as const;
 
 /* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   vehicleImage: {
     width: VEHICLE_IMAGE.width,
     height: VEHICLE_IMAGE.height,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));
 
 /** Nhãn của một KHỐI trong thẻ chi tiết — nhỏ, viết hoa, mờ. Cùng vai `blockTitle` của web. */
 function BlockTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={3} h={iconSize.sm} br={radius.pill} bg={colors.primary} />
@@ -191,6 +193,8 @@ function useBookingRefresh(bookingId: string) {
 }
 
 function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack: () => void }) {
+  const colors = useColors();
+  const styles = useStyles();
   const { refreshing, onRefresh } = useBookingRefresh(booking.id);
   const t = useTranslations('Bookings');
   const fmt = useAppFormat();
@@ -566,6 +570,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     </Text>
                     {canAssignDriver ? (
                       <Button
+                        icon="person-add-outline"
                         label={t('driver.assign')}
                         variant="primary"
                         size="sm"
@@ -667,6 +672,7 @@ function BookingActionBar({
   /** Mở hộp xác nhận cho một quyết định khép đơn (huỷ / khách không đến). */
   onDecide: (decision: Decision) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.actionBar');
   const tStatus = useTranslations('Bookings.statusActions');
   const [collecting, setCollecting] = useState(false);

@@ -19,8 +19,16 @@ export function toRequestBody(
    *
    * Gửi CHUỖI MÃ, không gửi số giảm: số giảm do server tính ở cả ba cửa kiểm.
    */
-  promoCode?: string | null,
+  promoCode: string | null | undefined,
+  /**
+   * Ô đồng ý của màn Xem lại có phủ ĐIỀU KHOẢN CỦA CHỦ XE không (chủ xe công bố điều khoản, hoặc
+   * bắt đồng ý). Server hiểu `acceptedTerms` là "đã đồng ý điều khoản thuê của chủ xe" và đóng băng
+   * nó cùng nội dung điều khoản — nên chỉ gửi khi câu khách vừa tick thật sự nhắc tới điều khoản đó.
+   * Cùng luật `agreementCoversHostTerms` của web.
+   */
+  coversHostTerms: boolean,
 ): Omit<CreateBookingRequestInput, 'vehicleId'> {
+  const note = values.note.trim();
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
   const interCity =
@@ -83,9 +91,15 @@ export function toRequestBody(
             : {}),
         }
       : {}),
-    ...(values.note ? { note: values.note } : {}),
+    ...(note ? { note } : {}),
+    // Liên hệ của chuyến (ADR 0063) — rỗng thì server lấy họ tên/SĐT của tài khoản.
+    ...(values.customerName.trim() ? { customerName: values.customerName.trim() } : {}),
+    ...(values.customerPhone.trim() ? { customerPhone: values.customerPhone.trim() } : {}),
     // Đúng web: chỉ gửi khi đã tick — server tự kiểm lại với điều khoản hiệu lực của dịch vụ.
-    ...(values.acceptedTerms ? { acceptedTerms: true } : {}),
+    ...(values.acceptedTerms && coversHostTerms ? { acceptedTerms: true } : {}),
+    // Bảo hiểm MIC (#213) — như web: chỉ gửi khi khách tích.
+    ...(values.vehicleProtectionSelected ? { vehicleProtectionSelected: true } : {}),
+    ...(values.personalAccidentSelected ? { personalAccidentSelected: true } : {}),
     ...(promoCode ? { promoCode } : {}),
   };
 }

@@ -10,7 +10,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useBadges } from '@/features/badges/hooks/use-badges';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { queryKeys } from '@/queries/query-keys';
@@ -93,7 +93,7 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
    * Invalidate cả nhánh `bookingRequests`: hộp thư yêu cầu cũng cần nhảy theo, không
    * riêng huy hiệu.
    */
-  useOnBadgeChange(badges.notificationsUnread, () => {
+  useOnBadgeSignal((counts) => counts.notificationsUnread, () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
   });
 

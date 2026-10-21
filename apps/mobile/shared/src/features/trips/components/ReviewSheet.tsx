@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { sizing, space } from '@/theme/tokens';
 import { useCreateReview } from '../hooks/use-trips';
 import type { CustomerTripDetail } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -130,6 +131,7 @@ export function ReviewSheet({
 
 /** Chọn sao. Vùng chạm là cả ô 48dp dù ngôi sao vẽ nhỏ hơn — năm mục một hàng rất dễ trượt. */
 function StarPicker({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+  const colors = useColors();
   const t = useTranslations('Trips.review');
 
   return (

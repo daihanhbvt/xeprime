@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ScrollView } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
   BOOKING_HOLD_STATUS,
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_COUNTDOWN_URGENT_MINUTES,
   isAwaitingPayment,
+  isFreeCancelWindowShort,
+  PAYMENT_RETURN_PARAM,
+  SERVICE_TYPE,
   STATUS_COLOR,
   type BookingHoldStatus,
 } from '@xeprime/types';
-import { dayjs } from '@xeprime/domain';
+import { dayjs, LIST_SEPARATOR, payAtPickupAmount } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +33,8 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { BankTransferDetails } from '@/features/payment-gateway/components/BankTransferDetails';
 import {
   TripGatewayNotice,
@@ -38,7 +43,10 @@ import {
   type TripGatewayState,
 } from '@/features/payment-gateway/components/TripGatewayPay';
 import { PaymentMethodHeader } from '@/features/payment-gateway/components/PaymentMethodHeader';
+import { useListingSpecSummary } from '@/features/booking-requests/hooks/use-listing-spec-summary';
 import { TripHoldPanel } from './components/TripHoldPanel';
+import { TripPaymentSuccess } from './components/TripPaymentSuccess';
+import { isPaymentSuccessFresh } from './trip-flow';
 import { useTrip } from './hooks/use-trips';
 import type { CustomerTripDetail } from './api';
 
@@ -125,6 +133,7 @@ function TripPaymentBody({
   refetch: () => void;
   refreshing: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.payment');
   /** Lượt MoMo/VNPAY — thông báo đứng TRÊN mọi thứ: đó là câu trả lời người vừa quay về đang tìm. */
   const gateway = useTripGateway(trip.id);
@@ -183,19 +192,24 @@ function AwaitingHold({
   hold: Hold;
   gateway: TripGatewayState;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.payment');
   const tHold = useTranslations('Trips.hold');
   const tCheckout = useTranslations('PaymentGateway.checkout');
-  const tPrice = useTranslations('Common.components.price');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
 
   const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
   // ADR 0032 điều 5: cửa sổ huỷ miễn phí bị kẹp bởi giờ nhận xe — so hai MỐC ĐÃ LƯU của server.
-  const freeCancelIsShort =
-    new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
+  const freeCancelIsShort = isFreeCancelWindowShort(hold);
   const customerTotal = trip.estimate?.fees?.customerTotalAmount ?? null;
-  const payAtPickup = trip.estimate?.fees?.payAtPickupAmount ?? null;
+  // Cùng helper web: server tính sẵn, snapshot cũ lùi về tổng − giữ chỗ.
+  const payAtPickup = payAtPickupAmount(trip.estimate?.fees);
+  // Dòng thông số dưới tên xe ("5 chỗ · Số tự động · Xăng") — như `TripPaymentCheckout` web.
+  const specs = useListingSpecSummary(trip.vehicle);
+  /** "Thứ Tư, 14/10/2026 08:00" — thứ + mốc đầy đủ, như web. */
+  const point = (iso: string) =>
+    t('summary.point', { weekday: fmt.weekdayLong(dayjs(iso)), dateTime: fmt.dateTime(iso) });
 
   return (
     <YStack gap={layout.section}>
@@ -207,17 +221,17 @@ function AwaitingHold({
         <YStack gap={space.sm}>
           <YStack gap={space.xs}>
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {underpaid ? t('remainingLabel') : t('amountLabel')}
+              {underpaid ? t('summary.remainingLabel') : t('summary.amountLabel')}
             </Text>
-            <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
+            <Text col={colors.primaryHover} fos={fontSize.h1} fow={fontWeight.semibold}>
               {fmt.money(hold.remainingAmount)}
             </Text>
             <Countdown
               deadline={hold.expiresAt}
-              urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+              urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
               segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
               labels={{
-                remaining: tHold('countdownRemaining'),
+                remaining: t('summary.countdown'),
                 expired: tHold('countdownExpired'),
                 segment: (index, total) => tHold('countdownSegment', { index, total }),
               }}
@@ -227,19 +241,42 @@ function AwaitingHold({
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
             {tCheckout('summary.title')}
           </Text>
-          <DataRow label={trip.vehicle.name} value={trip.vehicle.plateNumber ?? ''} />
+          <YStack gap={2}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {trip.vehicle.name}
+            </Text>
+            {specs.length > 0 ? (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {specs.join(LIST_SEPARATOR)}
+              </Text>
+            ) : null}
+          </YStack>
           {trip.pickupAt && trip.returnAt ? (
-            <DataRow
-              label={t('time')}
-              value={`${fmt.rentalPoint(dayjs(trip.pickupAt))} → ${fmt.rentalPoint(dayjs(trip.returnAt))}`}
-            />
+            <>
+              <DataRow label={t('summary.pickupAt')} value={point(trip.pickupAt)} />
+              <DataRow label={t('summary.returnAt')} value={point(trip.returnAt)} />
+            </>
+          ) : trip.serviceType === SERVICE_TYPE.LONG_TERM ? (
+            /* Dài hạn chưa chốt lịch (ADR 0011): kể gói + nguyện vọng như web, không có mốc nhận/trả. */
+            <>
+              <DataRow
+                label={t('summary.package')}
+                value={fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}
+              />
+              <DataRow label={t('summary.pickupWish')} value={fmt.pickupWish(trip)} />
+            </>
           ) : null}
           <DataRow label={t('service')} value={dl('serviceType', trip.serviceType)} />
           {customerTotal != null ? (
-            <DataRow label={tPrice('customerTotal')} value={fmt.money(customerTotal)} />
+            <DataRow label={t('summary.customerTotal')} value={fmt.money(customerTotal)} />
           ) : null}
-          {payAtPickup != null ? (
-            <DataRow label={tPrice('payAtHandover')} value={fmt.money(payAtPickup)} />
+          {payAtPickup ? (
+            <YStack gap={2}>
+              <DataRow label={t('summary.payOwner')} value={fmt.money(payAtPickup)} />
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('summary.payOwnerNote')}
+              </Text>
+            </YStack>
           ) : null}
           <DataRow label={tCheckout('summary.code')} value={hold.code} strong />
         </YStack>
@@ -285,22 +322,34 @@ function AwaitingHold({
 
       {/* Ghi chú điều khoản gom vào MỘT thẻ nền nhạt — đọc là phần phụ, không tranh chỗ với kênh trả. */}
       <Card tone="muted" lift="flat">
+        {/* Cùng khoá + thứ tự với `TripPaymentCheckout` web (`Trips.payment.summary.notes.*`). */}
         <YStack gap={space.xs}>
-          <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {tHold('expires')}
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+            {t('summary.notes.auto')}
+          </Text>
+          <Text col={colors.warning} fos={fontSize.bodySm}>
+            {`• ${t('summary.notes.expires')}`}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {tHold(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
-              time: fmt.dateTime(hold.freeCancelUntil),
-            })}
+            {'• '}
+            {freeCancelIsShort
+              ? tHold('freeCancelSoon', { time: fmt.dateTime(hold.freeCancelUntil) })
+              : t.rich('summary.notes.freeCancel', {
+                  time: fmt.dateTime(hold.freeCancelUntil),
+                  b: (chunks) => (
+                    <Text col={colors.text} fow={fontWeight.bold}>
+                      {chunks}
+                    </Text>
+                  ),
+                })}
           </Text>
           {payAtPickup == null ? (
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {tHold('restAtHandover')}
+              {`• ${tHold('restAtHandover')}`}
             </Text>
           ) : null}
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {tCheckout('summary.safety')}
+            {t('summary.notes.safety')}
           </Text>
         </YStack>
       </Card>
@@ -316,9 +365,26 @@ function HoldSettled({ trip, hold }: { trip: CustomerTripDetail; hold: Hold | nu
   const t = useTranslations('Trips.payment');
   const router = useRouter();
   const fmt = useAppFormat();
+  const params = useLocalSearchParams<{ [PAYMENT_RETURN_PARAM.TRIP_ORDER]?: string }>();
+  /*
+   * CHỐT một lần, ở lần ĐẦU có tín hiệu — vừa quay về từ cổng, hoặc `paidAt` có giá trị — chứ
+   * không phải lúc dựng màn: tiền có thể về khi màn đã mở, và chốt lúc dựng thì khối thành công không bao giờ hiện cho đúng khoản vừa trả. Đã chốt
+   * thì nhịp hỏi lại không làm khối biến mất khi vượt mốc 30′ lúc khách đang đọc.
+   */
+  const returned = Boolean(params[PAYMENT_RETURN_PARAM.TRIP_ORDER]);
+  const paidAt = hold?.paidAt ?? null;
+  const [freshLatch, setFreshLatch] = useState<boolean | null>(() =>
+    paidAt || returned ? isPaymentSuccessFresh(paidAt, returned) : null,
+  );
+  // Chỉnh state NGAY trong lượt render (mẫu "derived state" của React) — chạy đúng một lần vì
+  // nhánh chỉ mở khi chưa chốt.
+  if (freshLatch === null && (paidAt || returned)) {
+    setFreshLatch(isPaymentSuccessFresh(paidAt, returned));
+  }
+  const successFresh = freshLatch ?? false;
 
   const viewTrip = (
-    <Button
+    <Button variant="gradient"
       size="lg"
       icon="document-text-outline"
       label={t('viewTrip')}
@@ -338,8 +404,23 @@ function HoldSettled({ trip, hold }: { trip: CustomerTripDetail; hold: Hold | nu
   }
 
   if (hold.status === BOOKING_HOLD_STATUS.PAID || hold.status === BOOKING_HOLD_STATUS.RELEASED) {
+    /*
+     * Khoảnh khắc tiền về (trong 30′, hoặc vừa quay về từ cổng) ⇒ khối "Thanh toán thành công" của
+     * web. Mở lại sau nhiều ngày thì chỉ còn kết cục, không chúc mừng lần hai.
+     */
+    if (successFresh) {
+      return (
+        <TripPaymentSuccess
+          trip={trip}
+          hold={hold}
+          onViewTrip={() => router.replace(ROUTES.booking.detail(trip.id))}
+          onMyTrips={() => router.replace(ROUTES.booking.list())}
+        />
+      );
+    }
     return (
       <YStack gap={space.md}>
+        {hold.refund ? <TripHoldPanel hold={hold} tripId={trip.id} /> : null}
         <Callout tone="success" title={t('paidTitle')}>
           {t('paidBody', { amount: fmt.money(hold.paidAmount), code: hold.code })}
         </Callout>

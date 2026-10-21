@@ -32,7 +32,8 @@ import { SelectControl } from '@/components/ui/SelectControl';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CalendarFilters } from '../api';
 import { useBulkDayPreview, useBulkPriceDay, useBulkRestoreDayPrices } from '../hooks/use-bulk-day';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -97,6 +98,7 @@ function PriceSheetInner({
   filters: CalendarFilters;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();

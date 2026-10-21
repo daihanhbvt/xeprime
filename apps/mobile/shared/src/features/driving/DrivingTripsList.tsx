@@ -12,7 +12,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import type { DriverTrip } from './api';
 import { DrivingTripCard } from './components/DrivingTripCard';
 import { useDriverPendingCounts, useDriverTrips } from './hooks';
@@ -36,6 +37,7 @@ const styles = StyleSheet.create({
  * vạch cảnh báo và dẫn vào màn chi tiết để nhận / từ chối.
  */
 export function DrivingTripsList() {
+  const colors = useColors();
   const t = useTranslations('Driving.trips');
   const [when, setWhen] = useState<DriverTripTab>(DRIVER_TRIP_TAB.UPCOMING);
   const query = useDriverTrips(when);

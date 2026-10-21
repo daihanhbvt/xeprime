@@ -21,7 +21,8 @@ import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { resolveVerifierView, type DriverLicenceTrip } from '../driver-licence-view';
 import {
   useDriverLicence,
@@ -44,6 +45,7 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
  * server, nên giao diện không bao giờ nói "được" ở chỗ server sẽ nói "không".
  */
 export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | null }) {
+  const colors = useColors();
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
   const query = useDriverLicence();
@@ -177,11 +179,14 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
   );
 }
 
-const BANNER_TONE = {
-  success: { fg: colors.success, bg: colors.successSurface },
-  waiting: { fg: colors.warning, bg: colors.warningSurface },
-  danger: { fg: colors.danger, bg: colors.dangerSurface },
-} as const;
+const useBannerTone = themed(
+  (colors) =>
+    ({
+      success: { fg: colors.success, bg: colors.successSurface },
+      waiting: { fg: colors.warning, bg: colors.warningSurface },
+      danger: { fg: colors.danger, bg: colors.dangerSurface },
+    }) as const,
+);
 
 function StatusBanner({
   tone,
@@ -189,11 +194,13 @@ function StatusBanner({
   title,
   body,
 }: {
-  tone: keyof typeof BANNER_TONE;
+  tone: keyof ReturnType<typeof useBannerTone>;
   icon: IoniconName;
   title: string;
   body?: string | null;
 }) {
+  const colors = useColors();
+  const BANNER_TONE = useBannerTone();
   const skin = BANNER_TONE[tone];
   return (
     <XStack gap={space.sm} ai="flex-start" p={space.md} br={radius.lg} bg={skin.bg}>
@@ -214,6 +221,8 @@ function StatusBanner({
 
 /** Vì sao chưa xác thực được + gợi ý chụp lại đúng chỗ hỏng + (nếu được) nhờ người xem lại. */
 function RejectedNotice({ licence }: { licence: DriverLicence }) {
+  const colors = useColors();
+  const BANNER_TONE = useBannerTone();
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
   const toast = useAppToast();
@@ -285,6 +294,7 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
  * thì thấy ngay và nộp lại.
  */
 export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
+  const colors = useColors();
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
@@ -365,6 +375,7 @@ export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
  * gắn với CHÍNH URL hỏng, nên URL mới tự xoá trạng thái đó.
  */
 export function LicencePhoto({ licenceId }: { licenceId: string }) {
+  const colors = useColors();
   const t = useTranslations('DriverLicence.image');
   const image = useDriverLicenceImage(licenceId);
   const [open, setOpen] = useState(false);
@@ -470,6 +481,7 @@ export function LicencePhoto({ licenceId }: { licenceId: string }) {
 const PHOTO_HEIGHT = 160;
 
 function AcceptedDocuments() {
+  const colors = useColors();
   const t = useTranslations('DriverLicence.accepted');
   return (
     <YStack gap={space.xs} pt={space.sm} borderTopWidth={1} borderTopColor={colors.borderSubtle}>

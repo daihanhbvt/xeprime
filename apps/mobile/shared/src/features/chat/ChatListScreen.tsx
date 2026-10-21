@@ -18,7 +18,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { ConversationRow } from './components/ConversationRow';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversationsInfinite } from './hooks/use-chat';
@@ -50,6 +51,7 @@ const conversationKey = (conversation: ConversationSummary) => conversation.id;
  * theo màn (ADR 0004, mục "Screen filters").
  */
 export function ChatListScreen({ side }: { side: ChatSide }) {
+  const colors = useColors();
   const t = useTranslations('Chat');
   const tNav = useTranslations('Navigation.manage');
   const navigateOnce = useNavigateOnce();
@@ -96,7 +98,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
         tintColor={colors.primaryActive}
       />
     ),
-    [isRefetching, refetch],
+    [colors, isRefetching, refetch],
   );
 
   const renderRow = useCallback(

@@ -11,7 +11,8 @@ import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 export interface FilterOption {
   readonly value: string;
@@ -129,6 +130,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   onSearchChange: (next: string) => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.filters');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
@@ -332,6 +334,7 @@ const Group = memo(function Group({
   value: string;
   onSelect: (groupKey: string, value: string) => void;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       {/*
@@ -381,6 +384,7 @@ const DateRangeGroup = memo(function DateRangeGroup({
   to: string;
   onSelect: (groupKey: string, value: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
@@ -441,6 +445,7 @@ const ActiveChip = memo(function ActiveChip({
   label: string;
   onRemove: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable onPress={onRemove} accessibilityRole="button" accessibilityLabel={label}>
       <XStack

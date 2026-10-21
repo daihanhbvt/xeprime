@@ -25,7 +25,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { customerNoteSchema, type CustomerNoteFormValues } from '@xeprime/validators';
 import { NOTE_TYPE_VALUES } from '../constants';
 import {
@@ -58,6 +59,7 @@ export function CustomerNotesPanel({
   canManage: boolean;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();

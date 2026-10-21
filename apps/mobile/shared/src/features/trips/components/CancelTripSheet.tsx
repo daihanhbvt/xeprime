@@ -5,7 +5,8 @@ import { isZeroMoney } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
 
 /**
@@ -13,7 +14,7 @@ import type { CustomerTripDetail } from '../api';
  *
  * Hai câu dẫn khác nhau vì HỆ QUẢ khác nhau: chuyến chờ duyệt chỉ là rút lại một yêu cầu (nó
  * vốn chưa chiếm lịch), còn chuyến đã duyệt là huỷ một đơn thật và nhả lịch xe ra cho khách
- * khác. Nói chung một câu là để khách bấm mà không biết mình đang mất gì.
+ * khác; chuyến đã được nhận, chờ giữ chỗ thì chưa có đơn nhưng xe đang được giữ. Nói chung một câu là để khách bấm mà không biết mình đang mất gì.
  *
  * Khối tiền đã trả KHÔNG có nút hoàn: XePrime chỉ ghi nhận trạng thái, không chuyển tiền
  * (ADR 0013) — nói thẳng ra còn hơn để khách chờ một khoản tự về.
@@ -31,10 +32,18 @@ export function CancelTripSheet({
   onConfirm: () => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.cancel');
   const fmt = useAppFormat();
 
   const stage = trip.stage as CustomerTripStage;
+  const awaitingHold = stage === CUSTOMER_TRIP_STAGE.AWAITING_HOLD;
+  /*
+   * Đã chuyển MỘT PHẦN tiền giữ chỗ rồi huỷ ⇒ server hoàn ĐỦ phần đã chuyển trong cùng transaction
+   * huỷ. Khác tiền đưa thẳng cho chủ xe ở dưới: khoản này nằm ở XePrime, nên XePrime trả lại.
+   */
+  const holdPaid =
+    awaitingHold && trip.hold && !isZeroMoney(trip.hold.paidAmount) ? trip.hold.paidAmount : null;
   const finance = trip.finance;
   const rentalPaid = finance && !isZeroMoney(finance.rentalPaid);
   const depositPaid = finance && !isZeroMoney(finance.depositReceived);
@@ -66,11 +75,26 @@ export function CancelTripSheet({
       }
     >
       <Text col={colors.text} fos={fontSize.body}>
-        {stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL ? t('leadPending') : t('leadReady')}
+        {stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL
+          ? t('leadPending')
+          : awaitingHold
+            ? t('leadAwaitingHold')
+            : t('leadReady')}
       </Text>
 
+      {holdPaid ? (
+        <YStack gap={space.xs} bg={colors.infoSurface} p={space.md} br={radius.sm}>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {t('holdPaidTitle', { amount: fmt.money(holdPaid) })}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('holdPaidBody')}
+          </Text>
+        </YStack>
+      ) : null}
+
       {rentalPaid || depositPaid ? (
-        <YStack gap={space.xs} bg={colors.warningSurface} p={space.md} br={space.xs}>
+        <YStack gap={space.xs} bg={colors.warningSurface} p={space.md} br={radius.sm}>
           <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {t('paidTitle')}
           </Text>

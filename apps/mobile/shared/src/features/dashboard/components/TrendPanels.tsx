@@ -7,7 +7,8 @@ import { RevenueTrendChart } from '@/features/finance/components/RevenueTrendCha
 import { useBucketLabels } from '@/features/finance/hooks/use-bucket-labels';
 import type { FinanceSeries } from '@/features/finance/api';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { DASHBOARD_REVENUE_DAYS, type PartnerTrendPoint } from '../api';
 import { DashboardPanel } from './DashboardPanel';
 
@@ -17,11 +18,13 @@ import { DashboardPanel } from './DashboardPanel';
  * cache. Không thêm thư viện biểu đồ nào.
  */
 export function RevenueTrendPanel({ series }: { series: UseQueryResult<FinanceSeries> }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.charts');
   const { labelOf, titleOf } = useBucketLabels(FINANCE_GRANULARITY.DAY);
   const buckets = series.data?.buckets ?? [];
   const empty =
-    series.data !== undefined && buckets.every((b) => isZeroMoney(b.revenue) && isZeroMoney(b.cost));
+    series.data !== undefined &&
+    buckets.every((b) => isZeroMoney(b.revenue) && isZeroMoney(b.cost));
 
   return (
     <DashboardPanel
@@ -82,9 +85,11 @@ export function TripsTrendPanel({
   isError: boolean;
   onRetry: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.charts');
   const fmt = useAppFormat();
-  const empty = trend !== undefined && trend.every((p) => p.newBookings === 0 && p.completedTrips === 0);
+  const empty =
+    trend !== undefined && trend.every((p) => p.newBookings === 0 && p.completedTrips === 0);
   const max = Math.max(1, ...(trend ?? []).flatMap((p) => [p.newBookings, p.completedTrips]));
 
   return (
@@ -131,6 +136,7 @@ export function TripsTrendPanel({
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={10} h={10} br={radius.sm} bg={color} />
@@ -142,6 +148,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 }
 
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const percent = Math.round((value / max) * 100);
   return (
@@ -149,7 +156,13 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
       <YStack f={1} h={BAR_HEIGHT} br={radius.pill} bg={colors.surfaceMuted} overflow="hidden">
         <YStack w={`${percent}%`} h={BAR_HEIGHT} br={radius.pill} bg={color} />
       </YStack>
-      <Text w={BAR_VALUE_WIDTH} ta="right" col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+      <Text
+        w={BAR_VALUE_WIDTH}
+        ta="right"
+        col={colors.text}
+        fos={fontSize.label}
+        fow={fontWeight.semibold}
+      >
         {fmt.count(value)}
       </Text>
     </XStack>

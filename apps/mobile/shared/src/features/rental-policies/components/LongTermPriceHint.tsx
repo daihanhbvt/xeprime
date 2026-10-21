@@ -9,7 +9,8 @@ import {
 } from '@xeprime/types';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /** Làm tròn gợi ý về trăm nghìn cho dễ đọc — gợi ý là con số tham khảo, không phải để khớp lẻ. */
 const SUGGEST_ROUNDING = 100_000;
@@ -55,6 +56,7 @@ export function LongTermPriceHint({
   )[];
   discountEnabled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.pricing.longTermHint');
   const fmt = useAppFormat();
 

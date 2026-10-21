@@ -8,7 +8,8 @@ import { Screen } from '@/components/layout/Screen';
 import { AppVersion } from '@/components/ui/AppVersion';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { APP_NAME } from '@/lib/app-name';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { LoginForm } from './components/LoginForm';
 import { SocialButtons } from './components/SocialButtons';
@@ -59,6 +60,7 @@ export function LoginScreen({
    */
   onContinueAsGuest?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const tNav = useTranslations('Navigation');
 

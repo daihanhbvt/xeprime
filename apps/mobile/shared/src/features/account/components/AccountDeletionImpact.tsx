@@ -15,7 +15,8 @@ import { useWalletSummary, useWithdrawals } from '@/features/wallet/hooks/use-wa
 import { walletScopeFor } from '@/features/wallet/wallet-scope';
 import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Những thứ KHÔNG tự biến mất khi gửi yêu cầu xoá tài khoản. Bản native của
@@ -36,6 +37,7 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * trang mà web có. Lý do đầy đủ nằm ở docblock của `DeleteAccountScreen`.
  */
 export function AccountDeletionImpact() {
+  const colors = useColors();
   const t = useTranslations('Account.deletionImpact');
   const fmt = useAppFormat();
   const { data: user } = useCurrentUser();
@@ -139,6 +141,7 @@ export function AccountDeletionImpact() {
  * 360dp — không co thì nó bị cắt đúng ở phần đuôi, tức là mất luôn bậc đơn vị.
  */
 function MoneyTile({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack
       f={1}
@@ -168,6 +171,7 @@ function MoneyTile({ label, value }: { label: string; value: string }) {
 }
 
 function Bullet({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack gap={space.xs} ai="flex-start">
       <Text col={colors.textMuted} fos={fontSize.bodySm}>

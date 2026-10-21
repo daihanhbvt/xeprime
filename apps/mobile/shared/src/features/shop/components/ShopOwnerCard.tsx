@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { ShopOwnerAccount } from '../api';
 
 /**
@@ -36,6 +37,7 @@ export function ShopOwnerCard({
   /** Mở màn bảo mật tài khoản — nơi gọi giữ `useNavigateOnce` nên nó điều hướng, không phải thẻ này. */
   onOpenSecurity: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Shop.owner');
   const { data: user } = useCurrentUser();
 
@@ -105,6 +107,7 @@ function ContactRow({
   emptyLabel: string;
   verified: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Shop.owner');
 
   return (

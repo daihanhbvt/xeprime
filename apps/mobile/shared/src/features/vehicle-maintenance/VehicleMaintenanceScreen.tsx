@@ -49,7 +49,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   useMaintenanceProfile,
   useMaintenanceRecords,
@@ -203,6 +204,7 @@ export function VehicleMaintenanceWorkspace({ vehicleId }: { vehicleId: string }
 }
 
 function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: MaintenanceProfile }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.odometer');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -354,6 +356,7 @@ const INTERVAL_PLACEHOLDER_KM = 5000;
 const LAST_SERVICE_PLACEHOLDER_KM = 40000;
 
 function OilCard({ vehicleId, profile }: { vehicleId: string; profile: MaintenanceProfile }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.oil');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
@@ -542,6 +545,7 @@ function RecordsCard({
   actionable: boolean;
   onOpenSheet: (state: RecordSheetMode) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.records');
   const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
@@ -630,6 +634,7 @@ function RecordRow({
   canManage: boolean;
   onOpenSheet: (state: RecordSheetMode) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.records');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

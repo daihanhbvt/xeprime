@@ -3,11 +3,35 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { subtractMoney } from '@xeprime/domain';
+import { payAtPickupAmount } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+
+type FeeLineLike = PriceBreakdownFeesInput['lines'][number];
+
+/**
+ * Dòng phụ dưới tên một khoản phí — cùng luật web (`PriceBreakdown`/`BookingReviewCosts` #213):
+ * `x%` khi tính theo phần trăm, `N ngày × đơn giá` khi tính theo ngày (bảo hiểm MIC), rồi
+ * `· đối tác`. Không còn "null%" ở dòng theo ngày. Mọi con số đến từ server.
+ */
+export function useFeeLineSublabel(): (line: FeeLineLike) => string {
+  const tCommon = useTranslations('Common.components.price');
+  const fmt = useAppFormat();
+  return (line) =>
+    [
+      line.percent != null
+        ? `${line.percent}%`
+        : line.unitAmount && line.quantity
+          ? tCommon('perDayLine', { quantity: line.quantity, unit: fmt.money(line.unitAmount) })
+          : null,
+      line.partnerName,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+}
 
 /**
  * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 điều 1, cùng shape với `PriceBreakdownFees` bên web.
@@ -20,9 +44,12 @@ export interface PriceBreakdownFeesInput {
   lines: ReadonlyArray<{
     key: string;
     bearer: string;
-    percent: number;
+    /** `null` ở dòng tính THEO NGÀY (bảo hiểm MIC — luồng tiền v2): đọc `unitAmount × quantity`. */
+    percent: number | null;
     amount: string;
     partnerName?: string | null;
+    unitAmount?: string | null;
+    quantity?: number | null;
   }>;
   customerTotalAmount: string;
   /**
@@ -119,9 +146,11 @@ export function PriceBreakdown({
    */
   promoSlot?: React.ReactNode;
 }) {
+  const colors = useColors();
   const tCommon = useTranslations('Common.components.price');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const feeLineSublabel = useFeeLineSublabel();
   const [expanded, setExpanded] = useState(!collapsible);
   const showItems = !collapsible || expanded;
 
@@ -157,9 +186,7 @@ export function PriceBreakdown({
    * nhưng có mã thì `customerTotalAmount` vẫn khác `totalAmount`.
    */
   const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || promoDiscount > 0);
-  const payAtHandoverAmount =
-    fees?.payAtPickupAmount ??
-    (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
+  const payAtHandoverAmount = payAtPickupAmount(fees);
 
   return (
     <YStack gap={space.sm}>
@@ -304,8 +331,9 @@ export function PriceBreakdown({
                         {domainLabel('feeLine', line.key)}
                       </Text>
                       <Text col={colors.placeholder} fos={fontSize.label}>
-                        {(ownerBorne ? tCommon('ownerNet') : `${line.percent}%`) +
-                          (line.partnerName ? ` · ${line.partnerName}` : '')}
+                        {ownerBorne
+                          ? tCommon('ownerNet') + (line.partnerName ? ` · ${line.partnerName}` : '')
+                          : feeLineSublabel(line)}
                       </Text>
                     </YStack>
                     <Text

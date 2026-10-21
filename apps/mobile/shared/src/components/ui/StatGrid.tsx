@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Fragment, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { Divider } from './DataRow';
 import { DetailChevron } from './DetailArrow';
 import { IconDisc } from './IconDisc';
@@ -214,6 +215,7 @@ export function StatGrid({
  * bóp con số nhỏ đi ở mọi ô, kể cả ô không bấm được.
  */
 function Cell({ cell }: { cell: StatCell }) {
+  const colors = useColors();
   const body = (
     <YStack
       f={1}
@@ -291,7 +293,7 @@ function hintLines(hint: StatCell['hint']): readonly string[] {
  * Mờ cả hàng là cách một cái nút phản hồi; một hàng trong danh sách thì phản hồi bằng nền, vì
  * thứ người dùng cần thấy là "tôi đang chạm vào ĐÚNG hàng này", không phải "hàng này đang tắt".
  */
-const pressedRow = { backgroundColor: colors.surfaceMuted } as const;
+const usePressedRow = themed((colors) => ({ backgroundColor: colors.surfaceMuted }) as const);
 
 /**
  * Một hàng của biến thể `list`: huy hiệu tròn · nhãn đầy đủ (+ chú thích) · con số căn phải.
@@ -311,6 +313,8 @@ function ListRow({
   chevronSlot: boolean;
   emphasis: 'value' | 'even';
 }) {
+  const colors = useColors();
+  const pressedRow = usePressedRow();
   const even = emphasis === 'even';
 
   const body = (
@@ -323,34 +327,34 @@ function ListRow({
       accessibilityLabel={`${cell.fullLabel ?? cell.label}: ${cell.value}`}
     >
       <XStack ai="center" gap={space.sm}>
-      <IconDisc
-        icon={cell.icon}
-        tone={cell.tone}
-        {...(cell.surface ? { surface: cell.surface } : {})}
-        size={BADGE_SIZE}
-      />
+        <IconDisc
+          icon={cell.icon}
+          tone={cell.tone}
+          {...(cell.surface ? { surface: cell.surface } : {})}
+          size={BADGE_SIZE}
+        />
 
-      <Text
-        f={1}
-        minWidth={0}
-        col={even ? colors.text : colors.textMuted}
-        fos={fontSize.bodySm}
-        {...(even ? { fow: fontWeight.semibold } : {})}
-        numberOfLines={2}
-      >
-        {cell.label}
-      </Text>
+        <Text
+          f={1}
+          minWidth={0}
+          col={even ? colors.text : colors.textMuted}
+          fos={fontSize.bodySm}
+          {...(even ? { fow: fontWeight.semibold } : {})}
+          numberOfLines={2}
+        >
+          {cell.label}
+        </Text>
 
-      <Text
-        flexShrink={0}
-        col={cell.valueTone ?? colors.text}
-        fos={even ? fontSize.bodySm : fontSize.body}
-        fow={fontWeight.bold}
-        ta="right"
-        numberOfLines={1}
-      >
-        {cell.value}
-      </Text>
+        <Text
+          flexShrink={0}
+          col={cell.valueTone ?? colors.text}
+          fos={even ? fontSize.bodySm : fontSize.body}
+          fow={fontWeight.bold}
+          ta="right"
+          numberOfLines={1}
+        >
+          {cell.value}
+        </Text>
 
         {chevronSlot ? (
           <YStack w={iconSize.sm} ai="center">
@@ -402,6 +406,8 @@ function ListRow({
  * một cột ở dòng cuối là thứ mắt bắt được ngay, kể cả khi không gọi được tên.
  */
 function TotalRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean }) {
+  const colors = useColors();
+  const pressedRow = usePressedRow();
   const body = (
     <YStack
       px={space.md}
@@ -413,31 +419,31 @@ function TotalRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean 
       accessibilityLabel={`${cell.fullLabel ?? cell.label}: ${cell.value}`}
     >
       <XStack ai="center" gap={space.sm}>
-      <YStack w={BADGE_SIZE} ai="center">
-        <Ionicons name={cell.icon} size={iconSize.sm} color={cell.tone} />
-      </YStack>
+        <YStack w={BADGE_SIZE} ai="center">
+          <Ionicons name={cell.icon} size={iconSize.sm} color={cell.tone} />
+        </YStack>
 
-      <Text
-        f={1}
-        minWidth={0}
-        col={colors.text}
-        fos={fontSize.bodySm}
-        fow={fontWeight.semibold}
-        numberOfLines={2}
-      >
-        {cell.label}
-      </Text>
+        <Text
+          f={1}
+          minWidth={0}
+          col={colors.text}
+          fos={fontSize.bodySm}
+          fow={fontWeight.semibold}
+          numberOfLines={2}
+        >
+          {cell.label}
+        </Text>
 
-      <Text
-        flexShrink={0}
-        col={cell.valueTone ?? colors.text}
-        fos={fontSize.body}
-        fow={fontWeight.bold}
-        ta="right"
-        numberOfLines={1}
-      >
-        {cell.value}
-      </Text>
+        <Text
+          flexShrink={0}
+          col={cell.valueTone ?? colors.text}
+          fos={fontSize.body}
+          fow={fontWeight.bold}
+          ta="right"
+          numberOfLines={1}
+        >
+          {cell.value}
+        </Text>
 
         {chevronSlot ? (
           <YStack w={iconSize.sm} ai="center">
@@ -483,6 +489,7 @@ function TotalRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean 
  * quy ước kế toán cũ hơn cả màn hình: gạch một đường trước khi cộng.
  */
 function TotalRule() {
+  const colors = useColors();
   return <YStack h={1} bg={colors.border} />;
 }
 
@@ -500,6 +507,7 @@ function TotalRule() {
  * nó chỉ đứng ngay trên.
  */
 export function StatCardFooter({ children }: { children: ReactNode }) {
+  const colors = useColors();
   return (
     <>
       <Divider />
@@ -512,10 +520,12 @@ export function StatCardFooter({ children }: { children: ReactNode }) {
 
 /** Kẻ ngang giữa hai hàng. */
 function HRule() {
+  const colors = useColors();
   return <YStack h={1} bg={colors.borderSubtle} />;
 }
 
 /** Kẻ dọc giữa hai ô — `alignSelf: stretch` để nó cao bằng hàng, không bằng nội dung ô nào. */
 function VRule() {
+  const colors = useColors();
   return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" />;
 }
