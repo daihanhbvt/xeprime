@@ -224,7 +224,7 @@
   },
   "driverLicenceState": {
     "verified": "Bằng lái đã xác thực",
-    "pending": "Bằng lái chờ xác thực",
+    "pending": "Bằng lái đang được đọc",
     "none": "Chưa có bằng lái"
   },
   "driverEmployerKind": {
@@ -798,6 +798,7 @@
     "missing_fields": "Thiếu thông tin",
     "expired": "Bằng đã hết hạn",
     "no_drivable_class": "Hạng không lái được xe thuê",
+    "reader_unavailable": "Bộ đọc ảnh tạm lỗi",
     "other": "Lý do khác"
   },
   "feePolicyStatus": {

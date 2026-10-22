@@ -2,13 +2,14 @@
 
 import {
   CheckCircleFilled,
-  ClockCircleFilled,
+  EditOutlined,
   CloseCircleFilled,
   ExclamationCircleFilled,
   ReloadOutlined,
-  SyncOutlined,
 } from '@ant-design/icons';
-import { Alert, App, Button, Skeleton } from 'antd';
+import { Alert, Button, Modal, Skeleton } from 'antd';
+import Image from 'next/image';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import {
@@ -24,9 +25,8 @@ import {
   type DriverLicenceRejectReason,
 } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { useDriverLicence, useRequestDriverLicenceReview } from '../hooks/use-driver-licence';
+import { useDriverLicence } from '../hooks/use-driver-licence';
 import type { DriverLicence, DriverLicenceTrip } from '../types';
 import { DriverLicenceDetails } from './DriverLicenceDetails';
 import { DriverLicenceUploader } from './DriverLicenceUploader';
@@ -39,7 +39,7 @@ type TripIssue = 'expired' | 'expiredToday' | 'classMismatchCar' | 'classMismatc
 /**
  * Xác thực bằng lái — MỘT component cho cả trang "Giấy tờ & Xác minh" lẫn bước bằng lái trong
  * luồng đặt xe (ADR 0057). Màn hình hoàn toàn do trạng thái SERVER quyết: đang đọc → hợp lệ /
- * chờ duyệt / bị từ chối; component chỉ thêm một trạng thái của riêng nó — "đang thay bằng mới".
+ * bị từ chối (ADR 0070 gỡ chờ duyệt tay); component chỉ thêm một trạng thái của riêng nó — "đang thay bằng mới".
  *
  * "Cần nộp", "đang thay bằng" và "đang đọc" dùng CHUNG một khung: chỉ ô ảnh đổi từ bộ chọn sang
  * tiến trình, nên khách không bị đẩy sang một bố cục khác giữa lúc máy đang đọc.
@@ -50,23 +50,28 @@ type TripIssue = 'expired' | 'expiredToday' | 'classMismatchCar' | 'classMismatc
  */
 export function DriverLicenceVerifier({
   trip,
+  embedded = false,
 }: {
   /** Luồng đặt xe: soát bằng cho CHÍNH chuyến này. Nút đi tiếp thuộc về luồng, không ở đây. */
   trip?: DriverLicenceTrip;
+  /** Nằm trong một thẻ có sẵn (mục Giấy tờ của trang Tài khoản) — bỏ khung viền riêng. */
+  embedded?: boolean;
 }) {
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
   const query = useDriverLicence();
   const [replacing, setReplacing] = useState(false);
+  /** Hộp thoại "Thêm bằng lái" của mục Giấy tờ (design "Verify Add"). */
+  const [adding, setAdding] = useState(false);
   /**
    * Khách vừa chọn ảnh MỚI khi kết quả gần nhất là lượt nộp này (`latest.id`, hoặc `null` khi chưa có) —
    * lý do bị từ chối / cảnh báo của kết quả CŨ ẩn ngay, không đứng cạnh ảnh mới đang đọc. Kết quả của
    * lượt mới mang id khác nên tự hiện lại khi về.
    */
   const [pickedOver, setPickedOver] = useState<string | null | undefined>(undefined);
-  // Trong hộp thoại đặt xe, hộp thoại ĐÃ là khung — thêm một thẻ viền + bóng đổ bên trong chỉ là
-  // một lớp khung thừa. Trang Giấy tờ thì đứng riêng nên vẫn là một thẻ.
-  const panel = cx(styles.panel, trip && styles.panelEmbedded);
+  // Trong hộp thoại đặt xe hay thẻ Giấy tờ của trang Tài khoản, nơi chứa ĐÃ là khung — thêm một
+  // thẻ viền + bóng đổ bên trong chỉ là một lớp khung thừa.
+  const panel = cx(styles.panel, (trip || embedded) && styles.panelEmbedded);
 
   if (query.isPending) {
     return (
@@ -120,8 +125,35 @@ export function DriverLicenceVerifier({
       ? latest
       : null;
 
-  // 1. Bằng dùng được (cho chuyến này, nếu có chuyến) — trừ khi khách đang chủ động thay bằng.
-  if (usable && verified && !replacing && !processing) {
+  // Mục Giấy tờ: thêm / thay bằng đi qua hộp thoại, thẻ phía sau giữ nguyên. Chọn ảnh là gửi ngay —
+  // hộp thoại đóng, tiến trình đọc và kết quả hiện trong thẻ.
+  const closeAdd = () => {
+    setAdding(false);
+    setReplacing(false);
+  };
+  const addModal = embedded ? (
+    <Modal
+      open={adding || replacing}
+      title={t('addModal.title')}
+      onCancel={closeAdd}
+      width={480}
+      destroyOnHidden
+      footer={
+        <CtaButton variant="neutral" onClick={closeAdd}>
+          {t('addModal.cancel')}
+        </CtaButton>
+      }
+    >
+      <div className={styles.modalBody}>
+        <DriverLicenceUploader processing={null} onSubmitted={closeAdd} />
+        <AcceptedDocuments />
+      </div>
+    </Modal>
+  ) : null;
+
+  // 1. Bằng dùng được (cho chuyến này, nếu có chuyến) — trừ khi khách đang chủ động thay bằng
+  // ngay tại chỗ (luồng đặt xe; mục Giấy tờ thay bằng trong hộp thoại).
+  if (usable && verified && (!replacing || embedded) && !processing) {
     return (
       <div className={cx(panel, styles.panelSuccess)}>
         <StatusBanner
@@ -141,30 +173,38 @@ export function DriverLicenceVerifier({
               ),
             })}
           />
-        ) : status === DRIVER_LICENCE_STATUS.PENDING_REVIEW ? (
-          <Alert type="info" showIcon title={t('verified.replacePending')} />
         ) : null}
         <DriverLicenceDetails licence={verified} />
         <div className={styles.footerActions}>
-          <Button onClick={() => setReplacing(true)}>{t('verified.replace')}</Button>
+          <Button icon={<EditOutlined aria-hidden="true" />} onClick={() => setReplacing(true)}>
+            {t('verified.replace')}
+          </Button>
         </div>
+        {addModal}
       </div>
     );
   }
 
-  // 2. Đang chờ người của XePrime xem.
-  if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW && !replacing) {
+  // 2. Mục Giấy tờ của trang Tài khoản, chưa nộp lần nào: thẻ rỗng + nút mở hộp
+  // thoại "Thêm bằng lái" (design "Verify Empty").
+  if (embedded && !processing && !latest) {
     return (
-      <div className={cx(panel, styles.panelWaiting)}>
-        <StatusBanner
-          tone="waiting"
-          icon={<ClockCircleFilled />}
-          title={t('pending.title')}
-          body={booking ? t('pending.bookingBody') : t('pending.body')}
-        />
-        <div className={styles.footerActions}>
-          <Button onClick={() => setReplacing(true)}>{t('pending.replace')}</Button>
+      <div className={panel}>
+        <div className={styles.empty}>
+          <Image
+            src="/illustrations/driver-licence-empty.svg"
+            alt=""
+            width={160}
+            height={160}
+            className={styles.emptyArt}
+          />
+          <div className={styles.emptyText}>
+            <p className={styles.emptyTitle}>{t('empty.title')}</p>
+            <p className={styles.emptyBody}>{t('empty.body')}</p>
+          </div>
+          <CtaButton onClick={() => setAdding(true)}>{t('empty.add')}</CtaButton>
         </div>
+        {addModal}
       </div>
     );
   }
@@ -192,6 +232,18 @@ export function DriverLicenceVerifier({
           date: verified.expiresOn ? fmt.dateKey(verified.expiresOn) : '',
         })}
       />
+    );
+  }
+
+  if (embedded && !processing) {
+    return (
+      <div className={panel}>
+        {notice}
+        <div className={styles.footerActions}>
+          <CtaButton onClick={() => setAdding(true)}>{t('empty.add')}</CtaButton>
+        </div>
+        {addModal}
+      </div>
     );
   }
 
@@ -231,7 +283,7 @@ function StatusBanner({
   title,
   body,
 }: {
-  tone: 'success' | 'waiting' | 'danger';
+  tone: 'success' | 'danger';
   icon: ReactNode;
   title: string;
   body?: string | null;
@@ -249,15 +301,12 @@ function StatusBanner({
   );
 }
 
-/** Vì sao chưa xác thực được + gợi ý chụp lại đúng chỗ hỏng + (nếu được) nhờ người xem lại. */
+/** Vì sao chưa xác thực được + gợi ý chụp lại đúng chỗ hỏng. */
 function RejectedNotice({ licence }: { licence: DriverLicence }) {
   const t = useTranslations('DriverLicence');
-  const { message } = App.useApp();
-  const errorMessage = useErrorMessage();
-  const review = useRequestDriverLicenceReview();
   const fmt = useAppFormat();
   const reason = (licence.rejectionReason ?? 'other') as DriverLicenceRejectReason;
-  // Hết hạn: hiện NGÀY máy đọc được — khách thấy ngay nếu máy đọc lệch một chữ số, trước khi nhờ xem lại.
+  // Hết hạn: hiện NGÀY máy đọc được — khách thấy ngay nếu máy đọc lệch một chữ số và chụp lại.
   const reasonText =
     reason === DRIVER_LICENCE_REJECT_REASON.EXPIRED && licence.expiresOn
       ? t('rejected.expiredOn', { date: fmt.dateKey(licence.expiresOn) })
@@ -271,7 +320,7 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
       <div className={styles.rejectedBody}>
         <p className={styles.bannerTitle}>{t('rejected.title')}</p>
         <p className={styles.bannerBody}>{reasonText}</p>
-        {reason === DRIVER_LICENCE_REJECT_REASON.EXPIRED && licence.canRequestReview ? (
+        {reason === DRIVER_LICENCE_REJECT_REASON.EXPIRED ? (
           <p className={styles.bannerBody}>{t('rejected.expiredMisread')}</p>
         ) : null}
         {licence.qualityIssues.length > 0 ? (
@@ -283,22 +332,6 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
         ) : null}
         {licence.reviewNote ? (
           <p className={styles.bannerBody}>{t('rejected.note', { note: licence.reviewNote })}</p>
-        ) : null}
-        {licence.canRequestReview ? (
-          <Button
-            size="small"
-            icon={<SyncOutlined aria-hidden="true" />}
-            loading={review.isPending}
-            className={styles.reviewButton}
-            onClick={() =>
-              review.mutate(licence.id, {
-                onSuccess: () => void message.success(t('rejected.reviewRequested')),
-                onError: (error) => void message.error(errorMessage(error)),
-              })
-            }
-          >
-            {t('rejected.requestReview')}
-          </Button>
         ) : null}
       </div>
     </div>

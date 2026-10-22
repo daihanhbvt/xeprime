@@ -19,15 +19,14 @@ export interface DriverLicenceTrip {
 export type TripIssue = 'expired' | 'expiredToday' | 'classMismatchCar' | 'classMismatchMotorbike';
 
 /**
- * Màn hình của bộ xác thực — đúng ba nhánh của `DriverLicenceVerifier` bên web:
+ * Màn hình của bộ xác thực — đúng hai nhánh của `DriverLicenceVerifier` bên web (ADR 0070 gỡ
+ * nhánh chờ duyệt tay):
  *
  *  - `usable`  : bằng dùng được (cho chuyến này, nếu có chuyến) và khách không đang thay bằng.
- *  - `pending` : đang chờ người của XePrime xem.
  *  - `submit`  : cần nộp (lại) / đang thay bằng / máy đang đọc — CÙNG một khung.
  */
 export type VerifierView =
-  | { kind: 'usable'; verified: DriverLicence; rejected: DriverLicence | null; pendingReplace: boolean }
-  | { kind: 'pending' }
+  | { kind: 'usable'; verified: DriverLicence; rejected: DriverLicence | null }
   | {
       kind: 'submit';
       processing: DriverLicence | null;
@@ -80,15 +79,8 @@ export function resolveVerifierView(input: {
       : null;
 
   if (usable && verified && !replacing && !processing) {
-    return {
-      kind: 'usable',
-      verified,
-      rejected,
-      pendingReplace: status === DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-    };
+    return { kind: 'usable', verified, rejected };
   }
-
-  if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW && !replacing) return { kind: 'pending' };
 
   const showResult =
     !processing && !(pickedOver !== undefined && pickedOver === (latest?.id ?? null));

@@ -93,7 +93,9 @@ export class PlatformTripTodayDto {
 }
 
 export class PlatformTripSummaryDto {
-  @ApiProperty({ description: 'ISO-8601 UTC — mốc server tính; web đếm ngược từ các mốc, không từ đây' })
+  @ApiProperty({
+    description: 'ISO-8601 UTC — mốc server tính; web đếm ngược từ các mốc, không từ đây',
+  })
   generatedAt!: string;
   @ApiProperty({ type: PlatformTripTodayDto }) today!: PlatformTripTodayDto;
   @ApiProperty({ type: PlatformTripQueueCountsDto }) queues!: PlatformTripQueueCountsDto;

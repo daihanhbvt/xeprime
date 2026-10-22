@@ -72,20 +72,19 @@ const LIST_SELECT = {
  * Sắp xếp — mọi khoá đều có tiebreak `id` để phân trang ổn định khi nhiều xe cùng giá trị.
  * Giá `NULL` (xe chưa đặt giá) luôn xuống cuối ở cả hai chiều: nó không phải "giá 0".
  */
-const ORDER_BY: Readonly<Record<PlatformVehicleSort, Prisma.VehicleOrderByWithRelationInput[]>> =
-  {
-    [PLATFORM_VEHICLE_SORT.NEWEST]: [{ createdAt: 'desc' }, { id: 'desc' }],
-    [PLATFORM_VEHICLE_SORT.UPDATED]: [{ updatedAt: 'desc' }, { id: 'desc' }],
-    [PLATFORM_VEHICLE_SORT.NAME]: [{ name: 'asc' }, { id: 'asc' }],
-    [PLATFORM_VEHICLE_SORT.PRICE_DESC]: [
-      { weekdayPrice: { sort: 'desc', nulls: 'last' } },
-      { id: 'desc' },
-    ],
-    [PLATFORM_VEHICLE_SORT.PRICE_ASC]: [
-      { weekdayPrice: { sort: 'asc', nulls: 'last' } },
-      { id: 'asc' },
-    ],
-  };
+const ORDER_BY: Readonly<Record<PlatformVehicleSort, Prisma.VehicleOrderByWithRelationInput[]>> = {
+  [PLATFORM_VEHICLE_SORT.NEWEST]: [{ createdAt: 'desc' }, { id: 'desc' }],
+  [PLATFORM_VEHICLE_SORT.UPDATED]: [{ updatedAt: 'desc' }, { id: 'desc' }],
+  [PLATFORM_VEHICLE_SORT.NAME]: [{ name: 'asc' }, { id: 'asc' }],
+  [PLATFORM_VEHICLE_SORT.PRICE_DESC]: [
+    { weekdayPrice: { sort: 'desc', nulls: 'last' } },
+    { id: 'desc' },
+  ],
+  [PLATFORM_VEHICLE_SORT.PRICE_ASC]: [
+    { weekdayPrice: { sort: 'asc', nulls: 'last' } },
+    { id: 'asc' },
+  ],
+};
 
 /**
  * Xe TOÀN HỆ THỐNG cho admin nền tảng (build plan §11.1) — không tenant-scope.

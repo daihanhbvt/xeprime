@@ -204,9 +204,7 @@ export class PlatformPartnerDetailService {
             .then((page) => page.data)
         : Promise.resolve(null),
       // Trần xe đọc từ CHÍNH hàm mà cổng tạo xe gọi — không bao giờ nói khác con số bị chặn.
-      isPackage
-        ? this.billingService.fleetQuotaFor(partner.tenantId, now)
-        : Promise.resolve(null),
+      isPackage ? this.billingService.fleetQuotaFor(partner.tenantId, now) : Promise.resolve(null),
     ]);
 
     return {
@@ -386,66 +384,66 @@ export class PlatformPartnerDetailService {
       subscriptions,
       nextTerms,
     ] = await Promise.all([
-        this.prisma.tenant.findUniqueOrThrow({
-          where: { id: partner.tenantId },
-          select: {
-            usedFeatures: true,
-            subscriptions: {
-              where: effectiveSubscriptionWhere(now),
-              orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-              take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
-              select: {
-                ...EFFECTIVE_SUBSCRIPTION_ARGS.select,
-                id: true,
-                quotaJson: true,
-                startsAt: true,
-              },
+      this.prisma.tenant.findUniqueOrThrow({
+        where: { id: partner.tenantId },
+        select: {
+          usedFeatures: true,
+          subscriptions: {
+            where: effectiveSubscriptionWhere(now),
+            orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
+            take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
+            select: {
+              ...EFFECTIVE_SUBSCRIPTION_ARGS.select,
+              id: true,
+              quotaJson: true,
+              startsAt: true,
             },
           },
-        }),
-        this.prisma.vehicle.findMany({
-          where: { tenantId: partner.tenantId, deletedAt: null },
-          select: { vehicleType: true },
-        }),
-        this.prisma.tenantBranch.count({ where: { tenantId: partner.tenantId, deletedAt: null } }),
-        this.prisma.tenantMembership.count({
-          where: { tenantId: partner.tenantId, status: MEMBERSHIP_STATUS.ACTIVE },
-        }),
-        this.activeFeePolicy(),
-        this.prisma.subscriptionInvoice.findMany({
-          where: { tenantId: partner.tenantId },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: HISTORY_LIMIT,
-          select: {
-            id: true,
-            code: true,
-            periodFrom: true,
-            periodTo: true,
-            totalAmount: true,
-            paidAmount: true,
-            status: true,
-            paidAt: true,
-            expiresAt: true,
-          },
-        }),
-        this.prisma.tenantSubscription.findMany({
-          where: { tenantId: partner.tenantId },
-          orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
-          take: HISTORY_LIMIT,
-          select: {
-            id: true,
-            price: true,
-            termMonths: true,
-            status: true,
-            billingMode: true,
-            vehicleScope: true,
-            startsAt: true,
-            endsAt: true,
-            plan: { select: { name: true, code: true } },
-          },
-        }),
-        scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
-      ]);
+        },
+      }),
+      this.prisma.vehicle.findMany({
+        where: { tenantId: partner.tenantId, deletedAt: null },
+        select: { vehicleType: true },
+      }),
+      this.prisma.tenantBranch.count({ where: { tenantId: partner.tenantId, deletedAt: null } }),
+      this.prisma.tenantMembership.count({
+        where: { tenantId: partner.tenantId, status: MEMBERSHIP_STATUS.ACTIVE },
+      }),
+      this.activeFeePolicy(),
+      this.prisma.subscriptionInvoice.findMany({
+        where: { tenantId: partner.tenantId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: HISTORY_LIMIT,
+        select: {
+          id: true,
+          code: true,
+          periodFrom: true,
+          periodTo: true,
+          totalAmount: true,
+          paidAmount: true,
+          status: true,
+          paidAt: true,
+          expiresAt: true,
+        },
+      }),
+      this.prisma.tenantSubscription.findMany({
+        where: { tenantId: partner.tenantId },
+        orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+        take: HISTORY_LIMIT,
+        select: {
+          id: true,
+          price: true,
+          termMonths: true,
+          status: true,
+          billingMode: true,
+          vehicleScope: true,
+          startsAt: true,
+          endsAt: true,
+          plan: { select: { name: true, code: true } },
+        },
+      }),
+      scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
+    ]);
 
     // Đếm hoá đơn còn nợ trên TOÀN bộ, không chỉ 12 dòng lịch sử đang hiện.
     const unpaid = await this.prisma.subscriptionInvoice.findMany({
@@ -777,7 +775,8 @@ function usedWithin(quota: TypeQuota, type: VehicleType, usage: UsageByType): nu
  * gian hàng tuyến gói là `not_covered` — cổng tạo xe trả `PLAN_SCOPE_REQUIRED`.
  */
 function typeQuotaItem(quota: TypeQuota, usage: UsageByType): PartnerQuotaItemDto {
-  const type = quota.countedScope === PLAN_VEHICLE_SCOPE.MOTORBIKE ? VEHICLE_TYPE.MOTORBIKE : VEHICLE_TYPE.CAR;
+  const type =
+    quota.countedScope === PLAN_VEHICLE_SCOPE.MOTORBIKE ? VEHICLE_TYPE.MOTORBIKE : VEHICLE_TYPE.CAR;
   const used = usedWithin(quota, type, usage);
   if (quota.kind === VEHICLE_QUOTA_KIND.SCOPE_REQUIRED) {
     return { used, kind: PARTNER_QUOTA_KIND.NOT_COVERED, limit: null, reason: null };
@@ -805,7 +804,12 @@ function fleetQuotaItem(quota: FleetQuota, usage: UsageByType): PartnerQuotaItem
   const seen = new Set<string>();
   let limit = 0;
   for (const q of list) {
-    if (q.kind !== VEHICLE_QUOTA_KIND.TOTAL || q.limit === null || !q.subscriptionId || seen.has(q.subscriptionId)) {
+    if (
+      q.kind !== VEHICLE_QUOTA_KIND.TOTAL ||
+      q.limit === null ||
+      !q.subscriptionId ||
+      seen.has(q.subscriptionId)
+    ) {
       continue;
     }
     seen.add(q.subscriptionId);

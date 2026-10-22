@@ -17,8 +17,6 @@ import {
   DRIVER_LICENCE_GATE_ERROR_CODE,
   DRIVER_LICENCE_TRIP_GATE,
   evaluateDriverLicenceForTrip,
-  licenceClassCoverage,
-  normalizeLicenceClasses,
   type DriverLicenceGateInput,
 } from '@xeprime/domain';
 import { newId, Prisma, type CustomerDriverLicence } from '@xeprime/prisma';
@@ -29,26 +27,19 @@ import {
   DOCUMENT_MIME_EXTENSION,
   DRIVER_LICENCE_DECISION_SOURCE,
   DRIVER_LICENCE_IN_FLIGHT_STATUSES,
-  DRIVER_LICENCE_KIND,
-  DRIVER_LICENCE_PENDING_REASON,
   DRIVER_LICENCE_REJECT_REASON,
-  DRIVER_LICENCE_REVIEWABLE_REJECT_REASONS,
   DRIVER_LICENCE_STATUS,
   DRIVER_LICENCE_UPLOAD_MAX_BYTES,
   serviceRequiresDriverLicence,
   vnDateKey,
-  type DriverLicenceKind,
-  type DriverLicencePendingReason,
-  type DriverLicenceRejectReason,
   type DriverLicenceStatus,
   type ImageUploadMimeType,
   type PaginationMeta,
 } from '@xeprime/types';
-import { fromDateOnly, isValidDateOnly, toDateOnly } from '../../common/date-only';
+import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { FILE_SIGNATURE_PREFIX_BYTES, matchesFileSignature } from '../../common/file-signature';
 import { maskEmail, maskPhone } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
-import { phoneLookupVariants } from '../../common/phone';
 import { isUniqueViolation } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -59,18 +50,15 @@ import {
   type ResolvedLicenceFields,
 } from './driver-licence-decision';
 import {
-  ApproveDriverLicenceDto,
   DRIVER_LICENCE_DEFAULT_LIMIT,
   DRIVER_LICENCE_MAX_LIMIT,
   DriverLicenceDto,
   DriverLicenceImageDto,
   DriverLicenceOverviewDto,
   DriverLicencePresignDto,
-  PlatformDriverLicenceCountsDto,
   PlatformDriverLicenceDto,
   PlatformDriverLicenceListQueryDto,
   PresignDriverLicenceDto,
-  RejectDriverLicenceDto,
 } from './dto/driver-licence.dto';
 import {
   DRIVER_LICENCE_READER,
@@ -99,21 +87,18 @@ const MAX_SUBMISSIONS_PER_DAY = 10;
  */
 const SHUTDOWN_DRAIN_MS = 8_000;
 
-/** Lượt nộp đã có kết quả hoặc đang chờ người — thứ "lượt nộp gần nhất" được hiển thị. */
+/** Lượt nộp đang đọc hoặc đã có kết quả — thứ "lượt nộp gần nhất" được hiển thị. */
 const VISIBLE_STATUSES: DriverLicenceStatus[] = [
   DRIVER_LICENCE_STATUS.PROCESSING,
-  DRIVER_LICENCE_STATUS.PENDING_REVIEW,
   DRIVER_LICENCE_STATUS.VERIFIED,
   DRIVER_LICENCE_STATUS.REJECTED,
 ];
 
-/** Vì sao một lượt nộp đang chờ người duyệt — lưu trong `ocr_result_json`. */
-type PendingReason = DriverLicencePendingReason;
-
-/** Hình dạng của `ocr_result_json`. */
+/**
+ * Hình dạng của `ocr_result_json`. Dòng trước ADR 0070 còn khoá `pendingReason` — bỏ qua khi đọc.
+ */
 interface StoredReading {
   reading: DriverLicenceReading | null;
-  pendingReason: PendingReason | null;
 }
 
 const OWNER_SELECT = {
@@ -304,54 +289,6 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     return toDto(await this.prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } }));
   }
 
-  /**
-   * Khách nhờ người xem lại một lượt MÁY từ chối vì lý do máy có thể đọc sai (ảnh mờ, thiếu
-   * trường, không nhận ra hạng). Một lần cho mỗi lượt nộp, và chỉ với lượt nộp mới nhất.
-   */
-  async requestReview(userId: string, id: string): Promise<DriverLicenceDto> {
-    const row = await this.prisma.customerDriverLicence.findFirst({ where: { id, userId } });
-    if (!row) throw licenceNotFound();
-    if (!canRequestReview(row)) {
-      throw stateConflict('Lượt nộp này không thể gửi xem lại.');
-    }
-    const newer = await this.prisma.customerDriverLicence.count({
-      where: {
-        userId,
-        createdAt: { gt: row.createdAt },
-        status: { notIn: [DRIVER_LICENCE_STATUS.CANCELLED] },
-      },
-    });
-    if (newer > 0) throw stateConflict('Bạn đã nộp ảnh mới hơn — không cần gửi xem lại ảnh cũ.');
-
-    const stored = readStored(row.ocrResult);
-    try {
-      const claimed = await this.prisma.customerDriverLicence.updateMany({
-        where: {
-          id,
-          status: DRIVER_LICENCE_STATUS.REJECTED,
-          decisionSource: DRIVER_LICENCE_DECISION_SOURCE.AUTO,
-          reviewRequestedAt: null,
-        },
-        data: {
-          status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-          rejectionReason: null,
-          decisionSource: null,
-          decidedAt: null,
-          reviewRequestedAt: new Date(),
-          ocrResult: toJson({
-            ...stored,
-            pendingReason: DRIVER_LICENCE_PENDING_REASON.CUSTOMER_REQUEST,
-          }),
-        },
-      });
-      if (claimed.count === 0) throw stateConflict('Lượt nộp này vừa thay đổi — tải lại trang.');
-    } catch (error) {
-      if (isUniqueViolation(error)) throw stateConflict('Đang có một lượt nộp khác chờ xử lý.');
-      throw error;
-    }
-    return toDto(await this.prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } }));
-  }
-
   /** Ảnh của CHÍNH mình — URL sống ngắn. */
   async imageForOwner(userId: string, id: string): Promise<DriverLicenceImageDto> {
     this.assertStorage();
@@ -396,7 +333,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       case DRIVER_LICENCE_TRIP_GATE.PENDING_REVIEW:
         throw new ForbiddenException({
           code: DRIVER_LICENCE_GATE_ERROR_CODE[gate],
-          message: 'Bằng lái của bạn đang chờ XePrime xác thực — bạn sẽ đặt được xe ngay sau đó.',
+          message: 'Bằng lái của bạn đang được đọc — thử lại sau ít giây.',
         });
       case DRIVER_LICENCE_TRIP_GATE.EXPIRED:
         throw new ForbiddenException({
@@ -424,34 +361,18 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
   async listForPlatform(
     query: PlatformDriverLicenceListQueryDto,
   ): Promise<{ data: PlatformDriverLicenceDto[]; meta: PaginationMeta }> {
-    await this.recoverStaleProcessing({});
+    await this.recoverStaleProcessing({ userId: query.userId });
     const paging = resolvePaging(query, DRIVER_LICENCE_DEFAULT_LIMIT, DRIVER_LICENCE_MAX_LIMIT);
-    // Không lọc = VIỆC CẦN LÀM, không phải toàn bộ lịch sử.
-    const status =
-      (query.status as DriverLicenceStatus | undefined) ?? DRIVER_LICENCE_STATUS.PENDING_REVIEW;
-    const q = query.q?.trim();
+    // Lịch sử nộp của MỘT khách (hồ sơ khách thuê) — lượt bỏ dở `uploading` không có ảnh để xem.
     const where: Prisma.CustomerDriverLicenceWhereInput = {
-      status,
-      ...(query.kind ? { kind: query.kind } : {}),
-      ...(q
-        ? {
-            OR: [
-              { fullName: { contains: q, mode: 'insensitive' } },
-              { licenceNumber: { contains: q.replace(/\s+/g, ''), mode: 'insensitive' } },
-              { user: { displayName: { contains: q, mode: 'insensitive' } } },
-              { user: { phone: { in: phoneLookupVariants(q) } } },
-            ],
-          }
-        : {}),
+      userId: query.userId,
+      status: { not: DRIVER_LICENCE_STATUS.UPLOADING },
     };
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.customerDriverLicence.count({ where }),
       this.prisma.customerDriverLicence.findMany({
         where,
-        // Hàng đợi: cũ nhất trước (FIFO). Lịch sử: mới nhất trước.
-        orderBy: {
-          createdAt: status === DRIVER_LICENCE_STATUS.PENDING_REVIEW ? 'asc' : 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
         skip: paging.skip,
         take: paging.take,
         include: { user: { select: OWNER_SELECT }, decider: { select: { displayName: true } } },
@@ -460,28 +381,6 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     return {
       data: rows.map((row) => toPlatformDto(row)),
       meta: paginationMeta(paging, total),
-    };
-  }
-
-  async countsForPlatform(): Promise<PlatformDriverLicenceCountsDto> {
-    const groups = await this.prisma.customerDriverLicence.groupBy({
-      by: ['status'],
-      where: {
-        status: {
-          in: [
-            DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-            DRIVER_LICENCE_STATUS.VERIFIED,
-            DRIVER_LICENCE_STATUS.REJECTED,
-          ],
-        },
-      },
-      _count: { _all: true },
-    });
-    const count = (s: DriverLicenceStatus) => groups.find((g) => g.status === s)?._count._all ?? 0;
-    return {
-      pendingReview: count(DRIVER_LICENCE_STATUS.PENDING_REVIEW),
-      verified: count(DRIVER_LICENCE_STATUS.VERIFIED),
-      rejected: count(DRIVER_LICENCE_STATUS.REJECTED),
     };
   }
 
@@ -511,122 +410,6 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       targetId: id,
     });
     return image;
-  }
-
-  /**
-   * Người duyệt CHỐT bằng hợp lệ — với thông tin họ đã đối chiếu (sửa được chỗ máy đọc sai).
-   * Bằng đang dùng trước đó (nếu có) chuyển `superseded` trong CÙNG transaction.
-   */
-  async approve(
-    id: string,
-    actorUserId: string,
-    dto: ApproveDriverLicenceDto,
-  ): Promise<PlatformDriverLicenceDto> {
-    const before = await this.findPlatformRow(id);
-    if (before.status !== DRIVER_LICENCE_STATUS.PENDING_REVIEW) throw notPending(before.status);
-
-    for (const value of [dto.dateOfBirth, dto.issuedOn, dto.expiresOn]) {
-      // `@Matches` chỉ kiểm HÌNH; 2026-02-30 qua được nó và bị `Date` âm thầm đẩy sang tháng 3.
-      if (value && !isValidDateOnly(value)) throw invalidReview(`Ngày không có thật: ${value}`);
-    }
-    const fields = resolveManualFields(dto);
-    const today = vnDateKey(new Date());
-    if (fields.classes.length === 0) {
-      throw invalidReview('Hạng bằng không hợp lệ — nhập hạng như in trên bằng (vd B2, A1).');
-    }
-    if (fields.noExpiry === Boolean(fields.expiresOn)) {
-      throw invalidReview('Chọn MỘT trong hai: ngày hết hạn, hoặc "không thời hạn".');
-    }
-    if (fields.expiresOn && fields.expiresOn < today) {
-      throw invalidReview('Bằng đã hết hạn — hãy từ chối với lý do "Bằng đã hết hạn".');
-    }
-    if (!fields.coversCar && !fields.coversMotorbike) {
-      throw invalidReview('Hạng bằng không lái được ô tô lẫn xe máy — không thể duyệt.');
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.customerDriverLicence.updateMany({
-        where: { userId: before.userId, status: DRIVER_LICENCE_STATUS.VERIFIED },
-        data: { status: DRIVER_LICENCE_STATUS.SUPERSEDED },
-      });
-      const claimed = await tx.customerDriverLicence.updateMany({
-        where: { id, status: DRIVER_LICENCE_STATUS.PENDING_REVIEW },
-        data: {
-          ...fieldColumns(fields),
-          status: DRIVER_LICENCE_STATUS.VERIFIED,
-          decisionSource: DRIVER_LICENCE_DECISION_SOURCE.MANUAL,
-          decidedBy: actorUserId,
-          decidedAt: new Date(),
-          reviewNote: null,
-        },
-      });
-      if (claimed.count === 0) throw decidedByOther();
-      await this.audit.record(
-        {
-          actorUserId,
-          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'driver_licence.verified',
-          targetType: AUDIT_TARGET_TYPE.CUSTOMER_DRIVER_LICENCE,
-          targetId: id,
-          before: { status: before.status },
-          after: {
-            status: DRIVER_LICENCE_STATUS.VERIFIED,
-            kind: fields.kind,
-            classes: fields.classes,
-            expiresOn: fields.expiresOn,
-            noExpiry: fields.noExpiry,
-            coversCar: fields.coversCar,
-            coversMotorbike: fields.coversMotorbike,
-          },
-        },
-        tx,
-      );
-    });
-    // Có bằng hợp lệ ⇒ ảnh bằng cũ và các lượt bị từ chối trước đó hết lý do để giữ.
-    await this.purgeObsoleteImages(before.userId, { includeRejected: true });
-    return this.getForPlatform(id);
-  }
-
-  async reject(
-    id: string,
-    actorUserId: string,
-    dto: RejectDriverLicenceDto,
-  ): Promise<PlatformDriverLicenceDto> {
-    const before = await this.findPlatformRow(id);
-    if (before.status !== DRIVER_LICENCE_STATUS.PENDING_REVIEW) throw notPending(before.status);
-    const reason = dto.reason as DriverLicenceRejectReason;
-    const note = dto.note?.trim() || null;
-    if (reason === DRIVER_LICENCE_REJECT_REASON.OTHER && !note) {
-      throw invalidReview('Lý do "khác" cần một lời nhắn cho khách.');
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.customerDriverLicence.updateMany({
-        where: { id, status: DRIVER_LICENCE_STATUS.PENDING_REVIEW },
-        data: {
-          status: DRIVER_LICENCE_STATUS.REJECTED,
-          rejectionReason: reason,
-          reviewNote: note,
-          decisionSource: DRIVER_LICENCE_DECISION_SOURCE.MANUAL,
-          decidedBy: actorUserId,
-          decidedAt: new Date(),
-        },
-      });
-      if (claimed.count === 0) throw decidedByOther();
-      await this.audit.record(
-        {
-          actorUserId,
-          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'driver_licence.rejected',
-          targetType: AUDIT_TARGET_TYPE.CUSTOMER_DRIVER_LICENCE,
-          targetId: id,
-          before: { status: before.status },
-          after: { status: DRIVER_LICENCE_STATUS.REJECTED, reason, ...(note ? { note } : {}) },
-        },
-        tx,
-      );
-    });
-    return this.getForPlatform(id);
   }
 
   // ── Đọc ảnh (chạy nền) ─────────────────────────────────────────────────────────────────
@@ -726,12 +509,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       this.logger.error(
         `Lượt đọc bằng lái ${id} hỏng ngoài dự kiến: ${error instanceof Error ? error.message : String(error)}`,
       );
-      await this.toPendingReview(
-        id,
-        null,
-        DRIVER_LICENCE_PENDING_REASON.READER_UNAVAILABLE,
-        READER_FAILURE.PROVIDER_ERROR,
-      ).catch(() => undefined);
+      await this.toReaderUnavailable(id, READER_FAILURE.PROVIDER_ERROR).catch(() => undefined);
     }
   }
 
@@ -740,22 +518,12 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     if (!row || row.status !== DRIVER_LICENCE_STATUS.PROCESSING) return;
 
     if (!this.reader.enabled) {
-      await this.toPendingReview(
-        id,
-        null,
-        DRIVER_LICENCE_PENDING_REASON.READER_UNAVAILABLE,
-        READER_FAILURE.NOT_CONFIGURED,
-      );
+      await this.toReaderUnavailable(id, READER_FAILURE.NOT_CONFIGURED);
       return;
     }
     const image = await this.r2.readPrivateObject(row.objectKey, DRIVER_LICENCE_UPLOAD_MAX_BYTES);
     if (!image) {
-      await this.toPendingReview(
-        id,
-        null,
-        DRIVER_LICENCE_PENDING_REASON.READER_UNAVAILABLE,
-        READER_FAILURE.IMAGE_UNAVAILABLE,
-      );
+      await this.toReaderUnavailable(id, READER_FAILURE.IMAGE_UNAVAILABLE);
       return;
     }
 
@@ -766,7 +534,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       const code =
         error instanceof DriverLicenceReaderError ? error.code : READER_FAILURE.PROVIDER_ERROR;
       this.logger.warn(`Không đọc được bằng lái ${id}: ${code}`);
-      await this.toPendingReview(id, null, DRIVER_LICENCE_PENDING_REASON.READER_UNAVAILABLE, code);
+      await this.toReaderUnavailable(id, code);
       return;
     }
 
@@ -785,19 +553,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       ocrErrorCode: null,
     };
 
-    if (decision.status === DRIVER_LICENCE_STATUS.PENDING_REVIEW) {
-      await this.prisma.customerDriverLicence.updateMany({
-        where: { id: row.id, status: DRIVER_LICENCE_STATUS.PROCESSING },
-        data: {
-          ...base,
-          status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-          ocrResult: toJson({ reading, pendingReason: decision.why }),
-        },
-      });
-      return;
-    }
-
-    const ocrResult = toJson({ reading, pendingReason: null });
+    const ocrResult = toJson({ reading });
     if (decision.status === DRIVER_LICENCE_STATUS.REJECTED) {
       await this.prisma.customerDriverLicence.updateMany({
         where: { id: row.id, status: DRIVER_LICENCE_STATUS.PROCESSING },
@@ -840,26 +596,20 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       });
   }
 
-  private async toPendingReview(
-    id: string,
-    reading: DriverLicenceReading | null,
-    pendingReason: PendingReason,
-    errorCode: ReaderFailureCode | null,
-  ): Promise<void> {
+  /**
+   * Bộ đọc không đọc được (lỗi, tắt, quá tải, mất ảnh) ⇒ TỪ CHỐI với `reader_unavailable` để khách
+   * nộp lại sau ít phút. Chưa đọc được thì không bao giờ tự xác thực (ADR 0070).
+   */
+  private async toReaderUnavailable(id: string, errorCode: ReaderFailureCode): Promise<void> {
     await this.prisma.customerDriverLicence.updateMany({
       where: { id, status: DRIVER_LICENCE_STATUS.PROCESSING },
-      data: {
-        status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-        ocrResult: toJson({ reading, pendingReason }),
-        ocrErrorCode: errorCode,
-        ocrCompletedAt: new Date(),
-      },
+      data: readerUnavailableColumns(errorCode, new Date()),
     });
   }
 
   /**
-   * Lượt đọc kẹt ở `processing` (tiến trình khởi động lại giữa chừng) ⇒ chuyển sang người duyệt.
-   * Chạy trên đường đọc của khách và của hàng đợi — idempotent, không cần job riêng.
+   * Lượt đọc kẹt ở `processing` (tiến trình khởi động lại giữa chừng) ⇒ từ chối `reader_unavailable`.
+   * Chạy trên đường đọc của khách và của hồ sơ khách thuê — idempotent, không cần job riêng.
    */
   private async recoverStaleProcessing(scope: { userId?: string }): Promise<void> {
     await this.prisma.customerDriverLicence.updateMany({
@@ -868,15 +618,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
         status: DRIVER_LICENCE_STATUS.PROCESSING,
         updatedAt: { lt: new Date(Date.now() - STALE_PROCESSING_MS) },
       },
-      data: {
-        status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-        ocrErrorCode: READER_FAILURE.INTERRUPTED,
-        ocrResult: toJson({
-          reading: null,
-          pendingReason: DRIVER_LICENCE_PENDING_REASON.READER_UNAVAILABLE,
-        }),
-        ocrCompletedAt: new Date(),
-      },
+      data: readerUnavailableColumns(READER_FAILURE.INTERRUPTED, new Date()),
     });
   }
 
@@ -938,25 +680,28 @@ class SupersededReading extends Error {}
 function readStored(value: Prisma.JsonValue | null): StoredReading {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const v = value as unknown as Partial<StoredReading>;
-    return { reading: v.reading ?? null, pendingReason: v.pendingReason ?? null };
+    return { reading: v.reading ?? null };
   }
-  return { reading: null, pendingReason: null };
+  return { reading: null };
+}
+
+function readerUnavailableColumns(
+  errorCode: ReaderFailureCode,
+  now: Date,
+): Prisma.CustomerDriverLicenceUpdateManyMutationInput {
+  return {
+    status: DRIVER_LICENCE_STATUS.REJECTED,
+    rejectionReason: DRIVER_LICENCE_REJECT_REASON.READER_UNAVAILABLE,
+    decisionSource: DRIVER_LICENCE_DECISION_SOURCE.AUTO,
+    decidedAt: now,
+    ocrResult: toJson({ reading: null }),
+    ocrErrorCode: errorCode,
+    ocrCompletedAt: now,
+  };
 }
 
 function toJson(value: StoredReading): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
-}
-
-function canRequestReview(row: CustomerDriverLicence): boolean {
-  return (
-    row.status === DRIVER_LICENCE_STATUS.REJECTED &&
-    row.decisionSource === DRIVER_LICENCE_DECISION_SOURCE.AUTO &&
-    row.reviewRequestedAt === null &&
-    row.rejectionReason !== null &&
-    DRIVER_LICENCE_REVIEWABLE_REJECT_REASONS.includes(
-      row.rejectionReason as DriverLicenceRejectReason,
-    )
-  );
 }
 
 function fieldColumns(fields: ResolvedLicenceFields) {
@@ -972,27 +717,6 @@ function fieldColumns(fields: ResolvedLicenceFields) {
     issuingCountry: fields.issuingCountry,
     coversCar: fields.coversCar,
     coversMotorbike: fields.coversMotorbike,
-  };
-}
-
-/** Trường người duyệt nhập — GPLX VN/IDP vẫn suy "lái được gì" từ hạng, không tin cờ gửi lên. */
-function resolveManualFields(dto: ApproveDriverLicenceDto): ResolvedLicenceFields {
-  const kind = dto.kind as DriverLicenceKind;
-  const classes = normalizeLicenceClasses(dto.classes);
-  const issuedOn = dto.issuedOn ?? null;
-  const coverage = licenceClassCoverage({ kind, classes, issuedOn });
-  return {
-    kind,
-    licenceNumber: dto.licenceNumber.replace(/\s+/g, '').toUpperCase(),
-    fullName: dto.fullName.replace(/\s+/g, ' ').trim(),
-    dateOfBirth: dto.dateOfBirth ?? null,
-    classes,
-    issuedOn,
-    expiresOn: dto.noExpiry ? null : (dto.expiresOn ?? null),
-    noExpiry: dto.noExpiry,
-    issuingCountry: kind === DRIVER_LICENCE_KIND.VN ? 'VN' : (dto.issuingCountry ?? null),
-    coversCar: coverage ? coverage.car : dto.coversCar,
-    coversMotorbike: coverage ? coverage.motorbike : dto.coversMotorbike,
   };
 }
 
@@ -1026,7 +750,6 @@ function toDto(row: CustomerDriverLicence): DriverLicenceDto {
     rejectionReason: row.rejectionReason,
     reviewNote: row.reviewNote,
     qualityIssues: stored.reading?.qualityIssues ?? [],
-    canRequestReview: canRequestReview(row),
     reviewRequestedAt: row.reviewRequestedAt?.toISOString() ?? null,
     decisionSource: row.decisionSource,
     decidedAt: row.decidedAt?.toISOString() ?? null,
@@ -1050,8 +773,6 @@ function toPlatformDto(row: PlatformRow): PlatformDriverLicenceDto {
       confidence: stored.reading?.confidence ?? null,
       notes: stored.reading?.notes ?? null,
       errorCode: row.ocrErrorCode,
-      pendingReason:
-        row.status === DRIVER_LICENCE_STATUS.PENDING_REVIEW ? stored.pendingReason : null,
     },
     decidedByName: row.decider?.displayName ?? null,
   };
@@ -1068,23 +789,4 @@ function licenceNotFound(): NotFoundException {
 
 function stateConflict(message: string): ConflictException {
   return new ConflictException({ code: API_ERROR_CODE.DRIVER_LICENCE_STATE_CONFLICT, message });
-}
-
-function notPending(status: string): ConflictException {
-  return new ConflictException({
-    code: API_ERROR_CODE.DRIVER_LICENCE_STATE_CONFLICT,
-    message: 'Lượt nộp này không ở trạng thái chờ duyệt',
-    details: { status },
-  });
-}
-
-function decidedByOther(): ConflictException {
-  return new ConflictException({
-    code: API_ERROR_CODE.DRIVER_LICENCE_STATE_CONFLICT,
-    message: 'Lượt nộp vừa được người khác xử lý, hoặc khách vừa nộp ảnh khác',
-  });
-}
-
-function invalidReview(message: string): BadRequestException {
-  return new BadRequestException({ code: API_ERROR_CODE.VALIDATION_FAILED, message });
 }

@@ -96,7 +96,10 @@ export class PlatformVehicleListQueryDto {
   @IsBoolean()
   marketplaceVisible?: boolean;
 
-  @ApiPropertyOptional({ enum: PLATFORM_VEHICLE_SORT_VALUES, default: DEFAULT_PLATFORM_VEHICLE_SORT })
+  @ApiPropertyOptional({
+    enum: PLATFORM_VEHICLE_SORT_VALUES,
+    default: DEFAULT_PLATFORM_VEHICLE_SORT,
+  })
   @IsOptional()
   @IsIn(PLATFORM_VEHICLE_SORT_VALUES)
   sort?: PlatformVehicleSort;

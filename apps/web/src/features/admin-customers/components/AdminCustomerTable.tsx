@@ -1,13 +1,22 @@
 'use client';
 
 import { CheckCircleFilled, EyeOutlined } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
-import { USER_STATUS_META, type PaginationMeta, type UserStatus } from '@xeprime/types';
+import { Button, Tag, Tooltip } from 'antd';
+import { useTranslations } from 'next-intl';
+import {
+  CUSTOMER_LICENCE_STATE,
+  USER_STATUS_META,
+  vnDateKey,
+  type CustomerLicenceState,
+  type PaginationMeta,
+  type UserStatus,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { CUSTOMER_LICENCE_STATE_COLOR } from '../constants';
 import type { AdminCustomer } from '../types';
 import styles from './AdminCustomerTable.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminCustomerTableProps {
   items: AdminCustomer[];
@@ -20,8 +29,8 @@ interface AdminCustomerTableProps {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Suy từ tổng bề rộng cột (P25) — 9 cột, ba cột đếm hẹp. */
-const MIN_TABLE_WIDTH = 1160;
+/** Suy từ tổng bề rộng cột (P25) — 10 cột, ba cột đếm hẹp. */
+const MIN_TABLE_WIDTH = 1320;
 
 export function AdminCustomerTable({
   items,
@@ -33,11 +42,13 @@ export function AdminCustomerTable({
   onView,
   onPageChange,
 }: AdminCustomerTableProps) {
+  const t = useTranslations('AdminCustomers');
   const fmt = useAppFormat();
+  const today = vnDateKey(new Date());
 
   const columns: DataTableColumn<AdminCustomer>[] = [
     {
-      title: 'Khách',
+      title: t('table.customer'),
       key: 'name',
       width: 220,
       render: (_, r) => (
@@ -49,76 +60,113 @@ export function AdminCustomerTable({
       ),
     },
     {
-      title: 'SĐT',
+      title: t('table.phone'),
       key: 'phone',
       width: 150,
       render: (_, r) => (
         <span className={styles.phoneCell}>
           <span className={styles.masked}>{r.phoneMasked ?? '—'}</span>
           {r.phoneVerified ? (
-            <Tooltip title="SĐT đã xác thực OTP">
+            <Tooltip title={t('table.phoneVerified')}>
               {/* Màu lấy từ token (ADR 0003), không hard-code hex trong component. */}
-              <CheckCircleFilled className={styles.verified} />
+              <CheckCircleFilled
+                className={styles.verified}
+                aria-label={t('table.phoneVerified')}
+              />
             </Tooltip>
           ) : null}
         </span>
       ),
     },
     {
-      title: 'Yêu cầu',
+      title: t('table.licence'),
+      key: 'licence',
+      width: 160,
+      render: (_, r) => {
+        const state = r.licenceState as CustomerLicenceState;
+        const expired = Boolean(r.licenceExpiresOn && r.licenceExpiresOn < today);
+        return (
+          <div>
+            <Tag color={CUSTOMER_LICENCE_STATE_COLOR[state]}>{t(`licenceState.${state}`)}</Tag>
+            {state === CUSTOMER_LICENCE_STATE.VERIFIED && r.licenceExpiresOn ? (
+              <div className={expired ? styles.expired : styles.meta}>
+                {t(expired ? 'table.licenceExpired' : 'table.licenceExpiresOn', {
+                  date: fmt.dateKey(r.licenceExpiresOn),
+                })}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      title: t('table.requests'),
       key: 'requestCount',
       align: 'right',
       width: 100,
       render: (_, r) => r.requestCount,
     },
     {
-      title: 'Thành đơn',
+      title: t('table.booked'),
       key: 'bookedCount',
       align: 'right',
       width: 110,
       render: (_, r) => r.bookedCount,
     },
     {
-      title: 'Đánh giá',
+      title: t('table.reviews'),
       key: 'reviewCount',
       align: 'right',
       width: 100,
       render: (_, r) => r.reviewCount,
     },
     {
-      title: 'Trạng thái',
+      title: t('table.status'),
       key: 'status',
       width: 120,
-      render: (_, r) => <StatusTag value={r.status as UserStatus} meta={USER_STATUS_META} group="userStatus" />,
+      render: (_, r) => (
+        <StatusTag value={r.status as UserStatus} meta={USER_STATUS_META} group="userStatus" />
+      ),
     },
     {
-      title: 'Đăng nhập gần nhất',
+      title: t('table.lastLogin'),
       key: 'lastLoginAt',
       width: 170,
-      render: (_, r) => (r.lastLoginAt ? fmt.dateTime(r.lastLoginAt) : 'Chưa đăng nhập'),
+      render: (_, r) => (r.lastLoginAt ? fmt.dateTime(r.lastLoginAt) : t('table.neverLoggedIn')),
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
+    {
+      title: t('table.createdAt'),
+      key: 'createdAt',
+      width: 120,
+      render: (_, r) => fmt.date(r.createdAt),
+    },
     actionColumn<AdminCustomer>((row) => [
-      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+      { key: 'view', label: t('table.view'), icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),
   ];
 
   return (
     <DataTable<AdminCustomer>
-      label="Danh sách khách hàng"
+      label={t('table.label')}
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được danh sách khách', onRetry: error.onRetry } : null}
+      error={error ? { title: t('table.loadError'), onRetry: error.onRetry } : null}
       filtered={filtered}
-      empty={{ title: 'Chưa có khách thuê nào' }}
+      empty={{ title: t('table.empty') }}
       noResults={{
-        title: 'Không có khách khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: t('table.noResults'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{t('table.clearFilters')}</Button>
+        ) : undefined,
       }}
-      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} khách` }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => t('table.total', { count: total }),
+      }}
     />
   );
 }

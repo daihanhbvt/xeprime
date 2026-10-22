@@ -10,8 +10,6 @@ import { submitDriverLicence, type PreparedLicenceImage } from '../prepare-licen
 
 /** Đang đọc ảnh: hỏi lại dày để kết quả hiện ra ngay khi có — cùng số với web. */
 export const PROCESSING_POLL_MS = 1_500;
-/** Đang chờ người duyệt: hỏi thưa — màn hình vẫn tự đổi khi có kết quả. */
-export const PENDING_REVIEW_POLL_MS = 30_000;
 
 /** Nhịp hỏi lại theo trạng thái lượt nộp gần nhất — tách ra để test không cần QueryClient. */
 export function driverLicencePollInterval(
@@ -19,7 +17,6 @@ export function driverLicencePollInterval(
 ): number | false {
   const status = overview?.latest?.status;
   if (status === DRIVER_LICENCE_STATUS.PROCESSING) return PROCESSING_POLL_MS;
-  if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW) return PENDING_REVIEW_POLL_MS;
   return false;
 }
 
@@ -53,18 +50,6 @@ export function useSubmitDriverLicence() {
         withLatest(prev, licence),
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
-    },
-  });
-}
-
-export function useRequestDriverLicenceReview() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => driverLicenceApi.requestReview(id),
-    onSuccess: (licence) => {
-      queryClient.setQueryData<DriverLicenceOverview>(queryKeys.driverLicence.overview, (prev) =>
-        withLatest(prev, licence),
-      );
     },
   });
 }

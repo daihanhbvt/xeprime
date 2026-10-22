@@ -589,15 +589,6 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         icon: TeamOutlined,
       },
       {
-        // Bằng lái máy chưa tự xác thực được (ADR 0057) — đứng cạnh "Khách thuê" vì đây là việc
-        // gỡ cho KHÁCH đặt được xe, không phải kiểm duyệt nguồn cung.
-        key: 'admin-driver-licences',
-        labelKey: 'platform.driverLicences',
-        href: ROUTES.ADMIN.DRIVER_LICENCES,
-        permission: PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW,
-        icon: SafetyCertificateOutlined,
-      },
-      {
         // Một SĐT/email → mọi tài khoản ở cả ba realm (ADR 0053 điều 9). Cùng quyền với "Khách thuê".
         key: 'admin-account-lookup',
         labelKey: 'platform.accountLookup',

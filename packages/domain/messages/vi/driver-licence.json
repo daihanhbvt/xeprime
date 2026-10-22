@@ -1,6 +1,6 @@
 {
   "page": {
-    "subtitle": "Bằng lái đã xác thực giúp bạn đặt xe tự lái chỉ trong vài bước.",
+    "subtitle": "Bằng lái đã xác thực giúp bạn đặt xe tự lái chỉ trong vài bước",
     "sectionTitle": "Bằng lái xe"
   },
   "intro": {
@@ -37,13 +37,12 @@
     }
   },
   "verified": {
-    "title": "Bằng lái đã được xác thực",
-    "body": "Bạn có thể đặt xe tự lái phù hợp với hạng bằng của mình.",
+    "title": "Bằng lái của bạn đã sẵn sàng!",
+    "body": "Bạn có thể đặt các dòng xe tự lái tương thích với hạng bằng của mình.",
     "bookingTitle": "Bằng lái hợp lệ cho chuyến này",
-    "replace": "Cập nhật bằng mới",
+    "replace": "Cập nhật bằng lái",
     "cancelReplace": "Giữ bằng hiện tại",
-    "replaceFailed": "Ảnh bằng mới bạn vừa gửi chưa được xác thực: {reason} Bằng hiện tại vẫn dùng được.",
-    "replacePending": "Bằng mới bạn gửi đang chờ XePrime xác thực. Bằng hiện tại vẫn dùng được."
+    "replaceFailed": "Ảnh bằng mới bạn vừa gửi chưa được xác thực: {reason} Bằng hiện tại vẫn dùng được."
   },
   "fields": {
     "fullName": "Họ tên",
@@ -59,19 +58,11 @@
     "country": "Nơi cấp",
     "foreignNote": "Với bằng quốc tế / nước ngoài, chủ xe đối chiếu hạng và thời hạn trên bằng gốc khi giao xe."
   },
-  "pending": {
-    "title": "Đang chờ XePrime xác thực",
-    "body": "Chúng tôi sẽ kiểm tra ảnh của bạn trong thời gian sớm nhất. Trang này tự cập nhật khi có kết quả.",
-    "bookingBody": "Bạn có thể gửi yêu cầu thuê xe ngay khi bằng lái được xác thực.",
-    "replace": "Gửi ảnh khác"
-  },
   "rejected": {
     "title": "Chưa xác thực được bằng lái",
     "retake": "Chụp lại",
-    "requestReview": "Ảnh đã rõ — nhờ XePrime kiểm tra",
-    "reviewRequested": "Đã gửi yêu cầu kiểm tra.",
     "expiredOn": "Bằng lái đã hết hạn ngày {date}.",
-    "expiredMisread": "Ngày in trên bằng của bạn khác? Máy có thể đọc nhầm — hãy nhờ XePrime kiểm tra.",
+    "expiredMisread": "Ngày in trên bằng của bạn khác? Hãy chụp lại thật rõ phần ngày hết hạn.",
     "note": "Lời nhắn từ XePrime: {note}"
   },
   "reasons": {
@@ -81,6 +72,7 @@
     "missing_fields": "Không đọc được đủ số bằng, họ tên, hạng và thời hạn trên ảnh.",
     "expired": "Bằng lái đã hết hạn.",
     "no_drivable_class": "Hạng trên bằng không lái được ô tô hay xe máy cho thuê.",
+    "reader_unavailable": "Chưa đọc được thông tin trên ảnh. Hãy chụp lại mặt trước bằng lái thật rõ, đủ sáng, thấy đủ 4 góc rồi gửi lại.",
     "other": "XePrime chưa thể xác thực bằng lái này."
   },
   "issues": {
@@ -108,5 +100,14 @@
   "error": {
     "load": "Không tải được thông tin bằng lái.",
     "retry": "Thử lại"
+  },
+  "empty": {
+    "title": "Bạn chưa thêm bằng lái xe",
+    "body": "Vui lòng cập nhật Giấy phép lái xe (GPLX) để hệ thống xác minh. Quá trình này chỉ mất 2 phút và là điều kiện bắt buộc để bạn có thể đặt xe tự lái trên XePrime.",
+    "add": "Thêm bằng lái"
+  },
+  "addModal": {
+    "title": "Thêm bằng lái",
+    "cancel": "Huỷ"
   }
 }

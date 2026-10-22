@@ -1,10 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { ACCOUNT_REALM_VALUES, API_ERROR_CODE, MEMBERSHIP_STATUS, type AccountRealm } from '@xeprime/types';
+import {
+  ACCOUNT_REALM_VALUES,
+  API_ERROR_CODE,
+  MEMBERSHIP_STATUS,
+  type AccountRealm,
+} from '@xeprime/types';
 import { maskEmail, maskPhone } from '../../common/mask';
 import { phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { AccountLookupItemDto, AccountLookupQueryDto } from './dto/platform-account-lookup.dto';
+import type {
+  AccountLookupItemDto,
+  AccountLookupQueryDto,
+} from './dto/platform-account-lookup.dto';
 
 /**
  * Tra cứu XUYÊN REALM cho hỗ trợ — ADR 0053 điều 9.

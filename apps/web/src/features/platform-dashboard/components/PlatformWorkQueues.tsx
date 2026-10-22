@@ -4,15 +4,20 @@ import {
   AuditOutlined,
   BankOutlined,
   CustomerServiceOutlined,
-  IdcardOutlined,
+  PhoneOutlined,
   RollbackOutlined,
   SendOutlined,
 } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
+import { FOLLOW_UPS_HREF } from '@/features/admin-follow-ups/constants';
 import { ROUTES } from '@/constants/routes';
 import { ActionTile, type ActionTileMeta } from '@/features/dashboard/components/ActionTile';
-import { BANK_IN_URGENT_HOURS, FINANCE_QUEUE, financeQueueHref } from '@/features/platform-money/finance-queues';
+import {
+  BANK_IN_URGENT_HOURS,
+  FINANCE_QUEUE,
+  financeQueueHref,
+} from '@/features/platform-money/finance-queues';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs } from '@/lib/datetime';
 import type { usePlatformQueues } from '../hooks/use-platform-queues';
@@ -20,7 +25,8 @@ import styles from './PlatformDashboardView.module.css';
 
 type Queues = ReturnType<typeof usePlatformQueues>;
 
-export type PlatformQueueKey = 'vehicles' | 'licences' | 'bankIn' | 'withdrawals' | 'refunds' | 'cases';
+export type PlatformQueueKey =
+  'vehicles' | 'followUps' | 'bankIn' | 'withdrawals' | 'refunds' | 'cases';
 
 interface QueueTile {
   key: PlatformQueueKey;
@@ -49,7 +55,7 @@ function countOf<T>(
 export function usePlatformQueueTiles(queues: Queues): QueueTile[] {
   const t = useTranslations('PlatformDashboard.queues');
   const fmt = useAppFormat();
-  const { can, summary, licences, money, cases } = queues;
+  const { can, summary, followUps, money, cases } = queues;
   const tiles: QueueTile[] = [];
 
   if (can.vehicles) {
@@ -62,12 +68,12 @@ export function usePlatformQueueTiles(queues: Queues): QueueTile[] {
       meta: [],
     });
   }
-  if (can.licences) {
+  if (can.followUps) {
     tiles.push({
-      key: 'licences',
-      icon: IdcardOutlined,
-      href: ROUTES.ADMIN.DRIVER_LICENCES,
-      count: countOf(licences, (c) => c.pendingReview),
+      key: 'followUps',
+      icon: PhoneOutlined,
+      href: FOLLOW_UPS_HREF,
+      count: countOf(followUps, (c) => c),
       urgent: false,
       meta: [],
     });
@@ -84,7 +90,10 @@ export function usePlatformQueueTiles(queues: Queues): QueueTile[] {
       href: financeQueueHref(FINANCE_QUEUE.BANK_IN),
       count: countOf(money, (m) => m.bankIn.count),
       urgent: bankInStale,
-      meta: bankIn && bankIn.count > 0 ? [{ key: 'amount', text: t('bankIn.amount', { amount: fmt.money(bankIn.amount) }) }] : [],
+      meta:
+        bankIn && bankIn.count > 0
+          ? [{ key: 'amount', text: t('bankIn.amount', { amount: fmt.money(bankIn.amount) }) }]
+          : [],
     });
     const withdrawals = money.data?.withdrawals;
     tiles.push({
@@ -95,7 +104,13 @@ export function usePlatformQueueTiles(queues: Queues): QueueTile[] {
       urgent: Boolean(withdrawals && withdrawals.overdueCount > 0),
       meta:
         withdrawals && withdrawals.overdueCount > 0
-          ? [{ key: 'overdue', text: t('withdrawals.overdue', { count: withdrawals.overdueCount }), urgent: true }]
+          ? [
+              {
+                key: 'overdue',
+                text: t('withdrawals.overdue', { count: withdrawals.overdueCount }),
+                urgent: true,
+              },
+            ]
           : [],
     });
     tiles.push({

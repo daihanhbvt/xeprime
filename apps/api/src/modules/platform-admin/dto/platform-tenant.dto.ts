@@ -92,7 +92,10 @@ export class LockTenantDto {
  * và gói xe máy thì danh sách có hai dòng này.
  */
 export class PlatformTenantPlanTermDto {
-  @ApiProperty({ enum: [...PLAN_VEHICLE_SCOPE_VALUES], description: '@xeprime/types → PlanVehicleScope' })
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: '@xeprime/types → PlanVehicleScope',
+  })
   vehicleScope!: string;
   @ApiProperty() subscriptionId!: string;
   @ApiProperty() planCode!: string;
@@ -105,7 +108,11 @@ export class PlatformTenantPlanTermDto {
   graceEndsAt!: string | null;
   @ApiProperty({ enum: PARTNER_QUOTA_KIND_VALUES, description: 'Trần xe snapshot của KỲ này' })
   vehicleLimitKind!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ khi vehicleLimitKind = total' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Chỉ khi vehicleLimitKind = total',
+  })
   vehicleLimit!: number | null;
 }
 
@@ -137,7 +144,11 @@ export class PlatformTenantPlanDto {
       'Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói',
   })
   vehicleLimitKind!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ khi vehicleLimitKind = total' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Chỉ khi vehicleLimitKind = total',
+  })
   vehicleLimit!: number | null;
   @ApiProperty({
     type: [PlatformTenantPlanTermDto],

@@ -1,0 +1,156 @@
+.name {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.meta {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.good {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-success);
+}
+
+.intro {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+}
+
+.search {
+  width: 240px;
+}
+
+.phone {
+  width: 180px;
+}
+
+.select {
+  width: 200px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 560px) {
+  .search,
+  .phone,
+  .select {
+    width: 100%;
+  }
+}
+
+/* ── Panel chăm sóc: bên phải là hai thẻ — liên hệ, kết quả ─────────────────────────────── */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.contactName {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.contactPhone {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.phoneValue {
+  font-size: var(--xp-font-size-h4);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.contactActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-sm);
+}
+
+/* ── Bố cục gọn: hàng trên 2 thẻ, hàng dưới thẻ kết quả trải ngang ───────────────────── */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--xp-space-md);
+  align-items: start;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  margin: 0;
+}
+
+.factWide {
+  grid-column: 1 / -1;
+}
+
+.factLabel {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.factValue {
+  margin: 0;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+.formCol {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}

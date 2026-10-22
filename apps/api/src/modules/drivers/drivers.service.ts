@@ -1181,7 +1181,7 @@ export class DriversService {
 
   /**
    * Mức bằng lái của từng tài khoản — đọc `customer_driver_licences` (writer là
-   * `DriverLicencesService`; ở đây chỉ ĐỌC). Bằng đã xác thực còn hạn > đang chờ duyệt > chưa có.
+   * `DriverLicencesService`; ở đây chỉ ĐỌC). Bằng đã xác thực còn hạn > đang đọc ảnh > chưa có.
    */
   async licenceSummaries(userIds: string[]): Promise<Map<string, DriverLicenceSummaryDto>> {
     const ids = [...new Set(userIds)];
@@ -1190,11 +1190,7 @@ export class DriversService {
       where: {
         userId: { in: ids },
         status: {
-          in: [
-            DRIVER_LICENCE_STATUS.VERIFIED,
-            DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-            DRIVER_LICENCE_STATUS.PROCESSING,
-          ],
+          in: [DRIVER_LICENCE_STATUS.VERIFIED, DRIVER_LICENCE_STATUS.PROCESSING],
         },
       },
       orderBy: { createdAt: 'desc' },

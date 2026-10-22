@@ -18,7 +18,7 @@ import { PlatformDashboardView } from './PlatformDashboardView';
 const state = vi.hoisted(() => ({
   permissions: [] as string[],
   overview: null as unknown,
-  calls: { licences: 0, money: 0, cases: 0 },
+  calls: { followUps: 0, money: 0, cases: 0 },
 }));
 
 vi.mock('@/hooks/use-permissions', () => ({
@@ -54,11 +54,14 @@ vi.mock('../api', () => ({
   fetchPlatformOverview: () => Promise.resolve(state.overview),
 }));
 
-vi.mock('@/features/admin-driver-licences/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/features/admin-driver-licences/api')>()),
-  fetchDriverLicenceCounts: () => {
-    state.calls.licences += 1;
-    return Promise.resolve({ pendingReview: 2, verified: 5, rejected: 1 });
+vi.mock('@/features/admin-follow-ups/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/admin-follow-ups/api')>()),
+  fetchFollowUps: () => {
+    state.calls.followUps += 1;
+    return Promise.resolve({
+      items: [],
+      meta: { page: 1, limit: 1, total: 2, hasNext: true },
+    });
   },
 }));
 
@@ -98,7 +101,13 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const FUNNEL = { registered: 10, withVehicle: 8, withListing: 4, withBooking: 2, withCompletedTrip: 1 };
+const FUNNEL = {
+  registered: 10,
+  withVehicle: 8,
+  withListing: 4,
+  withBooking: 2,
+  withCompletedTrip: 1,
+};
 const GROWTH = {
   newCustomers: { current: 30, previous: 20 },
   newPartners: { current: 3, previous: 3 },
@@ -127,12 +136,12 @@ async function renderView() {
 }
 
 beforeEach(() => {
-  state.calls = { licences: 0, money: 0, cases: 0 };
+  state.calls = { followUps: 0, money: 0, cases: 0 };
   state.overview = overview();
 });
 
 describe('Tổng quan nền tảng — theo vai', () => {
-  it('REVIEWER: chỉ hai hàng đợi duyệt, không gọi API tiền/khiếu nại, không GMV, không doanh thu', async () => {
+  it('REVIEWER: chỉ hàng đợi duyệt xe, không gọi API tiền/khiếu nại/chăm sóc, không GMV', async () => {
     state.permissions = [
       PERMISSION.PLATFORM_DASHBOARD_VIEW,
       PERMISSION.PLATFORM_APPROVAL_REVIEW,
@@ -140,9 +149,8 @@ describe('Tổng quan nền tảng — theo vai', () => {
     ];
     await renderView();
 
-    expect(
-      await screen.findByText('Đang chờ xử lý: 3 xe chờ duyệt · 2 bằng lái chờ duyệt.'),
-    ).toBeTruthy();
+    expect(await screen.findByText('Đang chờ xử lý: 3 xe chờ duyệt.')).toBeTruthy();
+    expect(state.calls.followUps).toBe(0);
     const vehicles = screen.getByText('Xe chờ duyệt').closest('a')!;
     expect(vehicles.getAttribute('href')).toBe(ROUTES.ADMIN.ROOT);
 
@@ -181,7 +189,7 @@ describe('Tổng quan nền tảng — theo vai', () => {
     expect(withdrawals.getAttribute('href')).toBe(financeQueueHref(FINANCE_QUEUE.WITHDRAWALS));
     expect(within(withdrawals).getByText('1 trễ cam kết')).toBeTruthy();
     expect(screen.queryByText('Bằng lái chờ duyệt')).toBeNull();
-    expect(state.calls.licences).toBe(0);
+    expect(state.calls.followUps).toBe(0);
 
     expect(await screen.findByText('Doanh thu nền tảng')).toBeTruthy();
     expect(screen.getByText('6.000.000 ₫')).toBeTruthy();

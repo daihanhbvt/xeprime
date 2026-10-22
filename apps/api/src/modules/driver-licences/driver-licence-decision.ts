@@ -5,24 +5,23 @@ import {
 } from '@xeprime/domain';
 import {
   DRIVER_LICENCE_KIND,
-  DRIVER_LICENCE_PENDING_REASON,
   DRIVER_LICENCE_REJECT_REASON,
   DRIVER_LICENCE_STATUS,
   type DriverLicenceKind,
-  type DriverLicencePendingReason,
   type DriverLicenceRejectReason,
 } from '@xeprime/types';
 import { isValidDateOnly } from '../../common/date-only';
 import type { DriverLicenceReading } from './reader/driver-licence-reader';
 
 /**
- * Từ một lượt ĐỌC ẢNH ra một QUYẾT ĐỊNH — luật tự xác thực của ADR 0057 điều 2, viết thuần để
- * test đủ mọi nhánh mà không cần nhà cung cấp OCR.
+ * Từ một lượt ĐỌC ẢNH ra một QUYẾT ĐỊNH — luật tự xác thực của ADR 0057 điều 2 (ADR 0070 gỡ nhánh
+ * chờ duyệt tay), viết thuần để test đủ mọi nhánh mà không cần nhà cung cấp OCR.
  *
- * Nguyên tắc: máy chỉ tự XÁC THỰC khi mọi điều kiện rõ ràng; máy tự TỪ CHỐI khi lý do là thứ
- * khách tự sửa được ngay (chụp lại, chụp mặt trước, nộp bằng còn hạn); mọi thứ mập mờ còn lại —
- * độ tin cậy thấp, dữ liệu tự mâu thuẫn — sang người duyệt. Bằng quốc tế / nước ngoài: máy chỉ
- * kiểm "đúng là bằng lái", phần còn lại chủ xe đối chiếu lúc giao xe.
+ * Nguyên tắc: MỌI lượt đọc được đều có quyết định ngay. Máy tự TỪ CHỐI khi lý do là thứ khách tự
+ * sửa được (chụp lại, chụp mặt trước, nộp bằng còn hạn) — kể cả dữ liệu tự mâu thuẫn (hạn/ngày sinh
+ * vô lý), vì đó gần như luôn là ảnh đọc lệch. Độ tin cậy thấp nhưng đủ trường và hợp lệ thì tự XÁC
+ * THỰC — chủ xe đối chiếu bằng gốc lúc giao xe. Bằng quốc tế / nước ngoài: máy chỉ kiểm "đúng là
+ * bằng lái".
  */
 
 /** Trường đã chuẩn hoá — đúng dạng ghi vào các cột của `customer_driver_licences`. */
@@ -46,21 +45,7 @@ export type LicenceDecision =
       status: typeof DRIVER_LICENCE_STATUS.REJECTED;
       reason: DriverLicenceRejectReason;
       fields: ResolvedLicenceFields;
-    }
-  | {
-      status: typeof DRIVER_LICENCE_STATUS.PENDING_REVIEW;
-      /** Vì sao máy không tự quyết — cho người duyệt, không cho khách. */
-      why: PendingReviewWhy;
-      fields: ResolvedLicenceFields;
     };
-
-/** Lý do chờ duyệt mà LUẬT này sinh ra (các lý do còn lại do service gán: bộ đọc hỏng, khách nhờ). */
-export type PendingReviewWhy = Extract<
-  DriverLicencePendingReason,
-  | typeof DRIVER_LICENCE_PENDING_REASON.LOW_CONFIDENCE
-  | typeof DRIVER_LICENCE_PENDING_REASON.IMPLAUSIBLE_BIRTH_DATE
-  | typeof DRIVER_LICENCE_PENDING_REASON.IMPLAUSIBLE_EXPIRY
->;
 
 /** Tuổi tối thiểu được cấp bằng lái xe máy/ô tô ở Việt Nam — dưới mức này là đọc sai ngày sinh. */
 const MIN_LICENCE_AGE_YEARS = 18;
@@ -121,18 +106,10 @@ export function decideFromReading(
     );
   }
 
-  const pending = (why: PendingReviewWhy): LicenceDecision => ({
-    status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-    why,
-    fields,
-  });
-
   // Hạn đọc được phải CÓ THỂ có với hạng đó: một chữ số đọc lệch không được biến bằng ô tô thành
   // bằng vô thời hạn, hay hạn 2031 thành 2081 — cả hai đều qua cổng đặt xe mãi mãi. Kiểm TRƯỚC
-  // "hết hạn": hạn 2021 trên một tấm cấp năm 2021 là đọc sai, không phải bằng hết hạn.
-  if (implausibleExpiry(fields, today)) {
-    return pending(DRIVER_LICENCE_PENDING_REASON.IMPLAUSIBLE_EXPIRY);
-  }
+  // "hết hạn": hạn 2021 trên một tấm cấp năm 2021 là đọc sai, không phải bằng hết hạn ⇒ chụp lại.
+  if (implausibleExpiry(fields, today)) return reject(DRIVER_LICENCE_REJECT_REASON.UNREADABLE);
 
   if (!fields.noExpiry && fields.expiresOn !== null && fields.expiresOn < today) {
     return reject(DRIVER_LICENCE_REJECT_REASON.EXPIRED);
@@ -143,10 +120,8 @@ export function decideFromReading(
   }
 
   if (fields.dateOfBirth && ageOn(fields.dateOfBirth, today) < MIN_LICENCE_AGE_YEARS) {
-    return pending(DRIVER_LICENCE_PENDING_REASON.IMPLAUSIBLE_BIRTH_DATE);
+    return reject(DRIVER_LICENCE_REJECT_REASON.UNREADABLE);
   }
-
-  if (reading.confidence === 'low') return pending(DRIVER_LICENCE_PENDING_REASON.LOW_CONFIDENCE);
 
   return { status: DRIVER_LICENCE_STATUS.VERIFIED, fields };
 }

@@ -39,6 +39,7 @@ export * from './platform-partner';
 export * from './platform-partner-detail';
 export * from './platform-vehicle';
 export * from './platform-trips';
+export * from './platform-follow-ups';
 export * from './dashboard';
 export * from './vehicle-publication';
 export * from './vehicle-review';

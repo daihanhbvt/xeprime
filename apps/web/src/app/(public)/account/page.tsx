@@ -6,6 +6,7 @@ import { AccountMoneyPanel } from '@/features/account/components/AccountMoneyPan
 import { AccountTrackNotice } from '@/features/account/components/AccountTrackNotice';
 import { AccountView } from '@/features/account/components/AccountView';
 import { DeleteAccountView } from '@/features/account/components/DeleteAccountView';
+import { AccountDocumentsCard } from '@/features/driver-licence/components/AccountDocumentsCard';
 
 import styles from './page.module.css';
 
@@ -28,6 +29,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * ## Ba khối, theo thứ tự người dùng cần chúng (16/09/2026)
  *
  *   1. `AccountView`        — tên, ảnh, email/SĐT, và thẻ "Gian hàng của tôi" (lối nâng cấp gói).
+ *      `AccountDocumentsCard` — Giấy tờ & Xác minh (bằng lái), ngay dưới hồ sơ như design 22/10/2026;
+ *                             trước là một mục menu + trang riêng.
  *   2. `AccountMoneyPanel`  — số dư MỘT ví duy nhất + tài khoản ngân hàng nhận tiền. Sổ giao dịch
  *                             và lệnh rút nằm sau một cú bấm vào số điểm.
  *   3. `DeleteAccountView`  — yêu cầu xoá tài khoản: một support case, KHÔNG phải nút xoá.
@@ -44,6 +47,7 @@ export default function AccountPage() {
     <div className={styles.stack}>
       <AccountTrackNotice />
       <AccountView />
+      <AccountDocumentsCard />
       <AccountMoneyPanel />
       <div className={styles.stack}>
         <AccountDeletionImpact />

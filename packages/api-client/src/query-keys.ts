@@ -621,13 +621,20 @@ export const queryKeys = {
     overview: ['driver-licence', 'overview'] as const,
     image: (id: string) => ['driver-licence', 'image', id] as const,
   },
-  /** Hàng đợi bằng lái của nền tảng — tách khỏi `driverLicence` (phạm vi khác, quyền khác). */
+  /**
+   * Bằng lái của khách nhìn từ hồ sơ khách thuê (ADR 0070) — tách khỏi `driverLicence` (phạm vi
+   * khác, quyền khác).
+   */
   platformDriverLicences: {
     all: ['platform-driver-licences'] as const,
-    list: (params: QueryParams) => ['platform-driver-licences', 'list', params] as const,
-    counts: ['platform-driver-licences', 'counts'] as const,
-    detail: (id: string) => ['platform-driver-licences', 'detail', id] as const,
+    byCustomer: (userId: string) => ['platform-driver-licences', 'customer', userId] as const,
     image: (id: string) => ['platform-driver-licences', 'image', id] as const,
+  },
+  /** Tab "Cần chăm sóc" của Đơn thuê toàn hệ thống (ADR 0070). */
+  platformFollowUps: {
+    all: ['platform-follow-ups'] as const,
+    list: (params: QueryParams) => ['platform-follow-ups', 'list', params] as const,
+    assignees: ['platform-follow-ups', 'assignees'] as const,
   },
   /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {

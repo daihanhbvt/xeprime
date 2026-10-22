@@ -1,0 +1,109 @@
+{
+  "page": {
+    "title": "Renters",
+    "loading": "Loading renters…",
+    "privacyNote": "Phone numbers and emails are masked. Open the details to see them in full if you have permission — every view is recorded in the system log."
+  },
+  "filters": {
+    "searchPlaceholder": "Search by name",
+    "searchLabel": "Search renters by name",
+    "phonePlaceholder": "Exact phone number",
+    "phoneLabel": "Look up a renter by phone",
+    "emailPlaceholder": "Exact email",
+    "emailLabel": "Look up a renter by email",
+    "statusLabel": "Account status",
+    "allStatuses": "All statuses",
+    "licenceLabel": "Driving licence",
+    "allLicences": "Any licence status",
+    "hasRequests": "Has requested a trip"
+  },
+  "licenceState": {
+    "none": "Not submitted",
+    "processing": "Reading photo",
+    "verified": "Verified",
+    "rejected": "Not valid"
+  },
+  "table": {
+    "label": "Renter list",
+    "customer": "Renter",
+    "phone": "Phone",
+    "phoneVerified": "Phone verified by OTP",
+    "licence": "Licence",
+    "licenceExpiresOn": "Valid until {date}",
+    "licenceExpired": "Expired {date}",
+    "requests": "Requests",
+    "booked": "Booked",
+    "reviews": "Reviews",
+    "status": "Status",
+    "lastLogin": "Last sign-in",
+    "neverLoggedIn": "Never signed in",
+    "createdAt": "Created",
+    "view": "View details",
+    "loadError": "Could not load renters",
+    "empty": "No renters yet",
+    "noResults": "No renters match the filters",
+    "clearFilters": "Clear filters",
+    "total": "{count, plural, one {# renter} other {# renters}}"
+  },
+  "drawer": {
+    "title": "Renter",
+    "loadError": "Could not load renter details",
+    "phone": "Phone",
+    "email": "Email",
+    "verified": "Verified",
+    "activity": "Activity",
+    "activityValue": "{requests} requests · {booked} booked · {reviews} reviews · {conversations} conversations",
+    "lastLogin": "Last sign-in",
+    "neverLoggedIn": "Never signed in",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "recentRequests": "Recent trip requests",
+    "noRequests": "This renter has not requested a trip yet",
+    "requestTarget": "Shop · vehicle",
+    "requestPeriod": "From → to",
+    "requestStatus": "Status",
+    "requestLink": "Link",
+    "bookingLink": "Booking {code}"
+  },
+  "licence": {
+    "title": "Driving licence",
+    "autoNote": "Each submission is verified or rejected automatically. The owner checks the original licence at handover.",
+    "none": "This renter has not submitted a licence.",
+    "loadError": "Could not load the renter's licence.",
+    "retry": "Retry",
+    "history": "Submission history",
+    "submittedAt": "Submitted {date}",
+    "current": "In use",
+    "image": {
+      "title": "Front photo",
+      "alt": "Licence photo submitted by the renter",
+      "show": "Show photo",
+      "loadFailed": "Could not open the photo.",
+      "audit": "Every time the photo is opened it is recorded in the system log."
+    },
+    "facts": {
+      "kind": "Licence type",
+      "fullName": "Name on licence",
+      "licenceNumber": "Licence number",
+      "dateOfBirth": "Date of birth",
+      "classes": "Classes",
+      "expiresOn": "Valid until",
+      "noExpiry": "No expiry",
+      "country": "Issued in",
+      "drives": "Can drive",
+      "car": "Car",
+      "motorbike": "Motorbike",
+      "reason": "Reason",
+      "decidedAt": "Decided at",
+      "source": "Decided by",
+      "sourceAuto": "Automatic",
+      "confidence": "Reading confidence",
+      "readerError": "Reader error"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
+  }
+}

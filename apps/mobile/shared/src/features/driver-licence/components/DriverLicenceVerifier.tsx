@@ -12,7 +12,8 @@ import {
   type DriverLicenceRejectReason,
 } from '@xeprime/types';
 import type { DriverLicence } from '@/api/driver-licence/api';
-import { useAppToast } from '@/components/feedback/use-app-toast';
+import { images } from '@/assets';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -20,14 +21,9 @@ import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { resolveVerifierView, type DriverLicenceTrip } from '../driver-licence-view';
-import {
-  useDriverLicence,
-  useDriverLicenceImage,
-  useRequestDriverLicenceReview,
-} from '../hooks/use-driver-licence';
+import { useDriverLicence, useDriverLicenceImage } from '../hooks/use-driver-licence';
 import { DriverLicenceUploader } from './DriverLicenceUploader';
 
 const ACCEPTED_KEYS = ['vn', 'idp', 'foreign'] as const;
@@ -43,11 +39,22 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
  * Có `trip` (luồng đặt xe) thì "hợp lệ" nghĩa là hợp lệ CHO CHUYẾN ĐÓ — cùng một hàm với cổng ở
  * server, nên giao diện không bao giờ nói "được" ở chỗ server sẽ nói "không".
  */
-export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | null }) {
+export function DriverLicenceVerifier({
+  trip,
+  embedded = false,
+}: {
+  trip?: DriverLicenceTrip | null;
+  /**
+   * Khối Giấy tờ của tab Tài khoản (design "Verify Empty / Add"): chưa nộp thì là thẻ rỗng, còn
+   * thêm / thay bằng đi qua tấm trượt "Thêm bằng lái" — như hộp thoại bên web.
+   */
+  embedded?: boolean;
+}) {
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
   const query = useDriverLicence();
   const [replacing, setReplacing] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [pickedOver, setPickedOver] = useState<string | null | undefined>(undefined);
   const booking = Boolean(trip);
 
@@ -76,10 +83,50 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
   const view = resolveVerifierView({
     overview: query.data,
     trip: trip ?? null,
-    replacing,
+    // Khối Giấy tờ thay bằng trong tấm trượt — thẻ phía sau vẫn là bằng đang dùng.
+    replacing: replacing && !embedded,
     pickedOver,
     today: vnDateKey(new Date()),
   });
+
+  // Chọn ảnh là gửi ngay — tấm trượt đóng, tiến trình đọc và kết quả hiện trong thẻ.
+  const closeAdd = () => {
+    setAdding(false);
+    setReplacing(false);
+  };
+  const addSheet = embedded ? (
+    <BottomSheet open={adding || replacing} onClose={closeAdd} title={t('addModal.title')}>
+      <YStack gap={space.md}>
+        <DriverLicenceUploader processing={null} onSubmitted={closeAdd} />
+        <AcceptedDocuments />
+      </YStack>
+    </BottomSheet>
+  ) : null;
+
+  if (embedded && !latest) {
+    return (
+      <Card>
+        <YStack gap={space.lg} ai="center">
+          <Image
+            source={images.driverLicenceEmpty}
+            style={styles.emptyArt}
+            contentFit="contain"
+            accessible={false}
+          />
+          <YStack gap={space.xs}>
+            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} ta="center">
+              {t('empty.title')}
+            </Text>
+            <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+              {t('empty.body')}
+            </Text>
+          </YStack>
+          <Button label={t('empty.add')} onPress={() => setAdding(true)} />
+        </YStack>
+        {addSheet}
+      </Card>
+    );
+  }
 
   if (view.kind === 'usable') {
     return (
@@ -99,8 +146,6 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
                 ),
               })}
             </Callout>
-          ) : view.pendingReplace ? (
-            <Callout tone="info">{t('verified.replacePending')}</Callout>
           ) : null}
           <DriverLicenceDetails licence={view.verified} />
           <Button
@@ -109,26 +154,7 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
             onPress={() => setReplacing(true)}
           />
         </YStack>
-      </Card>
-    );
-  }
-
-  if (view.kind === 'pending') {
-    return (
-      <Card>
-        <YStack gap={space.md}>
-          <StatusBanner
-            tone="waiting"
-            icon="time"
-            title={t('pending.title')}
-            body={booking ? t('pending.bookingBody') : t('pending.body')}
-          />
-          <Button
-            label={t('pending.replace')}
-            variant="secondary"
-            onPress={() => setReplacing(true)}
-          />
-        </YStack>
+        {addSheet}
       </Card>
     );
   }
@@ -157,11 +183,15 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
           </YStack>
         )}
 
-        <DriverLicenceUploader
-          processing={view.processing}
-          onPick={() => setPickedOver(latest?.id ?? null)}
-          onSubmitted={() => setReplacing(false)}
-        />
+        {embedded && !view.processing ? (
+          <Button label={t('empty.add')} onPress={() => setAdding(true)} />
+        ) : (
+          <DriverLicenceUploader
+            processing={view.processing}
+            onPick={() => setPickedOver(latest?.id ?? null)}
+            onSubmitted={() => setReplacing(false)}
+          />
+        )}
 
         {replacing && !view.processing ? (
           <Button
@@ -171,15 +201,15 @@ export function DriverLicenceVerifier({ trip }: { trip?: DriverLicenceTrip | nul
           />
         ) : null}
 
-        {view.showAccepted ? <AcceptedDocuments /> : null}
+        {view.showAccepted && !embedded ? <AcceptedDocuments /> : null}
       </YStack>
+      {addSheet}
     </Card>
   );
 }
 
 const BANNER_TONE = {
   success: { fg: colors.success, bg: colors.successSurface },
-  waiting: { fg: colors.warning, bg: colors.warningSurface },
   danger: { fg: colors.danger, bg: colors.dangerSurface },
 } as const;
 
@@ -212,13 +242,10 @@ function StatusBanner({
   );
 }
 
-/** Vì sao chưa xác thực được + gợi ý chụp lại đúng chỗ hỏng + (nếu được) nhờ người xem lại. */
+/** Vì sao chưa xác thực được + gợi ý chụp lại đúng chỗ hỏng. */
 function RejectedNotice({ licence }: { licence: DriverLicence }) {
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
-  const toast = useAppToast();
-  const errorMessage = useErrorMessage();
-  const review = useRequestDriverLicenceReview();
   const reason = (licence.rejectionReason ?? 'other') as DriverLicenceRejectReason;
   // Hết hạn: hiện NGÀY máy đọc được — khách thấy ngay nếu máy đọc lệch một chữ số.
   const reasonText =
@@ -244,7 +271,7 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {reasonText}
         </Text>
-        {reason === DRIVER_LICENCE_REJECT_REASON.EXPIRED && licence.canRequestReview ? (
+        {reason === DRIVER_LICENCE_REJECT_REASON.EXPIRED ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('rejected.expiredMisread')}
           </Text>
@@ -258,22 +285,6 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('rejected.note', { note: licence.reviewNote })}
           </Text>
-        ) : null}
-        {licence.canRequestReview ? (
-          <YStack pt={space.xs}>
-            <Button
-              label={t('rejected.requestReview')}
-              icon="sync-outline"
-              variant="secondary"
-              loading={review.isPending}
-              onPress={() =>
-                review.mutate(licence.id, {
-                  onSuccess: () => toast.showSuccess(t('rejected.reviewRequested')),
-                  onError: (error) => toast.showError(errorMessage(error)),
-                })
-              }
-            />
-          </YStack>
         ) : null}
       </YStack>
     </XStack>
@@ -486,4 +497,9 @@ function AcceptedDocuments() {
 }
 
 /* `scale` đẩy viền nhoè ra ngoài khung — không có nó, mép ảnh lộ một quầng sáng (khớp web). */
+const styles = StyleSheet.create({
+  /* Hình 184 × 137 trong khung 160 của bản vẽ. */
+  emptyArt: { width: 184, height: 160 },
+});
+
 const thumbStyles = StyleSheet.create({ blurred: { transform: [{ scale: 1.15 }] } });

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { PERMISSION } from '@xeprime/types';
-import { useDriverLicenceCounts } from '@/features/admin-driver-licences/hooks/use-admin-driver-licences';
+import { useNewFollowUpCount } from '@/features/admin-follow-ups/hooks/use-follow-ups';
 import { useMoneySummary } from '@/features/platform-money/hooks/use-platform-money';
 import { fetchSupportCases, filtersToParams } from '@/features/support-cases/api';
 import { SUPPORT_SURFACE, type SupportCaseFilters } from '@/features/support-cases/types';
@@ -22,26 +22,28 @@ const OPEN_CASES_COUNT: SupportCaseFilters = { page: 1, limit: 1 };
  * cả" thứ hai: con số trên ô và con số trên màn hàng đợi phải là một phép đếm.
  *
  * Thiếu quyền ⇒ truy vấn của hàng đợi đó KHÔNG chạy và ô vắng hẳn (reviewer không thấy ô tiền,
- * finance không thấy ô bằng lái) — ẩn nút không phải kiểm soát quyền, guard API mới là cổng thật.
+ * reviewer không thấy ô chăm sóc khách) — ẩn nút không phải kiểm soát quyền, guard API mới là cổng thật.
  */
 export function usePlatformQueues() {
   const { has } = usePermissions();
   const can = {
     vehicles: has(PERMISSION.PLATFORM_APPROVAL_REVIEW),
-    licences: has(PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW),
+    followUps: has(PERMISSION.PLATFORM_SALES_FOLLOWUP_MANAGE),
     money: has(PERMISSION.PLATFORM_MONEY_MANAGE),
     cases: has(PERMISSION.PLATFORM_SUPPORT_MANAGE),
   };
 
   const summary = usePlatformSummary();
-  const licences = useDriverLicenceCounts(can.licences);
+  const followUps = useNewFollowUpCount(can.followUps);
   const money = useMoneySummary({ enabled: can.money });
   const cases = useQuery({
-    queryKey: queryKeys.supportCases.list(filtersToParams(SUPPORT_SURFACE.PLATFORM, OPEN_CASES_COUNT)),
+    queryKey: queryKeys.supportCases.list(
+      filtersToParams(SUPPORT_SURFACE.PLATFORM, OPEN_CASES_COUNT),
+    ),
     queryFn: () => fetchSupportCases(SUPPORT_SURFACE.PLATFORM, OPEN_CASES_COUNT),
     enabled: can.cases,
     select: (page) => page.meta.total,
   });
 
-  return { can, summary, licences, money, cases };
+  return { can, summary, followUps, money, cases };
 }

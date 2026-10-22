@@ -942,163 +942,6 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
       }
     },
-    "/account/driver-licence/{id}/request-review": {
-      "post": {
-        "description": "Chỉ với lượt mới nhất, bị từ chối TỰ ĐỘNG vì lý do máy có thể đọc sai (`canRequestReview`).\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
-        "operationId": "DriverLicencesController_requestReview",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/DriverLicenceDto"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "VALIDATION_FAILED",
-                    "message": "Dữ liệu gửi lên không hợp lệ"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "UNAUTHENTICATED",
-                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `REALM_NOT_ALLOWED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "REALM_NOT_ALLOWED",
-                    "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "NOT_FOUND",
-                    "message": "Không tìm thấy dữ liệu"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "CONFLICT",
-                    "message": "Dữ liệu đã tồn tại"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Vượt giới hạn số request"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Có lỗi xảy ra, vui lòng thử lại"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Nhờ XePrime xem lại một lượt bị máy từ chối",
-        "tags": [
-          "driver-licences"
-        ],
-        "security": [
-          {
-            "cookie": []
-          }
-        ]
-      }
-    },
     "/account/driver-licence/presign": {
       "post": {
         "description": "Bắt buộc `consent: true`. Lượt nộp đang chờ duyệt (nếu có) bị thay bằng lượt mới. Đang có một ảnh được đọc dở thì 409 `DRIVER_LICENCE_STATE_CONFLICT`.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
@@ -32858,6 +32701,21 @@
             }
           },
           {
+            "name": "licence",
+            "required": false,
+            "in": "query",
+            "description": "Tình trạng bằng lái",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "none",
+                "processing",
+                "verified",
+                "rejected"
+              ]
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -33486,41 +33344,10 @@
         "operationId": "PlatformDriverLicencesController_list",
         "parameters": [
           {
-            "name": "status",
-            "required": false,
+            "name": "userId",
+            "required": true,
             "in": "query",
-            "description": "Bỏ trống = hàng đợi CHỜ DUYỆT, cũ nhất trước",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "uploading",
-                "processing",
-                "pending_review",
-                "verified",
-                "rejected",
-                "superseded",
-                "cancelled"
-              ]
-            }
-          },
-          {
-            "name": "kind",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "vn",
-                "international_permit",
-                "foreign"
-              ]
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Tìm theo họ tên trên bằng / số bằng / tên hoặc SĐT tài khoản",
+            "description": "Tài khoản khách",
             "schema": {
               "type": "string"
             }
@@ -33639,7 +33466,7 @@
             }
           }
         },
-        "summary": "Hàng đợi bằng lái — mặc định CHỜ DUYỆT, cũ nhất trước",
+        "summary": "Lịch sử nộp bằng lái của một khách — mới nhất trước",
         "tags": [
           "platform-driver-licences"
         ],
@@ -33780,7 +33607,7 @@
             }
           }
         },
-        "summary": "Chi tiết một lượt nộp — kèm liên hệ đầy đủ của chủ tài khoản",
+        "summary": "Chi tiết một lượt nộp",
         "tags": [
           "platform-driver-licences"
         ],
@@ -33790,173 +33617,6 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session)."
-      }
-    },
-    "/platform/driver-licences/{id}/approve": {
-      "post": {
-        "description": "Bằng đang dùng trước đó (nếu có) chuyển `superseded`. Với GPLX VN / IDP, \"lái được ô tô / xe máy\" suy từ hạng; chỉ bằng nước ngoài dùng hai cờ gửi lên.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).",
-        "operationId": "PlatformDriverLicencesController_approve",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApproveDriverLicenceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PlatformDriverLicenceDto"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "VALIDATION_FAILED",
-                    "message": "Dữ liệu gửi lên không hợp lệ"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "UNAUTHENTICATED",
-                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "MISSING_PERMISSION",
-                    "message": "Tài khoản không có quyền thực hiện thao tác này"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "NOT_FOUND",
-                    "message": "Không tìm thấy dữ liệu"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "CONFLICT",
-                    "message": "Dữ liệu đã tồn tại"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Vượt giới hạn số request"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Có lỗi xảy ra, vui lòng thử lại"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Xác thực bằng lái — với thông tin đã đối chiếu",
-        "tags": [
-          "platform-driver-licences"
-        ],
-        "security": [
-          {
-            "cookie": []
-          }
-        ]
       }
     },
     "/platform/driver-licences/{id}/image": {
@@ -34089,273 +33749,6 @@
           }
         },
         "summary": "Mở ảnh bằng lái — URL sống ngắn, ghi audit mỗi lần mở",
-        "tags": [
-          "platform-driver-licences"
-        ],
-        "security": [
-          {
-            "cookie": []
-          }
-        ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session)."
-      }
-    },
-    "/platform/driver-licences/{id}/reject": {
-      "post": {
-        "operationId": "PlatformDriverLicencesController_reject",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectDriverLicenceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PlatformDriverLicenceDto"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "VALIDATION_FAILED",
-                    "message": "Dữ liệu gửi lên không hợp lệ"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "UNAUTHENTICATED",
-                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "MISSING_PERMISSION",
-                    "message": "Tài khoản không có quyền thực hiện thao tác này"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "NOT_FOUND",
-                    "message": "Không tìm thấy dữ liệu"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "CONFLICT",
-                    "message": "Dữ liệu đã tồn tại"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Vượt giới hạn số request"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Có lỗi xảy ra, vui lòng thử lại"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Từ chối — khách thấy lý do và nộp ảnh khác",
-        "tags": [
-          "platform-driver-licences"
-        ],
-        "security": [
-          {
-            "cookie": []
-          }
-        ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session)."
-      }
-    },
-    "/platform/driver-licences/counts": {
-      "get": {
-        "operationId": "PlatformDriverLicencesController_counts",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PlatformDriverLicenceCountsDto"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "UNAUTHENTICATED",
-                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "MISSING_PERMISSION",
-                    "message": "Tài khoản không có quyền thực hiện thao tác này"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Vượt giới hạn số request"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Có lỗi xảy ra, vui lòng thử lại"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Đếm theo trạng thái — cho tab và huy hiệu menu",
         "tags": [
           "platform-driver-licences"
         ],
@@ -35211,6 +34604,638 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/follow-ups": {
+      "get": {
+        "operationId": "PlatformFollowUpsController_list",
+        "parameters": [
+          {
+            "name": "reason",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer_cancelled",
+                "unpaid",
+                "host_declined",
+                "no_response",
+                "slot_taken",
+                "other_cancelled"
+              ]
+            }
+          },
+          {
+            "name": "followUpStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "contacted",
+                "rebooked",
+                "not_interested"
+              ]
+            }
+          },
+          {
+            "name": "mine",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ mục giao cho tôi",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tên khách / mã đơn / tên xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "required": false,
+            "in": "query",
+            "description": "Tra CHÍNH XÁC theo SĐT khách",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Kết thúc từ ngày (YYYY-MM-DD, giờ VN)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "Kết thúc tới hết ngày (YYYY-MM-DD, giờ VN)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformFollowUpPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khách mất đơn cần chăm sóc — mới kết thúc trước",
+        "tags": [
+          "platform-bookings"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/follow-ups/{id}": {
+      "patch": {
+        "operationId": "PlatformFollowUpsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFollowUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PlatformFollowUpDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ghi trạng thái / ghi chú / người phụ trách chăm sóc (ghi audit)",
+        "tags": [
+          "platform-bookings"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/follow-ups/{id}/contact": {
+      "post": {
+        "operationId": "PlatformFollowUpsController_revealContact",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FollowUpContactDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem SĐT/email khách đầy đủ để gọi lại (ghi audit từng lần xem)",
+        "tags": [
+          "platform-bookings"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.bookings.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/follow-ups/assignees": {
+      "get": {
+        "operationId": "PlatformFollowUpsController_listAssignees",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FollowUpAssigneeDto"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Nhân sự giao được làm phụ trách (có quyền chăm sóc khách)",
+        "tags": [
+          "platform-bookings"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
     "/platform/insurance/products": {
@@ -75256,71 +75281,6 @@
           }
         }
       },
-      "ApproveDriverLicenceDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "vn",
-              "international_permit",
-              "foreign"
-            ]
-          },
-          "licenceNumber": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "dateOfBirth": {
-            "type": "string",
-            "nullable": true,
-            "description": "YYYY-MM-DD"
-          },
-          "classes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "issuedOn": {
-            "type": "string",
-            "nullable": true,
-            "description": "YYYY-MM-DD"
-          },
-          "expiresOn": {
-            "type": "string",
-            "nullable": true,
-            "description": "YYYY-MM-DD; bỏ trống khi không thời hạn"
-          },
-          "noExpiry": {
-            "type": "boolean"
-          },
-          "issuingCountry": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO 3166-1 alpha-2"
-          },
-          "coversCar": {
-            "type": "boolean",
-            "description": "Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng."
-          },
-          "coversMotorbike": {
-            "type": "boolean",
-            "description": "Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng."
-          }
-        },
-        "required": [
-          "kind",
-          "licenceNumber",
-          "fullName",
-          "classes",
-          "noExpiry",
-          "coversCar",
-          "coversMotorbike"
-        ]
-      },
       "AssignableDriverDto": {
         "type": "object",
         "properties": {
@@ -83200,6 +83160,7 @@
               "missing_fields",
               "expired",
               "no_drivable_class",
+              "reader_unavailable",
               "other"
             ],
             "nullable": true
@@ -83224,13 +83185,10 @@
               ]
             }
           },
-          "canRequestReview": {
-            "type": "boolean",
-            "description": "Bị máy từ chối vì lý do máy có thể đọc sai — nhờ người xem lại được."
-          },
           "reviewRequestedAt": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer."
           },
           "decisionSource": {
             "type": "string",
@@ -83265,7 +83223,6 @@
           "rejectionReason",
           "reviewNote",
           "qualityIssues",
-          "canRequestReview",
           "reviewRequestedAt",
           "decisionSource",
           "decidedAt",
@@ -84830,6 +84787,58 @@
           "renting",
           "maintenance",
           "inactive"
+        ]
+      },
+      "FollowUpAssigneeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "platform_admin",
+              "platform_staff",
+              "reviewer",
+              "support",
+              "finance_admin"
+            ],
+            "description": "Vai trò nền tảng — để phân biệt với tên hiển thị"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "roleKey"
+        ]
+      },
+      "FollowUpContactDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string"
+          },
+          "customerEmail": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "customerPhone",
+          "customerEmail"
         ]
       },
       "ForgotPasswordDto": {
@@ -87446,6 +87455,7 @@
                 "platform.promo_codes.manage",
                 "platform.sellers.verify",
                 "platform.driver_licences.review",
+                "platform.sales_followups.manage",
                 "platform.money.manage",
                 "platform.insurance.manage",
                 "platform.support.manage",
@@ -91581,6 +91591,21 @@
             "type": "number",
             "description": "Số đánh giá đã viết"
           },
+          "licenceState": {
+            "type": "string",
+            "enum": [
+              "none",
+              "processing",
+              "verified",
+              "rejected"
+            ],
+            "description": "Tình trạng bằng lái"
+          },
+          "licenceExpiresOn": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn của bằng đang dùng (YYYY-MM-DD); null khi không thời hạn hoặc chưa có bằng"
+          },
           "lastLoginAt": {
             "type": "string",
             "nullable": true,
@@ -91618,6 +91643,7 @@
           "requestCount",
           "bookedCount",
           "reviewCount",
+          "licenceState",
           "createdAt",
           "conversationCount",
           "recentRequests",
@@ -91667,6 +91693,21 @@
             "type": "number",
             "description": "Số đánh giá đã viết"
           },
+          "licenceState": {
+            "type": "string",
+            "enum": [
+              "none",
+              "processing",
+              "verified",
+              "rejected"
+            ],
+            "description": "Tình trạng bằng lái"
+          },
+          "licenceExpiresOn": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn của bằng đang dùng (YYYY-MM-DD); null khi không thời hạn hoặc chưa có bằng"
+          },
           "lastLoginAt": {
             "type": "string",
             "nullable": true,
@@ -91685,6 +91726,7 @@
           "requestCount",
           "bookedCount",
           "reviewCount",
+          "licenceState",
           "createdAt"
         ]
       },
@@ -92014,25 +92056,6 @@
           "recentTenants"
         ]
       },
-      "PlatformDriverLicenceCountsDto": {
-        "type": "object",
-        "properties": {
-          "pendingReview": {
-            "type": "number"
-          },
-          "verified": {
-            "type": "number"
-          },
-          "rejected": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "pendingReview",
-          "verified",
-          "rejected"
-        ]
-      },
       "PlatformDriverLicenceDto": {
         "type": "object",
         "properties": {
@@ -92113,6 +92136,7 @@
               "missing_fields",
               "expired",
               "no_drivable_class",
+              "reader_unavailable",
               "other"
             ],
             "nullable": true
@@ -92137,13 +92161,10 @@
               ]
             }
           },
-          "canRequestReview": {
-            "type": "boolean",
-            "description": "Bị máy từ chối vì lý do máy có thể đọc sai — nhờ người xem lại được."
-          },
           "reviewRequestedAt": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer."
           },
           "decisionSource": {
             "type": "string",
@@ -92188,7 +92209,6 @@
           "rejectionReason",
           "reviewNote",
           "qualityIssues",
-          "canRequestReview",
           "reviewRequestedAt",
           "decisionSource",
           "decidedAt",
@@ -92271,18 +92291,6 @@
             "type": "string",
             "nullable": true,
             "description": "Mã lỗi khi bộ đọc hỏng"
-          },
-          "pendingReason": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "low_confidence",
-              "implausible_birth_date",
-              "implausible_expiry",
-              "reader_unavailable",
-              "customer_request"
-            ],
-            "description": "Vì sao lượt nộp phải chờ người duyệt"
           }
         },
         "required": [
@@ -92290,8 +92298,208 @@
           "model",
           "confidence",
           "notes",
-          "errorCode",
-          "pendingReason"
+          "errorCode"
+        ]
+      },
+      "PlatformFollowUpCancellationDto": {
+        "type": "object",
+        "properties": {
+          "responsibleParty": {
+            "type": "string",
+            "enum": [
+              "host",
+              "customer",
+              "platform",
+              "force_majeure"
+            ]
+          },
+          "reasonCategory": {
+            "type": "string",
+            "enum": [
+              "vehicle_unavailable",
+              "schedule_conflict",
+              "customer_requirements",
+              "customer_unreachable",
+              "customer_changed_plan",
+              "other"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "responsibleParty",
+          "reasonCategory",
+          "reason",
+          "cancelledAt"
+        ]
+      },
+      "PlatformFollowUpDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id yêu cầu thuê"
+          },
+          "lostReason": {
+            "type": "string",
+            "enum": [
+              "customer_cancelled",
+              "unpaid",
+              "host_declined",
+              "no_response",
+              "slot_taken",
+              "other_cancelled"
+            ]
+          },
+          "requestStatus": {
+            "type": "string",
+            "description": "Trạng thái yêu cầu thuê"
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "long_term"
+            ]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhoneMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che"
+          },
+          "customerUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "returnAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedAt": {
+            "type": "string",
+            "description": "Lúc gửi yêu cầu, ISO-8601 UTC"
+          },
+          "closedAt": {
+            "type": "string",
+            "description": "Lúc kết thúc (lần đổi trạng thái cuối), ISO-8601 UTC"
+          },
+          "cancellation": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformFollowUpCancellationDto"
+              }
+            ]
+          },
+          "rebookedLater": {
+            "type": "boolean",
+            "description": "Khách đã có đơn khác SAU yêu cầu này"
+          },
+          "followUpStatus": {
+            "type": "string",
+            "enum": [
+              "new",
+              "contacted",
+              "rebooked",
+              "not_interested"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "assigneeUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "assigneeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastContactedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "followUpUpdatedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "followUpUpdatedByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "lostReason",
+          "requestStatus",
+          "serviceType",
+          "customerName",
+          "customerUserId",
+          "tenantId",
+          "tenantName",
+          "vehicleName",
+          "bookingCode",
+          "pickupAt",
+          "returnAt",
+          "requestedAt",
+          "closedAt",
+          "cancellation",
+          "rebookedLater",
+          "followUpStatus",
+          "note",
+          "assigneeUserId",
+          "assigneeName",
+          "lastContactedAt",
+          "followUpUpdatedAt",
+          "followUpUpdatedByName"
+        ]
+      },
+      "PlatformFollowUpPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformFollowUpDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "PlatformHoldDto": {
@@ -98267,31 +98475,6 @@
           }
         }
       },
-      "RejectDriverLicenceDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "enum": [
-              "not_a_licence",
-              "back_side",
-              "unreadable",
-              "missing_fields",
-              "expired",
-              "no_drivable_class",
-              "other"
-            ]
-          },
-          "note": {
-            "type": "string",
-            "nullable": true,
-            "description": "Bắt buộc khi lý do là \"other\""
-          }
-        },
-        "required": [
-          "reason"
-        ]
-      },
       "RejectRefundDto": {
         "type": "object",
         "properties": {
@@ -100933,6 +101116,7 @@
                 "platform.promo_codes.manage",
                 "platform.sellers.verify",
                 "platform.driver_licences.review",
+                "platform.sales_followups.manage",
                 "platform.money.manage",
                 "platform.insurance.manage",
                 "platform.support.manage",
@@ -102442,6 +102626,37 @@
             "nullable": true
           }
         }
+      },
+      "UpdateFollowUpDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "contacted",
+              "rebooked",
+              "not_interested"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "assigneeUserId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Người phụ trách — tài khoản nền tảng; null để bỏ giao"
+          },
+          "markContacted": {
+            "type": "boolean",
+            "description": "Trạng thái \"đã gọi cho khách\": `true` ghi mốc liên hệ (giữ mốc cũ nếu đã có), `false` xoá mốc, bỏ trống = không đổi"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "UpdateInsuranceProductDto": {
         "type": "object",

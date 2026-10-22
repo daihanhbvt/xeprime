@@ -32,7 +32,9 @@ export class PlatformTripsController {
   ) {}
 
   @Get('summary')
-  @ApiOperation({ summary: 'Số dòng + số khẩn của bốn hàng đợi vận hành, và lịch giao/trả hôm nay' })
+  @ApiOperation({
+    summary: 'Số dòng + số khẩn của bốn hàng đợi vận hành, và lịch giao/trả hôm nay',
+  })
   @ApiOkResponse({ type: PlatformTripSummaryDto })
   summary(@Query() query: PlatformTripSummaryQueryDto): Promise<PlatformTripSummaryDto> {
     return this.trips.summary(query);

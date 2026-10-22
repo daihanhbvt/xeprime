@@ -15,10 +15,14 @@ export const DRIVER_LICENCE_STATUS = {
   UPLOADING: 'uploading',
   /**
    * Đang đọc ảnh — chạy NỀN sau lượt `complete`, thường xong trong vài chục giây. Kẹt quá 5 phút
-   * (tiến trình khởi động lại) thì tự sang `pending_review`; khởi động lại API thì đọc tiếp.
+   * (tiến trình khởi động lại) thì tự sang `rejected` lý do `reader_unavailable` — khách nộp lại.
    */
   PROCESSING: 'processing',
-  /** Đọc xong nhưng cần người của XePrime xem (bằng nước ngoài, ảnh mập mờ, OCR chưa bật). */
+  /**
+   * **@deprecated — ĐÃ GỠ (ADR 0070).** Hàng đợi duyệt tay của ADR 0057. Mọi lượt nộp giờ do hệ
+   * thống tự quyết; migration `20261022100000_driver_licence_auto_only` đóng các lượt còn chờ và
+   * DB từ chối giá trị này. Chỉ còn ở đây để `apps/mobile` biên dịch được.
+   */
   PENDING_REVIEW: 'pending_review',
   /** Đã xác thực — đặt được xe tự lái trong phạm vi hạng và hạn của bằng. */
   VERIFIED: 'verified',
@@ -43,7 +47,6 @@ export const DRIVER_LICENCE_STATUS_VALUES = Object.values(
 export const DRIVER_LICENCE_IN_FLIGHT_STATUSES: readonly DriverLicenceStatus[] = [
   DRIVER_LICENCE_STATUS.UPLOADING,
   DRIVER_LICENCE_STATUS.PROCESSING,
-  DRIVER_LICENCE_STATUS.PENDING_REVIEW,
 ];
 
 export const DRIVER_LICENCE_STATUS_META: Readonly<Record<DriverLicenceStatus, StatusMeta>> = {
@@ -90,7 +93,12 @@ export const DRIVER_LICENCE_REJECT_REASON = {
   EXPIRED: 'expired',
   /** Hạng trên bằng không lái được ô tô lẫn xe máy (vd chỉ có hạng máy kéo). */
   NO_DRIVABLE_CLASS: 'no_drivable_class',
-  /** Người duyệt từ chối vì lý do khác — bắt buộc kèm ghi chú. Hệ thống tự động không dùng mã này. */
+  /**
+   * Bộ đọc ảnh đang lỗi / tắt / quá tải nên CHƯA đọc được — không phải lỗi của ảnh, khách nộp lại
+   * sau ít phút. Chưa đọc được thì không bao giờ tự xác thực (ADR 0070).
+   */
+  READER_UNAVAILABLE: 'reader_unavailable',
+  /** LEGACY — lượt duyệt tay cũ từ chối vì lý do khác, kèm ghi chú. Không còn writer (ADR 0070). */
   OTHER: 'other',
 } as const;
 
@@ -100,45 +108,23 @@ export const DRIVER_LICENCE_REJECT_REASON_VALUES = Object.values(
   DRIVER_LICENCE_REJECT_REASON,
 ) as DriverLicenceRejectReason[];
 
-/**
- * Lý do bị từ chối TỰ ĐỘNG mà khách được quyền nhờ người xem lại — đúng những lý do máy đọc ảnh
- * có thể đọc sai. `expired` nằm đây vì máy đọc chữ (Tesseract) có thể đọc lệch một chữ số ngày
- * tháng ("15/03" thành "05/03") — một tấm bằng còn hạn vài ngày thành "hết hạn" mà khách không có
- * đường nào ngoài chụp lại. `not_a_licence` / `back_side` thì không: khách tự thấy và sửa được.
- */
-export const DRIVER_LICENCE_REVIEWABLE_REJECT_REASONS: readonly DriverLicenceRejectReason[] = [
-  DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
-  DRIVER_LICENCE_REJECT_REASON.MISSING_FIELDS,
-  DRIVER_LICENCE_REJECT_REASON.EXPIRED,
-  DRIVER_LICENCE_REJECT_REASON.NO_DRIVABLE_CLASS,
-];
-
-/**
- * Vì sao một lượt nộp đang CHỜ NGƯỜI DUYỆT — mã đi trên dây (`reading.pendingReason`), nhãn dịch ở
- * namespace `AdminDriverLicences.pendingReason`. Cho người duyệt, không cho khách.
- */
-export const DRIVER_LICENCE_PENDING_REASON = {
-  /** Các lượt đọc lệch nhau ở một trường then chốt. */
-  LOW_CONFIDENCE: 'low_confidence',
-  /** Ngày sinh cho ra người dưới tuổi được cấp bằng — gần như chắc chắn đọc sai. */
-  IMPLAUSIBLE_BIRTH_DATE: 'implausible_birth_date',
-  /** Hạn đọc được không thể có với hạng đó (hạng ô tô "không thời hạn", hạn quá xa, hạn trước ngày cấp). */
-  IMPLAUSIBLE_EXPIRY: 'implausible_expiry',
-  /** Bộ đọc hỏng, bị tắt, quá tải hoặc không lấy được ảnh. */
-  READER_UNAVAILABLE: 'reader_unavailable',
-  /** Khách nhờ xem lại một lần từ chối tự động. */
-  CUSTOMER_REQUEST: 'customer_request',
+/** Độ tin cậy bộ đọc ảnh tự đánh giá cho một lượt đọc — nhãn ở `AdminCustomers.licence.confidence`. */
+export const DRIVER_LICENCE_READING_CONFIDENCE = {
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low',
 } as const;
 
-export type DriverLicencePendingReason =
-  (typeof DRIVER_LICENCE_PENDING_REASON)[keyof typeof DRIVER_LICENCE_PENDING_REASON];
-export const DRIVER_LICENCE_PENDING_REASON_VALUES = Object.values(
-  DRIVER_LICENCE_PENDING_REASON,
-) as DriverLicencePendingReason[];
+export type DriverLicenceReadingConfidence =
+  (typeof DRIVER_LICENCE_READING_CONFIDENCE)[keyof typeof DRIVER_LICENCE_READING_CONFIDENCE];
+export const DRIVER_LICENCE_READING_CONFIDENCE_VALUES = Object.values(
+  DRIVER_LICENCE_READING_CONFIDENCE,
+) as DriverLicenceReadingConfidence[];
 
 /** Ai ra quyết định cuối cùng của một lượt nộp. */
 export const DRIVER_LICENCE_DECISION_SOURCE = {
   AUTO: 'auto',
+  /** LEGACY — lượt duyệt tay trước ADR 0070. Không còn writer. */
   MANUAL: 'manual',
 } as const;
 
@@ -187,3 +173,20 @@ export function serviceRequiresDriverLicence(serviceType: string | null | undefi
     serviceType ?? SERVICE_TYPE.SELF_DRIVE,
   );
 }
+
+/**
+ * Tình trạng bằng lái của MỘT khách trong hồ sơ khách thuê (admin nền tảng — ADR 0070): có bằng
+ * đang dùng thì `verified` (dù có lượt nộp mới hơn); không thì theo lượt nộp gần nhất.
+ */
+export const CUSTOMER_LICENCE_STATE = {
+  NONE: 'none',
+  PROCESSING: 'processing',
+  VERIFIED: 'verified',
+  REJECTED: 'rejected',
+} as const;
+
+export type CustomerLicenceState =
+  (typeof CUSTOMER_LICENCE_STATE)[keyof typeof CUSTOMER_LICENCE_STATE];
+export const CUSTOMER_LICENCE_STATE_VALUES = Object.values(
+  CUSTOMER_LICENCE_STATE,
+) as CustomerLicenceState[];

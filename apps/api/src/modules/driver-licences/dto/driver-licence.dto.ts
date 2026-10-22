@@ -2,36 +2,29 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DRIVER_LICENCE_DECISION_SOURCE_VALUES,
   DRIVER_LICENCE_KIND_VALUES,
-  DRIVER_LICENCE_PENDING_REASON_VALUES,
   DRIVER_LICENCE_QUALITY_ISSUE_VALUES,
+  DRIVER_LICENCE_READING_CONFIDENCE_VALUES,
   DRIVER_LICENCE_REJECT_REASON_VALUES,
   DRIVER_LICENCE_STATUS_VALUES,
   DRIVER_LICENCE_UPLOAD_MAX_BYTES,
   DRIVER_LICENCE_UPLOAD_MIME_TYPES,
 } from '@xeprime/types';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
   Equals,
-  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
-  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
-import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 export const DRIVER_LICENCE_DEFAULT_LIMIT = 20;
 export const DRIVER_LICENCE_MAX_LIMIT = 100;
-
-const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 // ── Phía khách ─────────────────────────────────────────────────────────────────────────────
 
@@ -96,10 +89,11 @@ export class DriverLicenceDto {
   })
   qualityIssues!: string[];
   @ApiProperty({
-    description: 'Bị máy từ chối vì lý do máy có thể đọc sai — nhờ người xem lại được.',
+    type: String,
+    nullable: true,
+    description: 'LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer.',
   })
-  canRequestReview!: boolean;
-  @ApiProperty({ type: String, nullable: true }) reviewRequestedAt!: string | null;
+  reviewRequestedAt!: string | null;
   @ApiProperty({ enum: DRIVER_LICENCE_DECISION_SOURCE_VALUES, nullable: true, type: String })
   decisionSource!: string | null;
   @ApiProperty({ type: String, nullable: true }) decidedAt!: string | null;
@@ -137,19 +131,12 @@ export class PlatformDriverLicenceOwnerDto {
 export class PlatformDriverLicenceReadingDto {
   @ApiProperty({ type: String, nullable: true }) provider!: string | null;
   @ApiProperty({ type: String, nullable: true }) model!: string | null;
-  @ApiProperty({ type: String, nullable: true, enum: ['high', 'medium', 'low'] })
+  @ApiProperty({ type: String, nullable: true, enum: DRIVER_LICENCE_READING_CONFIDENCE_VALUES })
   confidence!: string | null;
   @ApiProperty({ type: String, nullable: true, description: 'Ghi chú của bộ đọc cho người duyệt' })
   notes!: string | null;
   @ApiProperty({ type: String, nullable: true, description: 'Mã lỗi khi bộ đọc hỏng' })
   errorCode!: string | null;
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    enum: DRIVER_LICENCE_PENDING_REASON_VALUES,
-    description: 'Vì sao lượt nộp phải chờ người duyệt',
-  })
-  pendingReason!: string | null;
 }
 
 export class PlatformDriverLicenceDto extends DriverLicenceDto {
@@ -163,34 +150,13 @@ export class PlatformDriverLicencePageDto {
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
 
-export class PlatformDriverLicenceCountsDto {
-  @ApiProperty() pendingReview!: number;
-  @ApiProperty() verified!: number;
-  @ApiProperty() rejected!: number;
-}
-
+/** Lịch sử nộp bằng lái của MỘT khách — cho hồ sơ khách thuê (ADR 0070). */
 export class PlatformDriverLicenceListQueryDto {
-  @ApiPropertyOptional({
-    enum: DRIVER_LICENCE_STATUS_VALUES,
-    description: 'Bỏ trống = hàng đợi CHỜ DUYỆT, cũ nhất trước',
-  })
-  @IsOptional()
-  @IsIn(DRIVER_LICENCE_STATUS_VALUES)
-  status?: string;
-
-  @ApiPropertyOptional({ enum: DRIVER_LICENCE_KIND_VALUES })
-  @IsOptional()
-  @IsIn(DRIVER_LICENCE_KIND_VALUES)
-  kind?: string;
-
-  @ApiPropertyOptional({
-    description: 'Tìm theo họ tên trên bằng / số bằng / tên hoặc SĐT tài khoản',
-  })
-  @IsOptional()
+  @ApiProperty({ description: 'Tài khoản khách' })
   @IsString()
-  @Transform(trim)
-  @MaxLength(100)
-  q?: string;
+  @MinLength(26)
+  @MaxLength(26)
+  userId!: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -210,88 +176,4 @@ export class PlatformDriverLicenceListQueryDto {
   @Min(1)
   @Max(DRIVER_LICENCE_MAX_LIMIT)
   limit?: number;
-}
-
-/**
- * Người duyệt CHỐT thông tin trên bằng — sửa được chỗ máy đọc sai, và với bằng nước ngoài thì
- * tự quyết hai cờ "lái được ô tô / xe máy". Server kiểm lại: còn hạn, có ít nhất một loại xe.
- */
-export class ApproveDriverLicenceDto {
-  @ApiProperty({ enum: DRIVER_LICENCE_KIND_VALUES })
-  @IsIn(DRIVER_LICENCE_KIND_VALUES)
-  kind!: string;
-
-  @ApiProperty()
-  @IsString()
-  @Transform(trim)
-  @MinLength(3)
-  @MaxLength(40)
-  licenceNumber!: string;
-
-  @ApiProperty()
-  @IsString()
-  @Transform(trim)
-  @MinLength(2)
-  @MaxLength(160)
-  fullName!: string;
-
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
-  @IsOptional()
-  @Matches(DATE_ONLY_PATTERN)
-  dateOfBirth?: string | null;
-
-  @ApiProperty({ type: [String] })
-  @IsString({ each: true })
-  @ArrayMinSize(1)
-  @ArrayMaxSize(12)
-  @MaxLength(8, { each: true })
-  classes!: string[];
-
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
-  @IsOptional()
-  @Matches(DATE_ONLY_PATTERN)
-  issuedOn?: string | null;
-
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'YYYY-MM-DD; bỏ trống khi không thời hạn',
-  })
-  @IsOptional()
-  @Matches(DATE_ONLY_PATTERN)
-  expiresOn?: string | null;
-
-  @ApiProperty()
-  @IsBoolean()
-  noExpiry!: boolean;
-
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO 3166-1 alpha-2' })
-  @IsOptional()
-  @Matches(/^[A-Z]{2}$/)
-  issuingCountry?: string | null;
-
-  @ApiProperty({ description: 'Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng.' })
-  @IsBoolean()
-  coversCar!: boolean;
-
-  @ApiProperty({ description: 'Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng.' })
-  @IsBoolean()
-  coversMotorbike!: boolean;
-}
-
-export class RejectDriverLicenceDto {
-  @ApiProperty({ enum: DRIVER_LICENCE_REJECT_REASON_VALUES })
-  @IsIn(DRIVER_LICENCE_REJECT_REASON_VALUES)
-  reason!: string;
-
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'Bắt buộc khi lý do là "other"',
-  })
-  @IsOptional()
-  @IsString()
-  @Transform(trim)
-  @MaxLength(500)
-  note?: string | null;
 }

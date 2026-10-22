@@ -33,9 +33,9 @@
       "label": "Cars awaiting review",
       "part": "{count, plural, one {# car awaiting review} other {# cars awaiting review}}"
     },
-    "licences": {
-      "label": "Driver's licences to review",
-      "part": "{count, plural, one {# driver's licence to review} other {# driver's licences to review}}"
+    "followUps": {
+      "label": "Renters to follow up",
+      "part": "{count, plural, one {# renter to follow up} other {# renters to follow up}}"
     },
     "bankIn": {
       "label": "Unmatched incoming payments",

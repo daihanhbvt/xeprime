@@ -97,6 +97,7 @@ export const ROUTES = {
     FAVORITES: '/account/favorites',
     ADDRESSES: '/account/addresses',
     /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
+    /** Đường cũ của trang Giấy tờ — nay chỉ chuyển tiếp về mục Giấy tờ trong trang Tài khoản. */
     DOCUMENTS: '/account/documents',
     /** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản khách (ADR 0063). */
     DRIVING: '/account/driving',
@@ -323,7 +324,7 @@ export const ROUTES = {
     BANNERS: admin('/marketplace-banners'),
     /** Hàng đợi xác minh người bán (R3 — ADR 0028 release gate 1). */
     SELLERS: admin('/sellers'),
-    /** Hàng đợi bằng lái của khách (ADR 0057). */
+    /** Đường cũ của hàng đợi bằng lái (ADR 0070 gỡ) — chỉ còn chuyển tiếp về Khách thuê. */
     DRIVER_LICENCES: admin('/driver-licences'),
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
     FEE_POLICIES: admin('/fee-policies'),
@@ -756,7 +757,8 @@ export const adminAppConfigPath = {
   templates: (): string =>
     `${ROUTES.ADMIN.APP_CONFIG}?${new URLSearchParams({ [ADMIN_APP_CONFIG_TAB_PARAM]: ADMIN_APP_CONFIG_TAB.TEMPLATES })}`,
   newTemplate: (): string => `${ROUTES.ADMIN.APP_CONFIG}/templates/new`,
-  template: (id: string): string => `${ROUTES.ADMIN.APP_CONFIG}/templates/${encodeURIComponent(id)}`,
+  template: (id: string): string =>
+    `${ROUTES.ADMIN.APP_CONFIG}/templates/${encodeURIComponent(id)}`,
 };
 
 export const adminApprovalPath = {
@@ -1288,3 +1290,6 @@ export const drivingTripPath = {
   list: `${ROUTES.TRIPS}?${TRIPS_TAB_PARAM}=${TRIPS_TAB.DRIVING}`,
   detail: (bookingId: string): string => `${ROUTES.TRIPS}/driving/${encodeURIComponent(bookingId)}`,
 };
+
+/** Id của mục "Giấy tờ & Xác minh" trong trang Tài khoản — đích cuộn của link cũ `/account/documents`. */
+export const ACCOUNT_DOCUMENTS_ANCHOR = 'documents';
