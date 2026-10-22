@@ -1,8 +1,9 @@
 'use client';
 
-import { Alert, App, Button, Spin } from 'antd';
+import { Alert, App, Button, Radio, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { SUBSCRIPTION_CHANGE_TIMING } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { paymentPath } from '@/constants/routes';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
@@ -105,14 +106,46 @@ export function PurchaseModal({
         <div className={styles.empty}>{t('purchase.emptyFor', { scope: laneTitle })}</div>
       ) : (
         <>
-          <p className={styles.context}>
-            {current
-              ? t('purchase.chainsAfter', {
-                  plan: current.planName,
-                  date: fmt.date(current.endsAt),
-                })
-              : t('purchase.startsOnPayment')}
-          </p>
+          {current ? (
+            <div className={styles.timingSection}>
+              <div className={styles.timingLabel}>{t('purchase.timingLabel')}</div>
+              <Radio.Group
+                value={selection.timing}
+                onChange={(e) => selection.setTiming(e.target.value)}
+                className={styles.timingGroup}
+              >
+                <Radio value={SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM}>
+                  <span className={styles.timingOptionText}>
+                    <strong>{t('purchase.timingNextTerm')}</strong>
+                    <span className={styles.timingOptionDesc}>
+                      {t('purchase.chainsAfter', {
+                        plan: current.planName,
+                        date: fmt.date(current.endsAt),
+                      })}
+                    </span>
+                  </span>
+                </Radio>
+                <Radio value={SUBSCRIPTION_CHANGE_TIMING.NOW}>
+                  <span className={styles.timingOptionText}>
+                    <strong>{t('purchase.timingNow')}</strong>
+                    <span className={styles.timingOptionDesc}>
+                      {t('purchase.timingNowDesc')}
+                    </span>
+                  </span>
+                </Radio>
+              </Radio.Group>
+              {selection.timing === SUBSCRIPTION_CHANGE_TIMING.NOW ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  className={styles.timingAlert}
+                  title={t('purchase.timingNowWarning')}
+                />
+              ) : null}
+            </div>
+          ) : (
+            <p className={styles.context}>{t('purchase.startsOnPayment')}</p>
+          )}
 
           {pendingSameScope ? (
             <Alert
@@ -147,7 +180,9 @@ export function PurchaseModal({
               disabled={!selection.selection}
               onClick={submit}
             >
-              {t('purchase.submit')}
+              {selection.timing === SUBSCRIPTION_CHANGE_TIMING.NOW
+                ? t('purchase.submitNow')
+                : t('purchase.submit')}
             </Button>
           </div>
         </>

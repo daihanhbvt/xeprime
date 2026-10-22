@@ -47,3 +47,41 @@
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
+
+/* Khối chọn thời điểm áp dụng khi đang có gói cùng loại xe (ADR 0065). */
+.timingSection {
+  margin: 0 0 var(--xp-space-sm);
+  padding: var(--xp-space-sm);
+  background-color: var(--xp-color-bg-secondary);
+  border-radius: var(--xp-radius-md);
+  border: 1px solid var(--xp-color-border-subtle);
+}
+
+.timingLabel {
+  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text);
+  margin-bottom: var(--xp-space-xs);
+}
+
+.timingGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.timingOptionText {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.timingOptionDesc {
+  color: var(--xp-color-text-secondary);
+}
+
+.timingAlert {
+  margin-top: var(--xp-space-sm);
+}

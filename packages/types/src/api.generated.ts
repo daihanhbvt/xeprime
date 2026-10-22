@@ -18345,6 +18345,11 @@ export interface components {
              * @enum {number}
              */
             termMonths: 1 | 3 | 6 | 12;
+            /**
+             * @description Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay
+             * @enum {string}
+             */
+            timing?: "next_term" | "now";
         };
         PushDeviceDto: {
             id: string;

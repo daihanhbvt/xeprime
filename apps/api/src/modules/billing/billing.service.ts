@@ -1530,9 +1530,10 @@ export class BillingService {
       where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
       select: TERM_SNAPSHOT_SELECT,
     });
+    const timing = dto.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
     const periodFrom = planSubscriptionChain(
       live,
-      { planId: plan.id, vehicleScope, timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM },
+      { planId: plan.id, vehicleScope, timing },
       now,
     ).startsAt;
     const periodTo = addCalendarMonthsVn(periodFrom, dto.termMonths);
@@ -1615,6 +1616,7 @@ export class BillingService {
           planCode: plan.code,
           termMonths: dto.termMonths,
           vehicleScope,
+          timing,
           quota: quotaOf(limits),
           lines: pricing.lines,
         },
@@ -1854,11 +1856,12 @@ export class BillingService {
     }
 
     const now = new Date();
+    const timing = snapshot.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
     const { startsAt } = await this.planChainWithinTx(tx, {
       tenantId: args.tenantId,
       planId: plan.id,
       vehicleScope,
-      timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+      timing,
       actorUserId: null,
       now,
     });

@@ -95859,6 +95859,14 @@
               12
             ],
             "description": "Kỳ hạn THÁNG LỊCH (ADR 0015)"
+          },
+          "timing": {
+            "type": "string",
+            "enum": [
+              "next_term",
+              "now"
+            ],
+            "description": "Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay"
           }
         },
         "required": [
