@@ -309,7 +309,7 @@ describe('mốc biên bậc giao nhận', () => {
    * cũ `{toKm, fee}` vẫn đọc nguyên trạng — ca trên là bằng chứng.
    */
   maybe(
-    'bậc theo km: đơn giá × khoảng cách, làm tròn 1.000đ; lưu và đọc lại đúng dạng',
+    'bậc theo km: đơn giá × khoảng cách, đúng tới đồng (ADR 0069); lưu và đọc lại đúng dạng',
     async () => {
       const perKmTiers = [
         { toKm: 5, fee: '0' },
@@ -326,8 +326,8 @@ describe('mốc biên bậc giao nhận', () => {
         const fee = (km: number) => pricing.deliveryFeeFor(values, km);
         expect(fee(4)).toEqual({ kind: 'auto', fee: '0' });
         expect(fee(12)).toEqual({ kind: 'auto', fee: '120000' });
-        // 12,34 km × 10.000 = 123.400 ⇒ 123.000.
-        expect(fee(12.34)).toEqual({ kind: 'auto', fee: '123000' });
+        // 12,34 km × 10.000 = 123.400 — đúng tới đồng, không còn tròn 1.000đ (trước: 123.000).
+        expect(fee(12.34)).toEqual({ kind: 'auto', fee: '123400' });
         expect(fee(15.5)).toEqual({ kind: 'manual_required' });
       } finally {
         await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
@@ -352,12 +352,12 @@ describe('mốc biên bậc giao nhận', () => {
   });
 });
 
-describe('bước giá 1.000đ của khuyến mãi xe (ADR 0064)', () => {
+describe('khuyến mãi xe theo % làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
   maybe(
     'khuyến mãi trực tiếp % làm tròn tới 1.000đ — không có số lẻ trên tổng khách trả',
     async () => {
       const pickupAt = new Date('2027-03-01T03:00:00.000Z');
-      // 3 ngày × 333.000 = 999.000; 7% = 69.930 ⇒ 70.000.
+      // 3 ngày × 333.000 = 999.000; 7% = 69.930 ⇒ làm tròn LÊN 70.000.
       const quote = pricing.buildDailyQuote({
         weekdayPrice: '333000',
         weekendPrice: null,
@@ -370,20 +370,35 @@ describe('bước giá 1.000đ của khuyến mãi xe (ADR 0064)', () => {
       });
       expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-70000');
       expect(quote.totalAmount).toBe('929000');
+
+      // Ví dụ của ADR 0069: 2 ngày × 326.000 = 652.000; 10% = 65.200 ⇒ giảm 66.000 (trước: 65.000
+      // — khách được giảm ÍT hơn 10%).
+      const adr = pricing.buildDailyQuote({
+        weekdayPrice: '326000',
+        weekendPrice: null,
+        pickupAt,
+        returnAt: new Date(pickupAt.getTime() + 2 * 24 * HOUR),
+        policy: null,
+        delivery: null,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        discountPercent: 10,
+      });
+      expect(adr.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-66000');
+      expect(adr.totalAmount).toBe('586000');
     },
   );
 
-  maybe('ưu đãi cam kết dài hạn % làm tròn tới 1.000đ', async () => {
+  maybe('ưu đãi cam kết dài hạn % làm tròn LÊN tới 1.000đ', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    // 1 tháng × 8.765.000, ưu đãi 5% = 438.250 ⇒ 438.000.
+    // 1 tháng × 8.765.000, ưu đãi 5% = 438.250 ⇒ làm tròn LÊN 439.000 (trước: 438.000).
     const quote = pricing.buildLongTermPackageQuote({
       monthlyPrice: '8765000',
       packageMonths: 1,
       policy,
       delivery: null,
     });
-    expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-438000');
-    expect(quote.totalAmount).toBe('8327000');
+    expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-439000');
+    expect(quote.totalAmount).toBe('8326000'); // 8.765.000 − 439.000
   });
 });
 

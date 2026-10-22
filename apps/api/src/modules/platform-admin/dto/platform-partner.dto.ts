@@ -411,7 +411,10 @@ export class PartnerBookingRequestDto {
   pickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   returnAt!: string | null;
-  @ApiProperty({ description: 'ISO — hạn gian hàng phải phản hồi' }) respondBy!: string;
+  @ApiProperty({
+    description: 'ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066)',
+  })
+  respondBy!: string;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
 }
 

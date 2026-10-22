@@ -93,7 +93,28 @@
     "unassignedToast": "Driver removed",
     "assignedAt": "Assigned {time}",
     "respondedAt": "Accepted {time}",
-    "legacyHint": "This booking isn't a chauffeured trip."
+    "respondBy": "Waiting for the driver — answer by {time}",
+    "legacyHint": "This booking isn't a chauffeured trip.",
+    "externalTag": "External",
+    "externalSetAt": "Recorded {time}",
+    "enterExternal": "Enter an external driver",
+    "editExternal": "Edit",
+    "externalSaved": "External driver saved",
+    "missingSoon": "Pick-up is less than {hours} hours away and this trip still has no driver — assign a linked driver or enter an external one.",
+    "externalForm": {
+      "title": "External driver",
+      "hint": "The driver doesn't need a XePrime account. The customer will see this name and phone number to get in touch; the system doesn't check this person's schedule for overlaps.",
+      "replaceLinked": "{name}, currently assigned to this trip, will be removed and notified.",
+      "name": "Driver name",
+      "namePlaceholder": "e.g. Nguyen Van Tai",
+      "phone": "Phone number",
+      "phonePlaceholder": "e.g. 0901234567",
+      "save": "Save driver",
+      "nameRequired": "Please enter the driver's name",
+      "nameLength": "Driver name must be {min}–{max} characters",
+      "phoneRequired": "Please enter a phone number",
+      "phoneInvalid": "Invalid mobile phone number"
+    }
   },
   "endedBy": {
     "driver": "Driver left",

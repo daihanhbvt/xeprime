@@ -289,9 +289,15 @@ export class CustomerTripListItemDto {
 
   /**
    * Hạn chủ xe phải trả lời (ISO-8601 UTC) — đồng hồ đếm ngược trên thẻ chờ duyệt.
-   * `null` khi chuyến đã qua bước duyệt.
+   * `null` khi chuyến đã qua bước duyệt. Độ dài ĐỘNG theo khoảng cách tới giờ nhận (15′–4 giờ,
+   * ADR 0066) — client đọc mốc này, không tự giả định một cửa sổ cố định.
    */
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066)',
+  })
   respondBy!: string | null;
 
   /**
@@ -307,7 +313,8 @@ export class CustomerTripListItemDto {
   @ApiPropertyOptional({
     type: BookingDriverSummaryDto,
     nullable: true,
-    description: 'Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn',
+    description:
+      'Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp',
   })
   driver!: BookingDriverSummaryDto | null;
 
@@ -460,6 +467,25 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
 
+  /**
+   * Cờ "đang có khiếu nại" (ADR 0066) — THEO VAI người xem. Người đi thuê: báo cáo "chưa nhận
+   * được xe" còn mở của CHÍNH họ (khối "khiếu nại của bạn đang được xử lý"). Chủ xe: chuyến có
+   * tranh chấp (`dispute`) còn mở, ai mở cũng vậy.
+   */
+  @ApiProperty() openDispute!: boolean;
+  /**
+   * Người đi thuê bấm được "Chưa nhận được xe" NGAY BÂY GIỜ (ADR 0066, lớp 1): đơn `reserved`/
+   * `active`, trong `[pickupAt, pickupAt + 120′]`, chưa có báo cáo của chính họ còn mở. Server tính
+   * lúc đọc — giao diện tự tính lại theo đồng hồ để hiện nút đúng mốc; server vẫn là cửa chặn.
+   */
+  @ApiProperty() canReportNotReceived!: boolean;
+  /**
+   * Mốc ĐÓNG cửa sổ báo "Chưa nhận được xe" (`pickupAt + 120′`, ISO-8601 UTC) — có mặt khi chuyến
+   * còn báo được (chưa tới giờ hoặc đang trong cửa sổ), để giao diện tự hiện nút lúc tới giờ nhận
+   * và tự ẩn đúng lúc đóng. `null` khi không áp dụng.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) notReceivedReportUntil!: string | null;
+
   /** `null` khi chuyến chưa được nhận — chưa có đơn thì chưa có tiền. */
   @ApiPropertyOptional({ type: CustomerTripFinanceDto, nullable: true })
   finance!: CustomerTripFinanceDto | null;
@@ -611,7 +637,10 @@ export class CustomerTripCancelPreviewDto {
     description: 'ISO — mốc huỷ miễn phí ĐÃ LƯU; null khi chuyến chưa có khoản giữ chỗ',
   })
   freeCancelUntil!: string | null;
-  @ApiProperty({ description: 'false = đặt gấp, chuyến không có thời gian huỷ miễn phí' })
+  @ApiProperty({
+    description:
+      'false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0)',
+  })
   freeCancelAvailable!: boolean;
   @ApiProperty({ description: 'Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia' })
   deferred!: boolean;

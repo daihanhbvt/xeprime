@@ -155,7 +155,7 @@
     "activeTitle": "Tính năng Tối ưu nhận chuyến đang hoạt động",
     "activeBody": "Yêu cầu thuê đạt đủ điều kiện sẽ được xác nhận ngay, không cần bạn duyệt thủ công.",
     "inactiveTitle": "Đang duyệt thủ công",
-    "inactiveBody": "Mọi yêu cầu thuê sẽ chờ bạn duyệt trong 60 phút.",
+    "inactiveBody": "Mọi yêu cầu thuê sẽ chờ bạn duyệt — hạn trả lời từ 15 phút tới tối đa 4 giờ, tuỳ khoảng cách tới giờ nhận xe.",
     "toggleTitle": "Tự động đồng ý nhận chuyến",
     "toggleBody": "Tiết kiệm thời gian phản hồi khách hàng và gia tăng tỉ lệ chuyển đổi.",
     "toggleLabel": "Tự động nhận chuyến",

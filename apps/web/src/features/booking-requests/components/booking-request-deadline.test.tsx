@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   API_ERROR_CODE,
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_RESPOND_WINDOW,
   BOOKING_REQUEST_STATUS,
   SERVICE_TYPE,
 } from '@xeprime/types';
@@ -14,7 +14,7 @@ import { BookingRequestCard } from './BookingRequestCard';
 import type { BookingRequestItem } from '../types';
 
 /**
- * HẠN PHẢN HỒI 60 PHÚT nhìn từ hộp thư của gian hàng.
+ * HẠN PHẢN HỒI (động 15′–4 giờ, ADR 0066) nhìn từ hộp thư của gian hàng.
  *
  * Hai điều được khoá ở đây:
  *
@@ -86,7 +86,8 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
     rejectReason: null,
     bookingId: null,
     createdAt: inMinutes(-5),
-    respondBy: inMinutes(BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - 5),
+    // Chuyến nhận sau 3 ngày ⇒ cửa sổ trọn trần 240′ (ADR 0066), gửi 5 phút trước.
+    respondBy: inMinutes(BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES - 5),
     decidedAt: null,
     ...overrides,
   } as unknown as BookingRequestItem;
@@ -129,6 +130,13 @@ describe('Đồng hồ hạn phản hồi', () => {
 
     // 41:xx hoặc 42:00 tuỳ mili-giây trôi giữa lúc dựng dữ liệu và lúc render.
     expect(screen.getByText(/^4[12]:\d{2}$/)).toBeTruthy();
+  });
+
+  /** Cửa sổ động tới 4 giờ (ADR 0066) — đồng hồ phải có giờ, không in "149:59". */
+  it('còn trên một giờ: hiện giờ:phút:giây', () => {
+    renderCard(request({ respondBy: inMinutes(150) }));
+
+    expect(screen.getByText(/^2:(29:\d{2}|30:00)$/)).toBeTruthy();
   });
 
   /**
@@ -197,7 +205,7 @@ describe('Quyết định theo hạn phản hồi', () => {
     expect(screen.queryByRole('button', { name: /Duyệt & giữ xe/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Từ chối/ })).toBeNull();
     // Nói vì sao — im lặng ở đây đọc như một lỗi tải.
-    expect(screen.getByText(/Quá 60 phút chưa phản hồi/)).toBeTruthy();
+    expect(screen.getByText(/Yêu cầu đã đóng vì quá hạn phản hồi/)).toBeTruthy();
   });
 
   it('yêu cầu đã hết hạn (status expired) cũng không có action nào', () => {

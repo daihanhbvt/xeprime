@@ -1,0 +1,19 @@
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/*
+ * Bút toán ĐẢO mang số âm. Màu KHÔNG phải tín hiệu duy nhất: `fmt.money` đã in dấu trừ — dấu trừ
+ * mang nghĩa, màu chỉ giúp tìm nhanh. Không thêm ngoặc kế toán vì nó chồng lên dấu trừ đã có.
+ */
+.negative {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-error);
+}

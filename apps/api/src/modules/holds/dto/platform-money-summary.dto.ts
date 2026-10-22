@@ -26,7 +26,10 @@ export class BankInQueueSummaryDto extends MoneyQueueCountDto {
 }
 
 export class HoldQueueSummaryDto extends MoneyQueueCountDto {
-  @ApiProperty({ description: 'Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở' })
+  @ApiProperty({
+    description:
+      'Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao — ADR 0066)',
+  })
   disputeCount!: number;
 }
 

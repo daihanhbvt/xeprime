@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@xeprime/prisma';
+import { openSupportCaseWhere, Prisma } from '@xeprime/prisma';
 import {
   BANK_DIRECTION,
   BANK_MATCH_STATUS,
@@ -7,8 +7,6 @@ import {
   HOLD_REFUND_STATUS,
   INSURANCE_POLICY_STATUS,
   PAYMENT_ORDER_REVIEW_STATUS,
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS,
   WITHDRAWAL_STATUS_HOLDING_FUNDS,
   taxPeriodKeyVn,
@@ -68,18 +66,12 @@ export class PlatformMoneySummaryService {
           _count: { _all: true },
           _sum: { paidAmount: true },
         }),
-        // Cùng định nghĩa "tranh chấp mở" với `openDisputeBookingIds` (cờ `disputeOpen` của dòng).
+        // Cùng định nghĩa "tranh chấp mở" với `openDisputeBookingIds` (cờ `disputeOpen` của dòng)
+        // và lượt chốt kết cục — một mảnh `where` dùng chung (`openSupportCaseWhere`).
         this.prisma.bookingHold.count({
           where: {
             ...holdsWhere,
-            booking: {
-              supportCases: {
-                some: {
-                  category: SUPPORT_CASE_CATEGORY.DISPUTE,
-                  status: { in: [...SUPPORT_CASE_STATUS_OPEN] },
-                },
-              },
-            },
+            booking: { supportCases: { some: openSupportCaseWhere() } },
           },
         }),
         // = `listRefundsForPlatform` không lọc gì.

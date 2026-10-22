@@ -127,7 +127,7 @@
     "success": "Đã giữ xe — đã tạo đơn thuê",
     "successLongTerm": "Đã giữ xe — đã tạo đơn thuê dài hạn",
     "scheduleConflict": "Xe đã bận khung giờ này — chọn ngày giờ nhận khác hoặc từ chối yêu cầu.",
-    "expired": "Yêu cầu đã quá hạn phản hồi 60 phút — không duyệt được nữa. Hãy gọi cho khách."
+    "expired": "Yêu cầu đã quá hạn phản hồi — không duyệt được nữa. Hãy gọi cho khách."
   },
   "longTerm": {
     "title": "Duyệt và giữ xe — thuê dài hạn",
@@ -309,7 +309,7 @@
       "requestCode": "Mã yêu cầu: {code}",
       "requestCodeLabel": "Mã yêu cầu:",
       "body": "Chủ xe đang xem xét. Bạn sẽ nhận thông báo ngay khi có phản hồi.",
-      "pendingBody": "Chủ xe đang xem xét và có {minutes} phút để phản hồi. Bạn sẽ nhận được thông báo ngay khi có kết quả!",
+      "pendingBody": "Chủ xe đang xem xét và sẽ phản hồi trong tối đa {hours} giờ — giờ nhận xe càng gần, hạn phản hồi càng ngắn. Bạn sẽ nhận được thông báo ngay khi có kết quả!",
       "time": "Thời gian",
       "pickupMethod": "Nhận xe",
       "driverPickup": "Đón tại: {address}",
@@ -487,12 +487,13 @@
         "title": "Sau khi gửi yêu cầu",
         "instant": "Xe này hỗ trợ Đặt ngay: yêu cầu được nhận tự động khi gửi và bạn chuyển thẳng tới bước thanh toán tiền giữ chỗ để chốt chuyến.",
         "instantConfirmed": "Xe này hỗ trợ Đặt ngay: yêu cầu được nhận tự động và chuyến đi được xác nhận ngay khi gửi — không có bước thanh toán online.",
-        "hold": "Chủ xe xem và phản hồi yêu cầu của bạn. Khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ — chuyến đi chỉ được xác nhận khi XePrime nhận đủ khoản này.",
+        "hold": "Chủ xe xem và phản hồi yêu cầu của bạn. Khi chủ xe nhận chuyến, bạn có tối đa {minutes} phút để thanh toán tiền giữ chỗ (ngắn hơn nếu giờ nhận xe gần) — chuyến đi chỉ được xác nhận khi XePrime nhận đủ khoản này.",
         "general": "XePrime hoặc chủ xe sẽ liên hệ để kiểm tra thông tin, xác nhận tình trạng xe và hướng dẫn bước tiếp theo. Chuyến đi chỉ được xác nhận sau khi hoàn tất các bước được hướng dẫn."
       }
     },
     "nearPickup": {
       "title": "Bạn đang đặt sát giờ nhận xe",
+      "noFreeCancelTitle": "Chuyến này không có thời gian huỷ miễn phí",
       "short": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và được huỷ miễn phí trong khoảng {freeCancel} sau lúc chủ xe nhận. Chủ xe nhận càng muộn, hai khoảng này càng ngắn.",
       "noFreeCancel": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và không có thời gian huỷ miễn phí: huỷ sau khi thanh toán chỉ được hoàn tiền bảo hiểm (nếu có).",
       "tooShort": "Giờ nhận xe quá gần để kịp thanh toán tiền giữ chỗ qua XePrime — chủ xe có thể không nhận được chuyến này. Hãy chọn giờ nhận muộn hơn.",
@@ -508,15 +509,15 @@
     "close": "Đóng",
     "holdTitle": "Đã nhận chuyến — chờ khách thanh toán",
     "holdLead": "Lịch xe đã được giữ và mã thanh toán đã gửi cho khách. Đơn thuê mở tự động khi XePrime nhận đủ tiền giữ chỗ.",
-    "holdNext": "Khách có 2 giờ để chuyển khoản. Hết hạn mà chưa đủ tiền, chỗ tự nhả và bạn nhận thông báo.",
+    "holdNext": "Khách có tối đa 2 giờ để chuyển khoản (ngắn hơn nếu giờ nhận xe gần). Hết hạn mà chưa đủ tiền, chỗ tự nhả và bạn nhận thông báo.",
     "holdClose": "Về hộp thư yêu cầu"
   },
   "deadline": {
     "label": "Hạn phản hồi",
     "remaining": "Còn",
     "expired": "Đã quá hạn phản hồi",
-    "pastDueHint": "Quá 60 phút chưa phản hồi nên yêu cầu đã đóng. Gọi cho khách nếu vẫn muốn nhận chuyến này.",
-    "hint": "Gian hàng có 60 phút để trả lời. Quá hạn, yêu cầu tự đóng và khách được báo để chọn xe khác."
+    "pastDueHint": "Yêu cầu đã đóng vì quá hạn phản hồi. Gọi cho khách nếu vẫn muốn nhận chuyến này.",
+    "hint": "Hạn trả lời tuỳ khoảng cách tới giờ nhận xe: tối thiểu 15 phút, tối đa 4 giờ. Quá hạn, yêu cầu tự đóng và khách được báo để chọn xe khác."
   },
   "form": {
     "errors": {
@@ -571,17 +572,11 @@
   "approvalPreview": {
     "title": "Nếu duyệt ngay",
     "estimate": "Ước tính",
-    "online": "Khách chuyển qua QR (tiền giữ chỗ)",
-    "payAtPickup": "Khách trả bạn lúc nhận xe",
-    "commission": "Hoa hồng XePrime",
-    "tax": "Thuế khấu trừ",
-    "walletCredit": "Vào Ví điểm của bạn khi hoàn thành chuyến",
-    "ownerNet": "Bạn thực nhận cho tiền thuê",
     "noHold": "Chuyến này không thu tiền giữ chỗ online — đơn thuê được tạo ngay khi bạn duyệt, không có mã QR.",
     "paymentWindow": "Khách có {duration} để chuyển tiền giữ chỗ (tới khoảng {time}); quá hạn thì lịch tự nhả.",
     "freeCancel": "Khách được huỷ miễn phí trong {duration} sau khi bạn duyệt (tới khoảng {time}).",
-    "noFreeCancel": "Nhận xe sát giờ nên khách không có thời gian huỷ miễn phí.",
-    "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn được đền một nửa tiền giữ chỗ (phần ngoài bảo hiểm) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
+    "noFreeCancel": "Chuyến này khách không có thời gian huỷ miễn phí.",
+    "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn nhận toàn bộ phần giữ chỗ dành cho chủ xe (phần cam kết giữ xe tính trên tiền thuê) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
     "tooShort": "Giờ nhận xe quá gần để khách kịp chuyển tiền giữ chỗ — lượt duyệt sẽ không thành công. Hãy liên hệ khách để thoả thuận trực tiếp.",
     "longTermPickPickup": "Chọn giờ nhận xe để xem khách có bao lâu để thanh toán. Mã QR tiền giữ chỗ chỉ được gửi cho khách sau khi bạn chốt lịch và bấm duyệt."
   }

@@ -44,6 +44,7 @@ import {
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
+import { ownerPayoutOf } from '../../common/owner-payout';
 import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
@@ -714,11 +715,44 @@ export class BookingsService {
     return this.drivers.history(tenantId, id);
   }
 
-  async assignDriver(
+  /** Gán tài xế LIÊN KẾT (ADR 0063) — `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống, ADR 0067). */
+  assignDriver(
     tenantId: string,
     id: string,
     userId: string,
     driverId: string | null,
+  ): Promise<BookingDetailDto> {
+    return this.changeDriver(tenantId, id, (tx) =>
+      this.drivers.assignWithinTx(tx, { tenantId, bookingId: id, driverId, actorUserId: userId }),
+    );
+  }
+
+  /**
+   * Ghi tài xế NGOÀI HỆ THỐNG (ADR 0067) — tên + SĐT trên đúng đơn này; lượt gán liên kết đang có
+   * bị đóng như bỏ gán. Luật ở `DriversService.setExternalWithinTx` (writer duy nhất).
+   */
+  setExternalDriver(
+    tenantId: string,
+    id: string,
+    userId: string,
+    external: { name: string; phone: string },
+  ): Promise<BookingDetailDto> {
+    return this.changeDriver(tenantId, id, (tx) =>
+      this.drivers.setExternalWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        name: external.name,
+        phone: external.phone,
+        actorUserId: userId,
+      }),
+    );
+  }
+
+  /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */
+  private async changeDriver(
+    tenantId: string,
+    id: string,
+    apply: (tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
@@ -729,12 +763,7 @@ export class BookingsService {
 
     try {
       const row = await this.prisma.$transaction(async (tx) => {
-        await this.drivers.assignWithinTx(tx, {
-          tenantId,
-          bookingId: id,
-          driverId,
-          actorUserId: userId,
-        });
+        await apply(tx);
         return tx.booking.findFirstOrThrow({ where: { id, tenantId }, select: DETAIL_SELECT });
       });
       return this.withMoneyOne(toDetail(row));
@@ -1371,6 +1400,7 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
     ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,
     ownerNetAmount: internalSnapshot?.fees?.ownerNetAmount ?? null,
+    ownerPayout: internalSnapshot?.fees ? ownerPayoutOf(internalSnapshot.fees) : null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
     pickupLocation: addressViewOf({

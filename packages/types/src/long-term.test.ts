@@ -128,6 +128,18 @@ describe('mốc ưu đãi cam kết thời hạn', () => {
     });
   });
 
+  it('ưu đãi cam kết là khoản GIẢM: làm tròn LÊN 1.000đ như server (ADR 0069 điều 2)', () => {
+    // 3 × 652.000 = 1.956.000 · 10% = 195.600 ⇒ giảm 196.000 (bản cũ: 195.600).
+    const amounts = longTermPackageAmounts({
+      monthlyPrice: '652000',
+      packageMonths: 3,
+      tiers: [{ minMonths: 3, percent: 10 }],
+    });
+    expect(amounts.durationDiscountAmount).toBe('196000');
+    expect(amounts.finalPackageAmount).toBe('1760000');
+    expect(amounts.effectiveMonthlyAmount).toBe('586667');
+  });
+
   it('tắt ưu đãi → giá gói bằng đúng giá cơ sở', () => {
     const amounts = longTermPackageAmounts({
       monthlyPrice: '12000000',

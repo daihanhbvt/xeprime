@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   absoluteMoney,
+  applyDiscountPercent,
   compactMoneyParts,
   formatMoneyVnd,
   formatMoneyVndVi,
@@ -294,5 +295,27 @@ describe('formatMoneyVndVi — tiền trong câu chữ server sinh', () => {
   it('rỗng/null ra chuỗi rỗng — câu chữ tự lo phần còn lại', () => {
     expect(formatMoneyVndVi(null)).toBe('');
     expect(formatMoneyVndVi(undefined)).toBe('');
+  });
+});
+
+describe('applyDiscountPercent — khoản giảm làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
+  it('10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ — khớp báo giá server', () => {
+    expect(applyDiscountPercent('652000', 10)).toBe('586000');
+  });
+
+  it('khoản giảm đã tròn thì giữ nguyên, không nhảy thêm một bước', () => {
+    expect(applyDiscountPercent('650000', 10)).toBe('585000');
+    expect(applyDiscountPercent('1000000', 15)).toBe('850000');
+  });
+
+  it('giảm 100% kẹp về 0, không ra số âm', () => {
+    expect(applyDiscountPercent('652000', 100)).toBe('0');
+  });
+
+  it('không có % hợp lệ ⇒ giữ nguyên giá; giá vắng ⇒ null', () => {
+    expect(applyDiscountPercent('652000', 0)).toBe('652000');
+    expect(applyDiscountPercent('652000', null)).toBe('652000');
+    expect(applyDiscountPercent('652000', 120)).toBe('652000');
+    expect(applyDiscountPercent(null, 10)).toBeNull();
   });
 });

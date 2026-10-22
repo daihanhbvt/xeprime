@@ -126,11 +126,22 @@ export class PlatformTripRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD (giờ VN)' })
   pickupWindowEndDate!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044)' })
+  @ApiProperty({
+    description:
+      'ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút–4 giờ, ADR 0066)',
+  })
   respondBy!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Worker đã nhắc lần 1' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Worker đã nhắc lần 1 (khi còn 60 phút tới hạn — bỏ qua nếu cửa sổ ngắn hơn)',
+  })
   firstRemindedAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Worker đã nhắc lần cuối' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Worker đã nhắc lần cuối (khi còn 15 phút tới hạn)',
+  })
   finalRemindedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc chủ xe nhận chuyến' })
   decidedAt!: string | null;

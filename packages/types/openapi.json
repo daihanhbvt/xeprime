@@ -7174,6 +7174,7 @@
     },
     "/bookings/{id}/driver": {
       "patch": {
+        "description": "Gửi ĐÚNG MỘT khoá. `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống). `externalDriver`: ghi tên + SĐT tài xế ngoài hệ thống (ADR 0067) — coi là đã nhận ngay, lượt gán liên kết đang có bị đóng và người đó được báo. Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).",
         "operationId": "BookingsController_assignDriver",
         "parameters": [
           {
@@ -7327,7 +7328,7 @@
             }
           }
         },
-        "summary": "Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)",
+        "summary": "Gán/bỏ gán tài xế, hoặc ghi tài xế ngoài hệ thống cho đơn (có audit)",
         "tags": [
           "bookings"
         ],
@@ -7335,8 +7336,7 @@
           {
             "cookie": []
           }
-        ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session)."
+        ]
       }
     },
     "/bookings/{id}/driver-history": {
@@ -19819,6 +19819,7 @@
     },
     "/driver/trips/{id}/accept": {
       "post": {
+        "description": "Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` — chuyến được trả về bên thuê.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
         "operationId": "DriverSelfController_acceptTrip",
         "parameters": [
           {
@@ -19970,13 +19971,12 @@
           {
             "cookie": []
           }
-        ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        ]
       }
     },
     "/driver/trips/{id}/decline": {
       "post": {
-        "description": "Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
+        "description": "Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công — kể cả khi hệ thống đã trả lượt về trước đó.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
         "operationId": "DriverSelfController_declineTrip",
         "parameters": [
           {
@@ -23985,6 +23985,7 @@
                 "account",
                 "account_deletion",
                 "plan_consultation",
+                "handover_unconfirmed",
                 "other"
               ]
             }
@@ -37084,7 +37085,7 @@
     },
     "/platform/money/tax/export": {
       "get": {
-        "description": "Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).",
+        "description": "Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ. File mang số CCCD đầy đủ nên MỖI lần xuất ghi audit `tax.period_export` (người xuất, kỳ, số dòng).\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).",
         "operationId": "PlatformTaxController_exportCsv",
         "parameters": [
           {
@@ -46272,6 +46273,7 @@
                 "account",
                 "account_deletion",
                 "plan_consultation",
+                "handover_unconfirmed",
                 "other"
               ]
             }
@@ -59967,6 +59969,7 @@
                 "account",
                 "account_deletion",
                 "plan_consultation",
+                "handover_unconfirmed",
                 "other"
               ]
             }
@@ -62159,7 +62162,7 @@
     },
     "/trips/{id}/cancel-preview": {
       "get": {
-        "description": "Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví điểm. Huỷ sau mốc: bảo hiểm hoàn đủ, phần còn lại chia đôi chủ xe / XePrime. Mốc so với giờ server lúc gọi.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
+        "description": "Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví điểm. Huỷ sau mốc: bảo hiểm hoàn đủ; phần giữ chỗ của chủ xe đền chủ xe, phí đặt xe và hoa hồng thuộc XePrime (ADR 0066). Mốc so với giờ server lúc gọi.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
         "operationId": "CustomerTripsController_cancelPreview",
         "parameters": [
           {
@@ -62756,6 +62759,163 @@
           }
         },
         "summary": "Khách khai tài khoản nhận hoàn khoản giữ chỗ",
+        "tags": [
+          "customer-trips"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/trips/{id}/report-not-received": {
+      "post": {
+        "description": "Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case `dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp mở giữ quyết toán khoản giữ chỗ. Idempotent: đơn đã có tranh chấp mở thì không tạo thêm. Lỗi: 409 `TRIP_NOT_RECEIVED_NOT_ALLOWED` (sai trạng thái), `TRIP_NOT_RECEIVED_TOO_EARLY`, `TRIP_NOT_RECEIVED_WINDOW_CLOSED`; chuyến của người khác 404. Trả về chính chuyến đó.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.",
+        "operationId": "CustomerTripsController_reportNotReceived",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CustomerTripDetailDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `REALM_NOT_ALLOWED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "REALM_NOT_ALLOWED",
+                    "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến",
         "tags": [
           "customer-trips"
         ],
@@ -73369,7 +73529,7 @@
   },
   "info": {
     "title": "XePrime API",
-    "description": "API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant).\n\n## Lớp bọc response\n\nResponse thành công của API XePrime được bọc một lớp `data`; endpoint phân trang có thêm `meta`:\n\n```jsonc\n// GET /bookings/{id}\n{ \"data\": { \"id\": \"01J...\", \"code\": \"BK-000123\", \"status\": \"active\" } }\n\n// GET /bookings?page=1&limit=20\n{ \"data\": [ /* ... */ ], \"meta\": { \"page\": 1, \"limit\": 20, \"total\": 137, \"hasNext\": true } }\n```\n\nSchema trong tài liệu này đã bao gồm lớp bọc đó, nên copy thẳng ra client là đúng shape thật.\nNgoại lệ là endpoint tích hợp bên thứ ba được đánh dấu `x-xeprime-raw-response`, ví dụ webhook\nSePay phải trả nguyên `{\"success\": true}` theo contract của nhà cung cấp.\n\nLỗi luôn cùng một hình dạng, ở mọi mã HTTP:\n\n```jsonc\n{ \"error\": { \"code\": \"MISSING_PERMISSION\", \"message\": \"...\", \"details\": [ /* tuỳ mã */ ] } }\n```\n\n**Nhánh theo `error.code`, đừng nhánh theo `error.message`.** `message` là tiếng Việt dành cho\nlog và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng Anh phải tự ánh xạ từ mã (ADR 0012).\n\n## Xác thực\n\n**Hai đường vận chuyển, một nguồn sự thật về quyền.**\n\n**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có\ngì đọc được từ JavaScript.\n\n- `POST /auth/login` (email/SĐT + mật khẩu) · `POST /auth/register` · `POST /auth/phone/login`\n  (SĐT + OTP, passwordless).\n- **Google/Facebook**: trình duyệt điều hướng tới `GET /auth/social/{provider}`; vòng OAuth chạy\n  hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả\n  **302**, không trả JSON — đừng gọi chúng bằng XHR.\n- Từ trình duyệt: đặt `credentials: 'include'`, và origin phải nằm trong `CORS_ORIGINS`.\n- Từ curl/Postman: giữ cookie jar (`curl -c jar.txt -b jar.txt`).\n- Ngay trong trang này: cứ gọi `POST /auth/login` một lần, các endpoint sau dùng lại cookie đó.\n\n**App native** — `Authorization: Bearer <accessToken>` (ADR 0017). Lấy token ở\n`POST /auth/mobile/login` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019\nmục \"Chỗ cắm cho app native\".\n\n- Access token sống **15 phút**. Hết hạn trả `SESSION_EXPIRED` → gọi `POST /auth/mobile/refresh`.\n- Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token\n  đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.\n- `POST /auth/mobile/logout` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.\n\n**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.\n\nQuyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi\nendpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**\ntrong mô tả endpoint cho biết cần chính xác quyền nào.\n\nEndpoint có phạm vi gian hàng lấy `tenantId` từ membership của phiên đăng nhập. **Không endpoint\nnào nhận `tenantId` từ body hoặc query** — gửi lên cũng bị bỏ qua hoặc bị từ chối.\n\n## Phân trang, lọc, sắp xếp\n\nQuery dùng chung: `page` (từ 1), `limit`, `sort`. Kết quả trả `meta.total` và `meta.hasNext`.\nBộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.\n\n## Kiểu dữ liệu\n\n| Loại | Trên dây | Ghi chú |\n| --- | --- | --- |\n| Tiền | `string` | Ví dụ `\"1250000.00\"`. **Không bao giờ là `number`** — tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |\n| Thời điểm | `string` ISO-8601 UTC | Ví dụ `\"2026-08-21T03:00:00.000Z\"`. Hiển thị thì đổi sang `Asia/Ho_Chi_Minh`. |\n| Ngày (không giờ) | `string` `YYYY-MM-DD` | Dùng cho ngày nhận/trả theo lịch. |\n| ID | `string` 26 ký tự | ULID. |\n| Trạng thái, vai trò, quyền | `string` mã ổn định | Mã là DỮ LIỆU, chỉ nhãn hiển thị mới dịch. |\n\nThuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —\nclient không gửi lên và không được suy bằng `số tháng × 30` (ADR 0011).\n\nTiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường\ntiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay\n(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được\nADR 0028 thay bằng một lộ trình có release gate.\n\n## Mã lỗi\n\nMã dùng chung ở mọi endpoint:\n\n| HTTP | Mã | Khi nào |\n| --- | --- | --- |\n| 400 | `VALIDATION_FAILED` | Sai schema. `error.details` liệt kê từng field và ràng buộc hỏng. |\n| 401 | `UNAUTHENTICATED` | Thiếu cookie phiên hoặc phiên đã hết hạn. |\n| 403 | `MISSING_PERMISSION` | Đã đăng nhập nhưng thiếu quyền endpoint đòi. |\n| 403 | `NO_TENANT_SCOPE` | Tài khoản không thuộc gian hàng nào. |\n| 404 | `NOT_FOUND` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |\n| 409 | `CONFLICT` | Trùng bản ghi đã tồn tại. |\n| 409 | `BOOKING_SCHEDULE_CONFLICT` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc `EXCLUDE USING gist` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |\n| 429 | `RATE_LIMITED` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |\n| 500 | `INTERNAL_ERROR` | Lỗi server. Ở production `message` được che, tra log theo request-id. |\n\nToàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):\n\n`ACCOUNT_LOCKED` · `APPROVAL_ALREADY_DECIDED` · `APPROVAL_CHECKLIST_INCOMPLETE` · `APPROVAL_NOTE_CONFLICT` · `APPROVAL_SNAPSHOT_STALE` · `APPROVAL_SUBJECT_CHANGED` · `BANK_ACCOUNT_DUPLICATE` · `BANK_ACCOUNT_REPLACE_NOT_CONFIRMED` · `BANK_TX_ALREADY_HANDLED` · `BANK_TX_TARGET_NOT_PAYABLE` · `BANNER_VISIBLE_LIMIT_EXCEEDED` · `BOOKING_CANCEL_NOT_ALLOWED` · `BOOKING_NO_SHOW_NOT_ALLOWED` · `BOOKING_REQUEST_DUPLICATE` · `BOOKING_REQUEST_EXPIRED` · `BOOKING_SCHEDULE_CONFLICT` · `BRANCH_DEFAULT_IMMUTABLE` · `BRANCH_HAS_DEPENDENCIES` · `BRANCH_LOCATION_REQUIRED` · `BRANCH_SCOPE_EXCEEDED` · `CANNOT_BOOK_OWN_VEHICLE` · `CANNOT_DECIDE_OWN_REQUEST` · `CATALOG_MODEL_DUPLICATE` · `CATALOG_MODEL_IN_USE` · `CATALOG_MODEL_SPEC_INVALID` · `CHAT_CUSTOMER_UNAVAILABLE` · `CHAT_REQUIRES_BOOKING` · `COMMISSION_PLAN_IS_SINGLETON` · `CONFLICT` · `CURRENT_PASSWORD_INCORRECT` · `CUSTOMER_APP_NOT_AVAILABLE` · `CUSTOMER_ARCHIVED` · `CUSTOMER_BLOCKED` · `CUSTOMER_PHONE_DUPLICATE` · `DEFAULT_COMMISSION_PLAN_MISSING` · `DEFAULT_PLAN_PROTECTED` · `DELIVERY_NOT_SUPPORTED` · `DELIVERY_QUOTE_REQUIRED` · `DEPOSIT_ALWAYS_REQUIRED` · `DRIVER_ACCOUNT_NOT_FOUND` · `DRIVER_ALREADY_LINKED` · `DRIVER_ASSIGNMENT_LOCKED` · `DRIVER_ASSIGNMENT_STATE_CONFLICT` · `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED` · `DRIVER_BUSY` · `DRIVER_HAS_ACCEPTED_TRIPS` · `DRIVER_HAS_ACTIVE_TRIP` · `DRIVER_IS_TRIP_CUSTOMER` · `DRIVER_LICENCE_CLASS_MISMATCH` · `DRIVER_LICENCE_EXPIRED` · `DRIVER_LICENCE_IMAGE_INVALID` · `DRIVER_LICENCE_PENDING_REVIEW` · `DRIVER_LICENCE_REQUIRED` · `DRIVER_LICENCE_STATE_CONFLICT` · `DRIVER_LICENCE_SUBMISSION_LIMIT` · `DRIVER_LINK_STATE_CONFLICT` · `DRIVER_NOT_ASSIGNABLE` · `EMAIL_TAKEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY` · `FEE_POLICY_ACTIVATION_BLOCKED` · `FEE_POLICY_MISSING` · `FEE_POLICY_NOT_DRAFT` · `FORBIDDEN` · `HANDOVER_NOT_ELIGIBLE` · `HANDOVER_ODOMETER_BELOW_PICKUP` · `HANDOVER_ODOMETER_SUSPICIOUS` · `HANDOVER_WINDOW_VIOLATION` · `HOLD_ALREADY_PAID` · `HOLD_EXPIRED` · `HOLD_LIMIT_REACHED` · `HOLD_LOCKED_BY_DISPUTE` · `HOLD_NOT_PENDING` · `HOLD_NOT_REFUNDABLE` · `HOLD_REQUIRED` · `HOLD_WINDOW_TOO_SHORT` · `INSTANT_BOOK_UNAVAILABLE` · `INSUFFICIENT_BALANCE` · `INSURANCE_PARTNER_NOT_CONFIGURED` · `INTERNAL_ERROR` · `INVALID_CREDENTIALS` · `INVALID_RESET_TOKEN` · `INVALID_STATUS_TRANSITION` · `INVITE_ALREADY_MEMBER` · `INVITE_EMAIL_MISMATCH` · `INVITE_EXPIRED` · `INVITE_INVALID` · `INVITE_PHONE_MISMATCH` · `INVITE_SCOPE_STALE` · `MEMBER_ALREADY_IN_OTHER_TENANT` · `MIN_RENTAL_DURATION` · `MISSING_PERMISSION` · `MONEY_STEP_1000` · `NOT_FOUND` · `NO_TENANT_SCOPE` · `OCR_FAILED` · `OCR_NOT_CONFIGURED` · `OCR_PROCESSING` · `OCR_UNREADABLE` · `ODOMETER_DECREASE_FORBIDDEN` · `ORIGIN_NOT_ALLOWED` · `OTP_COOLDOWN` · `OTP_EXPIRED` · `OTP_INVALID` · `OTP_LOCKED` · `OTP_LOGIN_RETIRED` · `OTP_SMS_REQUIRED_IN_PRODUCTION` · `OTP_TOO_MANY` · `PACKAGE_ONBOARDING_INCOMPLETE` · `PARTNER_ACCESS_REQUIRED` · `PARTNER_REGISTRATION_NOT_SUPPORTED` · `PASSWORD_NOT_SET` · `PASSWORD_UNCHANGED` · `PAYMENT_AMOUNT_OUT_OF_RANGE` · `PAYMENT_GATEWAY_PROVIDER_ERROR` · `PAYMENT_GATEWAY_SIGNATURE_INVALID` · `PAYMENT_GATEWAY_UNAVAILABLE` · `PAYMENT_HOLD_WINDOW_TOO_SHORT` · `PAYMENT_ORDER_ALREADY_HANDLED` · `PAYMENT_ORDER_IN_PROGRESS` · `PAYMENT_TARGET_NOT_PAYABLE` · `PHONE_LOGIN_REQUIRED` · `PHONE_NOT_VERIFIED` · `PHONE_TAKEN` · `PLAN_CONSULTATION_DISABLED` · `PLAN_GUIDE_TEMPLATE_ACTIVE` · `PLAN_GUIDE_TEMPLATE_CODE_TAKEN` · `PLAN_GUIDE_TEST_NO_EMAIL` · `PLAN_INCENTIVE_INVALID` · `PLAN_IN_USE` · `PLAN_LIMIT_REACHED` · `PLAN_NOT_SELF_SERVE` · `PLAN_SCOPE_REQUIRED` · `PROFILE_INCOMPLETE` · `PROMO_CODE_DUPLICATE` · `PROMO_CODE_EXHAUSTED` · `PROMO_CODE_LOCKED` · `PROMO_CODE_NOT_APPLICABLE` · `RATE_LIMITED` · `REALM_LOGIN_METHOD_NOT_ALLOWED` · `REALM_NOT_ALLOWED` · `REALM_UNRESOLVED` · `RECEIPT_BOOKING_VEHICLE_MISMATCH` · `RECEIPT_SOURCE_LOCKED` · `REFUND_ACCOUNT_REQUIRED` · `REFUND_ALREADY_HANDLED` · `RENTAL_TERMS_ACCEPTANCE_REQUIRED` · `SELLER_PROFILE_INCOMPLETE` · `SELLER_PROFILE_NOT_EDITABLE` · `SEPAY_NOT_CONFIGURED` · `SEPAY_SIGNATURE_INVALID` · `SESSION_EXPIRED` · `SHOP_ACCOUNT_CANNOT_BOOK` · `SHOP_LISTING_REQUIREMENTS_MISSING` · `SHOP_NOT_ACTIVE` · `SHOP_OWNER_ONLY` · `SHOP_VERIFICATION_PENDING` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `SOCIAL_NOT_CONFIGURED` · `SOCIAL_STATE_INVALID` · `SOCIAL_TOKEN_INVALID` · `SUBSCRIPTION_INVOICE_PARTIALLY_PAID` · `SUBSCRIPTION_LATER_TERM_EXISTS` · `SUBSCRIPTION_TERM_CONFLICT` · `SUBSCRIPTION_TRACK_ONLY` · `SUPPORT_ACTION_NOT_ALLOWED` · `SUPPORT_BLOCK_NOT_OWNED` · `SUPPORT_CASE_CATEGORY_NOT_ALLOWED` · `SUPPORT_CASE_CLOSED` · `SUPPORT_CONTEXT_EXPIRED` · `SUPPORT_CONTEXT_INVALID` · `SUPPORT_FIELD_NOT_ALLOWED` · `SUPPORT_MEDIA_OUT_OF_SCOPE` · `SUPPORT_OPEN_TRIPS` · `SUPPORT_REASON_REQUIRED` · `SURCHARGE_CATEGORY_DUPLICATE` · `TENANT_BILLING_NOT_CONFIGURED` · `TENANT_NOT_ACTIVE` · `TRIP_CANCEL_NOT_ALLOWED` · `TRIP_REMIND_TOO_SOON` · `UNAUTHENTICATED` · `UPLOADS_NOT_CONFIGURED` · `VALIDATION_FAILED` · `VEHICLE_CODE_DUPLICATE` · `VEHICLE_FIELD_LOCKED` · `VEHICLE_IMAGES_INCOMPLETE` · `VEHICLE_NOT_APPROVED_PUBLIC` · `VEHICLE_PLATFORM_HIDDEN` · `VEHICLE_PUBLISH_INCOMPLETE` · `VEHICLE_SERVICE_IN_USE` · `VEHICLE_TRANSMISSION_INCOMPATIBLE` · `WALLET_INSUFFICIENT_BALANCE` · `WITHDRAWAL_ALREADY_HANDLED` · `WITHDRAWAL_BELOW_MINIMUM`\n\nĐịnh nghĩa gốc: `packages/types/src/api.ts` → `API_ERROR_CODE`.\n\n## Sinh type cho client TypeScript\n\n```bash\npnpm contract   # apps/api → packages/types/openapi.json → packages/types/src/api.generated.ts\n```\n\nType client **không viết tay** (ADR 0007): import từ `@xeprime/types`.",
+    "description": "API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant).\n\n## Lớp bọc response\n\nResponse thành công của API XePrime được bọc một lớp `data`; endpoint phân trang có thêm `meta`:\n\n```jsonc\n// GET /bookings/{id}\n{ \"data\": { \"id\": \"01J...\", \"code\": \"BK-000123\", \"status\": \"active\" } }\n\n// GET /bookings?page=1&limit=20\n{ \"data\": [ /* ... */ ], \"meta\": { \"page\": 1, \"limit\": 20, \"total\": 137, \"hasNext\": true } }\n```\n\nSchema trong tài liệu này đã bao gồm lớp bọc đó, nên copy thẳng ra client là đúng shape thật.\nNgoại lệ là endpoint tích hợp bên thứ ba được đánh dấu `x-xeprime-raw-response`, ví dụ webhook\nSePay phải trả nguyên `{\"success\": true}` theo contract của nhà cung cấp.\n\nLỗi luôn cùng một hình dạng, ở mọi mã HTTP:\n\n```jsonc\n{ \"error\": { \"code\": \"MISSING_PERMISSION\", \"message\": \"...\", \"details\": [ /* tuỳ mã */ ] } }\n```\n\n**Nhánh theo `error.code`, đừng nhánh theo `error.message`.** `message` là tiếng Việt dành cho\nlog và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng Anh phải tự ánh xạ từ mã (ADR 0012).\n\n## Xác thực\n\n**Hai đường vận chuyển, một nguồn sự thật về quyền.**\n\n**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có\ngì đọc được từ JavaScript.\n\n- `POST /auth/login` (email/SĐT + mật khẩu) · `POST /auth/register` · `POST /auth/phone/login`\n  (SĐT + OTP, passwordless).\n- **Google/Facebook**: trình duyệt điều hướng tới `GET /auth/social/{provider}`; vòng OAuth chạy\n  hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả\n  **302**, không trả JSON — đừng gọi chúng bằng XHR.\n- Từ trình duyệt: đặt `credentials: 'include'`, và origin phải nằm trong `CORS_ORIGINS`.\n- Từ curl/Postman: giữ cookie jar (`curl -c jar.txt -b jar.txt`).\n- Ngay trong trang này: cứ gọi `POST /auth/login` một lần, các endpoint sau dùng lại cookie đó.\n\n**App native** — `Authorization: Bearer <accessToken>` (ADR 0017). Lấy token ở\n`POST /auth/mobile/login` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019\nmục \"Chỗ cắm cho app native\".\n\n- Access token sống **15 phút**. Hết hạn trả `SESSION_EXPIRED` → gọi `POST /auth/mobile/refresh`.\n- Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token\n  đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.\n- `POST /auth/mobile/logout` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.\n\n**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.\n\nQuyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi\nendpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**\ntrong mô tả endpoint cho biết cần chính xác quyền nào.\n\nEndpoint có phạm vi gian hàng lấy `tenantId` từ membership của phiên đăng nhập. **Không endpoint\nnào nhận `tenantId` từ body hoặc query** — gửi lên cũng bị bỏ qua hoặc bị từ chối.\n\n## Phân trang, lọc, sắp xếp\n\nQuery dùng chung: `page` (từ 1), `limit`, `sort`. Kết quả trả `meta.total` và `meta.hasNext`.\nBộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.\n\n## Kiểu dữ liệu\n\n| Loại | Trên dây | Ghi chú |\n| --- | --- | --- |\n| Tiền | `string` | Ví dụ `\"1250000.00\"`. **Không bao giờ là `number`** — tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |\n| Thời điểm | `string` ISO-8601 UTC | Ví dụ `\"2026-08-21T03:00:00.000Z\"`. Hiển thị thì đổi sang `Asia/Ho_Chi_Minh`. |\n| Ngày (không giờ) | `string` `YYYY-MM-DD` | Dùng cho ngày nhận/trả theo lịch. |\n| ID | `string` 26 ký tự | ULID. |\n| Trạng thái, vai trò, quyền | `string` mã ổn định | Mã là DỮ LIỆU, chỉ nhãn hiển thị mới dịch. |\n\nThuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —\nclient không gửi lên và không được suy bằng `số tháng × 30` (ADR 0011).\n\nTiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường\ntiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay\n(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được\nADR 0028 thay bằng một lộ trình có release gate.\n\n## Mã lỗi\n\nMã dùng chung ở mọi endpoint:\n\n| HTTP | Mã | Khi nào |\n| --- | --- | --- |\n| 400 | `VALIDATION_FAILED` | Sai schema. `error.details` liệt kê từng field và ràng buộc hỏng. |\n| 401 | `UNAUTHENTICATED` | Thiếu cookie phiên hoặc phiên đã hết hạn. |\n| 403 | `MISSING_PERMISSION` | Đã đăng nhập nhưng thiếu quyền endpoint đòi. |\n| 403 | `NO_TENANT_SCOPE` | Tài khoản không thuộc gian hàng nào. |\n| 404 | `NOT_FOUND` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |\n| 409 | `CONFLICT` | Trùng bản ghi đã tồn tại. |\n| 409 | `BOOKING_SCHEDULE_CONFLICT` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc `EXCLUDE USING gist` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |\n| 429 | `RATE_LIMITED` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |\n| 500 | `INTERNAL_ERROR` | Lỗi server. Ở production `message` được che, tra log theo request-id. |\n\nToàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):\n\n`ACCOUNT_LOCKED` · `APPROVAL_ALREADY_DECIDED` · `APPROVAL_CHECKLIST_INCOMPLETE` · `APPROVAL_NOTE_CONFLICT` · `APPROVAL_SNAPSHOT_STALE` · `APPROVAL_SUBJECT_CHANGED` · `BANK_ACCOUNT_DUPLICATE` · `BANK_ACCOUNT_REPLACE_NOT_CONFIRMED` · `BANK_TX_ALREADY_HANDLED` · `BANK_TX_TARGET_NOT_PAYABLE` · `BANNER_VISIBLE_LIMIT_EXCEEDED` · `BOOKING_CANCEL_NOT_ALLOWED` · `BOOKING_NO_SHOW_NOT_ALLOWED` · `BOOKING_REQUEST_DUPLICATE` · `BOOKING_REQUEST_EXPIRED` · `BOOKING_SCHEDULE_CONFLICT` · `BRANCH_DEFAULT_IMMUTABLE` · `BRANCH_HAS_DEPENDENCIES` · `BRANCH_LOCATION_REQUIRED` · `BRANCH_SCOPE_EXCEEDED` · `CANNOT_BOOK_OWN_VEHICLE` · `CANNOT_DECIDE_OWN_REQUEST` · `CATALOG_MODEL_DUPLICATE` · `CATALOG_MODEL_IN_USE` · `CATALOG_MODEL_SPEC_INVALID` · `CHAT_CUSTOMER_UNAVAILABLE` · `CHAT_REQUIRES_BOOKING` · `COMMISSION_PLAN_IS_SINGLETON` · `CONFLICT` · `CURRENT_PASSWORD_INCORRECT` · `CUSTOMER_APP_NOT_AVAILABLE` · `CUSTOMER_ARCHIVED` · `CUSTOMER_BLOCKED` · `CUSTOMER_PHONE_DUPLICATE` · `DEFAULT_COMMISSION_PLAN_MISSING` · `DEFAULT_PLAN_PROTECTED` · `DELIVERY_NOT_SUPPORTED` · `DELIVERY_QUOTE_REQUIRED` · `DEPOSIT_ALWAYS_REQUIRED` · `DRIVER_ACCOUNT_NOT_FOUND` · `DRIVER_ALREADY_LINKED` · `DRIVER_ASSIGNMENT_EXPIRED` · `DRIVER_ASSIGNMENT_LOCKED` · `DRIVER_ASSIGNMENT_STATE_CONFLICT` · `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED` · `DRIVER_BUSY` · `DRIVER_HAS_ACCEPTED_TRIPS` · `DRIVER_HAS_ACTIVE_TRIP` · `DRIVER_IS_TRIP_CUSTOMER` · `DRIVER_LICENCE_CLASS_MISMATCH` · `DRIVER_LICENCE_EXPIRED` · `DRIVER_LICENCE_IMAGE_INVALID` · `DRIVER_LICENCE_PENDING_REVIEW` · `DRIVER_LICENCE_REQUIRED` · `DRIVER_LICENCE_STATE_CONFLICT` · `DRIVER_LICENCE_SUBMISSION_LIMIT` · `DRIVER_LINK_STATE_CONFLICT` · `DRIVER_NOT_ASSIGNABLE` · `EMAIL_TAKEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY` · `FEE_POLICY_ACTIVATION_BLOCKED` · `FEE_POLICY_MISSING` · `FEE_POLICY_NOT_DRAFT` · `FORBIDDEN` · `HANDOVER_NOT_ELIGIBLE` · `HANDOVER_ODOMETER_BELOW_PICKUP` · `HANDOVER_ODOMETER_SUSPICIOUS` · `HANDOVER_WINDOW_VIOLATION` · `HOLD_ALREADY_PAID` · `HOLD_EXPIRED` · `HOLD_LIMIT_REACHED` · `HOLD_LOCKED_BY_DISPUTE` · `HOLD_NOT_PENDING` · `HOLD_NOT_REFUNDABLE` · `HOLD_REQUIRED` · `HOLD_WINDOW_TOO_SHORT` · `INSTANT_BOOK_UNAVAILABLE` · `INSUFFICIENT_BALANCE` · `INSURANCE_PARTNER_NOT_CONFIGURED` · `INTERNAL_ERROR` · `INVALID_CREDENTIALS` · `INVALID_RESET_TOKEN` · `INVALID_STATUS_TRANSITION` · `INVITE_ALREADY_MEMBER` · `INVITE_EMAIL_MISMATCH` · `INVITE_EXPIRED` · `INVITE_INVALID` · `INVITE_PHONE_MISMATCH` · `INVITE_SCOPE_STALE` · `MEMBER_ALREADY_IN_OTHER_TENANT` · `MIN_RENTAL_DURATION` · `MISSING_PERMISSION` · `MONEY_STEP_1000` · `NOT_FOUND` · `NO_TENANT_SCOPE` · `OCR_FAILED` · `OCR_NOT_CONFIGURED` · `OCR_PROCESSING` · `OCR_UNREADABLE` · `ODOMETER_DECREASE_FORBIDDEN` · `ORIGIN_NOT_ALLOWED` · `OTP_COOLDOWN` · `OTP_EXPIRED` · `OTP_INVALID` · `OTP_LOCKED` · `OTP_LOGIN_RETIRED` · `OTP_SMS_REQUIRED_IN_PRODUCTION` · `OTP_TOO_MANY` · `PACKAGE_ONBOARDING_INCOMPLETE` · `PARTNER_ACCESS_REQUIRED` · `PARTNER_REGISTRATION_NOT_SUPPORTED` · `PASSWORD_NOT_SET` · `PASSWORD_UNCHANGED` · `PAYMENT_AMOUNT_OUT_OF_RANGE` · `PAYMENT_GATEWAY_PROVIDER_ERROR` · `PAYMENT_GATEWAY_SIGNATURE_INVALID` · `PAYMENT_GATEWAY_UNAVAILABLE` · `PAYMENT_HOLD_WINDOW_TOO_SHORT` · `PAYMENT_ORDER_ALREADY_HANDLED` · `PAYMENT_ORDER_IN_PROGRESS` · `PAYMENT_TARGET_NOT_PAYABLE` · `PHONE_LOGIN_REQUIRED` · `PHONE_NOT_VERIFIED` · `PHONE_TAKEN` · `PLAN_CONSULTATION_DISABLED` · `PLAN_GUIDE_TEMPLATE_ACTIVE` · `PLAN_GUIDE_TEMPLATE_CODE_TAKEN` · `PLAN_GUIDE_TEST_NO_EMAIL` · `PLAN_INCENTIVE_INVALID` · `PLAN_IN_USE` · `PLAN_LIMIT_REACHED` · `PLAN_NOT_PUBLISHED` · `PLAN_NOT_SELF_SERVE` · `PLAN_SCOPE_REQUIRED` · `PROFILE_INCOMPLETE` · `PROMO_CODE_DUPLICATE` · `PROMO_CODE_EXHAUSTED` · `PROMO_CODE_LOCKED` · `PROMO_CODE_NOT_APPLICABLE` · `RATE_LIMITED` · `REALM_LOGIN_METHOD_NOT_ALLOWED` · `REALM_NOT_ALLOWED` · `REALM_UNRESOLVED` · `RECEIPT_BOOKING_VEHICLE_MISMATCH` · `RECEIPT_SOURCE_LOCKED` · `REFUND_ACCOUNT_REQUIRED` · `REFUND_ALREADY_HANDLED` · `RENTAL_TERMS_ACCEPTANCE_REQUIRED` · `SELLER_PROFILE_INCOMPLETE` · `SELLER_PROFILE_NOT_EDITABLE` · `SEPAY_NOT_CONFIGURED` · `SEPAY_SIGNATURE_INVALID` · `SESSION_EXPIRED` · `SHOP_ACCOUNT_CANNOT_BOOK` · `SHOP_LISTING_REQUIREMENTS_MISSING` · `SHOP_NOT_ACTIVE` · `SHOP_OWNER_ONLY` · `SHOP_VERIFICATION_PENDING` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `SOCIAL_NOT_CONFIGURED` · `SOCIAL_STATE_INVALID` · `SOCIAL_TOKEN_INVALID` · `SUBSCRIPTION_INVOICE_PARTIALLY_PAID` · `SUBSCRIPTION_LATER_TERM_EXISTS` · `SUBSCRIPTION_TERM_CONFLICT` · `SUBSCRIPTION_TRACK_ONLY` · `SUPPORT_ACTION_NOT_ALLOWED` · `SUPPORT_BLOCK_NOT_OWNED` · `SUPPORT_CASE_CATEGORY_NOT_ALLOWED` · `SUPPORT_CASE_CLOSED` · `SUPPORT_CASE_PLATFORM_RESOLVE_ONLY` · `SUPPORT_CONTEXT_EXPIRED` · `SUPPORT_CONTEXT_INVALID` · `SUPPORT_FIELD_NOT_ALLOWED` · `SUPPORT_MEDIA_OUT_OF_SCOPE` · `SUPPORT_OPEN_TRIPS` · `SUPPORT_REASON_REQUIRED` · `SURCHARGE_CATEGORY_DUPLICATE` · `TENANT_BILLING_NOT_CONFIGURED` · `TENANT_NOT_ACTIVE` · `TRIP_CANCEL_NOT_ALLOWED` · `TRIP_NOT_RECEIVED_NOT_ALLOWED` · `TRIP_NOT_RECEIVED_TOO_EARLY` · `TRIP_NOT_RECEIVED_WINDOW_CLOSED` · `TRIP_REMIND_TOO_SOON` · `UNAUTHENTICATED` · `UPLOADS_NOT_CONFIGURED` · `VALIDATION_FAILED` · `VEHICLE_CODE_DUPLICATE` · `VEHICLE_FIELD_LOCKED` · `VEHICLE_IMAGES_INCOMPLETE` · `VEHICLE_NOT_APPROVED_PUBLIC` · `VEHICLE_PLATFORM_HIDDEN` · `VEHICLE_PUBLISH_INCOMPLETE` · `VEHICLE_SERVICE_IN_USE` · `VEHICLE_TRANSMISSION_INCOMPATIBLE` · `WALLET_INSUFFICIENT_BALANCE` · `WITHDRAWAL_ALREADY_HANDLED` · `WITHDRAWAL_BELOW_MINIMUM`\n\nĐịnh nghĩa gốc: `packages/types/src/api.ts` → `API_ERROR_CODE`.\n\n## Sinh type cho client TypeScript\n\n```bash\npnpm contract   # apps/api → packages/types/openapi.json → packages/types/src/api.generated.ts\n```\n\nType client **không viết tay** (ADR 0007): import từ `@xeprime/types`.",
     "version": "0.1.0",
     "contact": {}
   },
@@ -74628,12 +74788,17 @@
           "driverId": {
             "type": "string",
             "nullable": true,
-            "description": "ID tài xế (ULID) — null để bỏ gán"
+            "description": "ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`."
+          },
+          "externalDriver": {
+            "description": "Tài xế ngoài hệ thống (ADR 0067). Không gửi cùng `driverId`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExternalDriverInputDto"
+              }
+            ]
           }
-        },
-        "required": [
-          "driverId"
-        ]
+        }
       },
       "AssignSubscriptionDto": {
         "type": "object",
@@ -75561,17 +75726,30 @@
           "ownerCommissionAmount": {
             "type": "string",
             "nullable": true,
-            "description": "`H` — hoa hồng XePrime giữ lại từ phần của chủ xe"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe"
           },
           "ownerTaxAmount": {
             "type": "string",
             "nullable": true,
-            "description": "`T` — thuế khấu trừ khỏi tiền chủ xe"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe"
           },
           "ownerNetAmount": {
             "type": "string",
             "nullable": true,
-            "description": "`B − H − T` — chủ xe thực nhận cả chuyến"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến"
+          },
+          "ownerPayout": {
+            "nullable": true,
+            "description": "Bảng cộng ví chủ xe — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OwnerPayoutDto"
+              }
+            ]
           },
           "actualPickupAt": {
             "type": "string",
@@ -75643,7 +75821,8 @@
               "unassigned",
               "cancelled",
               "no_show",
-              "completed"
+              "completed",
+              "expired"
             ]
           },
           "assignedAt": {
@@ -75681,33 +75860,50 @@
       "BookingDriverSummaryDto": {
         "type": "object",
         "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "linked",
+              "external"
+            ],
+            "description": "`linked` = tài khoản khách đã liên kết (ADR 0063) · `external` = tên + SĐT bên thuê ghi trên đơn (ADR 0067)"
+          },
           "id": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "ID liên kết tài xế (`drivers.id`) — null khi `source = external`, và luôn null ở bề mặt khách"
           },
           "name": {
             "type": "string"
           },
           "phone": {
-            "type": "string"
+            "type": "string",
+            "description": "Dạng hiển thị `0xxxxxxxxx`"
           },
           "assignmentStatus": {
             "type": "string",
             "enum": [
               "pending",
               "accepted"
-            ]
+            ],
+            "description": "Tài xế ngoài hệ thống luôn `accepted` — không có lượt chờ"
           },
           "assignedAt": {
             "type": "string",
-            "description": "ISO-8601 UTC"
+            "description": "ISO-8601 UTC — mốc gán (hoặc mốc ghi tài xế ngoài hệ thống)"
           },
           "respondedAt": {
             "type": "string",
             "nullable": true
+          },
+          "respondBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn tài xế trả lời (ISO-8601, ADR 0066) — chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê."
           }
         },
         "required": [
-          "id",
+          "source",
           "name",
           "phone",
           "assignmentStatus",
@@ -75974,19 +76170,31 @@
           },
           "ownerCommissionAmount": {
             "type": "string",
-            "description": "`H` — hoa hồng XePrime giữ lại từ phần của chủ xe (VND string)"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)"
           },
           "taxAmount": {
             "type": "string",
-            "description": "`T` — thuế khấu trừ khỏi tiền chủ xe (VND string)"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe (VND string)"
           },
           "ownerPayableAmount": {
             "type": "string",
-            "description": "`D − T` — XePrime ghi vào ví điểm chủ xe khi chuyến hoàn thành (VND string)"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.ownerPayableAmount`. `D − T` — XePrime ghi vào ví điểm chủ xe khi chuyến hoàn thành (VND string)"
           },
           "ownerNetAmount": {
             "type": "string",
-            "description": "`B − H − T` — chủ xe thực nhận cả chuyến (VND string)"
+            "deprecated": true,
+            "description": "DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến (VND string)"
+          },
+          "ownerPayout": {
+            "description": "Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OwnerPayoutDto"
+              }
+            ]
           },
           "policyFreeCancelHours": {
             "type": "number",
@@ -76015,6 +76223,7 @@
           "taxAmount",
           "ownerPayableAmount",
           "ownerNetAmount",
+          "ownerPayout",
           "policyFreeCancelHours",
           "policyPaymentWindowMinutes"
         ]
@@ -76032,7 +76241,7 @@
           },
           "freeCancelMinutes": {
             "type": "number",
-            "description": "Khách huỷ miễn phí trong bấy nhiêu phút; 0 = đặt gấp"
+            "description": "Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí"
           },
           "expiresAt": {
             "type": "string",
@@ -76311,7 +76520,7 @@
           },
           "respondBy": {
             "type": "string",
-            "description": "ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính)"
+            "description": "ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, 15–240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút — ADR 0066)"
           },
           "decidedAt": {
             "type": "string",
@@ -80303,13 +80512,20 @@
             "type": "number",
             "description": "Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng"
           },
+          "dayAmounts": {
+            "description": "Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) — đúng mảng đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "baseAmount": {
             "type": "string",
             "description": "B — tổng bảng kê giá thuê (gồm giao nhận)"
           },
           "deliveryAmount": {
             "type": "string",
-            "description": "G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào cọc online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = \"0\""
+            "description": "G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = \"0\""
           },
           "lines": {
             "type": "array",
@@ -80327,7 +80543,7 @@
           },
           "depositAmount": {
             "type": "string",
-            "description": "D — phần của CHỦ XE trong cọc online; \"0\" khi chuyến không thu online"
+            "description": "D — phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); \"0\" khi chuyến không thu online"
           },
           "ownerCommissionAmount": {
             "type": "string",
@@ -80335,15 +80551,15 @@
           },
           "platformRetainedAmount": {
             "type": "string",
-            "description": "S + H — phần XePrime giữ lại từ cọc online (trước tài trợ mã)"
+            "description": "S + H — phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)"
           },
           "grossOnlineAmount": {
             "type": "string",
-            "description": "Cọc online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên"
+            "description": "Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên"
           },
           "sponsorableAmount": {
             "type": "string",
-            "description": "D + S + H — phần cọc online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)"
+            "description": "D + S + H — phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)"
           },
           "promoDiscountAmount": {
             "type": "string",
@@ -80361,15 +80577,73 @@
           },
           "onlineAmount": {
             "type": "string",
-            "description": "Cọc online − P — số quét QR trả ngay"
+            "description": "Tiền giữ chỗ − P — số quét QR trả ngay"
           },
           "payAtPickupAmount": {
             "type": "string",
-            "description": "Tổng khách trả trước mã − cọc online — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
+            "description": "Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
           },
           "taxAmount": {
             "type": "string",
-            "description": "T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách"
+            "description": "T = GTGT + TNCN — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. \"0\" khi cổng thuế tắt hoặc người bán được miễn (taxExemptReason)"
+          },
+          "rentAmount": {
+            "type": "string",
+            "description": "R = B − G — tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D"
+          },
+          "vatAmount": {
+            "type": "string",
+            "description": "Thuế GTGT khấu trừ = roundVnd(vat% × R)"
+          },
+          "pitAmount": {
+            "type": "string",
+            "description": "Thuế TNCN khấu trừ = roundVnd(pit% × R)"
+          },
+          "vatPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% GTGT đã áp. null khi đơn không bị khấu trừ"
+          },
+          "pitPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% TNCN đã áp. null khi đơn không bị khấu trừ"
+          },
+          "taxCategory": {
+            "type": "string",
+            "enum": [
+              "service",
+              "transport"
+            ],
+            "nullable": true,
+            "description": "Nhóm NĐ 117 (service | transport). null khi đơn không bị khấu trừ"
+          },
+          "taxExemptReason": {
+            "type": "string",
+            "enum": [
+              "company"
+            ],
+            "nullable": true,
+            "description": "Vì sao không khấu trừ dù cổng thuế mở — company (doanh nghiệp đã xác minh)"
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "long_term"
+            ],
+            "nullable": true,
+            "description": "Loại dịch vụ đã đóng băng — chọn cặp tỷ lệ thuế"
+          },
+          "sellerEntityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "household_business",
+              "company"
+            ],
+            "description": "Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)"
           },
           "ownerPayableAmount": {
             "type": "string",
@@ -80462,7 +80736,7 @@
           },
           "freeCancelAvailable": {
             "type": "boolean",
-            "description": "false = đặt gấp, không có thời gian huỷ miễn phí"
+            "description": "false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0)"
           },
           "lateCancelRefundAmount": {
             "type": "string",
@@ -80751,7 +81025,7 @@
           },
           "freeCancelAvailable": {
             "type": "boolean",
-            "description": "false = đặt gấp, chuyến không có thời gian huỷ miễn phí"
+            "description": "false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0)"
           },
           "deferred": {
             "type": "boolean",
@@ -80826,7 +81100,8 @@
           },
           "respondBy": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066)"
           },
           "canContact": {
             "type": "boolean",
@@ -80834,7 +81109,7 @@
           },
           "driver": {
             "nullable": true,
-            "description": "Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn",
+            "description": "Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp",
             "type": "object",
             "allOf": [
               {
@@ -80972,6 +81247,16 @@
             "type": "string",
             "nullable": true
           },
+          "openDispute": {
+            "type": "boolean"
+          },
+          "canReportNotReceived": {
+            "type": "boolean"
+          },
+          "notReceivedReportUntil": {
+            "type": "string",
+            "nullable": true
+          },
           "finance": {
             "nullable": true,
             "type": "object",
@@ -81043,6 +81328,8 @@
           "canReview",
           "hasReview",
           "createdAt",
+          "openDispute",
+          "canReportNotReceived",
           "insuranceCertificates",
           "insuranceCoverage"
         ]
@@ -81383,7 +81670,8 @@
           },
           "respondBy": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066)"
           },
           "canContact": {
             "type": "boolean",
@@ -81391,7 +81679,7 @@
           },
           "driver": {
             "nullable": true,
-            "description": "Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn",
+            "description": "Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp",
             "type": "object",
             "allOf": [
               {
@@ -82019,7 +82307,7 @@
           },
           "perKm": {
             "type": "string",
-            "description": "Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, làm tròn tới 1.000đ. Bỏ trống khi bậc tính trọn gói",
+            "description": "Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói",
             "example": "10000"
           }
         },
@@ -82645,7 +82933,8 @@
               "unassigned",
               "cancelled",
               "no_show",
-              "completed"
+              "completed",
+              "expired"
             ],
             "description": "Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua"
           },
@@ -82656,6 +82945,11 @@
           "respondedAt": {
             "type": "string",
             "nullable": true
+          },
+          "respondBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê."
           },
           "endedAt": {
             "type": "string",
@@ -82757,7 +83051,8 @@
               "unassigned",
               "cancelled",
               "no_show",
-              "completed"
+              "completed",
+              "expired"
             ],
             "description": "Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua"
           },
@@ -82768,6 +83063,11 @@
           "respondedAt": {
             "type": "string",
             "nullable": true
+          },
+          "respondBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê."
           },
           "endedAt": {
             "type": "string",
@@ -82931,6 +83231,28 @@
           "excessKm"
         ]
       },
+      "ExternalDriverInputDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Văn Tài",
+            "minLength": 2,
+            "maxLength": 120,
+            "description": "Tên tài xế — cắt khoảng trắng hai đầu trước khi kiểm"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567",
+            "pattern": "^(0|\\+84)\\d{9}$",
+            "description": "SĐT di động VN (`0xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua) — khách gọi số này để gặp người đón"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
       "FacetBucketDto": {
         "type": "object",
         "properties": {
@@ -83033,7 +83355,7 @@
           },
           "amount": {
             "type": "string",
-            "description": "VND string, bội 1.000đ"
+            "description": "VND string nguyên — khoản tính từ tỷ lệ đúng tới đồng (ADR 0069)"
           },
           "partnerName": {
             "type": "string"
@@ -83096,13 +83418,29 @@
           "taxEnabled": {
             "type": "boolean"
           },
+          "taxRates": {
+            "nullable": true,
+            "description": "Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). null ở chính sách ≤ v8",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRatesDto"
+              }
+            ]
+          },
+          "taxLegalBasis": {
+            "type": "string",
+            "nullable": true
+          },
           "taxPercent": {
             "type": "number",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY (≤ v8) — một mức cho mọi chuyến; thay bằng taxRates"
           },
           "taxLabel": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY (≤ v8) — nhãn của chính sách một-mức; thay bằng taxLegalBasis"
           },
           "tripInsuranceEnabled": {
             "type": "boolean"
@@ -83221,13 +83559,30 @@
           "taxEnabled": {
             "type": "boolean"
           },
+          "taxRates": {
+            "nullable": true,
+            "description": "Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). Vắng/null ở snapshot ≤ v8",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRatesDto"
+              }
+            ]
+          },
+          "taxLegalBasis": {
+            "type": "string",
+            "nullable": true,
+            "description": "Căn cứ pháp lý khấu trừ"
+          },
           "taxPercent": {
             "type": "number",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY (≤ v8) — một mức"
           },
           "taxLabel": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY (≤ v8)"
           },
           "tripInsuranceEnabled": {
             "type": "boolean"
@@ -83249,15 +83604,15 @@
           },
           "depositPercent": {
             "type": "number",
-            "description": "% cọc online trên TỔNG KHÁCH TRẢ trước mã"
+            "description": "% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066"
           },
           "depositMinAmount": {
             "type": "string",
-            "description": "Sàn tiền cọc (VND)"
+            "description": "Sàn của `D` (VND): D = max(% × tiền thuê, sàn)"
           },
           "depositMaxPercent": {
             "type": "number",
-            "description": "Trần % cọc của chính sách này"
+            "description": "Trần % của `D` ở chính sách này"
           },
           "customerPlatformFee": {
             "description": "`S` — phí sàn cố định mỗi đơn",
@@ -84053,7 +84408,7 @@
           },
           "disputeCount": {
             "type": "number",
-            "description": "Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở"
+            "description": "Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao — ADR 0066)"
           }
         },
         "required": [
@@ -86448,7 +86803,9 @@
               "driver_trip_unassigned",
               "driver_trip_accepted",
               "driver_trip_declined",
-              "driver_trip_completed"
+              "driver_trip_response_expired",
+              "driver_trip_completed",
+              "booking_driver_missing"
             ]
           },
           "title": {
@@ -86635,6 +86992,7 @@
               "account",
               "account_deletion",
               "plan_consultation",
+              "handover_unconfirmed",
               "other"
             ]
           },
@@ -86756,6 +87114,100 @@
         "required": [
           "fromDay",
           "percent"
+        ]
+      },
+      "OwnerPayoutDto": {
+        "type": "object",
+        "properties": {
+          "rentAmount": {
+            "type": "string",
+            "description": "Doanh thu cho thuê xe `R` — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt xe, bảo hiểm (VND string)"
+          },
+          "rentalDays": {
+            "type": "number",
+            "description": "Số ngày thuê tính phí"
+          },
+          "unitAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đơn giá thuê / ngày — CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến 1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện \"Tiền thuê N ngày\""
+          },
+          "ownerCommissionAmount": {
+            "type": "string",
+            "description": "`H` — phí dịch vụ – chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string)"
+          },
+          "commissionTiers": {
+            "nullable": true,
+            "description": "Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) — đúng các nấc đã tính ra `H`. `null` ở tuyến gói, hoặc snapshot không mang nấc (trước luồng tiền v2) ⇒ màn hình giải thích chung, không có con số",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerCommissionTierDto"
+            }
+          },
+          "taxAmount": {
+            "type": "string",
+            "description": "`T` = GTGT + TNCN — thuế khấu trừ, nộp thay (VND string)"
+          },
+          "vatAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phần GTGT của `T`. `null` = snapshot trước ADR 0068 (một mức, không tách)"
+          },
+          "pitAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phần TNCN của `T`. `null` = snapshot trước ADR 0068 (một mức, không tách)"
+          },
+          "vatPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% GTGT đã áp. `null` khi không khấu trừ hoặc snapshot cũ"
+          },
+          "pitPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% TNCN đã áp. `null` khi không khấu trừ hoặc snapshot cũ"
+          },
+          "taxTotalPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tổng % thuế đã áp (`vat + pit`, hoặc mức đơn của snapshot cũ). `null` khi không khấu trừ"
+          },
+          "taxExemptReason": {
+            "type": "string",
+            "enum": [
+              "company"
+            ],
+            "nullable": true,
+            "description": "Vì sao KHÔNG khấu trừ dù cổng thuế mở — `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)"
+          },
+          "ownerNetAmount": {
+            "type": "string",
+            "description": "Thu nhập chủ xe (a) = `R − H − T` (VND string)"
+          },
+          "payAtPickupRentAmount": {
+            "type": "string",
+            "description": "Khách thanh toán trực tiếp (b) = `R − D − H` — phần TIỀN THUÊ khách trả tay lúc nhận xe, không gồm phí giao xe (VND string)"
+          },
+          "ownerPayableAmount": {
+            "type": "string",
+            "description": "Số tiền cộng ví (a − b) = `D − T` — ghi có khi chuyến hoàn thành (VND string)"
+          },
+          "collectsHold": {
+            "type": "boolean",
+            "description": "Chuyến có thu tiền giữ chỗ online không. `false` (báo giá tạm tính) ⇒ không có khoản nào đi qua XePrime, (b) và số cộng ví không có nghĩa"
+          }
+        },
+        "required": [
+          "rentAmount",
+          "rentalDays",
+          "ownerCommissionAmount",
+          "commissionTiers",
+          "taxAmount",
+          "ownerNetAmount",
+          "payAtPickupRentAmount",
+          "ownerPayableAmount",
+          "collectsHold"
         ]
       },
       "PaginationMetaDto": {
@@ -87196,7 +87648,7 @@
           },
           "respondBy": {
             "type": "string",
-            "description": "ISO — hạn gian hàng phải phản hồi"
+            "description": "ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066)"
           },
           "createdAt": {
             "type": "string",
@@ -91060,7 +91512,7 @@
           },
           "disputeOpen": {
             "type": "boolean",
-            "description": "Đang có tranh chấp mở trên đơn — kết cục bị tạm giữ"
+            "description": "Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ"
           },
           "refundStatus": {
             "type": "string",
@@ -92838,17 +93290,17 @@
           },
           "respondBy": {
             "type": "string",
-            "description": "ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044)"
+            "description": "ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút–4 giờ, ADR 0066)"
           },
           "firstRemindedAt": {
             "type": "string",
             "nullable": true,
-            "description": "Worker đã nhắc lần 1"
+            "description": "Worker đã nhắc lần 1 (khi còn 60 phút tới hạn — bỏ qua nếu cửa sổ ngắn hơn)"
           },
           "finalRemindedAt": {
             "type": "string",
             "nullable": true,
-            "description": "Worker đã nhắc lần cuối"
+            "description": "Worker đã nhắc lần cuối (khi còn 15 phút tới hạn)"
           },
           "decidedAt": {
             "type": "string",
@@ -94721,7 +95173,7 @@
           },
           "deliveryAmount": {
             "type": "string",
-            "description": "G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào cọc online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = \"0\""
+            "description": "G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = \"0\""
           },
           "lines": {
             "type": "array",
@@ -94739,7 +95191,7 @@
           },
           "grossOnlineAmount": {
             "type": "string",
-            "description": "Cọc online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên"
+            "description": "Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên"
           },
           "promoDiscountAmount": {
             "type": "string",
@@ -94757,11 +95209,11 @@
           },
           "onlineAmount": {
             "type": "string",
-            "description": "Cọc online − P — số quét QR trả ngay"
+            "description": "Tiền giữ chỗ − P — số quét QR trả ngay"
           },
           "payAtPickupAmount": {
             "type": "string",
-            "description": "Tổng khách trả trước mã − cọc online — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
+            "description": "Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
           },
           "holdAmount": {
             "type": "string",
@@ -94850,7 +95302,7 @@
           },
           "depositPercent": {
             "type": "number",
-            "description": "% cọc online trên TỔNG KHÁCH TRẢ trước mã"
+            "description": "% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066"
           },
           "customerPlatformFee": {
             "description": "`S` — phí sàn cố định mỗi đơn",
@@ -96673,7 +97125,7 @@
         "properties": {
           "serviceFeeRecognized": {
             "type": "string",
-            "description": "Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: huỷ muộn chia đôi `D + S`."
+            "description": "Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ vào phần nền tảng."
           },
           "subscriptionsCollected": {
             "type": "string",
@@ -99169,6 +99621,7 @@
               "account",
               "account_deletion",
               "plan_consultation",
+              "handover_unconfirmed",
               "other"
             ]
           },
@@ -99226,7 +99679,8 @@
             ]
           },
           "openedByName": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "assigneeName": {
             "type": "string",
@@ -99267,7 +99721,6 @@
           "subject",
           "description",
           "openedByScope",
-          "openedByName",
           "createdAt",
           "updatedAt",
           "events"
@@ -99292,6 +99745,7 @@
               "account",
               "account_deletion",
               "plan_consultation",
+              "handover_unconfirmed",
               "other"
             ]
           },
@@ -99349,7 +99803,8 @@
             ]
           },
           "openedByName": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "assigneeName": {
             "type": "string",
@@ -99383,7 +99838,6 @@
           "subject",
           "description",
           "openedByScope",
-          "openedByName",
           "createdAt",
           "updatedAt"
         ]
@@ -99796,6 +100250,14 @@
           "amount": {
             "type": "string"
           },
+          "vatAmount": {
+            "type": "string",
+            "description": "Tổng GTGT (dòng một-mức cũ không tách nên không có ở đây)"
+          },
+          "pitAmount": {
+            "type": "string",
+            "description": "Tổng TNCN (dòng một-mức cũ không tách nên không có ở đây)"
+          },
           "rows": {
             "type": "number"
           }
@@ -99803,6 +100265,8 @@
         "required": [
           "entityType",
           "amount",
+          "vatAmount",
+          "pitAmount",
           "rows"
         ]
       },
@@ -99841,6 +100305,18 @@
             "type": "string",
             "description": "Tổng giá trị thuê chịu thuế của kỳ"
           },
+          "totalVatAmount": {
+            "type": "string",
+            "description": "Tổng GTGT của kỳ (ADR 0068) — dòng một-mức trước 22/10/2026 không tách nên không có ở đây"
+          },
+          "totalPitAmount": {
+            "type": "string",
+            "description": "Tổng TNCN của kỳ (ADR 0068)"
+          },
+          "totalUnsplitAmount": {
+            "type": "string",
+            "description": "Tổng của các dòng một-mức CHƯA TÁCH GTGT/TNCN (trước 22/10/2026). Kỳ trộn hai loại dòng thì `totalVatAmount + totalPitAmount + totalUnsplitAmount = totalAmount`"
+          },
           "rows": {
             "type": "number",
             "description": "Số dòng (gồm cả dòng đảo)"
@@ -99874,6 +100350,9 @@
           "periodKey",
           "totalAmount",
           "totalTaxableBase",
+          "totalVatAmount",
+          "totalPitAmount",
+          "totalUnsplitAmount",
           "rows",
           "accruedAmount",
           "declaredAmount",
@@ -99911,6 +100390,59 @@
           "oldestPeriod"
         ]
       },
+      "TaxRateDto": {
+        "type": "object",
+        "properties": {
+          "vatPercent": {
+            "type": "number",
+            "description": "% thuế GTGT khấu trừ thay (0–5)",
+            "example": 5
+          },
+          "pitPercent": {
+            "type": "number",
+            "description": "% thuế TNCN khấu trừ thay (0–5)",
+            "example": 2
+          }
+        },
+        "required": [
+          "vatPercent",
+          "pitPercent"
+        ]
+      },
+      "TaxRatesDto": {
+        "type": "object",
+        "properties": {
+          "self_drive": {
+            "description": "Tự lái — nhóm dịch vụ (NĐ 117: 5% + 2%)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRateDto"
+              }
+            ]
+          },
+          "long_term": {
+            "description": "Thuê dài hạn — nhóm dịch vụ (NĐ 117: 5% + 2%)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRateDto"
+              }
+            ]
+          },
+          "with_driver": {
+            "description": "Có tài xế — nhóm vận tải (NĐ 117: 3% + 1,5%)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRateDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "self_drive",
+          "long_term",
+          "with_driver"
+        ]
+      },
       "TaxRowDto": {
         "type": "object",
         "properties": {
@@ -99937,12 +100469,27 @@
               "company",
               "unknown"
             ],
+            "description": "Loại chủ thể người bán KHAI trong hồ sơ lúc ghi sổ. `unknown` = gian hàng chưa khai hồ sơ người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã bị khấu trừ theo mức cá nhân — xem `taxSubjectType`)."
+          },
+          "taxSubjectType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "household_business",
+              "company"
+            ],
             "nullable": true,
-            "description": "Loại chủ thể tại thời điểm phát sinh. `null`/`unknown` = gian hàng chưa khai hồ sơ người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual`."
+            "description": "Chủ thể ÁP THUẾ đóng băng lúc nhận chuyến (ADR 0068 điều 2): không hồ sơ / doanh nghiệp chưa xác minh ⇒ `individual`. Khác `entityType` là chuyện bình thường. null ở dòng một-mức trước 22/10/2026"
           },
           "taxCode": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "MST — snapshot lúc ghi sổ"
+          },
+          "legalName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tên pháp lý — snapshot"
           },
           "taxableBase": {
             "type": "string",
@@ -99950,11 +100497,40 @@
           },
           "percent": {
             "type": "number",
-            "description": "% đã áp — SNAPSHOT, không phải tỷ lệ hiện hành"
+            "description": "% tổng đã áp — SNAPSHOT, không phải tỷ lệ hiện hành"
+          },
+          "vatPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% GTGT đã áp (ADR 0068). null ở dòng một-mức trước 22/10/2026"
+          },
+          "pitPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% TNCN đã áp"
+          },
+          "vatAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Thuế GTGT. ÂM ở dòng đảo. null ở dòng một-mức trước 22/10/2026"
+          },
+          "pitAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Thuế TNCN. ÂM ở dòng đảo"
+          },
+          "taxCategory": {
+            "type": "string",
+            "enum": [
+              "service",
+              "transport"
+            ],
+            "nullable": true,
+            "description": "Nhóm NĐ 117 — service (5% + 2%) | transport (3% + 1,5%)"
           },
           "label": {
             "type": "string",
-            "example": "VAT 5% + TNCN 5%"
+            "example": "GTGT 5% + TNCN 2%"
           },
           "amount": {
             "type": "string",
@@ -100000,6 +100576,7 @@
           "bookingCode",
           "tenantId",
           "tenantName",
+          "entityType",
           "taxableBase",
           "percent",
           "label",
@@ -100044,13 +100621,23 @@
               "company",
               "unknown"
             ],
-            "nullable": true
+            "description": "Loại chủ thể người bán KHAI. `unknown` = chưa khai hồ sơ người bán"
           },
           "taxCode": {
             "type": "string",
             "nullable": true
           },
+          "legalName": {
+            "type": "string",
+            "nullable": true
+          },
           "amount": {
+            "type": "string"
+          },
+          "vatAmount": {
+            "type": "string"
+          },
+          "pitAmount": {
             "type": "string"
           },
           "rows": {
@@ -100060,7 +100647,10 @@
         "required": [
           "tenantId",
           "tenantName",
+          "entityType",
           "amount",
+          "vatAmount",
+          "pitAmount",
           "rows"
         ]
       },
@@ -100556,6 +101146,18 @@
           "totalTaxableBase": {
             "type": "string"
           },
+          "totalVatAmount": {
+            "type": "string",
+            "description": "Tổng GTGT đã khấu trừ trong kỳ"
+          },
+          "totalPitAmount": {
+            "type": "string",
+            "description": "Tổng TNCN đã khấu trừ trong kỳ"
+          },
+          "totalUnsplitAmount": {
+            "type": "string",
+            "description": "Tổng của các dòng một-mức CHƯA TÁCH GTGT/TNCN (trước 22/10/2026). Kỳ trộn hai loại dòng thì `totalVatAmount + totalPitAmount + totalUnsplitAmount = totalAmount`"
+          },
           "rows": {
             "type": "number"
           },
@@ -100570,6 +101172,9 @@
           "periodKey",
           "totalAmount",
           "totalTaxableBase",
+          "totalVatAmount",
+          "totalPitAmount",
+          "totalUnsplitAmount",
           "rows",
           "items"
         ]
@@ -101673,39 +102278,48 @@
           },
           "holdPaymentWindowMinutes": {
             "type": "number",
-            "description": "Phút khách có để chuyển cọc khi đặt XA (giờ nhận cách lúc duyệt ≥ 24 giờ) — đồng thời là trần của cửa sổ động khi đặt cận ngày (ΔT × 40%, sàn 15 phút)",
+            "description": "TRẦN của hạn chuyển tiền giữ chỗ (phút). Hạn thật = clamp(round(ΔT × 30%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận — ADR 0066",
             "example": 120
           },
           "freeCancelHours": {
             "type": "number",
-            "description": "Giờ huỷ miễn phí KỂ TỪ khi duyệt khi đặt XA (≥ 24 giờ) — đồng thời là trần của cửa sổ động (ΔT × 30%; dưới 2 giờ thì không có huỷ miễn phí)",
-            "example": 4
+            "description": "TRẦN của cửa sổ huỷ miễn phí (giờ). Cửa sổ thật = clamp(round(ΔT × 20%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận; 0 = tắt huỷ miễn phí — ADR 0066",
+            "example": 2
           },
           "depositPercent": {
             "type": "number",
-            "description": "% cọc online trên TỔNG KHÁCH TRẢ trước mã khuyến mãi",
-            "example": 30
+            "description": "% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) — ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D",
+            "example": 15
           },
           "depositMinAmount": {
             "type": "string",
-            "description": "Sàn tiền cọc (VND string, bội 1.000đ)",
-            "example": "50000"
+            "description": "Sàn của `D` (VND string, bội 1.000đ): D = max(% × tiền thuê, sàn); 0 = không sàn",
+            "example": "0"
           },
           "depositMaxPercent": {
             "type": "number",
-            "description": "Trần % cọc của chính sách này",
+            "description": "Trần % của `D` ở chính sách này",
             "example": 30
           },
           "taxEnabled": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Cổng khấu trừ thuế thay chủ xe (ADR 0068)"
           },
-          "taxPercent": {
-            "type": "number",
-            "nullable": true
+          "taxRates": {
+            "nullable": true,
+            "description": "Bảng mức khấu trừ theo loại dịch vụ, tách GTGT/TNCN — bắt buộc khi taxEnabled (ADR 0068). Áp cho cá nhân và hộ kinh doanh; doanh nghiệp đã xác minh không bị khấu trừ.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxRatesDto"
+              }
+            ]
           },
-          "taxLabel": {
+          "taxLegalBasis": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Căn cứ pháp lý của việc khấu trừ — bắt buộc khi taxEnabled",
+            "example": "NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP"
           },
           "tripInsuranceEnabled": {
             "type": "boolean"
@@ -105203,7 +105817,7 @@
         "properties": {
           "revenueTotal": {
             "type": "string",
-            "description": "Σ doanh thu các chuyến hoàn thành trong kỳ"
+            "description": "Σ doanh thu cho thuê xe (tiền thuê `R`, không gồm phí giao) các chuyến hoàn thành trong kỳ"
           },
           "ownerCommissionTotal": {
             "type": "string",
@@ -105215,7 +105829,11 @@
           },
           "payAtPickupTotal": {
             "type": "string",
-            "description": "Σ phần khách trả trực tiếp khi nhận xe"
+            "description": "Σ phần TIỀN THUÊ khách trả trực tiếp khi nhận xe (`R − D − H`, không gồm phí giao)"
+          },
+          "deliveryTotal": {
+            "type": "string",
+            "description": "Σ phí giao xe `G` khách trả tận tay chủ xe trong kỳ"
           },
           "balanceChangeTotal": {
             "type": "string",
@@ -105227,7 +105845,7 @@
           },
           "ownerIncome": {
             "type": "string",
-            "description": "Thu nhập chủ gian hàng = doanh thu − hoa hồng − thuế − phí gói"
+            "description": "Thu nhập chủ gian hàng = doanh thu cho thuê xe − phí dịch vụ chủ xe − thuế − phí gói"
           }
         },
         "required": [
@@ -105235,6 +105853,7 @@
           "ownerCommissionTotal",
           "taxTotal",
           "payAtPickupTotal",
+          "deliveryTotal",
           "balanceChangeTotal",
           "subscriptionFeeTotal",
           "ownerIncome"
@@ -105270,7 +105889,7 @@
           "unitAmount": {
             "type": "string",
             "nullable": true,
-            "description": "Đơn giá một đơn vị thuê (ngày hoặc tháng). `null` khi snapshot giá của đơn không đủ dữ liệu để chia — KHÔNG suy ngược từ tổng."
+            "description": "Đơn giá một đơn vị thuê (ngày hoặc tháng). Theo ngày: CHỈ khi mọi ngày cùng một giá (đặc tả 05 §7.1) — giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ngược `R / N` từ tổng."
           },
           "unitKind": {
             "type": "string",
@@ -105283,11 +105902,11 @@
           },
           "revenueAmount": {
             "type": "string",
-            "description": "Doanh thu chuyến `B` (VND string)"
+            "description": "Doanh thu cho thuê xe `R = B − G` (VND string) — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe (`deliveryAmount`)."
           },
           "ownerCommissionAmount": {
             "type": "string",
-            "description": "Hoa hồng lũy tiến `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ cột đã đóng băng `bookings.owner_commission_amount`; 0 ở tuyến gói và đơn trước luồng tiền v2."
+            "description": "Phí dịch vụ – chủ xe `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã đóng băng (`ownerPayout`) khi có, không thì từ cột `bookings.owner_commission_amount` (ghi từ cùng snapshot); 0 ở tuyến gói và đơn trước luồng tiền v2."
           },
           "taxAmount": {
             "type": "string",
@@ -105295,11 +105914,29 @@
           },
           "payAtPickupAmount": {
             "type": "string",
-            "description": "`B − D` — khách trả trực tiếp chủ xe, không qua ví"
+            "description": "`R − D − H` — phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG gồm phí giao xe (khoản đó ở `deliveryAmount`)."
+          },
+          "deliveryAmount": {
+            "type": "string",
+            "description": "Phí giao xe `G` — khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. Đọc từ `bookings.delivery_fee` (sửa được sau khi đơn ra đời). `0` khi không giao tận nơi."
+          },
+          "ownerIncomeAmount": {
+            "type": "string",
+            "description": "Thu nhập chủ xe của chuyến `R − H − T` (ADR 0068 điều 5). `ownerIncomeAmount − payAtPickupAmount = D − T` = phần cộng ví."
           },
           "balanceChange": {
             "type": "string",
             "description": "Ví nhúc nhích bao nhiêu vì chuyến này. Đọc từ sổ, âm được."
+          },
+          "ownerPayout": {
+            "nullable": true,
+            "description": "Bảng cộng ví chủ xe dựng từ bảng phí ĐÃ ĐÓNG BĂNG của đơn (`ownerPayoutOf`). `null` với đơn gian hàng lập tay / đơn cũ không đi qua chính sách phí. Phí giao xe KHÔNG nằm trong bảng (xem `deliveryAmount`).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OwnerPayoutDto"
+              }
+            ]
           }
         },
         "required": [
@@ -105312,6 +105949,8 @@
           "ownerCommissionAmount",
           "taxAmount",
           "payAtPickupAmount",
+          "deliveryAmount",
+          "ownerIncomeAmount",
           "balanceChange"
         ]
       },

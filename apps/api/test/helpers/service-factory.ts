@@ -43,6 +43,7 @@ import { TaxService } from '../../src/modules/tax/tax.service';
 import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
+import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
@@ -181,7 +182,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     audit,
     notifications,
     new InsuranceReadService(prisma),
-    new TaxReadService(prisma),
+    new TaxReadService(prisma, audit),
   );
 }
 
@@ -409,6 +410,19 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
 /** `AppConfigService` — công tắc `isPlanPromotionEnabled` + cửa xếp hàng email hướng dẫn gói. */
 export function makeAppConfigService(prisma: PrismaService): AppConfigService {
   return new AppConfigService(prisma, new AuditService(prisma), new ConfigService());
+}
+
+/** `SupportService` — case hỗ trợ / tranh chấp (một service cho cả ba bề mặt). */
+export function makeSupportService(
+  prisma: PrismaService,
+  notifications: NotificationService = makeNotificationService(prisma),
+): SupportService {
+  return new SupportService(
+    prisma,
+    new AuditService(prisma),
+    notifications,
+    makeAppConfigService(prisma),
+  );
 }
 
 /** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */

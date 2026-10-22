@@ -48,7 +48,7 @@
     "lead": "Every amount has an owner, and we show each line instead of rolling them into one number.",
     "hold": {
       "title": "Paid online",
-      "desc": "The holding amount, the service fee and insurance where it applies. This is not the security deposit taken at pick-up."
+      "desc": "The holding amount, the booking fee and insurance where it applies. This is not the security deposit taken at pick-up."
     },
     "pickup": {
       "title": "Paid at pick-up",

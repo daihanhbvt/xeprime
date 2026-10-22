@@ -110,6 +110,11 @@ export const DRIVER_ASSIGNMENT_OUTCOME = {
   CANCELLED: 'cancelled',
   NO_SHOW: 'no_show',
   COMPLETED: 'completed',
+  /**
+   * Tài xế KHÔNG trả lời trong hạn (`bookings.driver_respond_by`, ADR 0066) — hệ thống gỡ lượt
+   * gán, đơn quay về chưa có tài xế và bên thuê được báo khẩn. Đơn của khách KHÔNG bị huỷ.
+   */
+  EXPIRED: 'expired',
 } as const;
 
 export type DriverAssignmentOutcome =
@@ -126,7 +131,114 @@ export const DRIVER_ASSIGNMENT_OUTCOME_META: Readonly<Record<DriverAssignmentOut
     [DRIVER_ASSIGNMENT_OUTCOME.CANCELLED]: { label: 'Đơn đã huỷ', color: STATUS_COLOR.NEUTRAL },
     [DRIVER_ASSIGNMENT_OUTCOME.NO_SHOW]: { label: 'Khách không đến', color: STATUS_COLOR.NEUTRAL },
     [DRIVER_ASSIGNMENT_OUTCOME.COMPLETED]: { label: 'Hoàn thành', color: STATUS_COLOR.SUCCESS },
+    [DRIVER_ASSIGNMENT_OUTCOME.EXPIRED]: {
+      label: 'Quá hạn xác nhận',
+      color: STATUS_COLOR.WARNING,
+    },
   };
+
+/**
+ * Hạn tài xế trả lời một lượt gán — ADR 0066 (ghi đè "lượt chờ KHÔNG hết hạn" của ADR 0063).
+ *
+ * `T = clamp(round(ΔT × 10%), 15′, 60′)` với `ΔT = pickupAt − assignedAt`. Giờ nhận đã qua (hoặc
+ * trùng mốc gán) ⇒ sàn 15′. Server tính MỘT lần lúc gán và lưu `bookings.driver_respond_by`;
+ * client chỉ đọc mốc đó để đếm ngược, không tự tính lại.
+ */
+export const DRIVER_RESPONSE_WINDOW = {
+  RATIO: 0.1,
+  MIN_MINUTES: 15,
+  MAX_MINUTES: 60,
+} as const;
+
+/**
+ * Bên thuê nên gán người khác trong bấy nhiêu phút sau khi tài xế từ chối / không phản hồi — câu
+ * chữ của thông báo khẩn (ADR 0066). Mục tiêu vận hành, KHÔNG phải một hạn hệ thống tự thi hành.
+ */
+export const DRIVER_REASSIGN_TARGET_MINUTES = 30;
+
+/**
+ * Nguồn của tài xế đang phủ một đơn `with_driver` (ADR 0067).
+ *
+ *  - `linked`   — tài khoản khách đã liên kết với bên thuê (ADR 0063), có lượt gán chờ/đã nhận;
+ *  - `external` — tên + SĐT bên thuê ghi trên ĐÚNG đơn đó, không tài khoản, coi là đã nhận ngay.
+ *
+ * Hai nguồn loại trừ nhau trên một đơn (CHECK `bookings_external_driver_exclusive_check`).
+ */
+export const DRIVER_SOURCE = {
+  LINKED: 'linked',
+  EXTERNAL: 'external',
+} as const;
+
+export type DriverSource = (typeof DRIVER_SOURCE)[keyof typeof DRIVER_SOURCE];
+export const DRIVER_SOURCE_VALUES = Object.values(DRIVER_SOURCE) as DriverSource[];
+
+/**
+ * Độ dài tên tài xế ngoài hệ thống (ký tự, sau khi cắt khoảng trắng hai đầu) — một luật cho DTO
+ * API, form web và app native; trần khớp `bookings.external_driver_name VARCHAR(120)`.
+ */
+export const EXTERNAL_DRIVER_NAME_LENGTH = { MIN: 2, MAX: 120 } as const;
+
+/**
+ * Còn bấy nhiêu phút tới giờ nhận mà đơn `with_driver` đang `reserved` vẫn KHÔNG có ai phủ — không
+ * lượt gán liên kết nào (kể cả đang chờ) và không tài xế ngoài hệ thống — thì worker báo KHẨN bên
+ * thuê MỘT lần (ADR 0067 điều 2). Không huỷ đơn, không đổi đồng tiền nào. Giao diện khu quản lý
+ * dùng cùng mốc để hiện cảnh báo trên đơn.
+ */
+export const DRIVER_MISSING_ALERT_LEAD_MINUTES = 120;
+
+/**
+ * Đơn `with_driver` CHƯA có ai phủ và giờ nhận đã vào vùng cảnh báo (`≤ DRIVER_MISSING_ALERT_LEAD_MINUTES`
+ * phút, chưa qua giờ nhận) — một phép kiểm cho cảnh báo trên web/app. Worker dùng điều kiện SQL
+ * tương đương ở `@xeprime/prisma` (`driverMissingAlertWhere`).
+ */
+export function isDriverMissingAlertDue(
+  booking: { pickupAt: Date | string; hasDriver: boolean },
+  now: Date = new Date(),
+): boolean {
+  if (booking.hasDriver) return false;
+  const pickupMs = new Date(booking.pickupAt).getTime();
+  if (!Number.isFinite(pickupMs)) return false;
+  const left = pickupMs - now.getTime();
+  return left > 0 && left <= DRIVER_MISSING_ALERT_LEAD_MINUTES * MINUTE_MS;
+}
+
+/**
+ * Mã `audit_logs.action` của lượt gán tài xế mà API và worker cùng ghi — hai tiến trình phải ra
+ * đúng MỘT mã để tra cứu/đối soát (ADR 0066). Đích luôn là `AUDIT_TARGET_TYPE.BOOKING`.
+ */
+export const DRIVER_ASSIGNMENT_AUDIT_ACTION = {
+  /** Lượt `pending` quá `driver_respond_by` được trả về bên thuê (worker quét, hoặc tài xế Từ chối muộn). */
+  RESPONSE_EXPIRED: 'booking.driver_response_expired',
+  /** Bên thuê ghi / đổi tài xế NGOÀI HỆ THỐNG trên đơn (ADR 0067) — tên + SĐT trong audit đã che. */
+  EXTERNAL_SET: 'booking.driver_external_set',
+  /** Tài xế ngoài hệ thống bị xoá khỏi đơn (bỏ gán, hoặc thay bằng tài xế liên kết — ADR 0067). */
+  EXTERNAL_CLEARED: 'booking.driver_external_cleared',
+  /** Worker đã báo khẩn "chuyến sắp nhận chưa có tài xế" (ADR 0067 điều 2) — một lần mỗi đơn. */
+  MISSING_ALERTED: 'booking.driver_missing_alerted',
+} as const;
+
+const MINUTE_MS = 60_000;
+
+/** Số phút tài xế có để nhận/từ chối một lượt gán lập lúc `assignedAt` cho chuyến nhận lúc `pickupAt`. */
+export function driverResponseWindowMinutes(assignedAt: Date, pickupAt: Date): number {
+  const deltaMinutes = (pickupAt.getTime() - assignedAt.getTime()) / MINUTE_MS;
+  // `!(x > 0)` bắt cả NaN (ngày hỏng) — rơi về sàn thay vì sinh một mốc NaN.
+  if (!(deltaMinutes > 0)) return DRIVER_RESPONSE_WINDOW.MIN_MINUTES;
+  return Math.min(
+    DRIVER_RESPONSE_WINDOW.MAX_MINUTES,
+    Math.max(
+      DRIVER_RESPONSE_WINDOW.MIN_MINUTES,
+      Math.round(deltaMinutes * DRIVER_RESPONSE_WINDOW.RATIO),
+    ),
+  );
+}
+
+/** Mốc hết hạn trả lời — giá trị ghi vào `bookings.driver_respond_by`. */
+export function driverRespondByFor(assignedAt: Date, pickupAt: Date): Date {
+  return new Date(
+    assignedAt.getTime() + driverResponseWindowMinutes(assignedAt, pickupAt) * MINUTE_MS,
+  );
+}
 
 /**
  * Bằng lái của tài khoản tài xế, nhìn từ phía BÊN THUÊ — chỉ ba mức, không lộ ảnh/số bằng

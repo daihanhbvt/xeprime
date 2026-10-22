@@ -13,10 +13,13 @@ import {
   FEE_SCHEDULE_DEFAULTS,
   VEHICLE_TYPE,
   feePolicyActivationBlockers,
+  maxTaxRatePercent,
+  parseTaxRates,
   type FeePolicySnapshot,
   type FeePolicyValues,
   type OwnerCommissionTier,
   type PerVehicleTypeAmount,
+  type TaxRatesByServiceType,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -36,6 +39,8 @@ const SELECT = {
   depositMinAmount: true,
   depositMaxPercent: true,
   taxEnabled: true,
+  taxRates: true,
+  taxLegalBasis: true,
   taxPercent: true,
   taxLabel: true,
   tripInsuranceEnabled: true,
@@ -119,6 +124,7 @@ export class FeePoliciesService {
   }
 
   async createDraft(actorUserId: string, dto: UpsertFeePolicyDto): Promise<FeePolicyDto> {
+    assertDepositCoversTax(dto);
     const row = await this.prisma.$transaction(async (tx) => {
       const last = await tx.feePolicy.aggregate({ _max: { version: true } });
       const created = await tx.feePolicy.create({
@@ -154,6 +160,7 @@ export class FeePoliciesService {
   ): Promise<FeePolicyDto> {
     const before = await this.load(id);
     this.assertDraft(before);
+    assertDepositCoversTax(dto);
     const row = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.feePolicy.updateMany({
         where: { id, status: FEE_POLICY_STATUS.DRAFT },
@@ -277,6 +284,30 @@ export class FeePoliciesService {
   }
 }
 
+/**
+ * `depositPercent` ≥ mức thuế tổng cao nhất của bảng — cùng luật với blocker
+ * `deposit_percent_below_tax_percent`, nhưng chặn ngay lúc LƯU NHÁP: CHECK
+ * `fee_policies_deposit_covers_tax_check` áp cho mọi dòng, và để nó nổ là trả 500 thay vì một câu
+ * 400 nói rõ ô nào sai.
+ */
+function assertDepositCoversTax(dto: UpsertFeePolicyDto): void {
+  if (!dto.taxEnabled || !dto.taxRates) return;
+  const rates = dto.taxRates as TaxRatesByServiceType;
+  const required = maxTaxRatePercent(rates);
+  if (dto.depositPercent < required) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: `% giữ chỗ của chủ xe phải ≥ mức thuế cao nhất (${required}%)`,
+      details: [
+        {
+          field: 'depositPercent',
+          constraints: { depositCoversTax: 'deposit_percent_below_tax_percent' },
+        },
+      ],
+    });
+  }
+}
+
 function notDraft(status: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.FEE_POLICY_NOT_DRAFT,
@@ -295,6 +326,9 @@ function toValues(row: Row): FeePolicyValues {
     depositMinAmount: row.depositMinAmount.toFixed(0),
     depositMaxPercent: Number(row.depositMaxPercent),
     taxEnabled: row.taxEnabled,
+    // Hỏng/thiếu khoá ⇒ null — blocker `tax_requires_rates_and_basis` chặn kích hoạt (ADR 0068).
+    taxRates: parseTaxRates(row.taxRates),
+    taxLegalBasis: row.taxLegalBasis,
     taxPercent: row.taxPercent == null ? null : Number(row.taxPercent),
     taxLabel: row.taxLabel,
     tripInsuranceEnabled: row.tripInsuranceEnabled,
@@ -401,8 +435,18 @@ function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
     depositMinAmount: new Prisma.Decimal(dto.depositMinAmount),
     depositMaxPercent: new Prisma.Decimal(dto.depositMaxPercent),
     taxEnabled: dto.taxEnabled,
-    taxPercent: dto.taxEnabled && dto.taxPercent != null ? new Prisma.Decimal(dto.taxPercent) : null,
-    taxLabel: dto.taxEnabled ? dto.taxLabel?.trim() || null : null,
+    /*
+     * ADR 0068: bảng mức theo loại dịch vụ + căn cứ pháp lý. Chỉ ba khoá × hai trường khai báo đi
+     * vào jsonb — không để một khoá lạ lọt qua DTO thành dữ liệu chính sách. Hai cột một-mức cũ
+     * (`tax_percent`/`tax_label`) luôn null ở bản mới: chúng chỉ còn để đọc lại chính sách ≤ v8.
+     */
+    taxRates:
+      dto.taxEnabled && dto.taxRates
+        ? (taxRatesJson(dto.taxRates as TaxRatesByServiceType) as Prisma.InputJsonObject)
+        : Prisma.DbNull,
+    taxLegalBasis: dto.taxEnabled ? dto.taxLegalBasis?.trim() || null : null,
+    taxPercent: null,
+    taxLabel: null,
     tripInsuranceEnabled: dto.tripInsuranceEnabled,
     tripInsurancePercent:
       dto.tripInsuranceEnabled && dto.tripInsurancePercent != null
@@ -431,6 +475,16 @@ function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
   };
 }
 
+/** Bảng mức → jsonb, đúng ba khoá × hai trường (ADR 0068). */
+function taxRatesJson(rates: TaxRatesByServiceType): Record<string, { vatPercent: number; pitPercent: number }> {
+  return Object.fromEntries(
+    Object.entries(rates).map(([type, rate]) => [
+      type,
+      { vatPercent: rate.vatPercent, pitPercent: rate.pitPercent },
+    ]),
+  );
+}
+
 function auditValues(v: FeePolicyValues): Record<string, unknown> {
   return {
     serviceFeePercent: v.serviceFeePercent,
@@ -441,7 +495,8 @@ function auditValues(v: FeePolicyValues): Record<string, unknown> {
     depositMinAmount: v.depositMinAmount,
     depositMaxPercent: v.depositMaxPercent,
     taxEnabled: v.taxEnabled,
-    taxPercent: v.taxPercent ?? null,
+    taxRates: v.taxRates,
+    taxLegalBasis: v.taxLegalBasis,
     tripInsuranceEnabled: v.tripInsuranceEnabled,
     tripInsurancePercent: v.tripInsurancePercent ?? null,
     vehicleProtectionEnabled: v.vehicleProtectionEnabled,

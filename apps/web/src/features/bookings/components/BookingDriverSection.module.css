@@ -44,6 +44,11 @@
   font-weight: var(--xp-font-weight-medium, 500);
 }
 
+/* Hạn tài xế trả lời lượt gán (ADR 0066) — việc có đồng hồ, nên màu cảnh báo. */
+.deadline {
+  color: var(--xp-color-warning);
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -71,4 +76,17 @@
 .history {
   margin-top: 10px;
   border-top: 1px solid var(--xp-color-border-secondary, var(--xp-color-border));
+}
+
+/* Cảnh báo "sắp tới giờ nhận mà chưa có tài xế" (ADR 0067) — đứng trên phần phân công. */
+.alert {
+  margin-bottom: 10px;
+}
+
+/* Ghi chú + lỗi đầu form tài xế ngoài hệ thống — đọc trước khi gõ tên, SĐT. */
+.hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-lg);
 }

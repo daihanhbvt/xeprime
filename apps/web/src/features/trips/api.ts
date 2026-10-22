@@ -125,6 +125,16 @@ export function cancelTrip(id: string): Promise<CustomerTripDetail> {
 }
 
 /**
+ * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1. Server mở một tranh chấp khẩn (idempotent) và
+ * trả về chính chuyến đó với `openDispute = true`, như `cancelTrip`.
+ */
+export function reportTripNotReceived(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/report-not-received`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
  * Khách khai tài khoản nhận tiền hoàn khoản giữ chỗ — ADR 0033.
  *
  * Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích.

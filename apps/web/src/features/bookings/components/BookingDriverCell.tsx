@@ -1,17 +1,19 @@
 'use client';
 
+import { Tag } from 'antd';
 import { useTranslations } from 'next-intl';
-import { DRIVER_ASSIGNMENT_STATUS_META, SERVICE_TYPE } from '@xeprime/types';
+import { DRIVER_ASSIGNMENT_STATUS_META, DRIVER_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import type { BookingListItem } from '../types';
 import styles from './BookingDriverCell.module.css';
 
 /**
- * Ô "Tài xế" của mọi bảng đơn thuê ở site partner (ADR 0063).
+ * Ô "Tài xế" của mọi bảng đơn thuê ở site partner (ADR 0063 · ADR 0067).
  *
  * - đơn không phải `with_driver` và không có tài xế cũ ⇒ "—" (không áp dụng);
  * - đơn `with_driver` chưa có ai ⇒ "Chưa phân công" tông cảnh báo — đơn chưa chạy được;
- * - có tài xế ⇒ tên + nhãn lượt gán (chờ nhận / đã nhận).
+ * - tài xế liên kết ⇒ tên + nhãn lượt gán (chờ nhận / đã nhận);
+ * - tài xế ngoài hệ thống ⇒ tên + nhãn "Ngoài hệ thống" (đã phủ chuyến, không có lượt chờ).
  */
 export function BookingDriverCell({
   booking,
@@ -24,11 +26,15 @@ export function BookingDriverCell({
     return (
       <span className={styles.cell}>
         <span className={styles.name}>{driver.name}</span>
-        <StatusTag
-          value={driver.assignmentStatus}
-          meta={DRIVER_ASSIGNMENT_STATUS_META}
-          group="driverAssignmentStatus"
-        />
+        {driver.source === DRIVER_SOURCE.EXTERNAL ? (
+          <Tag>{t('external')}</Tag>
+        ) : (
+          <StatusTag
+            value={driver.assignmentStatus}
+            meta={DRIVER_ASSIGNMENT_STATUS_META}
+            group="driverAssignmentStatus"
+          />
+        )}
       </span>
     );
   }

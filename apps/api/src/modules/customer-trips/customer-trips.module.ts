@@ -8,6 +8,7 @@ import { CustomerTripsService } from './customer-trips.service';
 import { CancellationsModule } from '../cancellations/cancellations.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { InsuranceModule } from '../insurance/insurance.module';
+import { SupportModule } from '../support/support.module';
 
 /**
  * Màn `Chuyến của tôi` phía khách (Wave 11).
@@ -32,6 +33,8 @@ import { InsuranceModule } from '../insurance/insurance.module';
     CancellationsModule,
     // GCN bảo hiểm đã cấp của chuyến (ADR 0064) — chỉ đọc.
     InsuranceModule,
+    // "Chưa nhận được xe" mở case qua `SupportService` — một service cho mọi case (ADR 0066).
+    SupportModule,
   ],
   controllers: [CustomerTripsController],
   providers: [CustomerTripsService],

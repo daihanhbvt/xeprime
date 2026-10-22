@@ -11,6 +11,8 @@ import {
   SERVICE_TYPE,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   SERVICE_TYPE_VALUES,
+  EXTERNAL_DRIVER_NAME_LENGTH,
+  VN_PHONE_PATTERN,
   type BookingListPreset,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
@@ -21,6 +23,7 @@ import {
   IsLatitude,
   IsLongitude,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   Length,
@@ -28,9 +31,13 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateBy,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { OwnerPayoutDto } from '../../../common/dto/owner-payout.dto';
+import { ExactlyOneOf } from '../../../common/validators/exactly-one-of.validator';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
@@ -264,24 +271,45 @@ export class BookingDetailDto extends BookingListItemDto {
    * Kinh tế của CHỦ XE, đóng băng trong snapshot lúc đặt (ADR 0024) — DTO nội bộ của gian hàng nên
    * hiện ở đây là đúng chỗ (ADR 0064). `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
    */
+  /** @deprecated Đọc `ownerPayout.ownerCommissionAmount` — trường phẳng giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: '`H` — hoa hồng XePrime giữ lại từ phần của chủ xe',
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy ' +
+      'tiến theo ngày), XePrime giữ lại từ phần của chủ xe',
   })
   ownerCommissionAmount!: string | null;
+  /** @deprecated Đọc `ownerPayout.taxAmount` (kèm GTGT/TNCN tách riêng) — giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: '`T` — thuế khấu trừ khỏi tiền chủ xe',
+    deprecated: true,
+    description: 'DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe',
   })
   ownerTaxAmount!: string | null;
+  /** @deprecated Đọc `ownerPayout.ownerNetAmount` — trường phẳng giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: '`B − H − T` — chủ xe thực nhận cả chuyến',
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến',
   })
   ownerNetAmount!: string | null;
+  /**
+   * Bảng cộng ví chủ xe (ADR 0068 điều 5) dựng từ snapshot đã đóng băng — cùng hình dạng, cùng hàm
+   * dựng với hộp duyệt yêu cầu. `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
+   */
+  @ApiPropertyOptional({
+    type: OwnerPayoutDto,
+    nullable: true,
+    description:
+      'Bảng cộng ví chủ xe — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), ' +
+      'khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí',
+  })
+  ownerPayout!: OwnerPayoutDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
@@ -511,17 +539,73 @@ export class UpdateBookingDeliveryFeeDto {
   note?: string;
 }
 
+/** Tài xế NGOÀI HỆ THỐNG ghi trên đơn (ADR 0067) — tên + SĐT di động VN, không tài khoản. */
+export class ExternalDriverInputDto {
+  @ApiProperty({
+    example: 'Nguyễn Văn Tài',
+    minLength: EXTERNAL_DRIVER_NAME_LENGTH.MIN,
+    maxLength: EXTERNAL_DRIVER_NAME_LENGTH.MAX,
+    description: 'Tên tài xế — cắt khoảng trắng hai đầu trước khi kiểm',
+  })
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @Length(EXTERNAL_DRIVER_NAME_LENGTH.MIN, EXTERNAL_DRIVER_NAME_LENGTH.MAX)
+  name!: string;
+
+  @ApiProperty({
+    example: '0901234567',
+    pattern: VN_PHONE_PATTERN.source,
+    description:
+      'SĐT di động VN (`0xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua) — khách gọi số này để gặp người đón',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/[\s.-]/g, '') : value,
+  )
+  @IsString()
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
+}
+
 /**
- * Gán/bỏ gán tài xế cho đơn (ADR 0063). `driverId` là id LIÊN KẾT tài xế (`drivers.id`);
- * `null` là BỎ GÁN tường minh — field bắt buộc để không lẫn "không gửi gì" với "gỡ tài xế".
- * Luật gán ở `DriversService.assignWithinTx`; FK tổ hợp ở DB chặn nốt trường hợp service quên.
+ * Gán/bỏ gán tài xế cho đơn — gửi ĐÚNG MỘT trong hai khoá:
+ *
+ *  - `driverId` (ADR 0063): id LIÊN KẾT tài xế (`drivers.id`); `null` là BỎ GÁN tường minh (gỡ cả
+ *    tài xế liên kết lẫn tài xế ngoài hệ thống) — để không lẫn "không gửi gì" với "gỡ tài xế".
+ *  - `externalDriver` (ADR 0067): tên + SĐT tài xế ngoài hệ thống; lượt gán liên kết đang có bị
+ *    đóng như bỏ gán và người đó được báo.
+ *
+ * Luật ở `DriversService` (writer duy nhất); CHECK ở DB chặn nốt trường hợp service quên.
  */
 export class AssignBookingDriverDto {
-  @ApiProperty({ type: String, nullable: true, description: 'ID tài xế (ULID) — null để bỏ gán' })
-  @ValidateIf((o: AssignBookingDriverDto) => o.driverId !== null)
-  @IsString()
-  @Length(26, 26)
-  driverId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`.',
+  })
+  // Kiểm cả khi VẮNG nếu `externalDriver` cũng vắng — để body rỗng bị `ExactlyOneOf` từ chối.
+  @ValidateIf(
+    (o: AssignBookingDriverDto) => o.driverId !== undefined || o.externalDriver === undefined,
+  )
+  @ExactlyOneOf(['driverId', 'externalDriver'])
+  @ValidateBy({
+    name: 'isDriverIdOrNull',
+    validator: {
+      validate: (value: unknown) =>
+        value === null || (typeof value === 'string' && value.length === 26),
+      defaultMessage: () => 'driverId phải là ID 26 ký tự hoặc null',
+    },
+  })
+  driverId?: string | null;
+
+  @ApiPropertyOptional({
+    type: ExternalDriverInputDto,
+    description: 'Tài xế ngoài hệ thống (ADR 0067). Không gửi cùng `driverId`.',
+  })
+  @ValidateIf((o: AssignBookingDriverDto) => o.externalDriver !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ExternalDriverInputDto)
+  externalDriver?: ExternalDriverInputDto;
 }
 
 /**

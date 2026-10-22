@@ -31,8 +31,11 @@ import {
 } from '@xeprime/types';
 import {
   computeCustomerFees,
+  isServiceType,
+  taxSellerEntityOf,
   type CustomerFeeBreakdown,
   type InsuranceOfferedByKind,
+  type SellerEntityType,
 } from '@xeprime/types';
 import { deliveryTierFee } from '@xeprime/domain';
 import { AuditService } from '../audit/audit.service';
@@ -94,6 +97,11 @@ export interface InsuranceSelection {
  */
 export interface FeeTrip {
   vehicleType: string;
+  /**
+   * Loại dịch vụ của chuyến — chọn cặp tỷ lệ thuế GTGT/TNCN (ADR 0068 điều 1). Bắt buộc: một mã
+   * không nhận ra được rơi về mức CAO NHẤT của bảng (NĐ 117), không bao giờ về 0.
+   */
+  serviceType: string;
   breakdown: Pick<QuoteBreakdownDto, 'totalAmount' | 'rows' | 'days' | 'longTerm' | 'dayAmounts'>;
   /** Lịch đã chốt — chỉ dài hạn cần, để đếm số ngày lịch thật của gói. */
   schedule?: { pickupAt: Date; returnAt: Date } | null;
@@ -237,15 +245,23 @@ export class PricingService {
      * ra cho tới lúc đối soát cuối tháng.
      */
     if (!deposit.billingMode) return null;
-    const { rentalDays, dayAmounts } = feeDaysOf(trip);
-    return computeCustomerFees({
+    const { rentalDays, dayAmounts, dayAmountsListed } = feeDaysOf(trip);
+    const fees = computeCustomerFees({
       billingMode: deposit.billingMode,
       policy,
       vehicleType: trip.vehicleType as VehicleType,
+      /*
+       * Thuế theo LOẠI DỊCH VỤ và CHỦ THỂ (ADR 0068). Chủ thể đọc tại ĐÂY — mỗi lượt báo giá và mỗi
+       * lượt duyệt — rồi đóng băng vào bảng phí cùng mọi con số khác (ADR 0024): đổi hồ sơ người bán
+       * sau khi nhận chuyến không viết lại thuế của chuyến đó.
+       */
+      serviceType: isServiceType(trip.serviceType) ? trip.serviceType : null,
+      sellerEntityType: await this.taxSellerEntityFor(tenantId),
       baseAmount: trip.breakdown.totalAmount,
       /*
        * Phí giao nằm TRONG `totalAmount` nhưng không phải tiền thuê: tách ra để thuế, hoa hồng và
-       * cọc 30% không tính trên nó và để nó rơi trọn vào phần khách trả tận tay (ADR 0064).
+       * phần giữ chỗ của chủ xe không tính trên nó và để nó rơi trọn vào phần khách trả tận tay
+       * (ADR 0064 · ADR 0066).
        */
       deliveryAmount: deliveryAmountOf(trip.breakdown.rows),
       /*
@@ -261,6 +277,29 @@ export class PricingService {
       personalAccidentSelected: opts.personalAccidentSelected === true,
       ...(opts.promo === undefined ? {} : { promo: opts.promo }),
     });
+    /*
+     * Chỉ ĐÓNG BĂNG giá từng ngày khi đó là giá NIÊM YẾT thật (`breakdown.dayAmounts`). Mảng chia
+     * đều (dài hạn, bảng kê cũ thiếu giá từng ngày) chỉ làm mẫu số cho nấc hoa hồng; ghi nó vào bảng
+     * phí thì bảng cộng ví (`ownerPayoutOf`) đọc ra một "đơn giá / ngày" chủ xe chưa từng đặt.
+     */
+    if (dayAmountsListed) return fees;
+    const { dayAmounts: _evenSplit, ...withoutDayAmounts } = fees;
+    return withoutDayAmounts;
+  }
+
+  /**
+   * Chủ thể ÁP THUẾ của gian hàng (ADR 0068 điều 2) — `taxSellerEntityOf`: chỉ doanh nghiệp ĐÃ
+   * XÁC MINH được miễn khấu trừ; chưa có hồ sơ / hồ sơ chưa duyệt ⇒ cá nhân.
+   */
+  async taxSellerEntityFor(
+    tenantId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<SellerEntityType> {
+    const profile = await db.sellerProfile.findUnique({
+      where: { tenantId },
+      select: { entityType: true, status: true },
+    });
+    return taxSellerEntityOf(profile);
   }
 
   /**
@@ -999,12 +1038,14 @@ export class PricingService {
         : null;
     if (directDiscountPercent) {
       /*
-       * Bước giá 1.000đ (ADR 0064): số giảm đi thẳng vào tổng khách trả và mẫu số cọc — một số lẻ
-       * ở đây là một số lẻ trên mã QR. `roundToThousand` (nửa bước LÊN), cùng luật với mọi phép
-       * chia tỷ lệ của luồng tiền v2: đây là tiền CHỦ XE tự bớt, không bị trần nào chặn trên, nên
-       * khác mã khuyến mãi nền tảng (làm tròn XUỐNG để không vượt trần đã hứa).
+       * KHOẢN GIẢM theo % làm tròn LÊN tới 1.000đ (ADR 0069 điều 2): khách không bao giờ được giảm
+       * ít hơn % chủ xe đã công bố (10% × 652.000đ = 65.200đ ⇒ giảm 66.000đ), và giá sau giảm giữ
+       * được số tròn khi giá ngày đã tròn. Kẹp ≤ tiền thuê gốc — giảm 100% không được ra số âm.
        */
-      discount = roundDecimalToThousand(base.mul(directDiscountPercent).div(100));
+      discount = Prisma.Decimal.min(
+        ceilDecimalToThousand(base.mul(directDiscountPercent).div(100)),
+        base,
+      );
       rows.push({
         key: PRICE_ROW.DISCOUNT,
         label: `Khuyến mãi trực tiếp (${directDiscountPercent}%)`,
@@ -1070,9 +1111,13 @@ export class PricingService {
     tier: DiscountTier | null,
   ): LongTermPackageOptionDto {
     const basePackage = monthly.mul(months).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-    // Bước giá 1.000đ — cùng luật với khuyến mãi trực tiếp tự lái (xem `buildDailyQuote`).
+    // Ưu đãi cam kết là KHOẢN GIẢM: làm tròn LÊN 1.000đ, kẹp ≤ giá gói (ADR 0069 điều 2 — cùng luật
+    // với khuyến mãi trực tiếp tự lái, xem `buildDailyQuote`).
     const discount = tier
-      ? roundDecimalToThousand(basePackage.mul(tier.percent).div(100))
+      ? Prisma.Decimal.min(
+          ceilDecimalToThousand(basePackage.mul(tier.percent).div(100)),
+          basePackage,
+        )
       : new Prisma.Decimal(0);
     const finalPackage = basePackage.minus(discount);
     return {
@@ -1345,7 +1390,7 @@ export class PricingService {
        */
       const fees = await this.customerFeesFor(
         input.tenantId,
-        { vehicleType: vehicle.vehicleType, breakdown },
+        { vehicleType: vehicle.vehicleType, serviceType: input.serviceType, breakdown },
         breakdown.estimateNote != null,
         { ...input.insurance, ...(input.promo ? { promo: input.promo } : {}) },
       );
@@ -1474,7 +1519,11 @@ export class PricingService {
           // Dài hạn chưa chốt giờ nhận ⇒ như báo giá tạm tính: hiện phí dự kiến, không thu giữ chỗ.
           fees: await this.customerFeesFor(
             vehicle.tenantId,
-            { vehicleType: vehicle.vehicleType, breakdown: longTermBreakdown },
+            {
+              vehicleType: vehicle.vehicleType,
+              serviceType: SERVICE_TYPE.LONG_TERM,
+              breakdown: longTermBreakdown,
+            },
             true,
             { ...insurance, insuranceOffered: offeredByKind },
           ),
@@ -1519,7 +1568,12 @@ export class PricingService {
         ...breakdown,
         fees: await this.customerFeesFor(
           vehicle.tenantId,
-          { vehicleType: vehicle.vehicleType, breakdown },
+          {
+            vehicleType: vehicle.vehicleType,
+            // Báo giá ngày không gửi loại dịch vụ ⇒ tự lái, cùng mặc định của `buildDailyQuote`.
+            serviceType: serviceType ?? SERVICE_TYPE.SELF_DRIVE,
+            breakdown,
+          },
           breakdown.estimateNote != null,
           { ...insurance, insuranceOffered: offeredByKind },
         ),
@@ -1540,13 +1594,14 @@ export function deliveryAmountOf(rows: ReadonlyArray<{ key: string; amount: stri
 }
 
 /**
- * Làm tròn tới bước giá 1.000đ trên `Prisma.Decimal` — cùng luật `roundToThousand` của
- * `@xeprime/types` (nửa bước LÊN), nhưng không rời Decimal (tiền không đi qua float).
+ * Làm tròn LÊN tới bước 1.000đ trên `Prisma.Decimal` — luật của KHOẢN GIẢM GIÁ theo % (ADR 0069
+ * điều 2), cùng nghĩa `ceilToThousand` của `@xeprime/types` nhưng không rời Decimal (tiền không đi
+ * qua float, nên không cần epsilon).
  */
-function roundDecimalToThousand(value: Prisma.Decimal): Prisma.Decimal {
+export function ceilDecimalToThousand(value: Prisma.Decimal): Prisma.Decimal {
   return value
     .div(MONEY_STEP_VND)
-    .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+    .toDecimalPlaces(0, Prisma.Decimal.ROUND_CEIL)
     .mul(MONEY_STEP_VND);
 }
 
@@ -1562,8 +1617,15 @@ function roundDecimalToThousand(value: Prisma.Decimal): Prisma.Decimal {
  *     giá riêng). Bảng kê thiếu `dayAmounts` (snapshot cũ) ⇒ chia đều tiền thuê.
  *   - Dài hạn: số ngày LỊCH của gói — đếm trên lịch đã chốt, chưa chốt thì ước từ hôm nay (báo giá
  *     dài hạn lúc đó vốn là tạm tính, không thu tiền). Không bao giờ `tháng × 30` (ADR 0011).
+ *
+ * `dayAmountsListed` = mảng là giá NIÊM YẾT thật từng ngày (đóng băng được vào bảng phí); `false` =
+ * mảng chia đều, chỉ để làm mẫu số hoa hồng.
  */
-export function feeDaysOf(trip: FeeTrip): { rentalDays: number; dayAmounts: string[] } {
+export function feeDaysOf(trip: FeeTrip): {
+  rentalDays: number;
+  dayAmounts: string[];
+  dayAmountsListed: boolean;
+} {
   const { breakdown } = trip;
   const rent = new Prisma.Decimal(promoEligibleAmount(breakdown.rows));
 
@@ -1575,15 +1637,14 @@ export function feeDaysOf(trip: FeeTrip): { rentalDays: number; dayAmounts: stri
       1,
       Math.round((returnAt.getTime() - pickupAt.getTime()) / MS_PER_DAY),
     );
-    return { rentalDays, dayAmounts: splitEvenly(rent, rentalDays) };
+    return { rentalDays, dayAmounts: splitEvenly(rent, rentalDays), dayAmountsListed: false };
   }
 
   const rentalDays = Math.max(1, breakdown.days ?? 1);
-  const dayAmounts =
-    breakdown.dayAmounts && breakdown.dayAmounts.length === rentalDays
-      ? breakdown.dayAmounts
-      : splitEvenly(rent, rentalDays);
-  return { rentalDays, dayAmounts };
+  if (breakdown.dayAmounts && breakdown.dayAmounts.length === rentalDays) {
+    return { rentalDays, dayAmounts: breakdown.dayAmounts, dayAmountsListed: true };
+  }
+  return { rentalDays, dayAmounts: splitEvenly(rent, rentalDays), dayAmountsListed: false };
 }
 
 /** Chia `amount` thành `parts` phần VND nguyên; ngày cuối nhận phần dư — `Σ` đúng bằng `amount`. */

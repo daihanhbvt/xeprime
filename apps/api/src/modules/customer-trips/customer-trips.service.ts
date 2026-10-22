@@ -1,6 +1,15 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma, releasePromoRedemption } from '@xeprime/prisma';
-import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
+import {
+  findOpenTripNotReceivedReport,
+  hasOpenSupportCase,
+  Prisma,
+  releasePromoRedemption,
+} from '@xeprime/prisma';
+import {
+  BOOKING_DRIVER_SELECT,
+  toBookingDriverSummary,
+  toRenterDriverSummary,
+} from '../drivers/booking-driver-summary';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -23,6 +32,10 @@ import {
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
+  NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES,
+  SUPPORT_CASE_CATEGORY,
+  handoverGraceEndsAt,
+  notReceivedWindowPhase,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
   PROMO_RELEASE_REASON,
@@ -79,6 +92,7 @@ import { PricingService } from '../pricing/pricing.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { VehicleContractsService } from '../vehicles/vehicle-contracts.service';
+import { SupportService } from '../support/support.service';
 import {
   CustomerTripHandoverEvidenceDto,
   CustomerTripHandoverEvidencePhotoDto,
@@ -168,6 +182,8 @@ export class CustomerTripsService {
     private readonly cancellations: CancellationsService,
     /** GCN bảo hiểm đã cấp của chuyến (ADR 0064) — chỉ đọc. */
     private readonly insuranceRead: InsuranceReadService,
+    /** Báo "Chưa nhận được xe" mở case tranh chấp qua đúng service hỗ trợ (ADR 0066, lớp 1). */
+    private readonly support: SupportService,
   ) {}
 
   /**
@@ -269,8 +285,7 @@ export class CustomerTripsService {
       // một chủ xe không thể nói hai câu khác nhau về việc có được thấy SĐT khách hay không.
       hostPackageTrack: membership
         ? tenantUsesManagePortal({
-            billingMode: resolveEffectiveBilling(membership.tenant.subscriptions, now)
-              .billingMode,
+            billingMode: resolveEffectiveBilling(membership.tenant.subscriptions, now).billingMode,
           })
         : false,
     };
@@ -410,9 +425,16 @@ export class CustomerTripsService {
       c.certificate ? [c.certificate] : [],
     );
     const base = toListItem(row, surcharges, scope, estimates, now);
+    const openDispute = booking
+      ? await this.hasOpenDispute(base.role as TripRole, booking.id, viewerUserId)
+      : false;
+    const notReceived = notReceivedReportState(base.role as TripRole, booking, openDispute, now);
 
     return {
       ...base,
+      openDispute,
+      canReportNotReceived: notReceived.canReport,
+      notReceivedReportUntil: notReceived.until,
       customerNote: row.note,
       // Liên hệ CHÍNH người thuê đã khai — phía chủ xe không cần (đã có `renter`, có gác).
       contact:
@@ -900,6 +922,84 @@ export class CustomerTripsService {
   }
 
   /**
+   * Khách báo "CHƯA NHẬN ĐƯỢC XE" — lớp 1 chống treo đơn (ADR 0066, đặc tả 02 §3.2).
+   *
+   * Không đổi trạng thái đơn (không có `DISPUTED`): một case `dispute` khẩn gắn đơn là đủ, vì
+   * `HoldSettlementService` đã GIỮ quyết toán khi đơn có tranh chấp mở, và case rơi thẳng vào hàng
+   * đợi hỗ trợ của nền tảng.
+   *
+   * Cửa sổ `[pickupAt, pickupAt + HANDOVER_CONFIRMATION_GRACE_MINUTES]`, đơn `reserved` (chưa ai
+   * xác nhận giao) hoặc `active` (chủ xe đã xác nhận giao nhưng khách nói không nhận được). Bấm lại
+   * trả về đúng chuyến đó, không mở thêm case. Chuyến của người khác là 404 — quyền nằm trong WHERE.
+   *
+   * Trạng thái đơn và cửa sổ được kiểm SAU khi khoá dòng đơn (`FOR UPDATE`), trong CÙNG
+   * transaction với việc mở case: kiểm trước transaction thì chủ xe ghi "khách không đến" (hay huỷ,
+   * hay xoá đơn) chen vào giữa vẫn để lọt một case tranh chấp lên một đơn đã sang trạng thái khác.
+   * Khoá này cũng là thứ xếp hàng hai lượt bấm song song (xem `openTripNotReceivedWithinTx`).
+   */
+  async reportNotReceived(customerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: { id: true, status: true, bookingId: true },
+    });
+    if (!row) throw tripNotFound();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (row.bookingId) {
+        await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${row.bookingId} FOR UPDATE`;
+      }
+      const locked = row.bookingId
+        ? await tx.booking.findUnique({
+            where: { id: row.bookingId },
+            select: {
+              id: true,
+              tenantId: true,
+              code: true,
+              status: true,
+              pickupAt: true,
+              deletedAt: true,
+            },
+          })
+        : null;
+      // `now` đọc SAU khoá — lượt chờ khoá có thể đã đẩy giờ báo qua mốc đóng cửa sổ.
+      const booking = assertNotReceivedReportable(
+        row.status as BookingRequestStatus,
+        locked,
+        new Date(),
+      );
+      await this.support.openTripNotReceivedWithinTx(tx, customerUserId, {
+        id: booking.id,
+        tenantId: booking.tenantId,
+        code: booking.code,
+        bookingRequestId: row.id,
+      });
+    });
+    return this.detail(customerUserId, id);
+  }
+
+  /**
+   * Cờ "đang có khiếu nại" của trang chuyến — câu trả lời THEO VAI, vì hai vai đọc hai câu khác:
+   *
+   *  - Người đi thuê: báo cáo "chưa nhận được xe" CÒN MỞ của CHÍNH họ. Khối hiện ra nói "khiếu nại
+   *    chưa nhận được xe của bạn đang được xử lý" và ẩn nút báo — một tranh chấp gian hàng mở hay
+   *    case hệ thống `handover_unconfirmed` không phải lời báo đó, nên không được bật cờ (và không
+   *    được chặn khách báo).
+   *  - Chủ xe: tranh chấp (`dispute`) còn mở trên chuyến, ai mở cũng vậy — "chuyến đang có khiếu
+   *    nại". Cố ý không gồm `handover_unconfirmed`: đó là việc hệ thống chờ xác minh, không phải lời
+   *    khiếu nại; gian hàng đã được báo riêng khi worker mở nó.
+   */
+  private async hasOpenDispute(
+    role: TripRole,
+    bookingId: string,
+    viewerUserId: string,
+  ): Promise<boolean> {
+    if (role === TRIP_ROLE.RENTER) {
+      return (await findOpenTripNotReceivedReport(this.prisma, bookingId, viewerUserId)) !== null;
+    }
+    return hasOpenSupportCase(this.prisma, bookingId, [SUPPORT_CASE_CATEGORY.DISPUTE]);
+  }
+
+  /**
    * Chuyến của CHÍNH người đang đăng nhập, rút còn hai định danh mà mọi truy vấn phụ cần.
    *
    * `tenantId` lấy từ ĐƠN chứ không từ yêu cầu: đơn mới là thứ các bảng vận hành (bàn giao,
@@ -1234,8 +1334,16 @@ function toListItem(
         ? row.respondBy.toISOString()
         : null,
     canContact,
-    // Chỉ phía CHỦ XE thấy tài xế đang gán — khách nhìn chuyến của mình không cần lượt gán nội bộ.
-    driver: role === TRIP_ROLE.HOST && booking ? toBookingDriverSummary(booking) : null,
+    /*
+     * Phía CHỦ XE thấy lượt gán đầy đủ (chờ / đã nhận, hạn trả lời). Phía KHÁCH chỉ thấy người SẼ
+     * đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067); chưa có thì `null`
+     * và trang chuyến nói "Đang sắp xếp tài xế".
+     */
+    driver: booking
+      ? role === TRIP_ROLE.HOST
+        ? toBookingDriverSummary(booking)
+        : toRenterDriverSummary(booking)
+      : null,
     vehicle: {
       id: row.vehicle.id,
       name: row.vehicle.name,
@@ -1537,6 +1645,79 @@ function evidencePhotoNotFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy ảnh hiện trạng của chuyến này',
   });
+}
+
+/**
+ * Nút "Chưa nhận được xe" của trang chuyến (ADR 0066, lớp 1) — server tính, client chỉ đọc.
+ *
+ * `until` = mốc đóng cửa sổ khi chuyến CÒN có thể báo (chưa tới giờ hoặc đang trong cửa sổ), để
+ * giao diện tự ẩn nút đúng lúc mà không phải hỏi lại; `canReport` chỉ đúng khi đang TRONG cửa sổ.
+ * Chỉ người đi thuê, chỉ khi chưa có tranh chấp mở — đã khiếu nại rồi thì giao diện hiện trạng thái
+ * xử lý thay cho nút.
+ */
+function notReceivedReportState(
+  role: TripRole,
+  booking: { status: string; pickupAt: Date; deletedAt?: Date | null } | null,
+  openDispute: boolean,
+  now: Date,
+): { canReport: boolean; until: string | null } {
+  if (role !== TRIP_ROLE.RENTER || !booking || openDispute) {
+    return { canReport: false, until: null };
+  }
+  if (!NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES.includes(booking.status as BookingStatus)) {
+    return { canReport: false, until: null };
+  }
+  const phase = notReceivedWindowPhase(booking.pickupAt, now);
+  if (phase === 'closed') return { canReport: false, until: null };
+  return {
+    canReport: phase === 'open',
+    until: handoverGraceEndsAt(booking.pickupAt).toISOString(),
+  };
+}
+
+/**
+ * Cổng của `reportNotReceived` — chạy trên dòng đơn ĐÃ KHOÁ. Trả về đơn khi báo được; ngoài ra
+ * ném đúng mã: sai trạng thái / đơn đã xoá ⇒ `TRIP_NOT_RECEIVED_NOT_ALLOWED`, ngoài cửa sổ ⇒
+ * `TRIP_NOT_RECEIVED_TOO_EARLY` / `TRIP_NOT_RECEIVED_WINDOW_CLOSED`.
+ */
+function assertNotReceivedReportable<
+  B extends { status: string; pickupAt: Date; deletedAt: Date | null },
+>(requestStatus: BookingRequestStatus, locked: B | null, now: Date): B {
+  const booking = locked && !locked.deletedAt ? locked : null;
+  const bookingStatus = (booking?.status as BookingStatus | undefined) ?? null;
+  if (
+    !booking ||
+    !bookingStatus ||
+    !NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES.includes(bookingStatus)
+  ) {
+    throw new ConflictException({
+      code: API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED,
+      message: 'Chuyến này không còn báo "chưa nhận được xe" được',
+      details: { stage: customerTripStage({ requestStatus, bookingStatus }) },
+    });
+  }
+
+  const phase = notReceivedWindowPhase(booking.pickupAt, now);
+  if (phase !== 'open') {
+    const details = {
+      windowStartsAt: booking.pickupAt.toISOString(),
+      windowEndsAt: handoverGraceEndsAt(booking.pickupAt).toISOString(),
+    };
+    throw new ConflictException(
+      phase === 'before'
+        ? {
+            code: API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY,
+            message: 'Chưa tới giờ nhận xe',
+            details,
+          }
+        : {
+            code: API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED,
+            message: 'Đã quá thời hạn báo chưa nhận được xe',
+            details,
+          },
+    );
+  }
+  return booking;
 }
 
 function tripNotFound(): NotFoundException {

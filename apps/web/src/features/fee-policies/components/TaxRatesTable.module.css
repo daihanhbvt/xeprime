@@ -1,0 +1,93 @@
+/* Bảng mức khấu trừ thuế theo loại dịch vụ — cùng dáng bảng nấc hoa hồng (CommissionTiersField). */
+
+.table {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  margin-bottom: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) minmax(96px, 1fr) minmax(96px, 1fr) minmax(64px, 0.6fr);
+  align-items: center;
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.row {
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.row > * {
+  min-width: 0;
+}
+
+/* Nhãn từng ô vẫn có cho trình đọc màn hình; hàng tiêu đề lo phần nhãn nhìn thấy. */
+.row :global(.ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.row :global(.ant-form-item) {
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.row :global(.ant-form-item-row) {
+  display: block;
+}
+
+.service {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--xp-color-text);
+}
+
+.category {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.value,
+.total {
+  font-variant-numeric: tabular-nums;
+}
+
+.total,
+.totalHead {
+  text-align: right;
+}
+
+.total {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+@media (max-width: 575px) {
+  .head,
+  .row {
+    grid-template-columns: minmax(84px, 1fr) minmax(72px, 1fr) minmax(72px, 1fr) 52px;
+    padding: var(--xp-space-sm);
+    gap: var(--xp-space-sm);
+  }
+}

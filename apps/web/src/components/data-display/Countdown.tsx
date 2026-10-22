@@ -7,6 +7,7 @@ import {
   countdownSegment,
   countdownState,
   holdRemainingMs,
+  longClockText,
   type CountdownState,
 } from '@xeprime/types';
 import styles from './Countdown.module.css';
@@ -104,7 +105,11 @@ export function Countdown({
         <>
           {labels.remaining}{' '}
           <span className={styles.clock} suppressHydrationWarning>
-            {clockText(shown)}
+            {/*
+              Có chặng ⇒ mỗi chặng tối đa 60′, `m:ss`. Đếm một mạch ⇒ cửa sổ có thể dài hơn một
+              giờ (hạn phản hồi tới 4 giờ, huỷ miễn phí tới 2 giờ — ADR 0066) ⇒ `h:mm:ss`.
+            */}
+            {segment ? clockText(shown) : longClockText(shown)}
           </span>
           {segment && segment.total > 1 && labels.segment ? (
             <span className={styles.segment} suppressHydrationWarning>

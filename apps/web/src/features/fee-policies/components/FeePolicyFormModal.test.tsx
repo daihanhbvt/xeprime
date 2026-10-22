@@ -50,9 +50,12 @@ describe('FeePolicyFormModal — tạo bản nháp', () => {
     expect((screen.getByLabelText('Phí sàn — Ô tô') as HTMLInputElement).value).toBe('50.000');
     expect((screen.getByLabelText('Phí sàn — Xe máy') as HTMLInputElement).value).toBe('30.000');
     expect(
-      (screen.getByLabelText('Tỉ lệ tiền giữ chỗ (% trên tổng khách trả)') as HTMLInputElement)
-        .value,
-    ).toBe('30');
+      (
+        screen.getByLabelText(
+          'Phần giữ chỗ của chủ xe (% trên tiền thuê, không gồm phí giao xe)',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe('15');
     expect((screen.getByLabelText('Nấc 2: từ ngày') as HTMLInputElement).value).toBe('3');
     // 2 ngày × 10% + 3 ngày × 7% của 1.000.000đ.
     expect(screen.getByText(/H = 410\.000/)).toBeTruthy();
@@ -84,7 +87,8 @@ describe('FeePolicyFormModal — tạo bản nháp', () => {
     const body = create.mutate.mock.calls[0]![0];
     expect(body).toMatchObject({
       name: 'Luồng tiền v2',
-      depositPercent: 30,
+      depositPercent: 15,
+      depositMinAmount: '0',
       customerPlatformFee: { car: '50000', motorbike: '30000' },
       ownerCommissionTiers: [
         { fromDay: 1, percent: 10 },
@@ -97,5 +101,37 @@ describe('FeePolicyFormModal — tạo bản nháp', () => {
       insurancePartnerName: null,
     });
     expect(body).not.toHaveProperty('serviceFeePercent');
+    // Thuế tắt mặc định ⇒ không gửi bảng mức / căn cứ.
+    expect(body).toMatchObject({ taxEnabled: false, taxRates: null, taxLegalBasis: null });
+  });
+
+  it('bật thuế: bảng ba loại dịch vụ × GTGT/TNCN có cột Cộng, căn cứ pháp lý, phạm vi áp dụng', async () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText('Tên'), { target: { value: 'Thuế NĐ 117' } });
+    fireEvent.click(screen.getByRole('switch', { name: /^Bật khấu trừ, nộp thay thuế cho chủ xe/ }));
+
+    expect((screen.getByLabelText('Căn cứ pháp lý') as HTMLInputElement).value).toBe(
+      'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',
+    );
+    expect((screen.getByLabelText('Tự lái: thuế GTGT (%)') as HTMLInputElement).value).toBe('5.00');
+    expect((screen.getByLabelText('Có tài xế: thuế TNCN (%)') as HTMLInputElement).value).toBe('1.50');
+    // Cột Cộng: 7% · 7% · 4,5%.
+    expect(screen.getAllByText('7%')).toHaveLength(2);
+    expect(screen.getByText('4,5%')).toBeTruthy();
+    expect(
+      screen.getByText('Áp dụng cho: cá nhân, hộ kinh doanh · Doanh nghiệp: không khấu trừ'),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(create.mutate).toHaveBeenCalledTimes(1));
+    expect(create.mutate.mock.calls[0]![0]).toMatchObject({
+      taxEnabled: true,
+      taxLegalBasis: 'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',
+      taxRates: {
+        self_drive: { vatPercent: 5, pitPercent: 2 },
+        long_term: { vatPercent: 5, pitPercent: 2 },
+        with_driver: { vatPercent: 3, pitPercent: 1.5 },
+      },
+    });
   });
 });

@@ -55,7 +55,6 @@ const modal = vi.hoisted(() => ({
   open: false,
   plan: null as Plan | null,
   template: null as Plan | null,
-  allowCommission: undefined as boolean | undefined,
 }));
 
 vi.mock('@/features/admin-plans/components/PlanFormModal', () => ({
@@ -63,7 +62,6 @@ vi.mock('@/features/admin-plans/components/PlanFormModal', () => ({
     open: boolean;
     plan: Plan | null;
     template: Plan | null;
-    allowCommission: boolean;
   }) => {
     Object.assign(modal, props);
     if (!props.open) return null;
@@ -169,7 +167,7 @@ beforeEach(() => {
   setStatus.mutate.mockReset();
   setStatus.isPending = false;
   setStatus.variables = undefined;
-  Object.assign(modal, { open: false, plan: null, template: null, allowCommission: undefined });
+  Object.assign(modal, { open: false, plan: null, template: null });
   setQuery();
 });
 
@@ -253,7 +251,7 @@ describe('/manage/admin/plans — bảng', () => {
     expect(table().getByText('/ 6 tháng')).toBeTruthy();
   });
 
-  it('tuyến hoa hồng: % / chuyến và trần Owner Lite — KHÔNG "Không giới hạn"', () => {
+  it('tuyến hoa hồng: không phí thuê bao, hoa hồng theo Chính sách phí, trần Owner Lite', () => {
     renderPageWith([
       plan(
         { billingMode: 'commission', commissionPercent: 10 },
@@ -262,8 +260,10 @@ describe('/manage/admin/plans — bảng', () => {
     ]);
 
     expect(table().getByText('Hoa hồng theo chuyến')).toBeTruthy();
-    expect(table().getByText('10%')).toBeTruthy();
-    expect(table().getByText('/ chuyến')).toBeTruthy();
+    // `commissionPercent` là cột di sản — bảng KHÔNG in nó (ADR 0064 điều 3).
+    expect(table().queryByText('10%')).toBeNull();
+    expect(table().getByText('Không phí thuê bao')).toBeTruthy();
+    expect(table().getByText('hoa hồng theo Chính sách phí')).toBeTruthy();
     expect(table().getByText('Tối đa 3 xe')).toBeTruthy();
     // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1).
     expect(table().queryByText(/chi nhánh/)).toBeNull();
@@ -343,17 +343,11 @@ describe('/manage/admin/plans — tạo, sửa, nhân bản', () => {
     expect(screen.getByTestId('plan-form').textContent).toBe('new');
   });
 
-  it('"Tạo gói dịch vụ" mở form rỗng; đã có tuyến hoa hồng thì KHÔNG cho chọn hoa hồng', () => {
+  it('"Tạo gói dịch vụ" mở form rỗng', () => {
     renderPageWith([COMMISSION, plan()]);
 
     fireEvent.click(screen.getByRole('button', { name: /Tạo gói dịch vụ/ }));
     expect(screen.getByTestId('plan-form').textContent).toBe('new');
-    expect(modal.allowCommission).toBe(false);
-  });
-
-  it('danh mục CHƯA có tuyến hoa hồng thì cho chọn', () => {
-    renderPageWith([plan()]);
-    expect(modal.allowCommission).toBe(true);
   });
 
   it('"Chỉnh sửa" mở form với đúng gói', () => {

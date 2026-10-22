@@ -23,8 +23,13 @@ import { pumpOutbox } from './jobs/outbox-pump';
 import { projectBadges } from './jobs/badge-projection';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
+import {
+  sweepDriverAssignmentExpiry,
+  sweepDriverMissingAlerts,
+} from './jobs/driver-assignment-expiry';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
+import { sweepHandoverOverdue } from './jobs/handover-overdue';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
@@ -66,8 +71,8 @@ const PUMP_INTERVAL_MS = 2_000;
 const RETENTION_INTERVAL_MS = 60 * 60 * 1_000;
 /**
  * Nhịp quét hạn phản hồi. Một phút là độ trễ tối đa mà một mốc phải chịu — đủ nhỏ so với cửa
- * sổ 60 phút để "còn 15 phút" vẫn là một câu đúng, đủ lớn để không biến worker thành một vòng
- * lặp bận trên một bảng mà 99% thời gian không có gì để làm (index một phần lo phần còn lại).
+ * sổ ngắn nhất (15 phút, ADR 0066) để "còn 15 phút" vẫn là một câu đúng, đủ lớn để không biến
+ * worker thành một vòng lặp bận trên một bảng mà 99% thời gian không có gì để làm (index một phần lo phần còn lại).
  */
 const DEADLINE_INTERVAL_MS = 60 * 1_000;
 /**
@@ -245,7 +250,9 @@ async function main(): Promise<void> {
     logger: { warn: (message, meta) => console.warn(message, meta ?? '') },
   });
   if (insurancePartner.configured) {
-    console.warn('bảo hiểm: INSURANCE_PARTNER=mic_mock — GCN GIẢ LẬP (TEST-…), không có hiệu lực thật');
+    console.warn(
+      'bảo hiểm: INSURANCE_PARTNER=mic_mock — GCN GIẢ LẬP (TEST-…), không có hiệu lực thật',
+    );
   }
   await prisma.$connect();
   healthServer = startHealthServer(health);
@@ -263,6 +270,21 @@ async function main(): Promise<void> {
             `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}`,
           );
         }
+        /*
+         * Hạn tài xế trả lời lượt gán (ADR 0066) — cùng họ "hạn phản hồi", cùng nhịp một phút (hạn
+         * ngắn nhất là 15′), nên chạy chung vòng lặp + khoá thay vì giành thêm một chỗ trong pool.
+         */
+        const drivers = await sweepDriverAssignmentExpiry(prisma);
+        if (drivers.expired) {
+          console.log(`tài xế: trả ${drivers.expired} lượt gán quá hạn trả lời về bên thuê`);
+        }
+        // Nhắc khẩn chuyến sắp nhận chưa có ai phủ (ADR 0067) — cùng họ tài xế, cùng nhịp/khoá. Chạy
+        // SAU phép trả lượt quá hạn: đơn vừa bị trả lượt trong cửa sổ đã được đánh dấu "đã báo" cùng
+        // lúc (`markDriverMissingAlertCovered` — tin hết hạn đã đòi gán lại), không nhận tin thứ hai.
+        const missing = await sweepDriverMissingAlerts(prisma);
+        if (missing.alerted) {
+          console.log(`tài xế: nhắc khẩn ${missing.alerted} chuyến sắp nhận chưa có tài xế`);
+        }
       },
       { critical: true },
     ),
@@ -275,22 +297,27 @@ async function main(): Promise<void> {
      * (KHÔNG gỡ xe khỏi chợ), void hoá đơn quá hạn, chào gói khi tiêu hết lượt miễn phí.
      * Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
      */
-    loop('vòng đời gói', LOCK_SUBSCRIPTION_LIFECYCLE, SUBSCRIPTION_LIFECYCLE_INTERVAL_MS, async () => {
-      const result = await sweepSubscriptionLifecycle(prisma);
-      if (
-        result.renewalReminders ||
-        result.expiryNotices ||
-        result.lapsed ||
-        result.invoicesVoided ||
-        result.freeTripOffers ||
-        result.graceGuides
-      ) {
-        console.log(
-          `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
-            `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}, email ân hạn ${result.graceGuides}`,
-        );
-      }
-    }),
+    loop(
+      'vòng đời gói',
+      LOCK_SUBSCRIPTION_LIFECYCLE,
+      SUBSCRIPTION_LIFECYCLE_INTERVAL_MS,
+      async () => {
+        const result = await sweepSubscriptionLifecycle(prisma);
+        if (
+          result.renewalReminders ||
+          result.expiryNotices ||
+          result.lapsed ||
+          result.invoicesVoided ||
+          result.freeTripOffers ||
+          result.graceGuides
+        ) {
+          console.log(
+            `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
+              `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}, email ân hạn ${result.graceGuides}`,
+          );
+        }
+      },
+    ),
     /*
      * Tiền giữ chỗ (R3 — ADR 0028 · ADR 0044 điều 3): nhắc khách ở mốc còn 60 và 15 phút, rồi khi
      * quá hạn thì lật `expired`, yêu cầu `hold_expired`, nhả lịch và báo hai bên. KHÔNG còn nhánh
@@ -305,6 +332,15 @@ async function main(): Promise<void> {
         const reminders = result.firstReminders + result.finalReminders;
         if (result.expired || reminders) {
           console.log(`giữ chỗ: nhắc ${reminders}, hết hạn ${result.expired}`);
+        }
+        /*
+         * Chống treo đơn ở mốc bàn giao (ADR 0066, lớp 3) — cùng nhịp phút, cùng loại việc "tiền
+         * của một chuyến theo đồng hồ", nên đi chung vòng lặp thay vì chiếm thêm một khoá + một
+         * chỗ trong pool. Idempotent bằng cột claim `handover_overdue_at`.
+         */
+        const overdue = await sweepHandoverOverdue(prisma);
+        if (overdue.flagged) {
+          console.log(`bàn giao: ${overdue.flagged} chuyến quá ân hạn — đã mở case xác minh`);
         }
       },
       { critical: true },
@@ -441,9 +477,15 @@ async function main(): Promise<void> {
     health.limitGauge('badgeQueueLagMs', BADGE_LAG_UNHEALTHY_MS);
 
     jobs.push(
-      loop('outbox pump', LOCK_PUMP, PUMP_INTERVAL_MS, async () => {
-        await pumpOutbox(prisma);
-      }, { critical: true }),
+      loop(
+        'outbox pump',
+        LOCK_PUMP,
+        PUMP_INTERVAL_MS,
+        async () => {
+          await pumpOutbox(prisma);
+        },
+        { critical: true },
+      ),
       loop('retention', LOCK_RETENTION, RETENTION_INTERVAL_MS, async () => {
         const trimmed = await runRetention(prisma);
         if (trimmed > 0) console.log(`retention: dọn ${trimmed} tin cũ khỏi Firestore`);

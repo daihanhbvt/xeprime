@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  BILLING_MODE,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
@@ -16,11 +17,14 @@ import {
   WALLET_ENTRY_SOURCE,
   WALLET_OWNER_TYPE,
   WALLET_STATEMENT_UNIT,
+  computeCustomerFees,
+  type CustomerFeeBreakdown,
 } from '@xeprime/types';
 import { HostMetricsService } from '../src/modules/host-metrics/host-metrics.service';
 import { WalletStatementService } from '../src/modules/wallet/wallet-statement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { FEE_POLICY_ND117 } from './helpers/fee-snapshot';
 
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH của gian hàng — trên PostgreSQL THẬT.
@@ -121,9 +125,13 @@ async function seedTrip(opts: {
   tax: number;
   /** Hoa hồng `H` đã đóng băng trên đơn (tuyến hoa hồng — ADR 0064 điều 3). Mặc định 0. */
   commission?: number;
+  /** Phí giao `G` — nằm TRONG `total` (như `bookings.total_amount`), chủ xe nhận tận tay. */
+  delivery?: number;
   days?: number;
   longTermMonthly?: string;
   withSnapshot?: boolean;
+  /** Bảng phí đóng băng (`snapshot.fees`) — đơn đi qua chợ. Vắng ⇒ đơn gian hàng lập tay. */
+  fees?: CustomerFeeBreakdown;
   status?: string;
 }): Promise<string> {
   const id = newId();
@@ -147,7 +155,8 @@ async function seedTrip(opts: {
       pickupAt,
       returnAt,
       ...(opts.actualReturnAt === undefined ? {} : { actualReturnAt: opts.actualReturnAt }),
-      baseAmount: dec(opts.total),
+      baseAmount: dec(opts.total - (opts.delivery ?? 0)),
+      deliveryFee: dec(opts.delivery ?? 0),
       totalAmount: dec(opts.total),
       taxAmount: dec(opts.tax),
       ownerCommissionAmount: dec(opts.commission ?? 0),
@@ -182,6 +191,7 @@ async function seedTrip(opts: {
                   rows: [],
                   totalAmount: String(opts.total),
                   depositAmount: '0',
+                  ...(opts.fees ? { fees: opts.fees as unknown as Prisma.InputJsonObject } : {}),
                   policy: null,
                 },
           }
@@ -189,6 +199,48 @@ async function seedTrip(opts: {
     },
   });
   return id;
+}
+
+/**
+ * Một chuyến ĐI QUA CHỢ: bảng phí thật (`computeCustomerFees`, chính sách NĐ 117) đóng băng vào
+ * snapshot, và các cột tiền chép từ CHÍNH bảng đó — đúng như `feeColumns` lúc đơn ra đời.
+ */
+async function seedQuotedTrip(opts: {
+  returnAt: Date;
+  /** Giá thuê TỪNG ngày (sau khuyến mãi). `null` ⇒ bảng phí cũ không mang giá từng ngày. */
+  dayAmounts: string[] | null;
+  /** Số ngày — bắt buộc khi `dayAmounts = null`. */
+  days?: number;
+  rent?: number;
+  delivery?: number;
+}): Promise<{ id: string; fees: CustomerFeeBreakdown }> {
+  const days = opts.dayAmounts?.length ?? opts.days ?? 1;
+  const rent = opts.rent ?? (opts.dayAmounts ?? []).reduce((sum, day) => sum + Number(day), 0);
+  const delivery = opts.delivery ?? 0;
+  const computed = computeCustomerFees({
+    billingMode: BILLING_MODE.COMMISSION,
+    policy: FEE_POLICY_ND117,
+    vehicleType: VEHICLE_TYPE.CAR,
+    baseAmount: String(rent + delivery),
+    deliveryAmount: String(delivery),
+    rentalDays: days,
+    ...(opts.dayAmounts ? { dayAmounts: opts.dayAmounts } : {}),
+    insuranceOffered: false,
+    serviceType: SERVICE_TYPE.SELF_DRIVE,
+  });
+  // Đi qua JSON như cột jsonb — snapshot đọc lại từ DB đúng hình dạng này.
+  const fees = JSON.parse(JSON.stringify(computed)) as CustomerFeeBreakdown;
+  const id = await seedTrip({
+    returnAt: opts.returnAt,
+    total: rent + delivery,
+    delivery,
+    deposit: Number(fees.depositAmount),
+    tax: Number(fees.taxAmount),
+    commission: Number(fees.ownerCommissionAmount ?? 0),
+    days,
+    fees,
+  });
+  return { id, fees };
 }
 
 /** Ghi có vào ví gian hàng cho một chuyến — đúng đường mà `hold_release` đi. */
@@ -385,8 +437,9 @@ describe('Cộng dồn của kỳ', () => {
     expect(december.totals.revenueTotal).toBe('4000000');
     expect(december.totals.ownerCommissionTotal).toBe('0');
     expect(december.totals.taxTotal).toBe('200000');
-    // `B − D` = 4.000.000 − 1.200.000
+    // `R − D − H` = 4.000.000 − 1.200.000 − 0
     expect(december.totals.payAtPickupTotal).toBe('2800000');
+    expect(december.totals.deliveryTotal).toBe('0');
     expect(december.totals.subscriptionFeeTotal).toBe('1000000');
     // 4.000.000 − 200.000 − 1.000.000
     expect(december.totals.ownerIncome).toBe('2800000');
@@ -415,6 +468,70 @@ describe('Cộng dồn của kỳ', () => {
     expect(january.totals.ownerCommissionTotal).toBe('140000');
     // 2.000.000 − H 140.000 − T 200.000 − phí gói 0
     expect(january.totals.ownerIncome).toBe('1660000');
+    /*
+     * `H` nằm TRONG khoản online (cộng thêm trên `D`), nên phần khách trả tay là `R − D − H` —
+     * bản trước 22/10/2026 tính `B − D` = 1.400.000, đếm hoa hồng hai lần.
+     */
+    expect(january.items[0]!.payAtPickupAmount).toBe('1260000');
+    expect(january.totals.payAtPickupTotal).toBe('1260000');
+  });
+
+  /**
+   * Bảng cộng ví chủ xe (ADR 0068 điều 5 · đặc tả 05 §6.1), có thêm phí giao `G` 100.000đ:
+   * 1 ngày tự lái 780.000đ, tuyến hoa hồng, chủ xe cá nhân.
+   *
+   * Phí giao đứng RIÊNG — không vào doanh thu, thu nhập hay phần trả tay — và đẳng thức
+   * `thu nhập − khách trả trực tiếp = thay đổi số dư` đúng tới đồng.
+   */
+  maybe('đặc tả 05 §6.1: doanh thu/thu nhập không gồm phí giao, a − b = D − T', async () => {
+    const { id: trip } = await seedQuotedTrip({
+      returnAt: new Date('2027-02-10T03:00:00.000Z'),
+      dayAmounts: ['780000'],
+      delivery: 100_000,
+    });
+    await creditTrip(trip, 62_400);
+
+    const february = await statement.tenantStatement(tenantId, owner(), { period: '2027-02' });
+    const row = february.items.find((i) => i.bookingId === trip)!;
+    expect(row.revenueAmount).toBe('780000');
+    expect(row.deliveryAmount).toBe('100000');
+    expect(row.ownerCommissionAmount).toBe('78000');
+    expect(row.taxAmount).toBe('54600');
+    expect(row.ownerIncomeAmount).toBe('647400');
+    expect(row.payAtPickupAmount).toBe('585000');
+    expect(row.balanceChange).toBe('62400');
+    expect(Number(row.ownerIncomeAmount) - Number(row.payAtPickupAmount)).toBe(
+      Number(row.balanceChange),
+    );
+    // Đơn giá là giá NIÊM YẾT của ngày, không chia tổng gồm phí giao.
+    expect(row.unitAmount).toBe('780000');
+    expect(row.unitKind).toBe(WALLET_STATEMENT_UNIT.DAY);
+
+    /*
+     * Bảng cộng ví của dòng sao kê — CÙNG `ownerPayoutOf` với hộp duyệt và chi tiết đơn, và các
+     * trường phẳng ở trên chép từ chính nó. Phí giao không nằm trong bảng.
+     */
+    expect(row.ownerPayout).toMatchObject({
+      rentAmount: '780000',
+      rentalDays: 1,
+      unitAmount: '780000',
+      ownerCommissionAmount: '78000',
+      taxAmount: '54600',
+      vatAmount: '39000',
+      pitAmount: '15600',
+      vatPercent: 5,
+      pitPercent: 2,
+      ownerNetAmount: '647400',
+      payAtPickupRentAmount: '585000',
+      ownerPayableAmount: '62400',
+      collectsHold: true,
+    });
+
+    expect(february.totals.revenueTotal).toBe('780000');
+    expect(february.totals.deliveryTotal).toBe('100000');
+    expect(february.totals.payAtPickupTotal).toBe('585000');
+    expect(february.totals.ownerIncome).toBe('647400');
+    expect(february.totals.balanceChangeTotal).toBe('62400');
   });
 
   /** Sổ là nguồn sự thật của cột số dư: một bút toán đảo phải kéo con số xuống. */
@@ -452,12 +569,9 @@ describe('Cộng dồn của kỳ', () => {
 
 describe('Đơn giá đọc từ snapshot', () => {
   maybe('đơn theo ngày ⇒ đơn giá NGÀY; đơn dài hạn ⇒ đơn giá THÁNG', async () => {
-    const daily = await seedTrip({
+    const { id: daily } = await seedQuotedTrip({
       returnAt: new Date('2026-07-10T03:00:00.000Z'),
-      total: 4_050_000,
-      deposit: 0,
-      tax: 0,
-      days: 3,
+      dayAmounts: ['1350000', '1350000', '1350000'],
     });
     const longTerm = await seedTrip({
       returnAt: new Date('2026-07-20T03:00:00.000Z'),
@@ -490,6 +604,53 @@ describe('Đơn giá đọc từ snapshot', () => {
     const row = june.items.find((i) => i.bookingId === manual);
     expect(row?.unitAmount).toBeNull();
     expect(row?.unitKind).toBeNull();
+    // Không có bảng phí ⇒ không có bảng cộng ví; các trường phẳng đọc từ cột.
+    expect(row?.ownerPayout).toBeNull();
+    expect(row?.revenueAmount).toBe('900000');
+  });
+
+  /**
+   * Đặc tả 05 §7.1: đơn giá chỉ hiện khi MỌI ngày cùng giá. `R / N` khi các ngày giá khác nhau là
+   * bịa ra một giá chủ xe chưa từng niêm yết.
+   */
+  maybe('giá khác nhau theo ngày, hay không biết giá từng ngày ⇒ đơn giá `null`', async () => {
+    const { id: varied } = await seedQuotedTrip({
+      returnAt: new Date('2027-03-10T03:00:00.000Z'),
+      dayAmounts: ['1300000', '1300000', '1450000'],
+    });
+    const { id: legacy } = await seedQuotedTrip({
+      returnAt: new Date('2027-03-12T03:00:00.000Z'),
+      dayAmounts: null,
+      days: 3,
+      rent: 4_050_000,
+    });
+    // Đơn lập tay, nhiều ngày: không có giá từng ngày ⇒ không chia `R / N`.
+    const manual = await seedTrip({
+      returnAt: new Date('2027-03-14T03:00:00.000Z'),
+      total: 2_700_000,
+      deposit: 0,
+      tax: 0,
+      days: 3,
+    });
+    // Đơn lập tay 1 ngày: tiền thuê CHÍNH LÀ đơn giá.
+    const manualOneDay = await seedTrip({
+      returnAt: new Date('2027-03-16T03:00:00.000Z'),
+      total: 950_000,
+      delivery: 50_000,
+      deposit: 0,
+      tax: 0,
+      days: 1,
+    });
+
+    const march = await statement.tenantStatement(tenantId, owner(), { period: '2027-03' });
+    const rowOf = (id: string) => march.items.find((i) => i.bookingId === id)!;
+    expect(rowOf(varied).unitAmount).toBeNull();
+    expect(rowOf(varied).ownerPayout?.unitAmount).toBeNull();
+    expect(rowOf(varied).revenueAmount).toBe('4050000');
+    expect(rowOf(legacy).unitAmount).toBeNull();
+    expect(rowOf(manual).unitAmount).toBeNull();
+    expect(rowOf(manualOneDay).unitAmount).toBe('900000');
+    expect(rowOf(manualOneDay).unitKind).toBe(WALLET_STATEMENT_UNIT.DAY);
   });
 });
 

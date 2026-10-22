@@ -1079,7 +1079,7 @@
       "feeModePerKm": "Per km",
       "tierPerKmLabel": "Price per km for band {index}",
       "perKmUnit": "VND / km",
-      "perKmHint": "Fee = price per km × one-way distance, rounded to the nearest 1,000 VND.",
+      "perKmHint": "Fee = price per km × one-way distance, exact to the dong.",
       "perKmSummary": "{amount}/km"
     },
     "overtime": {

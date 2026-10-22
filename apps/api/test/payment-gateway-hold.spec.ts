@@ -95,6 +95,8 @@ function snapshotOf(): BookingPriceSnapshot {
         depositMinAmount: '0',
         depositMaxPercent: 30,
         taxEnabled: false,
+        taxRates: null,
+        taxLegalBasis: null,
         taxPercent: null,
         taxLabel: null,
         tripInsuranceEnabled: false,

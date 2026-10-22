@@ -81,20 +81,19 @@ export function MarketHeader() {
   const currentLogo = theme === 'dark' ? LOGO.dark : LOGO.light;
 
   const isSearchPage = pathname === ROUTES.SEARCH;
-  const [hiddenOnScroll, setHiddenOnScroll] = useState(false);
+  const [scrolledPast, setScrolledPast] = useState(false);
 
   useEffect(() => {
-    if (!isSearchPage) {
-      setHiddenOnScroll(false);
-      return;
-    }
+    if (!isSearchPage) return;
     const onScroll = () => {
-      setHiddenOnScroll(window.scrollY > 140);
+      setScrolledPast(window.scrollY > 140);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, [isSearchPage]);
+
+  const hiddenOnScroll = isSearchPage && scrolledPast;
 
   return (
     <header className={cx(styles.header, hiddenOnScroll && styles.headerHidden)}>

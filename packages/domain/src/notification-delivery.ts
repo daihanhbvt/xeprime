@@ -225,6 +225,12 @@ export function pushPriority(type: NotificationType): PushPriority {
     case NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED:
     case NOTIFICATION_TYPE.HOLD_REQUESTED:
     case NOTIFICATION_TYPE.HOLD_PAID:
+    case NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED:
+    case NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED:
+    case NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED:
+    case NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING:
+      // Tài xế (ADR 0066): lượt gán có hạn trả lời 15–60′, và khi tài xế từ chối / không phản hồi
+      // thì bên thuê phải gán người khác gấp; chuyến sắp nhận chưa có ai phủ (ADR 0067) cũng vậy.
       return PUSH_PRIORITY.HIGH;
     default:
       return PUSH_PRIORITY.NORMAL;

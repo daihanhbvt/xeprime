@@ -79,6 +79,9 @@
     "duration": "Duration",
     "pickupWish": "Preferred pick-up",
     "pickupMethodLabel": "Pick-up method",
+    "driver": "Driver",
+    "driverArranging": "Arranging your driver",
+    "driverCall": "Call driver {name}",
     "actualBlock": "What actually happened",
     "actualPickup": "Handover received at",
     "actualReturn": "Handover completed at",
@@ -150,6 +153,21 @@
     "cancel": "Cancel trip",
     "contactLocked": "Contact opens once the host approves your request. Anything arranged before that is outside XePrime support."
   },
+  "notReceived": {
+    "title": "Haven't received the vehicle?",
+    "lead": "If the pickup time has passed and you have not received the vehicle, or the host did not show up, let XePrime know before {time}.",
+    "action": "Vehicle not received",
+    "dialogTitle": "Report vehicle not received",
+    "dialogBody": "XePrime will hold all money for this trip (nothing is paid out to the host) and contact both you and the host to verify.",
+    "dialogNote": "Only report this if you really have not received the vehicle. If you have it, ignore this.",
+    "confirm": "Report not received",
+    "keep": "Go back",
+    "success": "Report sent. XePrime will contact you shortly.",
+    "openTitle": "Your vehicle-not-received report is being handled",
+    "openBody": "XePrime is holding the money for this trip and will contact you and the host to verify.",
+    "hostOpenTitle": "This trip has an open complaint",
+    "hostOpenBody": "XePrime is holding the money for this trip and will contact both sides to verify. If you have handed the vehicle over, confirm the handover record (with photos if you have them) so XePrime has evidence to verify."
+  },
   "cancel": {
     "title": "Cancel this trip?",
     "leadPending": "Your request will be withdrawn and the host will be notified. You can send a new request for this car at any time.",
@@ -171,8 +189,8 @@
       "paid": "Reservation payment transferred",
       "refund": "Refunded to Points wallet",
       "forfeit": "Not refunded",
-      "lateBody": "The {insurance} insurance is refunded in full because no policy has been issued yet. The rest of the reservation payment is shared between the owner (for holding the car for you) and XePrime.",
-      "lateBodyNoInsurance": "The reservation payment is shared between the owner (for holding the car for you) and XePrime.",
+      "lateBody": "The {insurance} insurance is refunded in full because no policy has been issued yet. The rest of the reservation payment (the booking fee and the rent paid in advance) is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
+      "lateBodyNoInsurance": "The reservation payment (the booking fee and the rent paid in advance) is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
       "deferred": "This trip has an open dispute — XePrime will settle this amount once it is resolved.",
       "notAllowedTitle": "This trip can no longer be cancelled",
       "notAllowedBody": "The trip has already started or ended. To return the vehicle early, contact the owner to hand it back and settle up."
@@ -252,7 +270,9 @@
     "countdownRemaining": "Time left to pay:",
     "countdownSegment": "hour {index}/{total}",
     "countdownExpired": "Payment window closed",
-    "freeCancelSoon": "This trip starts soon, so the free-cancellation window is shorter than usual: cancel before {time} for a full refund of what you paid.",
+    "freeCancelCountdown": "Free cancellation ends in:",
+    "freeCancelCountdownExpired": "Free cancellation has ended",
+    "freeCancelSoon": "This trip starts soon, so free cancellation ends BEFORE the payment deadline: only cancelling before {time} gets you a full refund of what you paid.",
     "qrCaption": "Scan to transfer",
     "vsDepositHint": "The reservation payment goes to XePrime to confirm the trip and counts towards your rental. It is not the security deposit — that is left with the host at pickup and returned when you bring the car back undamaged.",
     "vsDepositHintLabel": "How the reservation payment differs from the security deposit",
@@ -264,10 +284,10 @@
     "qrFailed": "The QR code didn't load. Use the details beside it to transfer manually.",
     "qrUnavailable": "No QR code is available for this payment. Use the amount and reference beside it to transfer.",
     "payNow": "Pay now",
-    "lateCancelRefund": "After that: the {amount} insurance is refunded in full to your Points wallet; the rest of the reservation payment is not refunded (it is shared between the owner and XePrime).",
-    "lateCancelNoRefund": "After that, the reservation payment is not refunded (it is shared between the owner and XePrime).",
-    "noFreeCancelRefund": "This trip starts very soon, so there is no free-cancellation window. If you cancel after paying, the {amount} insurance is refunded in full to your Points wallet; the rest of the reservation payment is not refunded (it is shared between the owner and XePrime).",
-    "noFreeCancelNoRefund": "This trip starts very soon, so there is no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (it is shared between the owner and XePrime)."
+    "lateCancelRefund": "After that: the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
+    "lateCancelNoRefund": "After that, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
+    "noFreeCancelRefund": "This trip has no free-cancellation window. If you cancel after paying, the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
+    "noFreeCancelNoRefund": "This trip has no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime)."
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -408,13 +428,14 @@
   "pending": {
     "status": {
       "title": "Your request has been received",
-      "body": "The owner has {minutes} minutes to respond. XePrime will notify you as soon as they accept or decline the trip.",
+      "body": "The owner has until {time} to respond. XePrime will notify you as soon as they accept or decline the trip.",
+      "bodyNoDeadline": "The owner is reviewing your request. XePrime will notify you as soon as they accept or decline the trip.",
       "guidanceHold": "The car is not held for you yet. Your trip is only confirmed once the owner accepts it and XePrime receives the full reservation payment.",
       "guidance": "The car is not held for you yet. Your trip is only confirmed once the owner accepts the request."
     },
     "track": {
       "title": "Track your request",
-      "bodyHold": "Nothing to pay yet. Once the owner accepts the trip, you will have {minutes} minutes to pay the reservation amount.",
+      "bodyHold": "Nothing to pay yet. Once the owner accepts the trip, you will have up to {minutes} minutes to pay the reservation amount (less if pick-up is soon).",
       "body": "Nothing to pay yet. XePrime will notify you as soon as the owner responds.",
       "findOther": "Find another car"
     },

@@ -52,7 +52,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: <CloseCircleOutlined />,
   // Khách RÚT lại yêu cầu — khác chiều với shop từ chối, nên khác icon.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: <RollbackOutlined />,
-  // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ-đã-dừng cho lúc hết giờ.
+  // Hạn phản hồi (động, ADR 0066): đồng hồ cho lời nhắc, đồng hồ-đã-dừng cho lúc hết giờ.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: <ClockCircleOutlined />,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: <HourglassOutlined />,
   // Xe đã có khách khác: không ai từ chối, chỉ là chỗ đã hết — icon TRUNG TÍNH, không phải dấu X.
@@ -111,6 +111,10 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: <CheckCircleOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: <CheckCircleOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: <CloseCircleOutlined />,
+  // Hết hạn trả lời (ADR 0066) — đồng hồ cát, cùng họ với "quá hạn phản hồi" của yêu cầu thuê.
+  [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: <HourglassOutlined />,
+  // Chuyến sắp nhận chưa có tài xế (ADR 0067) — việc có đồng hồ, cùng biểu tượng nhắc giờ.
+  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: <ClockCircleOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {
@@ -180,7 +184,8 @@ export function notificationHref(
    * Còn lại CÙNG màn với tuyến gói.
    */
   if (context === 'owner') {
-    if (target === NOTIFICATION_TARGET_TYPE.TENANT) return accountSectionPath(ACCOUNT_SECTION.PROFILE);
+    if (target === NOTIFICATION_TARGET_TYPE.TENANT)
+      return accountSectionPath(ACCOUNT_SECTION.PROFILE);
     if (
       target === NOTIFICATION_TARGET_TYPE.BOOKING ||
       target === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST

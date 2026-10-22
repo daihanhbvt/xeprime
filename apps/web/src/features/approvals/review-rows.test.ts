@@ -84,7 +84,7 @@ describe('pricingPolicyRows — chỉ giá của dịch vụ xe đăng, chỉ ch
     expect(valueOf(rows, 'deliveryFree')).toEqual({ kind: 'measure', value: 5, unit: 'withinKm' });
     expect(valueOf(rows, 'deliveryFees')).toEqual({
       kind: 'deliveryTiers',
-      tiers: [{ fromKm: 5, toKm: 30, fee: '150000', free: false }],
+      tiers: [{ fromKm: 5, toKm: 30, fee: '150000', perKm: null, free: false }],
     });
     expect(valueOf(rows, 'mileageLimit')).toEqual({
       kind: 'measure',
@@ -176,8 +176,8 @@ describe('splitDeliveryTiers', () => {
     ).toEqual({
       freeWithinKm: 3,
       paid: [
-        { fromKm: 3, toKm: 10, fee: '50000', free: false },
-        { fromKm: 10, toKm: 20, fee: '100000', free: false },
+        { fromKm: 3, toKm: 10, fee: '50000', perKm: null, free: false },
+        { fromKm: 10, toKm: 20, fee: '100000', perKm: null, free: false },
       ],
     });
   });
@@ -189,15 +189,15 @@ describe('splitDeliveryTiers', () => {
         { toKm: 10, fee: '0' },
       ]).paid,
     ).toEqual([
-      { fromKm: 0, toKm: 5, fee: '30000', free: false },
-      { fromKm: 5, toKm: 10, fee: '0', free: true },
+      { fromKm: 0, toKm: 5, fee: '30000', perKm: null, free: false },
+      { fromKm: 5, toKm: 10, fee: '0', perKm: null, free: true },
     ]);
   });
 
   it('không có vùng miễn phí', () => {
     expect(splitDeliveryTiers([{ toKm: 15, fee: '80000' }])).toEqual({
       freeWithinKm: null,
-      paid: [{ fromKm: 0, toKm: 15, fee: '80000', free: false }],
+      paid: [{ fromKm: 0, toKm: 15, fee: '80000', perKm: null, free: false }],
     });
   });
 });

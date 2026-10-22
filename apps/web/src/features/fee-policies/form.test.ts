@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { FEE_SCHEDULE_DEFAULTS, VEHICLE_TYPE, computeTieredOwnerCommission } from '@xeprime/types';
+import {
+  FEE_SCHEDULE_DEFAULTS,
+  TAX_LEGAL_BASIS_DEFAULT,
+  TAX_RATES_DEFAULTS,
+  VEHICLE_TYPE,
+  computeTieredOwnerCommission,
+} from '@xeprime/types';
 import {
   buildFeePolicySchema,
   commissionPreview,
   commissionTierRanges,
   feePolicyFormDefaults,
+  taxRateRowTotal,
   toUpsertFeePolicyBody,
   type FeePolicyFormValues,
 } from './form';
@@ -28,8 +35,8 @@ const schema = buildFeePolicySchema({
   integer: 'integer',
   thousandStep: 'thousandStep',
   ratePositive: 'ratePositive',
-  taxPercentRequired: 'taxPercentRequired',
-  taxLabelRequired: 'taxLabelRequired',
+  taxRateRequired: 'taxRateRequired',
+  taxLegalBasisRequired: 'taxLegalBasisRequired',
   partnerRequired: 'partnerRequired',
   blocker: (code) => `blocker:${code}`,
 });
@@ -55,7 +62,8 @@ function errorsOf(values: FeePolicyFormValues): Record<string, string> {
 describe('feePolicyFormDefaults — tạo mới', () => {
   it('lấy bộ số luồng tiền v2', () => {
     const d = feePolicyFormDefaults(null);
-    expect(d.depositPercent).toBe(30);
+    expect(d.depositPercent).toBe(15); // ADR 0066: 15% tiền thuê
+    expect(d.depositMinAmount).toBe(0);
     expect(d.customerPlatformFee).toEqual({ car: 50_000, motorbike: 30_000 });
     expect(d.ownerCommissionTiers).toEqual(FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers);
     expect(d.vehicleProtectionDailyAmount).toEqual({ car: 50_000, motorbike: 15_000 });
@@ -73,7 +81,7 @@ describe('toUpsertFeePolicyBody', () => {
   it('tiền là chuỗi, không gửi bốn trường % đời cũ', () => {
     const body = toUpsertFeePolicyBody(valid());
     expect(body.customerPlatformFee).toEqual({ [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '30000' });
-    expect(body.depositMinAmount).toBe('50000');
+    expect(body.depositMinAmount).toBe('0');
     expect(body.holdMinAmount).toBe('20000');
     expect(body.vehicleProtectionDailyAmount).toEqual({ car: '50000', motorbike: '15000' });
     expect(body).not.toHaveProperty('serviceFeePercent');
@@ -81,11 +89,20 @@ describe('toUpsertFeePolicyBody', () => {
     expect(body).not.toHaveProperty('vehicleProtectionPercent');
   });
 
-  it('cổng tắt thì không gửi tên đối tác / thuế', () => {
-    const body = toUpsertFeePolicyBody(valid({ insurancePartnerName: 'X', taxLabel: 'Y', taxPercent: 5 }));
+  it('cổng tắt thì không gửi tên đối tác / bảng mức thuế / căn cứ', () => {
+    const body = toUpsertFeePolicyBody(valid({ insurancePartnerName: 'X', taxLegalBasis: 'Y' }));
     expect(body.insurancePartnerName).toBeNull();
-    expect(body.taxPercent).toBeNull();
-    expect(body.taxLabel).toBeNull();
+    expect(body.taxRates).toBeNull();
+    expect(body.taxLegalBasis).toBeNull();
+    // Hai trường một-mức cũ (≤ v8) không bao giờ đi lên dây nữa.
+    expect(body).not.toHaveProperty('taxPercent');
+    expect(body).not.toHaveProperty('taxLabel');
+  });
+
+  it('bật thuế thì gửi đủ bảng mức ba loại dịch vụ + căn cứ đã cắt khoảng trắng', () => {
+    const body = toUpsertFeePolicyBody(valid({ taxEnabled: true, taxLegalBasis: '  NĐ 117  ' }));
+    expect(body.taxRates).toEqual(TAX_RATES_DEFAULTS);
+    expect(body.taxLegalBasis).toBe('NĐ 117');
   });
 });
 
@@ -187,9 +204,59 @@ describe('tiền cấu hình & luật nhiều ô', () => {
     expect(errors.freeCancelHours).toBe('blocker:free_cancel_shorter_than_payment_window');
   });
 
-  it('bật thuế cần % và tên loại thuế', () => {
-    const errors = errorsOf(valid({ taxEnabled: true }));
-    expect(errors.taxPercent).toBe('taxPercentRequired');
-    expect(errors.taxLabel).toBe('taxLabelRequired');
+});
+
+describe('thuế khấu trừ theo loại dịch vụ (ADR 0068)', () => {
+  it('bản mới mặc định bảng mức NĐ 117 + căn cứ — bật công tắc là hợp lệ ngay', () => {
+    const d = feePolicyFormDefaults(null);
+    expect(d.taxRates).toEqual(TAX_RATES_DEFAULTS);
+    expect(d.taxLegalBasis).toBe(TAX_LEGAL_BASIS_DEFAULT);
+    expect(errorsOf(valid({ taxEnabled: true }))).toEqual({});
+  });
+
+  it('cột Cộng tự tính, trống thì không bịa số', () => {
+    expect(taxRateRowTotal({ vatPercent: 3, pitPercent: 1.5 })).toBe(4.5);
+    expect(taxRateRowTotal({ vatPercent: 5, pitPercent: null })).toBeNull();
+  });
+
+  it('bật thuế: thiếu căn cứ hay một ô mức ⇒ báo đúng ô', () => {
+    const errors = errorsOf(
+      valid({
+        taxEnabled: true,
+        taxLegalBasis: '  ',
+        taxRates: { ...TAX_RATES_DEFAULTS, with_driver: { vatPercent: 3, pitPercent: null } },
+      }),
+    );
+    expect(errors.taxLegalBasis).toBe('taxLegalBasisRequired');
+    expect(errors['taxRates.with_driver.pitPercent']).toBe('taxRateRequired');
+  });
+
+  it('một sắc thuế vượt trần NĐ 117 (5%) ⇒ báo dưới ô', () => {
+    const errors = errorsOf(
+      valid({
+        taxEnabled: true,
+        taxRates: { ...TAX_RATES_DEFAULTS, self_drive: { vatPercent: 6, pitPercent: 2 } },
+      }),
+    );
+    expect(errors['taxRates.self_drive.vatPercent']).toBe('range');
+  });
+
+  it('% giữ chỗ dưới mức thuế cao nhất của bảng ⇒ chặn bằng luật của server', () => {
+    const errors = errorsOf(valid({ taxEnabled: true, depositPercent: 5 }));
+    expect(errors.depositPercent).toBe('blocker:deposit_percent_below_tax_percent');
+  });
+
+  it('nhân bản phiên bản một-mức cũ ⇒ điền sẵn bảng mức NĐ 117 (không tách được mức cũ)', () => {
+    const legacy = {
+      ...toUpsertFeePolicyBody(valid()),
+      taxEnabled: true,
+      taxRates: null,
+      taxLegalBasis: null,
+      taxPercent: 10,
+      taxLabel: 'VAT 5% + TNCN 5%',
+    } as unknown as Parameters<typeof feePolicyFormDefaults>[0];
+    const d = feePolicyFormDefaults(legacy);
+    expect(d.taxRates).toEqual(TAX_RATES_DEFAULTS);
+    expect(d.taxLegalBasis).toBe(TAX_LEGAL_BASIS_DEFAULT);
   });
 });

@@ -776,3 +776,28 @@ describe('Liên hệ của khách theo tuyến', () => {
     expect(row.customerEmail).toBe('an@test.vn');
   });
 });
+
+/**
+ * Bảng cộng ví chủ xe ở hộp duyệt (ADR 0068 điều 5) — dựng từ bảng phí TẠM TÍNH bằng đúng máy giá
+ * lượt duyệt dùng. Số tuyệt đối phụ thuộc chính sách phí đang hiệu lực của DB, nên spec khoá cái
+ * KHÔNG phụ thuộc: đơn giá chỉ hiện khi mọi ngày cùng giá, và ba đẳng thức đúng tới đồng
+ * (`owner-payout.unit.spec.ts` khoá số của đặc tả 05 §6).
+ */
+describe('BookingRequestsService.list — bảng cộng ví của lượt xem trước', () => {
+  maybe('giá ngày đồng nhất ⇒ có đơn giá; a = R − H − T, cộng ví = a − b', async () => {
+    const id = await seedRequest({ tenantId, vehicleId: vehicleBId, customerPhone: '0903333333' });
+    const page = await requests.list(tenantId, {}, null);
+    const preview = page.data.find((r) => r.id === id)!.approvalPreview;
+    expect(preview).not.toBeNull();
+    const p = preview!.ownerPayout;
+    expect(p.rentalDays).toBe(2);
+    // Xe B một giá cho mọi ngày (không giá cuối tuần) ⇒ đơn giá là giá ngày.
+    expect(p.unitAmount).toBe('200000');
+    expect(p.rentAmount).toBe('400000');
+    const n = Number;
+    expect(n(p.ownerNetAmount)).toBe(n(p.rentAmount) - n(p.ownerCommissionAmount) - n(p.taxAmount));
+    expect(n(p.ownerPayableAmount)).toBe(n(p.ownerNetAmount) - n(p.payAtPickupRentAmount));
+    // Hai cách nói về cùng một khoản phải khớp: số cộng ví = `ownerPayableAmount` của bản xem trước.
+    expect(p.ownerPayableAmount).toBe(preview!.ownerPayableAmount);
+  });
+});

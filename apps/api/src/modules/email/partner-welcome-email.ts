@@ -19,7 +19,7 @@ export interface PartnerWelcomeRenderInput {
   listVehicleUrl: string;
   contactUrl: string;
   hotline: string | null;
-  /** Hoa hồng XePrime mỗi chuyến của tuyến gói (luật tuyến — thường 0). */
+  /** Phí dịch vụ – chủ xe mỗi chuyến của tuyến gói (luật tuyến — thường 0). */
   packageCommissionPercent: number | null;
   /** Khối bảng giá gói đã dựng sẵn (`buildPlanTableHtml`) — HTML do server dựng, không chứa dữ liệu thô. */
   planTableHtml: string;
@@ -55,11 +55,11 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       'Nhận yêu cầu đặt xe, duyệt và giao xe cho khách.',
     ],
     fee: (freeTrips, percent) =>
-      `${freeTrips} chuyến đầu tiên không tính phí dịch vụ. Từ chuyến tiếp theo, XePrime thu phí dịch vụ${percent ? ` ${percent}` : ''} trên mỗi chuyến hoàn thành — không có phí thuê bao.`,
+      `${freeTrips} chuyến đầu tiên không tính phí dịch vụ – chủ xe. Từ chuyến tiếp theo, XePrime thu phí dịch vụ – chủ xe${percent ? ` ${percent}` : ''} trên mỗi chuyến hoàn thành — không có phí thuê bao.`,
     cta: 'Đăng xe ngay',
     planTitle: 'Có nhiều xe? Nâng lên gói gian hàng',
     planBody: (p) =>
-      `Gói gian hàng tính hoa hồng XePrime${p ? ` ${p}` : ''} mỗi chuyến thay cho phí dịch vụ theo chuyến, kèm bộ quản lý đầy đủ: lịch xe, đơn thuê, thu chi, nhân viên. Chọn gói và thanh toán trên website đối tác — gói tự kích hoạt khi tiền về.`,
+      `Gói gian hàng tính phí dịch vụ – chủ xe${p ? ` ${p}` : ''} mỗi chuyến thay cho mức theo chuyến của tuyến hoa hồng, kèm bộ quản lý đầy đủ: lịch xe, đơn thuê, thu chi, nhân viên. Chọn gói và thanh toán trên website đối tác — gói tự kích hoạt khi tiền về.`,
     planCta: 'Xem các gói',
     help: (hotline) =>
       `Cần hỗ trợ? Gửi yêu cầu ở trang hỗ trợ${hotline ? ` hoặc gọi ${hotline}` : ''}.`,
@@ -78,11 +78,11 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       'Receive booking requests, approve them and hand over the vehicle.',
     ],
     fee: (freeTrips, percent) =>
-      `Your first ${freeTrips} trips carry no service fee. After that, XePrime charges a${percent ? ` ${percent}` : ''} service fee on each completed trip — no subscription fee.`,
+      `Your first ${freeTrips} trips carry no owner service fee. After that, XePrime charges a${percent ? ` ${percent}` : ''} owner service fee on each completed trip — no subscription fee.`,
     cta: 'List a vehicle',
     planTitle: 'Have more vehicles? Upgrade to a shop plan',
     planBody: (p) =>
-      `A shop plan charges${p ? ` ${p}` : ''} XePrime commission per trip instead of the per-trip service fee, with the full management suite: vehicle calendar, bookings, finances, staff. Pick and pay for a plan on the partner website — it activates as soon as the payment arrives.`,
+      `A shop plan charges${p ? ` ${p}` : ''} owner service fee per trip instead of the commission-track rate, with the full management suite: vehicle calendar, bookings, finances, staff. Pick and pay for a plan on the partner website — it activates as soon as the payment arrives.`,
     planCta: 'See plans',
     help: (hotline) => `Need help? Send a request on the support page${hotline ? ` or call ${hotline}` : ''}.`,
     friend: 'there',

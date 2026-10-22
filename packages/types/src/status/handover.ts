@@ -79,6 +79,39 @@ export const HANDOVER_ELIGIBLE_BOOKING_STATUS: Readonly<
   [HANDOVER_TYPE.RETURN]: [BOOKING_STATUS.ACTIVE],
 };
 
+/**
+ * CỬA SỔ ÂN HẠN BÀN GIAO (ADR 0066) — số phút tính từ giờ hẹn nhận xe `pickupAt`.
+ *
+ * Một hằng số cho ba nơi đọc cùng một mốc:
+ *  - **Lớp 1** — khách báo "Chưa nhận được xe" được trong `[pickupAt, pickupAt + N′]` (API + web).
+ *  - **Lớp 3** — quá `pickupAt + N′` mà đơn còn `reserved`, không biên bản giao xe nào được xác
+ *    nhận ⇒ worker mở case `handover_unconfirmed` cho vận hành gọi xác minh.
+ * (Lớp 2 không cần đồng hồ: chủ xe xác nhận biên bản giao xe là đơn sang `active` ngay.)
+ */
+export const HANDOVER_CONFIRMATION_GRACE_MINUTES = 120;
+
+/**
+ * Trạng thái đơn mà khách còn báo "Chưa nhận được xe" được: `reserved` (chưa ai xác nhận giao)
+ * và `active` (chủ xe đã xác nhận giao nhưng khách nói không nhận được).
+ */
+export const NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES: readonly BookingStatus[] = [
+  BOOKING_STATUS.RESERVED,
+  BOOKING_STATUS.ACTIVE,
+];
+
+/** Mốc HẾT ân hạn bàn giao của một chuyến: `pickupAt + HANDOVER_CONFIRMATION_GRACE_MINUTES`. */
+export function handoverGraceEndsAt(pickupAt: Date): Date {
+  return new Date(pickupAt.getTime() + HANDOVER_CONFIRMATION_GRACE_MINUTES * 60_000);
+}
+
+/** Vị trí của `now` so với cửa sổ báo "Chưa nhận được xe" `[pickupAt, pickupAt + N′]`. */
+export type NotReceivedWindowPhase = 'before' | 'open' | 'closed';
+
+export function notReceivedWindowPhase(pickupAt: Date, now: Date): NotReceivedWindowPhase {
+  if (now.getTime() < pickupAt.getTime()) return 'before';
+  return now.getTime() <= handoverGraceEndsAt(pickupAt).getTime() ? 'open' : 'closed';
+}
+
 /** Trạng thái đơn mà việc xác nhận bàn giao sẽ chuyển tới. `null` = giữ nguyên trạng thái. */
 export const HANDOVER_CONFIRM_BOOKING_TARGET: Readonly<Record<HandoverType, BookingStatus | null>> =
   {

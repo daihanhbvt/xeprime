@@ -1,4 +1,4 @@
-import { isPerKmDeliveryTier, roundToThousand } from '@xeprime/types';
+import { isPerKmDeliveryTier, roundVnd } from '@xeprime/types';
 import { LIST_SEPARATOR } from './display';
 import { isZeroMoney } from './money';
 
@@ -77,14 +77,23 @@ export function deliveryTierRanges(tiers: readonly DeliveryTierLike[]): Delivery
   return ranges;
 }
 
+/** Độ phân giải quãng đường khi tính phí giao theo km: phần vạn km (0,1 m). */
+const DISTANCE_UNITS_PER_KM = 10_000;
+
 /**
  * Phí giao của MỘT bậc ở khoảng cách `distanceKm` (một chiều) — nơi DUY NHẤT nhân đơn giá theo km.
  *
- * Bậc trọn gói trả nguyên `fee`. Bậc theo km trả `perKm × distanceKm` làm tròn tới bước giá 1.000đ
- * (`roundToThousand`, nửa bước làm tròn LÊN — cùng luật với mọi số tiền tỷ lệ khác của luồng tiền
- * v2): khoảng cách đến từ bản đồ có số lẻ, và phí giao 123.456đ là số khách không trả tay được.
- * Phí giao không bao giờ vào khoản chuyển online (`computeCustomerFees`), nhưng nó vào TỔNG khách
- * trả — nên nó cũng phải là bội 1.000đ.
+ * Bậc trọn gói trả nguyên `fee`. Bậc theo km trả `perKm × distanceKm` làm tròn tới ĐỒNG (`roundVnd`,
+ * nửa đồng làm tròn LÊN — ADR 0069 điều 1): khoảng cách đến từ bản đồ có số lẻ, và phí giao là một
+ * khoản TÍNH RA từ đơn giá, nên nó phải đúng bằng đơn giá × quãng đường chứ không bị đẩy lên/xuống
+ * tới bậc 1.000đ gần nhất. Số lẻ được hạn chế bằng chính sách (đơn giá/km tròn), không bằng làm
+ * tròn kết quả. Phí giao không bao giờ vào khoản chuyển online (`computeCustomerFees`) — khách trả
+ * tận tay chủ xe.
+ *
+ * Quãng đường quy về số nguyên phần vạn km (`DISTANCE_UNITS_PER_KM`, 0,1 m — mịn hơn mọi nguồn
+ * khoảng cách: cột `distance_km` giữ 2 số lẻ) TRƯỚC khi nhân, chia sau cùng — cùng kỷ luật với
+ * `percentOfVnd`: `5.000 × 1,0001` đi qua số thực ra `5.000,4999…` và rơi xuống 5.000đ, còn
+ * `5.000 × 10.001 / 10.000` là đúng `5.000,5` ⇒ 5.001đ.
  */
 export function deliveryTierFee(
   tier: { fee?: string | null | undefined; perKm?: string | null | undefined },
@@ -95,7 +104,8 @@ export function deliveryTierFee(
     if (!Number.isFinite(perKm) || perKm < 0 || !Number.isFinite(distanceKm) || distanceKm < 0) {
       throw new Error(`Bậc giao xe theo km không hợp lệ: ${tier.perKm} × ${distanceKm}`);
     }
-    return String(roundToThousand(perKm * distanceKm));
+    const distanceUnits = Math.round(distanceKm * DISTANCE_UNITS_PER_KM);
+    return String(roundVnd((perKm * distanceUnits) / DISTANCE_UNITS_PER_KM));
   }
   return tier.fee == null || tier.fee === '' ? '0' : String(tier.fee);
 }

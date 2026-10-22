@@ -12,14 +12,15 @@ import {
 } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { getErrorCode } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { confirmHandover, saveHandoverDraft } from '../api';
 import { useInvalidateHandovers } from '../hooks';
 import type { Handover, HandoverBelowPickupDetails, HandoverContext } from '../types';
 import { HandoverPhotoGrid } from './HandoverPhotoGrid';
 import styles from './ConfirmHandoverDialog.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
 interface ConfirmHandoverDialogProps {
   context: HandoverContext;
@@ -30,20 +31,23 @@ interface ConfirmHandoverDialogProps {
   onOpenSurcharge?: () => void;
 }
 
-const COPY = {
+/** Khoá message theo chiều bàn giao (namespace `Bookings.handover`). */
+const COPY_KEYS = {
   [HANDOVER_TYPE.PICKUP]: {
-    title: 'Xác nhận đã giao xe',
-    cta: 'Xác nhận đã giao xe',
-    timeLabel: 'Thời gian giao xe thực tế',
-    advanced: 'Thêm thông tin bàn giao — Không bắt buộc',
-    odoLabel: 'Chỉ số Odo khi giao (km)',
+    dialogTitle: 'confirmDialog.titlePickup',
+    cta: 'actions.confirmPickup',
+    success: 'confirmDialog.successPickup',
+    timeLabel: 'occurredAt.labelPickup',
+    advanced: 'advancedPickup',
+    odoLabel: 'odometer.labelPickup',
   },
   [HANDOVER_TYPE.RETURN]: {
-    title: 'Xác nhận đã nhận lại xe',
-    cta: 'Xác nhận đã nhận xe',
-    timeLabel: 'Thời gian nhận xe thực tế',
-    advanced: 'Thêm thông tin khi nhận xe — Không bắt buộc',
-    odoLabel: 'Chỉ số Odo khi nhận (km)',
+    dialogTitle: 'confirmDialog.titleReturn',
+    cta: 'actions.confirmReturn',
+    success: 'confirmDialog.successReturn',
+    timeLabel: 'occurredAt.labelReturn',
+    advanced: 'advancedReturn',
+    odoLabel: 'odometer.labelReturn',
   },
 } as const;
 
@@ -80,9 +84,11 @@ export function ConfirmHandoverDialog({
   const fmt = useAppFormat();
 
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
   const tHandover = useTranslations('Bookings.handover');
-  const copy = COPY[type];
+  const datePattern = useDatePickerPattern();
+  const keys = COPY_KEYS[type];
   const invalidate = useInvalidateHandovers(context.bookingId, context.vehicleId);
   const canManage = has(PERMISSION.HANDOVER_MANAGE);
   const canViewFiles = has(PERMISSION.HANDOVER_FILE_VIEW);
@@ -136,9 +142,7 @@ export function ConfirmHandoverDialog({
         ...(draft?.rowVersion ? { expectedRowVersion: draft.rowVersion } : {}),
       });
       invalidate();
-      message.success(
-        type === HANDOVER_TYPE.PICKUP ? 'Đã xác nhận giao xe' : 'Đã xác nhận nhận lại xe',
-      );
+      message.success(tHandover(keys.success));
       onClose();
     } catch (err) {
       const code = getErrorCode(err);
@@ -146,11 +150,14 @@ export function ConfirmHandoverDialog({
         const details = (err as { details?: HandoverBelowPickupDetails }).details;
         setError(
           details
-            ? `Odo khi nhận (${details.odometerKm.toLocaleString('vi-VN')} km) không được nhỏ hơn Odo lúc giao (${details.pickupKm.toLocaleString('vi-VN')} km).`
-            : getErrorMessage(err),
+            ? tHandover('odometerBelowPickup', {
+                entered: fmt.kmNumber(details.odometerKm),
+                pickup: fmt.kmNumber(details.pickupKm),
+              })
+            : errorMessage(err),
         );
       } else {
-        setError(getErrorMessage(err));
+        setError(errorMessage(err));
       }
     } finally {
       setSubmitting(false);
@@ -159,25 +166,25 @@ export function ConfirmHandoverDialog({
 
   return (
     <ResponsiveDialog
-      title={copy.title}
+      title={tHandover(keys.dialogTitle)}
       open={open}
       onClose={onClose}
       size="md"
-      okText={copy.cta}
+      okText={tHandover(keys.cta)}
       onOk={() => void submit()}
       confirmLoading={submitting}
     >
       <div className={styles.body}>
         <dl className={styles.summary}>
           <div className={styles.row}>
-            <dt>Xe</dt>
+            <dt>{tHandover('confirmDialog.vehicle')}</dt>
             <dd>
               {context.vehicleName}
               {context.plateNumber ? ` · ${context.plateNumber}` : ''}
             </dd>
           </div>
           <div className={styles.row}>
-            <dt>Đơn</dt>
+            <dt>{tHandover('confirmDialog.booking')}</dt>
             <dd>{context.bookingCode}</dd>
           </div>
         </dl>
@@ -188,20 +195,26 @@ export function ConfirmHandoverDialog({
           Vẫn tuỳ chọn: bỏ trống thì KM của xe giữ nguyên, không dựng ra `0 km`.
         */}
         <label className={styles.field}>
-          <span className={styles.label}>{copy.odoLabel}</span>
+          <span className={styles.label}>{tHandover(keys.odoLabel)}</span>
           <input
             className={styles.input}
             inputMode="numeric"
             value={odometerKm}
-            placeholder="Bỏ trống nếu chưa đọc được"
+            placeholder={tHandover('odometer.placeholder')}
             onChange={(e) => setOdometerKm(e.target.value.replace(/\D/g, ''))}
           />
           <span className={styles.hint}>
             {context.vehicleOdometerKm != null
-              ? `KM hệ thống đang ghi: ${fmt.km(context.vehicleOdometerKm)}. Không nhập cũng xác nhận được.`
-              : 'Không nhập cũng xác nhận được. Bỏ trống thì KM của xe giữ nguyên.'}
+              ? tHandover('odometer.hintWithCurrent', { km: fmt.km(context.vehicleOdometerKm) })
+              : tHandover('odometer.hintPlain')}
           </span>
         </label>
+
+        {/*
+          Lời khuyên chụp ảnh + công tơ mét (ADR 0066 · đặc tả 02 §3.1) đứng NGOÀI vùng nâng cao:
+          ảnh vẫn tuỳ chọn, nhưng người bàn giao phải thấy lý do nên chụp mà không cần mở gì.
+        */}
+        <Alert type="info" showIcon title={tHandover('evidenceAdvisory')} />
 
         {/*
           Vùng nâng cao ĐÓNG SẴN: một chuyến bình thường không cần mở. Mọi thứ trong đây là
@@ -213,18 +226,18 @@ export function ConfirmHandoverDialog({
           items={[
             {
               key: 'advanced',
-              label: copy.advanced,
+              label: tHandover(keys.advanced),
               children: (
                 <div className={styles.advancedBody}>
                   <label className={styles.field}>
-                    <span className={styles.label}>{copy.timeLabel}</span>
+                    <span className={styles.label}>{tHandover(keys.timeLabel)}</span>
                     {/*
                       Một MỐC duy nhất, không phải một khoảng — nên dùng DatePicker chung chứ
                       không phải lịch khoảng thuê của Wave 9.
                     */}
                     <DatePicker
                       showTime={{ format: 'HH:mm' }}
-                      format="DD/MM/YYYY HH:mm"
+                      format={datePattern.dateTime}
                       value={occurredAt}
                       onChange={(next) => next && setOccurredAt(next)}
                       allowClear={false}
@@ -233,8 +246,7 @@ export function ConfirmHandoverDialog({
                       disabledDate={(current) => current.isAfter(nowInAppTz().endOf('day'))}
                     />
                     <span className={styles.hint}>
-                      {fmt.rentalPoint(occurredAt)} — mặc định theo giờ hẹn trên đơn, chỉnh lại nếu
-                      giao/nhận lệch giờ.
+                      {tHandover('occurredAt.hint', { time: fmt.rentalPoint(occurredAt) })}
                     </span>
                   </label>
 
@@ -245,9 +257,11 @@ export function ConfirmHandoverDialog({
                       onChange={(e) => setCondition(e.target.value as HandoverCondition)}
                     >
                       <Radio value={HANDOVER_CONDITION.NORMAL}>
-                        Bình thường — xe không có dấu hiệu hư hại mới
+                        {tHandover('condition.normalOption')}
                       </Radio>
-                      <Radio value={HANDOVER_CONDITION.ATTENTION}>Có điểm cần lưu ý</Radio>
+                      <Radio value={HANDOVER_CONDITION.ATTENTION}>
+                        {tHandover('condition.attentionOption')}
+                      </Radio>
                     </Radio.Group>
                   </div>
 
@@ -258,7 +272,7 @@ export function ConfirmHandoverDialog({
                       rows={2}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Ví dụ: bàn giao tại bãi, khách nhận đủ giấy tờ"
+                      placeholder={tHandover('notes.placeholder')}
                     />
                   </label>
 
@@ -273,11 +287,11 @@ export function ConfirmHandoverDialog({
                   */}
                   {canManage ? (
                     <div className={styles.field}>
-                      {/* Tiêu đề do chính lưới ảnh dựng — ở đây chỉ nói rõ nó không bắt buộc. */}
-                      <span className={styles.hint}>
-                        Chụp lại để có bằng chứng khi đối chiếu cuối chuyến. Không bắt buộc — bỏ qua
-                        vẫn xác nhận được.
-                      </span>
+                      {/*
+                        Tiêu đề do chính lưới ảnh dựng — ở đây chỉ nói rõ nó không bắt buộc. Lời
+                        khuyên VÌ SAO nên chụp đã đứng sẵn ngoài vùng này.
+                      */}
+                      <span className={styles.hint}>{tHandover('photosOptional')}</span>
                       <HandoverPhotoGrid
                         bookingId={context.bookingId}
                         type={type}
@@ -301,7 +315,7 @@ export function ConfirmHandoverDialog({
                   {type === HANDOVER_TYPE.RETURN && onOpenSurcharge ? (
                     <div className={styles.advancedLinks}>
                       <button type="button" className={styles.linkBtn} onClick={onOpenSurcharge}>
-                        Ghi nhận phát sinh
+                        {tHandover('confirmDialog.openSurcharge')}
                       </button>
                     </div>
                   ) : null}
@@ -312,11 +326,7 @@ export function ConfirmHandoverDialog({
         />
 
         {type === HANDOVER_TYPE.RETURN ? (
-          <Alert
-            type="info"
-            showIcon
-            title="Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau — không chặn hoàn tất chuyến."
-          />
+          <Alert type="info" showIcon title={tHandover('returnDepositNotice')} />
         ) : null}
 
         {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}

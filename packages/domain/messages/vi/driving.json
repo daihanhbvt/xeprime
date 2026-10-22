@@ -72,7 +72,7 @@
     "actualPickupAt": "Đã đón lúc {time}",
     "actualReturnAt": "Đã kết thúc lúc {time}",
     "pendingTitle": "Bên thuê gán bạn vào chuyến này",
-    "pendingBody": "Nhận chuyến để xác nhận bạn sẽ lái. Nếu từ chối, chuyến quay về chưa có tài xế.",
+    "pendingBody": "Nhận chuyến để xác nhận bạn sẽ lái. Nếu từ chối — hoặc quá hạn mà chưa trả lời — chuyến quay về bên thuê để gán tài xế khác.",
     "accept": "Nhận chuyến",
     "decline": "Từ chối",
     "declineConfirm": "Từ chối chuyến này?",
@@ -90,6 +90,11 @@
     "unassigned": "Không còn giao cho bạn",
     "cancelled": "Đơn đã huỷ",
     "no_show": "Khách không đến",
-    "completed": "Hoàn thành"
+    "completed": "Hoàn thành",
+    "expired": "Quá hạn xác nhận"
+  },
+  "respond": {
+    "remaining": "Trả lời trong",
+    "expired": "Đã quá hạn trả lời — chuyến được trả lại cho bên thuê"
   }
 }

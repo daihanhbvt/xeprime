@@ -42,6 +42,7 @@ function tripSelect(now: Date) {
     driverAssignmentStatus: true,
     driverAssignedAt: true,
     driverRespondedAt: true,
+    driverRespondBy: true,
     pickupAt: true,
     returnAt: true,
     routeType: true,
@@ -299,6 +300,11 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
       : (episode?.assignedAt ?? r.pickupAt)
     ).toISOString(),
     respondedAt: acceptedAt?.toISOString() ?? null,
+    // Hạn chỉ có nghĩa khi chuyến còn chờ CHÍNH tôi trả lời (ADR 0066).
+    respondBy:
+      current && outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN
+        ? (r.driverRespondBy?.toISOString() ?? null)
+        : null,
     endedAt: episode?.endedAt?.toISOString() ?? null,
     pickupAt: r.pickupAt.toISOString(),
     returnAt: r.returnAt.toISOString(),

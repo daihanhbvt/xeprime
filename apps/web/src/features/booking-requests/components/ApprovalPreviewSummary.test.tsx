@@ -15,6 +15,31 @@ const PREVIEW: ApprovalPreview = {
   taxAmount: '0',
   ownerPayableAmount: '150000',
   ownerNetAmount: '1800000',
+  /*
+   * Bảng cộng ví (ADR 0068 điều 5) — 2 ngày × 1.000.000đ tuyến hoa hồng, chưa bật khấu trừ
+   * thuế: H = 200.000, T = 0, D = 300.000 ⇒ a = 1.800.000, b = 1.500.000, cộng ví 300.000.
+   */
+  ownerPayout: {
+    rentAmount: '2000000',
+    rentalDays: 2,
+    unitAmount: '1000000',
+    ownerCommissionAmount: '200000',
+    commissionTiers: [
+      { fromDay: 1, percent: 10 },
+      { fromDay: 3, percent: 7 },
+    ],
+    taxAmount: '0',
+    vatAmount: '0',
+    pitAmount: '0',
+    vatPercent: null,
+    pitPercent: null,
+    taxTotalPercent: null,
+    taxExemptReason: null,
+    ownerNetAmount: '1800000',
+    payAtPickupRentAmount: '1500000',
+    ownerPayableAmount: '300000',
+    collectsHold: true,
+  },
   policyFreeCancelHours: 4,
   policyPaymentWindowMinutes: 120,
   windows: {
@@ -30,23 +55,34 @@ const PREVIEW: ApprovalPreview = {
 afterEach(cleanup);
 
 describe('ApprovalPreviewSummary', () => {
-  it('thu tiền giữ chỗ: dòng QR, khoản trừ có dấu trừ, thuế 0 bị ẩn, hai cửa sổ', () => {
+  it('thu tiền giữ chỗ: bảng cộng ví, khoản trừ có dấu trừ, thuế 0 bị ẩn, hai cửa sổ', () => {
     renderWithIntl(<ApprovalPreviewSummary preview={PREVIEW} />);
-    expect(screen.getByText('Khách chuyển qua QR (tiền giữ chỗ)')).toBeTruthy();
-    expect(screen.getByText('−200.000 ₫')).toBeTruthy();
-    expect(screen.queryByText('Thuế khấu trừ')).toBeNull();
+    expect(screen.getByText('Phí dịch vụ – Chủ xe')).toBeTruthy();
+    expect(screen.getByText(/^−200\.000\s*₫$/)).toBeTruthy();
+    expect(screen.queryByText(/^Thuế khấu trừ/)).toBeNull();
+    expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();
+    expect(screen.getByText('Khách thanh toán trực tiếp (b)')).toBeTruthy();
+    expect(screen.getByText(/^1\.500\.000\s*₫$/)).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText(/^300\.000\s*₫$/)).toBeTruthy();
     expect(screen.getByText(/Khách có 2 giờ để chuyển tiền giữ chỗ/)).toBeTruthy();
     expect(screen.getByText(/huỷ miễn phí trong 4 giờ/)).toBeTruthy();
   });
 
-  it('KHÔNG thu tiền giữ chỗ ⇒ không dòng QR / ví điểm, không cửa sổ, có câu "không QR"', () => {
+  it('KHÔNG thu tiền giữ chỗ ⇒ không dòng (b) / cộng ví, không cửa sổ, có câu "không QR"', () => {
     renderWithIntl(
       <ApprovalPreviewSummary
-        preview={{ ...PREVIEW, collectsHold: false, onlineAmount: null, windows: null }}
+        preview={{
+          ...PREVIEW,
+          collectsHold: false,
+          onlineAmount: null,
+          windows: null,
+          ownerPayout: { ...PREVIEW.ownerPayout, collectsHold: false },
+        }}
       />,
     );
-    expect(screen.queryByText('Khách chuyển qua QR (tiền giữ chỗ)')).toBeNull();
-    expect(screen.queryByText('Vào Ví điểm của bạn khi hoàn thành chuyến')).toBeNull();
+    expect(screen.queryByText('Khách thanh toán trực tiếp (b)')).toBeNull();
+    expect(screen.queryByText('Số tiền cộng ví (a − b)')).toBeNull();
     expect(screen.getByText(/không thu tiền giữ chỗ online/)).toBeTruthy();
     expect(screen.queryByText(/để chuyển tiền giữ chỗ/)).toBeNull();
   });
@@ -60,9 +96,7 @@ describe('ApprovalPreviewSummary', () => {
         }}
       />,
     );
-    expect(
-      screen.getByText('Nhận xe sát giờ nên khách không có thời gian huỷ miễn phí.'),
-    ).toBeTruthy();
+    expect(screen.getByText('Chuyến này khách không có thời gian huỷ miễn phí.')).toBeTruthy();
     expect(screen.getByText(/Khách có 36 phút để chuyển tiền giữ chỗ/)).toBeTruthy();
   });
 
@@ -77,8 +111,8 @@ describe('ApprovalPreviewSummary', () => {
 
   it('showMoney=false (dài hạn LEGACY chưa có gói) ⇒ chỉ còn cửa sổ, không dòng tiền', () => {
     renderWithIntl(<ApprovalPreviewSummary preview={PREVIEW} showMoney={false} />);
-    expect(screen.queryByText('Bạn thực nhận cả chuyến')).toBeNull();
-    expect(screen.queryByText('−200.000 ₫')).toBeNull();
+    expect(screen.queryByText('Thu nhập chủ xe (a)')).toBeNull();
+    expect(screen.queryByText(/^−200\.000\s*₫$/)).toBeNull();
     expect(screen.getByText(/Khách có 2 giờ để chuyển tiền giữ chỗ/)).toBeTruthy();
   });
 });

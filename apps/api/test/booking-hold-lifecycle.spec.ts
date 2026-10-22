@@ -151,6 +151,8 @@ function snapshotOf(): BookingPriceSnapshot {
         depositMinAmount: '0',
         depositMaxPercent: 30,
         taxEnabled: false,
+        taxRates: null,
+        taxLegalBasis: null,
         taxPercent: null,
         taxLabel: null,
         tripInsuranceEnabled: false,
@@ -459,9 +461,9 @@ describe('Nhận chuyến ⇒ tạo hold: chiếm lịch, phát QR, CHƯA có đ
   );
 
   /**
-   * Chuyến CẬN NGÀY (2–24 giờ): hai cửa sổ co theo `ΔT = pickupAt − acceptedAt` (luồng tiền v2 —
-   * `holdWindowsFor`): huỷ miễn phí `ΔT × 30%`, thanh toán `ΔT × 40%` — cả hai vẫn đếm XUÔI từ
-   * `decided_at` và không vượt giờ nhận xe.
+   * Chuyến CẬN NGÀY: hai cửa sổ co theo `ΔT = pickupAt − acceptedAt` (ADR 0066 —
+   * `holdWindowsFor`): huỷ miễn phí `ΔT × 20%`, thanh toán `ΔT × 30%` (sàn 15′, trần của chính
+   * sách) — cả hai vẫn đếm XUÔI từ `decided_at` và không vượt giờ nhận xe.
    */
   maybe('chuyến nhận xe cận ngày ⇒ hai cửa sổ co theo khoảng cách tới giờ nhận', async () => {
     const { holdId } = await makeHold(3 / 24);
@@ -476,18 +478,28 @@ describe('Nhận chuyến ⇒ tạo hold: chiếm lịch, phát QR, CHƯA có đ
     expect(hold.expiresAt.getTime()).toBe(
       accepted + holdPaymentWindowMinutes(leadMinutes, 1440) * 60_000,
     );
-    // ~3 giờ ⇒ ~54 phút huỷ miễn phí, ~72 phút thanh toán — ngắn hơn hẳn 4 giờ / 1440 phút.
+    // ~3 giờ ⇒ ~36 phút huỷ miễn phí, ~54 phút thanh toán — ngắn hơn hẳn 4 giờ / 1440 phút.
     expect(hold.freeCancelUntil.getTime() - accepted).toBeLessThan(60 * 60_000);
     expect(hold.expiresAt.getTime()).toBeLessThan(req.pickupAt!.getTime());
   });
 
-  /** Đặt GẤP (< 2 giờ): không có huỷ miễn phí — mốc trùng `decided_at`, cọc là chốt. */
-  maybe('chuyến nhận xe dưới 2 giờ ⇒ KHÔNG có huỷ miễn phí', async () => {
+  /**
+   * Đặt GẤP (< 2 giờ): ADR 0066 bỏ luật "không có huỷ miễn phí" — vẫn có `ΔT × 20%` (sàn 15′),
+   * và mốc huỷ đóng TRƯỚC hạn thanh toán (`ΔT × 30%`).
+   */
+  maybe('chuyến nhận xe dưới 2 giờ ⇒ vẫn có cửa sổ huỷ miễn phí ngắn', async () => {
     const { holdId } = await makeHold(1.5 / 24);
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
 
-    expect(hold.freeCancelUntil.getTime()).toBe(req.decidedAt!.getTime());
+    const accepted = req.decidedAt!.getTime();
+    const leadMinutes = (req.pickupAt!.getTime() - accepted) / 60_000;
+    expect(hold.freeCancelUntil.getTime()).toBe(
+      accepted + holdFreeCancelMinutes(leadMinutes, 4) * 60_000,
+    );
+    // ~90 phút ⇒ ~18 phút huỷ miễn phí, ~27 phút thanh toán.
+    expect(hold.freeCancelUntil.getTime()).toBeGreaterThan(accepted);
+    expect(hold.freeCancelUntil.getTime()).toBeLessThan(hold.expiresAt.getTime());
   });
 });
 
@@ -528,6 +540,33 @@ describe('Tiền về — thiếu / đủ / thừa (ADR 0016 điều 6 · ADR 00
        * `platform` đóng băng tại đây (Phase 6, ADR 0025 ràng buộc 4).
        */
       expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
+
+      /*
+       * Chi tiết đơn phía gian hàng mang BẢNG CỘNG VÍ (ADR 0068 điều 5) dựng từ snapshot đã đóng
+       * băng. Snapshot đời cũ (một mức thuế, không tách GTGT/TNCN, không giá từng ngày) vẫn dựng
+       * được: phần tách là `null`, đơn giá `null` vì 2 ngày mà không biết giá từng ngày, và đẳng
+       * thức a − b = D − T đúng tới đồng.
+       */
+      const detail = await bookings.getOne(tenantId, booking.id);
+      expect(detail.ownerPayout).toEqual({
+        rentAmount: BASE,
+        rentalDays: 2,
+        unitAmount: null,
+        ownerCommissionAmount: '0',
+        // Snapshot đời cũ không mang nấc hoa hồng ⇒ không bịa nấc, màn hình giải thích chung.
+        commissionTiers: null,
+        taxAmount: '0',
+        vatAmount: null,
+        pitAmount: null,
+        vatPercent: null,
+        pitPercent: null,
+        taxTotalPercent: null,
+        taxExemptReason: null,
+        ownerNetAmount: BASE,
+        payAtPickupRentAmount: BASE,
+        ownerPayableAmount: '0',
+        collectsHold: true,
+      });
 
       const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
       expect(req.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
@@ -766,17 +805,28 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
   });
 
   /**
-   * Huỷ muộn KHÔNG còn là "mất trắng" (ADR 0032 điều 5): `D + S` chia đôi chủ xe/XePrime, còn
-   * `IV + IP` hoàn 100% vì hợp đồng bảo hiểm chưa được mua.
+   * Huỷ muộn (ADR 0066, thay phép chia đôi của ADR 0032 điều 5 / ADR 0064 điều 8): chủ xe nhận
+   * TRỌN phần giữ chỗ `D` của mình, XePrime giữ `S + H`, còn `IV + IP` hoàn 100% vì hợp đồng bảo
+   * hiểm chưa được mua.
    */
   maybe(
-    'KHÁCH huỷ SAU mốc miễn phí ⇒ `split_late_cancel`: D+S chia đôi, không mất trắng',
+    'KHÁCH huỷ SAU mốc miễn phí ⇒ `split_late_cancel`: chủ xe nhận trọn D, XePrime giữ S',
     async () => {
       const { holdId, bookingId } = await paidHold(10);
-      // Dời mốc miễn phí về quá khứ — mốc là CỘT đã đóng băng, đây là cách mô phỏng "đã qua mốc".
+      /*
+       * Dời mốc miễn phí về quá khứ — mốc là CỘT đã đóng băng, đây là cách mô phỏng "đã qua mốc".
+       *
+       * Chính sách của spec để cọc = 0 (hold = S 100.000). Tách hold thành D 60.000 + S 40.000 —
+       * vẫn đúng `amount` nên CHECK `booking_holds_money_lines_sum_check` giữ — để lượt huỷ có
+       * phần của chủ xe mà đền.
+       */
       await prisma.bookingHold.update({
         where: { id: holdId },
-        data: { freeCancelUntil: new Date(Date.now() - 3600_000) },
+        data: {
+          freeCancelUntil: new Date(Date.now() - 3600_000),
+          depositAmount: new Prisma.Decimal(60_000),
+          serviceFeeAmount: new Prisma.Decimal(40_000),
+        },
       });
       await prisma.$transaction((tx) =>
         bookings.transitionWithinTx(
@@ -796,8 +846,8 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
       expect(hold.outcome).toBe(BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL);
 
       /*
-       * Chính sách của spec để cọc = 0 nên phần chia đôi chỉ có `S`; nửa của chủ xe vào ví gian
-       * hàng, nửa còn lại là doanh thu XePrime (không đi qua ví — ADR 0033 điều 3).
+       * Trọn `D` 60.000 vào ví gian hàng; `S` 40.000 là doanh thu XePrime (không đi qua ví — ADR
+       * 0033 điều 3).
        */
       const shopWallet = await prisma.wallet.findFirstOrThrow({
         where: { ownerTenantId: tenantId },
@@ -806,7 +856,10 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
         where: { walletId: shopWallet.id, sourceRefId: holdId },
       });
       expect(entry.kind).toBe('hold_forfeit');
-      expect(Number(entry.amount)).toBe(Number(HOLD_AMOUNT) / 2);
+      expect(entry.amount.toFixed(0)).toBe('60000');
+      expect(hold.settledOwnerAmount.toFixed(0)).toBe('60000');
+      expect(hold.settledPlatformAmount.toFixed(0)).toBe('40000');
+      expect(hold.settledTaxAmount.toFixed(0)).toBe('0');
 
       // Bảo hiểm = 0 ở chính sách này ⇒ không có gì hoàn cho khách.
       expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(0);
@@ -1104,6 +1157,46 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
     const after = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     expect(after.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
     expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(1);
+  });
+
+  /**
+   * ADR 0066 lớp 3: case `handover_unconfirmed` do HỆ THỐNG mở (không người mở) cũng giữ tiền như
+   * một tranh chấp — chủ xe/khách đổi trạng thái đơn sau đó không được tự giải ngân.
+   */
+  maybe('case CHƯA XÁC NHẬN BÀN GIAO mở ⇒ kết cục bị TẠM GIỮ như tranh chấp', async () => {
+    const { holdId, bookingId } = await paidHold();
+    const caseId = newId();
+    await prisma.supportCase.create({
+      data: {
+        id: caseId,
+        code: `SC${caseId.slice(-6).toUpperCase()}`,
+        tenantId,
+        bookingId,
+        openedByUserId: null,
+        openedByScope: SUPPORT_PARTY.PLATFORM,
+        category: SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED,
+        status: SUPPORT_CASE_STATUS.OPEN,
+        subject: 'Chưa xác nhận bàn giao',
+        description: 'Quá ân hạn bàn giao — case hệ thống',
+      },
+    });
+
+    await prisma.$transaction((tx) =>
+      bookings.transitionWithinTx(
+        tx,
+        tenantId,
+        bookingId,
+        customerId,
+        BOOKING_STATUS.RESERVED,
+        BOOKING_STATUS.CANCELLED,
+        { actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER },
+      ),
+    );
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.outcome).toBeNull();
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
+    expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(0);
   });
 
   /**

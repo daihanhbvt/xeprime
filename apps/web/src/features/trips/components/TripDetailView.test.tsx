@@ -6,6 +6,9 @@ import {
   CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_TRIP_STAGE,
   DEPOSIT_STATUS,
+  DRIVER_ASSIGNMENT_STATUS,
+  DRIVER_SOURCE,
+  SERVICE_TYPE,
   STOREFRONT_KIND,
   TRIP_ROLE,
 } from '@xeprime/types';
@@ -109,6 +112,10 @@ const TRIP: CustomerTripDetail = {
   renter: null,
   respondBy: null,
   canContact: true,
+  // Lưới "Chưa nhận được xe" (ADR 0066 điều 5) — fixture chưa tới giờ nhận, chưa có khiếu nại.
+  openDispute: false,
+  canReportNotReceived: false,
+  notReceivedReportUntil: null,
   // GCN bảo hiểm (ADR 0064) — chuyến này chưa bàn giao nên chưa có giấy nào.
   insuranceCertificates: [],
   insuranceCoverage: [],
@@ -1068,5 +1075,66 @@ describe('Huỷ chuyến', () => {
 
     expect(screen.getByText('Bạn đã thanh toán cho chuyến này')).toBeTruthy();
     expect(screen.getByText(/không tự chuyển tiền/)).toBeTruthy();
+  });
+});
+
+describe('Tài xế của chuyến có tài xế (khách — ADR 0067)', () => {
+  it('đã có đơn mà chưa có ai đến đón ⇒ "Đang sắp xếp tài xế"', () => {
+    setTrip({ serviceType: SERVICE_TYPE.WITH_DRIVER, bookingId: 'BK1', driver: null });
+    renderView();
+    expect(screen.getByText('Đang sắp xếp tài xế')).toBeTruthy();
+  });
+
+  it('tài xế ngoài hệ thống hiện tên + SĐT gọi được, như tài xế liên kết', () => {
+    setTrip({
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      bookingId: 'BK1',
+      driver: {
+        source: DRIVER_SOURCE.EXTERNAL,
+        id: null,
+        name: 'Nguyễn Văn Tài',
+        phone: '0912345678',
+        assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+        assignedAt: '2026-08-01T02:00:00.000Z',
+        respondedAt: null,
+        respondBy: null,
+      },
+    });
+    renderView();
+    expect(screen.getByText('Nguyễn Văn Tài')).toBeTruthy();
+    const call = screen.getByRole('link', { name: 'Gọi tài xế Nguyễn Văn Tài' });
+    expect(call.getAttribute('href')).toContain('0912345678');
+    expect(screen.queryByText('Đang sắp xếp tài xế')).toBeNull();
+  });
+
+  it('chuyến tự lái không có hàng tài xế', () => {
+    setTrip({ serviceType: SERVICE_TYPE.SELF_DRIVE, driver: null });
+    renderView();
+    expect(screen.queryByText('Đang sắp xếp tài xế')).toBeNull();
+  });
+});
+
+describe('Tài xế trên bố cục chuyến đang thuê (khách — ADR 0067)', () => {
+  it('đang thuê: hàng "Tài xế" trong lịch trình, gọi được', () => {
+    setTrip({
+      stage: CUSTOMER_TRIP_STAGE.ACTIVE,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      bookingId: 'BK1',
+      driver: {
+        source: DRIVER_SOURCE.LINKED,
+        id: null,
+        name: 'Lê Liên Kết',
+        phone: '0912000222',
+        assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+        assignedAt: '2026-08-01T02:00:00.000Z',
+        respondedAt: null,
+        respondBy: null,
+      },
+    });
+    renderView();
+    expect(screen.getByText('Lê Liên Kết')).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'Gọi tài xế Lê Liên Kết' }).getAttribute('href'),
+    ).toContain('0912000222');
   });
 });

@@ -235,12 +235,12 @@ describe('statusCountOf', () => {
  * Hạn phản hồi so MỐC chứ không so cột `status`: worker ghi `expired` trễ một nhịp, và cửa sổ
  * đó là một lỗ để duyệt một yêu cầu đã chết.
  */
-describe('hạn phản hồi 60 phút', () => {
+describe('hạn phản hồi', () => {
   const sentAt = new Date('2026-09-01T10:00:00.000Z');
-  const respondBy = bookingRequestRespondBy(sentAt);
+  const pickupAt = new Date('2026-09-01T15:00:00.000Z');
+  const respondBy = bookingRequestRespondBy(sentAt, pickupAt);
 
-  it('đúng 60 phút kể từ lúc khách gửi', () => {
-    expect(BOOKING_REQUEST_RESPOND_WINDOW_MINUTES).toBe(60);
+  it('đúng 60 phút khi ΔT = 5h (20% của 300 phút, ADR 0066)', () => {
     expect(respondBy.toISOString()).toBe('2026-09-01T11:00:00.000Z');
   });
 

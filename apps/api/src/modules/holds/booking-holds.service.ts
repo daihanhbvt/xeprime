@@ -25,8 +25,6 @@ import {
   OCCUPANCY_SOURCE_TYPE,
   PAYMENT_ORDER_CREDITED_OUTCOMES,
   PRICE_ROW,
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS_UNPAID,
   WITHDRAWAL_STATUS_DISBURSED,
   BOOKING_HOLD_STATUS_AWAITING,
@@ -226,7 +224,8 @@ export class BookingHoldsService {
        * Mốc "đặt xe thành công" — lúc chủ xe duyệt, hoặc lúc hệ thống tự nhận (ADR 0032 điều 2).
        *
        * CẢ HAI cửa sổ ĐỘNG (`holdWindowsFor` — hạn trả tiền và hạn huỷ miễn phí, co theo khoảng
-       * cách tới giờ nhận xe; đặt gấp dưới 2 giờ thì không có huỷ miễn phí) đếm xuôi từ đây, nên
+       * cách tới giờ nhận xe, sàn 15′ trừ khi chính sách đặt trần 0 hoặc giờ nhận xe kẹp về 0 —
+       * ADR 0066) đếm xuôi từ đây, nên
        * caller phải truyền ĐÚNG mốc đã ghi vào `booking_requests.decided_at` — hai mốc lệch nhau
        * là hai đồng hồ khác nhau cho cùng một chuyến.
        */
@@ -254,12 +253,12 @@ export class BookingHoldsService {
 
     await this.assertHoldQuotaWithinTx(tx, input.customerUserId);
 
-    const now = new Date();
     /*
-     * HAI CỬA SỔ ĐỘNG theo `ΔT = pickupAt − acceptedAt` (luồng tiền v2 — `holdWindowsFor`):
-     * đặt xa (≥ 24 giờ) giữ nguyên cửa sổ của chính sách (120′ trả tiền, 4 giờ huỷ miễn phí);
-     * đặt cận ngày co theo ΔT (40% / 30%); đặt gấp (< 2 giờ) không có huỷ miễn phí. Cả hai mốc
-     * vẫn đếm XUÔI từ `acceptedAt`, được LƯU vào cột và không bao giờ tính lại lúc đọc.
+     * HAI CỬA SỔ ĐỘNG theo `ΔT = pickupAt − acceptedAt` (ADR 0066 — `holdWindowsFor`): trả tiền
+     * `clamp(ΔT × 30%, 15′, holdPaymentWindowMinutes)`, huỷ miễn phí `clamp(ΔT × 20%, 15′,
+     * freeCancelHours)` — trần là của chính sách phí, chuyến xa tự chạm trần, mọi chuyến có ít nhất
+     * 15′ huỷ miễn phí. Cả hai mốc vẫn đếm XUÔI từ `acceptedAt`, kẹp bởi giờ nhận, được LƯU vào cột
+     * và không bao giờ tính lại lúc đọc.
      *
      * Hạn chuyển KHÔNG vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
      * một chỗ bị khoá vô nghĩa. Phần còn lại quá ngắn để ai kịp mở app ngân hàng thì không phát QR
@@ -276,7 +275,16 @@ export class BookingHoldsService {
       paymentWindowMinutes: fees.policy.holdPaymentWindowMinutes,
     });
     const { expiresAt, freeCancelUntil } = windows;
-    if (expiresAt.getTime() - now.getTime() < HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000) {
+    /*
+     * Đo cửa sổ từ `acceptedAt` (mốc lượt duyệt vừa ghi, cùng transaction), KHÔNG từ `now`: sàn của
+     * cửa sổ động ĐÚNG BẰNG ngưỡng này (15′ — ADR 0066), nên đo từ `now` (vài mili-giây sau
+     * `acceptedAt`) sẽ từ chối mọi chuyến có ΔT ≤ 50′ dù cửa sổ đủ 15′ — và lệch với
+     * `holdWindowsPreview.tooShort` mà màn duyệt đã cho người bấm xem.
+     */
+    if (
+      expiresAt.getTime() - input.acceptedAt.getTime() <
+      HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000
+    ) {
       throw new BadRequestException({
         code: API_ERROR_CODE.HOLD_WINDOW_TOO_SHORT,
         message:
@@ -1636,17 +1644,9 @@ export class BookingHoldsService {
     throw new Error('Không sinh được mã giữ chỗ duy nhất sau 5 lần');
   }
 
+  /** Cùng định nghĩa "tiền đơn này đang bị giữ" với lượt chốt kết cục (ADR 0066). */
   private async openDisputeBookingIds(bookingIds: string[]): Promise<Set<string>> {
-    if (bookingIds.length === 0) return new Set();
-    const rows = await this.prisma.supportCase.findMany({
-      where: {
-        bookingId: { in: bookingIds },
-        category: SUPPORT_CASE_CATEGORY.DISPUTE,
-        status: { in: [...SUPPORT_CASE_STATUS_OPEN] },
-      },
-      select: { bookingId: true },
-    });
-    return new Set(rows.map((r) => r.bookingId).filter((v): v is string => !!v));
+    return this.settlement.openDisputeBookingIds(bookingIds);
   }
 }
 

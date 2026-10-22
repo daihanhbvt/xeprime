@@ -53,6 +53,7 @@ import {
   makeCustomersService,
   makeNotificationService,
   makePricingService,
+  makeSupportService,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -107,6 +108,7 @@ const trips = new CustomerTripsService(
   audit,
   new CancellationsService(),
   new InsuranceReadService(asService),
+  makeSupportService(asService, notifications),
 );
 
 let dbAvailable = false;

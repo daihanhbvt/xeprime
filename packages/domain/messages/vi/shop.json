@@ -221,8 +221,8 @@
       "saved": "Đã lưu cấu hình thanh toán giữ chỗ"
     },
     "mode": {
-      "onTitle": "Khách trả khoản giữ chỗ trước khi có đơn",
-      "onBody": "Khách quét VietQR chuyển khoản giữ chỗ cho XePrime ngay khi bấm đặt, trong vòng 10 phút (tự gia hạn tối đa 2 lần). Chỗ xe được giữ trong lúc chờ, và bạn chỉ nhận được yêu cầu khi tiền đã về — không còn duyệt rồi ngồi chờ xem khách có chuyển hay không. Khoản này là một PHẦN của tiền thuê; phần còn lại khách trả trực tiếp cho bạn khi nhận xe. Nếu bạn từ chối, khách được hoàn đủ 100%.",
+      "onTitle": "Khách thanh toán tiền giữ chỗ sau khi bạn duyệt",
+      "onBody": "Sau khi bạn duyệt yêu cầu thuê xe, khách quét VietQR thanh toán tiền giữ chỗ (phí sàn + bảo hiểm + 15% tiền thuê) trong cửa sổ thời gian quy định. Đơn thuê chính thức được kích hoạt ngay khi XePrime nhận đủ tiền. Nếu bạn hủy đơn sau khi nhận, khách được hoàn 100% và bạn bị trừ điểm uy tín.",
       "offTitle": "Bạn tự thoả thuận với khách",
       "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
     },
@@ -233,7 +233,7 @@
       },
       "commission": {
         "title": "Gian hàng của bạn luôn thu cọc qua XePrime",
-        "body": "Bạn đang ở tuyến hoa hồng: không trả phí thuê bao, và XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản giữ chỗ là điều kiện của tuyến này nên công tắc bị khoá. Chuyển sang gói thuê bao nếu bạn muốn tự quyết.",
+        "body": "Bạn đang ở tuyến hoa hồng: không trả phí thuê bao. Khách trả phí sàn cố định S; bạn chịu hoa hồng lũy tiến H và thuế T theo Chính sách phí. Khoản giữ chỗ trực tuyến là bắt buộc để bảo đảm cam kết giữ xe cho bạn, nên công tắc bị khoá. Chuyển sang gói thuê bao nếu bạn muốn tự quyết.",
         "cta": "Xem gói thuê bao"
       },
       "featureMissing": {
@@ -250,7 +250,7 @@
     "appLocked": {
       "commission": {
         "title": "Gian hàng của bạn luôn thu khoản giữ chỗ qua XePrime",
-        "body": "Bạn đang là chủ xe cá nhân: XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản giữ chỗ là điều kiện của loại tài khoản này nên công tắc bị khoá."
+        "body": "Bạn đang là chủ xe cá nhân thuộc tuyến hoa hồng mặc định: không trả phí thuê bao, hoa hồng theo chuyến quy định tại Chính sách phí. Khoản giữ chỗ trực tuyến là điều kiện bắt buộc của tuyến này nên công tắc bị khoá."
       },
       "featureMissing": {
         "title": "Tài khoản hiện tại chưa có tính năng này",

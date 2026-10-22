@@ -1,19 +1,20 @@
 # BẢN THIẾT KẾ KỸ THUẬT TỔNG THỂ LUỒNG TIỀN XEPRIME
-### (XEPRIME MASTER FINANCIAL ARCHITECTURE SPECIFICATION — V2.2)
+### (XEPRIME MASTER FINANCIAL ARCHITECTURE SPECIFICATION — V2.3)
 
-> **Trạng thái:** Đang triển khai (theo [ADR 0064](decisions/0064-financial-flow-v2.md) / [ADR 0065](decisions/0065-per-vehicle-type-shop-plans.md))  
-> **Phiên bản:** v2.2 — rà soát 21/10/2026  
-> **Nguồn sự thật:** hai ADR trên. Tài liệu này GIẢI THÍCH và cho ví dụ; khi lệch nhau, ADR thắng. Tiến độ ở [`completion-roadmap.md`](completion-roadmap.md).  
+> **Trạng thái:** Đang triển khai (theo [ADR 0064](decisions/0064-financial-flow-v2.md) / [ADR 0065](decisions/0065-per-vehicle-type-shop-plans.md) / [ADR 0066](decisions/0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) / [ADR 0068](decisions/0068-platform-tax-withholding-nd117-nd68.md) / [ADR 0069](decisions/0069-money-rounding-exact-vnd.md))  
+> **Phiên bản:** v2.4 — 22/10/2026: thuế khấu trừ theo loại dịch vụ giống Mioto, doanh nghiệp không khấu trừ (ADR 0068); tiền tính ra đúng tới đồng (ADR 0069) · v2.3: tiền giữ chỗ 15% tiền thuê, đền huỷ muộn trọn `D`, SLA động (ADR 0066)  
+> **Nguồn sự thật:** ba ADR trên. Tài liệu này GIẢI THÍCH và cho ví dụ; khi lệch nhau, ADR thắng. Tiến độ ở [`completion-roadmap.md`](completion-roadmap.md).  
 > **Phạm vi:** tính giá, tiền giữ chỗ online, phân bổ và giải ngân ví điểm, cửa sổ thanh toán/huỷ động, phí giao xe, bảo hiểm (MIC — chưa có hợp đồng) và gói gian hàng theo loại xe, trên ba site: **Khách** (`xeprime.vn`), **Partner** (`partner.xeprime.vn`), **Admin** (`admin.xeprime.vn`).
 
 ---
 
 ## 1. NGUYÊN TẮC THIẾT KẾ & KỶ LUẬT TIỀN TỆ
 
-1. **Bước giá 1.000đ.**
-   - Lưu `Decimal(14, 2)` ở DB, chuỗi trong JSON (ADR 0007). Mọi số XePrime tính ra là bội 1.000đ, qua đúng một hàm:
-     $$\text{roundToThousand}(x) = \text{Math.round}(x / 1000) \times 1000$$
-   - Số cấu hình trong `fee_policies` cũng phải là bội 1.000đ (CHECK `fee_policies_v2_amounts_thousand_step_check`).
+1. **Tiền đúng tới đồng; bước 1.000đ chỉ cho chính sách (ADR 0069).**
+   - Lưu `Decimal(14, 2)` ở DB, chuỗi trong JSON (ADR 0007).
+   - Khoản **tính ra từ tỷ lệ** (hoa hồng $H$, phần giữ chỗ 15%, GTGT, TNCN, phí giao xe theo km) làm tròn tới **đồng**: $\text{roundVnd}(x) = \text{Math.round}(x)$.
+   - Khoản **giảm giá theo %** (khuyến mãi xe, ưu đãi dài hạn, mã nền tảng) làm tròn **lên** 1.000đ rồi mới kẹp trần — khách không bao giờ được giảm ít hơn % đã công bố.
+   - Số **cấu hình** trong `fee_policies` (phí sàn, biểu phí bảo hiểm, các sàn) là bội 1.000đ (CHECK `fee_policies_v2_amounts_thousand_step_check`) — chính sách hạn chế lẻ từ nguồn.
 2. **Năm đẳng thức bảo toàn** (với $G$ là phí giao xe, $P$ là mã khuyến mãi nền tảng):
    $$\begin{aligned}
    \text{Tổng khách trả} &= B + S + IV + IP + G - P \\
@@ -35,18 +36,19 @@ flowchart TD
         Rent["Tiền thuê B (sau khuyến mãi của xe, không gồm giao xe)"]
         Fee["+ Phí sàn S cố định: 50k ô tô / 30k xe máy"]
         Ins["+ Bảo hiểm IV / IP (tuỳ chọn, chỉ khi có đối tác)"]
-        Gross["Cơ sở tiền giữ chỗ = B + S + IV + IP"]
+        Gross["Tổng trước mã = B + S + IV + IP"]
         Deliv["Phí giao xe G (dự kiến) — trả tay lúc nhận"]
         Rent & Fee & Ins --> Gross
     end
 
     subgraph Online ["2. Tiền giữ chỗ (QR SePay)"]
-        Pct["30% × (B + S + IV + IP), làm tròn 1.000đ"]
-        Floor["Sàn: S + H + IV + IP + T · sàn cọc · holdMinAmount"]
+        Pct["S + H + IV + IP + roundTo1k(15% × B)"]
+        Floor["Sàn: S + H + IV + IP + T · holdMinAmount"]
         GOnline["grossOnline = max(...) , kẹp ≤ B + S + IV + IP"]
         Promo["− P (mã nền tảng, trừ SAU, trần D + S + H)"]
         QR["Số in lên QR = grossOnline − P"]
-        Gross --> Pct --> GOnline
+        Gross --> GOnline
+        Pct --> GOnline
         Floor --> GOnline --> Promo --> QR
     end
 
@@ -59,7 +61,7 @@ flowchart TD
 
     subgraph Settle ["4. Chuyến hoàn thành"]
         Plat["XePrime: S + H − P"]
-        Tax["Sổ thuế: T (10% × B)"]
+        Tax["Sổ thuế: T = GTGT + TNCN (7% tự lái · 4,5% có tài xế)"]
         Insurer["Hãng bảo hiểm: IV + IP (khi GCN issued)"]
         Wallet["Ví chủ xe: D − T"]
         GOnline --> Plat & Tax & Insurer & Wallet
@@ -71,7 +73,7 @@ flowchart TD
 | $B$ | Tiền thuê (sau khuyến mãi trực tiếp của xe, **không gồm giao xe**) | Khách | Chủ xe | Một phần, qua $D$ |
 | $S$ | Phí sàn (phí đặt xe) | Khách | XePrime | Có |
 | $H$ | Hoa hồng lũy tiến (chỉ tuyến hoa hồng) | Chủ xe | XePrime | Có — trừ từ $D$ |
-| $T$ | Thuế khấu trừ/nộp thay 10% | Chủ xe | Ngân sách | Có — trừ từ $D$ |
+| $T$ | Thuế khấu trừ/nộp thay (GTGT + TNCN, theo loại dịch vụ — ADR 0068) | Chủ xe (cá nhân/hộ) | Ngân sách | Có — trừ từ $D$ |
 | $IV$ · $IP$ | Bảo hiểm vật chất xe · tai nạn người (tuỳ chọn) | Khách | Hãng bảo hiểm | Có, giữ hộ |
 | $G$ | Phí giao nhận xe | Khách | Chủ xe | **Không** |
 | $P$ | Mã khuyến mãi nền tảng | XePrime tài trợ | Khách | Trừ vào QR |
@@ -91,23 +93,31 @@ Chỉ **tuyến hoa hồng**; tuyến gói $H = 0$ và không sinh dòng.
 | 8 – 30 | 3% |
 | 31+ | 0% |
 
-$$H = \text{roundToThousand}\Big(\sum_i \text{giá ngày}_i \times \%\text{nấc}(i)\Big)$$
+$H = \text{roundVnd}\Big(\sum_i \text{giá ngày}_i \times \%\text{nấc}(i)\Big)$$
 Làm tròn **một lần** trên tổng (`computeTieredOwnerCommission`). Giao xe, bảo hiểm, $S$ không vào mẫu số.
 
 ### 2.3. Thuế ($T$)
-- 10% (`VAT 5% + TNCN 5%`), **cả hai tuyến**, trừ vào tiền chủ xe, không cộng vào khách.
-- **Cơ sở tính = $B$**, không gồm $G$, $S$, $IV$, $IP$. *(Code hiện vẫn tính cả phí giao xe — đang sửa.)*
-- Chỉ phát sinh khi chuyến bắt đầu; huỷ trước chuyến không có thuế. Tỷ lệ là giả thuyết thị trường, chưa qua tư vấn thuế.
+- Khấu trừ, nộp thay theo **NĐ 117/2025 + NĐ 68/2026** (ADR 0068), mức theo **loại dịch vụ**, hai sắc thuế tính riêng (chính sách v9 — giống Mioto):
 
-### 2.4. Tiền giữ chỗ (khoản online qua QR)
-$$\text{grossOnline} = \min\Big(B{+}S{+}IV{+}IP,\ \max\big(\text{roundToThousand}(30\% \times (B{+}S{+}IV{+}IP)),\ \text{depositMinAmount},\ S{+}H{+}IV{+}IP{+}T,\ \text{holdMinAmount}\big)\Big)$$
-- Sàn $S + H + IV + IP + T$ bảo đảm $D \ge T$ — ví chủ xe không bao giờ nhận khoản âm.
+  | Dịch vụ | GTGT | TNCN | Tổng |
+  | :--- | :---: | :---: | :---: |
+  | Tự lái · Thuê dài hạn | 5% | 2% | **7%** |
+  | Có tài xế | 3% | 1,5% | **4,5%** |
+- Chỉ chủ thể **cá nhân / hộ kinh doanh**; gian hàng **doanh nghiệp** $T = 0$ (tự xuất hoá đơn). Tuyến hoa hồng hay gói KHÔNG quyết định thuế.
+- **Cơ sở tính = $B$**, không gồm $G$, $S$, $IV$, $IP$. Mỗi sắc thuế làm tròn tới đồng: $T = \text{roundVnd}(B \times \text{GTGT\%}) + \text{roundVnd}(B \times \text{TNCN\%})$.
+- Ghi sổ khi chuyến bắt đầu; huỷ trước chuyến không có thuế. Đặc tả đầy đủ + câu hỏi chờ tư vấn thuế: `docs/specifications/05-owner-tax-withholding-spec.md`.
+
+### 2.4. Tiền giữ chỗ (khoản online qua QR) — ADR 0066 điều 1
+$$D_{\text{target}} = \max\big(\text{roundVnd}(\text{depositPercent} \times B),\ \text{depositMinAmount}\big) \qquad (15\%\ \text{và sàn}\ 0\ \text{ở chính sách v8})$$
+$$\text{grossOnline} = \min\Big(B{+}S{+}IV{+}IP,\ \max\big(S{+}H{+}IV{+}IP{+}D_{\text{target}},\ S{+}H{+}IV{+}IP{+}T,\ \text{holdMinAmount}\big)\Big)$$
+- Tiền giữ chỗ = mọi thứ KHÔNG phải tiền chủ xe ($S + H + IV + IP$) + **phần cam kết giữ xe của chủ xe** $15\% \times B$. `depositPercent` là % của **tiền thuê $B$** (không gồm $G$), không còn là % của tổng khách trả.
+- Sàn $S + H + IV + IP + T$ bảo đảm $D \ge T$ — ví chủ xe không bao giờ nhận khoản âm (CHECK `deposit_percent ≥ tax_percent` giữ nó ở phía cấu hình).
 - Tuyến gói **tắt** công tắc thu cọc: $\text{grossOnline} = \max(S + IV + IP + T,\ \text{holdMinAmount})$, kẹp như trên.
 - Báo giá tạm tính / dài hạn chưa chốt lịch ⇒ không thu online, không có QR.
 - Giao diện luôn gọi là **"tiền giữ chỗ"**, không bao giờ "cọc" (ADR 0044 điều 9).
 
 ### 2.5. Thứ tự áp mã khuyến mãi
-1. Tính `grossOnline` **không mã** (30% và các sàn ở 2.4).
+1. Tính `grossOnline` **không mã** (công thức và các sàn ở 2.4).
 2. Trừ $P$: $\text{QR} = \text{grossOnline} - P$, với $P \le \min(\text{trần của mã},\ \text{tiền thuê đủ điều kiện},\ \text{grossOnline} - \text{holdMinAmount},\ D + S + H)$.
 3. $B$, $S$, $H$, $T$, $IV$, $IP$, $D$, phần trả tay và ví chủ xe **không đổi**; XePrime gánh $P$ (doanh thu $S + H - P$ có thể âm).
 
@@ -118,16 +128,18 @@ $$\text{grossOnline} = \min\Big(B{+}S{+}IV{+}IP,\ \max\big(\text{roundToThousand
 ### 3.1. Xe có tài xế
 - Ba ô giá trên từng xe: `withDriverDailyPrice` (nội thành), `withDriverInterCityPrice` (liên tỉnh 2 chiều), `withDriverOneWayPrice` (liên tỉnh 1 chiều).
 - Phụ phí tài xế theo quy tắc (`DRIVER_SURCHARGE_KIND`): ngoài giờ, chờ đợi, quá km, lưu đêm.
-- Tiền tài xế nằm trong $B$ ⇒ chịu $H$ (tuyến hoa hồng) và $T$ như tiền thuê; $S$ vẫn cố định; tiền giữ chỗ vẫn 30%.
-- Tài xế là tài khoản khách được bên thuê mời liên kết (ADR 0063).
+- Tiền tài xế nằm trong $B$ ⇒ chịu $H$ (tuyến hoa hồng) và $T$ như tiền thuê; $S$ vẫn cố định; phần giữ chỗ của chủ xe vẫn 15% × $B$.
+- Tài xế là tài khoản khách được bên thuê mời liên kết (ADR 0063). Tài xế có $\text{clamp}(10\% \times \Delta T, 15′, 60′)$ (với $\Delta T$ = `pickupAt` − lúc gán) để nhận/từ chối; quá hạn ⇒ worker nhả lượt gán và báo khẩn gian hàng gán người khác trong 30 phút — đơn của khách không bị huỷ (ADR 0066 điều 4).
+- **Tài xế ngoài hệ thống** (ADR 0067): bên thuê ghi tên + SĐT tài xế thuê ngoài trên đúng đơn đó — không cần tài khoản, coi là đã nhận ngay, khách thấy như tài xế liên kết. Không chống trùng lịch, không vào thống kê/thù lao tài xế.
+- **Thiếu tài xế sát giờ KHÔNG tự huỷ** (ADR 0067): còn 2 giờ mà chưa có ai (không lượt gán nào, không tài xế ngoài) ⇒ worker nhắc khẩn bên thuê một lần. Không đồng tiền nào đổi chiều; sau giờ nhận dựa vào lưới §7.4; bên thuê không phục vụ được thì tự huỷ chuyến (hoàn 100%, ghi trách nhiệm).
 
 ### 3.2. Phí giao nhận xe ($G$) — theo Wave 9
 - **Không nằm trong tiền giữ chỗ.** Chủ xe chốt phí đã thoả thuận **sau khi duyệt**; khách trả **trực tiếp chủ xe lúc nhận xe**. XePrime không thu hộ, không đối soát.
-- Không vào cơ sở 30%, không chịu $H$, không chịu $T$, không đủ điều kiện mã khuyến mãi. Chủ xe hưởng 100%.
+- Không vào cơ sở 15%, không chịu $H$, không chịu $T$, không đủ điều kiện mã khuyến mãi. Chủ xe hưởng 100%.
 - Báo giá cho khách hiện $G$ là dòng *dự kiến, trả khi nhận xe* khi có ước lượng khoảng cách (ADR 0018/0061).
 - Bảng bậc `deliveryTiers` của chính sách cho thuê có **hai dạng loại trừ nhau**:
   - Trọn gói `{ toKm, fee }` — ví dụ ≤ 5 km: 0đ; ≤ 10 km: 100.000đ.
-  - **Theo km** `{ toKm, perKm }` — phí = `perKm` × khoảng cách, làm tròn 1.000đ — ví dụ ≤ 15 km: 10.000đ/km.
+  - **Theo km** `{ toKm, perKm }` — phí = `perKm` × khoảng cách, đúng tới đồng (ADR 0069) — ví dụ ≤ 15 km: 10.000đ/km.
 
 ---
 
@@ -139,41 +151,42 @@ Thù lao/công nợ tài xế trong Manage (khoán theo cuốc, chia %, lương 
 
 ## 5. BẢNG PHÂN BỔ DÒNG TIỀN (VÍ DỤ CHUẨN)
 
-*Kịch bản: ô tô 5 ngày × 1.000.000đ/ngày, giao xe tận nơi 200.000đ (trả tay), thuế 10% trên tiền thuê, chính sách v7 (`depositPercent` 30%, sàn cọc và `holdMinAmount` nhỏ hơn mọi số dưới đây nên không chạm). Không mã khuyến mãi.*
+*Kịch bản: ô tô 5 ngày × 1.000.000đ/ngày, giao xe tận nơi 200.000đ (trả tay), thuế tự lái 7% (GTGT 5% + TNCN 2%) trên tiền thuê, chủ xe cột 1–2 là cá nhân, gian hàng cột 3 là hộ kinh doanh, chính sách v8 (`depositPercent` 15% tiền thuê, sàn cọc 0, `holdMinAmount` nhỏ hơn mọi số dưới đây nên không chạm). Không mã khuyến mãi.*
 
 Hoa hồng 5 ngày (tuyến hoa hồng): $2 \times 1.000.000 \times 10\% + 3 \times 1.000.000 \times 7\% = 200.000 + 210.000 = 410.000$đ.
-Thuế: $T = 10\% \times 5.000.000 = 500.000$đ (không tính trên 200.000đ giao xe).
+Thuế: $T = 5\% \times 5.000.000 + 2\% \times 5.000.000 = 250.000 + 100.000 = 350.000$đ (không tính trên 200.000đ giao xe).
 
 | Mục | Công thức | 1. Hoa hồng · không bảo hiểm | 2. Hoa hồng · có IV 50k/ngày | 3. Tuyến gói · cọc bật |
 | :--- | :--- | :--- | :--- | :--- |
 | **Tiền thuê ($B$)** | 1.000.000 × 5 | `5.000.000đ` | `5.000.000đ` | `5.000.000đ` |
 | **Phí sàn ($S$)** | cố định ô tô | `+ 50.000đ` | `+ 50.000đ` | `+ 50.000đ` |
 | **Bảo hiểm ($IV + IP$)** | chỉ khi có đối tác | `0đ` | `+ 250.000đ` *(50.000 × 5)* | `0đ` |
-| **Cơ sở tiền giữ chỗ** | $B + S + IV + IP$ | `5.050.000đ` | `5.300.000đ` | `5.050.000đ` |
-| **Phí giao xe ($G$)** | trả tay, ngoài cơ sở | `+ 200.000đ` | `+ 200.000đ` | `+ 200.000đ` |
-| **Tổng khách trả** | cơ sở + $G$ | **`5.250.000đ`** | **`5.500.000đ`** | **`5.250.000đ`** |
-| 30% cơ sở | roundTo1k(30% × cơ sở) | `1.515.000đ` | `1.590.000đ` | `1.515.000đ` |
-| Sàn không-phải-tiền-chủ-xe | $S + H + IV + IP + T$ | `960.000đ` *(50k + 410k + 500k)* | `1.210.000đ` *(50k + 410k + 250k + 500k)* | `550.000đ` *(50k + 0 + 500k)* |
-| **Tiền giữ chỗ (QR)** | max(30%, sàn) | **`1.515.000đ`** | **`1.590.000đ`** | **`1.515.000đ`** |
-| **Trả tay lúc nhận xe** | cơ sở − QR + $G$ | **`3.735.000đ`** *(3.535.000 + 200.000)* | **`3.910.000đ`** *(3.710.000 + 200.000)* | **`3.735.000đ`** *(3.535.000 + 200.000)* |
+| **Tổng trước mã** | $B + S + IV + IP$ | `5.050.000đ` | `5.300.000đ` | `5.050.000đ` |
+| **Phí giao xe ($G$)** | trả tay, ngoài tiền giữ chỗ | `+ 200.000đ` | `+ 200.000đ` | `+ 200.000đ` |
+| **Tổng khách trả** | + $G$ | **`5.250.000đ`** | **`5.500.000đ`** | **`5.250.000đ`** |
 | Hoa hồng ($H$) | lũy tiến trên $B$ | `410.000đ` | `410.000đ` | `0đ` |
-| Thuế ($T$) | 10% × $B$ | `500.000đ` | `500.000đ` | `500.000đ` |
-| $D$ (phần chủ xe trong QR) | QR − $S$ − $H$ − $IV$ − $IP$ | `1.055.000đ` *(1.515.000 − 50.000 − 410.000)* | `880.000đ` *(1.590.000 − 50.000 − 410.000 − 250.000)* | `1.465.000đ` *(1.515.000 − 50.000)* |
+| Phần giữ chỗ của chủ xe | roundVnd(15% × $B$) | `750.000đ` | `750.000đ` | `750.000đ` |
+| Sàn không-phải-tiền-chủ-xe | $S + H + IV + IP + T$ | `810.000đ` *(50k + 410k + 350k)* | `1.060.000đ` *(50k + 410k + 250k + 350k)* | `400.000đ` *(50k + 0 + 350k)* |
+| **Tiền giữ chỗ (QR)** | max($S + H + IV + IP$ + 15%·$B$, sàn) | **`1.210.000đ`** *(50k + 410k + 750k)* | **`1.460.000đ`** *(50k + 410k + 250k + 750k)* | **`800.000đ`** *(50k + 750k)* |
+| **Trả tay lúc nhận xe** | tổng trước mã − QR + $G$ | **`4.040.000đ`** *(3.840.000 + 200.000)* | **`4.040.000đ`** *(3.840.000 + 200.000)* | **`4.450.000đ`** *(4.250.000 + 200.000)* |
+| Thuế ($T$) | GTGT 5% + TNCN 2% × $B$ | `350.000đ` | `350.000đ` | `350.000đ` |
+| $D$ (phần chủ xe trong QR) | QR − $S$ − $H$ − $IV$ − $IP$ | `750.000đ` | `750.000đ` | `750.000đ` |
 | **XePrime giữ** | $S + H$ | `460.000đ` | `460.000đ` | `50.000đ` |
 | **Giữ hộ hãng bảo hiểm** | $IV + IP$ | `0đ` | `250.000đ` | `0đ` |
-| **Nộp ngân sách** | $T$ | `500.000đ` | `500.000đ` | `500.000đ` |
-| **Ghi có ví chủ xe** | $D - T$ | **`555.000đ`** | **`380.000đ`** | **`965.000đ`** |
-| Chủ xe nhận cho tiền thuê | trả tay (phần thuê) + ví = $B - H - T$ | `4.090.000đ` *(3.535.000 + 555.000)* | `4.090.000đ` *(3.710.000 + 380.000)* | `4.500.000đ` *(3.535.000 + 965.000)* |
-| **Chủ xe THỰC NHẬN** | + $G$ | **`4.290.000đ`** | **`4.290.000đ`** | **`4.700.000đ`** |
+| **Nộp ngân sách** | $T$ | `350.000đ` | `350.000đ` | `350.000đ` |
+| **Ghi có ví chủ xe** | $D - T$ | **`400.000đ`** | **`400.000đ`** | **`400.000đ`** |
+| Chủ xe nhận cho tiền thuê | trả tay (phần thuê) + ví = $B - H - T$ | `4.240.000đ` *(3.840.000 + 400.000)* | `4.240.000đ` *(3.840.000 + 400.000)* | `4.650.000đ` *(4.250.000 + 400.000)* |
+| **Chủ xe THỰC NHẬN** | + $G$ | **`4.440.000đ`** | **`4.440.000đ`** | **`4.850.000đ`** |
 
 **Kiểm tra bảo toàn** (tổng khách trả = chủ xe + XePrime + bảo hiểm + thuế):
-- Cột 1: $4.290.000 + 460.000 + 0 + 500.000 = 5.250.000$ ✓ · khách: $1.515.000 + 3.735.000 = 5.250.000$ ✓
-- Cột 2: $4.290.000 + 460.000 + 250.000 + 500.000 = 5.500.000$ ✓ · khách: $1.590.000 + 3.910.000 = 5.500.000$ ✓
-- Cột 3: $4.700.000 + 50.000 + 0 + 500.000 = 5.250.000$ ✓ · khách: $1.515.000 + 3.735.000 = 5.250.000$ ✓
+- Cột 1: $4.440.000 + 460.000 + 0 + 350.000 = 5.250.000$ ✓ · khách: $1.210.000 + 4.040.000 = 5.250.000$ ✓
+- Cột 2: $4.440.000 + 460.000 + 250.000 + 350.000 = 5.500.000$ ✓ · khách: $1.460.000 + 4.040.000 = 5.500.000$ ✓
+- Cột 3: $4.850.000 + 50.000 + 0 + 350.000 = 5.250.000$ ✓ · khách: $800.000 + 4.450.000 = 5.250.000$ ✓ · *Nếu gian hàng là doanh nghiệp: $T = 0$, ví nhận trọn $D = 750.000$đ.*
 
 **Biến thể:**
-- *Cột 3, gian hàng TẮT thu cọc:* QR = $\max(S + T, \text{holdMin}) = 550.000$đ; $D = 500.000$đ; ví $= D - T = 0$đ; trả tay $= 5.050.000 - 550.000 + 200.000 = 4.700.000$đ; chủ xe vẫn nhận $4.500.000$đ tiền thuê ($B - T$).
-- *Cột 1 với mã 100.000đ:* QR $= 1.515.000 - 100.000 = 1.415.000$đ; tổng khách $5.150.000$đ; trả tay, $D$, ví chủ xe **không đổi**; XePrime giữ $S + H - P = 360.000$đ.
+- *Cột 3, gian hàng TẮT thu cọc:* QR = $\max(S + T, \text{holdMin}) = 400.000$đ; $D = 350.000$đ; ví $= D - T = 0$đ; trả tay $= 5.050.000 - 400.000 + 200.000 = 4.850.000$đ; chủ xe vẫn nhận $4.650.000$đ tiền thuê ($B - T$).
+- *Cột 1 với mã 100.000đ:* QR $= 1.210.000 - 100.000 = 1.110.000$đ; tổng khách $5.150.000$đ; trả tay, $D$, ví chủ xe **không đổi**; XePrime giữ $S + H - P = 360.000$đ.
+- *Xe máy 1 ngày 150.000đ, tuyến hoa hồng, không bảo hiểm:* $S = 30.000$, $H = 15.000$, $15\% \times B = 22.500$ (đúng tới đồng, không làm tròn), $T = 7.500 + 3.000 = 10.500$ ⇒ QR $= 67.500$đ, $D = 22.500$đ, ví chủ xe khi chuyến xong $= 12.000$đ.
 
 Báo giá công khai chỉ hiện các dòng phía khách (tiền thuê, phí sàn, bảo hiểm, giao xe dự kiến, tiền giữ chỗ, phần trả khi nhận). Hoa hồng, thuế, $D$, ví chủ xe chỉ hiện ở bề mặt đối tác và quản trị (ADR 0064 điều 11).
 
@@ -197,63 +210,63 @@ Bảo đảm ở DB: không hai kỳ gói chồng nhau trên cùng (tenant, ph�
 
 ---
 
-## 7. CỬA SỔ THANH TOÁN & HUỶ MIỄN PHÍ ĐỘNG
+## 7. SLA ĐỘNG: PHẢN HỒI, THANH TOÁN & HUỶ MIỄN PHÍ (ADR 0066 điều 3)
 
-Hai mốc tính **xuôi từ `acceptedAt`**, kẹp bởi `pickupAt`, server lưu, client chỉ đọc (`holdWindowsFor`). Không gia hạn; nhắc ở mốc còn 60′ và 15′ (mốc nào dài hơn cả cửa sổ thì bỏ qua).
+Bốn đồng hồ cùng một hình dạng $\text{clamp}(\text{round}(\Delta T \times \text{tỉ lệ}),\ \text{sàn},\ \text{trần})$; server lưu mốc, client chỉ đọc.
+
+| Đồng hồ | $\Delta T$ | Công thức | Hết hạn |
+| :--- | :--- | :--- | :--- |
+| Chủ xe phản hồi yêu cầu | `pickupAt − createdAt` | 240′ nếu $\Delta T \ge 24$h; ngược lại clamp(20%, 15′, 240′); dài hạn chưa có giờ nhận ⇒ 240′ | `expired`, tính vào tỉ lệ phản hồi |
+| Khách trả tiền giữ chỗ $T_{\text{pay}}$ | `pickupAt − acceptedAt` | clamp(30%, 15′, 120′) | `hold_expired`, nhả lịch |
+| Huỷ miễn phí $T_{\text{cancel}}$ | `pickupAt − acceptedAt` | clamp(20%, 15′, 2h) | qua mốc ⇒ huỷ muộn (§7.3) |
+| Tài xế nhận cuốc | `pickupAt − lúc gán` | clamp(10%, 15′, 60′) | nhả lượt gán + báo khẩn gian hàng (§3.1) |
+
+Hai mốc của hold tính **xuôi từ `acceptedAt`**, kẹp bởi `pickupAt` (`holdWindowsFor`). Không gia hạn; nhắc ở mốc còn 60′ và 15′ (mốc nào dài hơn cả cửa sổ thì bỏ qua). Hạn phản hồi của yêu cầu lưu ở `booking_requests.respond_by` lúc gửi; worker nhắc chủ xe theo phần còn lại, cũng ở 60′ và 15′.
 
 ```mermaid
 flowchart TD
     Accept["Chủ xe duyệt / Đặt ngay: acceptedAt"] --> Delta["ΔT = pickupAt − acceptedAt"]
-    Delta --> Far["ΔT ≥ 24h"]
-    Far --> F1["Huỷ miễn phí: 4 giờ"]
-    Far --> F2["Hạn thanh toán: 120 phút"]
-    Delta --> Near["2h ≤ ΔT < 24h"]
-    Near --> N1["Huỷ miễn phí: min(4h, 30% × ΔT)"]
-    Near --> N2["Hạn thanh toán: clamp(40% × ΔT, 15′, 120′)"]
-    Delta --> Urgent["ΔT < 2h"]
-    Urgent --> U1["Không có huỷ miễn phí"]
-    Urgent --> U2["Hạn thanh toán: clamp(40% × ΔT, 15′, 48′)"]
+    Delta --> Pay["Hạn thanh toán: clamp(30% × ΔT, 15′, 120′)"]
+    Delta --> Cancel["Huỷ miễn phí: clamp(20% × ΔT, 15′, 2h)"]
     Accept --> Short{"Cửa sổ còn lại < 15′?"}
     Short -- có --> Reject["HOLD_WINDOW_TOO_SHORT — thoả thuận trực tiếp"]
 ```
 
 ### 7.1. Công thức
-$$T_{\text{cancel}} = \begin{cases}
-4\text{ giờ} & \Delta T \ge 24\text{ giờ} \\
-\min(4\text{ giờ}, \text{round}(\Delta T \times 30\%)) & 2\text{ giờ} \le \Delta T < 24\text{ giờ} \\
-0 & \Delta T < 2\text{ giờ}
-\end{cases}
+$$T_{\text{pay}} = \min\big(120,\ \max(15,\ \text{round}(\Delta T \times 30\%))\big)\ \text{phút}
 \qquad
-T_{\text{pay}} = \begin{cases}
-120\text{ phút} & \Delta T \ge 24\text{ giờ} \\
-\min(120, \max(15, \text{round}(\Delta T \times 40\%)))\text{ phút} & \Delta T < 24\text{ giờ}
-\end{cases}$$
+T_{\text{cancel}} = \min\big(120,\ \max(15,\ \text{round}(\Delta T \times 20\%))\big)\ \text{phút}$$
 
-Khi $\Delta T < 24$ giờ, $T_{\text{pay}}$ (40%) **dài hơn** $T_{\text{cancel}}$ (30%): khách trả ở cuối hạn đã qua mốc huỷ miễn phí. Màn thanh toán phải nêu mốc huỷ miễn phí **trước** khi khách trả.
+Trần là dữ liệu chính sách (`holdPaymentWindowMinutes` = 120′, `freeCancelHours` = 2h ở v8). Luôn có tối thiểu 15′ huỷ miễn phí (vẫn kẹp bởi `pickupAt`) — quy tắc "dưới 2h không có huỷ miễn phí" của bản v2.2 đã bỏ. Khi $50′ < \Delta T < 10$h, $T_{\text{pay}}$ (30%) **dài hơn** $T_{\text{cancel}}$ (20%): khách trả ở cuối hạn đã qua mốc huỷ miễn phí. Màn thanh toán phải hiện **đồng hồ đếm ngược** mốc huỷ miễn phí **trước** khi khách quét QR.
 
 ### 7.2. Bảng tình huống
 
 | Tình huống | $\Delta T$ | Huỷ miễn phí | Hạn thanh toán | Khách huỷ sau mốc miễn phí (trước bàn giao) |
 | :--- | :--- | :--- | :--- | :--- |
-| Đặt trước 3 ngày | 72 giờ | **4 giờ** | **120 phút** | $D + S + H$ chia 50/50 chủ xe ↔ XePrime; $IV + IP$ hoàn 100% |
-| Đặt trước 1 ngày | 24 giờ | **4 giờ** | **120 phút** | như trên |
-| Đặt trước 10 tiếng | 10 giờ | **3 giờ** (600′ × 30%) | **120 phút** (600′ × 40% = 240′, kẹp 120′) | như trên |
-| Đặt trước 4 tiếng | 4 giờ (240′) | **72 phút** | **96 phút** | như trên — trả ở phút 80 là đã qua mốc 72′ |
-| Đặt gấp trước 90 phút | 1,5 giờ | **0** | **36 phút** (90′ × 40%) | huỷ ngay sau khi trả đã là huỷ muộn |
-| Đặt gấp, $\Delta T < 2$ giờ nói chung | 15′ – 120′ | **0** | **15 – 48 phút** | như trên |
+| Đặt trước 3 ngày | 72 giờ | **2 giờ** | **120 phút** | chủ xe nhận trọn $D$; XePrime giữ $S + H - P$; $IV + IP$ hoàn 100% |
+| Đặt trước 1 ngày | 24 giờ | **2 giờ** | **120 phút** | như trên |
+| Đặt trước 10 tiếng | 10 giờ | **2 giờ** (600′ × 20%) | **120 phút** (600′ × 30% = 180′, kẹp 120′) | như trên |
+| Đặt trước 4 tiếng | 4 giờ (240′) | **48 phút** | **72 phút** | như trên — trả ở phút 60 là đã qua mốc 48′ |
+| Đặt gấp trước 90 phút | 1,5 giờ | **18 phút** | **27 phút** | như trên |
+| Đặt gấp trước 30 phút | 30′ | **15 phút** (sàn) | **15 phút** (sàn) | như trên |
 | Giờ nhận còn dưới 15′ | < 15′ | — | — | Không phát QR: `HOLD_WINDOW_TOO_SHORT` |
 
-### 7.3. Phân bổ khi huỷ (theo ví dụ §5)
+### 7.3. Phân bổ khi huỷ (theo ví dụ §5) — ADR 0066 điều 2
 
 | Sự kiện | Cột 1 | Cột 2 | Cột 3 |
 | :--- | :--- | :--- | :--- |
-| Phần chia $D + S + H$ | `1.515.000đ` | `1.340.000đ` *(880k + 50k + 410k)* | `1.515.000đ` *(1.465k + 50k)* |
-| Huỷ muộn / no-show → ví chủ xe ($\lfloor \cdot/2 \rfloor$ tới 1.000đ) | `757.000đ` | `670.000đ` | `757.000đ` |
-| → XePrime (phần dư, trừ $P$) | `758.000đ` | `670.000đ` | `758.000đ` |
+| Huỷ muộn / no-show → ví chủ xe (trọn $D$) | `750.000đ` | `750.000đ` | `750.000đ` |
+| → XePrime ($S + H - P$) | `460.000đ` | `460.000đ` | `50.000đ` |
 | → ví khách ($IV + IP$) | `0đ` | `250.000đ` | `0đ` |
-| Huỷ trong mốc miễn phí / chủ xe huỷ → ví khách | `1.515.000đ` | `1.590.000đ` | `1.515.000đ` |
+| Huỷ trong mốc miễn phí / chủ xe huỷ → ví khách | `1.210.000đ` | `1.460.000đ` | `800.000đ` |
 
-Hoàn toàn bộ chỉ hoàn **đúng số khách đã chuyển** (không hoàn phần $P$ nền tảng tài trợ). Tiền hoàn luôn vào ví **tài khoản khách** (ADR 0053 điều 8). Thuế không phát sinh ở mọi nhánh huỷ.
+Hoàn toàn bộ chỉ hoàn **đúng số khách đã chuyển** (không hoàn phần $P$ nền tảng tài trợ). Tiền hoàn luôn vào ví **tài khoản khách** (ADR 0053 điều 8). Thuế không phát sinh ở mọi nhánh huỷ: khoản đền cho chủ xe là bồi thường vi phạm, không phải doanh thu cho thuê. Chủ xe / gian hàng huỷ còn bị ghi trách nhiệm vào chỉ số uy tín (ADR 0045).
+
+### 7.4. Mốc nhận xe — lưới chống treo đơn (ADR 0066 điều 5)
+
+Không có trạng thái đơn mới. Chủ xe xác nhận giao xe ⇒ đơn `active` ngay (thuế, bảo hiểm khởi động); ảnh hiện trạng và số công tơ mét **tuỳ chọn**, có lời khuyến nghị chụp, và hiện ở trang chuyến của khách.
+- **Khách báo "Chưa nhận được xe"** trong `[pickupAt, pickupAt + 120′]` (đơn `reserved` hoặc `active`) ⇒ mở hồ sơ hỗ trợ `dispute` ưu tiên khẩn; hồ sơ tranh chấp đang mở **hoãn quyết toán** tiền giữ chỗ cho tới khi CSKH xử lý.
+- **Cả hai im lặng:** quá `pickupAt + 120′` mà đơn vẫn `reserved`, chưa có biên bản nhận xe ⇒ worker mở hồ sơ `handover_unconfirmed` cho CSKH gọi xác minh; hồ sơ này cũng hoãn quyết toán, nên một no-show ghi sau đó không tự chuyển tiền.
 
 ---
 
@@ -296,7 +309,7 @@ Mô tả sản phẩm sống ở **màn danh mục sản phẩm MIC** của admi
 ### 9.2. Site partner (`partner.xeprime.vn`)
 1. **Hộp thư yêu cầu `/booking-requests`** — `ApproveBookingRequestDialog`: tiền giữ chỗ khách sẽ chuyển, tiền thu tại chỗ, hoa hồng, thuế, số sẽ vào ví điểm; cửa sổ thanh toán/huỷ dự kiến theo $\Delta T$.
 2. **Chi tiết đơn `/bookings/[id]`** — tóm tắt tài chính chuyến, nhập phí giao xe đã thoả thuận.
-3. **Ví điểm `/balance`** — ghi có $D - T$ khi chuyến xong, phần chia khi khách huỷ muộn; yêu cầu rút về tài khoản ngân hàng.
+3. **Ví điểm `/balance`** — ghi có $D - T$ khi chuyến xong, trọn $D$ khi khách huỷ muộn / no-show; yêu cầu rút về tài khoản ngân hàng.
 4. **Gói thuê bao `/subscription`** (+ onboarding tuyến gói) — chọn tối đa một bậc mỗi loại xe; `enterprise_contact` là thẻ "Liên hệ tư vấn".
 
 *(URL hiển thị không mang tiền tố `/manage`; thư mục nội bộ là `app/(manage)/manage/*` — ADR 0051.)*
@@ -315,7 +328,7 @@ Mô tả sản phẩm sống ở **màn danh mục sản phẩm MIC** của admi
 Rà soát 21/10/2026. Bản trước của mục này ghi "đã triển khai & nghiệm thu" kèm số test; các con số đó **không được kiểm chứng lại** ở lần rà soát này và không được dùng làm bằng chứng.
 
 **Đã có trong code** (commit `a140472f`, migration `20261020170000_financial_flow_v2`, chính sách phí v7):
-- [x] `@xeprime/types`: `computeCustomerFees` (phí sàn cố định, hoa hồng lũy tiến, tiền giữ chỗ 30% có sàn, trần mã `D + S + H`), `computeTieredOwnerCommission`, `roundToThousand`, `resolveHoldAllocation` với dòng $H$, `holdWindowsFor` (cửa sổ động).
+- [x] `@xeprime/types`: `computeCustomerFees` (phí sàn cố định, hoa hồng lũy tiến, tiền giữ chỗ có sàn — từ 22/10 là `S + H + IV + IP + 15% × B` theo ADR 0066, trần mã `D + S + H`), `computeTieredOwnerCommission`, `roundToThousand`, `resolveHoldAllocation` với dòng $H$, `holdWindowsFor` (cửa sổ động).
 - [x] DB: cột v2 trên `fee_policies`, `booking_holds.owner_commission_amount` + bốn CHECK viết lại, `bookings.owner_commission_amount`, lựa chọn bảo hiểm trên `booking_requests`.
 - [x] `MicMockInsurancePartner` + chặn `mic_mock` ở production trong env schema.
 - [x] Web: `ListingBookingCard`, `RequestBookingFlow`/`BookingReviewCosts`, `ApproveBookingRequestDialog` đọc breakdown v2.
@@ -328,8 +341,11 @@ Rà soát 21/10/2026. Bản trước của mục này ghi "đã triển khai & n
 - [ ] Bậc giao xe theo km (dạng `{ toKm, perKm }` đã có trong types; còn form + hiển thị).
 - [ ] Gói theo loại xe (ADR 0065): backend (phạm vi, EXCLUDE, hoá đơn mở theo phạm vi, chuyển đổi miễn phí) + web (`/subscription`, onboarding, admin gán gói).
 - [ ] UX cửa sổ động và huỷ: hiện mốc huỷ miễn phí trước khi trả, câu chữ cho $\Delta T < 2$ giờ.
+- [ ] ADR 0066 (22/10/2026): chính sách v8 (15% tiền thuê, sàn cọc 0, huỷ miễn phí tối đa 2h), đền huỷ muộn trọn $D$, SLA phản hồi động cho chủ xe và tài xế, nút "Chưa nhận được xe" + hồ sơ `handover_unconfirmed` — đang triển khai trên nhánh hiện tại; trạng thái nghiệm thu ghi ở `completion-roadmap.md`, không ở đây.
+- [ ] ADR 0068 + 0069: thuế theo loại dịch vụ (GTGT/TNCN riêng, doanh nghiệp miễn), tiền đúng tới đồng, bảng cộng ví chủ xe, văn bản Chính sách thuế — đang triển khai.
+- [ ] ADR 0067: tài xế ngoài hệ thống trên đơn + nhắc khẩn thiếu tài xế ở mốc 2 giờ (không tự huỷ) — đang triển khai.
 
 **Hoãn / chưa thuộc đợt này:**
 - [ ] App native (khách + Partner) theo v2 và gói theo loại xe — việc của đội mobile.
 - [ ] Thù lao tài xế (§4) — giai đoạn sau, tuyến gói, cần ADR riêng.
-- [ ] Release gate ADR 0028: tư vấn thuế cho mức 10%, hợp đồng MIC thật, ý kiến pháp lý thu hộ — không mở được bằng mã.
+- [ ] Release gate ADR 0028: tư vấn thuế cho phân loại và mức khấu trừ (ADR 0068 — đang áp theo Mioto), hợp đồng MIC thật, ý kiến pháp lý thu hộ — không mở được bằng mã.

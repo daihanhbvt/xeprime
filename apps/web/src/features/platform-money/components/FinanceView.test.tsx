@@ -502,7 +502,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
     expect(within(drawer).queryByText('Đã dùng cho chuyến')).toBeNull();
     expect(within(drawer).queryByText('Bồi thường chủ xe')).toBeNull();
     expect(within(drawer).getByText('Đã quyết toán')).toBeTruthy();
-    expect(within(drawer).getByText('Huỷ muộn — chia đôi')).toBeTruthy();
+    expect(within(drawer).getByText('Huỷ muộn — đền giữ chỗ')).toBeTruthy();
     expect(within(drawer).getByText('Đã hoàn khách')).toBeTruthy();
 
     // Mỗi kết cục nói tiền đi đâu NGAY trên thẻ chọn — và dòng đó là mô tả của chính nút đó.

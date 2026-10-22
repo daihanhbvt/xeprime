@@ -24,10 +24,3 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
-
-/* Bút toán đảo — dấu trừ mang nghĩa, màu chỉ giúp tìm nhanh (xem `TaxPeriodPanel.module.css`). */
-.negative {
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-medium);
-  color: var(--xp-color-error);
-}

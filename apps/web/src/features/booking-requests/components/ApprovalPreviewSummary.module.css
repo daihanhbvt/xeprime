@@ -29,44 +29,6 @@
   font-size: var(--xp-font-size-label);
 }
 
-.rows {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  gap: var(--xp-space-2);
-}
-
-.row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-.row dt {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-}
-
-.row dd {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.total {
-  padding-top: var(--xp-space-xs);
-  border-top: 1px dashed var(--xp-color-border);
-}
-
-.total dt,
-.total dd {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
 .notes {
   display: flex;
   flex-direction: column;

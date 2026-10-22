@@ -115,6 +115,8 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'checkmark-done-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: 'close-circle-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: 'hourglass-outline',
+  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: 'alert-circle-outline',
 };
 
 export function notificationIcon(type: string): IconName {

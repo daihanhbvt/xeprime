@@ -22,6 +22,7 @@ import {
   fetchTripHandoverPhotoUrl,
   fetchTrips,
   provideRefundAccount,
+  reportTripNotReceived,
   tripsToParams,
 } from './api';
 import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
@@ -209,6 +210,34 @@ export function useCancelTrip(id: string) {
       const code = getErrorCode(error);
       if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+      }
+    },
+  });
+}
+
+/**
+ * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1.
+ *
+ * Cùng khuôn với `useCancelTrip`: server trả về chính chuyến (đã có `openDispute`) nên ghi thẳng
+ * vào cache chi tiết. Bị từ chối vì cửa sổ vừa đóng / đơn vừa đổi trạng thái thì kéo lại chuyến
+ * thật để nút tự biến mất thay vì mời bấm lại một việc chắc chắn hỏng.
+ */
+export function useReportTripNotReceived(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => reportTripNotReceived(id),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED
+      ) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
       }
     },
   });

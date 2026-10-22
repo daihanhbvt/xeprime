@@ -227,6 +227,12 @@
   gap: var(--xp-space-sm) var(--xp-space-md);
 }
 
+.trackInfo {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
 .readonlyGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

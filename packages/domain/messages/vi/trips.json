@@ -79,6 +79,9 @@
     "duration": "Thời lượng",
     "pickupWish": "Nguyện vọng nhận xe",
     "pickupMethodLabel": "Hình thức nhận xe",
+    "driver": "Tài xế",
+    "driverArranging": "Đang sắp xếp tài xế",
+    "driverCall": "Gọi tài xế {name}",
     "actualBlock": "Hành trình thực tế",
     "actualPickup": "Thời gian nhận bàn giao",
     "actualReturn": "Thời gian hoàn tất bàn giao",
@@ -150,6 +153,21 @@
     "cancel": "Huỷ chuyến",
     "contactLocked": "Kênh liên hệ mở sau khi chủ xe duyệt yêu cầu. Mọi trao đổi trước đó nằm ngoài phạm vi hỗ trợ của XePrime."
   },
+  "notReceived": {
+    "title": "Chưa nhận được xe?",
+    "lead": "Nếu đã quá giờ hẹn mà bạn chưa nhận được xe hoặc chủ xe không đến, hãy báo cho XePrime trước {time}.",
+    "action": "Chưa nhận được xe",
+    "dialogTitle": "Báo chưa nhận được xe",
+    "dialogBody": "XePrime sẽ tạm giữ toàn bộ tiền của chuyến này (chưa chuyển cho chủ xe) và liên hệ cả bạn lẫn chủ xe để xác minh.",
+    "dialogNote": "Chỉ báo khi bạn thật sự chưa nhận được xe. Nếu đã nhận xe, hãy bỏ qua.",
+    "confirm": "Báo chưa nhận được xe",
+    "keep": "Quay lại",
+    "success": "Đã gửi báo cáo. XePrime sẽ sớm liên hệ bạn.",
+    "openTitle": "Đang xử lý khiếu nại chưa nhận được xe",
+    "openBody": "XePrime đang tạm giữ tiền của chuyến và sẽ liên hệ bạn cùng chủ xe để xác minh.",
+    "hostOpenTitle": "Chuyến này đang có khiếu nại",
+    "hostOpenBody": "XePrime đang tạm giữ tiền của chuyến và sẽ liên hệ hai bên để xác minh. Nếu đã giao xe, hãy xác nhận biên bản giao xe (kèm ảnh nếu có) để XePrime có căn cứ xác minh."
+  },
   "cancel": {
     "title": "Huỷ chuyến đi?",
     "leadPending": "Yêu cầu thuê sẽ được rút lại và chủ xe nhận được thông báo. Bạn vẫn có thể gửi yêu cầu mới cho xe này bất cứ lúc nào.",
@@ -171,8 +189,8 @@
       "paid": "Tiền giữ chỗ đã chuyển",
       "refund": "Hoàn vào Ví điểm",
       "forfeit": "Không được hoàn",
-      "lateBody": "Tiền bảo hiểm {insurance} được hoàn đủ vì bảo hiểm chưa được phát hành. Phần còn lại của tiền giữ chỗ được chia cho chủ xe (bù việc giữ xe cho bạn) và XePrime.",
-      "lateBodyNoInsurance": "Tiền giữ chỗ được chia cho chủ xe (bù việc giữ xe cho bạn) và XePrime.",
+      "lateBody": "Tiền bảo hiểm {insurance} được hoàn đủ vì bảo hiểm chưa được phát hành. Phần còn lại của tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
+      "lateBodyNoInsurance": "Tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
       "deferred": "Chuyến đang có khiếu nại chưa xử lý xong — XePrime sẽ chốt khoản này sau khi có kết luận.",
       "notAllowedTitle": "Chuyến này không huỷ được nữa",
       "notAllowedBody": "Chuyến đã bắt đầu hoặc đã kết thúc. Nếu muốn trả xe sớm, hãy liên hệ chủ xe để bàn giao và quyết toán."
@@ -252,7 +270,9 @@
     "countdownRemaining": "Còn lại để thanh toán:",
     "countdownSegment": "giờ {index}/{total}",
     "countdownExpired": "Đã hết hạn thanh toán",
-    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên thời gian huỷ miễn phí ngắn hơn thường lệ: huỷ trước {time} được hoàn 100% số đã thanh toán.",
+    "freeCancelCountdown": "Còn lại để huỷ miễn phí:",
+    "freeCancelCountdownExpired": "Đã hết thời gian huỷ miễn phí",
+    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên thời gian huỷ miễn phí kết thúc TRƯỚC hạn thanh toán: chỉ huỷ trước {time} mới được hoàn 100% số đã thanh toán.",
     "qrCaption": "Quét mã để chuyển khoản",
     "vsDepositHint": "Tiền giữ chỗ chuyển cho XePrime để chốt chuyến và được trừ vào tiền thuê. Khác với cọc thế chấp — khoản bạn đặt lại cho chủ xe lúc nhận xe và lấy về khi trả xe nguyên vẹn.",
     "vsDepositHintLabel": "Tiền giữ chỗ khác cọc thế chấp thế nào",
@@ -264,10 +284,10 @@
     "qrFailed": "Không tải được mã QR. Dùng thông tin bên cạnh để chuyển khoản thủ công.",
     "qrUnavailable": "Chưa dựng được mã QR cho khoản này. Dùng số tiền và nội dung bên cạnh để chuyển khoản.",
     "payNow": "Thanh toán ngay",
-    "lateCancelRefund": "Huỷ sau mốc này: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm, phần còn lại của tiền giữ chỗ không được hoàn (chia cho chủ xe và XePrime).",
-    "lateCancelNoRefund": "Huỷ sau mốc này thì tiền giữ chỗ không được hoàn (chia cho chủ xe và XePrime).",
-    "noFreeCancelRefund": "Chuyến này nhận xe sát giờ nên không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm, phần còn lại của tiền giữ chỗ không được hoàn (chia cho chủ xe và XePrime).",
-    "noFreeCancelNoRefund": "Chuyến này nhận xe sát giờ nên không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán thì tiền giữ chỗ không được hoàn (chia cho chủ xe và XePrime)."
+    "lateCancelRefund": "Huỷ sau mốc này: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm; phí đặt xe và phần tiền thuê trả trước không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
+    "lateCancelNoRefund": "Huỷ sau mốc này thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
+    "noFreeCancelRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm; phí đặt xe và phần tiền thuê trả trước không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
+    "noFreeCancelNoRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime)."
   },
   "sides": {
     "ariaLabel": "Chọn phía của chuyến",
@@ -408,13 +428,14 @@
   "pending": {
     "status": {
       "title": "Yêu cầu của bạn đã được tiếp nhận",
-      "body": "Chủ xe có {minutes} phút để phản hồi yêu cầu. XePrime sẽ báo cho bạn ngay khi chủ xe nhận chuyến hoặc từ chối.",
+      "body": "Chủ xe cần phản hồi yêu cầu trước {time}. XePrime sẽ báo cho bạn ngay khi chủ xe nhận chuyến hoặc từ chối.",
+      "bodyNoDeadline": "Chủ xe đang xem xét yêu cầu. XePrime sẽ báo cho bạn ngay khi chủ xe nhận chuyến hoặc từ chối.",
       "guidanceHold": "Xe chưa được giữ cho bạn. Chuyến đi chỉ được xác nhận khi chủ xe nhận chuyến và XePrime nhận đủ tiền giữ chỗ.",
       "guidance": "Xe chưa được giữ cho bạn. Chuyến đi chỉ được xác nhận khi chủ xe nhận yêu cầu."
     },
     "track": {
       "title": "Theo dõi yêu cầu",
-      "bodyHold": "Chưa có khoản nào cần thanh toán. Khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ.",
+      "bodyHold": "Chưa có khoản nào cần thanh toán. Khi chủ xe nhận chuyến, bạn có tối đa {minutes} phút để thanh toán tiền giữ chỗ (ngắn hơn nếu giờ nhận xe gần).",
       "body": "Chưa có khoản nào cần thanh toán. XePrime sẽ báo cho bạn ngay khi chủ xe phản hồi.",
       "findOther": "Tìm xe khác"
     },

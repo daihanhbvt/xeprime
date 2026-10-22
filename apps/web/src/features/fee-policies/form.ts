@@ -13,16 +13,27 @@ import {
   OWNER_COMMISSION_PERCENT_MAX,
   OWNER_COMMISSION_FROM_DAY_MAX,
   OWNER_COMMISSION_TIERS_MAX,
-  TAX_PERCENT_MAX,
+  SERVICE_TYPE_VALUES,
+  TAX_CATEGORY_BY_SERVICE_TYPE,
+  TAX_CATEGORY_VALUES,
+  TAX_LEGAL_BASIS_DEFAULT,
+  TAX_LEGAL_BASIS_MAX_LENGTH,
+  TAX_PIT_PERCENT_MAX,
+  TAX_RATES_DEFAULTS,
+  TAX_VAT_PERCENT_MAX,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
   computeTieredOwnerCommission,
   feePolicyActivationBlockers,
   ownerCommissionPercentForDay,
   ownerCommissionTiersValid,
+  parseTaxRates,
+  taxRateTotalPercent,
   type FeePolicyValues,
   type OwnerCommissionTier,
   type PerVehicleTypeAmount,
+  type ServiceType,
+  type TaxRatesByServiceType,
   type VehicleType,
 } from '@xeprime/types';
 import type { FeePolicy, UpsertFeePolicyInput } from './types';
@@ -57,6 +68,26 @@ export interface CommissionTierFormValue {
   percent: number | null;
 }
 
+/** Một dòng của bảng mức thuế — GTGT % và TNCN % (ADR 0068 điều 1). */
+export interface TaxRateFormValue {
+  vatPercent: number | null;
+  pitPercent: number | null;
+}
+
+/** Bảng mức thuế theo loại dịch vụ — đủ ba khoá `SERVICE_TYPE`. */
+export type TaxRatesFormValue = Record<ServiceType, TaxRateFormValue>;
+
+/**
+ * Thứ tự các dòng của bảng mức thuế: MỌI `SERVICE_TYPE_VALUES`, gom theo NHÓM thuế
+ * (`TAX_CATEGORY_VALUES` — dịch vụ trước, vận tải sau) ⇒ tự lái · dài hạn · có tài xế, đúng thứ tự
+ * của ADR 0068. Suy ra chứ không liệt kê tay: thêm một loại dịch vụ là bảng có thêm dòng. Trần mỗi
+ * sắc thuế export lại từ `@xeprime/types` — MỘT nguồn với DTO.
+ */
+export const TAX_SERVICE_TYPES: readonly ServiceType[] = TAX_CATEGORY_VALUES.flatMap((category) =>
+  SERVICE_TYPE_VALUES.filter((type) => TAX_CATEGORY_BY_SERVICE_TYPE[type] === category),
+);
+export { TAX_PIT_PERCENT_MAX, TAX_VAT_PERCENT_MAX, TAX_LEGAL_BASIS_MAX_LENGTH };
+
 export interface FeePolicyFormValues {
   name: string;
   note: string;
@@ -74,8 +105,10 @@ export interface FeePolicyFormValues {
   tripInsuranceDailyAmount: PerVehicleTypeFormValue;
   insurancePartnerName: string;
   taxEnabled: boolean;
-  taxPercent: number | null;
-  taxLabel: string;
+  /** Căn cứ pháp lý — bắt buộc khi bật thuế. */
+  taxLegalBasis: string;
+  /** Bảng mức GTGT/TNCN theo loại dịch vụ (ADR 0068). */
+  taxRates: TaxRatesFormValue;
 }
 
 /** Thông điệp lỗi — modal truyền `t()` vào, form.ts không biết ngôn ngữ. */
@@ -87,8 +120,8 @@ export interface FeePolicyFormMessages {
   integer: string;
   thousandStep: string;
   ratePositive: string;
-  taxPercentRequired: string;
-  taxLabelRequired: string;
+  taxRateRequired: string;
+  taxLegalBasisRequired: string;
   partnerRequired: string;
   /** Nhãn của một mã `feePolicyActivationBlockers` — `Domain.feePolicyActivationBlocker`. */
   blocker: (code: string) => string;
@@ -101,6 +134,34 @@ function perVehicleToForm(amounts: PerVehicleTypeAmount): PerVehicleTypeFormValu
     car: Number(amounts[VEHICLE_TYPE.CAR]),
     motorbike: Number(amounts[VEHICLE_TYPE.MOTORBIKE]),
   };
+}
+
+function taxRatesToForm(rates: TaxRatesByServiceType): TaxRatesFormValue {
+  return Object.fromEntries(
+    TAX_SERVICE_TYPES.map((type) => [
+      type,
+      { vatPercent: rates[type].vatPercent, pitPercent: rates[type].pitPercent },
+    ]),
+  ) as TaxRatesFormValue;
+}
+
+/** Bảng mức từ form ⇒ dạng dây. Ô trống thành NaN để `taxRatesValid` (cổng kích hoạt) bắt được. */
+function taxRatesFromForm(rates: TaxRatesFormValue): TaxRatesByServiceType {
+  return Object.fromEntries(
+    TAX_SERVICE_TYPES.map((type) => [
+      type,
+      {
+        vatPercent: rates[type].vatPercent ?? Number.NaN,
+        pitPercent: rates[type].pitPercent ?? Number.NaN,
+      },
+    ]),
+  ) as TaxRatesByServiceType;
+}
+
+/** Tổng hai sắc thuế của một dòng đang soạn — `null` khi còn ô trống (cột "Cộng" hiện gạch). */
+export function taxRateRowTotal(row: TaxRateFormValue | undefined): number | null {
+  if (row?.vatPercent == null || row.pitPercent == null) return null;
+  return taxRateTotalPercent({ vatPercent: row.vatPercent, pitPercent: row.pitPercent });
 }
 
 function perVehicleToWire(value: PerVehicleTypeFormValue): PerVehicleTypeAmount {
@@ -127,7 +188,7 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
       ownerCommissionTiers: FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers.map((tier) => ({ ...tier })),
       depositPercent: FEE_SCHEDULE_DEFAULTS.depositPercent,
       depositMinAmount: Number(FEE_SCHEDULE_DEFAULTS.depositMinAmount),
-      // Trần không thấp hơn % cọc mặc định — cùng cách migration luồng tiền v2 nâng trần (`GREATEST(…, 30)`).
+      // Trần không thấp hơn % giữ chỗ mặc định — cùng cách migration v8 nâng trần (`GREATEST(…, 15)`, ADR 0066).
       depositMaxPercent: FEE_SCHEDULE_DEFAULTS.depositPercent,
       holdMinAmount: HOLD_MIN_AMOUNT,
       holdPaymentWindowMinutes: HOLD_PAYMENT_WINDOW_MINUTES,
@@ -140,8 +201,9 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
       tripInsuranceDailyAmount: perVehicleToForm(FEE_SCHEDULE_DEFAULTS.tripInsuranceDailyAmount),
       insurancePartnerName: '',
       taxEnabled: false,
-      taxPercent: null,
-      taxLabel: '',
+      // Bật công tắc là có ngay bảng mức NĐ 117 + căn cứ mặc định — admin chỉ sửa khi khác.
+      taxLegalBasis: TAX_LEGAL_BASIS_DEFAULT,
+      taxRates: taxRatesToForm(TAX_RATES_DEFAULTS),
     };
   }
   return {
@@ -164,8 +226,12 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
     tripInsuranceDailyAmount: perVehicleToForm(source.tripInsuranceDailyAmount),
     insurancePartnerName: source.insurancePartnerName ?? '',
     taxEnabled: source.taxEnabled,
-    taxPercent: source.taxPercent ?? null,
-    taxLabel: source.taxLabel ?? '',
+    /*
+     * Bản ≤ v8 (một mức) không có bảng mức: nhân bản nó thì điền sẵn mức NĐ 117 thay vì để trống —
+     * mức một-mức cũ không tách được thành GTGT/TNCN.
+     */
+    taxLegalBasis: source.taxLegalBasis ?? (source.taxEnabled ? TAX_LEGAL_BASIS_DEFAULT : ''),
+    taxRates: taxRatesToForm(parseTaxRates(source.taxRates) ?? TAX_RATES_DEFAULTS),
   };
 }
 
@@ -200,8 +266,9 @@ export function toUpsertFeePolicyBody(values: FeePolicyFormValues): UpsertFeePol
     tripInsuranceDailyAmount: perVehicleToWire(values.tripInsuranceDailyAmount),
     insurancePartnerName: insuranceOn ? values.insurancePartnerName.trim() || null : null,
     taxEnabled: values.taxEnabled,
-    taxPercent: values.taxEnabled ? values.taxPercent : null,
-    taxLabel: values.taxEnabled ? values.taxLabel.trim() || null : null,
+    // Tắt thuế thì không gửi bảng mức — server lưu null, không để số mồ côi.
+    taxRates: values.taxEnabled ? taxRatesFromForm(values.taxRates) : null,
+    taxLegalBasis: values.taxEnabled ? values.taxLegalBasis.trim() || null : null,
   };
 }
 
@@ -225,8 +292,11 @@ export function formToPolicyValues(values: FeePolicyFormValues): FeePolicyValues
     customerPlatformFee: perVehicleToWire(values.customerPlatformFee),
     ownerCommissionTiers: tiersFromForm(values.ownerCommissionTiers),
     taxEnabled: values.taxEnabled,
-    taxPercent: values.taxEnabled ? values.taxPercent : null,
-    taxLabel: values.taxEnabled ? values.taxLabel : null,
+    taxRates: values.taxEnabled ? taxRatesFromForm(values.taxRates) : null,
+    taxLegalBasis: values.taxEnabled ? values.taxLegalBasis : null,
+    // Hai trường một-mức cũ (≤ v8) — form mới không bao giờ ghi.
+    taxPercent: null,
+    taxLabel: null,
     tripInsuranceEnabled: values.tripInsuranceEnabled,
     tripInsuranceDailyAmount: perVehicleToWire(values.tripInsuranceDailyAmount),
     vehicleProtectionEnabled: values.vehicleProtectionEnabled,
@@ -363,6 +433,16 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
         }),
     }) as yup.ObjectSchema<PerVehicleTypeFormValue>;
 
+  /** Một sắc thuế: trống được (tắt thuế), có số thì trong `[0, trần NĐ 117]`, hai chữ số thập phân. */
+  const taxRate = (max: number) =>
+    yup
+      .number()
+      .nullable()
+      .defined()
+      .min(0, m.range)
+      .max(max, m.range)
+      .test('two-decimals', m.range, (v) => v == null || Math.abs(v * 100 - Math.round(v * 100)) < 1e-9);
+
   const percent = (min: number, max: number) =>
     yup
       .number()
@@ -429,25 +509,41 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
           then: (s) => s.test('required', m.partnerRequired, (v) => Boolean(v)),
         }),
       taxEnabled: yup.boolean().defined(),
-      taxPercent: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0, m.range)
-        .max(TAX_PERCENT_MAX, m.range)
-        .when('taxEnabled', {
-          is: true,
-          then: (s) => s.test('required', m.taxPercentRequired, (v) => v != null),
-        }),
-      taxLabel: yup
+      taxLegalBasis: yup
         .string()
         .trim()
-        .max(120)
+        .max(TAX_LEGAL_BASIS_MAX_LENGTH, m.range)
         .defined()
         .when('taxEnabled', {
           is: true,
-          then: (s) => s.test('required', m.taxLabelRequired, (v) => Boolean(v)),
+          then: (s) => s.test('required', m.taxLegalBasisRequired, (v) => Boolean(v)),
         }),
+      taxRates: yup
+        .object(
+          Object.fromEntries(
+            TAX_SERVICE_TYPES.map((type) => [
+              type,
+              yup.object({ vatPercent: taxRate(TAX_VAT_PERCENT_MAX), pitPercent: taxRate(TAX_PIT_PERCENT_MAX) }),
+            ]),
+          ),
+        )
+        .required() as unknown as yup.ObjectSchema<TaxRatesFormValue>,
+    })
+    /*
+     * Bật thuế thì MỌI ô của bảng mức phải có số — kiểm ở gốc vì `.when` trong object lồng không
+     * nhìn thấy `taxEnabled` ở cấp trên. Lỗi gắn đúng ô trống.
+     */
+    .test('tax-rates-required', function taxRatesRequired(raw) {
+      const values = raw as unknown as FeePolicyFormValues | undefined;
+      if (!values?.taxEnabled) return true;
+      const errors = TAX_SERVICE_TYPES.flatMap((type) =>
+        (['vatPercent', 'pitPercent'] as const)
+          .filter((field) => values.taxRates?.[type]?.[field] == null)
+          .map((field) =>
+            this.createError({ path: `taxRates.${type}.${field}`, message: m.taxRateRequired }),
+          ),
+      );
+      return errors.length > 0 ? new yup.ValidationError(errors) : true;
     })
     .test('activation-rules', function activationRules(raw) {
       if (!raw) return true;

@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { newId, openSupportCaseWhere, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   HANDOVER_CONFIRM_BOOKING_TARGET,
@@ -17,6 +17,16 @@ import {
   ODOMETER_SOURCE,
   PRIVATE_FILE_PURPOSE,
   PRIVATE_FILE_STATUS,
+  AUDIT_ACTOR_SCOPE,
+  AUDIT_TARGET_TYPE,
+  SUPPORT_CASE_AUDIT_ACTION,
+  SUPPORT_CASE_AUTO_RESOLVE_REASON,
+  SUPPORT_CASE_CATEGORY,
+  SUPPORT_CASE_EVENT_KIND,
+  SUPPORT_CASE_STATUS,
+  SUPPORT_CASE_STATUS_OPEN,
+  SUPPORT_EVENT_VISIBILITY,
+  SUPPORT_PARTY,
   handoverEnergyKind,
   handoverOdometerSuspicion,
   canAttachHandoverPhoto,
@@ -455,6 +465,25 @@ export class HandoversService {
               ? { actualPickupAt: occurredAt.toISOString() }
               : { actualReturnAt: occurredAt.toISOString() },
           );
+        }
+
+        /*
+         * Chuyến ĐÃ DIỄN RA — câu case `handover_unconfirmed` của worker (ADR 0066, lớp 3) chờ xác
+         * minh vừa có lời đáp, nên case tự kết luận ở đây. Không làm thì biên bản xác nhận muộn
+         * vẫn để tiền của chuyến bị giữ tới khi có người nhớ ra đóng tay.
+         *
+         * Đặt SAU `transitionWithinTx`: lượt chuyển đã khoá dòng đơn, mà worker cũng khoá dòng
+         * đơn trước khi claim + mở case. Worker xong trước ⇒ câu đọc dưới đây (READ COMMITTED,
+         * ảnh chụp mới mỗi câu) thấy case nó vừa mở; worker tới sau ⇒ nó chờ khoá rồi claim trượt
+         * vì đơn đã `active`. Không có khe nào để case mọc ra sau lượt xác nhận.
+         */
+        if (type === HANDOVER_TYPE.PICKUP) {
+          await this.resolveHandoverUnconfirmedWithinTx(tx, {
+            tenantId,
+            bookingId,
+            bookingCode: booking.code,
+            userId,
+          });
         }
 
         // KM vừa nhảy → tính lại mốc bảo dưỡng và mở việc-cần-làm nếu tới hạn.
@@ -929,6 +958,77 @@ export class HandoversService {
    * Hai người cùng bấm: partial unique chặn bản thứ hai, người thua đọc lại bản của người thắng
    * rồi đi tiếp bình thường (điều kiện `status` trong UPDATE mới là chỗ chống xác nhận đôi).
    */
+  /**
+   * Tự kết luận các case `handover_unconfirmed` còn mở của đơn khi biên bản GIAO XE được xác nhận
+   * (ADR 0066, lớp 3). Chỉ loại đó: tranh chấp (`dispute`) của khách — kể cả "chưa nhận được xe" —
+   * KHÔNG BAO GIỜ tự đóng theo đường này, vì chủ xe xác nhận giao không phải bằng chứng khách đã
+   * nhận; nó vẫn chờ nhân sự nền tảng phân xử.
+   *
+   * Ghi như một lượt kết luận của `SupportService.resolve`: trạng thái `resolved` + `resolution`,
+   * một sự kiện RESOLUTION công khai trên dòng thời gian, và audit `support_case.resolve` mang
+   * `reason = handover_confirmed`. Người thao tác là người vừa xác nhận biên bản — không có nhân
+   * sự nào bấm, và sự kiện không được giả làm của nền tảng. `resolved` vẫn mở lại được
+   * (`in_progress`) nếu CSKH thấy chưa ổn.
+   */
+  private async resolveHandoverUnconfirmedWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { tenantId: string; bookingId: string; bookingCode: string; userId: string },
+  ): Promise<void> {
+    const open = await tx.supportCase.findMany({
+      where: {
+        bookingId: input.bookingId,
+        ...openSupportCaseWhere([SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED]),
+      },
+      select: { id: true, status: true },
+    });
+    if (open.length === 0) return;
+
+    const resolution =
+      `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} — ` +
+      'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.';
+    const resolvedAt = new Date();
+    for (const row of open) {
+      // Điều kiện "còn mở" nằm trong UPDATE: nhân sự vừa đóng tay case này thì không ghi đè.
+      const claimed = await tx.supportCase.updateMany({
+        where: { id: row.id, status: { in: [...SUPPORT_CASE_STATUS_OPEN] } },
+        data: { status: SUPPORT_CASE_STATUS.RESOLVED, resolution, resolvedAt },
+      });
+      if (claimed.count === 0) continue;
+
+      await tx.supportCaseEvent.create({
+        data: {
+          id: newId(),
+          caseId: row.id,
+          actorUserId: input.userId,
+          actorScope: SUPPORT_PARTY.TENANT,
+          kind: SUPPORT_CASE_EVENT_KIND.RESOLUTION,
+          visibility: SUPPORT_EVENT_VISIBILITY.PUBLIC,
+          body: resolution,
+          fromStatus: row.status,
+          toStatus: SUPPORT_CASE_STATUS.RESOLVED,
+        },
+      });
+      await this.audit.record(
+        {
+          tenantId: input.tenantId,
+          actorUserId: input.userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: SUPPORT_CASE_AUDIT_ACTION.RESOLVE,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+          targetId: row.id,
+          before: { status: row.status },
+          after: {
+            status: SUPPORT_CASE_STATUS.RESOLVED,
+            resolution,
+            bookingId: input.bookingId,
+            reason: SUPPORT_CASE_AUTO_RESOLVE_REASON.HANDOVER_CONFIRMED,
+          },
+        },
+        tx,
+      );
+    }
+  }
+
   private async createForConfirm(
     tenantId: string,
     bookingId: string,

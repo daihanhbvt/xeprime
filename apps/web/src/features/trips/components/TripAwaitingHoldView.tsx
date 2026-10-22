@@ -28,6 +28,7 @@ import { cx } from '@/lib/cx';
 import { payAtPickupAmount } from '@/lib/customer-price-view';
 import type { CustomerTripDetail } from '../types';
 import { useFreeCancelNote } from '../use-free-cancel-note';
+import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
 import { TripHoldPanel } from './TripHoldPanel';
 import {
@@ -255,6 +256,7 @@ function HoldPaymentCard({
           segment: (index, total) => tHold('countdownSegment', { index, total }),
         }}
       />
+      <FreeCancelCountdown hold={hold} />
 
       {underpaid ? (
         <p className={styles.partial}>

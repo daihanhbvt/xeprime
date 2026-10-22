@@ -120,6 +120,17 @@ export {
   type PushDataInput,
 } from './notification-delivery';
 
+/** Câu thông báo khi lượt gán tài xế rơi về bên thuê — API và worker phát chung (ADR 0066). */
+export {
+  driverDisplayName,
+  driverMissingEmployerCopy,
+  driverReassignPushExpiresAt,
+  driverResponseExpiredDriverCopy,
+  driverResponseExpiredEmployerCopy,
+  driverTripDeclinedEmployerCopy,
+  type DriverTripReleasedCopyInput,
+} from './driver-trip-copy';
+
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
 export {

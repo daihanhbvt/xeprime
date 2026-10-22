@@ -179,7 +179,7 @@
       "feesTitle": "Các khoản đi kèm chuyến",
       "customerTotal": "Tổng bạn trả",
       "ownerNet": "Chủ xe thực nhận",
-      "ownerNetHint": "Số chủ xe nhận từ chuyến này. Phí dịch vụ XePrime do khách trả, KHÔNG trừ vào tiền thuê của chủ xe.",
+      "ownerNetHint": "Số chủ xe nhận từ chuyến này. Phí đặt xe do khách trả, KHÔNG trừ vào tiền thuê của chủ xe.",
       "holdAmount": "Tiền giữ chỗ (trả trước)",
       "holdHint": "Chuyển cho XePrime sau khi chủ xe nhận chuyến, để chốt chuyến. Được trừ vào tiền thuê — phần còn lại trả trực tiếp chủ xe khi nhận xe.",
       "payAtHandover": "Trả chủ xe khi nhận xe",

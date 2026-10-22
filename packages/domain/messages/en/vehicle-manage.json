@@ -155,7 +155,7 @@
     "activeTitle": "Instant booking is active",
     "activeBody": "Qualifying rental requests are confirmed straight away, with no manual approval from you.",
     "inactiveTitle": "Manual approval",
-    "inactiveBody": "Every rental request waits for your decision within 60 minutes.",
+    "inactiveBody": "Every rental request waits for your decision — you have from 15 minutes up to 4 hours to answer, depending on how soon pick-up is.",
     "toggleTitle": "Auto-accept trips",
     "toggleBody": "Save response time and increase your conversion rate.",
     "toggleLabel": "Auto-accept trips",

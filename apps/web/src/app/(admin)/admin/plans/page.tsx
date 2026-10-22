@@ -4,7 +4,7 @@ import { CodeSandboxOutlined, CopyOutlined, EditOutlined, PlusOutlined } from '@
 import { Alert, App, Button } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BILLING_MODE, PLAN_STATUS } from '@xeprime/types';
+import { PLAN_STATUS } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
@@ -107,12 +107,6 @@ export default function AdminPlansPage() {
       : null;
   const filtered = hasActivePlanFilters(filters);
   const loadFailed = isError && !data;
-  /*
-   * Danh mục chỉ có MỘT bậc hoa hồng (singleton, kể cả bậc đã tắt). Chưa tải xong thì coi như
-   * đã có — mở sẵn lựa chọn đó là mở con đường duy nhất server sẽ từ chối.
-   */
-  const allowCommission =
-    data !== undefined && !data.some((plan) => plan.billingMode === BILLING_MODE.COMMISSION);
 
   const filterFields: FilterField[] = [
     {
@@ -385,7 +379,6 @@ export default function AdminPlansPage() {
         open={dialog.open}
         plan={editingPlan}
         template={dialog.state.mode === 'duplicate' ? dialog.state.plan : null}
-        allowCommission={allowCommission}
         onClose={() => setDialog((current) => ({ ...current, open: false }))}
       />
     </div>

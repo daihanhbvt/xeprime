@@ -19,7 +19,8 @@ export const NOTIFICATION_TYPE = {
    */
   BOOKING_REQUEST_CANCELLED: 'booking_request_cancelled',
   /**
-   * Nhắc gian hàng: một yêu cầu sắp hết hạn phản hồi (mốc 20' và 45' của cửa sổ 60').
+   * Nhắc gian hàng: một yêu cầu sắp hết hạn phản hồi (khi còn 60′ và còn 15′ tới hạn —
+   * `BOOKING_REQUEST_REMINDER_REMAINING_MINUTES`, ADR 0066).
    *
    * Loại riêng chứ không mượn `BOOKING_REQUEST_SUBMITTED`: hai tin cùng loại nằm cạnh nhau
    * trong chuông trông như một tin trùng, và người trực sẽ học cách bỏ qua cả hai.
@@ -180,8 +181,18 @@ export const NOTIFICATION_TYPE = {
   DRIVER_TRIP_ACCEPTED: 'driver_trip_accepted',
   /** Tài xế từ chối chuyến, đơn quay về chưa có tài xế — gửi BÊN THUÊ. */
   DRIVER_TRIP_DECLINED: 'driver_trip_declined',
+  /**
+   * Tài xế KHÔNG trả lời trong hạn (ADR 0066) — hệ thống gỡ lượt gán. Phát cho HAI phía: bên thuê
+   * (khẩn — cần gán người khác) và tài xế (lượt của bạn đã hết hạn). Câu chữ do nơi phát dựng.
+   */
+  DRIVER_TRIP_RESPONSE_EXPIRED: 'driver_trip_response_expired',
   /** Chuyến tài xế đang lái đã HOÀN THÀNH (bên thuê xác nhận trả xe) — gửi TÀI XẾ. */
   DRIVER_TRIP_COMPLETED: 'driver_trip_completed',
+  /**
+   * Chuyến có tài xế còn dưới `DRIVER_MISSING_ALERT_LEAD_MINUTES` tới giờ nhận mà chưa ai phủ
+   * (ADR 0067 điều 2) — gửi BÊN THUÊ, khẩn, MỘT lần mỗi đơn. Đơn KHÔNG bị huỷ.
+   */
+  BOOKING_DRIVER_MISSING: 'booking_driver_missing',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -390,9 +401,17 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     label: 'Tài xế từ chối chuyến',
     color: STATUS_COLOR.DANGER,
   },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: {
+    label: 'Tài xế không phản hồi',
+    color: STATUS_COLOR.DANGER,
+  },
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: {
     label: 'Chuyến đã hoàn thành',
     color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: {
+    label: 'Chuyến sắp nhận chưa có tài xế',
+    color: STATUS_COLOR.DANGER,
   },
 };
 

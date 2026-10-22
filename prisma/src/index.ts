@@ -97,6 +97,37 @@ export {
 } from './promo-redemption';
 
 /**
+ * Lượt gán tài xế (ADR 0063 · ADR 0066) — xoá cột tài xế trên đơn + khép dòng sổ, và phép trả
+ * lượt QUÁ HẠN trả lời về bên thuê. Dùng chung cho `DriversService` (API) và worker quét hạn.
+ * Xem docblock `driver-assignment.ts`.
+ */
+export {
+  CLEARED_DRIVER_ASSIGNMENT,
+  closeOpenDriverAssignment,
+  expirePendingDriverAssignment,
+  expiredDriverAssignmentWhere,
+  CLEARED_EXTERNAL_DRIVER,
+  claimDriverMissingAlert,
+  driverMissingAlertWhere,
+  markDriverMissingAlertCovered,
+} from './driver-assignment';
+
+/**
+ * Mở case hỗ trợ — hình dạng hàng ghi dùng chung cho API (`SupportService`) và worker (case
+ * `handover_unconfirmed` do hệ thống mở, ADR 0066). Xem docblock `support-case.ts`.
+ */
+export {
+  bookingIdsWithOpenSupportCase,
+  createSupportCaseWithinTx,
+  findOpenTripNotReceivedReport,
+  hasOpenSupportCase,
+  openSupportCaseWhere,
+  openTripNotReceivedReports,
+  supportCaseCode,
+  type SupportCaseOpenInput,
+} from './support-case';
+
+/**
  * Email hướng dẫn gói (`email_outbox`) — cổng `isPlanPromotionEnabled` + khoá chống trùng dùng chung cho API và
  * worker. Xem docblock `plan-guide-outbox.ts`.
  */

@@ -180,6 +180,28 @@
   border-top: 1px solid var(--xp-color-border-subtle);
 }
 
+/* Chi tiết một dòng trên thẻ mobile (`expandable`) — đóng mặc định, mở ngay trong thẻ. */
+.cardExpand {
+  margin-top: var(--xp-space-sm);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.cardExpandToggle {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  cursor: pointer;
+}
+
+.cardExpandToggle:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.cardExpandBody {
+  margin-top: var(--xp-space-sm);
+}
+
 .cardsPagination {
   display: flex;
   justify-content: center;

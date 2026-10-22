@@ -11,9 +11,10 @@ type Hold = NonNullable<CustomerTripDetail['hold']>;
 /**
  * Câu "huỷ thế nào thì tiền đi đâu" của MỘT khoản giữ chỗ — ba trạng thái, một nguồn (ADR 0064):
  *
- *  - **Không có thời gian huỷ miễn phí** (`freeCancelAvailable = false` — đặt gấp): KHÔNG in một mốc
- *    "trước {giờ}" đã nằm trong quá khứ; nói thẳng là không có, và huỷ sau khi trả thì mất gì.
- *  - **Cửa sổ ngắn** (bị kẹp bởi giờ nhận xe, đóng không muộn hơn hạn thanh toán).
+ *  - **Không có thời gian huỷ miễn phí** (`freeCancelAvailable = false` — chính sách tắt huỷ miễn
+ *    phí, hoặc hold cũ trước ADR 0066): KHÔNG in một mốc "trước {giờ}" đã nằm trong quá khứ; nói
+ *    thẳng là không có, và huỷ sau khi trả thì mất gì.
+ *  - **Cửa sổ ngắn** (huỷ miễn phí đóng TRƯỚC hạn thanh toán — chuyến cận ngày, ADR 0066).
  *  - **Thường lệ**.
  *
  * Mỗi trạng thái nối thêm câu HUỶ MUỘN: bảo hiểm hoàn đủ vào Ví điểm (`lateCancelRefundAmount` —

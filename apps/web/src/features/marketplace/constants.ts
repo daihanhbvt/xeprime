@@ -98,6 +98,11 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
       },
       // Nhãn ngắn của design v2 ("Chính sách huỷ & hoàn tiền") — cột hẹp, không xuống dòng.
       { key: 'columns.legal.cancellationShort', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
+      /*
+       * Văn bản cho CHỦ XE nhưng vẫn ở chân trang công khai: Luật TMĐT buộc sàn công khai chính
+       * sách, và người đang cân nhắc đăng xe cần đọc được nó trước khi có tài khoản đối tác.
+       */
+      { key: 'columns.legal.ownerTax', href: legalPath.doc(LEGAL_DOC.OWNER_TAX) },
     ],
   },
 ];

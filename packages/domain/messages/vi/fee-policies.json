@@ -11,10 +11,10 @@
     "columns": {
       "name": "Tên",
       "platformFee": "Phí sàn (ô tô / xe máy)",
-      "commissionTiers": "Hoa hồng chủ xe",
-      "depositPercent": "Tỉ lệ tiền giữ chỗ",
+      "commissionTiers": "Hoa hồng chủ xe cá nhân",
+      "depositPercent": "Giữ chỗ chủ xe (% tiền thuê)",
       "insurance": "Bảo hiểm",
-      "tax": "Thuế",
+      "tax": "Thuế khấu trừ (tự lái · dài hạn · có tài xế)",
       "status": "Trạng thái",
       "activatedAt": "Ngày kích hoạt"
     },
@@ -33,12 +33,31 @@
     "discardAction": "Bỏ nháp",
     "discardConfirmTitle": "Bỏ bản nháp này?",
     "discardConfirmOk": "Bỏ",
-    "discardSuccess": "Đã bỏ bản nháp."
+    "discardSuccess": "Đã bỏ bản nháp.",
+    "view": {
+      "label": "Sổ chính sách phí",
+      "active": "Đang áp dụng",
+      "draft": "Bản nháp ({count})",
+      "archived": "Lịch sử lưu trữ ({count})"
+    },
+    "draftPending": "Có {count} bản nháp chưa kích hoạt.",
+    "draftPendingAction": "Xem bản nháp",
+    "archivedHint": "Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ — đơn mới tính theo bản đang áp dụng: {name} (phiên bản {version}).",
+    "archivedHintNoActive": "Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ.",
+    "backToActive": "Xem bản đang áp dụng",
+    "emptyActive": "Chưa có chính sách đang áp dụng — tạo hoặc kích hoạt một bản nháp.",
+    "emptyDraft": "Không có bản nháp nào.",
+    "emptyArchived": "Chưa có phiên bản nào được lưu trữ.",
+    "taxRatesSummary": "{selfDrive} · {longTerm} · {withDriver}",
+    "taxRatesHintLabel": "Chi tiết mức thuế khấu trừ",
+    "taxRateLine": "{service}: GTGT {vat, number}% + TNCN {pit, number}% = {total, number}%",
+    "taxLegacy": "{value, number}% (một mức, chính sách cũ)"
   },
   "tiers": {
     "dayRange": "Ngày {from}–{to}",
     "dayFrom": "Từ ngày {from}",
-    "dayOne": "Ngày {from}"
+    "dayOne": "Ngày {from}",
+    "item": "{range}: {percent, number}%"
   },
   "detail": {
     "title": "{name} — phiên bản {version}",
@@ -48,7 +67,7 @@
       "commission": "Hoa hồng chủ xe lũy tiến (H)",
       "deposit": "Tiền giữ chỗ",
       "insurance": "Bảo hiểm",
-      "tax": "Thuế",
+      "tax": "Thuế khấu trừ",
       "legacy": "Số của mô hình cũ"
     },
     "facts": {
@@ -61,11 +80,13 @@
       "vehicleProtection": "Bảo hiểm vật chất xe (IV)",
       "personalAccident": "Bảo hiểm tai nạn người (IP)",
       "insurancePartner": "Đối tác bảo hiểm",
-      "taxPercent": "% thuế",
-      "taxLabel": "Tên loại thuế",
+      "taxPercent": "% thuế (một mức, chính sách cũ)",
+      "taxLabel": "Tên loại thuế (chính sách cũ)",
       "serviceFeePercent": "% phí dịch vụ",
       "tripInsurancePercent": "% bảo hiểm chuyến đi",
-      "vehicleProtectionPercent": "% bảo vệ xe"
+      "vehicleProtectionPercent": "% bảo vệ xe",
+      "taxLegalBasis": "Căn cứ pháp lý",
+      "taxScope": "Áp dụng cho"
     },
     "perDay": "{value}/ngày",
     "off": "Chưa áp dụng",
@@ -82,7 +103,7 @@
     "platformFeeHint": "Số cố định mỗi đơn, khách trả, áp cho cả hai tuyến — không phụ thuộc số ngày thuê.",
     "platformFeeFor": "Phí sàn — {type}",
     "sectionCommission": "Hoa hồng chủ xe lũy tiến",
-    "commissionHint": "Chỉ áp cho chủ xe tuyến hoa hồng, trừ vào tiền chủ xe. Mỗi ngày thuê tính theo % của nấc chứa ngày đó.",
+    "commissionHint": "Trừ vào tiền chủ xe. Mỗi ngày thuê tính theo % của nấc chứa ngày đó.",
     "tierHeadFrom": "Từ ngày",
     "tierHeadTo": "Đến ngày",
     "tierHeadPercent": "% giá thuê",
@@ -96,9 +117,10 @@
     "previewSegment": "{range}: {percent, number}%",
     "previewInvalid": "Sửa các nấc để xem ví dụ.",
     "sectionDeposit": "Tiền giữ chỗ",
-    "depositPercent": "Tỉ lệ tiền giữ chỗ (% trên tổng khách trả)",
-    "depositMinAmount": "Cọc tối thiểu",
-    "depositMaxPercent": "Trần % cọc",
+    "depositHint": "Tiền giữ chỗ = phí sàn + hoa hồng + bảo hiểm + phần giữ chỗ của chủ xe. Phần của chủ xe tính theo % trên tiền thuê (không gồm phí giao xe); khách huỷ muộn hoặc không đến thì chủ xe nhận trọn phần này.",
+    "depositPercent": "Phần giữ chỗ của chủ xe (% trên tiền thuê, không gồm phí giao xe)",
+    "depositMinAmount": "Sàn phần giữ chỗ của chủ xe",
+    "depositMaxPercent": "Trần % phần giữ chỗ của chủ xe",
     "holdMinAmount": "Sàn khoản giữ chỗ",
     "holdPaymentWindowMinutes": "Cửa sổ chuyển khoản",
     "minutesUnit": "phút",
@@ -112,11 +134,9 @@
     "dailyRateFor": "Phí mỗi ngày — {type}",
     "insurancePartnerName": "Tên đối tác bảo hiểm",
     "insurancePartnerNameHint": "Tên đối tác thật — bắt buộc khi một loại bảo hiểm bật.",
-    "sectionTax": "Thuế",
-    "taxEnabled": "Bật thuế khấu trừ/nộp thay",
-    "taxEnabledHint": "Chỉ bật khi tư vấn thuế đã chốt phân loại và tỷ lệ. Thuế tính trên giá thuê, không gồm phí giao nhận xe.",
-    "taxPercent": "% thuế",
-    "taxLabel": "Tên loại thuế",
+    "sectionTax": "Thuế khấu trừ",
+    "taxEnabled": "Bật khấu trừ, nộp thay thuế cho chủ xe",
+    "taxEnabledHint": "Theo NĐ 117/2025/NĐ-CP, nền tảng khấu trừ và nộp thay thuế GTGT, TNCN cho hộ, cá nhân kinh doanh. Chỉ bật khi tư vấn thuế đã xác nhận phân loại. Thuế tính trên tiền thuê, không gồm phí giao xe; mỗi sắc thuế tính đúng tới đồng.",
     "activationBlocked": "Chưa kích hoạt được",
     "createdSuccess": "Đã tạo bản nháp.",
     "updatedSuccess": "Đã lưu bản nháp.",
@@ -128,9 +148,29 @@
       "integer": "Phải là số nguyên",
       "thousandStep": "Phải là bội của 1.000đ",
       "ratePositive": "Nhập phí mỗi ngày lớn hơn 0",
-      "taxPercentRequired": "Nhập % thuế",
-      "taxLabelRequired": "Nhập tên loại thuế",
-      "partnerRequired": "Nhập tên đối tác bảo hiểm"
-    }
+      "partnerRequired": "Nhập tên đối tác bảo hiểm",
+      "taxRateRequired": "Nhập % thuế",
+      "taxLegalBasisRequired": "Nhập căn cứ pháp lý"
+    },
+    "taxLegalBasis": "Căn cứ pháp lý",
+    "taxLegalBasisHint": "Số hiệu văn bản làm căn cứ khấu trừ — hiện cho chủ xe và in trên sổ thuế.",
+    "taxRatesTitle": "Mức khấu trừ theo loại dịch vụ",
+    "taxHeadService": "Loại dịch vụ",
+    "taxHeadVat": "GTGT (%)",
+    "taxHeadPit": "TNCN (%)",
+    "taxHeadTotal": "Cộng",
+    "taxVatLabel": "{service}: thuế GTGT (%)",
+    "taxPitLabel": "{service}: thuế TNCN (%)",
+    "taxCategory": {
+      "service": "Nhóm dịch vụ",
+      "transport": "Nhóm vận tải"
+    },
+    "taxScope": "Áp dụng cho: cá nhân, hộ kinh doanh · Doanh nghiệp: không khấu trừ",
+    "taxScopeValue": "Cá nhân, hộ kinh doanh · Doanh nghiệp đã xác minh: không khấu trừ"
+  },
+  "commissionScope": {
+    "title": "Phạm vi áp dụng: Chủ xe cá nhân (Tuyến hoa hồng). Xe gói / Gian hàng: Miễn phí (H = 0).",
+    "hint": "Chỉ áp dụng cho xe cá nhân (Tuyến hoa hồng). Gian hàng gói (xe gói) được miễn 100% hoa hồng trên chuyến (H = 0).",
+    "hintLabel": "Giải thích về hoa hồng chủ xe cá nhân"
   }
 }

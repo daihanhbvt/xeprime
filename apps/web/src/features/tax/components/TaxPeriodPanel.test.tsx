@@ -69,12 +69,22 @@ function makeSummary(over: Partial<TaxPeriodSummary> = {}): TaxPeriodSummary {
     periodKey: '2026-09',
     totalAmount: '140000',
     totalTaxableBase: '1400000',
+    totalVatAmount: '0',
+    totalPitAmount: '0',
+    // Dòng mẫu là dòng một-mức cũ — cả tổng nằm ở phần chưa tách.
+    totalUnsplitAmount: '140000',
     rows: 1,
     accruedAmount: '140000',
     declaredAmount: '0',
     remittedAmount: '0',
     byEntityType: [
-      { entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS, amount: '140000', rows: 1 },
+      {
+        entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS,
+        amount: '140000',
+        vatAmount: '0',
+        pitAmount: '0',
+        rows: 1,
+      },
     ],
     byTenant: [
       {
@@ -82,7 +92,10 @@ function makeSummary(over: Partial<TaxPeriodSummary> = {}): TaxPeriodSummary {
         tenantName: 'Gian hàng A',
         entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS,
         taxCode: 'TX123',
+        legalName: null,
         amount: '140000',
+        vatAmount: '0',
+        pitAmount: '0',
         rows: 1,
       },
     ],
@@ -98,9 +111,17 @@ function makeRow(over: Partial<TaxRow> = {}): TaxRow {
     tenantId: '01TENANT',
     tenantName: 'Gian hàng A',
     entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS,
+    taxSubjectType: null,
     taxCode: 'TX123',
+    legalName: null,
     taxableBase: '1400000',
     percent: 10,
+    // Dòng một-mức trước ADR 0068 — không tách GTGT/TNCN.
+    vatPercent: null,
+    pitPercent: null,
+    vatAmount: null,
+    pitAmount: null,
+    taxCategory: null,
     label: 'VAT 5% + TNCN 5%',
     amount: '140000',
     status: TAX_WITHHOLDING_STATUS.ACCRUED,
@@ -163,8 +184,8 @@ describe('TaxPeriodPanel', () => {
   it('gian hàng CHƯA khai hồ sơ: hiện riêng + cảnh báo, không gộp vào cá nhân', () => {
     summary.data = makeSummary({
       byEntityType: [
-        { entityType: SELLER_ENTITY_TYPE.INDIVIDUAL, amount: '100000', rows: 1 },
-        { entityType: 'unknown', amount: '40000', rows: 1 },
+        { entityType: SELLER_ENTITY_TYPE.INDIVIDUAL, amount: '100000', vatAmount: '0', pitAmount: '0', rows: 1 },
+        { entityType: 'unknown', amount: '40000', vatAmount: '0', pitAmount: '0', rows: 1 },
       ],
     });
     renderPanel();
@@ -175,12 +196,89 @@ describe('TaxPeriodPanel', () => {
     expect(within(alert).getByText(/chưa khai hồ sơ người bán/i)).toBeTruthy();
   });
 
+  it('dòng của gian hàng chưa khai hồ sơ: hiện "Chưa khai hồ sơ" + chủ thể ÁP THUẾ (cá nhân)', () => {
+    rows.data = {
+      data: [
+        makeRow({
+          entityType: 'unknown',
+          taxSubjectType: SELLER_ENTITY_TYPE.INDIVIDUAL,
+          taxCode: null,
+        }),
+      ],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderPanel();
+    expect(screen.getAllByText('Chưa khai hồ sơ').length).toBeGreaterThan(0);
+    expect(screen.getByText('Khấu trừ như: Cá nhân')).toBeTruthy();
+  });
+
+  it('loại khai trùng chủ thể áp thuế ⇒ KHÔNG lặp dòng "Khấu trừ như"', () => {
+    rows.data = {
+      data: [makeRow({ taxSubjectType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS })],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderPanel();
+    expect(screen.queryByText(/^Khấu trừ như:/)).toBeNull();
+  });
+
+  it('kỳ TRỘN dòng cũ: hiện phần "chưa tách" để GTGT + TNCN + phần đó = tổng', () => {
+    summary.data = makeSummary({
+      totalAmount: '194600',
+      totalVatAmount: '39000',
+      totalPitAmount: '15600',
+      totalUnsplitAmount: '140000',
+    });
+    renderPanel();
+    expect(screen.getByText('Dòng cũ chưa tách GTGT/TNCN')).toBeTruthy();
+  });
+
+  it('kỳ chỉ có dòng tách ⇒ KHÔNG hiện ô "chưa tách"', () => {
+    summary.data = makeSummary({
+      totalAmount: '54600',
+      totalVatAmount: '39000',
+      totalPitAmount: '15600',
+      totalUnsplitAmount: '0',
+    });
+    renderPanel();
+    expect(screen.queryByText('Dòng cũ chưa tách GTGT/TNCN')).toBeNull();
+  });
+
   it('nhóm `unknown` bằng 0 thì KHÔNG cảnh báo — không làm ồn khi không có việc', () => {
     summary.data = makeSummary({
-      byEntityType: [{ entityType: 'unknown', amount: '0', rows: 0 }],
+      byEntityType: [{ entityType: 'unknown', amount: '0', vatAmount: '0', pitAmount: '0', rows: 0 }],
     });
     renderPanel();
     expect(document.querySelector('.ant-alert-warning')).toBeNull();
+  });
+
+  it('dòng tách GTGT/TNCN (ADR 0068): hai cột thuế, cặp tỷ lệ, nhóm; tổng kỳ có GTGT và TNCN', () => {
+    summary.data = makeSummary({ totalVatAmount: '39000', totalPitAmount: '15600' });
+    rows.data = {
+      data: [
+        makeRow({
+          taxableBase: '780000',
+          percent: 7,
+          label: 'GTGT 5% + TNCN 2%',
+          amount: '54600',
+          vatPercent: 5,
+          pitPercent: 2,
+          vatAmount: '39000',
+          pitAmount: '15600',
+          taxCategory: 'service',
+        }),
+        makeRow({ id: '01OLD', bookingCode: 'DH000002' }),
+      ],
+      meta: { page: 1, limit: 20, total: 2, hasNext: false },
+    };
+    renderPanel();
+
+    expect(screen.getByText('GTGT đã khấu trừ')).toBeTruthy();
+    expect(screen.getByText('TNCN đã khấu trừ')).toBeTruthy();
+    expect(screen.getByText('GTGT 5% + TNCN 2%')).toBeTruthy();
+    expect(screen.getByText('Nhóm dịch vụ')).toBeTruthy();
+    expect(screen.getAllByText(/^15[.,]600/).length).toBeGreaterThan(0);
+    // Dòng một-mức cũ không bịa phép tách.
+    expect(screen.getAllByText('Dòng cũ — không tách')).toHaveLength(2);
   });
 
   it('bút toán ĐẢO hiện số âm, và KHÔNG cho đảo lần nữa', () => {

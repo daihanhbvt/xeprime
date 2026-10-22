@@ -33,7 +33,7 @@ const MIN_TABLE_WIDTH = 1100;
 
 /**
  * Hàng đợi YÊU CẦU THUÊ — hai chặng trước khi có đơn (ADR 0044):
- *  - `pending_approval`: chờ chủ xe trả lời (hạn 60′). Việc của người trực: nhắc tay chủ xe
+ *  - `pending_approval`: chờ chủ xe trả lời (hạn động 15′–4 giờ, ADR 0066). Việc của người trực: nhắc tay chủ xe
  *    khi máy đã nhắc hết hai mốc mà vẫn im — nút "Nhắc chủ xe", có cooldown.
  *  - `awaiting_hold`: chờ khách chuyển tiền giữ chỗ (120′). Khách đã được máy nhắc; nền tảng
  *    chỉ theo dõi — không có nút nào, vì không có ai để nhắc thêm.

@@ -205,7 +205,7 @@
         "period": "Month",
         "completed": "Completed trips",
         "revenue": "Total rental value",
-        "serviceFee": "XePrime service fee"
+        "serviceFee": "Booking fee"
       }
     },
     "vehicles": {
@@ -454,7 +454,7 @@
         "period": "Month",
         "completed": "Completed trips",
         "revenue": "Total rental value",
-        "serviceFee": "XePrime service fee",
+        "serviceFee": "Booking fee",
         "tax": "Tax withheld"
       },
       "stats": {
@@ -471,7 +471,7 @@
         "month": "Month",
         "completed": "Trips",
         "revenue": "Total rental value",
-        "serviceFee": "Service fee",
+        "serviceFee": "Booking fee",
         "tax": "Tax withheld",
         "state": "State"
       },

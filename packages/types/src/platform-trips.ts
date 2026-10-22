@@ -10,7 +10,7 @@ import { BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES } from './status/booki
  * Mã đi trên dây (`?queue=`, khoá của `counts`), không phải nhãn — nhãn ở namespace `AdminTrips`.
  */
 export const PLATFORM_TRIP_QUEUE = {
-  /** Yêu cầu thuê chờ CHỦ XE trả lời — có hạn 60′, quá hạn là mất khách. */
+  /** Yêu cầu thuê chờ CHỦ XE trả lời — có hạn (15′–4 giờ, ADR 0066), quá hạn là mất khách. */
   PENDING_APPROVAL: 'pending_approval',
   /** Chủ xe đã nhận, chờ KHÁCH chuyển tiền giữ chỗ trong cửa sổ 120′ — xe đang bị giữ. */
   AWAITING_HOLD: 'awaiting_hold',
@@ -67,7 +67,8 @@ export const TRIP_HANDOVER_SOON_HOURS = 2;
 
 /**
  * Yêu cầu chờ duyệt còn ít hơn ngần này phút là KHẨN: worker đã nhắc gian hàng lần cuối ở đúng mốc
- * này (`BOOKING_REQUEST_REMINDER_MINUTES.FINAL`) mà vẫn chưa có câu trả lời — tới lượt người
+ * này (`BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL` — còn 15′, ADR 0066) mà vẫn chưa có câu
+ * trả lời — tới lượt người
  * trực nhấc máy. Hai kênh (thông báo tự động, màn người trực) vì thế nói cùng một mốc.
  */
 export const TRIP_REQUEST_URGENT_MINUTES = BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES;

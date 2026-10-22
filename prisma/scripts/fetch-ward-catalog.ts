@@ -53,11 +53,11 @@ const TYPE_BY_PREFIX: ReadonlyArray<readonly [string, WardAdministrativeType]> =
 /**
  * Dọn khoảng trắng lạ trước khi phân loại.
  *
- * Không phải dọn dẹp cho đẹp: bộ dữ liệu gốc có đúng một bản ghi dùng NBSP (`Xã Yên Thành`),
+ * Không phải dọn dẹp cho đẹp: bộ dữ liệu gốc có đúng một bản ghi dùng NBSP (`Xã\u00A0Yên Thành`),
  * và một NBSP làm hỏng cả phép tách tiền tố lẫn khoá tìm kiếm bỏ dấu.
  */
 function cleanName(raw: string): string {
-  return raw.replace(/[   ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return raw.replace(/[\u00A0\u2007\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function classify(name: string): { administrativeType: WardAdministrativeType; shortName: string } {

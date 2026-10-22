@@ -90,7 +90,7 @@ describe('CancelTripDialog — huỷ muộn', () => {
     expect(screen.getByText(/Tiền bảo hiểm 70\.000 ₫ được hoàn đủ/)).toBeTruthy();
   });
 
-  it('không có bảo hiểm: câu chia tiền không nhắc tới bảo hiểm', () => {
+  it('không có bảo hiểm: câu phân bổ tiền không nhắc tới bảo hiểm', () => {
     state.preview.data = preview({
       refundAmount: '0',
       insuranceRefundAmount: '0',
@@ -98,8 +98,12 @@ describe('CancelTripDialog — huỷ muộn', () => {
     });
     renderDialog();
     expect(
-      screen.getByText('Tiền giữ chỗ được chia cho chủ xe (bù việc giữ xe cho bạn) và XePrime.'),
+      screen.getByText(
+        'Tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.',
+      ),
     ).toBeTruthy();
+    // Phía khách không bao giờ thấy phí dịch vụ của chủ xe (ADR 0064 điều 11).
+    expect(screen.queryByText(/hoa hồng/i)).toBeNull();
     expect(screen.queryByText(/Tiền bảo hiểm/)).toBeNull();
   });
 

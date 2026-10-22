@@ -3,25 +3,21 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { bookingRequestRemainingMs } from '@xeprime/types';
+import {
+  BOOKING_REQUEST_REMINDER_REMAINING_MINUTES,
+  bookingRequestRemainingMs,
+  longClockText,
+} from '@xeprime/types';
 import styles from './RespondDeadline.module.css';
 
 /** Dưới mốc này thì đồng hồ chuyển sang sắc thái cảnh báo — cùng con số với lần nhắc cuối. */
-const URGENT_MS = 15 * 60_000;
+const URGENT_MS = BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL * 60_000;
 
 /**
  * Nhịp đếm. Một giây là điều duy nhất đúng cho một đồng hồ hiện cả phút lẫn giây: nhịp thưa
  * hơn làm số nhảy cóc, còn nhịp dày hơn không đổi được gì mắt người nhìn thấy.
  */
 const TICK_MS = 1_000;
-
-/** Còn bao lâu, ở dạng `mm:ss` — không đưa giờ vào vì cửa sổ tối đa chỉ có 60 phút. */
-function clock(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
 
 export type RespondDeadlineState = 'normal' | 'urgent' | 'expired';
 
@@ -92,7 +88,8 @@ export function RespondDeadline({ respondBy }: { respondBy: string }) {
         <>
           {t('remaining')}{' '}
           <span className={styles.clock} suppressHydrationWarning>
-            {clock(remaining)}
+            {/* Cửa sổ động tới 4 giờ (ADR 0066) ⇒ `h:mm:ss` khi còn từ một giờ, `m:ss` khi dưới. */}
+            {longClockText(remaining)}
           </span>
         </>
       )}
