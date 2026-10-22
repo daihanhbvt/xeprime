@@ -58,7 +58,7 @@
     "DRIVER_LICENCE_STATE_CONFLICT": "Your licence submission has just changed — please reload the page.",
     "DRIVER_LICENCE_CLASS_MISMATCH": "Your driving licence class does not cover this type of vehicle.",
     "DRIVER_LICENCE_EXPIRED": "Your driving licence expires before the trip ends — please update to a valid licence.",
-    "DRIVER_LICENCE_PENDING_REVIEW": "Your driving licence is awaiting verification by XePrime — you can book as soon as it is verified.",
+    "DRIVER_LICENCE_PENDING_REVIEW": "Your licence is still being read — try again in a few seconds.",
     "DRIVER_LICENCE_REQUIRED": "Please verify your driving licence before booking a self-drive vehicle.",
     "OCR_NOT_CONFIGURED": "Automatic document reading isn't enabled.",
     "OCR_PROCESSING": "Still reading the document. Try again in a moment.",

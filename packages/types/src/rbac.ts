@@ -322,11 +322,16 @@ export const PERMISSION = {
   /** Xác minh người bán: duyệt/từ chối hồ sơ, xem PII hồ sơ (CCCD, tài khoản ngân hàng đầy đủ). */
   PLATFORM_SELLER_VERIFY: 'platform.sellers.verify',
   /**
-   * Hàng đợi bằng lái của KHÁCH (ADR 0057): xem ảnh bằng, duyệt/từ chối lượt nộp máy không tự
-   * quyết được. Quyền riêng, không gộp vào `platform.sellers.verify`: người bán và người thuê là
+   * Bằng lái của KHÁCH trong hồ sơ khách thuê (ADR 0057 · ADR 0070): xem ảnh bằng và lịch sử nộp —
+   * CHỈ ĐỌC, hệ thống tự quyết mọi lượt nộp. Giữ khoá cũ để không phải cấp lại quyền. Quyền riêng, không gộp vào `platform.sellers.verify`: người bán và người thuê là
    * hai tập PII khác nhau, và người xác minh gian hàng không đương nhiên được mở ảnh bằng lái khách.
    */
   PLATFORM_DRIVER_LICENCE_REVIEW: 'platform.driver_licences.review',
+  /**
+   * Chăm sóc khách mất đơn (ADR 0070): ghi trạng thái/ghi chú gọi lại trên tab "Cần chăm sóc".
+   * XEM danh sách chỉ cần `platform.bookings.view`; liên hệ đầy đủ vẫn là `view_pii` + audit.
+   */
+  PLATFORM_SALES_FOLLOWUP_MANAGE: 'platform.sales_followups.manage',
   /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày. */
   PLATFORM_MONEY_MANAGE: 'platform.money.manage',
   /**
@@ -486,7 +491,7 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_VEHICLE_MODERATE,
     // Reviewer xác minh người bán cùng lúc với duyệt gian hàng/xe.
     PERMISSION.PLATFORM_SELLER_VERIFY,
-    // …và bằng lái của khách mà máy đọc ảnh không tự quyết được (ADR 0057).
+    // …và xem bằng lái của khách (ADR 0057 · 0070).
     PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW,
   ],
   // Hỗ trợ cần liên hệ được khách → là role duy nhất ngoài admin được bỏ mask PII.
@@ -503,8 +508,10 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_TENANT_VIEW,
     PERMISSION.PLATFORM_TENANT_SUPPORT_VIEW,
     PERMISSION.PLATFORM_TENANT_SUPPORT_ASSIST,
-    // Khách hỏi "sao tôi chưa đặt được xe" thường là chuyện bằng lái — support xem và gỡ được.
+    // Khách hỏi "sao tôi chưa đặt được xe" thường là chuyện bằng lái — support xem được.
     PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW,
+    // Support là người gọi lại khách mất đơn (ADR 0070).
+    PERMISSION.PLATFORM_SALES_FOLLOWUP_MANAGE,
   ],
   [PLATFORM_ROLE.FINANCE_ADMIN]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,

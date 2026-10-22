@@ -58,7 +58,7 @@
     "DRIVER_LICENCE_STATE_CONFLICT": "Lượt nộp bằng lái vừa thay đổi — vui lòng tải lại trang.",
     "DRIVER_LICENCE_CLASS_MISMATCH": "Hạng bằng lái của bạn không lái được loại xe này.",
     "DRIVER_LICENCE_EXPIRED": "Bằng lái hết hạn trước khi chuyến kết thúc — vui lòng cập nhật bằng còn hạn.",
-    "DRIVER_LICENCE_PENDING_REVIEW": "Bằng lái của bạn đang chờ XePrime xác thực — bạn đặt được xe ngay sau khi có kết quả.",
+    "DRIVER_LICENCE_PENDING_REVIEW": "Bằng lái của bạn đang được đọc — thử lại sau ít giây.",
     "DRIVER_LICENCE_REQUIRED": "Bạn cần xác thực bằng lái xe trước khi đặt xe tự lái.",
     "OCR_NOT_CONFIGURED": "Chức năng đọc giấy tờ tự động chưa được bật.",
     "OCR_PROCESSING": "Đang đọc giấy tờ. Thử lại sau giây lát.",

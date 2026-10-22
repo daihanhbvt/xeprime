@@ -2,11 +2,21 @@
 
 import { DatePicker, Select, Space } from 'antd';
 import { useTranslations } from 'next-intl';
-import { Suspense, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, type ReactNode } from 'react';
 import { BOOKING_DATE_FIELD } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { CountTabs } from '@/components/navigation/CountTabs';
+import { FollowUpsView } from '@/features/admin-follow-ups/components/FollowUpsView';
+import {
+  ADMIN_BOOKINGS_VIEW,
+  ADMIN_BOOKINGS_VIEW_PARAM,
+  FOLLOW_UPS_HREF,
+  type AdminBookingsView,
+} from '@/features/admin-follow-ups/constants';
+import { useNewFollowUpCount } from '@/features/admin-follow-ups/hooks/use-follow-ups';
 import { ADMIN_BOOKINGS_DEFAULT_LIMIT } from '@/features/admin-bookings/api';
 import { AdminBookingDetailDrawer } from '@/features/admin-bookings/components/AdminBookingDetailDrawer';
 import { AdminBookingTable } from '@/features/admin-bookings/components/AdminBookingTable';
@@ -34,15 +44,55 @@ function PageFallback() {
   return <LoadingState variant="page" label={t('loading')} />;
 }
 
+/** Đổi góc nhìn thì bỏ bộ lọc của góc kia — hai danh sách có bộ lọc khác nhau. */
+const VIEW = ADMIN_BOOKINGS_VIEW;
+type View = AdminBookingsView;
+
 export default function AdminBookingsPage() {
   return (
     <Suspense fallback={<PageFallback />}>
-      <AdminBookingsView />
+      <AdminBookingsTabs />
     </Suspense>
   );
 }
 
-function AdminBookingsView() {
+function AdminBookingsTabs() {
+  const t = useTranslations('AdminFollowUps.tabs');
+  const tPage = useTranslations('AdminBookings.page');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const view: View =
+    searchParams.get(ADMIN_BOOKINGS_VIEW_PARAM) === VIEW.FOLLOW_UPS
+      ? VIEW.FOLLOW_UPS
+      : VIEW.BOOKINGS;
+  const newCount = useNewFollowUpCount();
+
+  const tabs = (
+    <CountTabs<View>
+      label={t('label')}
+      value={view}
+      items={[
+        { value: VIEW.BOOKINGS, label: t('bookings') },
+        { value: VIEW.FOLLOW_UPS, label: t('followUps'), count: newCount.data },
+      ]}
+      onChange={(next) => router.replace(next === VIEW.FOLLOW_UPS ? FOLLOW_UPS_HREF : pathname)}
+    />
+  );
+
+  if (view === VIEW.FOLLOW_UPS) {
+    return (
+      <div>
+        <ManagePageHeader title={tPage('title')} />
+        {tabs}
+        <FollowUpsView />
+      </div>
+    );
+  }
+  return <AdminBookingsView tabs={tabs} />;
+}
+
+function AdminBookingsView({ tabs }: { tabs: ReactNode }) {
   const t = useTranslations('AdminBookings');
   const options = useAdminBookingOptions();
   const datePattern = useDatePickerPattern();
@@ -129,6 +179,8 @@ function AdminBookingsView() {
           </Space>
         }
       />
+
+      {tabs}
 
       <AdminBookingTable
         items={items}

@@ -224,7 +224,7 @@
   },
   "driverLicenceState": {
     "verified": "Licence verified",
-    "pending": "Licence pending",
+    "pending": "Licence being read",
     "none": "No licence"
   },
   "driverEmployerKind": {
@@ -798,6 +798,7 @@
     "missing_fields": "Missing details",
     "expired": "Licence expired",
     "no_drivable_class": "Class does not cover rentals",
+    "reader_unavailable": "Reader temporarily unavailable",
     "other": "Other reason"
   },
   "feePolicyStatus": {

@@ -23,17 +23,12 @@
   box-shadow: none;
 }
 
-.panelEmbedded.panelSuccess,
-.panelEmbedded.panelWaiting {
+.panelEmbedded.panelSuccess {
   border: 0;
 }
 
 .panelSuccess {
   border-color: var(--xp-color-success);
-}
-
-.panelWaiting {
-  border-color: var(--xp-color-warning);
 }
 
 .heading {
@@ -59,17 +54,13 @@
 .banner {
   display: flex;
   align-items: flex-start;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
   padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-control);
 }
 
 .banner_success {
   background: var(--xp-color-success-bg);
-}
-
-.banner_waiting {
-  background: var(--xp-color-warning-bg);
 }
 
 .banner_danger {
@@ -78,16 +69,14 @@
 
 .bannerIcon {
   flex: none;
-  font-size: 24px;
+  /* Icon 20px căn với dòng tiêu đề 22px (design Account / Profile). */
+  padding-top: 1px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .banner_success .bannerIcon {
   color: var(--xp-color-success);
-}
-
-.banner_waiting .bannerIcon {
-  color: var(--xp-color-warning);
 }
 
 .banner_danger .bannerIcon {
@@ -96,13 +85,20 @@
 
 .bannerTitle {
   margin: 0;
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.banner_success .bannerTitle {
+  color: var(--xp-color-success);
 }
 
 .bannerBody {
   margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .rejectedBody {
@@ -118,10 +114,6 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
-.reviewButton {
-  margin-top: var(--xp-space-sm);
-}
-
 /* ── Thông tin trên bằng ─────────────────────────────────────────────────────── */
 
 /*
@@ -132,8 +124,8 @@
 .details {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--xp-space-md) var(--xp-space-lg);
+  align-items: center;
+  gap: var(--xp-space-md) var(--xp-space-20);
 }
 
 .detailsBody {
@@ -149,12 +141,14 @@
 .photo {
   position: relative;
   display: block;
-  flex: 0 0 200px;
-  aspect-ratio: 85.6 / 54;
+  /* 256×188 như design — ảnh thật của khách, cắt vừa khung. */
+  flex: 0 0 256px;
+  max-width: 100%;
+  height: 188px;
   overflow: hidden;
   padding: 0;
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-control);
   background: linear-gradient(135deg, var(--xp-color-bg-muted), var(--xp-color-bg-sand));
   color: var(--xp-color-text);
   font: inherit;
@@ -251,26 +245,32 @@
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--xp-space-sm) var(--xp-space-lg);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md) var(--xp-space-20);
   margin: 0;
+}
+
+.factWide {
+  grid-column: 1 / -1;
 }
 
 .fact {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-xs);
   min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .fact dt {
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-sm);
 }
 
 .fact dd {
   margin: 0;
   overflow-wrap: anywhere;
+  color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-medium);
   font-variant-numeric: tabular-nums;
 }
@@ -323,4 +323,46 @@
   padding-left: var(--xp-space-lg);
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-sm);
+}
+
+/* Chưa từng nộp (mục Giấy tờ của trang Tài khoản) — theo design "Verify Empty". */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-lg);
+  text-align: center;
+}
+
+/* Hình 184 × 137 tràn nhẹ khỏi khung 160 của bản vẽ — giữ khung để nhịp dọc đúng thiết kế. */
+.emptyArt {
+  height: 160px;
+  object-fit: contain;
+}
+
+.emptyText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.emptyBody {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
 }

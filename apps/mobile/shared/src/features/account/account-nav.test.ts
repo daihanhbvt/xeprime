@@ -47,13 +47,12 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 }
 
 describe('resolveAccountNav — MỘT menu khách', () => {
-  it('mười mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
+  it('chín mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
     const groups = resolveAccountNav(user(), { hasDriverLinks: true });
     expect(groups.map((g) => g.key)).toEqual(['account']);
     expect(groups[0]?.items.map((i) => i.key)).toEqual([
+      // Giấy tờ & Xác minh nằm TRONG tab Tài khoản (design 22/10/2026).
       'profile',
-      // Giấy tờ & Xác minh — bằng lái (ADR 0057).
-      'documents',
       'becomeOwner',
       'trips',
       // Nơi tôi làm tài xế (ADR 0063).

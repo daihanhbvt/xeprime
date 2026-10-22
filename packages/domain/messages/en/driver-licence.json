@@ -37,13 +37,12 @@
     }
   },
   "verified": {
-    "title": "Your driving licence is verified",
+    "title": "Your driving licence is ready!",
     "body": "You can book self-drive vehicles that match your licence class.",
     "bookingTitle": "Your licence is valid for this trip",
     "replace": "Update licence",
     "cancelReplace": "Keep current licence",
-    "replaceFailed": "The new licence photo you sent could not be verified: {reason} Your current licence remains valid.",
-    "replacePending": "The new licence you sent is awaiting verification by XePrime. Your current licence remains valid."
+    "replaceFailed": "The new licence photo you sent could not be verified: {reason} Your current licence remains valid."
   },
   "fields": {
     "fullName": "Full name",
@@ -59,19 +58,11 @@
     "country": "Issued in",
     "foreignNote": "For international and foreign licences, the owner checks the class and expiry against your original licence at pickup."
   },
-  "pending": {
-    "title": "Waiting for XePrime to verify",
-    "body": "We will check your photo as soon as possible. This page updates automatically when there is a result.",
-    "bookingBody": "You can send your rental request as soon as your licence is verified.",
-    "replace": "Send another photo"
-  },
   "rejected": {
     "title": "We could not verify your licence",
     "retake": "Retake",
-    "requestReview": "The photo is clear — ask XePrime to check",
-    "reviewRequested": "Your request for a check has been sent.",
     "expiredOn": "The licence expired on {date}.",
-    "expiredMisread": "Is the date on your licence different? The reader may have misread it — ask XePrime to check.",
+    "expiredMisread": "Is the date on your licence different? Retake the photo so the expiry date is sharp.",
     "note": "Message from XePrime: {note}"
   },
   "reasons": {
@@ -81,6 +72,7 @@
     "missing_fields": "We could not read the number, name, class and expiry date from the photo.",
     "expired": "The driving licence has expired.",
     "no_drivable_class": "The licence class does not cover rental cars or motorbikes.",
+    "reader_unavailable": "We could not read the details in this photo. Retake the front of your licence so it is sharp, well lit and shows all four corners, then send it again.",
     "other": "XePrime cannot verify this licence."
   },
   "issues": {
@@ -108,5 +100,14 @@
   "error": {
     "load": "Could not load your licence details.",
     "retry": "Try again"
+  },
+  "empty": {
+    "title": "You have not added a driving licence yet",
+    "body": "Add your driving licence so we can verify it. It only takes about 2 minutes and is required to book self-drive vehicles on XePrime.",
+    "add": "Add licence"
+  },
+  "addModal": {
+    "title": "Add driving licence",
+    "cancel": "Cancel"
   }
 }

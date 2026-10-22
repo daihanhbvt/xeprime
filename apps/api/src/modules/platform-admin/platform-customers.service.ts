@@ -1,6 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { ACCOUNT_REALM, API_ERROR_CODE, type PaginationMeta } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  CUSTOMER_LICENCE_STATE,
+  DRIVER_LICENCE_STATUS,
+  type CustomerLicenceState,
+  type PaginationMeta,
+} from '@xeprime/types';
+import { fromDateOnly } from '../../common/date-only';
 import { maskEmail, maskPhone } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { phoneLookupVariants } from '../../common/phone';
@@ -15,6 +23,13 @@ import {
   PlatformCustomerListQueryDto,
 } from './dto/platform-customer.dto';
 
+/** Lượt nộp bằng lái có ý nghĩa với hồ sơ khách: đang đọc hoặc đã có kết quả (bỏ lượt dở/huỷ/bị thay). */
+const LICENCE_RESULT_STATUSES = [
+  DRIVER_LICENCE_STATUS.PROCESSING,
+  DRIVER_LICENCE_STATUS.VERIFIED,
+  DRIVER_LICENCE_STATUS.REJECTED,
+] as const;
+
 const LIST_SELECT = {
   id: true,
   displayName: true,
@@ -25,7 +40,59 @@ const LIST_SELECT = {
   lastLoginAt: true,
   createdAt: true,
   _count: { select: { customerBookingRequests: true, reviews: true } },
+  // Bằng đang dùng (tối đa một — partial unique) + lượt nộp gần nhất có kết quả hoặc đang đọc.
+  driverLicences: {
+    where: {
+      status: {
+        in: [...LICENCE_RESULT_STATUSES],
+      },
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: 1,
+    select: { status: true, expiresOn: true },
+  },
 } satisfies Prisma.UserSelect;
+
+const LICENCE_VERIFIED: Prisma.CustomerDriverLicenceListRelationFilter = {
+  some: { status: DRIVER_LICENCE_STATUS.VERIFIED },
+};
+
+/**
+ * Lọc theo tình trạng bằng lái — cùng quy tắc với `licenceStateOf`: có bằng đang dùng là
+ * `verified`; không thì theo lượt nộp gần nhất. "Gần nhất là X" diễn đạt bằng "có X và không có
+ * lượt nào mới hơn X" — không cần cột suy diễn, và dùng index `(user_id, created_at)` sẵn có.
+ */
+function licenceWhere(state: CustomerLicenceState | undefined): Prisma.UserWhereInput {
+  switch (state) {
+    case CUSTOMER_LICENCE_STATE.VERIFIED:
+      return { driverLicences: LICENCE_VERIFIED };
+    case CUSTOMER_LICENCE_STATE.NONE:
+      return {
+        driverLicences: {
+          none: {
+            status: {
+              in: [...LICENCE_RESULT_STATUSES],
+            },
+          },
+        },
+      };
+    case CUSTOMER_LICENCE_STATE.PROCESSING:
+      return {
+        NOT: { driverLicences: LICENCE_VERIFIED },
+        driverLicences: { some: { status: DRIVER_LICENCE_STATUS.PROCESSING } },
+      };
+    case CUSTOMER_LICENCE_STATE.REJECTED:
+      return {
+        NOT: { driverLicences: LICENCE_VERIFIED },
+        AND: [
+          { driverLicences: { some: { status: DRIVER_LICENCE_STATUS.REJECTED } } },
+          { driverLicences: { none: { status: DRIVER_LICENCE_STATUS.PROCESSING } } },
+        ],
+      };
+    default:
+      return {};
+  }
+}
 
 /**
  * "Khách thuê" là các tài khoản realm `customer` (ADR 0053) — một cột, không còn suy từ "không
@@ -66,6 +133,7 @@ export class PlatformCustomersService {
       ...CUSTOMER_ONLY,
       ...(query.status ? { status: query.status } : {}),
       ...(query.hasRequests ? { customerBookingRequests: { some: {} } } : {}),
+      ...licenceWhere(query.licence as CustomerLicenceState | undefined),
       // SĐT/email khớp CHÍNH XÁC (unique trong realm khách): hỗ trợ đã có sẵn giá trị khách đọc cho.
       // Cho tìm gần đúng ở đây là biến ô tra cứu thành công cụ quét danh bạ khách hàng.
       // `users.phone` lưu dạng `84…`, còn hỗ trợ gõ `09…` — so khớp mọi dạng lưu (common/phone).
@@ -85,11 +153,15 @@ export class PlatformCustomersService {
       }),
     ]);
 
-    // Số yêu cầu đã thành đơn: một groupBy cho cả trang thay vì N truy vấn con.
-    const bookedByUser = await this.countBooked(rows.map((r) => r.id));
+    // Số yêu cầu đã thành đơn + bằng đang dùng: một truy vấn cho cả trang, không N truy vấn con.
+    const ids = rows.map((r) => r.id);
+    const [bookedByUser, verifiedByUser] = await Promise.all([
+      this.countBooked(ids),
+      this.verifiedLicences(ids),
+    ]);
 
     return {
-      data: rows.map((r) => toListItem(r, bookedByUser.get(r.id) ?? 0)),
+      data: rows.map((r) => toListItem(r, bookedByUser.get(r.id) ?? 0, verifiedByUser.get(r.id))),
       meta: paginationMeta(paging, total),
     };
   }
@@ -112,8 +184,9 @@ export class PlatformCustomersService {
     });
     if (!row) throw notFound();
 
-    const [bookedByUser, recentRequests] = await Promise.all([
+    const [bookedByUser, verifiedByUser, recentRequests] = await Promise.all([
       this.countBooked([id]),
+      this.verifiedLicences([id]),
       this.prisma.bookingRequest.findMany({
         where: { customerUserId: id },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -133,7 +206,7 @@ export class PlatformCustomersService {
     ]);
 
     return {
-      ...toListItem(row, bookedByUser.get(id) ?? 0),
+      ...toListItem(row, bookedByUser.get(id) ?? 0, verifiedByUser.get(id)),
       emailVerifiedAt: row.emailVerifiedAt ? (row.emailVerifiedAt as Date).toISOString() : null,
       conversationCount: row._count.customerConversations,
       recentRequests: recentRequests.map((r) => ({
@@ -175,6 +248,16 @@ export class PlatformCustomersService {
     return { customerId: row.id, phone: row.phone, email: row.email };
   }
 
+  /** Bằng ĐANG DÙNG của các khách — hạn của nó, theo khách. */
+  private async verifiedLicences(userIds: string[]): Promise<Map<string, VerifiedLicence>> {
+    if (userIds.length === 0) return new Map();
+    const rows = await this.prisma.customerDriverLicence.findMany({
+      where: { userId: { in: userIds }, status: DRIVER_LICENCE_STATUS.VERIFIED },
+      select: { userId: true, expiresOn: true },
+    });
+    return new Map(rows.map((r) => [r.userId, { expiresOn: r.expiresOn }]));
+  }
+
   /** Đếm yêu cầu đã chuyển thành đơn thuê, gom theo khách (bookingId khác null). */
   private async countBooked(userIds: string[]): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
@@ -193,7 +276,27 @@ export class PlatformCustomersService {
 
 type CustomerRow = Prisma.UserGetPayload<{ select: typeof LIST_SELECT }>;
 
-function toListItem(u: CustomerRow, bookedCount: number): PlatformCustomerDto {
+interface VerifiedLicence {
+  expiresOn: Date | null;
+}
+
+function licenceStateOf(
+  u: CustomerRow,
+  verified: VerifiedLicence | undefined,
+): CustomerLicenceState {
+  if (verified) return CUSTOMER_LICENCE_STATE.VERIFIED;
+  const latest = u.driverLicences[0];
+  if (!latest) return CUSTOMER_LICENCE_STATE.NONE;
+  return latest.status === DRIVER_LICENCE_STATUS.PROCESSING
+    ? CUSTOMER_LICENCE_STATE.PROCESSING
+    : CUSTOMER_LICENCE_STATE.REJECTED;
+}
+
+function toListItem(
+  u: CustomerRow,
+  bookedCount: number,
+  verified: VerifiedLicence | undefined,
+): PlatformCustomerDto {
   return {
     id: u.id,
     displayName: u.displayName,
@@ -204,6 +307,8 @@ function toListItem(u: CustomerRow, bookedCount: number): PlatformCustomerDto {
     requestCount: u._count.customerBookingRequests,
     bookedCount,
     reviewCount: u._count.reviews,
+    licenceState: licenceStateOf(u, verified),
+    licenceExpiresOn: fromDateOnly(verified?.expiresOn ?? null),
     lastLoginAt: u.lastLoginAt ? (u.lastLoginAt as Date).toISOString() : null,
     createdAt: (u.createdAt as Date).toISOString(),
   };

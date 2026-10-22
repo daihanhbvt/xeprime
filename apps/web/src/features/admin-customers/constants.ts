@@ -1,7 +1,9 @@
-import { USER_STATUS_META, USER_STATUS_VALUES } from '@xeprime/types';
+import { CUSTOMER_LICENCE_STATE, STATUS_COLOR, type CustomerLicenceState } from '@xeprime/types';
 
-/** Option lọc trạng thái tài khoản khách, sinh từ metadata ở `@xeprime/types` (ADR 0005). */
-export const ADMIN_CUSTOMER_STATUS_OPTIONS = [
-  { value: 'all', label: 'Tất cả trạng thái' },
-  ...USER_STATUS_VALUES.map((value) => ({ value, label: USER_STATUS_META[value].label })),
-];
+/** Màu nhãn tình trạng bằng lái của khách — nhãn dịch ở `AdminCustomers.licenceState`. */
+export const CUSTOMER_LICENCE_STATE_COLOR: Readonly<Record<CustomerLicenceState, string>> = {
+  [CUSTOMER_LICENCE_STATE.NONE]: STATUS_COLOR.NEUTRAL,
+  [CUSTOMER_LICENCE_STATE.PROCESSING]: STATUS_COLOR.PROCESSING,
+  [CUSTOMER_LICENCE_STATE.VERIFIED]: STATUS_COLOR.SUCCESS,
+  [CUSTOMER_LICENCE_STATE.REJECTED]: STATUS_COLOR.DANGER,
+};

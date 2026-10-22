@@ -73,7 +73,8 @@ import platformMoney from '@xeprime/domain/messages/en/platform-money.json';
 import insurance from '@xeprime/domain/messages/en/insurance.json';
 import adminInsurance from '@xeprime/domain/messages/en/admin-insurance.json';
 import platformSellers from '@xeprime/domain/messages/en/platform-sellers.json';
-import adminDriverLicences from '@xeprime/domain/messages/en/admin-driver-licences.json';
+import adminCustomers from '@xeprime/domain/messages/en/admin-customers.json';
+import adminFollowUps from '@xeprime/domain/messages/en/admin-follow-ups.json';
 import adminAppConfig from '@xeprime/domain/messages/en/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/en/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/en/admin-accounts.json';
@@ -142,7 +143,8 @@ const messages = {
   Insurance: insurance,
   AdminInsurance: adminInsurance,
   PlatformSellers: platformSellers,
-  AdminDriverLicences: adminDriverLicences,
+  AdminCustomers: adminCustomers,
+  AdminFollowUps: adminFollowUps,
   AdminAppConfig: adminAppConfig,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,

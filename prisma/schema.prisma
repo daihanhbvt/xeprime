@@ -121,6 +121,8 @@ model User {
   driverLinks                  Driver[]                  @relation("driver_link_account")
   driverLinksInvited           Driver[]                  @relation("driver_link_inviter")
   decidedDriverLicences        CustomerDriverLicence[]   @relation("driver_licence_decider")
+  assignedSalesFollowUps       SalesFollowUp[]           @relation("sales_follow_up_assignee")
+  updatedSalesFollowUps        SalesFollowUp[]           @relation("sales_follow_up_updater")
   updatedAppConfigs            PlatformAppConfig[]       @relation("app_config_updated_by")
 
   /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
@@ -532,7 +534,7 @@ model EmailVerification {
 ///
 /// Mỗi LƯỢT NỘP là một dòng (lịch sử giữ nguyên, không ghi đè ảnh cũ). Hai bất biến do DB giữ:
 /// tối đa MỘT dòng `verified` (bằng đang dùng) và tối đa MỘT lượt đang dở (`uploading` |
-/// `processing` | `pending_review`) cho mỗi tài khoản — partial unique ở migration.
+/// `processing`; `pending_review` đã gỡ ở ADR 0070) cho mỗi tài khoản — partial unique ở migration.
 ///
 /// Chỉ tài khoản realm `customer`: cột `realm` cố định (CHECK) và FK tổ hợp `(user_id, realm)`
 /// → `users(id, realm)`, nên một tài khoản đối tác/quản trị không bao giờ mang bằng lái ở đây.
@@ -2200,6 +2202,7 @@ model BookingRequest {
   hold            BookingHold?
   cancellation    BookingCancellation?
   supportCases    SupportCase[]
+  salesFollowUp   SalesFollowUp?
 
   @@index([tenantId, status])
   @@index([vehicleId])
@@ -2213,6 +2216,8 @@ model BookingRequest {
   /// Một phần chứ không toàn bảng vì 99% hàng sẽ là yêu cầu ĐÃ xử lý — worker không bao giờ
   /// hỏi tới chúng, và một index toàn bảng bắt mọi lần ghi phải bảo trì phần vô ích đó.
   @@index([respondBy])
+  /// Tab "Cần chăm sóc" (ADR 0070): yêu cầu đã kết thúc, mới nhất trước.
+  @@index([status, updatedAt(sort: Desc)])
   @@map("booking_requests")
 }
 
@@ -2278,6 +2283,30 @@ model BookingCancellation {
   /// chính họ". Index phủ đúng ba cột đó nên phép gộp không chạm bảng.
   @@index([tenantId, countsAgainstHost, cancelledAt])
   @@map("booking_cancellations")
+}
+
+/// Chăm sóc khách mất đơn — ADR 0070. MỘT dòng cho một yêu cầu thuê từ chợ đã kết thúc mà không
+/// thành chuyến; chưa có dòng = `new`. Writer DUY NHẤT: `PlatformFollowUpsService` (mỗi lần ghi
+/// một dòng `audit_logs` trong cùng transaction). Không thuộc tenant nào — đây là việc của nền tảng.
+model SalesFollowUp {
+  id               String    @id @db.Char(26)
+  bookingRequestId String    @unique @map("booking_request_id") @db.Char(26)
+  /// @xeprime/types → FollowUpStatus — CHECK.
+  status           String    @db.VarChar(20)
+  note             String?   @db.Text
+  assigneeUserId   String?   @map("assignee_user_id") @db.Char(26)
+  lastContactedAt  DateTime? @map("last_contacted_at") @db.Timestamptz(3)
+  updatedBy        String    @map("updated_by") @db.Char(26)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  bookingRequest BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  assignee       User?          @relation("sales_follow_up_assignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  updater        User           @relation("sales_follow_up_updater", fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([assigneeUserId])
+  @@map("sales_follow_ups")
 }
 
 // ---------------------------------------------------------------------------

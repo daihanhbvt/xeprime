@@ -32,7 +32,7 @@ export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
     licence.coversMotorbike ? t('fields.motorbike') : null,
   ].filter(Boolean);
 
-  const rows: Array<{ key: string; label: string; value: string | null }> = [
+  const rows: Array<{ key: string; label: string; value: string | null; wide?: boolean }> = [
     { key: 'name', label: t('fields.fullName'), value: licence.fullName },
     { key: 'number', label: t('fields.number'), value: licence.licenceNumber },
     { key: 'classes', label: t('fields.classes'), value: licence.classes.join(', ') || null },
@@ -49,6 +49,7 @@ export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
       key: 'kind',
       label: t('fields.kind'),
       value: licence.kind ? dl('driverLicenceKind', licence.kind) : null,
+      wide: true,
     },
   ];
 
@@ -60,7 +61,7 @@ export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
           {rows
             .filter((row) => row.value)
             .map((row) => (
-              <div key={row.key} className={styles.fact}>
+              <div key={row.key} className={cx(styles.fact, row.wide && styles.factWide)}>
                 <dt>{row.label}</dt>
                 <dd>{row.value}</dd>
               </div>

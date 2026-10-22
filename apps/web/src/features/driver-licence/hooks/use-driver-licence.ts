@@ -3,18 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DRIVER_LICENCE_STATUS } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
-import {
-  fetchDriverLicenceImage,
-  fetchDriverLicenceOverview,
-  requestDriverLicenceReview,
-  submitDriverLicence,
-} from '../api';
+import { fetchDriverLicenceImage, fetchDriverLicenceOverview, submitDriverLicence } from '../api';
 import type { DriverLicence, DriverLicenceOverview } from '../types';
 
 /** Đang đọc ảnh: hỏi lại dày để kết quả hiện ra ngay khi có. */
 const PROCESSING_POLL_MS = 1_500;
-/** Đang chờ người duyệt: hỏi thưa — trang vẫn tự đổi khi có kết quả mà không phải F5. */
-const PENDING_REVIEW_POLL_MS = 30_000;
 
 /**
  * Bằng lái của tài khoản. Tự hỏi lại khi lượt nộp gần nhất còn đang chờ kết quả — không có kênh
@@ -28,7 +21,6 @@ export function useDriverLicence(options: { enabled?: boolean } = {}) {
     refetchInterval: (query) => {
       const status = query.state.data?.latest?.status;
       if (status === DRIVER_LICENCE_STATUS.PROCESSING) return PROCESSING_POLL_MS;
-      if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW) return PENDING_REVIEW_POLL_MS;
       return false;
     },
   });
@@ -52,18 +44,6 @@ export function useSubmitDriverLicence() {
         withLatest(prev, licence),
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
-    },
-  });
-}
-
-export function useRequestDriverLicenceReview() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => requestDriverLicenceReview(id),
-    onSuccess: (licence) => {
-      queryClient.setQueryData<DriverLicenceOverview>(queryKeys.driverLicence.overview, (prev) =>
-        withLatest(prev, licence),
-      );
     },
   });
 }

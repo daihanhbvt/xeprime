@@ -133,24 +133,28 @@ describe('decideFromReading — tự từ chối (khách sửa được ngay)', 
   });
 });
 
-describe('decideFromReading — sang người duyệt', () => {
+describe('decideFromReading — ca mập mờ cũng tự quyết (ADR 0070)', () => {
   const whyOf = (reading: DriverLicenceReading) => {
     const decision = decideFromReading(reading, TODAY);
-    expect(decision.status).toBe(DRIVER_LICENCE_STATUS.PENDING_REVIEW);
-    return decision.status === DRIVER_LICENCE_STATUS.PENDING_REVIEW ? decision.why : null;
+    expect(decision.status).toBe(DRIVER_LICENCE_STATUS.REJECTED);
+    return decision.status === DRIVER_LICENCE_STATUS.REJECTED ? decision.reason : null;
   };
 
-  it('hạn không thể có với hạng đó ⇒ người duyệt, không tự xác thực', () => {
+  it('hạn không thể có với hạng đó ⇒ từ chối, chụp lại — không tự xác thực', () => {
     // Bằng ô tô "không thời hạn": đọc nhầm sẽ cho qua cổng đặt xe mãi mãi.
-    expect(whyOf(vnB2({ expiresOn: null, noExpiry: true }))).toBe('implausible_expiry');
+    expect(whyOf(vnB2({ expiresOn: null, noExpiry: true }))).toBe(
+      DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
+    );
     // Hạn 2081 — một chữ số đọc lệch.
-    expect(whyOf(vnB2({ expiresOn: '2081-03-15' }))).toBe('implausible_expiry');
+    expect(whyOf(vnB2({ expiresOn: '2081-03-15' }))).toBe(DRIVER_LICENCE_REJECT_REASON.UNREADABLE);
     // Hạn trước ngày cấp.
     expect(whyOf(vnB2({ issuedOn: '2021-03-15', expiresOn: '2021-01-01' }))).toBe(
-      'implausible_expiry',
+      DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
     );
     // Không đọc được ngày cấp: hôm nay là chặn trên của ngày cấp.
-    expect(whyOf(vnB2({ issuedOn: null, expiresOn: '2040-01-01' }))).toBe('implausible_expiry');
+    expect(whyOf(vnB2({ issuedOn: null, expiresOn: '2040-01-01' }))).toBe(
+      DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
+    );
   });
 
   it('B1 mẫu cũ có hạn tới tuổi 60 — hạn xa vẫn hợp lệ, quá tuổi 60 thì không', () => {
@@ -158,7 +162,9 @@ describe('decideFromReading — sang người duyệt', () => {
     expect(decideFromReading(vnB2({ ...b1, expiresOn: '2050-04-12' }), TODAY).status).toBe(
       DRIVER_LICENCE_STATUS.VERIFIED,
     );
-    expect(whyOf(vnB2({ ...b1, expiresOn: '2060-04-12' }))).toBe('implausible_expiry');
+    expect(whyOf(vnB2({ ...b1, expiresOn: '2060-04-12' }))).toBe(
+      DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
+    );
   });
 
   it('A1 không thời hạn là bình thường — không bị coi là hạn bất thường', () => {
@@ -167,12 +173,16 @@ describe('decideFromReading — sang người duyệt', () => {
     ).toBe(DRIVER_LICENCE_STATUS.VERIFIED);
   });
 
-  it('độ tin cậy thấp', () => {
-    expect(whyOf(vnB2({ confidence: 'low' }))).toBe('low_confidence');
+  it('độ tin cậy thấp nhưng đủ trường, hợp lệ ⇒ tự xác thực (chủ xe đối chiếu lúc giao xe)', () => {
+    expect(decideFromReading(vnB2({ confidence: 'low' }), TODAY).status).toBe(
+      DRIVER_LICENCE_STATUS.VERIFIED,
+    );
   });
 
   it('ngày sinh cho ra người dưới 18 tuổi — gần như chắc chắn đọc sai', () => {
-    expect(whyOf(vnB2({ dateOfBirth: '2012-01-01' }))).toBe('implausible_birth_date');
+    expect(whyOf(vnB2({ dateOfBirth: '2012-01-01' }))).toBe(
+      DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
+    );
   });
 });
 

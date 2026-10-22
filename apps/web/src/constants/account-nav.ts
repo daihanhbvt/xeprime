@@ -4,7 +4,6 @@ import {
   CreditCardOutlined,
   DeleteOutlined,
   HeartOutlined,
-  IdcardOutlined,
   SolutionOutlined,
   LockOutlined,
   ShopOutlined,
@@ -58,14 +57,6 @@ const PROFILE: AccountNavItem = {
   labelKey: 'account.profile',
   href: ROUTES.ACCOUNT.ROOT,
   icon: UserOutlined,
-};
-
-/** Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057). */
-const DOCUMENTS: AccountNavItem = {
-  key: 'documents',
-  labelKey: 'account.documents',
-  href: ROUTES.ACCOUNT.DOCUMENTS,
-  icon: IdcardOutlined,
 };
 
 /** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản này (ADR 0063). */
@@ -154,8 +145,8 @@ const BECOME_OWNER: AccountNavItem = {
  * "Tỉ lệ phản hồi" (chỉ số của GIAN HÀNG).
  */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
+  // Giấy tờ & Xác minh nằm TRONG trang hồ sơ (design 22/10/2026), không còn là mục riêng.
   PROFILE,
-  DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
   FAVORITES,

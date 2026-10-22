@@ -69,21 +69,6 @@ export class DriverLicencesController {
     return this.licences.complete(user.id, id);
   }
 
-  @Post(':id/request-review')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Nhờ XePrime xem lại một lượt bị máy từ chối',
-    description:
-      'Chỉ với lượt mới nhất, bị từ chối TỰ ĐỘNG vì lý do máy có thể đọc sai (`canRequestReview`).',
-  })
-  @ApiOkResponse({ type: DriverLicenceDto })
-  requestReview(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<DriverLicenceDto> {
-    return this.licences.requestReview(user.id, id);
-  }
-
   @Get(':id/image')
   @ApiOperation({ summary: 'Xem ảnh bằng lái đã nộp — URL sống ngắn' })
   @ApiOkResponse({ type: DriverLicenceImageDto })

@@ -66,12 +66,7 @@ async function main(): Promise<void> {
       try {
         const reading = await reader.read({ image: readFileSync(path), mimeType });
         const decision = decideFromReading(reading, today);
-        const outcome =
-          decision.status === 'rejected'
-            ? `rejected:${decision.reason}`
-            : decision.status === 'pending_review'
-              ? 'pending_review'
-              : 'verified';
+        const outcome = decision.status === 'rejected' ? `rejected:${decision.reason}` : 'verified';
         const ok = sample.expect === '?' || outcome === sample.expect;
         if (ok) matched += 1;
         console.log(

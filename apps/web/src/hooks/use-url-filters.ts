@@ -89,6 +89,20 @@ export function useUrlFilters<TFilters extends object>(
 }
 
 /** Đọc một tham số số nguyên dương từ URL (page/limit); giá trị rác → undefined. */
+/**
+ * Giá trị của `key` nếu nằm trong `allowed`, không thì `undefined` — link cũ hay gõ tay mang một giá
+ * trị lạ thì bộ lọc rơi về mặc định thay vì gửi lên server thành một lỗi 400 cho thứ người dùng
+ * không hề gõ.
+ */
+export function enumParam(
+  searchParams: URLSearchParams,
+  key: string,
+  allowed: readonly string[],
+): string | undefined {
+  const value = searchParams.get(key);
+  return value !== null && allowed.includes(value) ? value : undefined;
+}
+
 export function positiveIntParam(searchParams: URLSearchParams, key: string): number | undefined {
   const value = Number(searchParams.get(key));
   return Number.isFinite(value) && value > 0 ? value : undefined;

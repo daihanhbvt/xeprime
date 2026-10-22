@@ -326,7 +326,8 @@ export const ROUTES = {
     /** Đổi mật khẩu, hoặc ĐẶT lần đầu với tài khoản OTP/mạng xã hội (`hasPassword === false`). */
     changePassword: (): Href => '/account/change-password',
     /**
-     * Giấy tờ & Xác minh — bằng lái của tài khoản KHÁCH, điều kiện đặt xe tự lái (ADR 0057).
+     * Đường CŨ của Giấy tờ & Xác minh — nay chỉ chuyển về tab Tài khoản, nơi khối bằng lái nằm
+     * (design 22/10/2026). Bằng lái là của tài khoản KHÁCH (ADR 0057).
      * Chỉ app khách có màn này. Ở app Partner, builder này đổ về `/not-available` (overlay
      * `routes.ts` của nó); còn deep link URL `/account/documents` thì KHÔNG có route ở đó nên rơi
      * vào `+not-found`.

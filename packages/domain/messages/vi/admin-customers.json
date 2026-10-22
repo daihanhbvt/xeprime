@@ -1,0 +1,109 @@
+{
+  "page": {
+    "title": "Khách thuê",
+    "loading": "Đang tải danh sách khách…",
+    "privacyNote": "SĐT và email hiển thị ở dạng đã che. Mở chi tiết để xem đầy đủ nếu bạn có quyền — mỗi lần xem được ghi vào nhật ký hệ thống."
+  },
+  "filters": {
+    "searchPlaceholder": "Tìm theo tên",
+    "searchLabel": "Tìm khách theo tên",
+    "phonePlaceholder": "Tra đúng SĐT",
+    "phoneLabel": "Tra số điện thoại khách",
+    "emailPlaceholder": "Tra đúng email",
+    "emailLabel": "Tra email khách",
+    "statusLabel": "Trạng thái tài khoản",
+    "allStatuses": "Tất cả trạng thái",
+    "licenceLabel": "Bằng lái",
+    "allLicences": "Mọi tình trạng bằng lái",
+    "hasRequests": "Đã từng đặt xe"
+  },
+  "licenceState": {
+    "none": "Chưa nộp",
+    "processing": "Đang đọc ảnh",
+    "verified": "Đã xác thực",
+    "rejected": "Không hợp lệ"
+  },
+  "table": {
+    "label": "Danh sách khách hàng",
+    "customer": "Khách",
+    "phone": "SĐT",
+    "phoneVerified": "SĐT đã xác thực OTP",
+    "licence": "Bằng lái",
+    "licenceExpiresOn": "Hạn {date}",
+    "licenceExpired": "Hết hạn {date}",
+    "requests": "Yêu cầu",
+    "booked": "Thành đơn",
+    "reviews": "Đánh giá",
+    "status": "Trạng thái",
+    "lastLogin": "Đăng nhập gần nhất",
+    "neverLoggedIn": "Chưa đăng nhập",
+    "createdAt": "Ngày tạo",
+    "view": "Xem chi tiết",
+    "loadError": "Không tải được danh sách khách",
+    "empty": "Chưa có khách thuê nào",
+    "noResults": "Không có khách khớp bộ lọc",
+    "clearFilters": "Xoá bộ lọc",
+    "total": "{count, plural, other {# khách}}"
+  },
+  "drawer": {
+    "title": "Khách thuê",
+    "loadError": "Không tải được thông tin khách",
+    "phone": "SĐT",
+    "email": "Email",
+    "verified": "Đã xác thực",
+    "activity": "Hoạt động",
+    "activityValue": "{requests} yêu cầu · {booked} thành đơn · {reviews} đánh giá · {conversations} hội thoại",
+    "lastLogin": "Đăng nhập gần nhất",
+    "neverLoggedIn": "Chưa đăng nhập",
+    "createdAt": "Ngày tạo",
+    "updatedAt": "Cập nhật",
+    "recentRequests": "Yêu cầu thuê gần nhất",
+    "noRequests": "Khách chưa gửi yêu cầu thuê nào",
+    "requestTarget": "Gian hàng · xe",
+    "requestPeriod": "Thuê từ → đến",
+    "requestStatus": "Trạng thái",
+    "requestLink": "Liên kết",
+    "bookingLink": "Đơn {code}"
+  },
+  "licence": {
+    "title": "Bằng lái",
+    "autoNote": "Hệ thống tự xác thực hoặc từ chối mỗi lượt nộp. Chủ xe đối chiếu bằng gốc khi giao xe.",
+    "none": "Khách chưa nộp bằng lái.",
+    "loadError": "Không tải được bằng lái của khách.",
+    "retry": "Thử lại",
+    "history": "Lịch sử nộp",
+    "submittedAt": "Gửi lúc {date}",
+    "current": "Đang dùng",
+    "image": {
+      "title": "Ảnh mặt trước",
+      "alt": "Ảnh bằng lái khách đã nộp",
+      "show": "Xem ảnh",
+      "loadFailed": "Không mở được ảnh.",
+      "audit": "Mỗi lần mở ảnh được ghi vào nhật ký hệ thống."
+    },
+    "facts": {
+      "kind": "Loại bằng",
+      "fullName": "Họ tên trên bằng",
+      "licenceNumber": "Số bằng",
+      "dateOfBirth": "Ngày sinh",
+      "classes": "Hạng",
+      "expiresOn": "Có giá trị đến",
+      "noExpiry": "Không thời hạn",
+      "country": "Nơi cấp",
+      "drives": "Lái được",
+      "car": "Ô tô",
+      "motorbike": "Xe máy",
+      "reason": "Lý do",
+      "decidedAt": "Kết quả lúc",
+      "source": "Quyết định bởi",
+      "sourceAuto": "Hệ thống tự động",
+      "confidence": "Độ tin cậy khi đọc",
+      "readerError": "Lỗi bộ đọc"
+    },
+    "confidence": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    }
+  }
+}
