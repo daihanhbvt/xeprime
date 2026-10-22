@@ -33,6 +33,9 @@ const SUPPORT_ALLOWLIST = [
   'VehiclesController.update',
   // ── Đợt 2A: CHỈ ĐỌC, mỗi lĩnh vực một capability ──
   'BookingHandoversController.context',
+  // Giấy chứng nhận + tình trạng bảo hiểm của đơn (ADR 0064 điều 10) — chỉ đọc, cùng capability xem đơn.
+  'BookingInsuranceController.coverage',
+  'BookingInsuranceController.list',
   'BookingRequestsController.getOne',
   'BookingRequestsController.list',
   // Lịch sử gán tài xế của đơn (ADR 0063) — chỉ đọc, cùng capability xem đơn.

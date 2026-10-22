@@ -1474,6 +1474,9 @@
       "activate": "Bật mẫu email hướng dẫn gói",
       "delete": "Xoá mẫu email hướng dẫn gói",
       "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
+    },
+    "insurance_product": {
+      "update": "Cập nhật sản phẩm bảo hiểm"
     }
   },
   "auditTargetType": {
@@ -1527,7 +1530,8 @@
     "vehicle_handover": "Biên bản bàn giao",
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
-    "withdrawal_request": "Yêu cầu rút điểm"
+    "withdrawal_request": "Yêu cầu rút điểm",
+    "insurance_product": "Sản phẩm bảo hiểm"
   },
   "auditField": {
     "planCode": "Mã gói",

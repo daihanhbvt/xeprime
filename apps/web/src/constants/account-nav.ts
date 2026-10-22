@@ -3,6 +3,7 @@ import {
   CarOutlined,
   CreditCardOutlined,
   DeleteOutlined,
+  HeartOutlined,
   IdcardOutlined,
   SolutionOutlined,
   LockOutlined,
@@ -73,6 +74,14 @@ const DRIVING: AccountNavItem = {
   labelKey: 'account.driving',
   href: ROUTES.ACCOUNT.DRIVING,
   icon: SolutionOutlined,
+};
+
+/** Xe yêu thích — xe khách đã lưu để xem/đặt sau (BRD customer favorites). */
+const FAVORITES: AccountNavItem = {
+  key: 'favorites',
+  labelKey: 'account.favorites',
+  href: ROUTES.ACCOUNT.FAVORITES,
+  icon: HeartOutlined,
 };
 
 const TRIPS: AccountNavItem = {
@@ -149,6 +158,7 @@ export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
+  FAVORITES,
   DRIVING,
   PAYMENTS,
   BALANCE,

@@ -29,6 +29,7 @@ export * from './ulid';
 export * from './host-metrics';
 export * from './fee-policy';
 export * from './promo-code';
+export * from './favorites';
 export * from './pricing';
 export * from './shop-profile';
 export * from './shop-onboarding';

@@ -406,6 +406,18 @@ export const queryKeys = {
     /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
+  /**
+   * Xe yêu thích của tài khoản khách — `/account/favorites`. Trạng thái trái tim khoá THEO TỪNG XE
+   * (`status(vehicleId)`), không theo một tập: cập nhật lạc quan và hoàn tác của xe này không bao
+   * giờ ghi đè trạng thái của xe khác đang có thao tác song song.
+   */
+  favorites: {
+    all: ['favorites'] as const,
+    lists: ['favorites', 'list'] as const,
+    list: (params: QueryParams) => ['favorites', 'list', params] as const,
+    statusAll: ['favorites', 'status'] as const,
+    status: (vehicleId: string) => ['favorites', 'status', vehicleId] as const,
+  },
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,

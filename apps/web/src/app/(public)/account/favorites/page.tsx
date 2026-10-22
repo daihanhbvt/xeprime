@@ -1,13 +1,21 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { AccountComingSoon } from '@/features/account/components/AccountComingSoon';
+import { Suspense } from 'react';
+import { FavoritesView } from '@/features/favorites/components/FavoritesView';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Navigation.account');
   return { title: t('favorites'), robots: { index: false, follow: false } };
 }
 
-/** Route giữ chỗ, chưa có link menu và chưa có nội dung — xem `docs/design/03_PRODUCT_GAP_ANALYSIS.md` §6. */
-export default function AccountPlaceholderPage() {
-  return <AccountComingSoon labelKey="favorites" />;
+/**
+ * Xe yêu thích của tài khoản khách (BRD customer favorites). Tab Ô tô/Xe máy nằm trên URL nên
+ * view đọc `useSearchParams` — bọc Suspense để trang vẫn dựng tĩnh được phần khung.
+ */
+export default function AccountFavoritesPage() {
+  return (
+    <Suspense fallback={null}>
+      <FavoritesView />
+    </Suspense>
+  );
 }

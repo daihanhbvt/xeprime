@@ -5,6 +5,13 @@ import { VehicleCard } from './VehicleCard';
 import type { PublicListing } from '../types';
 import { renderWithIntl as render } from '@/i18n/test-utils';
 
+/** Trái tim cần phiên + QueryClient + hộp đăng nhập — có test riêng ở `features/favorites`. */
+vi.mock('@/features/favorites/components/FavoriteButton', () => ({
+  FavoriteButton: ({ vehicleId }: { vehicleId: string }) => (
+    <button type="button" data-testid={`favorite-${vehicleId}`} />
+  ),
+}));
+
 /**
  * Thẻ xe trên marketplace (Wave 11.1).
  *
@@ -76,12 +83,14 @@ describe('VehicleCard', () => {
   });
 
   /**
-   * Không có nút nào trong thẻ: không hành động thuê, và nút "Lưu xe" của bản vẽ chờ tới khi tính
-   * năng xe yêu thích mở — một trái tim bấm không làm gì là lời hứa hão.
+   * Không có hành động thuê nào trong thẻ: nút DUY NHẤT là trái tim Xe yêu thích (mở 21/10/2026,
+   * nối API thật) — mọi chỗ còn lại của thẻ là một liên kết tới trang chi tiết.
    */
-  it('không có nút nào trong thẻ — cả thẻ là một liên kết', () => {
+  it('nút duy nhất trong thẻ là trái tim yêu thích — còn lại là một liên kết', () => {
     render(<VehicleCard listing={LISTING} />);
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    const buttons = screen.queryAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]!.getAttribute('data-testid')).toBe('favorite-V1');
   });
 
   /** ADR 0011: % giảm là của giá TỰ LÁI — ngữ cảnh dài hạn/có tài xế không mang huy hiệu đó. */
@@ -269,5 +278,15 @@ describe('VehicleCard', () => {
     const body = container.querySelector('article > div:last-child');
     const last = body?.lastElementChild;
     expect(last?.textContent).toContain('1,05tr');
+  });
+});
+
+describe('VehicleCard — trái tim yêu thích', () => {
+  it('cả hai dạng thẻ gắn trái tim của ĐÚNG xe (không còn state cục bộ)', () => {
+    const { unmount } = render(<VehicleCard listing={LISTING} />);
+    expect(screen.getByTestId('favorite-V1')).toBeTruthy();
+    unmount();
+    render(<VehicleCard listing={LISTING} variant="list" />);
+    expect(screen.getByTestId('favorite-V1')).toBeTruthy();
   });
 });

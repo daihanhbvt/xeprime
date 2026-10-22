@@ -448,10 +448,7 @@ function AssignPlanModal({
     selectedScope === PLAN_VEHICLE_SCOPE.ALL && selected?.billingMode === BILLING_MODE.PACKAGE;
   // PlanDto.limits đã đủ hình, nhưng parse lại cho ra kiểu chia sẻ (PlanLimitsJson) dùng
   // với các phép xem trước — cùng parser với backend, không tự diễn giải.
-  const limits: PlanLimitsJson | null = useMemo(
-    () => (selected ? parsePlanLimits(selected.limits) : null),
-    [selected],
-  );
+  const limits: PlanLimitsJson | null = selected ? parsePlanLimits(selected.limits) : null;
   const isPackage = selected?.billingMode === BILLING_MODE.PACKAGE;
   const listed = limits ? planTermPrice(limits, termMonths) : null;
   /** Bậc tư vấn, hoặc kỳ hạn ngoài bảng giá: không có gì để rơi về ⇒ `price` BẮT BUỘC. */

@@ -115,6 +115,8 @@ model User {
   supportContextsOpened        TenantSupportContext[]    @relation("tenant_support_context_actor")
   supportContextsRevoked       TenantSupportContext[]    @relation("tenant_support_context_revoker")
   driverLicences               CustomerDriverLicence[]   @relation("driver_licence_owner")
+  /// Xe yêu thích của tài khoản KHÁCH này — FK tổ hợp `(user_id, realm)`, chỉ realm `customer`.
+  favoriteVehicles             CustomerFavorite[]        @relation("customer_favorite_owner")
   /// Các liên kết tài xế của tài khoản KHÁCH này (ADR 0063).
   driverLinks                  Driver[]                  @relation("driver_link_account")
   driverLinksInvited           Driver[]                  @relation("driver_link_inviter")
@@ -605,6 +607,39 @@ model CustomerDriverLicence {
   /// Tìm theo họ tên trên bằng (ILIKE %q%).
   @@index([fullName(ops: raw("gin_trgm_ops"))], map: "customer_driver_licences_full_name_trgm_idx", type: Gin)
   @@map("customer_driver_licences")
+}
+
+/// Xe yêu thích của TÀI KHOẢN KHÁCH (BRD 21/10/2026 — `docs/decisions/BRD-customer-favorites.md`).
+///
+/// Một dòng = khách đã lưu MỘT chiếc xe; không giữ giá, không giữ lịch, không phải yêu cầu đặt
+/// xe. Một mục cho một xe dù xe có nhiều dịch vụ (unique `(user_id, vehicle_id)`); thẻ trong danh
+/// sách đọc ảnh/giá/dịch vụ HIỆN HÀNH từ `public_listings` lúc tải, không chép xuống đây.
+///
+/// Xe ẩn/gỡ/đình chỉ KHÔNG xoá dòng này — danh sách lọc theo scope công khai lúc đọc, xe mở bán
+/// lại thì hiện lại. Xe/tài khoản bị XOÁ CỨNG thì dòng đi theo (CASCADE): một mục yêu thích trỏ
+/// vào chiếc xe không còn tồn tại không mở được gì, và nó không phải nghĩa vụ tiền nào cần giữ.
+///
+/// Writer DUY NHẤT: `FavoritesService` (apps/api/src/modules/favorites).
+model CustomerFavorite {
+  id        String   @id @db.Char(26)
+  userId    String   @map("user_id") @db.Char(26)
+  /// Luôn `customer` — CHECK; tồn tại để làm vế thứ hai của FK tổ hợp tới `users` (cùng cách
+  /// `customer_driver_licences`): tài khoản partner/platform không mang được dòng yêu thích nào.
+  realm     String   @default("customer") @db.VarChar(20)
+  vehicleId String   @map("vehicle_id") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User    @relation("customer_favorite_owner", fields: [userId, realm], references: [id, realm], onDelete: Cascade, map: "customer_favorites_user_realm_fkey")
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  /// Một mục cho một xe — thích lại là no-op (`ON CONFLICT DO NOTHING`), không phải dòng thứ hai.
+  /// Cũng phục vụ câu "trong các xe này, xe nào tôi đã thích" (trái tim ở kết quả tìm kiếm).
+  @@unique([userId, vehicleId], map: "customer_favorites_user_vehicle_key")
+  /// Danh sách "Xe yêu thích": mới lưu lên trước, `id` làm khoá phụ cho thứ tự xác định.
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)], map: "customer_favorites_user_created_idx")
+  /// FK `vehicle_id` — xoá cứng xe dọn mục yêu thích không phải quét cả bảng.
+  @@index([vehicleId], map: "customer_favorites_vehicle_idx")
+  @@map("customer_favorites")
 }
 
 /// Token đặt lại mật khẩu gửi qua email.
@@ -1373,6 +1408,8 @@ model Vehicle {
   /// Tin nhắn NHẮC TỚI xe này (thẻ ngữ cảnh), không phải hội thoại thuộc về xe — xem `Message`.
   messageContexts        Message[]                      @relation("message_vehicle_context")
   publicListing          PublicListing?
+  /// Khách đã lưu xe này vào "Xe yêu thích" — chỉ để khách tìm lại, không nuôi xếp hạng chợ.
+  favorites              CustomerFavorite[]
   images                 VehicleImage[]
   features               VehicleFeature[]
   receipts               Receipt[]

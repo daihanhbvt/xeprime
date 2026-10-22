@@ -2,13 +2,20 @@
 
 import { ShareAltOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import styles from './ListingDetailView.module.css';
 
 /**
  * Nút Chia sẻ & Yêu thích trên header trang chi tiết xe — Client Component
  * để cô lập icon AntD (cần React context) khỏi Server Component ListingDetailView.
  */
-export function ListingHeaderActions() {
+export function ListingHeaderActions({
+  vehicleId,
+  vehicleName,
+}: {
+  vehicleId: string;
+  vehicleName: string;
+}) {
   const t = useTranslations('Listings.detail.share');
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -34,7 +41,12 @@ export function ListingHeaderActions() {
       >
         <ShareAltOutlined aria-hidden="true" />
       </button>
-      {/* Chức năng thả tym tạm đóng theo yêu cầu */}
+      <FavoriteButton
+        vehicleId={vehicleId}
+        vehicleName={vehicleName}
+        className={styles.actionBtn}
+        activeClassName={styles.actionBtnActive}
+      />
     </div>
   );
 }

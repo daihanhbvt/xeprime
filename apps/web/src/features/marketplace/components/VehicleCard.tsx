@@ -4,22 +4,26 @@ import {
   ArrowRightOutlined,
   CompassOutlined,
   ControlOutlined,
-  HeartFilled,
-  HeartOutlined,
   StarFilled,
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
 import { isNewListing } from '@xeprime/domain';
-import { SERVICE_TYPE, VEHICLE_TYPE, transmissionFamily, type VehicleType } from '@xeprime/types';
+import {
+  FUEL_TYPE,
+  SERVICE_TYPE,
+  VEHICLE_TYPE,
+  transmissionFamily,
+  type VehicleType,
+} from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
 import { applyDiscountPercent } from '@/lib/money';
 import { initialOf } from '@/lib/initials';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
@@ -42,13 +46,6 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
   const fmt = useAppFormat();
-
-  const [isFavorite, setIsFavorite] = useState(false);
-  const handleFavoriteToggle = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFavorite((prev) => !prev);
-  };
 
   const { filters } = useMarketplaceFilters();
   const { fuelTypeLabel, bodyTypeLabel } = useCatalogLabels();
@@ -144,10 +141,12 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
   // LIST VARIANT (Figma 1200x206 horizontal card)
   // -------------------------
   if (variant === 'list') {
-    const bodyTypeName = listing.bodyType ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType) : null;
+    const bodyTypeName = listing.bodyType
+      ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType)
+      : null;
     const transmissionText = listing.transmission
       ? t(`transmissionFamily.${transmissionFamily(listing.transmission)}`)
-      : 'Số tự động';
+      : t('transmissionFamily.automatic');
 
     return (
       <article className={styles.listCard}>
@@ -192,7 +191,9 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
                 {instantBook ? (
                   <span className={styles.badgeInstantBlue}>{t('instantBook')}</span>
                 ) : null}
-                {!hasRating ? <span className={styles.badgeNewGreen}>{t('newVehicle')}</span> : null}
+                {!hasRating ? (
+                  <span className={styles.badgeNewGreen}>{t('newVehicle')}</span>
+                ) : null}
               </div>
 
               <div className={styles.listPriceAndRating}>
@@ -218,14 +219,12 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className={cx(styles.listFavoriteBtn, isFavorite && styles.heartActive)}
-                  onClick={handleFavoriteToggle}
-                  aria-label={t('save')}
-                >
-                  {isFavorite ? <HeartFilled /> : <HeartOutlined />}
-                </button>
+                <FavoriteButton
+                  vehicleId={listing.id}
+                  vehicleName={listing.name}
+                  className={styles.listFavoriteBtn}
+                  activeClassName={styles.heartActive}
+                />
               </div>
             </div>
 
@@ -247,7 +246,7 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
               </div>
               <div className={styles.specBox}>
                 <ThunderboltOutlined className={styles.specBoxIcon} aria-hidden />
-                <span>{fuel ?? 'Xăng'}</span>
+                <span>{fuel ?? fuelTypeLabel(FUEL_TYPE.GASOLINE)}</span>
               </div>
               <div className={styles.specBox}>
                 <CompassOutlined className={styles.specBoxIcon} aria-hidden />
@@ -270,13 +269,24 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
               >
                 {listing.shopLogoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
+                  <img
+                    src={listing.shopLogoUrl}
+                    alt=""
+                    loading="lazy"
+                    className={styles.shopLogo}
+                  />
                 ) : (
                   initialOf(listing.shopName)
                 )}
                 {isShopTrack ? (
                   <span className={styles.shopMark}>
-                    <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
+                    <Image
+                      src="/home/card-verified.svg"
+                      alt=""
+                      width={10}
+                      height={10}
+                      unoptimized
+                    />
                   </span>
                 ) : null}
               </span>
@@ -344,13 +354,12 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
           ) : null}
         </div>
 
-        <span
-          className={cx(styles.favoriteBtn, isFavorite && styles.heartActive)}
-          onClick={handleFavoriteToggle}
-          aria-hidden="true"
-        >
-          {isFavorite ? <HeartFilled /> : <HeartOutlined />}
-        </span>
+        <FavoriteButton
+          vehicleId={listing.id}
+          vehicleName={listing.name}
+          className={styles.favoriteBtn}
+          activeClassName={styles.heartActive}
+        />
 
         {extraPhotos > 0 ? (
           <span className={styles.photoCount}>

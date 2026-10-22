@@ -3,6 +3,7 @@ import { ROUTES } from '@/constants/routes';
 import { AccountPhoneGate } from '@/features/auth/components/AccountPhoneGate';
 import { AuthModal } from '@/features/auth/components/AuthModal';
 import { AuthModalProvider, AuthUrlSync } from '@/features/auth/components/AuthModalProvider';
+import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
 import { MarketHeader } from '@/features/marketplace/components/MarketHeader';
 import { MarketFooterSlot } from '@/features/marketplace/components/MarketFooterSlot';
 import { MobileTabBar } from '@/features/marketplace/components/MobileTabBar';
@@ -41,6 +42,8 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </div>
         <AuthModal />
         <AccountPhoneGate signOutTo={ROUTES.HOME} />
+        {/* Lượt thích xe bị gián đoạn vì chưa đăng nhập — hoàn tất sau khi có phiên (BRD §5.1.7). */}
+        <FavoriteIntentResumer />
       </AuthModalProvider>
     </ZoneProvider>
   );

@@ -41,13 +41,15 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 const keys = (items: readonly { key: string }[]) => items.map((item) => item.key);
 
 describe('ACCOUNT_NAV — thành phần', () => {
-  it('đúng chín mục, đúng thứ tự', () => {
+  it('đúng mười một mục, đúng thứ tự', () => {
     expect(keys(ACCOUNT_NAV)).toEqual([
       'profile',
       // Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057).
       'documents',
       'becomeOwner',
       'trips',
+      // Xe yêu thích — BRD customer favorites (21/10/2026).
+      'favorites',
       'driving',
       'payments',
       'balance',

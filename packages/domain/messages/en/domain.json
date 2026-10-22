@@ -1474,6 +1474,9 @@
       "activate": "Activate plan guide email template",
       "delete": "Delete plan guide email template",
       "send_test": "Send test plan guide email"
+    },
+    "insurance_product": {
+      "update": "Update insurance product"
     }
   },
   "auditTargetType": {
@@ -1527,7 +1530,8 @@
     "vehicle_handover": "Handover record",
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
-    "withdrawal_request": "Withdrawal request"
+    "withdrawal_request": "Withdrawal request",
+    "insurance_product": "Insurance product"
   },
   "auditField": {
     "planCode": "Plan code",

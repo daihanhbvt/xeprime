@@ -150,8 +150,8 @@ const subscription = vi.hoisted(() => ({
 }));
 vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   useMySubscription: () => subscription,
-  // Hoá đơn đang chờ là một lượt đọc riêng — xem `usePendingInvoice`.
-  usePendingInvoice: () => ({ data: undefined, isPending: false, isError: false }),
+  // Hoá đơn đang chờ là một lượt đọc riêng — xem `usePendingInvoices` (danh sách, mỗi phạm vi gói một).
+  usePendingInvoices: () => ({ data: [], isPending: false, isError: false }),
   useSubscriptionInvoices: () => ({
     data: { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
     isPending: false,
@@ -281,20 +281,52 @@ beforeEach(() => {
   url.setFilters.mockReset();
   vehicles.data = { items: [] };
   vehicles.isLoading = false;
+  // Một gói Ô TÔ trần 10, đã dùng hết 10; xe máy chưa có gói (ADR 0065 — hạn mức theo loại).
+  const currentPlan = {
+    subscriptionId: 'SUB1',
+    planId: 'PLAN1',
+    planCode: 'shop-advanced',
+    planName: 'Gói nâng cao',
+    vehicleScope: 'car',
+    phase: 'current',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    quota: { maxVehicles: 10, maxBranches: 3, maxMembers: null },
+    endsAt: '2026-12-01T00:00:00.000Z',
+  };
+  const carQuota = {
+    kind: 'total',
+    limit: 10,
+    reason: 'plan',
+    countedScope: 'car',
+    used: 10,
+    onMarketplace: 10,
+    subscriptionId: 'SUB1',
+    planCode: 'shop-advanced',
+    planName: 'Gói nâng cao',
+    phase: 'current',
+  };
   subscription.data = {
-    currentPlan: {
-      subscriptionId: 'SUB1',
-      planId: 'PLAN1',
-      planCode: 'shop-advanced',
-      planName: 'Gói nâng cao',
-      billingMode: BILLING_MODE.PACKAGE,
-      commissionPercent: null,
-      quota: { maxVehicles: 10, maxBranches: 3, maxMembers: null },
-      endsAt: '2026-12-01T00:00:00.000Z',
+    currentPlan,
+    currentPlans: [currentPlan],
+    vehicleQuotas: {
+      car: carQuota,
+      motorbike: {
+        kind: 'scope_required',
+        limit: null,
+        reason: null,
+        countedScope: 'motorbike',
+        used: 0,
+        onMarketplace: 0,
+        subscriptionId: null,
+        planCode: null,
+        planName: null,
+        phase: null,
+      },
     },
     usage: {
-      car: { used: 8, onMarketplace: 8 },
-      motorbike: { used: 2, onMarketplace: 2 },
+      car: { used: 10, onMarketplace: 10 },
+      motorbike: { used: 0, onMarketplace: 0 },
     },
     fleetQuota: { kind: 'total', totalLimit: 10, totalUsed: 10, reason: 'plan' },
     freeTrips: { allowance: 0, used: 0, left: 0 },
@@ -525,12 +557,12 @@ describe('Trang Cửa hàng — thông tin khai thuế', () => {
 });
 
 describe('Trang Cửa hàng — gói & hạn mức', () => {
-  it('hiện gói hiện hành, hạn và trần TỔNG đội xe', () => {
+  it('hiện gói hiện hành, hạn và trần của loại xe gói phủ', () => {
     renderPage();
 
     const section = within(document.querySelector('#shop-section-plan') as HTMLElement);
     expect(section.getByText('Gói nâng cao')).toBeTruthy();
-    // MỘT ô trần cho cả đội xe (ADR 0041 điều 4) — hai ô theo loại chỉ nói mức dùng.
+    // Trần đếm THEO LOẠI trong phạm vi của gói (ADR 0065 điều 3).
     expect(section.getByText('10/10')).toBeTruthy();
     expect(section.getByText('Ô tô')).toBeTruthy();
     expect(section.getByText('Xe máy')).toBeTruthy();
@@ -539,7 +571,7 @@ describe('Trang Cửa hàng — gói & hạn mức', () => {
   it('đã dùng hết trần: một dòng cảnh báo, KHÔNG phải một dải đỏ', () => {
     renderPage();
 
-    const warning = screen.getByText(/Đã dùng hết hạn mức/);
+    const warning = screen.getByText(/Đã dùng hết 10 suất ô tô/);
     expect(warning.closest('.ant-alert-warning')).toBeTruthy();
     expect(warning.closest('.ant-alert-error')).toBeNull();
   });

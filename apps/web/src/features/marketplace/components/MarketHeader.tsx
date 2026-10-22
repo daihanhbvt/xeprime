@@ -84,10 +84,7 @@ export function MarketHeader() {
   const [hiddenOnScroll, setHiddenOnScroll] = useState(false);
 
   useEffect(() => {
-    if (!isSearchPage) {
-      setHiddenOnScroll(false);
-      return;
-    }
+    if (!isSearchPage) return;
     const onScroll = () => {
       setHiddenOnScroll(window.scrollY > 140);
     };
@@ -97,7 +94,7 @@ export function MarketHeader() {
   }, [isSearchPage]);
 
   return (
-    <header className={cx(styles.header, hiddenOnScroll && styles.headerHidden)}>
+    <header className={cx(styles.header, isSearchPage && hiddenOnScroll && styles.headerHidden)}>
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Image
