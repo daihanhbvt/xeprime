@@ -23,7 +23,13 @@ const ESTIMATE: CustomerTripEstimate = {
   // kinh tế của chủ xe — kể cả với chính chủ xe, số thực nhận đi riêng ở `ownerNetAmount`.
   fees: {
     lines: [
-      { key: 'service_fee', bearer: 'customer', beneficiary: 'platform', percent: 10, amount: '70200' },
+      {
+        key: 'service_fee',
+        bearer: 'customer',
+        beneficiary: 'platform',
+        percent: 10,
+        amount: '70200',
+      },
     ],
     customerTotalAmount: '772200',
     holdAmount: '224640',
@@ -51,7 +57,7 @@ describe('TripEstimateCard', () => {
     // Bảng kê từng dòng nằm sau nút "Xem chi tiết giá" — mở ra trước khi đọc dòng phí.
     fireEvent.click(screen.getByText('Xem chi tiết giá'));
 
-    expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
+    expect(screen.getByText('Phí đặt xe')).toBeTruthy();
     // Thuế do CHỦ XE chịu — khách không trả, nên không được bày ra giữa hoá đơn của họ.
     expect(screen.queryByText(/Thuế/)).toBeNull();
     expect(screen.queryByText(/thực nhận/i)).toBeNull();

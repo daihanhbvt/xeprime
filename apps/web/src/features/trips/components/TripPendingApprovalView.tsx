@@ -2,16 +2,14 @@
 
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
-import {
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
-  HOLD_PAYMENT_WINDOW_MINUTES,
-} from '@xeprime/types';
+import { HOLD_PAYMENT_WINDOW_MINUTES } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
 import { RespondDeadline } from '@/features/booking-requests/components/RespondDeadline';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { CustomerTripDetail } from '../types';
 import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
@@ -55,6 +53,7 @@ export function TripPendingApprovalView({
   const tDetail = useTranslations('Trips.detail');
   const tFlow = useTranslations('BookingRequests.flow');
   const dl = useDomainLabel();
+  const fmt = useAppFormat();
   const trackId = useId();
   const data = useTripRequestData(trip);
   const crumbs = useTripFlowCrumbs(trip.vehicle.id);
@@ -80,7 +79,13 @@ export function TripPendingApprovalView({
           tag={dl('customerTripStage', trip.stage)}
           tone="warning"
           title={t('status.title')}
-          body={t('status.body', { minutes: BOOKING_REQUEST_RESPOND_WINDOW_MINUTES })}
+          body={
+            // Hạn ĐỘNG theo khoảng cách tới giờ nhận (ADR 0066) — đọc mốc server đã lưu, không
+            // nói một số phút cố định.
+            trip.respondBy
+              ? t('status.body', { time: fmt.dateTime(trip.respondBy) })
+              : t('status.bodyNoDeadline')
+          }
         >
           {/*
             Hạn phản hồi là mốc của SERVER (`respond_by`); đồng hồ chỉ đếm xuống tới nó. Hết hạn

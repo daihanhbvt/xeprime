@@ -4,11 +4,29 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { isUniqueViolation, newId, Prisma } from '@xeprime/prisma';
 import {
+  CLEARED_DRIVER_ASSIGNMENT,
+  CLEARED_EXTERNAL_DRIVER,
+  closeOpenDriverAssignment,
+  expirePendingDriverAssignment,
+  isUniqueViolation,
+  markDriverMissingAlertCovered,
+  newId,
+  Prisma,
+} from '@xeprime/prisma';
+import {
+  driverDisplayName,
+  driverReassignPushExpiresAt,
+  driverResponseExpiredEmployerCopy,
+  driverTripDeclinedEmployerCopy,
+} from '@xeprime/domain';
+import {
+  driverRespondByFor,
   ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  AUDIT_TARGET_TYPE,
+  DRIVER_ASSIGNMENT_AUDIT_ACTION,
   BOOKING_STATUS,
   BOOKING_STATUS_OCCUPYING,
   DRIVER_ASSIGNMENT_STATUS,
@@ -31,6 +49,7 @@ import {
 import { vnDateKey } from '../../common/day-range';
 import { fromDateOnly } from '../../common/date-only';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { maskName, maskPhone } from '../../common/mask';
 import { normalizePhone } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -83,11 +102,16 @@ type LinkRow = Prisma.DriverGetPayload<{ select: typeof LINK_SELECT }>;
 
 /**
  * Tài xế LIÊN KẾT — ADR 0063. Writer DUY NHẤT của bảng `drivers` và của bốn cột tài xế trên
- * `bookings` (`driver_id`, `driver_user_id`, `driver_assignment_status`, `driver_*_at`).
+ * `bookings` (`driver_id`, `driver_user_id`, `driver_assignment_status`, `driver_*_at`) — kể cả hai
+ * cột tài xế NGOÀI HỆ THỐNG `external_driver_name`/`external_driver_phone` (ADR 0067).
  *
  * Hai bề mặt gọi vào đây: khu quản lý của BÊN THUÊ (`DriversController`, `BookingsService`) và
  * tài khoản KHÁCH trong vai tài xế (`DriverSelfService`). Mọi luật "gán được", "gỡ thì báo ai",
  * "kết thúc liên kết thì đơn nào phải nhả" nằm MỘT chỗ — hai bề mặt chỉ là hai cửa vào.
+ *
+ * Ngoại lệ có tên (ADR 0066): worker `driver-assignment-expiry` trả lượt QUÁ HẠN trả lời về bên
+ * thuê — qua CÙNG hàm `expirePendingDriverAssignment` (`@xeprime/prisma`) mà lượt Từ chối muộn ở
+ * đây dùng, nên hai đường xoá đúng một tập cột và khép sổ cùng một kết cục.
  *
  * Chốt chặn trùng lịch là `bookings_driver_user_schedule_excl` ở DB (theo NGƯỜI, xuyên mọi bên
  * thuê). Các phép kiểm ở đây chỉ để thông điệp lỗi cụ thể; hai lượt gán đua nhau thì constraint
@@ -535,6 +559,9 @@ export class DriversService {
    * Lượt gán mới luôn ở `pending`: tài xế phải nhận. Lượt chờ vẫn giữ lịch của người đó (EXCLUDE
    * tính cả `pending`). Đổi người thì người cũ được báo đã bị gỡ, người mới được mời nhận.
    * Ném 23P01 nguyên trạng khi đua — bên gọi đổi thành `DRIVER_BUSY` (`isDriverScheduleConflict`).
+   *
+   * Gán tài xế liên kết hay bỏ gán (`driverId: null`) đều xoá tài xế NGOÀI HỆ THỐNG đang ghi trên
+   * đơn (ADR 0067 — hai cách loại trừ nhau), kèm audit `booking.driver_external_cleared`.
    */
   async assignWithinTx(
     tx: Prisma.TransactionClient,
@@ -546,28 +573,8 @@ export class DriversService {
       actorUserId: string | null;
     },
   ): Promise<void> {
-    const booking = await tx.booking.findFirst({
-      where: { id: input.bookingId, tenantId: input.tenantId, deletedAt: null },
-      select: {
-        id: true,
-        code: true,
-        tenantId: true,
-        status: true,
-        serviceType: true,
-        pickupAt: true,
-        returnAt: true,
-        driverId: true,
-        driverUserId: true,
-        bookingRequest: { select: { customerUserId: true } },
-      },
-    });
-    if (!booking) {
-      throw new NotFoundException({
-        code: API_ERROR_CODE.NOT_FOUND,
-        message: 'Không tìm thấy đơn',
-      });
-    }
-    if (input.driverId === booking.driverId) return;
+    const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
+    if (input.driverId === booking.driverId && !booking.externalDriverName) return;
     // Đã bàn giao (xe đang chạy) hoặc đơn đã khép ⇒ người cầm lái đã chốt, không đổi/gỡ nữa.
     if (!REASSIGNABLE.includes(booking.status)) {
       throw new ConflictException({
@@ -611,8 +618,12 @@ export class DriversService {
     }
 
     const now = new Date();
+    // Hạn trả lời tính MỘT lần ở đây và lưu lại (ADR 0066) — client chỉ đọc mốc để đếm ngược.
+    const respondBy = link ? driverRespondByFor(now, booking.pickupAt) : null;
     await tx.booking.update({
       where: { id: booking.id },
+      // Tài xế ngoài hệ thống (nếu có) luôn về NULL: gán liên kết thì CHECK loại trừ đòi vậy, bỏ
+      // gán thì đơn không còn ai (ADR 0067).
       data: link
         ? {
             driverId: link.id,
@@ -620,8 +631,10 @@ export class DriversService {
             driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING,
             driverAssignedAt: now,
             driverRespondedAt: null,
+            driverRespondBy: respondBy,
+            ...CLEARED_EXTERNAL_DRIVER,
           }
-        : CLEARED_ASSIGNMENT,
+        : { ...CLEARED_ASSIGNMENT, ...CLEARED_EXTERNAL_DRIVER },
     });
 
     // Sổ lịch sử: lượt cũ kết thúc là "đã gỡ", lượt mới mở ra (ADR 0063).
@@ -643,16 +656,138 @@ export class DriversService {
       });
     }
 
+    const actorScope = input.actorUserId ? AUDIT_ACTOR_SCOPE.TENANT : AUDIT_ACTOR_SCOPE.SYSTEM;
+    if (booking.externalDriverName) {
+      await this.audit.record(
+        {
+          tenantId: input.tenantId,
+          actorUserId: input.actorUserId,
+          actorScope,
+          action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_CLEARED,
+          targetType: AUDIT_TARGET_TYPE.BOOKING,
+          targetId: booking.id,
+          before: { externalDriver: maskedExternalDriver(booking) },
+          after: { externalDriver: null, driverId: link?.id ?? null },
+        },
+        tx,
+      );
+    }
+    // Lượt gán LIÊN KẾT đổi thật mới ghi `driver_assign` — xoá riêng tài xế ngoài hệ thống đã có
+    // dòng audit của nó ở trên.
+    if (booking.driverId !== (link?.id ?? null)) {
+      await this.audit.record(
+        {
+          tenantId: input.tenantId,
+          actorUserId: input.actorUserId,
+          actorScope,
+          action: 'booking.driver_assign',
+          targetType: 'booking',
+          targetId: booking.id,
+          before: { driverId: booking.driverId },
+          after: { driverId: link?.id ?? null, ...(link ? { driverName: link.name } : {}) },
+        },
+        tx,
+      );
+    }
+
+    if (booking.driverUserId) {
+      await this.notifyUnassigned(tx, booking, 'Chuyến đã được giao cho tài xế khác.');
+    }
+    if (link && respondBy) {
+      const employer = await this.employerName(tx, input.tenantId);
+      await this.notifications.emitToUser(
+        link.userId,
+        {
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED,
+          title: `Bạn có chuyến mới từ ${employer} — vui lòng xác nhận`,
+          body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)} · trả lời trước ${formatVnDateTime(respondBy)}`,
+          targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
+          targetId: booking.id,
+          // Rung máy sau hạn trả lời là mời tài xế nhận một chuyến đã không còn của họ.
+          pushExpiresAt: respondBy,
+        },
+        tx,
+      );
+    }
+  }
+
+  /**
+   * Ghi / đổi tài xế NGOÀI HỆ THỐNG trên đơn (ADR 0067) — chạy TRONG transaction của bên gọi.
+   *
+   * Không có lượt chờ: lưu là coi như đã nhận. Lượt gán LIÊN KẾT đang có (chờ hay đã nhận) bị đóng
+   * như "bỏ gán" (`unassigned`) và người đó được báo — y như đổi sang tài xế liên kết khác. Không
+   * chống trùng lịch (hệ thống không biết người này), không tạo hồ sơ dùng lại.
+   *
+   * `driver_missing_alerted_at` GIỮ NGUYÊN: đó là cột claim "đã nhắc một lần", không phải trạng
+   * thái phủ — đơn đã có người thì phép quét tự bỏ qua, gỡ lại sau đó cũng không nhắc lần hai.
+   */
+  async setExternalWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      tenantId: string;
+      bookingId: string;
+      name: string;
+      phone: string;
+      actorUserId: string;
+    },
+  ): Promise<void> {
+    const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
+    if (!REASSIGNABLE.includes(booking.status)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
+        message: 'Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa',
+      });
+    }
+    if (booking.serviceType !== SERVICE_TYPE.WITH_DRIVER) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED,
+        message: 'Chỉ đơn thuê có tài xế mới gán tài xế được',
+      });
+    }
+
+    const name = input.name.trim();
+    const phone = normalizePhone(input.phone);
+    // Gửi lại đúng người đang ghi ⇒ không đổi gì, không audit trùng.
+    if (booking.externalDriverName === name && booking.externalDriverPhone === phone) return;
+
+    const now = new Date();
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: {
+        ...CLEARED_ASSIGNMENT,
+        externalDriverName: name,
+        externalDriverPhone: phone,
+        driverAssignedAt: now,
+      },
+    });
+    if (booking.driverId) {
+      await closeOpenAssignment(
+        tx,
+        booking.id,
+        DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
+        input.actorUserId,
+      );
+    }
+
     await this.audit.record(
       {
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        actorScope: input.actorUserId ? AUDIT_ACTOR_SCOPE.TENANT : AUDIT_ACTOR_SCOPE.SYSTEM,
-        action: 'booking.driver_assign',
-        targetType: 'booking',
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_SET,
+        targetType: AUDIT_TARGET_TYPE.BOOKING,
         targetId: booking.id,
-        before: { driverId: booking.driverId },
-        after: { driverId: link?.id ?? null, ...(link ? { driverName: link.name } : {}) },
+        before: {
+          driverId: booking.driverId,
+          externalDriver: maskedExternalDriver(booking),
+        },
+        after: {
+          driverId: null,
+          externalDriver: maskedExternalDriver({
+            externalDriverName: name,
+            externalDriverPhone: phone,
+          }),
+        },
       },
       tx,
     );
@@ -660,20 +795,43 @@ export class DriversService {
     if (booking.driverUserId) {
       await this.notifyUnassigned(tx, booking, 'Chuyến đã được giao cho tài xế khác.');
     }
-    if (link) {
-      const employer = await this.employerName(tx, input.tenantId);
-      await this.notifications.emitToUser(
-        link.userId,
-        {
-          type: NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED,
-          title: `Bạn có chuyến mới từ ${employer} — vui lòng xác nhận`,
-          body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)}`,
-          targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
-          targetId: booking.id,
-        },
-        tx,
-      );
+  }
+
+  /**
+   * Đọc + KHOÁ dòng đơn trước khi đổi tài xế (`FOR UPDATE`). Hai lượt đổi song song (gán liên kết
+   * ↔ ghi tài xế ngoài) nếu không khoá sẽ cùng đọc "chưa có ai" rồi kẻ thắng sau xoá lượt gán của
+   * kẻ kia mà không khép sổ, không báo người bị gỡ. Khoá xếp hàng chúng; kẻ sau đọc đúng hiện trạng.
+   */
+  private async lockBookingForDriverChange(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    bookingId: string,
+  ) {
+    await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${bookingId} AND "tenant_id" = ${tenantId} FOR UPDATE`;
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, tenantId, deletedAt: null },
+      select: {
+        id: true,
+        code: true,
+        tenantId: true,
+        status: true,
+        serviceType: true,
+        pickupAt: true,
+        returnAt: true,
+        driverId: true,
+        driverUserId: true,
+        externalDriverName: true,
+        externalDriverPhone: true,
+        bookingRequest: { select: { customerUserId: true } },
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy đơn',
+      });
     }
+    return booking;
   }
 
   /**
@@ -682,11 +840,82 @@ export class DriversService {
    */
   async respondToTrip(userId: string, bookingId: string, accept: boolean): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const booking = await tx.booking.findFirst({
         where: { id: bookingId, driverUserId: userId, deletedAt: null },
-        select: { id: true, code: true, tenantId: true, driver: { select: { name: true } } },
+        select: {
+          id: true,
+          code: true,
+          tenantId: true,
+          status: true,
+          driverAssignmentStatus: true,
+          driverRespondBy: true,
+          driver: { select: { name: true } },
+        },
       });
-      if (!booking) throw tripNotFound();
+      if (!booking) {
+        /*
+         * Lượt của tôi đã bị hệ thống trả về vì quá hạn (ADR 0066) — đơn không còn mang tôi nên
+         * phép đọc trên trả rỗng. Nói đúng lý do thay vì 404: Nhận ⇒ `DRIVER_ASSIGNMENT_EXPIRED`;
+         * Từ chối ⇒ ý muốn "không lái" đã thành sự thật, trả thành công (idempotent).
+         */
+        const lapsed = await tx.bookingDriverAssignment.findFirst({
+          where: {
+            bookingId,
+            driverUserId: userId,
+            superseded: false,
+            outcome: DRIVER_ASSIGNMENT_OUTCOME.EXPIRED,
+          },
+          select: { id: true },
+        });
+        if (!lapsed) throw tripNotFound();
+        if (accept) throw assignmentExpired(null);
+        return;
+      }
+
+      const driverName = driverDisplayName(booking.driver?.name);
+      const pastDeadline =
+        booking.driverAssignmentStatus === DRIVER_ASSIGNMENT_STATUS.PENDING &&
+        booking.driverRespondBy !== null &&
+        booking.driverRespondBy.getTime() <= now.getTime() &&
+        REASSIGNABLE.includes(booking.status);
+      if (pastDeadline) {
+        // Quá hạn mà worker chưa kịp quét: Nhận bị từ chối; Từ chối thì làm đúng việc worker sắp
+        // làm — trả lượt về bên thuê với kết cục `expired` (không phải `declined`: tài xế đã để
+        // lỡ hạn, và bên thuê nhận đúng một loại tin khẩn dù ai về đích trước).
+        if (accept) throw assignmentExpired(booking.driverRespondBy);
+        const released = await expirePendingDriverAssignment(tx, {
+          bookingId,
+          driverUserId: userId,
+          now,
+          endedBy: userId,
+        });
+        if (!released) throw assignmentStateConflict();
+        await this.audit.record(
+          {
+            tenantId: booking.tenantId,
+            actorUserId: userId,
+            actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+            action: DRIVER_ASSIGNMENT_AUDIT_ACTION.RESPONSE_EXPIRED,
+            targetType: AUDIT_TARGET_TYPE.BOOKING,
+            targetId: bookingId,
+            after: { respondBy: booking.driverRespondBy?.toISOString(), lateDecline: true },
+          },
+          tx,
+        );
+        await this.notifications.emitToTenantMembers(
+          booking.tenantId,
+          {
+            type: NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED,
+            ...driverResponseExpiredEmployerCopy({ driverName, bookingCode: booking.code }),
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: bookingId,
+            pushExpiresAt: driverReassignPushExpiresAt(now),
+          },
+          tx,
+        );
+        return;
+      }
 
       const claimed = await tx.booking.updateMany({
         where: {
@@ -695,30 +924,31 @@ export class DriversService {
           driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING,
           status: { in: OCCUPYING },
           deletedAt: null,
+          // Hạn nằm TRONG WHERE (ADR 0066): lượt Nhận đua với worker quét hạn thì chỉ một bên
+          // thắng. Đơn đã giao xe không bị worker trả về, nên hạn không còn chặn nó.
+          OR: [{ driverRespondBy: { gt: now } }, { status: BOOKING_STATUS.ACTIVE }],
         },
         data: accept
           ? {
               driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
-              driverRespondedAt: new Date(),
+              driverRespondedAt: now,
+              driverRespondBy: null,
             }
           : CLEARED_ASSIGNMENT,
       });
-      if (claimed.count === 0) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.DRIVER_ASSIGNMENT_STATE_CONFLICT,
-          message: 'Chuyến này không còn chờ bạn xác nhận',
-        });
-      }
+      if (claimed.count === 0) throw assignmentStateConflict();
       if (accept) {
         await tx.bookingDriverAssignment.updateMany({
           where: { bookingId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN },
-          data: { acceptedAt: new Date() },
+          data: { acceptedAt: now },
         });
       } else {
         await closeOpenAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DECLINED, userId);
+        // Tin "từ chối — gán tài xế khác" dưới đây đã là lời nhắc khẩn của chuyến nếu giờ nhận đã
+        // trong cửa sổ 2 giờ: không để worker báo thêm "chưa có tài xế" (ADR 0067 điều 2).
+        await markDriverMissingAlertCovered(tx, bookingId, now);
       }
 
-      const driverName = booking.driver?.name ?? 'Tài xế';
       await this.audit.record(
         {
           tenantId: booking.tenantId,
@@ -732,17 +962,21 @@ export class DriversService {
       );
       await this.notifications.emitToTenantMembers(
         booking.tenantId,
-        {
-          type: accept
-            ? NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED
-            : NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
-          title: accept
-            ? `${driverName} đã nhận chuyến ${booking.code}`
-            : `${driverName} từ chối chuyến ${booking.code}`,
-          body: accept ? null : 'Đơn chưa có tài xế — hãy gán người khác.',
-          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-          targetId: bookingId,
-        },
+        accept
+          ? {
+              type: NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED,
+              title: `${driverName} đã nhận chuyến ${booking.code}`,
+              body: null,
+              targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+              targetId: bookingId,
+            }
+          : {
+              type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
+              ...driverTripDeclinedEmployerCopy({ driverName, bookingCode: booking.code }),
+              targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+              targetId: bookingId,
+              pushExpiresAt: driverReassignPushExpiresAt(now),
+            },
         tx,
       );
     });
@@ -1061,14 +1295,11 @@ export class DriversService {
   }
 }
 
-/** Bốn cột lượt gán về NULL cùng lúc — CHECK `bookings_driver_assignment_consistency_check`. */
-export const CLEARED_ASSIGNMENT = {
-  driverId: null,
-  driverUserId: null,
-  driverAssignmentStatus: null,
-  driverAssignedAt: null,
-  driverRespondedAt: null,
-} satisfies Prisma.BookingUncheckedUpdateManyInput;
+/**
+ * Cột lượt gán + hạn trả lời về NULL cùng lúc — bản dùng chung với worker (`@xeprime/prisma`), để
+ * hai đường trả lượt (từ chối ở API, quá hạn ở worker) xoá đúng cùng một tập cột.
+ */
+export const CLEARED_ASSIGNMENT = CLEARED_DRIVER_ASSIGNMENT;
 
 /** Kết cục của lượt gán khi đơn khép lại — khoá là trạng thái ĐÍCH của đơn. */
 const CLOSED_OUTCOME_BY_BOOKING_STATUS: Readonly<Record<string, DriverAssignmentOutcome>> = {
@@ -1078,19 +1309,17 @@ const CLOSED_OUTCOME_BY_BOOKING_STATUS: Readonly<Record<string, DriverAssignment
 };
 
 /**
- * Sổ `booking_driver_assignments` (ADR 0063) — chỉ `DriversService` gọi hai hàm này, luôn trong
- * transaction đang đổi cột tài xế của đơn, để sổ và đơn không bao giờ lệch nhau.
+ * Sổ `booking_driver_assignments` (ADR 0063) — ở API chỉ `DriversService` gọi hai hàm này, luôn
+ * trong transaction đang đổi cột tài xế của đơn, để sổ và đơn không bao giờ lệch nhau. Phép khép
+ * lượt dùng chung với worker quét hạn trả lời (ADR 0066).
  */
-async function closeOpenAssignment(
+function closeOpenAssignment(
   tx: Prisma.TransactionClient,
   bookingId: string,
   outcome: DriverAssignmentOutcome,
   endedBy: string | null,
 ): Promise<void> {
-  await tx.bookingDriverAssignment.updateMany({
-    where: { bookingId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN },
-    data: { outcome, endedAt: new Date(), endedBy },
-  });
+  return closeOpenDriverAssignment(tx, bookingId, outcome, endedBy);
 }
 
 /**
@@ -1145,6 +1374,22 @@ function linkStateConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_LINK_STATE_CONFLICT,
     message: 'Liên kết tài xế đã đổi trạng thái — tải lại rồi thử lại',
+  });
+}
+
+function assignmentStateConflict(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.DRIVER_ASSIGNMENT_STATE_CONFLICT,
+    message: 'Chuyến này không còn chờ bạn xác nhận',
+  });
+}
+
+/** Nhận chuyến sau hạn trả lời (ADR 0066). `respondBy` null khi lượt đã được trả về từ trước. */
+function assignmentExpired(respondBy: Date | null): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.DRIVER_ASSIGNMENT_EXPIRED,
+    message: 'Đã quá hạn xác nhận chuyến này — chuyến được trả lại cho bên thuê',
+    ...(respondBy ? { details: { respondBy: respondBy.toISOString() } } : {}),
   });
 }
 
@@ -1211,4 +1456,16 @@ function formatVnDateTime(d: Date): string {
     minute: '2-digit',
     hour12: false,
   }).format(d);
+}
+
+/**
+ * Tài xế ngoài hệ thống ĐÃ CHE cho audit (ADR 0067) — PII của bên thứ ba: sổ audit đọc được bởi
+ * nhân sự nền tảng, nên chỉ giữ đủ để đối chiếu ("Nguyễn Văn T." · `090****567`).
+ */
+function maskedExternalDriver(b: {
+  externalDriverName: string | null;
+  externalDriverPhone: string | null;
+}): { name: string; phone: string | null } | null {
+  if (!b.externalDriverName) return null;
+  return { name: maskName(b.externalDriverName), phone: maskPhone(b.externalDriverPhone) };
 }

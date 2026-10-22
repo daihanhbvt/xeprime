@@ -5,7 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import {
+  createSupportCaseWithinTx,
+  findOpenTripNotReceivedReport,
+  newId,
+  Prisma,
+  supportCaseCode,
+} from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -16,7 +22,11 @@ import {
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   SUPPORT_CASE_CATEGORY,
+  SUPPORT_CASE_CATEGORY_SYSTEM_ONLY,
+  SUPPORT_CASE_OPEN_REASON,
+  SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
   SUPPORT_CASE_EVENT_KIND,
+  SUPPORT_CASE_PRIORITY,
   SUPPORT_CASE_STATUS,
   SUPPORT_CASE_STATUS_OPEN,
   SUPPORT_EVENT_VISIBILITY,
@@ -24,6 +34,7 @@ import {
   canTransitionSupportCase,
   isSupportCaseOpen,
   type PaginationMeta,
+  type SupportCaseCategory,
   type SupportCaseStatus,
   type AppLocale,
   type SupportParty,
@@ -115,6 +126,14 @@ export class SupportService {
         message: 'Yêu cầu tư vấn gói gửi qua mục Tư vấn gói',
       });
     }
+    // Loại chỉ HỆ THỐNG mở (ADR 0066) — một người tự mở `handover_unconfirmed` là tự khoá tiền
+    // của một chuyến mà không qua lượt quét nào.
+    if (SUPPORT_CASE_CATEGORY_SYSTEM_ONLY.includes(dto.category as SupportCaseCategory)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CATEGORY_NOT_ALLOWED,
+        message: 'Loại yêu cầu này do hệ thống tự mở',
+      });
+    }
     if (dto.category === SUPPORT_CASE_CATEGORY.DISPUTE && !dto.bookingId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -151,24 +170,18 @@ export class SupportService {
       tenantId = booking.tenantId;
     }
 
-    const id = newId();
-    const row = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.supportCase.create({
-        data: {
-          id,
-          code: `SC${id.slice(-6).toUpperCase()}`,
-          tenantId,
-          bookingId: dto.bookingId ?? null,
-          bookingRequestId: dto.bookingRequestId ?? null,
-          openedByUserId: actor.userId,
-          openedByScope: actor.scope,
-          category: dto.category,
-          status: SUPPORT_CASE_STATUS.OPEN,
-          subject: dto.subject.trim(),
-          description: dto.description.trim(),
-        },
-        select: SELECT,
+    const id = await this.prisma.$transaction(async (tx) => {
+      const created = await createSupportCaseWithinTx(tx, {
+        tenantId,
+        bookingId: dto.bookingId ?? null,
+        bookingRequestId: dto.bookingRequestId ?? null,
+        openedByUserId: actor.userId,
+        openedByScope: actor.scope,
+        category: dto.category as SupportCaseCategory,
+        subject: dto.subject,
+        description: dto.description,
       });
+      const id = created.id;
       await this.audit.record(
         {
           tenantId,
@@ -188,7 +201,7 @@ export class SupportService {
           {
             type: NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED,
             title: `Yêu cầu hỗ trợ mới ${created.code}`,
-            body: created.subject,
+            body: dto.subject.trim(),
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.SUPPORT_CASE,
             targetId: id,
@@ -196,9 +209,81 @@ export class SupportService {
           tx,
         );
       }
-      return created;
+      return id;
     });
-    return this.detail(row.id, actor);
+    return this.detail(id, actor);
+  }
+
+  /**
+   * Lớp 1 chống treo đơn (ADR 0066) — khách báo "Chưa nhận được xe": mở MỘT case `dispute` khẩn
+   * gắn đơn. Case `dispute` mở là thứ `HoldSettlementService` đã đọc để GIỮ quyết toán, nên tiền
+   * của chuyến đóng băng mà không cần một trạng thái đơn mới.
+   *
+   * Chạy TRONG transaction của người gọi (`CustomerTripsService.reportNotReceived`), người gọi đã
+   * khoá dòng ĐƠN (`FOR UPDATE`) và kiểm lại quyền sở hữu, trạng thái đơn, cửa sổ thời gian SAU
+   * khoá; ở đây chỉ còn việc ghi cho đúng một lần.
+   *
+   * IDEMPOTENT theo đúng LỜI BÁO CỦA KHÁCH: đơn đã có báo cáo "chưa nhận được xe" còn mở của chính
+   * khách này (`findOpenTripNotReceivedReport`) thì trả về case đó. Tranh chấp do GIAN HÀNG mở
+   * không tính — khách vẫn có case của mình, nếu không lời báo bị nuốt và gian hàng tự đóng được
+   * case của mình để gỡ băng tiền. Hai lượt bấm SONG SONG xếp hàng sau khoá dòng đơn của người gọi
+   * rồi mới đọc, nên lượt sau luôn thấy case lượt trước vừa tạo. Không dùng unique index: tranh
+   * chấp thường (`POST /support/cases`) vẫn được phép nhiều case trên một đơn.
+   */
+  async openTripNotReceivedWithinTx(
+    tx: Prisma.TransactionClient,
+    customerUserId: string,
+    booking: { id: string; tenantId: string; code: string; bookingRequestId: string | null },
+  ): Promise<{ caseId: string; code: string; created: boolean }> {
+    const existing = await findOpenTripNotReceivedReport(tx, booking.id, customerUserId);
+    if (existing) return { caseId: existing.id, code: existing.code, created: false };
+
+    const created = await createSupportCaseWithinTx(tx, {
+      tenantId: booking.tenantId,
+      bookingId: booking.id,
+      bookingRequestId: booking.bookingRequestId,
+      openedByUserId: customerUserId,
+      openedByScope: SUPPORT_PARTY.CUSTOMER,
+      category: SUPPORT_CASE_CATEGORY.DISPUTE,
+      priority: SUPPORT_CASE_PRIORITY.URGENT,
+      subject: `Khách chưa nhận được xe — chuyến ${booking.code}`,
+      description:
+        'Khách báo CHƯA NHẬN ĐƯỢC XE trong thời hạn ân hạn bàn giao. XePrime tạm giữ toàn bộ ' +
+        'tiền của chuyến cho tới khi xác minh xong — cần liên hệ cả khách lẫn chủ xe.',
+    });
+    // Dòng audit này MANG dấu `reason` — `findOpenTripNotReceivedReport` đọc nó để phân biệt lời
+    // báo "chưa nhận được xe" với mọi tranh chấp khác trên cùng đơn. Cùng transaction với case.
+    await this.audit.record(
+      {
+        tenantId: booking.tenantId,
+        actorUserId: customerUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+        targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+        targetId: created.id,
+        after: {
+          code: created.code,
+          category: SUPPORT_CASE_CATEGORY.DISPUTE,
+          bookingId: booking.id,
+          reason: SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RECEIVED,
+        },
+      },
+      tx,
+    );
+    // Đích là ĐƠN, không phải case: gian hàng cần mở ngay chuyến đang bị khiếu nại.
+    await this.notifications.emitToTenantMembers(
+      booking.tenantId,
+      {
+        type: NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED,
+        title: `Khách báo chưa nhận được xe — chuyến ${booking.code}`,
+        body: 'XePrime tạm giữ tiền của chuyến và sẽ liên hệ hai bên để xác minh.',
+        tenantId: booking.tenantId,
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+        targetId: booking.id,
+      },
+      tx,
+    );
+    return { caseId: created.id, code: created.code, created: true };
   }
 
   /**
@@ -232,7 +317,7 @@ export class SupportService {
     const locale = (dto.locale as AppLocale | undefined) ?? DEFAULT_LOCALE;
 
     const id = newId();
-    const code = `SC${id.slice(-6).toUpperCase()}`;
+    const code = supportCaseCode(id);
     const description = [
       `Họ tên: ${dto.fullName}`,
       `SĐT: ${dto.phone}`,
@@ -331,7 +416,7 @@ export class SupportService {
         const created = await tx.supportCase.create({
           data: {
             id,
-            code: `SC${id.slice(-6).toUpperCase()}`,
+            code: supportCaseCode(id),
             tenantId: null,
             bookingId: null,
             bookingRequestId: null,
@@ -586,6 +671,19 @@ export class SupportService {
     if (!row) throw notFound();
 
     if (actor.scope !== SUPPORT_PARTY.PLATFORM) {
+      /*
+       * Case GIỮ quyết toán (ADR 0028 R3 · ADR 0066): đóng nó là gỡ băng tiền của chuyến. Một bên
+       * trong tranh chấp — kể cả bên đã mở case — không được tự gỡ: gian hàng mở một tranh chấp
+       * rồi tự đóng là cách giải ngân chính khoản đang bị khách khiếu nại.
+       */
+      if (
+        SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES.includes(row.category as SupportCaseCategory)
+      ) {
+        throw new ForbiddenException({
+          code: API_ERROR_CODE.SUPPORT_CASE_PLATFORM_RESOLVE_ONLY,
+          message: 'Case này giữ tiền của chuyến — chỉ nhân sự XePrime được kết luận/đóng',
+        });
+      }
       const ownCase = row.openedByUserId === actor.userId;
       if (!ownCase || to !== SUPPORT_CASE_STATUS.CLOSED) {
         throw new ForbiddenException({
@@ -808,7 +906,8 @@ export class SupportService {
       where: { id: row.id },
       select: { openedByUserId: true },
     });
-    if (opener && opener.openedByUserId !== actor.userId) {
+    // `openedByUserId` NULL = hệ thống mở (ADR 0066) — không có "người mở" nào để báo.
+    if (opener?.openedByUserId && opener.openedByUserId !== actor.userId) {
       await this.notifications.emitToUser(
         opener.openedByUserId,
         {
@@ -840,7 +939,8 @@ function toDto(row: Row): SupportCaseDto {
     bookingCode: row.booking?.code ?? null,
     bookingRequestId: row.bookingRequestId,
     openedByScope: row.openedByScope,
-    openedByName: row.opener.displayName,
+    // Case do hệ thống mở (ADR 0066) không có người mở.
+    openedByName: row.opener?.displayName ?? null,
     assigneeName: row.assignee?.displayName ?? null,
     resolution: row.resolution,
     resolvedAt: row.resolvedAt?.toISOString() ?? null,

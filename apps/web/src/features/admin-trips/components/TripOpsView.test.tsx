@@ -208,7 +208,7 @@ describe('Vận hành chuyến — khung màn', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Vận hành chuyến' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Chờ chủ xe duyệt' })).toBeTruthy();
-    expect(screen.getByText(/Chủ xe có 60 phút để trả lời/)).toBeTruthy();
+    expect(screen.getByText(/Hạn trả lời của chủ xe tuỳ khoảng cách tới giờ nhận xe/)).toBeTruthy();
     expect(screen.getByText('3 giao xe')).toBeTruthy();
     expect(screen.getByText('2 nhận xe')).toBeTruthy();
 

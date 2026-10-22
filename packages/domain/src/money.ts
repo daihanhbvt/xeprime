@@ -1,4 +1,4 @@
-import type { MoneyString } from '@xeprime/types';
+import { ceilToThousand, type MoneyString } from '@xeprime/types';
 
 export const CURRENCY_SUFFIX = '₫';
 
@@ -233,6 +233,10 @@ export function isZeroMoney(value: MoneyString | null | undefined): boolean {
  * Preview giá sau khuyến mãi ở client (thẻ xe/trang chi tiết/manage). PricingService
  * chốt báo giá bằng cùng công thức; helper này không dùng để cộng dồn kế toán.
  * Giá thuê VND là số nguyên ≤ 14 chữ số nên `Number` ở đây không mất chính xác (ADR 0007).
+ *
+ * Khoản GIẢM theo % làm tròn LÊN 1.000đ rồi kẹp ≤ giá gốc (ADR 0069 điều 2 — cùng luật
+ * `ceilDecimalToThousand` của server): 10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ. Khách không bao
+ * giờ được giảm ít hơn % đã công bố, và thẻ xe khớp đúng báo giá server.
  */
 export function applyDiscountPercent(
   value: MoneyString | null | undefined,
@@ -242,7 +246,8 @@ export function applyDiscountPercent(
   if (!percent || percent <= 0 || percent > 100) return value;
   const n = Number(value);
   if (!Number.isFinite(n)) return value;
-  return String(Math.round((n * (100 - percent)) / 100));
+  const discount = Math.min(ceilToThousand((n * percent) / 100), n);
+  return String(n - discount);
 }
 
 /** Hình dạng tiền hợp lệ trên dây (ADR 0007): số nguyên có dấu, tối đa 2 số lẻ. */

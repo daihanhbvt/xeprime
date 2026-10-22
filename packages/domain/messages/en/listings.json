@@ -58,7 +58,7 @@
       "badge": "VAT invoice available",
       "title": "VAT invoice",
       "body": "The owner can issue a VAT invoice for the rental paid to the owner. Share your invoicing details and confirm them directly with the owner.",
-      "disclaimer": "This is an arrangement between you and the owner: XePrime does not issue invoices on the owner's behalf, and amounts you pay to XePrime (such as the service fee) are not covered by this invoice."
+      "disclaimer": "This is an arrangement between you and the owner: XePrime does not issue invoices on the owner's behalf, and amounts you pay to XePrime (such as the booking fee) are not covered by this invoice."
     },
     "description": "Description",
     "descriptionEmpty": "This shop has not written a description.",
@@ -179,8 +179,8 @@
       },
       "cancellation": {
         "title": "Cancellation & reservation policy",
-        "free": "<strong>Free cancellation:</strong> within {hours} hours of the owner accepting your trip (and no later than pick-up), you get back 100% of what you paid.",
-        "hold": "<strong>Reservation window:</strong> once the owner accepts your trip, you have {minutes} minutes to pay the reservation fee.",
+        "free": "<strong>Free cancellation:</strong> after the owner accepts your trip, you get back 100% of what you paid if you cancel within {percent}% of the time left until pick-up (at least {minMinutes} minutes, at most {hours} hours, never past pick-up).",
+        "hold": "<strong>Reservation window:</strong> once the owner accepts your trip, you have {percent}% of the time left until pick-up to pay the reservation fee (at least {minMinutes} minutes, at most {minutes} minutes).",
         "release": "If the reservation fee isn't paid in full in time, the request closes automatically and the vehicle's dates open up for other renters.",
         "protection": "Renter protection: if the owner cancels after you have paid the reservation fee, you get back 100% of what you paid."
       }

@@ -27,7 +27,8 @@
         "privacy": "Privacy Policy",
         "marketplaceRules": "Marketplace Operating Rules",
         "cancellation": "Cancellation and Refund Policy",
-        "cancellationShort": "Cancellation & refund policy"
+        "cancellationShort": "Cancellation & refund policy",
+        "ownerTax": "Tax policy for owners"
       }
     },
     "apps": {

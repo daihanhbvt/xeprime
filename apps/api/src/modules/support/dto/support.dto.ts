@@ -133,7 +133,8 @@ export class SupportCaseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingRequestId!: string | null;
   @ApiProperty({ enum: SUPPORT_PARTY_VALUES }) openedByScope!: string;
-  @ApiProperty() openedByName!: string;
+  /** `null` = case do HỆ THỐNG mở (worker — ADR 0066), không có người nào bấm nút. */
+  @ApiPropertyOptional({ type: String, nullable: true }) openedByName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) assigneeName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) resolution!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) resolvedAt!: string | null;

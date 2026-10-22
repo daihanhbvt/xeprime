@@ -184,7 +184,8 @@ export const API_ERROR_CODE = {
    */
   BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
   /**
-   * Yêu cầu đã quá **hạn phản hồi 60 phút** — không duyệt và không từ chối được nữa.
+   * Yêu cầu đã quá **hạn phản hồi** (`respondBy` — cửa sổ động 15′–4 giờ, ADR 0066) — không
+   * duyệt và không từ chối được nữa.
    *
    * Mã riêng thay vì `INVALID_STATUS_TRANSITION`: trạng thái trong DB có thể vẫn còn
    * `pending_host_approval` (worker chạy theo nhịp, không tức thời), nên câu "yêu cầu này đã
@@ -228,6 +229,18 @@ export const API_ERROR_CODE = {
    * cần làm là liên hệ chủ xe, không phải thử lại.
    */
   TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
+  /**
+   * Khách báo "Chưa nhận được xe" (ADR 0066, lớp 1) ở chuyến không còn báo được — chưa có đơn,
+   * đơn không ở `reserved`/`active` (đã xong, đã huỷ, không đến). 409.
+   */
+  TRIP_NOT_RECEIVED_NOT_ALLOWED: 'TRIP_NOT_RECEIVED_NOT_ALLOWED',
+  /** Báo "Chưa nhận được xe" TRƯỚC giờ hẹn nhận xe — chưa tới giờ thì chưa có gì để "chưa nhận". 409. */
+  TRIP_NOT_RECEIVED_TOO_EARLY: 'TRIP_NOT_RECEIVED_TOO_EARLY',
+  /**
+   * Báo "Chưa nhận được xe" SAU `pickupAt + HANDOVER_CONFIRMATION_GRACE_MINUTES` — cửa sổ đã
+   * đóng; việc còn lại đi qua mục Hỗ trợ. 409.
+   */
+  TRIP_NOT_RECEIVED_WINDOW_CLOSED: 'TRIP_NOT_RECEIVED_WINDOW_CLOSED',
   /**
    * Đơn đã có một khoản phát sinh còn hiệu lực ở danh mục CHỈ ĐƯỢC GHI MỘT LẦN (hiện là phí
    * vượt km). `details` mang `{ category, surchargeId }` để FE chỉ thẳng vào khoản đang có.
@@ -489,6 +502,12 @@ export const API_ERROR_CODE = {
   /** Case đã đóng — mở case mới thay vì viết tiếp. */
   SUPPORT_CASE_CLOSED: 'SUPPORT_CASE_CLOSED',
   /**
+   * Case thuộc nhóm GIỮ quyết toán (`dispute`, `handover_unconfirmed` — ADR 0066) chỉ nhân sự
+   * nền tảng được đóng/kết luận: đóng nó là gỡ băng tiền của chuyến, nên không bên nào trong
+   * tranh chấp tự làm được — kể cả với case do chính họ mở.
+   */
+  SUPPORT_CASE_PLATFORM_RESOLVE_ONLY: 'SUPPORT_CASE_PLATFORM_RESOLVE_ONLY',
+  /**
    * Loại case này chỉ do CHÍNH người dùng mở cho tài khoản của mình (`account_deletion`) —
    * gian hàng/nền tảng không mở hộ, và không gắn đơn thuê.
    */
@@ -639,6 +658,11 @@ export const API_ERROR_CODE = {
   DRIVER_NOT_ASSIGNABLE: 'DRIVER_NOT_ASSIGNABLE',
   /** Lượt gán không còn chờ tài xế trả lời (đã nhận / đã bị gỡ / đổi người). */
   DRIVER_ASSIGNMENT_STATE_CONFLICT: 'DRIVER_ASSIGNMENT_STATE_CONFLICT',
+  /**
+   * Tài xế nhận chuyến SAU hạn trả lời (`driver_respond_by`, ADR 0066) — lượt gán đã/đang được
+   * hệ thống trả về bên thuê. `details.respondBy` (ISO-8601).
+   */
+  DRIVER_ASSIGNMENT_EXPIRED: 'DRIVER_ASSIGNMENT_EXPIRED',
   DRIVER_ASSIGNMENT_LOCKED: 'DRIVER_ASSIGNMENT_LOCKED',
   /**
    * Tài xế xin ngừng khi còn chuyến ĐÃ NHẬN chưa giao xe — bên thuê phải đổi người trước.

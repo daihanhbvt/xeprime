@@ -9,6 +9,14 @@ type Schemas = components['schemas'];
 export type BookingListItem = Schemas['BookingListItemDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
+export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
+export type ExternalDriverInput = Schemas['ExternalDriverInputDto'];
+/**
+ * Body của `PATCH /bookings/:id/driver` — ĐÚNG MỘT khoá (server từ chối body mang cả hai). DTO sinh
+ * ra để cả hai khoá tuỳ chọn; union ở đây để TypeScript bắt lỗi trước khi server phải bắt.
+ */
+export type AssignBookingDriverInput =
+  { driverId: string | null } | { externalDriver: ExternalDriverInput };
 export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];

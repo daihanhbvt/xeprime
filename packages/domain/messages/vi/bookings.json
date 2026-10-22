@@ -59,7 +59,7 @@
       "cancelTitle": "Hủy đơn {code}",
       "noShowTitle": "Ghi nhận khách không đến — đơn {code}",
       "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền giữ chỗ khách đã chuyển qua XePrime (nếu có) được hoàn 100% vào Ví điểm của khách.",
-      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; phần còn lại của tiền giữ chỗ chia đôi giữa bạn và XePrime.",
+      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; bạn nhận trọn phần giữ chỗ dành cho chủ xe, còn phí đặt xe và phí dịch vụ – chủ xe thuộc XePrime.",
       "cancelOk": "Hủy đơn",
       "noShowOk": "Ghi nhận không đến",
       "keep": "Giữ nguyên đơn",
@@ -161,15 +161,13 @@
     },
     "ownerEconomics": {
       "title": "Phần của bạn",
-      "commission": "Hoa hồng XePrime",
-      "tax": "Thuế khấu trừ",
-      "ownerNet": "Bạn thực nhận cho tiền thuê",
-      "note": "Số đã chốt lúc đặt. Hoa hồng và thuế được giữ lại từ tiền giữ chỗ trước khi phần còn lại vào Ví điểm của bạn khi chuyến hoàn thành."
+      "note": "Số đã chốt lúc đặt. Phí dịch vụ – chủ xe và thuế được giữ lại từ tiền giữ chỗ trước khi phần còn lại vào Ví điểm của bạn khi chuyến hoàn thành."
     }
   },
   "driver": {
     "title": "Tài xế",
     "none": "Chưa phân công",
+    "external": "Ngoài hệ thống",
     "assign": "Gán tài xế",
     "change": "Đổi",
     "unassign": "Bỏ gán",
@@ -272,7 +270,18 @@
     },
     "advancedPickup": "Thêm thông tin bàn giao — Không bắt buộc",
     "advancedReturn": "Thêm thông tin khi nhận xe — Không bắt buộc",
-    "photosHint": "Chụp lại để có bằng chứng khi đối chiếu cuối chuyến. Không bắt buộc — bỏ qua vẫn xác nhận được.",
+    "photosHint": "Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp. Không bắt buộc — bỏ qua vẫn xác nhận được.",
+    "evidenceAdvisory": "Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp.",
+    "photosOptional": "Không bắt buộc — bỏ qua vẫn xác nhận được.",
+    "confirmDialog": {
+      "titlePickup": "Xác nhận đã giao xe",
+      "titleReturn": "Xác nhận đã nhận lại xe",
+      "vehicle": "Xe",
+      "booking": "Đơn",
+      "successPickup": "Đã xác nhận giao xe",
+      "successReturn": "Đã xác nhận nhận lại xe",
+      "openSurcharge": "Ghi nhận phát sinh"
+    },
     "returnDepositNotice": "Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau — không chặn hoàn tất chuyến.",
     "odometerBelowPickup": "Odo khi nhận ({entered} km) không được nhỏ hơn Odo lúc giao ({pickup} km).",
     "occurredAt": {
@@ -632,5 +641,30 @@
     "derivedReturnEmpty": "Chọn gói và giờ nhận để biết ngày trả.",
     "scheduleLabel": "Thời gian thuê",
     "doneCodeLabel": "Mã đơn:"
+  },
+  "ownerPayout": {
+    "unitPrice": "Đơn giá thuê",
+    "rentalDays": "Số ngày thuê",
+    "rentalDaysValue": "{count, plural, other {# ngày}}",
+    "rentForDays": "Tiền thuê {count, plural, other {# ngày}}",
+    "variesByDay": "Giá khác nhau theo ngày",
+    "revenue": "Doanh thu cho thuê xe",
+    "revenueHint": "Tiền thuê sau khuyến mãi bạn đặt cho xe. Không gồm phí giao xe, phí đặt xe khách trả cho XePrime và bảo hiểm.",
+    "commission": "Phí dịch vụ – Chủ xe",
+    "commissionHintTiers": "Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: {tiers}.",
+    "commissionHintGeneric": "Tính theo nấc lũy tiến của chính sách phí áp cho chuyến này.",
+    "commissionHintBody": "Gian hàng có gói: 0đ. Khoản này giúp XePrime vận hành chợ, chăm sóc khách, xử lý hoàn/huỷ, hỗ trợ tranh chấp và bảo hiểm.",
+    "tax": "Thuế khấu trừ",
+    "taxSplit": "Thuế khấu trừ (GTGT {vat}% + TNCN {pit}%)",
+    "taxCombined": "Thuế khấu trừ ({percent}%)",
+    "taxExempt": "Không khấu trừ (doanh nghiệp)",
+    "taxHint": "Theo NĐ 117/2025 và NĐ 68/2026, XePrime khấu trừ, kê khai và nộp thay thuế cho chủ xe là cá nhân/hộ kinh doanh. Mức khấu trừ theo loại dịch vụ (tự lái, dài hạn, có tài xế), tính trên tiền thuê, theo chính sách thuế áp cho chuyến. Doanh nghiệp không bị khấu trừ.",
+    "taxPolicyLink": "Chính sách thuế",
+    "ownerNet": "Thu nhập chủ xe (a)",
+    "payAtPickup": "Khách thanh toán trực tiếp (b)",
+    "payAtPickupHint": "Phần tiền thuê khách trả tận tay bạn lúc nhận xe, không đi qua XePrime. Không gồm phí giao xe.",
+    "walletCredit": "Số tiền cộng ví (a − b)",
+    "walletCreditHint": "XePrime ghi có vào Ví điểm của bạn khi chuyến hoàn thành.",
+    "hintLabel": "Giải thích: {item}"
   }
 }

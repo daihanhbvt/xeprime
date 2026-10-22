@@ -45,6 +45,7 @@ import { payAtPickupAmount } from '@/lib/customer-price-view';
 import { dayjs } from '@/lib/datetime';
 import type { CustomerTripDetail } from '../types';
 import { useFreeCancelNote } from '../use-free-cancel-note';
+import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripColumns } from './TripRequestLayout';
 import styles from './TripPaymentCheckout.module.css';
 
@@ -478,6 +479,7 @@ function PaymentSummaryCard({
             segment: (index, total) => tHold('countdownSegment', { index, total }),
           }}
         />
+        <FreeCancelCountdown hold={hold} className={styles.countdown} />
       </div>
 
       {action}

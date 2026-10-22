@@ -40,9 +40,9 @@ import { makeBookingHoldsService } from './helpers/service-factory';
  *
  * ## Ba thứ được khoá ở đây
  *
- * 1. **Doanh thu nền tảng ở nhánh HUỶ MUỘN.** Công thức trong kế hoạch gốc
- *    (`SUM(service_fee_amount)`) sai đúng ở đây: `D + S` chia đôi nên phần nền tảng là
- *    `ceil((D+S)/2)`, không phải `S`. Tuyến GÓI có `S = 0` mà vẫn sinh doanh thu.
+ * 1. **Doanh thu nền tảng đọc từ cột ĐÃ CHỐT ở mọi nhánh, kể cả HUỶ MUỘN.** Từ ADR 0066 huỷ muộn
+ *    trả trọn `D` cho chủ xe và nền tảng giữ `S + H − P` — luật phân bổ đổi được theo ADR, nên đối
+ *    soát đọc `settled_platform_amount` đóng băng chứ không suy lại từ `service_fee_amount`.
  * 2. **Không cộng đôi khoản đã chuyển từ hold sang ví.** Hold chốt xong rời vế giữ hộ của nó và
  *    xuất hiện ở ví — tổng nghĩa vụ không được nhảy lên.
  * 3. **Chưa nhập số dư ⇒ `null`, không phải 0.**
@@ -326,13 +326,11 @@ describe('Công thức ba vế đóng trên một ngày có đủ năm loại gi
     const settledSplit = await settle(completed, 'settled');
     expect(settledSplit).toEqual({ platform: 140_000, owner: 280_000 });
 
-    // ── 4. HUỶ MUỘN: chia đôi — đây là ca công thức cũ tính SAI ───────────
+    // ── 4. HUỶ MUỘN (ADR 0066): chủ xe nhận trọn D, nền tảng giữ S ────────
     const lateCancel = await paidHold(280_000, 140_000);
     await bankIn(420_000, 'hold');
     const splitResult = await settle(lateCancel, 'split_late_cancel');
-    expect(splitResult).toEqual({ platform: 210_000, owner: 210_000 });
-    // `service_fee_amount` chỉ là 140.000 — lệch 70.000 nếu đọc nhầm cột.
-    expect(splitResult.platform).not.toBe(140_000);
+    expect(splitResult).toEqual({ platform: 140_000, owner: 280_000 });
 
     // ── 5. Tiền vào CHƯA KHỚP: vẫn trong tài khoản, vẫn là tiền của ai đó ─
     await bankIn(50_000, null);
@@ -340,24 +338,24 @@ describe('Công thức ba vế đóng trên một ngày có đủ năm loại gi
     const after = await holds.dailyReconciliation(RECON_DAY);
 
     const d = (a: string, b: string) => Number(a) - Number(b);
-    // Nền tảng tăng: 300.000 (gói) + 140.000 (hoàn thành) + 210.000 (huỷ muộn).
-    expect(d(after.platform.total, before.platform.total)).toBe(650_000);
+    // Nền tảng tăng: 300.000 (gói) + 140.000 (hoàn thành) + 140.000 (huỷ muộn).
+    expect(d(after.platform.total, before.platform.total)).toBe(580_000);
     expect(d(after.platform.subscriptionsCollected, before.platform.subscriptionsCollected)).toBe(
       300_000,
     );
     expect(d(after.platform.serviceFeeRecognized, before.platform.serviceFeeRecognized)).toBe(
-      350_000,
+      280_000,
     );
 
     /*
-     * Giữ hộ tăng: 420.000 (hold chưa chốt) + 490.000 (ví: 280.000 + 210.000) + 50.000 (chưa
+     * Giữ hộ tăng: 420.000 (hold chưa chốt) + 560.000 (ví: 280.000 + 280.000) + 50.000 (chưa
      * khớp). Hai hold ĐÃ CHỐT không còn ở `holdsUnsettled` — phần của chúng nằm ở ví và ở
      * doanh thu. Cộng cả hai là nhân đôi nghĩa vụ, và con số này khoá đúng điều đó.
      */
     expect(d(after.custodied.holdsUnsettled, before.custodied.holdsUnsettled)).toBe(420_000);
-    expect(d(after.custodied.walletTotal, before.custodied.walletTotal)).toBe(490_000);
+    expect(d(after.custodied.walletTotal, before.custodied.walletTotal)).toBe(560_000);
     expect(d(after.custodied.unmatchedIn, before.custodied.unmatchedIn)).toBe(50_000);
-    expect(d(after.custodied.total, before.custodied.total)).toBe(960_000);
+    expect(d(after.custodied.total, before.custodied.total)).toBe(1_030_000);
 
     // Tổng nghĩa vụ + doanh thu tăng đúng bằng tiền thật đã vào ngân hàng: 300k + 420k×3 + 50k.
     expect(

@@ -25,6 +25,7 @@ import {
 import { useCreateFeePolicyDraft, useUpdateFeePolicyDraft } from '../hooks/use-fee-policies';
 import type { FeePolicy } from '../types';
 import { CommissionTiersField } from './CommissionTiersField';
+import { TaxRatesField } from './TaxRatesTable';
 import styles from './FeePolicyFormModal.module.css';
 
 /**
@@ -72,8 +73,8 @@ export function FeePolicyFormModal({
         integer: t('form.validation.integer'),
         thousandStep: t('form.validation.thousandStep'),
         ratePositive: t('form.validation.ratePositive'),
-        taxPercentRequired: t('form.validation.taxPercentRequired'),
-        taxLabelRequired: t('form.validation.taxLabelRequired'),
+        taxRateRequired: t('form.validation.taxRateRequired'),
+        taxLegalBasisRequired: t('form.validation.taxLegalBasisRequired'),
         partnerRequired: t('form.validation.partnerRequired'),
         blocker: (code) => domainLabel('feePolicyActivationBlocker', code),
       }),
@@ -155,10 +156,18 @@ export function FeePolicyFormModal({
         ))}
 
         <Divider plain>{t('form.sectionCommission')}</Divider>
-        <p className={styles.hint}>{t('form.commissionHint')}</p>
+        {/* Phạm vi đi trước con số: nấc này không chạm tới gian hàng có gói (H = 0 — ADR 0064 điều 3). */}
+        <Alert
+          type="info"
+          showIcon
+          title={t('commissionScope.title')}
+          description={t('form.commissionHint')}
+          className={styles.alert}
+        />
         <CommissionTiersField control={control} />
 
         <Divider plain>{t('form.sectionDeposit')}</Divider>
+        <p className={styles.hint}>{t('form.depositHint')}</p>
         <NumberField
           control={control}
           name="depositPercent"
@@ -277,17 +286,16 @@ export function FeePolicyFormModal({
         />
         {taxEnabled ? (
           <>
-            <NumberField
+            <TextField
               control={control}
-              name="taxPercent"
-              label={t('form.taxPercent')}
-              percent
-              min={0}
-              max={50}
-              precision={2}
+              name="taxLegalBasis"
+              label={t('form.taxLegalBasis')}
+              help={t('form.taxLegalBasisHint')}
               required
             />
-            <TextField control={control} name="taxLabel" label={t('form.taxLabel')} required />
+            <p className={styles.hint}>{t('form.taxRatesTitle')}</p>
+            <TaxRatesField control={control} />
+            <p className={styles.hint}>{t('form.taxScope')}</p>
           </>
         ) : null}
 

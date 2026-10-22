@@ -70,8 +70,8 @@ export const HOLD_REFUND_REASON = {
   /** Hold trả THIẾU rồi hết hạn — phần đã chuyển phải quay về khách (ADR 0033). */
   HOLD_EXPIRED: 'hold_expired',
   /**
-   * Khách huỷ SAU mốc miễn phí — kết cục `split_late_cancel` tự động (ADR 0064): `IV + IP` hoàn
-   * 100% vào ví khách, `D + S + H` chia đôi chủ xe / XePrime. Khoản hoàn mang mã này là phần
+   * Khách huỷ SAU mốc miễn phí — kết cục `split_late_cancel` tự động (ADR 0064 · ADR 0066): `IV +
+   * IP` hoàn 100% vào ví khách, chủ xe nhận trọn `D`, XePrime giữ `S + H`. Khoản hoàn mang mã này là phần
    * BẢO HIỂM (chưa phát hành) — không phải "quyết định của XePrime".
    */
   LATE_CANCEL: 'late_cancel',

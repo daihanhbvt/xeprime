@@ -14,6 +14,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode } from '@/services/api-client';
 import { useAcceptDriverTrip, useDeclineDriverTrip, useDriverTrip } from '../hooks';
 import { placeMapUrl } from '../maps';
+import { DriverRespondCountdown } from './DriverRespondCountdown';
 import { DrivingTripTags } from './DrivingTripTags';
 import styles from './Driving.module.css';
 
@@ -106,6 +107,7 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
           description={
             <>
               <p className={styles.meta}>{t('pendingBody')}</p>
+              <DriverRespondCountdown respondBy={trip.respondBy} />
               <div className={styles.actions}>
                 <Button
                   type="primary"

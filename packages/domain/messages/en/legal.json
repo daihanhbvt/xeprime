@@ -23,7 +23,7 @@
   },
   "index": {
     "title": "Legal documents",
-    "subtitle": "The four documents that govern the use of XePrime. The version shown here is effective from {date}.",
+    "subtitle": "The documents that govern the use of XePrime. The version shown here is effective from {date}.",
     "supportHeading": "Need to report something specific?",
     "supportBody": "The support centre is where reports, complaints and disputes between renters and shops are received.",
     "supportLink": "Go to the support centre"
@@ -74,7 +74,7 @@
           "items": {
             "request": "You send a rental request with your time window and where you want the vehicle. This charges nothing and holds nothing — the vehicle stays open to other renters.",
             "decision": "The shop accepts or declines. Vehicles with instant booking are accepted automatically. Only an acceptance holds the calendar and fixes the price.",
-            "holdPayment": "You transfer the holding amount within the payment window, which runs from the moment the shop accepts and never past the pick-up time. It is 120 minutes when pick-up is 24 hours or more away and shorter when you book close to pick-up (at least 15 minutes) — see the Cancellation and Refund Policy. We remind you before it closes. When it closes, it closes; there is no extension.",
+            "holdPayment": "You transfer the holding amount within the payment window, which runs from the moment the shop accepts and never past the pick-up time. It is 30% of the time between the shop's acceptance and pick-up (at least 15 minutes, at most 120 minutes) — see the Cancellation and Refund Policy. We remind you before it closes. When it closes, it closes; there is no extension.",
             "bookingCreated": "The booking itself is created only once reconciliation confirms the holding amount arrived in full — not when you press a button or scan a code.",
             "slotLost": "If the time window has gone to another renter, the remaining requests for it are closed and you are told. This is not the shop declining you."
           }
@@ -312,9 +312,9 @@
           "heading": "3. The payment and free-cancellation windows",
           "body": "Once the shop accepts, you get a window to transfer the holding amount and a free-cancellation window. How long both last depends on the time between the shop's acceptance and the pick-up time; both run FORWARD from acceptance and never past pick-up. Current terms:",
           "items": {
-            "far": "Pick-up 24 hours or more away: 120 minutes to pay, free cancellation for 4 hours.",
-            "near": "Pick-up between 2 and 24 hours away: the payment window is 40% of the time left until pick-up (at least 15 minutes, at most 120 minutes); free cancellation is 30% of that time (at most 4 hours).",
-            "urgent": "Pick-up less than 2 hours away: the payment window is worked out the same way (at least 15 minutes) and there is NO free-cancellation window. If too little time is left to pay, the trip cannot be held through XePrime.",
+            "payment": "The payment window is 30% of the time between the shop's acceptance and pick-up, at least 15 minutes and at most 120 minutes — with pick-up about 7 hours or more away you get the full 120 minutes.",
+            "cancel": "Free cancellation is 20% of that time, at least 15 minutes and at most 2 hours — with pick-up 10 hours or more away you get the full 2 hours. For trips with pick-up less than 10 hours away, free cancellation ends BEFORE the payment deadline; the exact time is shown, with a countdown, before you pay.",
+            "tooShort": "Neither deadline ever runs past pick-up. If too little time is left to pay (under 15 minutes), the trip cannot be held through XePrime.",
             "expiry": "We remind you before the payment window closes. If the full amount has not arrived by then, the slot is released to other renters and the trip does not go ahead; anything you already transferred is refunded in full to your Points wallet. The payment window cannot be extended."
           }
         },
@@ -327,7 +327,7 @@
           "body": "Cancelling after the free-cancellation deadline, or cancelling after paying for a trip that has no free-cancellation window, works as follows. The cancellation dialog always shows what will and will not be refunded before you confirm.",
           "items": {
             "insurance": "Any insurance you chose is refunded 100% to your Points wallet, because the policy is only issued at pick-up.",
-            "split": "The rest of the holding amount is not refunded: half compensates the owner for holding the car for you, and half goes to XePrime.",
+            "split": "The whole holding amount except the insurance — the booking fee and the rent paid in advance — is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
             "noShow": "Not turning up without notice is treated as cancelling after the free-cancellation deadline.",
             "direct": "The part payable directly to the owner at pick-up has not been paid yet, so there is nothing to refund there."
           }
@@ -353,6 +353,88 @@
         "dispute": {
           "heading": "9. When the two of you disagree",
           "body": "Send a report through the Help centre with the trip code and your evidence: in-app messages, the handover records and the condition photos. We compare them against the trip record in our system and give a supporting conclusion within the limits of the data we hold. For anything the two of you settled off the platform, we have no data to reconcile."
+        }
+      }
+    },
+    "owner-tax": {
+      "title": "Tax policy for owners",
+      "summary": "XePrime withholds, declares and pays tax on behalf of owners who are individuals or household businesses: the rates, what they apply to, when they are deducted and what you need to do.",
+      "sections": {
+        "basis": {
+          "heading": "1. Legal basis",
+          "body": "XePrime withholds tax from owners because the law requires it — it is not a XePrime fee. The regulations in force:",
+          "items": {
+            "nd117": "Decree 117/2025/ND-CP (effective 1 July 2025): digital platforms with a payment function must withhold, declare and pay value-added tax (VAT) and personal income tax (PIT) on behalf of households and individuals doing business on the platform.",
+            "nd68": "Decree 68/2026/ND-CP (effective 5 March 2026): platforms with ordering and payment functions continue to withhold, declare and pay on behalf of sellers per transaction; PIT paid on your behalf is credited when you finalise your taxes.",
+            "platform": "XePrime collects the customer's hold payment through its own account, so it is a platform with a payment function and must withhold and pay on your behalf."
+          }
+        },
+        "who": {
+          "heading": "2. Who is withheld",
+          "body": "Whether tax is withheld depends only on the entity type in your seller profile:",
+          "items": {
+            "individual": "Individual: withheld.",
+            "household": "Household business: withheld.",
+            "company": "Company verified by XePrime: not withheld — a company issues its own invoices and declares its own taxes.",
+            "noProfile": "No seller profile yet, or a company profile not yet verified: treated as an individual and withheld. Missing information does not remove the tax obligation.",
+            "track": "Being on a subscription plan or not does not decide withholding: a shop that buys a plan but is a household business is still withheld."
+          }
+        },
+        "rates": {
+          "heading": "3. Rates",
+          "body": "The rate depends on the trip's service type and is made of two taxes computed separately. Current rates:",
+          "items": {
+            "selfDrive": "Self-drive rental: 7% — VAT 5% + PIT 2%.",
+            "longTerm": "Long-term rental: 7% — VAT 5% + PIT 2%.",
+            "withDriver": "Rental with driver: 4.5% — VAT 3% + PIT 1.5%.",
+            "snapshot": "The rate of a trip is locked in when you accept it. If the rates change later, trips already locked in keep the old rate."
+          }
+        },
+        "base": {
+          "heading": "4. What the tax applies to",
+          "body": "Tax is computed on the rental amount of the trip:",
+          "items": {
+            "included": "Included: the rental after any discount you set on the vehicle.",
+            "excluded": "Excluded: the delivery fee (the customer pays it to you directly), the booking fee the customer pays XePrime, insurance and the value of promo codes funded by XePrime.",
+            "rounding": "Each tax is computed separately and rounded to the đồng, so the amount withheld matches the rate times the rental exactly. Example: a 780,000đ self-drive trip is withheld VAT 39,000đ + PIT 15,600đ = 54,600đ."
+          }
+        },
+        "timing": {
+          "heading": "5. When tax is withheld",
+          "body": "Tax follows the trips that actually take place:",
+          "items": {
+            "recorded": "The tax is recorded when the trip starts, that is when the vehicle is handed over to the customer.",
+            "deducted": "The tax is deducted from what XePrime pays you: when the trip is completed, your Points wallet receives your share of the hold payment minus the tax. Tax is never added to what the customer pays.",
+            "adjusted": "If the amount of a trip changes after the tax was recorded, XePrime records a reversal and a new entry instead of editing the old one."
+          }
+        },
+        "cancellation": {
+          "heading": "6. When a trip is cancelled",
+          "body": "A cancellation creates no tax for the part of the trip that did not happen:",
+          "items": {
+            "beforeTrip": "Trip cancelled before it starts: no tax withheld.",
+            "lateCompensation": "The compensation you receive when a customer cancels late or does not show up is compensation, not rental revenue, so it is not withheld."
+          }
+        },
+        "threshold": {
+          "heading": "7. Revenue of 500 million đồng a year or less",
+          "body": "Under Decree 68/2026/ND-CP, households and individuals with annual revenue of 500 million đồng or less do not have to pay VAT and PIT. The platform still has to withhold per transaction because it cannot know your full-year revenue in advance. If you are not liable for the year, contact your tax authority to have the amount paid on your behalf refunded or offset, using the withholding certificate XePrime provides."
+        },
+        "identity": {
+          "heading": "8. Information you need to provide",
+          "body": "So that XePrime declares the right taxpayer, complete your seller profile: entity type, full name or household business name, and tax code or citizen ID number. Wrong or missing information may prevent the tax paid on your behalf from being credited to you correctly."
+        },
+        "certificate": {
+          "heading": "9. Withholding certificate",
+          "body": "XePrime will provide the year's tax withholding certificate before the tax finalisation period, for you to use when finalising your taxes or requesting a refund. Until then, you can see the tax withheld for each trip and per month in your workspace."
+        },
+        "statement": {
+          "heading": "10. Where you see the amounts",
+          "body": "In the request approval dialog, the booking detail and the wallet statement, the \"owner payout\" table shows each line separately: rental revenue, the owner service fee, tax withheld (with the VAT and PIT parts), your income, the part the customer pays you directly and the amount credited to your wallet."
+        },
+        "changes": {
+          "heading": "11. Policy changes",
+          "body": "The rates and how they apply may change with new legislation or tax authority guidance. Changes are published on this page before they apply and never apply retroactively to trips already locked in."
         }
       }
     }

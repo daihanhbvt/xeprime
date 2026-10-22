@@ -52,10 +52,12 @@ import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
+import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { TripAwaitingHoldView } from './TripAwaitingHoldView';
 import { TripConfirmedView } from './TripConfirmedView';
 import { TripPendingApprovalView } from './TripPendingApprovalView';
+import { telHref } from '@/lib/contact';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
@@ -223,6 +225,7 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
       : data.deliveryRequested && data.deliveryAddress
         ? [data.deliveryAddress]
         : [];
+  const driverTel = data.driver ? telHref(data.driver.phone) : null;
 
   /*
    * Khoản giữ chỗ CÒN CHỜ TRẢ hay không mới là thứ quyết định bố cục — KHÔNG phải cứ có `hold` là
@@ -355,6 +358,35 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
                 ))}
               </dd>
             </div>
+            {/*
+              Người sẽ đến đón (ADR 0067) — tài xế liên kết đã nhận hay tài xế ngoài hệ thống, cùng
+              một hình. Chưa có ai thì nói đang sắp xếp; server quyết ai được hiện cho ai.
+            */}
+            {data.serviceType === SERVICE_TYPE.WITH_DRIVER && data.bookingId ? (
+              <div className={styles.row}>
+                <dt>{t('detail.driver')}</dt>
+                <dd className={styles.pickupMethodValue}>
+                  {data.driver ? (
+                    <>
+                      <span>{data.driver.name}</span>
+                      {driverTel ? (
+                        <a
+                          href={driverTel}
+                          className={styles.address}
+                          aria-label={t('detail.driverCall', { name: data.driver.name })}
+                        >
+                          {data.driver.phone}
+                        </a>
+                      ) : (
+                        <span className={styles.address}>{data.driver.phone}</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className={styles.address}>{t('detail.driverArranging')}</span>
+                  )}
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           <dl className={styles.rows}>
@@ -419,6 +451,13 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
       </header>
 
       <TerminalNotice trip={data} stage={stage} />
+
+      {/*
+        "Chưa nhận được xe" (ADR 0066, lớp 1) — đứng đầu trang, trên mọi khối khác: trong 120′ sau
+        giờ nhận xe đây là việc gấp nhất khách có thể cần. Chủ xe xem cùng chuyến chỉ thấy khối
+        "đang có khiếu nại" khi có — server không bao giờ bật nút cho phía họ.
+      */}
+      <TripNotReceivedReport trip={data} />
 
       {/*
         Full-width CHỈ khi còn khoản phải trả: một khoản giữ chỗ đang chờ tiền (`hasQrPanel`) đáng

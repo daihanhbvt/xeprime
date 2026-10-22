@@ -10,6 +10,7 @@ import {
   updateBookingDeliveryFee,
 } from '../api';
 import type {
+  AssignBookingDriverInput,
   CreateBookingInput,
   TransitionInput,
   UpdateBookingInput,
@@ -60,11 +61,14 @@ export function useUpdateBookingDeliveryFee(id: string) {
   });
 }
 
-/** Gán/bỏ gán tài xế (17/08) — response là đơn đã cập nhật, ghi thẳng vào cache detail. */
+/**
+ * Gán/bỏ gán tài xế liên kết, hoặc ghi tài xế ngoài hệ thống (ADR 0067) — response là đơn đã cập
+ * nhật, ghi thẳng vào cache detail.
+ */
 export function useAssignBookingDriver(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (driverId: string | null) => assignBookingDriver(id, driverId),
+    mutationFn: (body: AssignBookingDriverInput) => assignBookingDriver(id, body),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);

@@ -631,10 +631,18 @@ describe('ListingDetailView — tab "Quy định & Chính sách"', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Điều khoản huỷ' }));
 
     const panel = screen.getByRole('tabpanel', { name: 'Điều khoản huỷ' });
-    // ADR 0032 · 0044: 4 giờ kể từ khi được nhận — KHÔNG phải "trước giờ nhận xe 4 tiếng".
-    expect(within(panel).getByText(/trong 4 giờ kể từ lúc chủ xe nhận chuyến/)).toBeTruthy();
+    // ADR 0032 · 0066: tính XUÔI từ lúc được nhận, theo tỉ lệ của ΔT — không "trước giờ nhận xe".
+    expect(
+      within(panel).getByText(
+        /kể từ lúc chủ xe nhận chuyến.*trong 20% .*tối thiểu 15 phút, tối đa 2 giờ/,
+      ),
+    ).toBeTruthy();
     expect(within(panel).queryByText(/trước giờ nhận xe/)).toBeNull();
-    expect(within(panel).getByText(/120 phút để thanh toán tiền giữ chỗ/)).toBeTruthy();
+    expect(
+      within(panel).getByText(
+        /30% .*để thanh toán tiền giữ chỗ \(tối thiểu 15 phút, tối đa 120 phút\)/,
+      ),
+    ).toBeTruthy();
   });
 
   it('tab và panel nối nhau bằng id; mũi tên phải/trái/End chuyển tab', async () => {

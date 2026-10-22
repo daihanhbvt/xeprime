@@ -11,7 +11,6 @@ import {
   SERVICE_TYPE,
   type BookingStatus,
 } from '@xeprime/types';
-import { DeductedAmount } from '@/components/data-display/DeductedAmount';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
@@ -28,6 +27,7 @@ import { BookingActionBar } from './BookingActionBar';
 import { BookingCustomerDocumentsDialog } from './BookingCustomerDocumentsDialog';
 import { BookingDriverSection } from './BookingDriverSection';
 import { BookingOperationPanel } from './BookingOperationPanel';
+import { OwnerPayoutTable } from './OwnerPayoutTable';
 import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
 import styles from './BookingDetailContent.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -386,35 +386,15 @@ export function BookingDetailContent({
             ) : null}
 
             {/*
-              Phần của CHỦ XE (ADR 0064) — hoa hồng `H` và thuế `T` XePrime giữ lại từ tiền giữ chỗ,
-              và số thực nhận cả chuyến. Số đã đóng băng lúc đặt (ADR 0024), server đọc từ snapshot;
-              đơn lập tay/đơn cũ không có thì khối không hiện.
+              Phần của CHỦ XE — bảng cộng ví (ADR 0068 điều 5), CÙNG khối với hộp duyệt yêu cầu: doanh
+              thu, phí dịch vụ – chủ xe, thuế khấu trừ, thu nhập (a), khách trả trực tiếp (b) và số
+              cộng ví. Số đã đóng băng lúc đặt (ADR 0024), server dựng từ snapshot; đơn lập tay/đơn
+              cũ không có bảng phí thì khối không hiện.
             */}
-            {data.ownerNetAmount != null ? (
+            {data.ownerPayout ? (
               <section className={styles.paymentPlan} aria-label={t('money.ownerEconomics.title')}>
                 <h4 className={styles.paymentPlanTitle}>{t('money.ownerEconomics.title')}</h4>
-                <dl className={styles.paymentPlanRows}>
-                  {data.ownerCommissionAmount && !isZeroMoney(data.ownerCommissionAmount) ? (
-                    <div className={styles.paymentPlanRow}>
-                      <dt>{t('money.ownerEconomics.commission')}</dt>
-                      <dd>
-                        <DeductedAmount value={data.ownerCommissionAmount} />
-                      </dd>
-                    </div>
-                  ) : null}
-                  {data.ownerTaxAmount && !isZeroMoney(data.ownerTaxAmount) ? (
-                    <div className={styles.paymentPlanRow}>
-                      <dt>{t('money.ownerEconomics.tax')}</dt>
-                      <dd>
-                        <DeductedAmount value={data.ownerTaxAmount} />
-                      </dd>
-                    </div>
-                  ) : null}
-                  <div className={styles.paymentPlanRowStrong}>
-                    <dt>{t('money.ownerEconomics.ownerNet')}</dt>
-                    <dd>{fmt.money(data.ownerNetAmount)}</dd>
-                  </div>
-                </dl>
+                <OwnerPayoutTable payout={data.ownerPayout} />
                 <p className={styles.paymentPlanNote}>{t('money.ownerEconomics.note')}</p>
               </section>
             ) : null}

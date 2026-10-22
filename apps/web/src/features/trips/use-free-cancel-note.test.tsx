@@ -40,23 +40,35 @@ describe('useFreeCancelNote', () => {
     expect(text).not.toContain('bảo hiểm');
   });
 
-  it('cửa sổ NGẮN (bị kẹp bởi giờ nhận xe) ⇒ báo ngắn hơn thường lệ + câu huỷ muộn', () => {
+  it('cửa sổ NGẮN (huỷ miễn phí đóng TRƯỚC hạn thanh toán) ⇒ báo rõ + câu huỷ muộn', () => {
     const text = note(
       hold({
-        freeCancelUntil: '2026-08-10T03:00:00.000Z',
+        freeCancelUntil: '2026-08-10T02:30:00.000Z',
         expiresAt: '2026-08-10T03:00:00.000Z',
         lateCancelRefundAmount: '50000',
       }),
     );
-    expect(text).toContain('ngắn hơn thường lệ');
+    expect(text).toContain('kết thúc TRƯỚC hạn thanh toán');
     expect(text).toContain('Huỷ sau mốc này');
     expect(text).toContain('50.000');
+  });
+
+  /** ADR 0066: chuyến xa có hai mốc TRÙNG nhau (cùng trần 120′) — đó là thường lệ, không "ngắn". */
+  it('hai mốc trùng nhau ⇒ câu thường lệ', () => {
+    const text = note(
+      hold({
+        freeCancelUntil: '2026-08-10T03:00:00.000Z',
+        expiresAt: '2026-08-10T03:00:00.000Z',
+      }),
+    );
+    expect(text).toMatch(/^Huỷ trước .+ được hoàn 100%/);
+    expect(text).not.toContain('kết thúc TRƯỚC hạn thanh toán');
   });
 
   it('thường lệ ⇒ mốc huỷ miễn phí + câu huỷ muộn không bảo hiểm', () => {
     const text = note(hold({}));
     expect(text).toMatch(/^Huỷ trước .+ được hoàn 100%/);
-    expect(text).not.toContain('ngắn hơn thường lệ');
+    expect(text).not.toContain('kết thúc TRƯỚC hạn thanh toán');
     expect(text).toContain('Huỷ sau mốc này thì tiền giữ chỗ không được hoàn');
   });
 });

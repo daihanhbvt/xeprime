@@ -19,6 +19,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import { useFreeCancelNote } from '../use-free-cancel-note';
 import type { CustomerTripDetail } from '../types';
+import { FreeCancelCountdown } from './FreeCancelCountdown';
 import styles from './TripHoldPanel.module.css';
 
 type Hold = NonNullable<CustomerTripDetail['hold']>;
@@ -110,6 +111,7 @@ export function TripHoldPanel({
             segment: (index, total) => t('countdownSegment', { index, total }),
           }}
         />
+        <FreeCancelCountdown hold={hold} />
       </header>
 
       {underpaid ? (

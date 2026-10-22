@@ -75,15 +75,21 @@ export class CustomerHoldDto {
   @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' })
   freeCancelUntil!: string;
   /**
-   * Chuyến này CÓ cửa sổ huỷ miễn phí không — `false` khi đặt gấp (nhận xe dưới 2 giờ sau lúc được
-   * nhận chuyến), khi đó `freeCancelUntil` trùng mốc nhận chuyến và mọi lượt huỷ sau khi trả là
-   * huỷ muộn (ADR 0064). Server suy từ hai mốc ĐÃ LƯU, client không tự so.
+   * Chuyến này CÓ cửa sổ huỷ miễn phí không (`hasFreeCancelWindow`). Từ ADR 0066 mọi hold mới có
+   * ít nhất 15′, nên `false` chỉ khi `freeCancelUntil` trùng mốc nhận chuyến: chính sách phí đặt
+   * `freeCancelHours = 0`, cửa sổ bị giờ nhận xe kẹp về 0, hoặc hold cũ tạo theo luật trước ADR
+   * 0066. Khi đó mọi lượt huỷ sau khi trả là huỷ muộn. Server suy từ hai mốc ĐÃ LƯU, client không
+   * tự so.
    */
-  @ApiProperty({ description: 'false = đặt gấp, không có thời gian huỷ miễn phí' })
+  @ApiProperty({
+    description:
+      'false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0)',
+  })
   freeCancelAvailable!: boolean;
   /**
-   * Số được hoàn vào ví điểm nếu huỷ SAU mốc miễn phí khi đã trả đủ — `IV + IP` hoàn đủ, `D + S + H`
-   * chia đôi (`resolveHoldAllocation`, cùng phép chia lượt huỷ thật dùng). VND string.
+   * Số được hoàn vào ví điểm nếu huỷ SAU mốc miễn phí khi đã trả đủ — chỉ `IV + IP` hoàn đủ; `D`
+   * đền chủ xe, `S + H − P` XePrime giữ (`resolveHoldAllocation`, cùng phép phân bổ lượt huỷ thật
+   * dùng — ADR 0066). VND string.
    */
   @ApiProperty({ description: 'Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string' })
   lateCancelRefundAmount!: string;
@@ -185,7 +191,10 @@ export class PlatformHoldDto {
   @ApiProperty() freeCancelUntil!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) releasedAt!: string | null;
-  @ApiProperty({ description: 'Đang có tranh chấp mở trên đơn — kết cục bị tạm giữ' })
+  @ApiProperty({
+    description:
+      'Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ',
+  })
   disputeOpen!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true, enum: HOLD_REFUND_STATUS_VALUES })
   refundStatus!: string | null;
@@ -306,7 +315,8 @@ export class ReconciliationPlatformDto {
   @ApiProperty({
     description:
       'Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng ' +
-      'băng. KHÔNG bằng tổng `service_fee_amount`: huỷ muộn chia đôi `D + S`.',
+      'băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ ' +
+      'vào phần nền tảng.',
   })
   serviceFeeRecognized!: string;
   @ApiProperty({ description: 'Tiền gói đã thu (subscription_invoices.paid_amount)' })

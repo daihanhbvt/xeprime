@@ -10,7 +10,9 @@ import {
   OWNER_COMMISSION_TIERS_MAX,
   SERVICE_FEE_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MIN,
-  TAX_PERCENT_MAX,
+  TAX_LEGAL_BASIS_MAX_LENGTH,
+  TAX_PIT_PERCENT_MAX,
+  TAX_VAT_PERCENT_MAX,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -18,6 +20,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDefined,
   IsInt,
   IsNumber,
   IsNumberString,
@@ -79,6 +82,48 @@ export class OwnerCommissionTierDto {
 }
 
 /**
+ * Cặp tỷ lệ khấu trừ của MỘT loại dịch vụ — `TaxRate` ở `@xeprime/types` (ADR 0068 điều 1).
+ * Trần mỗi sắc thuế là mức cao nhất của bảng NĐ 117/2025 (5%).
+ */
+export class TaxRateDto {
+  @ApiProperty({ description: `% thuế GTGT khấu trừ thay (0–${TAX_VAT_PERCENT_MAX})`, example: 5 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(TAX_VAT_PERCENT_MAX)
+  vatPercent!: number;
+
+  @ApiProperty({ description: `% thuế TNCN khấu trừ thay (0–${TAX_PIT_PERCENT_MAX})`, example: 2 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(TAX_PIT_PERCENT_MAX)
+  pitPercent!: number;
+}
+
+/**
+ * Bảng mức khấu trừ theo LOẠI DỊCH VỤ — `TaxRatesByServiceType` (ADR 0068 điều 1). Khoá là mã
+ * `SERVICE_TYPE` trên dây; đủ cả ba (thiếu một loại là 400, không phải 0%).
+ */
+export class TaxRatesDto {
+  @ApiProperty({ type: TaxRateDto, description: 'Tự lái — nhóm dịch vụ (NĐ 117: 5% + 2%)' })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => TaxRateDto)
+  self_drive!: TaxRateDto;
+
+  @ApiProperty({ type: TaxRateDto, description: 'Thuê dài hạn — nhóm dịch vụ (NĐ 117: 5% + 2%)' })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => TaxRateDto)
+  long_term!: TaxRateDto;
+
+  @ApiProperty({ type: TaxRateDto, description: 'Có tài xế — nhóm vận tải (NĐ 117: 3% + 1,5%)' })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => TaxRateDto)
+  with_driver!: TaxRateDto;
+}
+
+/**
  * Bộ số của MỘT phiên bản chính sách phí — ADR 0028 điều 2–3, luồng tiền v2 (20/10/2026).
  *
  * `*Enabled = false` là một CỔNG chưa mở, không phải tỷ lệ 0. DTO chỉ kiểm HÌNH DẠNG; điều kiện
@@ -125,8 +170,8 @@ export class UpsertFeePolicyDto {
 
   @ApiProperty({
     description:
-      'Phút khách có để chuyển cọc khi đặt XA (giờ nhận cách lúc duyệt ≥ 24 giờ) — đồng thời là trần ' +
-      'của cửa sổ động khi đặt cận ngày (ΔT × 40%, sàn 15 phút)',
+      'TRẦN của hạn chuyển tiền giữ chỗ (phút). Hạn thật = clamp(round(ΔT × 30%), 15 phút, trần) với ' +
+      'ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận — ADR 0066',
     example: 120,
   })
   @IsInt()
@@ -136,44 +181,74 @@ export class UpsertFeePolicyDto {
 
   @ApiProperty({
     description:
-      'Giờ huỷ miễn phí KỂ TỪ khi duyệt khi đặt XA (≥ 24 giờ) — đồng thời là trần của cửa sổ động ' +
-      '(ΔT × 30%; dưới 2 giờ thì không có huỷ miễn phí)',
-    example: 4,
+      'TRẦN của cửa sổ huỷ miễn phí (giờ). Cửa sổ thật = clamp(round(ΔT × 20%), 15 phút, trần) với ' +
+      'ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận; 0 = tắt huỷ miễn phí — ' +
+      'ADR 0066',
+    example: 2,
   })
   @IsInt()
   @Min(0)
   @Max(FREE_CANCEL_HOURS_MAX)
   freeCancelHours!: number;
 
-  @ApiProperty({ description: '% cọc online trên TỔNG KHÁCH TRẢ trước mã khuyến mãi', example: 30 })
+  @ApiProperty({
+    description:
+      '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, ' +
+      'không gồm phí giao xe) — ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D',
+    example: 15,
+  })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(DEPOSIT_PERCENT_MIN)
   @Max(DEPOSIT_PERCENT_MAX)
   depositPercent!: number;
 
-  @ApiProperty({ description: 'Sàn tiền cọc (VND string, bội 1.000đ)', example: '50000' })
+  @ApiProperty({
+    description: 'Sàn của `D` (VND string, bội 1.000đ): D = max(% × tiền thuê, sàn); 0 = không sàn',
+    example: '0',
+  })
   @IsNumberString()
-  @IsMoneyStep({ message: 'Sàn tiền cọc phải là bội của 1.000đ' })
+  @IsMoneyStep({ message: 'Sàn phần giữ chỗ của chủ xe phải là bội của 1.000đ' })
   depositMinAmount!: string;
 
-  @ApiProperty({ description: 'Trần % cọc của chính sách này', example: 30 })
+  @ApiProperty({ description: 'Trần % của `D` ở chính sách này', example: 30 })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(DEPOSIT_PERCENT_MIN)
   @Max(DEPOSIT_PERCENT_MAX)
   depositMaxPercent!: number;
 
-  @ApiProperty() @IsBoolean() taxEnabled!: boolean;
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  @ApiProperty({ description: 'Cổng khấu trừ thuế thay chủ xe (ADR 0068)' })
+  @IsBoolean()
+  taxEnabled!: boolean;
+
+  /*
+   * Bắt buộc khi BẬT thuế — kể cả ở bản nháp: CHECK `fee_policies_tax_requires_rates_check` áp cho
+   * mọi dòng không phải archived, nên thiếu ở đây sẽ thành lỗi 500 lúc lưu thay vì một câu 400.
+   * Tắt thuế thì hai trường bị bỏ qua và lưu null.
+   */
+  @ApiPropertyOptional({
+    type: TaxRatesDto,
+    nullable: true,
+    description:
+      'Bảng mức khấu trừ theo loại dịch vụ, tách GTGT/TNCN — bắt buộc khi taxEnabled (ADR 0068). ' +
+      'Áp cho cá nhân và hộ kinh doanh; doanh nghiệp đã xác minh không bị khấu trừ.',
+  })
   @ValidateIf((o: UpsertFeePolicyDto) => o.taxEnabled)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(TAX_PERCENT_MAX)
-  taxPercent?: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true })
-  @IsOptional()
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => TaxRatesDto)
+  taxRates?: TaxRatesDto | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Căn cứ pháp lý của việc khấu trừ — bắt buộc khi taxEnabled',
+    example: 'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',
+  })
+  @ValidateIf((o: UpsertFeePolicyDto) => o.taxEnabled)
   @IsString()
-  @MaxLength(120)
-  taxLabel?: string | null;
+  @Matches(/\S/, { message: 'Căn cứ pháp lý không được để trống' })
+  @MaxLength(TAX_LEGAL_BASIS_MAX_LENGTH)
+  taxLegalBasis?: string | null;
 
   @ApiProperty() @IsBoolean() tripInsuranceEnabled!: boolean;
   @ApiPropertyOptional({
@@ -268,8 +343,25 @@ export class FeePolicyDto {
   @ApiProperty() depositMinAmount!: string;
   @ApiProperty() depositMaxPercent!: number;
   @ApiProperty() taxEnabled!: boolean;
-  @ApiPropertyOptional({ type: Number, nullable: true }) taxPercent!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) taxLabel!: string | null;
+  @ApiPropertyOptional({
+    type: TaxRatesDto,
+    nullable: true,
+    description: 'Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). null ở chính sách ≤ v8',
+  })
+  taxRates!: TaxRatesDto | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) taxLegalBasis!: string | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'LEGACY (≤ v8) — một mức cho mọi chuyến; thay bằng taxRates',
+  })
+  taxPercent!: number | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'LEGACY (≤ v8) — nhãn của chính sách một-mức; thay bằng taxLegalBasis',
+  })
+  taxLabel!: string | null;
   @ApiProperty() tripInsuranceEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) tripInsurancePercent!: number | null;
   @ApiProperty() vehicleProtectionEnabled!: boolean;

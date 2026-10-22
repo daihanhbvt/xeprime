@@ -8,6 +8,7 @@ import {
   type QueryParams,
 } from '@/services/api-client';
 import type {
+  AssignBookingDriverInput,
   BookingDetail,
   BookingDriverHistoryItem,
   BookingFilters,
@@ -67,9 +68,14 @@ export const updateBookingDeliveryFee = (
   body: UpdateDeliveryFeeInput,
 ): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/delivery-fee`, body);
 
-/** Gán/bỏ gán tài xế cho đơn (17/08) — `driverId: null` là bỏ gán tường minh; server có audit. */
-export const assignBookingDriver = (id: string, driverId: string | null): Promise<BookingDetail> =>
-  apiPatch<BookingDetail>(`/bookings/${id}/driver`, { driverId });
+/**
+ * Gán/bỏ gán tài xế cho đơn — gửi ĐÚNG MỘT khoá: `driverId` (tài xế liên kết, `null` = bỏ gán —
+ * ADR 0063) hoặc `externalDriver` (tên + SĐT tài xế ngoài hệ thống — ADR 0067). Server có audit.
+ */
+export const assignBookingDriver = (
+  id: string,
+  body: AssignBookingDriverInput,
+): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/driver`, body);
 
 /** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */
 export const fetchBookingDriverHistory = (id: string): Promise<BookingDriverHistoryItem[]> =>

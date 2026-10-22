@@ -6,7 +6,11 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
-import { SUPPORT_CASE_CATEGORY, SUPPORT_CASE_CATEGORY_VALUES } from '@xeprime/types';
+import {
+  SUPPORT_CASE_CATEGORY,
+  SUPPORT_CASE_CATEGORY_SYSTEM_ONLY,
+  SUPPORT_CASE_CATEGORY_VALUES,
+} from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -17,8 +21,11 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useOpenSupportCase } from '../hooks/use-support-cases';
 import type { SupportSurface } from '../types';
 
+// Loại chỉ HỆ THỐNG mở (ADR 0066) — server từ chối nếu client gửi lên, nên không bày ra.
 const OPENABLE_CATEGORIES = SUPPORT_CASE_CATEGORY_VALUES.filter(
-  (value) => value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
+  (value) =>
+    value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION &&
+    !SUPPORT_CASE_CATEGORY_SYSTEM_ONLY.includes(value),
 );
 
 /**

@@ -19,6 +19,8 @@ import {
   holdWindowsFor,
   hasFreeCancelWindow,
   holdWindowsPreview,
+  isFreeCancelWindowShort,
+  longClockText,
   CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_CANCEL_PREVIEW_KIND_VALUES,
   clockText,
@@ -64,9 +66,9 @@ import { PERMISSION } from './rbac';
 describe('mốc thời gian của khoản giữ chỗ', () => {
   const accepted = new Date('2026-09-01T10:00:00.000Z');
 
-  it('mốc huỷ miễn phí là đúng 4 giờ SAU khi chủ xe duyệt, không phải trước giờ nhận', () => {
-    expect(holdFreeCancelUntil(accepted).toISOString()).toBe('2026-09-01T14:00:00.000Z');
-    expect(HOLD_FREE_CANCEL_HOURS).toBe(4);
+  it('mốc huỷ miễn phí là đúng 2 giờ SAU khi chủ xe duyệt, không phải trước giờ nhận', () => {
+    expect(holdFreeCancelUntil(accepted).toISOString()).toBe('2026-09-01T12:00:00.000Z');
+    expect(HOLD_FREE_CANCEL_HOURS).toBe(2);
   });
 
   /**
@@ -77,13 +79,14 @@ describe('mốc thời gian của khoản giữ chỗ', () => {
   it('đặt trước một tháng KHÔNG cho khách một tháng huỷ miễn phí', () => {
     const pickup = new Date('2026-10-01T10:00:00.000Z');
     const until = holdFreeCancelUntil(accepted, HOLD_FREE_CANCEL_HOURS, pickup);
-    expect(until.toISOString()).toBe('2026-09-01T14:00:00.000Z');
+    expect(until.toISOString()).toBe('2026-09-01T12:00:00.000Z');
   });
 
   it('chuyến SÁT GIỜ: cửa sổ bị kẹp về giờ nhận, không sống qua lúc khách cầm xe', () => {
     const pickupSoon = new Date('2026-09-01T11:30:00.000Z'); // chỉ 1,5 giờ sau khi duyệt
     const until = holdFreeCancelUntil(accepted, HOLD_FREE_CANCEL_HOURS, pickupSoon);
     expect(until.toISOString()).toBe('2026-09-01T11:30:00.000Z');
+    expect(HOLD_FREE_CANCEL_HOURS).toBeGreaterThan(1.5);
   });
 
   it('không truyền pickupAt thì không kẹp — caller quyết định có kẹp hay không', () => {
@@ -151,7 +154,7 @@ describe('mốc thời gian của khoản giữ chỗ', () => {
 
   it('qua nửa đêm vẫn đúng — không có bước "về đầu ngày"', () => {
     const lateEvening = new Date('2026-09-01T22:00:00.000Z');
-    expect(holdFreeCancelUntil(lateEvening).toISOString()).toBe('2026-09-02T02:00:00.000Z');
+    expect(holdFreeCancelUntil(lateEvening).toISOString()).toBe('2026-09-02T00:00:00.000Z');
   });
 });
 
@@ -179,24 +182,31 @@ describe('quyền huỷ miễn phí', () => {
   });
 });
 
-describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng tiền v2)', () => {
+describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066)', () => {
   const acceptedAt = new Date('2026-10-20T02:00:00.000Z');
+  /** Chính sách v8: huỷ miễn phí tối đa 2 giờ, thanh toán tối đa 120′. */
   const windowsAt = (leadHours: number) =>
     holdWindowsFor({
       acceptedAt,
       pickupAt: new Date(acceptedAt.getTime() + leadHours * 3_600_000),
-      freeCancelHours: 4,
+      freeCancelHours: 2,
       paymentWindowMinutes: 120,
     });
 
-  /** Năm dòng của bảng tình huống trong bản thiết kế §7.2 — số phút, không phải mốc. */
+  /**
+   * Thanh toán = clamp(round(ΔT × 30%), 15′, 120′) · huỷ = clamp(round(ΔT × 20%), 15′, 120′) —
+   * MỘT công thức cho mọi ΔT, chuyến xa tự chạm trần. Số phút, không phải mốc.
+   */
   it.each([
-    { lead: 72, cancel: 240, pay: 120 },
-    { lead: 24, cancel: 240, pay: 120 },
-    { lead: 10, cancel: 180, pay: 120 },
-    { lead: 4, cancel: 72, pay: 96 },
-    // §7.1: ΔT × 40% = 36′ (bảng §7.2 ghi tròn "30 phút"); công thức là nguồn sự thật.
-    { lead: 1.5, cancel: 0, pay: 36 },
+    { lead: 72, cancel: 120, pay: 120 },
+    { lead: 24, cancel: 120, pay: 120 },
+    { lead: 10, cancel: 120, pay: 120 },
+    { lead: 6, cancel: 72, pay: 108 },
+    { lead: 4, cancel: 48, pay: 72 },
+    { lead: 2, cancel: 24, pay: 36 },
+    { lead: 1.5, cancel: 18, pay: 27 },
+    { lead: 1, cancel: 15, pay: 18 },
+    { lead: 0.5, cancel: 15, pay: 15 },
   ])('ΔT = $lead giờ ⇒ huỷ miễn phí $cancel′, thanh toán $pay′', ({ lead, cancel, pay }) => {
     const w = windowsAt(lead);
     expect(w.freeCancelMinutes).toBe(cancel);
@@ -205,9 +215,30 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng 
     expect(w.expiresAt.getTime() - acceptedAt.getTime()).toBe(pay * 60_000);
   });
 
-  it('ngay dưới 2 giờ là KHÔNG huỷ miễn phí; đúng 2 giờ thì có 36 phút', () => {
-    expect(holdFreeCancelMinutes(119, 4)).toBe(0);
-    expect(holdFreeCancelMinutes(120, 4)).toBe(36);
+  it('không còn ngưỡng "đặt gấp ⇒ không huỷ miễn phí": dưới 2 giờ vẫn có ít nhất 15′', () => {
+    expect(holdFreeCancelMinutes(119, 2)).toBe(24);
+    expect(holdFreeCancelMinutes(30, 2)).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+    expect(holdFreeCancelMinutes(0, 2)).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+  });
+
+  it('biên làm tròn của sàn và trần', () => {
+    // 75′ × 20% = 15 · 78′ × 20% = 15,6 ⇒ 16.
+    expect(holdFreeCancelMinutes(75, 2)).toBe(15);
+    expect(holdFreeCancelMinutes(78, 2)).toBe(16);
+    // 595′ × 20% = 119 · 599′ × 20% = 119,8 ⇒ 120 (chạm trần 2 giờ).
+    expect(holdFreeCancelMinutes(595, 2)).toBe(119);
+    expect(holdFreeCancelMinutes(599, 2)).toBe(120);
+    // 390′ × 30% = 117 · 399′ × 30% = 119,7 ⇒ 120 (chạm trần 120′).
+    expect(holdPaymentWindowMinutes(390, 120)).toBe(117);
+    expect(holdPaymentWindowMinutes(399, 120)).toBe(120);
+    // 50′ × 30% = 15 · 54′ × 30% = 16,2 ⇒ 16.
+    expect(holdPaymentWindowMinutes(50, 120)).toBe(15);
+    expect(holdPaymentWindowMinutes(54, 120)).toBe(16);
+  });
+
+  it('chính sách tắt huỷ miễn phí (0 giờ) ⇒ 0, sàn 15′ không nâng nó lên', () => {
+    expect(holdFreeCancelMinutes(48 * 60, 0)).toBe(0);
+    expect(holdFreeCancelMinutes(60, 0)).toBe(0);
   });
 
   it('cửa sổ thanh toán không bao giờ dưới ngưỡng tạo hold — cùng một hằng', () => {
@@ -216,35 +247,61 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng 
   });
 
   it('cả hai cửa sổ KHÔNG vượt chính sách phí, kể cả khi ΔT × tỷ lệ lớn hơn', () => {
+    expect(holdFreeCancelMinutes(23 * 60, 2)).toBe(120);
     expect(holdFreeCancelMinutes(23 * 60, 4)).toBe(240);
     expect(holdPaymentWindowMinutes(23 * 60, 120)).toBe(120);
     expect(holdPaymentWindowMinutes(23 * 60, 90)).toBe(90);
   });
 
-  it('chuyến sát giờ: mốc hết hạn bị kẹp về giờ nhận xe, không vượt qua nó', () => {
+  it('chuyến sát giờ: cả hai mốc bị kẹp về giờ nhận xe, không vượt qua nó', () => {
     const pickupAt = new Date(acceptedAt.getTime() + 10 * 60_000);
-    const w = holdWindowsFor({ acceptedAt, pickupAt, freeCancelHours: 4, paymentWindowMinutes: 120 });
+    const w = holdWindowsFor({
+      acceptedAt,
+      pickupAt,
+      freeCancelHours: 2,
+      paymentWindowMinutes: 120,
+    });
     expect(w.paymentWindowMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+    expect(w.freeCancelMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
     expect(w.expiresAt).toEqual(pickupAt);
-    expect(w.freeCancelUntil).toEqual(acceptedAt);
+    expect(w.freeCancelUntil).toEqual(pickupAt);
   });
 
   it('giờ nhận đã qua ⇒ ΔT = 0, không có mốc nào ở tương lai của giờ nhận', () => {
     const pickupAt = new Date(acceptedAt.getTime() - 60_000);
-    const w = holdWindowsFor({ acceptedAt, pickupAt, freeCancelHours: 4, paymentWindowMinutes: 120 });
+    const w = holdWindowsFor({
+      acceptedAt,
+      pickupAt,
+      freeCancelHours: 2,
+      paymentWindowMinutes: 120,
+    });
     expect(w.leadMinutes).toBe(0);
     expect(w.expiresAt.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
+    expect(w.freeCancelUntil.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
   });
 
-  it('đặt gấp không có cửa sổ huỷ miễn phí — `hasFreeCancelWindow` đọc đúng điều đó từ hai mốc', () => {
+  it('`hasFreeCancelWindow` đọc từ hai mốc: chuyến gấp vẫn có cửa sổ, chính sách 0 giờ thì không', () => {
     const urgent = windowsAt(1.5);
-    expect(hasFreeCancelWindow(urgent.freeCancelUntil, acceptedAt)).toBe(false);
+    expect(hasFreeCancelWindow(urgent.freeCancelUntil, acceptedAt)).toBe(true);
+    const off = holdWindowsFor({
+      acceptedAt,
+      pickupAt: new Date(acceptedAt.getTime() + 48 * 3_600_000),
+      freeCancelHours: 0,
+      paymentWindowMinutes: 120,
+    });
+    expect(hasFreeCancelWindow(off.freeCancelUntil, acceptedAt)).toBe(false);
     const near = windowsAt(4);
-    expect(hasFreeCancelWindow(near.freeCancelUntil, acceptedAt)).toBe(true);
     // Chuỗi ISO từ API đi cùng đường với Date.
     expect(
       hasFreeCancelWindow(near.freeCancelUntil.toISOString(), acceptedAt.toISOString()),
     ).toBe(true);
+  });
+
+  it('`isFreeCancelWindowShort`: chuyến gần huỷ đóng TRƯỚC hạn trả; chuyến xa hai mốc trùng là thường lệ', () => {
+    expect(isFreeCancelWindowShort(windowsAt(4))).toBe(true);
+    expect(isFreeCancelWindowShort(windowsAt(8))).toBe(true);
+    expect(isFreeCancelWindowShort(windowsAt(24))).toBe(false);
+    expect(isFreeCancelWindowShort(windowsAt(72))).toBe(false);
   });
 
   it('xem trước cửa sổ: cùng `holdWindowsFor`, `tooShort` theo CÙNG ngưỡng lượt tạo hold', () => {
@@ -252,15 +309,16 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng 
     const ok = holdWindowsPreview({
       now,
       pickupAt: new Date(now.getTime() + 4 * 3_600_000),
-      freeCancelHours: 4,
+      freeCancelHours: 2,
       paymentWindowMinutes: 120,
     });
-    expect(ok.paymentWindowMinutes).toBe(96);
+    expect(ok.paymentWindowMinutes).toBe(72);
+    expect(ok.freeCancelMinutes).toBe(48);
     expect(ok.tooShort).toBe(false);
     const tight = holdWindowsPreview({
       now,
       pickupAt: new Date(now.getTime() + 10 * 60_000),
-      freeCancelHours: 4,
+      freeCancelHours: 2,
       paymentWindowMinutes: 120,
     });
     // Hạn bị kẹp về giờ nhận xe còn 10′ < 15′ ⇒ lượt duyệt sẽ nhận HOLD_WINDOW_TOO_SHORT.
@@ -525,6 +583,15 @@ describe('đồng hồ đếm ngược', () => {
     expect(clockText(9_999)).toBe('0:09');
     expect(clockText(65_000)).toBe('1:05');
     expect(clockText(600_000)).toBe('10:00');
+  });
+
+  it('đồng hồ dài: h:mm:ss từ một giờ trở lên, m:ss dưới một giờ', () => {
+    expect(longClockText(0)).toBe('0:00');
+    expect(longClockText(59 * 60_000 + 59_999)).toBe('59:59');
+    expect(longClockText(3_600_000)).toBe('1:00:00');
+    expect(longClockText(4 * 3_600_000 - 1)).toBe('3:59:59');
+    expect(longClockText(2 * 3_600_000 + 5 * 60_000 + 7_000)).toBe('2:05:07');
+    expect(longClockText(-5)).toBe('0:00');
   });
 
   it('chia chặng: chặng ĐANG chạy đếm từ 1, dư 0 nghĩa là vừa tròn một chặng', () => {

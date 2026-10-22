@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   COLLATERAL_MODE,
+  HOLD_DYNAMIC_WINDOW,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
   IDENTITY_VERIFY_METHOD,
@@ -32,8 +33,9 @@ type PolicyTab = (typeof TABS)[number];
  * Bốn tab "Quy định & Chính sách" của trang chi tiết xe — Figma v2 `19707:83494`.
  *
  * Câu chữ là của nền tảng, SỐ LIỆU là của tin đăng: khung giờ, phụ phí, hạn mức km, giấy tờ, thế chấp
- * đọc từ `listing`; hai mốc thời gian của khoản giữ chỗ đọc từ hằng số dùng chung với server
- * (`HOLD_FREE_CANCEL_HOURS`, `HOLD_PAYMENT_WINDOW_MINUTES`) — không gõ lại "4 tiếng", "120 phút".
+ * đọc từ `listing`; hai cửa sổ của khoản giữ chỗ (tỉ lệ, sàn, trần — ADR 0066) đọc từ hằng số dùng
+ * chung với server (`HOLD_DYNAMIC_WINDOW`, `HOLD_FREE_CANCEL_HOURS`, `HOLD_PAYMENT_WINDOW_MINUTES`)
+ * — không gõ lại "2 tiếng", "120 phút".
  * Huỷ miễn phí tính XUÔI từ lúc chủ xe nhận chuyến (ADR 0032 · ADR 0044), không ngược từ giờ nhận xe.
  *
  * Thanh tab theo mẫu WAI-ARIA Tabs: tab và panel nối nhau bằng id, mũi tên trái/phải/Home/End đổi
@@ -351,12 +353,24 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
           <h3 className={styles.subSectionTitle}>{tp('cancellation.title')}</h3>
           <div className={styles.ruleItem}>
             <span className={styles.bullet} />
-            <span>{tp.rich('cancellation.free', { strong, hours: HOLD_FREE_CANCEL_HOURS })}</span>
+            <span>
+              {tp.rich('cancellation.free', {
+                strong,
+                percent: Math.round(HOLD_DYNAMIC_WINDOW.FREE_CANCEL_SHARE * 100),
+                minMinutes: HOLD_DYNAMIC_WINDOW.MIN_MINUTES,
+                hours: HOLD_FREE_CANCEL_HOURS,
+              })}
+            </span>
           </div>
           <div className={styles.ruleItem}>
             <span className={styles.bullet} />
             <span>
-              {tp.rich('cancellation.hold', { strong, minutes: HOLD_PAYMENT_WINDOW_MINUTES })}
+              {tp.rich('cancellation.hold', {
+                strong,
+                percent: Math.round(HOLD_DYNAMIC_WINDOW.PAYMENT_SHARE * 100),
+                minMinutes: HOLD_DYNAMIC_WINDOW.MIN_MINUTES,
+                minutes: HOLD_PAYMENT_WINDOW_MINUTES,
+              })}
             </span>
           </div>
           <div className={styles.ruleItem}>

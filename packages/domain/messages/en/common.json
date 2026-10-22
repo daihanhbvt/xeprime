@@ -179,7 +179,7 @@
       "feesTitle": "Charges included with this trip",
       "customerTotal": "Your total",
       "ownerNet": "Host receives",
-      "ownerNetHint": "What the host earns from this trip. The XePrime service fee is paid by the guest and is NOT deducted from the host's rental income.",
+      "ownerNetHint": "What the host earns from this trip. The booking fee is paid by the guest and is NOT deducted from the host's rental income.",
       "holdAmount": "Reservation payment (upfront)",
       "holdHint": "Transferred to XePrime once the host accepts, to lock in the trip. It counts towards the rental — the rest is paid directly to the host at pickup.",
       "payAtHandover": "Pay the host at pickup",

@@ -127,7 +127,7 @@
     "success": "Vehicle held — booking created",
     "successLongTerm": "Vehicle held — long-term booking created",
     "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request.",
-    "expired": "This request passed its 60-minute response deadline and can no longer be approved. Call the customer."
+    "expired": "This request passed its response deadline and can no longer be approved. Call the customer."
   },
   "longTerm": {
     "title": "Approve & hold — long-term rental",
@@ -309,7 +309,7 @@
       "requestCode": "Request code: {code}",
       "requestCodeLabel": "Request code:",
       "body": "The host is reviewing it. You'll get a notification as soon as they reply.",
-      "pendingBody": "The host is reviewing it and has {minutes} minutes to reply. You'll get a notification as soon as there's an answer!",
+      "pendingBody": "The host is reviewing it and will reply within {hours} hours at most — the closer the pick-up time, the shorter the response deadline. You'll get a notification as soon as there's an answer!",
       "time": "Period",
       "pickupMethod": "Getting the car",
       "driverPickup": "Pick-up at: {address}",
@@ -487,12 +487,13 @@
         "title": "After you send the request",
         "instant": "This car supports Instant Book: your request is accepted automatically and you go straight to paying the holding amount to lock in the trip.",
         "instantConfirmed": "This car supports Instant Book: your request is accepted automatically and the trip is confirmed as soon as you send it — there is no online payment step.",
-        "hold": "The owner reviews and responds to your request. Once they accept, you have {minutes} minutes to pay the holding amount — the trip is confirmed only when XePrime receives it in full.",
+        "hold": "The owner reviews and responds to your request. Once they accept, you have up to {minutes} minutes to pay the holding amount (less if pick-up is soon) — the trip is confirmed only when XePrime receives it in full.",
         "general": "XePrime or the owner will contact you to check your details, confirm the car's condition and guide you through the next step. The trip is confirmed only after those steps are completed."
       }
     },
     "nearPickup": {
       "title": "You are booking close to pickup time",
+      "noFreeCancelTitle": "This trip has no free-cancellation window",
       "short": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and can cancel for free for about {freeCancel} after they accept. The later the owner accepts, the shorter both windows get.",
       "noFreeCancel": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and there is no free-cancellation window: cancelling after you pay only refunds the insurance (if any).",
       "tooShort": "Pickup is too close to pay the reservation payment through XePrime in time — the owner may not be able to accept this trip. Please pick a later pickup time.",
@@ -508,15 +509,15 @@
     "close": "Close",
     "holdTitle": "Trip accepted — waiting for payment",
     "holdLead": "The schedule is held and the payment code has been sent to the guest. The booking opens automatically once XePrime receives the reservation amount.",
-    "holdNext": "The guest has 2 hours to transfer. If the money does not arrive, the slot is released and you get a notification.",
+    "holdNext": "The guest has up to 2 hours to transfer (less if pick-up is soon). If the money does not arrive, the slot is released and you get a notification.",
     "holdClose": "Back to requests"
   },
   "deadline": {
     "label": "Response deadline",
     "remaining": "Left",
     "expired": "Response deadline passed",
-    "pastDueHint": "No answer within 60 minutes, so this request closed itself. Call the customer if you still want the trip.",
-    "hint": "The shop has 60 minutes to answer. After that the request closes itself and the customer is told to pick another vehicle."
+    "pastDueHint": "This request closed itself because its response deadline passed. Call the customer if you still want the trip.",
+    "hint": "The response deadline depends on how soon pick-up is: at least 15 minutes, at most 4 hours. After that the request closes itself and the customer is told to pick another vehicle."
   },
   "form": {
     "errors": {
@@ -571,17 +572,11 @@
   "approvalPreview": {
     "title": "If you approve now",
     "estimate": "Estimate",
-    "online": "Customer pays by QR (reservation payment)",
-    "payAtPickup": "Customer pays you at pickup",
-    "commission": "XePrime commission",
-    "tax": "Tax withheld",
-    "walletCredit": "Credited to your Points wallet when the trip completes",
-    "ownerNet": "You receive for the rental",
     "noHold": "This trip has no online reservation payment — the booking is created as soon as you approve, with no QR code.",
     "paymentWindow": "The customer has {duration} to transfer the reservation payment (until about {time}); after that the slot is released automatically.",
     "freeCancel": "The customer can cancel for free for {duration} after you approve (until about {time}).",
-    "noFreeCancel": "Pickup is very soon, so the customer gets no free-cancellation window.",
-    "lateCancel": "If the customer cancels after the free window, half of the reservation payment (excluding insurance) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
+    "noFreeCancel": "The customer gets no free-cancellation window on this trip.",
+    "lateCancel": "If the customer cancels after the free window, the whole owner's share of the reservation payment (the holding commitment calculated on the rental) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
     "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time — approval will fail. Contact the customer to arrange it directly.",
     "longTermPickPickup": "Pick a pickup time to see how long the customer has to pay. The reservation QR code is only sent to the customer after you confirm the schedule and approve."
   }

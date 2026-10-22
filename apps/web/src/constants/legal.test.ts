@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import enLegal from '@xeprime/domain/messages/en/legal.json';
 import viLegal from '@xeprime/domain/messages/vi/legal.json';
 
+import { SERVICE_TYPE, TAX_RATES_DEFAULTS, taxRateTotalPercent } from '@xeprime/types';
+
 import {
+  LEGAL_DOC,
   LEGAL_DOC_VALUES,
   LEGAL_EFFECTIVE_FROM,
   LEGAL_SECTIONS,
@@ -14,7 +17,7 @@ import { FOOTER_COLUMNS, FOOTER_SERVICE_LINKS } from '@/features/marketplace/con
 import { ROUTES } from './routes';
 
 /**
- * Bốn văn bản pháp lý công khai.
+ * Năm văn bản pháp lý công khai (bốn văn bản chung + chính sách thuế cho chủ xe).
  *
  * Nội dung do luật sư quyết, nhưng ba thứ dưới đây là kỹ thuật và phải khoá lại bằng test:
  *
@@ -102,10 +105,38 @@ describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
     expect(Number.isNaN(Date.parse(LEGAL_EFFECTIVE_FROM))).toBe(false);
   });
 
-  it('isLegalDoc chỉ nhận đúng bốn slug', () => {
+  it('isLegalDoc chỉ nhận đúng các slug đã khai', () => {
     for (const doc of LEGAL_DOC_VALUES) expect(isLegalDoc(doc)).toBe(true);
     expect(isLegalDoc('khong-ton-tai')).toBe(false);
     expect(isLegalDoc('')).toBe(false);
+  });
+});
+
+/**
+ * "Chính sách thuế cho chủ xe" (ADR 0068 điều 6) nêu mức khấu trừ HIỆN HÀNH bằng chữ. Văn bản và
+ * chính sách phí là hai nguồn khác nhau, nên khoá lại: đổi mức mặc định mà quên sửa văn bản là
+ * công bố cho chủ xe một con số không ai đang áp.
+ */
+describe('chính sách thuế cho chủ xe', () => {
+  const rateItems = {
+    [SERVICE_TYPE.SELF_DRIVE]: 'selfDrive',
+    [SERVICE_TYPE.LONG_TERM]: 'longTerm',
+    [SERVICE_TYPE.WITH_DRIVER]: 'withDriver',
+  } as const;
+
+  it.each([
+    ['vi', viLegal, ','],
+    ['en', enLegal, '.'],
+  ] as const)('%s: mức từng loại dịch vụ khớp TAX_RATES_DEFAULTS', (_locale, bundle, decimal) => {
+    const pct = (n: number) => `${String(n).replace('.', decimal)}%`;
+    const items = docOf(bundle, LEGAL_DOC.OWNER_TAX).sections.rates?.items ?? {};
+    for (const [serviceType, itemKey] of Object.entries(rateItems)) {
+      const rate = TAX_RATES_DEFAULTS[serviceType as keyof typeof rateItems];
+      const text = items[itemKey] ?? '';
+      expect(text).toContain(pct(taxRateTotalPercent(rate)));
+      expect(text).toContain(pct(rate.vatPercent));
+      expect(text).toContain(pct(rate.pitPercent));
+    }
   });
 });
 
@@ -170,7 +201,7 @@ describe('chân trang — không còn liên kết chết', () => {
     expect(footerHrefs).not.toContain(ROUTES.HOME);
   });
 
-  it('đủ bốn văn bản pháp lý và trang hỗ trợ', () => {
+  it('đủ mọi văn bản pháp lý và trang hỗ trợ', () => {
     for (const doc of LEGAL_DOC_VALUES) {
       expect(footerHrefs).toContain(legalPath.doc(doc));
     }

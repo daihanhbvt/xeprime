@@ -1079,7 +1079,7 @@
       "feeModePerKm": "Theo km",
       "tierPerKmLabel": "Đơn giá mỗi km của bậc {index}",
       "perKmUnit": "đ / km",
-      "perKmHint": "Phí = đơn giá × khoảng cách một chiều, làm tròn tới 1.000đ.",
+      "perKmHint": "Phí = đơn giá × khoảng cách một chiều, tính đúng tới đồng.",
       "perKmSummary": "{amount}/km"
     },
     "overtime": {

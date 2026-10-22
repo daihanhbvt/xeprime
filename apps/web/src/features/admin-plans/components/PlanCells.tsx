@@ -116,15 +116,13 @@ export function PlanPriceCell({ plan }: { plan: Plan }) {
   const kind = planKindOf(plan);
 
   function headline(): ReactNode {
+    // Tuyến hoa hồng không có giá thuê bao; hoa hồng theo chuyến là nấc của chính sách phí hiệu
+    // lực (ADR 0064 điều 3) — `plan.commissionPercent` là cột di sản, KHÔNG in ra.
     if (kind === PLAN_KIND.COMMISSION) {
       return (
         <>
-          <span className={styles.amount}>
-            {plan.commissionPercent == null
-              ? tCommon('labels.emptyValue')
-              : t('page.commissionPrice', { percent: plan.commissionPercent })}
-          </span>
-          <span className={styles.unit}>{t('page.perTrip')}</span>
+          <span className={styles.amountMuted}>{t('page.commissionPrice')}</span>
+          <span className={styles.unit}>{t('page.commissionByPolicy')}</span>
         </>
       );
     }

@@ -257,38 +257,86 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
 // ── Hạn phản hồi của gian hàng ──────────────────────────────────────────────
 
 /**
- * Gian hàng có **60 phút** để trả lời một yêu cầu thuê.
+ * Hạn phản hồi ĐỘNG của gian hàng — ADR 0066 (thay cửa sổ cố định 60 phút).
+ *
+ * Gọi `ΔT = pickupAt − createdAt`. Gian hàng có `clamp(round(ΔT × 20%), 15′, 240′)` để trả lời —
+ * chuyến xa (ΔT ≥ 20 giờ, và mọi ΔT ≥ 24 giờ) được trọn 4 giờ; yêu cầu DÀI HẠN chưa có giờ nhận
+ * (`pickupAt = null`, gian hàng chốt lịch lúc duyệt) cũng được 4 giờ.
  *
  * Vì sao có hạn: yêu cầu chờ duyệt KHÔNG chiếm lịch xe (`BOOKING_REQUEST_STATUS_OCCUPYING`),
  * nên một yêu cầu nằm im vô thời hạn không khoá gì cả — nó chỉ khoá KHÁCH, người đang chờ một
  * câu trả lời để còn đi tìm xe khác. Hạn phản hồi là lời hứa với khách, không phải một cơ chế
- * dọn dữ liệu.
+ * dọn dữ liệu. Vì sao tỉ lệ với ΔT: 60 phút cố định là quá gắt với chuyến tuần sau (chủ xe đang
+ * ngủ / đang giao xe khác) mà lại quá dài với chuyến nhận sau 90 phút.
+ *
+ * ⚠️ Hạn KHÔNG bị kẹp bởi `pickupAt`: với ΔT rất nhỏ, sàn 15′ có thể vượt giờ nhận xe. Đó là chủ
+ * đích (ADR 0066) — dưới 15′ không ai mở máy kịp để duyệt; lượt duyệt khi đó tự vấp
+ * `HOLD_WINDOW_TOO_SHORT` hoặc lịch đã qua, và yêu cầu hết hạn như thường.
  *
  * Số này sống ở `packages/types` vì cả ba phía phải nói cùng một con số: API tính `respondBy`
  * lúc nhận yêu cầu, worker expire theo đúng mốc đó, và web đếm ngược tới đúng nó.
  */
-export const BOOKING_REQUEST_RESPOND_WINDOW_MINUTES = 60;
+export const BOOKING_REQUEST_RESPOND_WINDOW = {
+  /** Phần của ΔT dành cho gian hàng trả lời. */
+  SHARE: 0.2,
+  /** Sàn (phút) — dưới mức này không ai kịp mở máy để duyệt. */
+  MIN_MINUTES: 15,
+  /** Trần (phút) — cũng là cửa sổ của yêu cầu dài hạn chưa có giờ nhận. */
+  MAX_MINUTES: 240,
+} as const;
 
 /**
- * Hai mốc nhắc gian hàng, tính từ lúc khách gửi.
+ * **@deprecated (ADR 0066)** — hạn phản hồi không còn là một con số cố định; dùng
+ * `bookingRequestRespondWindowMinutes` (hoặc đọc `respondBy` đã lưu). Giờ mang giá trị TRẦN của
+ * cửa sổ động. Chỉ còn để `apps/mobile` biên dịch — không dùng trong code mới.
+ */
+export const BOOKING_REQUEST_RESPOND_WINDOW_MINUTES = BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES;
+
+/**
+ * Hai mốc nhắc gian hàng, tính bằng **số phút CÒN LẠI** tới hạn — cùng khuôn với
+ * `HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`.
+ *
+ * Vì sao theo phần còn lại: cửa sổ mỗi yêu cầu dài khác nhau (15′–240′, ADR 0066), nên một mốc
+ * "sau 20 phút" có thể bắn sau khi yêu cầu đã chết. Mốc "còn N phút" tự nằm đúng chỗ; worker bỏ
+ * qua mốc nào ≥ chính cửa sổ của yêu cầu đó (nhắc "còn 60 phút" cho một yêu cầu có 30 phút là
+ * nhắc ngay lúc khách vừa gửi — vô nghĩa).
  *
  * Nhắc TRƯỚC khi hết hạn chứ không phải sau: mục đích là để yêu cầu được trả lời, không phải
  * để báo cáo rằng nó đã chết. `FINAL` cách hạn 15 phút — đủ để mở máy và bấm, không đủ để quên.
  */
-export const BOOKING_REQUEST_REMINDER_MINUTES = {
-  FIRST: 20,
-  FINAL: 45,
+export const BOOKING_REQUEST_REMINDER_REMAINING_MINUTES = {
+  FIRST: 60,
+  FINAL: 15,
 } as const;
 
 /** Phút còn lại tại mốc nhắc cuối — dùng cho câu "còn {n} phút" của thông báo. */
 export const BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES =
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
+  BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL;
 
 const MS_PER_MINUTE = 60_000;
 
-/** Hạn phản hồi của một yêu cầu gửi lúc `from`. SERVER tính — client không gửi giá trị này. */
-export function bookingRequestRespondBy(from: Date): Date {
-  return new Date(from.getTime() + BOOKING_REQUEST_RESPOND_WINDOW_MINUTES * MS_PER_MINUTE);
+/**
+ * Độ dài hạn phản hồi (phút) của một yêu cầu gửi lúc `createdAt` cho giờ nhận `pickupAt` —
+ * `clamp(round(ΔT × 20%), 15′, 240′)`; không có giờ nhận (dài hạn) ⇒ 240′. Hàm thuần.
+ */
+export function bookingRequestRespondWindowMinutes(
+  createdAt: Date,
+  pickupAt?: Date | null,
+): number {
+  const { SHARE, MIN_MINUTES, MAX_MINUTES } = BOOKING_REQUEST_RESPOND_WINDOW;
+  if (!pickupAt) return MAX_MINUTES;
+  const leadMinutes = Math.max(0, (pickupAt.getTime() - createdAt.getTime()) / MS_PER_MINUTE);
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(leadMinutes * SHARE)));
+}
+
+/**
+ * Hạn phản hồi của một yêu cầu gửi lúc `createdAt`. SERVER tính — client không gửi giá trị này.
+ * Bỏ `pickupAt` (yêu cầu dài hạn chưa chốt giờ nhận) ⇒ trọn 240′.
+ */
+export function bookingRequestRespondBy(createdAt: Date, pickupAt?: Date | null): Date {
+  return new Date(
+    createdAt.getTime() + bookingRequestRespondWindowMinutes(createdAt, pickupAt) * MS_PER_MINUTE,
+  );
 }
 
 /**

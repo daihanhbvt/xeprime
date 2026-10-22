@@ -546,3 +546,35 @@ describe('DataTable — không chứa nghiệp vụ', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(1);
   });
 });
+
+/* ------------------------------------------------------------------ hàng mở rộng */
+
+describe('DataTable — hàng mở rộng (expandable)', () => {
+  const expandable = {
+    label: 'Chi tiết',
+    rowExpandable: (row: Row) => row.id === 'r1',
+    render: (row: Row) => <p>Chi tiết của {row.name}</p>,
+  };
+
+  it('desktop: chỉ dòng mở được mới có nút, bấm thì hiện chi tiết ngay dưới dòng', () => {
+    const { container } = renderTable({ expandable });
+
+    expect(container.querySelectorAll('button.ant-table-row-expand-icon-collapsed')).toHaveLength(1);
+    expect(screen.queryByText('Chi tiết của Honda SH 150i')).toBeNull();
+    fireEvent.click(container.querySelector('button.ant-table-row-expand-icon-collapsed')!);
+    expect(screen.getByText('Chi tiết của Honda SH 150i')).toBeTruthy();
+    expect(screen.queryByText('Chi tiết của Toyota Vios')).toBeNull();
+  });
+
+  it('thẻ mobile: chi tiết nằm trong <details> cuối thẻ, bấm nhãn KHÔNG mở bản ghi', () => {
+    viewport.mobile = true;
+    const onRowClick = vi.fn();
+    const { container } = renderTable({ expandable, onRowClick });
+
+    const toggles = screen.getAllByText('Chi tiết');
+    expect(toggles).toHaveLength(1);
+    expect(container.querySelectorAll('details')).toHaveLength(1);
+    fireEvent.click(toggles[0]!);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+});

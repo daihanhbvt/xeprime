@@ -3,7 +3,12 @@
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { FEE_POLICY_STATUS_META, VEHICLE_TYPE_VALUES, type FeePolicyStatus } from '@xeprime/types';
+import {
+  FEE_POLICY_STATUS_META,
+  VEHICLE_TYPE_VALUES,
+  parseTaxRates,
+  type FeePolicyStatus,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { WorkDrawerFacts, type WorkDrawerFact } from '@/components/overlay/WorkDrawer';
@@ -13,6 +18,7 @@ import { commissionTierRanges } from '../form';
 import { useFeePolicyFormat } from '../hooks/use-fee-policy-format';
 import { useTierRangeLabel } from '../hooks/use-tier-range-label';
 import type { FeePolicy } from '../types';
+import { TaxRatesView } from './TaxRatesTable';
 import styles from './FeePolicyDetailDrawer.module.css';
 
 /**
@@ -62,6 +68,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Body({ policy }: { policy: FeePolicy }) {
   const t = useTranslations('FeePolicies.detail');
   const tForm = useTranslations('FeePolicies.form');
+  const tScope = useTranslations('FeePolicies.commissionScope');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -146,16 +153,31 @@ function Body({ policy }: { policy: FeePolicy }) {
     { key: 'partner', label: t('facts.insurancePartner'), value: policy.insurancePartnerName ?? empty },
   ];
 
-  const tax: WorkDrawerFact[] = policy.taxEnabled
-    ? [
-        {
-          key: 'taxPercent',
-          label: t('facts.taxPercent'),
-          value: policy.taxPercent != null ? pf.percent(policy.taxPercent) : empty,
-        },
-        { key: 'taxLabel', label: t('facts.taxLabel'), value: policy.taxLabel ?? empty },
-      ]
-    : [{ key: 'taxOff', label: t('facts.taxPercent'), value: off }];
+  /*
+   * Thuế (ADR 0068): bảng mức theo loại dịch vụ + căn cứ pháp lý. Phiên bản ≤ v8 (một mức, đã lưu
+   * trữ) không có bảng — hiện đúng hai số cũ của nó để đối chiếu đơn cũ.
+   */
+  const taxRates = parseTaxRates(policy.taxRates);
+  const tax: WorkDrawerFact[] = !policy.taxEnabled
+    ? [{ key: 'taxOff', label: tForm('taxEnabled'), value: off }]
+    : taxRates
+      ? [
+          {
+            key: 'taxLegalBasis',
+            label: t('facts.taxLegalBasis'),
+            value: policy.taxLegalBasis ?? empty,
+            wide: true,
+          },
+          { key: 'taxScope', label: t('facts.taxScope'), value: tForm('taxScopeValue'), wide: true },
+        ]
+      : [
+          {
+            key: 'taxPercent',
+            label: t('facts.taxPercent'),
+            value: policy.taxPercent != null ? pf.percent(policy.taxPercent) : empty,
+          },
+          { key: 'taxLabel', label: t('facts.taxLabel'), value: policy.taxLabel ?? empty },
+        ];
 
   /* Số của mô hình cũ — chỉ hiện khi phiên bản thật sự mang chúng (bản đời trước luồng tiền v2). */
   const legacy: WorkDrawerFact[] = [
@@ -185,6 +207,8 @@ function Body({ policy }: { policy: FeePolicy }) {
         <WorkDrawerFacts items={platformFee} />
       </Section>
       <Section title={t('sections.commission')}>
+        {/* Nấc này không áp cho gian hàng có gói (H = 0) — nói ngay trên đầu, không để người đọc suy. */}
+        <Alert type="info" showIcon title={tScope('title')} className={styles.alert} />
         {commission.length > 0 ? <WorkDrawerFacts items={commission} /> : <p className={styles.muted}>{empty}</p>}
       </Section>
       <Section title={t('sections.deposit')}>
@@ -195,6 +219,7 @@ function Body({ policy }: { policy: FeePolicy }) {
       </Section>
       <Section title={t('sections.tax')}>
         <WorkDrawerFacts items={tax} />
+        {policy.taxEnabled && taxRates ? <TaxRatesView rates={taxRates} /> : null}
       </Section>
       {legacy.length > 0 ? (
         <Section title={t('sections.legacy')}>

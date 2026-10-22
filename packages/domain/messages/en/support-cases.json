@@ -46,6 +46,7 @@
     "pickOne": "Pick a request to see its detail.",
     "loadError": "Could not load the request.",
     "openedBy": "Opened by",
+    "openedBySystem": "XePrime system",
     "tenant": "Shop",
     "booking": "Booking",
     "assignee": "Assignee",

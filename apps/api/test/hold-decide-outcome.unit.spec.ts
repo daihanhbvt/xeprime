@@ -34,7 +34,7 @@ describe('decideOutcome — lý do hoàn của kết cục tự động', () => 
     });
   });
 
-  it('khách huỷ SAU mốc ⇒ chia đôi, lý do `late_cancel` (không phải admin_decision)', () => {
+  it('khách huỷ SAU mốc ⇒ `split_late_cancel`, lý do `late_cancel` (không phải admin_decision)', () => {
     expect(
       decideOutcome({
         to: BOOKING_STATUS.CANCELLED,
@@ -85,13 +85,13 @@ describe('allocationForHold — phép chia lượt chốt thật và màn xem tr
     priceSnapshotJson: { fees: { taxAmount: '10000' } } as Prisma.JsonValue,
   };
 
-  it('huỷ muộn: khách chỉ nhận lại IV + IP, D + S + H chia đôi chủ xe / XePrime', () => {
+  it('huỷ muộn (ADR 0066): khách chỉ nhận lại IV + IP, chủ xe nhận trọn D, XePrime giữ S + H', () => {
     const totals = allocationTotals(
       allocationForHold(hold, BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) ?? [],
     );
-    expect(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe('70000');
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('85000');
-    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('85000');
+    expect(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe('70000'); // IV 50.000 + IP 20.000
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('100000'); // D
+    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('70000'); // S 50.000 + H 20.000
     // Huỷ không bao giờ có thuế.
     expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('0');
   });

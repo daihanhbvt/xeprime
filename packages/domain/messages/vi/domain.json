@@ -219,7 +219,8 @@
     "unassigned": "Đã gỡ tài xế",
     "cancelled": "Đơn đã huỷ",
     "no_show": "Khách không đến",
-    "completed": "Hoàn thành"
+    "completed": "Hoàn thành",
+    "expired": "Quá hạn xác nhận"
   },
   "driverLicenceState": {
     "verified": "Bằng lái đã xác thực",
@@ -394,7 +395,9 @@
     "driver_trip_unassigned": "Chuyến đã được gỡ khỏi bạn",
     "driver_trip_completed": "Chuyến đã hoàn thành",
     "driver_trip_accepted": "Tài xế đã nhận chuyến",
-    "driver_trip_declined": "Tài xế từ chối chuyến"
+    "driver_trip_declined": "Tài xế từ chối chuyến",
+    "driver_trip_response_expired": "Tài xế không phản hồi",
+    "booking_driver_missing": "Chuyến sắp nhận chưa có tài xế"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -727,8 +730,8 @@
     "motorbike": "Xe máy"
   },
   "feeLine": {
-    "service_fee": "Phí dịch vụ XePrime",
-    "owner_commission": "Hoa hồng XePrime",
+    "service_fee": "Phí đặt xe",
+    "owner_commission": "Phí dịch vụ – Chủ xe",
     "tax": "Thuế khấu trừ/nộp thay",
     "trip_insurance": "Bảo hiểm tai nạn người ngồi trên xe",
     "vehicle_protection": "Bảo hiểm vật chất xe",
@@ -804,7 +807,8 @@
   },
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "% phí dịch vụ ngoài khoảng cho phép",
-    "tax_requires_rate_and_label": "Thuế cần cả tỷ lệ và tên loại thuế",
+    "tax_requires_rates_and_basis": "Thuế cần đủ bảng mức theo loại dịch vụ và căn cứ pháp lý",
+    "tax_rate_out_of_range": "Mức GTGT hoặc TNCN ngoài khoảng cho phép (0–5%, tối đa hai chữ số thập phân)",
     "insurance_requires_partner": "Bảo hiểm cần tên đối tác thật",
     "trip_insurance_requires_rate": "Bảo hiểm tai nạn người cần biểu phí ngày cho mọi loại xe",
     "vehicle_protection_requires_rate": "Bảo hiểm vật chất xe cần biểu phí ngày cho mọi loại xe",
@@ -812,8 +816,8 @@
     "owner_commission_tiers_invalid": "Nấc hoa hồng phải bắt đầu từ ngày 1, tăng dần, mỗi nấc từ 0% đến 30%",
     "hold_window_out_of_range": "Cửa sổ chuyển khoản ngoài khoảng cho phép",
     "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép",
-    "deposit_percent_out_of_range": "% cọc ngoài khoảng cho phép hoặc vượt trần của chính sách",
-    "deposit_percent_below_tax_percent": "% cọc không được thấp hơn % thuế",
+    "deposit_percent_out_of_range": "% tiền giữ chỗ của chủ xe ngoài khoảng cho phép hoặc vượt trần của chính sách",
+    "deposit_percent_below_tax_percent": "% tiền giữ chỗ của chủ xe không được thấp hơn mức thuế cao nhất của bảng",
     "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản"
   },
   "bookingHoldStatus": {
@@ -827,7 +831,7 @@
   "bookingHoldOutcome": {
     "kept": "Đã dùng cho chuyến",
     "settled": "Đã quyết toán",
-    "split_late_cancel": "Huỷ muộn — chia đôi",
+    "split_late_cancel": "Huỷ muộn — đền giữ chỗ",
     "refunded": "Đã hoàn khách",
     "forfeited": "Bồi thường chủ xe",
     "released_to_shop": "Đã chuyển gian hàng"
@@ -861,6 +865,7 @@
     "account": "Tài khoản",
     "account_deletion": "Yêu cầu xoá tài khoản",
     "plan_consultation": "Tư vấn gói",
+    "handover_unconfirmed": "Chưa xác nhận bàn giao xe",
     "other": "Khác"
   },
   "supportCaseParty": {
@@ -1270,6 +1275,9 @@
       "retry": "Phát hành lại bảo hiểm",
       "void": "Huỷ hợp đồng bảo hiểm"
     },
+    "insurance_product": {
+      "update": "Cập nhật sản phẩm bảo hiểm"
+    },
     "listing": {
       "support": {
         "repair": "Sửa đồng bộ tin đăng (phiên hỗ trợ)"
@@ -1345,6 +1353,9 @@
       "transition": "Chuyển trạng thái case hỗ trợ",
       "resolve": "Giải quyết case hỗ trợ",
       "withdraw": "Rút case hỗ trợ"
+    },
+    "tax": {
+      "period_export": "Xuất bảng kê thuế theo kỳ"
     },
     "tax_withholding": {
       "reverse": "Đảo bút toán khấu trừ thuế"
@@ -1496,6 +1507,7 @@
     "fee_policy": "Chính sách phí",
     "hold_refund": "Hoàn tiền giữ chỗ",
     "holiday_sync_run": "Lượt đồng bộ lịch nghỉ lễ",
+    "insurance_product": "Sản phẩm bảo hiểm",
     "marketplace_banner": "Banner trang chủ",
     "payment": "Thanh toán",
     "payment_gateway_order": "Lượt thanh toán qua cổng",

@@ -10,7 +10,7 @@ import type { Plan } from '../types';
 
 /**
  * Đặc tả PlanFormModal sau ADR 0041: chế độ thu phí quyết định form là CÁI GÌ (tuyến hoa hồng
- * chỉ có %, bậc gian hàng có trần + bảng giá), giá gửi lên là con số TUYỆT ĐỐI của từng kỳ hạn,
+ * chỉ có tên/mô tả + thẻ thông tin, bậc gian hàng có trần + bảng giá), giá gửi lên là con số TUYỆT ĐỐI của từng kỳ hạn,
  * kỳ bỏ trống KHÔNG lọt vào `termPrices`, `code` bị khoá khi sửa (định danh — ADR 0010), và
  * nhân bản là TẠO MỚI điền sẵn.
  *
@@ -70,23 +70,11 @@ const COMMISSION_PLAN: Plan = {
   limits: { ...PLAN.limits, maxVehicles: null, maxBranches: null, termPrices: [], features: [] },
 } as Plan;
 
-function renderModal(
-  plan: Plan | null,
-  {
-    template = null,
-    allowCommission = false,
-  }: { template?: Plan | null; allowCommission?: boolean } = {},
-) {
+function renderModal(plan: Plan | null, { template = null }: { template?: Plan | null } = {}) {
   const onClose = vi.fn();
   renderWithIntl(
     <App>
-      <PlanFormModal
-        open
-        plan={plan}
-        template={template}
-        allowCommission={allowCommission}
-        onClose={onClose}
-      />
+      <PlanFormModal open plan={plan} template={template} onClose={onClose} />
     </App>,
   );
   return { onClose };
@@ -270,13 +258,10 @@ describe('PlanFormModal — chế độ tạo', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('chỉ cho chọn "Hoa hồng theo chuyến" khi danh mục CHƯA có bậc đó', () => {
-    renderModal(null, { allowCommission: false });
+  // Tuyến hoa hồng là tuyến cố định do seed hệ thống dựng — tạo mới chỉ có bậc gian hàng.
+  it('tạo mới chỉ có một loại gói (bậc gian hàng) nên ô chọn bị khoá', () => {
+    renderModal(null);
     expect((byLabel('Loại gói') as HTMLInputElement).disabled).toBe(true);
-    cleanup();
-
-    renderModal(null, { allowCommission: true });
-    expect((byLabel('Loại gói') as HTMLInputElement).disabled).toBe(false);
   });
 });
 
@@ -392,10 +377,14 @@ describe('PlanFormModal — xoá gói nháp', () => {
 });
 
 describe('PlanFormModal — tuyến hoa hồng', () => {
-  it('chỉ có %, không có trần nào để sửa và không có bảng giá', () => {
+  /*
+   * Hoa hồng theo chuyến là nấc của chính sách phí hiệu lực (ADR 0064 điều 3) — `commissionPercent`
+   * của bậc là cột di sản backend không đọc, nên form không còn ô nhập nào cho nó.
+   */
+  it('không có ô % hoa hồng, không trần nào để sửa và không có bảng giá', () => {
     renderModal(COMMISSION_PLAN);
 
-    expect(byLabel('Tỷ lệ hoa hồng / chuyến')).toBeTruthy();
+    expect(queryLabel('Tỷ lệ hoa hồng')).toBeNull();
     expect(queryLabel('Số xe tối đa')).toBeNull();
     expect(queryLabel('Giá kỳ 1 tháng')).toBeNull();
     expect(queryLabel('Tính năng của gói')).toBeNull();
@@ -403,11 +392,19 @@ describe('PlanFormModal — tuyến hoa hồng', () => {
 
   /*
    * Trần của tuyến hoa hồng là `OWNER_LITE_VEHICLE_LIMIT` trong code, không phải dữ liệu bậc —
-   * form hiện nó ra như THÔNG TIN để admin không đi tìm, nhưng không có ô nhập nào.
+   * form hiện nó ra trong THẺ THÔNG TIN chỉ-đọc kèm đường dẫn sang Chính sách phí.
    */
-  it('hiện trần Owner Lite dưới dạng thông tin, không phải ô nhập', () => {
+  it('hiện thẻ thông tin chỉ-đọc: trần Owner Lite + đường dẫn Chính sách phí', () => {
     renderModal(COMMISSION_PLAN);
+    expect(
+      screen.getByText(
+        'Tuyến vào cửa mặc định cho chủ xe cá nhân (tối đa 3 xe). Không phí thuê bao. Hoa hồng theo chuyến được quy định tại Chính sách phí.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('3 xe')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Xem Chính sách phí' }).getAttribute('href')).toContain(
+      '/fee-policies',
+    );
     // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1) — không in, không có ô nhập.
     expect(screen.queryByText(/chi nhánh/)).toBeNull();
   });
@@ -424,7 +421,8 @@ describe('PlanFormModal — tuyến hoa hồng', () => {
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
     const payload = update.mutate.mock.calls[0]![0];
     expect('limits' in payload).toBe(false);
-    expect(payload.commissionPercent).toBe(10);
+    // Bỏ trống = server giữ nguyên cột di sản đang lưu; không gửi lại một con số không ai đọc.
+    expect('commissionPercent' in payload).toBe(false);
   });
 });
 

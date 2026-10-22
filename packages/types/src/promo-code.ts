@@ -32,7 +32,7 @@
  * Framework-free: api tính, web/mobile hiển thị, worker đọc — MỘT phép tính.
  */
 
-import { floorToThousand } from './fee-policy';
+import { ceilToThousand } from './fee-policy';
 import { PRICE_ROW } from './pricing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { SERVICE_TYPE, VEHICLE_TYPE, type ServiceType, type VehicleType } from './status/vehicle';
@@ -545,7 +545,7 @@ export function computePromoDiscount(input: PromoDiscountInput): PromoDiscountRe
   const raw =
     input.terms.discountType === PROMO_DISCOUNT_TYPE.FIXED
       ? Number(input.terms.discountAmount ?? 0)
-      : floorToThousand((eligible * (input.terms.discountPercent ?? 0)) / 100);
+      : ceilToThousand((eligible * Math.round((input.terms.discountPercent ?? 0) * 100)) / 10_000);
   if (!(raw > 0)) return { ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR };
 
   const percentCap =
@@ -561,16 +561,15 @@ export function computePromoDiscount(input: PromoDiscountInput): PromoDiscountRe
   }
 
   /*
-   * BƯỚC GIÁ 1.000đ, làm tròn XUỐNG (ADR 0064). Số này đi thẳng vào mã QR (`holdAmount = grossOnline − P`)
-   * và vào tổng khách trả, nên nó phải là bội 1.000đ như mọi khoản tiền khác.
-   *
-   * XUỐNG chứ không phải `roundToThousand` (nửa bước LÊN) vì mọi đại lượng ở đây là một TRẦN: làm
-   * tròn lên có thể đẩy số giảm vượt `maxDiscountAmount` hay phần tài trợ được mà nó vừa bị kẹp vào
-   * — nền tảng hứa "giảm tối đa 50.000đ" rồi giảm 50.500đ. Làm tròn xuống thì không bao giờ vượt
-   * cam kết, và khách thiệt tối đa 999đ trên một khoản giảm theo %. Số cấu hình (giảm tiền cố định,
-   * trần) đã bị chặn bội 1.000đ ở DTO; `floor` ở cuối là lưới cho tiền thuê/cọc cũ còn số lẻ.
+   * Làm tròn LÊN rồi mới KẸP (ADR 0069 điều 2, thay "làm tròn XUỐNG" của ADR 0046): phần trăm
+   * đã nhân ở trên được `ceilToThousand` để khách KHÔNG BAO GIỜ được giảm ít hơn % đã công bố
+   * (10% × 652.000đ = 65.200đ ⇒ giảm 66.000đ). Sau đó các trần thắng: trần của mã, tiền thuê đủ
+   * điều kiện, `grossOnline − holdMinAmount` và phần tài trợ được. Trần thấp hơn thì lấy ĐÚNG trần
+   * — có thể lẻ tới đồng (tiền giữ chỗ nay đúng tới đồng), nhưng không bao giờ vượt một cam kết:
+   * nền tảng hứa "giảm tối đa 50.000đ" thì giảm đúng 50.000đ. Mã giảm số tiền cố định giữ nguyên
+   * số admin nhập (DTO đã chặn bội 1.000đ).
    */
-  const applied = floorToThousand(Math.min(raw, percentCap, eligible, onlineCap, sponsorCap));
+  const applied = Math.min(raw, percentCap, eligible, onlineCap, sponsorCap);
   if (!(applied > 0)) return { ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR };
 
   return { ok: true, discountAmount: String(applied), clamped: applied < raw };

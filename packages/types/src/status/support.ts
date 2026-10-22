@@ -30,6 +30,15 @@ export const SUPPORT_CASE_CATEGORY = {
   ACCOUNT_DELETION: 'account_deletion',
   /** Yêu cầu tư vấn gói gửi từ app Partner — chỉ qua `POST /support/plan-consultation`. */
   PLAN_CONSULTATION: 'plan_consultation',
+  /**
+   * Quá giờ nhận xe `HANDOVER_CONFIRMATION_GRACE_MINUTES` mà CẢ HAI bên đều im lặng — không biên
+   * bản giao xe nào được xác nhận, khách cũng không báo "chưa nhận được xe" (ADR 0066, lớp 3).
+   *
+   * CHỈ worker mở loại này (`opened_by_user_id` NULL — không có người nào bấm nút); client gửi
+   * lên thì bị từ chối. Như `dispute`, nó GIỮ quyết toán khoản giữ chỗ của đơn cho tới khi đóng —
+   * xem `SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES`.
+   */
+  HANDOVER_UNCONFIRMED: 'handover_unconfirmed',
   OTHER: 'other',
 } as const;
 
@@ -50,8 +59,29 @@ export const SUPPORT_CASE_CATEGORY_LABEL: Readonly<Record<SupportCaseCategory, s
   [SUPPORT_CASE_CATEGORY.ACCOUNT]: 'Tài khoản',
   [SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION]: 'Yêu cầu xoá tài khoản',
   [SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION]: 'Tư vấn gói',
+  [SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED]: 'Chưa xác nhận bàn giao xe',
   [SUPPORT_CASE_CATEGORY.OTHER]: 'Khác',
 };
+
+/**
+ * Loại case GIỮ quyết toán khoản giữ chỗ của đơn khi còn mở (ADR 0028 R3 · ADR 0066).
+ *
+ * MỘT danh sách cho mọi nơi đọc "tiền đơn này đang bị giữ": `HoldSettlementService` (không chốt
+ * kết cục), cờ `disputeOpen` của dòng hold và bộ đếm của màn tiền nền tảng. Hai danh sách là hai
+ * câu trả lời khác nhau cho cùng một câu hỏi.
+ */
+export const SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES: readonly SupportCaseCategory[] = [
+  SUPPORT_CASE_CATEGORY.DISPUTE,
+  SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED,
+];
+
+/**
+ * Loại case chỉ HỆ THỐNG hoặc một endpoint riêng mở — `POST /support/cases` từ chối chúng, và
+ * form mở case của web không bày chúng ra.
+ */
+export const SUPPORT_CASE_CATEGORY_SYSTEM_ONLY: readonly SupportCaseCategory[] = [
+  SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED,
+];
 
 export const SUPPORT_CASE_STATUS = {
   OPEN: 'open',
@@ -169,6 +199,30 @@ export const SUPPORT_PARTY = {
 
 export type SupportParty = (typeof SUPPORT_PARTY)[keyof typeof SUPPORT_PARTY];
 export const SUPPORT_PARTY_VALUES = Object.values(SUPPORT_PARTY) as SupportParty[];
+
+/**
+ * Đường mở case chuyên biệt (ADR 0066) — ghi vào `audit_logs.after_json.reason` để nhật ký phân
+ * biệt "khách báo chưa nhận được xe" với một tranh chấp mở tay.
+ */
+export const SUPPORT_CASE_OPEN_REASON = {
+  /** Lớp 1: khách bấm "Chưa nhận được xe" trong ân hạn bàn giao. */
+  TRIP_NOT_RECEIVED: 'trip_not_received',
+  /** Lớp 3: worker — quá ân hạn bàn giao mà cả hai bên im lặng. */
+  HANDOVER_OVERDUE: 'handover_overdue',
+} as const;
+
+/**
+ * Kết luận TỰ ĐỘNG một case (không có nhân sự nào bấm) — ghi vào `audit_logs.after_json.reason`.
+ */
+export const SUPPORT_CASE_AUTO_RESOLVE_REASON = {
+  /**
+   * Chủ xe xác nhận biên bản GIAO XE sau khi worker đã mở `handover_unconfirmed` (ADR 0066,
+   * lớp 3): điều case đó chờ xác minh — chuyến có diễn ra không — vừa được trả lời, nên case tự
+   * kết luận trong CÙNG transaction xác nhận và tiền của chuyến không bị giữ vô thời hạn. Tranh
+   * chấp (`dispute`) của khách KHÔNG bao giờ tự đóng theo đường này.
+   */
+  HANDOVER_CONFIRMED: 'handover_confirmed',
+} as const;
 
 /** Mã `audit_logs.action` của case hỗ trợ. */
 export const SUPPORT_CASE_AUDIT_ACTION = {

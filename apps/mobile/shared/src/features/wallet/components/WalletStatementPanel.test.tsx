@@ -34,6 +34,8 @@ function trip(overrides: Partial<WalletStatementTrip> = {}): WalletStatementTrip
     ownerCommissionAmount: '0',
     taxAmount: '90000',
     payAtPickupAmount: '0',
+    deliveryAmount: '0',
+    ownerIncomeAmount: '810000',
     balanceChange: '810000',
     ...overrides,
   };
@@ -55,6 +57,7 @@ function statement(): WalletStatement {
       ownerCommissionTotal: '0',
       taxTotal: '90000',
       payAtPickupTotal: '0',
+      deliveryTotal: '0',
       balanceChangeTotal: '810000',
       subscriptionFeeTotal: '0',
       ownerIncome: '810000',

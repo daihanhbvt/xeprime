@@ -126,7 +126,7 @@ Khách gửi yêu cầu (không thu tiền, không chiếm lịch)
 - Không có khoản nào phải thu online (gian hàng tắt thu cọc, báo giá còn tạm tính, dài hạn chưa chốt lịch) ⇒ đơn tạo ngay lúc duyệt, **không có QR giả** (điều 4).
 - Giờ nhận quá gần (cửa sổ còn < 15′) ⇒ không phát QR, trả `HOLD_WINDOW_TOO_SHORT`; chuyến thỏa thuận trực tiếp (điều 5).
 - Một khung giờ một người thắng: khi một yêu cầu được nhận, các yêu cầu chồng lấn còn chờ đóng bằng `slot_taken` và khách được báo ngay (điều 6).
-- Gian hàng có hạn phản hồi yêu cầu (hiện 60 phút). Chuyến **có tài xế** không tự nhận khi có thu tiền giữ chỗ (điều 8).
+- Gian hàng có hạn phản hồi yêu cầu động theo khoảng cách tới giờ nhận (4 giờ cho chuyến đặt trước ≥ 24 giờ; 20% khoảng đó, 15 phút – 4 giờ, cho chuyến gần hơn — ADR 0066). Chuyến **có tài xế** không tự nhận khi có thu tiền giữ chỗ (điều 8).
 
 ### 5.2 Tiền giữ chỗ và phân bổ — [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) điều 2 · [ADR 0029](../decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1–2 · [ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md)
 

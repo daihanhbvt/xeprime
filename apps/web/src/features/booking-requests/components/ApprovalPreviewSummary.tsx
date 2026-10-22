@@ -2,10 +2,8 @@
 
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
-import { DeductedAmount } from '@/components/data-display/DeductedAmount';
+import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { cx } from '@/lib/cx';
-import { isZeroMoney } from '@/lib/money';
 import type { BookingRequestItem } from '../types';
 import styles from './ApprovalPreviewSummary.module.css';
 
@@ -18,8 +16,9 @@ export type ApprovalWindows = NonNullable<ApprovalPreview['windows']>;
  * dựng bằng đúng `holdWindowsFor` trên giờ nhận vừa chọn. Luôn gắn nhãn ƯỚC TÍNH — số chốt đóng
  * băng lúc duyệt (ADR 0024).
  *
- * Đây là DTO nội bộ của gian hàng: hoa hồng, thuế và số thực nhận của CHỦ XE hiện ở đây là đúng
- * chỗ — khách không bao giờ thấy khối này.
+ * Đây là DTO nội bộ của gian hàng: phí dịch vụ – chủ xe, thuế và số thực nhận của CHỦ XE hiện ở
+ * đây là đúng chỗ — khách không bao giờ thấy khối này. Phần tiền là bảng cộng ví dùng CHUNG với chi
+ * tiết đơn (`OwnerPayoutTable`, ADR 0068 điều 5); các ghi chú cửa sổ thanh toán/huỷ đứng dưới nó.
  */
 export function ApprovalPreviewSummary({
   preview,
@@ -49,46 +48,7 @@ export function ApprovalPreviewSummary({
         <span className={styles.badge}>{t('estimate')}</span>
       </header>
 
-      {showMoney ? (
-        <dl className={styles.rows}>
-          {preview.collectsHold && preview.onlineAmount ? (
-            <div className={styles.row}>
-              <dt>{t('online')}</dt>
-              <dd>{fmt.money(preview.onlineAmount)}</dd>
-            </div>
-          ) : null}
-          <div className={styles.row}>
-            <dt>{t('payAtPickup')}</dt>
-            <dd>{fmt.money(preview.payAtPickupAmount)}</dd>
-          </div>
-          {!isZeroMoney(preview.ownerCommissionAmount) ? (
-            <div className={styles.row}>
-              <dt>{t('commission')}</dt>
-              <dd>
-                <DeductedAmount value={preview.ownerCommissionAmount} />
-              </dd>
-            </div>
-          ) : null}
-          {!isZeroMoney(preview.taxAmount) ? (
-            <div className={styles.row}>
-              <dt>{t('tax')}</dt>
-              <dd>
-                <DeductedAmount value={preview.taxAmount} />
-              </dd>
-            </div>
-          ) : null}
-          {preview.collectsHold ? (
-            <div className={styles.row}>
-              <dt>{t('walletCredit')}</dt>
-              <dd>{fmt.money(preview.ownerPayableAmount)}</dd>
-            </div>
-          ) : null}
-          <div className={cx(styles.row, styles.total)}>
-            <dt>{t('ownerNet')}</dt>
-            <dd>{fmt.money(preview.ownerNetAmount)}</dd>
-          </div>
-        </dl>
-      ) : null}
+      {showMoney ? <OwnerPayoutTable payout={preview.ownerPayout} label={t('title')} /> : null}
 
       {!preview.collectsHold ? (
         <p className={styles.note}>{t('noHold')}</p>

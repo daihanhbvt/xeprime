@@ -69,6 +69,12 @@ export {
   type PhoneSchemaLabels,
 } from './phone';
 
+export {
+  buildExternalDriverSchema,
+  type ExternalDriverFormValues,
+  type ExternalDriverSchemaLabels,
+} from './external-driver';
+
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
 
 /**

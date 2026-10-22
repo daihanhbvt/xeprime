@@ -15,7 +15,11 @@ import {
 } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { UpdateTenantProfileDto } from '../src/modules/tenants/dto/tenant-onboarding.dto';
-import { makeBranchesService, makeTenantsService } from './helpers/service-factory';
+import {
+  makeBranchesService,
+  makeSellerProfileService,
+  makeTenantsService,
+} from './helpers/service-factory';
 
 /**
  * Hồ sơ gian hàng (`PATCH /tenants/current/profile`) — chạy trên PostgreSQL THẬT.
@@ -35,6 +39,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const branches = makeBranchesService(asService);
 const tenants = makeTenantsService(asService);
+const sellerProfiles = makeSellerProfileService(asService);
 /** Quyền của CHỦ gian hàng (có `seller_profile.manage`) — controller đọc nó từ membership. */
 const OWNER_ACCESS = { canManageSellerProfile: true };
 
@@ -495,6 +500,139 @@ describe('Mã số thuế — một nguồn là hồ sơ người bán', () => {
     expect(await errorsOf({ taxCode: '0316 123 456' })).toEqual([]);
     expect(await errorsOf({ taxCode: 'MST-abc' })).toContain('taxCode');
     expect(await errorsOf({ taxCode: '123' })).toContain('taxCode');
+  });
+});
+
+/**
+ * Hồ sơ ĐÃ XÁC MINH đổi định danh thuế ⇒ phải duyệt lại (ADR 0068 điều 2).
+ *
+ * Chỉ doanh nghiệp ĐÃ XÁC MINH mới được miễn khấu trừ thuế (`taxSellerEntityOf`). Nếu hồ sơ đã
+ * duyệt tự đổi `individual → company` mà vẫn giữ nhãn "đã xác minh", một cú bấm là thôi bị khấu
+ * trừ 7% — nên đổi loại chủ thể, MST hay CCCD đưa hồ sơ về hàng đợi reviewer, có audit.
+ */
+describe('Hồ sơ người bán đã xác minh đổi định danh thuế ⇒ duyệt lại', () => {
+  const verify = () =>
+    prisma.sellerProfile.update({
+      where: { tenantId },
+      data: {
+        entityType: SELLER_ENTITY_TYPE.INDIVIDUAL,
+        legalName: 'Nguyễn Văn Thuế',
+        taxId: null,
+        idNumber: '079123456789',
+        status: SELLER_PROFILE_STATUS.VERIFIED,
+        verifiedAt: new Date(),
+      },
+    });
+  const state = () =>
+    prisma.sellerProfile.findUniqueOrThrow({
+      where: { tenantId },
+      select: { id: true, status: true, verifiedAt: true, entityType: true },
+    });
+  const base = {
+    entityType: SELLER_ENTITY_TYPE.INDIVIDUAL,
+    legalName: 'Nguyễn Văn Thuế',
+    taxId: null,
+    idNumber: '079123456789',
+  };
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.approvalTask.deleteMany({ where: { tenantId } });
+    await prisma.sellerProfile.update({
+      where: { tenantId },
+      data: { status: SELLER_PROFILE_STATUS.DRAFT, verifiedAt: null },
+    });
+  });
+
+  maybe('đổi cá nhân → doanh nghiệp: về `submitted`, mở phiếu duyệt, ghi audit lý do', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+
+    const dto = await sellerProfiles.save(tenantId, ownerId, {
+      ...base,
+      entityType: SELLER_ENTITY_TYPE.COMPANY,
+      taxId: '0316999888',
+    });
+
+    expect(dto.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
+    const after = await state();
+    expect(after.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
+    expect(after.verifiedAt).toBeNull();
+    expect(
+      await prisma.approvalTask.count({ where: { tenantId, targetId: after.id, status: 'pending' } }),
+    ).toBe(1);
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { tenantId, action: 'seller_profile.save' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(log.afterJson).toMatchObject({
+      entityType: SELLER_ENTITY_TYPE.COMPANY,
+      status: SELLER_PROFILE_STATUS.SUBMITTED,
+      reverifyReason: ['entityType', 'taxId'],
+    });
+    expect(log.beforeJson).toMatchObject({ status: SELLER_PROFILE_STATUS.VERIFIED });
+  });
+
+  /**
+   * Trạng thái đọc TRONG transaction sau khi khoá hàng: hai lượt lưu song song trên hồ sơ đã xác
+   * minh không được cùng thấy `verified`. Lượt thắng đưa hồ sơ về `submitted`; lượt thua phải đọc
+   * đúng trạng thái đó và bị từ chối — không ghi đè lên bộ số vừa được gửi duyệt.
+   */
+  maybe('hai lượt lưu SONG SONG trên hồ sơ đã xác minh: đúng một lượt thắng, lượt kia 409', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+
+    const results = await Promise.allSettled([
+      sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000011' }),
+      sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000022' }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]!.reason).toMatchObject({
+      response: { code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE },
+    });
+    const after = await state();
+    expect(after.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
+    expect(
+      await prisma.approvalTask.count({ where: { tenantId, targetId: after.id, status: 'pending' } }),
+    ).toBe(1);
+  });
+
+  maybe('đổi số CCCD cũng phải duyệt lại', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+    await sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000001' });
+    expect((await state()).status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
+  });
+
+  maybe('đổi sang loại chủ thể còn THIẾU trường bắt buộc ⇒ về `draft`, không vào hàng đợi', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+    // Doanh nghiệp bắt buộc có MST — chưa khai thì không thể gửi duyệt.
+    await sellerProfiles.save(tenantId, ownerId, { ...base, entityType: SELLER_ENTITY_TYPE.COMPANY });
+    expect((await state()).status).toBe(SELLER_PROFILE_STATUS.DRAFT);
+    expect(await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } })).toBe(0);
+  });
+
+  maybe('chỉ đổi tên pháp lý / nơi cấp ⇒ GIỮ `verified` (không đổi nghĩa vụ thuế)', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+    await sellerProfiles.save(tenantId, ownerId, {
+      ...base,
+      legalName: 'Nguyễn Văn Thuế (đổi dấu)',
+      idIssuedBy: 'Cục CS QLHC về TTXH',
+    });
+    expect((await state()).status).toBe(SELLER_PROFILE_STATUS.VERIFIED);
+  });
+
+  maybe('đổi MST qua hồ sơ gian hàng (đường cũ) ở hồ sơ đã xác minh ⇒ cũng duyệt lại', async () => {
+    await sellerProfiles.getOrCreate(tenantId);
+    await verify();
+    await tenants.updateProfile(tenantId, ownerId, { taxCode: '0316777666' }, OWNER_ACCESS);
+    expect((await state()).status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
   });
 });
 

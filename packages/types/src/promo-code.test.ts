@@ -49,9 +49,11 @@ const POLICY: FeePolicySnapshot = {
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
-  depositMinAmount: '50000',
+  // depositPercent 15 · depositMinAmount '0' — FEE_SCHEDULE_DEFAULTS (chính sách v8, ADR 0066).
   depositMaxPercent: 30,
   taxEnabled: false,
+  taxRates: null,
+  taxLegalBasis: null,
   taxPercent: null,
   taxLabel: null,
   tripInsuranceEnabled: false,
@@ -170,37 +172,37 @@ describe('computePromoDiscount — công thức và bốn cái trần', () => {
     expect(r).toEqual({ ok: true, discountAmount: '112000', clamped: false });
   });
 
-  it('mã PHẦN TRĂM làm tròn XUỐNG bước 1.000đ — không bao giờ giảm quá số đã hứa', () => {
+  it('mã PHẦN TRĂM làm tròn LÊN bước 1.000đ — khách không bao giờ được giảm ít hơn % đã hứa', () => {
     /*
-     * 7% × 1.264.500 = 88.515 ⇒ 88.000 — không phải 88.515đ (số lẻ trên mã QR), cũng không phải
-     * 89.000đ (làm tròn lên là giảm quá 7% đã hứa). Số này đi thẳng vào mã QR (ADR 0064).
+     * 7% × 1.264.500 = 88.515 ⇒ 89.000 (ADR 0069 điều 2 — trước đây làm tròn XUỐNG còn 88.000,
+     * tức giảm ít hơn 7%). Không trần nào chặn nên không bị kẹp.
      */
     const r = computePromoDiscount({
       terms: percentTerms(7, null),
       ...TRIP,
       eligibleAmount: '1264500',
     });
-    expect(r).toEqual({ ok: true, discountAmount: '88000', clamped: false });
+    expect(r).toEqual({ ok: true, discountAmount: '89000', clamped: false });
   });
 
-  it('% làm tròn XUỐNG không bao giờ vượt trần, kể cả khi trần nằm giữa hai bước', () => {
-    // 10% × 505.900 = 50.590 ⇒ 50.000 (làm tròn lên sẽ ra 51.000 — vượt trần 50.500 vừa kẹp nó).
+  it('làm tròn LÊN rồi mới kẹp trần — trần nằm giữa hai bước thì lấy ĐÚNG trần, kể cả số lẻ', () => {
+    // 10% × 505.900 = 50.590 ⇒ 51.000, rồi trần của mã 50.500 thắng ⇒ giảm đúng 50.500.
     const r = computePromoDiscount({
       terms: percentTerms(10, '50500'),
       ...TRIP,
       eligibleAmount: '505900',
     });
-    expect(r.ok && Number(r.discountAmount) % 1000).toBe(0);
-    expect(r.ok && Number(r.discountAmount) <= 50500).toBe(true);
+    expect(r).toEqual({ ok: true, discountAmount: '50500', clamped: true });
   });
 
-  it('% quá nhỏ để đủ một bước 1.000đ ⇒ từ chối, không phát mã "giảm 0đ"', () => {
+  it('% nhỏ hơn một bước 1.000đ vẫn làm tròn LÊN đủ một bước — không còn "giảm 0đ" vì làm tròn', () => {
+    // 1% × 90.000 = 900 ⇒ 1.000 (trước: làm tròn XUỐNG còn 0 rồi bị từ chối).
     const r = computePromoDiscount({
       terms: percentTerms(1, null),
       ...TRIP,
       eligibleAmount: '90000',
     });
-    expect(r).toEqual({ ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR });
+    expect(r).toEqual({ ok: true, discountAmount: '1000', clamped: false });
   });
 
   it('mã PHẦN TRĂM bị TRẦN của chính nó kẹp, và nói rõ là đã kẹp', () => {
@@ -426,7 +428,8 @@ describe('promoCodeConfigBlockers — cấu hình admin', () => {
 describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () => {
   /**
    * Ô tô 2 ngày × 700.000đ, tuyến hoa hồng: S = 50.000, H = 140.000 (10% × 2 ngày), tổng khách
-   * trả 1.450.000 ⇒ cọc online 30% = 435.000, trong đó phần của chủ xe D = 245.000.
+   * trả 1.450.000. Phần chủ xe D = 15% × 1.400.000 = 210.000 ⇒ tiền giữ chỗ = S + H + D = 400.000
+   * (ADR 0066).
    */
   const feeInput = {
     billingMode: BILLING_MODE.COMMISSION,
@@ -439,9 +442,9 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
   it('KHÔNG có mã: grossOnline == online, và không có dòng promo nào', () => {
     const fees = computeCustomerFees(feeInput);
-    expect(fees.grossOnlineAmount).toBe('435000');
-    expect(fees.onlineAmount).toBe('435000');
-    expect(fees.sponsorableAmount).toBe('435000');
+    expect(fees.grossOnlineAmount).toBe('400000');
+    expect(fees.onlineAmount).toBe('400000');
+    expect(fees.sponsorableAmount).toBe('400000');
     expect(fees.promoDiscountAmount).toBe('0');
     expect(fees.promo).toBeNull();
     expect(fees.customerTotalAmount).toBe('1450000');
@@ -454,8 +457,8 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
     /*
      * Đây là bất biến trung tâm của ADR 0046: mã do XePrime tài trợ, nên không một con số nào
-     * thuộc về gian hàng, ngân sách hay hãng bảo hiểm được đổi. Cọc 30% tính trên tổng TRƯỚC mã
-     * chính là để giữ được điều đó — tính trên tổng sau mã thì phần trả tay của chủ xe tụt theo.
+     * thuộc về gian hàng, ngân sách hay hãng bảo hiểm được đổi. Tiền giữ chỗ tính TRƯỚC mã chính
+     * là để giữ được điều đó — tính sau mã thì phần trả tay của chủ xe tụt theo.
      */
     expect(after.baseAmount).toBe(before.baseAmount);
     expect(after.lines).toEqual(before.lines);
@@ -472,8 +475,8 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
     // Và đúng hai con số của KHÁCH giảm, đúng bằng phần tài trợ.
     expect(after.promoDiscountAmount).toBe('100000');
-    expect(after.onlineAmount).toBe('335000');
-    expect(after.holdAmount).toBe('335000');
+    expect(after.onlineAmount).toBe('300000');
+    expect(after.holdAmount).toBe('300000');
     expect(after.customerTotalAmount).toBe('1350000');
     expect(Number(before.onlineAmount) - Number(after.onlineAmount)).toBe(100000);
     expect(Number(before.customerTotalAmount) - Number(after.customerTotalAmount)).toBe(100000);
@@ -482,17 +485,18 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
   it('KẸP LẠI một lần nữa ở máy giá: snapshot đòi nhiều hơn trần thì chỉ được tới trần', () => {
     /*
      * Bất biến "online không xuống dưới sàn" không được phép phụ thuộc vào việc mọi caller đều
-     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 415.000đ.
+     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 380.000đ
+     * (= 400.000 tiền giữ chỗ − 20.000 sàn đối soát).
      */
     const fees = computeCustomerFees({
       ...feeInput,
       promo: snapshotOf(fixedTerms('10000000'), '10000000'),
     });
-    expect(fees.promoDiscountAmount).toBe('415000');
+    expect(fees.promoDiscountAmount).toBe('380000');
     expect(fees.onlineAmount).toBe('20000');
     expect(Number(fees.onlineAmount)).toBeGreaterThanOrEqual(Number(POLICY.holdMinAmount));
     // Snapshot đi kèm số ĐÃ KẸP, không phải số mã hứa — mọi màn hình đọc lại phải thấy số thật.
-    expect(fees.promo?.discountApplied).toBe('415000');
+    expect(fees.promo?.discountApplied).toBe('380000');
   });
 
   it('snapshot có số giảm 0 ⇒ `promo` về null, không để một mã "giảm 0đ" đi tiếp', () => {
@@ -573,7 +577,7 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     expect(fees.customerTotalAmount).toBe(String(770000 - 72000));
   });
 
-  it('tuyến GÓI (H = 0) vẫn tài trợ được — chủ xe vẫn nhận đủ phần cọc của mình', () => {
+  it('tuyến GÓI (H = 0) vẫn tài trợ được — chủ xe vẫn nhận đủ phần giữ chỗ của mình', () => {
     const fees = computeCustomerFees({
       ...feeInput,
       billingMode: BILLING_MODE.PACKAGE,
@@ -582,11 +586,11 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     });
     // Tuyến gói chỉ có phí sàn, không có dòng hoa hồng.
     expect(fees.lines.map((l) => l.key)).toEqual([FEE_LINE.SERVICE_FEE]);
-    // 30% × 1.450.000 = 435.000 ⇒ online 335.000; phần của chủ xe D = 435.000 − 50.000.
-    expect(fees.grossOnlineAmount).toBe('435000');
-    expect(fees.onlineAmount).toBe('335000');
-    // Chủ xe VẪN được nhận đủ phần cọc: nền tảng bù phần chênh.
-    expect(fees.ownerPayableAmount).toBe('385000');
+    // S 50.000 + D (15% × 1.400.000 = 210.000) = 260.000 ⇒ online 160.000 sau mã 100.000.
+    expect(fees.grossOnlineAmount).toBe('260000');
+    expect(fees.onlineAmount).toBe('160000');
+    // Chủ xe VẪN được nhận đủ phần giữ chỗ: nền tảng bù phần chênh.
+    expect(fees.ownerPayableAmount).toBe('210000');
   });
 });
 
@@ -655,12 +659,13 @@ describe('resolveHoldAllocation + tài trợ — tổng phân bổ = TIỀN MẶ
     expect(sum(allocationTotals(allocation))).toBe(50000 + 140000 + 30000 + 20000 - 100000);
   });
 
-  it('HUỶ MUỘN: chủ xe nhận đủ NỬA QUYỀN LỢI, nền tảng gánh tài trợ', () => {
+  it('HUỶ MUỘN: chủ xe nhận TRỌN D (ADR 0066), nền tảng gánh tài trợ', () => {
     const allocation = resolveHoldAllocation(lines, 'split_late_cancel');
     const totals = allocationTotals(allocation);
-    // Nửa của (280.000 + 140.000) = 210.000 — không nhỏ đi vì nền tảng đã giảm giá cho khách.
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('210000');
-    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('110000');
+    // D 280.000 nguyên vẹn — không nhỏ đi vì nền tảng đã giảm giá cho khách.
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('280000');
+    // Nền tảng: 140.000 phí dịch vụ − 100.000 tài trợ = 40.000.
+    expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('40000');
     expect(sum(totals)).toBe(CASH);
   });
 

@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
+  AUDIT_ACTOR_SCOPE,
   SELLER_ENTITY_TYPE,
+  TAX_CATEGORY_VALUES,
   TAX_WITHHOLDING_STATUS,
   TAX_WITHHOLDING_STATUS_UNPAID,
   taxPeriodKeyVn,
   type PaginationMeta,
   type SellerEntityType,
+  type TaxCategory,
   type TaxWithholdingStatus,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import {
   TAX_DEFAULT_LIMIT,
   TAX_MAX_LIMIT,
@@ -35,6 +39,16 @@ const ROW_SELECT = {
   remittedAt: true,
   reversalOfId: true,
   reversalReason: true,
+  vatAmount: true,
+  pitAmount: true,
+  vatPercent: true,
+  pitPercent: true,
+  taxCategory: true,
+  sellerEntityType: true,
+  taxSubjectType: true,
+  sellerTaxId: true,
+  sellerIdNumber: true,
+  sellerLegalName: true,
   booking: { select: { code: true } },
   tenant: { select: { name: true } },
   sellerProfile: { select: { entityType: true, taxId: true, legalName: true } },
@@ -52,7 +66,10 @@ const ROW_SELECT = {
  */
 @Injectable()
 export class TaxReadService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Tờ khai một KỲ: tổng, chia theo LOẠI CHỦ THỂ, và chia theo gian hàng.
@@ -66,7 +83,7 @@ export class TaxReadService {
     const [totals, byStatus, byEntity, byTenant] = await Promise.all([
       this.prisma.taxWithholding.aggregate({
         where: { periodKey },
-        _sum: { amount: true, taxableBase: true },
+        _sum: { amount: true, taxableBase: true, vatAmount: true, pitAmount: true },
         _count: { _all: true },
       }),
       this.prisma.taxWithholding.groupBy({
@@ -77,39 +94,62 @@ export class TaxReadService {
       }),
       /*
        * `groupBy` của Prisma không đi qua quan hệ, nên phần chia theo loại chủ thể viết SQL.
-       * `LEFT JOIN` + `COALESCE(..., 'unknown')`: gian hàng chưa khai hồ sơ vẫn phải xuất hiện.
+       *
+       * Loại chủ thể là loại người bán KHAI, đọc SNAPSHOT của dòng (`seller_entity_type`, chụp từ
+       * hồ sơ lúc ghi sổ — ADR 0068), rơi về hồ sơ đang trỏ tới chỉ cho dòng một-mức trước đợt này.
+       * Dòng ghi lúc gian hàng CHƯA có hồ sơ mang cả hai NULL ⇒ `'unknown'`: nhóm đó phải xuất hiện,
+       * không bị gộp vào cá nhân dù tiền của nó đã bị khấu trừ theo mức cá nhân (`tax_subject_type`).
        */
-      this.prisma.$queryRaw<Array<{ entityType: string; amount: Prisma.Decimal; rows: bigint }>>`
-        SELECT COALESCE(sp.entity_type, 'unknown') AS "entityType",
+      this.prisma.$queryRaw<
+        Array<{
+          entityType: string;
+          amount: Prisma.Decimal;
+          vatAmount: Prisma.Decimal;
+          pitAmount: Prisma.Decimal;
+          rows: bigint;
+        }>
+      >`
+        SELECT COALESCE(tw.seller_entity_type, sp.entity_type, 'unknown') AS "entityType",
                COALESCE(SUM(tw.amount), 0)        AS amount,
+               COALESCE(SUM(tw.vat_amount), 0)    AS "vatAmount",
+               COALESCE(SUM(tw.pit_amount), 0)    AS "pitAmount",
                COUNT(*)                            AS rows
           FROM tax_withholdings tw
           LEFT JOIN seller_profiles sp ON sp.id = tw.seller_profile_id
          WHERE tw.period_key = ${periodKey}
-         GROUP BY COALESCE(sp.entity_type, 'unknown')
+         GROUP BY COALESCE(tw.seller_entity_type, sp.entity_type, 'unknown')
          ORDER BY amount DESC
       `,
       this.prisma.$queryRaw<
         Array<{
           tenantId: string;
           tenantName: string;
-          entityType: string | null;
+          entityType: string;
           taxCode: string | null;
+          legalName: string | null;
           amount: Prisma.Decimal;
+          vatAmount: Prisma.Decimal;
+          pitAmount: Prisma.Decimal;
           rows: bigint;
         }>
       >`
-        SELECT tw.tenant_id            AS "tenantId",
-               t.name                  AS "tenantName",
-               sp.entity_type          AS "entityType",
-               sp.tax_id               AS "taxCode",
-               COALESCE(SUM(tw.amount), 0) AS amount,
-               COUNT(*)                AS rows
+        SELECT tw.tenant_id                                    AS "tenantId",
+               t.name                                          AS "tenantName",
+               COALESCE(tw.seller_entity_type, sp.entity_type, 'unknown') AS "entityType",
+               COALESCE(tw.seller_tax_id, sp.tax_id)           AS "taxCode",
+               COALESCE(tw.seller_legal_name, sp.legal_name)   AS "legalName",
+               COALESCE(SUM(tw.amount), 0)                     AS amount,
+               COALESCE(SUM(tw.vat_amount), 0)                 AS "vatAmount",
+               COALESCE(SUM(tw.pit_amount), 0)                 AS "pitAmount",
+               COUNT(*)                                        AS rows
           FROM tax_withholdings tw
           JOIN tenants t ON t.id = tw.tenant_id
           LEFT JOIN seller_profiles sp ON sp.id = tw.seller_profile_id
          WHERE tw.period_key = ${periodKey}
-         GROUP BY tw.tenant_id, t.name, sp.entity_type, sp.tax_id
+         GROUP BY tw.tenant_id, t.name,
+                  COALESCE(tw.seller_entity_type, sp.entity_type, 'unknown'),
+                  COALESCE(tw.seller_tax_id, sp.tax_id),
+                  COALESCE(tw.seller_legal_name, sp.legal_name)
          ORDER BY amount DESC
       `,
     ]);
@@ -120,8 +160,7 @@ export class TaxReadService {
 
     return {
       periodKey,
-      totalAmount: (totals._sum.amount ?? zero).toFixed(0),
-      totalTaxableBase: (totals._sum.taxableBase ?? zero).toFixed(0),
+      ...splitTotals(totals._sum),
       rows: totals._count._all,
       accruedAmount: statusOf(TAX_WITHHOLDING_STATUS.ACCRUED).toFixed(0),
       declaredAmount: statusOf(TAX_WITHHOLDING_STATUS.DECLARED).toFixed(0),
@@ -129,14 +168,19 @@ export class TaxReadService {
       byEntityType: byEntity.map((r) => ({
         entityType: normalizeEntityType(r.entityType),
         amount: new Prisma.Decimal(r.amount).toFixed(0),
+        vatAmount: new Prisma.Decimal(r.vatAmount).toFixed(0),
+        pitAmount: new Prisma.Decimal(r.pitAmount).toFixed(0),
         rows: Number(r.rows),
       })),
       byTenant: byTenant.map((r) => ({
         tenantId: r.tenantId,
         tenantName: r.tenantName,
-        entityType: r.entityType === null ? null : normalizeEntityType(r.entityType),
+        entityType: normalizeEntityType(r.entityType),
         taxCode: r.taxCode,
+        legalName: r.legalName,
         amount: new Prisma.Decimal(r.amount).toFixed(0),
+        vatAmount: new Prisma.Decimal(r.vatAmount).toFixed(0),
+        pitAmount: new Prisma.Decimal(r.pitAmount).toFixed(0),
         rows: Number(r.rows),
       })),
     };
@@ -172,22 +216,34 @@ export class TaxReadService {
    * Xuất ở server thay vì dựng ở client: dữ liệu của một kỳ có thể vài nghìn dòng, và tải hết
    * về trình duyệt chỉ để ghép chuỗi là cách chắc chắn để màn hình treo ở kỳ đầu tiên đông đơn.
    */
-  async periodCsv(periodKey: string): Promise<string> {
+  async periodCsv(periodKey: string, actorUserId: string): Promise<string> {
     const rows = await this.prisma.taxWithholding.findMany({
       where: { periodKey },
       select: ROW_SELECT,
       orderBy: [{ accruedAt: 'asc' }, { id: 'asc' }],
     });
 
+    /*
+     * Cột theo yêu cầu kê khai của NĐ 117 (ADR 0068 điều 4): người bán (loại chủ thể, MST, số định
+     * danh, tên pháp lý — SNAPSHOT lúc ghi sổ), doanh thu, GTGT và TNCN tách riêng kèm tỷ lệ, và
+     * nhóm ngành nghề. Dòng trước đợt này (một mức) để trống các cột tách — không bịa phép tách.
+     */
     const header = [
       'ky',
       'ma_don',
       'gian_hang',
       'loai_chu_the',
+      'khau_tru_nhu',
       'ma_so_thue',
+      'so_dinh_danh',
       'ten_phap_ly',
+      'nhom',
       'gia_tri_chiu_thue',
       'ty_le',
+      'ty_le_gtgt',
+      'ty_le_tncn',
+      'thue_gtgt',
+      'thue_tncn',
       'nhan',
       'so_tien',
       'trang_thai',
@@ -202,11 +258,20 @@ export class TaxReadService {
         r.periodKey,
         r.booking.code,
         r.tenant.name,
-        r.sellerProfile?.entityType ?? '',
-        r.sellerProfile?.taxId ?? '',
-        r.sellerProfile?.legalName ?? '',
+        declaredEntityTypeOf(r),
+        // Chủ thể ÁP THUẾ đã đóng băng (không hồ sơ / doanh nghiệp chưa xác minh ⇒ cá nhân).
+        // Trống ở dòng một-mức cũ: khi đó mọi chủ thể bị khấu trừ, không có phép phân loại.
+        r.taxSubjectType ?? '',
+        r.sellerTaxId ?? r.sellerProfile?.taxId ?? '',
+        r.sellerIdNumber ?? '',
+        r.sellerLegalName ?? r.sellerProfile?.legalName ?? '',
+        r.taxCategory ?? '',
         r.taxableBase.toFixed(0),
         r.percent.toFixed(2),
+        r.vatPercent?.toFixed(2) ?? '',
+        r.pitPercent?.toFixed(2) ?? '',
+        r.vatAmount?.toFixed(0) ?? '',
+        r.pitAmount?.toFixed(0) ?? '',
         r.label,
         r.amount.toFixed(0),
         r.status,
@@ -224,6 +289,26 @@ export class TaxReadService {
      * bằng editor.
      */
     const body = [header.join(','), ...lines.map((c) => c.join(','))].join('\r\n');
+
+    /*
+     * File này mang SỐ CCCD ĐẦY ĐỦ và MST của mọi người bán trong kỳ — một lần tải là một lần dữ
+     * liệu định danh rời khỏi hệ thống. Ghi audit (ai, kỳ nào, bao nhiêu dòng, bao nhiêu số định
+     * danh) TRƯỚC khi trả file: audit lỗi thì không xuất, không bao giờ có một lần tải không dấu
+     * vết. Không ghi số giấy tờ vào audit — chỉ đếm.
+     */
+    await this.audit.record({
+      actorUserId,
+      actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+      action: 'tax.period_export',
+      targetType: 'tax_period',
+      targetId: periodKey,
+      after: {
+        periodKey,
+        rows: rows.length,
+        withIdNumber: rows.filter((r) => r.sellerIdNumber).length,
+      },
+    });
+
     return `${BOM_UTF8}${body}\r\n`;
   }
 
@@ -232,7 +317,7 @@ export class TaxReadService {
     const [agg, rows] = await Promise.all([
       this.prisma.taxWithholding.aggregate({
         where: { tenantId, periodKey },
-        _sum: { amount: true, taxableBase: true },
+        _sum: { amount: true, taxableBase: true, vatAmount: true, pitAmount: true },
         _count: { _all: true },
       }),
       this.prisma.taxWithholding.findMany({
@@ -243,11 +328,9 @@ export class TaxReadService {
       }),
     ]);
 
-    const zero = new Prisma.Decimal(0);
     return {
       periodKey,
-      totalAmount: (agg._sum.amount ?? zero).toFixed(0),
-      totalTaxableBase: (agg._sum.taxableBase ?? zero).toFixed(0),
+      ...splitTotals(agg._sum),
       rows: agg._count._all,
       items: rows.map(toRowDto),
     };
@@ -293,12 +376,17 @@ function toRowDto(r: Row): TaxRowDto {
     bookingCode: r.booking.code,
     tenantId: r.tenantId,
     tenantName: r.tenant.name,
-    entityType: r.sellerProfile?.entityType
-      ? normalizeEntityType(r.sellerProfile.entityType)
-      : null,
-    taxCode: r.sellerProfile?.taxId ?? null,
+    entityType: declaredEntityTypeOf(r),
+    taxSubjectType: entityTypeOrNull(r.taxSubjectType),
+    taxCode: r.sellerTaxId ?? r.sellerProfile?.taxId ?? null,
+    legalName: r.sellerLegalName ?? r.sellerProfile?.legalName ?? null,
     taxableBase: r.taxableBase.toFixed(0),
     percent: Number(r.percent),
+    vatPercent: r.vatPercent == null ? null : Number(r.vatPercent),
+    pitPercent: r.pitPercent == null ? null : Number(r.pitPercent),
+    vatAmount: r.vatAmount?.toFixed(0) ?? null,
+    pitAmount: r.pitAmount?.toFixed(0) ?? null,
+    taxCategory: normalizeTaxCategory(r.taxCategory),
     label: r.label,
     amount: r.amount.toFixed(0),
     status: r.status as TaxWithholdingStatus,
@@ -319,6 +407,55 @@ function toRowDto(r: Row): TaxRowDto {
 function normalizeEntityType(value: string): SellerEntityType | 'unknown' {
   const known = Object.values(SELLER_ENTITY_TYPE) as string[];
   return known.includes(value) ? (value as SellerEntityType) : 'unknown';
+}
+
+/**
+ * Loại chủ thể người bán KHAI của một dòng — snapshot của dòng trước (ADR 0068), hồ sơ đang trỏ tới
+ * chỉ cho dòng một-mức ghi trước đợt này. Không có cả hai (gian hàng chưa khai hồ sơ lúc ghi sổ) ⇒
+ * `'unknown'`, KHÔNG BAO GIỜ `individual`: cùng một phép với `COALESCE(..., 'unknown')` của tờ khai.
+ */
+function declaredEntityTypeOf(r: Row): SellerEntityType | 'unknown' {
+  return normalizeEntityType(r.sellerEntityType ?? r.sellerProfile?.entityType ?? 'unknown');
+}
+
+/** Chủ thể ÁP THUẾ — `null` ở dòng một-mức cũ; giá trị lạ (ghi tay) cũng `null`, không đoán. */
+function entityTypeOrNull(value: string | null): SellerEntityType | null {
+  const normalized = value ? normalizeEntityType(value) : 'unknown';
+  return normalized === 'unknown' ? null : normalized;
+}
+
+/**
+ * Tổng của một tập dòng, kèm phần CHƯA TÁCH GTGT/TNCN.
+ *
+ * Kỳ có cả dòng một-mức cũ lẫn dòng tách (ADR 0068) thì `GTGT + TNCN ≠ tổng`: phần chênh chính là
+ * tổng `amount` của các dòng cũ. Tính bằng phép trừ, không bằng truy vấn thứ hai — CHECK
+ * `tax_withholdings_vat_pit_sum_check` bảo đảm `vat + pit = amount` ở MỌI dòng tách (cả dòng đảo),
+ * nên `tổng − ΣGTGT − ΣTNCN` đúng bằng tổng của các dòng không tách.
+ */
+function splitTotals(sum: {
+  amount: Prisma.Decimal | null;
+  taxableBase: Prisma.Decimal | null;
+  vatAmount: Prisma.Decimal | null;
+  pitAmount: Prisma.Decimal | null;
+}) {
+  const zero = new Prisma.Decimal(0);
+  const total = sum.amount ?? zero;
+  const vat = sum.vatAmount ?? zero;
+  const pit = sum.pitAmount ?? zero;
+  return {
+    totalAmount: total.toFixed(0),
+    totalTaxableBase: (sum.taxableBase ?? zero).toFixed(0),
+    totalVatAmount: vat.toFixed(0),
+    totalPitAmount: pit.toFixed(0),
+    totalUnsplitAmount: total.minus(vat).minus(pit).toFixed(0),
+  };
+}
+
+/** Nhóm NĐ 117 lạ (ghi tay) ⇒ null thay vì ép về một nhóm. */
+function normalizeTaxCategory(value: string | null): TaxCategory | null {
+  return value != null && (TAX_CATEGORY_VALUES as string[]).includes(value)
+    ? (value as TaxCategory)
+    : null;
 }
 
 /** Bọc một ô CSV — dấu phẩy, dấu ngoặc kép và xuống dòng trong tên gian hàng đều có thật. */

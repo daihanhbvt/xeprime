@@ -417,21 +417,28 @@
   "taxWithheld": {
     "title": "Thuế đã khấu trừ",
     "period": "Kỳ",
-    "explainer": "Thuế do chủ xe chịu và được trừ khỏi khoản XePrime phải trả bạn, không cộng vào giá khách. Chỉ phát sinh khi chuyến đã bắt đầu — chuyến huỷ trước giờ nhận không bị trừ.",
+    "explainer": "Theo NĐ 117/2025/NĐ-CP, XePrime khấu trừ và nộp thay thuế GTGT và TNCN cho chủ xe là cá nhân, hộ kinh doanh (doanh nghiệp đã xác minh không bị khấu trừ): tự lái, dài hạn 5% + 2%; có tài xế 3% + 1,5% trên tiền thuê, không gồm phí giao xe. Thuế được trừ khỏi khoản XePrime phải trả bạn, không cộng vào giá khách, và chỉ phát sinh khi chuyến đã bắt đầu.",
     "loadError": "Không tải được số liệu thuế",
     "empty": "Kỳ này chưa có chuyến nào bị khấu trừ thuế.",
     "percentOf": "{percent}% giá trị chịu thuế",
     "stats": {
       "total": "Tổng đã khấu trừ",
       "base": "Giá trị chịu thuế",
-      "trips": "Số chuyến"
+      "trips": "Số chuyến",
+      "vat": "GTGT đã khấu trừ",
+      "pit": "TNCN đã khấu trừ",
+      "unsplit": "Dòng cũ chưa tách GTGT/TNCN"
     },
     "columns": {
       "booking": "Chuyến",
       "base": "Giá trị chịu thuế",
       "label": "Loại thuế",
       "amount": "Đã khấu trừ",
-      "status": "Trạng thái"
-    }
+      "status": "Trạng thái",
+      "vat": "GTGT",
+      "pit": "TNCN"
+    },
+    "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
+    "notSplit": "Dòng cũ — không tách"
   }
 }

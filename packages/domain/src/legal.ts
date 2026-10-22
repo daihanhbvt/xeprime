@@ -1,5 +1,6 @@
 /**
- * Bốn văn bản pháp lý công khai của sàn.
+ * Năm văn bản pháp lý công khai của sàn — bốn văn bản chung + "Chính sách thuế" cho chủ xe
+ * (`owner-tax`, ADR 0068 điều 6).
  *
  * Ở `@xeprime/domain` chứ không ở `apps/web/src/constants/` vì CẢ HAI client viện dẫn cùng bộ
  * văn bản này: web render chúng tại `/legal/<slug>`, app native mở đúng địa chỉ đó trong trình
@@ -24,6 +25,12 @@ export const LEGAL_DOC = {
   PRIVACY: 'privacy',
   MARKETPLACE_RULES: 'marketplace-rules',
   CANCELLATION: 'cancellation',
+  /**
+   * Chính sách khấu trừ, nộp thay thuế cho chủ xe (NĐ 117/2025, NĐ 68/2026 — ADR 0068 điều 6).
+   * Đọc chủ yếu từ site đối tác (dấu "i" của dòng thuế ở bảng cộng ví), nhưng `/legal/*` là đường
+   * dùng chung mọi site nên CÙNG một địa chỉ ở cả ba.
+   */
+  OWNER_TAX: 'owner-tax',
 } as const;
 
 export type LegalDoc = (typeof LEGAL_DOC)[keyof typeof LEGAL_DOC];
@@ -32,11 +39,11 @@ export const LEGAL_DOC_VALUES = Object.values(LEGAL_DOC) as LegalDoc[];
 /**
  * Ngày hiệu lực của bản đang hiển thị.
  *
- * MỘT ngày cho cả bốn văn bản vì chúng được soạn cùng một đợt và tham chiếu lẫn nhau — bản
+ * MỘT ngày cho cả bộ văn bản vì chúng được soạn cùng một đợt và tham chiếu lẫn nhau — bản
  * quy chế nói về phí mà bản điều khoản chưa nói thì người đọc không biết bản nào thắng.
  * Sửa nội dung một văn bản là phải dời ngày này và ghi lại ở phần lịch sử.
  */
-export const LEGAL_EFFECTIVE_FROM = '2026-09-23';
+export const LEGAL_EFFECTIVE_FROM = '2026-10-22';
 
 /**
  * Một mục của văn bản: tên mục + (tuỳ chọn) thứ tự các GẠCH ĐẦU DÒNG bên trong nó.
@@ -128,10 +135,11 @@ export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly LegalSection[]>>
     { key: 'principle' },
     { key: 'beforeDecision' },
     /*
-     * Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe (ADR 0064 · `holdWindowsFor`): ba bậc thời gian
-     * + luật hết hạn. Luật tiền và chính sách công bố đi cùng một lần phát hành.
+     * Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe (ADR 0066 · `holdWindowsFor`): MỘT công thức
+     * cho mọi ΔT — thanh toán 30%, huỷ miễn phí 20%, sàn 15′, trần của chính sách — + chuyến quá
+     * gần + luật hết hạn. Luật tiền và chính sách công bố đi cùng một lần phát hành.
      */
-    { key: 'paymentWindow', items: ['far', 'near', 'urgent', 'expiry'] },
+    { key: 'paymentWindow', items: ['payment', 'cancel', 'tooShort', 'expiry'] },
     { key: 'freeCancel' },
     { key: 'afterFreeCancel', items: ['insurance', 'split', 'noShow', 'direct'] },
     {
@@ -142,6 +150,25 @@ export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly LegalSection[]>>
     { key: 'refund' },
     { key: 'dispute' },
   ],
+  /*
+   * Thứ tự đi theo câu hỏi của một chủ xe: vì sao bị trừ → mình có thuộc diện không → bao nhiêu
+   * → tính trên khoản nào → lúc nào → huỷ thì sao → dưới ngưỡng thì sao → mình phải làm gì →
+   * chứng từ. Số % ở mục `rates` là chính sách HIỆN HÀNH; đổi mức = phát hành chính sách phí mới
+   * VÀ sửa văn bản này cùng đợt (dời `LEGAL_EFFECTIVE_FROM`).
+   */
+  [LEGAL_DOC.OWNER_TAX]: [
+    { key: 'basis', items: ['nd117', 'nd68', 'platform'] },
+    { key: 'who', items: ['individual', 'household', 'company', 'noProfile', 'track'] },
+    { key: 'rates', items: ['selfDrive', 'longTerm', 'withDriver', 'snapshot'] },
+    { key: 'base', items: ['included', 'excluded', 'rounding'] },
+    { key: 'timing', items: ['recorded', 'deducted', 'adjusted'] },
+    { key: 'cancellation', items: ['beforeTrip', 'lateCompensation'] },
+    { key: 'threshold' },
+    { key: 'identity' },
+    { key: 'certificate' },
+    { key: 'statement' },
+    { key: 'changes' },
+  ],
 };
 
 /** Tên mục của một văn bản, phẳng — cho những chỗ chỉ cần danh sách khoá. */
@@ -150,7 +177,7 @@ export function legalSectionKeys(doc: LegalDoc): readonly string[] {
 }
 
 export const legalPath = {
-  /** Trang chủ khu pháp lý — địa chỉ viện dẫn CẢ BỘ bốn văn bản. */
+  /** Trang chủ khu pháp lý — địa chỉ viện dẫn CẢ BỘ văn bản. */
   index: '/legal',
   doc: (doc: LegalDoc): string => `/legal/${doc}`,
 };

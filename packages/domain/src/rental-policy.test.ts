@@ -57,11 +57,22 @@ describe('deliveryTierFee — phí của một bậc ở một khoảng cách', 
     expect(deliveryTierFee({ fee: '0' }, 2)).toBe('0');
   });
 
-  it('bậc theo km: đơn giá × khoảng cách, làm tròn tới bước 1.000đ', () => {
+  it('bậc theo km: đơn giá × khoảng cách, đúng tới ĐỒNG (ADR 0069)', () => {
     expect(deliveryTierFee({ perKm: '10000' }, 12)).toBe('120000');
-    // 12,34 km × 10.000 = 123.400 ⇒ 123.000; 12,35 km ⇒ 123.500 ⇒ 124.000 (nửa bước làm tròn LÊN).
-    expect(deliveryTierFee({ perKm: '10000' }, 12.34)).toBe('123000');
-    expect(deliveryTierFee({ perKm: '10000' }, 12.35)).toBe('124000');
+    // 12,34 km × 10.000 = 123.400 (trước: 123.000); 12,35 km × 10.000 = 123.500 (trước: 124.000).
+    expect(deliveryTierFee({ perKm: '10000' }, 12.34)).toBe('123400');
+    expect(deliveryTierFee({ perKm: '10000' }, 12.35)).toBe('123500');
+    // 7,3456 km × 8.500 = 62.437,6 ⇒ 62.438 (nửa đồng trở lên làm tròn LÊN).
+    expect(deliveryTierFee({ perKm: '8500' }, 7.3456)).toBe('62438');
+    // 7,3452 km × 8.500 = 62.434,2 ⇒ 62.434.
+    expect(deliveryTierFee({ perKm: '8500' }, 7.3452)).toBe('62434');
+  });
+
+  it('nửa đồng THẬT không bị sai số dấu phẩy động kéo xuống', () => {
+    // 5.000 × 1,0001 = 5.000,5 — nhân thẳng bằng số thực ra 5.000,4999… ⇒ 5.000 (sai).
+    expect(deliveryTierFee({ perKm: '5000' }, 1.0001)).toBe('5001');
+    // 3.000 × 2,0005 = 6.001,5 ⇒ 6.002.
+    expect(deliveryTierFee({ perKm: '3000' }, 2.0005)).toBe('6002');
   });
 
   it('đơn giá rác hoặc khoảng cách âm ⇒ ném, không im lặng cho ra 0', () => {

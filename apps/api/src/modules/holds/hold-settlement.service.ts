@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { bookingIdsWithOpenSupportCase, hasOpenSupportCase, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -11,8 +11,6 @@ import {
   HOLD_REFUND_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_OPEN,
   isOutcomeAllowed,
   isWithinFreeCancel,
   type AuditActorScope,
@@ -49,10 +47,11 @@ import { formatMoneyVndVi } from '@xeprime/domain';
  *
  *  1. Hoàn thành ⇒ `kept` (XePrime giữ phí dịch vụ). Khách không đến ⇒ `forfeited`.
  *  2. Khách huỷ: TRƯỚC `free_cancel_until` (cột đã đóng băng, không tính lại từ giờ nhận) ⇒
- *     `refunded` 100%; SAU mốc ⇒ `split_late_cancel` (`IV + IP` hoàn đủ vào ví khách, `D + S + H`
- *     chia đôi chủ xe / XePrime — lý do hoàn `late_cancel`; không đến nhận xe cũng vậy, lý do
- *     `no_show`). Chủ xe/nền tảng huỷ ⇒ `refunded` — khách không có lỗi. Đây là chính sách
- *     huỷ/hoàn công bố ở `/legal/cancellation` (ADR 0064); đổi luật là đổi cả hai.
+ *     `refunded` 100%; SAU mốc ⇒ `split_late_cancel` (`IV + IP` hoàn đủ vào ví khách, chủ xe
+ *     nhận trọn `D`, XePrime giữ `S + H − P` — ADR 0066; lý do hoàn `late_cancel`; không đến
+ *     nhận xe cũng vậy, lý do `no_show`). Chủ xe/nền tảng huỷ ⇒ `refunded` — khách không có lỗi.
+ *     Đây là chính sách huỷ/hoàn công bố ở `/legal/cancellation` (ADR 0064 · ADR 0066); đổi luật
+ *     là đổi cả hai.
  *  3. Có TRANH CHẤP mở trên đơn ⇒ KHÔNG chốt. Kết cục để trống, admin chốt tay sau khi case
  *     kết luận (`adminSettle`). Hook từ chuyển trạng thái đơn KHÔNG ném — đơn vẫn huỷ/hoàn thành
  *     được, chỉ có tiền là chờ.
@@ -775,18 +774,23 @@ export class HoldSettlementService {
     return true;
   }
 
+  /**
+   * Đơn có case còn mở thuộc nhóm GIỮ quyết toán (`dispute`, `handover_unconfirmed` — ADR 0066)
+   * không. Tên giữ "dispute" vì cả hai cùng một nghĩa với tiền: chưa ai được chốt kết cục.
+   */
   private async hasOpenDispute(
     tx: Prisma.TransactionClient | PrismaService,
     bookingId: string,
   ): Promise<boolean> {
-    const open = await tx.supportCase.count({
-      where: {
-        bookingId,
-        category: SUPPORT_CASE_CATEGORY.DISPUTE,
-        status: { in: [...SUPPORT_CASE_STATUS_OPEN] },
-      },
-    });
-    return open > 0;
+    return hasOpenSupportCase(tx, bookingId);
+  }
+
+  /**
+   * Bản theo LÔ của `hasOpenDispute` — cờ `disputeOpen` của các dòng hold (`BookingHoldsService`)
+   * đọc đúng định nghĩa "tiền đơn này đang bị giữ" với lượt chốt kết cục.
+   */
+  async openDisputeBookingIds(bookingIds: readonly string[]): Promise<Set<string>> {
+    return bookingIdsWithOpenSupportCase(this.prisma, bookingIds);
   }
 }
 
@@ -823,7 +827,8 @@ export function decideOutcome(input: {
               refundReason: HOLD_REFUND_REASON.EARLY_CANCEL,
             }
           : {
-              // Huỷ muộn: D + S + H chia đôi, IV + IP hoàn 100% vào ví khách (bảo hiểm chưa mua).
+              // Huỷ muộn (ADR 0066): chủ xe nhận trọn D, XePrime giữ S + H − P, IV + IP hoàn 100%
+              // vào ví khách (bảo hiểm chưa mua).
               outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
               refundReason: HOLD_REFUND_REASON.LATE_CANCEL,
             };
@@ -876,8 +881,9 @@ export function allocationForHold(
       serviceFee: hold.serviceFeeAmount.toFixed(0),
       /*
        * `H` — hoa hồng lũy tiến (luồng tiền v2). Quyết toán: về doanh thu nền tảng, nên ví chủ
-       * xe nhận `D − T` = `cọc − phí sàn − hoa hồng − bảo hiểm − thuế`. Huỷ muộn: nằm trong phần
-       * chia đôi. Huỷ sớm: hoàn khách. Hold trước v2 có cột này bằng 0.
+       * xe nhận `D − T` = `tiền giữ chỗ − phí sàn − hoa hồng − bảo hiểm − thuế`. Huỷ muộn: về
+       * doanh thu nền tảng cùng `S` (ADR 0066). Huỷ sớm: hoàn khách. Hold trước v2 có cột này
+       * bằng 0.
        */
       ownerCommission: hold.ownerCommissionAmount.toFixed(0),
       vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
@@ -912,7 +918,7 @@ export interface CustomerCancelPreview {
   insuranceRefundAmount: string;
   /** Số khách mất = `amount − phần phân bổ hoàn khách` — không bao giờ gồm khoản chuyển thừa. */
   forfeitAmount: string;
-  /** Phần chủ xe được đền vì giữ lịch (nửa `D + S + H` khi huỷ muộn). */
+  /** Phần chủ xe được đền vì giữ lịch (trọn `D` khi huỷ muộn — ADR 0066). */
   ownerCompensationAmount: string;
   freeCancelUntil: Date;
   withinFreeCancel: boolean;

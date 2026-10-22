@@ -138,7 +138,11 @@ export class PromoQuoteService {
   private applyToFees(context: PromoQuoteContext, promo: PromoCodeSnapshot) {
     return this.pricing.applyPromoToFees(
       context.tenantId,
-      { vehicleType: context.scope.vehicleType, breakdown: context.breakdown },
+      {
+        vehicleType: context.scope.vehicleType,
+        serviceType: context.scope.serviceType,
+        breakdown: context.breakdown,
+      },
       { quoteIsEstimate: context.quoteIsEstimate, promo, ...context.insurance },
     );
   }

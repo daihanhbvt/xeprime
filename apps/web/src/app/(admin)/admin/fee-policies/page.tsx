@@ -8,14 +8,23 @@ import {
   PlusOutlined,
   PoweroffOutlined,
 } from '@ant-design/icons';
-import { App, Button } from 'antd';
+import { Alert, App, Button } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { FEE_POLICY_STATUS, FEE_POLICY_STATUS_META, type FeePolicyStatus } from '@xeprime/types';
+import {
+  FEE_POLICY_STATUS,
+  FEE_POLICY_STATUS_META,
+  parseTaxRates,
+  taxRateTotalPercent,
+  type FeePolicyStatus,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { QueueViewSwitch } from '@/features/platform-money/components/QueueViewSwitch';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -26,7 +35,18 @@ import {
   useDiscardFeePolicyDraft,
   useFeePolicies,
 } from '@/features/fee-policies/hooks/use-fee-policies';
+import { TAX_SERVICE_TYPES } from '@/features/fee-policies/form';
 import { useFeePolicyFormat } from '@/features/fee-policies/hooks/use-fee-policy-format';
+import {
+  FEE_POLICY_VIEW,
+  activeFeePolicy,
+  countFeePoliciesByView,
+  feePoliciesInView,
+  feePolicyViewOf,
+  parseFeePolicyFilters,
+  type FeePolicyFilters,
+  type FeePolicyView,
+} from '@/features/fee-policies/policy-views';
 import type { FeePolicy } from '@/features/fee-policies/types';
 
 import styles from './page.module.css';
@@ -46,7 +66,9 @@ type FormTarget =
  * transaction (server). Sửa số ở đây KHÔNG hồi tố — đơn/hold đã tạo giữ snapshot riêng.
  *
  * Danh sách không phân trang: mỗi lần đổi số là MỘT phiên bản, nên cả vòng đời sản phẩm chỉ có vài
- * chục dòng — server trả trọn danh sách.
+ * chục dòng — server trả trọn danh sách. Bảng chia theo SỔ (`policy-views.ts`): mặc định chỉ bản
+ * đang áp dụng, bản nháp và lịch sử lưu trữ ở hai sổ riêng — trải phẳng mọi phiên bản làm người
+ * đọc tưởng nhiều chính sách đang chạy song song.
  */
 export default function AdminFeePoliciesPage() {
   const t = useTranslations('FeePolicies');
@@ -60,18 +82,31 @@ export default function AdminFeePoliciesPage() {
   const { data, isError, isFetching, refetch } = useFeePolicies();
   const activate = useActivateFeePolicy();
   const discard = useDiscardFeePolicyDraft();
+  const { filters, setFilters } = useUrlFilters<FeePolicyFilters>(parseFeePolicyFilters);
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null);
   // Giữ MÃ chứ không giữ bản ghi: panel luôn đọc bản mới nhất sau khi danh sách tải lại.
   const [viewingId, setViewingId] = useState<string | null>(null);
 
   const items = data ?? [];
+  const view = feePolicyViewOf(filters);
+  const rows = feePoliciesInView(items, view);
+  const counts = countFeePoliciesByView(items);
+  const active = activeFeePolicy(items);
+  // Panel tìm trong TOÀN BỘ danh sách: kích hoạt một nháp đang mở làm nó rời sổ nháp, panel vẫn đứng.
   const viewing = viewingId ? (items.find((p) => p.id === viewingId) ?? null) : null;
+
+  const showView = (next: FeePolicyView) =>
+    setFilters({ view: next === FEE_POLICY_VIEW.ACTIVE ? undefined : next });
 
   function handleActivate(policy: FeePolicy) {
     if (activate.isPending) return;
     activate.mutate(policy.id, {
-      onSuccess: () => message.success(t('page.activateSuccess')),
+      onSuccess: () => {
+        message.success(t('page.activateSuccess'));
+        // Bản vừa kích hoạt rời sổ nháp — đưa người dùng tới nơi nó đang ở.
+        showView(FEE_POLICY_VIEW.ACTIVE);
+      },
       onError: (err) => message.error(errorMessage(err)),
     });
   }
@@ -112,9 +147,15 @@ export default function AdminFeePoliciesPage() {
       render: (_, p) => pf.perVehicle(p.customerPlatformFee),
     },
     {
-      title: t('page.columns.commissionTiers'),
+      // Nấc lũy tiến chỉ áp cho tuyến hoa hồng; gian hàng có gói được miễn (H = 0 — ADR 0064 điều 3).
+      title: (
+        <span className={styles.columnTitle}>
+          {t('page.columns.commissionTiers')}
+          <InfoHint label={t('commissionScope.hintLabel')} content={t('commissionScope.hint')} />
+        </span>
+      ),
       key: 'commissionTiers',
-      width: 170,
+      width: 200,
       render: (_, p) => pf.tierSummary(p.ownerCommissionTiers) || tCommon('labels.emptyValue'),
     },
     {
@@ -137,12 +178,37 @@ export default function AdminFeePoliciesPage() {
       },
     },
     {
+      // Thuế khấu trừ theo loại dịch vụ (ADR 0068): "7% · 7% · 4,5%", chi tiết GTGT/TNCN ở tooltip.
       title: t('page.columns.tax'),
       key: 'tax',
-      width: 110,
-      align: 'right',
-      render: (_, p) =>
-        p.taxEnabled && p.taxPercent != null ? pf.percent(p.taxPercent) : t('page.taxOff'),
+      width: 180,
+      render: (_, p) => {
+        if (!p.taxEnabled) return t('page.taxOff');
+        const rates = parseTaxRates(p.taxRates);
+        if (!rates) {
+          return p.taxPercent != null
+            ? t('page.taxLegacy', { value: p.taxPercent })
+            : tCommon('labels.emptyValue');
+        }
+        return (
+          <span className={styles.columnTitle}>
+            {pf.taxRatesSummary(rates)}
+            <InfoHint
+              label={t('page.taxRatesHintLabel')}
+              content={TAX_SERVICE_TYPES.map((type) => (
+                <div key={type}>
+                  {t('page.taxRateLine', {
+                    service: domainLabel('serviceType', type),
+                    vat: rates[type].vatPercent,
+                    pit: rates[type].pitPercent,
+                    total: taxRateTotalPercent(rates[type]),
+                  })}
+                </div>
+              ))}
+            />
+          </span>
+        );
+      },
     },
     {
       title: t('page.columns.status'),
@@ -231,17 +297,72 @@ export default function AdminFeePoliciesPage() {
     <div>
       <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={createButton} />
 
+      <QueueViewSwitch<FeePolicyView>
+        label={t('page.view.label')}
+        value={view}
+        options={[
+          { value: FEE_POLICY_VIEW.ACTIVE, label: t('page.view.active') },
+          { value: FEE_POLICY_VIEW.DRAFT, label: t('page.view.draft', { count: counts.draft }) },
+          {
+            value: FEE_POLICY_VIEW.ARCHIVED,
+            label: t('page.view.archived', { count: counts.archived }),
+          },
+        ]}
+        onChange={showView}
+      />
+
+      {view === FEE_POLICY_VIEW.ACTIVE && counts.draft > 0 ? (
+        <Alert
+          type="info"
+          showIcon
+          className={styles.notice}
+          title={t('page.draftPending', { count: counts.draft })}
+          action={
+            <Button size="small" onClick={() => showView(FEE_POLICY_VIEW.DRAFT)}>
+              {t('page.draftPendingAction')}
+            </Button>
+          }
+        />
+      ) : null}
+      {view === FEE_POLICY_VIEW.ARCHIVED && rows.length > 0 ? (
+        <Alert
+          type="info"
+          showIcon
+          className={styles.notice}
+          title={
+            active
+              ? t('page.archivedHint', { name: active.name, version: active.version })
+              : t('page.archivedHintNoActive')
+          }
+          action={
+            active ? (
+              <Button size="small" onClick={() => showView(FEE_POLICY_VIEW.ACTIVE)}>
+                {t('page.backToActive')}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
       <DataTable<FeePolicy>
         label={t('page.title')}
         columns={columns}
-        items={items}
+        items={rows}
         rowKey={(row) => row.id}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={
           isError && !data ? { title: t('page.loadError'), onRetry: () => void refetch() } : null
         }
-        empty={{ title: t('page.empty'), action: createButton }}
+        empty={
+          items.length === 0
+            ? { title: t('page.empty'), action: createButton }
+            : view === FEE_POLICY_VIEW.DRAFT
+              ? { title: t('page.emptyDraft'), action: createButton }
+              : view === FEE_POLICY_VIEW.ARCHIVED
+                ? { title: t('page.emptyArchived') }
+                : { title: t('page.emptyActive'), action: createButton }
+        }
       />
 
       {formTarget ? (

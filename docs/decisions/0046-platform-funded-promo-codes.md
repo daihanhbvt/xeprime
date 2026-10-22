@@ -1,6 +1,6 @@
 # ADR 0046 — Mã khuyến mãi do NỀN TẢNG tài trợ
 
-Ngày: 23/09/2026 · Trạng thái: Accepted · Mở rộng: 0029 điều 1–2, 0032 điều 2, 0033 điều 3–4, 0044 · Không ghi đè ADR nào
+Ngày: 23/09/2026 · Trạng thái: Accepted (cách làm tròn mã theo % — XUỐNG 1.000đ — bị [0069](0069-money-rounding-exact-vnd.md) thay bằng làm tròn LÊN rồi kẹp trần) · Mở rộng: 0029 điều 1–2, 0032 điều 2, 0033 điều 3–4, 0044 · Không ghi đè ADR nào
 
 > ⚠️ **[ADR 0064](0064-financial-flow-v2.md) (21/10/2026):** công thức điều 2 có thêm `H`; trần (4) ở điều 3 đổi `D + S` → `D + S + H`; CHECK trần ở điều 4 đổi tương ứng. Mã vẫn trừ SAU phép tính tiền giữ chỗ và không bớt tiền của chủ xe.
 

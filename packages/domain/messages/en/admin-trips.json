@@ -41,7 +41,7 @@
     }
   },
   "intro": {
-    "pending_approval": "Hosts have 60 minutes to answer; the system already reminded them at minute 20 and 45. Under 15 minutes left with no answer: call them or send a nudge — the customer is waiting to look elsewhere.",
+    "pending_approval": "The host's response deadline depends on how soon pick-up is (15 minutes to 4 hours); the system reminds them at 60 and 15 minutes left. Under 15 minutes left with no answer: call them or send a nudge — the customer is waiting to look elsewhere.",
     "awaiting_hold": "The host accepted and the vehicle is held for the customer. They have 120 minutes to pay the hold; the system reminds them at 60 and 15 minutes left. When time runs out the vehicle returns to the marketplace by itself.",
     "pickup_soon": "Paid bookings picking up within the next 24 hours. Past the pickup time with no handover: ask the shop — the customer may be standing there.",
     "active": "Vehicles currently with customers. Past the return time with no return handover: ask the shop; settlement only runs after the return record."

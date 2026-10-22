@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DRIVER_ASSIGNMENT_OUTCOME_VALUES,
   DRIVER_ASSIGNMENT_STATUS_VALUES,
+  DRIVER_SOURCE_VALUES,
   DRIVER_LICENCE_STATE_VALUES,
   DRIVER_LINK_END_PARTY_VALUES,
   DRIVER_LINK_STATUS_FILTER_ANY,
@@ -10,6 +11,7 @@ import {
   STOREFRONT_KIND_VALUES,
   DRIVER_LINK_SCOPE_VALUES,
   type DriverLinkScope,
+  type DriverSource,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -173,14 +175,43 @@ export class DriverPageDto {
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
 
-/** Tóm tắt tài xế gắn trên đơn thuê (khu quản lý). */
+/**
+ * Tài xế đang phủ một đơn (ADR 0063 · ADR 0067) — liên kết HOẶC ghi tay ngoài hệ thống.
+ *
+ * Phía bên thuê (khu quản lý, Owner Lite): đủ trường. Phía KHÁCH của chính đơn: chỉ tên + SĐT
+ * người sẽ đến đón — tài xế liên kết hiện khi đã NHẬN chuyến, `id` luôn null, không có hạn trả lời.
+ */
 export class BookingDriverSummaryDto {
-  @ApiProperty() id!: string;
+  @ApiProperty({
+    enum: DRIVER_SOURCE_VALUES,
+    description:
+      '`linked` = tài khoản khách đã liên kết (ADR 0063) · `external` = tên + SĐT bên thuê ghi trên đơn (ADR 0067)',
+  })
+  source!: DriverSource;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'ID liên kết tài xế (`drivers.id`) — null khi `source = external`, và luôn null ở bề mặt khách',
+  })
+  id!: string | null;
   @ApiProperty() name!: string;
-  @ApiProperty() phone!: string;
-  @ApiProperty({ enum: DRIVER_ASSIGNMENT_STATUS_VALUES }) assignmentStatus!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) assignedAt!: string;
+  @ApiProperty({ description: 'Dạng hiển thị `0xxxxxxxxx`' }) phone!: string;
+  @ApiProperty({
+    enum: DRIVER_ASSIGNMENT_STATUS_VALUES,
+    description: 'Tài xế ngoài hệ thống luôn `accepted` — không có lượt chờ',
+  })
+  assignmentStatus!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC — mốc gán (hoặc mốc ghi tài xế ngoài hệ thống)' })
+  assignedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) respondedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Hạn tài xế trả lời (ISO-8601, ADR 0066) — chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê.',
+  })
+  respondBy!: string | null;
 }
 
 /** Một lượt gán trong lịch sử tài xế của đơn (khu quản lý, ADR 0063). */
@@ -357,6 +388,13 @@ export class DriverTripDto {
   outcome!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) assignedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) respondedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê.',
+  })
+  respondBy!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

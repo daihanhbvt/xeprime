@@ -210,3 +210,8 @@
     padding-top: var(--xp-space-md);
   }
 }
+
+/* Bảng cộng ví của một chuyến trong hàng mở rộng — đủ hẹp để nhãn và số đọc thành cặp. */
+.payout {
+  max-width: 520px;
+}

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Realms } from '../../common/decorators';
@@ -135,8 +145,8 @@ export class CustomerTripsController {
     summary: 'Xem trước số được hoàn nếu khách huỷ chuyến ngay bây giờ',
     description:
       'Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví ' +
-      'điểm. Huỷ sau mốc: bảo hiểm hoàn đủ, phần còn lại chia đôi chủ xe / XePrime. Mốc so với ' +
-      'giờ server lúc gọi.',
+      'điểm. Huỷ sau mốc: bảo hiểm hoàn đủ; phần giữ chỗ của chủ xe đền chủ xe, phí đặt xe và hoa ' +
+      'hồng thuộc XePrime (ADR 0066). Mốc so với giờ server lúc gọi.',
   })
   @ApiOkResponse({ type: CustomerTripCancelPreviewDto })
   cancelPreview(
@@ -160,6 +170,30 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.cancel(user.id, id);
+  }
+
+  /**
+   * "Chưa nhận được xe" — lớp 1 chống treo đơn (ADR 0066). Chỉ realm khách: chủ xe không tự khiếu
+   * nại chính chuyến của mình.
+   */
+  @Post(':id/report-not-received')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến',
+    description:
+      'Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case ' +
+      '`dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp ' +
+      'mở giữ quyết toán khoản giữ chỗ. Idempotent: đơn đã có tranh chấp mở thì không tạo thêm. ' +
+      'Lỗi: 409 `TRIP_NOT_RECEIVED_NOT_ALLOWED` (sai trạng thái), `TRIP_NOT_RECEIVED_TOO_EARLY`, ' +
+      '`TRIP_NOT_RECEIVED_WINDOW_CLOSED`; chuyến của người khác 404. Trả về chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  reportNotReceived(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    return this.trips.reportNotReceived(user.id, id);
   }
 
   @Post(':id/refund-account')

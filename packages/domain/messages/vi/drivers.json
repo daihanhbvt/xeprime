@@ -93,7 +93,28 @@
     "unassignedToast": "Đã bỏ gán tài xế",
     "assignedAt": "Gán lúc {time}",
     "respondedAt": "Nhận lúc {time}",
-    "legacyHint": "Đơn này không phải chuyến có tài xế."
+    "respondBy": "Chờ tài xế nhận — hạn {time}",
+    "legacyHint": "Đơn này không phải chuyến có tài xế.",
+    "externalTag": "Ngoài hệ thống",
+    "externalSetAt": "Ghi lúc {time}",
+    "enterExternal": "Nhập tài xế ngoài hệ thống",
+    "editExternal": "Sửa",
+    "externalSaved": "Đã lưu tài xế ngoài hệ thống",
+    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết hoặc nhập tài xế ngoài hệ thống.",
+    "externalForm": {
+      "title": "Tài xế ngoài hệ thống",
+      "hint": "Người lái không cần tài khoản XePrime. Khách sẽ thấy tên và số điện thoại này để liên hệ; hệ thống không kiểm tra lịch trùng của người này.",
+      "replaceLinked": "{name} đang được gán cho chuyến này sẽ bị gỡ và nhận thông báo.",
+      "name": "Tên tài xế",
+      "namePlaceholder": "VD: Nguyễn Văn Tài",
+      "phone": "Số điện thoại",
+      "phonePlaceholder": "VD: 0901234567",
+      "save": "Lưu tài xế",
+      "nameRequired": "Vui lòng nhập tên tài xế",
+      "nameLength": "Tên tài xế từ {min} đến {max} ký tự",
+      "phoneRequired": "Vui lòng nhập số điện thoại",
+      "phoneInvalid": "Số điện thoại di động không hợp lệ"
+    }
   },
   "endedBy": {
     "driver": "Tài xế ngừng",

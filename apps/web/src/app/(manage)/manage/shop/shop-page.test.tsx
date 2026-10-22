@@ -564,8 +564,8 @@ describe('Trang Cửa hàng — gói & hạn mức', () => {
     expect(section.getByText('Gói nâng cao')).toBeTruthy();
     // Trần đếm THEO LOẠI trong phạm vi của gói (ADR 0065 điều 3).
     expect(section.getByText('10/10')).toBeTruthy();
-    expect(section.getByText('Ô tô')).toBeTruthy();
-    expect(section.getByText('Xe máy')).toBeTruthy();
+    expect(section.getByText('Gói ô tô')).toBeTruthy();
+    expect(section.getByText('Gói xe máy')).toBeTruthy();
   });
 
   it('đã dùng hết trần: một dòng cảnh báo, KHÔNG phải một dải đỏ', () => {

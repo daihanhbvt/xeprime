@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import {
   DRIVER_ASSIGNMENT_STATUS_META,
+  DRIVER_SOURCE,
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
@@ -33,6 +34,11 @@ import styles from './BookingFormDialog.module.css';
 const NOTE_MAX = 2000;
 /** Giá trị Select cho "không gán" — `null` không phải một value hợp lệ của AntD Select. */
 const NO_DRIVER = '';
+/**
+ * Giá trị Select đại diện tài xế NGOÀI HỆ THỐNG đang ghi trên đơn (ADR 0067) — không có id liên
+ * kết. Chọn lại nó là "giữ nguyên"; sửa tên/SĐT làm ở khối Tài xế của chi tiết đơn.
+ */
+const EXTERNAL_DRIVER = '__external__';
 
 function buildEditSchema(labels: { name: string; phone: string }) {
   return yup.object({
@@ -95,7 +101,11 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
   // Bộ chọn tài xế chỉ có khi đơn CHƯA giao xe — sau bàn giao tài xế đã chốt (ADR 0063).
   const driverEditable =
     withDriver && isDriverReassignable(booking.status) && has(PERMISSION.DRIVER_VIEW);
-  const currentDriverId = booking.driver?.id ?? NO_DRIVER;
+  const currentDriverId = booking.driver
+    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL
+      ? EXTERNAL_DRIVER
+      : (booking.driver.id ?? NO_DRIVER)
+    : NO_DRIVER;
   const [driverId, setDriverId] = useState<string>(currentDriverId);
   /** Thông tin đơn đã lưu, chỉ còn tài xế hỏng — lần bấm sau chỉ thử lại phần tài xế. */
   const [detailsSaved, setDetailsSaved] = useState(false);
@@ -128,7 +138,7 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
   async function saveDriver(): Promise<boolean> {
     if (!driverChanged) return true;
     try {
-      await assign.mutateAsync(driverId === NO_DRIVER ? null : driverId);
+      await assign.mutateAsync({ driverId: driverId === NO_DRIVER ? null : driverId });
       return true;
     } catch (err) {
       message.error(t('driverFailed', { error: errorMessage(err) }));
@@ -235,9 +245,17 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
                    * Người đang gán có thể không còn trong danh sách khả dụng (liên kết đã tạm
                    * ngưng) — vẫn giữ một option để ô hiện đúng tên, không hiện mã thô.
                    */
-                  ...(driver && !(driversQ.data ?? []).some((d) => d.id === driver.id)
-                    ? [{ value: driver.id, title: driver.name, label: driver.name }]
-                    : []),
+                  ...(driver?.source === DRIVER_SOURCE.EXTERNAL
+                    ? [
+                        {
+                          value: EXTERNAL_DRIVER,
+                          title: driver.name,
+                          label: `${driver.name} · ${tDriver('externalTag')}`,
+                        },
+                      ]
+                    : driver?.id && !(driversQ.data ?? []).some((d) => d.id === driver.id)
+                      ? [{ value: driver.id, title: driver.name, label: driver.name }]
+                      : []),
                   ...(driversQ.data ?? []).map((d) => ({
                     value: d.id,
                     title: `${d.name} ${d.phone}`,
@@ -257,7 +275,7 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
                 ]}
               />
               {/* Trạng thái lượt gán HIỆN TẠI — gán mới vẫn chờ tài xế nhận. */}
-              {driver && driverId === driver.id ? (
+              {driver?.id && driverId === driver.id ? (
                 <StatusTag
                   value={driver.assignmentStatus}
                   meta={DRIVER_ASSIGNMENT_STATUS_META}

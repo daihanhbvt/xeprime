@@ -4,7 +4,7 @@ import { InfoCircleOutlined, LeftOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { BOOKING_REQUEST_RESPOND_WINDOW_MINUTES } from '@xeprime/types';
+import { BOOKING_REQUEST_RESPOND_WINDOW } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
@@ -76,7 +76,8 @@ export function BookingSuccessStep({
       lead={
         confirmed
           ? t('done.autoAccepted')
-          : t('done.pendingBody', { minutes: BOOKING_REQUEST_RESPOND_WINDOW_MINUTES })
+          : // Hạn thật (động theo giờ nhận, ADR 0066) hiện ở trang chuyến; ở đây chỉ nói trần.
+            t('done.pendingBody', { hours: BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES / 60 })
       }
       code={{
         label: t('done.requestCodeLabel'),

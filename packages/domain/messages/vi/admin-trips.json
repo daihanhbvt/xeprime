@@ -41,7 +41,7 @@
     }
   },
   "intro": {
-    "pending_approval": "Chủ xe có 60 phút để trả lời; máy đã nhắc ở phút 20 và 45. Còn dưới 15 phút mà chưa có câu trả lời thì gọi hoặc nhắc tay — khách đang chờ để còn đi tìm xe khác.",
+    "pending_approval": "Hạn trả lời của chủ xe tuỳ khoảng cách tới giờ nhận xe (15 phút – 4 giờ); máy nhắc khi còn 60 phút và còn 15 phút. Còn dưới 15 phút mà chưa có câu trả lời thì gọi hoặc nhắc tay — khách đang chờ để còn đi tìm xe khác.",
     "awaiting_hold": "Chủ xe đã nhận, xe đang được giữ cho khách. Khách có 120 phút để chuyển tiền giữ chỗ; máy tự nhắc ở mốc còn 60 và 15 phút. Hết giờ là xe tự quay lại chợ.",
     "pickup_soon": "Đơn đã giữ chỗ, giao xe trong 24 giờ tới. Quá giờ mà gian hàng chưa bàn giao thì hỏi họ — khách có thể đang đứng chờ.",
     "active": "Xe đang ở với khách. Quá giờ trả mà chưa bàn giao trả xe thì hỏi gian hàng; quyết toán chỉ chạy sau biên bản trả xe."

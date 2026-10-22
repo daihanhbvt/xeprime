@@ -262,6 +262,18 @@ describe('ConfirmHandoverDialog', () => {
     expect(screen.getByRole('button', { name: 'Xác nhận đã giao xe' })).toBeTruthy();
   });
 
+  it('lời khuyên chụp ảnh + công tơ mét HIỆN SẴN (ADR 0066) mà ảnh vẫn tuỳ chọn', () => {
+    renderDialog();
+    // Không cần mở vùng nâng cao mới thấy — đó là lý do nó đứng ngoài.
+    expect(
+      screen.getByText(
+        'Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp.',
+      ),
+    ).toBeTruthy();
+    openAdvanced();
+    expect(screen.getByText('Không bắt buộc — bỏ qua vẫn xác nhận được.')).toBeTruthy();
+  });
+
   it('vùng nâng cao vẫn giữ Odo, thời điểm thực tế và ghi chú', () => {
     renderDialog();
     openAdvanced();

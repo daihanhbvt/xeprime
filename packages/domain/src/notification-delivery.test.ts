@@ -192,6 +192,9 @@ describe('pushPriority + androidChannelFor', () => {
     expect(pushPriority(NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED)).toBe(PUSH_PRIORITY.HIGH);
     expect(pushPriority(NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING)).toBe(PUSH_PRIORITY.NORMAL);
     expect(pushPriority(NOTIFICATION_TYPE.REVIEW_RECEIVED)).toBe(PUSH_PRIORITY.NORMAL);
+    expect(pushPriority(NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED)).toBe(PUSH_PRIORITY.HIGH);
+    expect(pushPriority(NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING)).toBe(PUSH_PRIORITY.HIGH);
+    expect(pushPriority(NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED)).toBe(PUSH_PRIORITY.HIGH);
   });
 
   it('chat có kênh Android riêng để tắt được mà không tắt tin về đơn', () => {
@@ -230,7 +233,12 @@ describe('pushDataPayload', () => {
 });
 
 describe('chatNotificationCopy', () => {
-  const base = { senderName: 'Đà Nẵng Prime', text: 'Giá 30k 1 ngày', attachmentCount: 0, messageType: 'text' };
+  const base = {
+    senderName: 'Đà Nẵng Prime',
+    text: 'Giá 30k 1 ngày',
+    attachmentCount: 0,
+    messageType: 'text',
+  };
 
   it('tiêu đề là TÊN phía gửi, nội dung là chính câu tin', () => {
     expect(chatNotificationCopy(base)).toEqual({
@@ -260,15 +268,15 @@ describe('chatNotificationCopy', () => {
   });
 
   it('tin chỉ có đính kèm mô tả theo LOẠI và SỐ LƯỢNG', () => {
-    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'image' }).body).toBe(
-      'Đã gửi một ảnh',
-    );
-    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 3, messageType: 'image' }).body).toBe(
-      'Đã gửi 3 ảnh',
-    );
-    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'file' }).body).toBe(
-      'Đã gửi một tệp',
-    );
+    expect(
+      chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'image' }).body,
+    ).toBe('Đã gửi một ảnh');
+    expect(
+      chatNotificationCopy({ ...base, text: null, attachmentCount: 3, messageType: 'image' }).body,
+    ).toBe('Đã gửi 3 ảnh');
+    expect(
+      chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'file' }).body,
+    ).toBe('Đã gửi một tệp');
   });
 
   /** Khoảng trắng thừa ở hai đầu là chuyện thường của ô nhập — không để nó thành nội dung. */

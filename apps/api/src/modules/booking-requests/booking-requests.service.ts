@@ -66,6 +66,7 @@ import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
 import { addressViewOf, pinOf } from '../../common/address-view';
+import { ownerPayoutOf } from '../../common/owner-payout';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
@@ -671,6 +672,7 @@ export class BookingRequestsService {
           mode: 'public',
         });
 
+        const submittedAt = new Date();
         await tx.bookingRequest.create({
           data: {
             id,
@@ -742,12 +744,17 @@ export class BookingRequestsService {
             /*
              * Hạn phản hồi do SERVER đặt, luôn luôn. DTO không có trường này nên client không
              * gửi được, và không có nhánh nào đọc một giá trị từ ngoài vào: một khách tự nới
-             * hạn của mình sẽ biến lời hứa "60 phút" thành thứ vô nghĩa.
+             * hạn của mình sẽ biến lời hứa về hạn phản hồi thành thứ vô nghĩa.
+             *
+             * Độ dài ĐỘNG theo ΔT = giờ nhận − lúc gửi (ADR 0066): 20% của ΔT, 15′–240′; dài hạn
+             * chưa có giờ nhận (`pickupAt = null`) ⇒ 240′. `createdAt` ghi CÙNG mốc để
+             * `respondBy − createdAt` đúng bằng cửa sổ — worker đọc hiệu đó để bỏ lượt nhắc.
              *
              * Vẫn KHÔNG chiếm lịch xe ở bước này (ADR 0006) — đây mới là "chờ shop trả lời",
              * chưa phải một chỗ đã giữ.
              */
-            respondBy: bookingRequestRespondBy(new Date()),
+            createdAt: submittedAt,
+            respondBy: bookingRequestRespondBy(submittedAt, pickupAt),
             rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
             /*
              * Điều kiện của mã ĐÓNG BĂNG ngay tại đây. Lúc chốt giá, số giảm được tính lại từ
@@ -922,7 +929,12 @@ export class BookingRequestsService {
     schedule: ApprovalSchedule,
   ): Promise<{ fees: CustomerFeeBreakdown | null; promoDropped: boolean }> {
     const quoteIsEstimate = breakdown.estimateNote != null;
-    const trip = { vehicleType: req.vehicle.vehicleType, breakdown, schedule };
+    const trip = {
+      vehicleType: req.vehicle.vehicleType,
+      serviceType: req.serviceType,
+      breakdown,
+      schedule,
+    };
     const feeOpts = {
       depositRequired: deposit.required,
       vehicleProtectionSelected: req.vehicleProtectionSelected,
@@ -1195,7 +1207,10 @@ export class BookingRequestsService {
       return {
         pricing,
         approvalPreview: estimate?.fees
-          ? approvalPreviewOf(estimate.fees, r.serviceType === SERVICE_TYPE.LONG_TERM ? null : r.pickupAt)
+          ? approvalPreviewOf(
+              estimate.fees,
+              r.serviceType === SERVICE_TYPE.LONG_TERM ? null : r.pickupAt,
+            )
           : null,
       };
     } catch (err) {
@@ -1245,7 +1260,7 @@ export class BookingRequestsService {
     const frozen = this.promos.frozenTermsOf(r);
     const fees = await this.pricing.customerFeesFor(
       tenantId,
-      { vehicleType: r.vehicle.vehicleType, breakdown },
+      { vehicleType: r.vehicle.vehicleType, serviceType: r.serviceType, breakdown },
       breakdown.estimateNote != null,
       {
         vehicleProtectionSelected: r.vehicleProtectionSelected,
@@ -2626,7 +2641,7 @@ export class BookingRequestsService {
  *
  * 50 là con số "nhiều hơn mọi tình huống thật, ít hơn một job": một chiếc xe có 50 yêu cầu chờ
  * chồng nhau cùng khung giờ là dấu hiệu của tấn công, không phải của thị trường. Quá trần thì
- * phần dư ở lại hàng chờ và rơi vào hạn phản hồi 60 phút như trước — chậm hơn, không sai.
+ * phần dư ở lại hàng chờ và rơi vào hạn phản hồi của chính nó như trước — chậm hơn, không sai.
  */
 const SUPERSEDED_SCAN_LIMIT = 50;
 
@@ -2697,6 +2712,9 @@ type BookingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof SELECT
  * Xem trước lượt duyệt từ bảng phí TẠM TÍNH — tiền của chủ xe + hai cửa sổ của khoản giữ chỗ NẾU
  * duyệt ngay (`holdWindowsFor` với `acceptedAt = now`, CÙNG hàm lượt tạo hold dùng). `pickupAt`
  * null ⇒ chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) ⇒ không có cửa sổ để ước.
+ *
+ * Bảng cộng ví đọc giá từng ngày từ CHÍNH bảng phí (`fees.dayAmounts`) — cùng nguồn chi tiết đơn
+ * đọc sau khi bảng phí được đóng băng, nên hai màn ra cùng một đơn giá.
  */
 function approvalPreviewOf(
   fees: CustomerFeeBreakdown,
@@ -2722,6 +2740,7 @@ function approvalPreviewOf(
     taxAmount: fees.taxAmount,
     ownerPayableAmount: fees.ownerPayableAmount,
     ownerNetAmount: fees.ownerNetAmount,
+    ownerPayout: ownerPayoutOf(fees),
     policyFreeCancelHours: fees.policy.freeCancelHours,
     policyPaymentWindowMinutes: fees.policy.holdPaymentWindowMinutes,
     windows: windows ? toHoldWindowsPreviewDto(windows) : null,
@@ -2919,7 +2938,7 @@ function notFound(): NotFoundException {
 function requestExpired(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.BOOKING_REQUEST_EXPIRED,
-    message: 'Yêu cầu đã quá hạn phản hồi 60 phút — hãy liên hệ lại với khách',
+    message: 'Yêu cầu đã quá hạn phản hồi — hãy liên hệ lại với khách',
   });
 }
 

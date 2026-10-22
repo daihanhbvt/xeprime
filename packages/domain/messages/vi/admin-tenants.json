@@ -205,7 +205,7 @@
         "period": "Tháng",
         "completed": "Chuyến hoàn tất",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ XePrime"
+        "serviceFee": "Phí đặt xe"
       }
     },
     "vehicles": {
@@ -454,7 +454,7 @@
         "period": "Tháng",
         "completed": "Chuyến hoàn tất",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ XePrime",
+        "serviceFee": "Phí đặt xe",
         "tax": "Thuế khấu trừ"
       },
       "stats": {
@@ -471,7 +471,7 @@
         "month": "Tháng",
         "completed": "Chuyến",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ",
+        "serviceFee": "Phí đặt xe",
         "tax": "Thuế khấu trừ",
         "state": "Tình trạng"
       },
