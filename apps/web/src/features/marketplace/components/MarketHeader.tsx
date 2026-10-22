@@ -96,7 +96,7 @@ export function MarketHeader() {
   const hiddenOnScroll = isSearchPage && scrolledPast;
 
   return (
-    <header className={cx(styles.header, hiddenOnScroll && styles.headerHidden)}>
+    <header className={cx(styles.header, isSearchPage && hiddenOnScroll && styles.headerHidden)}>
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Image

@@ -129,6 +129,7 @@
     "VEHICLE_IMAGES_INCOMPLETE": "Xe còn thiếu ảnh bắt buộc — ô tô cần 5 ảnh (trước, sau, trái, phải, nội thất), xe máy cần 2 ảnh (trước, sau).",
     "VEHICLE_NOT_APPROVED_PUBLIC": "Xe chưa được nền tảng duyệt nên chưa hiển thị trên chợ được. Hãy gửi duyệt công khai trước.",
     "VEHICLE_PLATFORM_HIDDEN": "Nền tảng đang ẩn xe này. Liên hệ hỗ trợ XePrime để được xem xét lại.",
+    "FAVORITE_VEHICLE_UNAVAILABLE": "Xe này hiện không còn trên chợ nên chưa lưu vào yêu thích được.",
     "APPROVAL_ALREADY_DECIDED": "Phiếu này vừa được người khác xử lý. Đang tải lại trạng thái mới nhất.",
     "APPROVAL_CHECKLIST_INCOMPLETE": "Hoàn tất kiểm tra thủ công trước khi phê duyệt.",
     "APPROVAL_NOTE_CONFLICT": "Ghi chú vừa được người khác sửa. Xem bản mới nhất trước khi lưu lại.",

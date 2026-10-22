@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "Saved vehicles"
+  },
+  "tabs": {
+    "label": "Vehicle type",
+    "withCount": "{type} ({count})",
+    "showMore": "Show more"
+  },
+  "button": {
+    "save": "Save {name} to your saved vehicles",
+    "remove": "Remove {name} from your saved vehicles"
+  },
+  "card": {
+    "remove": "Unsave",
+    "removeAria": "Remove {name} from your saved vehicles",
+    "viewDetail": "View details",
+    "viewDetailAria": "View details of {name}",
+    "servicesLabel": "Services offered",
+    "serviceLinkAria": "View {name} with {service}",
+    "highlightsLabel": "Vehicle perks",
+    "savedAt": "Saved {dateTime}",
+    "viewDetail": "View details"
+  },
+  "empty": {
+    "car": "You haven't saved any cars yet",
+    "motorbike": "You haven't saved any motorbikes yet",
+    "body": "Tap the heart on a vehicle you like to save it for later.",
+    "cta": "Find a vehicle"
+  },
+  "error": {
+    "title": "Couldn't load your saved vehicles",
+    "loadMore": "Couldn't load more. {reason}"
+  },
+  "toast": {
+    "saved": "Vehicle saved.",
+    "saveFailed": "Couldn't save this vehicle. {reason}",
+    "removeFailed": "Couldn't remove this vehicle. {reason}"
+  }
+}

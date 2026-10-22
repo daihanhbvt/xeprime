@@ -9,6 +9,13 @@ import type { PublicQuote } from '@/features/rental-policies/types';
 import type { PublicListingDetail } from '../types';
 import { ListingDetailView } from './ListingDetailView';
 
+/** Trái tim cần phiên + QueryClient + hộp đăng nhập — có test riêng ở `features/favorites`. */
+vi.mock('@/features/favorites/components/FavoriteButton', () => ({
+  FavoriteButton: ({ vehicleId }: { vehicleId: string }) => (
+    <button type="button" data-testid={`favorite-${vehicleId}`} />
+  ),
+}));
+
 /*
  * Thẻ "Thành tiền" hỏi báo giá SERVER (`/public/listings/:id/quote`) qua TanStack Query — mỗi lần dựng
  * trang là một QueryClient mới (không lẫn cache giữa các bài), và báo giá là một bảng kê kiểu server.

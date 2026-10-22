@@ -187,6 +187,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'customers', description: 'Khách hàng của gian hàng và giấy tờ tuỳ thân đã thu.' },
       { name: 'customer-trips', description: 'Chuyến xe nhìn từ phía tài khoản khách.' },
       {
+        name: 'favorites',
+        description:
+          'Xe yêu thích của tài khoản khách: lưu/bỏ lưu (idempotent), trái tim theo lô, danh sách ' +
+          'theo loại xe đọc dữ liệu chợ hiện hành. Không giữ giá/lịch, không ảnh hưởng xếp hạng.',
+      },
+      {
         name: 'driver-self',
         description:
           'Tài khoản khách trong vai TÀI XẾ: lời mời liên kết, nơi mình lái, chuyến được gán và nhận/từ chối (ADR 0063).',

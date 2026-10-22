@@ -26,6 +26,7 @@ import listings from '@xeprime/domain/messages/en/listings.json';
 import shops from '@xeprime/domain/messages/en/shops.json';
 import chat from '@xeprime/domain/messages/en/chat.json';
 import trips from '@xeprime/domain/messages/en/trips.json';
+import favorites from '@xeprime/domain/messages/en/favorites.json';
 import account from '@xeprime/domain/messages/en/account.json';
 import legal from '@xeprime/domain/messages/en/legal.json';
 import support from '@xeprime/domain/messages/en/support.json';
@@ -94,6 +95,7 @@ const messages = {
   Shops: shops,
   Chat: chat,
   Trips: trips,
+  Favorites: favorites,
   Account: account,
   Legal: legal,
   Support: support,

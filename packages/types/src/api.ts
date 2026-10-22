@@ -993,6 +993,13 @@ export const API_ERROR_CODE = {
    * nền tảng vừa cố ý gỡ xuống (ADR 0048 điều 4).
    */
   VEHICLE_PLATFORM_HIDDEN: 'VEHICLE_PLATFORM_HIDDEN',
+  /**
+   * Lưu vào "Xe yêu thích" một chiếc xe KHÔNG đang niêm yết công khai (BRD customer favorites) —
+   * id lạ, xe bị ẩn/gỡ/đình chỉ, gian hàng ngừng hoạt động. Mã riêng thay vì `NOT_FOUND` chung:
+   * giao diện hoàn tác trái tim và nói đúng chuyện "xe này hiện không còn trên chợ", không phải
+   * một lỗi tra cứu chung chung. Bỏ thích thì không bao giờ trả mã này (luôn idempotent).
+   */
+  FAVORITE_VEHICLE_UNAVAILABLE: 'FAVORITE_VEHICLE_UNAVAILABLE',
 
   /**
    * Phiếu duyệt đã được một người duyệt KHÁC xử lý (hoặc đã rời hàng đợi) — mọi thao tác ghi lên
