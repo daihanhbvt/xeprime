@@ -15,6 +15,7 @@ import {
   GiftOutlined,
   HistoryOutlined,
   IdcardOutlined,
+  InsuranceOutlined,
   InboxOutlined,
   LineChartOutlined,
   MobileOutlined,
@@ -588,15 +589,6 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         icon: TeamOutlined,
       },
       {
-        // Bằng lái máy chưa tự xác thực được (ADR 0057) — đứng cạnh "Khách thuê" vì đây là việc
-        // gỡ cho KHÁCH đặt được xe, không phải kiểm duyệt nguồn cung.
-        key: 'admin-driver-licences',
-        labelKey: 'platform.driverLicences',
-        href: ROUTES.ADMIN.DRIVER_LICENCES,
-        permission: PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW,
-        icon: SafetyCertificateOutlined,
-      },
-      {
         // Một SĐT/email → mọi tài khoản ở cả ba realm (ADR 0053 điều 9). Cùng quyền với "Khách thuê".
         key: 'admin-account-lookup',
         labelKey: 'platform.accountLookup',
@@ -625,6 +617,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         // gói vẫn thấy mục này — và trong màn chỉ thấy hàng đợi tiền vào.
         permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
         icon: WalletOutlined,
+      },
+      {
+        /*
+         * Bảo hiểm chuyến (ADR 0064) đứng cạnh Tài chính: hàng đợi giấy chứng nhận là phí khách đã
+         * trả đang giữ hộ (quyền tiền), danh mục sản phẩm là nội dung hiện cho khách (quyền bảo
+         * hiểm). Có MỘT trong hai quyền là thấy mục — trong màn, mỗi tab tự gác theo quyền của nó.
+         */
+        key: 'admin-insurance',
+        labelKey: 'platform.insurance',
+        href: ROUTES.ADMIN.INSURANCE,
+        permission: [PERMISSION.PLATFORM_INSURANCE_MANAGE, PERMISSION.PLATFORM_MONEY_MANAGE],
+        icon: InsuranceOutlined,
       },
       {
         /*

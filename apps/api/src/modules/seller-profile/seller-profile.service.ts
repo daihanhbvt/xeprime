@@ -104,28 +104,34 @@ export class SellerProfileService {
     actorUserId: string,
     dto: SaveSellerProfileDto,
   ): Promise<SellerProfileDto> {
-    const current = await this.load(tenantId);
-    if (!canEditSellerProfile(current.status as SellerProfileStatus)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE,
-        message: 'Hồ sơ đang chờ xác minh — không sửa được cho tới khi có kết quả',
-        details: { status: current.status },
-      });
-    }
+    // Bảo đảm có hàng để KHOÁ — bản nháp tạo lười nằm ngoài transaction là vô hại (idempotent).
+    await this.load(tenantId);
+
+    const next = {
+      entityType: dto.entityType,
+      legalName: dto.legalName?.trim() || null,
+      taxId: normalizeTaxId(dto.taxId),
+      idNumber: normalizeIdNumber(dto.idNumber),
+      idIssuedAt: dto.idIssuedAt ? toDateOnly(dto.idIssuedAt) : null,
+      idIssuedBy: dto.idIssuedBy?.trim() || null,
+    };
 
     const row = await this.prisma.$transaction(async (tx) => {
+      const current = await this.lockEditable(
+        tx,
+        tenantId,
+        'Hồ sơ đang chờ xác minh — không sửa được cho tới khi có kết quả',
+      );
+      const reverify = reverificationFor(current, next);
+
       const updated = await tx.sellerProfile.update({
         where: { tenantId },
-        data: {
-          entityType: dto.entityType,
-          legalName: dto.legalName?.trim() || null,
-          taxId: normalizeTaxId(dto.taxId),
-          idNumber: dto.idNumber?.replace(/\s+/g, '').toUpperCase() || null,
-          idIssuedAt: dto.idIssuedAt ? toDateOnly(dto.idIssuedAt) : null,
-          idIssuedBy: dto.idIssuedBy?.trim() || null,
-        },
+        data: { ...next, ...(reverify ? reverify.data : {}) },
         select: SELECT,
       });
+      if (reverify?.status === SELLER_PROFILE_STATUS.SUBMITTED) {
+        await this.openApprovalTask(tx, tenantId, updated.id, actorUserId);
+      }
 
       await this.audit.record(
         {
@@ -135,8 +141,17 @@ export class SellerProfileService {
           action: 'seller_profile.save',
           targetType: 'seller_profile',
           targetId: updated.id,
-          // KHÔNG ghi số giấy tờ vào audit — chỉ ghi loại chủ thể vừa lưu.
-          after: { entityType: dto.entityType },
+          // KHÔNG ghi số giấy tờ vào audit — chỉ ghi loại chủ thể vừa lưu và trường nào đã đổi.
+          ...(reverify
+            ? {
+                before: { status: current.status, entityType: current.entityType },
+                after: {
+                  entityType: dto.entityType,
+                  status: reverify.status,
+                  reverifyReason: reverify.changed,
+                },
+              }
+            : { after: { entityType: dto.entityType } }),
         },
         tx,
       );
@@ -166,7 +181,14 @@ export class SellerProfileService {
     const taxId = normalizeTaxId(rawTaxId);
     const current = await tx.sellerProfile.findUnique({
       where: { tenantId },
-      select: { id: true, status: true, taxId: true },
+      select: {
+        id: true,
+        status: true,
+        taxId: true,
+        entityType: true,
+        idNumber: true,
+        legalName: true,
+      },
     });
     if ((current?.taxId ?? null) === taxId) return;
     if (current && !canEditSellerProfile(current.status as SellerProfileStatus)) {
@@ -178,12 +200,18 @@ export class SellerProfileService {
     }
 
     let row: { id: string; entityType: string };
+    let reverify: ReturnType<typeof reverificationFor> = null;
     if (current) {
+      // Đổi MST của hồ sơ ĐÃ XÁC MINH qua đường cũ cũng phải duyệt lại — cùng luật với `save`.
+      reverify = reverificationFor(current, { ...current, taxId });
       row = await tx.sellerProfile.update({
         where: { tenantId },
-        data: { taxId },
+        data: { taxId, ...(reverify ? reverify.data : {}) },
         select: { id: true, entityType: true },
       });
+      if (reverify?.status === SELLER_PROFILE_STATUS.SUBMITTED) {
+        await this.openApprovalTask(tx, tenantId, row.id, actorUserId);
+      }
     } else {
       const tenant = await tx.tenant.findUnique({
         where: { id: tenantId },
@@ -209,7 +237,14 @@ export class SellerProfileService {
         targetType: 'seller_profile',
         targetId: row.id,
         // KHÔNG ghi số giấy tờ vào audit — như `save`. `via` nói lần ghi đến từ đường cũ.
-        after: { entityType: row.entityType, via: 'tenant_profile.tax_code' },
+        ...(reverify
+          ? { before: { status: current?.status ?? null } }
+          : {}),
+        after: {
+          entityType: row.entityType,
+          via: 'tenant_profile.tax_code',
+          ...(reverify ? { status: reverify.status, reverifyReason: reverify.changed } : {}),
+        },
       },
       tx,
     );
@@ -217,24 +252,20 @@ export class SellerProfileService {
 
   /** Gửi xác minh — mở một `approval_task` cho hàng đợi reviewer. */
   async submit(tenantId: string, actorUserId: string): Promise<SellerProfileDto> {
-    const current = await this.load(tenantId);
-    if (!canEditSellerProfile(current.status as SellerProfileStatus)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE,
-        message: 'Hồ sơ đang chờ xác minh',
-        details: { status: current.status },
-      });
-    }
-    const missing = missingFields(current);
-    if (missing.length > 0) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.SELLER_PROFILE_INCOMPLETE,
-        message: 'Hồ sơ còn thiếu thông tin bắt buộc',
-        details: { missing },
-      });
-    }
+    await this.load(tenantId);
 
     const row = await this.prisma.$transaction(async (tx) => {
+      // Khoá cùng hàng với `save`: bộ số được GỬI duyệt phải đúng là bộ số vừa kiểm đủ trường.
+      const current = await this.lockEditable(tx, tenantId, 'Hồ sơ đang chờ xác minh');
+      const missing = missingFields(current);
+      if (missing.length > 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SELLER_PROFILE_INCOMPLETE,
+          message: 'Hồ sơ còn thiếu thông tin bắt buộc',
+          details: { missing },
+        });
+      }
+
       const updated = await tx.sellerProfile.update({
         where: { tenantId },
         data: {
@@ -465,6 +496,33 @@ export class SellerProfileService {
     });
   }
 
+  /**
+   * Khoá hàng hồ sơ (`FOR UPDATE`) rồi đọc lại TRONG transaction của nơi gọi — `save`/`submit`.
+   *
+   * Quyết định "sửa được không" và "có phải duyệt lại không" (ADR 0068 điều 2) phụ thuộc `status`.
+   * Đọc nó ngoài transaction thì hai lượt lưu song song trên một hồ sơ ĐÃ XÁC MINH cùng thấy
+   * `verified` và cùng ghi; hay một lượt lưu thấy `draft` rồi ghi đè lên hồ sơ vừa được GỬI duyệt
+   * — reviewer duyệt một bộ số khác bộ đã gửi, và nhãn "doanh nghiệp đã xác minh" (miễn khấu trừ
+   * thuế) dán lên dữ liệu chưa ai xem. Khoá xếp các lượt nối tiếp: lượt sau đọc đúng trạng thái
+   * lượt trước để lại, và bị từ chối `SELLER_PROFILE_NOT_EDITABLE` nếu hồ sơ đã sang chờ duyệt.
+   */
+  private async lockEditable(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    notEditableMessage: string,
+  ): Promise<Row> {
+    await tx.$queryRaw`SELECT 1 FROM seller_profiles WHERE tenant_id = ${tenantId} FOR UPDATE`;
+    const current = await tx.sellerProfile.findUniqueOrThrow({ where: { tenantId }, select: SELECT });
+    if (!canEditSellerProfile(current.status as SellerProfileStatus)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE,
+        message: notEditableMessage,
+        details: { status: current.status },
+      });
+    }
+    return current;
+  }
+
   private async load(tenantId: string): Promise<Row> {
     const row = await this.prisma.sellerProfile.findUnique({ where: { tenantId }, select: SELECT });
     if (row) return row;
@@ -480,6 +538,54 @@ export class SellerProfileService {
  */
 export function normalizeTaxId(raw: string | null | undefined): string | null {
   return raw?.replace(/\s+/g, '') || null;
+}
+
+/** Số CCCD/hộ chiếu đã chuẩn hoá — bỏ khoảng trắng, in hoa; rỗng ⇒ `null`. */
+export function normalizeIdNumber(raw: string | null | undefined): string | null {
+  return raw?.replace(/\s+/g, '').toUpperCase() || null;
+}
+
+/** Trường ĐỊNH DANH THUẾ của hồ sơ — đổi một trong số này ở hồ sơ đã xác minh là phải duyệt lại. */
+export const SELLER_TAX_IDENTITY_FIELDS = ['entityType', 'taxId', 'idNumber'] as const;
+
+/**
+ * Hồ sơ ĐÃ XÁC MINH bị đổi loại chủ thể, MST hoặc số CCCD ⇒ phải duyệt lại (ADR 0068 điều 2).
+ *
+ * Lý do là tiền thật: chỉ doanh nghiệp ĐÃ XÁC MINH mới được miễn khấu trừ thuế
+ * (`taxSellerEntityOf`). Để hồ sơ đã duyệt tự đổi `individual → company` mà vẫn giữ nhãn
+ * "đã xác minh" là một cú bấm để thôi bị khấu trừ 7%. Tương tự với MST/CCCD — đó là định danh ghi
+ * lên tờ khai thuế, reviewer phải thấy lại.
+ *
+ * Còn đủ trường bắt buộc ⇒ `submitted` (vào lại hàng đợi reviewer — caller mở `approval_task`);
+ * thiếu ⇒ `draft` (không thể gửi một hồ sơ thiếu, chủ gian hàng phải bổ sung rồi gửi). Đổi tên
+ * pháp lý hay nơi cấp giấy tờ không kích hoạt — không đổi nghĩa vụ thuế. `null` = không cần.
+ */
+export function reverificationFor(
+  current: { status: string; entityType: string; taxId: string | null; idNumber: string | null },
+  next: { entityType: string; legalName: string | null; taxId: string | null; idNumber: string | null },
+): {
+  status: typeof SELLER_PROFILE_STATUS.SUBMITTED | typeof SELLER_PROFILE_STATUS.DRAFT;
+  changed: string[];
+  data: Prisma.SellerProfileUpdateInput;
+} | null {
+  if (current.status !== SELLER_PROFILE_STATUS.VERIFIED) return null;
+  const changed = SELLER_TAX_IDENTITY_FIELDS.filter((field) => current[field] !== next[field]);
+  if (changed.length === 0) return null;
+  const status =
+    missingFields(next).length === 0
+      ? SELLER_PROFILE_STATUS.SUBMITTED
+      : SELLER_PROFILE_STATUS.DRAFT;
+  return {
+    status,
+    changed: [...changed],
+    data: {
+      status,
+      submittedAt: status === SELLER_PROFILE_STATUS.SUBMITTED ? new Date() : null,
+      verifiedAt: null,
+      verifier: { disconnect: true },
+      reviewNote: null,
+    },
+  };
 }
 
 /**

@@ -23,7 +23,7 @@
   },
   "index": {
     "title": "Văn bản pháp lý",
-    "subtitle": "Bốn văn bản điều chỉnh việc sử dụng XePrime. Bản đang hiển thị có hiệu lực từ {date}.",
+    "subtitle": "Bộ văn bản điều chỉnh việc sử dụng XePrime. Bản đang hiển thị có hiệu lực từ {date}.",
     "supportHeading": "Cần phản ánh một việc cụ thể?",
     "supportBody": "Trung tâm hỗ trợ là nơi tiếp nhận phản ánh, khiếu nại và tranh chấp giữa người thuê với gian hàng.",
     "supportLink": "Tới trung tâm hỗ trợ"
@@ -74,7 +74,7 @@
           "items": {
             "request": "Bạn gửi yêu cầu thuê kèm khung giờ và nơi nhận xe. Bước này chưa thu tiền và chưa giữ chỗ — chiếc xe vẫn mở cho khách khác.",
             "decision": "Gian hàng nhận hoặc từ chối yêu cầu. Với xe bật “Đặt ngay”, hệ thống nhận tự động. Chỉ khi được nhận thì lịch mới được giữ, giá mới được chốt.",
-            "holdPayment": "Bạn chuyển tiền giữ chỗ trong cửa sổ thanh toán — hiện là 120 phút kể từ lúc gian hàng nhận chuyến, và không vượt quá giờ nhận xe. Chúng tôi nhắc bạn hai lần trước khi hết giờ. Hết hạn là hết, không có gia hạn.",
+            "holdPayment": "Bạn chuyển tiền giữ chỗ trong cửa sổ thanh toán, tính từ lúc gian hàng nhận chuyến và không vượt quá giờ nhận xe. Cửa sổ bằng 30% khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe (tối thiểu 15 phút, tối đa 120 phút) — xem Chính sách huỷ và hoàn tiền. Chúng tôi nhắc bạn trước khi hết giờ. Hết hạn là hết, không có gia hạn.",
             "bookingCreated": "Đơn thuê chỉ hình thành khi hệ thống đối soát xác nhận đã nhận đủ tiền giữ chỗ — không phải khi bạn bấm một nút hay quét mã.",
             "slotLost": "Nếu khung giờ đã thuộc về khách khác, các yêu cầu còn chờ cho khung giờ đó được đóng lại và báo cho bạn. Đây không phải là gian hàng từ chối bạn."
           }
@@ -309,24 +309,36 @@
           "body": "Gửi yêu cầu thuê không thu tiền và không giữ chỗ. Bạn rút yêu cầu bất cứ lúc nào trước khi gian hàng quyết định mà không mất gì, và lượt rút đó không bị tính vào chỉ số uy tín của gian hàng."
         },
         "paymentWindow": {
-          "heading": "3. Cửa sổ thanh toán tiền giữ chỗ",
-          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ — hiện là 120 phút kể từ lúc nhận chuyến, và không bao giờ vượt quá giờ nhận xe. Bạn được nhắc hai lần trước khi hết giờ. Hết cửa sổ mà chưa nhận được tiền thì chỗ được nhả cho khách khác và chuyến không thành; bạn không mất khoản nào vì chưa chuyển khoản nào. Cửa sổ này không được gia hạn."
+          "heading": "3. Cửa sổ thanh toán và huỷ miễn phí",
+          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ và một cửa sổ huỷ miễn phí. Độ dài của cả hai phụ thuộc khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe; cả hai tính XUÔI từ lúc nhận chuyến và không bao giờ vượt quá giờ nhận xe. Mức hiện hành:",
+          "items": {
+            "payment": "Thời gian thanh toán bằng 30% khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe, tối thiểu 15 phút và tối đa 120 phút — nhận xe sau từ khoảng 7 giờ trở lên thì được trọn 120 phút.",
+            "cancel": "Thời gian huỷ miễn phí bằng 20% khoảng thời gian đó, tối thiểu 15 phút và tối đa 2 giờ — nhận xe sau từ 10 giờ trở lên thì được trọn 2 giờ. Với chuyến nhận xe sau dưới 10 giờ, thời gian huỷ miễn phí kết thúc TRƯỚC hạn thanh toán; mốc chính xác hiển thị và được đếm ngược trước khi bạn thanh toán.",
+            "tooShort": "Cả hai mốc không bao giờ vượt quá giờ nhận xe. Nếu thời gian còn lại quá ngắn để kịp thanh toán (dưới 15 phút), chuyến không thể giữ chỗ qua XePrime.",
+            "expiry": "Bạn được nhắc trước khi hết giờ thanh toán. Hết cửa sổ mà chưa nhận đủ tiền thì chỗ được nhả cho khách khác và chuyến không thành; phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm. Cửa sổ thanh toán không được gia hạn."
+          }
         },
         "freeCancel": {
-          "heading": "4. Huỷ miễn phí trong 4 giờ đầu",
-          "body": "Sau khi đã chuyển tiền giữ chỗ, bạn được huỷ và hoàn lại 100% số đã chuyển nếu huỷ trong vòng 4 giờ kể từ lúc gian hàng nhận chuyến. Mốc này tính XUÔI từ lúc nhận chuyến chứ không tính ngược từ giờ nhận xe, nên mọi khách đều có đúng một cửa sổ như nhau; với chuyến sát giờ, mốc bị kẹp bởi chính giờ nhận xe. Mốc chính xác của chuyến bạn hiển thị ngay trên đơn."
+          "heading": "4. Huỷ miễn phí",
+          "body": "Sau khi đã chuyển tiền giữ chỗ, bạn được huỷ và hoàn 100% số đã chuyển vào Ví điểm nếu huỷ trước mốc huỷ miễn phí của chuyến (mục 3). Mốc này được chốt một lần khi gian hàng nhận chuyến: thanh toán xong hay gian hàng dời giờ nhận xe đều không làm nó thay đổi. Mốc chính xác của chuyến bạn — hoặc dòng báo chuyến không có thời gian huỷ miễn phí — hiển thị trước khi bạn thanh toán."
         },
         "afterFreeCancel": {
-          "heading": "5. Huỷ sau cửa sổ miễn phí",
-          "body": "Quá cửa sổ miễn phí, phần được hoàn phụ thuộc chính sách đã ghi trên đơn tại thời điểm chốt chuyến — hãy đọc mục này trên đơn trước khi chuyển tiền. Không đến nhận xe mà không báo được xử lý như huỷ sát giờ. Phần tiền trả trực tiếp cho chủ xe lúc nhận xe thì chưa phát sinh, nên không có gì để hoàn."
+          "heading": "5. Huỷ sau mốc huỷ miễn phí",
+          "body": "Huỷ sau mốc huỷ miễn phí, hoặc huỷ sau khi thanh toán một chuyến không có thời gian huỷ miễn phí, được xử lý như sau. Hộp xác nhận huỷ luôn cho bạn thấy số được hoàn và số không được hoàn trước khi bấm.",
+          "items": {
+            "insurance": "Tiền bảo hiểm (nếu bạn đã chọn) được hoàn 100% vào Ví điểm, vì hợp đồng bảo hiểm chỉ phát hành lúc giao xe.",
+            "split": "Toàn bộ tiền giữ chỗ trừ phần bảo hiểm — tức phí đặt xe và phần tiền thuê trả trước — không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
+            "noShow": "Không đến nhận xe mà không báo được xử lý như huỷ sau mốc huỷ miễn phí.",
+            "direct": "Phần tiền trả trực tiếp cho chủ xe lúc nhận xe chưa phát sinh, nên không có gì để hoàn."
+          }
         },
         "ownerCancel": {
           "heading": "6. Khi chủ xe huỷ",
           "body": "Quyền huỷ của chủ xe khác nhau theo chặng, và chặng càng muộn thì hậu quả với khách càng lớn nên ràng buộc càng chặt.",
           "items": {
             "beforeDecision": "Chưa quyết định: gian hàng có thể TỪ CHỐI yêu cầu. Không ai mất tiền vì chưa có khoản nào được chuyển.",
-            "beforePayment": "Đã nhận chuyến nhưng bạn chưa chuyển đủ tiền: gian hàng có thể huỷ chuyến. Lịch được nhả và phần bạn đã chuyển (nếu có) được hoàn lại.",
-            "afterBooking": "Đã thành đơn thuê: gian hàng huỷ thì bạn được hoàn 100% số đã chuyển, và lượt huỷ đó được ghi nhận vào chỉ số uy tín của gian hàng.",
+            "beforePayment": "Đã nhận chuyến nhưng bạn chưa chuyển đủ tiền: gian hàng có thể huỷ chuyến. Lịch được nhả và phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm.",
+            "afterBooking": "Đã thành đơn thuê: gian hàng huỷ thì bạn được hoàn 100% số đã chuyển vào Ví điểm — kể cả khi đã qua mốc huỷ miễn phí — và lượt huỷ đó được ghi nhận vào chỉ số uy tín của gian hàng.",
             "duringTrip": "Chuyến đang chạy: không huỷ được. Xe đang ở ngoài đường với khách, nên việc kết thúc sớm phải đi qua bàn giao trả xe rồi quyết toán."
           }
         },
@@ -336,11 +348,93 @@
         },
         "refund": {
           "heading": "8. Cách hoàn tiền",
-          "body": "Khoản được hoàn là phần bạn đã CHUYỂN KHOẢN cho XePrime, hoàn về tài khoản ngân hàng bạn cung cấp. Phần trả trực tiếp cho chủ xe lúc nhận xe và cọc thế chấp nhận xe do hai bên tự trao nhận, nên cũng do hai bên tự hoàn cho nhau. Nếu bạn dùng mã khuyến mãi của XePrime, phần được hoàn không bao gồm giá trị mã — mã là khoản nền tảng tài trợ, không phải tiền bạn đã bỏ ra."
+          "body": "Khoản được hoàn là phần bạn đã chuyển cho XePrime, ghi ngay vào Ví điểm của tài khoản đã đặt chuyến (1 điểm = 1đ, không hết hạn); bạn rút Ví điểm về tài khoản ngân hàng bất cứ lúc nào. Phần trả trực tiếp cho chủ xe lúc nhận xe và cọc thế chấp nhận xe do hai bên tự trao nhận, nên cũng do hai bên tự hoàn cho nhau. Nếu bạn dùng mã khuyến mãi của XePrime, phần được hoàn không bao gồm giá trị mã — mã là khoản nền tảng tài trợ, không phải tiền bạn đã bỏ ra."
         },
         "dispute": {
           "heading": "9. Khi hai bên không thống nhất",
           "body": "Hãy gửi phản ánh qua trang Hỗ trợ kèm mã chuyến và bằng chứng: tin nhắn trong ứng dụng, biên bản giao nhận và ảnh hiện trạng xe. Chúng tôi đối chiếu với hồ sơ chuyến trên hệ thống và đưa ra kết luận hỗ trợ trong phạm vi dữ liệu mình có. Với phần giao dịch hai bên tự thực hiện ngoài nền tảng, chúng tôi không có dữ liệu để đối soát."
+        }
+      }
+    },
+    "owner-tax": {
+      "title": "Chính sách thuế cho chủ xe",
+      "summary": "XePrime khấu trừ, kê khai và nộp thay thuế cho chủ xe là cá nhân, hộ kinh doanh: mức bao nhiêu, tính trên khoản nào, trừ lúc nào và bạn cần làm gì.",
+      "sections": {
+        "basis": {
+          "heading": "1. Căn cứ pháp lý",
+          "body": "XePrime khấu trừ thuế cho chủ xe vì pháp luật yêu cầu, không phải một khoản phí của XePrime. Các văn bản đang áp dụng:",
+          "items": {
+            "nd117": "Nghị định 117/2025/NĐ-CP (hiệu lực từ 01/07/2025): nền tảng số có chức năng thanh toán phải khấu trừ, kê khai và nộp thay thuế giá trị gia tăng (GTGT) và thuế thu nhập cá nhân (TNCN) cho hộ, cá nhân kinh doanh trên nền tảng.",
+            "nd68": "Nghị định 68/2026/NĐ-CP (hiệu lực từ 05/03/2026): nền tảng có chức năng đặt hàng và thanh toán tiếp tục khấu trừ, khai thay, nộp thay theo từng giao dịch; số thuế TNCN đã nộp thay được trừ khi bạn quyết toán.",
+            "platform": "XePrime thu tiền giữ chỗ của khách qua tài khoản của mình, nên là nền tảng có chức năng thanh toán và thuộc diện phải khấu trừ, nộp thay."
+          }
+        },
+        "who": {
+          "heading": "2. Ai bị khấu trừ",
+          "body": "Việc có khấu trừ hay không chỉ phụ thuộc vào loại chủ thể trong hồ sơ người bán của bạn:",
+          "items": {
+            "individual": "Cá nhân: bị khấu trừ.",
+            "household": "Hộ kinh doanh: bị khấu trừ.",
+            "company": "Doanh nghiệp đã được XePrime xác minh: không bị khấu trừ — doanh nghiệp tự xuất hoá đơn và tự kê khai thuế.",
+            "noProfile": "Chưa khai hồ sơ người bán, hoặc hồ sơ doanh nghiệp chưa được xác minh: được xem là cá nhân và bị khấu trừ. Thiếu thông tin không làm mất nghĩa vụ thuế.",
+            "track": "Dùng gói thuê bao hay không dùng gói không quyết định việc khấu trừ: một gian hàng mua gói nhưng là hộ kinh doanh vẫn bị khấu trừ."
+          }
+        },
+        "rates": {
+          "heading": "3. Mức khấu trừ",
+          "body": "Mức khấu trừ tính theo loại dịch vụ của chuyến, gồm hai sắc thuế tính riêng. Mức đang áp dụng:",
+          "items": {
+            "selfDrive": "Thuê xe tự lái: 7% — GTGT 5% + TNCN 2%.",
+            "longTerm": "Thuê dài hạn: 7% — GTGT 5% + TNCN 2%.",
+            "withDriver": "Thuê xe có tài xế: 4,5% — GTGT 3% + TNCN 1,5%.",
+            "snapshot": "Mức của một chuyến được chốt ngay khi bạn nhận chuyến. Nếu mức thay đổi sau đó, chuyến đã chốt vẫn giữ mức cũ."
+          }
+        },
+        "base": {
+          "heading": "4. Tính trên khoản nào",
+          "body": "Thuế tính trên tiền thuê xe của chuyến:",
+          "items": {
+            "included": "Gồm: tiền thuê xe sau khuyến mãi bạn tự đặt cho xe.",
+            "excluded": "Không gồm: phí giao xe (khách trả trực tiếp cho bạn), phí đặt xe khách trả cho XePrime, tiền bảo hiểm và giá trị mã khuyến mãi do XePrime tài trợ.",
+            "rounding": "Mỗi sắc thuế được tính riêng và làm tròn tới đồng, nên số bị trừ khớp đúng tỷ lệ nhân với tiền thuê. Ví dụ: chuyến tự lái 780.000đ bị khấu trừ GTGT 39.000đ + TNCN 15.600đ = 54.600đ."
+          }
+        },
+        "timing": {
+          "heading": "5. Khấu trừ lúc nào",
+          "body": "Thuế đi theo chuyến thật sự diễn ra:",
+          "items": {
+            "recorded": "Khoản thuế được ghi nhận khi chuyến bắt đầu, tức là lúc bàn giao xe cho khách.",
+            "deducted": "Tiền thuế được trừ vào phần XePrime chuyển cho bạn: khi chuyến hoàn thành, Ví điểm của bạn nhận phần giữ chỗ của bạn trừ đi thuế. Thuế không bao giờ cộng vào số tiền khách phải trả.",
+            "adjusted": "Nếu số tiền của chuyến thay đổi sau khi đã ghi nhận, XePrime ghi một bút toán đảo và một bút toán mới thay vì sửa số cũ."
+          }
+        },
+        "cancellation": {
+          "heading": "6. Khi chuyến bị huỷ",
+          "body": "Huỷ chuyến không làm phát sinh thuế cho phần chuyến không diễn ra:",
+          "items": {
+            "beforeTrip": "Chuyến huỷ trước khi bắt đầu: không khấu trừ thuế.",
+            "lateCompensation": "Khoản đền cho bạn khi khách huỷ muộn hoặc không đến nhận xe là tiền bồi thường, không phải doanh thu cho thuê xe, nên không bị khấu trừ."
+          }
+        },
+        "threshold": {
+          "heading": "7. Doanh thu dưới 500 triệu đồng một năm",
+          "body": "Theo Nghị định 68/2026/NĐ-CP, hộ, cá nhân có doanh thu cả năm từ 500 triệu đồng trở xuống không phải nộp GTGT và TNCN. Nền tảng vẫn phải khấu trừ theo từng giao dịch vì không biết trước tổng doanh thu cả năm của bạn. Nếu cả năm bạn thuộc diện không phải nộp, hãy liên hệ cơ quan thuế quản lý để được hoàn hoặc bù trừ số đã nộp thay, dựa trên chứng từ khấu trừ XePrime cung cấp."
+        },
+        "identity": {
+          "heading": "8. Thông tin bạn cần cung cấp",
+          "body": "Để XePrime kê khai đúng người nộp thuế, bạn cần khai đầy đủ hồ sơ người bán: loại chủ thể, họ tên hoặc tên hộ kinh doanh, và mã số thuế hoặc số căn cước công dân. Thông tin sai hoặc thiếu có thể khiến số thuế đã nộp thay không được ghi nhận đúng cho bạn."
+        },
+        "certificate": {
+          "heading": "9. Chứng từ khấu trừ thuế",
+          "body": "XePrime sẽ cung cấp chứng từ khấu trừ thuế của năm trước kỳ quyết toán thuế, để bạn dùng khi quyết toán hoặc đề nghị hoàn thuế. Trong lúc chờ, bạn xem được số thuế đã khấu trừ của từng chuyến và theo từng tháng trong khu làm việc của mình."
+        },
+        "statement": {
+          "heading": "10. Bạn xem số tiền ở đâu",
+          "body": "Ở hộp duyệt yêu cầu, chi tiết đơn và sao kê ví, bảng \"cộng ví chủ xe\" tách riêng từng dòng: doanh thu cho thuê xe, phí dịch vụ – chủ xe, thuế khấu trừ (ghi rõ phần GTGT và TNCN), thu nhập của bạn, phần khách thanh toán trực tiếp cho bạn và số tiền được cộng vào ví."
+        },
+        "changes": {
+          "heading": "11. Thay đổi chính sách",
+          "body": "Mức khấu trừ và cách áp dụng có thể thay đổi theo văn bản pháp luật hoặc hướng dẫn mới của cơ quan thuế. Thay đổi được công bố tại trang này trước khi áp dụng và không áp ngược cho những chuyến đã chốt."
         }
       }
     }

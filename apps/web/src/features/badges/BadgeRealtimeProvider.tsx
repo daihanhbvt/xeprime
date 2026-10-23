@@ -36,6 +36,12 @@ interface BadgeRealtime {
   /** Con số hiện tại — nguồn duy nhất cho chuông, biểu tượng chat và huy hiệu menu. */
   counts: UserBadgeCounts;
   /**
+   * Đã có con số THẬT (REST hoặc bản chiếu) chưa. Trước đó `counts` là 0 để hiển thị, nhưng 0
+   * đó là "chưa biết" chứ không phải "không có gì" — nơi phản ứng với THAY ĐỔI của con số phải
+   * đưa `null` cho `useOnBadgeChange` lúc này (`known ? x : null`).
+   */
+  known: boolean;
+  /**
    * Đang NGHE được con số thay vì phải hỏi lại — tức là listener của CHÍNH document này đã nhận
    * một snapshot từ server. KHÔNG suy từ "đã đăng nhập Firebase": hai điều đó độc lập, và tin
    * vào điều thứ hai là lý do badge từng đứng im trong khi mọi tầng trông như đang chạy.
@@ -156,6 +162,7 @@ export function BadgeRealtimeProvider({ children }: { children: ReactNode }) {
    * TanStack Query), và `EMPTY` là hằng số module — nên `counts` đủ ổn định để làm dependency.
    */
   const counts = data ?? EMPTY;
+  const known = data !== undefined;
 
   /*
    * Thông báo mới ⇒ làm mới thứ nó có thể vừa làm đổi.
@@ -166,11 +173,11 @@ export function BadgeRealtimeProvider({ children }: { children: ReactNode }) {
    * tin vào một danh sách cũ. Hộp thư chat và danh sách thông báo là ngoại lệ có chủ ý: chúng
    * nghe tín hiệu RIÊNG, chính xác hơn, ở hook của chính chúng.
    */
-  useOnBadgeChange(counts.notificationsUnread, () => {
+  useOnBadgeChange(known ? counts.notificationsUnread : null, () => {
     refreshNotificationAffected(queryClient);
   });
 
-  const value = useMemo<BadgeRealtime>(() => ({ counts, live }), [counts, live]);
+  const value = useMemo<BadgeRealtime>(() => ({ counts, known, live }), [counts, known, live]);
 
   return <BadgeRealtimeCtx.Provider value={value}>{children}</BadgeRealtimeCtx.Provider>;
 }

@@ -1,17 +1,16 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { bookingIdsWithOpenSupportCase, hasOpenSupportCase, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
   BOOKING_STATUS,
+  FEE_LINE,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_OPEN,
   isOutcomeAllowed,
   isWithinFreeCancel,
   type AuditActorScope,
@@ -48,8 +47,11 @@ import { formatMoneyVndVi } from '@xeprime/domain';
  *
  *  1. Hoàn thành ⇒ `kept` (XePrime giữ phí dịch vụ). Khách không đến ⇒ `forfeited`.
  *  2. Khách huỷ: TRƯỚC `free_cancel_until` (cột đã đóng băng, không tính lại từ giờ nhận) ⇒
- *     `refunded` 100%; SAU mốc ⇒ `forfeited`. Chủ xe/nền tảng huỷ ⇒ `refunded` — khách không
- *     có lỗi. Đây là chính sách huỷ/hoàn công bố ở `/legal/cancellation`; đổi luật là đổi cả hai.
+ *     `refunded` 100%; SAU mốc ⇒ `split_late_cancel` (`IV + IP` hoàn đủ vào ví khách, chủ xe
+ *     nhận trọn `D`, XePrime giữ `S + H − P` — ADR 0066; lý do hoàn `late_cancel`; không đến
+ *     nhận xe cũng vậy, lý do `no_show`). Chủ xe/nền tảng huỷ ⇒ `refunded` — khách không có lỗi.
+ *     Đây là chính sách huỷ/hoàn công bố ở `/legal/cancellation` (ADR 0064 · ADR 0066); đổi luật
+ *     là đổi cả hai.
  *  3. Có TRANH CHẤP mở trên đơn ⇒ KHÔNG chốt. Kết cục để trống, admin chốt tay sau khi case
  *     kết luận (`adminSettle`). Hook từ chuyển trạng thái đơn KHÔNG ném — đơn vẫn huỷ/hoàn thành
  *     được, chỉ có tiền là chờ.
@@ -166,6 +168,7 @@ export class HoldSettlementService {
         customerUserId: true,
         depositAmount: true,
         serviceFeeAmount: true,
+        ownerCommissionAmount: true,
         vehicleInsuranceAmount: true,
         personalInsuranceAmount: true,
       },
@@ -186,6 +189,7 @@ export class HoldSettlementService {
     const allowed = adminSettleOutcomes(hold.purpose as BookingHoldPurpose, {
       deposit: hold.depositAmount.toFixed(0),
       serviceFee: hold.serviceFeeAmount.toFixed(0),
+      ownerCommission: hold.ownerCommissionAmount.toFixed(0),
       vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
       personalInsurance: hold.personalInsuranceAmount.toFixed(0),
     });
@@ -267,6 +271,37 @@ export class HoldSettlementService {
       select: { id: true, status: true },
     });
     if (existing) {
+      /*
+       * Khoản trước ĐÃ vào ví điểm (thường là phần chuyển THỪA lúc tiền về) và khoản mới là một
+       * NGUỒN khác — phần hoàn của lượt chốt kết cục. Bỏ qua ở đây là nuốt tiền hoàn huỷ của một
+       * khách chỉ vì họ từng chuyển dư 1đ. Ghi có ví thêm một bút toán (khác `kind` nên unique 4 cột
+       * của sổ ví vẫn chống cộng đôi), rồi cộng dồn số tiền vào cùng yêu cầu hoàn (một hold — một
+       * yêu cầu, `hold_refunds.hold_id` unique).
+       */
+      if (existing.status === HOLD_REFUND_STATUS.CREDITED && input.customerUserId) {
+        const credited = await this.wallet.creditWithinTx(tx, {
+          owner: this.refundWalletOwner(input.customerUserId),
+          kind:
+            input.reason === HOLD_REFUND_REASON.OVERPAID
+              ? WALLET_ENTRY_KIND.HOLD_OVERPAY
+              : WALLET_ENTRY_KIND.HOLD_REFUND,
+          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+          sourceRefId: input.holdId,
+          amount: input.amount,
+          holdId: input.holdId,
+          note: input.note,
+        });
+        if (!credited) {
+          // Nguồn này đã ghi có rồi — không cộng đôi; người gọi tự đưa khoản này tới người xử lý.
+          this.logger.warn(`Hold ${input.holdId}: khoản ${input.reason} đã ghi có ví trước đó`);
+          return { id: existing.id, created: false, recorded: false };
+        }
+        await tx.holdRefund.update({
+          where: { id: existing.id },
+          data: { amount: { increment: input.amount } },
+        });
+        return { id: existing.id, created: false, recorded: true };
+      }
       if (existing.status !== HOLD_REFUND_STATUS.PENDING) {
         // Đã chuyển/từ chối rồi — không tự cộng dồn vào một yêu cầu đã đóng; admin xử lý tay.
         this.logger.warn(
@@ -520,43 +555,92 @@ export class HoldSettlementService {
 
     const hold = await tx.bookingHold.findUniqueOrThrow({
       where: { id: input.holdId },
+      select: HOLD_ALLOCATION_SELECT,
+    });
+    return allocationForHold(hold, input.outcome);
+  }
+
+  /**
+   * XEM TRƯỚC tiền đi đâu nếu KHÁCH huỷ đơn này NGAY BÂY GIỜ — đọc, không ghi gì.
+   *
+   * MỘT nguồn với lượt huỷ thật: cùng `decideOutcome` (luật kết cục), cùng `allocationForHold`
+   * (phép chia), cùng hold `paid` + `outcome IS NULL` mà `settleForBookingWithinTx` chọn. Màn huỷ
+   * của khách hứa đúng con số mà lượt bấm sẽ ghi — không có phép tính thứ hai ở client.
+   *
+   * `null` khi đơn không có khoản giữ chỗ đã trả nào chờ chốt (tuyến gói tắt cọc, đơn tự lập,
+   * khoản đã chốt). `deferred = true` khi có tranh chấp mở: lượt huỷ vẫn đi, nhưng tiền chờ admin.
+   *
+   * **Chuyển THỪA không phải tiền giữ chỗ.** Phép chia chạy trên CỘT tiền của hold (tổng đúng bằng
+   * `amount`), còn phần khách chuyển dư (`paidAmount − amount`) đã có đường về riêng — khoản hoàn
+   * `overpaid` ghi lúc tiền về (`BookingHoldsService.applyBankPaymentWithinTx`). Hai hệ quả:
+   *
+   *  - phần khách MẤT tính trên `amount`, không trên `paidAmount` — tính trên `paidAmount` là hứa
+   *    khách mất cả khoản thừa mà thực tế họ được hoàn;
+   *  - khoản thừa còn CHỜ chuyển tay (`pending`, khách không có ví) sẽ được lượt huỷ CỘNG DỒN vào
+   *    cùng yêu cầu hoàn (`upsertRefundWithinTx`), nên nó nằm trong `refundAmount`. Khoản thừa đã
+   *    vào ví điểm từ trước thì không — tiền đó không còn ở XePrime để hoàn lần nữa.
+   */
+  async previewCustomerCancel(
+    bookingId: string,
+    tenantId: string,
+    now: Date = new Date(),
+  ): Promise<CustomerCancelPreview | null> {
+    const hold = await this.prisma.bookingHold.findFirst({
+      where: { bookingId, tenantId, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
       select: {
-        depositAmount: true,
-        serviceFeeAmount: true,
-        vehicleInsuranceAmount: true,
-        personalInsuranceAmount: true,
-        promoDiscountAmount: true,
-        priceSnapshotJson: true,
+        ...HOLD_ALLOCATION_SELECT,
+        id: true,
+        amount: true,
+        paidAmount: true,
+        freeCancelUntil: true,
       },
     });
+    if (!hold) return null;
 
-    /*
-     * Thuế chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU (ADR 0032 điều 3) — hai nhánh huỷ không bao giờ
-     * có thuế, kể cả huỷ muộn.
-     */
-    const taxAmount =
-      input.outcome === BOOKING_HOLD_OUTCOME.SETTLED
-        ? taxFromSnapshot(hold.priceSnapshotJson)
-        : '0';
+    const decision = decideOutcome({
+      to: BOOKING_STATUS.CANCELLED,
+      actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+      freeCancelUntil: hold.freeCancelUntil,
+      now,
+    });
+    if (!decision) return null;
 
-    return resolveHoldAllocation(
-      {
-        deposit: hold.depositAmount.toFixed(0),
-        serviceFee: hold.serviceFeeAmount.toFixed(0),
-        vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
-        personalInsurance: hold.personalInsuranceAmount.toFixed(0),
-        /*
-         * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4) — đọc từ CỘT, không suy từ snapshot.
-         *
-         * Bốn dòng trên là QUYỀN LỢI; con số này là phần nền tảng đã bù, và tổng phân bổ phải
-         * khớp TIỀN MẶT (`amount`) chứ không khớp quyền lợi. Thiếu nó ở đây là phân bổ nhiều hơn
-         * số tiền hold từng cầm, và `booking_holds_settled_allocation_check` sẽ chặn đúng chỗ đó.
-         */
-        promoDiscount: hold.promoDiscountAmount.toFixed(0),
+    const allocation =
+      hold.paidAmount.gt(0) ? (allocationForHold(hold, decision.outcome) ?? []) : [];
+    const totals = allocationTotals(allocation);
+    // Khoản thừa còn chờ chuyển tay — lượt huỷ cộng dồn phần hoàn vào chính yêu cầu này.
+    const pendingOverpaid = await this.prisma.holdRefund.findFirst({
+      where: {
+        holdId: hold.id,
+        status: HOLD_REFUND_STATUS.PENDING,
+        reason: HOLD_REFUND_REASON.OVERPAID,
       },
-      kind,
-      taxAmount,
-    );
+      select: { amount: true },
+    });
+    const overpaidRefund = Number(pendingOverpaid?.amount.toFixed(0) ?? 0);
+    const allocatedRefund = Number(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]);
+    const holdAmount = Number(hold.amount.toFixed(0));
+    const insuranceRefund = allocation
+      .filter(
+        (line) =>
+          line.target === ALLOCATION_TARGET.CUSTOMER_BALANCE &&
+          (line.key === FEE_LINE.VEHICLE_PROTECTION || line.key === FEE_LINE.TRIP_INSURANCE),
+      )
+      .reduce((sum, line) => sum + Number(line.amount), 0);
+    return {
+      outcome: decision.outcome,
+      refundReason: decision.refundReason,
+      // Tiền của khách CÒN ở XePrime cho khoản này: giữ chỗ + phần thừa chưa trả lại.
+      paidAmount: String(holdAmount + overpaidRefund),
+      refundAmount: String(allocatedRefund + overpaidRefund),
+      insuranceRefundAmount: String(insuranceRefund),
+      /** Phần khách MẤT = tiền giữ chỗ − phần phân bổ hoàn khách. Không âm. */
+      forfeitAmount: String(Math.max(0, holdAmount - allocatedRefund)),
+      ownerCompensationAmount: totals[ALLOCATION_TARGET.OWNER_BALANCE],
+      freeCancelUntil: hold.freeCancelUntil,
+      withinFreeCancel: isWithinFreeCancel(hold.freeCancelUntil, now),
+      deferred: await this.hasOpenDispute(this.prisma, bookingId),
+    };
   }
 
   private async allocateWithinTx(
@@ -690,15 +774,23 @@ export class HoldSettlementService {
     return true;
   }
 
-  private async hasOpenDispute(tx: Prisma.TransactionClient, bookingId: string): Promise<boolean> {
-    const open = await tx.supportCase.count({
-      where: {
-        bookingId,
-        category: SUPPORT_CASE_CATEGORY.DISPUTE,
-        status: { in: [...SUPPORT_CASE_STATUS_OPEN] },
-      },
-    });
-    return open > 0;
+  /**
+   * Đơn có case còn mở thuộc nhóm GIỮ quyết toán (`dispute`, `handover_unconfirmed` — ADR 0066)
+   * không. Tên giữ "dispute" vì cả hai cùng một nghĩa với tiền: chưa ai được chốt kết cục.
+   */
+  private async hasOpenDispute(
+    tx: Prisma.TransactionClient | PrismaService,
+    bookingId: string,
+  ): Promise<boolean> {
+    return hasOpenSupportCase(tx, bookingId);
+  }
+
+  /**
+   * Bản theo LÔ của `hasOpenDispute` — cờ `disputeOpen` của các dòng hold (`BookingHoldsService`)
+   * đọc đúng định nghĩa "tiền đơn này đang bị giữ" với lượt chốt kết cục.
+   */
+  async openDisputeBookingIds(bookingIds: readonly string[]): Promise<Set<string>> {
+    return bookingIdsWithOpenSupportCase(this.prisma, bookingIds);
   }
 }
 
@@ -724,7 +816,8 @@ export function decideOutcome(input: {
        */
       return {
         outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
-        refundReason: HOLD_REFUND_REASON.ADMIN_DECISION,
+        // Luật tự động, không phải quyết định của ai — sổ hoàn phải đọc được đúng chuyện đó.
+        refundReason: HOLD_REFUND_REASON.NO_SHOW,
       };
     case BOOKING_STATUS.CANCELLED:
       if (input.actorScope === AUDIT_ACTOR_SCOPE.CUSTOMER) {
@@ -734,9 +827,10 @@ export function decideOutcome(input: {
               refundReason: HOLD_REFUND_REASON.EARLY_CANCEL,
             }
           : {
-              // Huỷ muộn: D + S chia đôi, IV + IP hoàn 100% (bảo hiểm chưa mua).
+              // Huỷ muộn (ADR 0066): chủ xe nhận trọn D, XePrime giữ S + H − P, IV + IP hoàn 100%
+              // vào ví khách (bảo hiểm chưa mua).
               outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
-              refundReason: HOLD_REFUND_REASON.ADMIN_DECISION,
+              refundReason: HOLD_REFUND_REASON.LATE_CANCEL,
             };
       }
       // Gian hàng, nền tảng hay hệ thống huỷ — khách không có lỗi.
@@ -747,6 +841,89 @@ export function decideOutcome(input: {
     default:
       return null;
   }
+}
+
+/** Cột tiền của hold mà phép chia cần — một select cho lượt chốt thật và lượt xem trước. */
+const HOLD_ALLOCATION_SELECT = {
+  depositAmount: true,
+  serviceFeeAmount: true,
+  ownerCommissionAmount: true,
+  vehicleInsuranceAmount: true,
+  personalInsuranceAmount: true,
+  promoDiscountAmount: true,
+  priceSnapshotJson: true,
+} satisfies Prisma.BookingHoldSelect;
+
+type HoldAllocationRow = Prisma.BookingHoldGetPayload<{ select: typeof HOLD_ALLOCATION_SELECT }>;
+
+/**
+ * Phân bổ của một hold cho một kết cục — hàm THUẦN, dùng chung cho lượt chốt thật
+ * (`computeAllocationWithinTx`) và lượt xem trước của khách (`previewCustomerCancel`). Hai nơi mà
+ * dựng đầu vào khác nhau thì màn xem trước hứa một con số lượt chốt không bao giờ ra.
+ *
+ * `null` = kết cục LEGACY (`kept`/`forfeited`/`released_to_shop`) — không phân bổ gì.
+ */
+export function allocationForHold(
+  hold: HoldAllocationRow,
+  outcome: BookingHoldOutcome,
+): ReturnType<typeof resolveHoldAllocation> | null {
+  const kind = holdSettlementKindFor(outcome);
+  if (!kind) return null;
+  /*
+   * Thuế chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU (ADR 0032 điều 3) — hai nhánh huỷ không bao giờ
+   * có thuế, kể cả huỷ muộn.
+   */
+  const taxAmount =
+    outcome === BOOKING_HOLD_OUTCOME.SETTLED ? taxFromSnapshot(hold.priceSnapshotJson) : '0';
+  return resolveHoldAllocation(
+    {
+      deposit: hold.depositAmount.toFixed(0),
+      serviceFee: hold.serviceFeeAmount.toFixed(0),
+      /*
+       * `H` — hoa hồng lũy tiến (luồng tiền v2). Quyết toán: về doanh thu nền tảng, nên ví chủ
+       * xe nhận `D − T` = `tiền giữ chỗ − phí sàn − hoa hồng − bảo hiểm − thuế`. Huỷ muộn: về
+       * doanh thu nền tảng cùng `S` (ADR 0066). Huỷ sớm: hoàn khách. Hold trước v2 có cột này
+       * bằng 0.
+       */
+      ownerCommission: hold.ownerCommissionAmount.toFixed(0),
+      vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
+      personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+      /*
+       * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4) — đọc từ CỘT, không suy từ snapshot.
+       *
+       * Bốn dòng trên là QUYỀN LỢI; con số này là phần nền tảng đã bù, và tổng phân bổ phải
+       * khớp TIỀN MẶT (`amount`) chứ không khớp quyền lợi. Thiếu nó ở đây là phân bổ nhiều hơn
+       * số tiền hold từng cầm, và `booking_holds_settled_allocation_check` sẽ chặn đúng chỗ đó.
+       */
+      promoDiscount: hold.promoDiscountAmount.toFixed(0),
+    },
+    kind,
+    taxAmount,
+  );
+}
+
+/** Kết quả xem trước lượt khách huỷ — xem `HoldSettlementService.previewCustomerCancel`. */
+export interface CustomerCancelPreview {
+  outcome: BookingHoldOutcome;
+  refundReason: HoldRefundReason | null;
+  /**
+   * Tiền của khách CÒN nằm ở XePrime cho khoản này = tiền giữ chỗ (`amount`) + phần chuyển thừa
+   * chưa trả lại. Khoản thừa đã vào ví điểm từ trước không tính. `refundAmount + forfeitAmount`
+   * luôn bằng con số này.
+   */
+  paidAmount: string;
+  /** Tổng lượt huỷ sẽ hoàn cho khách (phần phân bổ + khoản thừa còn chờ). */
+  refundAmount: string;
+  /** Phần hoàn là tiền BẢO HIỂM chưa phát hành (`IV + IP`) — luôn hoàn đủ. */
+  insuranceRefundAmount: string;
+  /** Số khách mất = `amount − phần phân bổ hoàn khách` — không bao giờ gồm khoản chuyển thừa. */
+  forfeitAmount: string;
+  /** Phần chủ xe được đền vì giữ lịch (trọn `D` khi huỷ muộn — ADR 0066). */
+  ownerCompensationAmount: string;
+  freeCancelUntil: Date;
+  withinFreeCancel: boolean;
+  /** Có tranh chấp mở — tiền chờ admin chốt, không tự chia. */
+  deferred: boolean;
 }
 
 function sumFor(

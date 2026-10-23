@@ -35,3 +35,6 @@ export type PrivateFileTicket = Schemas['SourceContractDownloadDto'];
 
 /** Thân request khai tài khoản nhận hoàn — chọn cái đã lưu, hoặc khai ba ô. */
 export type ProvideRefundAccountInput = Schemas['ProvideRefundAccountDto'];
+
+/** Xem trước lượt khách tự huỷ — số được hoàn / số mất do server tính (ADR 0064). */
+export type CustomerTripCancelPreview = Schemas['CustomerTripCancelPreviewDto'];

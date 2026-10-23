@@ -113,8 +113,16 @@ export const CONVERSATION_STATUS_META: Readonly<Record<ConversationStatus, Statu
   [CONVERSATION_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: STATUS_COLOR.NEUTRAL },
 };
 
-/** Trạng thái gói dịch vụ trong danh mục (ADR 0010). Archived = ngừng bán, thuê bao cũ giữ nguyên. */
+/**
+ * Trạng thái gói dịch vụ trong danh mục (ADR 0010). Archived = ngừng bán, thuê bao cũ giữ nguyên.
+ *
+ * `draft` = CHƯA MỞ BÁN (ADR 0065): bậc đã có trong danh mục nhưng giá chưa được admin chốt —
+ * không hiện ở bảng giá gian hàng, không tự mua, không gán được. Admin mở bán bằng
+ * `POST /platform/plans/:id/activate` (draft → active). Thuê bao ĐANG CHẠY trên bậc draft (ánh xạ
+ * từ bậc cũ) chạy bình thường — trạng thái nói về DANH MỤC, không về khách hàng.
+ */
 export const PLAN_STATUS = {
+  DRAFT: 'draft',
   ACTIVE: 'active',
   ARCHIVED: 'archived',
 } as const;
@@ -123,6 +131,7 @@ export type PlanStatus = (typeof PLAN_STATUS)[keyof typeof PLAN_STATUS];
 export const PLAN_STATUS_VALUES = Object.values(PLAN_STATUS) as PlanStatus[];
 
 export const PLAN_STATUS_META: Readonly<Record<PlanStatus, StatusMeta>> = {
+  [PLAN_STATUS.DRAFT]: { label: 'Chưa mở bán', color: STATUS_COLOR.WARNING },
   [PLAN_STATUS.ACTIVE]: { label: 'Đang bán', color: STATUS_COLOR.SUCCESS },
   [PLAN_STATUS.ARCHIVED]: { label: 'Ngừng bán', color: STATUS_COLOR.NEUTRAL },
 };

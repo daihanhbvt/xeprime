@@ -8,6 +8,7 @@ import {
   PLATFORM_TENANT_PLAN_FILTER_VALUES,
   type PlatformTenantPlanFilter,
   PLATFORM_TENANT_SORT_VALUES,
+  PLAN_VEHICLE_SCOPE_VALUES,
   TENANT_STATUS_VALUES,
   type PlatformPartnerKind,
   type PlatformTenantSort,
@@ -87,6 +88,35 @@ export class LockTenantDto {
 }
 
 /**
+ * MỘT kỳ gói đang hiệu lực của một phạm vi loại xe (ADR 0065) — gian hàng chạy song song gói ô tô
+ * và gói xe máy thì danh sách có hai dòng này.
+ */
+export class PlatformTenantPlanTermDto {
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: '@xeprime/types → PlanVehicleScope',
+  })
+  vehicleScope!: string;
+  @ApiProperty() subscriptionId!: string;
+  @ApiProperty() planCode!: string;
+  @ApiProperty() planName!: string;
+  @ApiProperty({ enum: Object.values(BILLING_PHASE), description: 'current | grace' })
+  phase!: string;
+  @ApiProperty({ description: 'ISO — bắt đầu kỳ' }) startsAt!: string;
+  @ApiProperty({ description: 'ISO — kết thúc kỳ' }) endsAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hết ân hạn' })
+  graceEndsAt!: string | null;
+  @ApiProperty({ enum: PARTNER_QUOTA_KIND_VALUES, description: 'Trần xe snapshot của KỲ này' })
+  vehicleLimitKind!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Chỉ khi vehicleLimitKind = total',
+  })
+  vehicleLimit!: number | null;
+}
+
+/**
  * Gói của một gian hàng nhìn từ DANH SÁCH — câu "đang dùng gói gì, tới bao giờ, kỳ sau là gì".
  *
  * Pha và tuyến chấm bằng `resolveEffectiveBilling` — cùng phép mà cổng tuyến dùng — nên danh sách
@@ -114,8 +144,19 @@ export class PlatformTenantPlanDto {
       'Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói',
   })
   vehicleLimitKind!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ khi vehicleLimitKind = total' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Chỉ khi vehicleLimitKind = total',
+  })
   vehicleLimit!: number | null;
+  @ApiProperty({
+    type: [PlatformTenantPlanTermDto],
+    description:
+      'Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) — all → car → motorbike. ' +
+      'Rỗng khi không ở tuyến gói. vehicleLimit ở trên là TỔNG trần các kỳ này',
+  })
+  terms!: PlatformTenantPlanTermDto[];
   @ApiPropertyOptional({
     type: PlanTermRefDto,
     nullable: true,

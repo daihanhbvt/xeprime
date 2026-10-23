@@ -131,6 +131,15 @@ export default function AdminCatalogPage() {
       render: (_, item) => (
         <div>
           <div className={styles.label}>{item.label}</div>
+          {/*
+            Bản tiếng Anh ngay dưới — thiếu thì nói thẳng để admin biết mục nào chưa dịch. Hãng xe
+            là tên riêng, không dịch: không nhắc "chưa dịch" ở đó, chỉ hiện khi admin có nhập.
+          */}
+          {item.labelEn ? (
+            <div className={styles.desc}>{tCol('labelEnValue', { label: item.labelEn })}</div>
+          ) : item.type !== CATALOG_TYPE.VEHICLE_BRAND ? (
+            <div className={styles.desc}>{tCol('labelEnMissing')}</div>
+          ) : null}
           {item.description ? <div className={styles.desc}>{item.description}</div> : null}
         </div>
       ),

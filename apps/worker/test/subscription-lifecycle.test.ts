@@ -38,6 +38,8 @@ let ownerId: string;
 let commissionPlanId: string;
 let packagePlanId: string;
 const tenantIds: string[] = [];
+/** Bậc theo loại xe (ADR 0065) do từng test tự dựng — `after` dọn cùng. */
+const extraPlanIds: string[] = [];
 
 async function mkTenant(label: string): Promise<string> {
   const id = newId();
@@ -144,11 +146,14 @@ before(async () => {
 after(async () => {
   if (dbAvailable) {
     await prisma.notification.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.auditLog.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
-    await prisma.plan.deleteMany({ where: { id: { in: [commissionPlanId, packagePlanId] } } });
+    await prisma.plan.deleteMany({
+      where: { id: { in: [commissionPlanId, packagePlanId, ...extraPlanIds] } },
+    });
     await prisma.user.deleteMany({ where: { id: ownerId } });
   }
   await prisma.$disconnect();
@@ -327,4 +332,161 @@ test('quét từng 6 giờ qua cửa sổ cũ: không mốc nào thành tuyến 
     assert.equal(billing.billingMode, BILLING_MODE.COMMISSION, `lệch tuyến ở giờ +${hour}`);
     assert.notEqual(billing.phase, BILLING_PHASE.UNCONFIGURED, `unconfigured ở giờ +${hour}`);
   }
+});
+
+/*
+ * ADR 0065 — gói theo LOẠI XE: một phạm vi hết ân hạn KHÔNG kéo cả gian hàng về hoa hồng khi phạm
+ * vi kia còn đang ân hạn; chỉ khi phạm vi cuối cùng hết ân hạn thì mới hạ, và dòng hoa hồng nối
+ * liền từ mốc hết ân hạn của CHÍNH phạm vi đó.
+ */
+test('gói theo loại: hạ về hoa hồng chỉ khi KHÔNG còn phạm vi nào giữ gói', async () => {
+  if (!dbAvailable) return;
+  const mkScopedPlan = async (scope: string) => {
+    const id = newId();
+    await prisma.plan.create({
+      data: {
+        id,
+        code: `sl-${scope}-${RUN}`,
+        name: `Gói ${scope}`,
+        status: PLAN_STATUS.ACTIVE,
+        billingMode: BILLING_MODE.PACKAGE,
+        vehicleScope: scope,
+        sortOrder: 999,
+        limitsJson: { features: [], graceDays: 7, maxVehicles: 5, termPrices: [{ months: 1, price: '100000' }] },
+      },
+    });
+    extraPlanIds.push(id);
+    return id;
+  };
+  const motoPlan = await mkScopedPlan('motorbike');
+  const carPlan = await mkScopedPlan('car');
+  const tenantId = await mkTenant('scoped-lapse');
+  const now = new Date();
+  const motoEnds = new Date(now.getTime() - 9 * DAY); // hết ân hạn từ 2 ngày trước
+  const carEnds = new Date(now.getTime() - 2 * DAY); // còn 5 ngày ân hạn
+  for (const [planId, scope, endsAt] of [
+    [motoPlan, 'motorbike', motoEnds],
+    [carPlan, 'car', carEnds],
+  ] as const) {
+    await prisma.tenantSubscription.create({
+      data: {
+        id: newId(),
+        tenantId,
+        planId,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        price: 0,
+        termMonths: 1,
+        billingMode: BILLING_MODE.PACKAGE,
+        vehicleScope: scope,
+        startsAt: new Date(endsAt.getTime() - 30 * DAY),
+        endsAt,
+      },
+    });
+  }
+
+  await sweepSubscriptionLifecycle(prisma, now);
+  const commission = () =>
+    prisma.tenantSubscription.findFirst({
+      where: { tenantId, billingMode: BILLING_MODE.COMMISSION },
+      select: { startsAt: true, vehicleScope: true },
+    });
+  assert.equal(await commission(), null, 'phạm vi ô tô còn ân hạn ⇒ chưa hạ tuyến');
+  const rows = await prisma.tenantSubscription.findMany({
+    where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE },
+    select: { endsAt: true, billingMode: true, vehicleScope: true, plan: { select: { code: true, limitsJson: true } } },
+  });
+  assert.equal(resolveEffectiveBilling(rows, now).billingMode, BILLING_MODE.PACKAGE);
+
+  // Sáu ngày sau: phạm vi ô tô cũng hết ân hạn ⇒ hạ, nối liền từ mốc hết ân hạn của ô tô.
+  const later = new Date(now.getTime() + 6 * DAY);
+  await sweepSubscriptionLifecycle(prisma, later);
+  const created = await commission();
+  assert.ok(created, 'hết mọi phạm vi ⇒ phải sinh dòng hoa hồng');
+  assert.equal(created.startsAt.getTime(), carEnds.getTime() + 7 * DAY);
+  assert.equal(created.vehicleScope, 'all');
+});
+
+/** Hai bậc theo loại xe dùng chung cho các test ADR 0065 bên dưới. */
+async function scopedPlans(): Promise<{ moto: string; car: string }> {
+  const mk = async (scope: string) => {
+    const id = newId();
+    await prisma.plan.create({
+      data: {
+        id,
+        code: `sl2-${scope}-${RUN}-${id.slice(-4)}`,
+        name: scope === 'car' ? 'Ô tô · 5 xe' : 'Xe máy · 1 xe',
+        status: PLAN_STATUS.ACTIVE,
+        billingMode: BILLING_MODE.PACKAGE,
+        vehicleScope: scope,
+        sortOrder: 999,
+        limitsJson: { features: [], graceDays: 7, maxVehicles: 5, termPrices: [{ months: 1, price: '100000' }] },
+      },
+    });
+    extraPlanIds.push(id);
+    return id;
+  };
+  return { moto: await mk('motorbike'), car: await mk('car') };
+}
+
+async function scopedRow(tenantId: string, planId: string, scope: string, endsAt: Date) {
+  await prisma.tenantSubscription.create({
+    data: {
+      id: newId(),
+      tenantId,
+      planId,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      price: 0,
+      termMonths: 1,
+      billingMode: BILLING_MODE.PACKAGE,
+      vehicleScope: scope,
+      startsAt: new Date(endsAt.getTime() - 30 * DAY),
+      endsAt,
+    },
+  });
+}
+
+test('hai phạm vi cùng qua ân hạn trong MỘT lượt ⇒ hoa hồng nối từ mốc hết ân hạn MUỘN NHẤT', async () => {
+  if (!dbAvailable) return;
+  const plans = await scopedPlans();
+  const tenantId = await mkTenant('both-lapsed');
+  const now = new Date();
+  const motoEnds = new Date(now.getTime() - 12 * DAY); // ân hạn hết 5 ngày trước
+  const carEnds = new Date(now.getTime() - 9 * DAY); // ân hạn hết 2 ngày trước — muộn hơn
+  await scopedRow(tenantId, plans.moto, 'motorbike', motoEnds);
+  await scopedRow(tenantId, plans.car, 'car', carEnds);
+
+  await sweepSubscriptionLifecycle(prisma, now);
+  const rows = await prisma.tenantSubscription.findMany({
+    where: { tenantId, billingMode: BILLING_MODE.COMMISSION },
+    select: { startsAt: true },
+  });
+  assert.equal(rows.length, 1, 'đúng MỘT dòng hoa hồng');
+  assert.equal(rows[0]!.startsAt.getTime(), carEnds.getTime() + 7 * DAY);
+});
+
+test('cặp gói ô tô + xe máy hết hạn cùng lúc ⇒ MỘT tin hết hạn nói cả hai loại', async () => {
+  if (!dbAvailable) return;
+  const plans = await scopedPlans();
+  const tenantId = await mkTenant('pair-expired');
+  // Người nhận tin là THÀNH VIÊN gian hàng (`notifyTenantMembers`).
+  await prisma.tenantMembership.create({
+    data: { id: newId(), tenantId, userId: ownerId, roleKey: 'shop_owner', status: 'active' },
+  });
+  const endsAt = new Date(Date.now() - HOUR);
+  await scopedRow(tenantId, plans.moto, 'motorbike', endsAt);
+  await scopedRow(tenantId, plans.car, 'car', endsAt);
+
+  await sweepSubscriptionLifecycle(prisma, new Date());
+  const notes = await prisma.notification.findMany({
+    where: { tenantId, type: 'subscription_expired' },
+    select: { title: true, body: true, userId: true },
+  });
+  const perUser = new Map<string, number>();
+  for (const n of notes) perUser.set(n.userId ?? '', (perUser.get(n.userId ?? '') ?? 0) + 1);
+  assert.ok(notes.length > 0, 'phải có tin hết hạn');
+  for (const count of perUser.values()) assert.equal(count, 1, 'mỗi người MỘT tin cho cả cặp');
+  assert.match(notes[0]!.title, /Xe máy · 1 xe/);
+  assert.match(notes[0]!.title, /Ô tô · 5 xe/);
+  assert.match(notes[0]!.body ?? '', /xe máy/);
+  assert.match(notes[0]!.body ?? '', /ô tô/);
 });

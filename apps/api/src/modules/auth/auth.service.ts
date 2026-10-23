@@ -751,7 +751,7 @@ export class AuthService {
       Promise.resolve(
         membership
           ? resolveTenantFeatures(
-              membership.tenant.subscriptions[0] ?? null,
+              membership.tenant.subscriptions,
               membership.tenant.usedFeatures,
               now,
             )

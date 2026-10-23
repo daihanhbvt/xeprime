@@ -38,6 +38,12 @@ export interface PushDispatchResult {
   devicesDisabled: number;
   /** Dòng bị bỏ lại ở `processing` bởi một tiến trình đã chết, nay được trả về hàng đợi. */
   reclaimed: number;
+  /**
+   * Phần của `failed` hỏng vì CẤU HÌNH nhà cung cấp (`provider_auth`): khoá APNs của app iOS bị
+   * thiếu/thu hồi, hoặc service account sai. Không thử lại được và không phải lỗi của thiết bị
+   * — nên nó là con số duy nhất ở đây nói rằng MỌI thông báo tới nền tảng đó đang mất.
+   */
+  providerAuthFailed: number;
 }
 
 /**
@@ -70,6 +76,7 @@ export async function dispatchPushDeliveries(
     expired: 0,
     devicesDisabled: 0,
     reclaimed: 0,
+    providerAuthFailed: 0,
   };
 
   // Trả về hàng đợi những dòng mà một tiến trình đã chết đang giữ. Chạy TRƯỚC bước chiếm để
@@ -191,6 +198,7 @@ export async function dispatchPushDeliveries(
             : verdict.code,
         );
         result.failed++;
+        if (verdict.code === PUSH_ERROR_CODE.PROVIDER_AUTH) result.providerAuthFailed++;
       } else {
         await prisma.pushDelivery.update({
           where: { id: row.id },

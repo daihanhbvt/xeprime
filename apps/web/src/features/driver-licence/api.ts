@@ -19,9 +19,6 @@ export const fetchDriverLicenceOverview = (): Promise<DriverLicenceOverview> =>
 export const fetchDriverLicenceImage = (id: string): Promise<DriverLicenceImage> =>
   apiGet<DriverLicenceImage>(`${BASE}/${id}/image`);
 
-export const requestDriverLicenceReview = (id: string): Promise<DriverLicence> =>
-  apiPost<DriverLicence>(`${BASE}/${id}/request-review`);
-
 /**
  * Nộp một ảnh: presign → PUT thẳng lên kho riêng tư → xác nhận. Trả về lượt nộp ở trạng thái
  * `processing` — đọc ảnh chạy nền, giao diện hỏi lại `fetchDriverLicenceOverview` tới khi có kết

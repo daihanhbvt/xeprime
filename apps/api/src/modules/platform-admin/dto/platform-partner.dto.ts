@@ -9,6 +9,7 @@ import {
   PARTNER_QUOTA_KIND_VALUES,
   PARTNER_VEHICLE_SORT_VALUES,
   PLATFORM_PARTNER_KIND_VALUES,
+  PLAN_VEHICLE_SCOPE_VALUES,
   QUOTA_LIMIT_REASON_VALUES,
   SERVICE_TYPE_VALUES,
   SHOP_VERIFICATION_VALUES,
@@ -135,6 +136,12 @@ export class PartnerQuotaItemDto {
   reason!: string | null;
 }
 
+/** Hạn mức xe THEO LOẠI (ADR 0065) — mỗi loại một trần, `not_covered` khi loại đó chưa có gói. */
+export class PartnerVehicleTypeQuotasDto {
+  @ApiProperty({ type: PartnerQuotaItemDto }) car!: PartnerQuotaItemDto;
+  @ApiProperty({ type: PartnerQuotaItemDto }) motorbike!: PartnerQuotaItemDto;
+}
+
 export class PartnerPlanSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) planName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) planCode!: string | null;
@@ -154,6 +161,18 @@ export class PartnerPlanSummaryDto {
     description: 'Trần xe ĐANG CƯỠNG CHẾ (BillingService.vehicleQuotaFor) và số xe đã dùng',
   })
   vehicleQuota!: PartnerQuotaItemDto;
+  @ApiProperty({
+    type: PartnerVehicleTypeQuotasDto,
+    description: 'Trần xe theo LOẠI (ADR 0065) — vehicleQuota ở trên là tổng gộp của hai trần này',
+  })
+  vehicleQuotaByType!: PartnerVehicleTypeQuotasDto;
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    isArray: true,
+    description:
+      'Phạm vi loại xe đang có kỳ gói hiệu lực (all → car → motorbike); rỗng ngoài tuyến gói',
+  })
+  packageScopes!: string[];
   @ApiPropertyOptional({
     type: PlanTermRefDto,
     nullable: true,
@@ -393,7 +412,10 @@ export class PartnerBookingRequestDto {
   pickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   returnAt!: string | null;
-  @ApiProperty({ description: 'ISO — hạn gian hàng phải phản hồi' }) respondBy!: string;
+  @ApiProperty({
+    description: 'ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066)',
+  })
+  respondBy!: string;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
 }
 
@@ -517,7 +539,10 @@ export class PartnerProfileDto {
 /* ─────────────────────────────── Gói & phí (gian hàng gói) ─────────────────────────────── */
 
 export class PartnerQuotaDto {
-  @ApiProperty({ type: PartnerQuotaItemDto }) vehicles!: PartnerQuotaItemDto;
+  @ApiProperty({ type: PartnerQuotaItemDto, description: 'Trần xe gộp — tổng của vehiclesByType' })
+  vehicles!: PartnerQuotaItemDto;
+  @ApiProperty({ type: PartnerVehicleTypeQuotasDto, description: 'Trần xe theo loại (ADR 0065)' })
+  vehiclesByType!: PartnerVehicleTypeQuotasDto;
   @ApiProperty({ type: PartnerQuotaItemDto }) branches!: PartnerQuotaItemDto;
   @ApiProperty({ type: PartnerQuotaItemDto }) members!: PartnerQuotaItemDto;
 }
@@ -547,6 +572,11 @@ export class PartnerSubscriptionRowDto {
   @ApiProperty() id!: string;
   @ApiProperty() planName!: string;
   @ApiProperty() planCode!: string;
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: 'Phạm vi loại xe của kỳ (ADR 0065)',
+  })
+  vehicleScope!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) billingMode!: string | null;
   @ApiProperty({ description: 'Decimal' }) price!: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) termMonths!: number | null;

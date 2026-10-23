@@ -1,9 +1,11 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   API_ERROR_CODE,
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_RESPOND_WINDOW,
   BOOKING_REQUEST_STATUS,
   SERVICE_TYPE,
 } from '@xeprime/types';
@@ -12,7 +14,7 @@ import { BookingRequestCard } from './BookingRequestCard';
 import type { BookingRequestItem } from '../types';
 
 /**
- * HẠN PHẢN HỒI 60 PHÚT nhìn từ hộp thư của gian hàng.
+ * HẠN PHẢN HỒI (động 15′–4 giờ, ADR 0066) nhìn từ hộp thư của gian hàng.
  *
  * Hai điều được khoá ở đây:
  *
@@ -23,6 +25,20 @@ import type { BookingRequestItem } from '../types';
  *     Vị từ ở đây phải là `respondBy`, KHÔNG phải cột `status`: worker chạy theo nhịp nên có
  *     một cửa sổ mà bản ghi vẫn còn `pending_host_approval` trong khi giờ đã hết.
  */
+
+/*
+ * Hộp thoại duyệt đọc LẠI yêu cầu mỗi lần mở (cửa sổ "nếu duyệt ngay" không được cũ). Ở đây không
+ * có server: lượt đọc lại treo mãi, hộp thoại hiện bản của dòng hộp thư — đúng hành vi lúc đang tải.
+ */
+vi.mock('../api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api')>()),
+  fetchBookingRequest: () => new Promise(() => {}),
+}));
+
+function withQueryClient(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
 
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
@@ -70,7 +86,8 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
     rejectReason: null,
     bookingId: null,
     createdAt: inMinutes(-5),
-    respondBy: inMinutes(BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - 5),
+    // Chuyến nhận sau 3 ngày ⇒ cửa sổ trọn trần 240′ (ADR 0066), gửi 5 phút trước.
+    respondBy: inMinutes(BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES - 5),
     decidedAt: null,
     ...overrides,
   } as unknown as BookingRequestItem;
@@ -113,6 +130,13 @@ describe('Đồng hồ hạn phản hồi', () => {
 
     // 41:xx hoặc 42:00 tuỳ mili-giây trôi giữa lúc dựng dữ liệu và lúc render.
     expect(screen.getByText(/^4[12]:\d{2}$/)).toBeTruthy();
+  });
+
+  /** Cửa sổ động tới 4 giờ (ADR 0066) — đồng hồ phải có giờ, không in "149:59". */
+  it('còn trên một giờ: hiện giờ:phút:giây', () => {
+    renderCard(request({ respondBy: inMinutes(150) }));
+
+    expect(screen.getByText(/^2:(29:\d{2}|30:00)$/)).toBeTruthy();
   });
 
   /**
@@ -181,7 +205,7 @@ describe('Quyết định theo hạn phản hồi', () => {
     expect(screen.queryByRole('button', { name: /Duyệt & giữ xe/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Từ chối/ })).toBeNull();
     // Nói vì sao — im lặng ở đây đọc như một lỗi tải.
-    expect(screen.getByText(/Quá 60 phút chưa phản hồi/)).toBeTruthy();
+    expect(screen.getByText(/Yêu cầu đã đóng vì quá hạn phản hồi/)).toBeTruthy();
   });
 
   it('yêu cầu đã hết hạn (status expired) cũng không có action nào', () => {
@@ -215,15 +239,17 @@ describe('Lỗi khi duyệt', () => {
 
     // Hộp thoại GIỮ nguyên khi có lỗi — người trực cần đọc nó rồi mới quyết định tiếp.
     render(
-      <App>
-        <ApproveBookingRequestDialog
-          request={request()}
-          submitting={false}
-          error="Xe đã bận khung giờ này"
-          onCancel={vi.fn()}
-          onConfirm={vi.fn()}
-        />
-      </App>,
+      withQueryClient(
+        <App>
+          <ApproveBookingRequestDialog
+            request={request()}
+            submitting={false}
+            error="Xe đã bận khung giờ này"
+            onCancel={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </App>,
+      ),
     );
 
     const dialog = await screen.findByRole('dialog');
@@ -234,15 +260,17 @@ describe('Lỗi khi duyệt', () => {
   it('đang gửi: nút chính vào trạng thái chờ, không bấm được lần hai', async () => {
     const { ApproveBookingRequestDialog } = await import('./ApproveBookingRequestDialog');
     render(
-      <App>
-        <ApproveBookingRequestDialog
-          request={request()}
-          submitting
-          error={null}
-          onCancel={vi.fn()}
-          onConfirm={vi.fn()}
-        />
-      </App>,
+      withQueryClient(
+        <App>
+          <ApproveBookingRequestDialog
+            request={request()}
+            submitting
+            error={null}
+            onCancel={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </App>,
+      ),
     );
 
     const dialog = await screen.findByRole('dialog');

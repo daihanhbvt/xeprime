@@ -280,6 +280,22 @@
   font-style: italic;
 }
 
+/* Bảo hiểm chuyến đi MIC */
+.insuranceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
+}
+
+.insuranceNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary, #717680);
+  font-style: italic;
+}
+
 /* Tiện ích bổ sung */
 .extraSection {
   background: var(--xp-color-bg-container, #ffffff);
@@ -444,6 +460,14 @@
   background: linear-gradient(90deg, #d6a439, #ba8b26);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Chú thích dưới tổng / trạng thái chưa có báo giá — câu của server-side luật hiển thị. */
+.costNote {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--xp-color-text-tertiary, #717680);
 }
 
 .ctaBtnWrapper {
@@ -739,32 +763,6 @@
   color: var(--xp-color-text, #0e0f12);
 }
 
-.longTermBenefits {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--xp-color-success-subtle);
-  border: 1px solid #d1fadf;
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.benefitItem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--xp-color-success);
-  font-weight: 500;
-}
-
-.benefitIcon {
-  font-size: 13px;
-  flex: none;
-}
-
-
 /* Tùy biến RentalDateTimeRangeField trong booking card */
 .bookingRangeField {
   border: 1px solid var(--xp-color-border, #e9eaeb) !important;
@@ -779,35 +777,272 @@
   border-color: var(--xp-color-primary, #e9ac29) !important;
 }
 
+/*
+ * ── Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72244` ─────────────────
+ *
+ * Thẻ đặt xe và thẻ "Thành tiền" TRÀN MÉP (lề âm = `--page-gutter` của trang), cách nhau 16 — số đo
+ * 16 của bản vẽ là `--xp-space-lg` ở mobile (tầng token hạ `md` xuống 12). Thanh tab
+ * nền `BG/gray-100`, tab đang chọn là ô trắng bo trên 12 có gạch chân vàng. Tiêu đề khối có vạch
+ * vàng 4px bên trái như các khối của trang. Chữ theo thang 14/16/18 của bản vẽ.
+ */
+@media (max-width: 640px) {
+  .wrap {
+    gap: var(--xp-space-lg);
+  }
 
+  .card,
+  .breakdownCard {
+    margin-inline: calc(-1 * var(--page-gutter, var(--xp-space-lg)));
+    border: none;
+    box-shadow: var(--xp-elevation-xs);
+  }
+
+  .card {
+    border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
+  }
+
+  .breakdownCard {
+    gap: var(--xp-space-lg);
+    padding: var(--xp-space-lg);
+    border-radius: 0;
+  }
+
+  /* ── Thanh tab (Figma "Rental Type Tabs") ── */
+  .tabHeader {
+    background: var(--xp-color-bg-muted);
+    border-bottom: none;
+  }
+
+  .serviceTab {
+    padding: 0 var(--xp-space-12);
+    border-radius: var(--xp-space-12) var(--xp-space-12) 0 0;
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .serviceTab:first-child {
+    border-top-left-radius: var(--xp-border-radius-card);
+  }
+
+  .serviceTabActive {
+    border-bottom-color: var(--xp-color-primary-accent);
+  }
+
+  .body {
+    gap: var(--xp-space-lg);
+    padding: var(--xp-space-lg);
+  }
+
+  /* ── Giá: giá gạch `18px`, giá chính `36px/Semibold` vàng, đơn vị `20px` (Figma "Vehicle Card Footer") ── */
+  .priceRow {
+    align-items: center;
+    gap: var(--xp-space-sm);
+  }
+
+  .priceGroup {
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--xp-space-6);
+    min-width: 0;
+  }
+
+  /* Giá gạch một dòng riêng phía trên — giá thật đầy đủ "585.000 ₫" + "/ngày" không còn vừa một hàng 358px. */
+  .oldPrice {
+    flex-basis: 100%;
+    font-size: 18px;
+    line-height: 28px;
+  }
+
+  .mainPrice {
+    font-size: var(--xp-font-size-display-sm);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-display-sm);
+    letter-spacing: -0.02em;
+  }
+
+  .unit {
+    color: var(--xp-color-text-tertiary);
+    font-size: var(--xp-font-size-lead);
+    line-height: var(--xp-line-height-lead);
+  }
+
+  /* ── Vị trí nhận xe (Figma "Pickup Location") ── */
+  .locationSection {
+    gap: var(--xp-space-12);
+  }
+
+  .sectionTitle,
+  .breakdownTitle {
+    margin: 0;
+    padding: 0 var(--xp-space-12);
+    border-left: 4px solid var(--xp-color-primary-accent);
+    font-size: var(--xp-font-size-h3);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h3);
+  }
+
+  /* Hai lựa chọn trong khay `BG/gray-50` cao 72; ô đang chọn trắng, viền vàng, bo 12. */
+  .deliveryToggle {
+    gap: 0;
+    min-height: 72px;
+    padding: 0;
+  }
+
+  .toggleBtn {
+    justify-content: center;
+    padding: var(--xp-space-12);
+    border-radius: var(--xp-space-12);
+  }
+
+  .toggleLabel {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .toggleSub,
+  .toggleSubDanger {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .addressBox {
+    gap: var(--xp-space-6);
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .addressNote {
+    font-size: var(--xp-font-size-body);
+    font-weight: var(--xp-font-weight-regular);
+    line-height: var(--xp-line-height-body);
+  }
+
+  /* ── Thành tiền: dòng `16px`, chú thích `14px` `Text/Gray/low` (Figma "Additional Services") ── */
+  .priceLine,
+  .priceLineTop {
+    gap: var(--xp-space-lg);
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .priceLabel {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .costNote {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .priceSubLabel {
+    max-width: none;
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .promoGroupTitle {
+    margin-top: 0;
+    font-size: var(--xp-font-size-body-lg);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .promoCodeButton {
+    padding: var(--xp-space-12);
+    font-weight: var(--xp-font-weight-regular);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .promoGiftIcon {
+    font-size: 20px;
+  }
+
+  .discountValue {
+    color: var(--xp-color-success-accent);
+  }
+
+  .totalRow {
+    align-items: center;
+    gap: var(--xp-space-sm);
+    margin-top: 0;
+    padding-top: var(--xp-space-lg);
+  }
+
+  .totalLabel {
+    font-size: var(--xp-font-size-body-lg);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .totalAmount {
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h2);
+    white-space: nowrap;
+  }
+
+  .ctaBtnWrapper {
+    margin-top: 0;
+  }
+
+  .ctaBtnWrapper :global(.ant-btn) {
+    font-weight: var(--xp-font-weight-semibold);
+  }
+
+  .chatBtnWrapper {
+    margin-top: calc(-1 * var(--xp-space-sm));
+  }
+
+  /* Gói dài hạn: 4 ô một hàng quá chật ở 358px → hai hàng. */
+  .packageOptions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .routeOptions,
+  .longTermPrefOptions {
+    flex-wrap: wrap;
+  }
+
+  .routeBtn,
+  .longTermPrefBtn {
+    flex: 1 1 calc(50% - var(--xp-space-sm));
+  }
+}
 
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
    Chỉ những màu KHÔNG có token tương đương ở bản sáng; phần còn lại đã đi qua `--xp-*`.
    `--xp-color-bg-subtle` chưa từng được khai báo nên hai hộp dùng nó luôn rơi về fallback sáng. */
-:global([data-theme="dark"]) .discountBadge,
-:global([data-theme="dark"]) .promoAppliedRow,
-:global([data-theme="dark"]) .longTermBenefits {
+:global([data-theme='dark']) .discountBadge,
+:global([data-theme='dark']) .promoAppliedRow {
   border-color: color-mix(in srgb, var(--xp-color-success) 35%, transparent);
 }
 
-:global([data-theme="dark"]) .deliveryAddressCard {
+:global([data-theme='dark']) .deliveryAddressCard {
   background: var(--xp-color-bg-muted);
   border-color: var(--xp-color-border);
 }
 
-:global([data-theme="dark"]) .deliveryAddressTitle {
+:global([data-theme='dark']) .deliveryAddressTitle {
   color: var(--xp-color-text-secondary);
 }
 
-:global([data-theme="dark"]) .deliveryDistanceInfo {
+:global([data-theme='dark']) .deliveryDistanceInfo {
   color: var(--xp-color-text-tertiary);
 }
 
-:global([data-theme="dark"]) .chooseAddressBtn:hover {
+:global([data-theme='dark']) .chooseAddressBtn:hover {
   background: var(--xp-color-bg-selected);
 }
 
-:global([data-theme="dark"]) .driverRulesBox,
-:global([data-theme="dark"]) .expectedReturnBox {
+:global([data-theme='dark']) .driverRulesBox,
+:global([data-theme='dark']) .expectedReturnBox {
   background: var(--xp-color-bg-muted);
+}
+
+/* Dịch vụ chưa có giá công bố — nói "liên hệ báo giá", không hiện 0đ. */
+.onRequest {
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  color: var(--xp-color-text-secondary);
 }

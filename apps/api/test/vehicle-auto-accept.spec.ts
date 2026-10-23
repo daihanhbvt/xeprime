@@ -749,7 +749,7 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
  * có hold" nữa — nó kiểm thứ VẪN khác nhau giữa hai tuyến: SỐ TIỀN trong hold.
  */
 describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ chỗ', () => {
-  maybe('hold của tuyến hoa hồng mang dòng phí dịch vụ; tuyến gói thì không', async () => {
+  maybe('hold của tuyến hoa hồng mang dòng hoa hồng H; phí sàn S như nhau ở hai tuyến', async () => {
     if (!feePolicyActive) throw new Error('Thiếu chính sách phí ACTIVE — migration R3 chưa chạy?');
 
     /*
@@ -769,12 +769,34 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
       where: { bookingRequestId: shop.id },
     });
 
-    // `S` — phí dịch vụ phía khách: 10% ở tuyến hoa hồng, 0 ở tuyến gói (ADR 0028 điều 1).
-    expect(Number(commissionHold.serviceFeeAmount)).toBeGreaterThan(0);
-    expect(Number(shopHold.serviceFeeAmount)).toBe(0);
-    // Cả hai đều có `D` — cọc là tiền thuê của chủ xe, không phụ thuộc tuyến.
-    expect(Number(commissionHold.depositAmount)).toBeGreaterThan(0);
-    expect(Number(shopHold.depositAmount)).toBeGreaterThan(0);
+    /*
+     * LUỒNG TIỀN v2 (ADR 0064, tiền giữ chỗ theo ADR 0066 — chính sách phí v8). Thứ khác nhau
+     * giữa hai tuyến nay là HOA HỒNG `H` phía chủ xe, không còn là phí phía khách: phí sàn `S` cố
+     * định và như nhau ở cả hai tuyến (ADR 0064 điều 2).
+     *
+     *   ô tô 700.000đ/ngày × 2 ngày ⇒ B = 1.400.000 · không phí giao · không tích bảo hiểm
+     *   S = 50.000 (cả hai tuyến) · T = 10% × B = 140.000 (khấu trừ chủ xe, cả hai tuyến)
+     *   H = 10% × B = 140.000 ở tuyến hoa hồng (2 ngày, nấc 1–2) · 0 ở tuyến gói
+     *   D = 15% × B = 210.000 (cả hai tuyến) · online = max(S + H + D, S + H + T)
+     *     hoa hồng: 50.000 + 140.000 + 210.000 = 400.000 (sàn 330.000)
+     *     gói:      50.000 + 0       + 210.000 = 260.000 (sàn 190.000)
+     *
+     * IV = IP = 0 ở cả hai: bảo hiểm TUỲ CHỌN, khách không tích thì server không được cộng
+     * (ADR 0064 điều 10) — dù fixture có đối tác bảo hiểm giả lập.
+     */
+    expect(commissionHold.serviceFeeAmount.toFixed(0)).toBe('50000');
+    expect(commissionHold.ownerCommissionAmount.toFixed(0)).toBe('140000');
+    expect(commissionHold.depositAmount.toFixed(0)).toBe('210000');
+    expect(commissionHold.vehicleInsuranceAmount.toFixed(0)).toBe('0');
+    expect(commissionHold.personalInsuranceAmount.toFixed(0)).toBe('0');
+    expect(commissionHold.amount.toFixed(0)).toBe('400000');
+
+    expect(shopHold.serviceFeeAmount.toFixed(0)).toBe('50000');
+    expect(shopHold.ownerCommissionAmount.toFixed(0)).toBe('0');
+    expect(shopHold.depositAmount.toFixed(0)).toBe('210000');
+    expect(shopHold.vehicleInsuranceAmount.toFixed(0)).toBe('0');
+    expect(shopHold.personalInsuranceAmount.toFixed(0)).toBe('0');
+    expect(shopHold.amount.toFixed(0)).toBe('260000');
   });
 
   /**

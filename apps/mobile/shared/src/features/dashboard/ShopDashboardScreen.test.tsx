@@ -474,7 +474,7 @@ describe('ShopDashboardScreen — dải trạng thái và ba bước mở gian h
    */
   it.each([
     [TENANT_STATUS.SUSPENDED, 'Gian hàng đang bị khoá'],
-    [TENANT_STATUS.EXPIRED, 'Gói dịch vụ đã hết hạn'],
+    [TENANT_STATUS.EXPIRED, 'Đã hết thời hạn sử dụng'],
   ])('gian hàng %s: nút "Liên hệ hỗ trợ" mở trang con /manage/help', async (status, title) => {
     const view = await renderScreen(FULL, { status });
 

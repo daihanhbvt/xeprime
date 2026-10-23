@@ -3,12 +3,15 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
-  FEE_LINE,
   TAX_WITHHOLDING_STATUS,
   canTransitionTax,
+  feeTaxDetailOf,
   isTaxPeriodKey,
   taxPeriodKeyVn,
+  taxRateLabel,
   type BookingPriceSnapshot,
+  type SellerEntityType,
+  type TaxCategory,
   type TaxWithholdingStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
@@ -21,6 +24,20 @@ export interface TaxSnapshot {
   percent: Prisma.Decimal;
   label: string;
   feePolicyId: string;
+  /**
+   * GTGT/TNCN tách riêng (ADR 0068). `null` cả bốn khi snapshot là mô hình một-mức (trước
+   * 22/10/2026) — sổ không bịa ra một phép tách mà lúc đó không ai tính.
+   */
+  vatAmount: Prisma.Decimal | null;
+  pitAmount: Prisma.Decimal | null;
+  vatPercent: Prisma.Decimal | null;
+  pitPercent: Prisma.Decimal | null;
+  taxCategory: TaxCategory | null;
+  /**
+   * Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (`taxSellerEntityOf`). `null` ở snapshot cũ.
+   * KHÁC loại chủ thể người bán KHAI — cái đó chụp từ hồ sơ lúc ghi sổ (`seller_entity_type`).
+   */
+  taxSubjectType: SellerEntityType | null;
 }
 
 /**
@@ -76,13 +93,13 @@ export class TaxService {
 
     const now = input.now ?? new Date();
     /*
-     * Hồ sơ người bán chụp TẠI ĐÂY, không join lúc kê khai: tỷ lệ thuế phụ thuộc loại chủ thể
-     * (cá nhân · hộ kinh doanh · doanh nghiệp), và gian hàng có thể đổi loại sau khi chuyến đã
-     * chạy. Tờ khai của một kỳ phải đọc lại đúng loại chủ thể đã áp cho từng chuyến.
+     * Hồ sơ người bán chụp TẠI ĐÂY, không join lúc kê khai: tờ khai chia theo loại chủ thể người
+     * bán KHAI (cá nhân · hộ kinh doanh · doanh nghiệp) kèm MST/CCCD, và gian hàng có thể đổi hồ
+     * sơ sau khi chuyến đã chạy. Tờ khai của một kỳ phải đọc lại đúng hồ sơ lúc ghi sổ.
      */
     const seller = await tx.sellerProfile.findUnique({
       where: { tenantId: input.tenantId },
-      select: { id: true },
+      select: { id: true, entityType: true, taxId: true, idNumber: true, legalName: true },
     });
 
     try {
@@ -98,6 +115,25 @@ export class TaxService {
           label: snapshot.label,
           amount: snapshot.amount,
           feePolicyId: snapshot.feePolicyId,
+          vatAmount: snapshot.vatAmount,
+          pitAmount: snapshot.pitAmount,
+          vatPercent: snapshot.vatPercent,
+          pitPercent: snapshot.pitPercent,
+          taxCategory: snapshot.taxCategory,
+          /*
+           * HAI sự kiện khác nhau, hai cột:
+           *  - `sellerEntityType` = loại chủ thể người bán KHAI trong hồ sơ, chụp TẠI ĐÂY cùng định
+           *    danh (MST, CCCD, tên pháp lý — NĐ 117 đòi tờ khai ghi người bán bằng chúng, và hồ sơ
+           *    sửa được sau khi chuyến đã chạy). Không có hồ sơ ⇒ NULL: tờ khai phải THẤY khoảng
+           *    trống đó (nhóm `unknown`), không được ghi đè bằng "cá nhân".
+           *  - `taxSubjectType` = chủ thể ÁP THUẾ đọc từ SNAPSHOT của đơn (đóng băng lúc nhận chuyến
+           *    — ADR 0024): không hồ sơ / doanh nghiệp chưa xác minh ⇒ khấu trừ như cá nhân.
+           */
+          sellerEntityType: seller?.entityType ?? null,
+          taxSubjectType: snapshot.taxSubjectType,
+          sellerTaxId: seller?.taxId ?? null,
+          sellerIdNumber: seller?.idNumber ?? null,
+          sellerLegalName: seller?.legalName ?? null,
           status: TAX_WITHHOLDING_STATUS.ACCRUED,
           accruedAt: now,
           // Kỳ theo GIỜ VIỆT NAM — hàm thuần dùng chung, không suy ở SQL (xem docblock của cột).
@@ -147,6 +183,16 @@ export class TaxService {
         sellerProfileId: true,
         periodKey: true,
         reversalOfId: true,
+        vatAmount: true,
+        pitAmount: true,
+        vatPercent: true,
+        pitPercent: true,
+        taxCategory: true,
+        sellerEntityType: true,
+        taxSubjectType: true,
+        sellerTaxId: true,
+        sellerIdNumber: true,
+        sellerLegalName: true,
       },
     });
     if (!row) {
@@ -199,6 +245,17 @@ export class TaxService {
           // ÂM — phép cộng một kỳ chỉ là `SUM(amount)`, không phải một cây if theo trạng thái.
           amount: row.amount.negated(),
           feePolicyId: row.feePolicyId,
+          // Hai sắc thuế đảo CÙNG dấu với tổng — CHECK `vat + pit = amount` giữ ở cả dòng đảo.
+          vatAmount: row.vatAmount?.negated() ?? null,
+          pitAmount: row.pitAmount?.negated() ?? null,
+          vatPercent: row.vatPercent,
+          pitPercent: row.pitPercent,
+          taxCategory: row.taxCategory,
+          sellerEntityType: row.sellerEntityType,
+          taxSubjectType: row.taxSubjectType,
+          sellerTaxId: row.sellerTaxId,
+          sellerIdNumber: row.sellerIdNumber,
+          sellerLegalName: row.sellerLegalName,
           status: TAX_WITHHOLDING_STATUS.REVERSED,
           // Dòng đảo thuộc CÙNG kỳ với dòng gốc: đảo một nghĩa vụ của tháng 3 vào tháng 5 vẫn
           // là sửa tờ khai tháng 3, và xếp nó vào tháng 5 sẽ làm cả hai kỳ sai.
@@ -302,21 +359,42 @@ export function taxFromSnapshot(
   const fees = (snapshot as BookingPriceSnapshot | null)?.fees;
   if (!fees) return null;
 
-  const line = fees.lines.find((l) => l.key === FEE_LINE.TAX);
-  if (!line) return null;
-
-  const amount = new Prisma.Decimal(line.amount);
+  /*
+   * MỘT chỗ đọc thuế của snapshot (`feeTaxDetailOf`) cho cả mô hình một-mức cũ lẫn GTGT/TNCN tách
+   * riêng (ADR 0068) — sổ thuế, bảng cộng ví và màn đối tác đọc cùng một con số.
+   */
+  const detail = feeTaxDetailOf(fees);
+  const amount = new Prisma.Decimal(detail.taxAmount);
   if (amount.lte(0)) return null;
 
   const feePolicyId = fees.policy.policyId || fallbackFeePolicyId;
   if (!feePolicyId) return null;
 
+  const split = detail.vatAmount != null && detail.pitAmount != null;
+  const decimalOrNull = (value: number | null) =>
+    value == null ? null : new Prisma.Decimal(value);
   return {
     amount,
-    // Mẫu số `B` — giá trị thuê chịu thuế, KHÔNG gồm bảo hiểm (ADR 0032 điều 3).
-    taxableBase: new Prisma.Decimal(fees.baseAmount),
-    percent: new Prisma.Decimal(line.percent ?? fees.policy.taxPercent ?? 0),
-    label: (fees.policy.taxLabel ?? 'Thuế khấu trừ').slice(0, 100),
+    /*
+     * Mẫu số — đúng con số `computeCustomerFees` đã nhân %: tiền thuê `R = B − G`, KHÔNG gồm phí
+     * giao, bảo hiểm hay phí sàn (ADR 0064 điều 4). Đọc từ snapshot, không suy lại ở đây.
+     */
+    taxableBase: new Prisma.Decimal(detail.rentAmount),
+    percent: new Prisma.Decimal(detail.totalPercent ?? 0),
+    /*
+     * Nhãn theo ĐÚNG cặp tỷ lệ đã áp ("GTGT 5% + TNCN 2%"); snapshot một-mức giữ nhãn chính sách
+     * của nó.
+     */
+    label: (split && detail.vatPercent != null && detail.pitPercent != null
+      ? taxRateLabel(detail.vatPercent, detail.pitPercent)
+      : (fees.policy.taxLabel ?? 'Thuế khấu trừ')
+    ).slice(0, 100),
     feePolicyId,
+    vatAmount: split ? new Prisma.Decimal(detail.vatAmount!) : null,
+    pitAmount: split ? new Prisma.Decimal(detail.pitAmount!) : null,
+    vatPercent: split ? decimalOrNull(detail.vatPercent) : null,
+    pitPercent: split ? decimalOrNull(detail.pitPercent) : null,
+    taxCategory: split ? detail.taxCategory : null,
+    taxSubjectType: detail.sellerEntityType,
   };
 }

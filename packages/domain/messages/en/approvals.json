@@ -144,7 +144,8 @@
       "shop": "Follows the shop's general policy",
       "vehicle": "Vehicle-specific policy"
     },
-    "free": "Free"
+    "free": "Free",
+    "perKm": "{amount}/km"
   },
   "pickup": {
     "branch": "Pickup point",

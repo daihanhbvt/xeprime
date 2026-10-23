@@ -6,9 +6,7 @@ import {
   approveWithdrawal,
   fetchDailyReconciliation,
   fetchHolds,
-  fetchInsuranceQueue,
   fetchMoneySummary,
-  insuranceFiltersToParams,
   fetchRefunds,
   fetchWithdrawalQueue,
   holdFiltersToParams,
@@ -17,11 +15,9 @@ import {
   refundFiltersToParams,
   rejectRefund,
   rejectWithdrawal,
-  retryInsurance,
   reverseWithdrawal,
   saveBankBalance,
   settleHold,
-  voidInsurance,
   withdrawalFiltersToParams,
 } from '../api';
 import type {
@@ -33,7 +29,6 @@ import type {
   SettleHoldInput,
   MarkWithdrawalPaidInput,
   WithdrawalFilters,
-  InsuranceFilters,
 } from '../types';
 
 export function useHolds(filters: HoldFilters) {
@@ -201,38 +196,3 @@ export function useReverseWithdrawal() {
   });
 }
 
-// ── Hàng đợi bảo hiểm (ADR 0032 điều 4 — Phase 7) ───────────────────────────
-
-export function useInsuranceQueue(filters: InsuranceFilters) {
-  const params = insuranceFiltersToParams(filters);
-  return useQuery({
-    queryKey: queryKeys.platformInsurance.list(params),
-    queryFn: () => fetchInsuranceQueue(params),
-    placeholderData: keepPreviousData,
-  });
-}
-
-/**
- * Thử lại / thu hồi đều đổi trạng thái một dòng VÀ con số `insuranceReserved` của bảng đối soát
- * — nên làm mới cả nhánh money, không chỉ nhánh bảo hiểm.
- */
-function useInvalidateInsurance() {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.all });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
-  };
-}
-
-export function useRetryInsurance() {
-  const invalidate = useInvalidateInsurance();
-  return useMutation({ mutationFn: (id: string) => retryInsurance(id), onSuccess: invalidate });
-}
-
-export function useVoidInsurance() {
-  const invalidate = useInvalidateInsurance();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => voidInsurance(id, { reason }),
-    onSuccess: invalidate,
-  });
-}

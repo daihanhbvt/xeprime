@@ -14,8 +14,24 @@ import {
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
   BILLING_PHASE,
+  PLAN_VEHICLE_SCOPE,
+  PLAN_VEHICLE_SCOPE_VALUES,
+  PLAN_VEHICLE_SCOPE_DISPLAY_ORDER,
+  PLAN_QUOTA_GATE_POINT,
+  QUOTA_LIMIT_REASON,
+  VEHICLE_QUOTA_KIND,
+  type PlanQuotaGatePoint,
+  type QuotaLimitReason,
+  type VehicleQuotaKind,
+  packageTermCovering,
+  planScopesConflict,
+  planVehicleScopeOf,
+  resolveActivePackageTerms,
   resolveEffectiveBilling,
+  type ActivePackageTerm,
   type EffectiveBilling,
+  type PlanVehicleScope,
+  type VehicleType,
   SHOP_ONBOARDING_STATE,
   type BillingMode,
   COMMISSION_TRACK_TERM_MONTHS,
@@ -74,8 +90,10 @@ import {
   SubscriptionDto,
   SubscriptionInvoiceDto,
   SubscriptionListQueryDto,
+  TenantPlanCatalogDto,
   TenantPlanDto,
   UpdatePlanDto,
+  VehicleTypeQuotaDto,
 } from './dto/billing.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import {
@@ -92,6 +110,7 @@ const PLAN_SELECT = {
   description: true,
   billingMode: true,
   commissionPercent: true,
+  vehicleScope: true,
   limitsJson: true,
   currency: true,
   status: true,
@@ -113,6 +132,7 @@ const INVOICE_SELECT = {
   totalAmount: true,
   paidAmount: true,
   status: true,
+  vehicleScope: true,
   paidAt: true,
   expiresAt: true,
   createdAt: true,
@@ -128,6 +148,7 @@ const SUB_SELECT = {
   quotaJson: true,
   billingMode: true,
   commissionPercent: true,
+  vehicleScope: true,
   startsAt: true,
   endsAt: true,
   note: true,
@@ -151,6 +172,7 @@ const TERM_SNAPSHOT_SELECT = {
   planId: true,
   status: true,
   billingMode: true,
+  vehicleScope: true,
   startsAt: true,
   endsAt: true,
   plan: { select: { code: true, name: true } },
@@ -168,6 +190,7 @@ function termSnapshot(term: TermSnapshotRow) {
     subscriptionId: term.id,
     planCode: term.plan.code,
     planName: term.plan.name,
+    vehicleScope: term.vehicleScope,
     billingMode: term.billingMode,
     startsAt: term.startsAt.toISOString(),
     endsAt: term.endsAt.toISOString(),
@@ -242,6 +265,8 @@ export class BillingService {
         message: 'Mã gói đã tồn tại',
       });
     }
+    // Lỗi NHẬP LIỆU trước lỗi TRẠNG THÁI danh mục: phạm vi sai là sai bất kể danh mục đang có gì.
+    const vehicleScope = this.planScopeForCreate(dto.billingMode, dto.vehicleScope);
     await this.assertCommissionTrackStaysSingle(dto.billingMode, null);
 
     const knobs = this.normalizePlanKnobs({
@@ -259,6 +284,7 @@ export class BillingService {
           description: dto.description ?? null,
           billingMode: knobs.billingMode,
           commissionPercent: knobs.commissionPercent,
+          vehicleScope,
           limitsJson: knobs.limits as unknown as Prisma.InputJsonValue,
           sortOrder: dto.sortOrder ?? 0,
         },
@@ -276,6 +302,7 @@ export class BillingService {
             name: dto.name,
             billingMode: knobs.billingMode,
             commissionPercent: knobs.commissionPercent,
+            vehicleScope,
             ...planAuditKnobs(knobs.limits),
           },
         },
@@ -309,6 +336,8 @@ export class BillingService {
         });
       }
       await this.assertCommissionTrackStaysSingle(dto.billingMode, current.id);
+      // Bậc theo loại xe không thành bậc hoa hồng được (CHECK `plans_commission_scope_all`).
+      this.planScopeForCreate(dto.billingMode, current.vehicleScope);
     }
 
     // Chuẩn hoá trên hình MERGED (field không gửi = giữ giá trị đang lưu): phép kiểm chạy trên
@@ -417,7 +446,9 @@ export class BillingService {
   }
 
   /**
-   * Lật `plans.status` giữa `active` ↔ `archived` — đường ghi chung của ngừng bán/mở bán lại.
+   * Lật `plans.status` — đường ghi chung của MỞ BÁN (`draft`/`archived` → `active`) và NGỪNG BÁN
+   * (`active`/`draft` → `archived`). `draft` (ADR 0065) là bậc mới chưa chốt giá: mở bán là lần
+   * đầu nó xuất hiện ở bảng giá gian hàng.
    *
    * Compare-and-set bằng `updateMany … WHERE status = <nguồn>` thay cho đọc-rồi-ghi: hai admin
    * bấm công tắc cùng lúc thì đúng một lượt đổi được, lượt kia nhận
@@ -429,10 +460,14 @@ export class BillingService {
     current: PlanRow,
     to: PlanStatus,
   ): Promise<PlanDto> {
-    const from = to === PLAN_STATUS.ACTIVE ? PLAN_STATUS.ARCHIVED : PLAN_STATUS.ACTIVE;
+    const fromStatuses: PlanStatus[] =
+      to === PLAN_STATUS.ACTIVE
+        ? [PLAN_STATUS.ARCHIVED, PLAN_STATUS.DRAFT]
+        : [PLAN_STATUS.ACTIVE, PLAN_STATUS.DRAFT];
+    const from = current.status;
     const row = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.plan.updateMany({
-        where: { id: current.id, status: from },
+        where: { id: current.id, status: { in: fromStatuses } },
         data: { status: to },
       });
       if (count === 0) {
@@ -622,7 +657,19 @@ export class BillingService {
   ): Promise<SubscriptionDto> {
     await this.assertTenant(tenantId);
     const plan = await this.loadPlan(dto.planId);
-    if (plan.status !== PLAN_STATUS.ACTIVE) {
+    /*
+     * `draft` (ADR 0065 — CHƯA MỞ BÁN): bảng giá của nó là số GIỮ CHỖ, nên gán tay chỉ được khi
+     * admin gõ GIÁ tường minh; rơi về giá niêm yết của một bậc chưa chốt giá là thu một con số
+     * không ai quyết. `archived` thì không gán được như trước.
+     */
+    if (plan.status === PLAN_STATUS.DRAFT && dto.price === undefined) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Gói chưa mở bán (giá đang là số tạm) — nhập giá cho lượt gán này, hoặc mở bán gói trước',
+        details: { field: 'price', planStatus: plan.status },
+      });
+    }
+    if (plan.status === PLAN_STATUS.ARCHIVED) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
         message: 'Gói đã ngừng bán, không gán được',
@@ -666,6 +713,7 @@ export class BillingService {
       const chain = await this.planChainWithinTx(tx, {
         tenantId,
         planId: plan.id,
+        vehicleScope: planVehicleScopeOf(plan.vehicleScope),
         timing: dto.timing,
         actorUserId,
         now,
@@ -683,6 +731,8 @@ export class BillingService {
           status: SUBSCRIPTION_STATUS.ACTIVE,
           price,
           termMonths: dto.termMonths,
+          // SNAPSHOT phạm vi loại xe (ADR 0065) — trigger ở DB đòi nó khớp phạm vi của bậc.
+          vehicleScope: plan.vehicleScope,
           // SNAPSHOT hạn mức (ADR 0041 điều 3) — chỉ tuyến gói có; tuyến hoa hồng không mua hạn
           // mức nào, trần của nó là `OWNER_LITE_VEHICLE_LIMIT` trong code.
           quotaJson:
@@ -707,6 +757,7 @@ export class BillingService {
        * tiền lần thứ hai. Cùng transaction, cùng lý do với đường webhook.
        */
       await this.completePackageOnboardingWithinTx(tx, tenantId, plan.billingMode);
+      await this.voidInvoicesSupersededByScopeWithinTx(tx, tenantId, plan);
 
       // Hoá đơn gói cho lượt gán tay (ADR 0015 điều 5): admin gán = đã thu tiền ngoài luồng
       // ⇒ hoá đơn `paid` gắn thẳng vào subscription. 0đ (gói tuyến hoa hồng) thì không sinh
@@ -719,6 +770,7 @@ export class BillingService {
             planId: plan.id,
             planCode: plan.code,
             termMonths: dto.termMonths,
+            vehicleScope: planVehicleScopeOf(plan.vehicleScope),
             quota,
             lines: pricing.lines,
           },
@@ -754,6 +806,7 @@ export class BillingService {
             priceOverridden: dto.price !== undefined && dto.price !== listed,
             termMonths: dto.termMonths,
             quota,
+            vehicleScope: plan.vehicleScope,
             billingMode: plan.billingMode,
             commissionPercent:
               plan.commissionPercent === null ? null : plan.commissionPercent.toString(),
@@ -832,9 +885,27 @@ export class BillingService {
         where: { id: target.id },
         data: { status: SUBSCRIPTION_STATUS.CANCELLED },
       });
-      const remaining = live.filter((term) => term.id !== target.id);
-      const fallback =
-        remaining.length === 0 ? await this.assignDefaultPlanWithinTx(tx, tenantId, now) : null;
+      /*
+       * Còn kỳ nào ĐANG CHẠY ở bất kỳ phạm vi nào không (ADR 0065) — huỷ gói ô tô khi gói xe máy
+       * còn hạn thì gian hàng vẫn ở tuyến gói, không gán dòng hoa hồng.
+       *
+       * "Đang chạy" chứ không "còn hạn": với nhiều phạm vi, một kỳ xe máy CHỈ ĐÃ XẾP LỊCH có thể
+       * còn lại sau khi huỷ kỳ ô tô đang chạy (luật "kỳ xếp sau" chỉ xét phạm vi xung đột). Không
+       * gán gì lúc đó là để gian hàng trống tuyến tới ngày kỳ xe máy bắt đầu — pha `unconfigured`.
+       * Dòng hoa hồng gán ở đây nhường chỗ ngay khi kỳ gói đó bắt đầu (`resolveEffectiveBilling`:
+       * kỳ gói còn hạn thắng dòng hoa hồng).
+       */
+      /*
+       * Kỳ gói đang ÂN HẠN (đã hết hạn, chưa qua `graceDays`) cũng giữ tuyến (ADR 0038 điều 1 ·
+       * ADR 0065 điều 5) — nó không có trong `live` (`ends_at > now`), nên hỏi chính phép chấm kỳ
+       * hiệu lực trên các dòng đã bắt đầu, SAU khi kỳ bị huỷ đã lật `cancelled`.
+       */
+      const stillRunning =
+        live.some((term) => term.id !== target.id && term.startsAt.getTime() <= now.getTime()) ||
+        resolveActivePackageTerms(await this.loadEffectiveRows(tenantId, now, tx), now).length > 0;
+      const fallback = stillRunning
+        ? null
+        : await this.assignDefaultPlanWithinTx(tx, tenantId, now);
 
       await this.audit.record(
         {
@@ -981,6 +1052,8 @@ export class BillingService {
     args: {
       tenantId: string;
       planId: string;
+      /** Phạm vi loại xe của bậc được gán (ADR 0065) — chỉ kỳ ở phạm vi XUNG ĐỘT bị nối/huỷ. */
+      vehicleScope: PlanVehicleScope;
       timing?: string | null;
       /** `null` = hệ thống (webhook) — không có lượt "đổi gói ngay" nào từ đường đó. */
       actorUserId: string | null;
@@ -999,7 +1072,7 @@ export class BillingService {
     });
     const chain = planSubscriptionChain(
       live,
-      { planId: args.planId, timing: args.timing },
+      { planId: args.planId, timing: args.timing, vehicleScope: args.vehicleScope },
       args.now,
     );
     if (chain.cancel.length > 0) {
@@ -1063,6 +1136,36 @@ export class BillingService {
     });
   }
 
+  /**
+   * Hoá đơn `issued` còn mở của các phạm vi KHÁC mà xung đột với bậc vừa bật (ADR 0065 điều 6.3) bị
+   * void trong CÙNG transaction — CẢ HAI chiều: bật bậc `all` (doanh nghiệp) void hoá đơn ô tô/xe
+   * máy; bật gói ô tô void hoá đơn `all` cũ (ví dụ hoá đơn `shop-basic` trước ADR 0065). Để lại
+   * chúng là để một lần chuyển khoản muộn mở một kỳ xếp SAU kỳ vừa bật mà không ai mua nữa.
+   *
+   * Hoá đơn CÙNG phạm vi không đụng ở đây (đường mua tự void nó; gán tay/kích hoạt giữ nguyên hành vi
+   * trước ADR 0065). Hoá đơn `partially_paid` KHÔNG void (đã có tiền thật — ADR 0016 điều 6): nó nằm
+   * lại cho admin xử lý ở màn đối soát.
+   */
+  private async voidInvoicesSupersededByScopeWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    plan: { billingMode: string; vehicleScope: string },
+  ): Promise<void> {
+    if (plan.billingMode !== BILLING_MODE.PACKAGE) return;
+    const scope = planVehicleScopeOf(plan.vehicleScope);
+    const others = PLAN_VEHICLE_SCOPE_VALUES.filter(
+      (other) => other !== scope && planScopesConflict(scope, other),
+    );
+    await tx.subscriptionInvoice.updateMany({
+      where: {
+        tenantId,
+        status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+        vehicleScope: { in: others },
+      },
+      data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+    });
+  }
+
   async assignDefaultPlanWithinTx(
     tx: Prisma.TransactionClient,
     tenantId: string,
@@ -1080,6 +1183,8 @@ export class BillingService {
         termMonths: COMMISSION_TRACK_TERM_MONTHS,
         billingMode: BILLING_MODE.COMMISSION,
         commissionPercent: plan.commissionPercent,
+        // Tuyến hoa hồng phủ mọi loại xe (CHECK `plans_commission_scope_all`).
+        vehicleScope: PLAN_VEHICLE_SCOPE.ALL,
         startsAt: now,
         endsAt: addCalendarMonthsVn(now, COMMISSION_TRACK_TERM_MONTHS),
         // Không ghi chú chữ: dòng hệ thống nói bằng `origin` (`subscriptionOriginOf`) và giao diện
@@ -1094,7 +1199,13 @@ export class BillingService {
   // "Gói của tôi" — tenant-scoped (W2 LÔ 3)
   // -------------------------------------------------------------------------
 
-  /** Gói hiện hành + mức dùng đội xe + lượt miễn phí (ADR 0026). */
+  /**
+   * Gói hiện hành + mức dùng / hạn mức THEO LOẠI XE + lượt miễn phí (ADR 0026 · ADR 0065).
+   *
+   * Một lượt đọc các dòng hiệu lực (`EFFECTIVE_SUBSCRIPTION_ARGS`) rồi mọi phép suy chạy trên
+   * CHÍNH tập dòng đó — tuyến, kỳ của từng phạm vi, hạn mức từng loại — để thẻ "Gói của tôi"
+   * không thể nói một con số khác với con số `assertVehicleQuota` thật sự chặn.
+   */
   async mySubscription(tenantId: string): Promise<MySubscriptionDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
@@ -1106,22 +1217,9 @@ export class BillingService {
         message: 'Không tìm thấy gian hàng',
       });
     }
-    /*
-     * Dòng thuê bao HIỆU LỰC, không phải "gói còn hạn".
-     *
-     * `findCurrent` đòi `ends_at > now`, nên suốt 7 ngày ân hạn nó trả `null` — và màn "Gói của
-     * tôi" sẽ hiện "chưa có gói" NGAY CẠNH hạn mức theo chỗ của chính gói vừa hết hạn (phần
-     * `fleetQuota` bên dưới đọc pha hiệu lực). Hai con số trên cùng một thẻ nói ngược nhau là
-     * đúng loại lệch mà `resolveEffectiveBilling` sinh ra để xoá.
-     */
-    const current = await this.prisma.tenantSubscription.findFirst({
-      where: { tenantId, ...effectiveSubscriptionWhere(new Date()) },
-      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-      select: SUB_SELECT,
-    });
-
-    // Hai groupBy thay cho bốn count — mức dùng đội xe và mức chiếm suất trên chợ, theo loại.
-    const [fleet, onMarket] = await Promise.all([
+    const now = new Date();
+    const [rows, fleet, onMarket] = await Promise.all([
+      this.loadEffectiveRows(tenantId, now),
       this.prisma.vehicle.groupBy({
         by: ['vehicleType'],
         where: { tenantId, deletedAt: null },
@@ -1129,58 +1227,78 @@ export class BillingService {
       }),
       this.prisma.vehicle.groupBy({
         by: ['vehicleType'],
-        where: {
-          tenantId,
-          deletedAt: null,
-          publicStatus: {
-            in: [
-              VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
-              VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-            ],
-          },
-        },
+        where: { tenantId, deletedAt: null, publicStatus: { in: [...MARKETPLACE_SLOT_STATUSES] } },
         _count: { _all: true },
       }),
     ]);
-    const countOf = (rows: typeof fleet, type: string) =>
-      rows.find((r) => r.vehicleType === type)?._count._all ?? 0;
-
-    /*
-     * Hạn mức đọc từ `vehicleQuotaFor` — CÙNG hàm mà `assertVehicleQuota` gọi, nên màn "Gói
-     * của tôi" không thể nói một con số khác với con số backend thật sự chặn. Bản trước có một
-     * bản sao của luật ở đây, và bản sao đó đọc `findCurrent` (vô hạn khi vừa hết hạn) trong
-     * khi cổng chặn đọc pha hiệu lực.
-     *
-     * Trần là MỘT con số cho cả đội xe (ADR 0041 điều 4), nên nó chỉ xuất hiện ở `fleetQuota`.
-     * `usage` vẫn tách theo loại vì màn hình cần con số đó — nhưng không mang trần nào: viết
-     * trần tổng vào ô của từng loại là nói "3 ô tô" khi luật là "3 xe".
-     */
-    const quota = await this.vehicleQuotaFor(tenantId);
+    const countOf = (list: typeof fleet, type: string) =>
+      list.find((r) => r.vehicleType === type)?._count._all ?? 0;
     const carUsed = countOf(fleet, VEHICLE_TYPE.CAR);
     const motorbikeUsed = countOf(fleet, VEHICLE_TYPE.MOTORBIKE);
+    const carOnMarket = countOf(onMarket, VEHICLE_TYPE.CAR);
+    const motorbikeOnMarket = countOf(onMarket, VEHICLE_TYPE.MOTORBIKE);
+
+    const billing = resolveEffectiveBilling(rows, now);
+    const terms = resolveActivePackageTerms(rows, now);
+    /*
+     * "Gói hiện hành" (một dòng, giữ cho client cũ): kỳ gói ƯU TIÊN khi ở tuyến gói (`all` thắng,
+     * rồi ô tô, rồi xe máy — thứ tự của `resolveActivePackageTerms`), ngược lại dòng hiệu lực gần
+     * nhất. Đọc `findCurrent` (đòi `ends_at > now`) thì suốt ân hạn thẻ hiện "chưa có gói" ngay
+     * cạnh hạn mức của chính gói vừa hết hạn.
+     */
+    const primary = terms[0]?.row ?? rows[0] ?? null;
+
+    const usedBy = (scope: PlanVehicleScope) =>
+      scope === PLAN_VEHICLE_SCOPE.ALL
+        ? { used: carUsed + motorbikeUsed, onMarketplace: carOnMarket + motorbikeOnMarket }
+        : scope === PLAN_VEHICLE_SCOPE.CAR
+          ? { used: carUsed, onMarketplace: carOnMarket }
+          : { used: motorbikeUsed, onMarketplace: motorbikeOnMarket };
+    const quotas = {
+      car: quotaForVehicleType(rows, billing, VEHICLE_TYPE.CAR, now),
+      motorbike: quotaForVehicleType(rows, billing, VEHICLE_TYPE.MOTORBIKE, now),
+    };
+    const withUsage = (quota: VehicleTypeQuota): VehicleTypeQuotaDto => ({
+      ...quota,
+      ...usedBy(quota.countedScope),
+    });
 
     const used = Math.min(tenant.freeTripsUsed, FREE_TRIP_ALLOWANCE);
     return {
-      currentPlan: current ? toCurrentPlanDto(current) : null,
+      currentPlan: primary ? toCurrentPlanDto(primary, now) : null,
+      currentPlans: terms.map((term) => toCurrentPlanDto(term.row, now)),
       usage: {
-        car: { used: carUsed, onMarketplace: countOf(onMarket, VEHICLE_TYPE.CAR) },
-        motorbike: {
-          used: motorbikeUsed,
-          onMarketplace: countOf(onMarket, VEHICLE_TYPE.MOTORBIKE),
-        },
+        car: { used: carUsed, onMarketplace: carOnMarket },
+        motorbike: { used: motorbikeUsed, onMarketplace: motorbikeOnMarket },
       },
-      fleetQuota: {
-        kind: quota.kind,
-        totalLimit: quota.kind === 'total' ? quota.limit : null,
-        reason: quota.kind === 'total' ? quota.reason : null,
-        totalUsed: carUsed + motorbikeUsed,
-      },
+      vehicleQuotas: { car: withUsage(quotas.car), motorbike: withUsage(quotas.motorbike) },
+      fleetQuota: fleetQuotaSummary(quotas, carUsed + motorbikeUsed),
       freeTrips: {
         allowance: FREE_TRIP_ALLOWANCE,
         used: tenant.freeTripsUsed,
         left: FREE_TRIP_ALLOWANCE - used,
       },
     };
+  }
+
+  /**
+   * Các dòng thuê bao HIỆU LỰC gần nhất của một tenant — đầu vào DUY NHẤT của mọi phép chấm tuyến
+   * / kỳ / hạn mức trong service này (`EFFECTIVE_SUBSCRIPTION_ARGS`: đã bắt đầu, `ends_at` muộn
+   * nhất trước, giới hạn cửa sổ). `SUB_SELECT` là tập cha của select hiệu lực, nên cùng dòng đó
+   * dựng được DTO mà không cần đọc lần hai.
+   */
+  private loadEffectiveRows(
+    tenantId: string,
+    now: Date,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SubRow[]> {
+    const client = tx ?? this.prisma;
+    return client.tenantSubscription.findMany({
+      where: { tenantId, ...effectiveSubscriptionWhere(now) },
+      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
+      take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
+      select: SUB_SELECT,
+    });
   }
 
   /**
@@ -1198,6 +1316,22 @@ export class BillingService {
       select: PLAN_SELECT,
     });
     return rows.map(toTenantPlanDto);
+  }
+
+  /**
+   * Bảng giá gian hàng NHÓM THEO PHẠM VI loại xe (ADR 0065) — `motorbike`, `car`, rồi `all`
+   * (bậc doanh nghiệp). Cùng tập bậc với `listPlansForTenant`; endpoint phẳng giữ nguyên hình cho
+   * app native đã phát hành (ADR 0031), endpoint này là thứ màn chọn gói mới đọc. Nhóm rỗng vẫn
+   * có mặt để giao diện nói "chưa có gói cho loại xe này" thay vì đoán từ một khoá vắng.
+   */
+  async planCatalogForTenant(): Promise<TenantPlanCatalogDto> {
+    const plans = await this.listPlansForTenant();
+    return {
+      groups: PLAN_VEHICLE_SCOPE_DISPLAY_ORDER.map((vehicleScope) => ({
+        vehicleScope,
+        plans: plans.filter((plan) => plan.vehicleScope === vehicleScope),
+      })),
+    };
   }
 
   /** Lịch sử hoá đơn gói của gian hàng (mới nhất trước). */
@@ -1257,7 +1391,12 @@ export class BillingService {
    * trước migration `subscription_invoice_single_payable`): mới nhất là mã người dùng vừa thấy.
    */
   async pendingInvoiceForTenant(tenantId: string): Promise<PendingSubscriptionInvoiceDto> {
-    const row = await this.prisma.subscriptionInvoice.findFirst({
+    /*
+     * Từ ADR 0065 mỗi PHẠM VI loại xe giữ tối đa một hoá đơn trả được (unique
+     * `subscription_invoices_one_payable_per_tenant_scope`), nên tối đa ba dòng — đọc hết, không
+     * phân trang. `invoice` (mới nhất) giữ cho client cũ; `invoices` là danh sách đầy đủ.
+     */
+    const rows = await this.prisma.subscriptionInvoice.findMany({
       where: {
         tenantId,
         status: {
@@ -1265,9 +1404,11 @@ export class BillingService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: PLAN_VEHICLE_SCOPE_VALUES.length,
       select: INVOICE_SELECT,
     });
-    return { invoice: row ? toInvoiceDto(row) : null };
+    const invoices = rows.map(toInvoiceDto);
+    return { invoice: invoices[0] ?? null, invoices };
   }
 
   /**
@@ -1291,10 +1432,23 @@ export class BillingService {
   ): Promise<SubscriptionInvoiceDto> {
     await this.assertTenant(tenantId);
     const plan = await this.loadPlan(dto.planId);
+    /*
+     * Bậc CHƯA MỞ BÁN có mã riêng (`PLAN_NOT_PUBLISHED`): người đang xem bảng giá cần câu "chọn
+     * gói khác", không phải câu chung "dữ liệu vừa thay đổi". `planStatus` giữ lại trong `details`
+     * cho client cũ còn đọc nó.
+     */
+    if (plan.status === PLAN_STATUS.DRAFT) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PLAN_NOT_PUBLISHED,
+        message: 'Gói chưa mở bán',
+        details: { planCode: plan.code, planStatus: plan.status },
+      });
+    }
     if (plan.status !== PLAN_STATUS.ACTIVE) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
         message: 'Gói đã ngừng bán',
+        details: { planStatus: plan.status },
       });
     }
     /*
@@ -1357,13 +1511,31 @@ export class BillingService {
     }
 
     const now = new Date();
-    // Kỳ DỰ KIẾN để hiển thị: nối đuôi gói còn hạn. Kỳ thật chốt lại lúc kích hoạt (W4).
-    const tail = await this.prisma.tenantSubscription.findFirst({
+    const vehicleScope = planVehicleScopeOf(plan.vehicleScope);
+    /*
+     * Hoá đơn của mọi phạm vi XUNG ĐỘT (ADR 0065): mua gói ô tô ⇒ {car, all}; mua bậc `all` ⇒ cả ba.
+     * Unique ở DB chỉ giữ "một hoá đơn trả được mỗi phạm vi" theo phạm vi CHÍNH XÁC, nên phần xung
+     * đột chéo (một hoá đơn `all` cũ còn mở khi mua gói ô tô) phải xử ở đây: hai mã cùng sống thì
+     * lần chuyển khoản muộn mở một kỳ mà chính lượt mua mới đã thay.
+     */
+    const conflictingScopes = PLAN_VEHICLE_SCOPE_VALUES.filter((other) =>
+      planScopesConflict(vehicleScope, other),
+    );
+    /*
+     * Kỳ DỰ KIẾN để hiển thị — CÙNG bảng quyết định mà lượt kích hoạt sẽ dùng
+     * (`planSubscriptionChain`, theo phạm vi): mua gói xe máy khi đang có gói ô tô thì bắt đầu
+     * NGAY, không nối sau kỳ ô tô. Kỳ thật chốt lại lúc tiền về (`activateFromInvoiceWithinTx`).
+     */
+    const live = await this.prisma.tenantSubscription.findMany({
       where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
-      orderBy: { endsAt: 'desc' },
-      select: { endsAt: true },
+      select: TERM_SNAPSHOT_SELECT,
     });
-    const periodFrom = tail ? tail.endsAt : now;
+    const timing = dto.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
+    const periodFrom = planSubscriptionChain(
+      live,
+      { planId: plan.id, vehicleScope, timing },
+      now,
+    ).startsAt;
     const periodTo = addCalendarMonthsVn(periodFrom, dto.termMonths);
     const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
 
@@ -1407,8 +1579,16 @@ export class BillingService {
        * Lối đi tiếp đúng là chuyển nốt phần còn thiếu theo mã cũ, nên trả mã lỗi nói thẳng điều
        * đó kèm chính mã đối soát đang dang dở.
        */
+      /*
+       * Theo PHẠM VI (ADR 0065): hoá đơn gói ô tô dang dở không chặn mua gói xe máy — hai chuỗi
+       * kỳ độc lập, và unique ở DB cũng chỉ giữ một hoá đơn trả được cho mỗi phạm vi.
+       */
       const partiallyPaid = await tx.subscriptionInvoice.findFirst({
-        where: { tenantId, status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID },
+        where: {
+          tenantId,
+          vehicleScope: { in: conflictingScopes },
+          status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        },
         orderBy: { createdAt: 'desc' },
         select: { code: true },
       });
@@ -1421,7 +1601,11 @@ export class BillingService {
       }
 
       await tx.subscriptionInvoice.updateMany({
-        where: { tenantId, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
+        where: {
+          tenantId,
+          vehicleScope: { in: conflictingScopes },
+          status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+        },
         data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
       });
       const invoice = await this.createInvoiceWithinTx(tx, {
@@ -1431,6 +1615,8 @@ export class BillingService {
           planId: plan.id,
           planCode: plan.code,
           termMonths: dto.termMonths,
+          vehicleScope,
+          timing,
           quota: quotaOf(limits),
           lines: pricing.lines,
         },
@@ -1453,6 +1639,7 @@ export class BillingService {
             code: invoice.code,
             planCode: plan.code,
             termMonths: dto.termMonths,
+            vehicleScope,
             quota: quotaOf(limits),
             totalAmount: invoice.totalAmount.toString(),
             expiresAt: expiresAt.toISOString(),
@@ -1465,10 +1652,21 @@ export class BillingService {
     return toInvoiceDto(row);
   }
 
-  /** Gói hiện hành của tenant (đọc-only, dùng cho tenant detail) — null nếu không có/hết hạn. */
+  /**
+   * Gói hiện hành của tenant (đọc-only, dùng cho tenant detail) — null nếu không có/hết hạn.
+   * Nhiều kỳ cùng chạy (ADR 0065) ⇒ kỳ ưu tiên (`all` → ô tô → xe máy, rồi dòng hoa hồng);
+   * danh sách đủ là `currentPlans`.
+   */
   async currentPlan(tenantId: string): Promise<CurrentPlanDto | null> {
-    const current = await this.findCurrent(tenantId, new Date());
-    return current ? toCurrentPlanDto(current) : null;
+    const now = new Date();
+    const [first] = await this.findCurrentRows(tenantId, now);
+    return first ? toCurrentPlanDto(first, now) : null;
+  }
+
+  /** Mọi kỳ ĐANG CHẠY (`starts_at <= now < ends_at`), kỳ ưu tiên trước — xem `currentPlan`. */
+  async currentPlans(tenantId: string): Promise<CurrentPlanDto[]> {
+    const now = new Date();
+    return (await this.findCurrentRows(tenantId, now)).map((row) => toCurrentPlanDto(row, now));
   }
 
   /**
@@ -1635,14 +1833,35 @@ export class BillingService {
     }
     const plan = await tx.plan.findUniqueOrThrow({
       where: { id: snapshot.planId },
-      select: { id: true, code: true, name: true, billingMode: true, commissionPercent: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        billingMode: true,
+        commissionPercent: true,
+        vehicleScope: true,
+      },
     });
+    /*
+     * Phạm vi đọc từ BẬC, không từ snapshot: phạm vi của một bậc không đổi sau khi tạo, và trigger
+     * ở DB đòi dòng thuê bao khớp đúng bậc nó trỏ tới. Hoá đơn trước ADR 0065 (bậc `shop-*` đã
+     * ngừng bán) ra một kỳ `all` với trần TỔNG ghi trên chính tờ hoá đơn — xếp SAU mọi kỳ đang
+     * chạy của cả hai loại xe, nên không cắt ngắn kỳ nào gian hàng đã trả.
+     */
+    const vehicleScope = planVehicleScopeOf(plan.vehicleScope);
+    if (snapshot.vehicleScope !== vehicleScope) {
+      this.logger.warn(
+        `Hoá đơn ${args.invoiceId} ghi phạm vi ${snapshot.vehicleScope} nhưng bậc ${plan.code} là ${vehicleScope} — kích hoạt theo bậc.`,
+      );
+    }
 
     const now = new Date();
+    const timing = snapshot.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
     const { startsAt } = await this.planChainWithinTx(tx, {
       tenantId: args.tenantId,
       planId: plan.id,
-      timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+      vehicleScope,
+      timing,
       actorUserId: null,
       now,
     });
@@ -1656,6 +1875,7 @@ export class BillingService {
         status: SUBSCRIPTION_STATUS.ACTIVE,
         price: args.totalAmount,
         termMonths: snapshot.termMonths,
+        vehicleScope,
         // Hạn mức từ CHÍNH hoá đơn, không đọc lại `plan.limits_json`: giữa lúc phát hành mã và
         // lúc tiền về, admin có thể đã sửa bậc gói. Thứ gian hàng trả tiền cho là thứ ghi trên
         // tờ hoá đơn họ đang cầm (ADR 0041 điều 3).
@@ -1689,6 +1909,7 @@ export class BillingService {
      * tuyến nào cả.
      */
     await this.completePackageOnboardingWithinTx(tx, args.tenantId, plan.billingMode);
+    await this.voidInvoicesSupersededByScopeWithinTx(tx, args.tenantId, plan);
 
     await this.audit.record(
       {
@@ -1704,6 +1925,7 @@ export class BillingService {
           planCode: plan.code,
           planName: plan.name,
           termMonths: snapshot.termMonths,
+          vehicleScope,
           quota: snapshot.quota,
           price: args.totalAmount.toString(),
           startsAt: sub.startsAt.toISOString(),
@@ -1731,74 +1953,80 @@ export class BillingService {
   }
 
   /**
-   * Hạn mức SỐ XE — một cách đếm, hai điểm thi hành (ADR 0041 điều 4).
+   * Hạn mức SỐ XE — đếm THEO LOẠI XE trong phạm vi của gói, hai điểm thi hành (ADR 0041 điều 4 ·
+   * ADR 0065).
    *
-   * | Nguồn trần | Trần | Gác tạo xe | Gác gửi lên chợ |
-   * | --- | --- | --- | --- |
-   * | Bậc gói đã mua (`plan`) | `quota.maxVehicles` | ✅ | ✅ |
-   * | Owner Lite (`owner_lite`) | `OWNER_LITE_VEHICLE_LIMIT` | ✅ | ❌ |
-   * | Chưa cấu hình (`billing_unconfigured`) | 3, mã lỗi khác | ✅ | ❌ |
+   * | Nguồn trần | Trần | Đếm | Gác tạo xe | Gác gửi lên chợ |
+   * | --- | --- | --- | --- | --- |
+   * | Kỳ gói phủ loại xe (`plan`) | `quota.maxVehicles` | xe CÙNG loại (bậc `all`: mọi loại) | ✅ | ✅ |
+   * | Tuyến gói nhưng KHÔNG có kỳ cho loại này | — | — | ❌ `PLAN_SCOPE_REQUIRED` | ❌ `PLAN_SCOPE_REQUIRED` |
+   * | Owner Lite (`owner_lite`) | `OWNER_LITE_VEHICLE_LIMIT` | TỔNG | ✅ | — |
+   * | Chưa cấu hình (`billing_unconfigured`) | 3, mã lỗi khác | TỔNG | ✅ | — |
    *
-   * ## Đếm TỔNG, không đếm theo loại
+   * ## Không rơi về Owner Lite cho loại xe chưa mua gói
    *
-   * `vehicleType` cố ý KHÔNG vào `where`: từ ADR 0041 một bậc bán "tối đa N xe", và ba ô tô cộng
-   * ba xe máy vẫn là sáu chiếc. Mô hình cũ đếm theo LOẠI vì thứ bán ra là CHỖ của từng loại —
-   * không còn chỗ nào để bán thì cũng không còn hai con số để so.
+   * Gian hàng đang trả gói ô tô mà đăng được xe máy theo trần 3 xe của tuyến hoa hồng là hai
+   * tuyến trên MỘT gian hàng — và tuyến hoa hồng thu 10% phí dịch vụ phía khách trên chính chiếc
+   * xe máy đó, trong khi cả gian hàng đang hưởng 0% (ADR 0028). Lối đi tiếp đúng là mua gói cho
+   * loại xe đó, nên mã lỗi nói đúng điều đó.
    *
    * ## Vì sao đọc `resolveEffectiveBilling` chứ không `findCurrent`
    *
    * `findCurrent` đòi `ends_at > now`, nên đúng giây một gói hết hạn nó trả `null` — và một bản
-   * trước của hàm này coi `null` là KHÔNG GIỚI HẠN. Cộng với `graceDays = 7` và kỳ hoa hồng 12
-   * tháng mà mọi tenant cùng nhận trong một ngày (ADR 0038, bối cảnh điều 2), đó là một cửa sổ
-   * ĐỊNH KỲ trong đó mọi chủ xe đăng được vô số xe. Pha `grace`/`lapsed` chỉ tồn tại ở
-   * `resolveEffectiveBilling`, nên hạn mức phải hỏi chính nó.
+   * trước của hàm này coi `null` là KHÔNG GIỚI HẠN. Pha `grace`/`lapsed` chỉ tồn tại ở
+   * `resolveEffectiveBilling`/`resolveActivePackageTerms`, nên hạn mức phải hỏi chính chúng.
    *
    * ## Hai điểm thi hành, và vì sao chúng khác nhau
    *
    * `scope: 'fleet'` (mặc định) — tạo xe. `scope: 'marketplace'` — gửi xe lên chợ; chỉ đếm xe
    * đang chiếm suất và TRỪ chính chiếc đang gửi, để tenant tụt bậc vẫn chọn được xe nào ở lại.
-   *
-   * Trần KHÔNG trả tiền (Owner Lite, `unconfigured`) chỉ gác điểm TẠO: không tạo được chiếc thứ
-   * tư thì không có chiếc thứ tư để gửi, còn gác thêm ở chợ gây đúng thiệt hại ADR 0038 cấm —
-   * gian hàng rơi khỏi gói giữ nguyên xe TRÊN chợ, nhưng mọi chiếc rời chợ một lần (sửa hồ sơ,
-   * bị yêu cầu bổ sung, tạm gỡ) sẽ không bao giờ quay lại được.
-   *
-   * Trần ĐÃ TRẢ TIỀN thì gác cả hai, vì đó là cửa duy nhất còn lại của một lần HẠ BẬC: gói mới
-   * nối đuôi gói cũ (`planChainWithinTx`), nên gian hàng 40 xe hạ về bậc 3 xe bước sang kỳ mới
-   * với 40 xe đang bán và một hoá đơn 100.000đ.
+   * Trần KHÔNG trả tiền (Owner Lite, `unconfigured`) chỉ gác điểm TẠO (ADR 0038 điều 12); trần
+   * ĐÃ TRẢ TIỀN gác cả hai, vì đó là cửa duy nhất còn lại của một lần HẠ BẬC.
    *
    * ⚠️ Cổng này CHẶN THÊM MỚI, không gỡ thứ đang có (ADR 0038 · ADR 0041 điều 4). Xe ở nguyên
    * trên chợ, chuyến chạy tiếp, tiền về ví bình thường; chỉ chiếc TIẾP THEO bị từ chối.
    */
   async assertVehicleQuota(
     tenantId: string,
-    opts: { scope?: 'fleet' | 'marketplace'; excludeVehicleId?: string } = {},
+    vehicleType: VehicleType,
+    opts: { scope?: PlanQuotaGatePoint; excludeVehicleId?: string } = {},
   ): Promise<void> {
-    const quota = await this.vehicleQuotaFor(tenantId, new Date());
-    if (quota.kind === 'unlimited') return;
+    const quota = await this.vehicleQuotaFor(tenantId, vehicleType, new Date());
+    if (quota.kind === VEHICLE_QUOTA_KIND.SCOPE_REQUIRED) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.PLAN_SCOPE_REQUIRED,
+        message:
+          vehicleType === VEHICLE_TYPE.MOTORBIKE
+            ? 'Gian hàng chưa có gói cho XE MÁY. Mua gói xe máy để đăng và đưa xe máy lên chợ.'
+            : 'Gian hàng chưa có gói cho Ô TÔ. Mua gói ô tô để đăng và đưa ô tô lên chợ.',
+        details: { vehicleType },
+      });
+    }
+    if (quota.kind === VEHICLE_QUOTA_KIND.UNLIMITED || quota.limit === null) return;
 
-    const scope = opts.scope ?? 'fleet';
-    if (scope === 'marketplace' && quota.reason !== 'plan') return;
+    const scope = opts.scope ?? PLAN_QUOTA_GATE_POINT.FLEET;
+    if (scope === PLAN_QUOTA_GATE_POINT.MARKETPLACE && quota.reason !== QUOTA_LIMIT_REASON.PLAN) return;
 
-    const scopeWhere: Prisma.VehicleWhereInput =
-      scope === 'marketplace'
-        ? {
-            publicStatus: {
-              in: [
-                VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
-                VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-              ],
-            },
-            ...(opts.excludeVehicleId ? { id: { not: opts.excludeVehicleId } } : {}),
-          }
-        : {};
-
-    const used = await this.prisma.vehicle.count({
-      where: { tenantId, deletedAt: null, ...scopeWhere },
-    });
+    const where: Prisma.VehicleWhereInput = {
+      tenantId,
+      deletedAt: null,
+      // Bậc `all` (và Owner Lite) đếm GỘP hai loại; bậc theo loại chỉ đếm đúng loại đó.
+      ...(quota.countedScope === PLAN_VEHICLE_SCOPE.ALL ? {} : { vehicleType: quota.countedScope }),
+      ...(scope === PLAN_QUOTA_GATE_POINT.MARKETPLACE ? { publicStatus: { in: [...MARKETPLACE_SLOT_STATUSES] } } : {}),
+      // Trừ chính chiếc đang gửi lại / đang đổi loại — để thao tác trên xe đã có không tự chặn mình.
+      ...(opts.excludeVehicleId ? { id: { not: opts.excludeVehicleId } } : {}),
+    };
+    const used = await this.prisma.vehicle.count({ where });
     if (used < quota.limit) return;
 
-    const details = { scope, reason: quota.reason, used, limit: quota.limit };
+    const details = {
+      scope,
+      reason: quota.reason,
+      vehicleType,
+      countedScope: quota.countedScope,
+      used,
+      limit: quota.limit,
+    };
 
     /*
      * Cùng CON SỐ, khác LÝ DO — và lý do đi theo tới tận thông điệp lỗi.
@@ -1807,7 +2035,7 @@ export class BillingService {
      * tảng mà người dùng không tự sửa được. Nói với họ "chủ xe cá nhân đăng tối đa 3 xe" là nói
      * sai nguyên nhân, và đẩy họ đi mua một gói không giải quyết được gì.
      */
-    if (quota.reason === 'billing_unconfigured') {
+    if (quota.reason === QUOTA_LIMIT_REASON.BILLING_UNCONFIGURED) {
       throw new ConflictException({
         code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
         message:
@@ -1819,8 +2047,14 @@ export class BillingService {
     throw new ForbiddenException({
       code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
       message:
-        quota.reason === 'plan'
-          ? `Gói hiện tại cho phép tối đa ${quota.limit} xe. Nâng bậc gói để đăng thêm xe.`
+        quota.reason === QUOTA_LIMIT_REASON.PLAN
+          ? `Gói hiện tại cho phép tối đa ${quota.limit} xe${
+              quota.countedScope === PLAN_VEHICLE_SCOPE.ALL
+                ? ''
+                : vehicleType === VEHICLE_TYPE.MOTORBIKE
+                  ? ' máy'
+                  : ' ô tô'
+            }. Nâng bậc gói để đăng thêm xe.`
           : `Chủ xe cá nhân đăng tối đa ${quota.limit} xe (tính cả ô tô và xe máy). ` +
             'Mua gói gian hàng để đăng thêm xe.',
       details,
@@ -1828,73 +2062,59 @@ export class BillingService {
   }
 
   /**
-   * Hạn mức xe đang áp cho một tenant — MỘT phép suy cho cổng chặn và cho màn "Gói của tôi".
+   * Hạn mức đang áp cho MỘT loại xe của một tenant — MỘT phép suy cho cổng chặn, màn "Gói của
+   * tôi" và drawer đối tác của admin (`quotaForVehicleType`).
    *
-   * `reason` đi kèm con số vì nó quyết định hai thứ khác nhau: điểm thi hành (điều 4) và câu
-   * người dùng đọc khi chạm trần. Nén ba lý do vào một `number | null` là cách một màn hình bắt
-   * đầu mời chủ xe "mua gói" để sửa một lỗi cấu hình của nền tảng.
+   * `reason` và `countedScope` đi kèm con số vì chúng quyết định điểm thi hành, cách đếm, và câu
+   * người dùng đọc khi chạm trần. Nén chúng vào một `number | null` là cách một màn hình bắt đầu
+   * mời chủ xe "mua gói" để sửa một lỗi cấu hình của nền tảng.
    */
   async vehicleQuotaFor(
     tenantId: string,
+    vehicleType: VehicleType,
     now: Date = new Date(),
-  ): Promise<
-    | { kind: 'unlimited' }
-    | { kind: 'total'; limit: number; reason: 'plan' | 'owner_lite' | 'billing_unconfigured' }
-  > {
-    /*
-     * `EFFECTIVE_SUBSCRIPTION_ARGS.select` + đúng MỘT cột thêm (`quota_json`), thay vì chép lại
-     * cả khối select. Hằng đó tồn tại để không có định nghĩa thứ hai của "dòng hiệu lực"; một
-     * bản chép tay ở đây là chỗ nó bắt đầu trôi (thiếu `plan.name`, `orderBy` lệch…).
-     */
-    const row = await this.prisma.tenantSubscription.findFirst({
-      where: { tenantId, ...effectiveSubscriptionWhere(now) },
-      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true },
-    });
-    const billing = resolveEffectiveBilling(row, now);
-    if (billing.billingMode !== BILLING_MODE.PACKAGE || !row) {
-      return {
-        kind: 'total',
-        limit: OWNER_LITE_VEHICLE_LIMIT,
-        reason:
-          billing.phase === BILLING_PHASE.UNCONFIGURED ? 'billing_unconfigured' : 'owner_lite',
-      };
-    }
-
-    /*
-     * SNAPSHOT thắng bậc gói (ADR 0041 điều 3), và phép chọn phải TƯỜNG MINH.
-     *
-     * `quota.maxVehicles ?? limits.maxVehicles` đọc một `null` TƯỜNG MINH ("bậc này không giới
-     * hạn") thành "chưa khai" rồi rơi về bậc gói — sai ở đúng chỗ tốn tiền nhất. `parsePlanQuota`
-     * trả `null` cho cả cột NULL lẫn jsonb hỏng, và chỉ khi đó mới hỏi tới bậc gói.
-     */
-    const quota = parsePlanQuota(row.quotaJson);
-    const limit = quota ? quota.maxVehicles : parsePlanLimits(row.plan.limitsJson).maxVehicles;
-    return limit == null ? { kind: 'unlimited' } : { kind: 'total', limit, reason: 'plan' };
+  ): Promise<VehicleTypeQuota> {
+    const rows = await this.loadEffectiveRows(tenantId, now);
+    return quotaForVehicleType(rows, resolveEffectiveBilling(rows, now), vehicleType, now);
   }
 
-  /**
-   * Trần CHI NHÁNH đang áp — `null` = không giới hạn. Cùng nguồn, cùng luật snapshot với
-   * `vehicleQuotaFor`; `BranchesService.create` là nơi duy nhất gọi.
-   *
-   * Tuyến hoa hồng KHÔNG có trần chi nhánh ở đây: nhiều chi nhánh là một CỜ NĂNG LỰC
-   * (`PLAN_FEATURE.BRANCHES`), và tuyến đó không có cờ nào (ADR 0027) nên nó đã bị chặn ở trục
-   * thứ nhất. Hai trục độc lập, kiểm nối tiếp — đặt thêm một con số ở đây là trả lời hai lần cho
-   * cùng một câu hỏi, bằng hai luật có thể trôi khỏi nhau.
-   */
-  async branchQuotaFor(tenantId: string, now: Date = new Date()): Promise<number | null> {
-    const row = await this.prisma.tenantSubscription.findFirst({
-      where: { tenantId, ...effectiveSubscriptionWhere(now) },
-      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true },
-    });
-    const billing = resolveEffectiveBilling(row, now);
-    if (billing.billingMode !== BILLING_MODE.PACKAGE || !row) return null;
-    const quota = parsePlanQuota(row.quotaJson);
-    return quota ? quota.maxBranches : parsePlanLimits(row.plan.limitsJson).maxBranches;
+  /** Hạn mức của CẢ HAI loại xe từ một lượt đọc — drawer đối tác của admin dùng. */
+  async fleetQuotaFor(
+    tenantId: string,
+    now: Date = new Date(),
+  ): Promise<Record<VehicleType, VehicleTypeQuota>> {
+    const rows = await this.loadEffectiveRows(tenantId, now);
+    const billing = resolveEffectiveBilling(rows, now);
+    return {
+      [VEHICLE_TYPE.CAR]: quotaForVehicleType(rows, billing, VEHICLE_TYPE.CAR, now),
+      [VEHICLE_TYPE.MOTORBIKE]: quotaForVehicleType(rows, billing, VEHICLE_TYPE.MOTORBIKE, now),
+    } as Record<VehicleType, VehicleTypeQuota>;
   }
 
   // -------------------------------------------------------------------------
+
+  /**
+   * Phạm vi loại xe của một bậc MỚI (ADR 0065) — bỏ trống = `all`.
+   *
+   * Bậc tuyến hoa hồng chỉ được là `all` (CHECK `plans_commission_scope_all`): tuyến đó không bán
+   * gì theo loại xe, trần Owner Lite là TỔNG. Từ chối ở đây bằng `VALIDATION_FAILED` thay vì để DB
+   * trả 500 cho một ô admin chọn sai.
+   *
+   * Không có đường SỬA phạm vi: dòng thuê bao snapshot nó và trigger ở DB đòi hai bên khớp, nên
+   * đổi phạm vi của một bậc đã bán là đổi điều kiện hợp đồng của mọi gian hàng đang chạy trên nó.
+   * Muốn một phạm vi khác thì tạo bậc khác.
+   */
+  private planScopeForCreate(billingMode: string, requested?: string): PlanVehicleScope {
+    const scope = planVehicleScopeOf(requested);
+    if (billingMode === BILLING_MODE.COMMISSION && scope !== PLAN_VEHICLE_SCOPE.ALL) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Bậc tuyến hoa hồng phủ mọi loại xe — phạm vi phải là "all"',
+        details: { field: 'vehicleScope' },
+      });
+    }
+    return scope;
+  }
 
   /**
    * Chuẩn hoá + kiểm bộ núm của một bậc gói trước khi ghi. Chạy trên hình MERGED (create: dto
@@ -2007,6 +2227,9 @@ export class BillingService {
         code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE),
         periodFrom: args.periodFrom,
         periodTo: args.periodTo,
+        // Cột phạm vi là khoá của unique "một hoá đơn trả được mỗi phạm vi" (ADR 0065) — lấy từ
+        // CHÍNH snapshot để cột và `lines_json` không bao giờ nói hai điều khác nhau.
+        vehicleScope: args.snapshot.vehicleScope,
         linesJson: args.snapshot as unknown as Prisma.InputJsonValue,
         subtotal: args.subtotal,
         discountAmount: args.discountAmount,
@@ -2041,11 +2264,13 @@ export class BillingService {
     tx?: Prisma.TransactionClient,
   ): Promise<EffectiveBilling> {
     const client = tx ?? this.prisma;
-    const row = await client.tenantSubscription.findFirst({
+    // Mọi phạm vi loại xe (ADR 0065): còn MỘT kỳ gói hiệu lực ở bất kỳ phạm vi nào là cả gian
+    // hàng ở tuyến gói — `resolveEffectiveBilling` gộp các dòng.
+    const rows = await client.tenantSubscription.findMany({
       where: { tenantId, ...effectiveSubscriptionWhere(now) },
       ...EFFECTIVE_SUBSCRIPTION_ARGS,
     });
-    const billing = resolveEffectiveBilling(row, now);
+    const billing = resolveEffectiveBilling(rows, now);
     if (billing.phase === BILLING_PHASE.UNCONFIGURED) {
       /*
        * `unconfigured` có HAI nguyên nhân từ ADR 0040, và chỉ một trong hai là sự cố.
@@ -2115,19 +2340,39 @@ export class BillingService {
     now: Date = new Date(),
     tx?: Prisma.TransactionClient,
   ): Promise<unknown> {
-    const current = await this.findCurrent(tenantId, now, tx);
-    return current?.plan.limitsJson ?? null;
+    const rows = await this.findCurrentRows(tenantId, now, tx);
+    if (rows.length === 0) return null;
+    /*
+     * Nhiều kỳ cùng chạy (ADR 0065: gói ô tô + gói xe máy) ⇒ HỢP cờ năng lực của các kỳ — cùng
+     * phép mà `resolveTenantFeatures` dùng cho guard và `me()`. Trả về hình `limits_json` (chỉ
+     * khoá `features`) để `planFeatureFlags` ở nơi gọi đọc như cũ.
+     */
+    const features = new Set(rows.flatMap((row) => parsePlanLimits(row.plan.limitsJson).features));
+    return { features: [...features] };
   }
 
-  private findCurrent(tenantId: string, now: Date, tx?: Prisma.TransactionClient) {
+  /**
+   * Mọi kỳ ĐANG CHẠY của tenant (`starts_at <= now < ends_at`), kỳ ưu tiên trước: kỳ gói theo thứ
+   * tự phạm vi `all` → ô tô → xe máy, rồi dòng hoa hồng.
+   */
+  private async findCurrentRows(
+    tenantId: string,
+    now: Date,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SubRow[]> {
     const client = tx ?? this.prisma;
-    return client.tenantSubscription.findFirst({
+    const rows = await client.tenantSubscription.findMany({
       // Điều kiện "gói hiện hành" dùng CHUNG với TenantScopeGuard/AuthService.me (ADR 0027):
       // hai định nghĩa trôi khỏi nhau là menu mở mà API trả 403.
       where: { tenantId, ...currentSubscriptionWhere(now) },
       orderBy: { endsAt: 'desc' },
       select: SUB_SELECT,
     });
+    const rank = (row: SubRow) =>
+      row.billingMode === BILLING_MODE.PACKAGE
+        ? PLAN_VEHICLE_SCOPE_VALUES.indexOf(planVehicleScopeOf(row.vehicleScope))
+        : PLAN_VEHICLE_SCOPE_VALUES.length;
+    return rows.sort((a, b) => rank(a) - rank(b));
   }
 
   private async loadPlan(id: string) {
@@ -2159,6 +2404,127 @@ type PlanRow = Prisma.PlanGetPayload<{ select: typeof PLAN_SELECT }>;
 type SubRow = Prisma.TenantSubscriptionGetPayload<{ select: typeof SUB_SELECT }>;
 type InvoiceRow = Prisma.SubscriptionInvoiceGetPayload<{ select: typeof INVOICE_SELECT }>;
 
+/** Xe đang chiếm suất trên chợ — chờ duyệt công khai hoặc đã công khai. */
+const MARKETPLACE_SLOT_STATUSES = [
+  VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+  VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+] as const;
+
+/**
+ * Hạn mức đang áp cho MỘT loại xe (ADR 0065) — hình dạng chung của cổng chặn, "Gói của tôi" và
+ * drawer đối tác.
+ *
+ *  - `kind: 'scope_required'` — gian hàng TUYẾN GÓI không có kỳ gói nào phủ loại xe này ⇒ tạo xe
+ *    / đưa lên chợ bị từ chối `PLAN_SCOPE_REQUIRED`. `limit`/`reason` là `null`.
+ *  - `countedScope` — đếm xe trong phạm vi nào: chính loại xe (bậc theo loại), hoặc `all` (bậc
+ *    doanh nghiệp/bậc cũ có trần, Owner Lite) — tức trần dùng CHUNG với loại xe kia.
+ */
+export interface VehicleTypeQuota {
+  kind: VehicleQuotaKind;
+  limit: number | null;
+  reason: QuotaLimitReason | null;
+  countedScope: PlanVehicleScope;
+  subscriptionId: string | null;
+  planCode: string | null;
+  planName: string | null;
+  /** Pha của kỳ gói gác loại xe này (`current`/`grace`); `null` ngoài tuyến gói. */
+  phase: string | null;
+}
+
+/**
+ * Lõi thuần của `vehicleQuotaFor` — nhận các dòng hiệu lực đã đọc, để `mySubscription` tính hai
+ * loại xe từ MỘT lượt đọc thay vì hai.
+ */
+function quotaForVehicleType<
+  T extends EffectiveSubscriptionRowWithQuota,
+>(rows: readonly T[], billing: EffectiveBilling, vehicleType: VehicleType, now: Date): VehicleTypeQuota {
+  if (billing.billingMode !== BILLING_MODE.PACKAGE) {
+    return {
+      kind: VEHICLE_QUOTA_KIND.TOTAL,
+      limit: OWNER_LITE_VEHICLE_LIMIT,
+      reason:
+        billing.phase === BILLING_PHASE.UNCONFIGURED ? QUOTA_LIMIT_REASON.BILLING_UNCONFIGURED : QUOTA_LIMIT_REASON.OWNER_LITE,
+      // Trần Owner Lite là TỔNG ô tô + xe máy (ADR 0038 điều 12).
+      countedScope: PLAN_VEHICLE_SCOPE.ALL,
+      subscriptionId: null,
+      planCode: null,
+      planName: null,
+      phase: null,
+    };
+  }
+  const term: ActivePackageTerm<T> | null = packageTermCovering(
+    resolveActivePackageTerms(rows, now),
+    vehicleType,
+  );
+  if (!term) {
+    return {
+      kind: VEHICLE_QUOTA_KIND.SCOPE_REQUIRED,
+      limit: null,
+      reason: null,
+      countedScope: vehicleType,
+      subscriptionId: null,
+      planCode: null,
+      planName: null,
+      phase: null,
+    };
+  }
+  /*
+   * SNAPSHOT thắng bậc gói (ADR 0041 điều 3), và phép chọn phải TƯỜNG MINH.
+   *
+   * `quota.maxVehicles ?? limits.maxVehicles` đọc một `null` TƯỜNG MINH ("bậc này không giới
+   * hạn") thành "chưa khai" rồi rơi về bậc gói — sai ở đúng chỗ tốn tiền nhất. `parsePlanQuota`
+   * trả `null` cho cả cột NULL lẫn jsonb hỏng, và chỉ khi đó mới hỏi tới bậc gói.
+   */
+  const quota = parsePlanQuota(term.row.quotaJson);
+  const limit = quota ? quota.maxVehicles : parsePlanLimits(term.row.plan.limitsJson).maxVehicles;
+  return {
+    kind: limit === null ? VEHICLE_QUOTA_KIND.UNLIMITED : VEHICLE_QUOTA_KIND.TOTAL,
+    limit,
+    reason: QUOTA_LIMIT_REASON.PLAN,
+    countedScope: term.vehicleScope === PLAN_VEHICLE_SCOPE.ALL ? PLAN_VEHICLE_SCOPE.ALL : vehicleType,
+    subscriptionId: term.row.id,
+    planCode: term.row.plan.code,
+    planName: term.row.plan.name ?? null,
+    phase: term.billing.phase,
+  };
+}
+
+type EffectiveSubscriptionRowWithQuota = {
+  id: string;
+  billingMode: string | null;
+  endsAt: Date;
+  vehicleScope: string;
+  quotaJson: Prisma.JsonValue;
+  plan: { code: string; name: string; limitsJson: Prisma.JsonValue };
+};
+
+/**
+ * `fleetQuota` một-con-số cho client trước ADR 0065 — SUY từ hạn mức theo loại, không phải một
+ * luật thứ hai. Tuyến gói: tổng trần các loại đã có gói (loại chưa có gói góp 0; một kỳ `all` có
+ * trần chỉ tính MỘT lần), có loại không giới hạn ⇒ `unlimited`. Cổng chặn thật đọc theo loại.
+ */
+function fleetQuotaSummary(
+  quotas: { car: VehicleTypeQuota; motorbike: VehicleTypeQuota },
+  totalUsed: number,
+): MySubscriptionDto['fleetQuota'] {
+  const list = [quotas.car, quotas.motorbike];
+  if (list.some((q) => q.kind === VEHICLE_QUOTA_KIND.UNLIMITED)) {
+    return { kind: VEHICLE_QUOTA_KIND.UNLIMITED, totalLimit: null, reason: null, totalUsed };
+  }
+  if (quotas.car.reason !== QUOTA_LIMIT_REASON.PLAN && quotas.car.kind !== VEHICLE_QUOTA_KIND.SCOPE_REQUIRED) {
+    return { kind: VEHICLE_QUOTA_KIND.TOTAL, totalLimit: quotas.car.limit, reason: quotas.car.reason, totalUsed };
+  }
+  const seen = new Set<string>();
+  let totalLimit = 0;
+  for (const q of list) {
+    if (q.kind !== VEHICLE_QUOTA_KIND.TOTAL || q.limit === null || !q.subscriptionId) continue;
+    if (seen.has(q.subscriptionId)) continue;
+    seen.add(q.subscriptionId);
+    totalLimit += q.limit;
+  }
+  return { kind: VEHICLE_QUOTA_KIND.TOTAL, totalLimit, reason: QUOTA_LIMIT_REASON.PLAN, totalUsed };
+}
+
 /** Hoá đơn tay/hỏng không đọc ra snapshot nào — hiện "không giới hạn" là sai, nhưng DTO phải đủ hình. */
 const EMPTY_QUOTA: PlanQuotaSnapshot = { maxVehicles: null, maxBranches: null, maxMembers: null };
 
@@ -2189,12 +2555,15 @@ function planAuditKnobs(limits: PlanLimitsJson): Record<string, unknown> {
   };
 }
 
-function toCurrentPlanDto(current: SubRow): CurrentPlanDto {
+function toCurrentPlanDto(current: SubRow, now: Date): CurrentPlanDto {
+  const phase = resolveEffectiveBilling(current, now).phase;
   return {
     subscriptionId: current.id,
     planId: current.planId,
     planCode: current.plan.code,
     planName: current.plan.name,
+    vehicleScope: planVehicleScopeOf(current.vehicleScope),
+    phase,
     // Ba cột SNAPSHOT trên chính dòng subscription (ADR 0024 điều 2 · ADR 0041 điều 3) — null ở
     // dòng gán trước đó; caller phân biệt "không biết" với "0/commission", đừng bịa mặc định.
     billingMode: current.billingMode,
@@ -2216,6 +2585,7 @@ function toInvoiceDto(row: InvoiceRow): SubscriptionInvoiceDto {
     planId: snapshot.planId ?? '',
     planCode: snapshot.planCode ?? '',
     termMonths: snapshot.termMonths ?? 0,
+    vehicleScope: planVehicleScopeOf(row.vehicleScope),
     // Đọc qua parser đầy đủ: hoá đơn phát hành TRƯỚC ADR 0041 mang  thay cho ,
     // và màn lịch sử hoá đơn phải hiện đúng con số của chính tờ chứng từ đó.
     quota: parsePlanInvoiceSnapshot(row.linesJson)?.quota ?? EMPTY_QUOTA,
@@ -2259,6 +2629,7 @@ function toTenantPlanDto(p: PlanRow): TenantPlanDto {
     description: p.description,
     billingMode: p.billingMode,
     commissionPercent: p.commissionPercent === null ? null : Number(p.commissionPercent),
+    vehicleScope: planVehicleScopeOf(p.vehicleScope),
     // Parser phòng thủ: jsonb hỏng/thiếu key không sập đường đọc — rơi về giá trị an toàn.
     limits: parsePlanLimits(p.limitsJson),
     currency: p.currency,
@@ -2280,6 +2651,7 @@ function toSubscriptionDto(s: SubRow): SubscriptionDto {
     // null = dòng lịch sử gán trước ADR 0015 — "không ghi", khác với 0/commission.
     termMonths: s.termMonths,
     quota: parsePlanQuota(s.quotaJson),
+    vehicleScope: planVehicleScopeOf(s.vehicleScope),
     billingMode: s.billingMode,
     commissionPercent: s.commissionPercent === null ? null : Number(s.commissionPercent),
     startsAt: (s.startsAt as Date).toISOString(),

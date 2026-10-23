@@ -61,7 +61,7 @@ function listSelect(now: Date) {
       where: effectiveSubscriptionWhere(now),
       orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
       take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
-      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, startsAt: true, quotaJson: true },
+      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, id: true, startsAt: true, quotaJson: true },
     },
   } satisfies Prisma.TenantSelect;
 }
@@ -194,7 +194,7 @@ export class PlatformTenantsService {
       select: { id: true, subscriptions: { where: effective, ...EFFECTIVE_SUBSCRIPTION_ARGS } },
     });
     return candidates
-      .filter((c) => isSubscriptionTrack(resolveEffectiveBilling(c.subscriptions[0] ?? null, now)))
+      .filter((c) => isSubscriptionTrack(resolveEffectiveBilling(c.subscriptions, now)))
       .map((c) => c.id);
   }
 
@@ -308,7 +308,7 @@ export class PlatformTenantsService {
 type TenantRow = Prisma.TenantGetPayload<{ select: ReturnType<typeof listSelect> }>;
 
 function toListItem(r: TenantRow, now: Date, nextTerm: PlanTermRefDto | null): PlatformTenantDto {
-  const billing = resolveEffectiveBilling(r.subscriptions[0] ?? null, now);
+  const billing = resolveEffectiveBilling(r.subscriptions, now);
   return {
     id: r.id,
     code: r.code,
@@ -325,7 +325,7 @@ function toListItem(r: TenantRow, now: Date, nextTerm: PlanTermRefDto | null): P
     ownerName: r.owner?.displayName ?? null,
     provinceName: r.profile?.provinceName ?? null,
     vehicleCount: r._count.vehicles,
-    plan: tenantPlanSummary(r.subscriptions[0] ?? null, nextTerm, now),
+    plan: tenantPlanSummary(r.subscriptions, nextTerm, now),
     createdAt: r.createdAt as unknown as string,
   };
 }

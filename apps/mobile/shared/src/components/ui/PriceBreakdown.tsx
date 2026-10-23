@@ -20,7 +20,7 @@ export interface PriceBreakdownFeesInput {
   lines: ReadonlyArray<{
     key: string;
     bearer: string;
-    percent: number;
+    percent: number | null;
     amount: string;
     partnerName?: string | null;
   }>;
@@ -304,8 +304,11 @@ export function PriceBreakdown({
                         {domainLabel('feeLine', line.key)}
                       </Text>
                       <Text col={colors.placeholder} fos={fontSize.label}>
-                        {(ownerBorne ? tCommon('ownerNet') : `${line.percent}%`) +
-                          (line.partnerName ? ` · ${line.partnerName}` : '')}
+                        {(ownerBorne
+                          ? tCommon('ownerNet')
+                          : line.percent != null
+                            ? `${line.percent}%`
+                            : '') + (line.partnerName ? ` · ${line.partnerName}` : '')}
                       </Text>
                     </YStack>
                     <Text

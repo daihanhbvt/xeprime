@@ -33,7 +33,6 @@ function moneyText(expected: string) {
     (node?.textContent ?? '').replace(/\s+/g, ' ').trim() === want;
 }
 
-
 function renderIt(fees: PriceBreakdownFees | null, audience: 'customer' | 'owner' = 'customer') {
   return render(
     <NextIntlClientProvider locale="vi" messages={viMessages} timeZone="Asia/Ho_Chi_Minh">
@@ -45,15 +44,13 @@ function renderIt(fees: PriceBreakdownFees | null, audience: 'customer' | 'owner
 describe('PriceBreakdown — phụ phí phía khách', () => {
   it('tuyến hoa hồng: hiện phí dịch vụ, tổng khách trả và số giữ chỗ', () => {
     renderIt({
-      lines: [
-        { key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' },
-      ],
+      lines: [{ key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' }],
       customerTotalAmount: '1100000',
       holdAmount: '100000',
     });
 
     // Nhãn theo NGƯỜI HƯỞNG, dịch qua Domain.feeLine.
-    expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
+    expect(screen.getByText('Phí đặt xe')).toBeTruthy();
     // Hai con số cùng hiện: giá thuê (doanh thu gian hàng) và tổng khách trả.
     expect(screen.getAllByText(moneyText('1.000.000 ₫'))[0]).toBeTruthy();
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
@@ -82,7 +79,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
       holdAmount: null,
     });
 
-    expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
+    expect(screen.getByText('Phí đặt xe')).toBeTruthy();
     // Không thu % trên một con số chưa chốt (CLAUDE.md) — nên không có ô giữ chỗ.
     expect(screen.queryByText('Tiền giữ chỗ (trả trước)')).toBeNull();
   });
@@ -90,7 +87,13 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
   const OWNER_BORNE: PriceBreakdownFees = {
     lines: [
       { key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' },
-      { key: 'vehicle_protection', bearer: 'owner', percent: 2, amount: '20000', partnerName: 'Đối tác BH' },
+      {
+        key: 'vehicle_protection',
+        bearer: 'owner',
+        percent: 2,
+        amount: '20000',
+        partnerName: 'Đối tác BH',
+      },
     ],
     // Tổng khách CHỈ cộng dòng của khách — dòng kia trừ vào tiền chủ xe.
     customerTotalAmount: '1100000',
@@ -100,7 +103,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
   it('CHỦ XE đọc: dòng họ chịu hiện ra, đánh dấu riêng, không nằm trong tổng khách', () => {
     renderIt(OWNER_BORNE, 'owner');
 
-    expect(screen.getByText('Bảo vệ xe')).toBeTruthy();
+    expect(screen.getByText('Bảo hiểm vật chất xe')).toBeTruthy();
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
     // Tên đối tác bảo hiểm hiện ngay tại dòng — không được thu dưới danh nghĩa một hãng không có.
     expect(screen.getByText(/Đối tác BH/)).toBeTruthy();
@@ -116,7 +119,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
   it('KHÁCH đọc: KHÔNG thấy dòng do chủ xe chịu, tổng vẫn nguyên', () => {
     renderIt(OWNER_BORNE);
 
-    expect(screen.queryByText('Bảo vệ xe')).toBeNull();
+    expect(screen.queryByText('Bảo hiểm vật chất xe')).toBeNull();
     expect(screen.queryByText(/Đối tác BH/)).toBeNull();
     // Tổng khách KHÔNG đổi vì dòng đó vốn chưa từng nằm trong đó.
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();

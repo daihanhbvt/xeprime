@@ -1,6 +1,6 @@
 import type { DriverLicence } from '@/api/driver-licence/api';
 import { resolveVerifierView } from './driver-licence-view';
-import { driverLicencePollInterval, PENDING_REVIEW_POLL_MS, PROCESSING_POLL_MS } from './hooks/use-driver-licence';
+import { driverLicencePollInterval, PROCESSING_POLL_MS } from './hooks/use-driver-licence';
 import { buildLicenceTrip } from '../booking-requests/licence-trip';
 
 /** Cùng các ca của `DriverLicenceVerifier.test.tsx` bên web — ADR 0057. */
@@ -21,7 +21,6 @@ const BASE: DriverLicence = {
   rejectionReason: null,
   reviewNote: null,
   qualityIssues: [],
-  canRequestReview: false,
   reviewRequestedAt: null,
   decisionSource: 'auto',
   decidedAt: '2026-10-01T00:00:00.000Z',
@@ -47,7 +46,9 @@ describe('resolveVerifierView', () => {
   });
 
   it('đang thay bằng: quay về khung nộp', () => {
-    expect(view({ overview: { verified: BASE, latest: BASE }, replacing: true }).kind).toBe('submit');
+    expect(view({ overview: { verified: BASE, latest: BASE }, replacing: true }).kind).toBe(
+      'submit',
+    );
   });
 
   it('đang đọc ảnh: khung nộp với processing', () => {
@@ -56,11 +57,6 @@ describe('resolveVerifierView', () => {
       kind: 'submit',
       processing: latest,
     });
-  });
-
-  it('chờ duyệt: pending', () => {
-    const latest = { ...BASE, status: 'pending_review' } as DriverLicence;
-    expect(view({ overview: { verified: null, latest } }).kind).toBe('pending');
   });
 
   it('bị từ chối: hiện lý do; chọn ảnh mới thì ẩn ngay', () => {
@@ -91,11 +87,10 @@ describe('resolveVerifierView', () => {
 });
 
 describe('driverLicencePollInterval', () => {
-  it('hỏi dày khi đang đọc, thưa khi chờ duyệt, tắt khi đã có kết quả', () => {
+  it('hỏi dày khi đang đọc, tắt khi đã có kết quả', () => {
     const at = (status: string) =>
       driverLicencePollInterval({ verified: null, latest: { ...BASE, status } as DriverLicence });
     expect(at('processing')).toBe(PROCESSING_POLL_MS);
-    expect(at('pending_review')).toBe(PENDING_REVIEW_POLL_MS);
     expect(at('verified')).toBe(false);
   });
 });

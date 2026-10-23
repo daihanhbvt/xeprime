@@ -1,0 +1,154 @@
+/* Hai làn gói theo loại xe + thẻ doanh nghiệp. */
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.head {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.lanes {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.lane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+  outline: none;
+}
+
+/* Làn được trỏ tới từ `?lane=` (CTA ở màn xe) — viền thương hiệu, không phải màu lỗi. */
+.laneHighlighted,
+.lane:focus-visible {
+  border-color: var(--xp-color-primary);
+  box-shadow: 0 0 0 2px var(--xp-color-primary-light);
+}
+
+.laneHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.laneIcon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.laneTitle {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.tag {
+  margin: 0;
+}
+
+.current {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.currentText {
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.planName {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Loại xe chưa có gói: xe loại đó không lên chợ được — câu này là việc phải làm, nên đậm hơn. */
+.missing {
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.usage {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.usageSub {
+  color: var(--xp-color-text-secondary);
+}
+
+.pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+@media (max-width: 767px) {
+  .lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

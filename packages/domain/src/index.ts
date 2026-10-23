@@ -18,6 +18,8 @@
  *    và nó dùng `Prisma.Decimal`/`Prisma.sql`.
  */
 
+export { isNewListing, type ListingRatingLike } from './listing-flags';
+
 export {
   packageShopListingGateFrom,
   isLogoOnlyGate,
@@ -28,8 +30,10 @@ export {
 export {
   CURRENCY_SUFFIX,
   subtractMoney,
+  sumMoney,
   absoluteMoney,
   isNegativeMoney,
+  isPositiveMoney,
   isZeroMoney,
   formatMoneyVnd,
   formatMoneyVndVi,
@@ -115,6 +119,17 @@ export {
   type NotificationTargetRef,
   type PushDataInput,
 } from './notification-delivery';
+
+/** Câu thông báo khi lượt gán tài xế rơi về bên thuê — API và worker phát chung (ADR 0066). */
+export {
+  driverDisplayName,
+  driverMissingEmployerCopy,
+  driverReassignPushExpiresAt,
+  driverResponseExpiredDriverCopy,
+  driverResponseExpiredEmployerCopy,
+  driverTripDeclinedEmployerCopy,
+  type DriverTripReleasedCopyInput,
+} from './driver-trip-copy';
 
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
@@ -235,9 +250,12 @@ export { LIST_SEPARATOR, vehicleLabel } from './display';
 
 export {
   deliverySummaryText,
+  deliveryTierFee,
   deliveryTierRanges,
   freeDeliveryWithinKm,
   isFreeDeliveryFee,
+  isPerKmTier,
+  type DeliveryTierLike,
   type DeliveryTierRange,
 } from './rental-policy';
 
@@ -359,15 +377,18 @@ export { countChangePercent } from './period-change';
 export {
   PLAN_CARD_FEATURE_LINES,
   PLAN_TIER_ICON,
+  PLAN_VEHICLES_LINE_MESSAGE,
   buildPlanPricingCards,
   planBenefitLines,
   planTierIcon,
+  planVehiclesLineMessage,
   type PlanBenefitLine,
   type PlanCardHeadline,
   type PlanCardSource,
   type PlanCardTerm,
   type PlanPricingCard,
   type PlanTierIcon,
+  type PlanVehiclesLineMessageKey,
 } from './plan-pricing-card';
 export {
   canStartAnotherCheckout,

@@ -10,14 +10,19 @@ import {
   MEMBERSHIP_STATUS,
   PARTNER_COMMISSION_MONTHS,
   PARTNER_QUOTA_KIND,
+  VEHICLE_QUOTA_KIND,
   PERMISSION,
   PLATFORM_PARTNER_KIND,
+  PLAN_VEHICLE_SCOPE,
   QUOTA_LIMIT_REASON,
   SHOP_ONBOARDING_STATE,
   SUBSCRIPTION_INVOICE_PAYABLE_STATUSES,
   SUPPORT_CASE_STATUS,
   TENANT_STATUS,
   VEHICLE_OPERATION_STATUS,
+  VEHICLE_TYPE,
+  type VehicleType,
+  resolveActivePackageTerms,
   maskAccountNumber,
   missingPackageShopListingRequirements,
   parsePlanLimits,
@@ -129,15 +134,15 @@ export class PlatformPartnerDetailService {
             subscriptions: {
               where: effectiveSubscriptionWhere(now),
               orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-              take: 1,
-              select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true },
+              take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
+              select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, id: true, quotaJson: true },
             },
           },
         }),
         this.verificationOf(partner.tenantId),
         this.prisma.vehicle.findMany({
           where: { tenantId: partner.tenantId, deletedAt: null },
-          select: { id: true },
+          select: { id: true, vehicleType: true },
         }),
         this.prisma.vehicle.count({
           where: { ...marketplaceVehicleWhere(), tenantId: partner.tenantId },
@@ -199,9 +204,7 @@ export class PlatformPartnerDetailService {
             .then((page) => page.data)
         : Promise.resolve(null),
       // Trần xe đọc từ CHÍNH hàm mà cổng tạo xe gọi — không bao giờ nói khác con số bị chặn.
-      isPackage
-        ? this.billingService.vehicleQuotaFor(partner.tenantId, now)
-        : Promise.resolve(null),
+      isPackage ? this.billingService.fleetQuotaFor(partner.tenantId, now) : Promise.resolve(null),
     ]);
 
     return {
@@ -242,9 +245,10 @@ export class PlatformPartnerDetailService {
       plan:
         isPackage && vehicleQuota
           ? planSummaryOf(
-              tenant.subscriptions[0] ?? null,
+              tenant.subscriptions,
               tenant.usedFeatures,
-              vehicleQuotaItem(vehicleQuota, vehicleIds.length),
+              vehicleQuota,
+              usageByType(vehicleIds),
               now,
               nextTerms.get(partner.tenantId) ?? null,
             )
@@ -380,57 +384,66 @@ export class PlatformPartnerDetailService {
       subscriptions,
       nextTerms,
     ] = await Promise.all([
-        this.prisma.tenant.findUniqueOrThrow({
-          where: { id: partner.tenantId },
-          select: {
-            usedFeatures: true,
-            subscriptions: {
-              where: effectiveSubscriptionWhere(now),
-              orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-              take: 1,
-              select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true, startsAt: true },
+      this.prisma.tenant.findUniqueOrThrow({
+        where: { id: partner.tenantId },
+        select: {
+          usedFeatures: true,
+          subscriptions: {
+            where: effectiveSubscriptionWhere(now),
+            orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
+            take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
+            select: {
+              ...EFFECTIVE_SUBSCRIPTION_ARGS.select,
+              id: true,
+              quotaJson: true,
+              startsAt: true,
             },
           },
-        }),
-        this.prisma.vehicle.count({ where: { tenantId: partner.tenantId, deletedAt: null } }),
-        this.prisma.tenantBranch.count({ where: { tenantId: partner.tenantId, deletedAt: null } }),
-        this.prisma.tenantMembership.count({
-          where: { tenantId: partner.tenantId, status: MEMBERSHIP_STATUS.ACTIVE },
-        }),
-        this.activeFeePolicy(),
-        this.prisma.subscriptionInvoice.findMany({
-          where: { tenantId: partner.tenantId },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: HISTORY_LIMIT,
-          select: {
-            id: true,
-            code: true,
-            periodFrom: true,
-            periodTo: true,
-            totalAmount: true,
-            paidAmount: true,
-            status: true,
-            paidAt: true,
-            expiresAt: true,
-          },
-        }),
-        this.prisma.tenantSubscription.findMany({
-          where: { tenantId: partner.tenantId },
-          orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
-          take: HISTORY_LIMIT,
-          select: {
-            id: true,
-            price: true,
-            termMonths: true,
-            status: true,
-            billingMode: true,
-            startsAt: true,
-            endsAt: true,
-            plan: { select: { name: true, code: true } },
-          },
-        }),
-        scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
-      ]);
+        },
+      }),
+      this.prisma.vehicle.findMany({
+        where: { tenantId: partner.tenantId, deletedAt: null },
+        select: { vehicleType: true },
+      }),
+      this.prisma.tenantBranch.count({ where: { tenantId: partner.tenantId, deletedAt: null } }),
+      this.prisma.tenantMembership.count({
+        where: { tenantId: partner.tenantId, status: MEMBERSHIP_STATUS.ACTIVE },
+      }),
+      this.activeFeePolicy(),
+      this.prisma.subscriptionInvoice.findMany({
+        where: { tenantId: partner.tenantId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: HISTORY_LIMIT,
+        select: {
+          id: true,
+          code: true,
+          periodFrom: true,
+          periodTo: true,
+          totalAmount: true,
+          paidAmount: true,
+          status: true,
+          paidAt: true,
+          expiresAt: true,
+        },
+      }),
+      this.prisma.tenantSubscription.findMany({
+        where: { tenantId: partner.tenantId },
+        orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+        take: HISTORY_LIMIT,
+        select: {
+          id: true,
+          price: true,
+          termMonths: true,
+          status: true,
+          billingMode: true,
+          vehicleScope: true,
+          startsAt: true,
+          endsAt: true,
+          plan: { select: { name: true, code: true } },
+        },
+      }),
+      scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
+    ]);
 
     // Đếm hoá đơn còn nợ trên TOÀN bộ, không chỉ 12 dòng lịch sử đang hiện.
     const unpaid = await this.prisma.subscriptionInvoice.findMany({
@@ -444,19 +457,19 @@ export class PlatformPartnerDetailService {
       .sort((a, b) => a.getTime() - b.getTime());
 
     /*
-     * Trần xe và chi nhánh đọc từ CHÍNH hai hàm mà cổng tạo xe / tạo chi nhánh gọi — màn này
+     * Trần xe đọc từ CHÍNH hàm mà cổng tạo xe gọi — màn này
      * không được nói một con số khác với con số backend thật sự chặn (vd. gian hàng hết gói bị
      * chặn ở trần Owner Lite, không phải "không giới hạn").
      */
-    const [vehicleQuota, branchLimit] = await Promise.all([
-      this.billingService.vehicleQuotaFor(partner.tenantId, now),
-      this.billingService.branchQuotaFor(partner.tenantId, now),
-    ]);
-    const row = tenant.subscriptions[0] ?? null;
-    const vehicles = vehicleQuotaItem(vehicleQuota, vehiclesUsed);
+    const vehicleQuota = await this.billingService.fleetQuotaFor(partner.tenantId, now);
+    const rows = tenant.subscriptions;
+    const usage = usageByType(vehiclesUsed);
+    const vehicles = fleetQuotaItem(vehicleQuota, usage);
     const nextTerm = nextTerms.get(partner.tenantId) ?? null;
-    const plan = planSummaryOf(row, tenant.usedFeatures, vehicles, now, nextTerm);
-    const context = resolveTenantFeatures(row, tenant.usedFeatures, now);
+    const plan = planSummaryOf(rows, tenant.usedFeatures, vehicleQuota, usage, now, nextTerm);
+    const context = resolveTenantFeatures(rows, tenant.usedFeatures, now);
+    // Kỳ ưu tiên (ADR 0065: `all` → ô tô → xe máy), rồi dòng hiệu lực gần nhất.
+    const row = resolveActivePackageTerms(rows, now)[0]?.row ?? rows[0] ?? null;
     const onPackage = context.billingMode === BILLING_MODE.PACKAGE;
     // Trần nhân sự chỉ được GHI trên gói (chưa cổng nào cưỡng chế) — snapshot trước, chọn TƯỜNG
     // MINH (ADR 0041 điều 3), không `??`.
@@ -479,9 +492,13 @@ export class PlatformPartnerDetailService {
       termStartsAt: row?.startsAt.toISOString() ?? null,
       quota: {
         vehicles,
-        // `branchQuotaFor` trả `null` cho HAI nghĩa: tuyến gói không trần, hoặc tuyến không có khái
-        // niệm trần chi nhánh (nhiều chi nhánh là cờ năng lực của gói) — tách bằng tuyến hiệu lực.
-        branches: onPackage ? limitItem(branchesUsed, branchLimit) : notApplicable(branchesUsed),
+        vehiclesByType: {
+          car: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.CAR], usage),
+          motorbike: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.MOTORBIKE], usage),
+        },
+        // Không còn trần chi nhánh theo gói (ADR 0065 điều 1): tuyến gói = không giới hạn; tuyến
+        // hoa hồng không có khái niệm này (nhiều chi nhánh là cờ năng lực của gói).
+        branches: onPackage ? limitItem(branchesUsed, null) : notApplicable(branchesUsed),
         members: onPackage ? limitItem(membersUsed, memberLimit) : notApplicable(membersUsed),
       },
       features: Object.entries(context.features).map(([feature, state]) => ({ feature, state })),
@@ -497,6 +514,7 @@ export class PlatformPartnerDetailService {
         id: sub.id,
         planName: sub.plan.name,
         planCode: sub.plan.code,
+        vehicleScope: sub.vehicleScope,
         billingMode: sub.billingMode,
         price: sub.price.toFixed(2),
         termMonths: sub.termMonths,
@@ -733,13 +751,71 @@ function maskOrNull(value: string | null): string | null {
   return value ? maskAccountNumber(value) : null;
 }
 
-type VehicleQuota = Awaited<ReturnType<BillingService['vehicleQuotaFor']>>;
+type FleetQuota = Awaited<ReturnType<BillingService['fleetQuotaFor']>>;
+type TypeQuota = FleetQuota[VehicleType];
+type UsageByType = Record<VehicleType, number>;
 
-/** Trần xe ĐANG CƯỠNG CHẾ → hình dạng hiển thị, giữ nguyên lý do (gói / Owner Lite / chưa cấu hình). */
-function vehicleQuotaItem(quota: VehicleQuota, used: number): PartnerQuotaItemDto {
-  return quota.kind === 'total'
+function usageByType(vehicles: readonly { vehicleType: string }[]): UsageByType {
+  const usage = { [VEHICLE_TYPE.CAR]: 0, [VEHICLE_TYPE.MOTORBIKE]: 0 } as UsageByType;
+  for (const v of vehicles) {
+    if (v.vehicleType in usage) usage[v.vehicleType as VehicleType] += 1;
+  }
+  return usage;
+}
+
+/** Số xe đếm vào trần của một loại — trần `all` (bậc doanh nghiệp, Owner Lite) đếm GỘP hai loại. */
+function usedWithin(quota: TypeQuota, type: VehicleType, usage: UsageByType): number {
+  return quota.countedScope === PLAN_VEHICLE_SCOPE.ALL
+    ? usage[VEHICLE_TYPE.CAR] + usage[VEHICLE_TYPE.MOTORBIKE]
+    : usage[type];
+}
+
+/**
+ * Trần xe ĐANG CƯỠNG CHẾ cho MỘT loại xe → hình dạng hiển thị (ADR 0065). Loại xe chưa có gói ở
+ * gian hàng tuyến gói là `not_covered` — cổng tạo xe trả `PLAN_SCOPE_REQUIRED`.
+ */
+function typeQuotaItem(quota: TypeQuota, usage: UsageByType): PartnerQuotaItemDto {
+  const type =
+    quota.countedScope === PLAN_VEHICLE_SCOPE.MOTORBIKE ? VEHICLE_TYPE.MOTORBIKE : VEHICLE_TYPE.CAR;
+  const used = usedWithin(quota, type, usage);
+  if (quota.kind === VEHICLE_QUOTA_KIND.SCOPE_REQUIRED) {
+    return { used, kind: PARTNER_QUOTA_KIND.NOT_COVERED, limit: null, reason: null };
+  }
+  return quota.kind === VEHICLE_QUOTA_KIND.TOTAL
     ? { used, kind: PARTNER_QUOTA_KIND.TOTAL, limit: quota.limit, reason: quota.reason }
     : { used, kind: PARTNER_QUOTA_KIND.UNLIMITED, limit: null, reason: null };
+}
+
+/**
+ * Trần xe GỘP của cả gian hàng (hình dạng trước ADR 0065): tổng trần các kỳ gói phủ hai loại xe
+ * (một kỳ `all` chỉ tính một lần), có loại không giới hạn ⇒ không giới hạn. Ngoài tuyến gói: trần
+ * Owner Lite TỔNG như cũ. Chi tiết theo loại là `vehiclesByType`/`vehicleQuotaByType`.
+ */
+function fleetQuotaItem(quota: FleetQuota, usage: UsageByType): PartnerQuotaItemDto {
+  const used = usage[VEHICLE_TYPE.CAR] + usage[VEHICLE_TYPE.MOTORBIKE];
+  const list = [quota[VEHICLE_TYPE.CAR], quota[VEHICLE_TYPE.MOTORBIKE]];
+  if (list.some((q) => q.kind === VEHICLE_QUOTA_KIND.UNLIMITED)) {
+    return { used, kind: PARTNER_QUOTA_KIND.UNLIMITED, limit: null, reason: null };
+  }
+  const car = quota[VEHICLE_TYPE.CAR];
+  if (car.reason !== null && car.reason !== QUOTA_LIMIT_REASON.PLAN) {
+    return { used, kind: PARTNER_QUOTA_KIND.TOTAL, limit: car.limit, reason: car.reason };
+  }
+  const seen = new Set<string>();
+  let limit = 0;
+  for (const q of list) {
+    if (
+      q.kind !== VEHICLE_QUOTA_KIND.TOTAL ||
+      q.limit === null ||
+      !q.subscriptionId ||
+      seen.has(q.subscriptionId)
+    ) {
+      continue;
+    }
+    seen.add(q.subscriptionId);
+    limit += q.limit;
+  }
+  return { used, kind: PARTNER_QUOTA_KIND.TOTAL, limit, reason: QUOTA_LIMIT_REASON.PLAN };
 }
 
 /** Trần của một bậc gói — `null` là bậc không giới hạn (chỉ gọi khi tenant ĐANG ở tuyến gói). */
@@ -750,18 +826,20 @@ function limitItem(used: number, limit: number | null): PartnerQuotaItemDto {
 }
 
 function planSummaryOf(
-  row: {
+  rows: readonly {
     billingMode: string | null;
     endsAt: Date;
+    vehicleScope: string;
     quotaJson: Prisma.JsonValue;
     plan: { code: string; name: string; limitsJson: Prisma.JsonValue };
-  } | null,
+  }[],
   usedFeatures: string[],
-  vehicleQuota: PartnerQuotaItemDto,
+  vehicleQuota: FleetQuota,
+  usage: UsageByType,
   now: Date,
   nextTerm: PlanTermRefDto | null,
 ): PartnerPlanSummaryDto {
-  const context = resolveTenantFeatures(row, usedFeatures, now);
+  const context = resolveTenantFeatures(rows, usedFeatures, now);
   return {
     planName: context.planName,
     planCode: context.planCode,
@@ -769,7 +847,12 @@ function planSummaryOf(
     billingMode: context.billingMode,
     endsAt: context.planEndsAt?.toISOString() ?? null,
     graceEndsAt: context.graceEndsAt?.toISOString() ?? null,
-    vehicleQuota,
+    packageScopes: context.packageScopes,
+    vehicleQuota: fleetQuotaItem(vehicleQuota, usage),
+    vehicleQuotaByType: {
+      car: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.CAR], usage),
+      motorbike: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.MOTORBIKE], usage),
+    },
     nextTerm,
   };
 }

@@ -19,23 +19,31 @@ const ESTIMATE: CustomerTripEstimate = {
   rows: [{ key: 'base', label: 'Tiền thuê 1 ngày', sublabel: null, amount: '780000' }],
   rentalTotal: '702000',
   depositAmount: '5000000',
+  // Bản CÔNG KHAI (`toPublicFeeBreakdown`, ADR 0064): server đã cắt dòng chủ xe chịu và mọi số
+  // kinh tế của chủ xe — kể cả với chính chủ xe, số thực nhận đi riêng ở `ownerNetAmount`.
   fees: {
-    billingMode: 'commission',
     lines: [
-      { key: 'service_fee', bearer: 'customer', beneficiary: 'platform', percent: 10, amount: '70200' },
-      { key: 'tax', bearer: 'owner', beneficiary: 'tax', percent: 10, amount: '70200' },
+      {
+        key: 'service_fee',
+        bearer: 'customer',
+        beneficiary: 'platform',
+        percent: 10,
+        amount: '70200',
+      },
     ],
     customerTotalAmount: '772200',
     holdAmount: '224640',
-    ownerNetAmount: '631800',
   } as unknown as CustomerTripEstimate['fees'],
+  ownerNetAmount: null,
 };
 
 function renderCard(opts: { isHost?: boolean; settled?: boolean } = {}) {
+  // Server chỉ trả `ownerNetAmount` cho vai chủ xe.
+  const estimate = opts.isHost ? { ...ESTIMATE, ownerNetAmount: '631800' } : ESTIMATE;
   return render(
     <NextIntlClientProvider locale="vi" messages={viMessages} timeZone="Asia/Ho_Chi_Minh">
       <TripEstimateCard
-        estimate={ESTIMATE}
+        estimate={estimate}
         isHost={opts.isHost ?? false}
         settled={opts.settled ?? false}
       />
@@ -49,19 +57,17 @@ describe('TripEstimateCard', () => {
     // Bảng kê từng dòng nằm sau nút "Xem chi tiết giá" — mở ra trước khi đọc dòng phí.
     fireEvent.click(screen.getByText('Xem chi tiết giá'));
 
-    expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
+    expect(screen.getByText('Phí đặt xe')).toBeTruthy();
     // Thuế do CHỦ XE chịu — khách không trả, nên không được bày ra giữa hoá đơn của họ.
     expect(screen.queryByText(/Thuế/)).toBeNull();
     expect(screen.queryByText(/thực nhận/i)).toBeNull();
   });
 
-  it('CHỦ XE thấy đủ cả dòng thuế lẫn số thực nhận — đó là thứ giải thích doanh thu của họ', () => {
+  it('CHỦ XE thấy số thực nhận ở chân thẻ — server trả riêng cho vai chủ xe', () => {
     renderCard({ isHost: true });
-    fireEvent.click(screen.getByText('Xem chi tiết giá'));
 
-    expect(screen.getByText(/Thuế/)).toBeTruthy();
-    // Hai chỗ: nhãn nhỏ dưới dòng thuế, và dòng tổng thực nhận ở chân thẻ.
     expect(screen.getAllByText(/thực nhận/i).length).toBeGreaterThanOrEqual(1);
+    expect(document.body.textContent).toContain('631.800');
   });
 
   /**

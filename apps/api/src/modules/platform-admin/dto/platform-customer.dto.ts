@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { USER_STATUS_VALUES } from '@xeprime/types';
+import { CUSTOMER_LICENCE_STATE_VALUES, USER_STATUS_VALUES } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
@@ -43,6 +43,11 @@ export class PlatformCustomerListQueryDto {
   @IsBoolean()
   hasRequests?: boolean;
 
+  @ApiPropertyOptional({ enum: CUSTOMER_LICENCE_STATE_VALUES, description: 'Tình trạng bằng lái' })
+  @IsOptional()
+  @IsIn(CUSTOMER_LICENCE_STATE_VALUES)
+  licence?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -77,6 +82,14 @@ export class PlatformCustomerDto {
   @ApiProperty({ description: 'Số yêu cầu thuê đã gửi' }) requestCount!: number;
   @ApiProperty({ description: 'Số yêu cầu đã thành đơn thuê' }) bookedCount!: number;
   @ApiProperty({ description: 'Số đánh giá đã viết' }) reviewCount!: number;
+  @ApiProperty({ enum: CUSTOMER_LICENCE_STATE_VALUES, description: 'Tình trạng bằng lái' })
+  licenceState!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Hạn của bằng đang dùng (YYYY-MM-DD); null khi không thời hạn hoặc chưa có bằng',
+  })
+  licenceExpiresOn!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
   lastLoginAt!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;

@@ -35,7 +35,9 @@
     "parties": "Shop · Customer",
     "payee": "Customer · Shop",
     "lines": "Deposit {deposit} · Fee {fee}",
-    "noAccount": "No account on file"
+    "noAccount": "No account on file",
+    "commission": "Commission {amount}",
+    "tax": "Tax {amount}"
   },
   "settle": {
     "title": "Settle booking hold {code}",
@@ -44,7 +46,7 @@
     "noteRequired": "A reason is required (at least 5 characters).",
     "submit": "Settle",
     "success": "Outcome settled.",
-    "disputeOpen": "This booking still has an open dispute — resolve it before settling the money.",
+    "disputeOpen": "This booking still has an open dispute or handover verification case — resolve it before settling the money.",
     "auditHint": "This action is written to the audit log and cannot be undone.",
     "received": "Amount received",
     "paidTotal": "Total received",
@@ -62,14 +64,15 @@
     "noAllocation": "Legacy hold — this outcome is recorded only; no money is allocated.",
     "outcomeHelp": {
       "settled": "Trip completed: deposit to the owner (after tax), fee to XePrime, insurance to the insurer.",
-      "split_late_cancel": "Late cancellation or no-show: deposit and fee split between owner and XePrime; insurance refunded to the customer.",
+      "split_late_cancel": "Late cancellation or no-show: the owner's share of the reservation payment to the owner, platform fee and commission to XePrime (less any promo funding), insurance refunded to the customer.",
       "refunded": "Refund the customer everything they transferred.",
       "kept": "Trip ran: the platform keeps the amount; nothing is transferred.",
       "forfeited": "Late cancellation or no-show: the amount goes to the shop wallet as compensation.",
       "released_to_shop": "Trip completed: the amount is returned to the shop wallet."
     },
     "previous": "Previous hold",
-    "next": "Next hold"
+    "next": "Next hold",
+    "taxWithheld": "Within the owner's share: tax withheld on completion"
   },
   "refundPaid": {
     "title": "Record refund transfer",
@@ -132,44 +135,6 @@
     "varianceBalanced": "Balanced",
     "countChip": "{count, plural, one {# item} other {# items}}"
   },
-  "insurance": {
-    "title": "Insurance queue",
-    "loadError": "Could not load the insurance queue",
-    "total": "{count, plural, one {# policy} other {# policies}}",
-    "noCertificate": "none yet",
-    "noAutoRetry": "no automatic retry",
-    "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
-    "partnerMissing": {
-      "title": "No insurance partner configured",
-      "body": "Premiums are being collected and held, but no insurer is issuing certificates — customers do NOT actually have cover. Retrying changes nothing until a real partner is connected. This is a platform configuration task, not a per-trip incident."
-    },
-    "columns": {
-      "booking": "Trip",
-      "tenant": "Shop",
-      "product": "Product",
-      "premium": "Premium collected",
-      "status": "Status",
-      "certificate": "Certificate no.",
-      "attempts": "Attempts / next"
-    },
-    "actions": {
-      "retry": "Retry",
-      "retryQueued": "Retry queued — the worker picks it up within a minute",
-      "void": "Void"
-    },
-    "empty": {
-      "title": "No failing policies",
-      "description": "Every premium collected has been dealt with."
-    },
-    "voidModal": {
-      "title": "Void insurance policy",
-      "hint": "Voiding is a money decision and goes into the audit log. If the certificate was already issued, settle it with the partner first — voiding here only closes the XePrime side.",
-      "reasonLabel": "Reason for voiding",
-      "reasonPlaceholder": "Why this policy is being voided",
-      "done": "Policy voided",
-      "reasonRequired": "Enter a reason for voiding (at least 5 characters)."
-    }
-  },
   "tax": {
     "title": "Tax ledger by period",
     "period": "Declaration period",
@@ -177,26 +142,33 @@
     "total": "{count, plural, one {# row} other {# rows}}",
     "percentOf": "{percent}% of taxable value",
     "unknownEntity": "Seller profile missing",
+    "withheldAs": "Withheld as: {entity}",
     "stats": {
       "total": "Period obligation",
       "accrued": "Awaiting declaration",
       "declared": "Declared",
-      "remitted": "Remitted"
+      "remitted": "Remitted",
+      "vat": "VAT withheld",
+      "pit": "PIT withheld",
+      "unsplit": "Legacy rows (VAT/PIT not split)"
     },
     "byEntity": {
       "title": "By entity type",
-      "value": "{amount} · {count, plural, one {# row} other {# rows}}"
+      "value": "{amount} · {count, plural, one {# row} other {# rows}}",
+      "valueSplit": "{amount} (VAT {vat} · PIT {pit}) · {count, plural, one {# row} other {# rows}}"
     },
     "unknownWarning": {
       "title": "Some obligations belong to shops with no seller profile",
-      "body": "Without an entity type there is no way to know which return these rows belong to. Ask those shops to complete their profile before closing the period — do not fold them into the individual bucket, which would be guessing at a legal obligation on their behalf."
+      "body": "These rows were still withheld at the individual rate — a missing profile never removes the obligation — but the return needs the seller’s entity type and tax ID or personal ID number. Ask those shops to complete their profile before closing the period — do not file them under individuals yourself, which would be guessing at a legal obligation on their behalf."
     },
     "columns": {
       "booking": "Trip / shop",
       "entity": "Entity type / tax ID",
       "base": "Taxable value",
       "amount": "Amount",
-      "status": "Status"
+      "status": "Status",
+      "vat": "VAT",
+      "pit": "PIT"
     },
     "actions": {
       "export": "Export CSV",
@@ -216,6 +188,12 @@
       "reasonLabel": "Reason for reversing",
       "reasonPlaceholder": "Why this row is wrong",
       "done": "Tax row reversed"
+    },
+    "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
+    "notSplit": "Legacy row — not split",
+    "category": {
+      "service": "Services group",
+      "transport": "Transport group"
     }
   },
   "status": {

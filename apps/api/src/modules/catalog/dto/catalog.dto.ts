@@ -41,8 +41,25 @@ export class CatalogItemDto {
   @ApiProperty({ example: 'SUV' })
   label!: string;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'SUV',
+    description:
+      'Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.',
+  })
+  labelEn!: string | null;
+
   @ApiProperty({ type: String, nullable: true, example: '7 chỗ · gầm cao' })
   description!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '7 seats · high clearance',
+    description: 'Dòng phụ tiếng Anh. NULL = client dùng `description`.',
+  })
+  descriptionEn!: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: '/body-types/suv.png' })
   iconUrl!: string | null;
@@ -134,11 +151,28 @@ export class CreateCatalogItemDto {
   @MaxLength(120)
   label!: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    example: 'Coupe',
+    description: 'Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  labelEn?: string | null;
+
   @ApiPropertyOptional({ example: '2 chỗ · thể thao' })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   description?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, example: '2 seats · sporty' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  descriptionEn?: string | null;
 
   @ApiPropertyOptional({ example: '/body-types/coupe.png' })
   @IsOptional()
@@ -197,11 +231,27 @@ export class UpdateCatalogItemDto {
   @MaxLength(120)
   label?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label`',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  labelEn?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   description?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  descriptionEn?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()

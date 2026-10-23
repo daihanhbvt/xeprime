@@ -46,6 +46,7 @@
     "pickOne": "Chọn một yêu cầu để xem chi tiết.",
     "loadError": "Không tải được yêu cầu.",
     "openedBy": "Người mở",
+    "openedBySystem": "Hệ thống XePrime",
     "tenant": "Gian hàng",
     "booking": "Đơn thuê",
     "assignee": "Người phụ trách",

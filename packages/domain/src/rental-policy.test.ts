@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { deliveryTierRanges, freeDeliveryWithinKm, isFreeDeliveryFee } from './rental-policy';
+import {
+  deliverySummaryText,
+  deliveryTierFee,
+  deliveryTierRanges,
+  freeDeliveryWithinKm,
+  isFreeDeliveryFee,
+} from './rental-policy';
 
 /**
  * Bậc phí giao xe — MỘT luật cho mọi nơi đọc nó: dòng tóm tắt khách thấy, form chính sách, màn
@@ -27,9 +33,69 @@ describe('deliveryTierRanges', () => {
         { toKm: 10, fee: '50000' },
       ]),
     ).toEqual([
-      { fromKm: 0, toKm: 3, fee: '0', free: true },
-      { fromKm: 3, toKm: 10, fee: '50000', free: false },
+      { fromKm: 0, toKm: 3, fee: '0', perKm: null, free: true },
+      { fromKm: 3, toKm: 10, fee: '50000', perKm: null, free: false },
     ]);
+  });
+
+  it('bậc THEO KM mang đơn giá, không bao giờ là miễn phí', () => {
+    expect(
+      deliveryTierRanges([
+        { toKm: 5, fee: '0' },
+        { toKm: 15, perKm: '10000' },
+      ]),
+    ).toEqual([
+      { fromKm: 0, toKm: 5, fee: '0', perKm: null, free: true },
+      { fromKm: 5, toKm: 15, fee: '0', perKm: '10000', free: false },
+    ]);
+  });
+});
+
+describe('deliveryTierFee — phí của một bậc ở một khoảng cách', () => {
+  it('bậc trọn gói trả nguyên phí, không phụ thuộc khoảng cách', () => {
+    expect(deliveryTierFee({ fee: '100000' }, 7.3)).toBe('100000');
+    expect(deliveryTierFee({ fee: '0' }, 2)).toBe('0');
+  });
+
+  it('bậc theo km: đơn giá × khoảng cách, đúng tới ĐỒNG (ADR 0069)', () => {
+    expect(deliveryTierFee({ perKm: '10000' }, 12)).toBe('120000');
+    // 12,34 km × 10.000 = 123.400 (trước: 123.000); 12,35 km × 10.000 = 123.500 (trước: 124.000).
+    expect(deliveryTierFee({ perKm: '10000' }, 12.34)).toBe('123400');
+    expect(deliveryTierFee({ perKm: '10000' }, 12.35)).toBe('123500');
+    // 7,3456 km × 8.500 = 62.437,6 ⇒ 62.438 (nửa đồng trở lên làm tròn LÊN).
+    expect(deliveryTierFee({ perKm: '8500' }, 7.3456)).toBe('62438');
+    // 7,3452 km × 8.500 = 62.434,2 ⇒ 62.434.
+    expect(deliveryTierFee({ perKm: '8500' }, 7.3452)).toBe('62434');
+  });
+
+  it('nửa đồng THẬT không bị sai số dấu phẩy động kéo xuống', () => {
+    // 5.000 × 1,0001 = 5.000,5 — nhân thẳng bằng số thực ra 5.000,4999… ⇒ 5.000 (sai).
+    expect(deliveryTierFee({ perKm: '5000' }, 1.0001)).toBe('5001');
+    // 3.000 × 2,0005 = 6.001,5 ⇒ 6.002.
+    expect(deliveryTierFee({ perKm: '3000' }, 2.0005)).toBe('6002');
+  });
+
+  it('đơn giá rác hoặc khoảng cách âm ⇒ ném, không im lặng cho ra 0', () => {
+    expect(() => deliveryTierFee({ perKm: 'abc' }, 3)).toThrow();
+    expect(() => deliveryTierFee({ perKm: '10000' }, -1)).toThrow();
+  });
+});
+
+describe('deliverySummaryText', () => {
+  it('bậc theo km đọc ra đơn giá mỗi km', () => {
+    const text = deliverySummaryText(
+      {
+        deliveryTiers: [
+          { toKm: 5, fee: 0 },
+          { toKm: 15, perKm: '10000' },
+        ],
+        deliveryMaxRadiusKm: 15,
+      },
+      { money: (v) => `${v}đ`, free: 'Miễn phí', quote: 'Báo giá', perKm: (m) => `${m}/km` },
+    );
+    expect(text).toContain('0–5 km: Miễn phí');
+    expect(text).toContain('>5–15 km: 10000đ/km');
+    expect(text).toContain('>15 km: Báo giá');
   });
 });
 

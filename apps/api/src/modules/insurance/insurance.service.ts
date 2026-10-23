@@ -1,16 +1,23 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  activeInsuranceProductSnapshots,
+  applyInsuranceIssueResult,
+  claimDueInsurancePolicies,
+  insuranceIssuingStaleBefore,
+  issueInsurancePolicy,
+  newId,
+  Prisma,
+  type InsuranceIssueOutcome,
+  type InsuranceProductSnapshot,
+} from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   FEE_LINE,
-  INSURANCE_ISSUE_ERROR,
   INSURANCE_POLICY_STATUS,
   INSURANCE_PRODUCT_KIND,
-  insuranceRetryDelayMinutes,
   type BookingPriceSnapshot,
   type InsuranceConsentSource,
-  type InsuranceIssueError,
   type InsuranceProductKind,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
@@ -42,8 +49,6 @@ interface PremiumLines {
  */
 @Injectable()
 export class InsuranceService {
-  private readonly logger = new Logger(InsuranceService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -72,10 +77,31 @@ export class InsuranceService {
     },
   ): Promise<void> {
     const premiums = premiumsFromSnapshot(input.snapshot);
+    if (premiums.vehicleTrip.lte(0) && premiums.personalAccident.lte(0)) return;
     const rows: Prisma.BookingInsurancePolicyCreateManyInput[] = [];
 
-    const push = (kind: InsuranceProductKind, amount: Prisma.Decimal, needsConsent: boolean) => {
+    /*
+     * Snapshot SẢN PHẨM (ADR 0064): tên, quyền lợi, khấu trừ khách đã thấy lúc chọn — admin sửa
+     * hay TẮT danh mục sau đó không viết lại lời hứa.
+     *
+     * Nguồn là bản ĐÓNG BĂNG LÚC DUYỆT trên snapshot giá của hold (`freezeInsuranceProducts`) —
+     * cùng mốc với giá (ADR 0024). Khách trả tiền sau lúc duyệt tới 120 phút, và admin tắt sản
+     * phẩm trong khoảng đó không được làm hợp đồng của một khoản phí ĐÃ THU mất mô tả. Chỉ snapshot
+     * trước 21/10/2026 (không mang `insuranceProducts`) mới đọc danh mục hiện hành, trong CÙNG
+     * transaction tạo đơn.
+     */
+    const frozen = input.snapshot.insuranceProducts;
+    const products: Map<InsuranceProductKind, InsuranceProductSnapshot> = frozen
+      ? new Map(
+          Object.entries(frozen).filter(
+            (entry): entry is [InsuranceProductKind, InsuranceProductSnapshot] => entry[1] != null,
+          ),
+        )
+      : await activeInsuranceProductSnapshots(tx);
+
+    const push = (kind: InsuranceProductKind, amount: Prisma.Decimal) => {
       if (amount.lte(0)) return;
+      const product = products.get(kind) ?? null;
       rows.push({
         id: newId(),
         bookingId: input.bookingId,
@@ -90,15 +116,21 @@ export class InsuranceService {
          * phải gửi ĐÚNG khoá cũ, nếu không đối tác coi đó là một hợp đồng mới và khách bị mua đôi.
          */
         idempotencyKey: `${input.bookingId}:${kind}`,
-        // Bằng chứng khách chọn — chỉ có nghĩa với `IP`; `IV` bắt buộc nên không có gì để chọn.
-        ...(needsConsent && input.consent
+        ...(product
+          ? {
+              productSnapshotJson: product as unknown as Prisma.InputJsonValue,
+              partnerProductCode: product.partnerProductCode,
+            }
+          : {}),
+        // Bằng chứng khách chọn — từ luồng tiền v2 CẢ HAI sản phẩm đều tuỳ chọn, nên cả hai cần nó.
+        ...(input.consent
           ? { consentAt: input.consent.at, consentSource: input.consent.source }
           : {}),
       });
     };
 
-    push(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP, premiums.vehicleTrip, false);
-    push(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT, premiums.personalAccident, true);
+    push(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP, premiums.vehicleTrip);
+    push(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT, premiums.personalAccident);
     if (rows.length === 0) return;
 
     await tx.bookingInsurancePolicy.createMany({ data: rows, skipDuplicates: true });
@@ -155,199 +187,25 @@ export class InsuranceService {
   }
 
   // ── 3. Worker: gọi đối tác ───────────────────────────────────────────────
+  //
+  // Ba hàm dưới đây là LỚP VỎ của `@xeprime/prisma` (insurance-issue.ts) — đúng đoạn code worker
+  // chạy mỗi phút (apps/worker/src/jobs/insurance-issue.ts). Giữ chúng ở đây để spec của API khoá
+  // luật trên bản thật, và để một lệnh vận hành tương lai gọi được mà không phải dựng worker.
 
-  /**
-   * CHIẾM một lô hợp đồng tới hạn — `updateMany` có điều kiện, không đọc-rồi-ghi.
-   *
-   * Hai worker chạy song song (deploy chồng) thì đúng một bên chiếm được mỗi dòng: bên thua thấy
-   * `count` nhỏ hơn và bỏ qua. Đọc danh sách rồi mới update sẽ cho cả hai cùng gọi đối tác trên
-   * cùng một hợp đồng — và khoá idempotency là thứ duy nhất cứu, tức là dựa vào đối tác để sửa
-   * lỗi của mình.
-   */
-  async claimDue(limit: number, now: Date = new Date()): Promise<string[]> {
-    const due = await this.prisma.bookingInsurancePolicy.findMany({
-      where: {
-        status: { in: [INSURANCE_POLICY_STATUS.RESERVED, INSURANCE_POLICY_STATUS.FAILED] },
-        nextAttemptAt: { not: null, lte: now },
-      },
-      orderBy: { nextAttemptAt: 'asc' },
-      take: limit,
-      select: { id: true, status: true },
-    });
-
-    const claimed: string[] = [];
-    for (const row of due) {
-      const { count } = await this.prisma.bookingInsurancePolicy.updateMany({
-        // `status` trong WHERE là phần CHIẾM: ai đổi nó trước thì bên còn lại trượt.
-        where: { id: row.id, status: row.status, nextAttemptAt: { not: null, lte: now } },
-        data: { status: INSURANCE_POLICY_STATUS.ISSUING, lastAttemptAt: now },
-      });
-      if (count === 1) claimed.push(row.id);
-    }
-    return claimed;
+  /** CHIẾM một lô hợp đồng tới hạn — `updateMany` có điều kiện, không đọc-rồi-ghi. */
+  claimDue(limit: number, now: Date = new Date()): Promise<string[]> {
+    return claimDueInsurancePolicies(this.prisma, limit, now);
   }
 
-  /** Dữ liệu đủ để gọi đối tác cho một hợp đồng đã chiếm. */
-  async loadForIssue(policyId: string) {
-    return this.prisma.bookingInsurancePolicy.findUniqueOrThrow({
-      where: { id: policyId },
-      select: {
-        id: true,
-        tenantId: true,
-        bookingId: true,
-        productKind: true,
-        premiumAmount: true,
-        idempotencyKey: true,
-        issueAttempts: true,
-        consentAt: true,
-        consentSource: true,
-        booking: {
-          select: {
-            pickupAt: true,
-            returnAt: true,
-            customerName: true,
-            customerPhone: true,
-            vehicle: { select: { name: true, plateNumber: true } },
-          },
-        },
-      },
-    });
+  /** Ghi kết quả một lần gọi đối tác lên một hợp đồng đang `issuing`. */
+  applyIssueResult(policyId: string, result: InsuranceIssueOutcome, now: Date = new Date()) {
+    return applyInsuranceIssueResult(this.prisma, policyId, result, now);
   }
 
-  /**
-   * Ghi kết quả một lần gọi đối tác.
-   *
-   * Thành công ⇒ `issued` + số chứng nhận (CHECK ở DB đòi nó, nên không có đường đánh dấu đã cấp
-   * mà tay không). Thất bại ⇒ `failed` + backoff, hoặc dừng hẳn nếu lỗi không thử lại được.
-   */
-  async applyIssueResult(
-    policyId: string,
-    result:
-      | {
-          ok: true;
-          certificateNumber: string;
-          certificateUrl?: string;
-          partnerProductCode?: string;
-          coverageFrom: Date;
-          coverageTo: Date;
-          raw: unknown;
-        }
-      | { ok: false; code: InsuranceIssueError; message: string; retryable: boolean; raw?: unknown },
-    now: Date = new Date(),
-  ): Promise<void> {
-    if (result.ok) {
-      await this.prisma.bookingInsurancePolicy.update({
-        where: { id: policyId },
-        data: {
-          status: INSURANCE_POLICY_STATUS.ISSUED,
-          certificateNumber: result.certificateNumber,
-          certificateUrl: result.certificateUrl ?? null,
-          partnerProductCode: result.partnerProductCode ?? null,
-          coverageFrom: result.coverageFrom,
-          coverageTo: result.coverageTo,
-          issuedAt: now,
-          nextAttemptAt: null,
-          lastErrorCode: null,
-          lastErrorMessage: null,
-          issueAttempts: { increment: 1 },
-          responsePayloadJson: toJson(result.raw),
-        },
-      });
-      return;
-    }
-
-    const current = await this.prisma.bookingInsurancePolicy.findUniqueOrThrow({
-      where: { id: policyId },
-      select: { issueAttempts: true },
-    });
-    const attempts = current.issueAttempts + 1;
-    /*
-     * Lỗi KHÔNG thử lại được (đối tác từ chối, chưa cắm đối tác) ⇒ `nextAttemptAt = null`: worker
-     * thôi nhặt nó, và nó nằm im trong hàng đợi admin cho tới khi có người xử lý. Quay vòng vô
-     * hạn trên một lỗi vĩnh viễn chỉ đốt hạn mức API và giấu mất những lỗi thật sự tạm thời.
-     */
-    const nextAttemptAt = result.retryable
-      ? new Date(now.getTime() + insuranceRetryDelayMinutes(attempts) * 60_000)
-      : null;
-
-    await this.prisma.bookingInsurancePolicy.update({
-      where: { id: policyId },
-      data: {
-        status: INSURANCE_POLICY_STATUS.FAILED,
-        issueAttempts: attempts,
-        lastErrorCode: result.code,
-        lastErrorMessage: result.message.slice(0, 2000),
-        nextAttemptAt,
-        responsePayloadJson: toJson(result.raw),
-      },
-    });
-  }
-
-  /** Gọi đối tác cho MỘT hợp đồng đã chiếm — worker gọi; không chạy trong transaction nào. */
+  /** Gọi đối tác cho MỘT hợp đồng đã chiếm — không chạy trong transaction nào. */
   async issueOne(policyId: string, now: Date = new Date()): Promise<'issued' | 'failed'> {
-    const policy = await this.loadForIssue(policyId);
-    const request = {
-      idempotencyKey: policy.idempotencyKey,
-      productKind: policy.productKind as InsuranceProductKind,
-      premiumAmount: policy.premiumAmount.toFixed(0),
-      coverageFrom: policy.booking.pickupAt,
-      coverageTo: policy.booking.returnAt,
-      vehicle: {
-        name: policy.booking.vehicle.name,
-        plateNumber: policy.booking.vehicle.plateNumber,
-      },
-      customer: {
-        name: policy.booking.customerName,
-        phone: policy.booking.customerPhone,
-      },
-      consent:
-        policy.consentAt && policy.consentSource
-          ? { at: policy.consentAt, source: policy.consentSource as InsuranceConsentSource }
-          : null,
-    };
-
-    await this.prisma.bookingInsurancePolicy.update({
-      where: { id: policyId },
-      data: { requestPayloadJson: toJson(request) },
-    });
-
-    let result;
-    try {
-      result = await this.partner.issue(request);
-    } catch (err) {
-      /*
-       * Adapter ném thay vì trả lỗi — coi là tạm thời và thử lại. Một exception rơi ra đây mà
-       * không được bắt sẽ để hợp đồng kẹt vĩnh viễn ở `issuing`, tức là worker không bao giờ
-       * nhặt lại nó và phí của khách nằm im không ai biết.
-       */
-      result = {
-        ok: false as const,
-        code: INSURANCE_ISSUE_ERROR.PARTNER_UNAVAILABLE,
-        message: err instanceof Error ? err.message : String(err),
-        retryable: true,
-      };
-    }
-
-    await this.applyIssueResult(
-      policyId,
-      result.ok
-        ? {
-            ok: true,
-            certificateNumber: result.certificateNumber,
-            ...(result.certificateUrl === undefined
-              ? {}
-              : { certificateUrl: result.certificateUrl }),
-            ...(result.partnerProductCode === undefined
-              ? {}
-              : { partnerProductCode: result.partnerProductCode }),
-            coverageFrom: policy.booking.pickupAt,
-            coverageTo: policy.booking.returnAt,
-            raw: result.raw,
-          }
-        : result,
-      now,
-    );
-    return result.ok ? 'issued' : 'failed';
+    const outcome = await issueInsurancePolicy(this.prisma, this.partner, policyId, now);
+    return outcome === 'issued' ? 'issued' : 'failed';
   }
 
   // ── Admin ────────────────────────────────────────────────────────────────
@@ -357,11 +215,15 @@ export class InsuranceService {
    *
    * Không tự gọi đối tác ngay tại request: một endpoint admin treo vì đối tác chậm là một tab
    * trình duyệt quay mãi và một người bấm lại năm lần.
+   *
+   * Nhận `failed` và `issuing` ĐÃ QUÁ HẠN THUÊ (`INSURANCE_ISSUING_LEASE_MINUTES` — worker chết giữa
+   * chừng). Một `issuing` còn trong hạn là lượt đang chờ đối tác: đặt lại nó là mời gọi đôi.
    */
   async retry(policyId: string, actorUserId: string): Promise<void> {
+    const now = new Date();
     const policy = await this.prisma.bookingInsurancePolicy.findUnique({
       where: { id: policyId },
-      select: { id: true, tenantId: true, status: true },
+      select: { id: true, tenantId: true, status: true, lastAttemptAt: true },
     });
     if (!policy) {
       throw new NotFoundException({
@@ -369,19 +231,57 @@ export class InsuranceService {
         message: 'Không tìm thấy hợp đồng bảo hiểm',
       });
     }
-    if (policy.status !== INSURANCE_POLICY_STATUS.FAILED) {
+    const staleBefore = insuranceIssuingStaleBefore(now);
+    const staleIssuing =
+      policy.status === INSURANCE_POLICY_STATUS.ISSUING &&
+      (policy.lastAttemptAt == null || policy.lastAttemptAt < staleBefore);
+    if (policy.status !== INSURANCE_POLICY_STATUS.FAILED && !staleIssuing) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ hợp đồng đang lỗi mới thử lại được',
+        message: 'Chỉ hợp đồng đang lỗi (hoặc kẹt ở bước phát hành) mới thử lại được',
         details: { status: policy.status },
+      });
+    }
+    /*
+     * Chưa cắm đối tác (`INSURANCE_PARTNER=none`) ⇒ lượt thử CHẮC CHẮN hỏng lại với đúng mã cũ.
+     * Từ chối ngay, nói đúng lý do, thay vì xếp một việc vô ích cho worker rồi để người trực
+     * tưởng nút thử lại bị hỏng. API và worker đọc cùng một file env (docker-compose.prod.yml).
+     */
+    if (!this.partner.configured) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INSURANCE_PARTNER_NOT_CONFIGURED,
+        message: 'Chưa cắm đối tác bảo hiểm — thử phát hành lại sẽ không cấp được chứng nhận',
       });
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.bookingInsurancePolicy.updateMany({
-        where: { id: policyId, status: INSURANCE_POLICY_STATUS.FAILED },
-        data: { nextAttemptAt: new Date() },
+      const { count } = await tx.bookingInsurancePolicy.updateMany({
+        where: staleIssuing
+          ? {
+              id: policyId,
+              status: INSURANCE_POLICY_STATUS.ISSUING,
+              lastAttemptAt: policy.lastAttemptAt,
+            }
+          : { id: policyId, status: INSURANCE_POLICY_STATUS.FAILED },
+        /*
+         * Thử lại là một lượt MỚI: xoá mã lỗi cũ để hàng đợi không hiện lỗi của lượt trước như
+         * thể nó vừa xảy ra. Số lần thử giữ nguyên — đó là lịch sử thật. Một `issuing` bỏ dở về
+         * lại `failed` để worker chiếm nó bằng đúng đường thường.
+         */
+        data: {
+          status: INSURANCE_POLICY_STATUS.FAILED,
+          nextAttemptAt: now,
+          lastErrorCode: null,
+          lastErrorMessage: null,
+        },
       });
+      if (count === 0) {
+        // Worker vừa nhặt (hoặc vừa ghi kết quả) xen giữa — không ghi đè lượt đang chạy.
+        throw new ConflictException({
+          code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+          message: 'Hợp đồng vừa đổi trạng thái — tải lại để xem kết quả mới nhất',
+        });
+      }
       await this.audit.record(
         {
           tenantId: policy.tenantId,
@@ -469,6 +369,3 @@ export function premiumsFromSnapshot(snapshot: BookingPriceSnapshot): PremiumLin
   };
 }
 
-function toJson(value: unknown): Prisma.InputJsonValue {
-  return (value ?? null) as Prisma.InputJsonValue;
-}

@@ -32,6 +32,10 @@
       "instantBook": "Instant Book is on — your request is accepted automatically, with no wait for approval.",
       "experienced": "This host has completed {count, plural, one {# trip} other {# trips}} on XePrime.",
       "newHost": "New to XePrime — you could be one of this host's first guests."
+    },
+    "type": {
+      "shop": "Shop",
+      "owner": "Owner"
     }
   },
   "stats": {
@@ -79,6 +83,11 @@
       "hour": "Under an hour",
       "hours": "A few hours",
       "day": "Same day"
+    },
+    "inlineLabel": {
+      "responseRate": "Response rate",
+      "responseTime": "Responds within",
+      "acceptKeep": "Acceptance rate"
     }
   }
 }

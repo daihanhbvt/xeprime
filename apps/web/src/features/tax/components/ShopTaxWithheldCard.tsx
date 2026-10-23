@@ -7,15 +7,17 @@ import { PERMISSION, TAX_WITHHOLDING_STATUS_META } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { isZeroMoney } from '@/lib/money';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useShopTaxSummary } from '../hooks/use-tax';
 import type { TaxRow } from '../types';
+import { TaxAmount, TaxSplitAmount } from './TaxSplitAmount';
 
 import styles from './ShopTaxWithheldCard.module.css';
 
 const PERIOD_FORMAT = 'YYYY-MM';
-const MIN_TABLE_WIDTH = 720;
+const MIN_TABLE_WIDTH = 900;
 
 /**
  * "Thuế đã khấu trừ trong kỳ" — bề mặt của CHỦ XE (Phase 8, ADR 0032 điều 3).
@@ -51,19 +53,29 @@ export function ShopTaxWithheldCard() {
       render: (row) => (
         <div>
           <p className={styles.value}>{fmt.money(row.taxableBase)}</p>
-          <p className={styles.muted}>{t('percentOf', { percent: row.percent })}</p>
+          <p className={styles.muted}>
+            {row.vatPercent != null && row.pitPercent != null
+              ? t('ratePair', { vat: row.vatPercent, pit: row.pitPercent })
+              : t('percentOf', { percent: row.percent })}
+          </p>
         </div>
       ),
+    },
+    {
+      key: 'vat',
+      title: t('columns.vat'),
+      render: (row) => <TaxSplitAmount value={row.vatAmount} fallback={t('notSplit')} />,
+    },
+    {
+      key: 'pit',
+      title: t('columns.pit'),
+      render: (row) => <TaxSplitAmount value={row.pitAmount} fallback={t('notSplit')} />,
     },
     { key: 'label', title: t('columns.label'), render: (row) => row.label },
     {
       key: 'amount',
       title: t('columns.amount'),
-      render: (row) => (
-        <span className={Number(row.amount) < 0 ? styles.negative : styles.value}>
-          {fmt.money(row.amount)}
-        </span>
-      ),
+      render: (row) => <TaxAmount value={row.amount} />,
     },
     {
       key: 'status',
@@ -125,6 +137,12 @@ export function ShopTaxWithheldCard() {
           <>
             <div className={styles.stats}>
               <Statistic title={t('stats.total')} value={fmt.money(data.totalAmount)} />
+              <Statistic title={t('stats.vat')} value={fmt.money(data.totalVatAmount)} />
+              <Statistic title={t('stats.pit')} value={fmt.money(data.totalPitAmount)} />
+              {/* Kỳ trộn dòng cũ không tách: phần còn lại của tổng, để GTGT + TNCN + phần này = tổng. */}
+              {isZeroMoney(data.totalUnsplitAmount) ? null : (
+                <Statistic title={t('stats.unsplit')} value={fmt.money(data.totalUnsplitAmount)} />
+              )}
               <Statistic title={t('stats.base')} value={fmt.money(data.totalTaxableBase)} />
               <Statistic title={t('stats.trips')} value={data.rows} />
             </div>

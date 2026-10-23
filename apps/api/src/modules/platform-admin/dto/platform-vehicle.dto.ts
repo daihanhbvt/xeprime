@@ -15,18 +15,12 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { toQueryBool } from '../../../common/dto/query-transforms';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as PLATFORM_VEHICLE_DEFAULT_LIMIT, MAX_LIMIT as PLATFORM_VEHICLE_MAX_LIMIT };
-
-/** Query param boolean-ish (`1`/`true`) → boolean; giá trị lạ giữ nguyên để `@IsBoolean` chặn. */
-const toBool = ({ value }: { value: unknown }): unknown => {
-  if (value === true || value === 'true' || value === '1') return true;
-  if (value === false || value === 'false' || value === '0') return false;
-  return value;
-};
 
 /** Lọc xe toàn hệ thống (admin nền tảng). Mọi filter là AND. */
 export class PlatformVehicleListQueryDto {
@@ -98,11 +92,14 @@ export class PlatformVehicleListQueryDto {
       'false = mọi xe không hiện',
   })
   @IsOptional()
-  @Transform(toBool)
+  @Transform(toQueryBool)
   @IsBoolean()
   marketplaceVisible?: boolean;
 
-  @ApiPropertyOptional({ enum: PLATFORM_VEHICLE_SORT_VALUES, default: DEFAULT_PLATFORM_VEHICLE_SORT })
+  @ApiPropertyOptional({
+    enum: PLATFORM_VEHICLE_SORT_VALUES,
+    default: DEFAULT_PLATFORM_VEHICLE_SORT,
+  })
   @IsOptional()
   @IsIn(PLATFORM_VEHICLE_SORT_VALUES)
   sort?: PlatformVehicleSort;

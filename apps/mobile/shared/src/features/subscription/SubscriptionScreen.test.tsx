@@ -146,7 +146,9 @@ describe('SubscriptionWorkspace — Gói & hạn mức', () => {
     expect(view.getByText(viSubscription.mobilePlan.subtitleHidden)).toBeTruthy();
     expect(view.getByText('3/3')).toBeTruthy();
     expect(view.getByText('10% / chuyến')).toBeTruthy();
-    expect(view.getByText('Bạn đã đạt giới hạn 3 xe của tuyến hoa hồng.')).toBeTruthy();
+    expect(
+      view.getByText(viSubscription.mobilePlan.commissionLimitReached.replace('{limit}', '3')),
+    ).toBeTruthy();
     expect(view.queryByText(viSubscription.usage.atLimitBuyPlan)).toBeNull();
 
     expect(view.queryByText(viSubscription.features.unlockTitle)).toBeNull();

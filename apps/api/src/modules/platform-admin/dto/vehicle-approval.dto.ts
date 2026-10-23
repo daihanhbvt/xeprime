@@ -220,9 +220,13 @@ export class VehicleApprovalServiceDto {
   @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
 }
 
+/** Một bậc giao xe trong snapshot duyệt — trọn gói (`fee`) HOẶC theo km (`perKm`), ADR 0064. */
 export class VehicleApprovalDeliveryTierDto {
   @ApiProperty() toKm!: number;
-  @ApiProperty({ description: "VND — '0' là miễn phí" }) fee!: string;
+  @ApiPropertyOptional({ type: String, description: "Phí trọn gói VND — '0' là miễn phí" })
+  fee?: string;
+  @ApiPropertyOptional({ type: String, description: 'Đơn giá VND mỗi km — bậc tính theo km' })
+  perKm?: string;
 }
 
 export class VehicleApprovalDiscountTierDto {

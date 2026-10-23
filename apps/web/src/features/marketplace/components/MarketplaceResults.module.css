@@ -1,5 +1,16 @@
 /* Vùng làm việc /search — Figma `18:567`. */
 .workspace {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.container {
+  width: 100%;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
@@ -89,6 +100,55 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.toolbarHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.locationSubtitle {
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
+.viewModeGroup {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 8px;
+  background: var(--xp-color-bg-container);
+  overflow: hidden;
+  padding: 2px;
+  gap: 2px;
+}
+
+.viewModeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.16s ease;
+}
+
+.viewModeBtn:hover {
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-hover);
+}
+
+.viewModeActive {
+  background: #fdf6ec;
+  color: var(--xp-color-primary-strong);
+  font-weight: 600;
 }
 
 .toolbarLeft {
@@ -233,6 +293,38 @@
   .grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: 16px;
+  list-style: none;
+}
+
+.endBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px 32px;
+  text-align: center;
+  gap: 8px;
+}
+
+.endTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  margin: 0;
+}
+
+.endSubtitle {
+  font-size: 14px;
+  color: var(--xp-color-text-secondary);
+  margin: 0;
 }
 
 .cell {

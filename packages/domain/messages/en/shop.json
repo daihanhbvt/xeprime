@@ -221,8 +221,8 @@
       "saved": "Reservation payment settings saved"
     },
     "mode": {
-      "onTitle": "Guests pay a reservation amount before the booking exists",
-      "onBody": "The customer scans a VietQR transfer to XePrime the moment they book, within 10 minutes (auto-extended up to twice). The slot is held while they pay, and the request only reaches you once the money has arrived — no more approving and then waiting to see whether they pay. This amount is PART of the rental price; the customer pays you the rest directly at handover. If you decline, they are refunded in full.",
+      "onTitle": "Guests pay the reservation hold amount after you approve",
+      "onBody": "After you approve the booking request, the customer scans a VietQR transfer to pay the reservation hold amount (platform fee + insurance + 15% rental hold) within the dynamic payment window. The booking is confirmed as soon as XePrime receives full payment. If you cancel after accepting, the guest receives a 100% refund and your reliability score is penalized.",
       "offTitle": "You arrange it with the guest yourself",
       "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup — XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
     },
@@ -233,7 +233,7 @@
       },
       "commission": {
         "title": "Your shop always collects deposits through XePrime",
-        "body": "You are on the commission track: no subscription fee, and XePrime charges a per-trip service fee on the customer side. The reservation payment is a condition of this track, so the switch is locked. Move to a subscription plan if you want to decide for yourself.",
+        "body": "You are on the commission track: no subscription fee. Customers pay the fixed platform fee S, while you bear the tiered commission H and tax T set in the Fee policy. Online reservation hold is mandatory to protect your booking slot, so the switch is locked. Move to a subscription plan if you want to decide for yourself.",
         "cta": "View subscription plans"
       },
       "featureMissing": {
@@ -250,7 +250,7 @@
     "appLocked": {
       "commission": {
         "title": "Your shop always collects the reservation amount through XePrime",
-        "body": "You are an individual owner: XePrime charges a per-trip service fee on the customer side. The reservation payment is a condition of this account type, so the switch is locked."
+        "body": "You are an individual owner on the default commission track: no subscription fee, per-trip commission is governed by the Fee policy. The reservation hold payment is mandatory for this account type, so the switch is locked."
       },
       "featureMissing": {
         "title": "Your account does not include this yet",

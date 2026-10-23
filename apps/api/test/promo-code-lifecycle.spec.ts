@@ -28,6 +28,7 @@ import { PromoQuoteService } from '../src/modules/promo-codes/promo-quote.servic
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { ensureInsuranceProducts } from './helpers/insurance-products';
 import {
   makeBookingHoldsService,
   makeBookingRequestsService,
@@ -87,25 +88,34 @@ const RUN = newId().slice(-8).toLowerCase();
 const DAY = 24 * 3600_000;
 
 /**
- * Chuyến 2 ngày × 700.000đ trên CHÍNH SÁCH PHÍ HIỆU LỰC của môi trường (bản `active` duy nhất):
- * phí dịch vụ 10% · cọc 20% (sàn 50.000) · bảo hiểm xe 2% · thuế 10% (CHỦ XE chịu) · sàn giữ chỗ
- * 20.000. Bảo hiểm người 1% chỉ tính khi khách GIỮ lựa chọn, và không ca nào ở đây chọn nó.
+ * Chuyến ô tô 2 ngày × 700.000đ, tuyến HOA HỒNG, trên CHÍNH SÁCH PHÍ HIỆU LỰC của môi trường
+ * (bản `active` duy nhất — luồng tiền v2, migration 20261020170000): phí sàn 50.000đ (ô tô) · hoa
+ * hồng 10% cho ngày 1–2 · phần giữ chỗ của chủ xe 15% trên TIỀN THUÊ (chính sách v8, ADR 0066 —
+ * không sàn tiền) · thuế khấu trừ chính sách v9 (ADR 0068): tự lái 5% GTGT + 2% TNCN, CHỦ XE chịu · sàn
+ * giữ chỗ 20.000. Bảo hiểm `IV` 50.000đ/ngày và `IP` 20.000đ/ngày chỉ tính khi khách TÍCH chọn —
+ * mặc định các ca ở đây không chọn.
  *
  * Suy ra từ chính sách chứ không gõ tay từng số ở mỗi `expect`: một lần đổi chính sách dev sẽ
  * làm spec đỏ ở ĐÚNG một chỗ, thay vì đỏ ở hai chục chỗ với hai chục con số rời rạc.
  */
 const RENTAL = 1_400_000;
-const SERVICE_FEE = RENTAL * 0.1;
-const VEHICLE_INSURANCE = RENTAL * 0.02;
-/** `T` — CHỦ XE chịu, KHÔNG cộng vào tổng khách (ADR 0032 điều 3). */
-const TAX = RENTAL * 0.1;
-const DEPOSIT = RENTAL * 0.2;
-/** `D + S + IV` — quyền lợi, trước tài trợ. */
-const GROSS_ONLINE = DEPOSIT + SERVICE_FEE + VEHICLE_INSURANCE;
-/** `B + S + IV` — số khách trả khi KHÔNG có mã. */
-const CUSTOMER_TOTAL = RENTAL + SERVICE_FEE + VEHICLE_INSURANCE;
-/** `D + S` — phần tài trợ được; bảo hiểm là tiền giữ hộ, không tài trợ được (ADR 0033 điều 4). */
-const SPONSORABLE = DEPOSIT + SERVICE_FEE;
+/** `S` — phí sàn cố định của ô tô, KHÁCH trả. */
+const SERVICE_FEE = 50_000;
+/** `H` — hoa hồng lũy tiến: hai ngày đều ở nấc 10%. CHỦ XE chịu, không cộng vào tổng khách. */
+const COMMISSION = RENTAL * 0.1;
+/** `IV` — 2 ngày × 50.000đ, chỉ khi khách tích chọn. */
+const VEHICLE_INSURANCE = 2 * 50_000;
+/**
+ * `T` — CHỦ XE chịu, KHÔNG cộng vào tổng khách (ADR 0032 điều 3). Tự lái, gian hàng chưa có hồ sơ
+ * người bán ⇒ cá nhân ⇒ GTGT 5% × 1.400.000 = 70.000 + TNCN 2% × 1.400.000 = 28.000 = 98.000.
+ */
+const TAX = 70_000 + 28_000;
+/** `B + S` — số khách trả khi KHÔNG có mã (không bảo hiểm). */
+const CUSTOMER_TOTAL = RENTAL + SERVICE_FEE;
+/** `D` — phần giữ chỗ của chủ xe = 15% × tiền thuê, đúng tới đồng (ADR 0066 · 0069) = 210.000. */
+const DEPOSIT = 210_000;
+/** Tiền giữ chỗ online = S + H + D — trước tài trợ (≥ S + H + T vì 15% ≥ thuế 7%). */
+const GROSS_ONLINE = SERVICE_FEE + COMMISSION + DEPOSIT;
 
 let dbAvailable = false;
 let mainCustomer: string;
@@ -204,6 +214,8 @@ async function submit(
     offsetDays?: number;
     vehicle?: string;
     customerUserId?: string;
+    vehicleProtectionSelected?: boolean;
+    personalAccidentSelected?: boolean;
   } = {},
 ) {
   const offsetDays = opts.offsetDays ?? 5;
@@ -213,6 +225,12 @@ async function submit(
       pickupAt: vnAt(offsetDays, 9).toISOString(),
       returnAt: vnAt(offsetDays + 2, 9).toISOString(),
       ...(opts.promoCode === undefined ? {} : { promoCode: opts.promoCode }),
+      ...(opts.vehicleProtectionSelected === undefined
+        ? {}
+        : { vehicleProtectionSelected: opts.vehicleProtectionSelected }),
+      ...(opts.personalAccidentSelected === undefined
+        ? {}
+        : { personalAccidentSelected: opts.personalAccidentSelected }),
     },
     opts.customerUserId ?? currentCustomer,
   );
@@ -262,6 +280,8 @@ beforeAll(async () => {
     console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
     return;
   }
+  // Báo giá IV/IP cần hai sản phẩm MIC trong danh mục — DB test có thể chưa seed.
+  await ensureInsuranceProducts(asService);
 
   ownerId = newId();
   tenantId = newId();
@@ -749,10 +769,11 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
     expect(hold.depositAmount.toFixed(0)).toBe(String(DEPOSIT));
     expect(hold.serviceFeeAmount.toFixed(0)).toBe(String(SERVICE_FEE));
     expect(hold.promoDiscountAmount.toFixed(0)).toBe('100000');
-    // Bất biến `D + S + IV + IP − P = amount` — cũng là CHECK ở DB.
+    // Bất biến `D + S + H + IV + IP − P = amount` — cũng là CHECK ở DB.
     expect(
       Number(hold.depositAmount) +
         Number(hold.serviceFeeAmount) +
+        Number(hold.ownerCommissionAmount) +
         Number(hold.vehicleInsuranceAmount) +
         Number(hold.personalInsuranceAmount) -
         Number(hold.promoDiscountAmount),
@@ -860,20 +881,24 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
 
   maybe('mã KHỔNG LỒ bị kẹp ở `D + S` — không lấn một đồng nào vào tiền bảo hiểm', async () => {
     /*
-     * Trần chặt nhất ở đây là phần TÀI TRỢ ĐƯỢC (420.000), không phải `grossOnline − sàn`
-     * (428.000): 28.000đ bảo hiểm là tiền XePrime giữ hộ hãng bảo hiểm và vẫn phải chuyển đủ cho
-     * đối tác dù nền tảng có giảm giá cho khách hay không (ADR 0033 điều 4).
+     * Trần chặt nhất ở đây là phần TÀI TRỢ ĐƯỢC (`D + S + H` = 400.000), không phải
+     * `grossOnline − sàn` (500.000 − 20.000 = 480.000): 100.000đ bảo hiểm là tiền XePrime giữ hộ
+     * hãng bảo hiểm và vẫn phải chuyển đủ cho đối tác dù nền tảng có giảm giá cho khách hay không
+     * (ADR 0033 điều 4).
      */
     const code = `CAP${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code, discountAmount: '9000000' });
-    const receipt = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code, vehicleProtectionSelected: true });
     await requests.approve(tenantId, ownerId, receipt.id);
 
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
     });
-    expect(hold.promoDiscountAmount.toFixed(0)).toBe(String(SPONSORABLE));
-    expect(hold.amount.toFixed(0)).toBe(String(GROSS_ONLINE - SPONSORABLE));
+    // ADR 0066: bảo hiểm cộng THÊM vào tiền giữ chỗ, không làm đổi phần D của chủ xe.
+    const grossOnlineWithIv = GROSS_ONLINE + VEHICLE_INSURANCE;
+    const sponsorableWithIv = grossOnlineWithIv - VEHICLE_INSURANCE;
+    expect(hold.promoDiscountAmount.toFixed(0)).toBe(String(sponsorableWithIv));
+    expect(hold.amount.toFixed(0)).toBe(String(grossOnlineWithIv - sponsorableWithIv));
     // Phần bảo hiểm khách chuyển KHÔNG bị bớt — nó đúng bằng `IV`.
     expect(hold.amount.toFixed(0)).toBe(String(VEHICLE_INSURANCE));
     expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe(String(VEHICLE_INSURANCE));
@@ -1346,8 +1371,11 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
         returnAt: true,
         longTermPackageMonths: true,
         promoSnapshot: true,
+        vehicleProtectionSelected: true,
+        personalAccidentSelected: true,
         vehicle: {
           select: {
+            vehicleType: true,
             weekdayPrice: true,
             weekendPrice: true,
             monthlyPrice: true,
@@ -1368,6 +1396,10 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
       returnAt: row.returnAt,
       longTermPackageMonths: row.longTermPackageMonths,
       vehicle: row.vehicle,
+      insurance: {
+        vehicleProtectionSelected: row.vehicleProtectionSelected,
+        personalAccidentSelected: row.personalAccidentSelected,
+      },
       promo: row.promoSnapshot as never,
     });
   }
@@ -1382,7 +1414,7 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
     expect(est?.fees?.customerTotalAmount).toBe(String(CUSTOMER_TOTAL - 100_000));
     // Tiền thuê `B` và phần trả chủ xe KHÔNG đổi — XePrime tài trợ (ADR 0046 điều 2).
     expect(est?.breakdown.totalAmount).toBe(String(RENTAL));
-    expect(est?.fees?.payAtPickupAmount).toBe(String(RENTAL - DEPOSIT));
+    expect(est?.fees?.payAtPickupAmount).toBe(String(CUSTOMER_TOTAL - GROSS_ONLINE));
   });
 
   maybe('yêu cầu KHÔNG mã: ước tính giữ nguyên giá, không tự sinh khoản giảm', async () => {

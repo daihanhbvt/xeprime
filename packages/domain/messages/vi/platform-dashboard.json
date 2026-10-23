@@ -33,9 +33,9 @@
       "label": "Xe chờ duyệt",
       "part": "{count, plural, other {# xe chờ duyệt}}"
     },
-    "licences": {
-      "label": "Bằng lái chờ duyệt",
-      "part": "{count, plural, other {# bằng lái chờ duyệt}}"
+    "followUps": {
+      "label": "Khách cần chăm sóc",
+      "part": "{count, plural, other {# khách cần chăm sóc}}"
     },
     "bankIn": {
       "label": "Tiền vào chưa khớp",

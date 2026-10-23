@@ -193,7 +193,9 @@ export function vehicleInfoRows(vehicle: ReviewVehicle): ReviewRow[] {
  * (@xeprime/domain) quyết — cùng luật với dòng tóm tắt giao nhận khách thấy, với form chính sách
  * và với màn giao xe của chủ xe.
  */
-export function splitDeliveryTiers(tiers: readonly { toKm: number; fee: string }[]): {
+export function splitDeliveryTiers(
+  tiers: readonly { toKm: number; fee?: string | null; perKm?: string | null }[],
+): {
   freeWithinKm: number | null;
   paid: DeliveryTierRange[];
 } {

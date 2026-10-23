@@ -228,12 +228,12 @@ export const BOOKING_HOLD_OUTCOME = {
    */
   SETTLED: 'settled',
   /**
-   * Khách huỷ MUỘN hoặc không đến — `D + S` chia đôi chủ xe/XePrime, `IV + IP` hoàn 100%
-   * (ADR 0032 điều 5, ADR 0033 điều 3).
+   * Khách huỷ MUỘN hoặc không đến — chủ xe nhận trọn `D`, XePrime giữ `S + H − P`, `IV + IP`
+   * hoàn 100% (ADR 0066, thay phép chia đôi của ADR 0032 điều 5 / ADR 0064 điều 8). Giá trị lưu
+   * giữ tên `split_late_cancel` — đổi nó là làm hỏng dữ liệu và CHECK đã có.
    *
    * Không dùng `forfeited` vì nó nói "toàn bộ khoản giữ chỗ về gian hàng" — sai ở hai chỗ: phần
-   * bảo hiểm phải trả lại khách (hợp đồng chưa mua), và phần còn lại chia đôi chứ không về hết
-   * một phía.
+   * bảo hiểm phải trả lại khách (hợp đồng chưa mua), và phí sàn + hoa hồng thuộc XePrime.
    */
   SPLIT_LATE_CANCEL: 'split_late_cancel',
   /** Huỷ trước mốc miễn phí, hoặc chủ xe huỷ, hoặc khách chuyển thừa — ghi có VÍ KHÁCH. */
@@ -264,7 +264,7 @@ export const BOOKING_HOLD_OUTCOME_META: Readonly<Record<BookingHoldOutcome, Stat
   [BOOKING_HOLD_OUTCOME.KEPT]: { label: 'Đã dùng cho chuyến', color: STATUS_COLOR.SUCCESS },
   [BOOKING_HOLD_OUTCOME.SETTLED]: { label: 'Đã quyết toán', color: STATUS_COLOR.SUCCESS },
   [BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL]: {
-    label: 'Huỷ muộn — chia đôi',
+    label: 'Huỷ muộn — đền giữ chỗ',
     color: STATUS_COLOR.WARNING,
   },
   [BOOKING_HOLD_OUTCOME.REFUNDED]: { label: 'Đã hoàn khách', color: STATUS_COLOR.INFO },

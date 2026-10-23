@@ -254,6 +254,7 @@ jobs:
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
           V_DRIVER_LICENCE_ENFORCEMENT: ${{ vars.DRIVER_LICENCE_ENFORCEMENT }}
           V_DRIVER_LICENCE_OCR: ${{ vars.DRIVER_LICENCE_OCR }}
+          V_INSURANCE_PARTNER: ${{ vars.INSURANCE_PARTNER }}
           V_SMTP_HOST: ${{ vars.SMTP_HOST }}
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
@@ -561,6 +562,10 @@ jobs:
           # có bước nộp bằng).
           kv DRIVER_LICENCE_OCR "${V_DRIVER_LICENCE_OCR:-tesseract}"
           kv DRIVER_LICENCE_ENFORCEMENT "${V_DRIVER_LICENCE_ENFORCEMENT:-on}"
+
+          # Đối tác bảo hiểm chuyến (ADR 0032 điều 4). "mic_mock" = GCN GIẢ LẬP, chỉ staging —
+          # production TỪ CHỐI boot khi khai giá trị đó.
+          kv INSURANCE_PARTNER "${V_INSURANCE_PARTNER:-none}"
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.

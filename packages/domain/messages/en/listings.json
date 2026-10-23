@@ -58,7 +58,7 @@
       "badge": "VAT invoice available",
       "title": "VAT invoice",
       "body": "The owner can issue a VAT invoice for the rental paid to the owner. Share your invoicing details and confirm them directly with the owner.",
-      "disclaimer": "This is an arrangement between you and the owner: XePrime does not issue invoices on the owner's behalf, and amounts you pay to XePrime (such as the service fee) are not covered by this invoice."
+      "disclaimer": "This is an arrangement between you and the owner: XePrime does not issue invoices on the owner's behalf, and amounts you pay to XePrime (such as the booking fee) are not covered by this invoice."
     },
     "description": "Description",
     "descriptionEmpty": "This shop has not written a description.",
@@ -93,6 +93,175 @@
       "title": "Mileage allowance",
       "included": "Includes {km}/day. {fee} for each kilometre over the limit.",
       "note": "The allowance scales with the number of chargeable rental days. Excess mileage is only charged at settlement and is not part of the price shown."
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "home": "Home",
+      "search": "Rent a car",
+      "current": "Vehicle details",
+      "back": "Back to vehicles"
+    },
+    "featuresTitle": "Features",
+    "hostTitle": "Host",
+    "location": {
+      "title": "Vehicle location",
+      "openMap": "Open map"
+    },
+    "attributes": {
+      "brand": "Brand: <strong>{value}</strong>",
+      "color": "Colour: <strong>{value}</strong>"
+    },
+    "descriptionToggle": {
+      "more": "Read more",
+      "less": "Show less"
+    },
+    "gallery": {
+      "photoAlt": "{name} — photo {index}",
+      "pager": "Choose a vehicle photo",
+      "goTo": "Photo {index} of {total}",
+      "counter": "{index} / {total}"
+    },
+    "benefits": {
+      "title": "Self pick-up",
+      "items": {
+        "hourly": "Save more with hourly rental packages",
+        "noWait": "Book fast, no need to wait for the owner to approve"
+      },
+      "howItWorks": "How it works"
+    },
+    "share": {
+      "label": "Share this vehicle",
+      "title": "Share"
+    },
+    "policies": {
+      "label": "Rental rules",
+      "title": "Rules & policies",
+      "tabs": {
+        "general": "General rules",
+        "documents": "Rental documents",
+        "collateral": "Collateral",
+        "cancellation": "Cancellation"
+      },
+      "general": {
+        "purpose": "Use the vehicle for its intended purpose — no prohibited goods, flammable or explosive materials, or livestock and poultry.",
+        "noSmoking": "No smoking, chewing gum or littering inside the vehicle (a cleaning fee applies if broken).",
+        "handover": "Pick up and return the vehicle within the agreed hours and keep it in its original condition.",
+        "tip": "Tip: Take photos of the vehicle (exterior & odometer) at pick-up and return so both sides can compare."
+      },
+      "surcharge": {
+        "rule": "{kind}: {amount}{per}",
+        "withThreshold": "{rule} · {threshold}",
+        "per": {
+          "perHour": "/hour",
+          "per30Minutes": "/30 min",
+          "perKm": "/km",
+          "perNight": "/night"
+        },
+        "threshold": {
+          "minuteOfDay": "charged after {time}",
+          "graceMinutes": "charged after {count, plural, one {# free minute} other {# free minutes}} of waiting",
+          "kmPerDay": "charged beyond {km}/day"
+        }
+      },
+      "documents": {
+        "licenceRequired": "This service needs a verified driving licence on your account before you send a rental request.",
+        "empty": "The owner hasn't published specific requirements for this service — you'll be reminded what to bring when you send a request."
+      },
+      "collateral": {
+        "none": "<strong>No deposit or collateral required:</strong> this vehicle needs no collateral or deposit at pick-up.",
+        "mode": "<strong>Collateral type:</strong> {mode}.",
+        "modeCash": "cash",
+        "modeAsset": "a motorbike or an asset of equivalent value",
+        "modeAssetTypes": "a motorbike or an asset of equivalent value ({types})",
+        "amount": "<strong>Collateral amount:</strong> {amount}",
+        "unknown": "No collateral required, or agree on it directly with the owner at handover.",
+        "note": "Collateral (the pick-up deposit) is handed directly to the owner at pick-up and returned in full when the vehicle comes back intact."
+      },
+      "cancellation": {
+        "title": "Cancellation & reservation policy",
+        "free": "<strong>Free cancellation:</strong> after the owner accepts your trip, you get back 100% of what you paid if you cancel within {percent}% of the time left until pick-up (at least {minMinutes} minutes, at most {hours} hours, never past pick-up).",
+        "hold": "<strong>Reservation window:</strong> once the owner accepts your trip, you have {percent}% of the time left until pick-up to pay the reservation fee (at least {minMinutes} minutes, at most {minutes} minutes).",
+        "release": "If the reservation fee isn't paid in full in time, the request closes automatically and the vehicle's dates open up for other renters.",
+        "protection": "Renter protection: if the owner cancels after you have paid the reservation fee, you get back 100% of what you paid."
+      }
+    },
+    "booking": {
+      "tabsLabel": "Rental type",
+      "tabs": {
+        "selfDrive": "Daily rental",
+        "withDriver": "With driver",
+        "longTerm": "Long-term"
+      },
+      "change": "Change",
+      "route": {
+        "label": "Route:"
+      },
+      "package": {
+        "label": "Rental term:"
+      },
+      "longTerm": {
+        "wishLabel": "Preferred pick-up date:",
+        "asap": "As soon as possible (within the next 7 days)",
+        "dateLabel": "When would you like to pick up the car?",
+        "datePlaceholder": "Choose a pick-up date",
+        "expectedReturn": "Expected return date:",
+        "expectedReturnValue": "{date} ({duration})"
+      },
+      "driver": {
+        "pickupTitle": "Pick-up address",
+        "pickupAt": "The driver picks you up at:",
+        "choosePickup": "Choose a pick-up address & view the map",
+        "pickupModalTitle": "Choose a pick-up address",
+        "destinationLabel": "Destination (province/city or address):",
+        "destinationPlaceholder": "e.g. Hoi An, Quang Nam",
+        "surchargesTitle": "Driver surcharges (if they apply during the trip):"
+      },
+      "pickup": {
+        "title": "Pick-up location",
+        "self": "Pick up yourself",
+        "selfHint": "Free",
+        "delivery": "Delivery to you",
+        "deliveryHint": "Fee based on distance",
+        "addressFallback": "The shop's handover address",
+        "deliveryAddress": "Delivery address:",
+        "distance": "Estimated distance: ~{distance} · Delivery fee: <b>{fee}</b>",
+        "free": "Free",
+        "chooseDelivery": "Choose a delivery address & view the map",
+        "note": "* The exact location and the owner's phone number are shown once the reservation fee is paid.",
+        "distanceFeeLater": "Estimated distance: ~{distance} · Delivery fee: the owner confirms it when accepting"
+      },
+      "insurance": {
+        "title": "Trip Insurance (MIC)",
+        "note": "Optional comprehensive protection for your trip."
+      },
+      "costs": {
+        "title": "Total",
+        "discountGroup": "Discounts/Promotions",
+        "promoRemove": "Remove promo code",
+        "promoApply": "Apply a promo / referral code"
+      }
+    },
+    "deliveryModal": {
+      "title": "Delivery address",
+      "useTyped": "Use the address exactly as typed: “{query}”",
+      "pickupPointFallback": "Handover branch",
+      "ownerPoint": "<strong>Owner's handover point:</strong> {address}",
+      "maxRadius": "<strong>Maximum delivery radius:</strong> {distance}",
+      "searchLabel": "Enter the address where you want the car:",
+      "searchPlaceholder": "House number, street, ward, district...",
+      "locating": "Locating the address and working out the distance...",
+      "mapAlt": "Map of the delivery location",
+      "feeLabel": "Estimated delivery fee:",
+      "free": "Free",
+      "distance": "Estimated road distance: ~{distance}",
+      "confirmedPlace": "Confirmed location: {address}",
+      "manualTitle": "Delivery fee to be agreed",
+      "manualOutsideRadius": "This address is outside the automatic quote radius ({distance}). The owner will tell you the delivery fee after accepting your request.",
+      "manualOutsideRadiusUnknown": "This address is outside the automatic quote radius. The owner will tell you the delivery fee after accepting your request.",
+      "manualDefault": "The owner confirms the delivery fee directly when approving your rental request.",
+      "notFoundTitle": "Couldn't find a route automatically",
+      "notFoundBody": "We couldn't work out the distance for this address automatically. The owner will tell you the delivery fee later.",
+      "confirm": "Confirm address"
     }
   },
   "reviews": {

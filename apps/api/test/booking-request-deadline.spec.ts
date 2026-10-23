@@ -6,8 +6,8 @@ import {
   AUDIT_ACTOR_SCOPE,
   BILLING_MODE,
   BOOKING_REQUEST_DECISION_SOURCE,
-  BOOKING_REQUEST_REMINDER_MINUTES,
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_REMINDER_REMAINING_MINUTES,
+  BOOKING_REQUEST_RESPOND_WINDOW,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   bookingRequestRespondBy,
@@ -138,9 +138,12 @@ function nextWindow(): { pickupAt: string; returnAt: string } {
 }
 
 /** Gửi một yêu cầu thuê qua ĐÚNG đường công khai mà khách đi. */
-async function submit(vehicleId: string): Promise<string> {
+async function submit(
+  vehicleId: string,
+  window: { pickupAt: string; returnAt: string } = nextWindow(),
+): Promise<string> {
   const receipt = await requests.submitPublic(
-    { vehicleId, ...nextWindow() },
+    { vehicleId, ...window },
     await customer('Nguyễn Văn A'),
   );
   return receipt.id;
@@ -187,6 +190,18 @@ async function submitPendingApproval(vehicleId: string): Promise<string> {
 /** Đẩy hạn phản hồi của một yêu cầu về quá khứ — mô phỏng thời gian trôi mà không phải chờ. */
 const setRespondBy = (id: string, at: Date) =>
   prisma.bookingRequest.update({ where: { id }, data: { respondBy: at } });
+
+/**
+ * Đặt hạn còn `remainingMin` phút trên một cửa sổ dài `windowMin` phút — dời CẢ `created_at`, vì
+ * worker đọc `respond_by − created_at` làm độ dài cửa sổ để bỏ mốc nhắc không tồn tại (ADR 0066).
+ */
+const setWindow = (id: string, windowMin: number, remainingMin: number) => {
+  const respondBy = new Date(Date.now() + remainingMin * MINUTE);
+  return prisma.bookingRequest.update({
+    where: { id },
+    data: { respondBy, createdAt: new Date(respondBy.getTime() - windowMin * MINUTE) },
+  });
+};
 
 const countOccupancyFor = (vehicleId: string) =>
   prisma.vehicleOccupancy.count({ where: { vehicleId } });
@@ -262,8 +277,8 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () => {
-  maybe('respondBy = createdAt + 60 phút, do server đặt', async () => {
+describe('Gửi yêu cầu: hạn phản hồi động, CHƯA giữ chỗ (ADR 0044 · 0066)', () => {
+  maybe('chuyến xa (≥ 24 giờ) ⇒ respondBy = createdAt + 240 phút, do server đặt', async () => {
     const vehicleId = await seedVehicle();
     const id = await submit(vehicleId);
 
@@ -273,10 +288,27 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
     });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-    // So theo PHÚT: `created_at` do DB đặt còn `respond_by` do Node tính, hai đồng hồ lệch nhau
-    // vài mili-giây là chuyện bình thường và không phải thứ test này nói về.
+    // `created_at` và `respond_by` ghi CÙNG một mốc ⇒ hiệu đúng bằng cửa sổ, tới mili-giây.
+    expect(row.respondBy.getTime() - row.createdAt.getTime()).toBe(
+      BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES * MINUTE,
+    );
+  });
+
+  maybe('nhận xe sau 10 giờ ⇒ hạn 20% ΔT = 120 phút', async () => {
+    const vehicleId = await seedVehicle();
+    const pickup = new Date(Date.now() + 10 * 60 * MINUTE);
+    const id = await submit(vehicleId, {
+      pickupAt: pickup.toISOString(),
+      returnAt: new Date(pickup.getTime() + 2 * DAY).toISOString(),
+    });
+
+    const row = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id },
+      select: { createdAt: true, respondBy: true },
+    });
+    // ΔT đo từ lúc gửi (vài mili-giây sau `pickup` được dựng) — so theo PHÚT.
     const gapMinutes = (row.respondBy.getTime() - row.createdAt.getTime()) / MINUTE;
-    expect(Math.round(gapMinutes)).toBe(BOOKING_REQUEST_RESPOND_WINDOW_MINUTES);
+    expect(Math.round(gapMinutes)).toBe(120);
   });
 
   /**
@@ -553,8 +585,8 @@ describe('Worker — nhắc và hết hạn', () => {
   maybe('nhắc lần 1 chỉ gửi MỘT lần dù quét bao nhiêu lượt', async () => {
     const vehicleId = await seedVehicle();
     const id = await submitPendingApproval(vehicleId);
-    // Còn đúng 40 phút = đã qua mốc nhắc lần 1 (phút 20), chưa tới mốc lần 2 (phút 45).
-    await setRespondBy(id, new Date(Date.now() + 40 * MINUTE));
+    // Cửa sổ 240′, còn 40′ = đã qua mốc nhắc lần 1 (còn 60′), chưa tới mốc lần 2 (còn 15′).
+    await setWindow(id, 240, 40);
 
     await sweepBookingRequestDeadlines(prisma);
     await sweepBookingRequestDeadlines(prisma);
@@ -573,9 +605,7 @@ describe('Worker — nhắc và hết hạn', () => {
   maybe('nhắc lần 2 ở mốc còn 15 phút, và cũng chỉ một lần', async () => {
     const vehicleId = await seedVehicle();
     const id = await submitPendingApproval(vehicleId);
-    const remaining =
-      BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
-    await setRespondBy(id, new Date(Date.now() + (remaining - 1) * MINUTE));
+    await setWindow(id, 240, BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL - 1);
 
     await sweepBookingRequestDeadlines(prisma);
     await sweepBookingRequestDeadlines(prisma);
@@ -587,10 +617,42 @@ describe('Worker — nhắc và hết hạn', () => {
     expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING, id)).toBe(2);
   });
 
+  /**
+   * Cửa sổ ngắn hơn ngưỡng ⇒ mốc đó KHÔNG tồn tại (ADR 0066): yêu cầu có 30′ không bao giờ nhận
+   * "còn 60 phút" — tin đó sẽ bắn ngay lúc khách vừa gửi. Mốc "còn 15′" vẫn bắn bình thường.
+   */
+  maybe('cửa sổ 30′ ⇒ bỏ mốc "còn 60′", vẫn nhắc ở mốc "còn 15′"', async () => {
+    const vehicleId = await seedVehicle();
+    const id = await submitPendingApproval(vehicleId);
+    await setWindow(id, 30, 25);
+
+    await sweepBookingRequestDeadlines(prisma);
+    let row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id } });
+    expect(row.firstRemindedAt).toBeNull();
+    expect(row.finalRemindedAt).toBeNull();
+    expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING, id)).toBe(0);
+
+    await setWindow(id, 30, BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL - 1);
+    await sweepBookingRequestDeadlines(prisma);
+    row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id } });
+    expect(row.firstRemindedAt).toBeNull();
+    expect(row.finalRemindedAt).not.toBeNull();
+    expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING, id)).toBe(1);
+  });
+
+  maybe('cửa sổ đúng bằng sàn 15′ ⇒ không có mốc nhắc nào', async () => {
+    const vehicleId = await seedVehicle();
+    const id = await submitPendingApproval(vehicleId);
+    await setWindow(id, BOOKING_REQUEST_RESPOND_WINDOW.MIN_MINUTES, 5);
+
+    await sweepBookingRequestDeadlines(prisma);
+    expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING, id)).toBe(0);
+  });
+
   maybe('hết hạn → expired + audit system + báo cả gian hàng lẫn khách', async () => {
     const vehicleId = await seedVehicle();
     const id = await submitPendingApproval(vehicleId);
-    await setRespondBy(id, new Date(Date.now() - MINUTE));
+    await setWindow(id, 90, -1);
 
     await sweepBookingRequestDeadlines(prisma);
 
@@ -607,7 +669,11 @@ describe('Worker — nhắc và hết hạn', () => {
     });
     expect(log.actorScope).toBe(AUDIT_ACTOR_SCOPE.SYSTEM);
     expect(log.actorUserId).toBeNull();
-    expect(log.afterJson).toMatchObject({ status: BOOKING_REQUEST_STATUS.EXPIRED });
+    // Cửa sổ THẬT của yêu cầu này, không phải một hằng số (ADR 0066).
+    expect(log.afterJson).toMatchObject({
+      status: BOOKING_REQUEST_STATUS.EXPIRED,
+      windowMinutes: 90,
+    });
 
     // Hai người nhận: chủ gian hàng (thành viên) và khách (tài khoản gắn với yêu cầu).
     expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED, id)).toBe(2);

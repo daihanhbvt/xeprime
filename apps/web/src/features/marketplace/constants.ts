@@ -1,4 +1,11 @@
-import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
+import {
+  SERVICE_TYPE,
+  TRANSMISSION_TYPE_EXT,
+  VEHICLE_TYPE,
+  type ServiceType,
+  type TransmissionTypeExt,
+  type VehicleType,
+} from '@xeprime/types';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
 import type { FooterKey, ServiceLabelKey } from '@/i18n/keys';
@@ -91,6 +98,11 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
       },
       // Nhãn ngắn của design v2 ("Chính sách huỷ & hoàn tiền") — cột hẹp, không xuống dòng.
       { key: 'columns.legal.cancellationShort', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
+      /*
+       * Văn bản cho CHỦ XE nhưng vẫn ở chân trang công khai: Luật TMĐT buộc sàn công khai chính
+       * sách, và người đang cân nhắc đăng xe cần đọc được nó trước khi có tài khoản đối tác.
+       */
+      { key: 'columns.legal.ownerTax', href: legalPath.doc(LEGAL_DOC.OWNER_TAX) },
     ],
   },
 ];
@@ -121,3 +133,71 @@ export const FOOTER_SERVICE_LINKS: ReadonlyArray<{
   labelKey: tab.labelKey,
   href: marketplaceSearchHref({ serviceType: tab.key }),
 }));
+
+/**
+ * Mốc giá / ngày cho lối tắt "Mức giá" — một bảng cho CẢ viên lọc nhanh lẫn panel Bộ lọc, nên
+ * hai chỗ trên cùng một trang không bao giờ đưa ra hai bộ mốc khác nhau.
+ *
+ * Theo LOẠI XE vì hai mặt bằng giá cách nhau một bậc: "dưới 800k" là lựa chọn rẻ của ô tô nhưng
+ * gồm gần như mọi xe máy. Mốc là số NGUYÊN VND đi thẳng vào `priceMin`/`priceMax` của URL; chữ
+ * hiển thị dựng lúc render bằng `moneyCompact` theo ngôn ngữ — không gõ "150k" ở đâu cả.
+ *
+ * `min` thiếu = không chặn dưới, `max` thiếu = không chặn trên. Mốc là cấu hình sản phẩm ước
+ * lượng theo giá thuê phổ biến; đổi ở đây, không ở component.
+ */
+export interface PriceBand {
+  readonly min?: number;
+  readonly max?: number;
+}
+
+export const PRICE_BANDS: Readonly<Record<VehicleType, readonly PriceBand[]>> = {
+  [VEHICLE_TYPE.CAR]: [
+    { max: 800_000 },
+    { min: 800_000, max: 1_500_000 },
+    { min: 1_500_000, max: 2_500_000 },
+    { min: 2_500_000 },
+  ],
+  [VEHICLE_TYPE.MOTORBIKE]: [
+    { max: 150_000 },
+    { min: 150_000, max: 250_000 },
+    { min: 250_000, max: 400_000 },
+    { min: 400_000 },
+  ],
+};
+
+/** Chưa chọn loại xe (URL không nói) ⇒ mốc của ô tô — cùng mặc định với thẻ tìm kiếm. */
+export function priceBandsFor(vehicleType: string | null | undefined): readonly PriceBand[] {
+  return vehicleType === VEHICLE_TYPE.MOTORBIKE
+    ? PRICE_BANDS[VEHICLE_TYPE.MOTORBIKE]
+    : PRICE_BANDS[VEHICLE_TYPE.CAR];
+}
+
+/** Mốc đang được chọn khi khoảng giá hiện tại TRÙNG KHÍT nó (cả hai đầu). */
+export function isPriceBandSelected(
+  band: PriceBand,
+  priceMin: number | null | undefined,
+  priceMax: number | null | undefined,
+): boolean {
+  return (band.min ?? null) === (priceMin ?? null) && (band.max ?? null) === (priceMax ?? null);
+}
+
+/**
+ * Hộp số trong lối tắt "Hộp số" — tập con của `TRANSMISSION_TYPE_EXT` mà khách hay lọc nhất,
+ * theo loại xe. Nhãn lấy từ `Domain.transmissionType`, không viết ở component.
+ */
+export const QUICK_TRANSMISSIONS: Readonly<Record<VehicleType, readonly TransmissionTypeExt[]>> = {
+  [VEHICLE_TYPE.CAR]: [TRANSMISSION_TYPE_EXT.AUTOMATIC, TRANSMISSION_TYPE_EXT.MANUAL],
+  [VEHICLE_TYPE.MOTORBIKE]: [
+    TRANSMISSION_TYPE_EXT.AUTOMATIC_CVT,
+    TRANSMISSION_TYPE_EXT.SEMI_AUTOMATIC,
+    TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH,
+  ],
+};
+
+export function quickTransmissionsFor(
+  vehicleType: string | null | undefined,
+): readonly TransmissionTypeExt[] {
+  return vehicleType === VEHICLE_TYPE.MOTORBIKE
+    ? QUICK_TRANSMISSIONS[VEHICLE_TYPE.MOTORBIKE]
+    : QUICK_TRANSMISSIONS[VEHICLE_TYPE.CAR];
+}

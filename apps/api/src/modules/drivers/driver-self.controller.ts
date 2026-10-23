@@ -106,7 +106,11 @@ export class DriverSelfController {
   }
 
   @Post('trips/:id/accept')
-  @ApiOperation({ summary: 'Nhận chuyến được gán' })
+  @ApiOperation({
+    summary: 'Nhận chuyến được gán',
+    description:
+      'Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` — chuyến được trả về bên thuê.',
+  })
   @ApiOkResponse({ type: DriverTripDetailDto })
   async acceptTrip(
     @CurrentUser() user: AuthenticatedUser,
@@ -120,7 +124,7 @@ export class DriverSelfController {
   @ApiOperation({
     summary: 'Từ chối chuyến được gán',
     description:
-      'Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi.',
+      'Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công — kể cả khi hệ thống đã trả lượt về trước đó.',
   })
   @ApiOkResponse({ type: OkResultDto })
   async declineTrip(

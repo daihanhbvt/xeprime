@@ -31,7 +31,7 @@ import { PackageUpgradeWizard } from './PackageUpgradeWizard';
  */
 
 const pendingInvoice = vi.hoisted(() => ({
-  data: null as SubscriptionInvoice | null,
+  data: [] as SubscriptionInvoice[],
   isLoading: false,
   isError: false,
   refetch: vi.fn(),
@@ -42,8 +42,9 @@ const plans = vi.hoisted(() => ({
   isError: false,
   refetch: vi.fn(),
 }));
+/** Mỗi làn đã chọn một hoá đơn, tạo LẦN LƯỢT bằng `mutateAsync` (ADR 0065). */
 const purchase = vi.hoisted(() => ({
-  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
   isPending: false,
   isError: false,
   error: null as unknown,
@@ -53,11 +54,17 @@ const purchase = vi.hoisted(() => ({
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
-  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: nav.push,
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
 vi.mock('../hooks/use-subscription', () => ({
-  usePendingInvoice: () => pendingInvoice,
+  usePendingInvoices: () => pendingInvoice,
   useTenantPlans: () => plans,
   usePurchaseSubscription: () => purchase,
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
@@ -133,8 +140,9 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
 function makePlan(over: Partial<TenantPlan> = {}): TenantPlan {
   return {
     id: 'plan-basic',
-    code: 'shop-basic',
+    code: 'moto_5',
     name: 'Gói cơ bản',
+    vehicleScope: 'motorbike',
     description: 'Cho cửa hàng nhỏ',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
@@ -222,7 +230,8 @@ const INVOICE = {
   id: 'INV1',
   code: 'XPG123456',
   planId: 'plan-basic',
-  planCode: 'shop-basic',
+  planCode: 'moto_5',
+  vehicleScope: 'motorbike',
   termMonths: 3,
   quota: { maxVehicles: 3, maxBranches: 1, maxMembers: null },
   status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
@@ -257,13 +266,12 @@ function pickPlanAndContinue() {
 const displayNameInput = () => screen.getByLabelText(/Tên hiển thị/) as HTMLInputElement;
 const phoneInput = () => screen.getByLabelText(/Số điện thoại/) as HTMLInputElement;
 /** Ô địa chỉ là AutoComplete (role `combobox`) — `getByLabelText` còn khớp cả aria-label của khối. */
-const addressInput = () =>
-  screen.getByRole('combobox', { name: /Địa chỉ/ }) as HTMLInputElement;
+const addressInput = () => screen.getByRole('combobox', { name: /Địa chỉ/ }) as HTMLInputElement;
 const submitButton = () => screen.getByRole('button', { name: /Lưu thông tin và tạo hoá đơn/ });
 
 beforeEach(() => {
   nav.push.mockReset();
-  pendingInvoice.data = null;
+  pendingInvoice.data = [];
   pendingInvoice.isLoading = false;
   pendingInvoice.isError = false;
   plans.data = [makePlan()];
@@ -277,7 +285,7 @@ beforeEach(() => {
   branchQuery.isError = false;
   updateProfile.mutateAsync.mockReset().mockResolvedValue(SHOP);
   updateBranch.mutateAsync.mockReset().mockResolvedValue(BRANCH);
-  purchase.mutate.mockReset();
+  purchase.mutateAsync.mockReset().mockResolvedValue({ ...INVOICE, id: 'INV-NEW' });
   purchase.isError = false;
   useRegisterShop.mockClear();
 });
@@ -289,7 +297,8 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
     renderWizard();
 
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
-    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
+    // Trần đọc THEO LOẠI xe của bậc (ADR 0065) — bậc xe máy nói "xe máy", không phải "xe".
+    expect(screen.getByText('Tối đa 3 xe máy')).toBeTruthy();
     expect(screen.queryByLabelText(/Tên hiển thị/)).toBeNull();
     expect(screen.queryByLabelText(/Số điện thoại/)).toBeNull();
   });
@@ -306,7 +315,9 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /Chọn gói/ }));
 
-    expect(screen.getByRole('button', { name: /Tiếp tục/ }).getAttribute('disabled')).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: /Tiếp tục/ }).getAttribute('disabled'),
+    ).not.toBeNull();
     // Dải chốt đơn nói ra VÌ SAO nút còn mờ, ngay cạnh chỗ tổng tiền sẽ hiện.
     expect(screen.getByText(/Chọn một thời hạn/)).toBeTruthy();
   });
@@ -316,8 +327,9 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
     plans.data = [
       makePlan({
         id: 'plan-pro',
-        code: 'shop-pro',
-        name: 'Gói chuyên nghiệp',
+        code: 'enterprise_contact',
+        name: 'Gói doanh nghiệp',
+        vehicleScope: 'all',
         limits: {
           maxVehicles: null,
           maxBranches: null,
@@ -347,7 +359,7 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
     expect(displayNameInput()).toBeTruthy();
     expect(phoneInput()).toBeTruthy();
     // Bảng giá nhường chỗ, nhưng lựa chọn vẫn được nhắc lại để không ai quên mình đang mua gì.
-    expect(screen.getByText(/Gói đã chọn: Gói cơ bản · 3 tháng/)).toBeTruthy();
+    expect(screen.getByText(/Gói đã chọn: Gói xe máy Gói cơ bản \(3 tháng\)/)).toBeTruthy();
   });
 
   /**
@@ -366,7 +378,7 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
   });
 
   it('đang chờ chuyển khoản: số bước KHÔNG bấm lùi được, lối sửa đi qua nút riêng', () => {
-    pendingInvoice.data = INVOICE;
+    pendingInvoice.data = [INVOICE];
     renderWizard();
 
     expect(screen.queryByRole('button', { name: /Chọn gói dịch vụ/ })).toBeNull();
@@ -379,13 +391,13 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
    * `issued` rồi tạo mã mới, nên ai đã chuyển khoản theo mã cũ phải biết để quay lại.
    */
   it('bấm "Chọn lại gói": về bảng giá, kèm cảnh báo mã cũ sẽ bị huỷ và đường quay lại', () => {
-    pendingInvoice.data = INVOICE;
+    pendingInvoice.data = [INVOICE];
     renderWizard();
 
     fireEvent.click(screen.getByRole('button', { name: 'Chọn lại gói' }));
 
     // Bảng giá phải CÓ HÀNG: danh mục gói vẫn tải được dù hoá đơn cũ chưa mất đi đâu cả.
-    expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
     expect(screen.queryByText(/Chưa có gói nào đang bán/)).toBeNull();
     expect(screen.getByText(/XPG123456 chờ chuyển khoản/)).toBeTruthy();
     // Nói rõ mã cũ chỉ bị huỷ Ở BƯỚC TẠO HOÁ ĐƠN MỚI, không phải ngay lúc bấm "Chọn lại gói".
@@ -394,7 +406,7 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
     // Và quay lại được đúng mã đang chờ, không mất dấu nó.
     fireEvent.click(screen.getByRole('button', { name: 'Quay lại mã đang chờ' }));
     expect(screen.getByText('XPG123456')).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Gói xe máy' })).toBeNull();
   });
 
   /**
@@ -403,11 +415,13 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
    * nhận tiền là xoá dấu vết khoản khách đã chuyển. Giao diện phải nói cùng một luật.
    */
   it('đã nhận một phần: KHÔNG có lối chọn lại gói', () => {
-    pendingInvoice.data = {
-      ...INVOICE,
-      status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
-      paidAmount: '100000',
-    };
+    pendingInvoice.data = [
+      {
+        ...INVOICE,
+        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        paidAmount: '100000',
+      },
+    ];
     renderWizard();
 
     expect(screen.queryByRole('button', { name: 'Chọn lại gói' })).toBeNull();
@@ -449,7 +463,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
     pickPlanAndContinue();
     fireEvent.click(submitButton());
 
-    await waitFor(() => expect(purchase.mutate).toHaveBeenCalled());
+    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalled());
     expect(useRegisterShop).not.toHaveBeenCalled();
   });
 
@@ -459,17 +473,11 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
     fireEvent.click(submitButton());
 
     await waitFor(() =>
-      // Tham số thứ hai là callback chạy khi hoá đơn mới về.
-      expect(purchase.mutate).toHaveBeenCalledWith(
-        { planId: 'plan-basic', termMonths: 3 },
-        expect.anything(),
-      ),
+      expect(purchase.mutateAsync).toHaveBeenCalledWith({ planId: 'plan-basic', termMonths: 3 }),
     );
 
-    // Hoá đơn về ⇒ sang thẳng TRANG THANH TOÁN của nó.
-    const options = purchase.mutate.mock.calls[0]![1] as { onSuccess: (invoice: unknown) => void };
-    options.onSuccess({ ...INVOICE, id: 'INV-NEW' });
-    expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
+    // MỘT hoá đơn về ⇒ sang thẳng TRANG THANH TOÁN của nó.
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW'));
 
     // Hồ sơ giữ nguyên những ô form này không hỏi (giới thiệu, ảnh bìa, giấy tờ).
     expect(updateProfile.mutateAsync).toHaveBeenCalledWith(
@@ -486,7 +494,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
       phone: '0901234567',
     });
     // Client KHÔNG gửi giá: server đọc lại bảng giá của chính bậc + kỳ hạn này.
-    expect(purchase.mutate.mock.calls[0]![0]).not.toHaveProperty('price');
+    expect(purchase.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('price');
   });
 
   /**
@@ -502,7 +510,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
 
     await waitFor(() => expect(updateBranch.mutateAsync).toHaveBeenCalled());
     expect(updateProfile.mutateAsync).not.toHaveBeenCalled();
-    expect(purchase.mutate).not.toHaveBeenCalled();
+    expect(purchase.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('lưu HỒ SƠ hỏng ⇒ không tạo hoá đơn', async () => {
@@ -512,7 +520,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
     fireEvent.click(submitButton());
 
     await waitFor(() => expect(updateProfile.mutateAsync).toHaveBeenCalled());
-    expect(purchase.mutate).not.toHaveBeenCalled();
+    expect(purchase.mutateAsync).not.toHaveBeenCalled();
   });
 
   /**
@@ -534,7 +542,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
       expect(screen.getByText('Nhập số điện thoại liên hệ của gian hàng')).toBeTruthy(),
     );
     expect(updateProfile.mutateAsync).not.toHaveBeenCalled();
-    expect(purchase.mutate).not.toHaveBeenCalled();
+    expect(purchase.mutateAsync).not.toHaveBeenCalled();
   });
 
   /** Logo là cổng của việc ĐĂNG XE, không phải cổng của việc mua gói (ADR 0040 điều 7). */
@@ -545,7 +553,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
     expect(screen.getByText(/gian hàng phải có logo trước khi gửi xe lên chợ/)).toBeTruthy();
 
     fireEvent.click(submitButton());
-    await waitFor(() => expect(purchase.mutate).toHaveBeenCalled());
+    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalled());
   });
 
   it('gian hàng không có chi nhánh nào ⇒ nói thẳng, không âm thầm bỏ qua SĐT', () => {
@@ -564,7 +572,7 @@ describe('PackageUpgradeWizard — bước thanh toán', () => {
    * màn chuyển khoản với ĐÚNG mã cũ — không ai bị mời tạo hoá đơn thứ hai cho cùng một khoản.
    */
   it('đang có hoá đơn chờ: vào thẳng thẻ hoá đơn chờ, không hiện bảng giá', () => {
-    pendingInvoice.data = INVOICE;
+    pendingInvoice.data = [INVOICE];
     renderWizard();
 
     expect(screen.getByText('XPG123456')).toBeTruthy();
@@ -573,28 +581,90 @@ describe('PackageUpgradeWizard — bước thanh toán', () => {
       '/manage/payment/INV1',
     );
     expect(screen.getByText(/Đang chờ tiền về/)).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Gói xe máy' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Tiếp tục' })).toBeNull();
 
     /*
      * Và màn này phải NÓI RA đang mua gì: nó sống qua F5 và qua một lần đăng nhập ở máy khác,
      * nên không có gì bảo đảm người đang đọc còn nhớ mình đã chọn bậc nào.
      */
-    expect(screen.getByText('Gói đang mua')).toBeTruthy();
     expect(screen.getByText(/Gói cơ bản/)).toBeTruthy();
     expect(screen.getByText('3 tháng')).toBeTruthy();
-    expect(screen.getByText(/Tối đa 3 xe/)).toBeTruthy();
+    expect(screen.getByText(/Tối đa 3 xe máy/)).toBeTruthy();
+    // Nhãn loại xe đứng đầu: hai hoá đơn chờ cùng lúc phải phân biệt được cái nào cho loại nào.
+    expect(screen.getByText(/Gói đang mua · Gói xe máy/)).toBeTruthy();
   });
 
   it('chuyển thiếu: vẫn ở màn đó, nói số còn thiếu chứ không gọi là đã thanh toán', () => {
-    pendingInvoice.data = {
-      ...INVOICE,
-      status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
-      paidAmount: '100000',
-    };
+    pendingInvoice.data = [
+      {
+        ...INVOICE,
+        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        paidAmount: '100000',
+      },
+    ];
     renderWizard();
 
     expect(screen.getByText(/Đã nhận một phần/)).toBeTruthy();
     expect(screen.getByText('XPG123456')).toBeTruthy();
+  });
+});
+
+describe('PackageUpgradeWizard — hai làn theo loại xe (ADR 0065)', () => {
+  const CAR_PLAN = makePlan({
+    id: 'plan-car',
+    code: 'car_5',
+    name: 'Ô tô 5 xe',
+    vehicleScope: 'car',
+  } as Partial<TenantPlan>);
+
+  /** Chọn bậc + kỳ 1 tháng ở MỘT làn (radiogroup mang tên làn). */
+  function pickInLane(lane: string) {
+    const group = screen.getByRole('radiogroup', { name: lane });
+    fireEvent.click(group.querySelector('[role="radio"]') as HTMLElement);
+    const terms = screen.getAllByRole('radiogroup', { name: 'Chọn thời hạn' });
+    const last = terms[terms.length - 1]!;
+    fireEvent.click(last.querySelector('[role="radio"]') as HTMLElement);
+  }
+
+  it('hai làn xe máy và ô tô, mỗi làn một bảng giá riêng', () => {
+    plans.data = [makePlan(), CAR_PLAN];
+    renderWizard();
+
+    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();
+    expect(screen.getByText('Tối đa 3 ô tô')).toBeTruthy();
+  });
+
+  it('chọn cả hai làn ⇒ HAI hoá đơn, tạo lần lượt, ở lại trang (không nhảy sang một mã)', async () => {
+    plans.data = [makePlan(), CAR_PLAN];
+    purchase.mutateAsync
+      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
+      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-C', vehicleScope: 'car' });
+    renderWizard();
+    pickInLane('Gói xe máy');
+    pickInLane('Gói ô tô');
+    fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(purchase.mutateAsync.mock.calls[0]![0]).toEqual({ planId: 'plan-basic', termMonths: 1 });
+    expect(purchase.mutateAsync.mock.calls[1]![0]).toEqual({ planId: 'plan-car', termMonths: 1 });
+    expect(nav.push).not.toHaveBeenCalled();
+  });
+
+  it('hoá đơn làn thứ hai hỏng ⇒ dừng, báo đúng làn, không điều hướng', async () => {
+    plans.data = [makePlan(), CAR_PLAN];
+    purchase.mutateAsync
+      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
+      .mockRejectedValueOnce(new Error('500'));
+    renderWizard();
+    pickInLane('Gói xe máy');
+    pickInLane('Gói ô tô');
+    fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(nav.push).not.toHaveBeenCalled();
   });
 });

@@ -205,7 +205,7 @@
         "period": "Tháng",
         "completed": "Chuyến hoàn tất",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ XePrime"
+        "serviceFee": "Phí đặt xe"
       }
     },
     "vehicles": {
@@ -383,7 +383,8 @@
         "daysLeft": "{days, plural, other {Còn # ngày}}",
         "next": "Kỳ kế tiếp",
         "nextValue": "{plan} · {from} → {to}",
-        "noNext": "Chưa xếp lịch"
+        "noNext": "Chưa xếp lịch",
+        "scopes": "Gói theo loại xe"
       },
       "quota": {
         "title": "Hạn mức sử dụng",
@@ -453,7 +454,7 @@
         "period": "Tháng",
         "completed": "Chuyến hoàn tất",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ XePrime",
+        "serviceFee": "Phí đặt xe",
         "tax": "Thuế khấu trừ"
       },
       "stats": {
@@ -470,7 +471,7 @@
         "month": "Tháng",
         "completed": "Chuyến",
         "revenue": "Tổng tiền thuê",
-        "serviceFee": "Phí dịch vụ",
+        "serviceFee": "Phí đặt xe",
         "tax": "Thuế khấu trừ",
         "state": "Tình trạng"
       },
@@ -540,7 +541,17 @@
       "unlimited": "{used} · không giới hạn",
       "notApplicable": "{used} · không áp dụng cho tuyến này",
       "ownerLite": "trần Owner Lite (đã hết gói)",
-      "unconfigured": "chưa xác định được gói"
+      "unconfigured": "chưa xác định được gói",
+      "notCovered": "{used} xe · chưa có gói cho loại xe này",
+      "type": {
+        "motorbike": "Xe máy",
+        "car": "Ô tô"
+      },
+      "scope": {
+        "motorbike": "Xe máy",
+        "car": "Ô tô",
+        "all": "Mọi loại xe"
+      }
     }
   }
 }

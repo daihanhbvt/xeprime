@@ -1,8 +1,6 @@
-import { releasePromoRedemption, type PrismaClient } from '@xeprime/prisma';
+import { Prisma, releasePromoRedemption, type PrismaClient } from '@xeprime/prisma';
 import {
-  BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES,
-  BOOKING_REQUEST_REMINDER_MINUTES,
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_REMINDER_REMAINING_MINUTES,
   BOOKING_REQUEST_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -23,7 +21,9 @@ export interface DeadlineSweepResult {
 }
 
 /**
- * Hạn phản hồi 60 phút của yêu cầu thuê: nhắc ở phút 20 và 45, hết hạn ở phút 60.
+ * Hạn phản hồi của yêu cầu thuê — cửa sổ ĐỘNG 15′–240′ theo khoảng cách tới giờ nhận (ADR 0066):
+ * nhắc khi còn 60′ và còn 15′ tới hạn (`BOOKING_REQUEST_REMINDER_REMAINING_MINUTES`), hết hạn ở
+ * đúng `respond_by`.
  *
  * Vì sao ở worker chứ không ở API: không có request nào của người dùng trùng với thời điểm một
  * yêu cầu hết hạn — đó là một sự kiện của ĐỒNG HỒ. Nhét nó vào `setInterval` trong tiến trình
@@ -60,28 +60,49 @@ type ReminderStage = 'first' | 'final';
 /**
  * Một mốc nhắc. `stage` quyết định cột claim và câu chữ; phần còn lại giống hệt nhau nên không
  * tách thành hai hàm gần-như-trùng.
+ *
+ * Mốc tính theo **phần CÒN LẠI** tới `respond_by` — cùng khuôn `remindDueHolds`. Cửa sổ mỗi yêu
+ * cầu dài khác nhau (ADR 0066), nên một mốc "sau 20 phút" có thể bắn sau khi yêu cầu đã chết;
+ * "còn 60 phút" thì tự nằm đúng chỗ.
  */
 async function remind(prisma: PrismaClient, now: Date, stage: ReminderStage): Promise<number> {
-  const elapsedMinutes =
+  const remainingMinutes =
     stage === 'first'
-      ? BOOKING_REQUEST_REMINDER_MINUTES.FIRST
-      : BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
+      ? BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FIRST
+      : BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL;
+  const dueBefore = new Date(now.getTime() + remainingMinutes * MS_PER_MINUTE);
+  const unclaimed =
+    stage === 'first'
+      ? Prisma.sql`first_reminded_at IS NULL`
+      : Prisma.sql`final_reminded_at IS NULL`;
+
   /*
-   * Mốc suy NGƯỢC từ `respond_by`, không xuôi từ `created_at`: `respond_by` là cột có index và
-   * là mốc duy nhất mà cả API lẫn web đều nhìn. Hai cách cho cùng một kết quả với dữ liệu bình
-   * thường, nhưng chỉ cách này còn đúng nếu sau này có yêu cầu được gia hạn.
+   * Cửa sổ của yêu cầu chưa bao giờ dài hơn ngưỡng ⇒ mốc đó không tồn tại với nó: nhắc "còn 60
+   * phút" cho một yêu cầu chỉ có 30 phút là bắn ngay lúc khách vừa gửi. Những dòng đó KHÔNG được
+   * claim — cột `*_reminded_at` là "đã nhắc thật", người trực đọc nó ở hàng đợi vận hành.
+   * `respond_by − created_at` CHÍNH LÀ độ dài cửa sổ (API ghi hai cột cùng một mốc).
+   *
+   * Phép loại nằm TRONG SQL chứ không ở vòng lặp: dòng bị bỏ qua mà không claim thì vẫn đứng
+   * đầu `ORDER BY respond_by LIMIT` ở mọi nhịp sau, và đủ nhiều dòng như vậy sẽ chiếm hết lô —
+   * lời nhắc thật xếp sau không bao giờ được đọc tới. Prisma không tả được `cột − cột > khoảng`,
+   * nên câu chọn id viết tay; phần đọc chi tiết vẫn qua Prisma.
    */
-  const remainingMs = (BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - elapsedMinutes) * MS_PER_MINUTE;
-  const dueBefore = new Date(now.getTime() + remainingMs);
+  const due = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id
+      FROM booking_requests
+     WHERE status = ${BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL}
+       AND respond_by > ${now}
+       AND respond_by <= ${dueBefore}
+       AND ${unclaimed}
+       AND respond_by - created_at > make_interval(mins => ${remainingMinutes}::int)
+     ORDER BY respond_by ASC
+     LIMIT ${BATCH}
+  `;
+  if (due.length === 0) return 0;
 
   const candidates = await prisma.bookingRequest.findMany({
-    where: {
-      status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-      respondBy: { lte: dueBefore, gt: now },
-      ...(stage === 'first' ? { firstRemindedAt: null } : { finalRemindedAt: null }),
-    },
+    where: { id: { in: due.map((r) => r.id) } },
     orderBy: { respondBy: 'asc' },
-    take: BATCH,
     select: {
       id: true,
       tenantId: true,
@@ -113,7 +134,7 @@ async function remind(prisma: PrismaClient, now: Date, stage: ReminderStage): Pr
       title:
         stage === 'first'
           ? `Yêu cầu thuê chờ phản hồi: ${req.customerName}`
-          : `Còn ${BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES} phút để trả lời ${req.customerName}`,
+          : `Còn ${remainingMinutes} phút để trả lời ${req.customerName}`,
       body: req.vehicle.name,
       targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
       targetId: req.id,
@@ -150,6 +171,7 @@ async function expire(prisma: PrismaClient, now: Date): Promise<number> {
       customerName: true,
       customerUserId: true,
       respondBy: true,
+      createdAt: true,
       vehicle: { select: { name: true } },
     },
   });
@@ -196,14 +218,17 @@ async function expire(prisma: PrismaClient, now: Date): Promise<number> {
         after: {
           status: BOOKING_REQUEST_STATUS.EXPIRED,
           respondBy: req.respondBy.toISOString(),
-          windowMinutes: BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+          // Cửa sổ THẬT của yêu cầu này (động từ ADR 0066) — `respond_by − created_at`.
+          windowMinutes: Math.round(
+            (req.respondBy.getTime() - req.createdAt.getTime()) / MS_PER_MINUTE,
+          ),
         },
       });
 
       await notifyTenantMembers(tx, req.tenantId, {
         type: NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED,
         title: `Đã quá hạn phản hồi: ${req.customerName}`,
-        body: `${req.vehicle.name} · yêu cầu đã tự đóng sau ${BOOKING_REQUEST_RESPOND_WINDOW_MINUTES} phút`,
+        body: `${req.vehicle.name} · yêu cầu đã tự đóng vì quá hạn phản hồi`,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
         targetId: req.id,
       });

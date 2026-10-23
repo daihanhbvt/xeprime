@@ -20,8 +20,10 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { tripFinanceBreakdown } from '../booking-trip-view';
 import type { CustomerTripDetail } from '../types';
+import { TripDriverCard } from './TripDriverCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
 import {
   TripColumns,
@@ -124,29 +126,39 @@ export function TripConfirmedView({
           aside={<BookingJourney current="confirmed" hasHoldStage={hold != null} complete />}
         />
       }
+      lead={
+        <TripRequestStatusCard
+          variant="confirmed"
+          tag={t('status.tag')}
+          tone="success"
+          title={t('status.title')}
+          body={t('status.body', { vehicle: trip.vehicle.name, owner: trip.shop.name })}
+        >
+          <a href={`#${checklistId}`} className={styles.guideLink}>
+            {t('status.guide')}
+          </a>
+        </TripRequestStatusCard>
+      }
       main={
         <>
-          <TripRequestStatusCard
-            variant="confirmed"
-            tag={t('status.tag')}
-            tone="success"
-            title={t('status.title')}
-            body={t('status.body', { vehicle: trip.vehicle.name, owner: trip.shop.name })}
-          >
-            <a href={`#${checklistId}`} className={styles.guideLink}>
-              {t('status.guide')}
-            </a>
-          </TripRequestStatusCard>
-
           <TripRequestTripCard trip={trip} data={data} ownerAction={ownerAction} />
+
+          {/* Người sẽ đến đón — chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
+          <TripDriverCard trip={trip} />
 
           <PickupChecklist trip={trip} data={data} anchorId={checklistId} />
 
           <TripRequestRenterCard trip={trip} />
         </>
       }
-      aside={
+      priority={
         <>
+          {/*
+            "Chưa nhận được xe" (ADR 0066, lớp 1) — chặng `ready` là đúng lúc khách cần nó nhất: đã
+            quá giờ hẹn mà chưa ai bàn giao. Ngoài cửa sổ 120′ (do server tính) khối tự im lặng.
+          */}
+          <TripNotReceivedReport trip={trip} />
+
           {/*
             Quay về từ MoMo/VNPAY (ADR 0058) bằng liên kết CŨ `/trips/:id?paymentOrder=` — lượt mở trước
             13/10/2026. Không có tham số thì khối tự im lặng.
@@ -173,7 +185,10 @@ export function TripConfirmedView({
               description={tDetail('directDeposit.body')}
             />
           ) : null}
-
+        </>
+      }
+      aside={
+        <>
           {breakdown ? (
             <BookingReviewCosts
               listing={data.listing}

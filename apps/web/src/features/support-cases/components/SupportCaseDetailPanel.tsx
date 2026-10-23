@@ -4,11 +4,13 @@ import { App, Alert, Button, Checkbox, Descriptions, Input, Skeleton, Tag } from
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
   SUPPORT_CASE_STATUS,
   SUPPORT_CASE_STATUS_META,
   SUPPORT_CASE_STATUS_VALUES,
   SUPPORT_EVENT_VISIBILITY,
   canTransitionSupportCase,
+  type SupportCaseCategory,
   type SupportCaseStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -117,13 +119,18 @@ export function SupportCaseDetailPanel({
     );
   }
 
+  // Case GIỮ tiền của chuyến (tranh chấp, chưa xác nhận bàn giao) chỉ nền tảng đóng/kết luận —
+  // server từ chối `SUPPORT_CASE_PLATFORM_RESOLVE_ONLY`, nên bên còn lại không thấy nút nào.
+  const platformResolveOnly = SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES.includes(
+    row.category as SupportCaseCategory,
+  );
   const allowedTransitions = SUPPORT_CASE_STATUS_VALUES.filter(
     (next) =>
       canTransitionSupportCase(status, next) &&
       // `resolved` đi qua nút Kết luận (bắt buộc có kết luận), không qua nút đổi trạng thái trần.
       next !== SUPPORT_CASE_STATUS.RESOLVED &&
       // Gian hàng và khách chỉ được ĐÓNG case của chính họ; mọi bước xử lý là việc của nền tảng.
-      (isPlatform || next === SUPPORT_CASE_STATUS.CLOSED),
+      (isPlatform || (next === SUPPORT_CASE_STATUS.CLOSED && !platformResolveOnly)),
   );
 
   return (
@@ -140,7 +147,9 @@ export function SupportCaseDetailPanel({
 
       <Descriptions size="small" column={1} bordered>
         <Descriptions.Item label={t('detail.openedBy')}>
-          {row.openedByName} · {domainLabel('supportCaseParty', row.openedByScope, row.openedByScope)}
+          {/* `null` = case do hệ thống mở (worker — ADR 0066), không có người nào bấm nút. */}
+          {row.openedByName ?? t('detail.openedBySystem')} ·{' '}
+          {domainLabel('supportCaseParty', row.openedByScope, row.openedByScope)}
         </Descriptions.Item>
         {row.tenantName ? (
           <Descriptions.Item label={t('detail.tenant')}>{row.tenantName}</Descriptions.Item>

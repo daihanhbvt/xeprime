@@ -48,7 +48,7 @@
     "lead": "Mỗi khoản có một chủ sở hữu, và chúng tôi hiện từng dòng thay vì gộp thành một con số.",
     "hold": {
       "title": "Khoản chuyển online",
-      "desc": "Gồm tiền giữ chỗ, phí dịch vụ và bảo hiểm nếu có. Đây không phải cọc thế chấp khi nhận xe."
+      "desc": "Gồm tiền giữ chỗ, phí đặt xe và bảo hiểm nếu có. Đây không phải cọc thế chấp khi nhận xe."
     },
     "pickup": {
       "title": "Phần trả tại chỗ",

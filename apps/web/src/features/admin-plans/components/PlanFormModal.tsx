@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  ApartmentOutlined,
   AppstoreOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -11,7 +10,6 @@ import {
   FileTextOutlined,
   LikeOutlined,
   NumberOutlined,
-  PercentageOutlined,
   SaveOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -23,14 +21,19 @@ import { App, Button, Collapse, Form, Tag, Tooltip } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import {
   BILLING_MODE,
   OWNER_LITE_VEHICLE_LIMIT,
   PLAN_FEATURE_VALUES,
+  PLAN_VEHICLE_SCOPE,
+  PLAN_VEHICLE_SCOPE_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
   isPlanFeature,
+  planVehicleScopeOf,
+  type PlanVehicleScope,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
@@ -40,13 +43,14 @@ import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { ROUTES } from '@/constants/routes';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { useCreatePlan, useDeletePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
-import { COMMISSION_TRACK_BRANCH_LIMIT, toPlanCode } from '../plan-catalog';
+import { toPlanCode } from '../plan-catalog';
 import type { CreatePlanInput, Plan } from '../types';
 import styles from './PlanFormModal.module.css';
 
@@ -66,6 +70,13 @@ const TERM_FIELDS = [
 
 type TermField = (typeof TERM_FIELDS)[number][0];
 
+/** Thứ tự lựa chọn phạm vi trên form — cùng thứ tự nhóm của bảng giá: xe máy → ô tô → doanh nghiệp. */
+const SCOPE_OPTIONS: readonly PlanVehicleScope[] = [
+  PLAN_VEHICLE_SCOPE.MOTORBIKE,
+  PLAN_VEHICLE_SCOPE.CAR,
+  PLAN_VEHICLE_SCOPE.ALL,
+];
+
 /** Các ô của phần "Cài đặt nâng cao" — lỗi ở đây phải tự mở phần đó ra, không thì không ai thấy. */
 const ADVANCED_FIELDS = ['maxMembers', 'graceDays', 'sortOrder', 'features'] as const;
 const ADVANCED_PANEL = 'advanced';
@@ -77,11 +88,13 @@ const ADVANCED_PANEL = 'advanced';
  *
  * Chế độ thu phí quyết định form là cái gì:
  *
- *   `commission` — **một TUYẾN, không phải một SKU** (ADR 0038 điều 13). Chỉ có tên, mô tả và
- *   % phí dịch vụ. Không bảng giá, không trần, không cờ năng lực: trần của tuyến này là
- *   `OWNER_LITE_VEHICLE_LIMIT` — một quy tắc SẢN PHẨM trong code, nên nó hiện ra ở đây dưới dạng
- *   THÔNG TIN chứ không phải ô nhập. Một ô nhập cho nó là mời admin sửa một con số mà backend
- *   không đọc.
+ *   `commission` — **một TUYẾN cố định, không phải một SKU** (ADR 0038 điều 13). Chỉ sửa được
+ *   tên và mô tả. Không bảng giá, không trần, không cờ năng lực, và KHÔNG có ô % hoa hồng: hoa
+ *   hồng theo chuyến là nấc lũy tiến `owner_commission_tiers` của chính sách phí hiệu lực
+ *   (ADR 0064 điều 3) — `plans.commission_percent` là cột di sản chỉ còn vì CHECK DB, không phép
+ *   tính tiền nào đọc. Trần `OWNER_LITE_VEHICLE_LIMIT` là quy tắc SẢN PHẨM trong code. Cả hai hiện
+ *   ra dưới dạng THẺ THÔNG TIN chỉ-đọc: một ô nhập là mời admin sửa một con số backend không đọc.
+ *   Sửa thì form KHÔNG gửi `commissionPercent` ⇒ server giữ nguyên giá trị đang lưu.
  *
  *   `package` — một BẬC gian hàng: trần xe, trần chi nhánh, và bảng giá bốn kỳ hạn.
  *
@@ -104,7 +117,6 @@ export function PlanFormModal({
   open,
   plan,
   template = null,
-  allowCommission = false,
   onClose,
 }: {
   open: boolean;
@@ -112,11 +124,6 @@ export function PlanFormModal({
   plan: Plan | null;
   /** Tạo mới điền sẵn từ bậc này (nhân bản). Bỏ qua khi `plan` có giá trị. */
   template?: Plan | null;
-  /**
-   * Cho chọn "Hoa hồng theo chuyến" lúc tạo. Danh mục chỉ được có MỘT bậc hoa hồng
-   * (`COMMISSION_PLAN_IS_SINGLETON`) — khi nó đã tồn tại thì lựa chọn đó bị ẩn hẳn.
-   */
-  allowCommission?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations('AdminPlans');
@@ -140,8 +147,7 @@ export function PlanFormModal({
         .defined()
         .integer(t('form.validation.integer'))
         .min(0, t('form.validation.nonNegative'));
-    const money = () =>
-      yup.number().nullable().defined().min(0, t('form.validation.nonNegative'));
+    const money = () => yup.number().nullable().defined().min(0, t('form.validation.nonNegative'));
     return yup.object({
       code: yup
         .string()
@@ -153,19 +159,11 @@ export function PlanFormModal({
       name: yup.string().trim().required(t('form.validation.nameRequired')).max(255),
       description: yup.string().trim().max(200).default(''),
       billingMode: yup.string().oneOf([BILLING_MODE.COMMISSION, BILLING_MODE.PACKAGE]).required(),
-      commissionPercent: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(1)
-        .max(20)
-        .when('billingMode', {
-          is: BILLING_MODE.COMMISSION,
-          then: (s) =>
-            s.test('required', t('form.validation.commissionRequired'), (v) => v != null),
-        }),
+      vehicleScope: yup
+        .string()
+        .oneOf([...PLAN_VEHICLE_SCOPE_VALUES])
+        .required(),
       maxVehicles: int(yup.number()),
-      maxBranches: int(yup.number()),
       maxMembers: int(yup.number()),
       priceM1: money(),
       priceM3: money(),
@@ -189,9 +187,8 @@ export function PlanFormModal({
           name: plan ? plan.name : t('form.copyName', { name: source.name }),
           description: source.description ?? '',
           billingMode: source.billingMode as FormValues['billingMode'],
-          commissionPercent: source.commissionPercent,
+          vehicleScope: planVehicleScopeOf(source.vehicleScope),
           maxVehicles: source.limits.maxVehicles ?? null,
-          maxBranches: source.limits.maxBranches ?? null,
           maxMembers: source.limits.maxMembers ?? null,
           priceM1: termPriceOf(source, 1),
           priceM3: termPriceOf(source, 3),
@@ -217,9 +214,9 @@ export function PlanFormModal({
            * sẵn con đường duy nhất bị server từ chối.
            */
           billingMode: BILLING_MODE.PACKAGE,
-          commissionPercent: null,
+          // Bậc mới mặc định là bậc XE MÁY — làn đầu tiên của bảng giá (ADR 0065). Đổi được tới lúc lưu.
+          vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
           maxVehicles: null,
-          maxBranches: null,
           maxMembers: null,
           priceM1: null,
           priceM3: null,
@@ -254,18 +251,15 @@ export function PlanFormModal({
   };
 
   /*
-   * Chế độ thu phí CHỌN được lúc tạo; lúc sửa nó là sự thật đã rồi — backend từ chối mọi lượt
-   * đổi chiều (`DEFAULT_PLAN_PROTECTED` / `COMMISSION_PLAN_IS_SINGLETON`), nên ô chọn bị khoá và
-   * chỉ còn một lựa chọn để HIỂN THỊ. Lựa chọn hoa hồng chỉ có khi danh mục chưa có bậc đó.
+   * Lúc sửa, chế độ thu phí là sự thật đã rồi — backend từ chối mọi lượt đổi chiều
+   * (`DEFAULT_PLAN_PROTECTED` / `COMMISSION_PLAN_IS_SINGLETON`), nên ô chọn bị khoá và chỉ còn
+   * một lựa chọn để HIỂN THỊ. Lúc tạo chỉ có bậc GIAN HÀNG: tuyến hoa hồng là tuyến cố định do
+   * seed hệ thống dựng (singleton), không phải thứ admin dựng tay.
    */
-  const modeOptions = (
-    plan
-      ? [plan.billingMode]
-      : [
-          BILLING_MODE.PACKAGE,
-          ...(allowCommission && !isDuplicate ? [BILLING_MODE.COMMISSION] : []),
-        ]
-  ).map((mode) => ({ value: mode, label: domainLabel('billingMode', mode) }));
+  const modeOptions = (plan ? [plan.billingMode] : [BILLING_MODE.PACKAGE]).map((mode) => ({
+    value: mode,
+    label: domainLabel('billingMode', mode),
+  }));
 
   const onSubmit = handleSubmit(
     (values) => {
@@ -280,8 +274,8 @@ export function PlanFormModal({
         name: values.name.trim(),
         description: values.description?.trim() || undefined,
         billingMode: values.billingMode,
-        // Tuyến gói: service tự xoá % — không gửi. Tuyến hoa hồng: schema đã bắt buộc có.
-        ...(isPkg ? {} : { commissionPercent: values.commissionPercent as number }),
+        // KHÔNG bao giờ gửi `commissionPercent`: tuyến gói thì service tự xoá, tuyến hoa hồng thì
+        // bỏ trống là giữ nguyên cột di sản đang lưu (hoa hồng thật ở chính sách phí — ADR 0064).
         /*
          * Tuyến hoa hồng KHÔNG gửi `limits` — bỏ trống là giữ nguyên giá trị đang lưu
          * (`updatePlan` merge trên hình đang có). Form này cố ý không có ô cho `graceDays`,
@@ -292,7 +286,6 @@ export function PlanFormModal({
           ? {
               limits: {
                 maxVehicles: values.maxVehicles,
-                maxBranches: values.maxBranches,
                 maxMembers: values.maxMembers,
                 // Bậc tư vấn không có bảng giá (ADR 0041 điều 5) — service cũng xoá, nhưng gửi
                 // đúng ngay từ đây thì cái admin thấy sau khi lưu bằng cái họ vừa bấm.
@@ -322,7 +315,21 @@ export function PlanFormModal({
         onError: (err: unknown) => message.error(errorMessage(err)),
       };
       if (plan) update.mutate({ id: plan.id, ...shared }, done);
-      else create.mutate({ code: values.code.trim(), ...shared }, done);
+      else
+        create.mutate(
+          {
+            code: values.code.trim(),
+            /*
+             * Phạm vi chỉ gửi lúc TẠO (`CreatePlanDto.vehicleScope`) — sửa thì server không nhận nó.
+             * Tuyến hoa hồng luôn `all` (CHECK `plans_commission_scope_all`).
+             */
+            vehicleScope: isPkg
+              ? (values.vehicleScope as PlanVehicleScope)
+              : PLAN_VEHICLE_SCOPE.ALL,
+            ...shared,
+          },
+          done,
+        );
     },
     (errors) => {
       if (ADVANCED_FIELDS.some((field) => errors[field])) setAdvancedOpen(true);
@@ -449,6 +456,31 @@ export function PlanFormModal({
               disabled={modeOptions.length < 2}
               required
             />
+            {/*
+              PHẠM VI loại xe của bậc (ADR 0065 điều 1) — chọn LÚC TẠO, khoá khi sửa: thuê bao đã chụp
+              phạm vi lên dòng của nó, và đổi phạm vi một bậc đang bán là đổi thứ khách đã mua.
+              Tuyến hoa hồng không có ô này — nó luôn phủ mọi loại xe.
+            */}
+            {isPackage ? (
+              <div className={styles.hinted}>
+                <SelectField
+                  control={control}
+                  name="vehicleScope"
+                  label={<FieldLabel icon={<CarOutlined />}>{t('form.vehicleScope')}</FieldLabel>}
+                  options={SCOPE_OPTIONS.map((scope) => ({
+                    value: scope,
+                    label: t(`form.scopeOption.${scope}`),
+                  }))}
+                  disabled={isEdit}
+                  required
+                />
+                <InfoHint
+                  className={styles.hintCorner}
+                  label={t('form.vehicleScopeHintLabel')}
+                  content={t('form.vehicleScopeHint')}
+                />
+              </div>
+            ) : null}
             {!isEdit ? (
               <div className={styles.hinted}>
                 <TextField
@@ -470,92 +502,47 @@ export function PlanFormModal({
               <TextAreaField
                 control={control}
                 name="description"
-                label={
-                  <FieldLabel icon={<FileTextOutlined />}>{t('form.description')}</FieldLabel>
-                }
+                label={<FieldLabel icon={<FileTextOutlined />}>{t('form.description')}</FieldLabel>}
                 placeholder={t('form.descriptionPlaceholder')}
                 rows={3}
                 maxLength={200}
               />
             </div>
 
-            {!isPackage ? (
+            {isPackage ? (
               <div className={styles.hinted}>
                 <NumberField
                   control={control}
-                  name="commissionPercent"
-                  label={
-                    <FieldLabel icon={<PercentageOutlined />}>
-                      {t('form.commissionPercent')}
-                    </FieldLabel>
-                  }
-                  percent
-                  min={1}
-                  max={20}
-                  precision={2}
-                  required
+                  name="maxVehicles"
+                  label={<FieldLabel icon={<CarOutlined />}>{t('form.maxVehicles')}</FieldLabel>}
+                  min={0}
+                  addonAfter={t('form.vehiclesUnit')}
+                  placeholder={t('form.unlimitedPlaceholder')}
                 />
-                <InfoHint
-                  className={styles.hintCorner}
-                  label={t('form.commissionPercentHintLabel')}
-                  content={t('form.commissionPercentHint')}
-                />
+                {unlimitedHint}
               </div>
-            ) : (
-              <>
-                <div className={styles.hinted}>
-                  <NumberField
-                    control={control}
-                    name="maxVehicles"
-                    label={<FieldLabel icon={<CarOutlined />}>{t('form.maxVehicles')}</FieldLabel>}
-                    min={0}
-                    addonAfter={t('form.vehiclesUnit')}
-                    placeholder={t('form.unlimitedPlaceholder')}
-                  />
-                  {unlimitedHint}
-                </div>
-                <div className={styles.hinted}>
-                  <NumberField
-                    control={control}
-                    name="maxBranches"
-                    label={
-                      <FieldLabel icon={<ApartmentOutlined />}>{t('form.maxBranches')}</FieldLabel>
-                    }
-                    min={0}
-                    addonAfter={t('form.branchesUnit')}
-                    placeholder={t('form.unlimitedPlaceholder')}
-                  />
-                  {unlimitedHint}
-                </div>
-              </>
-            )}
+            ) : null}
           </div>
 
           {!isPackage ? (
             /*
-              Trần của tuyến hoa hồng là QUY TẮC trong code (`OWNER_LITE_VEHICLE_LIMIT`), không
-              phải dữ liệu của bậc — `vehicleQuotaFor` nhận ra tuyến này trước khi đọc tới
-              `limits`. Hiện nó ra để admin không đi tìm, nhưng KHÔNG cho sửa.
+              Thẻ THÔNG TIN chỉ-đọc của tuyến cố định. Trần là QUY TẮC trong code
+              (`OWNER_LITE_VEHICLE_LIMIT` — `vehicleQuotaFor` nhận ra tuyến này trước khi đọc tới
+              `limits`); hoa hồng theo chuyến là nấc của chính sách phí hiệu lực. Không con số nào
+              ở đây sửa được — chỗ sửa hoa hồng là trang Chính sách phí, có phiên bản (ADR 0024).
             */
             <section className={styles.section}>
-              <SectionHeader
-                icon={<CarOutlined />}
-                title={t('form.ownerLiteTitle')}
-                hint={
-                  <InfoHint label={t('form.ownerLiteHintLabel')} content={t('form.ownerLiteHint')} />
-                }
-              />
+              <SectionHeader icon={<CarOutlined />} title={t('form.defaultTrackTitle')} />
+              <p className={styles.trackInfo}>{t('form.defaultTrackInfo')}</p>
               <dl className={styles.readonlyGrid}>
                 <div>
                   <dt>{t('form.maxVehicles')}</dt>
                   <dd>{t('form.vehiclesValue', { count: OWNER_LITE_VEHICLE_LIMIT })}</dd>
                 </div>
                 <div>
-                  <dt>{t('form.maxBranches')}</dt>
+                  <dt>{t('form.tripCommission')}</dt>
                   <dd>
-                    {COMMISSION_TRACK_BRANCH_LIMIT == null
-                      ? t('form.unlimitedPlaceholder')
-                      : t('form.branchesValue', { count: COMMISSION_TRACK_BRANCH_LIMIT })}
+                    <Link href={ROUTES.ADMIN.FEE_POLICIES}>{t('form.openFeePolicies')}</Link>
                   </dd>
                 </div>
               </dl>
@@ -569,7 +556,10 @@ export function PlanFormModal({
                     name="salesOnly"
                     label={t('form.salesOnly')}
                     labelExtra={
-                      <InfoHint label={t('form.salesOnlyHintLabel')} content={t('form.salesOnlyHint')} />
+                      <InfoHint
+                        label={t('form.salesOnlyHintLabel')}
+                        content={t('form.salesOnlyHint')}
+                      />
                     }
                   />
                 </OptionRow>
@@ -595,7 +585,10 @@ export function PlanFormModal({
                     icon={<CalendarOutlined />}
                     title={t('form.sectionPricing')}
                     hint={
-                      <InfoHint label={t('form.pricingHintLabel')} content={t('form.pricingHint')} />
+                      <InfoHint
+                        label={t('form.pricingHintLabel')}
+                        content={t('form.pricingHint')}
+                      />
                     }
                   />
                   {/* Nhãn kỳ hạn nằm BÊN TRÁI ô giá — ngữ cảnh bố cục ngang chỉ cho khối này. */}
@@ -655,7 +648,9 @@ export function PlanFormModal({
                             control={control}
                             name="maxMembers"
                             label={
-                              <FieldLabel icon={<TeamOutlined />}>{t('form.maxMembers')}</FieldLabel>
+                              <FieldLabel icon={<TeamOutlined />}>
+                                {t('form.maxMembers')}
+                              </FieldLabel>
                             }
                             min={0}
                             placeholder={t('form.unlimitedPlaceholder')}
@@ -666,7 +661,9 @@ export function PlanFormModal({
                           control={control}
                           name="graceDays"
                           label={
-                            <FieldLabel icon={<CalendarOutlined />}>{t('form.graceDays')}</FieldLabel>
+                            <FieldLabel icon={<CalendarOutlined />}>
+                              {t('form.graceDays')}
+                            </FieldLabel>
                           }
                           min={0}
                           addonAfter={t('form.graceDaysUnit')}
@@ -690,7 +687,9 @@ export function PlanFormModal({
                             control={control}
                             name="features"
                             label={
-                              <FieldLabel icon={<AppstoreOutlined />}>{t('form.features')}</FieldLabel>
+                              <FieldLabel icon={<AppstoreOutlined />}>
+                                {t('form.features')}
+                              </FieldLabel>
                             }
                             options={PLAN_FEATURE_VALUES.map((feature) => ({
                               value: feature,
@@ -748,7 +747,15 @@ function FieldLabel({ icon, children }: { icon: ReactNode; children: ReactNode }
   );
 }
 
-function SectionHeader({ icon, title, hint }: { icon: ReactNode; title: string; hint: ReactNode }) {
+function SectionHeader({
+  icon,
+  title,
+  hint = null,
+}: {
+  icon: ReactNode;
+  title: string;
+  hint?: ReactNode;
+}) {
   return (
     <div className={styles.sectionHeader}>
       <span className={styles.sectionIcon} aria-hidden="true">

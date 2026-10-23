@@ -90,14 +90,15 @@ export function ShopQuickInfoCard({
    * (`shopHighlightOf`). Để trống chỗ này với gian hàng chưa nổi bật làm thẻ trông như thiếu mất
    * một phần, mà mọi gian hàng đều có ít nhất một điều đúng để nói.
    */
-  const highlight = variant !== 'compact'
-    ? shopHighlightOf({
-        metrics,
-        ratingAvg,
-        ratingCount: shop.ratingCount,
-        completedTripCount: shop.completedTripCount,
-      })
-    : null;
+  const highlight =
+    variant !== 'compact'
+      ? shopHighlightOf({
+          metrics,
+          ratingAvg,
+          ratingCount: shop.ratingCount,
+          completedTripCount: shop.completedTripCount,
+        })
+      : null;
 
   if (variant === 'inline') {
     return (
@@ -113,12 +114,22 @@ export function ShopQuickInfoCard({
                 )}
               </span>
               {shop.verified ? (
-                <VerifiedMark label={t('header.verified')} size={16} className={styles.verifiedBadgeInline} />
+                <VerifiedMark
+                  label={t('header.verified')}
+                  size={16}
+                  className={styles.verifiedBadgeInline}
+                />
               ) : null}
             </div>
 
             <div className={styles.body}>
-              <span className={styles.shopTypeLabel}>Gian hàng</span>
+              {/*
+                Hai tuyến trên một chợ (ADR 0028): cùng tín hiệu với thẻ xe ở trang kết quả — đã xác
+                minh là gian hàng, còn lại là chủ xe cá nhân.
+              */}
+              <span className={styles.shopTypeLabel}>
+                {shop.verified ? t('card.type.shop') : t('card.type.owner')}
+              </span>
               <div className={styles.nameRow}>
                 <Link href={shopPath.detail(shop.slug)} className={styles.name}>
                   {shop.name}
@@ -130,14 +141,23 @@ export function ShopQuickInfoCard({
                     <span className={styles.rating}>
                       <StarFilled className={styles.star} aria-hidden="true" />
                       {fmt.rating(ratingAvg as number)}
-                      {shop.ratingCount ? <span className={styles.ratingCount}> ({shop.ratingCount})</span> : ''}
+                      {shop.ratingCount ? (
+                        <span className={styles.ratingCount}> ({shop.ratingCount})</span>
+                      ) : (
+                        ''
+                      )}
                     </span>
                   ) : null}
-                  {hasRating && hasTrips ? <span className={styles.divider} aria-hidden="true" /> : null}
+                  {hasRating && hasTrips ? (
+                    <span className={styles.divider} aria-hidden="true" />
+                  ) : null}
                   {hasTrips && trips ? (
                     <span className={styles.trips}>
                       <TripsIcon />
-                      {t('card.trips', { count: trips.display, plus: trips.approximate ? '+' : '' })}
+                      {t('card.trips', {
+                        count: trips.display,
+                        plus: trips.approximate ? '+' : '',
+                      })}
                     </span>
                   ) : null}
                 </div>
@@ -166,7 +186,10 @@ export function ShopQuickInfoCard({
   return (
     <div className={cx(styles.card, variant === 'compact' && styles.compact, className)}>
       <div className={styles.row}>
-        <span className={cx(styles.avatar, variant === 'compact' && styles.avatarSm)} aria-hidden="true">
+        <span
+          className={cx(styles.avatar, variant === 'compact' && styles.avatarSm)}
+          aria-hidden="true"
+        >
           {shop.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo gian hàng từ R2, host theo môi trường
             <img src={shop.logoUrl} alt="" className={styles.avatarImg} />
@@ -202,7 +225,9 @@ export function ShopQuickInfoCard({
                   {fmt.rating(ratingAvg as number)}
                 </span>
               ) : null}
-              {hasRating && hasTrips ? <span className={styles.divider} aria-hidden="true" /> : null}
+              {hasRating && hasTrips ? (
+                <span className={styles.divider} aria-hidden="true" />
+              ) : null}
               {hasTrips && trips ? (
                 <span className={styles.trips}>
                   {t('card.trips', { count: trips.display, plus: trips.approximate ? '+' : '' })}
@@ -211,7 +236,9 @@ export function ShopQuickInfoCard({
             </div>
           ) : null}
         </div>
-        {variant === 'compact' && actions ? <div className={styles.inlineActions}>{actions}</div> : null}
+        {variant === 'compact' && actions ? (
+          <div className={styles.inlineActions}>{actions}</div>
+        ) : null}
       </div>
 
       {variant === 'full' ? <HostMetrics metrics={metrics} className={styles.metrics} /> : null}

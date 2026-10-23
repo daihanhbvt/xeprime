@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   absoluteMoney,
+  applyDiscountPercent,
   compactMoneyParts,
   formatMoneyVnd,
   formatMoneyVndVi,
@@ -8,8 +9,10 @@ import {
   normalizeNumberInput,
   parseNumberInput,
   isNegativeMoney,
+  isPositiveMoney,
   isZeroMoney,
   subtractMoney,
+  sumMoney,
   wholeUnits,
   type MoneySeparators,
 } from './money';
@@ -54,12 +57,46 @@ describe('subtractMoney — số nguyên xu, không float', () => {
   });
 });
 
+describe('sumMoney — tổng trên bigint xu', () => {
+  it('cộng nhiều khoản, kể cả số lẻ và số lớn', () => {
+    expect(sumMoney(['199000', '900000'])).toBe('1099000');
+    expect(sumMoney(['0.10', '0.20'])).toBe('0.30');
+    expect(sumMoney(['9007199254740993', '1'])).toBe('9007199254740994');
+  });
+
+  it('rỗng/null coi như 0, danh sách rỗng ra 0', () => {
+    expect(sumMoney([])).toBe('0');
+    expect(sumMoney(['500000', null, undefined, ''])).toBe('500000');
+    expect(sumMoney(['-200', '100'])).toBe('-100');
+  });
+});
+
 describe('isNegativeMoney · absoluteMoney · isZeroMoney · wholeUnits', () => {
   it('nhận đúng số âm', () => {
     expect(isNegativeMoney('-1')).toBe(true);
     expect(isNegativeMoney('-0.01')).toBe(true);
     expect(isNegativeMoney('0')).toBe(false);
     expect(isNegativeMoney(null)).toBe(false);
+  });
+
+  it('nhận đúng số dương trên CHUỖI, không qua Number', () => {
+    for (const positive of ['1', '0.01', '20000.00', '99999999999999.99', ' 5 ']) {
+      expect(isPositiveMoney(positive)).toBe(true);
+    }
+    for (const notPositive of [
+      '0',
+      '0.00',
+      '-0',
+      '-1',
+      '-0.01',
+      '',
+      null,
+      undefined,
+      'abc',
+      '1e3',
+    ]) {
+      expect(isPositiveMoney(notPositive)).toBe(false);
+    }
   });
 
   it('trị tuyệt đối bỏ dấu, giữ null cho giá trị vắng', () => {
@@ -258,5 +295,27 @@ describe('formatMoneyVndVi — tiền trong câu chữ server sinh', () => {
   it('rỗng/null ra chuỗi rỗng — câu chữ tự lo phần còn lại', () => {
     expect(formatMoneyVndVi(null)).toBe('');
     expect(formatMoneyVndVi(undefined)).toBe('');
+  });
+});
+
+describe('applyDiscountPercent — khoản giảm làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
+  it('10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ — khớp báo giá server', () => {
+    expect(applyDiscountPercent('652000', 10)).toBe('586000');
+  });
+
+  it('khoản giảm đã tròn thì giữ nguyên, không nhảy thêm một bước', () => {
+    expect(applyDiscountPercent('650000', 10)).toBe('585000');
+    expect(applyDiscountPercent('1000000', 15)).toBe('850000');
+  });
+
+  it('giảm 100% kẹp về 0, không ra số âm', () => {
+    expect(applyDiscountPercent('652000', 100)).toBe('0');
+  });
+
+  it('không có % hợp lệ ⇒ giữ nguyên giá; giá vắng ⇒ null', () => {
+    expect(applyDiscountPercent('652000', 0)).toBe('652000');
+    expect(applyDiscountPercent('652000', null)).toBe('652000');
+    expect(applyDiscountPercent('652000', 120)).toBe('652000');
+    expect(applyDiscountPercent(null, 10)).toBeNull();
   });
 });

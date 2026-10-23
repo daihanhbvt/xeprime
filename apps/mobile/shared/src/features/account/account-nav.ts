@@ -74,15 +74,6 @@ const PROFILE: AccountNavItem = {
   target: NAV_TARGET.TAB,
 };
 
-/** Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057). */
-const DOCUMENTS: AccountNavItem = {
-  key: 'documents',
-  labelKey: 'account.documents',
-  href: ROUTES.account.documents(),
-  icon: 'id-card-outline',
-  target: NAV_TARGET.SCREEN,
-};
-
 const TRIPS: AccountNavItem = {
   key: 'trips',
   labelKey: 'account.trips',
@@ -157,11 +148,11 @@ const BECOME_OWNER: AccountNavItem = {
   target: NAV_TARGET.SCREEN,
 };
 
-/** Menu tài khoản KHÁCH — cùng mười mục, cùng thứ tự với `ACCOUNT_NAV` bên web. */
+/** Menu tài khoản KHÁCH — cùng thứ tự với `ACCOUNT_NAV` bên web. */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
+  // Giấy tờ & Xác minh nằm TRONG tab Tài khoản, ngay dưới hồ sơ (design 22/10/2026) — không còn
+  // là mục riêng, cùng cách với web.
   PROFILE,
-  // Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057).
-  DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
   DRIVING,

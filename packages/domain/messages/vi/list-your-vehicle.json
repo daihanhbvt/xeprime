@@ -272,6 +272,7 @@
     "deliveryFeeTypeError": "Phí giao xe phải là số",
     "deliveryFeeInteger": "Phí giao xe phải là số nguyên",
     "deliveryFeeMin": "Phí giao xe không được âm",
+    "deliveryFeeThousandStep": "Phí giao xe phải là bội số 1.000đ",
     "mileageRequired": "Nhập số km tối đa trong một ngày",
     "mileageInteger": "Số km phải là số nguyên",
     "mileageMin": "Hạn mức tối thiểu là 50 km/ngày",

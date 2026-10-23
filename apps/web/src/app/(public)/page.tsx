@@ -20,7 +20,8 @@ import { AppBanner } from '@/features/marketplace/components/AppBanner';
 import { BANNER_PLACEMENT, CATALOG_TYPE } from '@xeprime/types';
 import { cx } from '@/lib/cx';
 import styles from './page.module.css';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { resolveAppLocale } from '@/i18n/config';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Marketplace.meta.home');
@@ -51,7 +52,7 @@ export default async function MarketplacePage() {
   const [banners, promoBanners, catalog] = await Promise.all([
     fetchBannersServer(BANNER_PLACEMENT.HERO),
     fetchBannersServer(BANNER_PLACEMENT.PROMO),
-    fetchCatalogServer(),
+    fetchCatalogServer(resolveAppLocale(await getLocale())),
   ]);
   const showcaseTypes = homeShowcaseBodyTypes(catalog[CATALOG_TYPE.BODY_TYPE]);
 

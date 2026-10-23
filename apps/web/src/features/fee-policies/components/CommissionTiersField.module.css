@@ -1,0 +1,133 @@
+/* Bảng nấc hoa hồng lũy tiến — cùng dáng bảng mốc giao xe của chính sách thuê. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  margin-bottom: var(--xp-space-md);
+}
+
+.table {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(80px, 0.8fr) minmax(120px, 1fr) 88px;
+  align-items: center;
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.row {
+  align-items: start;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.row > * {
+  min-width: 0;
+}
+
+/* Nhãn từng ô vẫn có cho trình đọc màn hình; hàng tiêu đề lo phần nhãn nhìn thấy. */
+.row :global(.ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.row :global(.ant-form-item) {
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.row :global(.ant-form-item-row) {
+  display: block;
+}
+
+.fixedDay,
+.toDay {
+  display: flex;
+  align-items: center;
+  min-height: var(--xp-control-height);
+  color: var(--xp-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fixedDay {
+  color: var(--xp-color-text);
+}
+
+.actionHead {
+  text-align: right;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.error {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.previewTitle {
+  color: var(--xp-color-text-secondary);
+}
+
+.previewResult {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.previewSegments,
+.previewMuted {
+  color: var(--xp-color-text-secondary);
+}
+
+@media (max-width: 575px) {
+  .head,
+  .row {
+    grid-template-columns: minmax(72px, 1fr) minmax(56px, 0.7fr) minmax(96px, 1fr) 40px;
+    padding: var(--xp-space-sm);
+    gap: var(--xp-space-sm);
+  }
+
+  .deleteText {
+    display: none;
+  }
+}

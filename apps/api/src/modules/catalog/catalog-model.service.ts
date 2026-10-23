@@ -256,16 +256,20 @@ export class CatalogModelService {
     const current = await this.load(id);
     // Kiểm trên trạng thái SAU khi gộp: đổi nguồn năng lượng mà giữ hộp số cũ phải bị bắt, dù
     // request không gửi lại `transmissions`.
+    // Trường không gửi là `undefined` trên instance DTO (ValidationPipe `transform`) — so `!== undefined`,
+    // không dùng `'x' in dto` (luôn đúng), nếu không một lượt sửa thiếu trường sẽ xoá trắng chúng.
     const spec = this.validateSpec(current.vehicleType, {
       motorbikeCategory:
-        'motorbikeCategory' in dto ? (dto.motorbikeCategory ?? null) : current.motorbikeCategory,
+        dto.motorbikeCategory !== undefined
+          ? (dto.motorbikeCategory ?? null)
+          : current.motorbikeCategory,
       seatCounts:
         dto.seatCounts !== undefined ? uniqueSortedNumbers(dto.seatCounts) : current.seatCounts,
       fuelTypes: dto.fuelTypes !== undefined ? uniqueStrings(dto.fuelTypes) : current.fuelTypes,
       transmissions:
         dto.transmissions !== undefined ? uniqueStrings(dto.transmissions) : current.transmissions,
-      yearFrom: 'yearFrom' in dto ? (dto.yearFrom ?? null) : current.yearFrom,
-      yearTo: 'yearTo' in dto ? (dto.yearTo ?? null) : current.yearTo,
+      yearFrom: dto.yearFrom !== undefined ? (dto.yearFrom ?? null) : current.yearFrom,
+      yearTo: dto.yearTo !== undefined ? (dto.yearTo ?? null) : current.yearTo,
     });
 
     const label = dto.label?.trim();
@@ -276,7 +280,8 @@ export class CatalogModelService {
      * mỗi lần lưu thì bật/tắt một mẫu cũng biến nó thành "vừa kiểm tra" — xoá mất thứ duy nhất
      * nói được dữ liệu này cũ tới đâu.
      */
-    const nextSourceUrl = 'sourceUrl' in dto ? dto.sourceUrl?.trim() || null : current.sourceUrl;
+    const nextSourceUrl =
+      dto.sourceUrl !== undefined ? dto.sourceUrl?.trim() || null : current.sourceUrl;
     const sourceChanged = nextSourceUrl !== current.sourceUrl;
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -286,7 +291,7 @@ export class CatalogModelService {
           ...(label ? { label } : {}),
           ...(dto.marketStatus !== undefined ? { marketStatus: dto.marketStatus } : {}),
           ...spec,
-          ...('engineDisplacementCc' in dto
+          ...(dto.engineDisplacementCc !== undefined
             ? { engineDisplacementCc: dto.engineDisplacementCc ?? null }
             : {}),
           ...(sourceChanged

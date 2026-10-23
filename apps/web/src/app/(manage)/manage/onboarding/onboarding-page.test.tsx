@@ -41,22 +41,28 @@ vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => currentUser }
 
 /**
  * Cả nhánh hook của gói được thay một lần: trang và `PackageShopCheckout` cùng gọi
- * `usePendingInvoice` (chung query key, chung cache), nên mock ở tầng hook giữ cho hai chỗ luôn
+ * `usePendingInvoices` (chung query key, chung cache), nên mock ở tầng hook giữ cho hai chỗ luôn
  * thấy CÙNG một câu trả lời — đúng như TanStack Query làm thật.
  */
 const subscription = vi.hoisted(() => ({
-  pending: { data: null as unknown, isLoading: false, isError: false, refetch: vi.fn() },
+  pending: { data: [] as unknown[], isLoading: false, isError: false, refetch: vi.fn() },
   plans: {
     data: [] as unknown[],
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
   },
-  purchase: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
+  purchase: {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+  },
   paymentInfo: { data: { configured: false } as unknown },
 }));
 vi.mock('@/features/subscription/hooks/use-subscription', () => ({
-  usePendingInvoice: () => subscription.pending,
+  usePendingInvoices: () => subscription.pending,
   useTenantPlans: () => subscription.plans,
   usePurchaseSubscription: () => subscription.purchase,
   usePaymentInfo: () => subscription.paymentInfo,
@@ -68,6 +74,7 @@ const PLAN = {
   id: 'PLAN1',
   name: 'Gói cơ bản',
   billingMode: BILLING_MODE.PACKAGE,
+  vehicleScope: 'motorbike',
   limits: {
     maxVehicles: 3,
     maxBranches: 1,
@@ -84,7 +91,8 @@ const INVOICE = {
   id: 'INV1',
   code: 'XPGABC1234',
   planId: 'plan-basic',
-  planCode: 'shop-basic',
+  planCode: 'moto_5',
+  vehicleScope: 'motorbike',
   termMonths: 3,
   quota: { maxVehicles: 3, maxBranches: 1, maxMembers: null },
   status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
@@ -127,14 +135,16 @@ function renderPage() {
 
 beforeEach(() => {
   router.replace.mockReset();
+  router.push.mockReset();
   search.value = '';
-  subscription.pending.data = null;
+  subscription.pending.data = [];
   subscription.pending.isLoading = false;
   subscription.pending.isError = false;
   subscription.plans.data = [PLAN];
   subscription.plans.isLoading = false;
   subscription.plans.isError = false;
   subscription.purchase.mutate.mockReset();
+  subscription.purchase.mutateAsync.mockReset();
   subscription.purchase.isError = false;
 });
 
@@ -186,9 +196,9 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
     renderPage();
 
     // Bảng giá BẬC là bước đầu; kỳ hạn chỉ mở ra sau khi chọn bậc (ADR 0041).
-    expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
-    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
+    expect(screen.getByText('Tối đa 3 xe máy')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ })).toBeTruthy();
     expect(screen.queryByText(/^2$/)).toBeTruthy();
   });
@@ -202,7 +212,7 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
 
     const cta = screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ });
     expect(cta.hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText('Chọn kỳ hạn để tạo hoá đơn.')).toBeTruthy();
+    expect(screen.getByText(/Chọn ít nhất một gói \(xe máy hoặc ô tô\)/)).toBeTruthy();
   });
 
   /**
@@ -210,7 +220,7 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
    * mua gói nào mời người dùng tạo mã thứ hai cho cùng một khoản.
    */
   it('CÓ hoá đơn chờ: hiện lại đúng mã + trạng thái chờ, không hiện bộ chọn gói', () => {
-    subscription.pending.data = INVOICE;
+    subscription.pending.data = [INVOICE];
     renderPage();
 
     expect(screen.getByText('XPGABC1234')).toBeTruthy();
@@ -224,16 +234,84 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
    * thanh toán" vì đã có tiền về là mở Manage cho một khoản chưa đủ.
    */
   it('chuyển THIẾU: vẫn ở màn thanh toán, nói rõ còn thiếu, KHÔNG điều hướng', () => {
-    subscription.pending.data = {
-      ...INVOICE,
-      status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
-      paidAmount: '100000',
-    };
+    subscription.pending.data = [
+      {
+        ...INVOICE,
+        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        paidAmount: '100000',
+      },
+    ];
     renderPage();
 
     expect(screen.getByText(/Đã nhận một phần/)).toBeTruthy();
     expect(screen.getByText('XPGABC1234')).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('Bước 2 — gói theo loại xe (ADR 0065)', () => {
+  const CAR_PLAN = { ...PLAN, id: 'PLAN-CAR', name: 'Ô tô 5 xe', vehicleScope: 'car' };
+  const ENTERPRISE = {
+    ...PLAN,
+    id: 'PLAN-E',
+    name: 'Gói doanh nghiệp',
+    vehicleScope: 'all',
+    limits: { ...PLAN.limits, maxVehicles: null, termPrices: [], salesOnly: true },
+  };
+
+  beforeEach(() => {
+    signedIn({ onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING, billingMode: null });
+    subscription.plans.data = [PLAN, CAR_PLAN, ENTERPRISE];
+  });
+
+  function pick(lane: string) {
+    const group = screen.getByRole('radiogroup', { name: lane });
+    fireEvent.click(group.querySelector('[role="radio"]') as HTMLElement);
+    const terms = screen.getAllByRole('radiogroup', { name: 'Chọn thời hạn' });
+    fireEvent.click(terms[terms.length - 1]!.querySelector('[role="radio"]') as HTMLElement);
+  }
+
+  it('hai làn + thẻ doanh nghiệp "Liên hệ tư vấn" — doanh nghiệp không mua trực tiếp được', () => {
+    renderPage();
+    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Liên hệ tư vấn' })).toBeTruthy();
+  });
+
+  it('chỉ chọn MỘT làn ⇒ một hoá đơn, sang thẳng trang thanh toán của nó', async () => {
+    subscription.purchase.mutateAsync.mockResolvedValue({ ...INVOICE, id: 'INV-NEW' });
+    renderPage();
+    pick('Gói ô tô');
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/manage/payment/INV-NEW'));
+    expect(subscription.purchase.mutateAsync).toHaveBeenCalledWith({
+      planId: 'PLAN-CAR',
+      termMonths: 3,
+    });
+  });
+
+  it('chọn CẢ HAI làn ⇒ hai hoá đơn tạo lần lượt, ở lại trang để trả từng mã', async () => {
+    subscription.purchase.mutateAsync
+      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
+      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-C', vehicleScope: 'car' });
+    renderPage();
+    pick('Gói xe máy');
+    pick('Gói ô tô');
+    expect(screen.getByText(/Sẽ tạo 2 hoá đơn/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ }));
+
+    await waitFor(() => expect(subscription.purchase.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('đã có hoá đơn xe máy chờ: lối thêm gói ô tô, KHÔNG mời mua lại xe máy', () => {
+    subscription.pending.data = [INVOICE];
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm gói ô tô' }));
+    expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();
+    expect(screen.queryByRole('radiogroup', { name: 'Gói xe máy' })).toBeNull();
   });
 });
 
@@ -270,10 +348,10 @@ describe('Thanh toán xong', () => {
       onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
       billingMode: null,
     });
-    subscription.pending.data = INVOICE;
+    subscription.pending.data = [INVOICE];
     const view = renderPage();
 
-    subscription.pending.data = null;
+    subscription.pending.data = [];
     view.rerender(
       <App>
         <OwnerOnboardingPage />
@@ -282,7 +360,7 @@ describe('Thanh toán xong', () => {
 
     // Vẫn đứng ở bước 2 (bộ chọn gói hiện lại vì hoá đơn đã rời danh sách chờ), chưa đi đâu cả.
     await waitFor(() =>
-      expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy(),
+      expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy(),
     );
     expect(router.replace).not.toHaveBeenCalled();
   });

@@ -14,11 +14,16 @@ import {
 } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import { TAX_WITHHOLDING_STATUS, TAX_WITHHOLDING_STATUS_META } from '@xeprime/types';
+import {
+  TAX_CATEGORY,
+  TAX_WITHHOLDING_STATUS,
+  TAX_WITHHOLDING_STATUS_META,
+} from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { isPositiveMoney, isZeroMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -31,12 +36,13 @@ import {
   useTaxRows,
 } from '../hooks/use-tax';
 import type { TaxRow } from '../types';
+import { TaxAmount, TaxSplitAmount } from './TaxSplitAmount';
 
 import styles from './TaxPeriodPanel.module.css';
 
 /** Kỳ thuế là `YYYY-MM` — DatePicker ở chế độ tháng dùng đúng định dạng đó. */
 const PERIOD_FORMAT = 'YYYY-MM';
-const MIN_TABLE_WIDTH = 1100;
+const MIN_TABLE_WIDTH = 1280;
 
 interface TaxUrlFilters {
   /** Kỳ đang xem; vắng = kỳ HIỆN HÀNG. Kỳ tương lai hay giá trị rác bị bỏ qua. */
@@ -110,10 +116,20 @@ export function TaxPeriodPanel() {
         render: (row) => (
           <div>
             <p>
-              {row.entityType
-                ? domainLabel('sellerEntityType', row.entityType, t('unknownEntity'))
-                : t('unknownEntity')}
+              {row.entityType === 'unknown'
+                ? t('unknownEntity')
+                : domainLabel('sellerEntityType', row.entityType, t('unknownEntity'))}
             </p>
+            {/*
+              Loại KHAI và chủ thể ÁP THUẾ khác nhau là bình thường (chưa có hồ sơ, doanh nghiệp
+              chưa xác minh ⇒ khấu trừ như cá nhân — ADR 0068 điều 2). Nói rõ để người làm tờ khai
+              không tưởng sổ áp nhầm mức.
+            */}
+            {row.taxSubjectType && row.taxSubjectType !== row.entityType ? (
+              <p className={styles.muted}>
+                {t('withheldAs', { entity: domainLabel('sellerEntityType', row.taxSubjectType) })}
+              </p>
+            ) : null}
             <p className={styles.muted}>{row.taxCode ?? '—'}</p>
           </div>
         ),
@@ -124,19 +140,39 @@ export function TaxPeriodPanel() {
         render: (row) => (
           <div>
             <p>{fmt.money(row.taxableBase)}</p>
-            <p className={styles.muted}>{t('percentOf', { percent: row.percent })}</p>
+            <p className={styles.muted}>
+              {/* Cặp tỷ lệ GTGT/TNCN + nhóm NĐ 117 (ADR 0068); dòng một-mức cũ chỉ có % tổng. */}
+              {row.vatPercent != null && row.pitPercent != null
+                ? t('ratePair', { vat: row.vatPercent, pit: row.pitPercent })
+                : t('percentOf', { percent: row.percent })}
+            </p>
+            {row.taxCategory ? (
+              <p className={styles.muted}>
+                {t(
+                  row.taxCategory === TAX_CATEGORY.TRANSPORT
+                    ? 'category.transport'
+                    : 'category.service',
+                )}
+              </p>
+            ) : null}
           </div>
         ),
       },
       {
+        key: 'vat',
+        title: t('columns.vat'),
+        render: (row) => <TaxSplitAmount value={row.vatAmount} fallback={t('notSplit')} />,
+      },
+      {
+        key: 'pit',
+        title: t('columns.pit'),
+        render: (row) => <TaxSplitAmount value={row.pitAmount} fallback={t('notSplit')} />,
+      },
+      {
         key: 'amount',
         title: t('columns.amount'),
-        render: (row) => (
-          /* Dòng ÂM là bút toán ĐẢO — nó phải đọc được là âm, không chỉ là một số nhỏ hơn. */
-          <span className={Number(row.amount) < 0 ? styles.negative : styles.amount}>
-            {fmt.money(row.amount)}
-          </span>
-        ),
+        // Dòng ÂM là bút toán ĐẢO — nó phải đọc được là âm, không chỉ là một số nhỏ hơn.
+        render: (row) => <TaxAmount value={row.amount} />,
       },
       {
         key: 'status',
@@ -246,6 +282,15 @@ export function TaxPeriodPanel() {
         <>
           <div className={styles.stats}>
             <Statistic title={t('stats.total')} value={fmt.money(data.totalAmount)} />
+            <Statistic title={t('stats.vat')} value={fmt.money(data.totalVatAmount)} />
+            <Statistic title={t('stats.pit')} value={fmt.money(data.totalPitAmount)} />
+            {/*
+              Kỳ trộn dòng một-mức cũ (không tách) với dòng tách thì GTGT + TNCN ≠ tổng — phần còn
+              lại phải hiện ra, không để người làm tờ khai tự trừ rồi nghi sổ sai.
+            */}
+            {isZeroMoney(data.totalUnsplitAmount) ? null : (
+              <Statistic title={t('stats.unsplit')} value={fmt.money(data.totalUnsplitAmount)} />
+            )}
             <Statistic title={t('stats.accrued')} value={fmt.money(data.accruedAmount)} />
             <Statistic title={t('stats.declared')} value={fmt.money(data.declaredAmount)} />
             <Statistic title={t('stats.remitted')} value={fmt.money(data.remittedAmount)} />
@@ -265,12 +310,17 @@ export function TaxPeriodPanel() {
                     : domainLabel('sellerEntityType', entry.entityType, entry.entityType)
                 }
               >
-                {t('byEntity.value', { amount: fmt.money(entry.amount), count: entry.rows })}
+                {t('byEntity.valueSplit', {
+                  amount: fmt.money(entry.amount),
+                  vat: fmt.money(entry.vatAmount),
+                  pit: fmt.money(entry.pitAmount),
+                  count: entry.rows,
+                })}
               </Descriptions.Item>
             ))}
           </Descriptions>
 
-          {data.byEntityType.some((e) => e.entityType === 'unknown' && Number(e.amount) > 0) ? (
+          {data.byEntityType.some((e) => e.entityType === 'unknown' && isPositiveMoney(e.amount)) ? (
             <Alert
               type="warning"
               showIcon
@@ -336,3 +386,4 @@ export function TaxPeriodPanel() {
     </div>
   );
 }
+

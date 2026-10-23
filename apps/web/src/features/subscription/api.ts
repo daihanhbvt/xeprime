@@ -22,15 +22,21 @@ export const fetchPaymentInfo = (): Promise<PaymentInfo> =>
   apiGet<PaymentInfo>('/subscription/payment-info');
 
 /**
- * Hoá đơn gói ĐANG chờ tiền — `null` khi không có (ADR 0040).
+ * Hoá đơn gói ĐANG chờ tiền — tối đa MỘT mỗi phạm vi loại xe, mới nhất trước; rỗng khi không có
+ * (ADR 0040 · ADR 0065).
  *
- * Endpoint riêng thay vì lọc trang đầu của `fetchInvoices`: bất biến "mỗi gian hàng tối đa MỘT
- * hoá đơn trả được" do server giữ (advisory lock + void hoá đơn cũ trong `purchase`), nên câu
- * trả lời phải đến từ đó. Lọc ở client biến bất biến thành một giả định, và một lịch sử dài hơn
- * một trang sẽ đẩy hoá đơn chờ ra khỏi tầm nhìn.
+ * Endpoint riêng thay vì lọc trang đầu của `fetchInvoices`: bất biến "mỗi phạm vi tối đa MỘT hoá
+ * đơn trả được" do server giữ (unique một phần + void hoá đơn cũ cùng phạm vi trong `purchase`),
+ * nên câu trả lời phải đến từ đó. Lọc ở client biến bất biến thành một giả định, và một lịch sử dài
+ * hơn một trang sẽ đẩy hoá đơn chờ ra khỏi tầm nhìn.
+ *
+ * Đọc `invoices`, không đọc `invoice`: trường đơn chỉ là phần tử đầu, giữ cho client cũ — gian hàng
+ * vừa tạo hoá đơn xe máy lẫn ô tô sẽ mất một mã nếu web đọc nó.
  */
-export const fetchPendingInvoice = (): Promise<SubscriptionInvoice | null> =>
-  apiGet<PendingSubscriptionInvoice>('/subscription/invoices/pending').then((r) => r.invoice);
+export const fetchPendingInvoices = (): Promise<SubscriptionInvoice[]> =>
+  apiGet<PendingSubscriptionInvoice>('/subscription/invoices/pending').then(
+    (r) => r.invoices ?? (r.invoice ? [r.invoice] : []),
+  );
 
 /**
  * MỘT hoá đơn của gian hàng, ở MỌI trạng thái — nguồn của trang thanh toán `/payment/:invoiceId`.

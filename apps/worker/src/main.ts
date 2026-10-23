@@ -1,27 +1,35 @@
 import {
   backfillBadgeSignals,
+  createInsurancePartner,
   createPrismaClient,
   oldestBadgeSignalAgeMs,
 } from '@xeprime/prisma';
 import { HOLIDAY_SYNC_STATUS } from '@xeprime/types';
 import {
+  APP_ENV,
   FIRESTORE_ENABLED,
   GOOGLE_HOLIDAY_API_KEY,
   GOOGLE_HOLIDAY_CALENDAR_ID,
   HOLIDAY_SYNC_ENABLED,
+  INSURANCE_PARTNER,
   PUSH_ENABLED,
   assertWorkerEnv,
   requireEnv,
 } from './lib/env';
 import { createAdvisoryLocks } from './lib/advisory-lock';
-import { WorkerHealth, startHealthServer } from './lib/health';
+import { RecentEventCounter, WorkerHealth, startHealthServer } from './lib/health';
 import { firestoreBadgeWriter } from './lib/firestore';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { projectBadges } from './jobs/badge-projection';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
+import {
+  sweepDriverAssignmentExpiry,
+  sweepDriverMissingAlerts,
+} from './jobs/driver-assignment-expiry';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
+import { sweepHandoverOverdue } from './jobs/handover-overdue';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
@@ -63,8 +71,8 @@ const PUMP_INTERVAL_MS = 2_000;
 const RETENTION_INTERVAL_MS = 60 * 60 * 1_000;
 /**
  * Nhịp quét hạn phản hồi. Một phút là độ trễ tối đa mà một mốc phải chịu — đủ nhỏ so với cửa
- * sổ 60 phút để "còn 15 phút" vẫn là một câu đúng, đủ lớn để không biến worker thành một vòng
- * lặp bận trên một bảng mà 99% thời gian không có gì để làm (index một phần lo phần còn lại).
+ * sổ ngắn nhất (15 phút, ADR 0066) để "còn 15 phút" vẫn là một câu đúng, đủ lớn để không biến
+ * worker thành một vòng lặp bận trên một bảng mà 99% thời gian không có gì để làm (index một phần lo phần còn lại).
  */
 const DEADLINE_INTERVAL_MS = 60 * 1_000;
 /**
@@ -101,6 +109,17 @@ const LOCK_PUSH = 4_208;
  * mà phần lớn thời gian rỗng (index một phần lo phần còn lại).
  */
 const PUSH_INTERVAL_MS = 5_000;
+
+/**
+ * Cửa sổ đếm thông báo hỏng vì CẤU HÌNH nhà cung cấp (`provider_auth`). Một lượt trong giờ qua
+ * là đủ để báo `degraded`: lỗi này không bao giờ lẻ tẻ — khoá APNs thiếu/thu hồi thì MỌI thông
+ * báo tới iOS đều mất, và không lần thử lại nào cứu được. Trước số đo này, push iOS trên staging
+ * hỏng 100% suốt nhiều ngày trong khi `/health` vẫn báo `ok`.
+ *
+ * `degraded` chứ không `unhealthy`: cổng deploy không được khoá vì một cấu hình nằm ngoài mã
+ * nguồn (xem `HealthStatus`).
+ */
+const PUSH_CONFIG_FAILURE_WINDOW_MS = 60 * 60 * 1_000;
 
 const LOCK_BADGES = 4_209;
 
@@ -222,6 +241,19 @@ function loop(
 
 async function main(): Promise<void> {
   assertWorkerEnv();
+  /*
+   * Adapter bảo hiểm chọn MỘT lần lúc boot (ADR 0064). Ném ở đây — trước khi nối DB — khi cấu
+   * hình sai (`mic_mock` ở production, giá trị lạ): process manager thấy worker chết ngay.
+   */
+  const insurancePartner = createInsurancePartner(INSURANCE_PARTNER, {
+    appEnv: APP_ENV,
+    logger: { warn: (message, meta) => console.warn(message, meta ?? '') },
+  });
+  if (insurancePartner.configured) {
+    console.warn(
+      'bảo hiểm: INSURANCE_PARTNER=mic_mock — GCN GIẢ LẬP (TEST-…), không có hiệu lực thật',
+    );
+  }
   await prisma.$connect();
   healthServer = startHealthServer(health);
 
@@ -238,6 +270,21 @@ async function main(): Promise<void> {
             `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}`,
           );
         }
+        /*
+         * Hạn tài xế trả lời lượt gán (ADR 0066) — cùng họ "hạn phản hồi", cùng nhịp một phút (hạn
+         * ngắn nhất là 15′), nên chạy chung vòng lặp + khoá thay vì giành thêm một chỗ trong pool.
+         */
+        const drivers = await sweepDriverAssignmentExpiry(prisma);
+        if (drivers.expired) {
+          console.log(`tài xế: trả ${drivers.expired} lượt gán quá hạn trả lời về bên thuê`);
+        }
+        // Nhắc khẩn chuyến sắp nhận chưa có ai phủ (ADR 0067) — cùng họ tài xế, cùng nhịp/khoá. Chạy
+        // SAU phép trả lượt quá hạn: đơn vừa bị trả lượt trong cửa sổ đã được đánh dấu "đã báo" cùng
+        // lúc (`markDriverMissingAlertCovered` — tin hết hạn đã đòi gán lại), không nhận tin thứ hai.
+        const missing = await sweepDriverMissingAlerts(prisma);
+        if (missing.alerted) {
+          console.log(`tài xế: nhắc khẩn ${missing.alerted} chuyến sắp nhận chưa có tài xế`);
+        }
       },
       { critical: true },
     ),
@@ -250,22 +297,27 @@ async function main(): Promise<void> {
      * (KHÔNG gỡ xe khỏi chợ), void hoá đơn quá hạn, chào gói khi tiêu hết lượt miễn phí.
      * Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
      */
-    loop('vòng đời gói', LOCK_SUBSCRIPTION_LIFECYCLE, SUBSCRIPTION_LIFECYCLE_INTERVAL_MS, async () => {
-      const result = await sweepSubscriptionLifecycle(prisma);
-      if (
-        result.renewalReminders ||
-        result.expiryNotices ||
-        result.lapsed ||
-        result.invoicesVoided ||
-        result.freeTripOffers ||
-        result.graceGuides
-      ) {
-        console.log(
-          `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
-            `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}, email ân hạn ${result.graceGuides}`,
-        );
-      }
-    }),
+    loop(
+      'vòng đời gói',
+      LOCK_SUBSCRIPTION_LIFECYCLE,
+      SUBSCRIPTION_LIFECYCLE_INTERVAL_MS,
+      async () => {
+        const result = await sweepSubscriptionLifecycle(prisma);
+        if (
+          result.renewalReminders ||
+          result.expiryNotices ||
+          result.lapsed ||
+          result.invoicesVoided ||
+          result.freeTripOffers ||
+          result.graceGuides
+        ) {
+          console.log(
+            `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
+              `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}, email ân hạn ${result.graceGuides}`,
+          );
+        }
+      },
+    ),
     /*
      * Tiền giữ chỗ (R3 — ADR 0028 · ADR 0044 điều 3): nhắc khách ở mốc còn 60 và 15 phút, rồi khi
      * quá hạn thì lật `expired`, yêu cầu `hold_expired`, nhả lịch và báo hai bên. KHÔNG còn nhánh
@@ -281,6 +333,15 @@ async function main(): Promise<void> {
         if (result.expired || reminders) {
           console.log(`giữ chỗ: nhắc ${reminders}, hết hạn ${result.expired}`);
         }
+        /*
+         * Chống treo đơn ở mốc bàn giao (ADR 0066, lớp 3) — cùng nhịp phút, cùng loại việc "tiền
+         * của một chuyến theo đồng hồ", nên đi chung vòng lặp thay vì chiếm thêm một khoá + một
+         * chỗ trong pool. Idempotent bằng cột claim `handover_overdue_at`.
+         */
+        const overdue = await sweepHandoverOverdue(prisma);
+        if (overdue.flagged) {
+          console.log(`bàn giao: ${overdue.flagged} chuyến quá ân hạn — đã mở case xác minh`);
+        }
       },
       { critical: true },
     ),
@@ -289,14 +350,15 @@ async function main(): Promise<void> {
      * thì hợp đồng nên có trong vòng một phút, và nhanh hơn nữa cũng không giúp gì vì mốc phát
      * hành là lúc bàn giao chứ không phải lúc đặt.
      *
-     * KHÔNG `critical`: chưa cắm đối tác nên lượt nào cũng ra `failed`, và một job "hỏng theo
-     * thiết kế" mà bị đánh dấu critical sẽ làm health check của worker đỏ vĩnh viễn — rồi không
-     * ai tin nó nữa.
+     * KHÔNG `critical`: với `INSURANCE_PARTNER=none` lượt nào cũng ra `failed`, và một job "hỏng
+     * theo thiết kế" mà bị đánh dấu critical sẽ làm health check của worker đỏ vĩnh viễn.
      */
     loop('phát hành bảo hiểm', LOCK_INSURANCE_ISSUE, INSURANCE_ISSUE_INTERVAL_MS, async () => {
-      const result = await sweepInsuranceIssue(prisma);
+      const result = await sweepInsuranceIssue(prisma, insurancePartner);
       if (result.claimed) {
-        console.log(`bảo hiểm: xử lý ${result.claimed}, lỗi ${result.failed}`);
+        console.log(
+          `bảo hiểm: xử lý ${result.claimed}, cấp ${result.issued}, lỗi ${result.failed}`,
+        );
       }
     }),
     loop('xếp hạng chợ xe', LOCK_LISTING_RANK, LISTING_RANK_INTERVAL_MS, async () => {
@@ -332,6 +394,10 @@ async function main(): Promise<void> {
    * lặng nghĩa là `push_deliveries` chất đống mà không ai biết vì sao máy không rung.
    */
   if (PUSH_ENABLED) {
+    const pushConfigFailures = new RecentEventCounter(PUSH_CONFIG_FAILURE_WINDOW_MS);
+    health.limitGauge('pushConfigFailures1h', 0);
+    health.setGauge('pushConfigFailures1h', 0);
+
     jobs.push(
       loop(
         'đẩy thông báo',
@@ -344,6 +410,16 @@ async function main(): Promise<void> {
             console.log(
               `push: gửi ${result.sent}, thử lại ${result.retried}, hỏng ${result.failed}, ` +
                 `quá hạn ${result.expired}, tắt ${result.devicesDisabled} thiết bị`,
+            );
+          }
+
+          pushConfigFailures.record(result.providerAuthFailed);
+          health.setGauge('pushConfigFailures1h', pushConfigFailures.total());
+          if (result.providerAuthFailed > 0) {
+            console.error(
+              `push: ${result.providerAuthFailed} thông báo MẤT vì nhà cung cấp từ chối xác thực ` +
+                '(provider_auth) — không phải lỗi thiết bị, thử lại không cứu được. Kiểm khoá APNs ' +
+                '(.p8) của từng app iOS ở Firebase Console → Cloud Messaging, hoặc quyền của service account.',
             );
           }
         },
@@ -401,11 +477,18 @@ async function main(): Promise<void> {
     health.limitGauge('badgeQueueLagMs', BADGE_LAG_UNHEALTHY_MS);
 
     jobs.push(
-      loop('outbox pump', LOCK_PUMP, PUMP_INTERVAL_MS, async () => {
-        await pumpOutbox(prisma);
-      }, { critical: true }),
+      loop(
+        'outbox pump',
+        LOCK_PUMP,
+        PUMP_INTERVAL_MS,
+        async () => {
+          await pumpOutbox(prisma);
+        },
+        { critical: true },
+      ),
       loop('retention', LOCK_RETENTION, RETENTION_INTERVAL_MS, async () => {
-        await runRetention(prisma);
+        const trimmed = await runRetention(prisma);
+        if (trimmed > 0) console.log(`retention: dọn ${trimmed} tin cũ khỏi Firestore`);
       }),
       loop(
         'chiếu huy hiệu',

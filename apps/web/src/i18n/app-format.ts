@@ -90,6 +90,11 @@ export interface AppFormat {
   /** Thời lượng thuê dạng chữ: `3 ngày` · `2 ngày 4 giờ` · `5 hours`. */
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
   /**
+   * Một số PHÚT dạng chữ: `45 phút` · `2 giờ` · `2 giờ 30 phút` · `2 hours 30 minutes`.
+   * Chỉ để KỂ một cửa sổ thời gian (cửa sổ thanh toán, huỷ miễn phí) — làm tròn tới phút, âm thì 0.
+   */
+  minutesDuration: (totalMinutes: number) => string;
+  /**
    * Cả khoảng thuê trên MỘT dòng: `14/09 17:00 → 15/09 17:00 (1 ngày)`.
    *
    * Dùng ở dòng tóm tắt `/search`, và cố ý ghép từ đúng những mảnh mà ô chọn thời gian đang
@@ -257,6 +262,15 @@ export function createAppFormat(
     return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
   };
 
+  const minutesDuration = (totalMinutes: number) => {
+    const total = Math.max(0, Math.round(totalMinutes));
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
+    if (hours === 0) return t('units.minute', { count: minutes });
+    if (minutes === 0) return t('units.hour', { count: hours });
+    return t('units.hourAndMinute', { hours, minutes });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -301,6 +315,7 @@ export function createAppFormat(
     },
     rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
     rentalDuration: duration,
+    minutesDuration,
     rentalRangeSummary: (from, to) => {
       /*
        * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm

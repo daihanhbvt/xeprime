@@ -1,4 +1,4 @@
-import { newId } from '@xeprime/prisma';
+import { createInsurancePartner, newId, NoopInsurancePartner } from '@xeprime/prisma';
 import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { SupportRequestStore } from '../../src/common/support/support-request.store';
@@ -40,9 +40,10 @@ import { InsuranceReadService } from '../../src/modules/insurance/insurance-read
 import { InsuranceService } from '../../src/modules/insurance/insurance.service';
 import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
-import { NoopInsurancePartner } from '../../src/modules/insurance/partner/noop-insurance.partner';
+import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
+import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
@@ -105,9 +106,6 @@ export function makeBranchesService(prisma: PrismaService): BranchesService {
     new ListingsService(prisma),
     audit,
     makeAddressService(prisma),
-    // Trần chi nhánh của bậc gói đọc qua đây (ADR 0041 điều 1) — `BillingService` thật trên
-    // cùng database, không phải một stub: luật snapshot-thắng-bậc-gói là thứ cần được kiểm.
-    makeBillingService(prisma),
     makeDisabledGeoService(prisma),
   );
 }
@@ -184,7 +182,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     audit,
     notifications,
     new InsuranceReadService(prisma),
-    new TaxReadService(prisma),
+    new TaxReadService(prisma, audit),
   );
 }
 
@@ -297,7 +295,16 @@ export function makePricingService(
    * đường duyệt phải dùng CÙNG một instance, nếu không hai bên trả lời khác nhau về cùng một
    * gian hàng và spec kiểm một tổ hợp không tồn tại.
    */
-  overrides: { listings?: ListingsService; depositPolicy?: DepositPolicyService } = {},
+  overrides: {
+    listings?: ListingsService;
+    depositPolicy?: DepositPolicyService;
+    /**
+     * Đối tác bảo hiểm (`INSURANCE_PARTNER`). Mặc định `mic_mock` — nền tảng ĐANG bán bảo hiểm —
+     * để các spec về dòng `IV`/`IP` chạy đúng luồng có bảo hiểm; spec kiểm cổng "chưa có đối tác"
+     * truyền `'none'` (ADR 0064, `InsuranceOfferService`).
+     */
+    insurancePartner?: 'none' | 'mic_mock';
+  } = {},
 ): PricingService {
   return new PricingService(
     prisma,
@@ -305,6 +312,10 @@ export function makePricingService(
     overrides.listings ?? new ListingsService(prisma),
     overrides.depositPolicy ?? makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
+    new InsuranceOfferService(
+      createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
+      prisma,
+    ),
   );
 }
 
@@ -399,6 +410,19 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
 /** `AppConfigService` — công tắc `isPlanPromotionEnabled` + cửa xếp hàng email hướng dẫn gói. */
 export function makeAppConfigService(prisma: PrismaService): AppConfigService {
   return new AppConfigService(prisma, new AuditService(prisma), new ConfigService());
+}
+
+/** `SupportService` — case hỗ trợ / tranh chấp (một service cho cả ba bề mặt). */
+export function makeSupportService(
+  prisma: PrismaService,
+  notifications: NotificationService = makeNotificationService(prisma),
+): SupportService {
+  return new SupportService(
+    prisma,
+    new AuditService(prisma),
+    notifications,
+    makeAppConfigService(prisma),
+  );
 }
 
 /** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */

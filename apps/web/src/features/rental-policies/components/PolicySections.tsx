@@ -20,6 +20,7 @@ import {
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
+  DELIVERY_TIER_FEE_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
   type CollateralMode,
@@ -373,14 +374,45 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
                     />
                   </div>
                 </div>
-                <NumberField
-                  control={control}
-                  name={`deliveryTiers.${index}.fee`}
-                  label={t('tierFeeLabel', { index: index + 1 })}
-                  money
-                  help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
-                  disabled={disabled}
-                />
+                {/*
+                 * Hai cách tính LOẠI TRỪ nhau (ADR 0064): trọn gói cho cả bậc, hoặc đơn giá theo km
+                 * nhân khoảng cách thật. Chỉ ô của cách đang chọn được dựng — form không giữ hai số.
+                 */}
+                <div className={styles.feeCell}>
+                  <RadioGroupField
+                    control={control}
+                    name={`deliveryTiers.${index}.feeMode`}
+                    label={t('feeModeLabel', { index: index + 1 })}
+                    vertical={false}
+                    options={[
+                      { value: DELIVERY_TIER_FEE_MODE.FLAT, label: t('feeModeFlat') },
+                      { value: DELIVERY_TIER_FEE_MODE.PER_KM, label: t('feeModePerKm') },
+                    ]}
+                    disabled={disabled}
+                  />
+                  {tiers[index]?.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM ? (
+                    <NumberField
+                      key="perKm"
+                      control={control}
+                      name={`deliveryTiers.${index}.perKm`}
+                      label={t('tierPerKmLabel', { index: index + 1 })}
+                      money
+                      addonAfter={t('perKmUnit')}
+                      help={t('perKmHint')}
+                      disabled={disabled}
+                    />
+                  ) : (
+                    <NumberField
+                      key="fee"
+                      control={control}
+                      name={`deliveryTiers.${index}.fee`}
+                      label={t('tierFeeLabel', { index: index + 1 })}
+                      money
+                      help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
+                      disabled={disabled}
+                    />
+                  )}
+                </div>
                 {hideControls ? null : (
                   <Button
                     className={styles.deleteButton}
@@ -402,7 +434,14 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
             {hideControls ? null : (
               <Button
                 icon={<PlusOutlined aria-hidden="true" />}
-                onClick={() => append({ toKm: null, fee: null })}
+                onClick={() =>
+                  append({
+                    toKm: null,
+                    feeMode: DELIVERY_TIER_FEE_MODE.FLAT,
+                    fee: null,
+                    perKm: null,
+                  })
+                }
                 disabled={disabled}
               >
                 {t('addTier')}
@@ -441,7 +480,12 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
                 <strong>{t('previewTitle')}</strong>{' '}
                 {deliverySummaryText(
                   { deliveryTiers: tiers, deliveryMaxRadiusKm: radius },
-                  { money: fmt.money, free: t('free'), quote: t('summaryQuote') },
+                  {
+                    money: fmt.money,
+                    free: t('free'),
+                    quote: t('summaryQuote'),
+                    perKm: (amount) => t('perKmSummary', { amount }),
+                  },
                 )}
               </span>
             </div>

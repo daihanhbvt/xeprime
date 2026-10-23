@@ -99,6 +99,20 @@ export interface DataTableProps<T> {
    * Tắt (`striped={false}`) cho bảng ngoại lệ có nền hàng riêng.
    */
   striped?: boolean;
+  /**
+   * Chi tiết của MỘT dòng mở ngay dưới dòng đó (sao kê ví: bảng cộng ví của chuyến). Desktop dùng
+   * hàng mở rộng của AntD; thẻ mobile dùng `<details>` cuối thẻ với nhãn `label`. Không phải panel
+   * chi tiết — thứ cần đọc kỹ rồi quyết định vẫn là `DetailDrawer`.
+   */
+  expandable?: DataTableExpandable<T>;
+}
+
+export interface DataTableExpandable<T> {
+  render: (row: T) => ReactNode;
+  /** Dòng nào có chi tiết. Bỏ trống = mọi dòng. */
+  rowExpandable?: (row: T) => boolean;
+  /** Nhãn nút mở chi tiết trên thẻ mobile — "Chi tiết tiền của chuyến". */
+  label: string;
 }
 
 function defaultRowKey<T>(row: T): string {
@@ -153,7 +167,7 @@ function columnTitle<T>(column: MobileColumnShape<T>): ReactNode {
 function isInteractiveTarget(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    Boolean(target.closest('a, button, input, select, textarea, [role="button"]'))
+    Boolean(target.closest('a, button, input, select, textarea, summary, [role="button"]'))
   );
 }
 
@@ -226,6 +240,7 @@ export function DataTable<T>({
   renderCard,
   loadingLabel,
   striped = true,
+  expandable,
 }: DataTableProps<T>) {
   const tCommon = useTranslations('Common');
   const locale = useLocale();
@@ -273,6 +288,8 @@ export function DataTable<T>({
   }
 
   const isSelected = (row: T) => selectedRowKey !== null && rowKey(row) === selectedRowKey;
+  const canExpand = (row: T) =>
+    expandable !== undefined && (expandable.rowExpandable?.(row) ?? true);
 
   if (asCards) {
     return (
@@ -302,6 +319,12 @@ export function DataTable<T>({
               ) : (
                 <GenericMobileCard columns={columns} row={row} index={index} />
               )}
+              {expandable && canExpand(row) ? (
+                <details className={styles.cardExpand}>
+                  <summary className={styles.cardExpandToggle}>{expandable.label}</summary>
+                  <div className={styles.cardExpandBody}>{expandable.render(row)}</div>
+                </details>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -332,6 +355,14 @@ export function DataTable<T>({
         loading={loading}
         tableLayout="auto"
         scroll={{ x: minWidth }}
+        expandable={
+          expandable
+            ? {
+                expandedRowRender: (row) => expandable.render(row),
+                rowExpandable: canExpand,
+              }
+            : undefined
+        }
         rowClassName={(row, index) =>
           [
             striped && index % 2 === 1 ? styles.rowStriped : '',

@@ -16,11 +16,13 @@ import { queryKeys } from '@/services/query-keys';
 import {
   cancelTrip,
   fetchTrip,
+  fetchTripCancelPreview,
   fetchTripHandoverEvidence,
   fetchUnpaidHolds,
   fetchTripHandoverPhotoUrl,
   fetchTrips,
   provideRefundAccount,
+  reportTripNotReceived,
   tripsToParams,
 } from './api';
 import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
@@ -165,6 +167,21 @@ export function photoKey(type: string, slot: string): string {
 }
 
 /**
+ * Xem trước lượt huỷ — chỉ nạp khi hộp xác nhận MỞ (`enabled`), và luôn nạp lại mỗi lần mở
+ * (`staleTime: 0`): mốc huỷ miễn phí có thể vừa trôi qua giữa hai lần mở, và con số hứa với khách
+ * phải là con số lượt bấm sẽ ghi. Khoá con của `trips.detail` nên lượt huỷ làm mới luôn nó.
+ */
+export function useTripCancelPreview(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.trips.detail(id), 'cancel-preview'],
+    queryFn: () => fetchTripCancelPreview(id),
+    enabled: Boolean(id) && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+/**
  * Khách tự huỷ chuyến.
  *
  * Server trả về chính chuyến đã đổi chặng nên ghi thẳng vào cache chi tiết — màn cập nhật ngay,
@@ -193,6 +210,34 @@ export function useCancelTrip(id: string) {
       const code = getErrorCode(error);
       if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+      }
+    },
+  });
+}
+
+/**
+ * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1.
+ *
+ * Cùng khuôn với `useCancelTrip`: server trả về chính chuyến (đã có `openDispute`) nên ghi thẳng
+ * vào cache chi tiết. Bị từ chối vì cửa sổ vừa đóng / đơn vừa đổi trạng thái thì kéo lại chuyến
+ * thật để nút tự biến mất thay vì mời bấm lại một việc chắc chắn hỏng.
+ */
+export function useReportTripNotReceived(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => reportTripNotReceived(id),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED
+      ) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
       }
     },
   });

@@ -7,7 +7,13 @@
  */
 import * as yup from 'yup';
 import { PASSWORD_RULES } from './auth';
-import { missingVehicleImageTypes, VEHICLE_IMAGE_TYPE_VALUES } from '@xeprime/types';
+import {
+  DELIVERY_TIER_FEE_MODE,
+  DELIVERY_TIER_FEE_MODE_VALUES,
+  isThousandStep,
+  missingVehicleImageTypes,
+  VEHICLE_IMAGE_TYPE_VALUES,
+} from '@xeprime/types';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   ASSIGNABLE_TENANT_ROLES,
@@ -62,6 +68,12 @@ export {
   buildRequiredPhoneSchema,
   type PhoneSchemaLabels,
 } from './phone';
+
+export {
+  buildExternalDriverSchema,
+  type ExternalDriverFormValues,
+  type ExternalDriverSchemaLabels,
+} from './external-driver';
 
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
 
@@ -169,7 +181,9 @@ const vehiclePriceSchema = yup
   .number()
   .typeError('priceTypeError')
   .integer('priceInteger')
-  .min(0, 'priceMin');
+  .min(0, 'priceMin')
+  // Bước giá 1.000đ — cùng luật `@IsMoneyStep` của API (ADR 0064): giá đi thẳng vào tổng khách trả.
+  .test('thousand-step', 'priceThousandStep', (value) => value == null || isThousandStep(value));
 
 /*
  * Message của schema này là MÃ — `useValidationResolver` tra `Vehicles.form.validation.*`.
@@ -1393,6 +1407,14 @@ const codeWithParams = (code: string, values: Record<string, number>): string =>
 const optionalPolicyMoney = () =>
   yup.number().nullable().defined().default(null).integer('moneyInteger').min(0, 'moneyNegative');
 
+/** Số tiền chính sách đi tới tổng khách trả — thêm bước giá 1.000đ (ADR 0064, `@IsMoneyStep`). */
+const policyMoneyStep = () =>
+  optionalPolicyMoney().test(
+    'thousand-step',
+    'moneyThousandStep',
+    (value) => value == null || isThousandStep(value),
+  );
+
 const requiredPolicyNumber = (code: string) =>
   yup
     .number()
@@ -1421,7 +1443,23 @@ export const deliveryTierSchema = yup.object({
     .moreThan(0, 'tierToPositive')
     .max(KM_MAX, 'kmMax')
     .test(maxDecimalsTest(KM_DECIMALS, 'kmDecimals')),
-  fee: optionalPolicyMoney(),
+  /*
+   * Cách tính của bậc (ADR 0064) — trường của FORM; vắng mặt = trọn gói (dữ liệu và form cũ).
+   * Tuỳ chọn để app native chưa có ô này vẫn biên dịch và gửi bậc trọn gói như trước.
+   */
+  feeMode: yup.string().oneOf(DELIVERY_TIER_FEE_MODE_VALUES).optional(),
+  fee: policyMoneyStep(),
+  perKm: yup
+    .number()
+    .nullable()
+    .optional()
+    .integer('moneyInteger')
+    .min(0, 'moneyNegative')
+    .test('thousand-step', 'moneyThousandStep', (value) => value == null || isThousandStep(value))
+    .when('feeMode', {
+      is: DELIVERY_TIER_FEE_MODE.PER_KM,
+      then: (s) => s.test('required', 'perKmRequired', (value) => value != null && value > 0),
+    }),
 });
 
 /**
@@ -1625,13 +1663,13 @@ export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
  * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
  */
 export const vehiclePricingFormSchema = policyFormSchema.shape({
-  weekdayPrice: optionalPolicyMoney().when('$serviceTypes', {
+  weekdayPrice: policyMoneyStep().when('$serviceTypes', {
     is: (services: readonly string[] | undefined) =>
       !services || services.includes(SERVICE_TYPE.SELF_DRIVE),
     then: (s) => s.test('required', 'weekdayRequired', (value) => value != null),
   }),
-  weekendPrice: optionalPolicyMoney(),
-  hourlyPrice: optionalPolicyMoney(),
+  weekendPrice: policyMoneyStep(),
+  hourlyPrice: policyMoneyStep(),
   discountPercent: yup
     .number()
     .nullable()
@@ -1640,10 +1678,10 @@ export const vehiclePricingFormSchema = policyFormSchema.shape({
     .integer('percentInteger')
     .min(0, 'percentNegative')
     .max(100, 'percentMax'),
-  monthlyPrice: optionalPolicyMoney(),
-  withDriverDailyPrice: optionalPolicyMoney(),
-  withDriverInterCityPrice: optionalPolicyMoney(),
-  withDriverOneWayPrice: optionalPolicyMoney(),
+  monthlyPrice: policyMoneyStep(),
+  withDriverDailyPrice: policyMoneyStep(),
+  withDriverInterCityPrice: policyMoneyStep(),
+  withDriverOneWayPrice: policyMoneyStep(),
 });
 
 export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;

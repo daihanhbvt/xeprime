@@ -55,7 +55,7 @@ describe('driverFiltersToParams', () => {
   it('ba chiều lọc + phân trang, chiều nào trống thì `null`', () => {
     expect(driverFiltersToParams({ q: 'Trần' })).toEqual({
       q: 'Trần',
-      status: null,
+      linkStatus: null,
       driverType: null,
       page: 1,
       limit: 20,

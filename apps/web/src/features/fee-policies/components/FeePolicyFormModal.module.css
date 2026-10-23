@@ -1,0 +1,10 @@
+.hint {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}

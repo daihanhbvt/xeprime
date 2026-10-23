@@ -40,6 +40,11 @@ vi.mock('@/features/admin-bookings/hooks/use-admin-bookings', () => ({
   useRevealBookingContact: () => ({ data: undefined, isPending: false, mutate: vi.fn() }),
 }));
 
+// Tab "Cần chăm sóc" chỉ cần số đếm ở đây — bảng đơn là thứ được soát.
+vi.mock('@/features/admin-follow-ups/hooks/use-follow-ups', () => ({
+  useNewFollowUpCount: () => ({ data: undefined, isPending: false }),
+}));
+
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({ has: () => false, hasAny: () => false, isLoading: false }),
 }));

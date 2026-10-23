@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PickType } from '@nestjs/swagger';
 import {
   BILLING_MODE_VALUES,
   FEE_LINE_VALUES,
@@ -20,9 +20,20 @@ import {
   type LongTermPackageMonths,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  SELLER_ENTITY_TYPE_VALUES,
+  TAX_CATEGORY_VALUES,
+  TAX_EXEMPT_REASON,
   VEHICLE_TYPE_VALUES,
+  type DeliveryTier,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
+import { toQueryBool } from '../../../common/dto/query-transforms';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
+import {
+  OwnerCommissionTierDto,
+  PerVehicleTypeAmountDto,
+  TaxRatesDto,
+} from '../../fee-policies/dto/fee-policy.dto';
 import { AutoAcceptPreviewDto } from '../../vehicle-settings/dto/vehicle-settings.dto';
 import {
   ArrayMaxSize,
@@ -55,7 +66,14 @@ const MAX_KM = 500;
 // Cấu hình chính sách (input + output dùng chung shape tiers)
 // ---------------------------------------------------------------------------
 
-/** Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm`; mốc "từ" suy từ bậc liền trước. */
+/**
+ * Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm`; mốc "từ" suy từ bậc liền trước.
+ *
+ * Hai dạng LOẠI TRỪ nhau (ADR 0064 — `DeliveryTier` ở `@xeprime/types`): trọn gói (`fee`) hoặc
+ * theo km (`perKm`). Gửi đúng MỘT trong hai; bậc cũ chỉ có `fee` vẫn hợp lệ nguyên trạng.
+ * "Đúng một" và "`perKm` > 0" kiểm ở `PricingService.validatePolicy` — class-validator không mô tả
+ * được quan hệ giữa hai trường bằng một câu lỗi người đọc được.
+ */
 export class DeliveryTierDto {
   @ApiProperty({
     description: 'Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt',
@@ -66,10 +84,30 @@ export class DeliveryTierDto {
   @Max(MAX_KM)
   toKm!: number;
 
-  @ApiProperty({ description: "Phí VND dạng chuỗi — '0' = miễn phí", example: '30000' })
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí. Bỏ trống khi bậc tính theo km",
+    example: '30000',
+  })
+  @ValidateIf((o: DeliveryTierDto) => o.perKm == null)
   @IsString()
   @Matches(MONEY_PATTERN, { message: 'Phí giao nhận không hợp lệ (số VND không âm)' })
-  fee!: string;
+  @IsMoneyStep({ message: 'Phí giao nhận phải là bội của 1.000đ' })
+  fee?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, ' +
+      'đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói',
+    example: '10000',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(MONEY_PATTERN, { message: 'Đơn giá giao nhận mỗi km không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Đơn giá giao nhận mỗi km phải là bội của 1.000đ' })
+  perKm?: string;
 }
 
 /**
@@ -246,7 +284,8 @@ export class RentalPolicyValuesDto {
   @ApiProperty() depositAmount!: string;
   @ApiProperty() deliveryEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) deliveryMaxRadiusKm!: number | null;
-  @ApiProperty({ type: [DeliveryTierDto] }) deliveryTiers!: DeliveryTierDto[];
+  /** Bậc đã chuẩn hoá (`normalizeDeliveryTiers`) — trọn gói hoặc theo km, không bao giờ cả hai. */
+  @ApiProperty({ type: [DeliveryTierDto] }) deliveryTiers!: DeliveryTier[];
   @ApiPropertyOptional({ type: String, nullable: true }) overtimeFeePerHour!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeGraceMinutes!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeRoundingMinutes!: number | null;
@@ -400,6 +439,7 @@ export class SaveVehiclePricingDto {
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Giá thuê không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá thuê phải là bội của 1.000đ' })
   weekdayPrice?: string;
 
   @ApiPropertyOptional({
@@ -410,6 +450,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.weekendPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá cuối tuần không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá cuối tuần phải là bội của 1.000đ' })
   weekendPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -420,6 +461,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.monthlyPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá tháng không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá tháng phải là bội của 1.000đ' })
   monthlyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -430,6 +472,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá/ngày có tài xế không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá/ngày có tài xế phải là bội của 1.000đ' })
   withDriverDailyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -440,6 +483,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverInterCityPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá liên tỉnh không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá liên tỉnh phải là bội của 1.000đ' })
   withDriverInterCityPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -450,6 +494,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverOneWayPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá 1 chiều không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá 1 chiều phải là bội của 1.000đ' })
   withDriverOneWayPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -460,6 +505,7 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.hourlyPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá theo giờ không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá theo giờ phải là bội của 1.000đ' })
   hourlyPrice?: string | null;
 
   @ApiPropertyOptional({
@@ -546,6 +592,16 @@ export class QuoteBreakdownDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   estimateNote!: string | null;
   /**
+   * Giá thuê TỪNG NGÀY tính tiền, ngày 1 trước — sau khuyến mãi trực tiếp, KHÔNG gồm giao nhận.
+   * `Σ dayAmounts = BASE − |DISCOUNT|`.
+   *
+   * Là mẫu số của hoa hồng lũy tiến (luồng tiền v2): "10% giá thuê NGÀY ĐÓ" chỉ đúng khi biết
+   * giá của từng ngày — một chuyến có cuối tuần hay ngày giá riêng chia đều sẽ lệch nấc. `null`
+   * với báo giá theo GÓI dài hạn (giá gói không có cấu tạo theo ngày; phép tính chia đều).
+   */
+  @ApiPropertyOptional({ type: [String], nullable: true })
+  dayAmounts!: string[] | null;
+  /**
    * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 (R3). `null`/vắng = không có phụ phí (chưa có chính sách, hoặc
    * ngữ cảnh không áp). `rows`/`totalAmount` ở trên VẪN là bảng kê giá THUÊ (doanh thu gian hàng);
    * tổng KHÁCH TRẢ là `fees.customerTotalAmount`.
@@ -559,29 +615,67 @@ export class FeeLineDto {
   @ApiProperty({ enum: FEE_LINE_VALUES }) key!: string;
   @ApiProperty({ example: 'platform' }) beneficiary!: string;
   @ApiProperty({ example: 'customer' }) bearer!: string;
-  @ApiProperty() percent!: number;
-  @ApiProperty({ description: 'VND string' }) amount!: string;
+  /**
+   * % áp lên `baseAmount` — chỉ dòng tính bằng MỘT tỷ lệ (thuế). `null` với phí sàn cố định, bảo
+   * hiểm theo ngày (`unitAmount × quantity`) và hoa hồng lũy tiến (nấc nằm ở `policy`).
+   */
+  @ApiProperty({ type: Number, nullable: true }) percent!: number | null;
+  @ApiPropertyOptional({ type: String, description: 'Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày' })
+  unitAmount?: string;
+  @ApiPropertyOptional({ type: Number, description: 'Số ngày đã nhân với `unitAmount`' })
+  quantity?: number;
+  @ApiProperty({
+    description: 'VND string nguyên — khoản tính từ tỷ lệ đúng tới đồng (ADR 0069)',
+  })
+  amount!: string;
   @ApiPropertyOptional({ type: String }) partnerName?: string;
 }
 
 export class FeePolicySnapshotDto {
   @ApiProperty() policyId!: string;
   @ApiProperty() version!: number;
-  @ApiProperty() serviceFeePercent!: number;
+  @ApiProperty({ description: 'LEGACY — luồng tiền v2 không đọc trường này' })
+  serviceFeePercent!: number;
   @ApiProperty() holdMinAmount!: string;
-  @ApiProperty() holdPaymentWindowMinutes!: number;
-  @ApiProperty() freeCancelHours!: number;
+  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động' })
+  holdPaymentWindowMinutes!: number;
+  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động' })
+  freeCancelHours!: number;
   @ApiProperty() taxEnabled!: boolean;
-  @ApiPropertyOptional({ type: Number, nullable: true }) taxPercent!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) taxLabel!: string | null;
+  @ApiPropertyOptional({
+    type: TaxRatesDto,
+    nullable: true,
+    description: 'Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). Vắng/null ở snapshot ≤ v8',
+  })
+  taxRates?: TaxRatesDto | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Căn cứ pháp lý khấu trừ' })
+  taxLegalBasis?: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'LEGACY (≤ v8) — một mức' })
+  taxPercent!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'LEGACY (≤ v8)' })
+  taxLabel!: string | null;
   @ApiProperty() tripInsuranceEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) tripInsurancePercent!: number | null;
   @ApiProperty() vehicleProtectionEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) vehicleProtectionPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
-  @ApiProperty({ description: 'D — % cọc trên giá thuê gốc' }) depositPercent!: number;
-  @ApiProperty({ description: 'Sàn tiền cọc (VND)' }) depositMinAmount!: string;
-  @ApiProperty({ description: 'Trần % cọc của chính sách này' }) depositMaxPercent!: number;
+  @ApiProperty({
+    description:
+      '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm ' +
+      'phí giao xe) — ADR 0066',
+  })
+  depositPercent!: number;
+  @ApiProperty({ description: 'Sàn của `D` (VND): D = max(% × tiền thuê, sàn)' })
+  depositMinAmount!: string;
+  @ApiProperty({ description: 'Trần % của `D` ở chính sách này' }) depositMaxPercent!: number;
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` — phí sàn cố định mỗi đơn' })
+  customerPlatformFee!: PerVehicleTypeAmountDto;
+  @ApiProperty({ type: [OwnerCommissionTierDto], description: '`H` — nấc hoa hồng lũy tiến' })
+  ownerCommissionTiers!: readonly OwnerCommissionTierDto[];
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IV` — biểu phí mỗi ngày' })
+  vehicleProtectionDailyAmount!: PerVehicleTypeAmountDto;
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IP` — biểu phí mỗi ngày' })
+  tripInsuranceDailyAmount!: PerVehicleTypeAmountDto;
 }
 
 /** Cùng shape `CustomerFeeBreakdown` ở @xeprime/types — snapshot vào `price_snapshot_json.fees`. */
@@ -610,21 +704,65 @@ export class PromoCodeSnapshotDto {
   @ApiProperty({ description: 'ISO-8601' }) appliedAt!: string;
 }
 
+/**
+ * Bảng tiền của MỘT chuyến — luồng tiền v2, tiền giữ chỗ theo ADR 0066 (`computeCustomerFees`):
+ *
+ *   tổng khách trả   = B + S + IV + IP − P
+ *   D_target         = max(roundVnd(depositPercent% × B), depositMinAmount) (B = tiền thuê, không gồm G)
+ *   T                = roundVnd(vat% × B) + roundVnd(pit% × B)      (theo loại dịch vụ — ADR 0068)
+ *   tiền giữ chỗ     = min(B + S + IV + IP, max(S + H + IV + IP + D_target,
+ *                          S + H + IV + IP + T, holdMinAmount))      (trước mã)
+ *   trả khi nhận xe  = tổng khách trả trước mã − tiền giữ chỗ
+ *   D (của chủ xe)   = tiền giữ chỗ − S − H − IV − IP
+ *   sàn giữ lại      = S + H
+ *   chuyển ví chủ xe = D − T
+ *   chủ xe thực nhận = B − H − T
+ */
 export class CustomerFeeBreakdownDto {
   @ApiProperty({ enum: BILLING_MODE_VALUES }) billingMode!: string;
   @ApiProperty({ type: FeePolicySnapshotDto }) policy!: FeePolicySnapshotDto;
-  @ApiProperty({ description: 'Mẫu số = tổng bảng kê giá thuê' }) baseAmount!: string;
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Loại xe — quyết định mức S và biểu phí bảo hiểm' })
+  vehicleType!: string;
+  @ApiProperty({ description: 'Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng' })
+  rentalDays!: number;
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) — đúng mảng ' +
+      'đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026)',
+  })
+  dayAmounts?: string[];
+  @ApiProperty({ description: 'B — tổng bảng kê giá thuê (gồm giao nhận)' }) baseAmount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu ' +
+      'hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0"',
+  })
+  deliveryAmount?: string;
   @ApiProperty({ type: [FeeLineDto] }) lines!: FeeLineDto[];
-  @ApiProperty({ description: 'Tổng phụ phí KHÁCH gánh' }) customerFeeTotal!: string;
+  @ApiProperty({ description: 'Tổng phụ phí KHÁCH gánh (S + IV + IP)' }) customerFeeTotal!: string;
   @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp)' })
   customerTotalAmount!: string;
-  @ApiProperty({ description: 'D — cọc trả online cho XePrime; "0" khi chuyến không thu cọc' })
+  @ApiProperty({
+    description: 'D — phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online',
+  })
   depositAmount!: string;
   @ApiProperty({
+    description: 'H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói',
+  })
+  ownerCommissionAmount!: string;
+  @ApiProperty({ description: 'S + H — phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)' })
+  platformRetainedAmount!: string;
+  @ApiProperty({
     description:
-      'D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên',
+      'Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên',
   })
   grossOnlineAmount!: string;
+  @ApiProperty({
+    description: 'D + S + H — phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)',
+  })
+  sponsorableAmount!: string;
   @ApiProperty({
     description:
       'P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng.',
@@ -636,15 +774,68 @@ export class CustomerFeeBreakdownDto {
     description: 'Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã.',
   })
   promo!: PromoCodeSnapshotDto | null;
-  @ApiProperty({ description: 'D + S + IV + IP − P — số quét QR trả ngay' })
+  @ApiProperty({ description: 'Tiền giữ chỗ − P — số quét QR trả ngay' })
   onlineAmount!: string;
-  @ApiProperty({ description: 'B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe' })
+  @ApiProperty({
+    description: 'Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe',
+  })
   payAtPickupAmount!: string;
-  @ApiProperty({ description: 'T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách' })
+  @ApiProperty({
+    description:
+      'T = GTGT + TNCN — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng ' +
+      'thuế tắt hoặc người bán được miễn (taxExemptReason)',
+  })
   taxAmount!: string;
-  @ApiProperty({ description: 'D − T — khoản XePrime phải trả chủ xe khi chuyến hoàn thành' })
+  /*
+   * ── ADR 0068 — thuế tách GTGT/TNCN. Vắng mặt ở snapshot trước 22/10/2026 (một mức duy nhất). ──
+   */
+  @ApiPropertyOptional({
+    type: String,
+    description: 'R = B − G — tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D',
+  })
+  rentAmount?: string;
+  @ApiPropertyOptional({ type: String, description: 'Thuế GTGT khấu trừ = roundVnd(vat% × R)' })
+  vatAmount?: string;
+  @ApiPropertyOptional({ type: String, description: 'Thuế TNCN khấu trừ = roundVnd(pit% × R)' })
+  pitAmount?: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: '% GTGT đã áp. null khi đơn không bị khấu trừ',
+  })
+  vatPercent?: number | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: '% TNCN đã áp. null khi đơn không bị khấu trừ',
+  })
+  pitPercent?: number | null;
+  @ApiPropertyOptional({
+    enum: TAX_CATEGORY_VALUES,
+    nullable: true,
+    description: 'Nhóm NĐ 117 (service | transport). null khi đơn không bị khấu trừ',
+  })
+  taxCategory?: string | null;
+  @ApiPropertyOptional({
+    enum: Object.values(TAX_EXEMPT_REASON),
+    nullable: true,
+    description: 'Vì sao không khấu trừ dù cổng thuế mở — company (doanh nghiệp đã xác minh)',
+  })
+  taxExemptReason?: string | null;
+  @ApiPropertyOptional({
+    enum: SERVICE_TYPE_VALUES,
+    nullable: true,
+    description: 'Loại dịch vụ đã đóng băng — chọn cặp tỷ lệ thuế',
+  })
+  serviceType?: string | null;
+  @ApiPropertyOptional({
+    enum: SELLER_ENTITY_TYPE_VALUES,
+    description: 'Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)',
+  })
+  sellerEntityType?: string;
+  @ApiProperty({ description: 'D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành' })
   ownerPayableAmount!: string;
-  @ApiProperty({ description: 'Chủ xe THỰC NHẬN cả chuyến = B − T' }) ownerNetAmount!: string;
+  @ApiProperty({ description: 'Chủ xe THỰC NHẬN cả chuyến = B − H − T' }) ownerNetAmount!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -653,17 +844,90 @@ export class CustomerFeeBreakdownDto {
   holdAmount!: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Bản CÔNG KHAI của bảng tiền — khách không thấy kinh tế của chủ xe (ADR 0064)
+// ---------------------------------------------------------------------------
+
+/** Cùng shape `PublicFeePolicySnapshot` ở @xeprime/types — không nấc hoa hồng, không thuế. */
+export class PublicFeePolicySnapshotDto extends PickType(FeePolicySnapshotDto, [
+  'policyId',
+  'version',
+  'holdMinAmount',
+  'holdPaymentWindowMinutes',
+  'freeCancelHours',
+  'depositPercent',
+  'customerPlatformFee',
+  'tripInsuranceEnabled',
+  'tripInsuranceDailyAmount',
+  'vehicleProtectionEnabled',
+  'vehicleProtectionDailyAmount',
+  'insurancePartnerName',
+] as const) {}
+
+/**
+ * Cùng shape `PublicCustomerFeeBreakdown` ở @xeprime/types — dựng bằng `toPublicFeeBreakdown`.
+ *
+ * Bảng tiền như KHÁCH được thấy: mọi con số khách trả (tổng, tiền giữ chỗ, trả tận tay, mã giảm),
+ * KHÔNG có `H`, `T`, `D`, khoản chuyển ví, số chủ xe thực nhận, "sàn giữ lại", phần tài trợ được hay
+ * nấc hoa hồng — và `lines` chỉ còn dòng khách chịu.
+ */
+export class PublicCustomerFeeBreakdownDto extends PickType(CustomerFeeBreakdownDto, [
+  'vehicleType',
+  'rentalDays',
+  'baseAmount',
+  'deliveryAmount',
+  'lines',
+  'customerFeeTotal',
+  'customerTotalAmount',
+  'grossOnlineAmount',
+  'promoDiscountAmount',
+  'promo',
+  'onlineAmount',
+  'payAtPickupAmount',
+  'holdAmount',
+] as const) {
+  @ApiProperty({ type: PublicFeePolicySnapshotDto }) policy!: PublicFeePolicySnapshotDto;
+}
+
+/** Bảng kê giá của báo giá công khai — cùng `QuoteBreakdownDto`, nhưng `fees` là bản công khai. */
+export class PublicQuoteBreakdownDto extends OmitType(QuoteBreakdownDto, ['fees'] as const) {
+  @ApiPropertyOptional({ type: () => PublicCustomerFeeBreakdownDto, nullable: true })
+  fees?: PublicCustomerFeeBreakdownDto | null;
+}
+
 /** Tóm tắt giao nhận cho khách xem trước khi đặt (public). */
 export class DeliverySummaryDto {
   @ApiProperty() enabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) maxRadiusKm!: number | null;
-  @ApiProperty({ type: [DeliveryTierDto] }) tiers!: DeliveryTierDto[];
+  @ApiProperty({ type: [DeliveryTierDto] }) tiers!: DeliveryTier[];
+}
+
+/** Bảo hiểm nào đang được bán, theo từng sản phẩm (ADR 0064). */
+export class InsuranceOfferedByKindDto {
+  @ApiProperty({ description: '`IV` — bảo hiểm vật chất xe' }) vehicleProtection!: boolean;
+  @ApiProperty({ description: '`IP` — bảo hiểm tai nạn người trên xe' }) tripInsurance!: boolean;
 }
 
 /** GET /public/listings/:id/quote — báo giá công khai (chưa gồm phí giao nhận). */
 export class PublicQuoteDto {
-  @ApiProperty({ type: QuoteBreakdownDto }) breakdown!: QuoteBreakdownDto;
+  @ApiProperty({ type: PublicQuoteBreakdownDto }) breakdown!: PublicQuoteBreakdownDto;
   @ApiProperty({ type: DeliverySummaryDto }) delivery!: DeliverySummaryDto;
+  /**
+   * Nền tảng có ĐANG bán bảo hiểm chuyến không (có đối tác phát hành thật) — ADR 0028 điều 5.
+   * `false` ⇒ giao diện ẨN hai ô bảo hiểm: server không bao giờ thu `IV`/`IP` khi đó, dù khách có
+   * gửi lựa chọn lên. Từng dòng còn phải được chính sách phí mở (`fees.policy.*Enabled`).
+   */
+  @ApiProperty({
+    description:
+      'Nền tảng có đối tác bảo hiểm phát hành thật — false thì ẩn ô chọn bảo hiểm, server không thu IV/IP',
+  })
+  insuranceOffered!: boolean;
+  /**
+   * Theo TỪNG sản phẩm (ADR 0064): đối tác đã cắm VÀ sản phẩm đó đang bật trong danh mục. Ô chọn
+   * nào `false` thì ẩn — server cũng không thu dòng đó dù client gửi lựa chọn lên.
+   */
+  @ApiProperty({ type: () => InsuranceOfferedByKindDto })
+  insuranceOfferedByKind!: InsuranceOfferedByKindDto;
   /**
    * Yêu cầu với đúng khoảng/dịch vụ này có được HỆ THỐNG tự nhận không (08/09/2026). Server
    * quyết định; client chỉ hiện nhãn "đặt nhanh" khi trường này nói có — không suy từ toggle.
@@ -708,11 +972,30 @@ export class PublicQuoteQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  /** Lộ trình chuyến có tài xế — chỉ có nghĩa khi serviceType=with_driver (khác thì bỏ qua). */
+  /**
+   * Lộ trình chuyến có tài xế — chỉ có nghĩa khi serviceType=with_driver (khác thì bỏ qua):
+   * `inner_city` (nội thành, giá cơ bản) · `inter_city` (liên tỉnh 2 chiều) · `inter_city_one_way`
+   * (liên tỉnh 1 chiều — bù chiều về chạy rỗng). Giá route chưa niêm yết ⇒ rơi về bậc gần nhất
+   * kèm `estimateNote`.
+   */
   @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
   @IsOptional()
   @IsIn(ROUTE_TYPE_VALUES)
   routeType?: string;
+
+  /** Khách tích bảo hiểm vật chất xe (`IV`) — tuỳ chọn, tính theo ngày. Bỏ trống = không. */
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Transform(toQueryBool)
+  @IsBoolean()
+  vehicleProtectionSelected?: boolean;
+
+  /** Khách tích bảo hiểm tai nạn người (`IP`) — tuỳ chọn, tính theo ngày. Bỏ trống = không. */
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Transform(toQueryBool)
+  @IsBoolean()
+  personalAccidentSelected?: boolean;
 }
 
 // ---------------------------------------------------------------------------

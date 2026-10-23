@@ -2,25 +2,40 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { CATALOG_TYPE, type CatalogItemType } from '@xeprime/types';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
+import { resolveAppLocale } from '@/i18n/config';
 import { queryKeys } from '@/services/query-keys';
 import { fetchCatalog } from './api';
-import { catalogLabel, EMPTY_CATALOG, type CatalogItem, type CatalogMap } from './types';
+import {
+  catalogLabel,
+  EMPTY_CATALOG,
+  localizeCatalog,
+  type CatalogItem,
+  type CatalogMap,
+} from './types';
 
 /**
  * Danh mục lọc dùng chung — form tạo/sửa xe, bộ lọc marketplace và trang chi tiết cùng đọc
  * một query key nên chỉ tốn MỘT request cho cả phiên, và ba màn không bao giờ lệch nhau.
  *
  * `staleTime` 5 phút: đây là dữ liệu cấu hình, không phải dữ liệu giao dịch.
+ *
+ * Nhãn đã chọn theo ngôn ngữ đang hiển thị (`localizeCatalog`) — cache giữ bản gốc hai ngôn ngữ,
+ * nên đổi ngôn ngữ không cần tải lại danh mục.
  */
 export function useCatalog(): { catalog: CatalogMap; isLoading: boolean } {
+  const locale = resolveAppLocale(useLocale());
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.catalog.list(),
     queryFn: fetchCatalog,
     staleTime: 5 * 60_000,
   });
-  return { catalog: data ?? EMPTY_CATALOG, isLoading };
+  const catalog = useMemo(
+    () => (data ? localizeCatalog(data, locale) : EMPTY_CATALOG),
+    [data, locale],
+  );
+  return { catalog, isLoading };
 }
 
 /** Một chiều danh mục. */

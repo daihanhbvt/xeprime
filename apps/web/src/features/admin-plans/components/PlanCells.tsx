@@ -6,23 +6,29 @@ import {
   CrownOutlined,
   GoldOutlined,
   PercentageOutlined,
-  ShopOutlined,
   SketchOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { Switch, Tag } from 'antd';
+import { Button, Switch, Tag, Tooltip } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { OWNER_LITE_VEHICLE_LIMIT, PLAN_STATUS, PLAN_STATUS_META } from '@xeprime/types';
+import {
+  OWNER_LITE_VEHICLE_LIMIT,
+  PLAN_STATUS,
+  PLAN_STATUS_META,
+  PLAN_VEHICLE_SCOPE,
+  planVehicleScopeOf,
+} from '@xeprime/types';
+import { MotorbikeOutlined } from '@/components/data-display/VehicleTypeIcon';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import {
-  COMMISSION_TRACK_BRANCH_LIMIT,
   PLAN_KIND,
   headlineTerm,
   planKindOf,
+  planReadyToPublish,
   type PlanKind,
 } from '../plan-catalog';
 import type { Plan } from '../types';
@@ -101,7 +107,7 @@ export function PlanKindCell({ plan }: { plan: Plan }) {
  *
  * Giá đầu bảng là MỘT con số (`headlineTerm`); bảng giá đủ các kỳ nằm sau dấu "i" khi bậc bán
  * nhiều hơn một kỳ hạn. Trần của tuyến hoa hồng là quy tắc trong code (`OWNER_LITE_VEHICLE_LIMIT`),
- * không đọc từ `limits` — xem `COMMISSION_TRACK_BRANCH_LIMIT`.
+ * không đọc từ `limits`.
  */
 export function PlanPriceCell({ plan }: { plan: Plan }) {
   const t = useTranslations('AdminPlans');
@@ -110,15 +116,13 @@ export function PlanPriceCell({ plan }: { plan: Plan }) {
   const kind = planKindOf(plan);
 
   function headline(): ReactNode {
+    // Tuyến hoa hồng không có giá thuê bao; hoa hồng theo chuyến là nấc của chính sách phí hiệu
+    // lực (ADR 0064 điều 3) — `plan.commissionPercent` là cột di sản, KHÔNG in ra.
     if (kind === PLAN_KIND.COMMISSION) {
       return (
         <>
-          <span className={styles.amount}>
-            {plan.commissionPercent == null
-              ? tCommon('labels.emptyValue')
-              : t('page.commissionPrice', { percent: plan.commissionPercent })}
-          </span>
-          <span className={styles.unit}>{t('page.perTrip')}</span>
+          <span className={styles.amountMuted}>{t('page.commissionPrice')}</span>
+          <span className={styles.unit}>{t('page.commissionByPolicy')}</span>
         </>
       );
     }
@@ -161,24 +165,31 @@ export function PlanPriceCell({ plan }: { plan: Plan }) {
 
   const commission = kind === PLAN_KIND.COMMISSION;
   const maxVehicles = commission ? OWNER_LITE_VEHICLE_LIMIT : plan.limits.maxVehicles;
-  const maxBranches = commission ? COMMISSION_TRACK_BRANCH_LIMIT : plan.limits.maxBranches;
+  const scope = planVehicleScopeOf(plan.vehicleScope);
+  const VehicleIcon = scope === PLAN_VEHICLE_SCOPE.MOTORBIKE ? MotorbikeOutlined : CarOutlined;
+
+  /*
+   * Trần xe đọc THEO PHẠM VI của bậc (ADR 0065 điều 3): 'Tối đa 5 xe máy' ở bậc xe máy, '5 ô tô' ở
+   * bậc ô tô, '5 xe' (chung hai loại) ở bậc phạm vi `all`. Không còn dòng chi nhánh — trần chi nhánh
+   * thôi là hạn mức (ADR 0065 điều 1).
+   */
+  const vehicleText =
+    maxVehicles == null
+      ? t('page.vehicleUnlimited')
+      : scope === PLAN_VEHICLE_SCOPE.MOTORBIKE && !commission
+        ? t('page.vehicleLimitMotorbike', { value: fmt.count(maxVehicles) })
+        : scope === PLAN_VEHICLE_SCOPE.CAR && !commission
+          ? t('page.vehicleLimitCar', { value: fmt.count(maxVehicles) })
+          : t('page.vehicleLimit', { value: fmt.count(maxVehicles) });
 
   return (
     <div className={styles.priceBox}>
       <div className={styles.priceHead}>{headline()}</div>
       <ul className={styles.limits}>
         <li>
-          <CarOutlined aria-hidden />
+          <VehicleIcon aria-hidden />
           {/* `null` là KHÔNG GIỚI HẠN, không phải "chưa khai" (ADR 0041 điều 3). */}
-          {maxVehicles == null
-            ? t('page.vehicleUnlimited')
-            : t('page.vehicleLimit', { value: fmt.count(maxVehicles) })}
-        </li>
-        <li>
-          <ShopOutlined aria-hidden />
-          {maxBranches == null
-            ? t('page.branchUnlimited')
-            : t('page.branchLimit', { value: fmt.count(maxBranches) })}
+          {vehicleText}
         </li>
       </ul>
     </div>
@@ -207,9 +218,7 @@ export function PlanStatusCell({
 }) {
   const t = useTranslations('AdminPlans');
   const active = plan.status === PLAN_STATUS.ACTIVE;
-  const tag = (
-    <StatusTag value={plan.status} meta={PLAN_STATUS_META} group="planStatus" />
-  );
+  const tag = <StatusTag value={plan.status} meta={PLAN_STATUS_META} group="planStatus" />;
 
   if (planKindOf(plan) === PLAN_KIND.COMMISSION && active) {
     return (
@@ -219,6 +228,36 @@ export function PlanStatusCell({
           label={t('page.defaultTrackStatusLabel')}
           content={t('page.defaultTrackStatusHint')}
         />
+      </div>
+    );
+  }
+
+  /*
+   * Bậc NHÁP (`draft`): chưa từng bán — một nút "Mở bán" thay cho công tắc, vì đây là lần đưa ra
+   * chợ ĐẦU TIÊN chứ không phải bật lại. Bậc tự mua chưa có bảng giá thì nút khoá, kèm lý do: mở
+   * bán một bậc không có kỳ nào để mua là bày một thẻ không ai bấm được.
+   */
+  if (plan.status === PLAN_STATUS.DRAFT) {
+    const ready = planReadyToPublish(plan);
+    const button = (
+      <Button
+        size="small"
+        type="primary"
+        loading={pending}
+        disabled={!ready}
+        onClick={(event) => {
+          // Hàng bấm được (mở form sửa) — nút này không được mở cả hai.
+          event.stopPropagation();
+          onToggle(plan);
+        }}
+      >
+        {t('page.publishAction')}
+      </Button>
+    );
+    return (
+      <div className={styles.statusCell}>
+        {tag}
+        {ready ? button : <Tooltip title={t('page.publishNeedsPrice')}>{button}</Tooltip>}
       </div>
     );
   }

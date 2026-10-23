@@ -20,6 +20,7 @@ const notificationsApi = vi.hoisted(() => ({
 }));
 const badges = vi.hoisted(() => ({
   counts: { chatCustomer: 0, chatShop: 0, notificationsUnread: 0 },
+  known: true,
   live: false,
 }));
 

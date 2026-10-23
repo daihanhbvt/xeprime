@@ -138,6 +138,13 @@ export const API_ERROR_CODE = {
 
   // Dữ liệu
   VALIDATION_FAILED: 'VALIDATION_FAILED',
+  /**
+   * Số tiền cấu hình (giá xe, phí giao xe, mã khuyến mãi…) không phải bội của 1.000đ (ADR 0064 —
+   * `@IsMoneyStep`). Mã riêng thay vì `VALIDATION_FAILED` khi đó là lỗi DUY NHẤT của request: chủ
+   * xe cần đọc ĐÚNG câu "Giá phải là bội số 1.000đ" chứ không phải "dữ liệu chưa hợp lệ".
+   * `details` giữ nguyên dạng của `VALIDATION_FAILED` (`[{ field, constraints }]`).
+   */
+  MONEY_STEP_1000: 'MONEY_STEP_1000',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   /**
@@ -177,7 +184,8 @@ export const API_ERROR_CODE = {
    */
   BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
   /**
-   * Yêu cầu đã quá **hạn phản hồi 60 phút** — không duyệt và không từ chối được nữa.
+   * Yêu cầu đã quá **hạn phản hồi** (`respondBy` — cửa sổ động 15′–4 giờ, ADR 0066) — không
+   * duyệt và không từ chối được nữa.
    *
    * Mã riêng thay vì `INVALID_STATUS_TRANSITION`: trạng thái trong DB có thể vẫn còn
    * `pending_host_approval` (worker chạy theo nhịp, không tức thời), nên câu "yêu cầu này đã
@@ -222,6 +230,18 @@ export const API_ERROR_CODE = {
    */
   TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
   /**
+   * Khách báo "Chưa nhận được xe" (ADR 0066, lớp 1) ở chuyến không còn báo được — chưa có đơn,
+   * đơn không ở `reserved`/`active` (đã xong, đã huỷ, không đến). 409.
+   */
+  TRIP_NOT_RECEIVED_NOT_ALLOWED: 'TRIP_NOT_RECEIVED_NOT_ALLOWED',
+  /** Báo "Chưa nhận được xe" TRƯỚC giờ hẹn nhận xe — chưa tới giờ thì chưa có gì để "chưa nhận". 409. */
+  TRIP_NOT_RECEIVED_TOO_EARLY: 'TRIP_NOT_RECEIVED_TOO_EARLY',
+  /**
+   * Báo "Chưa nhận được xe" SAU `pickupAt + HANDOVER_CONFIRMATION_GRACE_MINUTES` — cửa sổ đã
+   * đóng; việc còn lại đi qua mục Hỗ trợ. 409.
+   */
+  TRIP_NOT_RECEIVED_WINDOW_CLOSED: 'TRIP_NOT_RECEIVED_WINDOW_CLOSED',
+  /**
    * Đơn đã có một khoản phát sinh còn hiệu lực ở danh mục CHỈ ĐƯỢC GHI MỘT LẦN (hiện là phí
    * vượt km). `details` mang `{ category, surchargeId }` để FE chỉ thẳng vào khoản đang có.
    *
@@ -261,6 +281,29 @@ export const API_ERROR_CODE = {
    * được và mã lỗi phải nói đúng việc cần làm.
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
+  /**
+   * Bậc gói đang ở trạng thái CHƯA MỞ BÁN (`draft`) — gian hàng chưa mua được (ADR 0065: sáu bậc
+   * seed chờ admin nhập giá rồi mới mở bán). 409, `details` mang `{ planCode }`.
+   *
+   * Mã riêng chứ không phải `CONFLICT` + `details.planStatus`: người mua cần một câu nói thẳng "chọn
+   * gói khác", và web không phải đọc một chi tiết phụ để phân biệt ca này với "dữ liệu vừa đổi".
+   */
+  PLAN_NOT_PUBLISHED: 'PLAN_NOT_PUBLISHED',
+  /**
+   * Gian hàng TUYẾN GÓI chưa có gói hiệu lực cho LOẠI XE này (ADR 0065) — tạo xe hoặc đưa xe lên
+   * chợ bị từ chối. `details` mang `{ vehicleType }`.
+   *
+   * Không rơi về trần Owner Lite: một gian hàng đang trả gói ô tô mà đăng được xe máy theo luật
+   * hoa hồng là hai tuyến trên cùng một gian hàng. Lối đi tiếp là MUA gói cho loại xe đó.
+   */
+  PLAN_SCOPE_REQUIRED: 'PLAN_SCOPE_REQUIRED',
+  /**
+   * Lượt ghi đụng EXCLUDE `tenant_subscriptions_package_scope_no_overlap` (ADR 0065): hai kỳ gói
+   * chồng thời gian ở phạm vi xung đột (cùng loại xe, hoặc một bên là `all`). Chuỗi kỳ ở
+   * `BillingService` không bao giờ đề xuất điều đó — mã này là lưới cuối của DB, không phải luồng
+   * thường. 409.
+   */
+  SUBSCRIPTION_TERM_CONFLICT: 'SUBSCRIPTION_TERM_CONFLICT',
   /**
    * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
    * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
@@ -459,6 +502,12 @@ export const API_ERROR_CODE = {
   /** Case đã đóng — mở case mới thay vì viết tiếp. */
   SUPPORT_CASE_CLOSED: 'SUPPORT_CASE_CLOSED',
   /**
+   * Case thuộc nhóm GIỮ quyết toán (`dispute`, `handover_unconfirmed` — ADR 0066) chỉ nhân sự
+   * nền tảng được đóng/kết luận: đóng nó là gỡ băng tiền của chuyến, nên không bên nào trong
+   * tranh chấp tự làm được — kể cả với case do chính họ mở.
+   */
+  SUPPORT_CASE_PLATFORM_RESOLVE_ONLY: 'SUPPORT_CASE_PLATFORM_RESOLVE_ONLY',
+  /**
    * Loại case này chỉ do CHÍNH người dùng mở cho tài khoản của mình (`account_deletion`) —
    * gian hàng/nền tảng không mở hộ, và không gắn đơn thuê.
    */
@@ -609,6 +658,11 @@ export const API_ERROR_CODE = {
   DRIVER_NOT_ASSIGNABLE: 'DRIVER_NOT_ASSIGNABLE',
   /** Lượt gán không còn chờ tài xế trả lời (đã nhận / đã bị gỡ / đổi người). */
   DRIVER_ASSIGNMENT_STATE_CONFLICT: 'DRIVER_ASSIGNMENT_STATE_CONFLICT',
+  /**
+   * Tài xế nhận chuyến SAU hạn trả lời (`driver_respond_by`, ADR 0066) — lượt gán đã/đang được
+   * hệ thống trả về bên thuê. `details.respondBy` (ISO-8601).
+   */
+  DRIVER_ASSIGNMENT_EXPIRED: 'DRIVER_ASSIGNMENT_EXPIRED',
   DRIVER_ASSIGNMENT_LOCKED: 'DRIVER_ASSIGNMENT_LOCKED',
   /**
    * Tài xế xin ngừng khi còn chuyến ĐÃ NHẬN chưa giao xe — bên thuê phải đổi người trước.
@@ -939,6 +993,13 @@ export const API_ERROR_CODE = {
    * nền tảng vừa cố ý gỡ xuống (ADR 0048 điều 4).
    */
   VEHICLE_PLATFORM_HIDDEN: 'VEHICLE_PLATFORM_HIDDEN',
+  /**
+   * Lưu vào "Xe yêu thích" một chiếc xe KHÔNG đang niêm yết công khai (BRD customer favorites) —
+   * id lạ, xe bị ẩn/gỡ/đình chỉ, gian hàng ngừng hoạt động. Mã riêng thay vì `NOT_FOUND` chung:
+   * giao diện hoàn tác trái tim và nói đúng chuyện "xe này hiện không còn trên chợ", không phải
+   * một lỗi tra cứu chung chung. Bỏ thích thì không bao giờ trả mã này (luôn idempotent).
+   */
+  FAVORITE_VEHICLE_UNAVAILABLE: 'FAVORITE_VEHICLE_UNAVAILABLE',
 
   /**
    * Phiếu duyệt đã được một người duyệt KHÁC xử lý (hoặc đã rời hàng đợi) — mọi thao tác ghi lên
@@ -1022,6 +1083,12 @@ export const API_ERROR_CODE = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   /** Upload ảnh cần đủ bộ env R2 — thiếu thì endpoint presign trả 503 kèm mã này. */
   UPLOADS_NOT_CONFIGURED: 'UPLOADS_NOT_CONFIGURED',
+  /**
+   * Admin bấm "Thử phát hành lại" GCN bảo hiểm khi môi trường chưa cắm đối tác
+   * (`INSURANCE_PARTNER=none`) — lượt thử chắc chắn hỏng lại, nên từ chối ngay thay vì xếp một
+   * việc vô ích vào hàng đợi worker (ADR 0064).
+   */
+  INSURANCE_PARTNER_NOT_CONFIGURED: 'INSURANCE_PARTNER_NOT_CONFIGURED',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

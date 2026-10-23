@@ -2,6 +2,8 @@
 
 Ngày: 22/09/2026 · Trạng thái: Accepted · Ghi đè: **0039 (toàn bộ)** · Khôi phục: 0032 điều 2 · Liên quan: 0005, 0006, 0011, 0021 (đã gỡ, thay bởi 0028/0032/0033), 0022, 0024, 0027, 0033
 
+> ⚠️ **[ADR 0064](0064-financial-flow-v2.md) điều 7 (21/10/2026)** thay con số 120′ CỐ ĐỊNH ở điều 3 bằng cửa sổ động theo `ΔT = pickupAt − acceptedAt` (120′ là trần, và là giá trị khi `ΔT ≥ 24h`). Không gia hạn, hai mốc nhắc 60′/15′ và quy tắc bỏ qua mốc giữ nguyên.
+
 ## Bối cảnh
 
 ADR 0039 (16/09/2026) đảo thứ tự của ADR 0032: khoản giữ chỗ sinh ra **lúc khách bấm đặt**, chủ xe duyệt **sau khi tiền về**. Lý do khi đó là ba vấn đề có thật — khách bấm xong không có gì để làm, gian hàng phải quyết định trước khi biết khách có nghiêm túc không, và cửa sổ hai giờ quá dài cho một chỗ chưa có tiền.

@@ -141,23 +141,43 @@ export function TripRequestStatusCard({
 /**
  * Khung hai cột của các màn chuyến (design v2): đầu trang, cột trái `Booking information` (748 rộng
  * trên khung 1440) và cột phải `Costs and actions` (420 rộng).
+ *
+ * Khi khung hẹp lại còn MỘT cột (mobile), thứ tự không phải "hết cột trái rồi tới cột phải" — như
+ * trang chi tiết xe mobile (Figma `19771:71482`) kéo thẻ đặt xe lên ngay sau thông tin chính, việc
+ * khách phải làm đứng ngay dưới thẻ trạng thái:
+ *
+ *   `lead` (thẻ trạng thái) → `priority` (việc chính: thanh toán, nhắn chủ xe…) → `main` → `aside`.
+ *
+ * Desktop vẫn là `lead + main` bên trái, `priority + aside` bên phải.
  */
 export function TripColumns({
   header,
+  lead,
   main,
+  priority,
   aside,
 }: {
   /** `TripPageHeader` của màn. */
   header: ReactNode;
+  /** Đầu cột trái, đứng đầu ở mọi khổ — thẻ trạng thái. */
+  lead?: ReactNode;
   main: ReactNode;
+  /** Đầu cột phải; ở một cột thì kéo lên ngay sau `lead`. */
+  priority?: ReactNode;
   aside: ReactNode;
 }) {
   return (
     <div className={styles.view}>
       {header}
       <div className={styles.columns}>
-        <div className={styles.main}>{main}</div>
-        <div className={styles.aside}>{aside}</div>
+        <div className={styles.main}>
+          {lead ? <div className={cx(styles.group, styles.lead)}>{lead}</div> : null}
+          <div className={cx(styles.group, styles.body)}>{main}</div>
+        </div>
+        <div className={styles.aside}>
+          {priority ? <div className={cx(styles.group, styles.priority)}>{priority}</div> : null}
+          <div className={cx(styles.group, styles.asideBody)}>{aside}</div>
+        </div>
       </div>
     </div>
   );
@@ -225,8 +245,9 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
 }
 
 /**
- * Bố cục của hai màn YÊU CẦU (chờ phản hồi · chờ giữ chỗ) + toàn bộ cột trái của chúng. Cột phải
- * (việc chính, chi phí, thay đổi kế hoạch) do từng màn truyền vào qua `children`.
+ * Bố cục của hai màn YÊU CẦU (chờ phản hồi · chờ giữ chỗ) + toàn bộ cột trái của chúng. Cột phải do
+ * từng màn truyền vào: việc chính qua `priority` (ở mobile đứng ngay dưới thẻ trạng thái), chi phí
+ * và thay đổi kế hoạch qua `children`.
  */
 export function TripRequestLayout({
   trip,
@@ -235,6 +256,7 @@ export function TripRequestLayout({
   step,
   hasHoldStage: holdStage,
   status,
+  priority,
   children,
 }: {
   trip: CustomerTripDetail;
@@ -247,7 +269,9 @@ export function TripRequestLayout({
   hasHoldStage: boolean;
   /** Thẻ trạng thái đầu cột trái — `TripRequestStatusCard`. */
   status: ReactNode;
-  /** Cột phải. */
+  /** Việc chính của màn, đầu cột phải — xem `TripColumns`. */
+  priority?: ReactNode;
+  /** Phần còn lại của cột phải. */
   children: ReactNode;
 }) {
   const me = useCurrentUser().data ?? null;
@@ -259,9 +283,10 @@ export function TripRequestLayout({
   return (
     <TripColumns
       header={header}
+      lead={status}
+      priority={priority}
       main={
         <>
-          {status}
           <TripRequestTripCard trip={trip} data={data} />
           <TripRequestProgress current={step} hasHoldStage={holdStage} className={styles.card} />
           <TripRequestRenterCard trip={trip} />

@@ -31,6 +31,7 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     seats: filters.seats?.length ? filters.seats.join(',') : null,
     fuelType: filters.fuelType?.length ? filters.fuelType.join(',') : null,
     features: filters.features?.length ? filters.features.join(',') : null,
+    transmission: filters.transmission?.length ? filters.transmission.join(',') : null,
     // Toggle tiện ích: `1` khi bật, vắng khi tắt — đúng bộ `LISTING_AMENITY` (xem `BOOLEAN_KEYS`).
     ...Object.fromEntries(BOOLEAN_KEYS.map((key) => [key, filters[key] ? '1' : null])),
     minSeats: filters.minSeats ?? null,
@@ -55,6 +56,7 @@ const ARRAY_KEYS = [
   'seats',
   'fuelType',
   'features',
+  'transmission',
 ] as const;
 /**
  * Boolean trên URL = đúng bộ toggle tiện ích của panel Bộ lọc (`LISTING_AMENITY`, key trùng tên

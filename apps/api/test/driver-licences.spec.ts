@@ -153,9 +153,6 @@ async function submit(
   return ticket.licenceId;
 }
 
-/** Một lượt CHỜ DUYỆT (bộ đọc chưa cấu hình). */
-const submitPending = (userId: string) => submit(serviceNoReader, userId);
-
 const statusOf = async (id: string) =>
   (await prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } })).status;
 
@@ -269,59 +266,44 @@ describe('Nộp ảnh và tự xác thực', () => {
     await expect(service.complete(stranger, id)).rejects.toMatchObject({ status: 404 });
   });
 
-  maybe(
-    'bằng hết hạn ⇒ máy từ chối; vẫn nhờ xem lại được (máy có thể đọc lệch chữ số)',
-    async () => {
-      const userId = await newCustomer();
-      next = vnB2({ issuedOn: '2010-01-01', expiresOn: '2020-01-01' });
-      const id = await submit(service, userId);
-      expect((await service.getOverview(userId)).latest).toMatchObject({
-        status: DRIVER_LICENCE_STATUS.REJECTED,
-        rejectionReason: DRIVER_LICENCE_REJECT_REASON.EXPIRED,
-        canRequestReview: true,
-      });
-      expect(await service.requestReview(userId, id)).toMatchObject({
-        status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-      });
-    },
-  );
-
-  maybe('mặt sau ⇒ máy từ chối, KHÔNG được nhờ xem lại — khách tự lật thẻ là xong', async () => {
+  maybe('bằng hết hạn ⇒ máy từ chối, khách nộp bằng còn hạn', async () => {
     const userId = await newCustomer();
-    next = vnB2({ side: 'back' });
-    const id = await submit(service, userId);
-    await expectCode(
-      service.requestReview(userId, id),
-      API_ERROR_CODE.DRIVER_LICENCE_STATE_CONFLICT,
-    );
+    next = vnB2({ issuedOn: '2010-01-01', expiresOn: '2020-01-01' });
+    await submit(service, userId);
+    expect((await service.getOverview(userId)).latest).toMatchObject({
+      status: DRIVER_LICENCE_STATUS.REJECTED,
+      rejectionReason: DRIVER_LICENCE_REJECT_REASON.EXPIRED,
+      decisionSource: DRIVER_LICENCE_DECISION_SOURCE.AUTO,
+    });
   });
 
-  maybe('ảnh mờ ⇒ từ chối; khách nhờ xem lại MỘT lần ⇒ chờ duyệt', async () => {
+  maybe('ảnh mờ ⇒ từ chối kèm gợi ý chụp lại', async () => {
     const userId = await newCustomer();
     next = vnB2({ readable: false, qualityIssues: ['blurry'] });
-    const id = await submit(service, userId);
+    await submit(service, userId);
     expect((await service.getOverview(userId)).latest).toMatchObject({
       status: DRIVER_LICENCE_STATUS.REJECTED,
       rejectionReason: DRIVER_LICENCE_REJECT_REASON.UNREADABLE,
       qualityIssues: ['blurry'],
-      canRequestReview: true,
     });
-
-    const after = await service.requestReview(userId, id);
-    expect(after).toMatchObject({
-      status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-      canRequestReview: false,
-    });
-    expect((await service.getForPlatform(id)).reading.pendingReason).toBe('customer_request');
   });
 
-  maybe('bộ đọc hỏng ⇒ sang người duyệt, không bao giờ tự xác thực', async () => {
+  maybe('độ tin cậy thấp nhưng đủ trường ⇒ tự xác thực (ADR 0070)', async () => {
+    const userId = await newCustomer();
+    next = vnB2({ confidence: 'low' });
+    const id = await submit(service, userId);
+    expect(await statusOf(id)).toBe(DRIVER_LICENCE_STATUS.VERIFIED);
+  });
+
+  maybe('bộ đọc hỏng ⇒ từ chối reader_unavailable, KHÔNG BAO GIỜ tự xác thực', async () => {
     const userId = await newCustomer();
     next = new DriverLicenceReaderError(READER_FAILURE.TIMEOUT, 'timeout');
     const id = await submit(service, userId);
     const row = await prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } });
     expect(row).toMatchObject({
-      status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
+      status: DRIVER_LICENCE_STATUS.REJECTED,
+      rejectionReason: DRIVER_LICENCE_REJECT_REASON.READER_UNAVAILABLE,
+      decisionSource: DRIVER_LICENCE_DECISION_SOURCE.AUTO,
       ocrErrorCode: READER_FAILURE.TIMEOUT,
     });
     await expectCode(
@@ -331,11 +313,23 @@ describe('Nộp ảnh và tự xác thực', () => {
         vehicleType: VEHICLE_TYPE.CAR,
         lastDayKey: '2027-01-01',
       }),
-      API_ERROR_CODE.DRIVER_LICENCE_PENDING_REVIEW,
+      API_ERROR_CODE.DRIVER_LICENCE_REQUIRED,
     );
   });
 
-  maybe('lượt đọc kẹt ở processing quá 5 phút ⇒ tự sang người duyệt khi đọc lại', async () => {
+  maybe('chưa cấu hình bộ đọc ⇒ reader_unavailable; bằng cũ vẫn dùng được', async () => {
+    const userId = await newCustomer();
+    const oldId = await submit(service, userId);
+    const id = await submit(serviceNoReader, userId);
+    expect(await prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      status: DRIVER_LICENCE_STATUS.REJECTED,
+      rejectionReason: DRIVER_LICENCE_REJECT_REASON.READER_UNAVAILABLE,
+      ocrErrorCode: READER_FAILURE.NOT_CONFIGURED,
+    });
+    expect((await service.getOverview(userId)).verified?.id).toBe(oldId);
+  });
+
+  maybe('lượt đọc kẹt ở processing quá 5 phút ⇒ reader_unavailable khi đọc lại', async () => {
     const userId = await newCustomer();
     const ticket = await service.presign(userId, {
       contentType: 'image/jpeg',
@@ -348,75 +342,29 @@ describe('Nộp ảnh và tự xác thực', () => {
     });
     await prisma.$executeRaw`UPDATE customer_driver_licences SET updated_at = now() - interval '10 minutes' WHERE id = ${ticket.licenceId}`;
     const overview = await service.getOverview(userId);
-    expect(overview.latest?.status).toBe(DRIVER_LICENCE_STATUS.PENDING_REVIEW);
+    expect(overview.latest).toMatchObject({
+      status: DRIVER_LICENCE_STATUS.REJECTED,
+      rejectionReason: DRIVER_LICENCE_REJECT_REASON.READER_UNAVAILABLE,
+    });
   });
 });
 
-describe('Hàng đợi duyệt của nền tảng', () => {
-  maybe('chưa cấu hình bộ đọc ⇒ chờ duyệt; duyệt ⇒ verified, bằng cũ bị thay', async () => {
-    const userId = await newCustomer();
-    const oldId = await submit(service, userId);
-    expect(await statusOf(oldId)).toBe(DRIVER_LICENCE_STATUS.VERIFIED);
-
-    const newIdLicence = await submit(serviceNoReader, userId);
-    expect(await statusOf(newIdLicence)).toBe(DRIVER_LICENCE_STATUS.PENDING_REVIEW);
-    // Bằng cũ VẪN dùng được trong lúc bằng mới chờ duyệt.
-    expect((await service.getOverview(userId)).verified?.id).toBe(oldId);
-
-    const approved = await service.approve(newIdLicence, reviewerId, {
-      kind: DRIVER_LICENCE_KIND.VN,
-      licenceNumber: '790 1234 56780',
-      fullName: 'Nguyễn  Văn An',
-      classes: ['a1', 'B2'],
-      issuedOn: '2024-05-01',
-      expiresOn: '2034-05-01',
-      noExpiry: false,
-      // Cờ gửi lên bị BỎ QUA với GPLX VN — suy từ hạng.
-      coversCar: false,
-      coversMotorbike: false,
+describe('Hồ sơ khách thuê — bằng lái chỉ đọc (ADR 0070)', () => {
+  maybe('lịch sử nộp của MỘT khách, mới nhất trước, che SĐT', async () => {
+    const userId = await newCustomer('84901234567');
+    const other = await newCustomer();
+    next = vnB2({ readable: false });
+    const first = await submit(service, userId);
+    next = vnB2();
+    const second = await submit(service, userId);
+    await submit(service, other);
+    const page = await service.listForPlatform({ userId });
+    expect(page.data.map((d) => d.id)).toEqual([second, first]);
+    expect(page.data[0]!.owner.phone).toBe('090****567');
+    expect((await service.getForPlatform(second)).owner).toMatchObject({
+      phone: '090****567',
+      email: expect.not.stringContaining(`dl-${userId}@`),
     });
-    expect(approved).toMatchObject({
-      status: DRIVER_LICENCE_STATUS.VERIFIED,
-      decisionSource: DRIVER_LICENCE_DECISION_SOURCE.MANUAL,
-      licenceNumber: '790123456780',
-      classes: ['A1', 'B2'],
-      coversCar: true,
-      coversMotorbike: true,
-    });
-    expect(await statusOf(oldId)).toBe(DRIVER_LICENCE_STATUS.SUPERSEDED);
-    expect(
-      await prisma.auditLog.count({
-        where: { targetId: newIdLicence, action: 'driver_licence.verified' },
-      }),
-    ).toBe(1);
-  });
-
-  maybe('duyệt bằng đã hết hạn / không có loại xe nào ⇒ 400', async () => {
-    const userId = await newCustomer();
-    const id = await submit(serviceNoReader, userId);
-    const base = {
-      kind: DRIVER_LICENCE_KIND.VN,
-      licenceNumber: '012345678901',
-      fullName: 'Trần Thị B',
-      classes: ['B2'],
-      expiresOn: '2031-01-01',
-      noExpiry: false,
-      coversCar: false,
-      coversMotorbike: false,
-    };
-    await expectCode(
-      service.approve(id, reviewerId, { ...base, expiresOn: '2020-01-01' }),
-      API_ERROR_CODE.VALIDATION_FAILED,
-    );
-    await expectCode(
-      service.approve(id, reviewerId, { ...base, classes: ['A4'] }),
-      API_ERROR_CODE.VALIDATION_FAILED,
-    );
-    await expectCode(
-      service.approve(id, reviewerId, { ...base, expiresOn: null }),
-      API_ERROR_CODE.VALIDATION_FAILED,
-    );
-    expect(await statusOf(id)).toBe(DRIVER_LICENCE_STATUS.PENDING_REVIEW);
   });
 
   maybe(
@@ -455,78 +403,6 @@ describe('Hàng đợi duyệt của nền tảng', () => {
       ).resolves.toBeUndefined();
     },
   );
-
-  maybe(
-    'bằng nước ngoài chờ duyệt (khách nhờ xem lại): người duyệt chốt hai cờ lái được gì',
-    async () => {
-      const userId = await newCustomer();
-      next = vnB2({
-        documentKind: 'foreign',
-        classes: ['C'],
-        issuingCountry: 'US',
-        expiresOn: '2029-06-30',
-      });
-      const id = await submit(serviceNoReader, userId);
-
-      const approved = await service.approve(id, reviewerId, {
-        kind: DRIVER_LICENCE_KIND.FOREIGN,
-        licenceNumber: 'D1234567',
-        fullName: 'JOHN SMITH',
-        classes: ['C'],
-        expiresOn: '2029-06-30',
-        noExpiry: false,
-        issuingCountry: 'US',
-        coversCar: true,
-        coversMotorbike: false,
-      });
-      expect(approved).toMatchObject({
-        coversCar: true,
-        coversMotorbike: false,
-        issuingCountry: 'US',
-      });
-    },
-  );
-
-  maybe(
-    'từ chối "khác" bắt buộc lời nhắn; hai người duyệt cùng lúc ⇒ một người thắng',
-    async () => {
-      const userId = await newCustomer();
-      const id = await submit(serviceNoReader, userId);
-      await expectCode(
-        service.reject(id, reviewerId, { reason: DRIVER_LICENCE_REJECT_REASON.OTHER }),
-        API_ERROR_CODE.VALIDATION_FAILED,
-      );
-      const results = await Promise.allSettled([
-        service.reject(id, reviewerId, { reason: DRIVER_LICENCE_REJECT_REASON.UNREADABLE }),
-        service.reject(id, reviewerId, { reason: DRIVER_LICENCE_REJECT_REASON.EXPIRED }),
-      ]);
-      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-      expect(await statusOf(id)).toBe(DRIVER_LICENCE_STATUS.REJECTED);
-    },
-  );
-
-  maybe('nộp ảnh mới khi đang chờ duyệt ⇒ lượt cũ bị huỷ, người duyệt nhận 409', async () => {
-    const userId = await newCustomer();
-    const first = await submit(serviceNoReader, userId);
-    await submit(serviceNoReader, userId);
-    expect(await statusOf(first)).toBe(DRIVER_LICENCE_STATUS.CANCELLED);
-    await expect(
-      service.reject(first, reviewerId, { reason: DRIVER_LICENCE_REJECT_REASON.UNREADABLE }),
-    ).rejects.toMatchObject({ status: 409 });
-  });
-
-  maybe('danh sách mặc định là hàng đợi chờ duyệt và che SĐT', async () => {
-    const userId = await newCustomer('84901234567');
-    const id = await submit(serviceNoReader, userId);
-    const page = await service.listForPlatform({ q: '0901234567' });
-    const item = page.data.find((d) => d.id === id);
-    expect(item?.owner.phone).toBe('090****567');
-    // Chi tiết CŨNG che — quyền duyệt bằng lái không phải quyền xem PII khách.
-    expect((await service.getForPlatform(id)).owner).toMatchObject({
-      phone: '090****567',
-      email: expect.not.stringContaining(`dl-${userId}@`),
-    });
-  });
 });
 
 describe('Vệ sinh dữ liệu và ca hỏng', () => {
@@ -560,15 +436,21 @@ describe('Vệ sinh dữ liệu và ca hỏng', () => {
     await expect(service.imageForOwner(userId, first)).rejects.toMatchObject({ status: 404 });
   });
 
-  maybe('lỗi ngoài dự kiến lúc đọc (R2 sập) ⇒ sang người duyệt, không kẹt processing', async () => {
-    const userId = await newCustomer();
-    r2Failure.read = true;
-    const id = await submit(service, userId);
-    expect(await prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } })).toMatchObject({
-      status: DRIVER_LICENCE_STATUS.PENDING_REVIEW,
-      ocrErrorCode: READER_FAILURE.PROVIDER_ERROR,
-    });
-  });
+  maybe(
+    'lỗi ngoài dự kiến lúc đọc (R2 sập) ⇒ reader_unavailable, không kẹt processing',
+    async () => {
+      const userId = await newCustomer();
+      r2Failure.read = true;
+      const id = await submit(service, userId);
+      expect(await prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } })).toMatchObject(
+        {
+          status: DRIVER_LICENCE_STATUS.REJECTED,
+          rejectionReason: DRIVER_LICENCE_REJECT_REASON.READER_UNAVAILABLE,
+          ocrErrorCode: READER_FAILURE.PROVIDER_ERROR,
+        },
+      );
+    },
+  );
 
   maybe('trần lượt nộp trong 24 giờ ⇒ mã riêng, không phải RATE_LIMITED chung', async () => {
     const userId = await newCustomer();
@@ -590,27 +472,6 @@ describe('Vệ sinh dữ liệu và ca hỏng', () => {
       API_ERROR_CODE.DRIVER_LICENCE_SUBMISSION_LIMIT,
     );
   });
-
-  maybe(
-    'duyệt với ngày không có thật trên lịch ⇒ 400, không lưu ngày bị đẩy sang tháng sau',
-    async () => {
-      const userId = await newCustomer();
-      const id = await submitPending(userId);
-      await expectCode(
-        service.approve(id, reviewerId, {
-          kind: DRIVER_LICENCE_KIND.VN,
-          licenceNumber: '012345678901',
-          fullName: 'Trần Thị B',
-          classes: ['B2'],
-          expiresOn: '2031-02-30',
-          noExpiry: false,
-          coversCar: false,
-          coversMotorbike: false,
-        }),
-        API_ERROR_CODE.VALIDATION_FAILED,
-      );
-    },
-  );
 });
 
 describe('Cổng đặt xe', () => {

@@ -38,6 +38,8 @@ export type BookingRequestDecisionTarget = Omit<
     | 'requestedPickupDate'
     | 'pickupWindowStartDate'
     | 'pickupWindowEndDate'
+    | 'pricing'
+    | 'approvalPreview'
   >,
   'customerPhone' | 'serviceType' | 'pickupPreference'
 > & {
@@ -77,6 +79,10 @@ export interface RequestBookingPrefill {
   packageMonths?: number | null;
   /** Mã khuyến mãi đang áp ở thẻ đặt xe — chuỗi mã, KHÔNG phải số giảm. */
   promoCode?: string | null;
+  /** Khách chọn bảo hiểm vật chất xe MIC (IV) — tùy chọn. */
+  vehicleProtectionSelected?: boolean;
+  /** Khách chọn bảo hiểm tai nạn người ngồi trên xe MIC (IP) — tùy chọn. */
+  personalAccidentSelected?: boolean;
   /**
    * Thẻ đặt xe đã có ĐỦ chuyến (dịch vụ + thời gian, hoặc gói) ⇒ hộp tự chạy lượt "Tiếp tục" ngay
    * khi mở: kiểm khung giờ, mời đăng nhập nếu cần, soát bằng lái — rồi tới thẳng màn Xem lại.

@@ -7,7 +7,7 @@ import {
 } from '@xeprime/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { ADMIN_APPROVAL_TASK_PARAM } from '@/constants/routes';
-import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
+import { enumParam, positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
 import { VEHICLE_APPROVALS_DEFAULT_STATUS } from '../api';
 import { APPROVAL_STATUS_ANY } from '../constants';
@@ -51,10 +51,6 @@ export function filterBarPatch(
   return out;
 }
 
-function oneOf(value: string | null, allowed: readonly string[]): string | undefined {
-  return value !== null && allowed.includes(value) ? value : undefined;
-}
-
 function dayParam(value: string | null): string | undefined {
   return value && dayjs(value, DAY_PARAM_FORMAT, true).isValid() ? value : undefined;
 }
@@ -68,10 +64,10 @@ function dayParam(value: string | null): string | undefined {
 export function useVehicleApprovalFilters() {
   return useUrlFilters<VehicleApprovalUrlState>((sp) => ({
     status:
-      oneOf(sp.get('status'), [...APPROVAL_STATUS_VALUES, APPROVAL_STATUS_ANY]) ??
+      enumParam(sp, 'status', [...APPROVAL_STATUS_VALUES, APPROVAL_STATUS_ANY]) ??
       VEHICLE_APPROVALS_DEFAULT_STATUS,
-    vehicleType: oneOf(sp.get('vehicleType'), VEHICLE_TYPE_VALUES) ?? ALL_FILTER,
-    storefrontKind: oneOf(sp.get('storefrontKind'), STOREFRONT_KIND_VALUES) ?? ALL_FILTER,
+    vehicleType: enumParam(sp, 'vehicleType', VEHICLE_TYPE_VALUES) ?? ALL_FILTER,
+    storefrontKind: enumParam(sp, 'storefrontKind', STOREFRONT_KIND_VALUES) ?? ALL_FILTER,
     q: sp.get('q')?.trim() || undefined,
     submittedFrom: dayParam(sp.get('submittedFrom')),
     submittedTo: dayParam(sp.get('submittedTo')),

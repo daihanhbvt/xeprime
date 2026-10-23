@@ -1,9 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  ACCOUNT_REALM,
-  PERMISSION,
-} from '@xeprime/types';
+import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
 import { PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import { AuditLogDetailDto, AuditLogListQueryDto, AuditLogPageDto } from './dto/audit-log.dto';
 import { PlatformAuditService } from './platform-audit.service';

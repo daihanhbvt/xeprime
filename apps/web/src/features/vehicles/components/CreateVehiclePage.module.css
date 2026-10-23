@@ -1,0 +1,4 @@
+/* Dải "gói chưa cho phép" (ADR 0065) đứng giữa tiêu đề trang và form. */
+.gate {
+  margin-bottom: var(--xp-space-md);
+}

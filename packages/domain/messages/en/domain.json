@@ -219,11 +219,12 @@
     "unassigned": "Driver removed",
     "cancelled": "Booking cancelled",
     "no_show": "Customer no-show",
-    "completed": "Completed"
+    "completed": "Completed",
+    "expired": "Not confirmed in time"
   },
   "driverLicenceState": {
     "verified": "Licence verified",
-    "pending": "Licence pending",
+    "pending": "Licence being read",
     "none": "No licence"
   },
   "driverEmployerKind": {
@@ -394,7 +395,9 @@
     "driver_trip_unassigned": "Trip removed from you",
     "driver_trip_completed": "Trip completed",
     "driver_trip_accepted": "Driver accepted the trip",
-    "driver_trip_declined": "Driver declined the trip"
+    "driver_trip_declined": "Driver declined the trip",
+    "driver_trip_response_expired": "Driver did not respond",
+    "booking_driver_missing": "Upcoming trip has no driver"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -448,6 +451,7 @@
     "escrow_hold": "Reservation holds via the platform"
   },
   "planStatus": {
+    "draft": "Not on sale yet",
     "active": "Active",
     "archived": "Inactive"
   },
@@ -726,12 +730,14 @@
     "motorbike": "Motorbike"
   },
   "feeLine": {
-    "service_fee": "XePrime service fee",
+    "service_fee": "Booking fee",
+    "owner_commission": "Owner service fee",
     "tax": "Withheld / remitted tax",
-    "trip_insurance": "Trip insurance",
-    "vehicle_protection": "Vehicle protection",
+    "trip_insurance": "Passenger accident insurance",
+    "vehicle_protection": "Vehicle damage insurance",
     "deposit": "Booking deposit",
-    "promo": "XePrime promo code"
+    "promo": "XePrime promo code",
+    "rent_prepaid": "Rent paid in advance"
   },
   "promoCodeState": {
     "disabled": "Paused",
@@ -792,6 +798,7 @@
     "missing_fields": "Missing details",
     "expired": "Licence expired",
     "no_drivable_class": "Class does not cover rentals",
+    "reader_unavailable": "Reader temporarily unavailable",
     "other": "Other reason"
   },
   "feePolicyStatus": {
@@ -801,12 +808,18 @@
   },
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "Service fee % is out of the allowed range",
-    "tax_requires_rate_and_label": "Tax needs both a rate and a tax name",
+    "tax_requires_rates_and_basis": "Tax needs a full rate table by service type and a legal basis",
+    "tax_rate_out_of_range": "A VAT or PIT rate is out of range (0–5%, at most two decimals)",
     "insurance_requires_partner": "Insurance needs a real partner name",
-    "trip_insurance_requires_rate": "Trip insurance needs a rate",
-    "vehicle_protection_requires_rate": "Vehicle protection needs a rate",
+    "trip_insurance_requires_rate": "Passenger accident insurance needs a daily rate for every vehicle type",
+    "vehicle_protection_requires_rate": "Vehicle damage insurance needs a daily rate for every vehicle type",
+    "amount_not_thousand_step": "Configured amounts must be non-negative multiples of 1,000 VND",
+    "owner_commission_tiers_invalid": "Commission tiers must start on day 1, increase, and stay between 0% and 30%",
     "hold_window_out_of_range": "Payment window is out of the allowed range",
-    "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range"
+    "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range",
+    "deposit_percent_out_of_range": "Owner's reservation share % is out of range or above the policy cap",
+    "deposit_percent_below_tax_percent": "Owner's reservation share % must not be lower than the highest tax rate in the table",
+    "free_cancel_shorter_than_payment_window": "Free-cancel window must not be shorter than the payment window"
   },
   "bookingHoldStatus": {
     "pending": "Awaiting payment",
@@ -819,7 +832,7 @@
   "bookingHoldOutcome": {
     "kept": "Used for the trip",
     "settled": "Settled",
-    "split_late_cancel": "Late cancellation — split",
+    "split_late_cancel": "Late cancellation — hold forfeited",
     "refunded": "Refunded to customer",
     "forfeited": "Compensated to owner",
     "released_to_shop": "Released to shop"
@@ -835,7 +848,9 @@
     "owner_cancel": "Owner cancelled the trip",
     "overpaid": "Overpaid",
     "hold_expired": "Reservation payment window expired",
-    "admin_decision": "XePrime decision"
+    "admin_decision": "XePrime decision",
+    "late_cancel": "Cancelled after free-cancel deadline",
+    "no_show": "Customer did not show up"
   },
   "supportCaseStatus": {
     "open": "New",
@@ -851,6 +866,7 @@
     "account": "Account",
     "account_deletion": "Account deletion request",
     "plan_consultation": "Plan consultation",
+    "handover_unconfirmed": "Handover not confirmed",
     "other": "Other"
   },
   "supportCaseParty": {
@@ -1260,6 +1276,9 @@
       "retry": "Retry insurance issuance",
       "void": "Void insurance policy"
     },
+    "insurance_product": {
+      "update": "Update insurance product"
+    },
     "listing": {
       "support": {
         "repair": "Repair listing sync (support)"
@@ -1335,6 +1354,9 @@
       "transition": "Change support case status",
       "resolve": "Resolve support case",
       "withdraw": "Withdraw support case"
+    },
+    "tax": {
+      "period_export": "Export tax withholding period"
     },
     "tax_withholding": {
       "reverse": "Reverse tax withholding"
@@ -1464,6 +1486,9 @@
       "activate": "Activate plan guide email template",
       "delete": "Delete plan guide email template",
       "send_test": "Send test plan guide email"
+    },
+    "insurance_product": {
+      "update": "Update insurance product"
     }
   },
   "auditTargetType": {
@@ -1483,6 +1508,7 @@
     "fee_policy": "Fee policy",
     "hold_refund": "Hold refund",
     "holiday_sync_run": "Holiday sync run",
+    "insurance_product": "Insurance product",
     "marketplace_banner": "Homepage banner",
     "payment": "Payment",
     "payment_gateway_order": "Gateway payment",
@@ -1517,7 +1543,8 @@
     "vehicle_handover": "Handover record",
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
-    "withdrawal_request": "Withdrawal request"
+    "withdrawal_request": "Withdrawal request",
+    "insurance_product": "Insurance product"
   },
   "auditField": {
     "planCode": "Plan code",
@@ -1610,5 +1637,13 @@
     "bank_transfer": "bank transfer",
     "momo": "MoMo wallet",
     "vnpay": "VNPAY"
+  },
+  "priceRow": {
+    "base": "Base rental",
+    "discount": "Direct discount",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery fee",
+    "overtime": "Overtime fee",
+    "extras": "Extras"
   }
 }

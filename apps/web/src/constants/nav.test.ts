@@ -178,13 +178,13 @@ describe('nav — cấu trúc khối', () => {
         ROUTES.ADMIN.TRIPS,
         ROUTES.ADMIN.BOOKINGS,
         ROUTES.ADMIN.CUSTOMERS,
-        // Hàng đợi bằng lái của khách (ADR 0057).
-        ROUTES.ADMIN.DRIVER_LICENCES,
         // Tra cứu xuyên realm (ADR 0053 điều 9).
         ROUTES.ADMIN.ACCOUNT_LOOKUP,
         // `ADMIN_BANK_TRANSACTIONS` không mất mà được GỘP (01/10/2026): hàng đợi tiền vào sống
         // trong màn Tài chính, URL cũ chuyển tiếp về `ADMIN_MONEY?queue=bank-in`.
         ROUTES.ADMIN.MONEY,
+        // Bảo hiểm chuyến (ADR 0064): danh mục sản phẩm + hàng đợi giấy chứng nhận.
+        ROUTES.ADMIN.INSURANCE,
         ROUTES.ADMIN.SUPPORT,
         ROUTES.ADMIN.PLANS,
         ROUTES.ADMIN.FEE_POLICIES,
@@ -547,8 +547,8 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     const labels = visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.REVIEWER], true);
 
     expect(labels).toContain('platform.approvals');
-    // Bằng lái khách máy chưa tự quyết (ADR 0057) cũng là việc duyệt của reviewer.
-    expect(labels).toContain('platform.driverLicences');
+    // Hàng đợi bằng lái đã gỡ (ADR 0070) — không còn mục menu riêng cho bất kỳ vai nào.
+    expect(labels).not.toContain('platform.driverLicences');
     expect(labels).not.toContain('platform.staff');
     expect(labels).not.toContain('platform.plans');
   });
@@ -569,8 +569,6 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     );
     expect(labels).not.toContain('platform.approvals');
     expect(labels).not.toContain('platform.audit');
-    // Ảnh bằng lái là PII của khách — không phải việc của tài chính.
-    expect(labels).not.toContain('platform.driverLicences');
   });
 
   it('không có quyền nào → không mục nào (khách chưa từng vào portal)', () => {

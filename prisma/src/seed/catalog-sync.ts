@@ -22,6 +22,7 @@ import {
   vehicleTransmissionTypesForFuels,
 } from '@xeprime/types';
 
+import { VEHICLE_FEATURE_LABEL_EN } from './catalog-labels-en';
 import { log, prisma, seedId } from './context';
 import {
   ADDITIONAL_BRANDS,
@@ -82,6 +83,7 @@ async function syncFeatures(): Promise<number> {
 
   for (const key of keys) {
     const label = (VEHICLE_FEATURE_LABEL as Record<string, string>)[key]!;
+    const labelEn = (VEHICLE_FEATURE_LABEL_EN as Record<string, string>)[key] ?? null;
     const vehicleTypes = [...(VEHICLE_FEATURE_VEHICLE_TYPES[key] ?? [])];
 
     await prisma.catalogItem.upsert({
@@ -94,10 +96,18 @@ async function syncFeatures(): Promise<number> {
         type: 'vehicle_feature',
         key,
         label,
+        labelEn,
         sortOrder: order,
         vehicleTypes,
       },
     });
+    // Bản tiếng Anh: chỉ ĐIỀN ô còn trống — admin đã dịch/sửa thì giữ nguyên (cùng luật với nhãn).
+    if (labelEn) {
+      await prisma.catalogItem.updateMany({
+        where: { type: 'vehicle_feature', key, labelEn: null },
+        data: { labelEn },
+      });
+    }
     order += 1;
   }
 

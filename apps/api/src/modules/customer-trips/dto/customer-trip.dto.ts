@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
+  CUSTOMER_CANCEL_PREVIEW_KIND_VALUES,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   TRIP_ROLE_VALUES,
@@ -26,10 +27,11 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { CustomerHoldDto } from '../../holds/dto/hold.dto';
+import { InsuranceCertificateDto, InsuranceCoverageDto } from '../../insurance/dto/insurance.dto';
 import {
-  CustomerFeeBreakdownDto,
   LongTermPackageOptionDto,
   PriceBreakdownRowDto,
+  PublicCustomerFeeBreakdownDto,
 } from '../../pricing/dto/pricing.dto';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
@@ -148,9 +150,12 @@ export class CustomerTripFinanceBreakdownDto {
   @ApiProperty({ description: 'Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng' })
   depositAmount!: string;
 
-  /** Phụ phí phía khách đã chốt. `null` khi đơn ra đời lúc sàn chưa có chính sách phí. */
-  @ApiPropertyOptional({ type: CustomerFeeBreakdownDto, nullable: true })
-  fees!: CustomerFeeBreakdownDto | null;
+  /**
+   * Phụ phí phía khách đã chốt — bản CÔNG KHAI (`toPublicFeeBreakdown`, ADR 0064): không mang hoa
+   * hồng, thuế hay số thực nhận của chủ xe. `null` khi đơn ra đời lúc sàn chưa có chính sách phí.
+   */
+  @ApiPropertyOptional({ type: PublicCustomerFeeBreakdownDto, nullable: true })
+  fees!: PublicCustomerFeeBreakdownDto | null;
 
   /** Cấu tạo giá gói dài hạn đã chốt (ADR 0011). `null` với dịch vụ khác. */
   @ApiPropertyOptional({ type: LongTermPackageOptionDto, nullable: true })
@@ -284,9 +289,15 @@ export class CustomerTripListItemDto {
 
   /**
    * Hạn chủ xe phải trả lời (ISO-8601 UTC) — đồng hồ đếm ngược trên thẻ chờ duyệt.
-   * `null` khi chuyến đã qua bước duyệt.
+   * `null` khi chuyến đã qua bước duyệt. Độ dài ĐỘNG theo khoảng cách tới giờ nhận (15′–4 giờ,
+   * ADR 0066) — client đọc mốc này, không tự giả định một cửa sổ cố định.
    */
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066)',
+  })
   respondBy!: string | null;
 
   /**
@@ -302,7 +313,8 @@ export class CustomerTripListItemDto {
   @ApiPropertyOptional({
     type: BookingDriverSummaryDto,
     nullable: true,
-    description: 'Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn',
+    description:
+      'Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp',
   })
   driver!: BookingDriverSummaryDto | null;
 
@@ -399,8 +411,19 @@ export class CustomerTripEstimateDto {
    * Phụ phí phía khách. `null` khi sàn chưa có chính sách phí hiệu lực — lúc đó tổng khách
    * trả bằng đúng giá thuê, và giao diện KHÔNG được bịa ra một dòng phí 0đ.
    */
-  @ApiPropertyOptional({ type: CustomerFeeBreakdownDto, nullable: true })
-  fees!: CustomerFeeBreakdownDto | null;
+  @ApiPropertyOptional({ type: PublicCustomerFeeBreakdownDto, nullable: true })
+  fees!: PublicCustomerFeeBreakdownDto | null;
+
+  /**
+   * `B − H − T` — số CHỦ XE thực nhận cả chuyến. CHỈ có khi người xem là chủ xe (vai `host`);
+   * khách luôn nhận `null` — kinh tế của chủ xe không bao giờ ra phía khách (ADR 0064).
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Chủ xe thực nhận — chỉ vai chủ xe, khách luôn null',
+  })
+  ownerNetAmount!: string | null;
 
   /**
    * Khác `null` ⇒ tổng chỉ là TẠM TÍNH ở mức sâu hơn (giá lộ trình / giá dịch vụ chưa niêm yết,
@@ -444,6 +467,25 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
 
+  /**
+   * Cờ "đang có khiếu nại" (ADR 0066) — THEO VAI người xem. Người đi thuê: báo cáo "chưa nhận
+   * được xe" còn mở của CHÍNH họ (khối "khiếu nại của bạn đang được xử lý"). Chủ xe: chuyến có
+   * tranh chấp (`dispute`) còn mở, ai mở cũng vậy.
+   */
+  @ApiProperty() openDispute!: boolean;
+  /**
+   * Người đi thuê bấm được "Chưa nhận được xe" NGAY BÂY GIỜ (ADR 0066, lớp 1): đơn `reserved`/
+   * `active`, trong `[pickupAt, pickupAt + 120′]`, chưa có báo cáo của chính họ còn mở. Server tính
+   * lúc đọc — giao diện tự tính lại theo đồng hồ để hiện nút đúng mốc; server vẫn là cửa chặn.
+   */
+  @ApiProperty() canReportNotReceived!: boolean;
+  /**
+   * Mốc ĐÓNG cửa sổ báo "Chưa nhận được xe" (`pickupAt + 120′`, ISO-8601 UTC) — có mặt khi chuyến
+   * còn báo được (chưa tới giờ hoặc đang trong cửa sổ), để giao diện tự hiện nút lúc tới giờ nhận
+   * và tự ẩn đúng lúc đóng. `null` khi không áp dụng.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) notReceivedReportUntil!: string | null;
+
   /** `null` khi chuyến chưa được nhận — chưa có đơn thì chưa có tiền. */
   @ApiPropertyOptional({ type: CustomerTripFinanceDto, nullable: true })
   finance!: CustomerTripFinanceDto | null;
@@ -481,6 +523,21 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
 
   @ApiPropertyOptional({ type: CustomerTripReviewDto, nullable: true })
   review!: CustomerTripReviewDto | null;
+
+  /**
+   * Giấy chứng nhận bảo hiểm ĐÃ CẤP của chuyến (ADR 0064) — rỗng cho tới khi bàn giao xe và
+   * đối tác phát hành. `isTest` = GCN của adapter giả lập, không có hiệu lực bảo hiểm.
+   */
+  @ApiProperty({ type: [InsuranceCertificateDto] })
+  insuranceCertificates!: InsuranceCertificateDto[];
+  /**
+   * Tình trạng bảo hiểm theo TỪNG sản phẩm khách đã trả (ADR 0064) — có mặt cả khi GCN chưa có
+   * (`pending_issue`/`issuing`/`failed`) hay không bao giờ có (`refunded`/`voided`). Rỗng = chuyến
+   * không mua bảo hiểm. `insuranceCertificates` giữ cho client cũ: đúng bằng các `certificate`
+   * khác null của danh sách này.
+   */
+  @ApiProperty({ type: [InsuranceCoverageDto] })
+  insuranceCoverage!: InsuranceCoverageDto[];
 }
 
 /**
@@ -549,4 +606,42 @@ export class CustomerUnpaidHoldsDto {
   limitReached!: boolean;
   @ApiProperty({ type: [CustomerUnpaidHoldDto], description: 'Gấp nhất trước' })
   items!: CustomerUnpaidHoldDto[];
+}
+
+/**
+ * XEM TRƯỚC lượt khách tự huỷ — `GET /trips/:id/cancel-preview` (ADR 0064).
+ *
+ * Mọi con số do server tính bằng ĐÚNG luật kết cục (`decideOutcome`) và phép chia
+ * (`resolveHoldAllocation`) mà lượt huỷ thật ghi xuống — hộp xác nhận huỷ hứa đúng số sẽ vào ví
+ * điểm, không có phép tính thứ hai ở client. Mốc so với `now` của server lúc gọi: khách mở hộp rồi
+ * để qua mốc huỷ miễn phí thì lượt bấm sẽ ra kết cục khác — client gọi lại khi mốc đã qua.
+ *
+ * Chỉ nói về tiền đi QUA XEPRIME (khoản giữ chỗ). Tiền khách trả TRỰC TIẾP chủ xe nằm ở `finance`.
+ */
+export class CustomerTripCancelPreviewDto {
+  @ApiProperty({ description: 'Chặng hiện tại còn huỷ được không' }) allowed!: boolean;
+  @ApiProperty({ enum: CUSTOMER_CANCEL_PREVIEW_KIND_VALUES }) kind!: string;
+  @ApiProperty({ description: 'Đã chuyển qua XePrime cho khoản giữ chỗ (VND string)' })
+  paidAmount!: string;
+  @ApiProperty({ description: 'Sẽ hoàn vào ví điểm của khách (VND string)' })
+  refundAmount!: string;
+  @ApiProperty({ description: 'Phần hoàn là tiền bảo hiểm chưa phát hành (VND string)' })
+  insuranceRefundAmount!: string;
+  @ApiProperty({ description: 'Khách mất = đã chuyển − được hoàn (VND string)' })
+  forfeitAmount!: string;
+  @ApiProperty({ description: 'Phần đền chủ xe vì giữ lịch khi huỷ muộn (VND string)' })
+  ownerCompensationAmount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — mốc huỷ miễn phí ĐÃ LƯU; null khi chuyến chưa có khoản giữ chỗ',
+  })
+  freeCancelUntil!: string | null;
+  @ApiProperty({
+    description:
+      'false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0)',
+  })
+  freeCancelAvailable!: boolean;
+  @ApiProperty({ description: 'Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia' })
+  deferred!: boolean;
 }

@@ -1,0 +1,80 @@
+/*
+ * Bảng cộng ví chủ xe (ADR 0068 điều 5 · đặc tả 05 §7.1) — một danh sách nhãn/giá trị, ba nhóm
+ * ngăn bằng đường kẻ: cấu tạo tiền thuê · doanh thu và các khoản trừ · thu nhập và phần cộng ví.
+ */
+.root {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-2);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.row dt {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Đầu mỗi nhóm sau nhóm đầu — đường kẻ như hai vạch "───" của đặc tả. */
+.groupStart {
+  padding-top: var(--xp-space-xs);
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.strong dt,
+.strong dd {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Số tiền cộng ví — con số chủ xe đối chiếu với sổ ví, nên nổi nhất bảng. */
+.highlight {
+  margin-top: var(--xp-space-2);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-subtle);
+}
+
+.highlight dt,
+.highlight dd {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.highlight dd {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-body);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.hintBody {
+  margin: 0;
+}
+
+.hintLink {
+  display: inline-block;
+  margin-top: var(--xp-space-xs);
+  color: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  text-decoration: underline;
+}

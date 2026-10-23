@@ -13,13 +13,16 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { ROUTES } from '@/constants/routes';
 import { useSupportSession } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { PlanQuotaGateAlert } from '@/features/subscription/components/PlanQuotaGateAlert';
+import { planQuotaGateFrom } from '@/features/subscription/plan-quota-gate';
+import { usePlanAwareErrorMessage } from '@/features/subscription/use-plan-quota-gate-message';
 import { submitVehiclePublic } from '../api';
 import { useCreateVehicle } from '../hooks/use-vehicle-mutations';
 import { formValuesToInput } from '../mappers';
 import type { CreateVehicleInput, VehicleDetail } from '../types';
 import { VehicleCreateSuccess } from './VehicleCreateSuccess';
 import { VehicleForm, type VehicleSubmitOptions } from './VehicleForm';
+import styles from './CreateVehiclePage.module.css';
 
 const SUPPORT_CREATE_FIELDS = new Set<string>(SUPPORT_VEHICLE_CREATE_FIELDS);
 
@@ -38,7 +41,8 @@ export function CreateVehiclePage() {
   const t = useTranslations('Vehicles.create');
   const router = useRouter();
   const { message } = App.useApp();
-  const errorMessage = useErrorMessage();
+  /* Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung. */
+  const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const support = useSupportSession();
   const create = useCreateVehicle();
@@ -46,6 +50,8 @@ export function CreateVehiclePage() {
     vehicle: VehicleDetail;
     submittedForReview: boolean;
   } | null>(null);
+
+  const createGate = create.isError ? planQuotaGateFrom(create.error) : null;
 
   const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
 
@@ -123,6 +129,11 @@ export function CreateVehiclePage() {
   return (
     <PageContainer>
       <ManagePageHeader title={t('title')} onBack={backToList} />
+      {/*
+        Gói chưa phủ loại xe vừa chọn / đã hết suất: dải có nút tới ĐÚNG làn gói (ADR 0065). Toast
+        ở trên biến mất sau vài giây; người dùng cần một lối đi tiếp còn đứng đó khi họ quay lại.
+      */}
+      {createGate ? <PlanQuotaGateAlert gate={createGate} className={styles.gate} /> : null}
       <VehicleForm
         submitting={create.isPending}
         errorMessage={create.isError ? errorMessage(create.error) : null}

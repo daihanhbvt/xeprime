@@ -1,29 +1,46 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarOutlined,
-  CheckCircleFilled,
   CloseOutlined,
   EnvironmentOutlined,
   GiftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { DatePicker } from 'antd';
+import { DatePicker, Skeleton } from 'antd';
+import { useTranslations } from 'next-intl';
 import {
+  addCalendarMonthsVn,
+  COLLATERAL_MODE,
+  INSURANCE_PRODUCT_KIND,
   isRouteType,
+  PICKUP_PREFERENCE,
+  PRICE_ROW,
   ROUTE_TYPE,
+  ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
+  type InsuranceProductKind,
   type RouteType,
 } from '@xeprime/types';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
-import { applyDiscountPercent } from '@/lib/money';
+import { applyDiscountPercent, isZeroMoney } from '@/lib/money';
+import { cx } from '@/lib/cx';
 import { rememberRentalRange, rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
+import { useCustomerCostView } from '@/features/booking-requests/hooks/use-customer-cost-view';
+import {
+  publicQuoteParams,
+  usePublicQuote,
+  useQuoteWithPromo,
+} from '@/features/booking-requests/hooks/use-public-quote';
 import { PICKUP_METHOD } from '@/features/booking-requests/schema';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
+import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
@@ -31,13 +48,11 @@ import {
   type RentalRange,
 } from '@/components/form/RentalDateTimeRangeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
-import { PromoPicker } from '@/features/promo-codes/components/PromoCodeField';
+import { PromoPicker, PromoStatusNote } from '@/features/promo-codes/components/PromoCodeField';
 import type { PromoTripParams } from '@/features/promo-codes/types';
 import { readDeliveryAddress } from '@/lib/delivery-address-memory';
-import {
-  DeliveryAddressModal,
-  type ConfirmedDeliveryInfo,
-} from './DeliveryAddressModal';
+import { DeliveryAddressModal, type ConfirmedDeliveryInfo } from './DeliveryAddressModal';
+import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingBookingCard.module.css';
 
@@ -60,13 +75,24 @@ export function ListingBookingCard({
   routeType,
   searchProvinceCode,
 }: ListingBookingCardProps) {
+  const t = useTranslations('Listings.detail.booking');
+  const tCard = useTranslations('Listings.card');
+  const tFlow = useTranslations('BookingRequests.flow');
+  const tPrice = useTranslations('Common.components.price');
+  const costsTitleId = useId();
   const fmt = useAppFormat();
+  const dl = useDomainLabel();
+  const surchargeLine = useDriverSurchargeLine();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const services = listing.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE];
-  const discount = listing.discountPercent ?? 0;
+  /*
+   * `discountPercent` là khuyến mãi trực tiếp của dịch vụ TỰ LÁI — không áp, không hiển thị cho xe có
+   * tài xế hay thuê dài hạn (ADR 0011; cùng luật với `VehicleSummaryPanel`).
+   */
+  const discount = activeService === SERVICE_TYPE.SELF_DRIVE ? (listing.discountPercent ?? 0) : 0;
 
   // 1. Quản lý trạng thái giao xe & modal địa chỉ
   const [deliveryMode, setDeliveryMode] = useState<'pickup' | 'delivery'>('pickup');
@@ -81,7 +107,7 @@ export function ListingBookingCard({
         lng: remembered.longitude,
         provinceCode: remembered.provinceCode,
         distanceKm: null,
-        fee: 0,
+        fee: null,
       };
     }
     return null;
@@ -105,11 +131,15 @@ export function ListingBookingCard({
     return ROUTE_TYPE.IN_CITY;
   });
 
-  // 4. Quản lý gói thuê dài hạn
+  /*
+   * 4. Gói thuê dài hạn — CHỈ những gói server trả về. Danh sách rỗng nghĩa là xe chưa có giá tháng
+   * (server cố ý không bịa gói — `PricingService`): không chọn gói nào, không hỏi báo giá, thẻ nói
+   * "liên hệ báo giá" thay vì mời chọn 1/3/6/12 tháng không có thật.
+   */
   const longTermPackages = listing.longTermPackages ?? [];
-  const [selectedMonths, setSelectedMonths] = useState<number>(() => {
-    return longTermPackages[0]?.packageMonths ?? 1;
-  });
+  const [selectedMonths, setSelectedMonths] = useState<number | null>(
+    () => longTermPackages[0]?.packageMonths ?? null,
+  );
 
   // 3b. Quản lý điểm đón & điểm đến cho "Có tài xế"
   const [driverPickupInfo, setDriverPickupInfo] = useState<ConfirmedDeliveryInfo | null>(() => {
@@ -122,7 +152,7 @@ export function ListingBookingCard({
         lng: remembered.longitude,
         provinceCode: remembered.provinceCode,
         distanceKm: null,
-        fee: 0,
+        fee: null,
       };
     }
     return null;
@@ -134,13 +164,18 @@ export function ListingBookingCard({
   const [pickupPreference, setPickupPreference] = useState<'asap' | 'specific_date'>('asap');
   const [requestedPickupDate, setRequestedPickupDate] = useState<Dayjs | null>(null);
 
+  /*
+   * Ngày trả DỰ KIẾN = ngày nhận + N THÁNG LỊCH theo giờ VN — cùng hàm server dùng (ADR 0011), không
+   * phải `dayjs.add('month')` của trình duyệt. Chỉ để khách hình dung; ngày thật do gian hàng chốt.
+   */
   const expectedReturnDateStr = useMemo(() => {
+    if (selectedMonths == null) return null;
     const start =
       pickupPreference === 'specific_date' && requestedPickupDate
         ? requestedPickupDate
         : nowInAppTz();
-    return start.add(selectedMonths, 'month').format('DD/MM/YYYY');
-  }, [pickupPreference, requestedPickupDate, selectedMonths]);
+    return fmt.date(addCalendarMonthsVn(start.toDate(), selectedMonths).toISOString());
+  }, [fmt, pickupPreference, requestedPickupDate, selectedMonths]);
 
   // Chuyển tab dịch vụ mượt mà (router.replace không reload toàn trang)
   const handleTabClick = (s: string) => {
@@ -174,41 +209,37 @@ export function ListingBookingCard({
     }
   };
 
-  // Tính số ngày thuê thực tế (mặc định 2 ngày ước tính cho preview)
-  let estDays = 2;
-  if (activeService === SERVICE_TYPE.LONG_TERM) {
-    estDays = selectedMonths;
-  } else if (range.pickupAt && range.returnAt) {
-    const diffHours = range.returnAt.diff(range.pickupAt, 'hour', true);
-    const computed = Math.ceil(diffHours / 24);
-    estDays = computed > 1 ? computed : 2;
-  }
-
-  // Giá cơ bản theo dịch vụ đang chọn
-  let basePrice = Number(listing.weekdayPrice || 0);
-  let unitLabel = '/ngày';
-
-  if (activeService === SERVICE_TYPE.LONG_TERM) {
-    const pkg = longTermPackages.find((p) => p.packageMonths === selectedMonths);
-    basePrice = Number(pkg?.baseMonthlyPrice || listing.monthlyPrice || 0);
-    unitLabel = '/tháng';
-  } else if (activeService === SERVICE_TYPE.WITH_DRIVER) {
-    basePrice = Number(listing.withDriverDailyPrice || listing.weekdayPrice || 0);
-    unitLabel = '/ngày';
-  }
-
+  /*
+   * Giá NIÊM YẾT của dịch vụ đang chọn — dòng giá lớn đầu thẻ, cùng con số với thẻ xe ở trang kết quả.
+   * Đây là đơn giá công bố, KHÔNG phải số phải trả: mọi khoản tiền của chuyến ở thẻ "Thành tiền" bên
+   * dưới đến từ báo giá của server.
+   */
+  const longTermPackage = longTermPackages.find((p) => p.packageMonths === selectedMonths) ?? null;
+  /** `null` = dịch vụ này chưa có giá công bố — dòng giá nói "liên hệ báo giá", không hiện 0đ. */
+  const basePrice: string | null =
+    activeService === SERVICE_TYPE.LONG_TERM
+      ? (longTermPackage?.baseMonthlyPrice ?? null)
+      : activeService === SERVICE_TYPE.WITH_DRIVER
+        ? (listing.withDriverDailyPrice ?? null)
+        : (listing.weekdayPrice ?? null);
+  const unitLabel =
+    activeService === SERVICE_TYPE.LONG_TERM ? tCard('perMonthUnit') : tCard('perDayUnit');
   const finalDailyPrice =
-    discount > 0 ? applyDiscountPercent(String(basePrice), discount) : String(basePrice);
+    basePrice != null && discount > 0 ? applyDiscountPercent(basePrice, discount) : basePrice;
+  const noLongTermPackage =
+    activeService === SERVICE_TYPE.LONG_TERM && longTermPackages.length === 0;
 
-  const rentTotal = Number(finalDailyPrice) * estDays;
-  const deliveryFee =
-    deliveryMode === 'delivery' && listing.deliveryEnabled
-      ? (deliveryInfo?.fee ?? 150000)
-      : 0;
+  const isDelivery = activeService !== SERVICE_TYPE.WITH_DRIVER && deliveryMode === 'delivery';
+  /** Phí giao DỰ KIẾN của địa chỉ đã chọn — chủ xe chốt lúc duyệt, KHÔNG nằm trong tổng (ADR 0018). */
+  const deliveryFee = isDelivery && listing.deliveryEnabled ? (deliveryInfo?.fee ?? null) : null;
 
   // 5. Quản lý mã khuyến mãi
   const pickupIso = range.pickupAt ? appWallClockToIso(range.pickupAt) : (pickupAt ?? undefined);
   const returnIso = range.returnAt ? appWallClockToIso(range.returnAt) : (returnAt ?? undefined);
+
+  // 6. Tuỳ chọn bảo hiểm MIC (vật chất xe / tai nạn người trên xe)
+  const [vehicleProtectionSelected, setVehicleProtectionSelected] = useState(false);
+  const [personalAccidentSelected, setPersonalAccidentSelected] = useState(false);
 
   const tripParams: PromoTripParams = useMemo(
     () => ({
@@ -217,48 +248,83 @@ export function ListingBookingCard({
       pickupAt: pickupIso,
       returnAt: returnIso,
       routeType: activeService === SERVICE_TYPE.WITH_DRIVER ? currentRouteType : undefined,
-      packageMonths: activeService === SERVICE_TYPE.LONG_TERM ? selectedMonths : undefined,
+      packageMonths:
+        activeService === SERVICE_TYPE.LONG_TERM ? (selectedMonths ?? undefined) : undefined,
+      vehicleProtectionSelected,
+      personalAccidentSelected,
     }),
-    [listing.id, activeService, pickupIso, returnIso, currentRouteType, selectedMonths],
+    [
+      listing.id,
+      activeService,
+      pickupIso,
+      returnIso,
+      currentRouteType,
+      selectedMonths,
+      vehicleProtectionSelected,
+      personalAccidentSelected,
+    ],
   );
 
   const promo = usePromoCode(tripParams);
   const [promoPickerOpen, setPromoPickerOpen] = useState(false);
 
-  const promoDiscountAmount =
-    promo.applied && promo.applied.applicable
-      ? Number(promo.applied.discountAmount ?? 0)
-      : 0;
+  /*
+   * BÁO GIÁ SERVER — cùng câu hỏi, cùng cache với hộp gửi yêu cầu (`publicQuoteParams`), nên con số
+   * khách thấy ở đây là đúng con số họ thấy khi bấm "Chọn thuê". Mã khuyến mãi thay CẢ bảng phí
+   * (`useQuoteWithPromo`, ADR 0046). Trình duyệt không cộng trừ một đồng nào.
+   */
+  const quoteParams = publicQuoteParams({
+    serviceType: activeService,
+    pickupAt: range.pickupAt,
+    returnAt: range.returnAt,
+    routeType: currentRouteType,
+    packageMonths: selectedMonths,
+    vehicleProtectionSelected,
+    personalAccidentSelected,
+  });
+  const quoteQ = usePublicQuote(listing.id, quoteParams);
+  const quote = useQuoteWithPromo(quoteQ.data, promo.applied?.fees);
 
-  const rentAfterPromo = Math.max(0, rentTotal - promoDiscountAmount);
-  const totalPayableEst = rentAfterPromo + deliveryFee;
-  const holdEst = Math.round(rentTotal * 0.3);
-
-  // Cọc xe
-  const depositEst = listing.noCollateral
-    ? 0
-    : listing.collateral?.depositAmount
-      ? Number(listing.collateral.depositAmount)
-      : 3000000;
-
-  const availableMonths =
-    longTermPackages.length > 0
-      ? longTermPackages.map((p) => p.packageMonths)
-      : [1, 3, 6, 12];
+  // Bảo hiểm ĐANG được chào cho báo giá này (ADR 0064) — gỡ lựa chọn khi sản phẩm không còn chào.
+  const setInsuranceSelected = useCallback((kind: InsuranceProductKind, checked: boolean) => {
+    if (kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP) setVehicleProtectionSelected(checked);
+    else setPersonalAccidentSelected(checked);
+  }, []);
+  const deselectInsurance = useCallback(
+    (kind: InsuranceProductKind) => setInsuranceSelected(kind, false),
+    [setInsuranceSelected],
+  );
+  const insuranceOffer = useInsuranceOffer(
+    quoteQ.data,
+    listing.vehicleType,
+    { vehicleProtectionSelected, personalAccidentSelected },
+    deselectInsurance,
+  );
+  const cost = useCustomerCostView({
+    listing,
+    breakdown: quote?.breakdown ?? null,
+    isDelivery,
+  });
+  /*
+   * Mã khuyến mãi chỉ tài trợ vào khoản khách chuyển ONLINE (ADR 0046 điều 2) — báo giá không có
+   * tiền giữ chỗ (tạm tính, dài hạn chưa chốt lịch, tuyến không thu) thì không có chỗ để áp mã.
+   * Điều kiện đọc từ SERVER, như hộp gửi yêu cầu.
+   */
+  const promoAvailable = quoteQ.data?.breakdown.fees?.holdAmount != null;
 
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
         {/* Thanh tab dịch vụ */}
         {services.length > 1 ? (
-          <div className={styles.tabHeader} role="tablist">
+          <div className={styles.tabHeader} role="tablist" aria-label={t('tabsLabel')}>
             {services.includes(SERVICE_TYPE.SELF_DRIVE) && (
               <button
                 type="button"
                 className={`${styles.serviceTab} ${activeService === SERVICE_TYPE.SELF_DRIVE ? styles.serviceTabActive : ''}`}
                 onClick={() => handleTabClick(SERVICE_TYPE.SELF_DRIVE)}
               >
-                Thuê theo ngày
+                {t('tabs.selfDrive')}
               </button>
             )}
             {services.includes(SERVICE_TYPE.WITH_DRIVER) && (
@@ -267,7 +333,7 @@ export function ListingBookingCard({
                 className={`${styles.serviceTab} ${activeService === SERVICE_TYPE.WITH_DRIVER ? styles.serviceTabActive : ''}`}
                 onClick={() => handleTabClick(SERVICE_TYPE.WITH_DRIVER)}
               >
-                Có tài xế
+                {t('tabs.withDriver')}
               </button>
             )}
             {services.includes(SERVICE_TYPE.LONG_TERM) && (
@@ -276,7 +342,7 @@ export function ListingBookingCard({
                 className={`${styles.serviceTab} ${activeService === SERVICE_TYPE.LONG_TERM ? styles.serviceTabActive : ''}`}
                 onClick={() => handleTabClick(SERVICE_TYPE.LONG_TERM)}
               >
-                Thuê dài hạn
+                {t('tabs.longTerm')}
               </button>
             )}
           </div>
@@ -285,53 +351,46 @@ export function ListingBookingCard({
         <div className={styles.body}>
           {/* Dòng giá */}
           <div className={styles.priceRow}>
-            <div className={styles.priceGroup}>
-              {discount > 0 && (
-                <span className={styles.oldPrice}>{fmt.money(String(basePrice))}</span>
-              )}
-              <span className={styles.mainPrice}>{fmt.money(finalDailyPrice)}</span>
-              <span className={styles.unit}>{unitLabel}</span>
-            </div>
-            {discount > 0 && <DiscountTag percent={discount} />}
+            {basePrice != null && finalDailyPrice != null ? (
+              <>
+                <div className={styles.priceGroup}>
+                  {discount > 0 && <span className={styles.oldPrice}>{fmt.money(basePrice)}</span>}
+                  <span className={styles.mainPrice}>{fmt.money(finalDailyPrice)}</span>
+                  <span className={styles.unit}>{unitLabel}</span>
+                </div>
+                {discount > 0 && <DiscountTag percent={discount} />}
+              </>
+            ) : (
+              <span className={styles.onRequest}>{tFlow('price.onRequest')}</span>
+            )}
           </div>
 
           {/* Chọn lộ trình khi đang ở tab Có tài xế (3 lộ trình: Nội thành, Liên tỉnh, Liên tỉnh 1 chiều) */}
           {activeService === SERVICE_TYPE.WITH_DRIVER && (
             <div className={styles.routeGroup}>
-              <span className={styles.routeLabel}>Lộ trình di chuyển:</span>
+              <span className={styles.routeLabel}>{t('route.label')}</span>
               <div className={styles.routeOptions}>
-                <button
-                  type="button"
-                  className={`${styles.routeBtn} ${currentRouteType === ROUTE_TYPE.IN_CITY ? styles.routeBtnActive : ''}`}
-                  onClick={() => handleRouteTypeChange(ROUTE_TYPE.IN_CITY)}
-                >
-                  Nội thành
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.routeBtn} ${currentRouteType === ROUTE_TYPE.INTER_CITY ? styles.routeBtnActive : ''}`}
-                  onClick={() => handleRouteTypeChange(ROUTE_TYPE.INTER_CITY)}
-                >
-                  Liên tỉnh
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.routeBtn} ${currentRouteType === ROUTE_TYPE.INTER_CITY_ONE_WAY ? styles.routeBtnActive : ''}`}
-                  onClick={() => handleRouteTypeChange(ROUTE_TYPE.INTER_CITY_ONE_WAY)}
-                >
-                  Liên tỉnh (1 chiều)
-                </button>
+                {ROUTE_TYPE_VALUES.map((route) => (
+                  <button
+                    key={route}
+                    type="button"
+                    className={`${styles.routeBtn} ${currentRouteType === route ? styles.routeBtnActive : ''}`}
+                    onClick={() => handleRouteTypeChange(route)}
+                  >
+                    {dl('routeType', route)}
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
           {/* Chọn gói dài hạn khi ở tab Thuê dài hạn (kèm tag giảm giá) */}
-          {activeService === SERVICE_TYPE.LONG_TERM && (
+          {activeService === SERVICE_TYPE.LONG_TERM && longTermPackages.length > 0 && (
             <div className={styles.packageGroup}>
-              <span className={styles.routeLabel}>Thời hạn thuê:</span>
+              <span className={styles.routeLabel}>{t('package.label')}</span>
               <div className={styles.packageOptions}>
-                {availableMonths.map((m) => {
-                  const pkg = longTermPackages.find((p) => p.packageMonths === m);
+                {longTermPackages.map((pkg) => {
+                  const m = pkg.packageMonths;
                   return (
                     <button
                       key={m}
@@ -339,9 +398,11 @@ export function ListingBookingCard({
                       className={`${styles.packageBtn} ${selectedMonths === m ? styles.packageBtnActive : ''}`}
                       onClick={() => setSelectedMonths(m)}
                     >
-                      <span>{m} tháng</span>
-                      {pkg?.durationDiscountPercent ? (
-                        <span className={styles.packageDiscountBadge}>-{pkg.durationDiscountPercent}%</span>
+                      <span>{fmt.packageLabel(m)}</span>
+                      {pkg.durationDiscountPercent ? (
+                        <span className={styles.packageDiscountBadge}>
+                          -{pkg.durationDiscountPercent}%
+                        </span>
                       ) : null}
                     </button>
                   );
@@ -353,47 +414,54 @@ export function ListingBookingCard({
           {/* Khung chọn ngày giờ nhận / trả xe */}
           {activeService === SERVICE_TYPE.LONG_TERM ? (
             <div className={styles.longTermTimeSection}>
-              <span className={styles.inputLabel}>Nguyện vọng ngày nhận xe:</span>
+              <span className={styles.inputLabel}>{t('longTerm.wishLabel')}</span>
               <div className={styles.longTermPrefOptions}>
                 <button
                   type="button"
                   className={`${styles.longTermPrefBtn} ${pickupPreference === 'asap' ? styles.longTermPrefBtnActive : ''}`}
                   onClick={() => setPickupPreference('asap')}
                 >
-                  Càng sớm càng tốt (trong 7 ngày tới)
+                  {t('longTerm.asap')}
                 </button>
                 <button
                   type="button"
                   className={`${styles.longTermPrefBtn} ${pickupPreference === 'specific_date' ? styles.longTermPrefBtnActive : ''}`}
                   onClick={() => setPickupPreference('specific_date')}
                 >
-                  Chọn ngày cụ thể
+                  {dl('pickupPreference', PICKUP_PREFERENCE.SPECIFIC_DATE)}
                 </button>
               </div>
 
               {pickupPreference === 'specific_date' && (
                 <div className={styles.specificDatePickerWrap}>
-                  <span className={styles.inputSubLabel}>Ngày bạn muốn nhận xe:</span>
+                  <span className={styles.inputSubLabel}>{t('longTerm.dateLabel')}</span>
                   <DatePicker
                     value={requestedPickupDate}
                     onChange={(d) => setRequestedPickupDate(d)}
                     disabledDate={(current) => current && current < nowInAppTz().startOf('day')}
                     format="DD/MM/YYYY"
-                    placeholder="Chọn ngày nhận xe"
+                    placeholder={t('longTerm.datePlaceholder')}
                     className={styles.datePickerInput}
                   />
                 </div>
               )}
 
-              <div className={styles.expectedReturnBox}>
-                <CalendarOutlined className={styles.calendarIcon} />
-                <div>
-                  <span className={styles.expectedReturnLabel}>Ngày trả xe dự kiến:</span>
-                  <span className={styles.expectedReturnValue}>
-                    {expectedReturnDateStr} ({selectedMonths} tháng)
-                  </span>
+              {expectedReturnDateStr && selectedMonths != null ? (
+                <div className={styles.expectedReturnBox}>
+                  <CalendarOutlined className={styles.calendarIcon} aria-hidden="true" />
+                  <div>
+                    <span className={styles.expectedReturnLabel}>
+                      {t('longTerm.expectedReturn')}
+                    </span>
+                    <span className={styles.expectedReturnValue}>
+                      {t('longTerm.expectedReturnValue', {
+                        date: expectedReturnDateStr,
+                        duration: fmt.packageLabel(selectedMonths) ?? '',
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
           ) : (
             <div className={styles.timeSection}>
@@ -411,17 +479,17 @@ export function ListingBookingCard({
           {/* Vị trí nhận xe / Địa chỉ đón khách */}
           {activeService === SERVICE_TYPE.WITH_DRIVER ? (
             <div className={styles.locationSection}>
-              <h4 className={styles.sectionTitle}>Địa chỉ đón khách</h4>
+              <h4 className={styles.sectionTitle}>{t('driver.pickupTitle')}</h4>
               {driverPickupInfo?.address ? (
                 <div className={styles.deliveryAddressCard}>
                   <div className={styles.deliveryHeaderRow}>
-                    <span className={styles.deliveryAddressTitle}>Tài xế đón tại:</span>
+                    <span className={styles.deliveryAddressTitle}>{t('driver.pickupAt')}</span>
                     <button
                       type="button"
                       className={styles.changeAddressBtn}
                       onClick={() => setDriverAddressModalOpen(true)}
                     >
-                      Thay đổi
+                      {t('change')}
                     </button>
                   </div>
                   <div className={styles.addressBox}>
@@ -435,21 +503,22 @@ export function ListingBookingCard({
                   className={styles.chooseAddressBtn}
                   onClick={() => setDriverAddressModalOpen(true)}
                 >
-                  <EnvironmentOutlined />
-                  <span>Chọn địa chỉ đón khách & xem bản đồ</span>
+                  <EnvironmentOutlined aria-hidden="true" />
+                  <span>{t('driver.choosePickup')}</span>
                 </button>
               )}
 
               {/* Nếu là lộ trình Liên tỉnh hoặc Liên tỉnh 1 chiều: hiển thị ô Điểm đến */}
               {currentRouteType !== ROUTE_TYPE.IN_CITY && (
                 <div className={styles.destinationSection}>
-                  <span className={styles.inputLabel}>Điểm đến (Tỉnh/thành hoặc địa chỉ đến):</span>
+                  <span className={styles.inputLabel}>{t('driver.destinationLabel')}</span>
                   <input
                     type="text"
                     className={styles.textInput}
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder="Ví dụ: TP. Hội An, Quảng Nam"
+                    placeholder={t('driver.destinationPlaceholder')}
+                    aria-label={t('driver.destinationLabel')}
                   />
                 </div>
               )}
@@ -457,26 +526,10 @@ export function ListingBookingCard({
               {/* Quy định phụ phí tài xế nếu có */}
               {listing.driverSurchargeRules && listing.driverSurchargeRules.length > 0 && (
                 <div className={styles.driverRulesBox}>
-                  <span className={styles.rulesTitle}>Phụ phí tài xế (nếu phát sinh trong chuyến):</span>
+                  <span className={styles.rulesTitle}>{t('driver.surchargesTitle')}</span>
                   <ul className={styles.rulesList}>
                     {listing.driverSurchargeRules.map((rule) => (
-                      <li key={rule.kind}>
-                        {rule.kind === 'overtime'
-                          ? 'Ngoài giờ'
-                          : rule.kind === 'overnight'
-                            ? 'Lưu đêm'
-                            : rule.kind === 'excess_distance'
-                              ? 'Vượt quãng đường'
-                              : rule.kind}
-                        : {fmt.money(rule.amount)} /{' '}
-                        {rule.unit === 'hour'
-                          ? 'giờ'
-                          : rule.unit === 'night'
-                            ? 'đêm'
-                            : rule.unit === 'km'
-                              ? 'km'
-                              : rule.unit}
-                      </li>
+                      <li key={rule.kind}>{surchargeLine(rule)}</li>
                     ))}
                   </ul>
                 </div>
@@ -484,15 +537,15 @@ export function ListingBookingCard({
             </div>
           ) : (
             <div className={styles.locationSection}>
-              <h4 className={styles.sectionTitle}>Vị trí nhận xe</h4>
+              <h4 className={styles.sectionTitle}>{t('pickup.title')}</h4>
               <div className={styles.deliveryToggle}>
                 <button
                   type="button"
                   className={`${styles.toggleBtn} ${deliveryMode === 'pickup' ? styles.toggleBtnActive : ''}`}
                   onClick={() => setDeliveryMode('pickup')}
                 >
-                  <span className={styles.toggleLabel}>Khách tự nhận xe</span>
-                  <span className={styles.toggleSub}>Miễn phí</span>
+                  <span className={styles.toggleLabel}>{t('pickup.self')}</span>
+                  <span className={styles.toggleSub}>{t('pickup.selfHint')}</span>
                 </button>
                 {listing.deliveryEnabled ? (
                   <button
@@ -505,8 +558,8 @@ export function ListingBookingCard({
                       }
                     }}
                   >
-                    <span className={styles.toggleLabel}>Giao xe tận nơi</span>
-                    <span className={styles.toggleSubDanger}>Phụ phí tính theo km</span>
+                    <span className={styles.toggleLabel}>{t('pickup.delivery')}</span>
+                    <span className={styles.toggleSubDanger}>{t('pickup.deliveryHint')}</span>
                   </button>
                 ) : null}
               </div>
@@ -515,19 +568,23 @@ export function ListingBookingCard({
                 <div className={styles.addressBox}>
                   <EnvironmentOutlined className={styles.addressIcon} />
                   <span>
-                    {listing.pickupPoint?.address || listing.shopProvince || 'Địa chỉ bàn giao của gian hàng'}
+                    {listing.pickupPoint?.address ||
+                      listing.shopProvince ||
+                      t('pickup.addressFallback')}
                   </span>
                 </div>
               ) : deliveryInfo?.address ? (
                 <div className={styles.deliveryAddressCard}>
                   <div className={styles.deliveryHeaderRow}>
-                    <span className={styles.deliveryAddressTitle}>Địa chỉ giao xe tận nơi:</span>
+                    <span className={styles.deliveryAddressTitle}>
+                      {t('pickup.deliveryAddress')}
+                    </span>
                     <button
                       type="button"
                       className={styles.changeAddressBtn}
                       onClick={() => setAddressModalOpen(true)}
                     >
-                      Thay đổi
+                      {t('change')}
                     </button>
                   </div>
                   <div className={styles.addressBox}>
@@ -536,8 +593,17 @@ export function ListingBookingCard({
                   </div>
                   {deliveryInfo.distanceKm != null && (
                     <div className={styles.deliveryDistanceInfo}>
-                      Khoảng cách dự kiến: ~{fmt.distanceKm(deliveryInfo.distanceKm)} · Phí giao:{' '}
-                      <b>{deliveryFee === 0 ? 'Miễn phí' : fmt.money(String(deliveryFee))}</b>
+                      {deliveryFee == null
+                        ? t('pickup.distanceFeeLater', {
+                            distance: fmt.distanceKm(deliveryInfo.distanceKm),
+                          })
+                        : t.rich('pickup.distance', {
+                            distance: fmt.distanceKm(deliveryInfo.distanceKm),
+                            fee: isZeroMoney(deliveryFee)
+                              ? t('pickup.free')
+                              : fmt.money(deliveryFee),
+                            b: (chunks) => <b>{chunks}</b>,
+                          })}
                     </div>
                   )}
                 </div>
@@ -547,152 +613,194 @@ export function ListingBookingCard({
                   className={styles.chooseAddressBtn}
                   onClick={() => setAddressModalOpen(true)}
                 >
-                  <EnvironmentOutlined />
-                  <span>Chọn địa chỉ giao xe & xem bản đồ</span>
+                  <EnvironmentOutlined aria-hidden="true" />
+                  <span>{t('pickup.chooseDelivery')}</span>
                 </button>
               )}
 
-              {/* Quyền lợi thuê dài hạn nếu ở tab Thuê dài hạn */}
-              {activeService === SERVICE_TYPE.LONG_TERM && (
-                <div className={styles.longTermBenefits}>
-                  <div className={styles.benefitItem}>
-                    <CheckCircleFilled className={styles.benefitIcon} />
-                    <span>Bảo dưỡng định kỳ trọn gói miễn phí</span>
-                  </div>
-                  <div className={styles.benefitItem}>
-                    <CheckCircleFilled className={styles.benefitIcon} />
-                    <span>Xe thay thế tương đương khi bảo dưỡng hoặc sự cố</span>
-                  </div>
-                  <div className={styles.benefitItem}>
-                    <CheckCircleFilled className={styles.benefitIcon} />
-                    <span>Hỗ trợ kỹ thuật cứu hộ 24/7</span>
-                  </div>
-                </div>
-              )}
-
-              <p className={styles.addressNote}>
-                * Địa điểm cụ thể và số điện thoại chủ xe sẽ hiển thị sau khi hoàn tất thanh toán giữ chỗ.
-              </p>
+              <p className={styles.addressNote}>{t('pickup.note')}</p>
             </div>
           )}
+
+          {/*
+            Tuỳ chọn bảo hiểm (ADR 0064) — chỉ hiện khi báo giá nói nền tảng ĐANG bán bảo hiểm
+            (có đối tác phát hành) và chính sách phí mở dòng đó. Phí ngày đọc từ báo giá, tên và
+            quyền lợi từ danh mục sản phẩm; không có số nào viết cứng.
+          */}
+          {insuranceOffer.items.length > 0 ? (
+            <div className={styles.insuranceSection}>
+              <h4 className={styles.sectionTitle}>{t('insurance.title')}</h4>
+              <InsuranceOptionList
+                items={insuranceOffer.items}
+                selected={{
+                  [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: vehicleProtectionSelected,
+                  [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: personalAccidentSelected,
+                }}
+                onChange={setInsuranceSelected}
+              />
+              <p className={styles.insuranceNote}>{t('insurance.note')}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 
       {/* Thẻ thành tiền */}
-      <div className={styles.breakdownCard}>
-        <h4 className={styles.breakdownTitle}>Thành tiền</h4>
+      <section className={styles.breakdownCard} aria-labelledby={costsTitleId}>
+        <h4 id={costsTitleId} className={styles.breakdownTitle}>
+          {t('costs.title')}
+        </h4>
 
-        <div className={styles.priceLine}>
-          <div className={styles.priceLabel}>
-            <span>Phí thuê xe</span>
-            <span className={styles.priceSubLabel}>
-              {estDays} {activeService === SERVICE_TYPE.LONG_TERM ? 'tháng' : 'ngày'} x {fmt.money(finalDailyPrice)}
-            </span>
+        {quoteParams == null ? (
+          <p className={styles.costNote}>
+            {noLongTermPackage
+              ? tFlow('price.onRequest')
+              : activeService === SERVICE_TYPE.LONG_TERM
+                ? tFlow('price.choosePackage')
+                : tFlow('price.chooseTime')}
+          </p>
+        ) : quoteQ.isPending ? (
+          <div aria-busy="true">
+            <Skeleton active title={false} paragraph={{ rows: 5 }} />
           </div>
-          <span className={styles.priceValue}>{fmt.money(String(rentTotal))}</span>
-        </div>
-
-        <div className={styles.dashedDivider} />
-
-        {deliveryFee > 0 && (
+        ) : quote ? (
           <>
-            <div className={styles.priceLine}>
-              <div className={styles.priceLabel}>
-                <span>Phí giao xe tạm tính</span>
+            {/* Tiền thuê + khuyến mãi trực tiếp — dòng và nhãn của SERVER. */}
+            {cost.rentRows.map((row) => (
+              <div key={row.key} className={styles.priceLine}>
+                <div className={styles.priceLabel}>
+                  <span>{row.label}</span>
+                  {row.sublabel ? (
+                    <span className={styles.priceSubLabel}>{row.sublabel}</span>
+                  ) : null}
+                </div>
+                <span
+                  className={cx(
+                    styles.priceValue,
+                    row.key === PRICE_ROW.DISCOUNT && styles.discountValue,
+                  )}
+                >
+                  {cost.signedMoney(row.amount)}
+                </span>
               </div>
-              <span className={styles.priceValue}>{fmt.money(String(deliveryFee))}</span>
-            </div>
-            <div className={styles.dashedDivider} />
-          </>
-        )}
+            ))}
 
-        {/* Khuyến mãi nền tảng mặc định */}
-        {discount > 0 && (
-          <>
-            <div className={styles.promoGroupTitle}>Giảm giá/Khuyến mãi</div>
-            <div className={styles.priceLine}>
-              <div className={styles.priceLabel}>
-                <span>Khuyến mãi XePrime (-{discount}%)</span>
+            {/* Phí dịch vụ, bảo hiểm… phía KHÁCH; dòng chủ xe chịu (thuế) không bao giờ ở đây. */}
+            {cost.feeLines.map((line) => (
+              <div key={line.key} className={styles.priceLine}>
+                <div className={styles.priceLabel}>
+                  <span>{dl('feeLine', line.key)}</span>
+                  <span className={styles.priceSubLabel}>
+                    {[
+                      line.percent != null
+                        ? `${line.percent}%`
+                        : line.unitAmount && line.quantity
+                          ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                          : null,
+                      line.partnerName,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </div>
+                <span className={styles.priceValue}>{fmt.money(line.amount)}</span>
               </div>
-              <span className={styles.discountValue}>
-                -{fmt.money(String(Number(listing.weekdayPrice || 0) * estDays - rentTotal))}
+            ))}
+
+            {promoAvailable ? (
+              <>
+                <div className={styles.dashedDivider} />
+                <div className={styles.promoGroupTitle}>{t('costs.discountGroup')}</div>
+                {/* Số giảm của mã là của SERVER (xem trước mã) — không tự trừ. */}
+                {promo.appliedCode && promo.applied?.applicable ? (
+                  <div className={styles.promoAppliedRow}>
+                    <div className={styles.promoAppliedLeft}>
+                      <span className={styles.promoTag}>{promo.appliedCode}</span>
+                      <span className={styles.promoDiscountText}>
+                        {/* Cùng bảng phí đang dựng ra tổng — một nguồn cho số giảm và tổng. */}−
+                        {fmt.money(cost.promoDiscount)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.promoRemoveBtn}
+                      onClick={() => promo.remove()}
+                      title={t('costs.promoRemove')}
+                      aria-label={t('costs.promoRemove')}
+                    >
+                      <CloseOutlined aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.promoCodeButton}
+                    onClick={() => setPromoPickerOpen(true)}
+                  >
+                    <div className={styles.promoCodeLeft}>
+                      <GiftOutlined className={styles.promoGiftIcon} aria-hidden="true" />
+                      <span>{t('costs.promoApply')}</span>
+                    </div>
+                    <RightOutlined className={styles.promoArrowIcon} aria-hidden="true" />
+                  </button>
+                )}
+              </>
+            ) : null}
+
+            <PromoStatusNote
+              checking={promo.checking}
+              reason={promoAvailable ? promo.reason : null}
+              hasApplied={Boolean(promo.applied?.applicable)}
+              droppedCode={promo.droppedCode}
+            />
+
+            <div className={styles.solidDivider} />
+
+            {/* Tiền giữ chỗ (D + S + IV + IP − P) và phần còn lại trả tay chủ xe — ADR 0032 · 0044. */}
+            {cost.holdAmount ? (
+              <div className={styles.priceLineTop}>
+                <div className={styles.priceLabel}>
+                  <span>{tPrice('holdAmount')}</span>
+                  <span className={styles.priceSubLabel}>{tPrice('holdHint')}</span>
+                </div>
+                <span className={styles.priceValue}>{fmt.money(cost.holdAmount)}</span>
+              </div>
+            ) : null}
+            {cost.holdAmount && cost.payAtPickup ? (
+              <div className={styles.priceLine}>
+                <div className={styles.priceLabel}>
+                  <span>{tPrice('payAtHandover')}</span>
+                </div>
+                <span className={styles.priceValue}>{fmt.money(cost.payAtPickup)}</span>
+              </div>
+            ) : null}
+
+            {/* Cọc thế chấp khi nhận xe — đặt lại rồi lấy về, không nằm trong tổng. */}
+            {cost.deposit ? (
+              <div className={styles.priceLineTop}>
+                <div className={styles.priceLabel}>
+                  <span>{tPrice('deposit')}</span>
+                  <span className={styles.priceSubLabel}>{cost.deposit.note}</span>
+                </div>
+                <span className={styles.priceValue}>
+                  {cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
+                    ? fmt.money(cost.deposit.amount)
+                    : dl('collateralMode', cost.deposit.mode)}
+                </span>
+              </div>
+            ) : null}
+
+            <div className={styles.totalRow}>
+              <span className={styles.totalLabel}>{cost.total?.label}</span>
+              <span className={styles.totalAmount}>
+                {fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)}
               </span>
             </div>
+            <p className={styles.costNote}>{cost.costNote}</p>
           </>
-        )}
-
-        {/* Áp dụng mã khuyến mãi hoặc hiển thị mã đã áp */}
-        {promo.appliedCode && promo.applied?.applicable ? (
-          <div className={styles.promoAppliedRow}>
-            <div className={styles.promoAppliedLeft}>
-              <span className={styles.promoTag}>{promo.appliedCode}</span>
-              <span className={styles.promoDiscountText}>
-                -{fmt.money(String(promoDiscountAmount))}
-              </span>
-            </div>
-            <button
-              type="button"
-              className={styles.promoRemoveBtn}
-              onClick={() => promo.remove()}
-              title="Gỡ mã khuyến mãi"
-              aria-label="Gỡ mã khuyến mãi"
-            >
-              <CloseOutlined />
-            </button>
-          </div>
         ) : (
-          <button
-            type="button"
-            className={styles.promoCodeButton}
-            onClick={() => setPromoPickerOpen(true)}
-          >
-            <div className={styles.promoCodeLeft}>
-              <GiftOutlined className={styles.promoGiftIcon} />
-              <span>Áp dụng mã khuyến mãi / giới thiệu</span>
-            </div>
-            <RightOutlined className={styles.promoArrowIcon} />
-          </button>
+          /* Báo giá không về: không bịa số — chủ xe vẫn xác nhận giá khi duyệt, khách vẫn đặt được. */
+          <p className={styles.costNote}>{tFlow('price.loadError')}</p>
         )}
-
-        <div className={styles.solidDivider} />
-
-        {listing.vatInvoiceSupported && (
-          <div className={styles.priceLine}>
-            <div className={styles.priceLabel}>
-              <span>Thuế VAT</span>
-            </div>
-            <span className={styles.priceValue}>{fmt.money(String(Math.round(rentTotal * 0.1)))}</span>
-          </div>
-        )}
-
-        <div className={styles.priceLineTop}>
-          <div className={styles.priceLabel}>
-            <span>Tiền giữ chỗ</span>
-            <span className={styles.priceSubLabel}>
-              Tiền giữ chỗ không phải phụ phí và sẽ được trừ trực tiếp vào khoản thanh toán. Bạn phải thanh toán tiền giữ chỗ trước khi nhận xe.
-            </span>
-          </div>
-          <span className={styles.priceValue}>{fmt.money(String(holdEst))}</span>
-        </div>
-
-        <div className={styles.priceLineTop}>
-          <div className={styles.priceLabel}>
-            <span>Cọc xe</span>
-            <span className={styles.priceSubLabel}>
-              {listing.noCollateral
-                ? 'Xe này miễn thế chấp tài sản / cọc xe máy khi nhận xe.'
-                : 'Thanh toán khi nhận xe và kiểm tra xe. Có nhận cọc xe máy. Lưu ý: Mức cọc có thể cao hơn đối với bằng lái mới được cấp dưới 1 năm. Liên hệ CSKH để biết thêm chi tiết!'}
-            </span>
-          </div>
-          <span className={styles.priceValue}>
-            {listing.noCollateral ? 'Miễn cọc' : fmt.money(String(depositEst))}
-          </span>
-        </div>
-
-        <div className={styles.totalRow}>
-          <span className={styles.totalLabel}>Tổng thanh toán dự kiến</span>
-          <span className={styles.totalAmount}>{fmt.money(String(totalPayableEst))}</span>
-        </div>
 
         {/* Nút hành động chính */}
         <div className={styles.ctaBtnWrapper}>
@@ -707,8 +815,14 @@ export function ListingBookingCard({
             routeType={activeService === SERVICE_TYPE.WITH_DRIVER ? currentRouteType : undefined}
             deliveryProvinceCode={
               activeService === SERVICE_TYPE.WITH_DRIVER
-                ? (driverPickupInfo?.provinceCode ?? searchProvinceCode ?? listing.provinceCode ?? undefined)
-                : (deliveryInfo?.provinceCode ?? searchProvinceCode ?? listing.provinceCode ?? undefined)
+                ? (driverPickupInfo?.provinceCode ??
+                  searchProvinceCode ??
+                  listing.provinceCode ??
+                  undefined)
+                : (deliveryInfo?.provinceCode ??
+                  searchProvinceCode ??
+                  listing.provinceCode ??
+                  undefined)
             }
             prefill={{
               pickupMethod:
@@ -739,6 +853,8 @@ export function ListingBookingCard({
                     : null,
               packageMonths: activeService === SERVICE_TYPE.LONG_TERM ? selectedMonths : null,
               promoCode: promo.appliedCode,
+              vehicleProtectionSelected,
+              personalAccidentSelected,
               autoContinue:
                 activeService === SERVICE_TYPE.LONG_TERM
                   ? selectedMonths != null &&
@@ -747,9 +863,9 @@ export function ListingBookingCard({
                   : activeService === SERVICE_TYPE.WITH_DRIVER
                     ? Boolean(
                         range.pickupAt &&
-                          range.returnAt &&
-                          driverPickupInfo?.address &&
-                          (currentRouteType === ROUTE_TYPE.IN_CITY || destination.trim()),
+                        range.returnAt &&
+                        driverPickupInfo?.address &&
+                        (currentRouteType === ROUTE_TYPE.IN_CITY || destination.trim()),
                       )
                     : Boolean(range.pickupAt && range.returnAt) &&
                       (deliveryMode !== 'delivery' || Boolean(deliveryInfo?.address)),
@@ -767,7 +883,7 @@ export function ListingBookingCard({
             size="large"
           />
         </div>
-      </div>
+      </section>
 
       {/* Modal chọn hoặc nhập mã khuyến mãi */}
       <PromoPicker
@@ -798,7 +914,7 @@ export function ListingBookingCard({
       {/* Modal chọn địa chỉ đón khách kèm bản đồ (cho Có tài xế) */}
       {driverAddressModalOpen && (
         <DeliveryAddressModal
-          title="Chọn địa chỉ đón khách"
+          title={t('driver.pickupModalTitle')}
           open={driverAddressModalOpen}
           onClose={() => setDriverAddressModalOpen(false)}
           listing={listing}

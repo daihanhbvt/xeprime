@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { normalizePromoCode, PROMO_INELIGIBLE_REASON, type PromoCodeSnapshot } from '@xeprime/types';
+import {
+  normalizePromoCode,
+  PROMO_INELIGIBLE_REASON,
+  toPublicFeeBreakdown,
+  type PromoCodeSnapshot,
+} from '@xeprime/types';
 import { PricingService, type PromoQuoteContext } from '../pricing/pricing.service';
 import type { AvailablePromoQueryDto, PreviewPromoCodeDto, PromoPreviewDto } from './dto/promo-code.dto';
 import { PromoCodeEvaluatorService, type PromoEvaluation } from './promo-code-evaluator.service';
@@ -118,7 +123,8 @@ export class PromoQuoteService {
        * Cả bảng, không chỉ hai con số: giao diện THAY `quote.breakdown.fees` bằng nó, nên mọi
        * dòng dẫn xuất (tiền giữ chỗ, trả chủ xe khi nhận, nhãn thu gọn) cùng một nguồn.
        */
-      fees: fees ?? null,
+      // Bản CÔNG KHAI — khách không thấy kinh tế của chủ xe, cùng luật với báo giá (ADR 0064).
+      fees: fees ? toPublicFeeBreakdown(fees) : null,
       name: evaluation.snapshot.name,
       description: terms?.description ?? null,
       discountType: evaluation.snapshot.discountType,
@@ -130,11 +136,15 @@ export class PromoQuoteService {
   }
 
   private applyToFees(context: PromoQuoteContext, promo: PromoCodeSnapshot) {
-    return this.pricing.applyPromoToFees(context.tenantId, context.breakdown.totalAmount, {
-      quoteIsEstimate: context.quoteIsEstimate,
-      promo,
-      personalAccidentSelected: context.personalAccidentSelected,
-    });
+    return this.pricing.applyPromoToFees(
+      context.tenantId,
+      {
+        vehicleType: context.scope.vehicleType,
+        serviceType: context.scope.serviceType,
+        breakdown: context.breakdown,
+      },
+      { quoteIsEstimate: context.quoteIsEstimate, promo, ...context.insurance },
+    );
   }
 }
 

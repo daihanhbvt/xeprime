@@ -9,20 +9,18 @@ import {
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
+  holdWindowsPreview,
+  toHoldWindowsPreviewDto,
   type LongTermPackageMonths,
 } from '@xeprime/types';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { fetchCalendarQuote } from '@/features/calendar/api';
+import { useNow } from '@/hooks/use-now';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
-import {
-  appWallClockToIso,
-  nowInAppTz,
-  startOfAppDay,
-  toAppTz,
-  type Dayjs,
-} from '@/lib/datetime';
+import { appWallClockToIso, nowInAppTz, startOfAppDay, toAppTz, type Dayjs } from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../types';
+import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
 
 import styles from './ApproveLongTermDialog.module.css';
 
@@ -90,6 +88,25 @@ function ApproveLongTermForm({
         : null,
     [pickupAt, effectivePackage],
   );
+
+  /*
+   * Hai cửa sổ của khách NẾU duyệt ngay với giờ nhận vừa chọn — CÙNG `holdWindowsPreview` mà server
+   * dùng cho yêu cầu theo ngày, trên trần cửa sổ của chính sách phí server trả về. Dài hạn không có
+   * giờ nhận trước lượt duyệt nên server không ước được; đây vẫn là ƯỚC TÍNH, mốc thật chốt lúc duyệt.
+   */
+  const now = useNow();
+  const preview = request.approvalPreview ?? null;
+  const windows = useMemo<ApprovalWindows | null>(() => {
+    if (!preview?.collectsHold || !pickupAt) return null;
+    return toHoldWindowsPreviewDto(
+      holdWindowsPreview({
+        now: new Date(now),
+        pickupAt: new Date(appWallClockToIso(pickupAt)),
+        freeCancelHours: preview.policyFreeCancelHours,
+        paymentWindowMinutes: preview.policyPaymentWindowMinutes,
+      }),
+    );
+  }, [preview, pickupAt, now]);
 
   const quoteQ = useQuery({
     queryKey: queryKeys.calendar.quote({
@@ -235,6 +252,19 @@ function ApproveLongTermForm({
           ) : (
             <Alert type="warning" showIcon title={t('longTerm.quoteUnavailable')} />
           )
+        ) : null}
+
+        {preview ? (
+          <ApprovalPreviewSummary
+            preview={preview}
+            windows={windows}
+            windowsPendingHint={t('approvalPreview.longTermPickPickup')}
+            /*
+              Yêu cầu LEGACY chưa mang gói: server ước tiền trên một gói chưa ai chọn — con số đó
+              không phải tiền của chuyến này. Chỉ hiện hai cửa sổ; tiền xem ở bảng giá gói phía trên.
+            */
+            showMoney={requestPackage != null}
+          />
         ) : null}
 
         {error ? <Alert type="error" showIcon title={error} /> : null}

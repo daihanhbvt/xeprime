@@ -5,11 +5,14 @@ import { Tag } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PLAN_TIER_ICON, type PlanBenefitLine, type PlanTierIcon } from '@xeprime/domain';
+import { PLAN_VEHICLE_SCOPE } from '@xeprime/types';
 
+import { ROUTES } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
 import type { PlanPurchaseState } from '../plan-purchase';
+import type { TenantPlan } from '../types';
 import styles from './PlanPricingTable.module.css';
 
 /**
@@ -19,7 +22,7 @@ import styles from './PlanPricingTable.module.css';
  * email, giờ làm việc) đã sống ở một chỗ có tên, và một biểu mẫu thứ hai là một hàng đợi thứ hai
  * mà chưa ai nhận. Khi có đội bán hàng thật thì đổi ĐÚNG hằng này.
  */
-const CONTACT_SALES_HREF = '/support';
+export const CONTACT_SALES_HREF = ROUTES.SUPPORT;
 
 /**
  * Huy hiệu của bậc — LOẠI biểu tượng (đường tăng → ngôi sao → vương miện, theo vị trí) do
@@ -54,7 +57,14 @@ const TIER_ICONS: Readonly<Record<PlanTierIcon, typeof RiseOutlined>> = {
  * THÁNG (mốc rẻ nhất để so ngang các bậc); chọn bậc rồi mới tới bảng kỳ hạn bên dưới, nơi %
  * tiết kiệm có nghĩa vì nó so với chính giá tháng của bậc đó.
  */
-export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
+export function PlanPricingTable({
+  state,
+  label,
+}: {
+  state: PlanPurchaseState;
+  /** Tên nhóm cho trình đọc màn hình — mỗi làn một tên ("Gói xe máy"), mặc định nhãn chung. */
+  label?: string;
+}) {
   const t = useTranslations('Subscription');
   const fmt = useAppFormat();
 
@@ -62,7 +72,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.tiers} role="radiogroup" aria-label={t('purchase.planLabel')}>
+      <div className={styles.tiers} role="radiogroup" aria-label={label ?? t('purchase.planLabel')}>
         {tiers.map((tier) => {
           const active = tier.plan.id === planId;
           const { headline } = tier.card;
@@ -92,7 +102,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
                 <p className={styles.tierDesc}>{tier.plan.description}</p>
               ) : null}
 
-              <TierBenefits benefits={tier.card.benefits} />
+              <TierBenefits benefits={tier.card.benefits} scope={tier.plan.vehicleScope} />
 
               {headline ? (
                 <p className={styles.tierPrice}>
@@ -118,9 +128,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  className={`${styles.tierAction} ${
-                    featured ? styles.tierActionPrimary : ''
-                  }`}
+                  className={`${styles.tierAction} ${featured ? styles.tierActionPrimary : ''}`}
                   onClick={() => state.selectPlan(tier.plan.id)}
                 >
                   {active ? t('purchase.tierSelected') : t('purchase.tierSelect')}
@@ -201,28 +209,36 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
  * không người dùng đọc thấy "Quản lý công nợ" ở một chỗ và "Theo dõi công nợ" ở chỗ kia rồi
  * tưởng đó là hai thứ.
  */
-function TierBenefits({ benefits }: { benefits: readonly PlanBenefitLine[] }) {
+function TierBenefits({
+  benefits,
+  scope,
+}: {
+  benefits: readonly PlanBenefitLine[];
+  /** Phạm vi của bậc — trần đọc theo đúng loại xe ("Tối đa 5 xe máy"), không phải "5 xe" chung chung. */
+  scope: TenantPlan['vehicleScope'];
+}) {
   const t = useTranslations('Subscription');
   const domainLabel = useDomainLabel();
 
-  function label(line: PlanBenefitLine): string {
+  function label(line: Exclude<PlanBenefitLine, { kind: 'branches' }>): string {
     switch (line.kind) {
       case 'vehicles':
-        return line.count == null
-          ? t('purchase.limitVehiclesUnlimited')
-          : t('purchase.limitVehicles', { count: line.count });
-      case 'branches':
-        return line.count == null
-          ? t('purchase.limitBranchesUnlimited')
-          : t('purchase.limitBranches', { count: line.count });
+        if (line.count == null) return t('purchase.limitVehiclesUnlimited');
+        return scope === PLAN_VEHICLE_SCOPE.MOTORBIKE
+          ? t('purchase.limitMotorbikes', { count: line.count })
+          : scope === PLAN_VEHICLE_SCOPE.CAR
+            ? t('purchase.limitCars', { count: line.count })
+            : t('purchase.limitVehicles', { count: line.count });
       case 'feature':
         return domainLabel('planFeature', line.feature);
     }
   }
 
+  const lines = benefits;
+
   return (
     <ul className={styles.limits}>
-      {benefits.map((line) => (
+      {lines.map((line) => (
         <li key={line.kind === 'feature' ? line.feature : line.kind}>
           <CheckCircleFilled aria-hidden="true" />
           {label(line)}

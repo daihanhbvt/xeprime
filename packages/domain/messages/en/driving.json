@@ -72,7 +72,7 @@
     "actualPickupAt": "Picked up {time}",
     "actualReturnAt": "Finished {time}",
     "pendingTitle": "You've been assigned to this trip",
-    "pendingBody": "Accept to confirm you'll drive. If you decline, the trip goes back to having no driver.",
+    "pendingBody": "Accept to confirm you'll drive. If you decline — or don't answer in time — the trip goes back to the employer to assign another driver.",
     "accept": "Accept trip",
     "decline": "Decline",
     "declineConfirm": "Decline this trip?",
@@ -90,6 +90,11 @@
     "unassigned": "No longer assigned to you",
     "cancelled": "Booking cancelled",
     "no_show": "Customer no-show",
-    "completed": "Completed"
+    "completed": "Completed",
+    "expired": "Not confirmed in time"
+  },
+  "respond": {
+    "remaining": "Answer within",
+    "expired": "Time to answer has passed — the trip goes back to the employer"
   }
 }

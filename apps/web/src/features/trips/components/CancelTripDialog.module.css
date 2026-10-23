@@ -15,3 +15,26 @@
 .refundNote {
   margin-top: var(--xp-space-xs);
 }
+
+/* Xem trước khoản giữ chỗ — ba dòng tiền đọc thẳng hàng như một phiếu nhỏ. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--xp-space-xs);
+  gap: var(--xp-space-2);
+}
+
+.factRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.factRow dt,
+.factRow dd {
+  margin: 0;
+}
+
+.note {
+  margin: 0;
+}

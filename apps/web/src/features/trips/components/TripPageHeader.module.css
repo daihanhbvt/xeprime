@@ -1,7 +1,7 @@
 /*
  * Đầu trang luồng đặt xe — Figma "Search Fields" (`19759:40223`): đệm trên 8 dưới 20, đường dẫn và
  * khối tiêu đề cách nhau 16; tiêu đề `24px/Semibold`, câu dẫn `16px/Regular` `Text/Gray/low`, tiến
- * trình neo đáy bên phải.
+ * trình neo đáy bên phải. Nút tròn + đường dẫn là `PageBreadcrumb` (dùng chung với chi tiết xe).
  */
 .header {
   display: flex;
@@ -9,77 +9,6 @@
   gap: var(--xp-space-md);
   min-width: 0;
   padding: var(--xp-space-sm) 0 var(--xp-space-20);
-}
-
-/* ── Nút tròn + đường dẫn (Figma `19759:40224`) ─────────────────────────── */
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-/* Nút quay lại — tròn 36, nền `BG/gray-50`, icon 20 (Figma "Solution Icon"). */
-.back {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg);
-  color: var(--xp-color-text-secondary);
-  font-size: 20px;
-  transition: background-color 0.15s ease;
-}
-
-.back:hover {
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text);
-}
-
-.back:focus-visible {
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-.trail {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  list-style: none;
-}
-
-.crumb {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.link {
-  color: inherit;
-}
-
-.link:hover {
-  color: var(--xp-color-primary-hover);
-}
-
-.separator {
-  padding: 0 0.3em;
-}
-
-/* Trang đang đứng — `Text/Brand/primary`, `14px/Medium`. */
-.current {
-  color: var(--xp-color-primary);
-  font-weight: var(--xp-font-weight-medium);
-  overflow-wrap: anywhere;
 }
 
 /* ── Tiêu đề + tiến trình (Figma `19759:40228`) ──────────────────────────── */
@@ -122,10 +51,13 @@
   min-width: 0;
 }
 
-/* Mobile (≤640px = `--xp-bp-mobile`): tiến trình xuống dưới tiêu đề, câu dẫn nhỏ một bậc. */
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`): thanh đường dẫn trắng dính ngay dưới header site (không đệm
+ * trên), tiến trình xuống dưới tiêu đề, câu dẫn nhỏ một bậc.
+ */
 @media (max-width: 640px) {
   .header {
-    padding-bottom: var(--xp-space-md);
+    padding: 0 0 var(--xp-space-md);
   }
 
   .description {

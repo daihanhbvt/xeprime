@@ -118,4 +118,41 @@
   gap: 6px;
 }
 
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`): đệm 16 như các thẻ khác của trang mobile, tiêu đề `18px/Semibold`
+ * cách nội dung 8; thanh tab cuộn ngang trong thẻ (không đẩy trang tràn) và ẩn thanh cuộn.
+ */
+@media (max-width: 640px) {
+  .wrap {
+    padding: var(--xp-space-lg);
+  }
 
+  .title {
+    margin-bottom: var(--xp-space-sm);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h3);
+  }
+
+  .tabList {
+    gap: 0;
+    margin-bottom: var(--xp-space-lg);
+    scrollbar-width: none;
+  }
+
+  .tabList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabButton {
+    padding: 10px var(--xp-space-12);
+    font-size: var(--xp-font-size-body);
+  }
+}
+
+/* Chủ xe chưa công bố thủ tục cho dịch vụ đang xem — nói rõ, không để tab trống. */
+.empty {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}

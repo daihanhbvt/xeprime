@@ -14,7 +14,9 @@
     "slotsSummary": "{car} car slots · {motorbike} motorbike slots",
     "purchaseButton": "Buy a plan",
     "renewButton": "Renew / change plan",
-    "upgradeButton": "Upgrade to a shop"
+    "upgradeButton": "Upgrade to a shop",
+    "packageTitle": "Shop plan",
+    "packageCount": "{count, plural, one {Using # plan by vehicle type} other {Using # plans by vehicle type}} — no fee per trip."
   },
   "usage": {
     "fleetTotal": "Total vehicles",
@@ -26,7 +28,16 @@
     "atLimitBuyPlan": "Buy a shop plan to list more vehicles.",
     "serviceFee": "Service fee",
     "serviceFeeValue": "{percent}% / trip",
-    "fleetLimitSub": "vehicles activated"
+    "fleetLimitSub": "vehicles activated",
+    "scopeRequired": "No plan yet",
+    "atLimitScope": {
+      "motorbike": "All {limit} motorbike slots of your plan are in use.",
+      "car": "All {limit} car slots of your plan are in use."
+    },
+    "atLimitUpgradeScope": {
+      "motorbike": "Move your motorbike plan up a tier to add more motorbikes.",
+      "car": "Move your car plan up a tier to add more cars."
+    }
   },
   "freeTrips": {
     "title": "Free trips",
@@ -55,7 +66,8 @@
       "period": "Period",
       "total": "Amount",
       "status": "Status",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "scope": "Plan type"
     },
     "copyCode": "Copy reference code",
     "emptyHint": "Invoices for buying or renewing a plan will appear here.",
@@ -86,7 +98,21 @@
     "submit": "Create invoice",
     "empty": "No plans are for sale yet.",
     "loadError": "Could not load the plan list",
-    "termsHint": "The longer the term, the lower the monthly cost."
+    "termsHint": "The longer the term, the lower the monthly cost.",
+    "titleFor": "Buy / renew: {scope}",
+    "emptyFor": "No {scope} is on sale yet.",
+    "limitMotorbikes": "{count, plural, one {Up to # motorbike} other {Up to # motorbikes}}",
+    "limitCars": "{count, plural, one {Up to # car} other {Up to # cars}}",
+    "chainsAfter": "You are on {plan} until {date}. The new plan starts right after that, so you lose no days of the current term.",
+    "startsOnPayment": "The plan starts as soon as XePrime receives your payment.",
+    "replacesPending": "Invoice {code} for this vehicle type is awaiting payment. Creating a new invoice cancels that code. If you already transferred with the old code, do not create a new one.",
+    "planNotOnSale": "This plan has just stopped taking new purchases. Choose another plan or reload the price list.",
+    "submitNow": "Upgrade now",
+    "timingLabel": "Effective timing",
+    "timingNextTerm": "Queue after current term",
+    "timingNow": "Upgrade immediately today",
+    "timingNowDesc": "Starts as soon as payment is confirmed",
+    "timingNowWarning": "The current term ends today. You pay the full price of the new tier, with no refund for remaining days."
   },
   "payment": {
     "title": "Transfer to activate your plan",
@@ -156,7 +182,11 @@
     "editInvoice": "Change plan",
     "backToInvoice": "Back to the pending code",
     "editWarnTitle": "Invoice {code} is still waiting for your transfer",
-    "editWarnBody": "The old code STAYS valid until you create a new invoice at step 3 — only then is it voided. If you have already transferred against it, go back and wait for the money instead of creating a new one."
+    "editWarnBody": "The old code STAYS valid until you create a new invoice at step 3 — only then is it voided. If you have already transferred against it, go back and wait for the money instead of creating a new one.",
+    "partialFailure": "Could not create the {scope} invoice: {error} The invoices already created are still valid.",
+    "chosenPlans": "Selected: {plans} · Total {amount}",
+    "chosenPlanItem": "{scope} {plan} ({months} months)",
+    "totalForPlans": "{count, plural, one {for 1 plan} other {for # plans}}"
   },
   "term": {
     "pillLabel": "Term",
@@ -212,5 +242,88 @@
     "voidTitle": "This invoice no longer accepts payment",
     "voidBody": "Invoice {code} has expired or was replaced by a newer one. Please choose a plan again.",
     "pickAgain": "Choose a plan"
+  },
+  "lanes": {
+    "title": {
+      "motorbike": "Motorbike plan",
+      "car": "Car plan",
+      "all": "Enterprise plan"
+    },
+    "pickHint": {
+      "motorbike": "Pick a plan if you rent out motorbikes. Leave it empty and motorbikes cannot be listed on the marketplace yet.",
+      "car": "Pick a plan if you rent out cars. Leave it empty and cars cannot be listed on the marketplace yet."
+    },
+    "clear": "Clear",
+    "invoiceCount": "{count, plural, =1 {1 invoice will be created.} other {# invoices will be created, one per vehicle type.}}",
+    "pickTermFirst": "Choose a term for the selected plan to create the invoice.",
+    "pickAtLeastOne": "Choose at least one plan (motorbike or car) and a term to create an invoice.",
+    "sectionTitle": "Plans by vehicle type",
+    "sectionHint": "Each vehicle type has its own plan. You can run a motorbike plan and a car plan side by side.",
+    "sectionEnterprise": "Your shop is on the enterprise plan, which covers both motorbikes and cars.",
+    "activeTag": "Active",
+    "graceTag": "In grace period",
+    "noneTag": "No plan",
+    "endsOn": "Ends {date}",
+    "scopeRequired": {
+      "motorbike": "No motorbike plan: motorbikes cannot be listed on the marketplace yet.",
+      "car": "No car plan: cars cannot be listed on the marketplace yet."
+    },
+    "noPlanHint": {
+      "motorbike": "No motorbike plan yet. Buy one to list motorbikes with no fee per trip.",
+      "car": "No car plan yet. Buy one to list cars with no fee per trip."
+    },
+    "usageOf": "{used}/{limit} vehicles",
+    "usageUnlimited": "{used} vehicles · unlimited",
+    "usageNoPlan": "{used} vehicles",
+    "onMarketplace": "{count, plural, other {# on the marketplace}}",
+    "pendingInvoice": "Invoice {code} is awaiting payment",
+    "renew": "Renew / change plan",
+    "buy": {
+      "motorbike": "Buy motorbike plan",
+      "car": "Buy car plan"
+    }
+  },
+  "enterprise": {
+    "defaultName": "Enterprise plan",
+    "tag": "Enterprise",
+    "activeTag": "Active",
+    "activeSummary": "One plan for your whole fleet: unlimited motorbikes and cars, priced by agreement with XePrime.",
+    "contactSummary": "For fleets of more than 10 vehicles of one type, or that need a custom setup.",
+    "coversBoth": "Unlimited motorbikes and cars",
+    "activeUntil": "Valid until {date}",
+    "changeHint": "Want to change or renew your enterprise plan? The XePrime team will help you directly.",
+    "contactHint": "The enterprise plan is quoted by fleet size and cannot be bought directly on this page.",
+    "contactCta": "Contact sales"
+  },
+  "quotaGate": {
+    "scopeRequired": {
+      "motorbike": "Your shop has no motorbike plan, so motorbikes cannot be added or listed on the marketplace yet.",
+      "car": "Your shop has no car plan, so cars cannot be added or listed on the marketplace yet."
+    },
+    "buy": {
+      "motorbike": "Buy motorbike plan",
+      "car": "Buy car plan"
+    },
+    "ownerLite": "Individual owners can list up to {limit} vehicles (cars and motorbikes combined). You have {used}.",
+    "upgradeToShop": "Upgrade to a shop",
+    "shared": {
+      "fleet": "Your current plan has used {used}/{limit} vehicles, so no new vehicle can be added.",
+      "marketplace": "Your current plan has used {used}/{limit} marketplace slots, so no more vehicles can be listed."
+    },
+    "viewPlans": "View plans",
+    "lane": {
+      "fleet": {
+        "motorbike": "Your motorbike plan has used {used}/{limit} vehicles, so no new motorbike can be added.",
+        "car": "Your car plan has used {used}/{limit} vehicles, so no new car can be added."
+      },
+      "marketplace": {
+        "motorbike": "Your motorbike plan has used {used}/{limit} marketplace slots, so no more motorbikes can be listed.",
+        "car": "Your car plan has used {used}/{limit} marketplace slots, so no more cars can be listed."
+      }
+    },
+    "upgrade": {
+      "motorbike": "Upgrade motorbike plan",
+      "car": "Upgrade car plan"
+    }
   }
 }

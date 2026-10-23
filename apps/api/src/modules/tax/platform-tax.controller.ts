@@ -67,13 +67,17 @@ export class PlatformTaxController {
     description:
       'Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép ' +
       'chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc ' +
-      'CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ.',
+      'CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ. File mang số ' +
+      'CCCD đầy đủ nên MỖI lần xuất ghi audit `tax.period_export` (người xuất, kỳ, số dòng).',
   })
   @ApiProduces('text/csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @ApiOkResponse({ schema: { type: 'string' } })
-  async exportCsv(@Query() query: TaxPeriodQueryDto): Promise<string> {
-    return this.read.periodCsv(query.period);
+  async exportCsv(
+    @Query() query: TaxPeriodQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<string> {
+    return this.read.periodCsv(query.period, user.id);
   }
 
   @Post('periods/:period/declared')

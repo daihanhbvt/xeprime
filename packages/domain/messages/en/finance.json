@@ -417,21 +417,28 @@
   "taxWithheld": {
     "title": "Tax withheld",
     "period": "Period",
-    "explainer": "Tax is borne by the vehicle owner and is deducted from what XePrime owes you; it is never added to the customer price. It only accrues once a trip has started — trips cancelled before pickup are not charged.",
+    "explainer": "Under Decree 117/2025/ND-CP, XePrime withholds and remits VAT and PIT for owners who are individuals or household businesses (verified companies are not withheld): self-drive and long-term 5% + 2%, with driver 3% + 1.5% of the rental amount, excluding the delivery fee. Tax is deducted from what XePrime owes you, never added to the customer price, and only accrues once a trip has started.",
     "loadError": "Could not load tax figures",
     "empty": "No trips had tax withheld in this period.",
     "percentOf": "{percent}% of taxable value",
     "stats": {
       "total": "Total withheld",
       "base": "Taxable value",
-      "trips": "Trips"
+      "trips": "Trips",
+      "vat": "VAT withheld",
+      "pit": "PIT withheld",
+      "unsplit": "Legacy rows (VAT/PIT not split)"
     },
     "columns": {
       "booking": "Trip",
       "base": "Taxable value",
       "label": "Tax type",
       "amount": "Withheld",
-      "status": "Status"
-    }
+      "status": "Status",
+      "vat": "VAT",
+      "pit": "PIT"
+    },
+    "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
+    "notSplit": "Legacy row — not split"
   }
 }

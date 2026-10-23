@@ -11,14 +11,14 @@
  * và nằm trong khoản chuyển online — không phải khấu trừ khỏi tiền chủ xe.
  */
 
-import { STATUS_COLOR, type StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusColor, type StatusMeta } from './meta';
 
 // ── Sản phẩm ────────────────────────────────────────────────────────────────
 
 export const INSURANCE_PRODUCT_KIND = {
-  /** `IV` — bảo hiểm xe cho chuyến đi. Bắt buộc khi cổng bảo hiểm mở. */
+  /** `IV` — bảo hiểm vật chất xe cho chuyến đi. Tuỳ chọn từ luồng tiền v2 (khách tích chọn). */
   VEHICLE_TRIP: 'vehicle_trip',
-  /** `IP` — tai nạn người ngồi trên xe. Tuỳ chọn, cần bằng chứng khách đã chọn. */
+  /** `IP` — tai nạn người ngồi trên xe. Tuỳ chọn (khách tích chọn). */
   PERSONAL_ACCIDENT: 'personal_accident',
 } as const;
 
@@ -30,9 +30,7 @@ export const INSURANCE_PRODUCT_KIND_VALUES = Object.values(
 ) as InsuranceProductKind[];
 
 export function isInsuranceProductKind(value: unknown): value is InsuranceProductKind {
-  return (
-    typeof value === 'string' && (INSURANCE_PRODUCT_KIND_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (INSURANCE_PRODUCT_KIND_VALUES as string[]).includes(value);
 }
 
 // ── Trạng thái ──────────────────────────────────────────────────────────────
@@ -81,19 +79,24 @@ export const INSURANCE_POLICY_STATUS_VALUES = Object.values(
 ) as InsurancePolicyStatus[];
 
 export function isInsurancePolicyStatus(value: unknown): value is InsurancePolicyStatus {
-  return (
-    typeof value === 'string' && (INSURANCE_POLICY_STATUS_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (INSURANCE_POLICY_STATUS_VALUES as string[]).includes(value);
 }
 
-export const INSURANCE_POLICY_STATUS_META: Readonly<
-  Record<InsurancePolicyStatus, StatusMeta>
-> = {
-  [INSURANCE_POLICY_STATUS.RESERVED]: { label: 'Đã thu phí, chờ bàn giao', color: STATUS_COLOR.WAITING },
-  [INSURANCE_POLICY_STATUS.ISSUING]: { label: 'Đang cấp chứng nhận', color: STATUS_COLOR.PROCESSING },
+export const INSURANCE_POLICY_STATUS_META: Readonly<Record<InsurancePolicyStatus, StatusMeta>> = {
+  [INSURANCE_POLICY_STATUS.RESERVED]: {
+    label: 'Đã thu phí, chờ bàn giao',
+    color: STATUS_COLOR.WAITING,
+  },
+  [INSURANCE_POLICY_STATUS.ISSUING]: {
+    label: 'Đang cấp chứng nhận',
+    color: STATUS_COLOR.PROCESSING,
+  },
   [INSURANCE_POLICY_STATUS.ISSUED]: { label: 'Đã cấp chứng nhận', color: STATUS_COLOR.SUCCESS },
   [INSURANCE_POLICY_STATUS.FAILED]: { label: 'Cấp thất bại', color: STATUS_COLOR.DANGER },
-  [INSURANCE_POLICY_STATUS.CANCELLED]: { label: 'Đã huỷ trước chuyến', color: STATUS_COLOR.NEUTRAL },
+  [INSURANCE_POLICY_STATUS.CANCELLED]: {
+    label: 'Đã huỷ trước chuyến',
+    color: STATUS_COLOR.NEUTRAL,
+  },
   [INSURANCE_POLICY_STATUS.VOIDED]: { label: 'Đã thu hồi', color: STATUS_COLOR.WARNING },
   [INSURANCE_POLICY_STATUS.CLAIM]: { label: 'Đang bồi thường', color: STATUS_COLOR.INFO },
 };
@@ -136,6 +139,19 @@ export function insuranceRetryDelayMinutes(attempts: number): number {
   const raw = n >= 6 ? INSURANCE_RETRY_MAX_MINUTES : 2 ** n;
   return Math.min(raw, INSURANCE_RETRY_MAX_MINUTES);
 }
+
+/**
+ * Thời hạn THUÊ của một lượt chiếm `issuing` — quá mốc này kể từ `lastAttemptAt` mà hợp đồng vẫn
+ * `issuing` thì worker đã chết giữa chừng (deploy, OOM, mất mạng), và hợp đồng được nhặt lại.
+ *
+ * Phải DÀI HƠN hẳn thời gian chờ tối đa một lần gọi đối tác (`INSURANCE_PARTNER_TIMEOUT_MS`):
+ * nhặt lại một lượt còn đang chờ phản hồi là gọi đôi. Gọi đôi vẫn an toàn — `idempotencyKey` không
+ * đổi qua các lần thử, đối tác trả lại đúng GCN cũ — nhưng không có lý do để mời nó.
+ */
+export const INSURANCE_ISSUING_LEASE_MINUTES = 10;
+
+/** Trần chờ một lần gọi đối tác phát hành — adapter thật phải tôn trọng nó. */
+export const INSURANCE_PARTNER_TIMEOUT_MS = 60_000;
 
 /**
  * Mã lỗi của cổng phát hành. Đây là MÃ đi trên dây, không phải câu hiển thị (ADR 0012).
@@ -189,3 +205,148 @@ export type InsuranceConsentSource =
 export const INSURANCE_CONSENT_SOURCE_VALUES = Object.values(
   INSURANCE_CONSENT_SOURCE,
 ) as InsuranceConsentSource[];
+
+// ── Danh mục sản phẩm (ADR 0064) ───────────────────────────────────────────
+
+/**
+ * Hãng bảo hiểm của một sản phẩm trong `insurance_products`. Mã đi trên dây, không phải tên hiện
+ * cho khách (tên sống ở `name_vi`/`name_en` của chính sản phẩm). Một hãng có tối đa MỘT sản phẩm
+ * mỗi loại — DB canh `UNIQUE (provider, kind)`.
+ */
+export const INSURANCE_PROVIDER = {
+  /** Tổng Công ty CP Bảo hiểm Quân đội. Chưa có hợp đồng thật: chỉ `mic_mock` phát hành được. */
+  MIC: 'mic',
+} as const;
+
+export type InsuranceProvider = (typeof INSURANCE_PROVIDER)[keyof typeof INSURANCE_PROVIDER];
+
+export const INSURANCE_PROVIDER_VALUES = Object.values(INSURANCE_PROVIDER) as InsuranceProvider[];
+
+/**
+ * Tiền tố số GCN do adapter GIẢ LẬP cấp. Có mặt ở đây (không chỉ trong adapter) để mọi bề mặt
+ * đọc được một GCN thử nghiệm mà không cần biết adapter nào đã cấp nó — số `TEST-…` không bao
+ * giờ là một hợp đồng có hiệu lực, kể cả khi ai đó quên đọc cờ `is_test`.
+ */
+export const INSURANCE_TEST_CERTIFICATE_PREFIX = 'TEST-';
+
+/** Chỗ thay số GCN trong `insurance_products.certificate_url_template`. */
+export const INSURANCE_CERTIFICATE_URL_PLACEHOLDER = '{certCode}';
+
+/**
+ * Dựng URL tra cứu GCN từ mẫu của sản phẩm. Số GCN được mã hoá URL — nó đến từ đối tác, không
+ * phải từ một chuỗi mình tự dựng, nên không được tin là an toàn để ghép thẳng.
+ */
+export function insuranceCertificateUrl(template: string, certificateNumber: string): string {
+  return template
+    .split(INSURANCE_CERTIFICATE_URL_PLACEHOLDER)
+    .join(encodeURIComponent(certificateNumber));
+}
+
+// ── Quản trị (ADR 0064) ────────────────────────────────────────────────────
+
+/**
+ * Giá trị đặc biệt của bộ lọc trạng thái ở hàng đợi hợp đồng của admin: xem MỌI trạng thái. Bỏ
+ * trống `status` vẫn là hàng đợi VIỆC CẦN LÀM (`failed`) — xem toàn bộ lịch sử là lựa chọn có chủ
+ * đích, không phải mặc định. Server (DTO) và web (công tắc góc nhìn) đọc cùng một hằng.
+ */
+export const INSURANCE_QUEUE_STATUS_ANY = 'any';
+
+export type InsuranceQueueStatusFilter = InsurancePolicyStatus | typeof INSURANCE_QUEUE_STATUS_ANY;
+
+/**
+ * Giới hạn trường khi admin sửa một sản phẩm bảo hiểm — DTO server và form web đọc cùng bảng này,
+ * nên hai bên không lệch nhau một ký tự. Tiền là chuỗi số nguyên đồng tối đa `amountMaxDigits`
+ * chữ số, bội của `MONEY_STEP_VND` (kiểm ở service; CHECK ở DB là chốt chặn thứ hai).
+ */
+export const INSURANCE_PRODUCT_LIMITS = {
+  partnerProductCode: { min: 2, max: 100 },
+  name: { min: 2, max: 255 },
+  coverage: { min: 5, max: 2000 },
+  maxPayoutNote: { max: 255 },
+  certificateUrlTemplate: { max: 500 },
+  displayOrder: { min: 0, max: 1000 },
+  amountMaxDigits: 12,
+} as const;
+
+/**
+ * Snapshot một sản phẩm của danh mục (ADR 0064) — tên, quyền lợi, khấu trừ, mức bồi thường, mẫu
+ * URL GCN như khách đã thấy. Tiền là chuỗi (ADR 0007): snapshot sống trong JSON.
+ *
+ * Đóng băng LÚC DUYỆT (cùng lúc giá — ADR 0024) vào `BookingPriceSnapshot.insuranceProducts` của
+ * hold, rồi sang `booking_insurance_policies.product_snapshot_json` lúc đơn ra đời. Admin sửa hay
+ * tắt sản phẩm giữa lúc duyệt và lúc khách trả không viết lại lời hứa đã hiện cho khách.
+ */
+export interface InsuranceProductSnapshot {
+  id: string;
+  kind: InsuranceProductKind;
+  provider: string;
+  partnerProductCode: string;
+  nameVi: string;
+  nameEn: string;
+  coverageVi: string;
+  coverageEn: string;
+  deductibleCar: string | null;
+  deductibleMotorbike: string | null;
+  maxPayoutCar: string | null;
+  maxPayoutMotorbike: string | null;
+  maxPayoutNoteVi: string | null;
+  maxPayoutNoteEn: string | null;
+  certificateUrlTemplate: string;
+}
+
+// ── Tình trạng bảo hiểm như KHÁCH/CHỦ XE thấy (ADR 0064) ───────────────────
+
+/**
+ * Tình trạng của MỘT sản phẩm bảo hiểm khách đã trả tiền, cho chi tiết chuyến (khách) và chi tiết
+ * đơn (gian hàng). Gọn hơn `INSURANCE_POLICY_STATUS`: người ngoài nền tảng không cần phân biệt
+ * `issued` với `claim`, nhưng PHẢI thấy được khi GCN chưa có — trả tiền rồi mà màn hình im lặng
+ * là thứ sinh ra cuộc gọi hỗ trợ.
+ */
+export const INSURANCE_COVERAGE_STATUS = {
+  /** Phí đã thu, chờ mốc bàn giao để phát hành (`reserved`). */
+  PENDING_ISSUE: 'pending_issue',
+  /** Đang gọi đối tác phát hành (`issuing`). */
+  ISSUING: 'issuing',
+  /** Đã có GCN (`issued`, hoặc `claim` — vẫn là hợp đồng có hiệu lực). */
+  ISSUED: 'issued',
+  /** Phát hành lỗi — XePrime đang xử lý (`failed`). */
+  FAILED: 'failed',
+  /** Hợp đồng đã cấp rồi bị thu hồi (`voided`). */
+  VOIDED: 'voided',
+  /** Huỷ trước bàn giao — phí đã hoàn 100% cho khách (`cancelled`). */
+  REFUNDED: 'refunded',
+} as const;
+
+export type InsuranceCoverageStatus =
+  (typeof INSURANCE_COVERAGE_STATUS)[keyof typeof INSURANCE_COVERAGE_STATUS];
+
+export const INSURANCE_COVERAGE_STATUS_VALUES = Object.values(
+  INSURANCE_COVERAGE_STATUS,
+) as InsuranceCoverageStatus[];
+
+const COVERAGE_BY_POLICY_STATUS: Readonly<Record<InsurancePolicyStatus, InsuranceCoverageStatus>> =
+  {
+    [INSURANCE_POLICY_STATUS.RESERVED]: INSURANCE_COVERAGE_STATUS.PENDING_ISSUE,
+    [INSURANCE_POLICY_STATUS.ISSUING]: INSURANCE_COVERAGE_STATUS.ISSUING,
+    [INSURANCE_POLICY_STATUS.ISSUED]: INSURANCE_COVERAGE_STATUS.ISSUED,
+    [INSURANCE_POLICY_STATUS.CLAIM]: INSURANCE_COVERAGE_STATUS.ISSUED,
+    [INSURANCE_POLICY_STATUS.FAILED]: INSURANCE_COVERAGE_STATUS.FAILED,
+    [INSURANCE_POLICY_STATUS.VOIDED]: INSURANCE_COVERAGE_STATUS.VOIDED,
+    [INSURANCE_POLICY_STATUS.CANCELLED]: INSURANCE_COVERAGE_STATUS.REFUNDED,
+  };
+
+/** Trạng thái hợp đồng (sổ nội bộ) → tình trạng hiển thị. Một bảng, đủ mọi trạng thái. */
+export function insuranceCoverageStatusOf(status: InsurancePolicyStatus): InsuranceCoverageStatus {
+  return COVERAGE_BY_POLICY_STATUS[status];
+}
+
+/** Màu nhãn của từng tình trạng — web/mobile đọc ở đây, không tự chọn màu trong component. */
+export const INSURANCE_COVERAGE_STATUS_COLOR: Readonly<Record<InsuranceCoverageStatus, StatusColor>> =
+  {
+    [INSURANCE_COVERAGE_STATUS.PENDING_ISSUE]: STATUS_COLOR.WAITING,
+    [INSURANCE_COVERAGE_STATUS.ISSUING]: STATUS_COLOR.PROCESSING,
+    [INSURANCE_COVERAGE_STATUS.ISSUED]: STATUS_COLOR.SUCCESS,
+    [INSURANCE_COVERAGE_STATUS.FAILED]: STATUS_COLOR.WARNING,
+    [INSURANCE_COVERAGE_STATUS.VOIDED]: STATUS_COLOR.NEUTRAL,
+    [INSURANCE_COVERAGE_STATUS.REFUNDED]: STATUS_COLOR.NEUTRAL,
+  };

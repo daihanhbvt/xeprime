@@ -14,6 +14,7 @@
  */
 import {
   DRIVER_ASSIGNMENT_STATUS,
+  driverRespondByFor,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   bookingRequestRespondBy,
@@ -50,7 +51,7 @@ import {
 import type { Prisma } from '../index';
 import type { CustomerAccounts } from './accounts';
 import { dateOnlyFromToday, daysFromToday, pick, prisma, seedId } from './context';
-import type { VehicleUnit } from './shop-fleet';
+import { completedMaintenanceSeedId, type VehicleUnit } from './shop-fleet';
 import type { ShopSpec } from './shops';
 
 /** Cọc tiền mặt theo loại xe — khớp chính sách gian hàng dựng ở `shop.ts`. */
@@ -449,6 +450,7 @@ export async function buildBookings(
       driverAssignmentStatus: null,
       driverAssignedAt: null,
       driverRespondedAt: null,
+      driverRespondBy: null,
     },
   });
 
@@ -465,6 +467,9 @@ export async function buildBookings(
         ? drivers[plan.unit.index % drivers.length]!
         : null;
     const driverAccepted = plan.status === BOOKING_STATUS.ACTIVE || plan.unit.index % 2 === 0;
+    // Lượt "chờ nhận" gán NGAY lúc seed, hạn trả lời theo luật thật (ADR 0066) — gán từ hôm qua
+    // thì worker trả nó về bên thuê ở nhịp quét đầu tiên và màn demo không còn việc cần trả lời.
+    const pendingAssignedAt = new Date();
     const driverFields = driver
       ? {
           driverId: driver.id,
@@ -472,8 +477,11 @@ export async function buildBookings(
           driverAssignmentStatus: driverAccepted
             ? DRIVER_ASSIGNMENT_STATUS.ACCEPTED
             : DRIVER_ASSIGNMENT_STATUS.PENDING,
-          driverAssignedAt: daysFromToday(-1),
+          driverAssignedAt: driverAccepted ? daysFromToday(-1) : pendingAssignedAt,
           driverRespondedAt: driverAccepted ? daysFromToday(-1) : null,
+          driverRespondBy: driverAccepted
+            ? null
+            : driverRespondByFor(pendingAssignedAt, plan.pickupAt),
         }
       : {
           driverId: null,
@@ -481,6 +489,7 @@ export async function buildBookings(
           driverAssignmentStatus: null,
           driverAssignedAt: null,
           driverRespondedAt: null,
+          driverRespondBy: null,
         };
 
     const fields = {
@@ -982,10 +991,24 @@ export async function buildMoney(
   }
 
   // ── Phiếu chi cho bảo dưỡng đã hoàn tất ──────────────────────────────────
-  const maintenanceRecords = await prisma.vehicleMaintenanceRecord.findMany({
-    where: { tenantId: deps.tenantId, completedAt: { not: null }, cost: { not: null } },
-    select: { id: true, vehicleId: true, cost: true, completedAt: true },
-  });
+  /*
+   * CHỈ phiếu bảo dưỡng do seed dựng (id tất định từ `completedMaintenanceSeedId`). Phiếu người
+   * dùng tạo trên DB dev đã có phiếu chi do app lập, cùng khoá `(tenant, maintenance, record.id)`
+   * — lập thêm ở đây là vỡ `receipts_source_ref_uniq`, và seed cũng không có quyền ghi vào dữ
+   * liệu người dùng tự tạo.
+   */
+  const maintenanceRecords = (
+    await prisma.vehicleMaintenanceRecord.findMany({
+      where: { tenantId: deps.tenantId, completedAt: { not: null }, cost: { not: null } },
+      select: {
+        id: true,
+        vehicleId: true,
+        cost: true,
+        completedAt: true,
+        vehicle: { select: { code: true } },
+      },
+    })
+  ).filter((record) => record.id === completedMaintenanceSeedId(spec.key, record.vehicle.code));
   for (const record of maintenanceRecords) {
     await upsertReceipt(spec, deps, {
       key: `maintenance:${record.id}`,
@@ -1190,11 +1213,14 @@ export async function buildBookingRequests(
   let count = 0;
 
   /*
-   * Hạn phản hồi tính bằng CHÍNH hàm mà API dùng (`bookingRequestRespondBy`, 60 phút) — seed
-   * không được có công thức riêng, nếu không dữ liệu demo sẽ minh hoạ một luật không tồn tại.
+   * Hạn phản hồi tính bằng CHÍNH hàm mà API dùng (`bookingRequestRespondBy`) — seed không được có
+   * công thức riêng, nếu không dữ liệu demo sẽ minh hoạ một luật không tồn tại. Yêu cầu chờ duyệt ở
+   * đây nhận xe sau ≥ 20 giờ hoặc là dài hạn, nên cửa sổ động (ADR 0066) cho trọn trần 4 giờ — gọi
+   * một tham số (không giờ nhận ⇒ trần) là đúng con số đó; yêu cầu đã quyết cũng lấy trần để mốc
+   * quyết của dữ liệu demo luôn nằm trong hạn.
    *
-   * Yêu cầu CHỜ DUYỆT lấy mốc từ lúc chạy seed, nên vừa seed xong là còn đúng một giờ để bấm
-   * duyệt. Sau một giờ chúng thành quá hạn thật — đó là luật, không phải lỗi seed; chạy lại
+   * Yêu cầu CHỜ DUYỆT lấy mốc từ lúc chạy seed, nên vừa seed xong là còn đúng bốn giờ để bấm
+   * duyệt. Sau đó chúng thành quá hạn thật — đó là luật, không phải lỗi seed; chạy lại
    * `pnpm db:seed` KHÔNG làm mới mốc (upsert giữ nguyên hàng cũ, như mọi trường khác).
    */
   const sentNow = new Date();

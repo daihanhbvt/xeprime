@@ -38,6 +38,7 @@ import {
 
 import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { OwnerPayoutDto } from '../../../common/dto/owner-payout.dto';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
 import { MobileDeviceDto, MobileSessionDto } from '../../auth/dto/mobile-auth.dto';
@@ -383,6 +384,21 @@ export class CreateBookingRequestDto {
   @IsString()
   @MaxLength(64)
   promoCode?: string;
+
+  /**
+   * Lựa chọn bảo hiểm của khách — luồng tiền v2: cả hai TUỲ CHỌN, tích thì tính theo ngày. Đóng
+   * băng vào yêu cầu; lượt chốt giá (duyệt/tự nhận) đọc lại đúng lựa chọn này. Chính sách phí tắt
+   * cổng bảo hiểm thì lựa chọn không sinh dòng tiền nào. Bỏ trống = không chọn.
+   */
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm vật chất xe (IV) — tính theo ngày' })
+  @IsOptional()
+  @IsBoolean()
+  vehicleProtectionSelected?: boolean;
+
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày' })
+  @IsOptional()
+  @IsBoolean()
+  personalAccidentSelected?: boolean;
 }
 
 /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
@@ -626,6 +642,104 @@ export class BookingRequestPricingDto {
   remainingAmount!: string | null;
 }
 
+/**
+ * Hai cửa sổ của khoản giữ chỗ NẾU duyệt ngay bây giờ — `holdWindowsFor` với `acceptedAt = now`.
+ * ƯỚC TÍNH: mốc thật được tính và LƯU lúc lượt duyệt chạy.
+ */
+export class BookingRequestApprovalWindowsDto {
+  @ApiProperty({ description: 'ΔT = giờ nhận xe − bây giờ, phút' }) leadMinutes!: number;
+  @ApiProperty({ description: 'Khách có bấy nhiêu phút để chuyển tiền giữ chỗ' })
+  paymentWindowMinutes!: number;
+  @ApiProperty({
+    description:
+      'Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí',
+  })
+  freeCancelMinutes!: number;
+  @ApiProperty({ description: 'ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe)' })
+  expiresAt!: string;
+  @ApiProperty({ description: 'ISO — mốc huỷ miễn phí dự kiến' }) freeCancelUntil!: string;
+  @ApiProperty({
+    description: 'Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT`',
+  })
+  tooShort!: boolean;
+}
+
+/**
+ * XEM TRƯỚC lượt duyệt cho gian hàng — tiền và hai cửa sổ của chuyến NẾU bấm duyệt bây giờ
+ * (ADR 0064). Chỉ có ở yêu cầu còn `pending_host_approval`; là ƯỚC TÍNH theo chính sách phí hiện
+ * hành (số chốt đóng băng lúc duyệt — ADR 0024).
+ *
+ * DTO nội bộ của gian hàng: phô bày kinh tế của CHỦ XE (hoa hồng `H`, thuế `T`, số thực nhận) là
+ * đúng chỗ — khách không bao giờ đọc DTO này.
+ */
+export class BookingRequestApprovalPreviewDto {
+  @ApiProperty({ description: 'Luôn true — số chốt khi duyệt' }) isEstimate!: boolean;
+  @ApiProperty({
+    description:
+      'Duyệt xong khách có nhận QR tiền giữ chỗ không. false = không thu online (báo giá tạm tính ' +
+      'hoặc không thu cọc) — đơn tạo ngay lúc duyệt',
+  })
+  collectsHold!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền giữ chỗ khách chuyển qua QR (VND string) — null khi không thu online',
+  })
+  onlineAmount!: string | null;
+  @ApiProperty({ description: 'Khách trả TRỰC TIẾP chủ xe lúc nhận xe (VND string)' })
+  payAtPickupAmount!: string;
+  /** @deprecated Đọc `ownerPayout.ownerCommissionAmount` — trường phẳng giữ cho app native cũ. */
+  @ApiProperty({
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy ' +
+      'tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)',
+  })
+  ownerCommissionAmount!: string;
+  /** @deprecated Đọc `ownerPayout.taxAmount` (kèm GTGT/TNCN tách riêng) — giữ cho app native cũ. */
+  @ApiProperty({
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe (VND string)',
+  })
+  taxAmount!: string;
+  /** @deprecated Đọc `ownerPayout.ownerPayableAmount` — trường phẳng giữ cho app native cũ. */
+  @ApiProperty({
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.ownerPayableAmount`. `D − T` — XePrime ghi vào ví điểm chủ ' +
+      'xe khi chuyến hoàn thành (VND string)',
+  })
+  ownerPayableAmount!: string;
+  /** @deprecated Đọc `ownerPayout.ownerNetAmount` — trường phẳng giữ cho app native cũ. */
+  @ApiProperty({
+    deprecated: true,
+    description:
+      'DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến ' +
+      '(VND string)',
+  })
+  ownerNetAmount!: string;
+  @ApiProperty({
+    type: OwnerPayoutDto,
+    description:
+      'Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) — doanh thu, phí dịch vụ – chủ xe, ' +
+      'thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b)',
+  })
+  ownerPayout!: OwnerPayoutDto;
+  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí khi đặt xa (giờ) — trần của cửa sổ động' })
+  policyFreeCancelHours!: number;
+  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa (phút) — trần của cửa sổ động' })
+  policyPaymentWindowMinutes!: number;
+  @ApiPropertyOptional({
+    type: BookingRequestApprovalWindowsDto,
+    nullable: true,
+    description:
+      'Hai cửa sổ nếu duyệt ngay — null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) ' +
+      'hoặc khi chuyến không thu online',
+  })
+  windows!: BookingRequestApprovalWindowsDto | null;
+}
+
 /** Một yêu cầu đặt xe (dùng cho cả list lẫn chi tiết ở inbox shop). */
 export class BookingRequestDto {
   @ApiProperty() id!: string;
@@ -750,14 +864,19 @@ export class BookingRequestDto {
   bookingId!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   /**
-   * HẠN PHẢN HỒI của gian hàng (`created_at + 60'`). Web đếm ngược tới đúng mốc này và ẩn hai
+   * HẠN PHẢN HỒI của gian hàng — `created_at` + cửa sổ ĐỘNG 20% của ΔT (giờ nhận − lúc gửi),
+   * 15′–240′; dài hạn chưa có giờ nhận ⇒ 240′ (ADR 0066). Web đếm ngược tới đúng mốc này và ẩn hai
    * nút quyết định khi nó đã trôi qua — cùng một mốc mà server dùng để từ chối, nên giao diện
    * không bao giờ mời người dùng bấm một nút chắc chắn nhận 409.
    *
    * Vẫn trả về ở yêu cầu ĐÃ xử lý: nó là dữ kiện của bản ghi ("shop có bao lâu"), không phải
    * một cái đồng hồ chỉ chạy khi còn chờ.
    */
-  @ApiProperty({ description: 'ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính)' })
+  @ApiProperty({
+    description:
+      'ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, ' +
+      '15–240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút — ADR 0066)',
+  })
   respondBy!: string;
   @ApiPropertyOptional({
     type: String,
@@ -789,6 +908,11 @@ export class BookingRequestDto {
   })
   holdExpiresAt!: string | null;
 
+  /** Khách đã tích bảo hiểm vật chất xe (`IV`) lúc gửi — lượt chốt giá tính theo lựa chọn này. */
+  @ApiProperty() vehicleProtectionSelected!: boolean;
+  /** Khách đã tích bảo hiểm tai nạn người (`IP`) lúc gửi. */
+  @ApiProperty() personalAccidentSelected!: boolean;
+
   @ApiPropertyOptional({
     type: BookingRequestPricingDto,
     nullable: true,
@@ -798,6 +922,15 @@ export class BookingRequestDto {
       'tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.',
   })
   pricing?: BookingRequestPricingDto | null;
+
+  @ApiPropertyOptional({
+    type: BookingRequestApprovalPreviewDto,
+    nullable: true,
+    description:
+      'Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) — chỉ yêu cầu còn chờ duyệt. Cùng ' +
+      'luật vắng mặt với `pricing` ở phiếu trả về của các thao tác.',
+  })
+  approvalPreview?: BookingRequestApprovalPreviewDto | null;
 }
 
 /**

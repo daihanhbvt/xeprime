@@ -31,7 +31,12 @@
     "unknown": "Not provided",
     "noteBlock": "Note",
     "cardTitle": "Booking details",
-    "pageSubtitle": "Manage the trip and the current rental"
+    "pageSubtitle": "Manage the trip and the current rental",
+    "forbiddenTitle": "You don't have permission to view bookings",
+    "forbiddenBody": "Contact your administrator if you need this permission.",
+    "viewVehicle": "View vehicle profile",
+    "addDocuments": "Add documents",
+    "packageValue": "{label} package"
   },
   "actionBar": {
     "contract": "Contract",
@@ -53,8 +58,8 @@
     "dialog": {
       "cancelTitle": "Cancel booking {code}",
       "noShowTitle": "Mark as no-show — booking {code}",
-      "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot.",
-      "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot.",
+      "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot. Any reservation payment the customer made through XePrime is refunded 100% to their Points wallet.",
+      "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot. Any insurance is refunded to the customer; you receive the whole owner's share of the reservation payment, while the booking fee and the owner service fee go to XePrime.",
       "cancelOk": "Cancel booking",
       "noShowOk": "Mark as no-show",
       "keep": "Keep the booking",
@@ -153,11 +158,16 @@
       "holdPaid": "Held via XePrime",
       "payAtPickup": "Due to the owner at pickup",
       "note": "The hold is collected by XePrime, so it is not part of the shop’s “Collected” line."
+    },
+    "ownerEconomics": {
+      "title": "Your share",
+      "note": "Fixed when the booking was made. The owner service fee and tax are withheld from the reservation payment before the rest goes to your Points wallet when the trip completes."
     }
   },
   "driver": {
     "title": "Driver",
     "none": "Not assigned",
+    "external": "External",
     "assign": "Assign driver",
     "change": "Change",
     "unassign": "Unassign",
@@ -260,7 +270,18 @@
     },
     "advancedPickup": "Add handover details — optional",
     "advancedReturn": "Add return details — optional",
-    "photosHint": "Photograph the vehicle so there is evidence at the end of the trip. Optional — you can confirm without it.",
+    "photosHint": "Photograph the vehicle's condition and odometer to protect your right to compensation if a dispute arises. Optional — you can confirm without it.",
+    "evidenceAdvisory": "Photograph the vehicle's condition and odometer to protect your right to compensation if a dispute arises.",
+    "photosOptional": "Optional — you can confirm without it.",
+    "confirmDialog": {
+      "titlePickup": "Confirm vehicle handed over",
+      "titleReturn": "Confirm vehicle returned",
+      "vehicle": "Vehicle",
+      "booking": "Booking",
+      "successPickup": "Handover confirmed",
+      "successReturn": "Return confirmed",
+      "openSurcharge": "Record a surcharge"
+    },
     "returnDepositNotice": "With no surcharges, the system proposes refunding the full deposit received. The owner makes the refund outside the app and marks it afterwards — it does not block completing the trip.",
     "odometerBelowPickup": "The return odometer ({entered} km) cannot be lower than the pickup odometer ({pickup} km).",
     "occurredAt": {
@@ -620,5 +641,30 @@
     "derivedReturnEmpty": "Pick a package and pickup time to see the return date.",
     "scheduleLabel": "Rental period",
     "doneCodeLabel": "Booking code:"
+  },
+  "ownerPayout": {
+    "unitPrice": "Daily rate",
+    "rentalDays": "Rental days",
+    "rentalDaysValue": "{count, plural, one {# day} other {# days}}",
+    "rentForDays": "Rental for {count, plural, one {# day} other {# days}}",
+    "variesByDay": "Rate varies by day",
+    "revenue": "Rental revenue",
+    "revenueHint": "The rental after any discount you set on the vehicle. Excludes the delivery fee, the booking fee the customer pays XePrime, and insurance.",
+    "commission": "Owner service fee",
+    "commissionHintTiers": "Tiered by rental day under the fee policy applied to this trip: {tiers}.",
+    "commissionHintGeneric": "Tiered by rental day under the fee policy applied to this trip.",
+    "commissionHintBody": "Shops on a plan: 0đ. It funds running the marketplace, customer care, refunds and cancellations, dispute support and insurance.",
+    "tax": "Tax withheld",
+    "taxSplit": "Tax withheld (VAT {vat}% + PIT {pit}%)",
+    "taxCombined": "Tax withheld ({percent}%)",
+    "taxExempt": "Not withheld (company)",
+    "taxHint": "Under Decree 117/2025 and Decree 68/2026, XePrime withholds, declares and pays tax on behalf of owners who are individuals or household businesses. The rate depends on the service type (self-drive, long-term, with driver) and applies to the rental, under the tax policy in force for the trip. Companies are not withheld.",
+    "taxPolicyLink": "Tax policy",
+    "ownerNet": "Owner income (a)",
+    "payAtPickup": "Paid by the customer directly (b)",
+    "payAtPickupHint": "The part of the rental the customer hands you at pick-up; it does not pass through XePrime. Excludes the delivery fee.",
+    "walletCredit": "Credited to your wallet (a − b)",
+    "walletCreditHint": "XePrime credits your Points wallet when the trip is completed.",
+    "hintLabel": "Explain: {item}"
   }
 }

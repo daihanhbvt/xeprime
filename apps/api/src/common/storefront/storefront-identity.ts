@@ -57,7 +57,7 @@ export interface ResolvedStorefront extends StorefrontIdentity {
  * bộ riêng của gian hàng — và đổi tuyến là đổi theo ngay, không job nào phải chép.
  */
 export function resolveStorefront(tenant: StorefrontTenantRow, now: Date): ResolvedStorefront {
-  const billingMode = resolveEffectiveBilling(tenant.subscriptions[0] ?? null, now).billingMode;
+  const billingMode = resolveEffectiveBilling(tenant.subscriptions, now).billingMode;
   const kind = resolveStorefrontKind(billingMode);
   const identity = storefrontIdentity(
     kind,

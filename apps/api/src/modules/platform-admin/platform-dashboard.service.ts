@@ -184,21 +184,38 @@ export class PlatformDashboardService {
     now: Date,
   ): Promise<PlatformDashboardActivityDto> {
     const [bookings, cancelled, gmv, series] = await Promise.all([
-      this.periodCount((w) =>
-        this.prisma.booking.count({ where: { deletedAt: null, createdAt: inWindow(w) } }),
-      current, previous),
-      this.periodCount((w) =>
-        this.prisma.booking.count({
-          where: { deletedAt: null, createdAt: inWindow(w), status: { in: GMV_EXCLUDED_STATUSES } },
-        }),
-      current, previous),
-      this.periodMoney(async (w) => {
-        const agg = await this.prisma.booking.aggregate({
-          where: { deletedAt: null, createdAt: inWindow(w), status: { notIn: GMV_EXCLUDED_STATUSES } },
-          _sum: { totalAmount: true },
-        });
-        return agg._sum.totalAmount;
-      }, current, previous),
+      this.periodCount(
+        (w) => this.prisma.booking.count({ where: { deletedAt: null, createdAt: inWindow(w) } }),
+        current,
+        previous,
+      ),
+      this.periodCount(
+        (w) =>
+          this.prisma.booking.count({
+            where: {
+              deletedAt: null,
+              createdAt: inWindow(w),
+              status: { in: GMV_EXCLUDED_STATUSES },
+            },
+          }),
+        current,
+        previous,
+      ),
+      this.periodMoney(
+        async (w) => {
+          const agg = await this.prisma.booking.aggregate({
+            where: {
+              deletedAt: null,
+              createdAt: inWindow(w),
+              status: { notIn: GMV_EXCLUDED_STATUSES },
+            },
+            _sum: { totalAmount: true },
+          });
+          return agg._sum.totalAmount;
+        },
+        current,
+        previous,
+      ),
       this.dailySeries(now),
     ]);
     return { bookings, cancelled, gmv, series };
@@ -210,7 +227,9 @@ export class PlatformDashboardService {
    * Cùng cách gom ngày với chuỗi tài chính của gian hàng (`AT TIME ZONE 'Asia/Ho_Chi_Minh'`).
    */
   private async dailySeries(now: Date): Promise<PlatformDashboardActivityDto['series']> {
-    const firstDay = vnDateKey(new Date(now.getTime() - (PLATFORM_DASHBOARD_TREND_DAYS - 1) * DAY_MS));
+    const firstDay = vnDateKey(
+      new Date(now.getTime() - (PLATFORM_DASHBOARD_TREND_DAYS - 1) * DAY_MS),
+    );
     const lastDay = vnDateKey(now);
     const from = dayStartUtc(firstDay)!;
 
@@ -248,14 +267,19 @@ export class PlatformDashboardService {
 
   private async growth(current: Window, previous: Window): Promise<PlatformDashboardGrowthDto> {
     const [newCustomers, newPartners] = await Promise.all([
-      this.periodCount((w) =>
-        this.prisma.user.count({
-          where: { realm: ACCOUNT_REALM.CUSTOMER, deletedAt: null, createdAt: inWindow(w) },
-        }),
-      current, previous),
-      this.periodCount((w) =>
-        this.prisma.tenant.count({ where: { deletedAt: null, createdAt: inWindow(w) } }),
-      current, previous),
+      this.periodCount(
+        (w) =>
+          this.prisma.user.count({
+            where: { realm: ACCOUNT_REALM.CUSTOMER, deletedAt: null, createdAt: inWindow(w) },
+          }),
+        current,
+        previous,
+      ),
+      this.periodCount(
+        (w) => this.prisma.tenant.count({ where: { deletedAt: null, createdAt: inWindow(w) } }),
+        current,
+        previous,
+      ),
     ]);
     return { newCustomers, newPartners };
   }
@@ -263,20 +287,28 @@ export class PlatformDashboardService {
   /** Cùng hai vị từ với `BookingHoldsService.dailyReconciliation` — chỉ đổi cửa sổ. */
   private async revenue(current: Window, previous: Window): Promise<PlatformDashboardRevenueDto> {
     const [serviceFee, subscriptions] = await Promise.all([
-      this.periodMoney(async (w) => {
-        const agg = await this.prisma.bookingHold.aggregate({
-          where: { outcome: { not: null }, releasedAt: inWindow(w) },
-          _sum: { settledPlatformAmount: true },
-        });
-        return agg._sum.settledPlatformAmount;
-      }, current, previous),
-      this.periodMoney(async (w) => {
-        const agg = await this.prisma.subscriptionInvoice.aggregate({
-          where: { paidAt: inWindow(w) },
-          _sum: { paidAmount: true },
-        });
-        return agg._sum.paidAmount;
-      }, current, previous),
+      this.periodMoney(
+        async (w) => {
+          const agg = await this.prisma.bookingHold.aggregate({
+            where: { outcome: { not: null }, releasedAt: inWindow(w) },
+            _sum: { settledPlatformAmount: true },
+          });
+          return agg._sum.settledPlatformAmount;
+        },
+        current,
+        previous,
+      ),
+      this.periodMoney(
+        async (w) => {
+          const agg = await this.prisma.subscriptionInvoice.aggregate({
+            where: { paidAt: inWindow(w) },
+            _sum: { paidAmount: true },
+          });
+          return agg._sum.paidAmount;
+        },
+        current,
+        previous,
+      ),
     ]);
 
     const sum = (a: string, b: string) => new Prisma.Decimal(a).add(b).toFixed(0);

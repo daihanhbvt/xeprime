@@ -11,6 +11,7 @@
 import { BILLING_MODE } from './status/billing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { SUBSCRIPTION_STATUS } from './status/misc';
+import { planScopesConflict, planVehicleScopeOf } from './plan-billing';
 
 export const SUBSCRIPTION_TERM_STATE = {
   /** `starts_at <= now < ends_at` — kỳ đang được tính. Tại mỗi thời điểm có tối đa một. */
@@ -143,6 +144,21 @@ export interface SubscriptionChainTerm extends SubscriptionTermRow {
   id: string;
   planId: string;
   billingMode?: string | null;
+  /** Phạm vi loại xe (ADR 0065). Thiếu ⇒ `all` — xung đột với mọi phạm vi, đúng hành vi cũ. */
+  vehicleScope?: string | null;
+}
+
+/**
+ * Chỉ giữ các kỳ ở phạm vi XUNG ĐỘT với `scope` (ADR 0065) — kỳ ô tô không nối đuôi, không huỷ,
+ * không chặn huỷ một kỳ xe máy. Dòng hoa hồng (phạm vi `all`) xung đột với mọi phạm vi nên luôn ở
+ * lại: nó vẫn nhường chỗ cho bất kỳ lượt gán gói nào.
+ */
+function termsConflictingWith<T extends SubscriptionChainTerm>(
+  terms: readonly T[],
+  scope: string | null | undefined,
+): T[] {
+  const target = planVehicleScopeOf(scope);
+  return terms.filter((term) => planScopesConflict(planVehicleScopeOf(term.vehicleScope), target));
 }
 
 export interface SubscriptionChainPlan<T extends SubscriptionChainTerm> {
@@ -175,14 +191,21 @@ const isPaidTerm = (term: SubscriptionChainTerm) => term.billingMode !== BILLING
  * Đuôi chỉ chọn trong kỳ TRẢ PHÍ: một dòng hoa hồng đã xếp lịch sau kỳ gói (hạ về hoa hồng từ kỳ
  * sau) mà được chọn làm đuôi thì lượt gán kế tiếp sẽ huỷ nó rồi bắt đầu từ `now` — chồng lên kỳ
  * gói đang chạy. Dòng hoa hồng không phải kỳ ai trả tiền: nó luôn nhường chỗ, không bao giờ được nối.
+ *
+ * **Theo phạm vi loại xe (ADR 0065).** Bảng trên chỉ áp lên các kỳ XUNG ĐỘT với phạm vi của bậc
+ * được gán (`planScopesConflict`): gán `car_5` không đụng tới kỳ `moto_1` đang chạy, còn gán bậc
+ * `all` (doanh nghiệp) nối đuôi/huỷ mọi kỳ. Đó đúng là phép EXCLUDE ở DB, nên lượt gán mà hàm này
+ * đề xuất không bao giờ bị ràng buộc từ chối.
  */
 export function planSubscriptionChain<T extends SubscriptionChainTerm>(
   terms: readonly T[],
-  input: { planId: string; timing?: string | null },
+  input: { planId: string; timing?: string | null; vehicleScope?: string | null },
   now: Date,
 ): SubscriptionChainPlan<T> {
   const at = now.getTime();
-  const live = terms.filter((term) => isLiveTerm(term, at));
+  const live = termsConflictingWith(terms, input.vehicleScope).filter((term) =>
+    isLiveTerm(term, at),
+  );
   const paidLive = live.filter(isPaidTerm);
 
   if (input.timing === SUBSCRIPTION_CHANGE_TIMING.NOW) {
@@ -243,7 +266,9 @@ export function subscriptionCancelBlockOf(
   if (!isLiveTerm(term, at)) return SUBSCRIPTION_CANCEL_BLOCK.NOT_LIVE;
   const startsAt = toMs(term.startsAt);
   if (!isPaidTerm(term) && startsAt <= at) return SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM;
-  const later = terms.some(
+  // Chỉ kỳ cùng phạm vi XUNG ĐỘT mới là "kỳ xếp sau" (ADR 0065): kỳ xe máy bắt đầu tháng sau không
+  // chặn huỷ kỳ ô tô — huỷ kỳ ô tô không để lại khoảng trống nào trong chuỗi xe máy.
+  const later = termsConflictingWith(terms, term.vehicleScope).some(
     (other) => other.id !== term.id && isLiveTerm(other, at) && toMs(other.startsAt) > startsAt,
   );
   return later ? SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM : null;
@@ -253,6 +278,12 @@ export function subscriptionCancelBlockOf(
  * Khoá tư vấn của CHUỖI KỲ một tenant — mọi đường GHI `tenant_subscriptions` (admin gán/huỷ,
  * webhook kích hoạt, job hết hạn) lấy cùng khoá này trước khi đọc "đuôi", nên hai lượt song song
  * không cùng nối sau một đuôi hay cùng thấy "chưa có gói". Dùng: `pg_advisory_xact_lock(hashtext(key))`.
+ *
+ * ⚠️ Khoá theo TENANT, không theo phạm vi loại xe (ADR 0065) — có chủ đích. Chồng lấn giữa hai kỳ
+ * gói đã có EXCLUDE ở DB canh; thứ khoá này giữ là các quyết định NHÌN XUYÊN phạm vi: "huỷ kỳ CUỐI
+ * CÙNG còn hạn thì gán lại dòng hoa hồng", "job chỉ hạ về hoa hồng khi không còn phạm vi nào giữ
+ * gói". Hai lượt huỷ ô tô và xe máy song song dưới hai khoá riêng sẽ cùng thấy phạm vi kia "còn",
+ * và gian hàng rơi vào pha `unconfigured`. Tranh chấp theo tenant thì rẻ: vài lượt ghi mỗi tháng.
  */
 export function subscriptionChainLockKey(tenantId: string): string {
   return `subscription-chain:${tenantId}`;

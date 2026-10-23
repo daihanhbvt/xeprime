@@ -10,6 +10,8 @@ import { PlatformAuditController } from './platform-audit.controller';
 import { PlatformAuditService } from './platform-audit.service';
 import { PlatformBookingsController } from './platform-bookings.controller';
 import { PlatformBookingsService } from './platform-bookings.service';
+import { PlatformFollowUpsController } from './platform-follow-ups.controller';
+import { PlatformFollowUpsService } from './platform-follow-ups.service';
 import { PlatformTripsController } from './platform-trips.controller';
 import { PlatformTripsService } from './platform-trips.service';
 import { PlatformAccountsController } from './platform-accounts.controller';
@@ -53,6 +55,7 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
     PlatformVehiclesController,
     PlatformBookingsController,
     PlatformTripsController,
+    PlatformFollowUpsController,
     PlatformCustomersController,
     PlatformAccountsController,
   ],
@@ -68,6 +71,7 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
     PlatformVehiclesService,
     PlatformBookingsService,
     PlatformTripsService,
+    PlatformFollowUpsService,
     PlatformCustomersService,
     PlatformAccountLookupService,
   ],

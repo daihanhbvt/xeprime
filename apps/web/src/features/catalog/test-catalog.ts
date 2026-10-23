@@ -48,7 +48,10 @@ function item(
     type,
     key,
     label,
+    // Fixture dùng một ngôn ngữ — bản tiếng Anh vắng thì giao diện rơi về `label`.
+    labelEn: null,
     description,
+    descriptionEn: null,
     iconUrl,
     // Trang chủ: tắt mặc định — test khối "Loại xe" tự dựng mục riêng.
     showOnHome: false,

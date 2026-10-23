@@ -427,7 +427,8 @@
       "imageUrlInvalid": "Invalid image URL",
       "imagesMax": "Maximum 20 photos",
       "seatCountCarOnly": "Seat count applies to cars only",
-      "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only"
+      "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only",
+      "priceThousandStep": "Prices must be a multiple of 1,000 VND"
     }
   },
   "publish": {
@@ -1072,7 +1073,14 @@
       "removeTierAt": "Remove band {index}",
       "maxRadiusTipLabel": "About the maximum supported radius",
       "unitKm": "km",
-      "summaryQuote": "Quoted manually by agreement"
+      "summaryQuote": "Quoted manually by agreement",
+      "feeModeLabel": "How band {index} is charged",
+      "feeModeFlat": "Flat fee",
+      "feeModePerKm": "Per km",
+      "tierPerKmLabel": "Price per km for band {index}",
+      "perKmUnit": "VND / km",
+      "perKmHint": "Fee = price per km × one-way distance, exact to the dong.",
+      "perKmSummary": "{amount}/km"
     },
     "overtime": {
       "title": "Agreed late-return fee",
@@ -1215,7 +1223,9 @@
       "mileageMin": "The minimum allowance is 50 km/day",
       "mileageMax": "The maximum allowance is 2000 km/day",
       "excessFeeRequired": "Enter the fee for each extra kilometre",
-      "excessFeeMax": "That excess mileage fee is too high"
+      "excessFeeMax": "That excess mileage fee is too high",
+      "moneyThousandStep": "The amount must be a multiple of 1,000 VND",
+      "perKmRequired": "Enter a price per km above 0 — for free delivery choose a 0 VND flat fee"
     },
     "calendarLink": "Custom prices by calendar",
     "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table.",

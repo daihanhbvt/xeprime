@@ -1,0 +1,102 @@
+{
+  "tabs": {
+    "label": "Booking views",
+    "bookings": "All bookings",
+    "followUps": "Follow-ups"
+  },
+  "page": {
+    "intro": "Renters who sent a request but did not end up with a trip. Call them back to ask why and invite them to book again."
+  },
+  "filters": {
+    "searchPlaceholder": "Renter name, booking code, vehicle",
+    "searchLabel": "Search lost requests",
+    "phonePlaceholder": "Exact phone number",
+    "phoneLabel": "Look up a renter by phone",
+    "reasonLabel": "Why it was lost",
+    "allReasons": "Any reason",
+    "statusLabel": "Follow-up status",
+    "allStatuses": "Any status",
+    "mine": "Assigned to me",
+    "dateRangeLabel": "Ended between"
+  },
+  "reason": {
+    "customer_cancelled": "Renter cancelled",
+    "unpaid": "Reservation payment not made",
+    "host_declined": "Owner declined / cancelled",
+    "no_response": "Owner did not respond",
+    "slot_taken": "Taken by another renter",
+    "other_cancelled": "Other cancellation"
+  },
+  "status": {
+    "new": "Not contacted",
+    "contacted": "Contacted",
+    "rebooked": "Booked again",
+    "not_interested": "Not interested"
+  },
+  "table": {
+    "label": "Renters to follow up",
+    "customer": "Renter",
+    "trip": "Vehicle · shop",
+    "reason": "Reason",
+    "closedAt": "Ended",
+    "followUp": "Follow-up",
+    "assignee": "Assignee",
+    "rebookedLater": "Has another booking",
+    "open": "Open",
+    "loadError": "Could not load the list",
+    "empty": "No renters to follow up yet",
+    "noResults": "Nothing matches the filters",
+    "clearFilters": "Clear filters",
+    "total": "{count, plural, one {# renter} other {# renters}}"
+  },
+  "drawer": {
+    "title": "Follow-up",
+    "ariaLabel": "Follow up {name}",
+    "previous": "Previous",
+    "next": "Next",
+    "record": "Trip that did not happen",
+    "vehicle": "Vehicle",
+    "tenant": "Shop",
+    "period": "From → to",
+    "requestedAt": "Requested at",
+    "closedAt": "Ended at",
+    "bookingCode": "Booking code",
+    "cancelledBy": "Responsible party",
+    "cancelReason": "Cancellation reason",
+    "cancelNote": "Cancellation note",
+    "rebookedLater": "The renter has booked again after this request.",
+    "lastUpdate": "Last update",
+    "lastUpdateValue": "{name} · {date}",
+    "lastContacted": "Last contacted",
+    "side": "Follow-up result",
+    "readOnly": "You can only view this item."
+  },
+  "form": {
+    "status": "Status",
+    "note": "Note",
+    "notePlaceholder": "What the renter said, when to call back…",
+    "markContacted": "I have called the renter",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "save": "Save",
+    "saved": "Follow-up saved.",
+    "hint": "Every save is recorded in the system log.",
+    "noteTooLong": "Notes can be at most {max} characters",
+    "lastContacted": "Last contacted: {date}",
+    "neverContacted": "No contact recorded yet",
+    "assigneeMe": "{name} (me)",
+    "noAssignees": "No staff member has follow-up access yet",
+    "assigneeHelp": "Only staff with follow-up access are listed. Grant access in Platform staff.",
+    "assigneeOption": "{name} · {role}"
+  },
+  "contact": {
+    "title": "Contact renter",
+    "reveal": "Show number to call",
+    "call": "Call",
+    "zalo": "Zalo",
+    "audit": "Each time the number is shown it is recorded in the system log.",
+    "noPermission": "You do not have permission to see the full phone number.",
+    "copy": "Copy phone number",
+    "copied": "Copied"
+  }
+}

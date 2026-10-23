@@ -35,7 +35,9 @@
     "parties": "Gian hàng · Khách",
     "payee": "Khách · Gian hàng",
     "lines": "Cọc {deposit} · Phí {fee}",
-    "noAccount": "Chưa khai tài khoản"
+    "noAccount": "Chưa khai tài khoản",
+    "commission": "Hoa hồng {amount}",
+    "tax": "Thuế {amount}"
   },
   "settle": {
     "title": "Chốt kết cục khoản giữ chỗ {code}",
@@ -44,7 +46,7 @@
     "noteRequired": "Cần nhập lý do (tối thiểu 5 ký tự).",
     "submit": "Chốt",
     "success": "Đã chốt kết cục.",
-    "disputeOpen": "Đơn này còn tranh chấp mở — kết luận tranh chấp trước khi chốt tiền.",
+    "disputeOpen": "Đơn này còn case tranh chấp hoặc xác minh bàn giao đang mở — kết luận case trước khi chốt tiền.",
     "auditHint": "Thao tác này ghi vào nhật ký hệ thống và không hoàn tác được.",
     "received": "Khoản đã nhận",
     "paidTotal": "Tổng đã nhận",
@@ -62,14 +64,15 @@
     "noAllocation": "Khoản giữ chỗ đời cũ — kết cục này chỉ ghi nhận, không chia tiền cho ai.",
     "outcomeHelp": {
       "settled": "Chuyến hoàn thành: cọc về chủ xe (sau thuế), phí về XePrime, bảo hiểm về hãng bảo hiểm.",
-      "split_late_cancel": "Khách huỷ muộn hoặc không đến: cọc và phí chia đôi chủ xe – XePrime, bảo hiểm hoàn khách.",
+      "split_late_cancel": "Khách huỷ muộn hoặc không đến: phần giữ chỗ của chủ xe về chủ xe, phí sàn và hoa hồng về XePrime (trừ tài trợ mã), bảo hiểm hoàn khách.",
       "refunded": "Hoàn lại khách toàn bộ số đã chuyển.",
       "kept": "Chuyến đã chạy: nền tảng giữ khoản tiền, không chuyển cho ai.",
       "forfeited": "Khách huỷ muộn hoặc không đến: khoản tiền về ví gian hàng làm bồi thường.",
       "released_to_shop": "Chuyến hoàn thành: trả khoản tiền về ví gian hàng."
     },
     "previous": "Khoản giữ chỗ trước",
-    "next": "Khoản giữ chỗ sau"
+    "next": "Khoản giữ chỗ sau",
+    "taxWithheld": "Trong phần của chủ xe: thuế khấu trừ khi hoàn thành"
   },
   "refundPaid": {
     "title": "Ghi nhận đã chuyển trả",
@@ -132,44 +135,6 @@
     "varianceBalanced": "Khớp",
     "countChip": "{count, plural, other {# khoản}}"
   },
-  "insurance": {
-    "title": "Hàng đợi bảo hiểm",
-    "loadError": "Không tải được hàng đợi bảo hiểm",
-    "total": "{count, plural, other {# hợp đồng}}",
-    "noCertificate": "chưa có",
-    "noAutoRetry": "không tự thử lại",
-    "attemptCount": "{count, plural, other {# lần}}",
-    "partnerMissing": {
-      "title": "Chưa cấu hình đối tác bảo hiểm",
-      "body": "Phí bảo hiểm đang được thu và giữ hộ, nhưng chưa có hãng nào cấp chứng nhận — khách CHƯA thực sự có bảo hiểm. Bấm thử lại sẽ không đổi được gì cho tới khi cắm đối tác thật. Đây là việc cấu hình của nền tảng, không phải sự cố của từng chuyến."
-    },
-    "columns": {
-      "booking": "Chuyến",
-      "tenant": "Gian hàng",
-      "product": "Sản phẩm",
-      "premium": "Phí đã thu",
-      "status": "Trạng thái",
-      "certificate": "Số chứng nhận",
-      "attempts": "Đã thử / lần tới"
-    },
-    "actions": {
-      "retry": "Thử lại",
-      "retryQueued": "Đã xếp lịch thử lại — worker sẽ chạy trong vòng một phút",
-      "void": "Thu hồi"
-    },
-    "empty": {
-      "title": "Không có hợp đồng nào đang lỗi",
-      "description": "Mọi phí bảo hiểm đã thu đều đã được xử lý."
-    },
-    "voidModal": {
-      "title": "Thu hồi hợp đồng bảo hiểm",
-      "hint": "Thu hồi là quyết định tiền và đi vào audit. Nếu hợp đồng đã được cấp, nhớ làm việc với đối tác trước — thu hồi ở đây chỉ đóng sổ phía XePrime.",
-      "reasonLabel": "Lý do thu hồi",
-      "reasonPlaceholder": "Vì sao thu hồi hợp đồng này",
-      "done": "Đã thu hồi hợp đồng",
-      "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự)."
-    }
-  },
   "tax": {
     "title": "Sổ thuế theo kỳ",
     "period": "Kỳ kê khai",
@@ -177,26 +142,33 @@
     "total": "{count, plural, other {# dòng}}",
     "percentOf": "{percent}% giá trị chịu thuế",
     "unknownEntity": "Chưa khai hồ sơ",
+    "withheldAs": "Khấu trừ như: {entity}",
     "stats": {
       "total": "Tổng nghĩa vụ kỳ",
       "accrued": "Chờ kê khai",
       "declared": "Đã kê khai",
-      "remitted": "Đã nộp"
+      "remitted": "Đã nộp",
+      "vat": "GTGT đã khấu trừ",
+      "pit": "TNCN đã khấu trừ",
+      "unsplit": "Dòng cũ chưa tách GTGT/TNCN"
     },
     "byEntity": {
       "title": "Chia theo loại chủ thể",
-      "value": "{amount} · {count, plural, other {# dòng}}"
+      "value": "{amount} · {count, plural, other {# dòng}}",
+      "valueSplit": "{amount} (GTGT {vat} · TNCN {pit}) · {count, plural, other {# dòng}}"
     },
     "unknownWarning": {
       "title": "Có nghĩa vụ thuế của gian hàng chưa khai hồ sơ người bán",
-      "body": "Không xác định được loại chủ thể thì không biết những dòng này thuộc tờ khai nào. Yêu cầu các gian hàng đó hoàn thiện hồ sơ trước khi chốt kỳ — đừng gộp tạm vào nhóm cá nhân, vì đó là đoán hộ họ một nghĩa vụ pháp lý."
+      "body": "Những dòng này vẫn bị khấu trừ theo mức cá nhân — thiếu hồ sơ không làm mất nghĩa vụ — nhưng tờ khai cần loại chủ thể và MST hoặc số định danh của người bán. Yêu cầu các gian hàng đó hoàn thiện hồ sơ trước khi chốt kỳ — đừng tự xếp họ vào nhóm cá nhân trên tờ khai, vì đó là đoán hộ họ một nghĩa vụ pháp lý."
     },
     "columns": {
       "booking": "Chuyến / gian hàng",
       "entity": "Loại chủ thể / MST",
       "base": "Giá trị chịu thuế",
       "amount": "Số tiền",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "vat": "GTGT",
+      "pit": "TNCN"
     },
     "actions": {
       "export": "Xuất CSV",
@@ -216,6 +188,12 @@
       "reasonLabel": "Lý do đảo",
       "reasonPlaceholder": "Vì sao dòng này sai",
       "done": "Đã đảo dòng thuế"
+    },
+    "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
+    "notSplit": "Dòng cũ — không tách",
+    "category": {
+      "service": "Nhóm dịch vụ",
+      "transport": "Nhóm vận tải"
     }
   },
   "status": {

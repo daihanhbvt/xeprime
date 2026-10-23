@@ -5,7 +5,7 @@ import { queryKeys } from '@/services/query-keys';
 import { fetchPartnerOverview, partnerOverviewParams } from '../api';
 
 /**
- * Nhịp tự làm mới của Tổng quan. "Việc cần làm" đổi theo PHÚT (hạn trả lời 60′, quá giờ giao
+ * Nhịp tự làm mới của Tổng quan. "Việc cần làm" đổi theo PHÚT (hạn trả lời 15′–4 giờ, quá giờ giao
  * xe), nên một màn để mở cả buổi phải tự nói đúng mà không cần ai bấm F5. Thông báo realtime đã
  * làm mới nhánh `dashboard` ngay khi có yêu cầu/đơn đổi (`notification-refresh.ts`); nhịp này là
  * lưới an toàn cho thứ chỉ đổi vì THỜI GIAN trôi (một chuyến vừa chạm giờ trả). TanStack tự dừng

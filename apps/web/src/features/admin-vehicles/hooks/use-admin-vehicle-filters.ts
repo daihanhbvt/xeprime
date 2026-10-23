@@ -11,7 +11,7 @@ import {
 } from '@xeprime/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { ADMIN_VEHICLE_OPEN_PARAM } from '@/constants/routes';
-import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
+import { enumParam, positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import type { AdminVehicleUrlState } from '../types';
 
 /** Trần `limit` của `GET /platform/vehicles` (`PLATFORM_VEHICLE_MAX_LIMIT`) — vượt thì API trả 400. */
@@ -19,10 +19,6 @@ const MAX_LIMIT = 100;
 
 /** Hai giá trị hợp lệ của chiều "hiển thị hiệu lực" trên URL — backend ép sang boolean. */
 const VISIBLE_VALUES = ['true', 'false'] as const;
-
-function oneOf(value: string | null, allowed: readonly string[]): string | undefined {
-  return value !== null && allowed.includes(value) ? value : undefined;
-}
 
 /** Các khoá mà `FilterBar` điều khiển — đều là chuỗi, đi qua được `FilterValues` không cần ép kiểu. */
 const FILTER_BAR_KEYS = [
@@ -70,15 +66,16 @@ export function useAdminVehicleFilters() {
     return {
       q: sp.get('q')?.trim() || undefined,
       tenantId: sp.get('tenantId')?.trim() || undefined,
-      publicStatus: oneOf(sp.get('publicStatus'), VEHICLE_PUBLIC_STATUS_VALUES) ?? ALL_FILTER,
+      publicStatus: enumParam(sp, 'publicStatus', VEHICLE_PUBLIC_STATUS_VALUES) ?? ALL_FILTER,
       operationStatus:
-        oneOf(sp.get('operationStatus'), VEHICLE_OPERATION_STATUS_VALUES) ?? ALL_FILTER,
-      vehicleType: oneOf(sp.get('vehicleType'), VEHICLE_TYPE_VALUES) ?? ALL_FILTER,
-      serviceType: oneOf(sp.get('serviceType'), SERVICE_TYPE_VALUES) ?? ALL_FILTER,
+        enumParam(sp, 'operationStatus', VEHICLE_OPERATION_STATUS_VALUES) ?? ALL_FILTER,
+      vehicleType: enumParam(sp, 'vehicleType', VEHICLE_TYPE_VALUES) ?? ALL_FILTER,
+      serviceType: enumParam(sp, 'serviceType', SERVICE_TYPE_VALUES) ?? ALL_FILTER,
       provinceCode: sp.get('provinceCode')?.trim() || ALL_FILTER,
-      tenantStatus: oneOf(sp.get('tenantStatus'), TENANT_STATUS_VALUES) ?? ALL_FILTER,
-      marketplaceVisible: oneOf(sp.get('marketplaceVisible'), VISIBLE_VALUES) ?? ALL_FILTER,
-      sort: isPlatformVehicleSort(sort) && sort !== DEFAULT_PLATFORM_VEHICLE_SORT ? sort : undefined,
+      tenantStatus: enumParam(sp, 'tenantStatus', TENANT_STATUS_VALUES) ?? ALL_FILTER,
+      marketplaceVisible: enumParam(sp, 'marketplaceVisible', VISIBLE_VALUES) ?? ALL_FILTER,
+      sort:
+        isPlatformVehicleSort(sort) && sort !== DEFAULT_PLATFORM_VEHICLE_SORT ? sort : undefined,
       page: positiveIntParam(sp, 'page'),
       limit: limit !== undefined && limit <= MAX_LIMIT ? limit : undefined,
       open: sp.get(ADMIN_VEHICLE_OPEN_PARAM)?.trim() || undefined,

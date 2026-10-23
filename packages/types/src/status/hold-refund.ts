@@ -69,6 +69,17 @@ export const HOLD_REFUND_REASON = {
   OVERPAID: 'overpaid',
   /** Hold trả THIẾU rồi hết hạn — phần đã chuyển phải quay về khách (ADR 0033). */
   HOLD_EXPIRED: 'hold_expired',
+  /**
+   * Khách huỷ SAU mốc miễn phí — kết cục `split_late_cancel` tự động (ADR 0064 · ADR 0066): `IV +
+   * IP` hoàn 100% vào ví khách, chủ xe nhận trọn `D`, XePrime giữ `S + H`. Khoản hoàn mang mã này là phần
+   * BẢO HIỂM (chưa phát hành) — không phải "quyết định của XePrime".
+   */
+  LATE_CANCEL: 'late_cancel',
+  /**
+   * Khách không đến nhận xe — xử lý NHƯ huỷ muộn (ADR 0033 điều 3), nhưng tách mã để sổ hoàn và
+   * báo cáo nói đúng chuyện đã xảy ra.
+   */
+  NO_SHOW: 'no_show',
   /** Admin quyết sau tranh chấp/sự cố — bắt buộc có ghi chú. */
   ADMIN_DECISION: 'admin_decision',
 } as const;
@@ -85,6 +96,8 @@ export const HOLD_REFUND_REASON_LABEL: Readonly<Record<HoldRefundReason, string>
   [HOLD_REFUND_REASON.OWNER_CANCEL]: 'Chủ xe huỷ chuyến',
   [HOLD_REFUND_REASON.OVERPAID]: 'Chuyển thừa',
   [HOLD_REFUND_REASON.HOLD_EXPIRED]: 'Hết hạn giữ chỗ khi chưa đủ tiền',
+  [HOLD_REFUND_REASON.LATE_CANCEL]: 'Khách huỷ sau mốc miễn phí',
+  [HOLD_REFUND_REASON.NO_SHOW]: 'Khách không đến nhận xe',
   [HOLD_REFUND_REASON.ADMIN_DECISION]: 'Quyết định của XePrime',
 };
 

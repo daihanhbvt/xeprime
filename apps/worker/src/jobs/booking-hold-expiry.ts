@@ -167,17 +167,37 @@ async function remindDueHolds(
     stage === 'first'
       ? HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FIRST
       : HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL;
-  const thresholdMs = remainingMinutes * 60_000;
+  const dueBefore = new Date(now.getTime() + remainingMinutes * 60_000);
+  const unclaimed =
+    stage === 'first'
+      ? Prisma.sql`payment_reminded_at IS NULL`
+      : Prisma.sql`final_payment_reminded_at IS NULL`;
+
+  /*
+   * Đã vào vùng nhắc nhưng CHƯA hết hạn — hold đã chết thì lượt quét hết hạn lo, không nhắc.
+   *
+   * Cửa sổ của hold chưa bao giờ dài tới ngưỡng (`expires_at − created_at`) ⇒ mốc đó không tồn
+   * tại với nó, và nó không được claim. Phép loại nằm TRONG SQL: dòng bỏ qua mà không claim sẽ
+   * đứng đầu `ORDER BY expires_at LIMIT` ở mọi nhịp sau và chiếm chỗ của lời nhắc thật. Prisma
+   * không tả được `cột − cột > khoảng`, nên câu chọn id viết tay — cùng khuôn lượt nhắc hạn phản
+   * hồi của gian hàng.
+   */
+  const due = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id
+      FROM booking_holds
+     WHERE status IN (${BOOKING_HOLD_STATUS.PENDING}, ${BOOKING_HOLD_STATUS.UNDERPAID})
+       AND expires_at > ${now}
+       AND expires_at <= ${dueBefore}
+       AND ${unclaimed}
+       AND expires_at - created_at > make_interval(mins => ${remainingMinutes}::int)
+     ORDER BY expires_at ASC
+     LIMIT ${BATCH}
+  `;
+  if (due.length === 0) return 0;
 
   const candidates = await prisma.bookingHold.findMany({
-    where: {
-      status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
-      // Đã vào vùng nhắc nhưng CHƯA hết hạn — hold đã chết thì lượt quét hết hạn lo, không nhắc.
-      expiresAt: { lte: new Date(now.getTime() + thresholdMs), gt: now },
-      ...(stage === 'first' ? { paymentRemindedAt: null } : { finalPaymentRemindedAt: null }),
-    },
+    where: { id: { in: due.map((r) => r.id) } },
     orderBy: { expiresAt: 'asc' },
-    take: BATCH,
     select: {
       id: true,
       code: true,
@@ -187,16 +207,12 @@ async function remindDueHolds(
       amount: true,
       paidAmount: true,
       expiresAt: true,
-      createdAt: true,
       vehicle: { select: { name: true } },
     },
   });
 
   let sent = 0;
   for (const hold of candidates) {
-    // Cửa sổ của hold này chưa bao giờ dài tới ngưỡng ⇒ mốc đó không tồn tại với nó.
-    if (hold.expiresAt.getTime() - hold.createdAt.getTime() <= thresholdMs) continue;
-
     const done = await prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingHold.updateMany({
         where: {

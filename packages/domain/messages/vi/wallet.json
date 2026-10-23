@@ -136,8 +136,14 @@
       "returnAt": "Ngày về",
       "unitAmount": "Đơn giá",
       "revenue": "Doanh thu",
-      "tax": "Thuế KD",
+      "commission": "Phí dịch vụ – Chủ xe",
+      "tax": "Thuế khấu trừ",
+      "delivery": "Phí giao xe",
       "balanceChange": "Thay đổi SD"
+    },
+    "payout": {
+      "expand": "Chi tiết tiền của chuyến",
+      "label": "Bảng cộng ví chuyến {code}"
     },
     "empty": {
       "title": "Tháng này chưa có chuyến nào hoàn thành",
@@ -145,16 +151,19 @@
     },
     "totals": {
       "balanceChange": "Tổng thay đổi số dư — chuyến đã hoàn thành",
-      "payAtPickup": "Khách trả trực tiếp khi nhận xe",
-      "payAtPickupHint": "Phần này khách đưa thẳng cho bạn, không đi qua XePrime.",
+      "payAtPickup": "Khách thanh toán trực tiếp khi nhận xe",
+      "payAtPickupHint": "Phần tiền thuê khách đưa thẳng cho bạn, không đi qua XePrime. Không gồm phí giao xe.",
+      "delivery": "Phí giao xe khách trả trực tiếp",
+      "deliveryHint": "Bạn nhận trọn khoản này; không tính phí dịch vụ và thuế.",
       "subscriptionFee": "Phí quản lý & vận hành gói nền tảng",
-      "tax": "Tổng thuế KD khấu trừ hộ",
+      "commission": "Tổng phí dịch vụ – Chủ xe",
+      "tax": "Tổng thuế khấu trừ, nộp thay",
       "ownerIncome": "Thu nhập chủ gian hàng",
-      "ownerIncomeHint": "Doanh thu trừ thuế và phí gói — gồm cả phần khách trả trực tiếp.",
+      "ownerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí gói — gồm cả phần khách trả trực tiếp, không gồm phí giao xe.",
       "ownerIncomeCommission": "Thu nhập chủ xe",
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
-      "appOwnerIncomeHint": "Doanh thu trừ thuế và phí nền tảng — gồm cả phần khách trả trực tiếp."
+      "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí nền tảng — gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
     }
   },
   "pill": {

@@ -97,6 +97,37 @@ export {
 } from './promo-redemption';
 
 /**
+ * Lượt gán tài xế (ADR 0063 · ADR 0066) — xoá cột tài xế trên đơn + khép dòng sổ, và phép trả
+ * lượt QUÁ HẠN trả lời về bên thuê. Dùng chung cho `DriversService` (API) và worker quét hạn.
+ * Xem docblock `driver-assignment.ts`.
+ */
+export {
+  CLEARED_DRIVER_ASSIGNMENT,
+  closeOpenDriverAssignment,
+  expirePendingDriverAssignment,
+  expiredDriverAssignmentWhere,
+  CLEARED_EXTERNAL_DRIVER,
+  claimDriverMissingAlert,
+  driverMissingAlertWhere,
+  markDriverMissingAlertCovered,
+} from './driver-assignment';
+
+/**
+ * Mở case hỗ trợ — hình dạng hàng ghi dùng chung cho API (`SupportService`) và worker (case
+ * `handover_unconfirmed` do hệ thống mở, ADR 0066). Xem docblock `support-case.ts`.
+ */
+export {
+  bookingIdsWithOpenSupportCase,
+  createSupportCaseWithinTx,
+  findOpenTripNotReceivedReport,
+  hasOpenSupportCase,
+  openSupportCaseWhere,
+  openTripNotReceivedReports,
+  supportCaseCode,
+  type SupportCaseOpenInput,
+} from './support-case';
+
+/**
  * Email hướng dẫn gói (`email_outbox`) — cổng `isPlanPromotionEnabled` + khoá chống trùng dùng chung cho API và
  * worker. Xem docblock `plan-guide-outbox.ts`.
  */
@@ -108,3 +139,35 @@ export {
   isPlanPromotionEnabled,
   type EnqueuePlanGuideEmailInput,
 } from './plan-guide-outbox';
+
+/**
+ * Phát hành bảo hiểm chuyến (ADR 0032 điều 4 · ADR 0064) — chiếm, gọi đối tác, ghi kết quả. Dùng
+ * chung cho worker (vòng quét mỗi phút) và API (`InsuranceService` là lớp vỏ tiêm được). Xem
+ * docblock của `insurance-issue.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
+ */
+export {
+  INSURANCE_PARTNER_MODE,
+  MIC_CERTIFICATE_PREFIX,
+  MIC_MOCK_CERTIFICATE_URL_TEMPLATE,
+  MicMockInsurancePartner,
+  NoopInsurancePartner,
+  activeInsuranceProductSnapshots,
+  applyInsuranceIssueResult,
+  claimDueInsurancePolicies,
+  createInsurancePartner,
+  freezeInsuranceProducts,
+  insuranceIssuingStaleBefore,
+  issueInsurancePolicy,
+  readInsuranceProductSnapshot,
+  sweepDueInsurancePolicies,
+  toInsuranceProductSnapshot,
+  type InsuranceIssueOutcome,
+  type InsuranceLogger,
+  type InsurancePartner,
+  type InsurancePartnerMode,
+  type InsuranceProductRow,
+  type InsuranceProductSnapshot,
+  type InsuranceSweepResult,
+  type IssuePolicyRequest,
+  type IssuePolicyResult,
+} from './insurance-issue';

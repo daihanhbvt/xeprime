@@ -1,4 +1,5 @@
 import type {
+  DriverLicenceReadingConfidence,
   DriverLicenceQualityIssue,
   DriverLicenceKind,
   ImageUploadMimeType,
@@ -17,7 +18,7 @@ export const DRIVER_LICENCE_READER = 'DRIVER_LICENCE_READER';
 /** Loại giấy tờ bộ đọc nhận ra — thêm `not_a_licence` so với loại bằng lưu ở DB. */
 export type ReadingDocumentKind = DriverLicenceKind | 'not_a_licence';
 
-export type ReadingConfidence = 'high' | 'medium' | 'low';
+export type ReadingConfidence = DriverLicenceReadingConfidence;
 
 export interface DriverLicenceReading {
   isDriverLicence: boolean;

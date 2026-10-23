@@ -1,13 +1,15 @@
 import type { Prisma } from '@xeprime/prisma';
 import {
   BILLING_MODE,
-  BILLING_PHASE,
   PARTNER_QUOTA_KIND,
   PLAN_EXPIRING_SOON_DAYS,
   PLATFORM_TENANT_PLAN_FILTER,
   SUBSCRIPTION_STATUS,
   parsePlanLimits,
   parsePlanQuota,
+  VEHICLE_TYPE,
+  packageTermCovering,
+  resolveActivePackageTerms,
   resolveEffectiveBilling,
   type PartnerQuotaKind,
   type PlatformTenantPlanFilter,
@@ -60,48 +62,87 @@ export async function scheduledTermsByTenant(
   return out;
 }
 
-/** Dòng hiệu lực gần nhất đã bắt đầu — đúng hình mà `listSelect` đọc. */
+/** Dòng hiệu lực đã bắt đầu — đúng hình mà `listSelect` đọc (cửa sổ `EFFECTIVE_SUBSCRIPTION_ARGS`). */
 export interface EffectiveTermRow {
+  id: string;
   billingMode: string | null;
+  vehicleScope: string;
   startsAt: Date;
   endsAt: Date;
   quotaJson: Prisma.JsonValue;
   plan: { code: string; name: string; limitsJson: Prisma.JsonValue };
 }
 
-/** Tóm tắt gói cho MỘT dòng danh sách — pha từ `resolveEffectiveBilling`, trần từ snapshot. */
+/**
+ * Trần xe snapshot của MỘT kỳ — ADR 0041 điều 3, biểu thức TƯỜNG MINH: `??` sẽ đọc một `null`
+ * nghĩa "không giới hạn" thành "chưa khai".
+ */
+function termVehicleLimit(row: EffectiveTermRow): number | null {
+  const quota = parsePlanQuota(row.quotaJson);
+  return quota ? quota.maxVehicles : parsePlanLimits(row.plan.limitsJson).maxVehicles;
+}
+
+/**
+ * Tóm tắt gói cho MỘT dòng danh sách — pha từ `resolveEffectiveBilling` (gộp mọi phạm vi loại xe,
+ * ADR 0065), trần từ snapshot của từng kỳ.
+ *
+ * `vehicleLimit` là TỔNG trần theo LOẠI xe được phủ (gói ô tô 5 + gói xe máy 1 = 6; một kỳ `all`
+ * tính một lần); một kỳ không giới hạn thì cả dòng không giới hạn. Chi tiết theo loại ở `terms`.
+ */
 export function tenantPlanSummary(
-  row: EffectiveTermRow | null,
+  rows: readonly EffectiveTermRow[],
   nextTerm: PlanTermRefDto | null,
   now: Date,
 ): PlatformTenantPlanDto {
-  const billing = resolveEffectiveBilling(row, now);
-  const onPackageTerm =
-    row !== null &&
-    billing.billingMode === BILLING_MODE.PACKAGE &&
-    (billing.phase === BILLING_PHASE.CURRENT || billing.phase === BILLING_PHASE.GRACE);
+  const billing = resolveEffectiveBilling(rows, now);
+  const active = resolveActivePackageTerms(rows, now);
+  const terms = active.map((term) => {
+    const limit = termVehicleLimit(term.row);
+    return {
+      vehicleScope: term.vehicleScope,
+      subscriptionId: term.row.id,
+      planCode: term.row.plan.code,
+      planName: term.row.plan.name,
+      phase: term.billing.phase,
+      startsAt: term.row.startsAt.toISOString(),
+      endsAt: term.row.endsAt.toISOString(),
+      graceEndsAt: term.billing.graceEndsAt?.toISOString() ?? null,
+      vehicleLimitKind: limit === null ? PARTNER_QUOTA_KIND.UNLIMITED : PARTNER_QUOTA_KIND.TOTAL,
+      vehicleLimit: limit,
+    };
+  });
 
   let vehicleLimitKind: PartnerQuotaKind = PARTNER_QUOTA_KIND.NOT_APPLICABLE;
   let vehicleLimit: number | null = null;
-  if (onPackageTerm) {
-    // ADR 0041 điều 3: snapshot của dòng thuê bao trước, bằng biểu thức TƯỜNG MINH — `??` sẽ đọc
-    // một `null` nghĩa "không giới hạn" thành "chưa khai".
-    const quota = parsePlanQuota(row.quotaJson);
-    const max = quota ? quota.maxVehicles : parsePlanLimits(row.plan.limitsJson).maxVehicles;
-    vehicleLimitKind = max === null ? PARTNER_QUOTA_KIND.UNLIMITED : PARTNER_QUOTA_KIND.TOTAL;
-    vehicleLimit = max;
+  if (active.length > 0) {
+    /*
+     * Cộng theo LOẠI XE ĐƯỢC PHỦ, không theo kỳ: một kỳ `all` đang ân hạn cạnh một kỳ ô tô còn hạn
+     * mà cộng cả hai là đếm ô tô hai lần. Mỗi loại lấy đúng kỳ gác nó (`packageTermCovering` —
+     * cùng phép với cổng tạo xe); một kỳ `all` gác cả hai loại chỉ được tính MỘT lần.
+     */
+    const covering = [VEHICLE_TYPE.CAR, VEHICLE_TYPE.MOTORBIKE]
+      .map((type) => packageTermCovering(active, type))
+      .filter((term): term is NonNullable<typeof term> => term !== null);
+    const distinct = [...new Set(covering)];
+    const limits = distinct.map((term) => termVehicleLimit(term.row));
+    const unlimited = limits.some((limit) => limit === null);
+    vehicleLimitKind = unlimited ? PARTNER_QUOTA_KIND.UNLIMITED : PARTNER_QUOTA_KIND.TOTAL;
+    vehicleLimit = unlimited ? null : limits.reduce<number>((sum, limit) => sum + (limit ?? 0), 0);
   }
+  const primary =
+    active[0]?.row ?? [...rows].sort((a, b) => b.endsAt.getTime() - a.endsAt.getTime())[0] ?? null;
 
   return {
     phase: billing.phase,
     billingMode: billing.billingMode,
     planName: billing.planName,
     planCode: billing.planCode,
-    termStartsAt: row?.startsAt.toISOString() ?? null,
+    termStartsAt: primary?.startsAt.toISOString() ?? null,
     endsAt: billing.planEndsAt?.toISOString() ?? null,
     graceEndsAt: billing.graceEndsAt?.toISOString() ?? null,
     vehicleLimitKind,
     vehicleLimit,
+    terms,
     nextTerm,
   };
 }

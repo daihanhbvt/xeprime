@@ -8,6 +8,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 /** Ngày LOCAL Asia/Ho_Chi_Minh — không giờ, không múi. */
@@ -42,6 +43,7 @@ export class SaveDailyPricesDto {
   @IsOptional()
   @IsString()
   @Matches(MONEY_PATTERN, { message: 'Giá theo ngày không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá theo ngày phải là bội của 1.000đ' })
   dailyPrice?: string;
 
   @ApiPropertyOptional({
@@ -51,6 +53,7 @@ export class SaveDailyPricesDto {
   @IsOptional()
   @IsString()
   @Matches(MONEY_PATTERN, { message: 'Giá theo giờ không hợp lệ (số VND không âm)' })
+  @IsMoneyStep({ message: 'Giá theo giờ phải là bội của 1.000đ' })
   hourlyPrice?: string;
 
   @ApiPropertyOptional({ description: 'Ghi chú (vd "Giá lễ 2/9")' })

@@ -229,8 +229,6 @@ describe('AccountScreen — điều hướng tài khoản', () => {
 
     for (const label of [
       'Tài khoản của tôi',
-      // Bằng lái của tài khoản khách (ADR 0057).
-      'Giấy tờ & Xác minh',
       'Trở thành chủ xe',
       'Chuyến của tôi',
       /*
@@ -246,6 +244,9 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     ]) {
       expect(view.getAllByRole('menuitem', { name: label }).length).toBeGreaterThan(0);
     }
+    // Giấy tờ & Xác minh là một KHỐI trong màn (design 22/10/2026), không còn là mục menu.
+    expect(view.queryByRole('menuitem', { name: 'Giấy tờ & Xác minh' })).toBeNull();
+    expect(view.getByText('Giấy tờ & Xác minh')).toBeTruthy();
     expect(view.queryByRole('menuitem', { name: 'Danh sách xe' })).toBeNull();
     expect(view.queryByRole('menuitem', { name: 'Lịch xe' })).toBeNull();
     // Không có nhóm thứ hai ⇒ không có tiêu đề nhóm.

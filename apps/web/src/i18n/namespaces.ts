@@ -44,6 +44,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'shops', namespace: 'Shops' },
   { file: 'chat', namespace: 'Chat' },
   { file: 'trips', namespace: 'Trips' },
+  // Xe yêu thích của tài khoản khách (BRD 21/10/2026) — trái tim ở chợ + trang /account/favorites.
+  { file: 'favorites', namespace: 'Favorites' },
   { file: 'account', namespace: 'Account' },
   // Bốn văn bản pháp lý công khai + trang Hỗ trợ. Tách khỏi `marketplace` vì chúng là VĂN BẢN
   // được viện dẫn (có ngày hiệu lực, sửa là phải dời ngày), không phải chữ trang trí của chợ.
@@ -117,10 +119,16 @@ export const MESSAGE_NAMESPACES = [
   { file: 'promo-codes', namespace: 'PromoCodes' },
   // Money operations của nền tảng: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3).
   { file: 'platform-money', namespace: 'PlatformMoney' },
+  // Bảo hiểm chuyến phía KHÁCH + GIAN HÀNG (ADR 0064): quyền lợi cạnh ô chọn, GCN đã cấp.
+  { file: 'insurance', namespace: 'Insurance' },
+  // Màn Bảo hiểm của admin nền tảng (ADR 0064): danh mục sản phẩm MIC + hàng đợi GCN.
+  { file: 'admin-insurance', namespace: 'AdminInsurance' },
   // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
-  // Hàng đợi bằng lái của khách (ADR 0057) — chỉ site quản trị.
-  { file: 'admin-driver-licences', namespace: 'AdminDriverLicences' },
+  // Khách thuê + bằng lái của khách (ADR 0070) — chỉ site quản trị.
+  { file: 'admin-customers', namespace: 'AdminCustomers' },
+  // Chăm sóc khách mất đơn (ADR 0070) — tab của Đơn thuê toàn hệ thống.
+  { file: 'admin-follow-ups', namespace: 'AdminFollowUps' },
   // Cấu hình app Partner (isPlanPromotionEnabled) + mẫu email hướng dẫn gói — chỉ site quản trị.
   { file: 'admin-app-config', namespace: 'AdminAppConfig' },
   // Nhân sự nền tảng + tra cứu xuyên realm của site quản trị (ADR 0053 — B4).

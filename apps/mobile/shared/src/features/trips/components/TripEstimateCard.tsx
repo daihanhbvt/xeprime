@@ -62,13 +62,13 @@ export function TripEstimateCard({
               Chỉ chủ xe: tổng khách trả không phải doanh thu của họ. `ownerNetAmount` do server
               tính theo đúng công thức của ADR 0029 — client KHÔNG tự trừ ra.
             */}
-            {isHost && estimate.fees ? (
+            {isHost && (estimate as { ownerNetAmount?: string | null }).ownerNetAmount ? (
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
                 <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
                   {t('ownerNet')}
                 </Text>
                 <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.bold}>
-                  {fmt.money(estimate.fees.ownerNetAmount)}
+                  {fmt.money((estimate as { ownerNetAmount?: string | null }).ownerNetAmount!)}
                 </Text>
               </XStack>
             ) : null}

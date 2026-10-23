@@ -272,6 +272,7 @@
     "deliveryFeeTypeError": "The delivery fee must be a number",
     "deliveryFeeInteger": "The delivery fee must be a whole number",
     "deliveryFeeMin": "The delivery fee cannot be negative",
+    "deliveryFeeThousandStep": "The delivery fee must be a multiple of 1,000 VND",
     "mileageRequired": "Enter the kilometres included per day",
     "mileageInteger": "The allowance must be a whole number",
     "mileageMin": "The minimum allowance is 50 km/day",

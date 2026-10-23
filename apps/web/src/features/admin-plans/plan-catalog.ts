@@ -1,10 +1,9 @@
 import {
   BILLING_MODE,
-  OWNER_LITE_FEATURES,
-  PLAN_FEATURE,
   PLAN_STATUS,
-  PLAN_STATUS_VALUES,
+  PLAN_VEHICLE_SCOPE,
   normalizeCatalogSearch,
+  planVehicleScopeOf,
   type PlanStatus,
 } from '@xeprime/types';
 import type { Plan } from './types';
@@ -25,22 +24,6 @@ export const PLAN_KIND = {
 
 export type PlanKind = (typeof PLAN_KIND)[keyof typeof PLAN_KIND];
 
-/**
- * Trần chi nhánh của tuyến hoa hồng — HỆ QUẢ, không phải một núm vặn, nên nó được SUY RA chứ
- * không viết số: backend không có con số nào cho nó (`branchQuotaFor` trả `null` ngoài tuyến
- * gói); thứ chặn thật là cờ `branches` vắng mặt trong `OWNER_LITE_FEATURES`, để lại đúng chi
- * nhánh mặc định. Ngày tập cờ đó có `branches`, câu trả lời ở đây tự đổi theo (`null` = không
- * giới hạn).
- *
- * Hiện nó cạnh `OWNER_LITE_VEHICLE_LIMIT` để admin không phải đi tìm; `limits_json` của bậc đó
- * để null ở mọi trần, và in "Không giới hạn" từ đó là nói ngược hẳn với thứ backend chặn
- * (ADR 0041 điều 4).
- */
-export const COMMISSION_TRACK_BRANCH_LIMIT: number | null = OWNER_LITE_FEATURES.includes(
-  PLAN_FEATURE.BRANCHES,
-)
-  ? null
-  : 1;
 export const PLAN_KIND_VALUES = Object.values(PLAN_KIND) as PlanKind[];
 
 export function planKindOf(plan: Pick<Plan, 'billingMode' | 'limits'>): PlanKind {
@@ -68,46 +51,118 @@ export function toPlanCode(raw: string): string {
     .slice(0, PLAN_CODE_MAX_LENGTH);
 }
 
-/** Bộ lọc của bảng gói — ba tham số URL (ADR 0004): `q`, `kind`, `status`. */
-export interface PlanCatalogFilters {
-  q?: string;
-  kind?: PlanKind;
-  status?: PlanStatus;
+/**
+ * NHÓM của một bậc trên màn quản trị — theo PHẠM VI loại xe (ADR 0065), cộng tuyến hoa hồng.
+ *
+ * Bốn nhóm, đúng bốn câu hỏi admin đặt ra khi mở màn này: bán gì cho xe máy, bán gì cho ô tô, bậc
+ * doanh nghiệp (phạm vi `all`, thường bán qua tư vấn) ra sao, và tuyến vào cửa. Nhóm suy từ dữ
+ * liệu của bậc (`billingMode` + `vehicleScope`), không lưu ở đâu.
+ */
+export const PLAN_GROUP = {
+  MOTORBIKE: 'motorbike',
+  CAR: 'car',
+  ENTERPRISE: 'enterprise',
+  COMMISSION: 'commission',
+} as const;
+export type PlanGroup = (typeof PLAN_GROUP)[keyof typeof PLAN_GROUP];
+/** Thứ tự hiển thị — cùng thứ tự `GET /subscription/plan-catalog` (xe máy → ô tô → doanh nghiệp). */
+export const PLAN_GROUP_ORDER: readonly PlanGroup[] = [
+  PLAN_GROUP.MOTORBIKE,
+  PLAN_GROUP.CAR,
+  PLAN_GROUP.ENTERPRISE,
+  PLAN_GROUP.COMMISSION,
+];
+
+export function planGroupOf(plan: Pick<Plan, 'billingMode' | 'vehicleScope'>): PlanGroup {
+  if (plan.billingMode === BILLING_MODE.COMMISSION) return PLAN_GROUP.COMMISSION;
+  const scope = planVehicleScopeOf(plan.vehicleScope);
+  if (scope === PLAN_VEHICLE_SCOPE.MOTORBIKE) return PLAN_GROUP.MOTORBIKE;
+  if (scope === PLAN_VEHICLE_SCOPE.CAR) return PLAN_GROUP.CAR;
+  return PLAN_GROUP.ENTERPRISE;
+}
+
+export interface PlanGroupRows {
+  group: PlanGroup;
+  plans: Plan[];
+}
+
+/** Chia danh sách (đã lọc) thành các nhóm KHÔNG rỗng, theo `PLAN_GROUP_ORDER`; giữ thứ tự trong nhóm. */
+export function groupPlans(plans: readonly Plan[]): PlanGroupRows[] {
+  return PLAN_GROUP_ORDER.map((group) => ({
+    group,
+    plans: plans.filter((plan) => planGroupOf(plan) === group),
+  })).filter((row) => row.plans.length > 0);
 }
 
 /**
- * Đọc bộ lọc từ URL. Giá trị lạ (link cũ, gõ tay) rơi về "không lọc" thay vì lọt vào phép so —
- * một `?status=foo` không được biến bảng thành rỗng với câu "không có gói nào khớp".
+ * BA SỔ của danh mục, theo trạng thái bậc: đang bán (mặc định), CHƯA MỞ BÁN (`draft` — bậc mới tạo
+ * hoặc sáu bậc seed của ADR 0065 chờ admin nhập giá rồi mở bán) và ĐÃ NGỪNG (`archived` — gồm ba
+ * bậc ADR 0041 đã nghỉ hưu, còn thuê bao lịch sử trỏ tới). Là một VIEW, không phải bộ lọc: mặc định
+ * không được thắp "Lọc 1", và bậc chưa bán / đã ngừng không được lẫn vào bảng đang bán.
+ */
+export const PLAN_CATALOG_VIEW = {
+  SELLING: 'selling',
+  DRAFT: 'draft',
+  RETIRED: 'retired',
+} as const;
+export type PlanCatalogView = (typeof PLAN_CATALOG_VIEW)[keyof typeof PLAN_CATALOG_VIEW];
+
+/** Sổ → trạng thái bậc được hiện trong sổ đó. */
+const VIEW_STATUS: Readonly<Record<PlanCatalogView, PlanStatus>> = {
+  [PLAN_CATALOG_VIEW.SELLING]: PLAN_STATUS.ACTIVE,
+  [PLAN_CATALOG_VIEW.DRAFT]: PLAN_STATUS.DRAFT,
+  [PLAN_CATALOG_VIEW.RETIRED]: PLAN_STATUS.ARCHIVED,
+};
+
+/** Bộ lọc của bảng gói — tham số URL (ADR 0004): `q`, `kind`, và view `view`. */
+export interface PlanCatalogFilters {
+  q?: string;
+  kind?: PlanKind;
+  /** `undefined` = đang bán (mặc định, không ghi lên URL). */
+  view?: typeof PLAN_CATALOG_VIEW.DRAFT | typeof PLAN_CATALOG_VIEW.RETIRED;
+}
+
+/**
+ * Đọc bộ lọc từ URL. Giá trị lạ (link cũ, gõ tay) rơi về "không lọc" thay vì lọt vào phép so.
+ * Link cũ `?status=archived` / `?status=draft` vẫn mở đúng sổ.
  */
 export function parsePlanCatalogFilters(params: URLSearchParams): PlanCatalogFilters {
   const q = params.get('q')?.trim() || undefined;
   const kind = params.get('kind');
+  const view = params.get('view');
   const status = params.get('status');
   return {
     q,
     kind: PLAN_KIND_VALUES.includes(kind as PlanKind) ? (kind as PlanKind) : undefined,
-    status: PLAN_STATUS_VALUES.includes(status as PlanStatus) ? (status as PlanStatus) : undefined,
+    view:
+      view === PLAN_CATALOG_VIEW.RETIRED || status === PLAN_STATUS.ARCHIVED
+        ? PLAN_CATALOG_VIEW.RETIRED
+        : view === PLAN_CATALOG_VIEW.DRAFT || status === PLAN_STATUS.DRAFT
+          ? PLAN_CATALOG_VIEW.DRAFT
+          : undefined,
   };
 }
 
+/** View không phải bộ lọc — chỉ `q` và `kind` thắp trạng thái "đang lọc". */
 export function hasActivePlanFilters(filters: PlanCatalogFilters): boolean {
-  return Boolean(filters.q || filters.kind || filters.status);
+  return Boolean(filters.q || filters.kind);
 }
 
 /**
  * Lọc danh mục ở CLIENT — cố ý, không phải thiếu sót.
  *
- * `GET /platform/plans` trả trọn danh mục (vài bậc, không phân trang — ngoại lệ đã ghi ở
+ * `GET /platform/plans` trả trọn danh mục (chục bậc, không phân trang — ngoại lệ đã ghi ở
  * `DataTable`), và thẻ số liệu đầu trang cần chính tập đầy đủ đó. Gọi lại server cho mỗi phím gõ
- * để lọc năm dòng là tốn một vòng mạng mà không đổi được gì.
+ * để lọc chục dòng là tốn một vòng mạng mà không đổi được gì.
  *
  * Tìm không dấu (`normalizeCatalogSearch`): "goi co ban" phải ra "Gói cơ bản".
  */
 export function filterPlans(plans: readonly Plan[], filters: PlanCatalogFilters): Plan[] {
   const needle = filters.q ? normalizeCatalogSearch(filters.q) : '';
+  const wanted = VIEW_STATUS[filters.view ?? PLAN_CATALOG_VIEW.SELLING];
   return plans.filter((plan) => {
+    if (plan.status !== wanted) return false;
     if (filters.kind && planKindOf(plan) !== filters.kind) return false;
-    if (filters.status && plan.status !== filters.status) return false;
     if (!needle) return true;
     return [plan.name, plan.code, plan.description ?? ''].some((text) =>
       normalizeCatalogSearch(text).includes(needle),
@@ -153,4 +208,14 @@ export function summarizePlans(plans: readonly Plan[]): PlanCatalogSummary {
 export function headlineTerm(plan: Pick<Plan, 'limits'>): { months: number; price: string } | null {
   const terms = [...plan.limits.termPrices].sort((a, b) => a.months - b.months);
   return terms[0] ?? null;
+}
+
+/**
+ * Bậc CHƯA MỞ BÁN mở bán được chưa — bậc tự mua phải có ít nhất một kỳ giá (ADR 0041 điều 2:
+ * `termPrices` là danh sách kỳ được bán; rỗng = gian hàng không mua được gì). Bậc tư vấn
+ * (`salesOnly`) không cần giá niêm yết. Server vẫn là lớp chặn thật.
+ */
+export function planReadyToPublish(plan: Pick<Plan, 'billingMode' | 'limits'>): boolean {
+  if (plan.billingMode === BILLING_MODE.COMMISSION) return true;
+  return plan.limits.salesOnly || plan.limits.termPrices.length > 0;
 }

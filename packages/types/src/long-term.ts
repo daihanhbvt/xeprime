@@ -15,6 +15,8 @@
  * PricingService trả về.
  */
 
+import { ceilToThousand } from './fee-policy';
+
 /** Múi giờ nghiệp vụ Asia/Ho_Chi_Minh — UTC+7 cố định, không DST. */
 export const VN_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
 
@@ -252,8 +254,11 @@ export interface LongTermPackageAmounts {
 
 /**
  * Preview giá một gói cho UI **khi chưa gọi được API** (vd gợi ý giá ở màn cấu hình của chủ
- * xe). Cùng công thức và cùng cách làm tròn (nửa lên, về đồng) với `PricingService`, nhưng
- * KHÔNG phải nguồn giá thật: mọi con số khách nhìn trong luồng đặt xe đều lấy từ server.
+ * xe). Cùng công thức và cùng cách làm tròn với `PricingService`, nhưng KHÔNG phải nguồn giá
+ * thật: mọi con số khách nhìn trong luồng đặt xe đều lấy từ server.
+ *
+ * Ưu đãi cam kết là KHOẢN GIẢM theo % ⇒ làm tròn LÊN 1.000đ rồi kẹp ≤ giá gói (ADR 0069 điều 2 —
+ * `ceilDecimalToThousand` ở server); giá gói và giá bình quân tháng làm tròn nửa lên về đồng.
  */
 export function longTermPackageAmounts(input: {
   monthlyPrice: string | number;
@@ -265,7 +270,9 @@ export function longTermPackageAmounts(input: {
   const months = input.packageMonths;
   const basePackage = Math.round(monthly * months);
   const tier = input.discountEnabled === false ? null : longTermTierFor(input.tiers, months);
-  const discount = tier ? Math.round((basePackage * tier.percent) / 100) : 0;
+  const discount = tier
+    ? Math.min(ceilToThousand((basePackage * tier.percent) / 100), basePackage)
+    : 0;
   const final = basePackage - discount;
   return {
     packageMonths: months,

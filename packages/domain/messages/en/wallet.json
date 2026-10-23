@@ -136,8 +136,14 @@
       "returnAt": "Return",
       "unitAmount": "Unit price",
       "revenue": "Revenue",
-      "tax": "Business tax",
+      "commission": "Owner service fee",
+      "tax": "Tax withheld",
+      "delivery": "Delivery fee",
       "balanceChange": "Balance change"
+    },
+    "payout": {
+      "expand": "Trip money details",
+      "label": "Wallet credit breakdown for trip {code}"
     },
     "empty": {
       "title": "No trips completed this month",
@@ -146,15 +152,18 @@
     "totals": {
       "balanceChange": "Total balance change — completed trips",
       "payAtPickup": "Paid to you directly at pick-up",
-      "payAtPickupHint": "The customer hands you this part; it never passes through XePrime.",
+      "payAtPickupHint": "The part of the rental the customer hands you; it never passes through XePrime. Excludes the delivery fee.",
+      "delivery": "Delivery fees paid to you directly",
+      "deliveryHint": "You keep all of it; no service fee or tax applies.",
       "subscriptionFee": "Platform plan management fee",
-      "tax": "Business tax withheld on your behalf",
+      "commission": "Total owner service fee",
+      "tax": "Total tax withheld and paid on your behalf",
       "ownerIncome": "Shop owner income",
-      "ownerIncomeHint": "Revenue minus tax and plan fee — includes what the customer paid you directly.",
+      "ownerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and plan fee — includes what the customer paid you directly, excludes delivery fees.",
       "ownerIncomeCommission": "Car owner income",
       "ownerIncomeGeneric": "Income",
       "appSubscriptionFee": "Platform management & operation fee",
-      "appOwnerIncomeHint": "Revenue minus tax and platform fees — including what customers paid you directly."
+      "appOwnerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and platform fees — includes what customers paid you directly, excludes delivery fees."
     }
   },
   "pill": {

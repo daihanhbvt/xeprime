@@ -1,12 +1,17 @@
 import { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-  SUPPORT_CAPABILITY,
-} from '@xeprime/types';
-import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   AssignBookingDriverDto,
@@ -42,7 +47,11 @@ export class BookingsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BookingListQueryDto,
   ): Promise<BookingPageDto> {
-    return this.bookings.list(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<BookingPageDto>;
+    return this.bookings.list(
+      tenant.tenantId,
+      query,
+      tenant.allowedBranchIds,
+    ) as Promise<BookingPageDto>;
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
@@ -107,7 +116,13 @@ export class BookingsController {
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Patch(':id/driver')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
-  @ApiOperation({ summary: 'Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)' })
+  @ApiOperation({
+    summary: 'Gán/bỏ gán tài xế, hoặc ghi tài xế ngoài hệ thống cho đơn (có audit)',
+    description:
+      'Gửi ĐÚNG MỘT khoá. `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống). ' +
+      '`externalDriver`: ghi tên + SĐT tài xế ngoài hệ thống (ADR 0067) — coi là đã nhận ngay, lượt gán liên kết đang có bị đóng và người đó được báo. ' +
+      'Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.',
+  })
   @ApiOkResponse({ type: BookingDetailDto })
   assignDriver(
     @CurrentTenant() tenant: TenantContext,
@@ -115,7 +130,10 @@ export class BookingsController {
     @Param('id') id: string,
     @Body() dto: AssignBookingDriverDto,
   ): Promise<BookingDetailDto> {
-    return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId);
+    // DTO bảo đảm đúng một trong hai khoá có mặt (`ExactlyOneOf`).
+    return dto.externalDriver
+      ? this.bookings.setExternalDriver(tenant.tenantId, id, user.id, dto.externalDriver)
+      : this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId ?? null);
   }
 
   /** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */

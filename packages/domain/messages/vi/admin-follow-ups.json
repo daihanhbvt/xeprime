@@ -1,0 +1,102 @@
+{
+  "tabs": {
+    "label": "Góc nhìn đơn thuê",
+    "bookings": "Tất cả đơn",
+    "followUps": "Cần chăm sóc"
+  },
+  "page": {
+    "intro": "Khách đã gửi yêu cầu nhưng chuyến không thành. Gọi lại để hỏi lý do và mời đặt lại."
+  },
+  "filters": {
+    "searchPlaceholder": "Tên khách, mã đơn, tên xe",
+    "searchLabel": "Tìm khách mất đơn",
+    "phonePlaceholder": "Tra đúng SĐT",
+    "phoneLabel": "Tra số điện thoại khách",
+    "reasonLabel": "Lý do mất đơn",
+    "allReasons": "Mọi lý do",
+    "statusLabel": "Trạng thái chăm sóc",
+    "allStatuses": "Mọi trạng thái",
+    "mine": "Giao cho tôi",
+    "dateRangeLabel": "Ngày kết thúc"
+  },
+  "reason": {
+    "customer_cancelled": "Khách huỷ",
+    "unpaid": "Không chuyển tiền giữ chỗ",
+    "host_declined": "Chủ xe từ chối / huỷ",
+    "no_response": "Chủ xe không trả lời",
+    "slot_taken": "Xe đã có khách khác",
+    "other_cancelled": "Huỷ khác"
+  },
+  "status": {
+    "new": "Chưa liên hệ",
+    "contacted": "Đã liên hệ",
+    "rebooked": "Đã đặt lại",
+    "not_interested": "Không có nhu cầu"
+  },
+  "table": {
+    "label": "Danh sách khách cần chăm sóc",
+    "customer": "Khách",
+    "trip": "Xe · gian hàng",
+    "reason": "Lý do",
+    "closedAt": "Kết thúc",
+    "followUp": "Chăm sóc",
+    "assignee": "Phụ trách",
+    "rebookedLater": "Đã có đơn khác",
+    "open": "Mở",
+    "loadError": "Không tải được danh sách",
+    "empty": "Chưa có khách nào cần chăm sóc",
+    "noResults": "Không có mục khớp bộ lọc",
+    "clearFilters": "Xoá bộ lọc",
+    "total": "{count, plural, other {# khách}}"
+  },
+  "drawer": {
+    "title": "Chăm sóc khách",
+    "ariaLabel": "Chăm sóc {name}",
+    "previous": "Mục trước",
+    "next": "Mục sau",
+    "record": "Chuyến không thành",
+    "vehicle": "Xe",
+    "tenant": "Gian hàng",
+    "period": "Thuê từ → đến",
+    "requestedAt": "Gửi yêu cầu lúc",
+    "closedAt": "Kết thúc lúc",
+    "bookingCode": "Mã đơn",
+    "cancelledBy": "Bên chịu trách nhiệm",
+    "cancelReason": "Lý do huỷ",
+    "cancelNote": "Ghi chú huỷ",
+    "rebookedLater": "Khách đã có đơn khác sau yêu cầu này.",
+    "lastUpdate": "Cập nhật cuối",
+    "lastUpdateValue": "{name} · {date}",
+    "lastContacted": "Liên hệ gần nhất",
+    "side": "Kết quả chăm sóc",
+    "readOnly": "Bạn chỉ có quyền xem mục này."
+  },
+  "form": {
+    "status": "Trạng thái",
+    "note": "Ghi chú",
+    "notePlaceholder": "Khách nói gì, hẹn gọi lại lúc nào…",
+    "markContacted": "Đã gọi cho khách",
+    "assignee": "Phụ trách",
+    "unassigned": "Chưa giao ai",
+    "save": "Lưu",
+    "saved": "Đã lưu kết quả chăm sóc.",
+    "hint": "Mỗi lần lưu được ghi vào nhật ký hệ thống.",
+    "noteTooLong": "Ghi chú tối đa {max} ký tự",
+    "lastContacted": "Liên hệ gần nhất: {date}",
+    "neverContacted": "Chưa ghi lần liên hệ nào",
+    "assigneeMe": "{name} (tôi)",
+    "noAssignees": "Chưa có nhân sự nào có quyền chăm sóc khách",
+    "assigneeHelp": "Chỉ hiện nhân sự có quyền chăm sóc khách. Cấp quyền ở Nhân sự nền tảng.",
+    "assigneeOption": "{name} · {role}"
+  },
+  "contact": {
+    "title": "Liên hệ khách",
+    "reveal": "Hiện số để gọi",
+    "call": "Gọi",
+    "zalo": "Zalo",
+    "audit": "Mỗi lần hiện số được ghi vào nhật ký hệ thống.",
+    "noPermission": "Bạn chưa có quyền xem số điện thoại đầy đủ.",
+    "copy": "Sao chép số điện thoại",
+    "copied": "Đã sao chép"
+  }
+}

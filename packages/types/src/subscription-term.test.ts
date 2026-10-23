@@ -233,3 +233,86 @@ describe('subscriptionAssignKindOfAction · subscriptionOriginOf', () => {
     );
   });
 });
+
+describe('chuỗi kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
+  const term = (over: Partial<Parameters<typeof planSubscriptionChain>[0][number]>) => ({
+    id: 't',
+    planId: 'car_5',
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    billingMode: 'package',
+    vehicleScope: 'car',
+    startsAt: '2026-10-01T00:00:00.000Z',
+    endsAt: '2027-01-01T00:00:00.000Z',
+    ...over,
+  });
+
+  it('mua gói xe máy khi đang có gói ô tô ⇒ bắt đầu NGAY, không nối đuôi, không huỷ gói ô tô', () => {
+    const plan = planSubscriptionChain(
+      [term({ id: 'car' })],
+      { planId: 'moto_1', vehicleScope: 'motorbike' },
+      NOW,
+    );
+    expect(plan.kind).toBe(SUBSCRIPTION_ASSIGN_KIND.ASSIGN);
+    expect(plan.startsAt).toEqual(NOW);
+    expect(plan.cancel).toEqual([]);
+  });
+
+  it('moto_5 → moto_10 giữa kỳ (đổi ngay) chỉ huỷ kỳ xe máy', () => {
+    const plan = planSubscriptionChain(
+      [term({ id: 'car' }), term({ id: 'moto', planId: 'moto_5', vehicleScope: 'motorbike' })],
+      { planId: 'moto_10', vehicleScope: 'motorbike', timing: SUBSCRIPTION_CHANGE_TIMING.NOW },
+      NOW,
+    );
+    expect(plan.kind).toBe(SUBSCRIPTION_ASSIGN_KIND.CHANGE_NOW);
+    expect(plan.cancel.map((t) => t.id)).toEqual(['moto']);
+  });
+
+  it('bậc doanh nghiệp (`all`) nối đuôi kỳ MUỘN NHẤT của mọi phạm vi', () => {
+    const plan = planSubscriptionChain(
+      [
+        term({ id: 'car' }),
+        term({ id: 'moto', vehicleScope: 'motorbike', endsAt: '2027-03-01T00:00:00.000Z' }),
+      ],
+      { planId: 'enterprise_contact', vehicleScope: 'all' },
+      NOW,
+    );
+    expect(plan.kind).toBe(SUBSCRIPTION_ASSIGN_KIND.SCHEDULE_CHANGE);
+    expect(plan.previous?.id).toBe('moto');
+    expect(plan.startsAt.toISOString()).toBe('2027-03-01T00:00:00.000Z');
+  });
+
+  it('gói ô tô khi bậc doanh nghiệp đang chạy ⇒ xếp SAU kỳ doanh nghiệp', () => {
+    const plan = planSubscriptionChain(
+      [term({ id: 'ent', planId: 'enterprise_contact', vehicleScope: 'all' })],
+      { planId: 'car_5', vehicleScope: 'car' },
+      NOW,
+    );
+    expect(plan.previous?.id).toBe('ent');
+    expect(plan.startsAt.toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  it('dòng hoa hồng (`all`) luôn bị thay bởi gói của bất kỳ phạm vi nào', () => {
+    const commission = term({ id: 'c', billingMode: 'commission', vehicleScope: 'all' });
+    const plan = planSubscriptionChain(
+      [commission],
+      { planId: 'moto_1', vehicleScope: 'motorbike' },
+      NOW,
+    );
+    expect(plan.cancel.map((t) => t.id)).toEqual(['c']);
+  });
+
+  it('kỳ xe máy xếp sau KHÔNG chặn huỷ kỳ ô tô', () => {
+    const car = term({ id: 'car' });
+    const motoLater = term({
+      id: 'moto',
+      vehicleScope: 'motorbike',
+      startsAt: '2027-01-01T00:00:00.000Z',
+      endsAt: '2027-02-01T00:00:00.000Z',
+    });
+    expect(subscriptionCancelBlockOf(car, [car, motoLater], NOW)).toBeNull();
+    const carLater = { ...motoLater, id: 'car2', vehicleScope: 'car' };
+    expect(subscriptionCancelBlockOf(car, [car, carLater], NOW)).toBe(
+      SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM,
+    );
+  });
+});

@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { fetchCatalogServer } from '@/features/catalog/api';
 import { fetchListingDetail } from '@/features/marketplace/api';
 import { ListingDetailView } from '@/features/marketplace/components/ListingDetailView';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { resolveAppLocale } from '@/i18n/config';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,7 +38,10 @@ export default async function ListingDetailPage({ params, searchParams }: PagePr
   const { pickupAt, returnAt, serviceType, routeType, provinceCode } = await searchParams;
   // Trang này render trên server cho SEO nên không dùng được `useCatalog`; danh mục lấy song
   // song với chi tiết xe để tra nhãn hãng/kiểu dáng/nhiên liệu/tiện ích từ key đã lưu.
-  const [listing, catalog] = await Promise.all([fetchListingDetail(id), fetchCatalogServer()]);
+  const [listing, catalog] = await Promise.all([
+    fetchListingDetail(id),
+    fetchCatalogServer(resolveAppLocale(await getLocale())),
+  ]);
   if (!listing) notFound();
   return (
     <ListingDetailView

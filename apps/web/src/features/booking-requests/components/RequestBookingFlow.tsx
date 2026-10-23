@@ -13,12 +13,13 @@ import { Alert, App, Button, Radio, Segmented, Spin } from 'antd';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
+  INSURANCE_PRODUCT_KIND,
   LONG_TERM_PACKAGE_MONTHS,
   LOCATION_SOURCE,
   PICKUP_PREFERENCE,
@@ -30,6 +31,7 @@ import {
   longTermPickupWindow,
   serviceRequiresDriverLicence,
   vnDateKey,
+  type InsuranceProductKind,
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
@@ -63,7 +65,7 @@ import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
-import { fetchDeliveryDistance, fetchPublicQuote } from '@/features/rental-policies/api';
+import { fetchDeliveryDistance } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { UnpaidHoldList } from '@/features/trips/components/UnpaidHoldList';
 import { useUnpaidHolds } from '@/features/trips/hooks';
@@ -87,8 +89,12 @@ import {
 import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../booking-draft';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
+import { NearPickupHoldNotice } from './NearPickupHoldNotice';
 import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
+import { publicQuoteParams, usePublicQuote, useQuoteWithPromo } from '../hooks/use-public-quote';
+import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { BookingJourney } from './BookingJourney';
 import { BookingReviewStep, type BookingReviewNextStep } from './BookingReviewStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
@@ -420,6 +426,8 @@ export function RequestBookingFlow({
       note: '',
       customerName: me?.displayName ?? '',
       customerPhone: me?.phone ?? '',
+      vehicleProtectionSelected: prefill?.vehicleProtectionSelected ?? false,
+      personalAccidentSelected: prefill?.personalAccidentSelected ?? false,
     },
   });
 
@@ -432,6 +440,8 @@ export function RequestBookingFlow({
   const watchedPreference = useWatch({ control, name: 'pickupPreference' });
   const watchedRequestedDate = useWatch({ control, name: 'requestedPickupDate' });
   const watchedAccepted = useWatch({ control, name: 'acceptedTerms' });
+  const watchedVehicleProtection = useWatch({ control, name: 'vehicleProtectionSelected' });
+  const watchedPersonalAccident = useWatch({ control, name: 'personalAccidentSelected' });
   const isLongTerm = watchedService === SERVICE_TYPE.LONG_TERM;
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
   /** Tự lái / dài hạn ⇒ khách phải có bằng lái hợp lệ cho chuyến (ADR 0057). */
@@ -575,18 +585,15 @@ export function RequestBookingFlow({
    * Dài hạn báo giá theo GÓI: không gửi ngày nào cả (giá không phụ thuộc ngày nhận, ADR 0011).
    * Dịch vụ theo ngày giữ hợp đồng nhận–trả như cũ.
    */
-  const quoteParams = isLongTerm
-    ? watchedPackage != null
-      ? { serviceType: watchedService, packageMonths: watchedPackage }
-      : null
-    : watchedPickup && watchedReturn
-      ? {
-          pickupAt: appWallClockToIso(watchedPickup),
-          returnAt: appWallClockToIso(watchedReturn),
-          serviceType: watchedService,
-          ...(isWithDriver ? { routeType: watchedRoute } : {}),
-        }
-      : null;
+  const quoteParams = publicQuoteParams({
+    serviceType: watchedService,
+    pickupAt: watchedPickup,
+    returnAt: watchedReturn,
+    routeType: watchedRoute,
+    packageMonths: watchedPackage,
+    vehicleProtectionSelected: watchedVehicleProtection,
+    personalAccidentSelected: watchedPersonalAccident,
+  });
   /**
    * Lịch bận của xe — nạp MỘT lần cho cả năm khi mở luồng, không phải mỗi lần lật tháng.
    *
@@ -700,14 +707,9 @@ export function RequestBookingFlow({
   const deliveryPending = deliveryAskable && !deliveryCurrent;
   const delivery = deliveryCurrent ? (deliveryQ.data ?? null) : null;
 
-  const quoteQ = useQuery({
-    queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
-    queryFn: () => fetchPublicQuote(vehicleId, quoteParams!),
-    // Bật từ NGAY bước Chuyến đi: chọn xong khoảng thuê là thấy tiền tạm tính, không phải đi
-    // hết một bước nữa mới biết mình sắp trả bao nhiêu.
-    enabled: quoteParams != null,
-    staleTime: 60_000,
-  });
+  // Bật từ NGAY bước Chuyến đi: chọn xong khoảng thuê là thấy tiền tạm tính, không phải đi hết một
+  // bước nữa mới biết mình sắp trả bao nhiêu. Cùng câu hỏi (và cùng cache) với thẻ đặt xe.
+  const quoteQ = usePublicQuote(vehicleId, quoteParams);
 
   /**
    * MÃ KHUYẾN MÃI — ADR 0046.
@@ -728,22 +730,37 @@ export function RequestBookingFlow({
    */
   const promoUnavailable = quoteQ.data != null && quoteQ.data.breakdown.fees?.holdAmount == null;
 
-  /**
-   * Báo giá đã ÁP MÃ — nguồn duy nhất cho mọi con số trong bảng giá.
-   *
-   * Báo giá công khai không nhận mã khuyến mãi (`PricingModule` cố tình không biết gì về chúng),
-   * nên bảng phí có mã do endpoint xem trước trả về. Thay CẢ `fees` chứ không ghép từng số: ghép
-   * tay chính là lỗi đã thấy ngày 24/09/2026 — dòng "−100.000đ" hiện ra trong khi "Tổng bạn trả"
-   * và "Tiền giữ chỗ" vẫn là con số chưa trừ, vì chúng đến từ một bảng phí khác.
-   *
-   * Không có mã, hoặc mã không áp được ⇒ `fees` của báo giá gốc, không đụng gì.
+  /** Báo giá đã ÁP MÃ — nguồn duy nhất cho mọi con số trong bảng giá (`useQuoteWithPromo`). */
+  const quoteWithPromo = useQuoteWithPromo(quoteQ.data, promo.applied?.fees);
+
+  /*
+   * Bảo hiểm ĐANG được chào cho báo giá này (ADR 0064): nền tảng có đối tác phát hành, chính sách
+   * mở dòng đó, sản phẩm đang bật. Không còn chào ⇒ gỡ lựa chọn khỏi form để nó không đi lên server.
    */
-  const quoteWithPromo = useMemo(() => {
-    const q = quoteQ.data ?? null;
-    const promoFees = promo.applied?.fees;
-    if (!q || !promoFees) return q;
-    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
-  }, [quoteQ.data, promo.applied]);
+  const setInsuranceSelected = useCallback(
+    (kind: InsuranceProductKind, checked: boolean) =>
+      setValue(
+        kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP
+          ? 'vehicleProtectionSelected'
+          : 'personalAccidentSelected',
+        checked,
+        { shouldValidate: true },
+      ),
+    [setValue],
+  );
+  const deselectInsurance = useCallback(
+    (kind: InsuranceProductKind) => setInsuranceSelected(kind, false),
+    [setInsuranceSelected],
+  );
+  const insuranceOffer = useInsuranceOffer(
+    quoteQ.data,
+    listing?.vehicleType,
+    {
+      vehicleProtectionSelected: watchedVehicleProtection,
+      personalAccidentSelected: watchedPersonalAccident,
+    },
+    deselectInsurance,
+  );
 
   /*
    * Mã khuyến mãi phải được đánh giá lại cho ĐÚNG NGƯỜI sau lượt đăng nhập. Kết quả xem trước phụ
@@ -966,6 +983,8 @@ export function RequestBookingFlow({
             }
           : {}),
         ...(v.acceptedTerms && agreementCoversHostTerms ? { acceptedTerms: true } : {}),
+        ...(v.vehicleProtectionSelected ? { vehicleProtectionSelected: true } : {}),
+        ...(v.personalAccidentSelected ? { personalAccidentSelected: true } : {}),
         // Lời nhắn chỉ gửi khi có chữ — server cũng cắt khoảng trắng, đây là để payload sạch.
         ...(v.note.trim() ? { note: v.note.trim() } : {}),
         ...(v.customerName?.trim() ? { customerName: v.customerName.trim() } : {}),
@@ -1360,6 +1379,7 @@ export function RequestBookingFlow({
       // Panel nói giá của ĐÚNG dịch vụ/gói khách đang chọn, không phải giá tự lái mặc định.
       serviceType={watchedService}
       packageMonths={watchedPackage}
+      compactOnMobile
     />
   );
 
@@ -1661,7 +1681,18 @@ export function RequestBookingFlow({
         }
         agreementCoversHostTerms={agreementCoversHostTerms}
         journey={<BookingJourney current="request" hasHoldStage={hasHoldStage} />}
-        costs={<BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />}
+        costs={
+          <>
+            <BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />
+            {/*
+              Đặt sát giờ ⇒ hạn thanh toán ngắn, có thể không có huỷ miễn phí — nói TRƯỚC khi gửi
+              (ADR 0032 điều 5 · ADR 0064). Dài hạn chưa có giờ nhận nên không ước được.
+            */}
+            {watchedService === SERVICE_TYPE.LONG_TERM ? null : (
+              <NearPickupHoldNotice pickupAt={watchedPickup} fees={quoteWithPromo?.breakdown.fees} />
+            )}
+          </>
+        }
         nextStep={nextStep}
         agreementMissing={agreementMissing && !watchedAccepted}
         stepError={stepError}
@@ -1949,6 +1980,21 @@ export function RequestBookingFlow({
                   phía trên — nên ảnh này chỉ vẽ lại chỗ họ vừa tự chỉ, cách đó vài trăm pixel,
                   trong một hộp thoại vốn đã phải cuộn. Quãng đường và phí thì đã nói bằng chữ.
                 */}
+              </div>
+            ) : null}
+
+            {/* ── Tuỳ chọn bảo hiểm (ADR 0064) — chỉ khi báo giá đang chào ─────── */}
+            {insuranceOffer.items.length > 0 ? (
+              <div className={styles.insuranceBlock}>
+                <span className={styles.rangeFieldLabel}>{t('insurance.title')}</span>
+                <InsuranceOptionList
+                  items={insuranceOffer.items}
+                  selected={{
+                    [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: watchedVehicleProtection,
+                    [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: watchedPersonalAccident,
+                  }}
+                  onChange={setInsuranceSelected}
+                />
               </div>
             ) : null}
 

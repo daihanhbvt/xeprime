@@ -1,0 +1,69 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Thanh tab sát danh sách, không chừa khoảng trống mặc định của AntD. */
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Thẻ ngang xếp dọc, mỗi thẻ chiếm cả bề rộng cột nội dung. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  min-width: 0;
+}
+
+.empty {
+  padding: var(--xp-space-xl) var(--xp-space-md);
+}
+
+.emptyText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+}
+
+.emptyText strong {
+  color: var(--xp-color-text);
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--xp-touch-target-min);
+  padding: 0 var(--xp-space-lg);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.emptyCta:hover {
+  background: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary-contrast);
+}
+
+.appendError {
+  margin: 0;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}

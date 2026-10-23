@@ -79,6 +79,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
   } {
     const prismaError = asPrismaKnownError(exception);
 
+    /*
+     * --- Postgres: ràng buộc của chuỗi kỳ thuê bao (ADR 0065) — xét TRƯỚC nhánh 23P01 chung ---
+     *
+     * Hai EXCLUDE khác nhau cùng ra mã 23P01; dịch theo TÊN ràng buộc, không theo mã, nếu không
+     * một lượt gán gói chồng kỳ sẽ nói với admin rằng "xe đã có lịch khác".
+     */
+    const pgText = postgresErrorText(exception);
+    if (pgText.includes(SUBSCRIPTION_TERM_EXCLUDE)) {
+      return {
+        status: HttpStatus.CONFLICT,
+        code: API_ERROR_CODE.SUBSCRIPTION_TERM_CONFLICT,
+        message: 'Gian hàng đã có một kỳ gói khác trùng thời gian cho loại xe này',
+      };
+    }
+    if (pgText.includes(SUBSCRIPTION_SCOPE_MISMATCH_TOKEN)) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Phạm vi loại xe của kỳ thuê bao không khớp phạm vi của gói',
+      };
+    }
+
     // --- Postgres: exclusion constraint của vehicle_occupancies (ADR 0006) ---
     // 23P01 (exclusion_violation) là cơ chế chống trùng lịch. Nó có thể đến qua Prisma
     // (code P2010, meta.code) hoặc raw $queryRaw (code 23P01 trực tiếp) — bắt cả hai.
@@ -157,6 +179,32 @@ export class AllExceptionsFilter implements ExceptionFilter {
  *  - Prisma ORM `.create()` (OccupancyService.reserve dùng đường này): Prisma KHÔNG mô hình hoá
  *    exclusion constraint nên bọc thành Unknown error — mã `23P01` chỉ còn trong `message`.
  */
+/** Tên EXCLUDE chống chồng kỳ gói theo phạm vi loại xe — migration `…_per_vehicle_type_plans`. */
+const SUBSCRIPTION_TERM_EXCLUDE = 'tenant_subscriptions_package_scope_no_overlap';
+/** Mã ổn định mà trigger `tenant_subscriptions_vehicle_scope_matches_plan` đặt đầu thông điệp (23514). */
+const SUBSCRIPTION_SCOPE_MISMATCH_TOKEN = 'TENANT_SUBSCRIPTION_SCOPE_MISMATCH';
+
+/**
+ * Văn bản lỗi Postgres để nhận diện ràng buộc theo TÊN — Prisma bọc lỗi trigger/EXCLUDE theo nhiều
+ * cách (`message`, `meta.message`, `meta.driverAdapterError.cause`…), nên gom hết rồi tìm chuỗi.
+ * Chỉ dùng để PHÂN LOẠI; không bao giờ trả văn bản này ra client.
+ */
+function postgresErrorText(exception: unknown): string {
+  if (typeof exception !== 'object' || exception === null) return '';
+  const e = exception as { message?: unknown; meta?: unknown; cause?: unknown };
+  const parts: string[] = [];
+  if (typeof e.message === 'string') parts.push(e.message);
+  for (const extra of [e.meta, e.cause]) {
+    if (extra === undefined) continue;
+    try {
+      parts.push(JSON.stringify(extra, (_key, value) => (value instanceof Error ? { ...value, message: value.message } : value)));
+    } catch {
+      // vòng tham chiếu — bỏ qua, `message` đã đủ cho phần lớn đường lỗi
+    }
+  }
+  return parts.join(' ');
+}
+
 function isRawExclusionViolation(exception: unknown): boolean {
   if (typeof exception !== 'object' || exception === null) return false;
   const e = exception as { code?: unknown; meta?: { code?: unknown }; message?: unknown };

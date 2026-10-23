@@ -8,6 +8,7 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { AccountDocumentsSection } from '@/features/driver-licence/components/AccountDocumentsSection';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { showsDeleteAccountCard } from './account-nav';
@@ -23,7 +24,8 @@ import type { UserProfile } from './api';
  *
  * THỨ TỰ KHỐI:
  *
- *  1. thẻ hồ sơ (`PersonalProfileCard`);
+ *  1. thẻ hồ sơ (`PersonalProfileCard`), rồi Giấy tờ & Xác minh (`AccountDocumentsSection` — chỉ
+ *     tài khoản KHÁCH, bằng lái thuộc realm `customer`; design 22/10/2026, trước là một mục menu);
  *  2. điều hướng tài khoản (`AccountNav` = `AccountSidebar`, kèm Đăng xuất ở cuối) — web ở
  *     ≤900px xếp menu LÊN TRÊN, app cố ý để DƯỚI thẻ hồ sơ (người dùng chốt 15/09/2026): mở tab
  *     Tài khoản là muốn thấy mình là ai trước, rồi mới tới danh sách lối đi;
@@ -110,6 +112,9 @@ function AccountBody({
           tenant={tenant}
           editable={editable}
         />
+
+        {/* Bằng lái là của TÀI KHOẢN KHÁCH (ADR 0057) — tài khoản có gian hàng không có mục này. */}
+        {tenant ? null : <AccountDocumentsSection />}
 
         {/*
           Cảnh báo cấu hình gói đứng NGAY TRƯỚC menu, đúng chỗ web đặt nó: nó nói rằng mọi đường

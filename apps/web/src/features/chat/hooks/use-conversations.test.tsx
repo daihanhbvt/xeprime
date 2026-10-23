@@ -15,6 +15,7 @@ import type { ReactNode } from 'react';
 const chat = vi.hoisted(() => ({ list: vi.fn() }));
 const badges = vi.hoisted(() => ({
   counts: { chatCustomer: 0, chatShop: 0, notificationsUnread: 0 },
+  known: true,
   live: false,
 }));
 

@@ -26,6 +26,7 @@ import listings from '@xeprime/domain/messages/vi/listings.json';
 import shops from '@xeprime/domain/messages/vi/shops.json';
 import chat from '@xeprime/domain/messages/vi/chat.json';
 import trips from '@xeprime/domain/messages/vi/trips.json';
+import favorites from '@xeprime/domain/messages/vi/favorites.json';
 import account from '@xeprime/domain/messages/vi/account.json';
 import legal from '@xeprime/domain/messages/vi/legal.json';
 import support from '@xeprime/domain/messages/vi/support.json';
@@ -69,8 +70,11 @@ import supportCases from '@xeprime/domain/messages/vi/support-cases.json';
 import feePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
 import promoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
+import insurance from '@xeprime/domain/messages/vi/insurance.json';
+import adminInsurance from '@xeprime/domain/messages/vi/admin-insurance.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
-import adminDriverLicences from '@xeprime/domain/messages/vi/admin-driver-licences.json';
+import adminCustomers from '@xeprime/domain/messages/vi/admin-customers.json';
+import adminFollowUps from '@xeprime/domain/messages/vi/admin-follow-ups.json';
 import adminAppConfig from '@xeprime/domain/messages/vi/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
@@ -92,6 +96,7 @@ const messages = {
   Shops: shops,
   Chat: chat,
   Trips: trips,
+  Favorites: favorites,
   Account: account,
   Legal: legal,
   Support: support,
@@ -135,8 +140,11 @@ const messages = {
   FeePolicies: feePolicies,
   PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
+  Insurance: insurance,
+  AdminInsurance: adminInsurance,
   PlatformSellers: platformSellers,
-  AdminDriverLicences: adminDriverLicences,
+  AdminCustomers: adminCustomers,
+  AdminFollowUps: adminFollowUps,
   AdminAppConfig: adminAppConfig,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,

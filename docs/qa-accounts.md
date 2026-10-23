@@ -57,10 +57,10 @@ buộc của phương án thiết kế mới. Việc còn dở: [`completion-roa
 | Quản trị | `admin@xeprime.vn` (env `PLATFORM_ADMIN_EMAIL`) | — (đăng nhập bằng email) | `platform_admin` — có ở CẢ `SEED_MODE=system` |
 | Quản trị | `reviewer@xeprime.test` | — (email) | duyệt hồ sơ gian hàng / xe |
 | Quản trị | `finance@xeprime.test` | — (email) | đối soát tiền vào, duyệt rút tiền |
-| Đối tác | `owner.saigon@xeprime.test` | `0902000001` | gian hàng **12 xe · 2 chi nhánh · bậc Chuyên nghiệp**, đủ dữ liệu vận hành (tài xế, giấy tờ, bảo dưỡng, bàn giao, thu chi, đánh giá); 1 xe nháp + 1 xe chờ duyệt |
+| Đối tác | `owner.saigon@xeprime.test` | `0902000001` | gian hàng **11 ô tô + 1 xe máy · 2 chi nhánh · gói Doanh nghiệp (giá đàm phán)**, đủ dữ liệu vận hành (tài xế, giấy tờ, bảo dưỡng, bàn giao, thu chi, đánh giá); 1 xe nháp + 1 xe chờ duyệt |
 | Đối tác | `manager.saigon@` · `staff.saigon@` · `ketoan.saigon@xeprime.test` | `0902000011` · `0902000012` · `0902000013` | nhân viên của gian hàng trên: quản lý · nhân viên · người xem |
-| Đối tác | `owner.hanoi@xeprime.test` | `0903000001` | gian hàng **5 xe · 2 chi nhánh · bậc Nâng cao** |
-| Đối tác | `owner.danang@xeprime.test` | `0904000001` | gian hàng **2 xe · 1 chi nhánh · bậc Cơ bản** |
+| Đối tác | `owner.hanoi@xeprime.test` | `0903000001` | gian hàng **4 ô tô + 1 xe máy · 2 chi nhánh · gói Ô tô 5 xe + Xe máy 1 xe** |
+| Đối tác | `owner.danang@xeprime.test` | `0904000001` | gian hàng **1 ô tô + 1 xe máy · 1 chi nhánh · gói Ô tô 1 xe + Xe máy 1 xe** |
 | Đối tác | `chuxe.huong@xeprime.test` | `0913000002` | chủ xe cá nhân tuyến hoa hồng, **1 xe** |
 | Đối tác | `chuxe.tuan@xeprime.test` | `0913000001` | chủ xe cá nhân tuyến hoa hồng, **2 xe** |
 | Đối tác | `chuxe.son@xeprime.test` | `0913000004` | chủ xe cá nhân tuyến hoa hồng, **3 xe** = 2 ô tô + 1 xe máy (chạm trần Owner Lite); 1 xe nháp |
@@ -110,8 +110,11 @@ kèm `DEMO_PASSWORD` và `PLATFORM_ADMIN_PASSWORD` thật.
 
 1. **Trần Owner Lite là TỔNG, không phải mỗi loại.** `chuxe.son` có 2 ô tô + 1 xe máy — đã chạm
    trần 3 xe. Tạo thêm MỘT chiếc bất kỳ loại nào phải bị từ chối (`PLAN_LIMIT_REACHED`).
-2. **Trần bậc gói là TỔNG số xe (ADR 0041).** `owner.danang` (Cơ bản, trần 3) thêm được đúng 1 xe
-   nữa; `owner.hanoi` (Nâng cao, trần 10) còn 5 chỗ; `owner.saigon` (Chuyên nghiệp) không giới hạn.
+2. **Trần gói đếm THEO LOẠI XE (ADR 0065).** `owner.danang` (Ô tô 1 + Xe máy 1) đã chạm trần cả hai
+   loại — tạo thêm ô tô hay xe máy đều bị từ chối (`PLAN_LIMIT_REACHED`); `owner.hanoi` (Ô tô 5 + Xe
+   máy 1) thêm được đúng 1 ô tô và 0 xe máy; `owner.saigon` (Doanh nghiệp) không giới hạn. Gian hàng
+   tuyến gói chỉ có gói ô tô mà tạo xe máy thì bị từ chối `PLAN_SCOPE_REQUIRED`, không rơi về trần
+   Owner Lite.
 3. **Khu quản lý nâng cao chặn ở SERVER.** Chủ xe tuyến hoa hồng gọi một endpoint quản lý nâng cao
    phải nhận `403 SUBSCRIPTION_TRACK_ONLY`, không chỉ bị ẩn menu.
 4. **Tự đặt xe bị chặn ở backend.** Tài khoản khách song sinh của `owner.saigon` đặt xe của chính

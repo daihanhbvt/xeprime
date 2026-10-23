@@ -20,6 +20,8 @@ export type PartnerActivity = Schemas['PartnerActivityDto'];
 export type PartnerSupportSession = Schemas['PartnerSupportSessionDto'];
 export type PartnerBranch = Schemas['PartnerBranchDto'];
 export type PartnerQuotaItem = Schemas['PartnerQuotaItemDto'];
+/** Trần xe theo LOẠI (ADR 0065) — hai trần xe máy / ô tô do server cưỡng chế. */
+export type PartnerVehicleTypeQuotas = Schemas['PartnerVehicleTypeQuotasDto'];
 
 /** Cỡ trang của các bảng trong drawer — khớp mặc định API (`PARTNER_DETAIL_DEFAULT_LIMIT`). */
 export const PARTNER_DETAIL_PAGE_SIZE = 10;

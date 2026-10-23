@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
-  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_RESPOND_WINDOW,
   BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
@@ -265,7 +265,6 @@ const VERIFIED_LICENCE = {
   rejectionReason: null,
   reviewNote: null,
   qualityIssues: [],
-  canRequestReview: false,
   reviewRequestedAt: null,
   decisionSource: 'auto',
   decidedAt: '2026-01-01T00:00:00.000Z',
@@ -315,6 +314,8 @@ function draftValues(): RequestFormValues {
     deliveryLongitude: null,
     deliveryLocationSource: null,
     acceptedTerms: false,
+    vehicleProtectionSelected: false,
+    personalAccidentSelected: false,
     note: '',
     customerName: LOGGED_IN_ME.displayName,
     customerPhone: LOGGED_IN_ME.phone,
@@ -1385,16 +1386,20 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /*
-     * Hạn phản hồi là HẰNG SỐ dùng chung với server (`respond_by` tính từ nó) — hộp nói độ dài cửa
-     * sổ, không tự tính một mốc giờ.
+     * Hạn phản hồi ĐỘNG theo giờ nhận (ADR 0066) — hộp nói TRẦN của cửa sổ từ hằng số dùng chung
+     * với server, không tự tính một mốc giờ (mốc thật hiện ở trang chuyến).
      */
-    it('nói hạn phản hồi của chủ xe theo hằng số dùng chung', async () => {
+    it('nói trần hạn phản hồi của chủ xe theo hằng số dùng chung', async () => {
       renderModal();
       await advanceToReview();
       await reachDone();
 
       expect(
-        screen.getByText(new RegExp(`có ${BOOKING_REQUEST_RESPOND_WINDOW_MINUTES} phút để phản hồi`)),
+        screen.getByText(
+          new RegExp(
+            `phản hồi trong tối đa ${BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES / 60} giờ`,
+          ),
+        ),
       ).toBeTruthy();
     });
 
@@ -2417,7 +2422,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       expect(screen.queryByText('Chi tiết giá thuê (dự kiến)')).toBeNull();
       // Có tiền giữ chỗ ⇒ sau khi gửi là chờ chủ xe nhận rồi trả trong 120 phút.
-      expect(screen.getByText(/bạn có 120 phút để thanh toán tiền giữ chỗ/)).toBeTruthy();
+      expect(screen.getByText(/bạn có tối đa 120 phút để thanh toán tiền giữ chỗ/)).toBeTruthy();
     });
 
     /**

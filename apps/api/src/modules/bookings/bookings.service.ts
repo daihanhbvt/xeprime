@@ -44,6 +44,7 @@ import {
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
+import { ownerPayoutOf } from '../../common/owner-payout';
 import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
@@ -714,11 +715,44 @@ export class BookingsService {
     return this.drivers.history(tenantId, id);
   }
 
-  async assignDriver(
+  /** Gán tài xế LIÊN KẾT (ADR 0063) — `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống, ADR 0067). */
+  assignDriver(
     tenantId: string,
     id: string,
     userId: string,
     driverId: string | null,
+  ): Promise<BookingDetailDto> {
+    return this.changeDriver(tenantId, id, (tx) =>
+      this.drivers.assignWithinTx(tx, { tenantId, bookingId: id, driverId, actorUserId: userId }),
+    );
+  }
+
+  /**
+   * Ghi tài xế NGOÀI HỆ THỐNG (ADR 0067) — tên + SĐT trên đúng đơn này; lượt gán liên kết đang có
+   * bị đóng như bỏ gán. Luật ở `DriversService.setExternalWithinTx` (writer duy nhất).
+   */
+  setExternalDriver(
+    tenantId: string,
+    id: string,
+    userId: string,
+    external: { name: string; phone: string },
+  ): Promise<BookingDetailDto> {
+    return this.changeDriver(tenantId, id, (tx) =>
+      this.drivers.setExternalWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        name: external.name,
+        phone: external.phone,
+        actorUserId: userId,
+      }),
+    );
+  }
+
+  /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */
+  private async changeDriver(
+    tenantId: string,
+    id: string,
+    apply: (tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
@@ -729,12 +763,7 @@ export class BookingsService {
 
     try {
       const row = await this.prisma.$transaction(async (tx) => {
-        await this.drivers.assignWithinTx(tx, {
-          tenantId,
-          bookingId: id,
-          driverId,
-          actorUserId: userId,
-        });
+        await apply(tx);
         return tx.booking.findFirstOrThrow({ where: { id, tenantId }, select: DETAIL_SELECT });
       });
       return this.withMoneyOne(toDetail(row));
@@ -1273,12 +1302,21 @@ type BookingDetailRow = Prisma.BookingGetPayload<{ select: typeof DETAIL_SELECT 
 function feeColumns(snapshot: BookingPriceSnapshot) {
   const fees = snapshot.fees;
   if (!fees) return {};
+  const serviceFeeLine = fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE);
   return {
     billingMode: fees.billingMode,
-    serviceFeePercent: fees.policy.serviceFeePercent,
-    serviceFeeAmount: new Prisma.Decimal(
-      fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? '0',
-    ),
+    /*
+     * "% phí dịch vụ ĐÃ ÁP" — đọc từ CHÍNH dòng phí, không từ chính sách. Luồng tiền v2 thu phí sàn
+     * CỐ ĐỊNH (`percent: null`), nên đơn mới ghi NULL thay vì chép `policy.serviceFeePercent` —
+     * con số legacy đó không còn được áp cho đơn nào, ghi nó vào đơn là ghi một lời nói dối.
+     */
+    serviceFeePercent: serviceFeeLine?.percent ?? null,
+    serviceFeeAmount: new Prisma.Decimal(serviceFeeLine?.amount ?? '0'),
+    /*
+     * `H` — hoa hồng lũy tiến XePrime giữ lại từ phần của chủ xe (luồng tiền v2). Snapshot trước v2
+     * không có trường này ⇒ 0, đúng với đơn đời đó.
+     */
+    ownerCommissionAmount: new Prisma.Decimal(fees.ownerCommissionAmount ?? '0'),
     customerTotalAmount: new Prisma.Decimal(fees.customerTotalAmount),
     /*
      * `D` và `D − T` đọc từ CHÍNH snapshot (ADR 0032 điều 2, ADR 0033 điều 2) — một nguồn, không
@@ -1358,6 +1396,11 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     customerTotalAmount: b.customerTotalAmount as unknown as string | null,
     holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
     payAtPickupAmount: internalSnapshot?.fees?.payAtPickupAmount ?? null,
+    // Kinh tế của CHỦ XE đã đóng băng trong snapshot (ADR 0024) — DTO nội bộ gian hàng (ADR 0064).
+    ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
+    ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,
+    ownerNetAmount: internalSnapshot?.fees?.ownerNetAmount ?? null,
+    ownerPayout: internalSnapshot?.fees ? ownerPayoutOf(internalSnapshot.fees) : null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
     pickupLocation: addressViewOf({

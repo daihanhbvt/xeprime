@@ -4,6 +4,8 @@ import logoMark from '../assets/images/xeprime-mark.png';
 import shopOnboarding from '../assets/images/shop-onboarding.png';
 import ownerPersonalCar from '../assets/images/owner-personal-car.png';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
+// Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
+import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
 // Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
 // diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
 import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
@@ -28,6 +30,7 @@ export const images = {
   shopOnboarding,
   ownerPersonalCar,
   ownerShopShowroom,
+  driverLicenceEmpty,
   partnerGuideAccount,
   partnerGuideChoose,
   partnerGuidePublish,

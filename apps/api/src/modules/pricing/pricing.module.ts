@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DepositPolicyModule } from '../deposit-policy/deposit-policy.module';
 import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 import { GeoModule } from '../geo/geo.module';
+import { InsuranceModule } from '../insurance/insurance.module';
 import { ListingsSyncModule } from '../public-listings/listings-sync.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { DeliveryDistanceService } from './delivery-distance.service';
@@ -34,6 +35,9 @@ import { VehicleDailyPricesController } from './vehicle-daily-prices.controller'
     DepositPolicyModule,
     FeePoliciesModule,
     VehicleSettingsModule,
+    // InsuranceModule: `InsuranceOfferService` — nguồn DUY NHẤT của "có bán bảo hiểm loại này
+    // không" (ADR 0064). Module đó không import gì, nên không tạo vòng.
+    InsuranceModule,
   ],
   // `VehicleDailyPricesController`: giá riêng theo ngày — writer là chính PricingService,
   // để mọi báo giá và bản ghi đè cùng một chủ (không lặp lại writer thứ hai ở VehiclesService).

@@ -1,0 +1,24 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}

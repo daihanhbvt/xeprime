@@ -12,6 +12,7 @@ export {
   compactMoneyParts,
   formatMoneyVnd,
   isNegativeMoney,
+  isPositiveMoney,
   isZeroMoney,
   moneyToVietnameseWords,
   subtractMoney,

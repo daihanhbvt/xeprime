@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Realms } from '../../common/decorators';
@@ -8,6 +18,7 @@ import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
+  CustomerTripCancelPreviewDto,
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
@@ -124,6 +135,27 @@ export class CustomerTripsController {
     );
   }
 
+  /**
+   * Hộp xác nhận huỷ gọi đây TRƯỚC khi khách bấm: số được hoàn / số mất do server tính bằng đúng
+   * luật mà `POST :id/cancel` sẽ áp (ADR 0064). Chỉ realm khách — chỉ người đi thuê mới tự huỷ.
+   */
+  @Get(':id/cancel-preview')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @ApiOperation({
+    summary: 'Xem trước số được hoàn nếu khách huỷ chuyến ngay bây giờ',
+    description:
+      'Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví ' +
+      'điểm. Huỷ sau mốc: bảo hiểm hoàn đủ; phần giữ chỗ của chủ xe đền chủ xe, phí đặt xe và hoa ' +
+      'hồng thuộc XePrime (ADR 0066). Mốc so với giờ server lúc gọi.',
+  })
+  @ApiOkResponse({ type: CustomerTripCancelPreviewDto })
+  cancelPreview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripCancelPreviewDto> {
+    return this.trips.cancelPreview(user.id, id);
+  }
+
   @Post(':id/cancel')
   @ApiOperation({
     summary: 'Khách tự huỷ chuyến của mình',
@@ -138,6 +170,30 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.cancel(user.id, id);
+  }
+
+  /**
+   * "Chưa nhận được xe" — lớp 1 chống treo đơn (ADR 0066). Chỉ realm khách: chủ xe không tự khiếu
+   * nại chính chuyến của mình.
+   */
+  @Post(':id/report-not-received')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến',
+    description:
+      'Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case ' +
+      '`dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp ' +
+      'mở giữ quyết toán khoản giữ chỗ. Idempotent: đơn đã có tranh chấp mở thì không tạo thêm. ' +
+      'Lỗi: 409 `TRIP_NOT_RECEIVED_NOT_ALLOWED` (sai trạng thái), `TRIP_NOT_RECEIVED_TOO_EARLY`, ' +
+      '`TRIP_NOT_RECEIVED_WINDOW_CLOSED`; chuyến của người khác 404. Trả về chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  reportNotReceived(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    return this.trips.reportNotReceived(user.id, id);
   }
 
   @Post(':id/refund-account')

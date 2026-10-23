@@ -16,6 +16,7 @@ import {
   SubscriptionInvoiceDto,
   SubscriptionInvoicePageDto,
   SubscriptionListQueryDto,
+  TenantPlanCatalogDto,
   TenantPlanDto,
 } from './dto/billing.dto';
 
@@ -35,7 +36,7 @@ export class SubscriptionController {
   @Get()
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)
-  @ApiOperation({ summary: 'Gói hiện hành + mức dùng chỗ theo loại xe + lượt miễn phí (ADR 0026)' })
+  @ApiOperation({ summary: 'Gói hiện hành theo từng loại xe + hạn mức/mức dùng theo loại + lượt miễn phí (ADR 0026 · 0065)' })
   @ApiOkResponse({ type: MySubscriptionDto })
   mySubscription(@CurrentTenant() tenant: TenantContext): Promise<MySubscriptionDto> {
     return this.billing.mySubscription(tenant.tenantId);
@@ -47,6 +48,20 @@ export class SubscriptionController {
   @ApiOkResponse({ type: [TenantPlanDto] })
   plans(): Promise<TenantPlanDto[]> {
     return this.billing.listPlansForTenant();
+  }
+
+  /**
+   * Bảng giá NHÓM THEO PHẠM VI loại xe (ADR 0065) — màn chọn gói mới đọc endpoint này. `plans`
+   * ở trên giữ hình mảng phẳng cho app native đã phát hành (mỗi phần tử mang `vehicleScope`).
+   */
+  @Get('plan-catalog')
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @ApiOperation({
+    summary: 'Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) — ADR 0065',
+  })
+  @ApiOkResponse({ type: TenantPlanCatalogDto })
+  planCatalog(): Promise<TenantPlanCatalogDto> {
+    return this.billing.planCatalogForTenant();
   }
 
   @Get('payment-info')

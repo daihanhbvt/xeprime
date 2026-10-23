@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { drivingTripPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { DriverRespondCountdown } from './DriverRespondCountdown';
 import { DrivingTripTags } from './DrivingTripTags';
 import {
   useAcceptDriverTrip,
@@ -182,7 +183,12 @@ function DrivingTripCard({ trip }: { trip: DriverTrip }) {
         {trip.destination ? (
           <p className={styles.meta}>{t('destination', { destination: trip.destination })}</p>
         ) : null}
-        {pending ? <p className={styles.warn}>{t('needsAnswer')}</p> : null}
+        {pending ? (
+          <>
+            <p className={styles.warn}>{t('needsAnswer')}</p>
+            <DriverRespondCountdown respondBy={trip.respondBy} />
+          </>
+        ) : null}
       </Link>
       {pending ? (
         <div className={styles.cardActions}>

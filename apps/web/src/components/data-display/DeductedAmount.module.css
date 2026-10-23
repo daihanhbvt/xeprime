@@ -1,0 +1,16 @@
+/* Khoản trừ khỏi tiền chủ xe — dấu trừ + màu khoản trừ; bằng 0 thì mờ. */
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.negative {
+  color: var(--xp-color-error);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.emphasis {
+  font-weight: var(--xp-font-weight-semibold);
+}

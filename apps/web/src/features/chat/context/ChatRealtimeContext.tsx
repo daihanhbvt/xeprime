@@ -4,7 +4,7 @@ import type { Firestore } from 'firebase/firestore';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { chatApi } from '../api';
-import { getChatDb, isFirebaseConfigured, signInChat } from '../lib/firebase-client';
+import { getChatDb, isFirebaseConfigured, signInChat, signOutChat } from '../lib/firebase-client';
 
 interface ChatRealtime {
   /** Firestore db khi đã đăng nhập realtime; null → chat rơi về REST. */
@@ -37,10 +37,16 @@ function warnRealtimeOff(reason: unknown): void {
 
 export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
+  /*
+   * Khoá theo ID, không theo object: `/auth/me` được làm mới sau nhiều thao tác (sửa hồ sơ, xác
+   * minh SĐT…), và mỗi lần data đổi là một object mới — khoá theo object thì mỗi lần như vậy lại
+   * xin một custom token và đăng nhập Firebase lại cho đúng người đang đăng nhập.
+   */
+  const userId = user?.id;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!user || !isFirebaseConfigured()) return undefined;
+    if (!userId || !isFirebaseConfigured()) return undefined;
     let cancelled = false;
     void (async () => {
       try {
@@ -55,17 +61,25 @@ export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
           return;
         }
         await signInChat(res.token);
-        if (!cancelled) setReady(true);
+        if (cancelled) {
+          // Đăng xuất tới TRONG LÚC đang đăng nhập: lượt `signOut` ở cleanup có thể đã chạy trước
+          // khi phiên này kịp thành hình, nên phải tự rời lại — không thì phiên còn trong tab.
+          await signOutChat(userId);
+          return;
+        }
+        setReady(true);
       } catch (err) {
         warnRealtimeOff(err);
       }
     })();
-    // Đăng xuất / đổi user → reset realtime (cleanup chạy khi dep đổi, không phải body effect).
+    // Đăng xuất / đổi user → reset realtime VÀ rời phiên Firebase của người đó (cleanup chạy khi
+    // dep đổi, không phải body effect).
     return () => {
       cancelled = true;
       setReady(false);
+      void signOutChat(userId).catch(warnRealtimeOff);
     };
-  }, [user]);
+  }, [userId]);
 
   const value = useMemo<ChatRealtime>(
     () => ({ db: ready ? getChatDb() : null, ready }),

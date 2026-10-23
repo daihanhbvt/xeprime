@@ -406,6 +406,18 @@ export const queryKeys = {
     /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
+  /**
+   * Xe yêu thích của tài khoản khách — `/account/favorites`. Trạng thái trái tim khoá THEO TỪNG XE
+   * (`status(vehicleId)`), không theo một tập: cập nhật lạc quan và hoàn tác của xe này không bao
+   * giờ ghi đè trạng thái của xe khác đang có thao tác song song.
+   */
+  favorites: {
+    all: ['favorites'] as const,
+    lists: ['favorites', 'list'] as const,
+    list: (params: QueryParams) => ['favorites', 'list', params] as const,
+    statusAll: ['favorites', 'status'] as const,
+    status: (vehicleId: string) => ['favorites', 'status', vehicleId] as const,
+  },
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
@@ -582,6 +594,19 @@ export const queryKeys = {
   platformInsurance: {
     all: ['platform-insurance'] as const,
     list: (params: QueryParams) => ['platform-insurance', 'list', params] as const,
+    /** Chi tiết một hợp đồng kèm payload đối tác (ADR 0064). */
+    detail: (id: string) => ['platform-insurance', 'detail', id] as const,
+    /** Danh mục sản phẩm phía quản trị (ADR 0064). */
+    products: ['platform-insurance', 'products'] as const,
+  },
+  /** Bảo hiểm phía khách/gian hàng — danh mục công khai + GCN của một đơn (ADR 0064). */
+  insurance: {
+    all: ['insurance'] as const,
+    publicProducts: (vehicleType: string) => ['insurance', 'public-products', vehicleType] as const,
+    bookingCertificates: (bookingId: string) =>
+      ['insurance', 'booking-certificates', bookingId] as const,
+    /** Tình trạng bảo hiểm theo từng sản phẩm của một đơn — phía gian hàng. */
+    bookingCoverage: (bookingId: string) => ['insurance', 'booking-coverage', bookingId] as const,
   },
   bankAccounts: {
     all: ['bank-accounts'] as const,
@@ -596,13 +621,20 @@ export const queryKeys = {
     overview: ['driver-licence', 'overview'] as const,
     image: (id: string) => ['driver-licence', 'image', id] as const,
   },
-  /** Hàng đợi bằng lái của nền tảng — tách khỏi `driverLicence` (phạm vi khác, quyền khác). */
+  /**
+   * Bằng lái của khách nhìn từ hồ sơ khách thuê (ADR 0070) — tách khỏi `driverLicence` (phạm vi
+   * khác, quyền khác).
+   */
   platformDriverLicences: {
     all: ['platform-driver-licences'] as const,
-    list: (params: QueryParams) => ['platform-driver-licences', 'list', params] as const,
-    counts: ['platform-driver-licences', 'counts'] as const,
-    detail: (id: string) => ['platform-driver-licences', 'detail', id] as const,
+    byCustomer: (userId: string) => ['platform-driver-licences', 'customer', userId] as const,
     image: (id: string) => ['platform-driver-licences', 'image', id] as const,
+  },
+  /** Tab "Cần chăm sóc" của Đơn thuê toàn hệ thống (ADR 0070). */
+  platformFollowUps: {
+    all: ['platform-follow-ups'] as const,
+    list: (params: QueryParams) => ['platform-follow-ups', 'list', params] as const,
+    assignees: ['platform-follow-ups', 'assignees'] as const,
   },
   /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {

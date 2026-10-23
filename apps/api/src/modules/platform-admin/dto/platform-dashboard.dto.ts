@@ -87,12 +87,18 @@ export class PlatformDashboardActivityDto {
   })
   gmv!: PlatformPeriodMoneyDto;
 
-  @ApiProperty({ type: [PlatformDashboardDayDto], description: '30 ngày gần nhất, cũ → mới, đủ ngày.' })
+  @ApiProperty({
+    type: [PlatformDashboardDayDto],
+    description: '30 ngày gần nhất, cũ → mới, đủ ngày.',
+  })
   series!: PlatformDashboardDayDto[];
 }
 
 export class PlatformDashboardGrowthDto {
-  @ApiProperty({ type: PlatformPeriodCountDto, description: 'Tài khoản KHÁCH (realm customer) mới.' })
+  @ApiProperty({
+    type: PlatformPeriodCountDto,
+    description: 'Tài khoản KHÁCH (realm customer) mới.',
+  })
   newCustomers!: PlatformPeriodCountDto;
 
   @ApiProperty({

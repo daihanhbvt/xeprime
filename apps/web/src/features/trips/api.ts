@@ -2,6 +2,7 @@ import type { HandoverPhotoSlot, HandoverType, PaginationMeta } from '@xeprime/t
 import { apiGet, apiRequest, type QueryParams } from '@/services/api-client';
 import type {
   CustomerTrip,
+  CustomerTripCancelPreview,
   CustomerTripCounts,
   CustomerTripDetail,
   CustomerTripHandoverEvidence,
@@ -104,6 +105,14 @@ export function fetchTripHandoverPhotoUrl(
 }
 
 /**
+ * Xem trước lượt huỷ — số được hoàn vào Ví điểm / số mất, do server tính bằng đúng luật lượt huỷ
+ * thật áp (ADR 0064). Client không cộng trừ gì.
+ */
+export function fetchTripCancelPreview(id: string): Promise<CustomerTripCancelPreview> {
+  return apiGet<CustomerTripCancelPreview>(`/trips/${id}/cancel-preview`);
+}
+
+/**
  * Khách tự huỷ chuyến của mình.
  *
  * Trả về chính chuyến đó sau khi huỷ (đã đổi chặng) nên nơi gọi ghi thẳng vào cache, không cần
@@ -113,6 +122,16 @@ export function cancelTrip(id: string): Promise<CustomerTripDetail> {
   return apiRequest<CustomerTripDetail>(`/trips/${id}/cancel`, { method: 'POST' }).then(
     (res) => res.data,
   );
+}
+
+/**
+ * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1. Server mở một tranh chấp khẩn (idempotent) và
+ * trả về chính chuyến đó với `openDispute = true`, như `cancelTrip`.
+ */
+export function reportTripNotReceived(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/report-not-received`, {
+    method: 'POST',
+  }).then((res) => res.data);
 }
 
 /**

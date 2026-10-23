@@ -1,4 +1,4 @@
-import type { MoneyString } from '@xeprime/types';
+import { ceilToThousand, type MoneyString } from '@xeprime/types';
 
 export const CURRENCY_SUFFIX = '₫';
 
@@ -74,9 +74,33 @@ export function subtractMoney(
   return fromCents(toCents(minuend || '0') - toCents(subtrahend || '0'));
 }
 
+/**
+ * Tổng nhiều số tiền, cùng phép `bigint` đơn vị xu như `subtractMoney` — không đi qua `Number`
+ * (ADR 0007). Rỗng/null coi như 0; danh sách rỗng ⇒ `'0'`.
+ *
+ * Dùng cho mọi tổng HIỂN THỊ ghép từ các khoản trên dây (vd tổng hoá đơn của nhiều làn gói): cộng
+ * bằng float là cách một tổng lệch với con số server tính lại từ cùng các dòng đó.
+ */
+export function sumMoney(values: readonly (MoneyString | null | undefined)[]): MoneyString {
+  return fromCents(values.reduce<bigint>((sum, value) => sum + toCents(value || '0'), 0n));
+}
+
 /** Số tiền có âm không — đọc trên chuỗi, cùng lý do như `isZeroMoney`. */
 export function isNegativeMoney(value: MoneyString | null | undefined): boolean {
   return Boolean(value) && toCents(value as MoneyString) < 0n;
+}
+
+/**
+ * Số tiền có DƯƠNG thật sự không (> 0) — đọc trên chuỗi, không qua `Number` (ADR 0007).
+ *
+ * Dùng để quyết định hiện một dòng tiền / một cột / một lựa chọn có phí: `Number(x) > 0` sai với
+ * số lớn và âm thầm coi chuỗi rác là `NaN` (⇒ false) — ở đây chuỗi không đúng hình dạng tiền trên
+ * dây cũng trả `false`, nhưng tường minh. Rỗng/null ⇒ `false`.
+ */
+export function isPositiveMoney(value: MoneyString | null | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return MONEY_WIRE_SHAPE.test(trimmed) && toCents(trimmed) > 0n;
 }
 
 /**
@@ -149,8 +173,7 @@ export function compactMoneyParts(
       // Đệm 0 ĐẦU rồi cắt 0 ĐUÔI: `1.050.000` ở 2 chữ số cho `05` (phải giữ số 0 đầu, nếu
       // không thành `1,5tr`), còn `1.300.000` cho `30` và phải rút thành `1,3tr`.
       const padded = String(fraction).padStart(fractionDigits, '0').replace(/0+$/, '');
-      const decimals =
-        whole >= 100n || padded === '' ? '' : `${separators.decimal}${padded}`;
+      const decimals = whole >= 100n || padded === '' ? '' : `${separators.decimal}${padded}`;
       return { value: `${sign}${whole}${decimals}`, unit };
     }
   }
@@ -210,6 +233,10 @@ export function isZeroMoney(value: MoneyString | null | undefined): boolean {
  * Preview giá sau khuyến mãi ở client (thẻ xe/trang chi tiết/manage). PricingService
  * chốt báo giá bằng cùng công thức; helper này không dùng để cộng dồn kế toán.
  * Giá thuê VND là số nguyên ≤ 14 chữ số nên `Number` ở đây không mất chính xác (ADR 0007).
+ *
+ * Khoản GIẢM theo % làm tròn LÊN 1.000đ rồi kẹp ≤ giá gốc (ADR 0069 điều 2 — cùng luật
+ * `ceilDecimalToThousand` của server): 10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ. Khách không bao
+ * giờ được giảm ít hơn % đã công bố, và thẻ xe khớp đúng báo giá server.
  */
 export function applyDiscountPercent(
   value: MoneyString | null | undefined,
@@ -219,7 +246,8 @@ export function applyDiscountPercent(
   if (!percent || percent <= 0 || percent > 100) return value;
   const n = Number(value);
   if (!Number.isFinite(n)) return value;
-  return String(Math.round((n * (100 - percent)) / 100));
+  const discount = Math.min(ceilToThousand((n * percent) / 100), n);
+  return String(n - discount);
 }
 
 /** Hình dạng tiền hợp lệ trên dây (ADR 0007): số nguyên có dấu, tối đa 2 số lẻ. */

@@ -4,9 +4,16 @@ import { Alert, Button, DatePicker, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { ACCOUNT_TRACK, WALLET_STATEMENT_UNIT, resolveAccountTrack } from '@xeprime/types';
-import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableExpandable,
+} from '@/components/data-display/DataTable';
+import { DeductedAmount } from '@/components/data-display/DeductedAmount';
+import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { absoluteMoney, isNegativeMoney, isPositiveMoney, isZeroMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { WALLET_STATEMENT_PAGE_SIZE } from '../api';
@@ -26,6 +33,13 @@ const MIN_TABLE_WIDTH: Readonly<Record<StatementVariant, number>> = {
   full: 880,
   compact: 640,
 };
+/**
+ * Cột "Phí dịch vụ – Chủ xe" (`H`) thêm vào thì bảng cần thêm chừng ấy bề ngang để không bóp các
+ * cột tiền — nhãn dài hơn nhãn "Hoa hồng" cũ nên rộng hơn.
+ */
+const COMMISSION_COLUMN_WIDTH = 120;
+/** Cột "Phí giao xe" — chỉ có khi kỳ có chuyến giao tận nơi. */
+const DELIVERY_COLUMN_WIDTH = 110;
 
 /**
  * Hai hình thái của bảng.
@@ -44,17 +58,22 @@ export type StatementVariant = 'full' | 'compact';
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH — một tháng làm ăn của gian hàng, đọc từ `/shop/wallet/statement`.
  *
- * ## Vì sao không có cột "phí sàn"
+ * ## Vì sao không có cột "phí sàn" — nhưng có cột "hoa hồng"
  *
- * Phí dịch vụ XePrime do KHÁCH trả thêm (ADR 0032 điều 2), không trừ vào doanh thu gian hàng.
- * Dựng nó thành một dòng khấu trừ trong bảng thu nhập của chủ xe là bịa ra một khoản họ không
- * hề mất. Với gian hàng tuyến gói thì con số đó còn luôn bằng 0 — một cột trắng chiếm chỗ.
+ * Phí sàn `S` do KHÁCH trả thêm (ADR 0064 điều 2), không trừ vào doanh thu gian hàng. Dựng nó
+ * thành một dòng khấu trừ trong bảng thu nhập của chủ xe là bịa ra một khoản họ không hề mất.
+ *
+ * Hoa hồng `H` thì ngược lại: CHỦ XE chịu, XePrime giữ lại từ khoản online (ADR 0064 điều 3), nên
+ * nó là một khoản trừ thật và thu nhập đã trừ nó. Cột chỉ hiện khi KỲ có hoa hồng
+ * (`ownerCommissionTotal > 0` — số của cả kỳ, nên lật trang không làm cột nhảy ra nhảy vào):
+ * tuyến gói luôn `H = 0`, và một cột toàn số 0 chỉ chiếm chỗ.
  *
  * ## Vì sao "thay đổi số dư" nhỏ hơn "doanh thu"
  *
- * Khách chỉ trả `D + S + IV + IP` online; phần `B − D` họ đưa TAY cho chủ xe lúc nhận xe và
- * XePrime không thu hộ. Bảng vì thế có một dòng riêng cho phần trả tay — thiếu nó, chủ xe đọc
- * hai con số lệch nhau rồi tin rằng nền tảng đang giữ tiền của mình.
+ * Khách chỉ trả `D + S + H + IV + IP` online; phần tiền thuê `R − D − H` họ đưa TAY cho chủ xe
+ * lúc nhận xe và XePrime không thu hộ. Bảng vì thế có một dòng riêng cho phần trả tay — thiếu nó,
+ * chủ xe đọc hai con số lệch nhau rồi tin rằng nền tảng đang giữ tiền của mình. Phí giao xe `G`
+ * cũng trả tay nhưng đứng ở dòng riêng: nó không phải tiền thuê (ADR 0068 điều 5).
  *
  * ## Kỳ và trang sống trên URL
  *
@@ -98,6 +117,13 @@ export function WalletStatementPanel({
   const items = useMemo(() => data?.items ?? [], [data]);
 
   const compact = variant === 'compact';
+  const showCommission = isPositiveMoney(data?.totals.ownerCommissionTotal);
+  /*
+   * Phí giao `G` của TỪNG chuyến (ADR 0068 điều 5): khách trả tận tay, chủ xe hưởng trọn, không
+   * nằm trong doanh thu hay bảng cộng ví — nên nó có cột riêng. Như cột phí dịch vụ, cột chỉ hiện
+   * khi KỲ có phí giao (số của cả kỳ, lật trang không làm cột nhảy).
+   */
+  const showDelivery = isPositiveMoney(data?.totals.deliveryTotal);
 
   const columns = useMemo<DataTableColumn<WalletStatementTrip>[]>(() => {
     /*
@@ -131,12 +157,16 @@ export function WalletStatementPanel({
       {
         key: 'pickupAt',
         title: t('columns.pickupAt'),
-        render: (_, row) => <span className={styles.number}>{fmt.shortDateTime(row.pickupAt)}</span>,
+        render: (_, row) => (
+          <span className={styles.number}>{fmt.shortDateTime(row.pickupAt)}</span>
+        ),
       },
       {
         key: 'returnAt',
         title: t('columns.returnAt'),
-        render: (_, row) => <span className={styles.number}>{fmt.shortDateTime(row.returnAt)}</span>,
+        render: (_, row) => (
+          <span className={styles.number}>{fmt.shortDateTime(row.returnAt)}</span>
+        ),
       },
       {
         key: 'unit',
@@ -161,15 +191,30 @@ export function WalletStatementPanel({
         render: (_, row) => <span className={styles.strong}>{fmt.money(row.revenueAmount)}</span>,
       },
       {
+        key: 'commission',
+        title: t('columns.commission'),
+        align: 'right',
+        hidden: !showCommission,
+        render: (_, row) => <DeductedAmount emphasis value={row.ownerCommissionAmount} />,
+      },
+      {
         key: 'tax',
         title: t('columns.tax'),
         align: 'right',
-        render: (_, row) => (
-          /* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */
-          <span className={Number(row.taxAmount) > 0 ? styles.negative : styles.muted}>
-            {Number(row.taxAmount) > 0 ? `−${fmt.money(row.taxAmount)}` : fmt.money('0')}
-          </span>
-        ),
+        /* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */
+        render: (_, row) => <DeductedAmount emphasis value={row.taxAmount} />,
+      },
+      {
+        key: 'delivery',
+        title: t('columns.delivery'),
+        align: 'right',
+        hidden: !showDelivery,
+        render: (_, row) =>
+          isZeroMoney(row.deliveryAmount) ? (
+            <span className={styles.muted}>{tCommon('labels.emptyValue')}</span>
+          ) : (
+            <span className={styles.number}>{fmt.money(row.deliveryAmount)}</span>
+          ),
       },
       {
         key: 'balanceChange',
@@ -179,7 +224,29 @@ export function WalletStatementPanel({
       },
     ];
     return all.filter((column) => !column.hidden);
-  }, [t, tCommon, fmt, domainLabel, compact]);
+  }, [t, tCommon, fmt, domainLabel, compact, showCommission, showDelivery]);
+
+  /*
+   * Bảng cộng ví của TỪNG chuyến — cùng khối (`OwnerPayoutTable`) với hộp duyệt yêu cầu và chi tiết
+   * đơn, dựng ở server bằng cùng `ownerPayoutOf`, nên một chuyến không thể có hai câu chuyện tiền.
+   * Đơn lập tay không có bảng phí (`ownerPayout = null`) ⇒ dòng không mở được: ở đó doanh thu là
+   * toàn bộ câu chuyện.
+   */
+  const expandable = useMemo<DataTableExpandable<WalletStatementTrip>>(
+    () => ({
+      label: t('payout.expand'),
+      rowExpandable: (row) => row.ownerPayout != null,
+      render: (row) =>
+        row.ownerPayout ? (
+          <OwnerPayoutTable
+            className={styles.payout}
+            payout={row.ownerPayout}
+            label={t('payout.label', { code: row.code })}
+          />
+        ) : null,
+    }),
+    [t],
+  );
 
   const stats = data?.stats;
   const totals = data?.totals;
@@ -237,9 +304,7 @@ export function WalletStatementPanel({
                 </>
               )}
             </dd>
-            <dt className={styles.statLabel}>
-              {t('stats.rating', { count: stats.ratingCount })}
-            </dt>
+            <dt className={styles.statLabel}>{t('stats.rating', { count: stats.ratingCount })}</dt>
           </div>
           <div className={styles.stat}>
             <dd className={styles.statValue}>
@@ -265,9 +330,14 @@ export function WalletStatementPanel({
         columns={columns}
         items={items}
         rowKey={(row) => row.bookingId}
-        minWidth={MIN_TABLE_WIDTH[variant]}
+        minWidth={
+          MIN_TABLE_WIDTH[variant] +
+          (showCommission ? COMMISSION_COLUMN_WIDTH : 0) +
+          (showDelivery ? DELIVERY_COLUMN_WIDTH : 0)
+        }
         loading={query.isFetching}
         striped={false}
+        expandable={expandable}
         empty={{ title: t('empty.title'), description: t('empty.body') }}
         pagination={{
           meta: {
@@ -283,20 +353,35 @@ export function WalletStatementPanel({
 
       {totals ? (
         <dl className={styles.totals}>
-          <SummaryRow label={t('totals.balanceChange')} value={<SignedAmount value={totals.balanceChangeTotal} />} />
+          <SummaryRow
+            label={t('totals.balanceChange')}
+            value={<SignedAmount value={totals.balanceChangeTotal} />}
+          />
           {/*
             Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
             `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe — dòng này khi đó là cả doanh thu,
             và giấu nó đi sẽ khiến "thu nhập" trông như từ trên trời rơi xuống.
           */}
-          {Number(totals.payAtPickupTotal) !== 0 ? (
+          {!isZeroMoney(totals.payAtPickupTotal) ? (
             <SummaryRow
               label={t('totals.payAtPickup')}
               hint={t('totals.payAtPickupHint')}
               value={<span className={styles.number}>{fmt.money(totals.payAtPickupTotal)}</span>}
             />
           ) : null}
-          {Number(totals.subscriptionFeeTotal) !== 0 ? (
+          {/*
+            Phí giao xe đứng RIÊNG (ADR 0068 điều 5): khách trả tận tay, chủ xe hưởng trọn, không
+            chịu phí dịch vụ hay thuế — nên nó không nằm trong doanh thu, thu nhập hay dòng trả
+            trực tiếp ở trên. Chỉ hiện khi kỳ có chuyến giao tận nơi.
+          */}
+          {!isZeroMoney(totals.deliveryTotal) ? (
+            <SummaryRow
+              label={t('totals.delivery')}
+              hint={t('totals.deliveryHint')}
+              value={<span className={styles.number}>{fmt.money(totals.deliveryTotal)}</span>}
+            />
+          ) : null}
+          {!isZeroMoney(totals.subscriptionFeeTotal) ? (
             <SummaryRow
               label={t('totals.subscriptionFee')}
               value={
@@ -304,15 +389,15 @@ export function WalletStatementPanel({
               }
             />
           ) : null}
+          {showCommission ? (
+            <SummaryRow
+              label={t('totals.commission')}
+              value={<DeductedAmount emphasis value={totals.ownerCommissionTotal} />}
+            />
+          ) : null}
           <SummaryRow
             label={t('totals.tax')}
-            value={
-              Number(totals.taxTotal) > 0 ? (
-                <span className={styles.negative}>−{fmt.money(totals.taxTotal)}</span>
-              ) : (
-                <span className={styles.muted}>{fmt.money('0')}</span>
-              )
-            }
+            value={<DeductedAmount emphasis value={totals.taxTotal} />}
           />
           <SummaryRow
             highlight
@@ -377,13 +462,12 @@ function SummaryRow({
  */
 function SignedAmount({ value }: { value: string }) {
   const fmt = useAppFormat();
-  const amount = Number(value);
-  if (amount === 0) return <span className={styles.muted}>{fmt.money('0')}</span>;
-  const positive = amount > 0;
+  if (isZeroMoney(value)) return <span className={styles.muted}>{fmt.money('0')}</span>;
+  const positive = !isNegativeMoney(value);
   return (
     <span className={positive ? styles.positive : styles.negative}>
       {positive ? '+' : '−'}
-      {fmt.money(String(Math.abs(amount)))}
+      {fmt.money(absoluteMoney(value))}
     </span>
   );
 }

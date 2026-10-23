@@ -3,6 +3,7 @@
 import { Button, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
   BOOKING_HOLD_OUTCOME_META,
   BOOKING_HOLD_STATUS,
@@ -209,6 +210,24 @@ export function HoldsPanel() {
               fee: fmt.money(row.serviceFeeAmount),
             })}
           </span>
+          {/*
+            `H` (hoa hồng giữ lại từ phần chủ xe) và `T` (thuế khấu trừ khi hoàn thành) — luồng tiền
+            v2. Không có thì không vẽ: hold tuyến gói và hold trước v2 có cả hai bằng 0.
+          */}
+          {Number(row.ownerCommissionAmount) > 0 || Number(row.taxAmount) > 0 ? (
+            <span className={styles.tertiary}>
+              {[
+                Number(row.ownerCommissionAmount) > 0
+                  ? t('columns.commission', { amount: fmt.money(row.ownerCommissionAmount) })
+                  : null,
+                Number(row.taxAmount) > 0
+                  ? t('columns.tax', { amount: fmt.money(row.taxAmount) })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(LIST_SEPARATOR)}
+            </span>
+          ) : null}
         </div>
       ),
     },

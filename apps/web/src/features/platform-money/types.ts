@@ -12,16 +12,6 @@ export type SaveBankBalanceInput = Schemas['SaveBankBalanceDto'];
 /** Số đếm các hàng đợi của màn Tài chính. */
 export type PlatformMoneySummary = Schemas['PlatformMoneySummaryDto'];
 
-/** Hợp đồng bảo hiểm nhìn từ ADMIN — Phase 7. */
-export type PlatformInsurancePolicy = Schemas['PlatformInsurancePolicyDto'];
-export type PlatformInsurancePage = Schemas['PlatformInsurancePageDto'];
-
-/** Bỏ trống `status` = hàng đợi VIỆC CẦN LÀM (đang lỗi). */
-export interface InsuranceFilters {
-  status?: string | null;
-  page?: number;
-}
-
 export interface HoldFilters {
   status?: string;
   /** Chỉ hold ĐÃ TRẢ mà chưa chốt kết cục — hàng đợi thật của admin. */

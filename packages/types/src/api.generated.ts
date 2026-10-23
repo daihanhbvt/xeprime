@@ -155,30 +155,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/account/driver-licence/{id}/request-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Nhờ XePrime xem lại một lượt bị máy từ chối
-         * @description Chỉ với lượt mới nhất, bị từ chối TỰ ĐỘNG vì lý do máy có thể đọc sai (`canRequestReview`).
-         *
-         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
-         *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
-         */
-        post: operations["DriverLicencesController_requestReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/account/driver-licence/presign": {
         parameters: {
             query?: never;
@@ -197,6 +173,82 @@ export interface paths {
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["DriverLicencesController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xe yêu thích của tôi — một tab Ô tô/Xe máy, phân trang, dữ liệu chợ hiện hành
+         * @description Xe đang bị ẩn/gỡ/đình chỉ hoặc không còn dịch vụ nào không hiện (mục yêu thích vẫn giữ, mở bán lại là hiện lại). Mới lưu lên trước.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        get: operations["FavoritesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/favorites/{vehicleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Lưu một xe vào yêu thích (idempotent)
+         * @description Chỉ xe đang niêm yết công khai — không thì 404 `FAVORITE_VEHICLE_UNAVAILABLE`. Thích lại một xe đã thích trả 200 như lần đầu.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        put: operations["FavoritesController_add"];
+        post?: never;
+        /**
+         * Bỏ một xe khỏi yêu thích (idempotent — chưa lưu cũng trả 200)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        delete: operations["FavoritesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/favorites/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trong các xe này, xe nào tôi đã thích — trái tim ở kết quả tìm kiếm/chi tiết
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        get: operations["FavoritesController_status"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1237,8 +1289,10 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * Gán/bỏ gán tài xế, hoặc ghi tài xế ngoài hệ thống cho đơn (có audit)
+         * @description Gửi ĐÚNG MỘT khoá. `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống). `externalDriver`: ghi tên + SĐT tài xế ngoài hệ thống (ADR 0067) — coi là đã nhận ngay, lượt gán liên kết đang có bị đóng và người đó được báo. Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
@@ -1503,6 +1557,58 @@ export interface paths {
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         post: operations["BookingHandoversController_presignPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/insurance-certificates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Giấy chứng nhận bảo hiểm đã cấp của một đơn
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["BookingInsuranceController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/insurance-coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tình trạng bảo hiểm của một đơn, theo từng sản phẩm
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["BookingInsuranceController_coverage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3092,7 +3198,9 @@ export interface paths {
         put?: never;
         /**
          * Nhận chuyến được gán
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * @description Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` — chuyến được trả về bên thuê.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
@@ -3114,7 +3222,7 @@ export interface paths {
         put?: never;
         /**
          * Từ chối chuyến được gán
-         * @description Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi.
+         * @description Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công — kể cả khi hệ thống đã trả lượt về trước đó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -5099,7 +5207,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi bằng lái — mặc định CHỜ DUYỆT, cũ nhất trước
+         * Lịch sử nộp bằng lái của một khách — mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
@@ -5125,7 +5233,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chi tiết một lượt nộp — kèm liên hệ đầy đủ của chủ tài khoản
+         * Chi tiết một lượt nộp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
@@ -5137,34 +5245,6 @@ export interface paths {
         get: operations["PlatformDriverLicencesController_getOne"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/platform/driver-licences/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Xác thực bằng lái — với thông tin đã đối chiếu
-         * @description Bằng đang dùng trước đó (nếu có) chuyển `superseded`. Với GPLX VN / IDP, "lái được ô tô / xe máy" suy từ hạng; chỉ bằng nước ngoài dùng hai cờ gửi lên.
-         *
-         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
-         *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
-         *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
-         *
-         *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
-         */
-        post: operations["PlatformDriverLicencesController_approve"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5189,58 +5269,6 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["PlatformDriverLicencesController_image"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/platform/driver-licences/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Từ chối — khách thấy lý do và nộp ảnh khác
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
-         *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
-         *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
-         *
-         *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
-         */
-        post: operations["PlatformDriverLicencesController_reject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/platform/driver-licences/counts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Đếm theo trạng thái — cho tab và huy hiệu menu
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
-         *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
-         *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
-         *
-         *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
-         */
-        get: operations["PlatformDriverLicencesController_counts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5355,6 +5383,164 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/platform/follow-ups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Khách mất đơn cần chăm sóc — mới kết thúc trước
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformFollowUpsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/follow-ups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Ghi trạng thái / ghi chú / người phụ trách chăm sóc (ghi audit)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        patch: operations["PlatformFollowUpsController_update"];
+        trace?: never;
+    };
+    "/platform/follow-ups/{id}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Xem SĐT/email khách đầy đủ để gọi lại (ghi audit từng lần xem)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PlatformFollowUpsController_revealContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/follow-ups/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nhân sự giao được làm phụ trách (có quyền chăm sóc khách)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformFollowUpsController_listAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/insurance/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh mục sản phẩm bảo hiểm (cả sản phẩm đang tắt)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformInsuranceProductsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/insurance/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sửa một sản phẩm bảo hiểm — tên, quyền lợi, khấu trừ, mẫu URL GCN, bật/tắt
+         * @description Biểu phí NGÀY không sửa ở đây — nó có phiên bản ở chính sách phí. Hợp đồng đã bán giữ snapshot riêng, nên sửa danh mục không viết lại quyền lợi đã hứa. Có audit.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        patch: operations["PlatformInsuranceProductsController_update"];
         trace?: never;
     };
     "/platform/locations": {
@@ -5480,7 +5666,7 @@ export interface paths {
         };
         /**
          * Hàng đợi hợp đồng bảo hiểm — mặc định chỉ các hợp đồng ĐANG LỖI
-         * @description Phí của hợp đồng chưa quyết toán nằm ở vế GIỮ HỘ của đối soát ba vế: mỗi dòng ở đây là một khoản tiền khách đã trả mà chưa có chứng nhận nào được cấp.
+         * @description Phí của hợp đồng chưa quyết toán nằm ở vế GIỮ HỘ của đối soát ba vế: mỗi dòng lỗi là một khoản tiền khách đã trả mà chưa có chứng nhận nào được cấp. Lọc theo trạng thái (`any` = tất cả), loại sản phẩm, đơn, hoặc tìm theo mã đơn / số GCN.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -5491,6 +5677,32 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["PlatformInsuranceController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/money/insurance/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chi tiết một hợp đồng — kèm yêu cầu/phản hồi nguyên trạng với đối tác
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformInsuranceController_detail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5510,7 +5722,7 @@ export interface paths {
         put?: never;
         /**
          * Thử phát hành lại
-         * @description Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp — KHÔNG gọi đối tác ngay trong request, vì một đối tác chậm sẽ treo tab của người trực.
+         * @description Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp (≤ 60 giây) — KHÔNG gọi đối tác ngay trong request, vì một đối tác chậm sẽ treo tab của người trực. Môi trường chưa cắm đối tác trả 409 `INSURANCE_PARTNER_NOT_CONFIGURED`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -5724,7 +5936,7 @@ export interface paths {
         };
         /**
          * Xuất CSV một kỳ để dán vào biểu mẫu tờ khai
-         * @description Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ.
+         * @description Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ. File mang số CCCD đầy đủ nên MỖI lần xuất ghi audit `tax.period_export` (người xuất, kỳ, số dòng).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -8029,6 +8241,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/insurance-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sản phẩm bảo hiểm đang bật cho một loại xe
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         */
+        get: operations["PublicInsuranceProductsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/listings": {
         parameters: {
             query?: never;
@@ -9032,7 +9266,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Gói hiện hành + mức dùng chỗ theo loại xe + lượt miễn phí (ADR 0026)
+         * Gói hiện hành theo từng loại xe + hạn mức/mức dùng theo loại + lượt miễn phí (ADR 0026 · 0065)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
@@ -9224,6 +9458,32 @@ export interface paths {
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["SubscriptionController_paymentInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscription/plan-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) — ADR 0065
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["SubscriptionController_planCatalog"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9652,6 +9912,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/cancel-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xem trước số được hoàn nếu khách huỷ chuyến ngay bây giờ
+         * @description Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví điểm. Huỷ sau mốc: bảo hiểm hoàn đủ; phần giữ chỗ của chủ xe đền chủ xe, phí đặt xe và hoa hồng thuộc XePrime (ADR 0066). Mốc so với giờ server lúc gọi.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        get: operations["CustomerTripsController_cancelPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}/handover-evidence": {
         parameters: {
             query?: never;
@@ -9718,6 +10002,30 @@ export interface paths {
          *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_provideRefundAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{id}/report-not-received": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến
+         * @description Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case `dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp mở giữ quyết toán khoản giữ chỗ. Idempotent: đơn đã có tranh chấp mở thì không tạo thêm. Lỗi: 409 `TRIP_NOT_RECEIVED_NOT_ALLOWED` (sai trạng thái), `TRIP_NOT_RECEIVED_TOO_EARLY`, `TRIP_NOT_RECEIVED_WINDOW_CLOSED`; chuyến của người khác 404. Trả về chính chuyến đó.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        post: operations["CustomerTripsController_reportNotReceived"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11477,26 +11785,6 @@ export interface components {
             /** @enum {number} */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
         };
-        ApproveDriverLicenceDto: {
-            /** @enum {string} */
-            kind: "vn" | "international_permit" | "foreign";
-            licenceNumber: string;
-            fullName: string;
-            /** @description YYYY-MM-DD */
-            dateOfBirth?: string | null;
-            classes: string[];
-            /** @description YYYY-MM-DD */
-            issuedOn?: string | null;
-            /** @description YYYY-MM-DD; bỏ trống khi không thời hạn */
-            expiresOn?: string | null;
-            noExpiry: boolean;
-            /** @description ISO 3166-1 alpha-2 */
-            issuingCountry?: string | null;
-            /** @description Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng. */
-            coversCar: boolean;
-            /** @description Chỉ có tác dụng với bằng nước ngoài — GPLX VN/IDP suy từ hạng. */
-            coversMotorbike: boolean;
-        };
         AssignableDriverDto: {
             id: string;
             name: string;
@@ -11510,8 +11798,10 @@ export interface components {
             data: components["schemas"]["AssignableDriverDto"][];
         };
         AssignBookingDriverDto: {
-            /** @description ID tài xế (ULID) — null để bỏ gán */
-            driverId: string | null;
+            /** @description ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`. */
+            driverId?: string | null;
+            /** @description Tài xế ngoài hệ thống (ADR 0067). Không gửi cùng `driverId`. */
+            externalDriver?: components["schemas"]["ExternalDriverInputDto"];
         };
         AssignSubscriptionDto: {
             /** @description ID gói (ULID) */
@@ -11808,6 +12098,23 @@ export interface components {
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe
+             */
+            ownerCommissionAmount?: string | null;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe
+             */
+            ownerTaxAmount?: string | null;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến
+             */
+            ownerNetAmount?: string | null;
+            /** @description Bảng cộng ví chủ xe — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí */
+            ownerPayout?: components["schemas"]["OwnerPayoutDto"] | null;
             actualPickupAt?: string | null;
             actualReturnAt?: string | null;
             note?: string | null;
@@ -11822,7 +12129,7 @@ export interface components {
             driverName: string;
             driverPhone: string;
             /** @enum {string} */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             /** @description Người gán — null = hệ thống ("Đặt ngay" tự gán) */
@@ -11833,14 +12140,26 @@ export interface components {
             endedByName?: string | null;
         };
         BookingDriverSummaryDto: {
-            id: string;
+            /**
+             * @description `linked` = tài khoản khách đã liên kết (ADR 0063) · `external` = tên + SĐT bên thuê ghi trên đơn (ADR 0067)
+             * @enum {string}
+             */
+            source: "linked" | "external";
+            /** @description ID liên kết tài xế (`drivers.id`) — null khi `source = external`, và luôn null ở bề mặt khách */
+            id?: string | null;
             name: string;
+            /** @description Dạng hiển thị `0xxxxxxxxx` */
             phone: string;
-            /** @enum {string} */
+            /**
+             * @description Tài xế ngoài hệ thống luôn `accepted` — không có lượt chờ
+             * @enum {string}
+             */
             assignmentStatus: "pending" | "accepted";
-            /** @description ISO-8601 UTC */
+            /** @description ISO-8601 UTC — mốc gán (hoặc mốc ghi tài xế ngoài hệ thống) */
             assignedAt: string;
             respondedAt?: string | null;
+            /** @description Hạn tài xế trả lời (ISO-8601, ADR 0066) — chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê. */
+            respondBy?: string | null;
         };
         BookingListItemDto: {
             id: string;
@@ -11911,6 +12230,58 @@ export interface components {
             totalAmount: string;
             depositAmount: string;
             policy?: components["schemas"]["SnapshotPolicyDto"] | null;
+        };
+        BookingRequestApprovalPreviewDto: {
+            /** @description Luôn true — số chốt khi duyệt */
+            isEstimate: boolean;
+            /** @description Duyệt xong khách có nhận QR tiền giữ chỗ không. false = không thu online (báo giá tạm tính hoặc không thu cọc) — đơn tạo ngay lúc duyệt */
+            collectsHold: boolean;
+            /** @description Tiền giữ chỗ khách chuyển qua QR (VND string) — null khi không thu online */
+            onlineAmount?: string | null;
+            /** @description Khách trả TRỰC TIẾP chủ xe lúc nhận xe (VND string) */
+            payAtPickupAmount: string;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)
+             */
+            ownerCommissionAmount: string;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe (VND string)
+             */
+            taxAmount: string;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.ownerPayableAmount`. `D − T` — XePrime ghi vào ví điểm chủ xe khi chuyến hoàn thành (VND string)
+             */
+            ownerPayableAmount: string;
+            /**
+             * @deprecated
+             * @description DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến (VND string)
+             */
+            ownerNetAmount: string;
+            /** @description Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b) */
+            ownerPayout: components["schemas"]["OwnerPayoutDto"];
+            /** @description Cửa sổ huỷ miễn phí khi đặt xa (giờ) — trần của cửa sổ động */
+            policyFreeCancelHours: number;
+            /** @description Cửa sổ thanh toán khi đặt xa (phút) — trần của cửa sổ động */
+            policyPaymentWindowMinutes: number;
+            /** @description Hai cửa sổ nếu duyệt ngay — null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) hoặc khi chuyến không thu online */
+            windows?: components["schemas"]["BookingRequestApprovalWindowsDto"] | null;
+        };
+        BookingRequestApprovalWindowsDto: {
+            /** @description ΔT = giờ nhận xe − bây giờ, phút */
+            leadMinutes: number;
+            /** @description Khách có bấy nhiêu phút để chuyển tiền giữ chỗ */
+            paymentWindowMinutes: number;
+            /** @description Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí */
+            freeCancelMinutes: number;
+            /** @description ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe) */
+            expiresAt: string;
+            /** @description ISO — mốc huỷ miễn phí dự kiến */
+            freeCancelUntil: string;
+            /** @description Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT` */
+            tooShort: boolean;
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -11985,7 +12356,7 @@ export interface components {
             bookingId?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính) */
+            /** @description ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, 15–240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút — ADR 0066) */
             respondBy: string;
             /** @description ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ */
             decidedAt?: string | null;
@@ -11996,8 +12367,12 @@ export interface components {
             decisionSource?: "host" | "system" | null;
             /** @description ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu */
             holdExpiresAt?: string | null;
+            vehicleProtectionSelected: boolean;
+            personalAccidentSelected: boolean;
             /** @description Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới. */
             pricing?: components["schemas"]["BookingRequestPricingDto"] | null;
+            /** @description Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) — chỉ yêu cầu còn chờ duyệt. Cùng luật vắng mặt với `pricing` ở phiếu trả về của các thao tác. */
+            approvalPreview?: components["schemas"]["BookingRequestApprovalPreviewDto"] | null;
         };
         BookingRequestPageDto: {
             data: components["schemas"]["BookingRequestDto"][];
@@ -12291,8 +12666,18 @@ export interface components {
             key: string;
             /** @example SUV */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @example SUV
+             */
+            labelEn: string | null;
             /** @example 7 chỗ · gầm cao */
             description: string | null;
+            /**
+             * @description Dòng phụ tiếng Anh. NULL = client dùng `description`.
+             * @example 7 seats · high clearance
+             */
+            descriptionEn: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
             /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
@@ -12322,8 +12707,18 @@ export interface components {
             key: string;
             /** @example SUV */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @example SUV
+             */
+            labelEn: string | null;
             /** @example 7 chỗ · gầm cao */
             description: string | null;
+            /**
+             * @description Dòng phụ tiếng Anh. NULL = client dùng `description`.
+             * @example 7 seats · high clearance
+             */
+            descriptionEn: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
             /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
@@ -12831,6 +13226,10 @@ export interface components {
             acceptedTerms?: boolean;
             /** @description Mã khuyến mãi nền tảng (server tự chuẩn hoá) */
             promoCode?: string;
+            /** @description Thêm bảo hiểm vật chất xe (IV) — tính theo ngày */
+            vehicleProtectionSelected?: boolean;
+            /** @description Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày */
+            personalAccidentSelected?: boolean;
         };
         CreateBranchDto: {
             /** @example Chi nhánh Đà Nẵng */
@@ -12878,8 +13277,15 @@ export interface components {
             key: string;
             /** @example Coupe */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`
+             * @example Coupe
+             */
+            labelEn?: string | null;
             /** @example 2 chỗ · thể thao */
             description?: Record<string, never>;
+            /** @example 2 seats · sporty */
+            descriptionEn?: string | null;
             /** @example /body-types/coupe.png */
             iconUrl?: Record<string, never>;
             /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
@@ -12993,6 +13399,11 @@ export interface components {
             billingMode: "commission" | "package";
             /** @description BẮT BUỘC khi billingMode=commission; phải trống khi package */
             commissionPercent?: number | null;
+            /**
+             * @description Phạm vi loại xe của bậc (ADR 0065) — bỏ trống = all. KHÔNG sửa được sau khi tạo. Bậc commission chỉ được là all
+             * @enum {string}
+             */
+            vehicleScope?: "all" | "car" | "motorbike";
             limits?: components["schemas"]["PlanLimitsInputDto"];
             /** @description Bỏ trống = 0 */
             sortOrder?: number;
@@ -13220,6 +13631,16 @@ export interface components {
             planCode: string;
             planName: string;
             /**
+             * @description Phạm vi loại xe của kỳ (ADR 0065)
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
+            /**
+             * @description Pha của RIÊNG kỳ này theo đồng hồ server (current | grace | lapsed | unconfigured)
+             * @enum {string}
+             */
+            phase: "current" | "grace" | "lapsed" | "unconfigured";
+            /**
              * @description SNAPSHOT trên dòng thuê bao (ADR 0024 điều 2) — null ở dòng trước ADR 0015
              * @enum {string|null}
              */
@@ -13351,30 +13772,77 @@ export interface components {
             /** @enum {string} */
             billingMode: "commission" | "package";
             policy: components["schemas"]["FeePolicySnapshotDto"];
-            /** @description Mẫu số = tổng bảng kê giá thuê */
+            /**
+             * @description Loại xe — quyết định mức S và biểu phí bảo hiểm
+             * @enum {string}
+             */
+            vehicleType: "car" | "motorbike";
+            /** @description Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng */
+            rentalDays: number;
+            /** @description Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) — đúng mảng đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026) */
+            dayAmounts?: string[];
+            /** @description B — tổng bảng kê giá thuê (gồm giao nhận) */
             baseAmount: string;
+            /** @description G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
+            deliveryAmount?: string;
             lines: components["schemas"]["FeeLineDto"][];
-            /** @description Tổng phụ phí KHÁCH gánh */
+            /** @description Tổng phụ phí KHÁCH gánh (S + IV + IP) */
             customerFeeTotal: string;
             /** @description Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp) */
             customerTotalAmount: string;
-            /** @description D — cọc trả online cho XePrime; "0" khi chuyến không thu cọc */
+            /** @description D — phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online */
             depositAmount: string;
-            /** @description D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên */
+            /** @description H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói */
+            ownerCommissionAmount: string;
+            /** @description S + H — phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã) */
+            platformRetainedAmount: string;
+            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên */
             grossOnlineAmount: string;
+            /** @description D + S + H — phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm) */
+            sponsorableAmount: string;
             /** @description P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
             promoDiscountAmount: string;
             /** @description Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã. */
             promo?: components["schemas"]["PromoCodeSnapshotDto"] | null;
-            /** @description D + S + IV + IP − P — số quét QR trả ngay */
+            /** @description Tiền giữ chỗ − P — số quét QR trả ngay */
             onlineAmount: string;
-            /** @description B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
+            /** @description Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
             payAtPickupAmount: string;
-            /** @description T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách */
+            /** @description T = GTGT + TNCN — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng thuế tắt hoặc người bán được miễn (taxExemptReason) */
             taxAmount: string;
-            /** @description D − T — khoản XePrime phải trả chủ xe khi chuyến hoàn thành */
+            /** @description R = B − G — tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D */
+            rentAmount?: string;
+            /** @description Thuế GTGT khấu trừ = roundVnd(vat% × R) */
+            vatAmount?: string;
+            /** @description Thuế TNCN khấu trừ = roundVnd(pit% × R) */
+            pitAmount?: string;
+            /** @description % GTGT đã áp. null khi đơn không bị khấu trừ */
+            vatPercent?: number | null;
+            /** @description % TNCN đã áp. null khi đơn không bị khấu trừ */
+            pitPercent?: number | null;
+            /**
+             * @description Nhóm NĐ 117 (service | transport). null khi đơn không bị khấu trừ
+             * @enum {string|null}
+             */
+            taxCategory?: "service" | "transport" | null;
+            /**
+             * @description Vì sao không khấu trừ dù cổng thuế mở — company (doanh nghiệp đã xác minh)
+             * @enum {string|null}
+             */
+            taxExemptReason?: "company" | null;
+            /**
+             * @description Loại dịch vụ đã đóng băng — chọn cặp tỷ lệ thuế
+             * @enum {string|null}
+             */
+            serviceType?: "self_drive" | "with_driver" | "long_term" | null;
+            /**
+             * @description Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)
+             * @enum {string}
+             */
+            sellerEntityType?: "individual" | "household_business" | "company";
+            /** @description D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành */
             ownerPayableAmount: string;
-            /** @description Chủ xe THỰC NHẬN cả chuyến = B − T */
+            /** @description Chủ xe THỰC NHẬN cả chuyến = B − H − T */
             ownerNetAmount: string;
             /** @description Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính) */
             holdAmount?: string | null;
@@ -13397,6 +13865,10 @@ export interface components {
             expiresAt: string;
             /** @description ISO — huỷ trước mốc này được hoàn toàn bộ */
             freeCancelUntil: string;
+            /** @description false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0) */
+            freeCancelAvailable: boolean;
+            /** @description Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string */
+            lateCancelRefundAmount: string;
             paidAt?: string | null;
             /** @enum {string|null} */
             paidVia?: "bank_transfer" | "momo" | "vnpay" | null;
@@ -13409,7 +13881,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "paid" | "credited" | "rejected";
             /** @enum {string} */
-            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "admin_decision";
+            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "admin_decision";
             /** @description VND string */
             amount: string;
             /** @description Khách đã khai tài khoản nhận hoàn chưa */
@@ -13457,6 +13929,28 @@ export interface components {
             /** @description ISO-8601 UTC */
             recordedAt: string;
         };
+        CustomerTripCancelPreviewDto: {
+            /** @description Chặng hiện tại còn huỷ được không */
+            allowed: boolean;
+            /** @enum {string} */
+            kind: "no_charge" | "full_refund" | "late_cancel" | "not_allowed";
+            /** @description Đã chuyển qua XePrime cho khoản giữ chỗ (VND string) */
+            paidAmount: string;
+            /** @description Sẽ hoàn vào ví điểm của khách (VND string) */
+            refundAmount: string;
+            /** @description Phần hoàn là tiền bảo hiểm chưa phát hành (VND string) */
+            insuranceRefundAmount: string;
+            /** @description Khách mất = đã chuyển − được hoàn (VND string) */
+            forfeitAmount: string;
+            /** @description Phần đền chủ xe vì giữ lịch khi huỷ muộn (VND string) */
+            ownerCompensationAmount: string;
+            /** @description ISO — mốc huỷ miễn phí ĐÃ LƯU; null khi chuyến chưa có khoản giữ chỗ */
+            freeCancelUntil?: string | null;
+            /** @description false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0) */
+            freeCancelAvailable: boolean;
+            /** @description Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia */
+            deferred: boolean;
+        };
         CustomerTripContactDto: {
             name: string;
             phone: string;
@@ -13472,10 +13966,11 @@ export interface components {
             /** @enum {string} */
             role: "host" | "renter";
             renter?: components["schemas"]["CustomerTripRenterDto"] | null;
+            /** @description ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
             respondBy?: string | null;
             /** @description Được lộ SĐT và mở hội thoại chưa */
             canContact: boolean;
-            /** @description Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn */
+            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
@@ -13518,12 +14013,17 @@ export interface components {
             rejectReason?: string | null;
             actualPickupAt?: string | null;
             actualReturnAt?: string | null;
+            openDispute: boolean;
+            canReportNotReceived: boolean;
+            notReceivedReportUntil?: string | null;
             finance?: components["schemas"]["CustomerTripFinanceDto"] | null;
             estimate?: components["schemas"]["CustomerTripEstimateDto"] | null;
             hold?: components["schemas"]["CustomerHoldDto"] | null;
             /** @enum {string|null} */
             depositCollectionMode?: "platform" | "direct" | "none" | null;
             review?: components["schemas"]["CustomerTripReviewDto"] | null;
+            insuranceCertificates: components["schemas"]["InsuranceCertificateDto"][];
+            insuranceCoverage: components["schemas"]["InsuranceCoverageDto"][];
         };
         CustomerTripEstimateDto: {
             /** @description Các dòng của giá THUÊ */
@@ -13532,7 +14032,9 @@ export interface components {
             rentalTotal: string;
             /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
             depositAmount: string;
-            fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
+            fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
+            /** @description Chủ xe thực nhận — chỉ vai chủ xe, khách luôn null */
+            ownerNetAmount?: string | null;
             estimateNote?: string | null;
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
         };
@@ -13541,7 +14043,7 @@ export interface components {
             rows: components["schemas"]["PriceBreakdownRowDto"][];
             /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
             depositAmount: string;
-            fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
+            fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
         };
         CustomerTripFinanceDto: {
@@ -13625,10 +14127,11 @@ export interface components {
             /** @enum {string} */
             role: "host" | "renter";
             renter?: components["schemas"]["CustomerTripRenterDto"] | null;
+            /** @description ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
             respondBy?: string | null;
             /** @description Được lộ SĐT và mở hội thoại chưa */
             canContact: boolean;
-            /** @description Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn */
+            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
@@ -13816,10 +14319,15 @@ export interface components {
             /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
             toKm: number;
             /**
-             * @description Phí VND dạng chuỗi — '0' = miễn phí
+             * @description Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí. Bỏ trống khi bậc tính theo km
              * @example 30000
              */
-            fee: string;
+            fee?: string;
+            /**
+             * @description Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói
+             * @example 10000
+             */
+            perKm?: string;
         };
         DepositRefundDto: {
             /** @description Tiền dạng chuỗi */
@@ -13915,13 +14423,12 @@ export interface components {
             coversCar: boolean;
             coversMotorbike: boolean;
             /** @enum {string|null} */
-            rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "other" | null;
+            rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "reader_unavailable" | "other" | null;
             /** @description Lời nhắn của người duyệt */
             reviewNote: string | null;
             /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra — để gợi ý cách chụp lại. */
             qualityIssues: ("blurry" | "glare" | "cropped" | "too_dark" | "obstructed" | "low_resolution")[];
-            /** @description Bị máy từ chối vì lý do máy có thể đọc sai — nhờ người xem lại được. */
-            canRequestReview: boolean;
+            /** @description LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
             reviewRequestedAt: string | null;
             /** @enum {string|null} */
             decisionSource: "auto" | "manual" | null;
@@ -14002,10 +14509,12 @@ export interface components {
              * @description Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua
              * @enum {string}
              */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
+            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
+            respondBy?: string | null;
             /** @description Lượt của tài xế kết thúc lúc */
             endedAt?: string | null;
             pickupAt: string;
@@ -14035,10 +14544,12 @@ export interface components {
              * @description Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua
              * @enum {string}
              */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
+            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
+            respondBy?: string | null;
             /** @description Lượt của tài xế kết thúc lúc */
             endedAt?: string | null;
             pickupAt: string;
@@ -14088,11 +14599,107 @@ export interface components {
             /** @description Diễn giải công thức */
             formula?: string | null;
         };
+        ExternalDriverInputDto: {
+            /**
+             * @description Tên tài xế — cắt khoảng trắng hai đầu trước khi kiểm
+             * @example Nguyễn Văn Tài
+             */
+            name: string;
+            /**
+             * @description SĐT di động VN (`0xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua) — khách gọi số này để gặp người đón
+             * @example 0901234567
+             */
+            phone: string;
+        };
         FacetBucketDto: {
             /** @description Giá trị của option (body type key, tên hãng, bucket số chỗ…) */
             key: string;
             /** @description Số listing khớp nếu chọn option này */
             count: number;
+        };
+        FavoriteStatusDto: {
+            /** @description Tập con của `vehicleIds` đã hỏi mà tài khoản này đang lưu. */
+            vehicleIds: string[];
+        };
+        FavoriteToggleResultDto: {
+            vehicleId: string;
+            /** @description `true` sau khi thích, `false` sau khi bỏ thích. */
+            favorited: boolean;
+        };
+        FavoriteVehicleDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
+            brand?: string | null;
+            model?: string | null;
+            seatCount?: number | null;
+            fuelType?: string | null;
+            /** @description Kiểu dáng (BODY_TYPE) */
+            bodyType?: string | null;
+            /**
+             * @description Phân khúc — chỉ xe máy
+             * @enum {string|null}
+             */
+            motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
+            mainImageUrl?: string | null;
+            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            imageCount: number;
+            /**
+             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @enum {string|null}
+             */
+            transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
+            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
+            /** @description Tiền dạng string — ADR 0007 */
+            weekdayPrice?: string | null;
+            weekendPrice?: string | null;
+            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            hourlyPrice?: string | null;
+            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            withDriverOneWayPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral: boolean;
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            vatInvoiceSupported: boolean;
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            discountPercent?: number | null;
+            /** @description Tên gian hàng */
+            shopName: string;
+            /** @description Slug gian hàng cho route /shops/[slug] */
+            shopSlug: string;
+            /** @description Logo gian hàng */
+            shopLogoUrl?: string | null;
+            /** @description Tỉnh/thành gian hàng */
+            shopProvince?: string | null;
+            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            shopVerified: boolean;
+            /** @description Số chuyến đã hoàn thành của xe */
+            completedTripCount: number;
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            provinceCode?: string | null;
+            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            wardName?: string | null;
+            /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
+            ratingAvg?: string | null;
+            /** @description Số lượt đánh giá của xe */
+            ratingCount: number;
+            /** @description Lúc khách lưu xe này — ISO-8601 UTC. */
+            favoritedAt: string;
+        };
+        FavoriteVehiclePageDto: {
+            data: components["schemas"]["FavoriteVehicleDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
         };
         FeaturedReviewDto: {
             id: string;
@@ -14112,13 +14719,17 @@ export interface components {
         };
         FeeLineDto: {
             /** @enum {string} */
-            key: "service_fee" | "tax" | "trip_insurance" | "vehicle_protection" | "deposit" | "promo";
+            key: "service_fee" | "owner_commission" | "tax" | "trip_insurance" | "vehicle_protection" | "deposit" | "promo" | "rent_prepaid";
             /** @example platform */
             beneficiary: string;
             /** @example customer */
             bearer: string;
-            percent: number;
-            /** @description VND string */
+            percent: number | null;
+            /** @description Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày */
+            unitAmount?: string;
+            /** @description Số ngày đã nhân với `unitAmount` */
+            quantity?: number;
+            /** @description VND string nguyên — khoản tính từ tỷ lệ đúng tới đồng (ADR 0069) */
             amount: string;
             partnerName?: string;
         };
@@ -14129,6 +14740,7 @@ export interface components {
             status: "draft" | "active" | "archived";
             name: string;
             note?: string | null;
+            /** @description LEGACY — luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
             holdPaymentWindowMinutes: number;
@@ -14137,13 +14749,22 @@ export interface components {
             depositMinAmount: string;
             depositMaxPercent: number;
             taxEnabled: boolean;
+            /** @description Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). null ở chính sách ≤ v8 */
+            taxRates?: components["schemas"]["TaxRatesDto"] | null;
+            taxLegalBasis?: string | null;
+            /** @description LEGACY (≤ v8) — một mức cho mọi chuyến; thay bằng taxRates */
             taxPercent?: number | null;
+            /** @description LEGACY (≤ v8) — nhãn của chính sách một-mức; thay bằng taxLegalBasis */
             taxLabel?: string | null;
             tripInsuranceEnabled: boolean;
             tripInsurancePercent?: number | null;
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
+            customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
+            vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+            tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
             effectiveFrom?: string | null;
             effectiveTo?: string | null;
             activatedByName?: string | null;
@@ -14156,24 +14777,41 @@ export interface components {
         FeePolicySnapshotDto: {
             policyId: string;
             version: number;
+            /** @description LEGACY — luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
+            /** @description Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động */
             holdPaymentWindowMinutes: number;
+            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động */
             freeCancelHours: number;
             taxEnabled: boolean;
+            /** @description Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). Vắng/null ở snapshot ≤ v8 */
+            taxRates?: components["schemas"]["TaxRatesDto"] | null;
+            /** @description Căn cứ pháp lý khấu trừ */
+            taxLegalBasis?: string | null;
+            /** @description LEGACY (≤ v8) — một mức */
             taxPercent?: number | null;
+            /** @description LEGACY (≤ v8) */
             taxLabel?: string | null;
             tripInsuranceEnabled: boolean;
             tripInsurancePercent?: number | null;
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
-            /** @description D — % cọc trên giá thuê gốc */
+            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066 */
             depositPercent: number;
-            /** @description Sàn tiền cọc (VND) */
+            /** @description Sàn của `D` (VND): D = max(% × tiền thuê, sàn) */
             depositMinAmount: string;
-            /** @description Trần % cọc của chính sách này */
+            /** @description Trần % của `D` ở chính sách này */
             depositMaxPercent: number;
+            /** @description `S` — phí sàn cố định mỗi đơn */
+            customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `H` — nấc hoa hồng lũy tiến */
+            ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
+            /** @description `IV` — biểu phí mỗi ngày */
+            vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IP` — biểu phí mỗi ngày */
+            tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         FinanceCategoryBreakdownDto: {
             /** @description Tổng của cả chiều tiền — khớp `revenue`/`cost` ở summary */
@@ -14285,6 +14923,21 @@ export interface components {
             maintenance: number;
             /** @description Xe có operationStatus = inactive */
             inactive: number;
+        };
+        FollowUpAssigneeDto: {
+            id: string;
+            displayName: string;
+            email: string | null;
+            /**
+             * @description Vai trò nền tảng — để phân biệt với tên hiển thị
+             * @enum {string}
+             */
+            roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
+        };
+        FollowUpContactDto: {
+            id: string;
+            customerPhone: string;
+            customerEmail: string | null;
         };
         ForgotPasswordDto: {
             /** @example ban@congty.vn */
@@ -14429,7 +15082,7 @@ export interface components {
             count: number;
             /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
             amount: string;
-            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở */
+            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao — ADR 0066) */
             disputeCount: number;
         };
         HolidayDto: {
@@ -14483,6 +15136,66 @@ export interface components {
             note: string;
             /** @description Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai */
             refundReference?: string;
+        };
+        InsuranceCertificateDto: {
+            id: string;
+            /** @enum {string} */
+            productKind: "vehicle_trip" | "personal_accident";
+            productNameVi?: string | null;
+            productNameEn?: string | null;
+            partnerName: string;
+            certificateNumber: string;
+            certificateUrl?: string | null;
+            coverageFrom?: string | null;
+            coverageTo?: string | null;
+            /** @description GCN THỬ NGHIỆM (adapter giả lập) — không có hiệu lực bảo hiểm */
+            isTest: boolean;
+            issuedAt: string;
+        };
+        InsuranceCoverageDto: {
+            /** @enum {string} */
+            kind: "vehicle_trip" | "personal_accident";
+            /** @enum {string} */
+            status: "pending_issue" | "issuing" | "issued" | "failed" | "voided" | "refunded";
+            productNameVi?: string | null;
+            productNameEn?: string | null;
+            /** @description Phí khách đã trả cho sản phẩm này (VND string) */
+            premiumAmount: string;
+            /** @description GCN — chỉ có khi `status = issued` */
+            certificate?: components["schemas"]["InsuranceCertificateDto"] | null;
+        };
+        InsuranceOfferedByKindDto: {
+            /** @description `IV` — bảo hiểm vật chất xe */
+            vehicleProtection: boolean;
+            /** @description `IP` — bảo hiểm tai nạn người trên xe */
+            tripInsurance: boolean;
+        };
+        InsuranceProductDto: {
+            id: string;
+            /** @enum {string} */
+            kind: "vehicle_trip" | "personal_accident";
+            /** @enum {string} */
+            provider: "mic";
+            partnerProductCode: string;
+            nameVi: string;
+            nameEn: string;
+            coverageVi: string;
+            coverageEn: string;
+            /** @description Khấu trừ/vụ — ô tô. `null` = không áp dụng */
+            deductibleCar?: string | null;
+            /** @description Khấu trừ/vụ — xe máy */
+            deductibleMotorbike?: string | null;
+            /** @description Bồi thường tối đa — ô tô. `null` = xem ghi chú */
+            maxPayoutCar?: string | null;
+            /** @description Bồi thường tối đa — xe máy */
+            maxPayoutMotorbike?: string | null;
+            maxPayoutNoteVi?: string | null;
+            maxPayoutNoteEn?: string | null;
+            /** @description Mẫu URL tra cứu GCN, `{certCode}` là chỗ thay số chứng nhận */
+            certificateUrlTemplate: string;
+            displayOrder: number;
+            isActive: boolean;
+            updatedAt: string;
         };
         InviteAnswerDto: {
             /** @enum {string} */
@@ -15022,7 +15735,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "customers.view" | "customers.manage" | "customers.manage_risk" | "customers.documents.manage" | "customers.documents.view_files" | "calendar.view" | "subscription.view" | "subscription.purchase" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "seller_profile.view" | "seller_profile.manage" | "support.view" | "support.manage" | "platform.dashboard.view" | "platform.tenants.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.tenant_support.view" | "platform.tenant_support.assist" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage" | "platform.fee_policies.manage" | "platform.promo_codes.manage" | "platform.sellers.verify" | "platform.driver_licences.review" | "platform.money.manage" | "platform.support.manage" | "platform.app_config.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "customers.view" | "customers.manage" | "customers.manage_risk" | "customers.documents.manage" | "customers.documents.view_files" | "calendar.view" | "subscription.view" | "subscription.purchase" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "seller_profile.view" | "seller_profile.manage" | "support.view" | "support.manage" | "platform.dashboard.view" | "platform.tenants.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.tenant_support.view" | "platform.tenant_support.assist" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage" | "platform.fee_policies.manage" | "platform.promo_codes.manage" | "platform.sellers.verify" | "platform.driver_licences.review" | "platform.sales_followups.manage" | "platform.money.manage" | "platform.insurance.manage" | "platform.support.manage" | "platform.app_config.manage")[];
         };
         MyShopDto: {
             id: string;
@@ -15047,15 +15760,21 @@ export interface components {
             defaultBranch?: components["schemas"]["DefaultBranchDto"] | null;
         };
         MySubscriptionDto: {
+            /** @description Kỳ ƯU TIÊN (all → car → motorbike) khi ở tuyến gói, ngược lại dòng hiệu lực gần nhất. Danh sách đủ ở currentPlans */
             currentPlan?: components["schemas"]["CurrentPlanDto"] | null;
+            /** @description Mọi kỳ GÓI đang hiệu lực (current | grace), tối đa một mỗi phạm vi loại xe (ADR 0065). Rỗng khi không ở tuyến gói */
+            currentPlans: components["schemas"]["CurrentPlanDto"][];
             usage: components["schemas"]["VehicleSlotUsageDto"];
+            /** @description Hạn mức THEO LOẠI xe (ADR 0065) — nguồn chính cho màn hình */
+            vehicleQuotas: components["schemas"]["VehicleTypeQuotasDto"];
+            /** @description Trần GỘP (hình dạng trước ADR 0065) — suy từ vehicleQuotas, giữ cho client cũ */
             fleetQuota: components["schemas"]["FleetQuotaDto"];
             freeTrips: components["schemas"]["FreeTripsDto"];
         };
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_request_slot_taken" | "booking_request_slot_reopened" | "booking_cancelled_by_host" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "shop_needs_revision" | "vehicle_approved" | "vehicle_rejected" | "vehicle_needs_revision" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expiring" | "hold_expired" | "hold_refunded" | "hold_refund_paid" | "promo_code_dropped" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated" | "chat_message_received" | "driver_invited" | "driver_invite_accepted" | "driver_invite_declined" | "driver_link_ended" | "driver_trip_assigned" | "driver_trip_unassigned" | "driver_trip_accepted" | "driver_trip_declined" | "driver_trip_completed";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_request_slot_taken" | "booking_request_slot_reopened" | "booking_cancelled_by_host" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "shop_needs_revision" | "vehicle_approved" | "vehicle_rejected" | "vehicle_needs_revision" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expiring" | "hold_expired" | "hold_refunded" | "hold_refund_paid" | "promo_code_dropped" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated" | "chat_message_received" | "driver_invited" | "driver_invite_accepted" | "driver_invite_declined" | "driver_link_ended" | "driver_trip_assigned" | "driver_trip_unassigned" | "driver_trip_accepted" | "driver_trip_declined" | "driver_trip_response_expired" | "driver_trip_completed" | "booking_driver_missing";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -15111,7 +15830,7 @@ export interface components {
         };
         OpenSupportCaseDto: {
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
             /** @example Xe giao không đúng mô tả */
             subject: string;
             description: string;
@@ -15150,6 +15869,55 @@ export interface components {
             amount?: string | null;
             /** @description Diễn giải công thức */
             formula?: string | null;
+        };
+        OwnerCommissionTierDto: {
+            /**
+             * @description Ngày thuê bắt đầu áp nấc này (tính từ 1)
+             * @example 1
+             */
+            fromDay: number;
+            /**
+             * @description % giá thuê của ngày đó (0–30)
+             * @example 10
+             */
+            percent: number;
+        };
+        OwnerPayoutDto: {
+            /** @description Doanh thu cho thuê xe `R` — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt xe, bảo hiểm (VND string) */
+            rentAmount: string;
+            /** @description Số ngày thuê tính phí */
+            rentalDays: number;
+            /** @description Đơn giá thuê / ngày — CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến 1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện "Tiền thuê N ngày" */
+            unitAmount?: string | null;
+            /** @description `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string) */
+            ownerCommissionAmount: string;
+            /** @description Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) — đúng các nấc đã tính ra `H`. `null` ở tuyến gói, hoặc snapshot không mang nấc (trước luồng tiền v2) ⇒ màn hình giải thích chung, không có con số */
+            commissionTiers: components["schemas"]["OwnerCommissionTierDto"][] | null;
+            /** @description `T` = GTGT + TNCN — thuế khấu trừ, nộp thay (VND string) */
+            taxAmount: string;
+            /** @description Phần GTGT của `T`. `null` = snapshot trước ADR 0068 (một mức, không tách) */
+            vatAmount?: string | null;
+            /** @description Phần TNCN của `T`. `null` = snapshot trước ADR 0068 (một mức, không tách) */
+            pitAmount?: string | null;
+            /** @description % GTGT đã áp. `null` khi không khấu trừ hoặc snapshot cũ */
+            vatPercent?: number | null;
+            /** @description % TNCN đã áp. `null` khi không khấu trừ hoặc snapshot cũ */
+            pitPercent?: number | null;
+            /** @description Tổng % thuế đã áp (`vat + pit`, hoặc mức đơn của snapshot cũ). `null` khi không khấu trừ */
+            taxTotalPercent?: number | null;
+            /**
+             * @description Vì sao KHÔNG khấu trừ dù cổng thuế mở — `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)
+             * @enum {string|null}
+             */
+            taxExemptReason?: "company" | null;
+            /** @description Thu nhập chủ xe (a) = `R − H − T` (VND string) */
+            ownerNetAmount: string;
+            /** @description Khách thanh toán trực tiếp (b) = `R − D − H` — phần TIỀN THUÊ khách trả tay lúc nhận xe, không gồm phí giao xe (VND string) */
+            payAtPickupRentAmount: string;
+            /** @description Số tiền cộng ví (a − b) = `D − T` — ghi có khi chuyến hoàn thành (VND string) */
+            ownerPayableAmount: string;
+            /** @description Chuyến có thu tiền giữ chỗ online không. `false` (báo giá tạm tính) ⇒ không có khoản nào đi qua XePrime, (b) và số cộng ví không có nghĩa */
+            collectsHold: boolean;
         };
         PaginationMetaDto: {
             /** @example 1 */
@@ -15285,7 +16053,7 @@ export interface components {
             pickupAt?: string | null;
             /** @description ISO */
             returnAt?: string | null;
-            /** @description ISO — hạn gian hàng phải phản hồi */
+            /** @description ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066) */
             respondBy: string;
             /** @description ISO */
             createdAt: string;
@@ -15586,6 +16354,10 @@ export interface components {
             graceEndsAt?: string | null;
             /** @description Trần xe ĐANG CƯỠNG CHẾ (BillingService.vehicleQuotaFor) và số xe đã dùng */
             vehicleQuota: components["schemas"]["PartnerQuotaItemDto"];
+            /** @description Trần xe theo LOẠI (ADR 0065) — vehicleQuota ở trên là tổng gộp của hai trần này */
+            vehicleQuotaByType: components["schemas"]["PartnerVehicleTypeQuotasDto"];
+            /** @description Phạm vi loại xe đang có kỳ gói hiệu lực (all → car → motorbike); rỗng ngoài tuyến gói */
+            packageScopes: ("all" | "car" | "motorbike")[];
             /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
             nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
         };
@@ -15616,14 +16388,17 @@ export interface components {
             address?: string | null;
         };
         PartnerQuotaDto: {
+            /** @description Trần xe gộp — tổng của vehiclesByType */
             vehicles: components["schemas"]["PartnerQuotaItemDto"];
+            /** @description Trần xe theo loại (ADR 0065) */
+            vehiclesByType: components["schemas"]["PartnerVehicleTypeQuotasDto"];
             branches: components["schemas"]["PartnerQuotaItemDto"];
             members: components["schemas"]["PartnerQuotaItemDto"];
         };
         PartnerQuotaItemDto: {
             used: number;
             /** @enum {string} */
-            kind: "total" | "unlimited" | "not_applicable";
+            kind: "total" | "unlimited" | "not_applicable" | "not_covered";
             /** @description Trần đang được cưỡng chế — chỉ khi kind = total */
             limit?: number | null;
             /**
@@ -15636,6 +16411,11 @@ export interface components {
             id: string;
             planName: string;
             planCode: string;
+            /**
+             * @description Phạm vi loại xe của kỳ (ADR 0065)
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
             billingMode?: string | null;
             /** @description Decimal */
             price: string;
@@ -15725,6 +16505,10 @@ export interface components {
         PartnerVehiclePageDto: {
             data: components["schemas"]["PartnerVehicleDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        PartnerVehicleTypeQuotasDto: {
+            car: components["schemas"]["PartnerQuotaItemDto"];
+            motorbike: components["schemas"]["PartnerQuotaItemDto"];
         };
         PartnerVerificationEventDto: {
             /** @description ISO */
@@ -15860,6 +16644,20 @@ export interface components {
         PendingSubscriptionInvoiceDto: {
             /** @description Hoá đơn còn nhận được tiền (issued | partially_paid); null khi không có */
             invoice: components["schemas"]["SubscriptionInvoiceDto"] | null;
+            /** @description MỌI hoá đơn còn nhận được tiền, mới nhất trước — tối đa một cho mỗi phạm vi loại xe (ADR 0065). `invoice` ở trên là phần tử đầu, giữ cho client cũ */
+            invoices: components["schemas"]["SubscriptionInvoiceDto"][];
+        };
+        PerVehicleTypeAmountDto: {
+            /**
+             * @description Ô tô — VND, bội 1.000đ
+             * @example 50000
+             */
+            car: string;
+            /**
+             * @description Xe máy — VND, bội 1.000đ
+             * @example 30000
+             */
+            motorbike: string;
         };
         PickupPointDto: {
             /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
@@ -15952,11 +16750,16 @@ export interface components {
             billingMode: "commission" | "package";
             /** @description % hoa hồng — chỉ có ở bậc commission */
             commissionPercent?: number | null;
+            /**
+             * @description Phạm vi loại xe (ADR 0065): motorbike | car | all (doanh nghiệp, tuyến hoa hồng)
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
             /** @description Núm vặn bậc gói (ADR 0041 điều 1) */
             limits: components["schemas"]["PlanLimitsDto"];
             currency: string;
             /** @enum {string} */
-            status: "active" | "archived";
+            status: "draft" | "active" | "archived";
             sortOrder: number;
             /** @description Số thuê bao đã gán từ gói này (mọi trạng thái) */
             subscriptionCount: number;
@@ -16222,6 +17025,13 @@ export interface components {
             bookedCount: number;
             /** @description Số đánh giá đã viết */
             reviewCount: number;
+            /**
+             * @description Tình trạng bằng lái
+             * @enum {string}
+             */
+            licenceState: "none" | "processing" | "verified" | "rejected";
+            /** @description Hạn của bằng đang dùng (YYYY-MM-DD); null khi không thời hạn hoặc chưa có bằng */
+            licenceExpiresOn?: string | null;
             /** @description ISO-8601 UTC */
             lastLoginAt?: string | null;
             /** @description ISO-8601 UTC */
@@ -16251,6 +17061,13 @@ export interface components {
             bookedCount: number;
             /** @description Số đánh giá đã viết */
             reviewCount: number;
+            /**
+             * @description Tình trạng bằng lái
+             * @enum {string}
+             */
+            licenceState: "none" | "processing" | "verified" | "rejected";
+            /** @description Hạn của bằng đang dùng (YYYY-MM-DD); null khi không thời hạn hoặc chưa có bằng */
+            licenceExpiresOn?: string | null;
             /** @description ISO-8601 UTC */
             lastLoginAt?: string | null;
             /** @description ISO-8601 UTC */
@@ -16352,11 +17169,6 @@ export interface components {
             approvalPendingVehicle: number;
             recentTenants: components["schemas"]["PlatformRecentTenantDto"][];
         };
-        PlatformDriverLicenceCountsDto: {
-            pendingReview: number;
-            verified: number;
-            rejected: number;
-        };
         PlatformDriverLicenceDto: {
             id: string;
             /** @enum {string} */
@@ -16379,13 +17191,12 @@ export interface components {
             coversCar: boolean;
             coversMotorbike: boolean;
             /** @enum {string|null} */
-            rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "other" | null;
+            rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "reader_unavailable" | "other" | null;
             /** @description Lời nhắn của người duyệt */
             reviewNote: string | null;
             /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra — để gợi ý cách chụp lại. */
             qualityIssues: ("blurry" | "glare" | "cropped" | "too_dark" | "obstructed" | "low_resolution")[];
-            /** @description Bị máy từ chối vì lý do máy có thể đọc sai — nhờ người xem lại được. */
-            canRequestReview: boolean;
+            /** @description LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
             reviewRequestedAt: string | null;
             /** @enum {string|null} */
             decisionSource: "auto" | "manual" | null;
@@ -16415,11 +17226,54 @@ export interface components {
             notes: string | null;
             /** @description Mã lỗi khi bộ đọc hỏng */
             errorCode: string | null;
-            /**
-             * @description Vì sao lượt nộp phải chờ người duyệt
-             * @enum {string|null}
-             */
-            pendingReason: "low_confidence" | "implausible_birth_date" | "implausible_expiry" | "reader_unavailable" | "customer_request" | null;
+        };
+        PlatformFollowUpCancellationDto: {
+            /** @enum {string} */
+            responsibleParty: "host" | "customer" | "platform" | "force_majeure";
+            /** @enum {string} */
+            reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "other";
+            reason: string | null;
+            /** @description ISO-8601 UTC */
+            cancelledAt: string;
+        };
+        PlatformFollowUpDto: {
+            /** @description Id yêu cầu thuê */
+            id: string;
+            /** @enum {string} */
+            lostReason: "customer_cancelled" | "unpaid" | "host_declined" | "no_response" | "slot_taken" | "other_cancelled";
+            /** @description Trạng thái yêu cầu thuê */
+            requestStatus: string;
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "long_term";
+            customerName: string;
+            /** @description ĐÃ che */
+            customerPhoneMasked?: string | null;
+            customerUserId: string | null;
+            tenantId: string;
+            tenantName: string;
+            vehicleName: string;
+            bookingCode: string | null;
+            pickupAt: string | null;
+            returnAt: string | null;
+            /** @description Lúc gửi yêu cầu, ISO-8601 UTC */
+            requestedAt: string;
+            /** @description Lúc kết thúc (lần đổi trạng thái cuối), ISO-8601 UTC */
+            closedAt: string;
+            cancellation: components["schemas"]["PlatformFollowUpCancellationDto"] | null;
+            /** @description Khách đã có đơn khác SAU yêu cầu này */
+            rebookedLater: boolean;
+            /** @enum {string} */
+            followUpStatus: "new" | "contacted" | "rebooked" | "not_interested";
+            note: string | null;
+            assigneeUserId: string | null;
+            assigneeName: string | null;
+            lastContactedAt: string | null;
+            followUpUpdatedAt: string | null;
+            followUpUpdatedByName: string | null;
+        };
+        PlatformFollowUpPageDto: {
+            data: components["schemas"]["PlatformFollowUpDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
         };
         PlatformHoldDto: {
             id: string;
@@ -16441,17 +17295,19 @@ export interface components {
             freeCancelUntil: string;
             paidAt?: string | null;
             releasedAt?: string | null;
-            /** @description Đang có tranh chấp mở trên đơn — kết cục bị tạm giữ */
+            /** @description Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ */
             disputeOpen: boolean;
             /** @enum {string|null} */
             refundStatus?: "pending" | "paid" | "credited" | "rejected" | null;
             createdAt: string;
             /** @enum {string} */
             purpose: "commission" | "escrow";
-            /** @description `D` — cọc, phần giá thuê của chủ xe */
+            /** @description `D` — phần của chủ xe trong cọc online */
             depositAmount: string;
-            /** @description `S` — phí dịch vụ phía khách */
+            /** @description `S` — phí sàn phía khách */
             serviceFeeAmount: string;
+            /** @description `H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe */
+            ownerCommissionAmount: string;
             /** @description `IV` — bảo hiểm xe */
             vehicleInsuranceAmount: string;
             /** @description `IP` — bảo hiểm người */
@@ -16475,7 +17331,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "paid" | "credited" | "rejected";
             /** @enum {string} */
-            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "admin_decision";
+            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "admin_decision";
             bankCode?: string | null;
             bankAccountNumber?: string | null;
             bankAccountName?: string | null;
@@ -16493,6 +17349,58 @@ export interface components {
             data: components["schemas"]["PlatformInsurancePolicyDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        PlatformInsurancePolicyDetailDto: {
+            id: string;
+            bookingId: string;
+            bookingCode: string;
+            tenantName: string;
+            customerName: string;
+            vehicleName: string;
+            /** @enum {string} */
+            productKind: "vehicle_trip" | "personal_accident";
+            /** @enum {string} */
+            status: "reserved" | "issuing" | "issued" | "failed" | "cancelled" | "voided" | "claim";
+            /** @description Phí đã thu của khách cho sản phẩm này */
+            premiumAmount: string;
+            partnerName: string;
+            partnerProductCode?: string | null;
+            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) — `null` với hợp đồng tạo trước danh mục */
+            productNameVi?: string | null;
+            productNameEn?: string | null;
+            certificateNumber?: string | null;
+            certificateUrl?: string | null;
+            /** @description GCN do adapter GIẢ LẬP cấp — không có hiệu lực bảo hiểm */
+            isTest: boolean;
+            coverageFrom?: string | null;
+            coverageTo?: string | null;
+            /** @description Số lần đã gọi đối tác */
+            issueAttempts: number;
+            lastErrorCode?: string | null;
+            lastErrorMessage?: string | null;
+            /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại — cần người xử lý */
+            nextAttemptAt?: string | null;
+            issuedAt?: string | null;
+            /** @description Bằng chứng khách CHỌN sản phẩm này (ADR 0028 điều 5) */
+            consentAt?: string | null;
+            createdAt: string;
+            consentSource?: string | null;
+            lastAttemptAt?: string | null;
+            cancelledAt?: string | null;
+            voidedAt?: string | null;
+            idempotencyKey: string;
+            /** @description Yêu cầu đã gửi đối tác ở lần thử gần nhất */
+            requestPayload?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Phản hồi nguyên trạng của đối tác ở lần thử gần nhất */
+            responsePayload?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Snapshot sản phẩm đóng băng lúc đơn ra đời */
+            productSnapshot?: {
+                [key: string]: unknown;
+            } | null;
+        };
         PlatformInsurancePolicyDto: {
             id: string;
             bookingId: string;
@@ -16507,8 +17415,14 @@ export interface components {
             /** @description Phí đã thu của khách cho sản phẩm này */
             premiumAmount: string;
             partnerName: string;
+            partnerProductCode?: string | null;
+            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) — `null` với hợp đồng tạo trước danh mục */
+            productNameVi?: string | null;
+            productNameEn?: string | null;
             certificateNumber?: string | null;
             certificateUrl?: string | null;
+            /** @description GCN do adapter GIẢ LẬP cấp — không có hiệu lực bảo hiểm */
+            isTest: boolean;
             coverageFrom?: string | null;
             coverageTo?: string | null;
             /** @description Số lần đã gọi đối tác */
@@ -16518,7 +17432,7 @@ export interface components {
             /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại — cần người xử lý */
             nextAttemptAt?: string | null;
             issuedAt?: string | null;
-            /** @description Bằng chứng khách CHỌN bảo hiểm tai nạn người (ADR 0028 điều 5) */
+            /** @description Bằng chứng khách CHỌN sản phẩm này (ADR 0028 điều 5) */
             consentAt?: string | null;
             createdAt: string;
         };
@@ -16806,11 +17720,41 @@ export interface components {
              * @description Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói
              * @enum {string}
              */
-            vehicleLimitKind: "total" | "unlimited" | "not_applicable";
+            vehicleLimitKind: "total" | "unlimited" | "not_applicable" | "not_covered";
             /** @description Chỉ khi vehicleLimitKind = total */
             vehicleLimit?: number | null;
+            /** @description Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) — all → car → motorbike. Rỗng khi không ở tuyến gói. vehicleLimit ở trên là TỔNG trần các kỳ này */
+            terms: components["schemas"]["PlatformTenantPlanTermDto"][];
             /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
             nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
+        };
+        PlatformTenantPlanTermDto: {
+            /**
+             * @description @xeprime/types → PlanVehicleScope
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
+            subscriptionId: string;
+            planCode: string;
+            planName: string;
+            /**
+             * @description current | grace
+             * @enum {string}
+             */
+            phase: "current" | "grace" | "lapsed" | "unconfigured";
+            /** @description ISO — bắt đầu kỳ */
+            startsAt: string;
+            /** @description ISO — kết thúc kỳ */
+            endsAt: string;
+            /** @description ISO — hết ân hạn */
+            graceEndsAt?: string | null;
+            /**
+             * @description Trần xe snapshot của KỲ này
+             * @enum {string}
+             */
+            vehicleLimitKind: "total" | "unlimited" | "not_applicable" | "not_covered";
+            /** @description Chỉ khi vehicleLimitKind = total */
+            vehicleLimit?: number | null;
         };
         PlatformTenantStatusCountsDto: {
             draft: number;
@@ -16862,11 +17806,11 @@ export interface components {
             pickupWindowEndDate?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044) */
+            /** @description ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút–4 giờ, ADR 0066) */
             respondBy: string;
-            /** @description Worker đã nhắc lần 1 */
+            /** @description Worker đã nhắc lần 1 (khi còn 60 phút tới hạn — bỏ qua nếu cửa sổ ngắn hơn) */
             firstRemindedAt?: string | null;
-            /** @description Worker đã nhắc lần cuối */
+            /** @description Worker đã nhắc lần cuối (khi còn 15 phút tới hạn) */
             finalRemindedAt?: string | null;
             /** @description Lúc chủ xe nhận chuyến */
             decidedAt?: string | null;
@@ -17219,7 +18163,9 @@ export interface components {
             packageMonths?: number;
             /** @enum {string} */
             routeType?: "inner_city" | "inter_city" | "inter_city_one_way";
-            /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người không */
+            /** @description Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không */
+            vehicleProtectionSelected?: boolean;
+            /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không */
             personalAccidentSelected?: boolean;
         };
         PriceBoundsDto: {
@@ -17339,7 +18285,7 @@ export interface components {
             customerTotalAmount?: string | null;
             /** @description Tiền giữ chỗ sau khi áp mã */
             holdAmount?: string | null;
-            fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
+            fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
             name: string;
             description?: string | null;
             /** @enum {string} */
@@ -17417,6 +18363,37 @@ export interface components {
             /** @description Đích đến khi bấm — null = không bấm được */
             linkUrl: string | null;
         };
+        PublicCustomerFeeBreakdownDto: {
+            /**
+             * @description Loại xe — quyết định mức S và biểu phí bảo hiểm
+             * @enum {string}
+             */
+            vehicleType: "car" | "motorbike";
+            /** @description Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng */
+            rentalDays: number;
+            /** @description B — tổng bảng kê giá thuê (gồm giao nhận) */
+            baseAmount: string;
+            /** @description G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
+            deliveryAmount?: string;
+            lines: components["schemas"]["FeeLineDto"][];
+            /** @description Tổng phụ phí KHÁCH gánh (S + IV + IP) */
+            customerFeeTotal: string;
+            /** @description Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp) */
+            customerTotalAmount: string;
+            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên */
+            grossOnlineAmount: string;
+            /** @description P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
+            promoDiscountAmount: string;
+            /** @description Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã. */
+            promo?: components["schemas"]["PromoCodeSnapshotDto"] | null;
+            /** @description Tiền giữ chỗ − P — số quét QR trả ngay */
+            onlineAmount: string;
+            /** @description Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
+            payAtPickupAmount: string;
+            /** @description Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính) */
+            holdAmount?: string | null;
+            policy: components["schemas"]["PublicFeePolicySnapshotDto"];
+        };
         PublicDestinationDto: {
             /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
             provinceCode: string;
@@ -17428,6 +18405,42 @@ export interface components {
             imageUrl?: string | null;
             /** @description Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. Null khi tỉnh không có xe tự lái nào có giá ngày. */
             minDailyPrice?: string | null;
+        };
+        PublicFeePolicySnapshotDto: {
+            policyId: string;
+            version: number;
+            holdMinAmount: string;
+            /** @description Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động */
+            holdPaymentWindowMinutes: number;
+            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động */
+            freeCancelHours: number;
+            tripInsuranceEnabled: boolean;
+            vehicleProtectionEnabled: boolean;
+            insurancePartnerName?: string | null;
+            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066 */
+            depositPercent: number;
+            /** @description `S` — phí sàn cố định mỗi đơn */
+            customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IV` — biểu phí mỗi ngày */
+            vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IP` — biểu phí mỗi ngày */
+            tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+        };
+        PublicInsuranceProductDto: {
+            /** @enum {string} */
+            kind: "vehicle_trip" | "personal_accident";
+            /** @enum {string} */
+            provider: "mic";
+            nameVi: string;
+            nameEn: string;
+            coverageVi: string;
+            coverageEn: string;
+            /** @description Khấu trừ/vụ cho ĐÚNG loại xe đang xem. `null` = không áp dụng khấu trừ */
+            deductibleAmount?: string | null;
+            /** @description Bồi thường tối đa cho loại xe đang xem. `null` = xem `maxPayoutNote*` */
+            maxPayoutAmount?: string | null;
+            maxPayoutNoteVi?: string | null;
+            maxPayoutNoteEn?: string | null;
         };
         PublicListingDetailDto: {
             id: string;
@@ -17613,9 +18626,30 @@ export interface components {
             total: number;
             hasNext: boolean;
         };
+        PublicQuoteBreakdownDto: {
+            /** @description Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày) */
+            days?: number | null;
+            /** @description Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
+            longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
+            rows: components["schemas"]["PriceBreakdownRowDto"][];
+            /** @description Tổng khách trả TRƯỚC cọc */
+            totalAmount: string;
+            /** @description Cọc thế chấp hoàn trả — không nằm trong tổng */
+            depositAmount: string;
+            /** @enum {string|null} */
+            policySource: "shop" | "vehicle" | null;
+            /** @description updatedAt của chính sách hiệu lực */
+            policyUpdatedAt?: string | null;
+            estimateNote?: string | null;
+            dayAmounts?: string[] | null;
+            fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
+        };
         PublicQuoteDto: {
-            breakdown: components["schemas"]["QuoteBreakdownDto"];
+            breakdown: components["schemas"]["PublicQuoteBreakdownDto"];
             delivery: components["schemas"]["DeliverySummaryDto"];
+            /** @description Nền tảng có đối tác bảo hiểm phát hành thật — false thì ẩn ô chọn bảo hiểm, server không thu IV/IP */
+            insuranceOffered: boolean;
+            insuranceOfferedByKind: components["schemas"]["InsuranceOfferedByKindDto"];
             autoAccept?: components["schemas"]["AutoAcceptPreviewDto"] | null;
         };
         PublicShopDto: {
@@ -17684,6 +18718,11 @@ export interface components {
              * @enum {number}
              */
             termMonths: 1 | 3 | 6 | 12;
+            /**
+             * @description Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay
+             * @enum {string}
+             */
+            timing?: "next_term" | "now";
         };
         PushDeviceDto: {
             id: string;
@@ -17714,6 +18753,7 @@ export interface components {
             /** @description updatedAt của chính sách hiệu lực */
             policyUpdatedAt?: string | null;
             estimateNote?: string | null;
+            dayAmounts?: string[] | null;
             fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
         };
         ReceiptBookingOptionDto: {
@@ -17927,7 +18967,7 @@ export interface components {
             total: string;
         };
         ReconciliationPlatformDto: {
-            /** @description Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: huỷ muộn chia đôi `D + S`. */
+            /** @description Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ vào phần nền tảng. */
             serviceFeeRecognized: string;
             /** @description Tiền gói đã thu (subscription_invoices.paid_amount) */
             subscriptionsCollected: string;
@@ -18056,12 +19096,6 @@ export interface components {
         };
         RejectBookingRequestDto: {
             reason?: string;
-        };
-        RejectDriverLicenceDto: {
-            /** @enum {string} */
-            reason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "other";
-            /** @description Bắt buộc khi lý do là "other" */
-            note?: string | null;
         };
         RejectRefundDto: {
             /** @description Lý do từ chối — bắt buộc */
@@ -18722,6 +19756,11 @@ export interface components {
             /** @description SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) — null ở dòng tuyến hoa hồng và dòng trước ADR 0041 */
             quota?: components["schemas"]["PlanQuotaDto"] | null;
             /**
+             * @description SNAPSHOT phạm vi loại xe của bậc lúc gán (ADR 0065)
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
+            /**
              * @description SNAPSHOT lúc gán (ADR 0024 điều 2) — không đọc xuyên qua plans
              * @enum {string|null}
              */
@@ -18756,6 +19795,11 @@ export interface components {
             planId: string;
             planCode: string;
             termMonths: number;
+            /**
+             * @description Phạm vi loại xe của bậc lúc phát hành (ADR 0065). Mỗi phạm vi giữ tối đa MỘT hoá đơn còn nhận được tiền
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
             /** @description Hạn mức sẽ áp khi hoá đơn này kích hoạt gói */
             quota: components["schemas"]["PlanQuotaDto"];
             lines: components["schemas"]["PlanInvoiceLineDto"][];
@@ -18793,7 +19837,7 @@ export interface components {
             /** @description Mã người dùng đọc/nhắc qua điện thoại */
             code: string;
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             /** @enum {string} */
@@ -18807,7 +19851,7 @@ export interface components {
             bookingRequestId?: string | null;
             /** @enum {string} */
             openedByScope: "customer" | "tenant" | "platform";
-            openedByName: string;
+            openedByName?: string | null;
             assigneeName?: string | null;
             resolution?: string | null;
             resolvedAt?: string | null;
@@ -18822,7 +19866,7 @@ export interface components {
             /** @description Mã người dùng đọc/nhắc qua điện thoại */
             code: string;
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             /** @enum {string} */
@@ -18836,7 +19880,7 @@ export interface components {
             bookingRequestId?: string | null;
             /** @enum {string} */
             openedByScope: "customer" | "tenant" | "platform";
-            openedByName: string;
+            openedByName?: string | null;
             assigneeName?: string | null;
             resolution?: string | null;
             resolvedAt?: string | null;
@@ -18875,7 +19919,7 @@ export interface components {
             workspace: "manage" | "owner_lite" | "onboarding";
             reason: string;
             capabilities: ("vehicle.view" | "branch.view" | "calendar.view" | "booking_request.view" | "booking.view" | "handover.view" | "customer.view_masked" | "driver.view" | "member.view" | "tenant_profile.view" | "rental_policy.view" | "subscription_status.view" | "support_case.view" | "maintenance.view" | "vehicle.info.edit" | "vehicle.media.manage" | "maintenance.manage" | "vehicle.create_draft" | "vehicle.document.manage" | "vehicle.branch.reassign" | "vehicle.operations.update" | "vehicle.schedule_block.manage" | "branch.basic_manage" | "vehicle.submit_review" | "listing.repair")[];
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "customers.view" | "customers.manage" | "customers.manage_risk" | "customers.documents.manage" | "customers.documents.view_files" | "calendar.view" | "subscription.view" | "subscription.purchase" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "seller_profile.view" | "seller_profile.manage" | "support.view" | "support.manage" | "platform.dashboard.view" | "platform.tenants.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.tenant_support.view" | "platform.tenant_support.assist" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage" | "platform.fee_policies.manage" | "platform.promo_codes.manage" | "platform.sellers.verify" | "platform.driver_licences.review" | "platform.money.manage" | "platform.support.manage" | "platform.app_config.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "customers.view" | "customers.manage" | "customers.manage_risk" | "customers.documents.manage" | "customers.documents.view_files" | "calendar.view" | "subscription.view" | "subscription.purchase" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "seller_profile.view" | "seller_profile.manage" | "support.view" | "support.manage" | "platform.dashboard.view" | "platform.tenants.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.tenant_support.view" | "platform.tenant_support.assist" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage" | "platform.fee_policies.manage" | "platform.promo_codes.manage" | "platform.sellers.verify" | "platform.driver_licences.review" | "platform.sales_followups.manage" | "platform.money.manage" | "platform.insurance.manage" | "platform.support.manage" | "platform.app_config.manage")[];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -18920,6 +19964,10 @@ export interface components {
             /** @enum {string} */
             entityType: "individual" | "household_business" | "company" | "unknown";
             amount: string;
+            /** @description Tổng GTGT (dòng một-mức cũ không tách nên không có ở đây) */
+            vatAmount: string;
+            /** @description Tổng TNCN (dòng một-mức cũ không tách nên không có ở đây) */
+            pitAmount: string;
             rows: number;
         };
         TaxPeriodAdvancedDto: {
@@ -18935,6 +19983,12 @@ export interface components {
             totalAmount: string;
             /** @description Tổng giá trị thuê chịu thuế của kỳ */
             totalTaxableBase: string;
+            /** @description Tổng GTGT của kỳ (ADR 0068) — dòng một-mức trước 22/10/2026 không tách nên không có ở đây */
+            totalVatAmount: string;
+            /** @description Tổng TNCN của kỳ (ADR 0068) */
+            totalPitAmount: string;
+            /** @description Tổng của các dòng một-mức CHƯA TÁCH GTGT/TNCN (trước 22/10/2026). Kỳ trộn hai loại dòng thì `totalVatAmount + totalPitAmount + totalUnsplitAmount = totalAmount` */
+            totalUnsplitAmount: string;
             /** @description Số dòng (gồm cả dòng đảo) */
             rows: number;
             /** @description Đã khấu trừ, CHƯA kê khai */
@@ -18961,6 +20015,26 @@ export interface components {
              */
             oldestPeriod: string | null;
         };
+        TaxRateDto: {
+            /**
+             * @description % thuế GTGT khấu trừ thay (0–5)
+             * @example 5
+             */
+            vatPercent: number;
+            /**
+             * @description % thuế TNCN khấu trừ thay (0–5)
+             * @example 2
+             */
+            pitPercent: number;
+        };
+        TaxRatesDto: {
+            /** @description Tự lái — nhóm dịch vụ (NĐ 117: 5% + 2%) */
+            self_drive: components["schemas"]["TaxRateDto"];
+            /** @description Thuê dài hạn — nhóm dịch vụ (NĐ 117: 5% + 2%) */
+            long_term: components["schemas"]["TaxRateDto"];
+            /** @description Có tài xế — nhóm vận tải (NĐ 117: 3% + 1,5%) */
+            with_driver: components["schemas"]["TaxRateDto"];
+        };
         TaxRowDto: {
             id: string;
             bookingId: string;
@@ -18968,16 +20042,37 @@ export interface components {
             tenantId: string;
             tenantName: string;
             /**
-             * @description Loại chủ thể tại thời điểm phát sinh. `null`/`unknown` = gian hàng chưa khai hồ sơ người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual`.
+             * @description Loại chủ thể người bán KHAI trong hồ sơ lúc ghi sổ. `unknown` = gian hàng chưa khai hồ sơ người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã bị khấu trừ theo mức cá nhân — xem `taxSubjectType`).
+             * @enum {string}
+             */
+            entityType: "individual" | "household_business" | "company" | "unknown";
+            /**
+             * @description Chủ thể ÁP THUẾ đóng băng lúc nhận chuyến (ADR 0068 điều 2): không hồ sơ / doanh nghiệp chưa xác minh ⇒ `individual`. Khác `entityType` là chuyện bình thường. null ở dòng một-mức trước 22/10/2026
              * @enum {string|null}
              */
-            entityType?: "individual" | "household_business" | "company" | "unknown" | null;
+            taxSubjectType?: "individual" | "household_business" | "company" | null;
+            /** @description MST — snapshot lúc ghi sổ */
             taxCode?: string | null;
+            /** @description Tên pháp lý — snapshot */
+            legalName?: string | null;
             /** @description Giá trị thuê chịu thuế `B` — KHÔNG gồm bảo hiểm */
             taxableBase: string;
-            /** @description % đã áp — SNAPSHOT, không phải tỷ lệ hiện hành */
+            /** @description % tổng đã áp — SNAPSHOT, không phải tỷ lệ hiện hành */
             percent: number;
-            /** @example VAT 5% + TNCN 5% */
+            /** @description % GTGT đã áp (ADR 0068). null ở dòng một-mức trước 22/10/2026 */
+            vatPercent?: number | null;
+            /** @description % TNCN đã áp */
+            pitPercent?: number | null;
+            /** @description Thuế GTGT. ÂM ở dòng đảo. null ở dòng một-mức trước 22/10/2026 */
+            vatAmount?: string | null;
+            /** @description Thuế TNCN. ÂM ở dòng đảo */
+            pitAmount?: string | null;
+            /**
+             * @description Nhóm NĐ 117 — service (5% + 2%) | transport (3% + 1,5%)
+             * @enum {string|null}
+             */
+            taxCategory?: "service" | "transport" | null;
+            /** @example GTGT 5% + TNCN 2% */
             label: string;
             /** @description Số tiền. ÂM = bút toán đảo. */
             amount: string;
@@ -18999,10 +20094,16 @@ export interface components {
         TaxTenantBreakdownDto: {
             tenantId: string;
             tenantName: string;
-            /** @enum {string|null} */
-            entityType?: "individual" | "household_business" | "company" | "unknown" | null;
+            /**
+             * @description Loại chủ thể người bán KHAI. `unknown` = chưa khai hồ sơ người bán
+             * @enum {string}
+             */
+            entityType: "individual" | "household_business" | "company" | "unknown";
             taxCode?: string | null;
+            legalName?: string | null;
             amount: string;
+            vatAmount: string;
+            pitAmount: string;
             rows: number;
         };
         TenantCustomerDetailDto: {
@@ -19100,6 +20201,9 @@ export interface components {
             /** @enum {string} */
             state: "enabled" | "read_only" | "hidden";
         };
+        TenantPlanCatalogDto: {
+            groups: components["schemas"]["TenantPlanGroupDto"][];
+        };
         TenantPlanDto: {
             id: string;
             code: string;
@@ -19112,14 +20216,25 @@ export interface components {
             billingMode: "commission" | "package";
             /** @description % hoa hồng — chỉ có ở bậc commission */
             commissionPercent?: number | null;
+            /**
+             * @description Phạm vi loại xe (ADR 0065): motorbike | car | all (doanh nghiệp, tuyến hoa hồng)
+             * @enum {string}
+             */
+            vehicleScope: "all" | "car" | "motorbike";
             /** @description Núm vặn bậc gói (ADR 0041 điều 1) */
             limits: components["schemas"]["PlanLimitsDto"];
             currency: string;
             /** @enum {string} */
-            status: "active" | "archived";
+            status: "draft" | "active" | "archived";
             sortOrder: number;
             /** @description ISO-8601 UTC */
             createdAt: string;
+        };
+        TenantPlanGroupDto: {
+            /** @enum {string} */
+            vehicleScope: "all" | "car" | "motorbike";
+            /** @description Theo sortOrder; rỗng = chưa bán gì */
+            plans: components["schemas"]["TenantPlanDto"][];
         };
         TenantProfileDto: {
             /** @description Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích */
@@ -19145,6 +20260,12 @@ export interface components {
             periodKey: string;
             totalAmount: string;
             totalTaxableBase: string;
+            /** @description Tổng GTGT đã khấu trừ trong kỳ */
+            totalVatAmount: string;
+            /** @description Tổng TNCN đã khấu trừ trong kỳ */
+            totalPitAmount: string;
+            /** @description Tổng của các dòng một-mức CHƯA TÁCH GTGT/TNCN (trước 22/10/2026). Kỳ trộn hai loại dòng thì `totalVatAmount + totalPitAmount + totalUnsplitAmount = totalAmount` */
+            totalUnsplitAmount: string;
             rows: number;
             items: components["schemas"]["TaxRowDto"][];
         };
@@ -19232,7 +20353,10 @@ export interface components {
         };
         UpdateCatalogItemDto: {
             label?: string;
+            /** @description Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label` */
+            labelEn?: string | null;
             description?: string | null;
+            descriptionEn?: string | null;
             iconUrl?: string | null;
             /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
             showOnHome?: boolean;
@@ -19276,6 +20400,32 @@ export interface components {
             /** @enum {string} */
             driverType?: "staff" | "collaborator" | "temporary";
             note?: string | null;
+        };
+        UpdateFollowUpDto: {
+            /** @enum {string} */
+            status: "new" | "contacted" | "rebooked" | "not_interested";
+            note?: string | null;
+            /** @description Người phụ trách — tài khoản nền tảng; null để bỏ giao */
+            assigneeUserId?: string | null;
+            /** @description Trạng thái "đã gọi cho khách": `true` ghi mốc liên hệ (giữ mốc cũ nếu đã có), `false` xoá mốc, bỏ trống = không đổi */
+            markContacted?: boolean;
+        };
+        UpdateInsuranceProductDto: {
+            partnerProductCode?: string;
+            nameVi?: string;
+            nameEn?: string;
+            coverageVi?: string;
+            coverageEn?: string;
+            deductibleCar?: string | null;
+            deductibleMotorbike?: string | null;
+            maxPayoutCar?: string | null;
+            maxPayoutMotorbike?: string | null;
+            maxPayoutNoteVi?: string | null;
+            maxPayoutNoteEn?: string | null;
+            /** @description https://…{certCode}… */
+            certificateUrlTemplate?: string;
+            displayOrder?: number;
+            isActive?: boolean;
         };
         UpdateMeDto: {
             displayName?: string;
@@ -19538,53 +20688,69 @@ export interface components {
             expiresIn: number;
         };
         UpsertFeePolicyDto: {
-            /** @example Pilot — phí dịch vụ 10% */
+            /** @example Luồng tiền v2 — phí sàn cố định, hoa hồng lũy tiến */
             name: string;
             note?: string | null;
             /**
-             * @description % phí dịch vụ XePrime áp cho tuyến hoa hồng (0–30). Tuyến gói luôn 0.
-             * @example 10
+             * @description LEGACY — % phí dịch vụ của mô hình cũ (0–30). Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.
+             * @example 0
              */
-            serviceFeePercent: number;
+            serviceFeePercent?: number;
             /**
-             * @description Sàn khoản giữ chỗ (VND string)
+             * @description Sàn khoản giữ chỗ (VND string, bội 1.000đ)
              * @example 20000
              */
             holdMinAmount: string;
             /**
-             * @description Phút khách có để chuyển cọc, tính từ lúc chủ xe duyệt (ADR 0032 điều 2)
+             * @description TRẦN của hạn chuyển tiền giữ chỗ (phút). Hạn thật = clamp(round(ΔT × 30%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận — ADR 0066
              * @example 120
              */
             holdPaymentWindowMinutes: number;
             /**
-             * @description Huỷ trong bấy nhiêu giờ KỂ TỪ khi duyệt thì hoàn 100% (ADR 0032 điều 5)
-             * @example 4
+             * @description TRẦN của cửa sổ huỷ miễn phí (giờ). Cửa sổ thật = clamp(round(ΔT × 20%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận; 0 = tắt huỷ miễn phí — ADR 0066
+             * @example 2
              */
             freeCancelHours: number;
             /**
-             * @description D — % cọc trên giá thuê gốc
-             * @example 20
+             * @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) — ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D
+             * @example 15
              */
             depositPercent: number;
             /**
-             * @description Sàn tiền cọc (VND string)
-             * @example 50000
+             * @description Sàn của `D` (VND string, bội 1.000đ): D = max(% × tiền thuê, sàn); 0 = không sàn
+             * @example 0
              */
             depositMinAmount: string;
             /**
-             * @description Trần % cọc của chính sách này
+             * @description Trần % của `D` ở chính sách này
              * @example 30
              */
             depositMaxPercent: number;
+            /** @description Cổng khấu trừ thuế thay chủ xe (ADR 0068) */
             taxEnabled: boolean;
-            taxPercent?: number | null;
-            taxLabel?: string | null;
+            /** @description Bảng mức khấu trừ theo loại dịch vụ, tách GTGT/TNCN — bắt buộc khi taxEnabled (ADR 0068). Áp cho cá nhân và hộ kinh doanh; doanh nghiệp đã xác minh không bị khấu trừ. */
+            taxRates?: components["schemas"]["TaxRatesDto"] | null;
+            /**
+             * @description Căn cứ pháp lý của việc khấu trừ — bắt buộc khi taxEnabled
+             * @example NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP
+             */
+            taxLegalBasis?: string | null;
             tripInsuranceEnabled: boolean;
+            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`) */
             tripInsurancePercent?: number | null;
             vehicleProtectionEnabled: boolean;
+            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`) */
             vehicleProtectionPercent?: number | null;
             /** @description Đối tác bảo hiểm THẬT — chỉ điền khi đã có hợp đồng (ADR 0028 điều 5) */
             insurancePartnerName?: string | null;
+            /** @description `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+            customerPlatformFee?: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `H` — nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1 */
+            ownerCommissionTiers?: components["schemas"]["OwnerCommissionTierDto"][];
+            /** @description `IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            vehicleProtectionDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            tripInsuranceDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         UpsertPromoCodeDto: {
             /**
@@ -19755,8 +20921,10 @@ export interface components {
         };
         VehicleApprovalDeliveryTierDto: {
             toKm: number;
-            /** @description VND — '0' là miễn phí */
-            fee: string;
+            /** @description Phí trọn gói VND — '0' là miễn phí */
+            fee?: string;
+            /** @description Đơn giá VND mỗi km — bậc tính theo km */
+            perKm?: string;
         };
         VehicleApprovalDetailDto: {
             approvalTaskId: string;
@@ -20444,6 +21612,39 @@ export interface components {
             data: components["schemas"]["VehicleTripHistoryItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        VehicleTypeQuotaDto: {
+            /** @enum {string} */
+            kind: "unlimited" | "total" | "scope_required";
+            /** @description Trần — chỉ khi kind = 'total' */
+            limit: number | null;
+            /**
+             * @description Trần từ đâu ra — null khi kind = 'scope_required'
+             * @enum {string|null}
+             */
+            reason?: "plan" | "owner_lite" | "billing_unconfigured" | null;
+            /**
+             * @description Đếm xe trong phạm vi nào — all = gộp hai loại (trần dùng chung)
+             * @enum {string}
+             */
+            countedScope: "all" | "car" | "motorbike";
+            /** @description Số xe chưa xoá đếm vào trần này (điểm chặn tạo xe) */
+            used: number;
+            /** @description Số xe đếm vào trần này đang chiếm suất trên chợ */
+            onMarketplace: number;
+            /** @description Kỳ gói đang gác loại xe này; null ngoài tuyến gói */
+            subscriptionId?: string | null;
+            planCode?: string | null;
+            planName?: string | null;
+            /**
+             * @description Pha của kỳ đó (current | grace); null ngoài tuyến gói
+             * @enum {string|null}
+             */
+            phase?: "current" | "grace" | "lapsed" | "unconfigured" | null;
+        };
+        VehicleTypeQuotasDto: {
+            car: components["schemas"]["VehicleTypeQuotaDto"];
+            motorbike: components["schemas"]["VehicleTypeQuotaDto"];
+        };
         VerifyCustomerDocumentDto: {
             /** @enum {string} */
             verifyMethod: "vneid" | "in_person";
@@ -20549,17 +21750,21 @@ export interface components {
             acceptKeepRatePercent?: number | null;
         };
         WalletStatementTotalsDto: {
-            /** @description Σ doanh thu các chuyến hoàn thành trong kỳ */
+            /** @description Σ doanh thu cho thuê xe (tiền thuê `R`, không gồm phí giao) các chuyến hoàn thành trong kỳ */
             revenueTotal: string;
+            /** @description Σ hoa hồng `H` XePrime giữ lại trong kỳ (số dương). 0 với tuyến gói. */
+            ownerCommissionTotal: string;
             /** @description Σ thuế đã khấu trừ hộ trong kỳ (số dương) */
             taxTotal: string;
-            /** @description Σ phần khách trả trực tiếp khi nhận xe */
+            /** @description Σ phần TIỀN THUÊ khách trả trực tiếp khi nhận xe (`R − D − H`, không gồm phí giao) */
             payAtPickupTotal: string;
+            /** @description Σ phí giao xe `G` khách trả tận tay chủ xe trong kỳ */
+            deliveryTotal: string;
             /** @description Σ thay đổi số dư ví do các chuyến của kỳ */
             balanceChangeTotal: string;
             /** @description Phí quản lý & vận hành gói nền tảng ĐÃ TRẢ trong kỳ (số dương). 0 với tuyến hoa hồng. */
             subscriptionFeeTotal: string;
-            /** @description Thu nhập chủ gian hàng = doanh thu − thuế − phí gói */
+            /** @description Thu nhập chủ gian hàng = doanh thu cho thuê xe − phí dịch vụ chủ xe − thuế − phí gói */
             ownerIncome: string;
         };
         WalletStatementTripDto: {
@@ -20575,21 +21780,29 @@ export interface components {
             pickupAt: string;
             /** @description Ngày về — giờ trả THỰC TẾ nếu có, không thì theo lịch */
             returnAt: string;
-            /** @description Đơn giá một đơn vị thuê (ngày hoặc tháng). `null` khi snapshot giá của đơn không đủ dữ liệu để chia — KHÔNG suy ngược từ tổng. */
+            /** @description Đơn giá một đơn vị thuê (ngày hoặc tháng). Theo ngày: CHỈ khi mọi ngày cùng một giá (đặc tả 05 §7.1) — giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ngược `R / N` từ tổng. */
             unitAmount?: string | null;
             /**
              * @description Đơn vị của `unitAmount`. `null` đi cùng `unitAmount = null`.
              * @enum {string|null}
              */
             unitKind?: "day" | "month" | null;
-            /** @description Doanh thu chuyến `B` (VND string) */
+            /** @description Doanh thu cho thuê xe `R = B − G` (VND string) — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe (`deliveryAmount`). */
             revenueAmount: string;
+            /** @description Phí dịch vụ – chủ xe `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã đóng băng (`ownerPayout`) khi có, không thì từ cột `bookings.owner_commission_amount` (ghi từ cùng snapshot); 0 ở tuyến gói và đơn trước luồng tiền v2. */
+            ownerCommissionAmount: string;
             /** @description Thuế khấu trừ `T` — chủ xe chịu */
             taxAmount: string;
-            /** @description `B − D` — khách trả trực tiếp chủ xe, không qua ví */
+            /** @description `R − D − H` — phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG gồm phí giao xe (khoản đó ở `deliveryAmount`). */
             payAtPickupAmount: string;
+            /** @description Phí giao xe `G` — khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. Đọc từ `bookings.delivery_fee` (sửa được sau khi đơn ra đời). `0` khi không giao tận nơi. */
+            deliveryAmount: string;
+            /** @description Thu nhập chủ xe của chuyến `R − H − T` (ADR 0068 điều 5). `ownerIncomeAmount − payAtPickupAmount = D − T` = phần cộng ví. */
+            ownerIncomeAmount: string;
             /** @description Ví nhúc nhích bao nhiêu vì chuyến này. Đọc từ sổ, âm được. */
             balanceChange: string;
+            /** @description Bảng cộng ví chủ xe dựng từ bảng phí ĐÃ ĐÓNG BĂNG của đơn (`ownerPayoutOf`). `null` với đơn gian hàng lập tay / đơn cũ không đi qua chính sách phí. Phí giao xe KHÔNG nằm trong bảng (xem `deliveryAmount`). */
+            ownerPayout?: components["schemas"]["OwnerPayoutDto"] | null;
         };
         WalletSummaryDto: {
             /** @description Rút được ngay (VND string) */
@@ -21702,12 +22915,294 @@ export interface operations {
             };
         };
     };
-    DriverLicencesController_requestReview: {
+    DriverLicencesController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignDriverLicenceDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DriverLicencePresignDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 6 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FavoritesController_list: {
+        parameters: {
+            query?: {
+                /** @description Tab Ô tô / Xe máy. Bỏ trống = Ô tô. */
+                vehicleType?: "car" | "motorbike";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteVehiclePageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FavoritesController_add: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                vehicleId: string;
             };
             cookie?: never;
         };
@@ -21720,7 +23215,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["DriverLicenceDto"];
+                        data: components["schemas"]["FavoriteToggleResultDto"];
                     };
                 };
             };
@@ -21873,18 +23368,16 @@ export interface operations {
             };
         };
     };
-    DriverLicencesController_presign: {
+    FavoritesController_remove: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                vehicleId: string;
+            };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PresignDriverLicenceDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Thành công */
             200: {
@@ -21893,7 +23386,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["DriverLicencePresignDto"];
+                        data: components["schemas"]["FavoriteToggleResultDto"];
                     };
                 };
             };
@@ -21961,6 +23454,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -21982,7 +23496,137 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 6 request / 60 giây.
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FavoritesController_status: {
+        parameters: {
+            query: {
+                /** @description Id xe — CSV, tối đa 100 id một lượt. */
+                vehicleIds: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FavoriteStatusDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -30035,6 +31679,306 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    BookingInsuranceController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsuranceCertificateDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    BookingInsuranceController_coverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsuranceCoverageDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
                      *       }
                      *     }
                      */
@@ -44564,7 +46508,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
@@ -52836,6 +54780,8 @@ export interface operations {
                 status?: "active" | "locked" | "deleted";
                 /** @description Chỉ khách đã từng gửi yêu cầu thuê */
                 hasRequests?: boolean;
+                /** @description Tình trạng bằng lái */
+                licence?: "none" | "processing" | "verified" | "rejected";
                 page?: number;
                 limit?: number;
             };
@@ -53496,12 +55442,9 @@ export interface operations {
     };
     PlatformDriverLicencesController_list: {
         parameters: {
-            query?: {
-                /** @description Bỏ trống = hàng đợi CHỜ DUYỆT, cũ nhất trước */
-                status?: "uploading" | "processing" | "pending_review" | "verified" | "rejected" | "superseded" | "cancelled";
-                kind?: "vn" | "international_permit" | "foreign";
-                /** @description Tìm theo họ tên trên bằng / số bằng / tên hoặc SĐT tài khoản */
-                q?: string;
+            query: {
+                /** @description Tài khoản khách */
+                userId: string;
                 page?: number;
                 limit?: number;
             };
@@ -53777,181 +55720,6 @@ export interface operations {
             };
         };
     };
-    PlatformDriverLicencesController_approve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApproveDriverLicenceDto"];
-            };
-        };
-        responses: {
-            /** @description Thành công */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PlatformDriverLicenceDto"];
-                    };
-                };
-            };
-            /**
-             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
-             *
-             *     Mã lỗi: `VALIDATION_FAILED`
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "VALIDATION_FAILED",
-                     *         "message": "Dữ liệu gửi lên không hợp lệ"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
-             *
-             *     Mã lỗi: `UNAUTHENTICATED`
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "UNAUTHENTICATED",
-                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
-             *
-             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Không tìm thấy bản ghi tương ứng.
-             *
-             *     Mã lỗi: `NOT_FOUND`
-             */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "NOT_FOUND",
-                     *         "message": "Không tìm thấy dữ liệu"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
-             *
-             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "CONFLICT",
-                     *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     PlatformDriverLicencesController_image: {
         parameters: {
             query?: never;
@@ -54052,287 +55820,6 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Không tìm thấy dữ liệu"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    PlatformDriverLicencesController_reject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RejectDriverLicenceDto"];
-            };
-        };
-        responses: {
-            /** @description Thành công */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PlatformDriverLicenceDto"];
-                    };
-                };
-            };
-            /**
-             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
-             *
-             *     Mã lỗi: `VALIDATION_FAILED`
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "VALIDATION_FAILED",
-                     *         "message": "Dữ liệu gửi lên không hợp lệ"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
-             *
-             *     Mã lỗi: `UNAUTHENTICATED`
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "UNAUTHENTICATED",
-                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
-             *
-             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Không tìm thấy bản ghi tương ứng.
-             *
-             *     Mã lỗi: `NOT_FOUND`
-             */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "NOT_FOUND",
-                     *         "message": "Không tìm thấy dữ liệu"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
-             *
-             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "CONFLICT",
-                     *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    PlatformDriverLicencesController_counts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Thành công */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PlatformDriverLicenceCountsDto"];
-                    };
-                };
-            };
-            /**
-             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
-             *
-             *     Mã lỗi: `UNAUTHENTICATED`
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "UNAUTHENTICATED",
-                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
-             *
-             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
                      *       }
                      *     }
                      */
@@ -55304,6 +56791,879 @@ export interface operations {
             };
         };
     };
+    PlatformFollowUpsController_list: {
+        parameters: {
+            query?: {
+                reason?: "customer_cancelled" | "unpaid" | "host_declined" | "no_response" | "slot_taken" | "other_cancelled";
+                followUpStatus?: "new" | "contacted" | "rebooked" | "not_interested";
+                /** @description Chỉ mục giao cho tôi */
+                mine?: boolean;
+                /** @description Tên khách / mã đơn / tên xe */
+                q?: string;
+                /** @description Tra CHÍNH XÁC theo SĐT khách */
+                phone?: string;
+                /** @description Kết thúc từ ngày (YYYY-MM-DD, giờ VN) */
+                dateFrom?: string;
+                /** @description Kết thúc tới hết ngày (YYYY-MM-DD, giờ VN) */
+                dateTo?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformFollowUpPageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformFollowUpsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFollowUpDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformFollowUpDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformFollowUpsController_revealContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FollowUpContactDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformFollowUpsController_listAssignees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FollowUpAssigneeDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformInsuranceProductsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsuranceProductDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformInsuranceProductsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInsuranceProductDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsuranceProductDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformLocationsController_list: {
         parameters: {
             query?: {
@@ -56069,9 +58429,13 @@ export interface operations {
     PlatformInsuranceController_list: {
         parameters: {
             query?: {
-                /** @description Bỏ trống = hàng đợi VIỆC CẦN LÀM (đang lỗi) */
-                status?: "reserved" | "issuing" | "issued" | "failed" | "cancelled" | "voided" | "claim";
+                /** @description Bỏ trống = hàng đợi VIỆC CẦN LÀM (đang lỗi). `any` = mọi trạng thái. */
+                status?: "reserved" | "issuing" | "issued" | "failed" | "cancelled" | "voided" | "claim" | "any";
                 productKind?: "vehicle_trip" | "personal_accident";
+                /** @description Chỉ hợp đồng của một đơn (id đơn). */
+                bookingId?: string;
+                /** @description Tìm theo mã đơn hoặc số giấy chứng nhận (chứa chuỗi). */
+                q?: string;
                 page?: number;
                 limit?: number;
             };
@@ -56147,6 +58511,156 @@ export interface operations {
                      *       "error": {
                      *         "code": "MISSING_PERMISSION",
                      *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformInsuranceController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformInsurancePolicyDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
                      *       }
                      *     }
                      */
@@ -62932,7 +65446,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Bỏ trống = chỉ gói đang bán */
-                status?: "active" | "archived";
+                status?: "draft" | "active" | "archived";
             };
             header?: never;
             path?: never;
@@ -66613,7 +69127,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
@@ -72274,6 +74788,93 @@ export interface operations {
             };
         };
     };
+    PublicInsuranceProductsController_list: {
+        parameters: {
+            query: {
+                vehicleType: "car" | "motorbike";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicInsuranceProductDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicListingsController_search: {
         parameters: {
             query?: {
@@ -72292,6 +74893,8 @@ export interface operations {
                 fuelType?: string;
                 /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
+                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
                 /** @description Chỉ xe giao tận nơi */
@@ -72744,6 +75347,8 @@ export interface operations {
                 packageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+                vehicleProtectionSelected?: boolean;
+                personalAccidentSelected?: boolean;
             };
             header?: never;
             path: {
@@ -72977,6 +75582,8 @@ export interface operations {
                 fuelType?: string;
                 /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
+                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
                 /** @description Chỉ xe giao tận nơi */
@@ -73290,6 +75897,9 @@ export interface operations {
                 returnAt?: string;
                 packageMonths?: number;
                 routeType?: "inner_city" | "inter_city" | "inter_city_one_way";
+                /** @description Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không */
+                vehicleProtectionSelected?: boolean;
+                /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không */
                 personalAccidentSelected?: boolean;
             };
             header?: never;
@@ -79032,6 +81642,112 @@ export interface operations {
             };
         };
     };
+    SubscriptionController_planCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["TenantPlanCatalogDto"];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     SubscriptionController_plans: {
         parameters: {
             query?: never;
@@ -79295,7 +82011,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "plan_consultation" | "handover_unconfirmed" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
@@ -81580,6 +84296,156 @@ export interface operations {
             };
         };
     };
+    CustomerTripsController_cancelPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CustomerTripCancelPreviewDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     CustomerTripsController_handoverEvidence: {
         parameters: {
             query?: never;
@@ -81896,6 +84762,177 @@ export interface operations {
                 "application/json": components["schemas"]["ProvideRefundAccountDto"];
             };
         };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CustomerTripDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    CustomerTripsController_reportNotReceived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Thành công */
             200: {

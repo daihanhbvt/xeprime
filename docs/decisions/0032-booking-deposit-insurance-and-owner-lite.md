@@ -2,6 +2,8 @@
 
 Ngày: 09/09/2026 · Trạng thái: Accepted · Ghi đè một phần: 0014, 0025, 0027, 0028, 0029 · Liên quan: 0006, 0016, 0018, 0022, 0024
 
+> ⚠️ **[ADR 0064](0064-financial-flow-v2.md) (21/10/2026) ghi đè:** câu "phí nền tảng 10%" ở điều 1; điều 2 (công thức `D + S + IV + IP` và cửa sổ 2h/4h cố định — nay tiền giữ chỗ 30% có sàn và cửa sổ động theo `ΔT`); điều 4 ở chữ "bắt buộc" (cả hai lớp bảo hiểm tuỳ chọn; thời điểm phát hành giữ nguyên); điều 5 (phép chia 50/50 trên `D + S + H`; cảnh báo "dưới 4 giờ" thay bằng quy tắc `T_cancel`); và gạch "code/config khác 2 giờ, 4 giờ… là implementation gap" ở mục Hệ quả.
+
 > ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026) ghi đè VỊ TRÍ ở điều 6:** Owner Lite
 > nay ở `partner.xeprime.vn` (realm `partner`), không còn trong `/account` của site khách. Ranh giới
 > năng lực Owner Lite ↔ Manage giữ nguyên.

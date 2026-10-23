@@ -619,8 +619,8 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       // không đọc `maxVehicles` của bậc gói (ADR 0038).
       await mkVehicle(tenantId, `XE1-${RUN}`);
       await mkVehicle(tenantId, `XE2-${RUN}`);
-      const quota = await billing.vehicleQuotaFor(tenantId);
-      expect(quota).toEqual({
+      const quota = await billing.vehicleQuotaFor(tenantId, VEHICLE_TYPE.CAR);
+      expect(quota).toMatchObject({
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
         reason: 'owner_lite',
@@ -659,7 +659,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         data: { publicStatus: 'approved_public' },
       });
       await expect(
-        billing.assertVehicleQuota(tenantQuotaId, {
+        billing.assertVehicleQuota(tenantQuotaId, VEHICLE_TYPE.CAR, {
           scope: 'marketplace',
           excludeVehicleId: newId(),
         }),
@@ -671,7 +671,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       });
       // Chính xe đang chiếm suất gửi LẠI duyệt thì không tự chặn mình.
       await expect(
-        billing.assertVehicleQuota(tenantQuotaId, {
+        billing.assertVehicleQuota(tenantQuotaId, VEHICLE_TYPE.CAR, {
           scope: 'marketplace',
           excludeVehicleId: car1.id,
         }),
@@ -683,7 +683,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
        * (ADR 0038 · ADR 0041 điều 4).
        */
       await expect(
-        billing.assertVehicleQuota(tenantId, { scope: 'marketplace' }),
+        billing.assertVehicleQuota(tenantId, VEHICLE_TYPE.CAR, { scope: 'marketplace' }),
       ).resolves.toBeUndefined();
 
       /*
@@ -692,7 +692,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
        * ở đây, và vì `findCurrent` cũng trả `null` trong cả cửa sổ ÂN HẠN, trần biến mất định
        * kỳ cho mọi tenant cùng lúc.
        */
-      expect(await billing.vehicleQuotaFor(tenantFreeId)).toEqual({
+      expect(await billing.vehicleQuotaFor(tenantFreeId, VEHICLE_TYPE.CAR)).toMatchObject({
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
         // Chưa có dòng thuê bao nào ⇒ LỖI CẤU HÌNH, không phải Owner Lite — thông điệp khác hẳn.
@@ -840,7 +840,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
        * 2 xe từ test quota, nên chiếc thứ 3 vào được và chiếc thứ 4 thì không. Đây là nơi bản cũ
        * nói "unlimited", và câu đó chính là lỗ hổng ADR 0038 vá.
        */
-      expect(await billing.vehicleQuotaFor(tenantId)).toEqual({
+      expect(await billing.vehicleQuotaFor(tenantId, VEHICLE_TYPE.CAR)).toMatchObject({
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
         reason: 'owner_lite',
@@ -926,7 +926,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(billingNow.phase).toBe(BILLING_PHASE.CURRENT);
 
       // Trần xe đi theo tuyến ngay trong cùng một nhịp — từ 3 (Owner Lite) về 2 (bậc đã mua).
-      expect(await billing.vehicleQuotaFor(upgradeTenantId)).toEqual({
+      expect(await billing.vehicleQuotaFor(upgradeTenantId, VEHICLE_TYPE.CAR)).toMatchObject({
         kind: 'total',
         limit: 2,
         reason: 'plan',

@@ -110,7 +110,14 @@
     "noPlans": "Hiện chưa có gói gian hàng nào đang bán",
     "noPlansHint": "Liên hệ hỗ trợ XePrime để mở gói cho gian hàng của bạn.",
     "createInvoice": "Tạo hoá đơn và lấy mã chuyển khoản",
-    "pickTermFirst": "Chọn kỳ hạn để tạo hoá đơn."
+    "pickTermFirst": "Chọn kỳ hạn để tạo hoá đơn.",
+    "partialFailure": "Chưa tạo được hoá đơn {scope}: {error} Hoá đơn đã tạo vẫn dùng được.",
+    "scope": {
+      "motorbike": "gói xe máy",
+      "car": "gói ô tô"
+    },
+    "addOtherScope": "Thêm {scope}",
+    "addPlan": "Thêm gói cho loại xe khác"
   },
   "packageWaiting": {
     "title": "Đăng ký gian hàng thành công!",

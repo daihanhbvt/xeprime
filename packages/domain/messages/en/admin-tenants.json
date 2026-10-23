@@ -205,7 +205,7 @@
         "period": "Month",
         "completed": "Completed trips",
         "revenue": "Total rental value",
-        "serviceFee": "XePrime service fee"
+        "serviceFee": "Booking fee"
       }
     },
     "vehicles": {
@@ -383,7 +383,8 @@
         "daysLeft": "{days, plural, one {# day left} other {# days left}}",
         "next": "Next term",
         "nextValue": "{plan} · {from} → {to}",
-        "noNext": "Not scheduled"
+        "noNext": "Not scheduled",
+        "scopes": "Plans by vehicle type"
       },
       "quota": {
         "title": "Usage & quota",
@@ -453,7 +454,7 @@
         "period": "Month",
         "completed": "Completed trips",
         "revenue": "Total rental value",
-        "serviceFee": "XePrime service fee",
+        "serviceFee": "Booking fee",
         "tax": "Tax withheld"
       },
       "stats": {
@@ -470,7 +471,7 @@
         "month": "Month",
         "completed": "Trips",
         "revenue": "Total rental value",
-        "serviceFee": "Service fee",
+        "serviceFee": "Booking fee",
         "tax": "Tax withheld",
         "state": "State"
       },
@@ -540,7 +541,17 @@
       "unlimited": "{used} · unlimited",
       "notApplicable": "{used} · not applicable on this plan type",
       "ownerLite": "Owner Lite cap (plan expired)",
-      "unconfigured": "plan not determined"
+      "unconfigured": "plan not determined",
+      "notCovered": "{used} vehicles · no plan for this vehicle type",
+      "type": {
+        "motorbike": "Motorbikes",
+        "car": "Cars"
+      },
+      "scope": {
+        "motorbike": "Motorbikes",
+        "car": "Cars",
+        "all": "All vehicle types"
+      }
     }
   }
 }

@@ -219,11 +219,12 @@
     "unassigned": "Đã gỡ tài xế",
     "cancelled": "Đơn đã huỷ",
     "no_show": "Khách không đến",
-    "completed": "Hoàn thành"
+    "completed": "Hoàn thành",
+    "expired": "Quá hạn xác nhận"
   },
   "driverLicenceState": {
     "verified": "Bằng lái đã xác thực",
-    "pending": "Bằng lái chờ xác thực",
+    "pending": "Bằng lái đang được đọc",
     "none": "Chưa có bằng lái"
   },
   "driverEmployerKind": {
@@ -394,7 +395,9 @@
     "driver_trip_unassigned": "Chuyến đã được gỡ khỏi bạn",
     "driver_trip_completed": "Chuyến đã hoàn thành",
     "driver_trip_accepted": "Tài xế đã nhận chuyến",
-    "driver_trip_declined": "Tài xế từ chối chuyến"
+    "driver_trip_declined": "Tài xế từ chối chuyến",
+    "driver_trip_response_expired": "Tài xế không phản hồi",
+    "booking_driver_missing": "Chuyến sắp nhận chưa có tài xế"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -448,6 +451,7 @@
     "escrow_hold": "Thu giữ chỗ qua sàn"
   },
   "planStatus": {
+    "draft": "Chưa mở bán",
     "active": "Đang hoạt động",
     "archived": "Ngừng hoạt động"
   },
@@ -726,12 +730,14 @@
     "motorbike": "Xe máy"
   },
   "feeLine": {
-    "service_fee": "Phí dịch vụ XePrime",
+    "service_fee": "Phí đặt xe",
+    "owner_commission": "Phí dịch vụ – Chủ xe",
     "tax": "Thuế khấu trừ/nộp thay",
-    "trip_insurance": "Bảo hiểm chuyến đi",
-    "vehicle_protection": "Bảo vệ xe",
+    "trip_insurance": "Bảo hiểm tai nạn người ngồi trên xe",
+    "vehicle_protection": "Bảo hiểm vật chất xe",
     "deposit": "Cọc đặt chuyến",
-    "promo": "Mã khuyến mãi XePrime"
+    "promo": "Mã khuyến mãi XePrime",
+    "rent_prepaid": "Phần tiền thuê trả trước"
   },
   "promoCodeState": {
     "disabled": "Đã tắt",
@@ -792,6 +798,7 @@
     "missing_fields": "Thiếu thông tin",
     "expired": "Bằng đã hết hạn",
     "no_drivable_class": "Hạng không lái được xe thuê",
+    "reader_unavailable": "Bộ đọc ảnh tạm lỗi",
     "other": "Lý do khác"
   },
   "feePolicyStatus": {
@@ -801,12 +808,18 @@
   },
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "% phí dịch vụ ngoài khoảng cho phép",
-    "tax_requires_rate_and_label": "Thuế cần cả tỷ lệ và tên loại thuế",
+    "tax_requires_rates_and_basis": "Thuế cần đủ bảng mức theo loại dịch vụ và căn cứ pháp lý",
+    "tax_rate_out_of_range": "Mức GTGT hoặc TNCN ngoài khoảng cho phép (0–5%, tối đa hai chữ số thập phân)",
     "insurance_requires_partner": "Bảo hiểm cần tên đối tác thật",
-    "trip_insurance_requires_rate": "Bảo hiểm chuyến đi cần tỷ lệ",
-    "vehicle_protection_requires_rate": "Bảo vệ xe cần tỷ lệ",
+    "trip_insurance_requires_rate": "Bảo hiểm tai nạn người cần biểu phí ngày cho mọi loại xe",
+    "vehicle_protection_requires_rate": "Bảo hiểm vật chất xe cần biểu phí ngày cho mọi loại xe",
+    "amount_not_thousand_step": "Số tiền cấu hình phải là bội của 1.000đ và không âm",
+    "owner_commission_tiers_invalid": "Nấc hoa hồng phải bắt đầu từ ngày 1, tăng dần, mỗi nấc từ 0% đến 30%",
     "hold_window_out_of_range": "Cửa sổ chuyển khoản ngoài khoảng cho phép",
-    "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép"
+    "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép",
+    "deposit_percent_out_of_range": "% tiền giữ chỗ của chủ xe ngoài khoảng cho phép hoặc vượt trần của chính sách",
+    "deposit_percent_below_tax_percent": "% tiền giữ chỗ của chủ xe không được thấp hơn mức thuế cao nhất của bảng",
+    "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản"
   },
   "bookingHoldStatus": {
     "pending": "Chờ chuyển giữ chỗ",
@@ -819,7 +832,7 @@
   "bookingHoldOutcome": {
     "kept": "Đã dùng cho chuyến",
     "settled": "Đã quyết toán",
-    "split_late_cancel": "Huỷ muộn — chia đôi",
+    "split_late_cancel": "Huỷ muộn — đền giữ chỗ",
     "refunded": "Đã hoàn khách",
     "forfeited": "Bồi thường chủ xe",
     "released_to_shop": "Đã chuyển gian hàng"
@@ -835,7 +848,9 @@
     "owner_cancel": "Chủ xe huỷ chuyến",
     "overpaid": "Chuyển thừa",
     "hold_expired": "Hết hạn thanh toán giữ chỗ",
-    "admin_decision": "Quyết định của XePrime"
+    "admin_decision": "Quyết định của XePrime",
+    "late_cancel": "Khách huỷ sau mốc miễn phí",
+    "no_show": "Khách không đến nhận xe"
   },
   "supportCaseStatus": {
     "open": "Mới",
@@ -851,6 +866,7 @@
     "account": "Tài khoản",
     "account_deletion": "Yêu cầu xoá tài khoản",
     "plan_consultation": "Tư vấn gói",
+    "handover_unconfirmed": "Chưa xác nhận bàn giao xe",
     "other": "Khác"
   },
   "supportCaseParty": {
@@ -1260,6 +1276,9 @@
       "retry": "Phát hành lại bảo hiểm",
       "void": "Huỷ hợp đồng bảo hiểm"
     },
+    "insurance_product": {
+      "update": "Cập nhật sản phẩm bảo hiểm"
+    },
     "listing": {
       "support": {
         "repair": "Sửa đồng bộ tin đăng (phiên hỗ trợ)"
@@ -1335,6 +1354,9 @@
       "transition": "Chuyển trạng thái case hỗ trợ",
       "resolve": "Giải quyết case hỗ trợ",
       "withdraw": "Rút case hỗ trợ"
+    },
+    "tax": {
+      "period_export": "Xuất bảng kê thuế theo kỳ"
     },
     "tax_withholding": {
       "reverse": "Đảo bút toán khấu trừ thuế"
@@ -1464,6 +1486,9 @@
       "activate": "Bật mẫu email hướng dẫn gói",
       "delete": "Xoá mẫu email hướng dẫn gói",
       "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
+    },
+    "insurance_product": {
+      "update": "Cập nhật sản phẩm bảo hiểm"
     }
   },
   "auditTargetType": {
@@ -1483,6 +1508,7 @@
     "fee_policy": "Chính sách phí",
     "hold_refund": "Hoàn tiền giữ chỗ",
     "holiday_sync_run": "Lượt đồng bộ lịch nghỉ lễ",
+    "insurance_product": "Sản phẩm bảo hiểm",
     "marketplace_banner": "Banner trang chủ",
     "payment": "Thanh toán",
     "payment_gateway_order": "Lượt thanh toán qua cổng",
@@ -1517,7 +1543,8 @@
     "vehicle_handover": "Biên bản bàn giao",
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
-    "withdrawal_request": "Yêu cầu rút điểm"
+    "withdrawal_request": "Yêu cầu rút điểm",
+    "insurance_product": "Sản phẩm bảo hiểm"
   },
   "auditField": {
     "planCode": "Mã gói",
@@ -1610,5 +1637,13 @@
     "bank_transfer": "chuyển khoản",
     "momo": "Ví MoMo",
     "vnpay": "VNPAY"
+  },
+  "priceRow": {
+    "base": "Tiền thuê gốc",
+    "discount": "Khuyến mãi trực tiếp",
+    "subtotal": "Tạm tính",
+    "delivery": "Phí giao nhận xe",
+    "overtime": "Phí quá giờ",
+    "extras": "Dịch vụ cộng thêm"
   }
 }

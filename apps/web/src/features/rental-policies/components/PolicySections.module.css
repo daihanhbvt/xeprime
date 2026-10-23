@@ -173,6 +173,14 @@
   display: contents;
 }
 
+/* Ô phí của một bậc: chọn cách tính (trọn gói / theo km) rồi tới đúng một ô số — ADR 0064. */
+.feeCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
 .distanceSeparator {
   display: none;
 }

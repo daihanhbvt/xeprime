@@ -1,7 +1,8 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BILLING_MODE } from '@xeprime/types';
+import { API_ERROR_CODE, BILLING_MODE } from '@xeprime/types';
+import { ApiClientError } from '@xeprime/api-client';
 
 import type { TenantPlan } from '../types';
 import { PurchaseModal } from './PurchaseModal';
@@ -28,16 +29,25 @@ const plans = vi.hoisted(() => ({
 }));
 
 const purchase = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+/** Hoá đơn còn chờ — để hộp thoại cảnh báo khi tạo mã mới sẽ huỷ mã cùng loại xe. */
+const pending = vi.hoisted(() => ({ data: [] as unknown[] }));
 
 /** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
-  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: nav.push,
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => plans,
+  usePendingInvoices: () => pending,
   usePurchaseSubscription: () => purchase,
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
@@ -55,6 +65,7 @@ function makePlan(over: Partial<TenantPlan> = {}): TenantPlan {
     code: 'shop-basic',
     name: 'Gói cơ bản',
     description: 'Cho cửa hàng nhỏ',
+    vehicleScope: 'motorbike',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
     status: 'active',
@@ -79,10 +90,13 @@ function makePlan(over: Partial<TenantPlan> = {}): TenantPlan {
   } as TenantPlan;
 }
 
-function renderModal(onClose = vi.fn()) {
+function renderModal(
+  onClose = vi.fn(),
+  current: Parameters<typeof PurchaseModal>[0]['current'] = null,
+) {
   render(
     <App>
-      <PurchaseModal open onClose={onClose} />
+      <PurchaseModal open scope="motorbike" current={current} onClose={onClose} />
     </App>,
   );
   return { onClose };
@@ -100,6 +114,7 @@ function pickTier(name: string) {
 
 beforeEach(() => {
   plans.data = [makePlan()];
+  pending.data = [];
   purchase.mutate.mockReset();
   nav.push.mockReset();
 });
@@ -109,10 +124,11 @@ afterEach(cleanup);
 describe('PurchaseModal — bậc nào được bán', () => {
   it('bậc gian hàng hiện thẻ kèm trần xe và giá tháng', () => {
     renderModal();
-    expect(screen.queryByText(/Chưa có gói nào đang bán/)).toBeNull();
+    expect(screen.queryByText(/đang bán/)).toBeNull();
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
-    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
-    expect(screen.getByText('Tối đa 1 chi nhánh')).toBeTruthy();
+    expect(screen.getByText('Tối đa 3 xe máy')).toBeTruthy();
+    // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1) — không in nữa.
+    expect(screen.queryByText(/chi nhánh/)).toBeNull();
   });
 
   /*
@@ -154,9 +170,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
     pickTier('Chọn gói');
     fireEvent.click(termCards()[1]!);
 
-    expect(
-      screen.getByRole('button', { name: /Tạo hoá đơn/ }).getAttribute('disabled'),
-    ).toBeNull();
+    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ }).getAttribute('disabled')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
     // Không còn `slots` trong body: bậc gói không bán chỗ (ADR 0041 điều 1).
     expect(purchase.mutate).toHaveBeenCalledWith(
@@ -193,7 +207,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
       }),
     ];
     renderModal();
-    expect(screen.getByText(/Chưa có gói nào đang bán/)).toBeTruthy();
+    expect(screen.getByText(/Chưa có Gói xe máy nào đang bán/)).toBeTruthy();
   });
 });
 
@@ -253,6 +267,114 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
     renderModal();
 
     expect(screen.queryByRole('radio')).toBeNull();
-    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ }).getAttribute('disabled')).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: /Tạo hoá đơn/ }).getAttribute('disabled'),
+    ).not.toBeNull();
+  });
+});
+
+describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
+  it('chỉ bày bậc CỦA ĐÚNG loại xe đang mua — bậc ô tô không lọt vào hộp xe máy', () => {
+    plans.data = [
+      makePlan(),
+      makePlan({ id: 'plan-car', code: 'car_5', name: 'Ô tô 5 xe', vehicleScope: 'car' }),
+    ];
+    renderModal();
+    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
+    expect(screen.queryByText('Ô tô 5 xe')).toBeNull();
+    expect(screen.getByText('Mua / gia hạn Gói xe máy')).toBeTruthy();
+  });
+
+  it('đang có kỳ cùng loại xe ⇒ nói trước kỳ mới nối tiếp sau ngày hết hạn', () => {
+    renderModal(vi.fn(), {
+      subscriptionId: 'S1',
+      planId: 'plan-basic',
+      planCode: 'moto_5',
+      planName: 'Xe máy 5 xe',
+      vehicleScope: 'motorbike',
+      phase: 'current',
+      endsAt: '2026-12-01T00:00:00.000Z',
+    });
+    expect(screen.getByText(/Bạn đang dùng Xe máy 5 xe tới/)).toBeTruthy();
+  });
+
+  it('chưa có kỳ nào ⇒ gói bắt đầu khi tiền về', () => {
+    renderModal();
+    expect(screen.getByText(/bắt đầu ngay khi XePrime nhận được tiền/)).toBeTruthy();
+  });
+
+  it('có hoá đơn chờ CÙNG loại xe ⇒ cảnh báo mã cũ sẽ bị huỷ; hoá đơn loại khác thì không', () => {
+    pending.data = [{ id: 'I2', code: 'XPGCAR', vehicleScope: 'car' }];
+    const view = renderModal();
+    expect(screen.queryByText(/XPGCAR/)).toBeNull();
+    cleanup();
+    pending.data = [{ id: 'I1', code: 'XPGMOTO', vehicleScope: 'motorbike' }];
+    renderModal(view.onClose);
+    expect(screen.getByText(/XPGMOTO của loại xe này đang chờ thanh toán/)).toBeTruthy();
+  });
+});
+
+describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
+  it('đang có kỳ cùng loại xe: chọn nâng gói ngay hiển thị cảnh báo huỷ ngày còn lại và gửi timing: now', () => {
+    renderModal(vi.fn(), {
+      subscriptionId: 'S1',
+      planId: 'plan-basic',
+      planCode: 'moto_5',
+      planName: 'Xe máy 5 xe',
+      vehicleScope: 'motorbike',
+      phase: 'current',
+      endsAt: '2026-12-01T00:00:00.000Z',
+    });
+
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+
+    // Ban đầu mặc định nối tiếp sau khi hết hạn, nút ghi "Tạo hoá đơn"
+    expect(screen.queryByText(/Kỳ hiện tại kết thúc ngay hôm nay/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ })).toBeTruthy();
+
+    // Chọn "Nâng gói ngay hôm nay"
+    const radioNow = screen.getByRole('radio', { name: /Nâng gói ngay hôm nay/ });
+    fireEvent.click(radioNow);
+
+    // Cảnh báo không hoàn tiền ngày còn lại xuất hiện
+    expect(
+      screen.getByText(
+        /Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại./,
+      ),
+    ).toBeTruthy();
+
+    // Nút đổi thành "Nâng gói ngay"
+    const submitBtn = screen.getByRole('button', { name: /Nâng gói ngay/ });
+    expect(submitBtn).toBeTruthy();
+
+    fireEvent.click(submitBtn);
+
+    // Gửi đúng body kèm timing: 'now'
+    expect(purchase.mutate).toHaveBeenCalledWith(
+      { planId: 'plan-basic', termMonths: 3, timing: 'now' },
+      expect.anything(),
+    );
+  });
+});
+
+describe('PurchaseModal — lỗi khi tạo hoá đơn', () => {
+  it('bậc vừa về "chưa mở bán" (CONFLICT · planStatus=draft) ⇒ câu riêng mời chọn bậc khác', async () => {
+    purchase.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.(
+        new ApiClientError({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Gói chưa mở bán',
+          status: 409,
+          details: { planStatus: 'draft' },
+        }),
+      ),
+    );
+    renderModal();
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
+
+    expect(await screen.findByText(/vừa ngừng nhận mua mới/)).toBeTruthy();
   });
 });

@@ -1,0 +1,11 @@
+/* Bước thanh toán của onboarding: các khối chờ tiền (mỗi loại xe một) rồi tới bộ chọn nếu còn. */
+.wrap {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.addMore {
+  align-self: flex-start;
+}

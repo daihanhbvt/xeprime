@@ -21,6 +21,7 @@ import {
   SUBSCRIPTION_TERM_STATE,
   SUBSCRIPTION_TERM_STATE_META,
   daysLeftUntil,
+  planVehicleScopeOf,
   type SubscriptionInvoiceStatus,
   type SubscriptionTermState,
 } from '@xeprime/types';
@@ -35,7 +36,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import type { PartnerBilling, PartnerOverview } from './api';
 import { usePartnerBilling } from './hooks';
-import { KeyValues, QuotaValue, useTabState } from './parts';
+import { KeyValues, QuotaValue, VehicleQuotaByType, useTabState } from './parts';
 import styles from './PartnerDetail.module.css';
 
 type SubscriptionRow = PartnerBilling['subscriptions'][number];
@@ -75,6 +76,7 @@ export function BillingTab({ overview }: { overview: PartnerOverview }) {
 
 function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joinedAt: string }) {
   const t = useTranslations('AdminTenants.partnerDetail.billing');
+  const tPlanScope = useTranslations('AdminTenants.partnerDetail.quota');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const { plan, quota, invoiceStatus } = billing;
@@ -89,7 +91,14 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       width: 200,
       render: (_, row) => `${fmt.date(row.startsAt)} – ${fmt.date(row.endsAt)}`,
     },
-    { title: t('columns.plan'), key: 'plan', width: 160, render: (_, row) => row.planName },
+    {
+      title: t('columns.plan'),
+      key: 'plan',
+      width: 200,
+      // Phạm vi loại xe của kỳ (ADR 0065) — hai kỳ cùng tên bậc "5 xe" phải phân biệt được.
+      render: (_, row) =>
+        `${row.planName} · ${tPlanScope(`scope.${planVehicleScopeOf(row.vehicleScope)}`)}`,
+    },
     {
       title: t('columns.price'),
       key: 'price',
@@ -191,6 +200,21 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
             <KeyValues
               items={[
                 { key: 'name', label: t('plan.name'), value: <strong>{plan.planName}</strong> },
+                /*
+                 * Phạm vi loại xe đang có kỳ gói (ADR 0065) — gian hàng có thể chạy song song gói xe
+                 * máy và gói ô tô; tên ở trên chỉ là kỳ ưu tiên.
+                 */
+                ...(plan.packageScopes.length > 0
+                  ? [
+                      {
+                        key: 'scopes',
+                        label: t('plan.scopes'),
+                        value: plan.packageScopes
+                          .map((scope) => tPlanScope(`scope.${planVehicleScopeOf(scope)}`))
+                          .join(', '),
+                      },
+                    ]
+                  : []),
                 {
                   key: 'phase',
                   label: t('plan.phase'),
@@ -227,20 +251,19 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
 
         <DashboardPanel title={t('quota.title')} icon={<BarChartOutlined />}>
           <div className={styles.progress}>
-            {(
-              [
-                ['vehicles', quota.vehicles],
-                ['branches', quota.branches],
-                ['members', quota.members],
-              ] as const
-            ).map(([key, item]) => (
-              // Ba trạng thái do server quyết (có trần / không giới hạn / không áp dụng) — không suy
-              // "không giới hạn" từ một `limit` rỗng.
-              <div key={key} className={styles.quotaRow}>
-                <span>{t(`quota.${key}`)}</span>
-                <QuotaValue quota={item} />
-              </div>
-            ))}
+            {/*
+              Trần xe THEO LOẠI (ADR 0065) rồi trần nhân sự. Không còn dòng chi nhánh — trần chi
+              nhánh thôi là hạn mức (ADR 0065 điều 1). Các trạng thái do server quyết (có trần /
+              không giới hạn / không áp dụng / chưa có gói) — không suy từ một `limit` rỗng.
+            */}
+            <div className={styles.quotaRow}>
+              <span>{t('quota.vehicles')}</span>
+              <VehicleQuotaByType quotas={quota.vehiclesByType} />
+            </div>
+            <div className={styles.quotaRow}>
+              <span>{t('quota.members')}</span>
+              <QuotaValue quota={quota.members} />
+            </div>
             <span className={styles.small}>{t('quota.features')}</span>
             <div className={styles.featureList}>
               {billing.features.map((feature) => (

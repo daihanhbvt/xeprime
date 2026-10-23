@@ -20,7 +20,6 @@ const query = vi.hoisted(() => ({
   isError: false,
   refetch: vi.fn(),
 }));
-const review = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const submit = vi.hoisted(() => ({
   mutate: vi.fn(),
   reset: vi.fn(),
@@ -40,7 +39,6 @@ const photo = vi.hoisted(() => ({
 vi.mock('../hooks/use-driver-licence', () => ({
   useDriverLicence: () => query,
   useDriverLicenceImage: () => photo,
-  useRequestDriverLicenceReview: () => review,
   useSubmitDriverLicence: () => submit,
 }));
 vi.mock('../prepare-licence-image', async (importOriginal) => ({
@@ -65,7 +63,6 @@ const BASE: DriverLicence = {
   rejectionReason: null,
   reviewNote: null,
   qualityIssues: [],
-  canRequestReview: false,
   reviewRequestedAt: null,
   decisionSource: 'auto',
   decidedAt: '2026-10-01T00:00:00.000Z',
@@ -84,7 +81,6 @@ beforeEach(() => {
   query.data = { verified: null, latest: null };
   query.isPending = false;
   query.isError = false;
-  review.mutate.mockReset();
   submit.mutate.mockReset();
   submit.isPending = false;
   prepare.fn.mockReset();
@@ -115,11 +111,11 @@ describe('DriverLicenceVerifier', () => {
   it('đã xác thực: hiện thông tin trên bằng và loại xe lái được', () => {
     query.data = { verified: BASE, latest: BASE };
     renderVerifier();
-    expect(screen.getByText('Bằng lái đã được xác thực')).toBeTruthy();
+    expect(screen.getByText('Bằng lái của bạn đã sẵn sàng!')).toBeTruthy();
     expect(screen.getByText('NGUYỄN VĂN AN')).toBeTruthy();
     expect(screen.getByText('790123456789')).toBeTruthy();
     expect(screen.getByText('Ô tô')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Cập nhật bằng mới' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cập nhật bằng lái' })).toBeTruthy();
   });
 
   it('đã xác thực: ảnh bằng nằm mờ trong khung, bấm mới mở trình xem — không có ảnh thứ hai dưới nền', async () => {
@@ -179,7 +175,7 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
   });
 
-  it('bị máy từ chối vì ảnh mờ: lý do + mẹo chụp lại + nút nhờ xem lại', () => {
+  it('bị máy từ chối vì ảnh mờ: lý do + mẹo chụp lại, không có nút nhờ xem lại (ADR 0070)', () => {
     query.data = {
       verified: null,
       latest: {
@@ -187,7 +183,6 @@ describe('DriverLicenceVerifier', () => {
         status: 'rejected',
         rejectionReason: 'unreadable',
         qualityIssues: ['glare'],
-        canRequestReview: true,
       },
     };
     renderVerifier();
@@ -195,8 +190,7 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByText('Ảnh chưa đủ rõ để đọc thông tin trên bằng.')).toBeTruthy();
     expect(screen.getByText(/Ảnh bị loá/)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /nhờ XePrime kiểm tra/ }));
-    expect(review.mutate).toHaveBeenCalledWith('L1', expect.anything());
+    expect(screen.queryByRole('button', { name: /nhờ XePrime kiểm tra/ })).toBeNull();
   });
 
   it('bằng nước ngoài đã xác thực: nói rõ chủ xe đối chiếu hạng và hạn khi giao xe', () => {
@@ -213,7 +207,7 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByText(/chủ xe đối chiếu hạng và thời hạn trên bằng gốc/)).toBeTruthy();
   });
 
-  it('máy từ chối vì HẾT HẠN: hiện ngày máy đọc được + được nhờ xem lại (máy có thể đọc lệch)', () => {
+  it('máy từ chối vì HẾT HẠN: hiện ngày máy đọc được + mời chụp lại nếu ngày in khác', () => {
     query.data = {
       verified: null,
       latest: {
@@ -221,39 +215,11 @@ describe('DriverLicenceVerifier', () => {
         status: 'rejected',
         rejectionReason: 'expired',
         expiresOn: '2026-10-05',
-        canRequestReview: true,
       },
     };
     renderVerifier();
     expect(screen.getByText('Bằng lái đã hết hạn ngày 05/10/2026.')).toBeTruthy();
-    expect(screen.getByText(/Máy có thể đọc nhầm/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /nhờ XePrime kiểm tra/ })).toBeTruthy();
-  });
-
-  it('người duyệt đã từ chối vì hết hạn: không còn nút, không mời nhờ kiểm tra', () => {
-    query.data = {
-      verified: null,
-      latest: {
-        ...BASE,
-        status: 'rejected',
-        rejectionReason: 'expired',
-        expiresOn: '2024-05-20',
-        decisionSource: 'manual',
-        canRequestReview: false,
-      },
-    };
-    renderVerifier();
-    expect(screen.getByText('Bằng lái đã hết hạn ngày 20/05/2024.')).toBeTruthy();
-    expect(screen.queryByText(/Máy có thể đọc nhầm/)).toBeNull();
-    expect(screen.queryByRole('button', { name: /nhờ XePrime kiểm tra/ })).toBeNull();
-  });
-
-  it('chờ duyệt: báo đang chờ và cho gửi ảnh khác', () => {
-    query.data = { verified: null, latest: { ...BASE, status: 'pending_review' } };
-    renderVerifier();
-    expect(screen.getByText('Đang chờ XePrime xác thực')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi ảnh khác' }));
-    expect(screen.getByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
+    expect(screen.getByText(/Hãy chụp lại thật rõ phần ngày hết hạn/)).toBeTruthy();
   });
 
   it('bằng hợp lệ nhưng hết hạn trước ngày trả xe: nói rõ ngày hết hạn, mời cập nhật', () => {

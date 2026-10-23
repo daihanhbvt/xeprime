@@ -29,12 +29,6 @@ export const driverLicenceApi = {
     return getApiClient().get<DriverLicenceImage>(`${BASE}/${encodeURIComponent(id)}/image`);
   },
 
-  requestReview(id: string): Promise<DriverLicence> {
-    return getApiClient().post<DriverLicence>(
-      `${BASE}/${encodeURIComponent(id)}/request-review`,
-    );
-  },
-
   /**
    * Xin URL tải ảnh. Body ĐÚNG ba trường của `PresignDriverLicenceDto` — API bật
    * `forbidNonWhitelisted`, nên không dùng được `UploadMeta` (có `fileName`) của các luồng khác.

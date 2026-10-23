@@ -20,6 +20,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { ensureInsuranceProducts } from './helpers/insurance-products';
 import {
   makeBookingHoldsService,
   makeBookingRequestsService,
@@ -102,6 +103,8 @@ beforeAll(async () => {
     console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
     return;
   }
+  // Báo giá IV/IP cần hai sản phẩm MIC trong danh mục — DB test có thể chưa seed.
+  await ensureInsuranceProducts(asService);
 
   ownerId = newId();
   await prisma.user.create({
@@ -299,6 +302,103 @@ describe('mốc biên bậc giao nhận', () => {
     expect(fee(10)).toEqual({ kind: 'auto', fee: '50000' });
     expect(fee(10.1)).toEqual({ kind: 'manual_required' });
     expect(pricing.deliveryFeeFor(null, 1)).toEqual({ kind: 'disabled' });
+  });
+
+  /*
+   * Bậc THEO KM (ADR 0064): phí = đơn giá × khoảng cách một chiều, làm tròn tới 1.000đ. Dữ liệu
+   * cũ `{toKm, fee}` vẫn đọc nguyên trạng — ca trên là bằng chứng.
+   */
+  maybe(
+    'bậc theo km: đơn giá × khoảng cách, đúng tới đồng (ADR 0069); lưu và đọc lại đúng dạng',
+    async () => {
+      const perKmTiers = [
+        { toKm: 5, fee: '0' },
+        { toKm: 15, perKm: '10000' },
+      ];
+      await pricing.saveShopPolicy(
+        tenantId,
+        ownerId,
+        policyDto({ deliveryTiers: perKmTiers, deliveryMaxRadiusKm: 15 }),
+      );
+      try {
+        const { values } = (await pricing.effectivePolicy(tenantId, vehicleId))!;
+        expect(values.deliveryTiers).toEqual(perKmTiers);
+        const fee = (km: number) => pricing.deliveryFeeFor(values, km);
+        expect(fee(4)).toEqual({ kind: 'auto', fee: '0' });
+        expect(fee(12)).toEqual({ kind: 'auto', fee: '120000' });
+        // 12,34 km × 10.000 = 123.400 — đúng tới đồng, không còn tròn 1.000đ (trước: 123.000).
+        expect(fee(12.34)).toEqual({ kind: 'auto', fee: '123400' });
+        expect(fee(15.5)).toEqual({ kind: 'manual_required' });
+      } finally {
+        await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
+      }
+    },
+  );
+
+  maybe('một bậc mang CẢ phí trọn gói lẫn đơn giá km, hoặc đơn giá 0đ/km ⇒ 400', async () => {
+    for (const tier of [
+      { toKm: 10, fee: '30000', perKm: '5000' },
+      { toKm: 10, perKm: '0' },
+      { toKm: 10 },
+    ]) {
+      await expect(
+        pricing.saveShopPolicy(
+          tenantId,
+          ownerId,
+          policyDto({ deliveryTiers: [tier], deliveryMaxRadiusKm: 10 }),
+        ),
+      ).rejects.toMatchObject({ status: 400 });
+    }
+  });
+});
+
+describe('khuyến mãi xe theo % làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
+  maybe(
+    'khuyến mãi trực tiếp % làm tròn tới 1.000đ — không có số lẻ trên tổng khách trả',
+    async () => {
+      const pickupAt = new Date('2027-03-01T03:00:00.000Z');
+      // 3 ngày × 333.000 = 999.000; 7% = 69.930 ⇒ làm tròn LÊN 70.000.
+      const quote = pricing.buildDailyQuote({
+        weekdayPrice: '333000',
+        weekendPrice: null,
+        pickupAt,
+        returnAt: new Date(pickupAt.getTime() + 3 * 24 * HOUR),
+        policy: null,
+        delivery: null,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        discountPercent: 7,
+      });
+      expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-70000');
+      expect(quote.totalAmount).toBe('929000');
+
+      // Ví dụ của ADR 0069: 2 ngày × 326.000 = 652.000; 10% = 65.200 ⇒ giảm 66.000 (trước: 65.000
+      // — khách được giảm ÍT hơn 10%).
+      const adr = pricing.buildDailyQuote({
+        weekdayPrice: '326000',
+        weekendPrice: null,
+        pickupAt,
+        returnAt: new Date(pickupAt.getTime() + 2 * 24 * HOUR),
+        policy: null,
+        delivery: null,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        discountPercent: 10,
+      });
+      expect(adr.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-66000');
+      expect(adr.totalAmount).toBe('586000');
+    },
+  );
+
+  maybe('ưu đãi cam kết dài hạn % làm tròn LÊN tới 1.000đ', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    // 1 tháng × 8.765.000, ưu đãi 5% = 438.250 ⇒ làm tròn LÊN 439.000 (trước: 438.000).
+    const quote = pricing.buildLongTermPackageQuote({
+      monthlyPrice: '8765000',
+      packageMonths: 1,
+      policy,
+      delivery: null,
+    });
+    expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-439000');
+    expect(quote.totalAmount).toBe('8326000'); // 8.765.000 − 439.000
   });
 });
 
@@ -871,6 +971,24 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
         serviceType: SERVICE_TYPE.WITH_DRIVER,
         routeType: ROUTE_TYPE.INTER_CITY,
       });
+      // Báo giá công khai nói thẳng nền tảng có bán bảo hiểm không, và KHÔNG mang kinh tế chủ xe
+      // (ADR 0064) — kể cả khi object nội bộ có đủ các trường đó.
+      expect(publicQuote.insuranceOffered).toBe(true);
+      const publicFees = publicQuote.breakdown.fees as Record<string, unknown> | null | undefined;
+      if (publicFees) {
+        for (const key of [
+          'ownerCommissionAmount',
+          'platformRetainedAmount',
+          'ownerNetAmount',
+          'ownerPayableAmount',
+          'taxAmount',
+          'depositAmount',
+          'sponsorableAmount',
+        ]) {
+          expect(publicFees).not.toHaveProperty(key);
+        }
+        expect(publicFees.policy).not.toHaveProperty('ownerCommissionTiers');
+      }
 
       // Seed thẳng yêu cầu — nhánh này kiểm inbox shop (duyệt), không phải đường gửi của khách.
       const requestId = newId();

@@ -69,6 +69,10 @@ const BOOKING: BookingDetail = {
   customerTotalAmount: '477360',
   holdPaidAmount: '102960',
   payAtPickupAmount: '374400',
+  ownerCommissionAmount: null,
+  ownerTaxAmount: null,
+  ownerNetAmount: null,
+  ownerPayout: null,
   actualPickupAt: null,
   actualReturnAt: null,
   note: null,
@@ -108,5 +112,49 @@ describe('BookingDetailContent — khoản giữ chỗ qua XePrime', () => {
     });
 
     expect(screen.queryByRole('region', { name: 'Thanh toán giữ chỗ' })).toBeNull();
+  });
+
+  it('"Phần của bạn" là bảng cộng ví chủ xe khi snapshot có (ADR 0068 điều 5)', () => {
+    renderDetail({
+      ...BOOKING,
+      ownerCommissionAmount: '46800',
+      ownerTaxAmount: '0',
+      ownerNetAmount: '421200',
+      ownerPayout: {
+        rentAmount: '468000',
+        rentalDays: 1,
+        unitAmount: '468000',
+        ownerCommissionAmount: '46800',
+        commissionTiers: null,
+        taxAmount: '0',
+        vatAmount: '0',
+        pitAmount: '0',
+        vatPercent: null,
+        pitPercent: null,
+        taxTotalPercent: null,
+        taxExemptReason: null,
+        ownerNetAmount: '421200',
+        payAtPickupRentAmount: '351000',
+        ownerPayableAmount: '70200',
+        collectsHold: true,
+      },
+    });
+
+    const share = screen.getByRole('region', { name: 'Phần của bạn' });
+    expect(within(share).getByText('Phí dịch vụ – Chủ xe')).toBeTruthy();
+    expect(share.textContent).toContain('46.800');
+    // Thuế 0đ (cổng chưa mở) thì không vẽ dòng — không bày một khoản trừ không tồn tại.
+    expect(within(share).queryByText(/^Thuế khấu trừ/)).toBeNull();
+    expect(within(share).getByText('Thu nhập chủ xe (a)')).toBeTruthy();
+    expect(share.textContent).toContain('421.200');
+    expect(within(share).getByText('Khách thanh toán trực tiếp (b)')).toBeTruthy();
+    expect(share.textContent).toContain('351.000');
+    expect(within(share).getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(share.textContent).toContain('70.200');
+  });
+
+  it('đơn lập tay/đơn cũ không có bảng phí ⇒ không có khối "Phần của bạn"', () => {
+    renderDetail({ ...BOOKING, ownerPayout: null });
+    expect(screen.queryByRole('region', { name: 'Phần của bạn' })).toBeNull();
   });
 });

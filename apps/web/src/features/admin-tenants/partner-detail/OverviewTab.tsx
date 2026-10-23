@@ -41,7 +41,7 @@ import {
   MoneyValue,
   PartnerBookingTable,
   PartnerVehicleTable,
-  QuotaValue,
+  VehicleQuotaByType,
   usePeriodLabel,
   useTabState,
 } from './parts';
@@ -413,8 +413,11 @@ function PlanSummary({ plan }: { plan: NonNullable<PartnerOverview['plan']> }) {
         {
           key: 'quota',
           label: t('quota'),
-          // Trần ĐANG CƯỠNG CHẾ do server tính — kể cả khi gói đã hết hạn và trần là Owner Lite.
-          value: <QuotaValue quota={plan.vehicleQuota} unit="vehicles" />,
+          /*
+           * Trần ĐANG CƯỠNG CHẾ do server tính, THEO LOẠI xe (ADR 0065) — kể cả khi gói đã hết hạn
+           * và trần là Owner Lite. Loại chưa có gói hiện "chưa có gói" thay vì một con số.
+           */
+          value: <VehicleQuotaByType quotas={plan.vehicleQuotaByType} />,
         },
       ]}
     />

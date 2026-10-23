@@ -16,7 +16,12 @@ import {
   addCalendarMonthsVn,
   daysLeftUntil,
   parsePlanLimits,
+  planScopesConflict,
   planSubscriptionChain,
+  planVehicleScopeOf,
+  PLAN_STATUS,
+  PLAN_VEHICLE_SCOPE,
+  PLAN_VEHICLE_SCOPE_VALUES,
   planTermPrice,
   subscriptionCancelBlockOf,
   type PlanLimitsJson,
@@ -33,7 +38,8 @@ import { dayjs } from '@/lib/datetime';
 import { SUBSCRIPTIONS_DEFAULT_LIMIT } from '../api';
 import { useAssignSubscription, useCancelSubscription } from '../hooks/use-plan-mutations';
 import { useLiveSubscriptions, usePlans, useTenantSubscriptions } from '../hooks/use-plans';
-import type { CurrentPlan, Plan, Subscription } from '../types';
+import { groupPlans } from '../plan-catalog';
+import type { CurrentPlan, Plan, PlatformTenantPlanTerm, Subscription } from '../types';
 import styles from './TenantPlanSection.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -41,6 +47,16 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 /** Trạng thái KỲ do SERVER chấm (`termState`) — client không tự chấm bằng đồng hồ của nó. */
 const stateOf = (sub: Subscription) => sub.termState as SubscriptionTermState;
+
+/** Thứ tự làn cố định (doanh nghiệp → ô tô → xe máy, `PLAN_VEHICLE_SCOPE_VALUES`) — thẻ không đổi chỗ. */
+function sortByScope<T extends Pick<Subscription, 'vehicleScope' | 'startsAt'>>(
+  rows: readonly T[],
+): T[] {
+  const rank = (row: T) => PLAN_VEHICLE_SCOPE_VALUES.indexOf(planVehicleScopeOf(row.vehicleScope));
+  return [...rows].sort(
+    (a, b) => rank(a) - rank(b) || new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+  );
+}
 
 /**
  * Section "Gói dịch vụ" trong hộp thao tác quản trị nền tảng (ADR 0010/0041).
@@ -56,9 +72,15 @@ const stateOf = (sub: Subscription) => sub.termState as SubscriptionTermState;
 export function TenantPlanSection({
   tenantId,
   currentPlan,
+  terms = [],
 }: {
   tenantId: string;
   currentPlan: CurrentPlan | null;
+  /**
+   * Các kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (`PlatformTenantPlanDto.terms`) — nguồn
+   * của thẻ khi người xem KHÔNG đọc được chuỗi kỳ (thiếu `platform.billing.manage`).
+   */
+  terms?: readonly PlatformTenantPlanTerm[];
 }) {
   const t = useTranslations('AdminPlans.tenant');
   const tCommon = useTranslations('Common');
@@ -80,8 +102,16 @@ export function TenantPlanSection({
   const cancel = useCancelSubscription(tenantId);
 
   const live = useMemo(() => liveQuery.data ?? [], [liveQuery.data]);
-  const current = live.find((sub) => stateOf(sub) === SUBSCRIPTION_TERM_STATE.CURRENT) ?? null;
-  const scheduled = live.filter((sub) => stateOf(sub) === SUBSCRIPTION_TERM_STATE.SCHEDULED);
+  /*
+   * Tối đa MỘT kỳ đang hiệu lực MỖI PHẠM VI (ADR 0065): một kỳ xe máy và một kỳ ô tô chạy song song,
+   * hoặc một kỳ doanh nghiệp phủ cả hai. Sắp theo thứ tự làn để thẻ không đổi chỗ giữa hai lần mở.
+   */
+  const current = sortByScope(
+    live.filter((sub) => stateOf(sub) === SUBSCRIPTION_TERM_STATE.CURRENT),
+  );
+  const scheduled = sortByScope(
+    live.filter((sub) => stateOf(sub) === SUBSCRIPTION_TERM_STATE.SCHEDULED),
+  );
 
   function handleCancel(sub: Subscription) {
     cancel.mutate(sub.id, {
@@ -90,7 +120,7 @@ export function TenantPlanSection({
     });
   }
 
-  const hasPlan = Boolean(current ?? currentPlan);
+  const hasPlan = current.length > 0 || terms.length > 0 || Boolean(currentPlan);
   const historyItems = history.data?.items ?? [];
 
   return (
@@ -107,19 +137,45 @@ export function TenantPlanSection({
       </div>
 
       <div className={styles.cards}>
-        {current ? (
-          <TermCard term={current} variant="current" />
-        ) : currentPlan ? (
-          // Không có quyền đọc chuỗi kỳ: chỉ có gói hiện hành từ chi tiết gian hàng.
-          <div className={cx(styles.card, styles.cardCurrent)}>
-            <div className={styles.cardLabel}>{t('currentLabel')}</div>
-            <div className={styles.cardName}>{currentPlan.planName}</div>
-            <div className={styles.meta}>
-              {t('endsOn', { date: fmt.date(currentPlan.endsAt) })}
-              {LIST_SEPARATOR}
-              {t('daysLeft', { days: daysLeftUntil(currentPlan.endsAt) })}
+        {current.length > 0 ? (
+          current.map((term) => <TermCard key={term.id} term={term} variant="current" />)
+        ) : !canManageBilling && (terms.length > 0 || currentPlan) ? (
+          /*
+           * Không có quyền đọc chuỗi kỳ: các kỳ gói hiệu lực đi kèm chi tiết gian hàng (mỗi phạm vi
+           * một kỳ), hoặc — ngoài tuyến gói — dòng hiện hành duy nhất.
+           */
+          (terms.length > 0
+            ? terms.map((term) => ({
+                key: term.subscriptionId,
+                scope: term.vehicleScope,
+                planName: term.planName,
+                endsAt: term.endsAt,
+              }))
+            : currentPlan
+              ? [
+                  {
+                    key: currentPlan.subscriptionId,
+                    scope: currentPlan.vehicleScope,
+                    planName: currentPlan.planName,
+                    endsAt: currentPlan.endsAt,
+                  },
+                ]
+              : []
+          ).map((item) => (
+            <div key={item.key} className={cx(styles.card, styles.cardCurrent)}>
+              <div className={styles.cardLabel}>
+                {t('currentLabel')}
+                {LIST_SEPARATOR}
+                {t(`scope.${planVehicleScopeOf(item.scope)}`)}
+              </div>
+              <div className={styles.cardName}>{item.planName}</div>
+              <div className={styles.meta}>
+                {t('endsOn', { date: fmt.date(item.endsAt) })}
+                {LIST_SEPARATOR}
+                {t('daysLeft', { days: daysLeftUntil(item.endsAt) })}
+              </div>
             </div>
-          </div>
+          ))
         ) : liveQuery.isLoading ? null : (
           <div className={cx(styles.card, styles.cardEmpty)}>
             <div className={styles.cardName}>{t('noPlan')}</div>
@@ -200,13 +256,13 @@ export function TenantPlanSection({
 /** Hạn mức snapshot của một kỳ (ADR 0041 điều 3) — `null` = không giới hạn. */
 function useQuotaText() {
   const t = useTranslations('AdminPlans.tenant');
-  return (term: Pick<Subscription, 'quota'>): string | null => {
+  return (term: Pick<Subscription, 'quota' | 'vehicleScope'>): string | null => {
     if (!term.quota) return null;
     const value = (limit: number | null | undefined) =>
       limit == null ? t('assign.unlimited') : String(limit);
-    return t('quotaSummary', {
+    // Trần đọc theo PHẠM VI của kỳ (ADR 0065) — không còn trần chi nhánh (ADR 0065 điều 1).
+    return t(`quotaScoped.${planVehicleScopeOf(term.vehicleScope)}`, {
       vehicles: value(term.quota.maxVehicles),
-      branches: value(term.quota.maxBranches),
     });
   };
 }
@@ -222,6 +278,8 @@ function TermCard({ term, variant }: { term: Subscription; variant: 'current' | 
     >
       <div className={styles.cardLabel}>
         {variant === 'current' ? t('currentLabel') : t('scheduledLabel')}
+        {LIST_SEPARATOR}
+        {t(`scope.${planVehicleScopeOf(term.vehicleScope)}`)}
       </div>
       <div className={styles.cardName}>{term.planName}</div>
       <div className={styles.meta}>
@@ -260,12 +318,18 @@ function HistoryRow({
   const fmt = useAppFormat();
   const state = stateOf(term);
   const scheduled = state === SUBSCRIPTION_TERM_STATE.SCHEDULED;
-  const past = state === SUBSCRIPTION_TERM_STATE.ENDED || state === SUBSCRIPTION_TERM_STATE.CANCELLED;
+  const past =
+    state === SUBSCRIPTION_TERM_STATE.ENDED || state === SUBSCRIPTION_TERM_STATE.CANCELLED;
 
   return (
     <li className={cx(styles.historyRow, past && styles.historyRowPast)}>
       <div className={styles.historyMain}>
-        <div className={styles.historyName}>{term.planName}</div>
+        <div className={styles.historyName}>
+          {term.planName}
+          <span className={styles.historyScope}>
+            {t(`scope.${planVehicleScopeOf(term.vehicleScope)}`)}
+          </span>
+        </div>
         <div className={styles.meta}>
           {[
             t('period', { from: fmt.date(term.startsAt), to: fmt.date(term.endsAt) }),
@@ -286,7 +350,11 @@ function HistoryRow({
         </div>
       </div>
       <div className={styles.historyActions}>
-        <StatusTag value={state} meta={SUBSCRIPTION_TERM_STATE_META} group="subscriptionTermState" />
+        <StatusTag
+          value={state}
+          meta={SUBSCRIPTION_TERM_STATE_META}
+          group="subscriptionTermState"
+        />
         {cancellable ? (
           <Popconfirm
             title={scheduled ? t('cancelScheduledTitle') : t('cancelCurrentTitle')}
@@ -327,8 +395,18 @@ function AssignPlanModal({
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
+  const tCatalog = useTranslations('AdminPlans');
   const { message } = App.useApp();
-  const plans = usePlans('active');
+  /*
+   * Bậc ĐANG BÁN và bậc CHƯA MỞ BÁN (`draft`) — admin gán được một bậc nháp cho một gian hàng
+   * (vd khách đầu tiên của bậc mới) nhưng phải nhập giá: bậc nháp chưa có giá niêm yết đáng tin, và
+   * server từ chối `VALIDATION_FAILED` nếu thiếu. Bậc đã ngừng không gán được.
+   */
+  const plansQuery = usePlans('all');
+  const plans = {
+    ...plansQuery,
+    data: plansQuery.data?.filter((p) => p.status !== PLAN_STATUS.ARCHIVED),
+  };
   const assign = useAssignSubscription(tenantId);
   const [planId, setPlanId] = useState<string | null>(null);
   const [termMonths, setTermMonths] = useState<SubscriptionTermMonths>(1);
@@ -348,22 +426,34 @@ function AssignPlanModal({
    * Kỳ TRẢ PHÍ cuối cùng còn hạn — câu hỏi "có cần chọn thời điểm áp dụng không". Luật đầy đủ
    * (đuôi, kỳ bị huỷ, đường gán) nằm ở `planSubscriptionChain`, gọi bên dưới.
    */
-  const paidLive = liveTerms.filter((term) => term.billingMode !== BILLING_MODE.COMMISSION);
+  const selected: Plan | undefined = plans.data?.find((p) => p.id === planId);
+  const selectedScope = selected ? planVehicleScopeOf(selected.vehicleScope) : null;
+  /*
+   * Chuỗi kỳ chạy THEO PHẠM VI (ADR 0065 điều 2): gán gói ô tô không nối sau kỳ xe máy, không huỷ
+   * nó. Chỉ kỳ trả phí ở phạm vi XUNG ĐỘT với bậc đang chọn mới quyết định "nối sau" / "đổi ngay" —
+   * cùng luật `planScopesConflict` mà `planSubscriptionChain` và EXCLUDE ở DB dùng. Chưa chọn
+   * bậc thì xét mọi kỳ trả phí (dòng ngữ cảnh đầu hộp thoại).
+   */
+  const allPaidLive = liveTerms.filter((term) => term.billingMode !== BILLING_MODE.COMMISSION);
+  const paidLive = selectedScope
+    ? allPaidLive.filter((term) =>
+        planScopesConflict(selectedScope, planVehicleScopeOf(term.vehicleScope)),
+      )
+    : allPaidLive;
   const paidTail =
     [...paidLive].sort((a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime())[0] ??
     null;
-
-  const selected: Plan | undefined = plans.data?.find((p) => p.id === planId);
+  /** Bậc doanh nghiệp (`all`) — gán nó huỷ hoá đơn mở của hai phạm vi kia và (đổi ngay) cả hai kỳ. */
+  const enterpriseSelected =
+    selectedScope === PLAN_VEHICLE_SCOPE.ALL && selected?.billingMode === BILLING_MODE.PACKAGE;
   // PlanDto.limits đã đủ hình, nhưng parse lại cho ra kiểu chia sẻ (PlanLimitsJson) dùng
   // với các phép xem trước — cùng parser với backend, không tự diễn giải.
-  const limits: PlanLimitsJson | null = useMemo(
-    () => (selected ? parsePlanLimits(selected.limits) : null),
-    [selected],
-  );
+  const limits: PlanLimitsJson | null = selected ? parsePlanLimits(selected.limits) : null;
   const isPackage = selected?.billingMode === BILLING_MODE.PACKAGE;
   const listed = limits ? planTermPrice(limits, termMonths) : null;
   /** Bậc tư vấn, hoặc kỳ hạn ngoài bảng giá: không có gì để rơi về ⇒ `price` BẮT BUỘC. */
-  const priceRequired = Boolean(isPackage && listed === null);
+  const isDraft = selected?.status === PLAN_STATUS.DRAFT;
+  const priceRequired = Boolean(isPackage && (listed === null || isDraft));
 
   /*
    * Xem trước bằng CHÍNH hàm server dùng: ngày bắt đầu, đường gán (gia hạn / đổi từ kỳ sau / đổi
@@ -371,7 +461,11 @@ function AssignPlanModal({
    * tới từng giây; server chấm lại khi ghi.
    */
   const chain = selected
-    ? planSubscriptionChain(liveTerms, { planId: selected.id, timing }, new Date())
+    ? planSubscriptionChain(
+        liveTerms,
+        { planId: selected.id, timing, vehicleScope: selected.vehicleScope },
+        new Date(),
+      )
     : null;
   const kind = chain?.kind ?? null;
   const replacedCount =
@@ -379,11 +473,15 @@ function AssignPlanModal({
       ? chain.cancel.filter((term) => term.billingMode !== BILLING_MODE.COMMISSION).length
       : 0;
 
-  const options = (plans.data ?? []).map((p) => {
-    const planLimits = parsePlanLimits(p.limits);
-    return {
-      value: p.id,
-      label:
+  /*
+   * Bậc chia NHÓM theo phạm vi (ADR 0065) — cùng bốn nhóm với màn danh mục, để admin chọn "gói ô tô
+   * 5 xe" chứ không phải tìm nó giữa bảy dòng cùng tên "5 xe".
+   */
+  const options = groupPlans(plans.data ?? []).map(({ group, plans: rows }) => ({
+    label: tCatalog(`page.groups.${group}`),
+    options: rows.map((p) => {
+      const planLimits = parsePlanLimits(p.limits);
+      const base =
         p.billingMode === BILLING_MODE.COMMISSION
           ? t('assign.planOptionCommission', { name: p.name, percent: p.commissionPercent ?? 0 })
           : planLimits.salesOnly
@@ -394,9 +492,14 @@ function AssignPlanModal({
                   planLimits.maxVehicles == null
                     ? t('assign.unlimited')
                     : String(planLimits.maxVehicles),
-              }),
-    };
-  });
+              });
+      return {
+        value: p.id,
+        // Bậc nháp nói rõ nó chưa bán — giá phải nhập tay.
+        label: p.status === PLAN_STATUS.DRAFT ? t('assign.draftOption', { label: base }) : base,
+      };
+    }),
+  }));
 
   function reset() {
     setPlanId(null);
@@ -467,7 +570,7 @@ function AssignPlanModal({
 
   return (
     <ResponsiveDialog
-      title={paidTail ? t('assign.titleRenew') : t('assign.title')}
+      title={allPaidLive.length > 0 ? t('assign.titleRenew') : t('assign.title')}
       open={open}
       onClose={close}
       footer={null}
@@ -480,11 +583,16 @@ function AssignPlanModal({
         <div className={styles.empty}>{t('assign.empty')}</div>
       ) : (
         <div className={styles.assignBody}>
-          {paidTail ? (
-            <div className={styles.contextLine}>
-              {t('assign.currentContext', { plan: paidTail.planName, date: tailEnd })}
+          {/* Mọi kỳ trả phí còn hạn, mỗi phạm vi một dòng — gán theo phạm vi nên cần thấy cả hai. */}
+          {sortByScope(allPaidLive).map((term) => (
+            <div key={term.id} className={styles.contextLine}>
+              {t('assign.scopeContext', {
+                scope: t(`scope.${planVehicleScopeOf(term.vehicleScope)}`),
+                plan: term.planName,
+                date: fmt.date(term.endsAt),
+              })}
             </div>
-          ) : null}
+          ))}
 
           <label className={styles.field}>
             <span className={styles.fieldLabel}>{t('assign.plan')}</span>
@@ -528,8 +636,16 @@ function AssignPlanModal({
               </div>
               {isPackage ? (
                 <div className={styles.help}>
-                  {priceRequired ? t('assign.priceRequiredHelp') : t('assign.priceHelp')}
+                  {isDraft
+                    ? t('assign.priceRequiredDraftHelp')
+                    : priceRequired
+                      ? t('assign.priceRequiredHelp')
+                      : t('assign.priceHelp')}
                 </div>
+              ) : null}
+
+              {enterpriseSelected ? (
+                <div className={styles.help}>{t('assign.enterpriseNote')}</div>
               ) : null}
 
               {paidTail ? (
@@ -592,15 +708,11 @@ function AssignPlanModal({
                   <>
                     <dt>{t('assign.previewQuota')}</dt>
                     <dd>
-                      {t('quotaSummary', {
+                      {t(`quotaScoped.${selectedScope ?? PLAN_VEHICLE_SCOPE.ALL}`, {
                         vehicles:
                           limits.maxVehicles == null
                             ? t('assign.unlimited')
                             : String(limits.maxVehicles),
-                        branches:
-                          limits.maxBranches == null
-                            ? t('assign.unlimited')
-                            : String(limits.maxBranches),
                       })}
                     </dd>
                   </>

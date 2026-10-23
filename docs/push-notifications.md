@@ -390,9 +390,20 @@ SELECT status, last_error_code, count(*)
 | --- | --- | --- |
 | `token_unregistered` | người dùng gỡ app / khôi phục máy | bình thường; thiết bị đã tự tắt |
 | `token_invalid` | token sai định dạng hoặc **sai project** | kiểm `google-services.json` có đúng project không |
-| `provider_auth` | service account thiếu quyền / FCM API chưa bật | §2.1 |
+| `provider_auth` | **chỉ iOS** ⇒ khoá APNs `.p8` thiếu/bị thu hồi ở Firebase (§2.4); **mọi nền tảng** ⇒ service account thiếu quyền / FCM API chưa bật (§2.1) | không thử lại — tin đã mất; sửa cấu hình rồi kiểm lại bằng §8 |
 | `provider_unavailable` | Google 5xx hoặc quota | tự thử lại, backoff mũ, tối đa 8 lần |
 | `expired` | quá `expires_at` trước khi tới lượt | đúng thiết kế — tin có đồng hồ đếm ngược không gửi muộn |
+
+Không cần đợi người dùng báo: lỗi `provider_auth` làm worker `/health` chuyển `degraded` trong một
+giờ (số đo `gauges.pushConfigFailures1h`, xem `docs/realtime-runbook.md` §3.1) và in một dòng
+`push: … thông báo MẤT vì nhà cung cấp từ chối xác thực` ở log. Tách theo nền tảng:
+
+```sql
+SELECT d.platform, pd.status, pd.last_error_code, count(*), max(pd.last_error_at)
+  FROM push_deliveries pd JOIN push_devices d ON d.id = pd.push_device_id
+ WHERE pd.created_at > now() - interval '1 day'
+ GROUP BY 1, 2, 3;
+```
 
 ---
 

@@ -1,0 +1,48 @@
+/* Thẻ "Tài xế" trên trang chuyến của khách (ADR 0067) — khung thẻ là của chung `TripRequestLayout`. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.name {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+}
+
+.phone {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Nút gọi tròn — cùng dáng nút liên hệ chủ xe của màn chuyến đã xác nhận. */
+.call {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+}
+
+.call:hover {
+  color: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+}

@@ -12,6 +12,8 @@ import {
   type ServiceType,
   type WalletStatementUnit,
 } from '@xeprime/types';
+import type { OwnerPayoutDto } from '../../common/dto/owner-payout.dto';
+import { ownerPayoutOf, uniformDayAmount } from '../../common/owner-payout';
 import { resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HostMetricsService } from '../host-metrics/host-metrics.service';
@@ -34,6 +36,8 @@ const TRIP_SELECT = {
   returnAt: true,
   actualReturnAt: true,
   totalAmount: true,
+  deliveryFee: true,
+  ownerCommissionAmount: true,
   taxAmount: true,
   depositAmountOnline: true,
   priceSnapshot: true,
@@ -80,17 +84,32 @@ export function completedTripsInPeriodWhere(
  *
  * ## Vì sao KHÔNG có cột "phí sàn"
  *
- * Phí dịch vụ XePrime do KHÁCH trả thêm (`FEE_BEARER.CUSTOMER`, ADR 0032 điều 2) — nó không trừ
+ * Phí đặt xe `S` do KHÁCH trả thêm (`FEE_BEARER.CUSTOMER`, ADR 0032 điều 2) — nó không trừ
  * vào doanh thu gian hàng. Đặt nó thành một dòng khấu trừ trong bảng thu nhập của chủ xe là bịa
  * ra một khoản họ không hề mất, và CLAUDE.md cấm dùng một con số đại diện cho cả phí dịch vụ lẫn
  * thuế lẫn tiền phải trả chủ xe.
  *
+ * Hoa hồng `H` (ADR 0064 điều 3) thì khác: CHỦ XE chịu, XePrime giữ lại từ khoản online — nên nó
+ * là một dòng khấu trừ thật, có cột riêng, và `ownerIncome` trừ nó ra.
+ *
  * ## Ba con số tiền KHÔNG được gộp
  *
- * `revenueTotal` là tiền thuê thu được; `balanceChangeTotal` là phần chảy qua ví XePrime
- * (`D − T`); phần còn lại `payAtPickupTotal = B − D` khách trả TAY cho chủ xe lúc nhận xe và
- * không bao giờ đi qua nền tảng. Bảng phải hiện cả ba, nếu không chủ xe đọc `balanceChange` nhỏ
- * hơn `revenue` rồi tin rằng XePrime đang giữ mất tiền của mình.
+ * `revenueTotal` là TIỀN THUÊ `R` (không gồm phí giao `G`); `balanceChangeTotal` là phần chảy qua
+ * ví XePrime (`D − T`); `payAtPickupTotal = R − D − H` là phần TIỀN THUÊ khách trả TAY cho chủ xe
+ * lúc nhận xe, không bao giờ đi qua nền tảng. Bảng phải hiện cả ba, nếu không chủ xe đọc
+ * `balanceChange` nhỏ hơn `revenue` rồi tin rằng XePrime đang giữ mất tiền của mình.
+ *
+ * Đẳng thức của bảng cộng ví (ADR 0068 điều 5), đúng tới đồng ở từng chuyến:
+ *
+ *     thu nhập (a) = R − H − T      khách trả trực tiếp (b) = R − D − H      a − b = D − T
+ *
+ * `H` nằm TRONG khoản online (cộng thêm trên `D`, ADR 0066), nên bản trước 22/10/2026 tính
+ * `b = B − D` là đếm `H` hai lần — chủ xe tuyến hoa hồng đọc phần trả tay lớn hơn số khách thật đưa.
+ *
+ * Phí giao `G` là tiền mặt của chủ xe nhận TẬN TAY (ADR 0064 điều 4), không chịu hoa hồng/thuế, nên
+ * nó đứng RIÊNG (`deliveryAmount`/`deliveryTotal`) — không vào `R`, `a` hay `b`. Đọc từ CỘT
+ * `bookings.delivery_fee` chứ không từ snapshot: chủ xe được sửa phí giao sau khi đơn ra đời
+ * (`updateDeliveryFee`), và `total_amount` đi theo nó.
  */
 @Injectable()
 export class WalletStatementService {
@@ -124,7 +143,13 @@ export class WalletStatementService {
       this.prisma.booking.aggregate({
         where,
         _count: { _all: true },
-        _sum: { totalAmount: true, taxAmount: true, depositAmountOnline: true },
+        _sum: {
+          totalAmount: true,
+          deliveryFee: true,
+          ownerCommissionAmount: true,
+          taxAmount: true,
+          depositAmountOnline: true,
+        },
       }),
       this.prisma.booking.findMany({
         where,
@@ -145,17 +170,34 @@ export class WalletStatementService {
     );
 
     const zero = new Prisma.Decimal(0);
-    const revenueTotal = aggregate._sum.totalAmount ?? zero;
+    const deliveryTotal = aggregate._sum.deliveryFee ?? zero;
+    /* `R = B − G` — tiền thuê; phí giao đứng riêng (docblock lớp). */
+    const revenueTotal = (aggregate._sum.totalAmount ?? zero).minus(deliveryTotal);
+    const ownerCommissionTotal = aggregate._sum.ownerCommissionAmount ?? zero;
     const taxTotal = aggregate._sum.taxAmount ?? zero;
     const depositOnlineTotal = aggregate._sum.depositAmountOnline ?? zero;
 
     const totals: WalletStatementTotalsDto = {
       revenueTotal: revenueTotal.toFixed(0),
+      ownerCommissionTotal: ownerCommissionTotal.toFixed(0),
       taxTotal: taxTotal.toFixed(0),
-      payAtPickupTotal: revenueTotal.minus(depositOnlineTotal).toFixed(0),
+      payAtPickupTotal: revenueTotal
+        .minus(depositOnlineTotal)
+        .minus(ownerCommissionTotal)
+        .toFixed(0),
+      deliveryTotal: deliveryTotal.toFixed(0),
       balanceChangeTotal: balanceChangeTotal.toFixed(0),
       subscriptionFeeTotal: subscriptionFeeTotal.toFixed(0),
-      ownerIncome: revenueTotal.minus(taxTotal).minus(subscriptionFeeTotal).toFixed(0),
+      /*
+       * `R − H − T` (ADR 0064 điều 5 · ADR 0068 điều 5), rồi trừ phí gói. Thiếu `H` thì chủ xe
+       * tuyến hoa hồng đọc một thu nhập lớn hơn số họ thật sự nhận; gồm `G` thì thu nhập "cho
+       * thuê xe" lẫn tiền xăng của người lái xe tới.
+       */
+      ownerIncome: revenueTotal
+        .minus(ownerCommissionTotal)
+        .minus(taxTotal)
+        .minus(subscriptionFeeTotal)
+        .toFixed(0),
     };
 
     const total = aggregate._count._all;
@@ -305,9 +347,50 @@ export class WalletStatementService {
 
 // ── Hàm thuần ───────────────────────────────────────────────────────────────
 
+/** `R = B − G` của một đơn — tiền thuê, không gồm phí giao (đọc từ cột, xem docblock lớp). */
+function rentOf(row: Pick<TripRow, 'totalAmount' | 'deliveryFee'>): Prisma.Decimal {
+  return row.totalAmount.minus(row.deliveryFee);
+}
+
+/**
+ * Một dòng sao kê.
+ *
+ * Đơn có bảng phí đóng băng (`snapshot.fees` — mọi đơn đi qua chợ) đọc MỌI con số tiền từ
+ * `ownerPayoutOf`: cùng hàm dựng bảng cộng ví ở hộp duyệt yêu cầu và chi tiết đơn, nên ba màn
+ * không thể kể ba câu chuyện về cùng một chuyến (ADR 0068 điều 5). Các trường phẳng chép từ bảng
+ * đó — app native đọc chúng.
+ *
+ * Đơn gian hàng lập tay (không bảng phí — ngoài luồng chợ, ADR 0028 điều 9) đọc từ CỘT: ở đó `H`,
+ * `T`, `D` đều 0 nên `a = b = R` và không có gì để giải thích ⇒ `ownerPayout = null`.
+ *
+ * Phí giao `G` luôn đọc từ cột (chủ xe sửa được sau khi đơn ra đời, xem docblock lớp) và không bao
+ * giờ nằm trong bảng cộng ví.
+ */
 function toTripDto(row: TripRow, balanceChange: Prisma.Decimal): WalletStatementTripDto {
-  const unit = unitPriceOf(row);
-  const depositOnline = row.depositAmountOnline ?? new Prisma.Decimal(0);
+  const snapshot = row.priceSnapshot as BookingPriceSnapshot | null;
+  const payout = snapshot?.fees ? ownerPayoutOf(snapshot.fees) : null;
+  const rent = rentOf(row);
+  const unit = unitPriceOf(snapshot, payout, rent);
+
+  const amounts = payout
+    ? {
+        revenueAmount: payout.rentAmount,
+        ownerCommissionAmount: payout.ownerCommissionAmount,
+        taxAmount: payout.taxAmount,
+        payAtPickupAmount: payout.payAtPickupRentAmount,
+        ownerIncomeAmount: payout.ownerNetAmount,
+      }
+    : {
+        revenueAmount: rent.toFixed(0),
+        ownerCommissionAmount: row.ownerCommissionAmount.toFixed(0),
+        taxAmount: row.taxAmount.toFixed(0),
+        payAtPickupAmount: rent
+          .minus(row.depositAmountOnline ?? 0)
+          .minus(row.ownerCommissionAmount)
+          .toFixed(0),
+        ownerIncomeAmount: rent.minus(row.ownerCommissionAmount).minus(row.taxAmount).toFixed(0),
+      };
+
   return {
     bookingId: row.id,
     code: row.code,
@@ -317,25 +400,29 @@ function toTripDto(row: TripRow, balanceChange: Prisma.Decimal): WalletStatement
     returnAt: (row.actualReturnAt ?? row.returnAt).toISOString(),
     unitAmount: unit?.amount ?? null,
     unitKind: unit?.kind ?? null,
-    revenueAmount: row.totalAmount.toFixed(0),
-    taxAmount: row.taxAmount.toFixed(0),
-    payAtPickupAmount: row.totalAmount.minus(depositOnline).toFixed(0),
+    ...amounts,
+    deliveryAmount: row.deliveryFee.toFixed(0),
     balanceChange: balanceChange.toFixed(0),
+    ownerPayout: payout,
   };
 }
 
 /**
  * Đơn giá một đơn vị thuê, đọc từ SNAPSHOT giá đã đóng băng trên đơn (ADR 0024).
  *
- * Đơn dài hạn trả giá THÁNG (`effectiveMonthlyAmount` — đã gồm ưu đãi cam kết thời hạn), đơn
- * theo ngày trả `totalAmount / days`. Chia cho `30` để suy giá ngày của một gói tháng là điều
- * CLAUDE.md cấm thẳng (ADR 0011), và chia cho `days` của một đơn không có `days` thì ra `Infinity`.
+ * Đơn dài hạn trả giá THÁNG (`effectiveMonthlyAmount` — đã gồm ưu đãi cam kết thời hạn). Chia cho
+ * `30` để suy giá ngày của một gói tháng là điều CLAUDE.md cấm thẳng (ADR 0011).
  *
- * Snapshot thiếu (đơn cũ, hoặc đơn gian hàng nhập tay không kèm bảng kê) ⇒ `null`: cột hiện dấu
- * gạch. Suy ngược một đơn giá từ tổng là bịa ra con số mà chủ xe chưa từng công bố.
+ * Đơn theo ngày: đơn giá CHỈ khi mọi ngày cùng một giá (đặc tả 05 §7.1) — đúng luật của bảng cộng
+ * ví (`ownerPayout.unitAmount`), và đơn lập tay đi qua chính `uniformDayAmount` đó (không biết giá
+ * từng ngày ⇒ chỉ chuyến 1 ngày có đơn giá). Chia `R / N` khi các ngày có giá khác nhau (cuối tuần,
+ * ngày giá riêng) là bịa ra một đơn giá chủ xe chưa từng niêm yết ⇒ `null`, cột hiện dấu gạch.
  */
-function unitPriceOf(row: TripRow): { amount: string; kind: WalletStatementUnit } | null {
-  const snapshot = row.priceSnapshot as BookingPriceSnapshot | null;
+function unitPriceOf(
+  snapshot: BookingPriceSnapshot | null,
+  payout: OwnerPayoutDto | null,
+  rent: Prisma.Decimal,
+): { amount: string; kind: WalletStatementUnit } | null {
   if (!snapshot) return null;
 
   if (snapshot.longTerm) {
@@ -345,10 +432,8 @@ function unitPriceOf(row: TripRow): { amount: string; kind: WalletStatementUnit 
     };
   }
 
-  const days = snapshot.days ?? 0;
-  if (days <= 0) return null;
-  return {
-    amount: new Prisma.Decimal(snapshot.totalAmount).dividedBy(days).toFixed(0),
-    kind: WALLET_STATEMENT_UNIT.DAY,
-  };
+  const amount = payout
+    ? payout.unitAmount
+    : uniformDayAmount(rent, snapshot.days ?? 0, null);
+  return amount == null ? null : { amount, kind: WALLET_STATEMENT_UNIT.DAY };
 }

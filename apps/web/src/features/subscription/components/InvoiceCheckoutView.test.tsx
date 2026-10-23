@@ -26,7 +26,12 @@ const user = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
   usePaymentInfo: () => ({
-    data: { configured: true, bankCode: 'VCB', accountNumber: '0123456789', accountName: 'XE PRIME' },
+    data: {
+      configured: true,
+      bankCode: 'VCB',
+      accountNumber: '0123456789',
+      accountName: 'XE PRIME',
+    },
   }),
   useTenantPlans: () => ({ data: [{ id: 'plan-advanced', name: 'Gói nâng cao' }] }),
 }));
@@ -140,7 +145,11 @@ describe('InvoiceCheckoutView', () => {
 
   it('hoá đơn không thuộc gian hàng này ⇒ không tìm thấy, không thử lại', () => {
     invoice.isError = true;
-    invoice.error = new ApiClientError({ code: API_ERROR_CODE.NOT_FOUND, message: 'x', status: 404 });
+    invoice.error = new ApiClientError({
+      code: API_ERROR_CODE.NOT_FOUND,
+      message: 'x',
+      status: 404,
+    });
     renderPage();
 
     expect(screen.getByText('Không tìm thấy hoá đơn')).toBeTruthy();

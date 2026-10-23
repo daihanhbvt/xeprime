@@ -78,7 +78,7 @@ describe('customerFormSchema', () => {
       await errorFor(customerFormSchema, {
         fullName: 'An',
         phone: '0901234567',
-        address: 'a'.repeat(501),
+        addressLine: 'a'.repeat(501),
       }),
     ).toBe('addressMax');
   });
@@ -187,7 +187,7 @@ describe('trần độ dài đọc từ TENANT_CUSTOMER_FIELD_MAX', () => {
     expect(
       await errorFor(customerFormSchema, {
         ...base,
-        address: 'a'.repeat(TENANT_CUSTOMER_FIELD_MAX.ADDRESS + 1),
+        addressLine: 'a'.repeat(TENANT_CUSTOMER_FIELD_MAX.ADDRESS + 1),
       }),
     ).toBe('addressMax');
 

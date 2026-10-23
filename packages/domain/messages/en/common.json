@@ -124,7 +124,8 @@
     "pickupWishDate": "{label}: {date}",
     "pickupWishWindow": "{label}: {start} – {end}",
     "pickupWishShopDecides": "The shop confirms the pickup date and time on approval",
-    "dateTime": "{date} {time}"
+    "dateTime": "{date} {time}",
+    "hourAndMinute": "{hours, plural, one {# hour} other {# hours}} {minutes, plural, one {# minute} other {# minutes}}"
   },
   "pagination": {
     "total": "{count, plural, one {# item} other {# items}}",
@@ -178,7 +179,7 @@
       "feesTitle": "Charges included with this trip",
       "customerTotal": "Your total",
       "ownerNet": "Host receives",
-      "ownerNetHint": "What the host earns from this trip. The XePrime service fee is paid by the guest and is NOT deducted from the host's rental income.",
+      "ownerNetHint": "What the host earns from this trip. The booking fee is paid by the guest and is NOT deducted from the host's rental income.",
       "holdAmount": "Reservation payment (upfront)",
       "holdHint": "Transferred to XePrime once the host accepts, to lock in the trip. It counts towards the rental — the rest is paid directly to the host at pickup.",
       "payAtHandover": "Pay the host at pickup",
@@ -187,7 +188,8 @@
       "viewDetails": "View price details",
       "collapse": "Collapse",
       "depositHintLabel": "What the security deposit is",
-      "holdHintLabel": "What the reservation payment is"
+      "holdHintLabel": "What the reservation payment is",
+      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}"
     },
     "filterBar": {
       "allOf": "{label}: All",
