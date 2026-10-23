@@ -301,8 +301,10 @@ afterAll(async () => {
        */
       const w = await prisma.wallet.findFirst({ where: { ownerTenantId: tenant } });
       if (w) {
-        await prisma.walletEntry.deleteMany({ where: { walletId: w.id } });
-        await prisma.wallet.delete({ where: { id: w.id } });
+        await prisma.$transaction([
+          prisma.walletEntry.deleteMany({ where: { walletId: w.id } }),
+          prisma.wallet.delete({ where: { id: w.id } }),
+        ]);
       }
       await prisma.booking.deleteMany({ where: { tenantId: tenant } });
       await prisma.vehicle.deleteMany({ where: { tenantId: tenant } });
