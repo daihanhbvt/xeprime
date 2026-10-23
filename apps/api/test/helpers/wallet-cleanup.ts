@@ -49,7 +49,9 @@ export async function releaseWalletObligations(
   if (wallets.length === 0) return;
 
   const walletIds = wallets.map((w) => w.id);
-  await prisma.withdrawalRequest.deleteMany({ where: { walletId: { in: walletIds } } });
-  await prisma.walletEntry.deleteMany({ where: { walletId: { in: walletIds } } });
-  await prisma.wallet.deleteMany({ where: { id: { in: walletIds } } });
+  await prisma.$transaction([
+    prisma.withdrawalRequest.deleteMany({ where: { walletId: { in: walletIds } } }),
+    prisma.walletEntry.deleteMany({ where: { walletId: { in: walletIds } } }),
+    prisma.wallet.deleteMany({ where: { id: { in: walletIds } } }),
+  ]);
 }

@@ -241,10 +241,12 @@ afterAll(async () => {
        * Ví phải gỡ TRƯỚC tenant: `wallets.owner_*` là RESTRICT (CLAUDE.md mục 5), và
        * `registerShop` đổi chủ ví sang tenant trong cùng transaction đăng ký.
        */
-      await prisma.walletEntry.deleteMany({
-        where: { wallet: { ownerTenantId: { in: tenantIds } } },
-      });
-      await prisma.wallet.deleteMany({ where: { ownerTenantId: { in: tenantIds } } });
+      await prisma.$transaction([
+        prisma.walletEntry.deleteMany({
+          where: { wallet: { ownerTenantId: { in: tenantIds } } },
+        }),
+        prisma.wallet.deleteMany({ where: { ownerTenantId: { in: tenantIds } } }),
+      ]);
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     }
     await prisma.wallet.deleteMany({

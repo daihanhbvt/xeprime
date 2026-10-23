@@ -150,9 +150,11 @@ afterAll(async () => {
   if (dbAvailable) {
     await prisma.bankTransaction.deleteMany({ where: ownTx });
     await prisma.platformBankBalance.deleteMany({ where: { note: { contains: RUN } } });
-    await prisma.withdrawalRequest.deleteMany({ where: { walletId } });
-    await prisma.walletEntry.deleteMany({ where: { walletId } });
-    await prisma.wallet.deleteMany({ where: { id: walletId } });
+    await prisma.$transaction([
+      prisma.withdrawalRequest.deleteMany({ where: { walletId } }),
+      prisma.walletEntry.deleteMany({ where: { walletId } }),
+      prisma.wallet.deleteMany({ where: { id: walletId } }),
+    ]);
     await prisma.holdRefund.deleteMany({ where: { tenantId } });
     await prisma.bookingHold.deleteMany({ where: { tenantId } });
     await prisma.bookingRequest.deleteMany({ where: { tenantId } });
@@ -554,7 +556,16 @@ describe('Chiều RA: mã XPW nằm cùng không gian tên với XPG/XPH', () =>
     expect(Number(after.outflow.withdrawalsPaid) - Number(before.outflow.withdrawalsPaid)).toBe(
       100_000,
     );
-    expect(after.walletDrift.wallets).toBe(0);
+    expect(after.walletDrift.wallets).toBe(before.walletDrift.wallets);
+    // Bất biến ADR 0023 điều 6 trên chính ví của spec: tổng bút toán = số dư + treo
+    const checkWallet = await prisma.wallet.findUniqueOrThrow({ where: { id: walletId } });
+    const checkEntries = await prisma.walletEntry.aggregate({
+      where: { walletId },
+      _sum: { amount: true },
+    });
+    expect(checkEntries._sum.amount?.toFixed(0)).toBe(
+      checkWallet.balance.add(checkWallet.pendingWithdrawAmount).toFixed(0),
+    );
   });
 });
 

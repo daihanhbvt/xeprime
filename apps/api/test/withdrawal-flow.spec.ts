@@ -80,9 +80,11 @@ afterAll(async () => {
   if (dbAvailable) {
     const w = await prisma.wallet.findFirst({ where: { ownerUserId: userId } });
     if (w) {
-      await prisma.withdrawalRequest.deleteMany({ where: { walletId: w.id } });
-      await prisma.walletEntry.deleteMany({ where: { walletId: w.id } });
-      await prisma.wallet.delete({ where: { id: w.id } });
+      await prisma.$transaction([
+        prisma.withdrawalRequest.deleteMany({ where: { walletId: w.id } }),
+        prisma.walletEntry.deleteMany({ where: { walletId: w.id } }),
+        prisma.wallet.delete({ where: { id: w.id } }),
+      ]);
     }
     await prisma.bankAccount.deleteMany({ where: { ownerUserId: userId } });
     await prisma.user.delete({ where: { id: userId } });

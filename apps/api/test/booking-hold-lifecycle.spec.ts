@@ -1013,11 +1013,13 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
         customerUserId: null,
       },
     });
-    await prisma.walletEntry.deleteMany({ where: { id: refundRow.walletEntryId! } });
-    await prisma.wallet.updateMany({
-      where: { ownerUserId: customerId },
-      data: { balance: { decrement: 30_000 } },
-    });
+    await prisma.$transaction([
+      prisma.walletEntry.deleteMany({ where: { id: refundRow.walletEntryId! } }),
+      prisma.wallet.updateMany({
+        where: { ownerUserId: customerId },
+        data: { balance: { decrement: 30_000 } },
+      }),
+    ]);
 
     const preview = (await settlement.previewCustomerCancel(bookingId, tenantId))!;
     expect(preview).toMatchObject({
