@@ -28,17 +28,22 @@ Chủ sản phẩm chốt (26/10/2026): ở site khách chỉ nhắc, có nút �
   tab ⇒ vẫn được nhắc. `sessionStorage` lỗi ⇒ lượt đóng vẫn giữ trong bộ nhớ của trang.
 - Câu mở nói rõ khách vẫn tìm và xem xe được khi chưa thêm số.
 
-### 2. Hỏi lại đúng lúc cần: luồng đặt xe
+### 2. Hỏi đúng lúc cần: nút GỬI yêu cầu thuê
 
-- `useAccountPhonePrompt()` mở lại hộp, kể cả khi khách đã "Để sau", với câu mở của việc đặt xe.
-- `RequestBookingFlow`: khách đã đăng nhập mà chưa có SĐT đã xác minh bấm **"Tiếp tục"** ở bước
-  Chuyến đi ⇒ mở hộp và ĐỢI ở bước đó (không soát bằng lái, không tới Xác nhận). Xác minh xong ⇒ luồng
-  tự đi tiếp (kiểm lại khung giờ → bằng lái → Xác nhận). "Để sau" ⇒ ở lại bước Chuyến đi; bấm
-  "Tiếp tục" lần nữa thì hộp lại mở.
-- Vừa đăng nhập bằng Google/Facebook từ hộp đặt xe (bản nháp ADR 0060 điều 7) mà chưa có số ⇒ cùng
-  đường trên: mở hộp, đợi, xác minh xong tự đi tiếp. Không tự gửi gì.
+- `useAccountPhonePrompt()` mở lại hộp, kể cả khi khách đã "Để sau", với câu mở của việc đặt xe,
+  điền sẵn số do nơi gọi truyền vào.
+- `RequestBookingFlow`: tài khoản chưa có SĐT đã xác minh đi hết các bước như mọi phiên khác — Chọn
+  chuyến → (bằng lái) → Xem lại, kể cả lượt tự đi tiếp khi mở từ thẻ đặt xe và lượt quay về sau
+  Google/Facebook. **Chỉ khi bấm "Gửi yêu cầu thuê xe"** (ô đồng ý đã tick, các ô đã hợp lệ) mới mở
+  hộp, điền sẵn SĐT LIÊN HỆ khách vừa gõ ở màn Xem lại (ADR 0063).
+- Xác minh xong trong CHÍNH lượt hộp đó ⇒ lượt gửi đi tiếp (chờ `/auth/me` làm mới mang số đã xác
+  minh, qua đủ các phép kiểm của nút gửi). Đây là tiếp nối cú bấm gửi của khách, không phải "tự gửi"
+  mà ADR 0060 điều 7 cấm (bản nháp sau một lượt đăng nhập rời trang). "Để sau" ⇒ không gửi, ở lại màn
+  Xem lại; bấm gửi lần nữa thì hộp lại mở.
+- Trong lúc hộp đặt xe mở (`useSuppressAccountPhoneReminder`), lời nhắc chung ở điều 1 KHÔNG tự bật
+  — khách chưa xem gì đã bị hỏi số là đúng thứ quyết định này gỡ.
 - Server vẫn trả `PHONE_NOT_VERIFIED` ở nút gửi (cache `/auth/me` cũ) ⇒ làm mới `/auth/me`, mở hộp, giữ
-  câu lỗi theo mã; xác minh xong lỗi tự gỡ, khách tự bấm gửi lại.
+  câu lỗi theo mã; xác minh xong lượt gửi đi tiếp.
 
 ### 3. Site partner giữ nguyên ADR 0060 điều 5
 
