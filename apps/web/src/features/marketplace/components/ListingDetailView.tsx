@@ -177,8 +177,8 @@ export async function ListingDetailView({
               {locationLine ? (
                 <div className={styles.locationRow}>
                   <svg
-                    width="18"
-                    height="18"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -194,10 +194,9 @@ export async function ListingDetailView({
                   <span>{locationLine}</span>
                 </div>
               ) : null}
-              <hr className={styles.headerDivider} />
             </div>
 
-            {/* 4 thông số icon 44px dạng hàng ngang (mobile: lưới 2 × 2) */}
+            {/* 4 thông số icon 48px dạng hàng ngang (mobile: lưới 2 × 2) */}
             {specs.length > 0 ? <ListingSpecsCard specs={specs} /> : null}
           </div>
 
@@ -241,21 +240,28 @@ export async function ListingDetailView({
             <h2 id="host-heading" className={styles.sectionTitle}>
               {t('hostTitle')}
             </h2>
-            <ShopQuickInfoCard
-              shop={{
-                name: listing.shopName,
-                slug: listing.shopSlug,
-                logoUrl: listing.shopLogoUrl,
-                verified: listing.shopVerified,
-                province: listing.shopProvince,
-                bio: listing.shopBio,
-                ratingAvg: listing.shopRatingAvg,
-                ratingCount: listing.shopRatingCount,
-                completedTripCount: listing.shopCompletedTripCount,
-              }}
-              metrics={listing.shopMetrics}
-              variant="inline"
-            />
+            {/*
+              Khung thẻ "Chủ xe" (viền vàng, nền vàng nhạt — Figma `19707:83457`) do lớp bọc này vẽ:
+              biến thể `inline` của thẻ dùng chung để nền/viền trong suốt ở PC. Ở mobile thẻ tự vẽ
+              khung riêng (`ShopQuickInfoCard.module.css`) nên lớp bọc nhường lại, không viền đôi.
+            */}
+            <div className={styles.hostCard}>
+              <ShopQuickInfoCard
+                shop={{
+                  name: listing.shopName,
+                  slug: listing.shopSlug,
+                  logoUrl: listing.shopLogoUrl,
+                  verified: listing.shopVerified,
+                  province: listing.shopProvince,
+                  bio: listing.shopBio,
+                  ratingAvg: listing.shopRatingAvg,
+                  ratingCount: listing.shopRatingCount,
+                  completedTripCount: listing.shopCompletedTripCount,
+                }}
+                metrics={listing.shopMetrics}
+                variant="inline"
+              />
+            </div>
           </section>
 
           {/* Điểm nhận xe & Bản đồ tĩnh */}
@@ -276,8 +282,8 @@ export async function ListingDetailView({
                     className={styles.openMapLink}
                   >
                     <svg
-                      width="18"
-                      height="18"
+                      width="20"
+                      height="20"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"

@@ -30,6 +30,7 @@ import { provinceLabelOf } from '../province-options';
 import { useAllDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
+import { usePriceBandLabel } from '../search/use-price-band-label';
 import type { MarketplaceFilters } from '../types';
 import { SearchExperienceProvider } from '../search/search-context';
 import { SearchHeroBanner } from '../search/SearchHeroBanner';
@@ -38,7 +39,6 @@ import { FilterModal } from './FilterModal';
 import { SearchDialog } from './SearchDialog';
 import { VehicleCard } from './VehicleCard';
 import styles from './MarketplaceResults.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
@@ -60,7 +60,7 @@ function MarketplaceResultsContent() {
   const t = useTranslations('Marketplace.results');
   const tLocation = useTranslations('HomeSearch.location');
   const domainLabel = useDomainLabel();
-  const fmt = useAppFormat();
+  const priceBandLabel = usePriceBandLabel();
 
   const { filters, setFilters } = useMarketplaceFilters();
   const { data: destinations } = useAllDestinations();
@@ -111,6 +111,12 @@ function MarketplaceResultsContent() {
         label: bodyTypeLabel(v) ?? v,
         onRemove: removeFrom('bodyType', v),
       });
+    for (const v of filters.motorbikeCategory ?? [])
+      chips.push({
+        key: `moto-${v}`,
+        label: domainLabel('motorbikeCategory', v),
+        onRemove: removeFrom('motorbikeCategory', v),
+      });
     for (const v of filters.brand ?? [])
       chips.push({
         key: `brand-${v}`,
@@ -120,7 +126,7 @@ function MarketplaceResultsContent() {
     for (const v of filters.transmission ?? [])
       chips.push({
         key: `trans-${v}`,
-        label: TRANSMISSION_TYPE_EXT_LABEL[v as TransmissionTypeExt] ?? v,
+        label: domainLabel('transmissionType', v, TRANSMISSION_TYPE_EXT_LABEL[v as TransmissionTypeExt] ?? v),
         onRemove: removeFrom('transmission', v),
       });
     for (const v of filters.seats ?? [])
@@ -144,20 +150,22 @@ function MarketplaceResultsContent() {
           label: domainLabel('listingAmenity', amenity, LISTING_AMENITY_LABEL[amenity]),
           onRemove: () => setFilters({ [amenity]: undefined }),
         });
+    if (filters.instantBook)
+      chips.push({
+        key: 'instantBook',
+        label: tFilters('modal.chips.instantBook'),
+        onRemove: () => setFilters({ instantBook: undefined }),
+      });
+    if (filters.minRating != null)
+      chips.push({
+        key: 'minRating',
+        label: tFilters('modal.ratingFrom', { rating: filters.minRating }),
+        onRemove: () => setFilters({ minRating: undefined }),
+      });
     if (filters.priceMin != null || filters.priceMax != null) {
-      let priceLabel = '';
-      if (filters.priceMax && !filters.priceMin) {
-        priceLabel = `Dưới ${fmt.moneyCompact(String(filters.priceMax))}`;
-      } else if (filters.priceMin && !filters.priceMax) {
-        priceLabel = `Trên ${fmt.moneyCompact(String(filters.priceMin))}`;
-      } else {
-        priceLabel = `${filters.priceMin ? fmt.moneyCompact(String(filters.priceMin)) : '0'} – ${
-          filters.priceMax ? fmt.moneyCompact(String(filters.priceMax)) : '∞'
-        }`;
-      }
       chips.push({
         key: 'price',
-        label: priceLabel,
+        label: priceBandLabel({ min: filters.priceMin, max: filters.priceMax }),
         onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
       });
     }
@@ -169,8 +177,9 @@ function MarketplaceResultsContent() {
     bodyTypeLabel,
     fuelTypeLabel,
     featureLabel,
-    fmt,
     domainLabel,
+    priceBandLabel,
+    tFilters,
   ]);
 
   /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
@@ -245,14 +254,15 @@ function MarketplaceResultsContent() {
                   value,
                   label: domainLabel('listingSort', value, LISTING_SORT_LABEL[value]),
                 }))}
-                variant="borderless"
+                className={styles.sortSelect}
+                size="large"
                 popupMatchSelectWidth={false}
                 aria-label={t('sortAriaLabel')}
               />
             </label>
 
             {/* Nút chuyển đổi View Mode: Grid (mặc định) & List */}
-            <div className={styles.viewModeGroup} role="group" aria-label="Chế độ hiển thị">
+            <div className={styles.viewModeGroup} role="group" aria-label={t('viewMode')}>
               <button
                 type="button"
                 className={cx(styles.viewModeBtn, viewMode === 'grid' && styles.viewModeActive)}

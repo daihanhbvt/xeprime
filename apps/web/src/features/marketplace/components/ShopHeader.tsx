@@ -1,5 +1,11 @@
-import { STOREFRONT_KIND } from '@xeprime/types';
-import { VerifiedMark } from '@/components/common/VerifiedMark';
+import Image from 'next/image';
+import {
+  HOST_METRIC_STATE,
+  HOST_METRIC_WINDOW_DAYS,
+  STOREFRONT_KIND,
+  hostMetricState,
+} from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 import { getAppFormat } from '@/i18n/server-format';
@@ -9,27 +15,34 @@ import type { PublicShop } from '../types';
 import styles from './ShopHeader.module.css';
 
 /**
- * Đầu trang gian hàng công khai — Server Component (không state, không `antd`) để nội dung nhận
- * dạng của gian hàng nằm sẵn trong HTML cho công cụ tìm kiếm. Phần duy nhất phải là client là
- * hai nút liên hệ, và nó được tách ra thành một island riêng (`ShopContactActions`).
+ * Đầu trang gian hàng công khai — Server Component (không state, không `antd`) để danh tính, giới
+ * thiệu và số liệu của gian hàng nằm sẵn trong HTML cho công cụ tìm kiếm. Phần client duy nhất là
+ * nút nhắn tin (`ShopContactActions`) và dấu "i" của ô "Nhận & giữ chuyến".
+ *
+ * Figma: chủ xe cá nhân `20058:71218`, gian hàng `20063:59332`. MỘT thẻ gom ba thứ trước đây là
+ * ba khối: ai (tên, nơi có xe, điểm, số chuyến, điểm nổi bật) → họ tự giới thiệu gì → hệ thống
+ * đếm được gì về họ. Đặt cạnh nhau để người đọc đối chiếu ngay: một đoạn giới thiệu hùng hồn bên
+ * cạnh "00 chuyến đã hoàn thành" tự nói điều cần nói.
  *
  * ## Hai mặt tiền, một component
  *
  * `shop.storefrontKind` (backend chấm từ tuyến thu tiền hiệu lực) chọn giữa:
  *
- *   `personal` — chủ xe cá nhân: KHÔNG ảnh bìa, avatar tròn, hồ sơ đọc như hồ sơ một CON NGƯỜI.
- *   `shop`     — gian hàng tuyến gói: ảnh bìa lớn, vành vàng quanh logo, dấu xác thực, các năng
- *                lực doanh nghiệp đếm được.
+ *   `personal` — chủ xe cá nhân: KHÔNG ảnh bìa, thẻ viền xám, hồ sơ đọc như hồ sơ một CON NGƯỜI.
+ *   `shop`     — gian hàng tuyến gói: ảnh bìa, thẻ viền vàng đè lên bìa, dấu xác thực, ô "Chi
+ *                nhánh".
  *
- * Tách thành hai component sẽ nhân đôi phần giống nhau (tên, đánh giá, liên hệ, thiếu-ảnh) và
- * đó chính là phần dễ trôi khỏi nhau nhất. Nhánh nằm ở đúng ba chỗ mà hai mặt tiền THẬT SỰ khác
- * nhau, mỗi chỗ đều đọc được ngay tại đây.
+ * Chủ xe cá nhân có thể đã tải lên một `coverUrl` (cùng form hồ sơ), nhưng một dải bìa rộng phía
+ * trên một người có một chiếc xe là mượn ngôn ngữ thị giác của doanh nghiệp để nói một điều chưa
+ * được xác minh — trang công khai không vẽ nó.
  *
- * ## Ảnh bìa chỉ thuộc về gian hàng
+ * ## Mọi chip và mọi ô đều ĐẾM ĐƯỢC
  *
- * Chủ xe cá nhân có thể đã tải lên một `coverUrl` từ trước (cùng form hồ sơ), nhưng một dải bìa
- * rộng phía trên một người có một chiếc xe là mượn ngôn ngữ thị giác của doanh nghiệp để nói một
- * điều chưa được xác minh. Dữ liệu vẫn còn nguyên trong hồ sơ họ; trang công khai chỉ không vẽ.
+ * Bản vẽ còn có số điện thoại, chip "Hỗ trợ phí đặt xe" và các khối cam kết (pháp nhân, bảo dưỡng,
+ * hỗ trợ 24/7) — chúng cố ý KHÔNG có ở đây: số điện thoại không công khai (`PublicShopDto`), và
+ * một lời hứa chưa có dữ liệu đứng sau là nói dối khách (ADR 0028). Ô thiếu dữ liệu thì BIẾN MẤT,
+ * không hiện 0: điểm khi chưa ai chấm không phải "0 sao", và chỉ số uy tín dưới ngưỡng mẫu là
+ * "chưa đủ dữ liệu", không phải 0% (ADR 0045 điều 3).
  */
 export async function ShopHeader({ shop }: { shop: PublicShop }) {
   const [t, fmt] = await Promise.all([getTranslations('Shops'), getAppFormat()]);
@@ -39,8 +52,8 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
 
   /*
    * Các tỉnh gian hàng ĐANG có xe, không phải tỉnh ghi trong hồ sơ: khách đọc dòng này để biết
-   * "thuê được ở đâu", và một salon bốn chi nhánh mà chỉ hiện tỉnh đăng ký là nói thiếu.
-   * Chưa có xe công khai nào ⇒ rơi về tỉnh trong hồ sơ, vẫn hơn là một dòng trống.
+   * "thuê được ở đâu", và một salon bốn chi nhánh mà chỉ hiện tỉnh đăng ký là nói thiếu. Chưa có
+   * xe công khai nào ⇒ rơi về tỉnh trong hồ sơ, vẫn hơn là một dòng trống.
    */
   const provinces =
     shop.serviceProvinceNames.length > 0
@@ -49,120 +62,243 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
         ? [shop.provinceName]
         : [];
 
-  const joinedLabel = t(isShop ? 'header.joinedShop' : 'header.joinedPersonal', {
-    date: fmt.monthYear(new Date(shop.joinedAt)),
-  });
+  /*
+   * "Đã xác minh" đọc PHIẾU DUYỆT gian hàng (`trust.shopVerified`), không đọc `verified` (= đang ở
+   * tuyến gói): trả tiền gói không đồng nghĩa nền tảng đã xem xét hồ sơ (ADR 0040 điều 5). Dấu
+   * xanh trên logo thì vẫn đọc `verified` — nó là dấu GIAN HÀNG, cùng dấu ở logo trên thẻ xe.
+   */
+  const highlights = [
+    shop.trust.shopVerified ? t('profile.verified') : null,
+    shop.branchCount > 1 ? t('profile.branches', { count: shop.branchCount }) : null,
+    shop.deliveryAvailable ? t('profile.delivery') : null,
+  ].filter((chip): chip is string => chip !== null);
+
+  // Chỉ số uy tín chỉ có tiếng nói khi đủ mẫu; dưới ngưỡng thì ô biến mất thay vì hiện 0%.
+  const metricsReady = hostMetricState(shop.metrics.sampleCount) === HOST_METRIC_STATE.READY;
+  const responseRate = metricsReady ? shop.metrics.responseRatePercent : null;
+  const acceptKeepRate = metricsReady ? shop.metrics.acceptKeepRatePercent : null;
+
+  // "02", "07" như bản vẽ — số đếm nhỏ đứng thẳng hàng với "100%" của ô bên cạnh.
+  const countValue = (value: number) => (value < 10 ? `0${value}` : fmt.count(value));
+
+  const statCandidates: (ShopStat | null)[] = [
+    isShop
+      ? { key: 'branches', value: countValue(shop.branchCount), label: t('profile.stats.branches') }
+      : null,
+    { key: 'vehicles', value: countValue(shop.vehicleCount), label: t('profile.stats.vehicles') },
+    {
+      key: 'completedTrips',
+      value: countValue(shop.completedTripCount),
+      label: t('profile.stats.completedTrips'),
+    },
+    hasRating
+      ? {
+          key: 'rating',
+          value: fmt.rating(rating),
+          label: t('profile.stats.rating'),
+          star: true,
+        }
+      : null,
+    responseRate !== null
+      ? {
+          key: 'responseRate',
+          value: t('metrics.responseRateValue', { percent: responseRate }),
+          label: t('profile.stats.responseRate'),
+        }
+      : null,
+    acceptKeepRate !== null
+      ? {
+          key: 'acceptKeep',
+          value: t('metrics.acceptKeepValue', { percent: acceptKeepRate }),
+          label: t('profile.stats.acceptKeep'),
+          hint: {
+            label: t('metrics.acceptKeepHintLabel'),
+            content: t('metrics.acceptKeepHint', { days: HOST_METRIC_WINDOW_DAYS }),
+          },
+        }
+      : null,
+  ];
+  const stats = statCandidates.filter((stat): stat is ShopStat => stat !== null);
 
   return (
-    <header className={styles.header}>
+    <header className={cx(styles.header, isShop && styles.headerShop)}>
       {isShop ? (
-        <ShopCover
-          imageUrl={shop.coverUrl}
-          alt={t('header.coverAlt', { name: shop.name })}
-          highlights={[
-            shop.verified ? t('highlights.verified') : null,
-            shop.branchCount > 1 ? t('highlights.branches', { count: shop.branchCount }) : null,
-            shop.deliveryAvailable ? t('highlights.delivery') : null,
-          ].filter((chip): chip is string => chip !== null)}
-        />
+        <ShopCover imageUrl={shop.coverUrl} alt={t('header.coverAlt', { name: shop.name })} />
       ) : null}
 
       <div className={styles.inner}>
-        <div className={cx(styles.identity, isShop && styles.identityShop)}>
-          <div className={cx(styles.avatar, isShop && styles.avatarShop)}>
-            {shop.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài (R2)
-              <img
-                src={shop.logoUrl}
-                alt={t('header.logoAlt', { name: shop.name })}
-                className={styles.avatarImg}
-              />
-            ) : (
-              <span className={styles.avatarFallback} aria-hidden="true">
-                {initialOf(shop.name)}
-              </span>
-            )}
-          </div>
+        <div className={cx(styles.card, isShop && styles.cardShop)}>
+          {isShop ? (
+            <Image
+              src="/shops/crown.webp"
+              alt=""
+              width={84}
+              height={84}
+              className={styles.crown}
+              aria-hidden="true"
+              unoptimized
+            />
+          ) : null}
 
-          <div className={styles.info}>
-            <div className={styles.nameRow}>
-              <h1 className={styles.name}>{shop.name}</h1>
-              {shop.verified ? (
-                <VerifiedMark label={t('header.verified')} size={22} className={styles.verified} />
-              ) : null}
-              <span className={cx(styles.badge, isShop && styles.badgeShop)}>
-                {t(isShop ? 'badge.shop' : 'badge.personal')}
-              </span>
-            </div>
-
-            <div className={styles.meta}>
-              {provinces.length > 0 ? (
-                <span className={styles.metaItem}>
-                  <PinIcon />
-                  {provinces.join(' · ')}
-                </span>
-              ) : null}
-              <span className={styles.metaItem}>
-                {hasRating ? (
-                  <>
-                    {/*
-                      MỘT ngôi sao, không phải năm. Ở đây điểm số đứng ngay cạnh nó ("4,9 (156
-                      đánh giá)"), nên năm ngôi sao chỉ lặp lại cùng một thông tin bằng một khối
-                      hình nặng hơn tên gian hàng ngay phía trên. Năm sao giữ nguyên ở chỗ nó
-                      thật sự làm việc: thẻ đánh giá, nơi KHÔNG có con số đi kèm.
-                    */}
-                    <span className={styles.star} aria-hidden="true">
-                      ★
-                    </span>
-                    <span className={styles.ratingText}>
-                      {t('header.rating', { avg: fmt.rating(rating), count: shop.ratingCount })}
-                    </span>
-                  </>
+          <div className={styles.summary}>
+            <div className={styles.identity}>
+              <div className={cx(styles.avatar, isShop && styles.avatarShop)}>
+                {shop.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài (R2)
+                  <img
+                    src={shop.logoUrl}
+                    alt={t('header.logoAlt', { name: shop.name })}
+                    className={styles.avatarImg}
+                  />
                 ) : (
-                  <span className={styles.ratingText}>{t('header.noRating')}</span>
+                  <span className={styles.avatarFallback} aria-hidden="true">
+                    {initialOf(shop.name)}
+                  </span>
                 )}
-              </span>
-              <span className={styles.metaDivider} aria-hidden="true" />
-              <span className={styles.metaItem}>{joinedLabel}</span>
+                {/*
+                  Huy hiệu XANH của bản vẽ (Figma "_Avatar company icon") — cùng file với dấu ở
+                  logo gian hàng trên thẻ xe, để khách thấy một dấu ở cả hai nơi. Không dùng
+                  `VerifiedMark` (con dấu vàng của menu tài khoản): ở đây nó là dấu của GIAN HÀNG.
+                */}
+                {shop.verified ? (
+                  <span
+                    className={styles.avatarMark}
+                    role="img"
+                    aria-label={t('header.verified')}
+                    title={t('header.verified')}
+                  >
+                    <Image src="/home/card-verified.svg" alt="" width={17} height={16} unoptimized />
+                  </span>
+                ) : null}
+              </div>
+
+              <div className={styles.info}>
+                <div className={styles.nameRow}>
+                  <h1 className={styles.name}>{shop.name}</h1>
+                  <span className={styles.badge}>
+                    {t(isShop ? 'profile.badgeShop' : 'profile.badgePersonal')}
+                  </span>
+                </div>
+
+                <ul className={styles.meta}>
+                  {provinces.length > 0 ? (
+                    <li className={styles.metaItem}>
+                      <MetaIcon src="/shops/location.svg" width={15} height={19} />
+                      <span>{provinces.join(' · ')}</span>
+                    </li>
+                  ) : null}
+                  <li className={styles.metaItem}>
+                    {hasRating ? (
+                      <>
+                        <MetaIcon src="/shops/star.svg" width={20} height={20} />
+                        <span>
+                          {fmt.rating(rating)}{' '}
+                          <span className={styles.metaMuted}>
+                            {t('profile.ratingCount', { count: shop.ratingCount })}
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className={styles.metaMuted}>{t('header.noRating')}</span>
+                    )}
+                  </li>
+                  <li className={cx(styles.metaItem, styles.metaStrong)}>
+                    <MetaIcon src="/shops/chart.svg" width={16} height={16} />
+                    <span>{t('profile.trips', { count: shop.completedTripCount })}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <ShopContactActions
+                slug={shop.slug}
+                chatOpen={shop.chatOpen}
+                className={styles.chat}
+              />
             </div>
+
+            {highlights.length > 0 ? (
+              <ul className={styles.highlights} aria-label={t('profile.highlightsLabel')}>
+                {highlights.map((chip) => (
+                  <li key={chip} className={styles.highlight}>
+                    <Image src="/shops/check.svg" alt="" width={12} height={12} unoptimized />
+                    {chip}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
-          <ShopContactActions
-            slug={shop.slug}
-            chatOpen={shop.chatOpen}
-            className={styles.actions}
-          />
+          {shop.bio || shop.address ? (
+            <section className={styles.about}>
+              <h2 className={styles.aboutTitle}>{t('profile.aboutTitle')}</h2>
+              {shop.bio ? <p className={styles.bio}>{shop.bio}</p> : null}
+              {shop.address ? (
+                <p className={styles.address}>
+                  {t('profile.address', { address: shop.address })}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          <ul className={styles.stats} aria-label={t('profile.stats.label')}>
+            {stats.map((stat) => (
+              <li key={stat.key} className={styles.stat}>
+                <span className={styles.statValue}>
+                  {stat.value}
+                  {stat.star ? (
+                    <Image src="/shops/star-16.svg" alt="" width={16} height={16} unoptimized />
+                  ) : null}
+                </span>
+                <span className={styles.statLabel}>
+                  {stat.label}
+                  {stat.hint ? (
+                    <InfoHint
+                      className={styles.statHint}
+                      label={stat.hint.label}
+                      content={stat.hint.content}
+                    />
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <p className={styles.joined}>
+            <Image src="/shops/info.svg" alt="" width={20} height={20} unoptimized />
+            {t('profile.joined', { date: fmt.monthYear(new Date(shop.joinedAt)) })}
+          </p>
         </div>
       </div>
     </header>
   );
 }
 
+interface ShopStat {
+  key: string;
+  value: string;
+  label: string;
+  star?: boolean;
+  hint?: { label: string; content: string };
+}
+
 /**
- * Dải bìa của gian hàng + các năng lực ĐẾM ĐƯỢC.
- *
- * Ba chip đều truy ngược được về dữ liệu: đã qua xác minh pháp nhân (tuyến gói), số chi nhánh
- * đang hoạt động, có xe giao tận nơi. Cố ý KHÔNG có "Bảo hiểm toàn diện" hay "Hỗ trợ 24/7" —
- * chưa có partner + policy + chứng nhận thật thì in chúng lên là hứa hộ người khác (ADR 0028),
- * và một chip sai làm cả ba chip còn lại mất giá trị.
- *
- * Không có ảnh bìa thì vẫn giữ dải: chip là phần mang thông tin, ảnh chỉ là nền — bỏ cả khối đi
- * sẽ làm hai gian hàng cùng hạng trông khác hẳn nhau chỉ vì một người chưa tải ảnh lên.
- *
- * Nhận chữ ĐÃ DỊCH thay vì tự gọi `getTranslations`, nên nó là một component ĐỒNG BỘ: một
- * Server Component async lồng trong một Server Component async chỉ giải được bằng bộ render RSC
- * của Next, tức là không bài test nào chạm tới nó được — và một dải bìa không có test là chỗ
- * duy nhất trên trang này mà một chip sai sẽ sống sót.
+ * Ô icon 20×20 đứng trước một dòng meta — trang trí thuần, chữ bên cạnh đã mang nghĩa. Kích thước
+ * hình là kích thước GỐC của từng SVG trong bản vẽ (ghim 15×19, biểu đồ 16×16, sao 20×20).
  */
-function ShopCover({
-  imageUrl,
-  alt,
-  highlights,
-}: {
-  imageUrl: string | null | undefined;
-  alt: string;
-  highlights: string[];
-}) {
+function MetaIcon({ src, width, height }: { src: string; width: number; height: number }) {
+  return (
+    <span className={styles.metaIcon} aria-hidden="true">
+      <Image src={src} alt="" width={width} height={height} unoptimized />
+    </span>
+  );
+}
+
+/**
+ * Dải bìa của gian hàng. Không có ảnh bìa thì vẫn giữ dải bằng nền thương hiệu: thẻ hồ sơ đè lên
+ * mép dưới của nó, bỏ dải đi thì hai gian hàng cùng hạng trông khác hẳn nhau chỉ vì một người chưa
+ * tải ảnh lên.
+ */
+function ShopCover({ imageUrl, alt }: { imageUrl: string | null | undefined; alt: string }) {
   return (
     <div className={styles.cover}>
       {imageUrl ? (
@@ -171,39 +307,6 @@ function ShopCover({
       ) : (
         <div className={styles.coverFallback} aria-hidden="true" />
       )}
-      <div className={styles.coverScrim} aria-hidden="true" />
-      {highlights.length > 0 ? (
-        <ul className={styles.highlights}>
-          {highlights.map((chip) => (
-            <li key={chip} className={styles.highlight}>
-              {chip}
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </div>
-  );
-}
-
-/**
- * Ghim địa bàn trước danh sách tỉnh.
- *
- * SVG inline thay vì `EnvironmentOutlined`: `@ant-design/icons` kéo cả đầu trang qua ranh giới
- * client chỉ vì một hình 14px, mà đầu trang gian hàng tồn tại chính là để render sẵn ở server
- * cho công cụ tìm kiếm. Trang trí thuần nên `aria-hidden` — tên tỉnh ngay bên cạnh đã là chữ.
- */
-function PinIcon() {
-  return (
-    <svg
-      className={styles.pin}
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M8 1.5A4.5 4.5 0 0 0 3.5 6c0 3.2 3.86 7.9 4.03 8.1a.6.6 0 0 0 .94 0C8.64 13.9 12.5 9.2 12.5 6A4.5 4.5 0 0 0 8 1.5Zm0 6.25A1.75 1.75 0 1 1 8 4.25a1.75 1.75 0 0 1 0 3.5Z" />
-    </svg>
   );
 }

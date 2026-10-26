@@ -1,26 +1,38 @@
+/*
+ * Hộp "Bộ lọc" — Figma `19719:47126` (1000 rộng). Chữ: tiêu đề 18/28 semibold, tiêu đề nhóm
+ * 16/24 semibold, lựa chọn 14/20, gợi ý 12/18. Phần đầu đứng yên, hai cột tiêu chí cuộn, dải
+ * "Đang chọn" + chân hộp cố định.
+ */
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
-  background: rgba(0, 0, 0, 0.5);
+  /*
+   * Bằng tầng hộp thoại của AntD (`--xp-z-popup-base` = 1000), KHÔNG cao hơn: lịch chọn ngày giờ,
+   * bảng chọn địa điểm mở từ chính hộp này là Popover/Drawer AntD (1000–1050) gắn vào `body` —
+   * đặt 1100 thì chúng mở ra nằm dưới hộp.
+   */
+  z-index: var(--xp-z-popup-base);
+  background: var(--xp-color-bg-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--xp-space-lg);
 }
 
 .modal {
   position: relative;
-  background: #ffffff;
-  border-radius: 16px;
+  background: var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-lg);
   width: 100%;
-  max-width: 820px;
-  max-height: 90vh;
+  max-width: 1000px;
+  max-height: min(950px, calc(100vh - 48px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 20px 24px -4px rgba(10, 13, 18, 0.08),
+    0 8px 8px -4px rgba(10, 13, 18, 0.03);
   animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -35,34 +47,38 @@
   }
 }
 
+/* ─── Đầu hộp ─────────────────────────────────────────────────────────────── */
 .header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--xp-color-border-subtle);
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--xp-space-lg) 64px var(--xp-space-20) 32px;
 }
 
 .titleArea {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--xp-space-2);
 }
 
 .title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 13px;
-  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-tertiary);
 }
 
 .closeBtn {
+  position: absolute;
+  top: var(--xp-space-20);
+  right: var(--xp-space-20);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -71,10 +87,12 @@
   border: none;
   background: transparent;
   color: var(--xp-color-text-tertiary);
-  font-size: 16px;
+  font-size: 18px;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .closeBtn:hover {
@@ -82,331 +100,544 @@
   color: var(--xp-color-text);
 }
 
-.content {
+/* ─── Thân: phần đầu đứng yên + phần cuộn ─────────────────────────────────── */
+.body {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.context {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: 0 32px var(--xp-space-md);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: var(--xp-space-md) 32px var(--xp-space-lg);
+}
+
+/* Dải tab nền xám, mục chọn nổi trắng — dùng cho dịch vụ và loại xe. */
+.segmented {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: var(--xp-space-2);
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-elevation-xs);
 }
 
-/* Service Segmented */
-.serviceSegmented {
-  display: flex;
-  background: var(--xp-color-bg-muted);
-  padding: 4px;
-  border-radius: 12px;
-  gap: 4px;
-}
-
-.serviceTab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-medium);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.16s ease;
-}
-
-.serviceTabActive {
-  background: #ffffff;
-  color: var(--xp-color-primary-strong);
-  font-weight: var(--xp-font-weight-semibold);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-/* Vehicle Type Segmented */
-.vehicleTypeRow {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rowLabel {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
-
-.vehicleTypeSegmented {
-  display: inline-flex;
-  background: var(--xp-color-bg-muted);
-  padding: 4px;
-  border-radius: 10px;
-  gap: 4px;
+.segmentedInline {
   align-self: flex-start;
 }
 
-.vehicleTypeTab {
-  display: flex;
+.segment {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 36px;
-  border: none;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  min-height: 44px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
   background: transparent;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-label);
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
   font-weight: var(--xp-font-weight-medium);
-  border-radius: 8px;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 
-.vehicleTypeTabActive {
-  background: #ffffff;
-  color: var(--xp-color-primary-strong);
-  font-weight: var(--xp-font-weight-semibold);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+.segmentFill {
+  flex: 1;
+  min-width: 0;
 }
 
-/* Fields Row */
+.segment:hover {
+  color: var(--xp-color-text);
+}
+
+.segmentActive,
+.segmentActive:hover {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-hover);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.segmentIcon {
+  display: inline-flex;
+  font-size: 20px;
+}
+
+.segment:focus-visible,
+.seeMore:focus-visible,
+.chip:focus-visible,
+.resetBtn:focus-visible,
+.clearBtn:focus-visible,
+.applyBtn:focus-visible,
+.closeBtn:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.dashedDivider {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 1px dashed var(--xp-color-border-strong);
+}
+
 .fieldsRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 32px;
 }
 
-.fieldBox {
+.field {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 6px;
 }
 
 .fieldLabel {
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
   color: var(--xp-color-text-secondary);
 }
 
-.fieldInputWrapper {
-  border: 1px solid var(--xp-color-border);
-  border-radius: 10px;
-  padding: 4px 12px;
-  background: #ffffff;
+.fieldIcon {
+  color: var(--xp-color-primary);
+  font-size: 16px;
 }
 
-/* Main Grid */
-.filterGrid {
+.fieldControl {
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  padding: 2px 14px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+/* Viên địa điểm nằm TRONG ô nhập — bỏ viền/nền của viên để không thành hai lớp khung. */
+.fieldControl .locationTrigger {
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--xp-font-size-body);
+}
+
+/* ─── Hai cột tiêu chí ───────────────────────────────────────────────────── */
+.columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  padding-top: 20px;
 }
 
 .column {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: 22px;
+  gap: var(--xp-space-20);
 }
 
-.section {
+.group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--xp-space-sm);
 }
 
-.sectionHeader {
+.groupHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--xp-space-12);
 }
 
-.sectionTitle {
+.groupTitle {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
 
-.sectionHint {
-  font-size: 12px;
+.groupHint {
+  flex-shrink: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-tertiary);
 }
 
-.optionsGrid {
+.options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
+  gap: var(--xp-space-2) var(--xp-space-12);
 }
 
-.checkboxLabel {
+.optionsSingle {
+  grid-template-columns: 1fr;
+}
+
+.option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--xp-color-text);
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  min-height: 30px;
   cursor: pointer;
   user-select: none;
 }
 
-.radioGroup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
-}
-
-.radioLabel {
-  display: flex;
+.optionLabel {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--xp-color-text);
-  cursor: pointer;
-  user-select: none;
+  gap: var(--xp-space-xs);
+  min-width: 0;
 }
 
-.seeMoreLink {
-  border: none;
-  background: transparent;
-  color: var(--xp-color-primary-strong);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
+.optionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}
+
+/* "4 chỗ" cạnh kiểu xe — Figma "Seat Count". */
+.optionPill {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.seeMore {
   align-self: flex-start;
   padding: 0;
-  margin-top: 2px;
-}
-
-.seeMoreLink:hover {
+  border: none;
+  background: transparent;
+  color: var(--xp-color-primary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
   text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
-/* Custom Price inputs */
-.priceInputsRow {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
+.seeMore:hover {
+  color: var(--xp-color-primary-hover);
 }
 
-.priceInputBlock {
-  flex: 1;
+.divider {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+/* ─── Khoảng giá ─────────────────────────────────────────────────────────── */
+.priceBlock {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--xp-space-12);
 }
 
-.priceInputTitle {
-  font-size: 11px;
-  color: var(--xp-color-text-tertiary);
+.priceInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xp-space-12);
 }
 
 .priceInput {
   width: 100%;
+  border-radius: var(--xp-border-radius-control);
 }
 
-/* Selected chips row in modal */
-.selectedRow {
+.priceInput :global(.ant-input-number-input) {
+  text-align: right;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.priceInputLabel {
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.priceSlider {
+  margin: var(--xp-space-xs) 6px 0;
+}
+
+.priceScale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ─── Không cần xác nhận ─────────────────────────────────────────────────── */
+.toggleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.toggleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding-top: 8px;
-  font-size: 12px;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.toggleText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.policyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-warning-bg);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-secondary);
 }
 
-.selectedChip {
-  display: inline-flex;
+.policyIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 16px;
+  color: var(--xp-color-warning);
+}
+
+/* ─── Đang chọn ──────────────────────────────────────────────────────────── */
+.selectedBar {
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) 32px var(--xp-space-12);
+}
+
+.selectedLabel {
+  flex-shrink: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.chips {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--xp-space-xs);
   padding: 2px 10px;
-  border-radius: 9999px;
   border: 1px solid var(--xp-color-primary);
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-strong);
-  font-size: 12px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-hover);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.chipCloseIcon {
+.chip:hover {
+  background: var(--xp-color-primary-muted);
+}
+
+.chipIcon {
   font-size: 10px;
 }
 
-.resetIconBtn {
+.resetBtn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px;
   border: none;
   background: transparent;
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-primary);
+  font-size: 16px;
   cursor: pointer;
-  padding: 2px;
-  display: inline-flex;
-  align-items: center;
 }
 
-.resetIconBtn:hover {
+.resetBtn:hover {
   color: var(--xp-color-primary-hover);
 }
 
-/* Footer */
+/* ─── Chân hộp ───────────────────────────────────────────────────────────── */
 .footer {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  background: #ffffff;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20) 32px var(--xp-space-20);
+  border-top: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.clearBtn,
+.applyBtn {
+  min-height: 48px;
+  padding: var(--xp-space-12) var(--xp-space-20);
+  border-radius: var(--xp-border-radius-control);
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    filter 0.16s ease;
 }
 
 .clearBtn {
-  height: 42px;
-  padding: 0 24px;
-  border-radius: 10px;
   border: 1px solid var(--xp-color-border-strong);
-  background: #ffffff;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.16s ease;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
 }
 
 .clearBtn:hover {
-  border-color: var(--xp-color-text-tertiary);
   background: var(--xp-color-bg-muted);
 }
 
 .applyBtn {
-  height: 42px;
-  padding: 0 32px;
-  border-radius: 10px;
+  min-width: 160px;
   border: none;
-  background: linear-gradient(135deg, #e9ac29 0%, #cb9115 100%);
-  color: #ffffff;
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-bold);
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(233, 172, 41, 0.35);
-  transition: all 0.16s ease;
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
 }
 
 .applyBtn:hover {
-  background: linear-gradient(135deg, #f0b73a 0%, #d69b1e 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(233, 172, 41, 0.45);
+  filter: brightness(0.96);
 }
 
+/* ─── Màn hẹp: toàn màn hình, cả thân cuộn chung ─────────────────────────── */
 @media (max-width: 768px) {
+  .overlay {
+    padding: 0;
+  }
+
   .modal {
-    max-height: 100vh;
+    max-width: none;
     height: 100%;
+    max-height: none;
     border-radius: 0;
   }
-  .filterGrid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+
+  .header {
+    padding: var(--xp-space-md) 56px var(--xp-space-12) var(--xp-space-md);
   }
-  .fieldsRow {
+
+  .body {
+    overflow-y: auto;
+  }
+
+  .context {
+    padding: 0 var(--xp-space-md) var(--xp-space-md);
+  }
+
+  .scroll {
+    flex: none;
+    overflow: visible;
+    padding: var(--xp-space-sm) var(--xp-space-md) var(--xp-space-lg);
+  }
+
+  .segment {
+    padding-inline: var(--xp-space-sm);
+    font-size: var(--xp-font-size-body);
+  }
+
+  /* Ba tab dịch vụ trên 390px: bỏ icon, cho nhãn xuống dòng thay vì bị cắt ở mép. */
+  .segmentFill {
+    white-space: normal;
+    text-align: center;
+    line-height: var(--xp-line-height-body-sm);
+  }
+
+  .segmentFill .segmentIcon {
+    display: none;
+  }
+
+  .priceInputs,
+  .fieldsRow,
+  .columns {
     grid-template-columns: 1fr;
+    gap: var(--xp-space-md);
+  }
+
+  .selectedBar {
+    padding-inline: var(--xp-space-md);
+  }
+
+  .footer {
+    padding: var(--xp-space-12) var(--xp-space-md);
+  }
+
+  .clearBtn,
+  .applyBtn {
+    flex: 1;
+    min-width: 0;
   }
 }

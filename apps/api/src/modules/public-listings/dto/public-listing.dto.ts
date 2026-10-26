@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PickType } from '@nestjs/swagger';
 import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
 import { LongTermPackageOptionDto } from '../../pricing/dto/pricing.dto';
 import {
@@ -7,10 +7,12 @@ import {
   COLLATERAL_MODE_VALUES,
   DEFAULT_LISTING_SORT,
   FUEL_TYPE_VALUES,
+  LISTING_MIN_RATING_VALUES,
   LISTING_SORT_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
   PROVINCE_CODES,
   SEAT_BUCKET_VALUES,
+  SELLER_ENTITY_TYPE,
   SERVICE_TYPE_VALUES,
   STOREFRONT_KIND_VALUES,
   TRANSMISSION_TYPE_EXT_VALUES,
@@ -166,6 +168,27 @@ export class PublicListingQueryDto {
   @Transform(toBool)
   @IsBoolean()
   vatInvoice?: boolean;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng ' +
+      'dịch vụ đó; không có thì bật cho ít nhất một dịch vụ',
+  })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  instantBook?: boolean;
+
+  @ApiPropertyOptional({
+    type: Number,
+    enum: LISTING_MIN_RATING_VALUES,
+    description: 'Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsIn(LISTING_MIN_RATING_VALUES)
+  minRating?: number;
 
   @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)' })
   @IsOptional()
@@ -878,6 +901,96 @@ export class PublicListingPageDto {
   @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
 }
 
+/** Một tỉnh/thành gian hàng đang có xe công khai — tab lọc "Xe đang cho thuê". */
+export class PublicShopProvinceDto {
+  @ApiProperty({ description: 'Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode`' })
+  code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() vehicleCount!: number;
+}
+
+/**
+ * Một chi nhánh đang giữ xe công khai của gian hàng.
+ *
+ * Điểm là trung bình CÓ TRỌNG SỐ theo số đánh giá của các xe thuộc chi nhánh — cùng cách cộng với
+ * điểm gian hàng; chi nhánh chưa có xe nào được đánh giá thì `ratingAvg = null`, không phải 0.
+ */
+export class PublicShopBranchDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiProperty({ description: 'Số xe công khai đang ở chi nhánh' }) vehicleCount!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá',
+  })
+  ratingAvg!: string | null;
+  @ApiProperty() ratingCount!: number;
+}
+
+/**
+ * Số xe công khai thoả từng chip lọc của trang gian hàng — đếm bằng CHÍNH `buildListingWhere` mà
+ * danh sách dùng, nên chip nào hiện ra thì bấm vào không bao giờ ra trang rỗng.
+ */
+export class ShopVehicleFilterCountsDto {
+  @ApiProperty({ description: 'serviceType=with_driver' }) withDriver!: number;
+  @ApiProperty({ description: 'serviceType=long_term' }) longTerm!: number;
+  @ApiProperty({ description: 'delivery=true' }) delivery!: number;
+  @ApiProperty({ description: 'instantBook=true' }) instantBook!: number;
+  @ApiProperty({ description: 'noCollateral=true' }) noCollateral!: number;
+  @ApiProperty({ description: 'vatInvoice=true' }) vatInvoice!: number;
+}
+
+/**
+ * Dấu hiệu UY TÍN đã được kiểm chứng của một gian hàng — khối "Xác thực XePrime" và các ô cam kết
+ * ở trang gian hàng.
+ *
+ * Mỗi trường là một sự thật có người chịu trách nhiệm đứng sau: nhân sự nền tảng đã duyệt (hồ sơ
+ * người bán, giấy phép, phiếu duyệt gian hàng), hệ thống đã xác minh (OTP), hoặc gian hàng tự CAM
+ * KẾT và có dòng audit (hoá đơn VAT, ADR 0059). Không trường nào là lời hứa của XePrime thay chủ
+ * xe (ADR 0028) — "đã ký hợp đồng chất lượng", "đội xe dự phòng", "cứu hộ 24/7" chưa có dữ liệu
+ * thì không có mặt ở đây.
+ */
+export class ShopTrustDto {
+  @ApiPropertyOptional({
+    enum: [SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS, SELLER_ENTITY_TYPE.COMPANY],
+    nullable: true,
+    description:
+      'Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy ' +
+      'phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null',
+  })
+  legalEntityType!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Thời điểm nền tảng xác minh hồ sơ người bán (ISO-8601 UTC)',
+  })
+  legalEntityVerifiedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Phiếu duyệt gian hàng mới nhất đã được nền tảng DUYỆT (SHOP_VERIFICATION)',
+  })
+  shopVerified!: boolean;
+
+  @ApiProperty({
+    description:
+      'Gian hàng đã duyệt + SĐT chủ đã xác minh OTP + không chi nhánh giữ xe công khai nào đang ' +
+      'chờ soát lại vị trí',
+  })
+  contactVerified!: boolean;
+
+  @ApiProperty({ description: 'Gian hàng cam kết xuất hoá đơn VAT cho tiền thuê (ADR 0059)' })
+  vatInvoiceSupported!: boolean;
+
+  @ApiProperty({
+    description:
+      'Số xe công khai ĐANG trong chu kỳ bảo dưỡng theo sổ bảo dưỡng (isMaintenanceOnSchedule)',
+  })
+  maintenanceOnScheduleCount!: number;
+}
+
 /**
  * Hồ sơ công khai của một gian hàng — cho trang `/shops/[slug]`. Chỉ dữ liệu công khai.
  *
@@ -967,6 +1080,24 @@ export class PublicShopDto {
     description: 'Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần',
   })
   serviceProvinceNames!: string[];
+
+  @ApiProperty({
+    type: [PublicShopProvinceDto],
+    description: 'Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần',
+  })
+  serviceProvinces!: PublicShopProvinceDto[];
+
+  @ApiProperty({
+    type: [PublicShopBranchDto],
+    description: 'Chi nhánh đang giữ xe công khai — theo số xe giảm dần',
+  })
+  branches!: PublicShopBranchDto[];
+
+  @ApiProperty({ type: ShopVehicleFilterCountsDto })
+  vehicleFilterCounts!: ShopVehicleFilterCountsDto;
+
+  @ApiProperty({ type: ShopTrustDto })
+  trust!: ShopTrustDto;
 
   @ApiProperty({ description: 'Có ít nhất một xe công khai hỗ trợ giao tận nơi' })
   deliveryAvailable!: boolean;
@@ -1083,25 +1214,22 @@ export class PublicShopListQueryDto {
   q?: string;
 }
 
-/** Query danh sách xe của một gian hàng — phân trang + sort (không nhận slug qua body). */
-export class ShopListingQueryDto {
-  @ApiPropertyOptional({ enum: LISTING_SORT_VALUES, default: DEFAULT_LISTING_SORT })
-  @IsOptional()
-  @IsIn(LISTING_SORT_VALUES)
-  sort?: ListingSort;
-
-  @ApiPropertyOptional({ default: 1, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 48 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(48)
-  limit?: number;
-}
+/**
+ * Query danh sách xe của một gian hàng — phân trang + sort + bộ lọc của trang gian hàng (tab tỉnh,
+ * chip dịch vụ/tiện ích). Không nhận slug qua body.
+ *
+ * `PickType` từ query chợ chứ không khai lại: cùng tên tham số, cùng validator, và đi qua CÙNG
+ * `buildListingWhere` — chip "Giao xe tận nơi" ở trang gian hàng không thể nghĩa khác chip cùng
+ * tên ở trang tìm kiếm.
+ */
+export class ShopListingQueryDto extends PickType(PublicListingQueryDto, [
+  'provinceCode',
+  'serviceType',
+  'delivery',
+  'instantBook',
+  'noCollateral',
+  'vatInvoice',
+  'sort',
+  'page',
+  'limit',
+] as const) {}

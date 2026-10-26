@@ -52930,6 +52930,29 @@
             }
           },
           {
+            "name": "instantBook",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe \"Đặt ngay\" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minRating",
+            "required": false,
+            "in": "query",
+            "description": "Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại",
+            "schema": {
+              "type": "number",
+              "enum": [
+                4,
+                4.5,
+                4.8
+              ]
+            }
+          },
+          {
             "name": "minSeats",
             "required": false,
             "in": "query",
@@ -53895,6 +53918,29 @@
             "description": "Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe)",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "instantBook",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe \"Đặt ngay\" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minRating",
+            "required": false,
+            "in": "query",
+            "description": "Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại",
+            "schema": {
+              "type": "number",
+              "enum": [
+                4,
+                4.5,
+                4.8
+              ]
             }
           },
           {
@@ -54942,6 +54988,64 @@
             "name": "slug",
             "required": true,
             "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "delivery",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe giao tận nơi",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "noCollateral",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe miễn thế chấp",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "vatInvoice",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "instantBook",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe \"Đặt ngay\" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "provinceCode",
+            "required": false,
+            "in": "query",
+            "description": "Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)",
             "schema": {
               "type": "string"
             }
@@ -97186,6 +97290,39 @@
           "insuranceOfferedByKind"
         ]
       },
+      "PublicShopBranchDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleCount": {
+            "type": "number",
+            "description": "Số xe công khai đang ở chi nhánh"
+          },
+          "ratingAvg": {
+            "type": "string",
+            "nullable": true,
+            "description": "Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá"
+          },
+          "ratingCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "vehicleCount",
+          "ratingCount"
+        ]
+      },
       "PublicShopDto": {
         "type": "object",
         "properties": {
@@ -97265,6 +97402,26 @@
               "type": "string"
             }
           },
+          "serviceProvinces": {
+            "description": "Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicShopProvinceDto"
+            }
+          },
+          "branches": {
+            "description": "Chi nhánh đang giữ xe công khai — theo số xe giảm dần",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicShopBranchDto"
+            }
+          },
+          "vehicleFilterCounts": {
+            "$ref": "#/components/schemas/ShopVehicleFilterCountsDto"
+          },
+          "trust": {
+            "$ref": "#/components/schemas/ShopTrustDto"
+          },
           "deliveryAvailable": {
             "type": "boolean",
             "description": "Có ít nhất một xe công khai hỗ trợ giao tận nơi"
@@ -97284,6 +97441,10 @@
           "metrics",
           "branchCount",
           "serviceProvinceNames",
+          "serviceProvinces",
+          "branches",
+          "vehicleFilterCounts",
+          "trust",
           "deliveryAvailable"
         ]
       },
@@ -97303,6 +97464,26 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "PublicShopProvinceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode`"
+          },
+          "name": {
+            "type": "string"
+          },
+          "vehicleCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "vehicleCount"
         ]
       },
       "PublicShopSummaryDto": {
@@ -100108,6 +100289,84 @@
           "summary",
           "data",
           "meta"
+        ]
+      },
+      "ShopTrustDto": {
+        "type": "object",
+        "properties": {
+          "legalEntityType": {
+            "type": "string",
+            "enum": [
+              "household_business",
+              "company"
+            ],
+            "nullable": true,
+            "description": "Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null"
+          },
+          "legalEntityVerifiedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Thời điểm nền tảng xác minh hồ sơ người bán (ISO-8601 UTC)"
+          },
+          "shopVerified": {
+            "type": "boolean",
+            "description": "Phiếu duyệt gian hàng mới nhất đã được nền tảng DUYỆT (SHOP_VERIFICATION)"
+          },
+          "contactVerified": {
+            "type": "boolean",
+            "description": "Gian hàng đã duyệt + SĐT chủ đã xác minh OTP + không chi nhánh giữ xe công khai nào đang chờ soát lại vị trí"
+          },
+          "vatInvoiceSupported": {
+            "type": "boolean",
+            "description": "Gian hàng cam kết xuất hoá đơn VAT cho tiền thuê (ADR 0059)"
+          },
+          "maintenanceOnScheduleCount": {
+            "type": "number",
+            "description": "Số xe công khai ĐANG trong chu kỳ bảo dưỡng theo sổ bảo dưỡng (isMaintenanceOnSchedule)"
+          }
+        },
+        "required": [
+          "shopVerified",
+          "contactVerified",
+          "vatInvoiceSupported",
+          "maintenanceOnScheduleCount"
+        ]
+      },
+      "ShopVehicleFilterCountsDto": {
+        "type": "object",
+        "properties": {
+          "withDriver": {
+            "type": "number",
+            "description": "serviceType=with_driver"
+          },
+          "longTerm": {
+            "type": "number",
+            "description": "serviceType=long_term"
+          },
+          "delivery": {
+            "type": "number",
+            "description": "delivery=true"
+          },
+          "instantBook": {
+            "type": "number",
+            "description": "instantBook=true"
+          },
+          "noCollateral": {
+            "type": "number",
+            "description": "noCollateral=true"
+          },
+          "vatInvoice": {
+            "type": "number",
+            "description": "vatInvoice=true"
+          }
+        },
+        "required": [
+          "withDriver",
+          "longTerm",
+          "delivery",
+          "instantBook",
+          "noCollateral",
+          "vatInvoice"
         ]
       },
       "SlotUsageDto": {

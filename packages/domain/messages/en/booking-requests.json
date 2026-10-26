@@ -443,7 +443,7 @@
       },
       "renter": {
         "title": "Renter details",
-        "description": "Filled in from your account — you can change the name or contact phone for this trip.",
+        "description": "Filled in from your account — tap the pencil icon to change the name or contact phone for this trip.",
         "name": "Full name",
         "phone": "Phone number",
         "email": "Email",
@@ -452,7 +452,8 @@
         "readonlyDescription": "The name and phone number the owner uses to contact you about this trip.",
         "namePlaceholder": "Enter the renter's full name",
         "phonePlaceholder": "Enter a contact phone number",
-        "phoneDifferent": "This contact number is not verified — the owner will also see your account number {accountPhone}."
+        "phoneDifferent": "This contact number is not verified — the owner will also see your account number {accountPhone}.",
+        "edit": "Edit {field}"
       },
       "requirements": {
         "title": "Documents & pick-up conditions",

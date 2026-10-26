@@ -1,10 +1,17 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  APPROVAL_STATUS,
+  APPROVAL_TARGET_TYPE,
   BILLING_MODE,
+  DOCUMENT_STATUS,
   PLAN_STATUS,
+  SELLER_ENTITY_TYPE,
+  SELLER_PROFILE_STATUS,
+  SERVICE_TYPE,
   STOREFRONT_KIND,
   SUBSCRIPTION_STATUS,
+  TENANT_DOCUMENT_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
@@ -275,6 +282,136 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(shop.metrics.instantBook).toBe(false);
     expect(shop.deliveryAvailable).toBe(false);
     expect(new Date(shop.joinedAt).getTime()).toBeGreaterThan(0);
+  });
+
+  maybe('getShopBySlug: tỉnh phục vụ kèm MÃ, chi nhánh kèm số xe, điểm null khi chưa ai chấm', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect(shop.serviceProvinces).toEqual([{ code: PROV, name: PROV_NAME, vehicleCount: 2 }]);
+    expect(shop.branches).toHaveLength(1);
+    expect(shop.branches[0]).toMatchObject({
+      id: branchByTenant.get(activeTenantId),
+      vehicleCount: 2,
+      ratingAvg: null,
+      ratingCount: 0,
+    });
+  });
+
+  /*
+   * Số trên mỗi chip phải là ĐÚNG số xe mà danh sách trả khi bấm chip đó — hai phép đếm cùng đi
+   * qua `buildListingWhere`. Assert theo cặp chứ không theo hằng số, để spec giữ nghĩa khi giá trị
+   * mặc định của snapshot (dịch vụ, Đặt ngay…) đổi.
+   */
+  maybe('vehicleFilterCounts khớp đúng tổng của listShopVehicles với cùng bộ lọc', async () => {
+    const { vehicleFilterCounts: counts } = await service.getShopBySlug(activeSlug);
+    const totalOf = (query: Parameters<typeof service.listShopVehicles>[1]) =>
+      service.listShopVehicles(activeSlug, query).then((res) => res.meta.total);
+
+    expect(await totalOf({ serviceType: SERVICE_TYPE.WITH_DRIVER })).toBe(counts.withDriver);
+    expect(await totalOf({ serviceType: SERVICE_TYPE.LONG_TERM })).toBe(counts.longTerm);
+    expect(await totalOf({ delivery: true })).toBe(counts.delivery);
+    expect(await totalOf({ instantBook: true })).toBe(counts.instantBook);
+    expect(await totalOf({ noCollateral: true })).toBe(counts.noCollateral);
+    expect(await totalOf({ vatInvoice: true })).toBe(counts.vatInvoice);
+    // Seed không bật giao xe ⇒ chip "Giao xe tận nơi" rỗng, khớp `deliveryAvailable`.
+    expect(counts.delivery).toBe(0);
+  });
+
+  /*
+   * Gian hàng chưa có gì được kiểm chứng ⇒ mọi cờ uy tín TẮT. Đây là ca quan trọng nhất của khối
+   * này: một cờ mặc định `true` là trang công khai nói "đã xác minh" về một người chưa ai xem xét.
+   */
+  maybe('trust: chưa được kiểm chứng gì ⇒ mọi cờ tắt, không pháp nhân, 0 xe đúng hạn', async () => {
+    const { trust } = await service.getShopBySlug(activeSlug);
+    expect(trust).toEqual({
+      legalEntityType: null,
+      legalEntityVerifiedAt: null,
+      shopVerified: false,
+      contactVerified: false,
+      vatInvoiceSupported: false,
+      maintenanceOnScheduleCount: 0,
+    });
+  });
+
+  /*
+   * Mỗi cờ bật đúng bởi nguồn của nó: phiếu duyệt gian hàng, hồ sơ người bán + giấy phép đã duyệt,
+   * OTP của chủ, cam kết VAT, sổ bảo dưỡng. Tuyến GÓI của tenant này KHÔNG được góp vào cờ nào
+   * (ADR 0040 điều 5) — nó đã có từ đầu spec mà ca trước vẫn phải tắt hết.
+   */
+  maybe('trust: mỗi cờ bật theo đúng nguồn kiểm chứng của nó', async () => {
+    const before = await service.getShopBySlug(otherSlug);
+    expect(before.trust.shopVerified).toBe(false);
+
+    const [vehicle] = await prisma.vehicle.findMany({
+      where: { tenantId: otherTenantId, publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC },
+      select: { id: true },
+    });
+    if (!vehicle) throw new Error('seed thiếu xe của tenant tuyến gói');
+
+    await prisma.approvalTask.create({
+      data: {
+        id: newId(),
+        tenantId: otherTenantId,
+        targetType: APPROVAL_TARGET_TYPE.TENANT,
+        targetId: otherTenantId,
+        status: APPROVAL_STATUS.APPROVED,
+        submittedBy: ownerId,
+      },
+    });
+    await prisma.sellerProfile.create({
+      data: {
+        id: newId(),
+        tenantId: otherTenantId,
+        entityType: SELLER_ENTITY_TYPE.COMPANY,
+        status: SELLER_PROFILE_STATUS.VERIFIED,
+        verifiedAt: new Date('2026-09-01T00:00:00.000Z'),
+      },
+    });
+    await prisma.tenantDocument.create({
+      data: {
+        id: newId(),
+        tenantId: otherTenantId,
+        documentType: TENANT_DOCUMENT_TYPE.BUSINESS_LICENSE,
+        fileUrl: 'https://img.example/licence.jpg',
+        status: DOCUMENT_STATUS.APPROVED,
+      },
+    });
+    await prisma.user.update({ where: { id: ownerId }, data: { phoneVerifiedAt: new Date() } });
+    await prisma.tenant.update({
+      where: { id: otherTenantId },
+      data: { vatInvoiceSupported: true },
+    });
+    await prisma.vehicleMaintenanceProfile.create({
+      data: {
+        vehicleId: vehicle.id,
+        tenantId: otherTenantId,
+        currentOdometerKm: 12_000,
+        lastServiceKm: 10_000,
+        oilChangeIntervalKm: 5_000,
+        lastServiceAt: new Date(Date.now() - 30 * 24 * 3600_000),
+      },
+    });
+
+    const { trust } = await service.getShopBySlug(otherSlug);
+    expect(trust.legalEntityType).toBe(SELLER_ENTITY_TYPE.COMPANY);
+    expect(new Date(trust.legalEntityVerifiedAt as string).toISOString()).toBe(
+      '2026-09-01T00:00:00.000Z',
+    );
+    expect(trust.shopVerified).toBe(true);
+    expect(trust.contactVerified).toBe(true);
+    expect(trust.vatInvoiceSupported).toBe(true);
+    expect(trust.maintenanceOnScheduleCount).toBe(1);
+
+    // Một chi nhánh giữ xe công khai bị đánh dấu soát lại vị trí ⇒ "địa chỉ đã xác minh" tắt.
+    await prisma.tenantBranch.update({
+      where: { id: branchByTenant.get(otherTenantId) },
+      data: { needsLocationReview: true },
+    });
+    expect((await service.getShopBySlug(otherSlug)).trust.contactVerified).toBe(false);
+  });
+
+  maybe('listShopVehicles lọc theo tỉnh: tỉnh khác → rỗng, đúng tỉnh → đủ xe', async () => {
+    expect((await service.listShopVehicles(activeSlug, { provinceCode: PROV })).meta.total).toBe(2);
+    expect((await service.listShopVehicles(activeSlug, { provinceCode: '01' })).meta.total).toBe(0);
   });
 
   maybe('getShopBySlug shop draft → 404', async () => {

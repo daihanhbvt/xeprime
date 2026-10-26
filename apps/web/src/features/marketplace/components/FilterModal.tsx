@@ -1,39 +1,51 @@
 'use client';
 
-import { CloseOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Checkbox, InputNumber, Radio } from 'antd';
+import {
+  CalendarOutlined,
+  CloseOutlined,
+  EnvironmentOutlined,
+  InfoCircleOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import { Checkbox, Radio, Slider, Switch } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   CATALOG_TYPE,
   FUEL_TYPE_LABEL,
+  LISTING_MIN_RATING_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
-  SERVICE_TYPE_VALUES,
   TRANSMISSION_TYPE_EXT_LABEL,
   VEHICLE_TYPE,
-  VEHICLE_TYPE_LABEL,
-  VEHICLE_TYPE_VALUES,
   vehicleFuelTypesFor,
-  vehicleServiceTypesFor,
   type ServiceType,
   type TransmissionTypeExt,
+  type VehicleType,
 } from '@xeprime/types';
+import { MoneyInput } from '@/components/form/MoneyInput';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
-import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
 import { catalogItemAppliesTo } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
-import { isPriceBandSelected, priceBandsFor, quickTransmissionsFor } from '../constants';
+import {
+  isPriceBandSelected,
+  priceBandsFor,
+  priceSliderFor,
+  quickTransmissionsFor,
+} from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from '../search/LocationPicker';
 import { resolveServiceType } from '../search/search-draft';
 import { useSearchExperience } from '../search/search-context';
+import { serviceItems, vehicleItems } from '../search/search-items';
 import { usePriceBandLabel } from '../search/use-price-band-label';
 import type { MarketplaceFilters } from '../types';
+import { BrandMark } from './BrandMark';
 import styles from './FilterModal.module.css';
 
 interface FilterModalProps {
@@ -42,8 +54,8 @@ interface FilterModalProps {
 }
 
 interface ModalDraft {
-  vehicleType?: string;
-  serviceType?: string;
+  vehicleType: VehicleType;
+  serviceType: ServiceType;
   brand: string[];
   bodyType: string[];
   motorbikeCategory: string[];
@@ -57,12 +69,28 @@ interface ModalDraft {
   noCollateral?: boolean;
   vatInvoice?: boolean;
   discount?: boolean;
+  instantBook?: boolean;
+  minRating?: number;
 }
+
+type ListField =
+  | 'brand'
+  | 'bodyType'
+  | 'motorbikeCategory'
+  | 'seats'
+  | 'fuelType'
+  | 'features'
+  | 'transmission';
+
+type FlagField = 'delivery' | 'noCollateral' | 'vatInvoice' | 'discount' | 'instantBook';
+
+/** Số mục hiện trước "Xem thêm" — Figma vẽ 3 hàng × 2 cột. */
+const COLLAPSED_COUNT = 6;
 
 function initDraft(filters: MarketplaceFilters): ModalDraft {
   return {
-    vehicleType: filters.vehicleType ?? VEHICLE_TYPE.CAR,
-    serviceType: filters.serviceType ?? SERVICE_TYPE.SELF_DRIVE,
+    vehicleType: (filters.vehicleType as VehicleType | undefined) ?? VEHICLE_TYPE.CAR,
+    serviceType: (filters.serviceType as ServiceType | undefined) ?? SERVICE_TYPE.SELF_DRIVE,
     brand: filters.brand ?? [],
     bodyType: filters.bodyType ?? [],
     motorbikeCategory: filters.motorbikeCategory ?? [],
@@ -76,13 +104,29 @@ function initDraft(filters: MarketplaceFilters): ModalDraft {
     noCollateral: filters.noCollateral,
     vatInvoice: filters.vatInvoice,
     discount: filters.discount,
+    instantBook: filters.instantBook,
+    minRating: filters.minRating,
   };
 }
 
+/**
+ * Hộp "Bộ lọc" của trang kết quả — Figma `19719:47126` (ô tô) · `19719:49416` (xe máy).
+ *
+ * Bố cục theo thiết kế: phần đầu (dịch vụ, loại xe, địa điểm, thời gian) đứng yên, hai cột tiêu
+ * chí cuộn bên dưới, dải "Đang chọn" và hai nút cố định ở đáy. Lựa chọn là NHÁP cục bộ — chỉ
+ * "Áp dụng" mới ghi vào URL (ADR 0004); riêng địa điểm/thời gian ghi thẳng vào ngữ cảnh tìm
+ * kiếm như ở thẻ tìm kiếm.
+ *
+ * Thiết kế vẽ thêm vài nhóm mà chợ chưa có dữ liệu để lọc (loại chủ sở hữu, ưu đãi dài hạn, mức
+ * cọc tối đa, giới hạn km) — chúng KHÔNG được dựng thành ô bấm mà không lọc gì. Mọi bộ lọc đã có
+ * từ trước vẫn giữ nguyên nghĩa, chỉ đổi chỗ đứng.
+ */
 export function FilterModal({ open, onClose }: FilterModalProps) {
   const t = useTranslations('Marketplace.filterPanel');
+  const tService = useTranslations('HomeSearch.service');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
   const priceBandLabel = usePriceBandLabel();
   const { filters, setFilters } = useMarketplaceFilters();
   const { draft: searchDraft, setRentalRange, setRentalMode } = useSearchExperience();
@@ -110,7 +154,15 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
     }
   }
 
-  if (!open) return null;
+  // Esc đóng hộp như mọi hộp thoại khác của chợ.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   const isMotorbike = draft.vehicleType === VEHICLE_TYPE.MOTORBIKE;
   /*
@@ -125,45 +177,47 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
     (f) => draft.features.includes(f.key) || catalogItemAppliesTo(f, draft.vehicleType),
   );
   /* Hai chiều đọc CÙNG một bảng (`vehicleServiceTypesFor`) với thẻ tìm kiếm: xe máy không có "có tài xế". */
-  const serviceTypes = SERVICE_TYPE_VALUES.filter((value) =>
-    vehicleServiceTypesFor(draft.vehicleType ?? VEHICLE_TYPE.CAR).includes(value),
+  const services = useMemo(
+    () => serviceItems(draft.vehicleType, true, tService),
+    [draft.vehicleType, tService],
   );
-  const vehicleTypes = VEHICLE_TYPE_VALUES.filter((value) =>
-    vehicleServiceTypesFor(value).includes(
-      (draft.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
-    ),
+  const vehicles = useMemo(
+    () => vehicleItems(domainLabel, draft.serviceType),
+    [domainLabel, draft.serviceType],
   );
   const priceBands = priceBandsFor(draft.vehicleType);
+  const priceSlider = priceSliderFor(draft.vehicleType);
   const transmissions = quickTransmissionsFor(draft.vehicleType);
-  const fuelTypes = vehicleFuelTypesFor(draft.vehicleType ?? VEHICLE_TYPE.CAR);
+  const fuelTypes = vehicleFuelTypesFor(draft.vehicleType);
   const transmissionLabel = (code: string) =>
     domainLabel(
       'transmissionType',
       code,
       TRANSMISSION_TYPE_EXT_LABEL[code as TransmissionTypeExt] ?? code,
     );
+  const ratingLabel = (rating: number) => t('modal.ratingFrom', { rating });
 
-  const displayedBrands = showAllBrands ? brandItems : brandItems.slice(0, 6);
-  const displayedBodyTypes = showAllBodyTypes ? bodyTypeItems : bodyTypeItems.slice(0, 6);
-  const displayedFeatures = showAllFeatures ? featureItems : featureItems.slice(0, 6);
+  if (!open) return null;
 
-  const toggleItem = (
-    field:
-      | 'brand'
-      | 'bodyType'
-      | 'motorbikeCategory'
-      | 'seats'
-      | 'fuelType'
-      | 'features'
-      | 'transmission',
-    value: string,
-  ) => {
+  const displayedBrands = showAllBrands ? brandItems : brandItems.slice(0, COLLAPSED_COUNT);
+  const displayedBodyTypes = showAllBodyTypes
+    ? bodyTypeItems
+    : bodyTypeItems.slice(0, COLLAPSED_COUNT);
+  const displayedFeatures = showAllFeatures
+    ? featureItems
+    : featureItems.slice(0, COLLAPSED_COUNT);
+
+  const toggleItem = (field: ListField, value: string) => {
     setDraft((prev) => {
       const list = prev[field];
       const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
       return { ...prev, [field]: next };
     });
   };
+  const setFlag = (field: FlagField, checked: boolean) =>
+    setDraft((prev) => ({ ...prev, [field]: checked || undefined }));
+  const setPrice = (priceMin: number | undefined, priceMax: number | undefined) =>
+    setDraft((prev) => ({ ...prev, priceMin, priceMax }));
 
   const handleApply = () => {
     // Nhiên liệu / hộp số không thuộc loại xe vừa chọn (diesel khi đã sang xe máy) bị bỏ, không
@@ -191,6 +245,8 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
       noCollateral: draft.noCollateral,
       vatInvoice: draft.vatInvoice,
       discount: draft.discount,
+      instantBook: draft.instantBook,
+      minRating: draft.minRating,
     });
     onClose();
   };
@@ -206,25 +262,110 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
       fuelType: [],
       features: [],
       transmission: [],
-      priceMin: undefined,
-      priceMax: undefined,
-      delivery: undefined,
-      noCollateral: undefined,
-      vatInvoice: undefined,
-      discount: undefined,
     });
   };
 
+  /*
+   * Dải "Đang chọn" — MỌI tiêu chí đang bật trong nháp, mỗi chip bấm để bỏ đúng tiêu chí đó. Chỉ
+   * liệt kê chiều thuộc loại xe đang chọn (kiểu dáng ô tô ẩn khi đang ở xe máy và ngược lại) —
+   * đúng những gì "Áp dụng" sẽ gửi đi.
+   */
+  const brandByKey = new Map(catalog[CATALOG_TYPE.VEHICLE_BRAND].map((b) => [b.key, b.label]));
+  const bodyTypeByKey = new Map(bodyTypeItems.map((b) => [b.key, b.label]));
+  const featureByKey = new Map(
+    catalog[CATALOG_TYPE.VEHICLE_FEATURE].map((f) => [f.key, f.label]),
+  );
+  const chips: { key: string; label: string; onRemove: () => void }[] = [
+    ...draft.brand.map((key) => ({
+      key: `brand:${key}`,
+      label: brandByKey.get(key) ?? key,
+      onRemove: () => toggleItem('brand', key),
+    })),
+    ...(isMotorbike
+      ? draft.motorbikeCategory.map((key) => ({
+          key: `motorbikeCategory:${key}`,
+          label: domainLabel('motorbikeCategory', key),
+          onRemove: () => toggleItem('motorbikeCategory', key),
+        }))
+      : [
+          ...draft.bodyType.map((key) => ({
+            key: `bodyType:${key}`,
+            label: bodyTypeByKey.get(key) ?? key,
+            onRemove: () => toggleItem('bodyType', key),
+          })),
+          ...draft.seats.map((key) => ({
+            key: `seats:${key}`,
+            label: domainLabel(
+              'seatBucket',
+              key,
+              SEAT_BUCKET_LABEL[key as keyof typeof SEAT_BUCKET_LABEL],
+            ),
+            onRemove: () => toggleItem('seats', key),
+          })),
+        ]),
+    ...(draft.priceMin != null || draft.priceMax != null
+      ? [
+          {
+            key: 'price',
+            label: priceBandLabel({ min: draft.priceMin, max: draft.priceMax }),
+            onRemove: () => setPrice(undefined, undefined),
+          },
+        ]
+      : []),
+    ...draft.transmission
+      .filter((code) => (transmissions as readonly string[]).includes(code))
+      .map((code) => ({
+        key: `transmission:${code}`,
+        label: transmissionLabel(code),
+        onRemove: () => toggleItem('transmission', code),
+      })),
+    ...draft.fuelType
+      .filter((code): code is (typeof fuelTypes)[number] =>
+        (fuelTypes as readonly string[]).includes(code),
+      )
+      .map((code) => ({
+        key: `fuelType:${code}`,
+        label: domainLabel('fuelType', code, FUEL_TYPE_LABEL[code]),
+        onRemove: () => toggleItem('fuelType', code),
+      })),
+    ...draft.features.map((key) => ({
+      key: `features:${key}`,
+      label: featureByKey.get(key) ?? key,
+      onRemove: () => toggleItem('features', key),
+    })),
+    ...(['delivery', 'discount', 'instantBook', 'noCollateral', 'vatInvoice'] as const)
+      .filter((field) => draft[field])
+      .map((field) => ({
+        key: field,
+        label: t(`modal.chips.${field}`),
+        onRemove: () => setFlag(field, false),
+      })),
+    ...(draft.minRating != null
+      ? [
+          {
+            key: 'minRating',
+            label: ratingLabel(draft.minRating),
+            onRemove: () => setDraft((prev) => ({ ...prev, minRating: undefined })),
+          },
+        ]
+      : []),
+  ];
+
+  const sliderValue: [number, number] = [
+    Math.min(draft.priceMin ?? 0, priceSlider.max),
+    Math.min(draft.priceMax ?? priceSlider.max, priceSlider.max),
+  ];
+
   return (
-    <div
-      className={styles.overlay}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="filter-modal-title"
-    >
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+    <div className={styles.overlay} onClick={onClose}>
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filter-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Đầu hộp */}
         <div className={styles.header}>
           <div className={styles.titleArea}>
             <h2 id="filter-modal-title" className={styles.title}>
@@ -242,384 +383,442 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className={styles.content}>
-          {/* 1. Dải tab Dịch vụ */}
-          <div className={styles.serviceSegmented}>
-            {serviceTypes.map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={cx(
-                  styles.serviceTab,
-                  draft.serviceType === value && styles.serviceTabActive,
-                )}
-                onClick={() => setDraft((p) => ({ ...p, serviceType: value }))}
-              >
-                <span>{domainLabel('serviceType', value)}</span>
-              </button>
-            ))}
-          </div>
+        <div className={styles.body}>
+          {/* Phần đầu đứng yên: dịch vụ · loại xe · địa điểm · thời gian */}
+          <div className={styles.context}>
+            <div className={styles.segmented} role="radiogroup" aria-label={t('modal.service')}>
+              {services.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.serviceType === item.value}
+                  className={cx(
+                    styles.segment,
+                    styles.segmentFill,
+                    draft.serviceType === item.value && styles.segmentActive,
+                  )}
+                  onClick={() => setDraft((p) => ({ ...p, serviceType: item.value }))}
+                >
+                  {item.icon ? (
+                    <span className={styles.segmentIcon} aria-hidden>
+                      {item.icon}
+                    </span>
+                  ) : null}
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
 
-          {/* 2. Loại xe (Ô tô / Xe máy) */}
-          <div className={styles.vehicleTypeRow}>
-            <span className={styles.rowLabel}>{t('vehicleType')}</span>
-            <div className={styles.vehicleTypeSegmented}>
-              {vehicleTypes.map((value) => {
-                const Icon = VEHICLE_TYPE_ICON[value];
-                return (
+            <div className={styles.group}>
+              <h3 className={styles.groupTitle}>{t('vehicleType')}</h3>
+              <div
+                className={cx(styles.segmented, styles.segmentedInline)}
+                role="radiogroup"
+                aria-label={t('vehicleType')}
+              >
+                {vehicles.map((item) => (
                   <button
-                    key={value}
+                    key={item.value}
                     type="button"
+                    role="radio"
+                    aria-checked={draft.vehicleType === item.value}
                     className={cx(
-                      styles.vehicleTypeTab,
-                      draft.vehicleType === value && styles.vehicleTypeTabActive,
+                      styles.segment,
+                      draft.vehicleType === item.value && styles.segmentActive,
                     )}
                     onClick={() =>
                       setDraft((p) => ({
                         ...p,
-                        vehicleType: value,
+                        vehicleType: item.value,
                         // Xe máy không có "có tài xế" — rơi về tự lái, cùng luật với thẻ tìm kiếm.
-                        serviceType: resolveServiceType(
-                          value,
-                          (p.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
-                        ),
+                        serviceType: resolveServiceType(item.value, p.serviceType),
                       }))
                     }
                   >
-                    <Icon aria-hidden />
-                    <span>{domainLabel('vehicleType', value, VEHICLE_TYPE_LABEL[value])}</span>
+                    <span className={styles.segmentIcon} aria-hidden>
+                      {item.icon}
+                    </span>
+                    <span>{item.label}</span>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+            </div>
+
+            <hr className={styles.dashedDivider} />
+
+            <div className={styles.fieldsRow}>
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>
+                  <EnvironmentOutlined className={styles.fieldIcon} aria-hidden />
+                  {t('searchAddress')}
+                </span>
+                <div className={styles.fieldControl}>
+                  <LocationPicker variant="chip" className={styles.locationTrigger} />
+                </div>
+              </div>
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>
+                  <CalendarOutlined className={styles.fieldIcon} aria-hidden />
+                  {t('rentalTime')}
+                </span>
+                <div className={styles.fieldControl}>
+                  <RentalDateTimeRangeField
+                    value={searchDraft.rental}
+                    onChange={setRentalRange}
+                    mode={searchDraft.rental.mode}
+                    onModeChange={setRentalMode}
+                    compactPoint
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 3. Ô Địa chỉ tìm xe & Thời gian nhận/trả */}
-          <div className={styles.fieldsRow}>
-            <div className={styles.fieldBox}>
-              <span className={styles.fieldLabel}>{t('searchAddress')}</span>
-              <div className={styles.fieldInputWrapper}>
-                <LocationPicker variant="chip" />
-              </div>
-            </div>
-            <div className={styles.fieldBox}>
-              <span className={styles.fieldLabel}>{t('rentalTime')}</span>
-              <div className={styles.fieldInputWrapper}>
-                <RentalDateTimeRangeField
-                  value={searchDraft.rental}
-                  onChange={setRentalRange}
-                  mode={searchDraft.rental.mode}
-                  onModeChange={setRentalMode}
-                  compactPoint
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Hai cột lọc chính */}
-          <div className={styles.filterGrid}>
-            {/* CỘT TRÁI */}
-            <div className={styles.column}>
-              {/* Hãng xe */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('brand')}</h3>
-                  <span className={styles.sectionHint}>{t('multiple')}</span>
-                </div>
-                <div className={styles.optionsGrid}>
-                  {displayedBrands.map((b) => (
-                    <label key={b.key} className={styles.checkboxLabel}>
-                      <Checkbox
-                        checked={draft.brand.includes(b.key)}
-                        onChange={() => toggleItem('brand', b.key)}
-                      />
-                      <span>{b.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {brandItems.length > 6 ? (
-                  <button
-                    type="button"
-                    className={styles.seeMoreLink}
-                    onClick={() => setShowAllBrands(!showAllBrands)}
-                  >
-                    {showAllBrands ? t('seeLess') : t('seeMore')}
-                  </button>
-                ) : null}
-              </div>
-
-              {/* Kiểu dáng (BodyType cho ô tô, Phân khúc cho xe máy) */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('bodyType')}</h3>
-                  <span className={styles.sectionHint}>{t('multiple')}</span>
-                </div>
-                <div className={styles.optionsGrid}>
-                  {!isMotorbike
-                    ? displayedBodyTypes.map((bt) => (
-                        <label key={bt.key} className={styles.checkboxLabel}>
+          {/* Hai cột tiêu chí — phần cuộn */}
+          <div className={styles.scroll}>
+            <div className={styles.columns}>
+              {/* CỘT TRÁI: hãng · kiểu xe · giá · nhận xe · ưu đãi · đặt ngay */}
+              <div className={styles.column}>
+                <FilterGroup title={t('brand')} hint={t('multiple')}>
+                  {brandItems.length > 0 ? (
+                    <div className={styles.options}>
+                      {displayedBrands.map((b) => (
+                        <label key={b.key} className={styles.option}>
                           <Checkbox
-                            checked={draft.bodyType.includes(bt.key)}
-                            onChange={() => toggleItem('bodyType', bt.key)}
+                            checked={draft.brand.includes(b.key)}
+                            onChange={() => toggleItem('brand', b.key)}
                           />
-                          <span>{bt.label}</span>
-                        </label>
-                      ))
-                    : MOTORBIKE_CATEGORY_VALUES.map((mc) => (
-                        <label key={mc} className={styles.checkboxLabel}>
-                          <Checkbox
-                            checked={draft.motorbikeCategory.includes(mc)}
-                            onChange={() => toggleItem('motorbikeCategory', mc)}
-                          />
-                          <span>{domainLabel('motorbikeCategory', mc)}</span>
+                          <span className={styles.optionLabel}>
+                            <BrandMark label={b.label} iconUrl={b.iconUrl} />
+                            <span className={styles.optionText}>{b.label}</span>
+                          </span>
                         </label>
                       ))}
-                </div>
-                {!isMotorbike && bodyTypeItems.length > 6 ? (
-                  <button
-                    type="button"
-                    className={styles.seeMoreLink}
-                    onClick={() => setShowAllBodyTypes(!showAllBodyTypes)}
-                  >
-                    {showAllBodyTypes ? t('seeLess') : t('seeMore')}
-                  </button>
-                ) : null}
-              </div>
-
-              {/* Khoảng giá */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('priceRange')}</h3>
-                  <span className={styles.sectionHint}>{t('single')}</span>
-                </div>
-                <div className={styles.radioGroup}>
-                  <label className={styles.radioLabel}>
-                    <Radio
-                      checked={draft.priceMin == null && draft.priceMax == null}
-                      onChange={() =>
-                        setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
-                      }
-                    />
-                    <span>{t('any')}</span>
-                  </label>
-                  {priceBands.map((band) => (
-                    <label
-                      key={`${band.min ?? ''}-${band.max ?? ''}`}
-                      className={styles.radioLabel}
-                    >
-                      <Radio
-                        checked={isPriceBandSelected(band, draft.priceMin, draft.priceMax)}
-                        onChange={() =>
-                          setDraft((p) => ({ ...p, priceMin: band.min, priceMax: band.max }))
-                        }
-                      />
-                      <span>{priceBandLabel(band)}</span>
-                    </label>
-                  ))}
-                </div>
-
-                <div className={styles.priceInputsRow}>
-                  <div className={styles.priceInputBlock}>
-                    <span className={styles.priceInputTitle}>{t('minPrice')}</span>
-                    <InputNumber
-                      className={styles.priceInput}
-                      min={0}
-                      step={50_000}
-                      value={draft.priceMin}
-                      onChange={(v) => setDraft((p) => ({ ...p, priceMin: v ?? undefined }))}
-                      formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    />
-                  </div>
-                  <div className={styles.priceInputBlock}>
-                    <span className={styles.priceInputTitle}>{t('maxPrice')}</span>
-                    <InputNumber
-                      className={styles.priceInput}
-                      min={0}
-                      step={50_000}
-                      value={draft.priceMax}
-                      placeholder={t('unlimited')}
-                      onChange={(v) => setDraft((p) => ({ ...p, priceMax: v ?? undefined }))}
-                      formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    />
-                  </div>
-                </div>
-
-                {/* Đang chọn pills */}
-                <div className={styles.selectedRow}>
-                  <span>{t('selected')}:</span>
-                  {draft.transmission.map((tr) => (
-                    <button
-                      key={tr}
-                      type="button"
-                      className={styles.selectedChip}
-                      onClick={() => toggleItem('transmission', tr)}
-                    >
-                      <span>{transmissionLabel(tr)}</span>
-                      <CloseOutlined className={styles.chipCloseIcon} aria-hidden />
-                    </button>
-                  ))}
-                  {draft.priceMin != null || draft.priceMax != null ? (
-                    <button
-                      type="button"
-                      className={styles.selectedChip}
-                      onClick={() =>
-                        setDraft((p) => ({ ...p, priceMin: undefined, priceMax: undefined }))
-                      }
-                    >
-                      <span>{priceBandLabel({ min: draft.priceMin, max: draft.priceMax })}</span>
-                      <CloseOutlined className={styles.chipCloseIcon} aria-hidden />
-                    </button>
+                    </div>
+                  ) : (
+                    <p className={styles.note}>{t('modal.noBrands')}</p>
+                  )}
+                  {brandItems.length > COLLAPSED_COUNT ? (
+                    <SeeMore expanded={showAllBrands} onToggle={setShowAllBrands} />
                   ) : null}
-                  <button
-                    type="button"
-                    className={styles.resetIconBtn}
-                    onClick={handleClear}
-                    title={tCommon('actions.clearSelection')}
-                    aria-label={tCommon('actions.clearSelection')}
-                  >
-                    <ReloadOutlined />
-                  </button>
-                </div>
-              </div>
-            </div>
+                </FilterGroup>
 
-            {/* CỘT PHẢI */}
-            <div className={styles.column}>
-              {/* Hộp số */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('transmission')}</h3>
-                  <span className={styles.sectionHint}>{t('single')}</span>
-                </div>
-                <div className={styles.radioGroup}>
-                  <label className={styles.radioLabel}>
-                    <Radio
-                      checked={draft.transmission.length === 0}
-                      onChange={() => setDraft((p) => ({ ...p, transmission: [] }))}
-                    />
-                    <span>{t('any')}</span>
-                  </label>
-                  {transmissions.map((code) => (
-                    <label key={code} className={styles.radioLabel}>
-                      <Radio
-                        checked={draft.transmission.includes(code)}
-                        onChange={() => setDraft((p) => ({ ...p, transmission: [code] }))}
-                      />
-                      <span>{transmissionLabel(code)}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Số chỗ ngồi (CHỈ CHO Ô TÔ!) */}
-              {!isMotorbike ? (
-                <div className={styles.section}>
-                  <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>{t('seats')}</h3>
-                    <span className={styles.sectionHint}>{t('multiple')}</span>
+                <FilterGroup title={t('modal.bodyType')} hint={t('multiple')}>
+                  <div className={styles.options}>
+                    {!isMotorbike
+                      ? displayedBodyTypes.map((bt) => (
+                          <label key={bt.key} className={styles.option}>
+                            <Checkbox
+                              checked={draft.bodyType.includes(bt.key)}
+                              onChange={() => toggleItem('bodyType', bt.key)}
+                            />
+                            <span className={styles.optionLabel}>
+                              <span className={styles.optionText}>{bt.label}</span>
+                              {bt.description ? (
+                                <span className={styles.optionPill}>{bt.description}</span>
+                              ) : null}
+                            </span>
+                          </label>
+                        ))
+                      : MOTORBIKE_CATEGORY_VALUES.map((mc) => (
+                          <label key={mc} className={styles.option}>
+                            <Checkbox
+                              checked={draft.motorbikeCategory.includes(mc)}
+                              onChange={() => toggleItem('motorbikeCategory', mc)}
+                            />
+                            <span className={styles.optionText}>
+                              {domainLabel('motorbikeCategory', mc)}
+                            </span>
+                          </label>
+                        ))}
                   </div>
-                  <div className={styles.optionsGrid}>
-                    {SEAT_BUCKET_VALUES.map((sb) => (
-                      <label key={sb} className={styles.checkboxLabel}>
-                        <Checkbox
-                          checked={draft.seats.includes(sb)}
-                          onChange={() => toggleItem('seats', sb)}
+                  {!isMotorbike && bodyTypeItems.length > COLLAPSED_COUNT ? (
+                    <SeeMore expanded={showAllBodyTypes} onToggle={setShowAllBodyTypes} />
+                  ) : null}
+                </FilterGroup>
+
+                <hr className={styles.divider} />
+
+                <div className={styles.priceBlock}>
+                  <FilterGroup title={t('modal.priceRange')} hint={t('single')}>
+                    <div className={styles.options}>
+                      <label className={styles.option}>
+                        <Radio
+                          checked={draft.priceMin == null && draft.priceMax == null}
+                          onChange={() => setPrice(undefined, undefined)}
                         />
-                        <span>{domainLabel('seatBucket', sb, SEAT_BUCKET_LABEL[sb])}</span>
+                        <span className={styles.optionText}>{t('modal.all')}</span>
+                      </label>
+                      {priceBands.map((band) => (
+                        <label key={`${band.min ?? ''}-${band.max ?? ''}`} className={styles.option}>
+                          <Radio
+                            checked={isPriceBandSelected(band, draft.priceMin, draft.priceMax)}
+                            onChange={() => setPrice(band.min, band.max)}
+                          />
+                          <span className={styles.optionText}>{priceBandLabel(band)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterGroup>
+
+                  <div className={styles.priceInputs}>
+                    <MoneyInput
+                      className={styles.priceInput}
+                      prefix={<span className={styles.priceInputLabel}>{t('minPrice')}</span>}
+                      addonAfter={null}
+                      min={0}
+                      step={priceSlider.step}
+                      value={draft.priceMin ?? null}
+                      placeholder="0"
+                      aria-label={t('minPrice')}
+                      onChange={(v) => setPrice(v ?? undefined, draft.priceMax)}
+                    />
+                    <MoneyInput
+                      className={styles.priceInput}
+                      prefix={<span className={styles.priceInputLabel}>{t('maxPrice')}</span>}
+                      addonAfter={null}
+                      min={0}
+                      step={priceSlider.step}
+                      value={draft.priceMax ?? null}
+                      placeholder={t('unlimited')}
+                      aria-label={t('maxPrice')}
+                      onChange={(v) => setPrice(draft.priceMin, v ?? undefined)}
+                    />
+                  </div>
+                  <Slider
+                    range
+                    className={styles.priceSlider}
+                    min={0}
+                    max={priceSlider.max}
+                    step={priceSlider.step}
+                    value={sliderValue}
+                    tooltip={{ formatter: (v) => (v == null ? '' : fmt.money(String(v))) }}
+                    onChange={([lo = 0, hi = priceSlider.max]) =>
+                      setPrice(lo > 0 ? lo : undefined, hi >= priceSlider.max ? undefined : hi)
+                    }
+                  />
+                  <div className={styles.priceScale}>
+                    <span>{fmt.pricePerDay('0')}</span>
+                    <span>{fmt.pricePerDay(String(priceSlider.max))}+</span>
+                  </div>
+                  <p className={styles.note}>{t('modal.priceNote')}</p>
+                </div>
+
+                <hr className={styles.divider} />
+
+                <FilterGroup title={t('modal.pickupMethod')} hint={t('single')}>
+                  <div className={styles.options}>
+                    <label className={styles.option}>
+                      <Radio
+                        checked={!draft.delivery}
+                        onChange={() => setFlag('delivery', false)}
+                      />
+                      <span className={styles.optionText}>{t('modal.all')}</span>
+                    </label>
+                    <label className={styles.option}>
+                      <Radio
+                        checked={Boolean(draft.delivery)}
+                        onChange={() => setFlag('delivery', true)}
+                      />
+                      <span className={styles.optionText}>{t('modal.deliveryOption')}</span>
+                    </label>
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup title={t('modal.offers')} hint={t('multiple')}>
+                  <p className={styles.note}>{t('modal.offersHint')}</p>
+                  <div className={styles.options}>
+                    <label className={styles.option}>
+                      <Checkbox
+                        checked={Boolean(draft.discount)}
+                        onChange={(e) => setFlag('discount', e.target.checked)}
+                      />
+                      <span className={styles.optionText}>{t('modal.hasOffer')}</span>
+                    </label>
+                  </div>
+                </FilterGroup>
+
+                <hr className={styles.divider} />
+
+                <div className={styles.toggleBlock}>
+                  <div className={styles.toggleRow}>
+                    <div className={styles.toggleText}>
+                      <span className={styles.groupTitle} id="filter-instant-book">
+                        {t('modal.instantBook')}
+                      </span>
+                      <span className={styles.note}>{t('modal.instantBookHint')}</span>
+                    </div>
+                    <Switch
+                      size="small"
+                      checked={Boolean(draft.instantBook)}
+                      onChange={(checked) => setFlag('instantBook', checked)}
+                      aria-labelledby="filter-instant-book"
+                    />
+                  </div>
+                  <div className={styles.policyNote}>
+                    <InfoCircleOutlined className={styles.policyIcon} aria-hidden />
+                    <span>{t('modal.policyNote')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CỘT PHẢI: hộp số · số chỗ · nhiên liệu · tiện ích · đánh giá · điều kiện thuê */}
+              <div className={styles.column}>
+                <FilterGroup title={t('transmission')} hint={t('single')}>
+                  <div className={styles.options}>
+                    <label className={styles.option}>
+                      <Radio
+                        checked={draft.transmission.length === 0}
+                        onChange={() => setDraft((p) => ({ ...p, transmission: [] }))}
+                      />
+                      <span className={styles.optionText}>{t('modal.all')}</span>
+                    </label>
+                    {transmissions.map((code) => (
+                      <label key={code} className={styles.option}>
+                        <Radio
+                          checked={draft.transmission.includes(code)}
+                          onChange={() => setDraft((p) => ({ ...p, transmission: [code] }))}
+                        />
+                        <span className={styles.optionText}>{transmissionLabel(code)}</span>
                       </label>
                     ))}
                   </div>
-                </div>
-              ) : null}
+                </FilterGroup>
 
-              {/* Nhiên liệu */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('fuelType')}</h3>
-                  <span className={styles.sectionHint}>{t('multiple')}</span>
-                </div>
-                <div className={styles.optionsGrid}>
-                  {fuelTypes.map((code) => (
-                    <label key={code} className={styles.checkboxLabel}>
-                      <Checkbox
-                        checked={draft.fuelType.includes(code)}
-                        onChange={() => toggleItem('fuelType', code)}
-                      />
-                      <span>{domainLabel('fuelType', code, FUEL_TYPE_LABEL[code])}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tiện ích */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('amenities')}</h3>
-                  <span className={styles.sectionHint}>{t('multiple')}</span>
-                </div>
-                <div className={styles.optionsGrid}>
-                  <label className={styles.checkboxLabel}>
-                    <Checkbox
-                      checked={Boolean(draft.delivery)}
-                      onChange={(e) =>
-                        setDraft((p) => ({ ...p, delivery: e.target.checked || undefined }))
-                      }
-                    />
-                    <span>{t('amenityDesc.delivery')}</span>
-                  </label>
-                  <label className={styles.checkboxLabel}>
-                    <Checkbox
-                      checked={Boolean(draft.noCollateral)}
-                      onChange={(e) =>
-                        setDraft((p) => ({ ...p, noCollateral: e.target.checked || undefined }))
-                      }
-                    />
-                    <span>{t('amenityDesc.noCollateral')}</span>
-                  </label>
-                  <label className={styles.checkboxLabel}>
-                    <Checkbox
-                      checked={Boolean(draft.vatInvoice)}
-                      onChange={(e) =>
-                        setDraft((p) => ({ ...p, vatInvoice: e.target.checked || undefined }))
-                      }
-                    />
-                    <span>{t('vatInvoice')}</span>
-                  </label>
-                  <label className={styles.checkboxLabel}>
-                    <Checkbox
-                      checked={Boolean(draft.discount)}
-                      onChange={(e) =>
-                        setDraft((p) => ({ ...p, discount: e.target.checked || undefined }))
-                      }
-                    />
-                    <span>{t('amenityDesc.discount')}</span>
-                  </label>
-                  {displayedFeatures.map((f) => (
-                    <label key={f.key} className={styles.checkboxLabel}>
-                      <Checkbox
-                        checked={draft.features.includes(f.key)}
-                        onChange={() => toggleItem('features', f.key)}
-                      />
-                      <span>{f.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {featureItems.length > 6 ? (
-                  <button
-                    type="button"
-                    className={styles.seeMoreLink}
-                    onClick={() => setShowAllFeatures(!showAllFeatures)}
-                  >
-                    {showAllFeatures ? t('seeLess') : t('seeMore')}
-                  </button>
+                {/* Số chỗ chỉ có nghĩa với ô tô. */}
+                {!isMotorbike ? (
+                  <FilterGroup title={t('modal.seats')} hint={t('multiple')}>
+                    <div className={styles.options}>
+                      {SEAT_BUCKET_VALUES.map((sb) => (
+                        <label key={sb} className={styles.option}>
+                          <Checkbox
+                            checked={draft.seats.includes(sb)}
+                            onChange={() => toggleItem('seats', sb)}
+                          />
+                          <span className={styles.optionText}>
+                            {domainLabel('seatBucket', sb, SEAT_BUCKET_LABEL[sb])}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterGroup>
                 ) : null}
+
+                <FilterGroup title={t('modal.fuelType')} hint={t('multiple')}>
+                  <div className={styles.options}>
+                    {fuelTypes.map((code) => (
+                      <label key={code} className={styles.option}>
+                        <Checkbox
+                          checked={draft.fuelType.includes(code)}
+                          onChange={() => toggleItem('fuelType', code)}
+                        />
+                        <span className={styles.optionText}>
+                          {domainLabel('fuelType', code, FUEL_TYPE_LABEL[code])}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterGroup>
+
+                <hr className={styles.divider} />
+
+                <FilterGroup title={t('amenities')} hint={t('multiple')}>
+                  <div className={styles.options}>
+                    {displayedFeatures.map((f) => (
+                      <label key={f.key} className={styles.option}>
+                        <Checkbox
+                          checked={draft.features.includes(f.key)}
+                          onChange={() => toggleItem('features', f.key)}
+                        />
+                        <span className={styles.optionText}>{f.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {featureItems.length > COLLAPSED_COUNT ? (
+                    <SeeMore expanded={showAllFeatures} onToggle={setShowAllFeatures} />
+                  ) : null}
+                </FilterGroup>
+
+                <FilterGroup title={t('rating')} hint={t('single')}>
+                  <div className={styles.options}>
+                    <label className={styles.option}>
+                      <Radio
+                        checked={draft.minRating == null}
+                        onChange={() => setDraft((p) => ({ ...p, minRating: undefined }))}
+                      />
+                      <span className={styles.optionText}>{t('modal.all')}</span>
+                    </label>
+                    {LISTING_MIN_RATING_VALUES.map((rating) => (
+                      <label key={rating} className={styles.option}>
+                        <Radio
+                          checked={draft.minRating === rating}
+                          onChange={() => setDraft((p) => ({ ...p, minRating: rating }))}
+                        />
+                        <span className={styles.optionText}>{ratingLabel(rating)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterGroup>
+
+                <hr className={styles.divider} />
+
+                <FilterGroup title={t('modal.rentalTerms')} hint={t('multiple')}>
+                  <div className={cx(styles.options, styles.optionsSingle)}>
+                    <label className={styles.option}>
+                      <Checkbox
+                        checked={Boolean(draft.noCollateral)}
+                        onChange={(e) => setFlag('noCollateral', e.target.checked)}
+                      />
+                      <span className={styles.optionText}>{t('amenityDesc.noCollateral')}</span>
+                    </label>
+                    <label className={styles.option}>
+                      <Checkbox
+                        checked={Boolean(draft.vatInvoice)}
+                        onChange={(e) => setFlag('vatInvoice', e.target.checked)}
+                      />
+                      <span className={styles.optionText}>{t('vatInvoice')}</span>
+                    </label>
+                  </div>
+                  {draft.vatInvoice ? (
+                    <p className={styles.note}>{t('amenityDesc.vatInvoice')}</p>
+                  ) : null}
+                </FilterGroup>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Dải "Đang chọn" — cố định trên chân hộp */}
+        {chips.length > 0 ? (
+          <div className={styles.selectedBar}>
+            <span className={styles.selectedLabel}>{t('selected')}</span>
+            <div className={styles.chips}>
+              {chips.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  className={styles.chip}
+                  onClick={chip.onRemove}
+                  aria-label={t('modal.removeChip', { label: chip.label })}
+                >
+                  <span>{chip.label}</span>
+                  <CloseOutlined className={styles.chipIcon} aria-hidden />
+                </button>
+              ))}
+              <button
+                type="button"
+                className={styles.resetBtn}
+                onClick={handleClear}
+                title={tCommon('actions.clearSelection')}
+                aria-label={tCommon('actions.clearSelection')}
+              >
+                <ReloadOutlined />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div className={styles.footer}>
           <button type="button" className={styles.clearBtn} onClick={handleClear}>
             {t('clear')}
@@ -630,5 +829,45 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterGroup({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={styles.group}>
+      <div className={styles.groupHeader}>
+        <h3 className={styles.groupTitle}>{title}</h3>
+        <span className={styles.groupHint}>{hint}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SeeMore({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  const t = useTranslations('Marketplace.filterPanel');
+  return (
+    <button
+      type="button"
+      className={styles.seeMore}
+      aria-expanded={expanded}
+      onClick={() => onToggle(!expanded)}
+    >
+      {expanded ? t('seeLess') : t('seeMore')}
+    </button>
   );
 }

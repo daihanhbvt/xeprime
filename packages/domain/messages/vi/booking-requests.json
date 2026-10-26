@@ -443,7 +443,7 @@
       },
       "renter": {
         "title": "Thông tin người thuê",
-        "description": "Mặc định lấy từ tài khoản của bạn — đổi được họ tên hoặc số điện thoại liên hệ cho chuyến này.",
+        "description": "Mặc định lấy từ tài khoản của bạn — bấm biểu tượng bút để đổi họ tên hoặc số điện thoại liên hệ cho chuyến này.",
         "name": "Họ và tên",
         "phone": "Số điện thoại",
         "email": "Email",
@@ -452,7 +452,8 @@
         "readonlyDescription": "Họ tên và số điện thoại chủ xe dùng để liên hệ về chuyến đi này.",
         "namePlaceholder": "Nhập họ tên người thuê",
         "phonePlaceholder": "Nhập số điện thoại liên hệ",
-        "phoneDifferent": "Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản {accountPhone} của bạn."
+        "phoneDifferent": "Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản {accountPhone} của bạn.",
+        "edit": "Sửa {field}"
       },
       "requirements": {
         "title": "Giấy tờ & điều kiện nhận xe",

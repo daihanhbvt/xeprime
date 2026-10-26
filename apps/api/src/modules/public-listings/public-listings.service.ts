@@ -2,8 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  APPROVAL_TARGET_TYPE,
   BOOKING_STATUS,
   BRANCH_STATUS,
+  DOCUMENT_STATUS,
+  SELLER_ENTITY_TYPE,
+  SELLER_PROFILE_STATUS,
+  SHOP_VERIFICATION,
+  TENANT_DOCUMENT_TYPE,
+  isMaintenanceOnSchedule,
+  resolveShopVerification,
   PROVINCE_CODES,
   PUBLIC_CACHE_SECONDS,
   REVIEW_STATUS,
@@ -45,6 +53,7 @@ import type {
   PublicShopListQueryDto,
   PublicShopSummaryDto,
   ShopListingQueryDto,
+  ShopTrustDto,
 } from './dto/public-listing.dto';
 import { branchMapTarget } from '../../common/address-view';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -814,7 +823,7 @@ export class PublicListingsService {
       });
     }
 
-    const stats = await this.shopStats(t.id);
+    const [stats, trust] = await Promise.all([this.shopStats(t.id), this.shopTrust(t.id, now)]);
     const storefront = resolveStorefront(t, now);
 
     return {
@@ -833,6 +842,97 @@ export class PublicListingsService {
       ratingAvg: t.ratingAvg as unknown as string,
       ratingCount: t.ratingCount,
       ...stats,
+      trust,
+    };
+  }
+
+  /**
+   * Dấu hiệu uy tín ĐÃ KIỂM CHỨNG của gian hàng (`ShopTrustDto`) — mỗi cờ đọc từ nơi quyết định
+   * nó được ghi ra, không từ một cột tự khai:
+   *
+   *   - pháp nhân: `seller_profiles` đã được nền tảng xác minh (người duyệt + thời điểm) VÀ giấy
+   *     phép kinh doanh trong `tenant_documents` đã được duyệt. Cá nhân không có dòng này — "pháp
+   *     nhân" không phải lời khen dành cho mọi người bán;
+   *   - gian hàng: phiếu `approval_tasks` loại tenant mới nhất (`resolveShopVerification`) — KHÔNG
+   *     phải tuyến gói: trả tiền không đồng nghĩa đã được xem xét (ADR 0040 điều 5);
+   *   - liên hệ + địa chỉ: gian hàng đã duyệt, SĐT chủ đã OTP, và không chi nhánh nào đang giữ xe
+   *     công khai mà bị đánh dấu cần soát lại vị trí;
+   *   - bảo dưỡng: CHÍNH phép tính của Trung tâm bảo dưỡng (`isMaintenanceOnSchedule`) trên các xe
+   *     đang công khai.
+   */
+  private async shopTrust(tenantId: string, now: Date): Promise<ShopTrustDto> {
+    const visibleListing = publicListingScope();
+    const [tenant, approvedLicence, maintenance, branchesNeedingReview] = await Promise.all([
+      this.prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: {
+          vatInvoiceSupported: true,
+          owner: { select: { phoneVerifiedAt: true } },
+          sellerProfile: { select: { entityType: true, status: true, verifiedAt: true } },
+          approvalTasks: {
+            where: { targetType: APPROVAL_TARGET_TYPE.TENANT },
+            orderBy: { submittedAt: 'desc' },
+            take: 1,
+            select: { status: true },
+          },
+        },
+      }),
+      this.prisma.tenantDocument.findFirst({
+        where: {
+          tenantId,
+          documentType: TENANT_DOCUMENT_TYPE.BUSINESS_LICENSE,
+          status: DOCUMENT_STATUS.APPROVED,
+        },
+        select: { id: true },
+      }),
+      this.prisma.vehicleMaintenanceProfile.findMany({
+        where: { tenantId, vehicle: { publicListing: { is: visibleListing } } },
+        select: {
+          currentOdometerKm: true,
+          lastServiceKm: true,
+          lastServiceAt: true,
+          oilChangeIntervalKm: true,
+        },
+      }),
+      this.prisma.tenantBranch.count({
+        where: {
+          tenantId,
+          deletedAt: null,
+          needsLocationReview: true,
+          publicListings: { some: visibleListing },
+        },
+      }),
+    ]);
+
+    const seller = tenant.sellerProfile;
+    const legalEntity =
+      seller?.status === SELLER_PROFILE_STATUS.VERIFIED &&
+      (seller.entityType === SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS ||
+        seller.entityType === SELLER_ENTITY_TYPE.COMPANY) &&
+      approvedLicence !== null
+        ? seller
+        : null;
+    const shopVerified =
+      resolveShopVerification(tenant.approvalTasks[0]?.status) === SHOP_VERIFICATION.VERIFIED;
+
+    return {
+      legalEntityType: legalEntity?.entityType ?? null,
+      legalEntityVerifiedAt: (legalEntity?.verifiedAt as unknown as string | null) ?? null,
+      shopVerified,
+      contactVerified:
+        shopVerified && tenant.owner.phoneVerifiedAt !== null && branchesNeedingReview === 0,
+      vatInvoiceSupported: tenant.vatInvoiceSupported,
+      maintenanceOnScheduleCount: maintenance.filter((profile) =>
+        isMaintenanceOnSchedule(
+          {
+            currentKm: profile.currentOdometerKm,
+            lastServiceKm: profile.lastServiceKm,
+            intervalKm: profile.oilChangeIntervalKm,
+            lastServiceAt: profile.lastServiceAt,
+          },
+          now,
+        ),
+      ).length,
     };
   }
 
@@ -858,22 +958,45 @@ export class PublicListingsService {
       | 'metrics'
       | 'branchCount'
       | 'serviceProvinceNames'
+      | 'serviceProvinces'
+      | 'branches'
+      | 'vehicleFilterCounts'
       | 'deliveryAvailable'
     >
   > {
     const visibleListing: Prisma.PublicListingWhereInput = { ...publicListingScope(), tenantId };
+    // Số xe của từng chip đi qua CHÍNH bộ lọc của danh sách (`listShopVehicles`), không phải một
+    // điều kiện viết tay thứ hai — chip hiện "có xe" thì bấm vào phải ra đúng chừng ấy xe.
+    const countMatching = (filter: ListingFilterQuery) =>
+      this.prisma.publicListing.count({ where: { ...buildListingWhere(filter), tenantId } });
 
-    const [byProvince, deliveryRow, completedTripCount, branchCount, metrics] = await Promise.all([
-      // Gộp theo tỉnh trả CẢ HAI thứ cần: danh sách tỉnh phục vụ (sắp theo số xe) và tổng số xe.
-      this.prisma.publicListing.groupBy({
-        by: ['provinceName'],
+    const [
+      rows,
+      completedTripCount,
+      branchCount,
+      metrics,
+      withDriver,
+      longTerm,
+      delivery,
+      instantBook,
+      noCollateral,
+      vatInvoice,
+    ] = await Promise.all([
+      /*
+       * Một lượt đọc các cột nhỏ của mọi xe công khai, gộp ở Node thành ba thứ: tổng số xe, tỉnh
+       * phục vụ và chi nhánh. Không `groupBy`: điểm chi nhánh là trung bình CÓ TRỌNG SỐ theo số
+       * đánh giá, phép mà `groupBy` không biểu diễn được. Số hàng bị chặn bởi đội xe của MỘT gian
+       * hàng, và cả endpoint đã đứng sau cache 60 giây.
+       */
+      this.prisma.publicListing.findMany({
         where: visibleListing,
-        _count: { _all: true },
-        orderBy: { _count: { provinceName: 'desc' } },
-      }),
-      this.prisma.publicListing.findFirst({
-        where: { ...visibleListing, deliveryEnabled: true },
-        select: { vehicleId: true },
+        select: {
+          branchId: true,
+          provinceCode: true,
+          provinceName: true,
+          ratingAvg: true,
+          ratingCount: true,
+        },
       }),
       this.prisma.booking.count({
         where: { tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
@@ -887,17 +1010,82 @@ export class PublicListingsService {
        * gian hàng là cách nhanh nhất để không ai tin con số nào.
        */
       this.hostMetrics.forTenant(tenantId),
+      countMatching({ serviceType: SERVICE_TYPE.WITH_DRIVER }),
+      countMatching({ serviceType: SERVICE_TYPE.LONG_TERM }),
+      countMatching({ delivery: true }),
+      countMatching({ instantBook: true }),
+      countMatching({ noCollateral: true }),
+      countMatching({ vatInvoice: true }),
     ]);
 
+    const provinces = new Map<string, { name: string; vehicleCount: number }>();
+    const branchStats = new Map<
+      string,
+      { vehicleCount: number; ratingCount: number; ratingWeighted: number }
+    >();
+    for (const row of rows) {
+      // Scope đã bắt buộc có tỉnh; vế kiểm chỉ để type hẹp lại.
+      if (row.provinceCode && row.provinceName) {
+        const province = provinces.get(row.provinceCode) ?? {
+          name: row.provinceName,
+          vehicleCount: 0,
+        };
+        province.vehicleCount += 1;
+        provinces.set(row.provinceCode, province);
+      }
+      if (row.branchId) {
+        const branch = branchStats.get(row.branchId) ?? {
+          vehicleCount: 0,
+          ratingCount: 0,
+          ratingWeighted: 0,
+        };
+        branch.vehicleCount += 1;
+        if (row.ratingAvg !== null && row.ratingCount > 0) {
+          branch.ratingCount += row.ratingCount;
+          branch.ratingWeighted += Number(row.ratingAvg) * row.ratingCount;
+        }
+        branchStats.set(row.branchId, branch);
+      }
+    }
+
+    const branchRows =
+      branchStats.size > 0
+        ? await this.prisma.tenantBranch.findMany({
+            where: { tenantId, id: { in: [...branchStats.keys()] } },
+            select: { id: true, name: true, province: { select: { name: true } } },
+          })
+        : [];
+
+    const byVehicleCountThenName = <T extends { vehicleCount: number; name: string }>(a: T, b: T) =>
+      b.vehicleCount - a.vehicleCount || a.name.localeCompare(b.name, 'vi');
+
+    const serviceProvinces = [...provinces.entries()]
+      .map(([code, province]) => ({ code, ...province }))
+      .sort(byVehicleCountThenName);
+
     return {
-      vehicleCount: byProvince.reduce((total, row) => total + row._count._all, 0),
+      vehicleCount: rows.length,
       completedTripCount,
       metrics,
       branchCount,
-      serviceProvinceNames: byProvince
-        .map((row) => row.provinceName)
-        .filter((name): name is string => Boolean(name)),
-      deliveryAvailable: deliveryRow !== null,
+      serviceProvinceNames: serviceProvinces.map((province) => province.name),
+      serviceProvinces,
+      branches: branchRows
+        .map((branch) => {
+          const stats = branchStats.get(branch.id)!;
+          return {
+            id: branch.id,
+            name: branch.name,
+            provinceName: branch.province?.name ?? null,
+            vehicleCount: stats.vehicleCount,
+            ratingAvg:
+              stats.ratingCount > 0 ? (stats.ratingWeighted / stats.ratingCount).toFixed(2) : null,
+            ratingCount: stats.ratingCount,
+          };
+        })
+        .sort(byVehicleCountThenName),
+      vehicleFilterCounts: { withDriver, longTerm, delivery, instantBook, noCollateral, vatInvoice },
+      deliveryAvailable: delivery > 0,
     };
   }
 
@@ -912,9 +1100,20 @@ export class PublicListingsService {
     const now = new Date();
     const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
-    // Cùng scope với marketplace: xe của gian hàng nằm ở tỉnh đã bị ẩn cũng không hiện ở trang
-    // shop — nếu không, trang shop thành đường vòng qua luật hiển thị.
-    const where: Prisma.PublicListingWhereInput = { ...publicListingScope(), shopSlug: slug };
+    // Cùng scope và cùng bộ lọc với marketplace (`buildListingWhere` đã gồm `publicListingScope`):
+    // xe ở tỉnh đã bị ẩn cũng không hiện ở trang shop — nếu không, trang shop thành đường vòng qua
+    // luật hiển thị — và chip ở đây nghĩa đúng như chip cùng tên ở trang tìm kiếm.
+    const where: Prisma.PublicListingWhereInput = {
+      ...buildListingWhere({
+        provinceCode: query.provinceCode,
+        serviceType: query.serviceType,
+        delivery: query.delivery,
+        instantBook: query.instantBook,
+        noCollateral: query.noCollateral,
+        vatInvoice: query.vatInvoice,
+      }),
+      shopSlug: slug,
+    };
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.publicListing.count({ where }),

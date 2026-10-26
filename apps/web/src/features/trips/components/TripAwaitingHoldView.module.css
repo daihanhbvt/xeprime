@@ -24,11 +24,11 @@
 .amount {
   margin: 0;
   color: var(--xp-color-primary-hover);
-  font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h1);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-h2);
+  line-height: var(--xp-line-height-h2);
 }
 
 /* Đã chuyển một phần — nền cam nhạt, chữ cam: khách cần biết ngay số trên là phần CÒN THIẾU. */

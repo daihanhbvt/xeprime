@@ -32,9 +32,9 @@ export interface ListingSpecItem {
 }
 
 /**
- * Thẻ thông số xe dạng 4 card theo Figma v2 (node 19707:83377):
- * - Icon 44px tròn viền mềm
- * - Nhãn phía trên và giá trị in đậm phía dưới
+ * Hàng thông số xe theo Figma v2 (node 19707:83378):
+ * - Vòng icon 48px nền vàng nhạt, icon 24 vàng
+ * - Nhãn phía trên (14/22, xám nhạt) và giá trị phía dưới (16/24 Medium)
  */
 export function ListingSpecsCard({ specs }: { specs: ListingSpecItem[] }) {
   // Lấy tối đa 4 thông số tiêu biểu nhất nếu có, hoặc hiển thị toàn bộ

@@ -89,5 +89,80 @@
       "responseTime": "Phản hồi trong",
       "acceptKeep": "Tỉ lệ đồng ý"
     }
+  },
+  "breadcrumb": {
+    "label": "Đường dẫn",
+    "home": "Trang chủ",
+    "personal": "Thông tin chủ xe",
+    "shop": "Thông tin chủ gian hàng",
+    "back": "Quay lại tìm xe"
+  },
+  "profile": {
+    "badgePersonal": "Chủ xe cá nhân",
+    "badgeShop": "Chủ gian hàng",
+    "ratingCount": "({count, plural, other {# đánh giá}})",
+    "trips": "{count, plural, other {# chuyến}}",
+    "highlightsLabel": "Điểm nổi bật",
+    "verified": "Đã xác minh",
+    "branches": "{count, plural, other {# chi nhánh}}",
+    "delivery": "Hỗ trợ giao xe tận nơi",
+    "aboutTitle": "Thông tin",
+    "address": "Địa chỉ: {address}",
+    "joined": "Đã tham gia từ {date}",
+    "message": "Nhắn tin",
+    "stats": {
+      "label": "Số liệu",
+      "branches": "Chi nhánh",
+      "vehicles": "Xe cho thuê",
+      "completedTrips": "Chuyến đã hoàn thành",
+      "rating": "Đánh giá",
+      "responseRate": "Tỷ lệ phản hồi",
+      "acceptKeep": "Nhận & giữ chuyến"
+    }
+  },
+  "branches": {
+    "title": "Chi nhánh",
+    "vehicles": "{count, plural, other {# xe có sẵn}}",
+    "rating": "Điểm {rating} trên 5"
+  },
+  "vehicleFilters": {
+    "provinceLabel": "Lọc theo tỉnh/thành",
+    "all": "Tất cả",
+    "label": "Lọc xe",
+    "withDriver": "Có tài xế",
+    "longTerm": "Thuê dài hạn",
+    "delivery": "Giao xe tận nơi",
+    "instantBook": "Giữ xe tức thì",
+    "noCollateral": "Miễn thế chấp",
+    "vatInvoice": "Xuất VAT",
+    "emptyFiltered": "Không có xe nào khớp bộ lọc đang chọn.",
+    "clear": "Bỏ lọc"
+  },
+  "trust": {
+    "sectionLabel": "Uy tín gian hàng",
+    "title": "Xác thực XePrime",
+    "badge": "Verified Partner",
+    "legalEntity": {
+      "household_business": "Hộ kinh doanh đã được XePrime xác minh, giấy phép kinh doanh đã kiểm định",
+      "company": "Pháp nhân doanh nghiệp, đã kiểm định giấy phép kinh doanh"
+    },
+    "shopVerified": "Hồ sơ gian hàng đã được XePrime duyệt",
+    "contactVerified": "Thông tin liên hệ và địa chỉ chi nhánh được xác minh",
+    "tiles": {
+      "legal": {
+        "title": "Pháp lý & Hoá đơn minh bạch",
+        "vat": "Gian hàng xuất hoá đơn VAT cho tiền thuê xe khi khách yêu cầu.",
+        "verified": "Hồ sơ pháp lý đã được XePrime xác minh."
+      },
+      "maintenance": {
+        "title": "Bảo dưỡng định kỳ",
+        "body": "{onSchedule}/{total} xe đang trong chu kỳ bảo dưỡng, theo sổ bảo dưỡng gian hàng cập nhật trên XePrime."
+      },
+      "deposit": {
+        "title": "Chính sách cọc & Hoàn tiền",
+        "body": "Tiền giữ chỗ thanh toán qua XePrime; huỷ trong thời gian huỷ miễn phí (nếu chuyến có) được hoàn lại toàn bộ số đã chuyển.",
+        "noCollateral": "{count}/{total} xe miễn thế chấp."
+      }
+    }
   }
 }

@@ -27,9 +27,9 @@
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .body {
@@ -137,29 +137,29 @@
 
 .scheduleLabel {
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .scheduleValue {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .placeTitle {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .placeBody {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-lg);
-  line-height: var(--xp-line-height-body-lg);
   overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .divider {

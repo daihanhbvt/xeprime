@@ -54,6 +54,8 @@ async function syncBrands(): Promise<number> {
         label: brand.label,
         sortOrder: brand.sortOrder,
         vehicleTypes: [...brand.vehicleTypes],
+        // Chỉ lúc tạo: logo admin đã thay ở màn danh mục không bị seed ghi đè.
+        iconUrl: brand.iconUrl ?? null,
       },
     });
     touched += 1;

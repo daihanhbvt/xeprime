@@ -1,6 +1,10 @@
 /*
  * Trang chi tiết xe Marketplace theo chuẩn Figma v2 — PC `19707:83357` (khung 1200), mobile
  * `19771:71482` (khung 390). Thứ tự một cột: xem docblock của `ListingDetailView`.
+ *
+ * Thang chữ cột trái (bản Figma cập nhật): tên xe `h1` 30/38 Semibold · tiêu đề khối 16/24
+ * Semibold kèm vạch vàng 3×18 · thân 14/22 Regular `Text/Gray/medium`. Thân 14px dùng line-height
+ * 22 của bản vẽ (token `--xp-line-height-body` là 20 — dùng cho UI dày, không cho đoạn văn đọc).
  */
 
 .wrap {
@@ -34,15 +38,17 @@
 .intro {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--xp-space-20);
   min-width: 0;
 }
 
-/* Tiêu đề & header xe */
+/* Tiêu đề & header xe — Figma `19707:83378`: vạch đáy 1px, đệm dưới 12, cách hàng thông số 20. */
 .headerBlock {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--xp-space-sm);
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border);
 }
 
 .titleRow {
@@ -55,49 +61,55 @@
 .titleWithBadge {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--xp-space-12);
   flex-wrap: wrap;
+  min-width: 0;
 }
 
+/* `30/38 Semibold` — tên xe in hoa như bản vẽ. */
 .title {
   margin: 0;
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--xp-color-text, #0e0f12);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+  color: var(--xp-color-text);
+  letter-spacing: 0;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
+/* Nhãn "Xe mới": nền `Status/success-low`, chữ `12/18 Medium` success, đệm 2×8, bo 16. */
 .badgeNew {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-success-bg);
-  color: #12b76a;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid #d1fadf;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
   white-space: nowrap;
 }
 
+/* "Hỗ trợ xuất hoá đơn VAT" — cùng khuôn nhãn với "Xe mới", tông vàng thương hiệu. */
 .amenityBadge {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--xp-color-primary-subtle, #fff9f0);
-  border: 1px solid var(--xp-color-primary-muted, #f6ebd5);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--xp-color-primary-dark, #cb9115);
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
   white-space: nowrap;
 }
 
+/* Vị trí: icon 20 + chữ `16/24 Regular` `Text/Gray/medium`. */
 .locationRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: #475467;
-  margin-top: 4px;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 /* Icon ghim tô bằng `currentColor` — màu đi theo token, tự đổi ở giao diện tối. */
@@ -106,37 +118,32 @@
   color: var(--xp-color-text-tertiary);
 }
 
-.headerDivider {
-  border: none;
-  border-top: 1px solid #f2f4f7;
-  margin: 16px 0 8px 0;
-  width: 100%;
-}
-
 .actionIcons {
   display: flex;
-  gap: 8px;
+  gap: var(--xp-space-sm);
   flex-shrink: 0;
 }
 
+/* Nút chia sẻ / yêu thích — tròn trắng, viền 1px `Stroke/gray-low`, đệm 8 + icon 20 = 36. */
 .actionBtn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  padding: var(--xp-space-sm);
   border-radius: 50%;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  background: var(--xp-color-bg-container, #ffffff);
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  color: var(--xp-color-text-secondary, #414651);
+  font-size: 20px;
+  color: var(--xp-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .actionBtn:hover {
-  border-color: var(--xp-color-primary, #e9ac29);
-  color: var(--xp-color-primary, #e9ac29);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
 }
 
 /* Trái tim đã lưu — cùng sắc đỏ với tim trên thẻ xe. */
@@ -146,7 +153,7 @@
   color: var(--xp-color-error);
 }
 
-/* Thẻ khối chung cho cột trái - phẳng theo Figma v2 (Images 2 & 4) */
+/* Thẻ khối chung cho cột trái - phẳng theo Figma v2 */
 .sectionCard {
   background: transparent;
   border: none;
@@ -155,21 +162,37 @@
   box-shadow: none;
 }
 
+/*
+ * Tiêu đề khối: vạch vàng 3×18 bo tròn + chữ `16/24 Semibold`, khe 8. Cùng khuôn được chép ở
+ * `ListingDescription`, `ListingPoliciesTabs`, `ListingReviews` (mỗi module CSS một bản — chưa có
+ * tiền lệ `composes` chéo file trong repo).
+ */
 .sectionTitle {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
-  border-left: 4px solid #d6a439;
-  padding-left: 12px;
-  line-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0 0 var(--xp-space-12);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.sectionTitle::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 18px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
 }
 
 .sectionHeaderRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: var(--xp-space-12);
+  margin-bottom: var(--xp-space-12);
 }
 
 .sectionHeaderRow .sectionTitle {
@@ -179,97 +202,89 @@
 .openMapLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #d6a439;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  color: var(--xp-color-primary);
   text-decoration: none;
-  transition: opacity 0.15s ease;
+  white-space: nowrap;
+  transition: color 0.15s ease;
 }
 
 .openMapLink:hover {
-  opacity: 0.8;
+  color: var(--xp-color-primary-hover);
 }
 
 .mapIcon {
-  color: #d6a439;
+  flex-shrink: 0;
 }
 
-.descBody {
-  margin: 0;
-  font-size: 15px;
-  line-height: 24px;
-  color: var(--xp-color-text-secondary, #414651);
-  white-space: pre-line;
-}
-
-.readMoreBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-top: 12px;
-  color: #d6a439;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.readMoreBtn:hover {
-  opacity: 0.8;
-}
-
-/* Tiện ích xe (features) theo Figma v2 Image 4: Lưới 4 cột */
+/* Tiện ích xe (features): lưới 4 cột, icon 20 + chữ `14/22 Regular` `Text/Gray/medium`. */
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  row-gap: 20px;
-  column-gap: 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  row-gap: var(--xp-space-md);
+  column-gap: var(--xp-space-lg);
 }
 
 .featureItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  color: var(--xp-color-text, #0e0f12);
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
 }
 
 .featureIcon {
-  color: #344054;
+  width: 20px;
+  height: 20px;
+  color: var(--xp-color-text-secondary);
   flex-shrink: 0;
 }
 
 .featureLabel {
-  font-weight: 500;
+  font-weight: var(--xp-font-weight-regular);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Vị trí nhận xe & bản đồ */
+/*
+ * Khung thẻ "Chủ xe" — Figma `19707:83457`: nền trắng, viền 1px `#e9c336`, bo 16, đệm 16. Bản vẽ
+ * phủ hai lớp vân vàng mờ (ảnh); ở đây xấp xỉ bằng gradient token, không thêm tài nguyên ảnh.
+ */
+.hostCard {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in srgb, var(--xp-color-primary-glow) 14%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(240deg, var(--xp-color-primary-subtle) 0%, var(--xp-color-bg-container) 100%);
+}
+
+/* Vị trí nhận xe & bản đồ — thân `14/22 Regular` `Text/Gray/medium`. */
 .pickupAddress {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #475467;
-  margin: 0 0 16px;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
+  margin: 0 0 var(--xp-space-md);
 }
 
 .addressPinIcon {
   flex-shrink: 0;
+  margin-top: 3px;
   color: var(--xp-color-text-tertiary);
-}
-
-.pickupMeta {
-  font-size: 13px;
-  color: var(--xp-color-text-tertiary, #717680);
-  margin: 0 0 16px;
 }
 
 .pickupMap {
@@ -277,7 +292,7 @@
   height: 180px;
   object-fit: cover;
   border-radius: 12px;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border: 1px solid var(--xp-color-border);
   margin-bottom: 12px;
 }
 
@@ -345,7 +360,7 @@
   }
 
   .featuresGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -381,8 +396,11 @@
     gap: var(--xp-space-lg);
   }
 
+  /* Bản vẽ mobile không có vạch ngăn dưới tên xe. */
   .headerBlock {
     gap: var(--xp-space-sm);
+    padding-bottom: 0;
+    border-bottom: none;
   }
 
   .titleRow {
@@ -392,17 +410,9 @@
 
   .titleWithBadge {
     gap: var(--xp-space-sm);
-    min-width: 0;
   }
 
-  /* `24px/Semibold` (Figma `19771:72411`) — bậc `h1` của thang mobile là đúng 24/32. */
-  .title {
-    font-size: var(--xp-font-size-h1);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-h1);
-    letter-spacing: 0;
-    overflow-wrap: anywhere;
-  }
+  /* `24px/Semibold` (Figma `19771:72411`) — token `h1` tự hạ về 24/32 ở thang mobile. */
 
   /* Nút chia sẻ — tròn 32 (đệm 8 + icon 16), viền `Stroke/gray-low200`; vùng chạm vẫn 44 (`::after`). */
   .actionIcons {
@@ -425,23 +435,11 @@
   .locationRow {
     align-items: flex-start;
     gap: var(--xp-space-sm);
-    margin-top: 0;
-    color: var(--xp-color-text-secondary);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .locationPinIcon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .headerDivider {
-    display: none;
   }
 
   .sectionTitle {
     margin-bottom: var(--xp-space-sm);
-    font-weight: var(--xp-font-weight-semibold);
+    font-size: var(--xp-font-size-h3);
     line-height: var(--xp-line-height-h3);
   }
 
@@ -455,34 +453,28 @@
   }
 
   .featureItem {
-    gap: var(--xp-space-sm);
-    min-width: 0;
     font-size: var(--xp-font-size-body-lg);
     line-height: var(--xp-line-height-body-lg);
   }
 
-  .featureLabel {
-    font-weight: var(--xp-font-weight-regular);
+  /* Khung do thẻ dùng chung tự vẽ ở mobile (Figma `19771:72767`) — lớp bọc nhường, tránh viền đôi. */
+  .hostCard {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
   }
 
   /* Vị trí xe: "Mở bản đồ" `16px/Semibold` vàng; bản vẽ mobile không có bản đồ tĩnh. */
   .openMapLink {
     gap: var(--xp-space-sm);
-    color: var(--xp-color-primary);
     font-size: var(--xp-font-size-body-lg);
     line-height: var(--xp-line-height-body-lg);
   }
 
-  .mapIcon {
-    color: var(--xp-color-primary);
-  }
-
   .pickupAddress {
-    align-items: flex-start;
     margin-bottom: 0;
-    color: var(--xp-color-text-secondary);
     font-size: var(--xp-font-size-body-lg);
-    font-weight: var(--xp-font-weight-regular);
     line-height: var(--xp-line-height-body-lg);
   }
 
@@ -498,21 +490,8 @@
 }
 
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
-   Chỉ những màu KHÔNG có token tương đương ở bản sáng (xám `#475467`/`#344054`, viền xanh/xám
-   nhạt) — phần còn lại đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. */
-:global([data-theme='dark']) .badgeNew {
-  border-color: color-mix(in srgb, #12b76a 35%, transparent);
-}
-
-:global([data-theme='dark']) .locationRow,
-:global([data-theme='dark']) .pickupAddress {
-  color: var(--xp-color-text-secondary);
-}
-
-:global([data-theme='dark']) .headerDivider {
-  border-top-color: var(--xp-color-border);
-}
-
-:global([data-theme='dark']) .featureIcon {
-  color: var(--xp-color-text-secondary);
+   Mọi màu đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. Riêng viền thẻ "Chủ xe":
+   vàng chói `#e9c336` trên nền tối quá gắt — hạ về vàng trầm như thẻ "Tự nhận xe". */
+:global([data-theme='dark']) .hostCard {
+  border-color: var(--xp-color-primary-muted);
 }

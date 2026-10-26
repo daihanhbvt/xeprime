@@ -1,10 +1,11 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
+import { CheckCircleFilled, EditOutlined } from '@ant-design/icons';
 import { Form } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
-import { useWatch, type Control } from 'react-hook-form';
+import { useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
+import { useFormState, useWatch, type Control } from 'react-hook-form';
 import { isSameVnPhone } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import type { CurrentUser } from '@/hooks/use-current-user';
@@ -111,7 +112,18 @@ function usePhoneNote(phone: string | null, renter: CurrentUser): ReactNode {
   ) : null;
 }
 
-/** Hai ô nhập của màn Xem lại — luật nằm ở `requestFormSchema`, server kiểm lại. */
+type ContactField = 'customerName' | 'customerPhone';
+
+/**
+ * Hai ô nhập của màn Xem lại — luật nằm ở `requestFormSchema`, server kiểm lại.
+ *
+ * Ô nào tài khoản ĐÃ CÓ giá trị thì mở ra ở trạng thái khoá (điền sẵn), bút ở mép phải mới mở cho
+ * sửa — đa số khách thuê cho chính mình, khỏi phải để ý hai ô đã đúng. Ô tài khoản còn trống (vào
+ * bằng Google chưa có SĐT) thì nhập được ngay. Ô đang lỗi validate không bao giờ bị khoá: khoá một
+ * ô lỗi là chặn khách sửa đúng chỗ cần sửa.
+ *
+ * Không có ô email: chủ xe liên hệ qua SĐT, email tài khoản không đi theo yêu cầu thuê.
+ */
 function RenterContactFields({
   control,
   renter,
@@ -122,12 +134,37 @@ function RenterContactFields({
   const t = useTranslations('BookingRequests.flow');
   const phone = useWatch({ control, name: 'customerPhone' });
   const phoneNote = usePhoneNote(phone, renter);
+  const { errors } = useFormState({ control, name: ['customerName', 'customerPhone'] });
+  const [unlocked, setUnlocked] = useState<Record<ContactField, boolean>>({
+    customerName: !renter.displayName?.trim(),
+    customerPhone: !renter.phone?.trim(),
+  });
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const locked = (field: ContactField) => !unlocked[field] && !errors[field];
+  const unlock = (field: ContactField) => {
+    // Ô còn `disabled` thì không focus được — render xong lượt mở khoá rồi mới đặt con trỏ vào.
+    flushSync(() => setUnlocked((prev) => ({ ...prev, [field]: true })));
+    wrapRef.current?.querySelector<HTMLInputElement>(`[data-field="${field}"] input`)?.focus();
+  };
+  const editButton = (field: ContactField, label: string) =>
+    locked(field) ? (
+      <button
+        type="button"
+        className={styles.contactEditBtn}
+        onClick={() => unlock(field)}
+        aria-label={t('reviewPage.renter.edit', { field: label })}
+        title={t('reviewPage.renter.edit', { field: label })}
+      >
+        <EditOutlined aria-hidden />
+      </button>
+    ) : undefined;
 
   return (
-    <>
-      {/* Nhãn nằm TRÊN ô như thiết kế — `Form.Item` đứng một mình mặc định đặt nhãn bên trái. */}
-      <Form component={false} layout="vertical" colon={false}>
-        <div className={styles.contactInputs}>
+    /* Nhãn nằm TRÊN ô như thiết kế — `Form.Item` đứng một mình mặc định đặt nhãn bên trái. */
+    <Form component={false} layout="vertical" colon={false}>
+      <div className={styles.contactInputs} ref={wrapRef}>
+        <div data-field="customerName">
           <TextField
             control={control}
             name="customerName"
@@ -135,7 +172,11 @@ function RenterContactFields({
             placeholder={t('reviewPage.renter.namePlaceholder')}
             autoComplete="name"
             required
+            disabled={locked('customerName')}
+            suffix={editButton('customerName', t('reviewPage.renter.name'))}
           />
+        </div>
+        <div data-field="customerPhone">
           <TextField
             control={control}
             name="customerPhone"
@@ -144,21 +185,13 @@ function RenterContactFields({
             placeholder={t('reviewPage.renter.phonePlaceholder')}
             autoComplete="tel"
             required
+            disabled={locked('customerPhone')}
+            suffix={editButton('customerPhone', t('reviewPage.renter.phone'))}
             help={phoneNote ?? undefined}
           />
         </div>
-      </Form>
-      {renter.email ? (
-        <dl className={styles.contactGrid}>
-          <div className={styles.contactField}>
-            <dt>{t('reviewPage.renter.email')}</dt>
-            <dd className={styles.contactValue}>
-              <span className={styles.contactText}>{renter.email}</span>
-            </dd>
-          </div>
-        </dl>
-      ) : null}
-    </>
+      </div>
+    </Form>
   );
 }
 

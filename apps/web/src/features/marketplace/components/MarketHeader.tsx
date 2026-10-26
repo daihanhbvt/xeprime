@@ -135,28 +135,15 @@ export function MarketHeader() {
         </nav>
 
         <div className={styles.right}>
-          <button
-            type="button"
-            className={styles.themeToggle}
-            onClick={toggleTheme}
-            aria-label={t('toggleTheme')}
-            title={theme === 'dark' ? t('themeLight') : t('themeDark')}
-          >
-            {theme === 'dark' ? (
-              <SunOutlined className={styles.themeIcon} aria-hidden="true" />
-            ) : (
-              <MoonOutlined className={styles.themeIcon} aria-hidden="true" />
-            )}
-          </button>
           {user ? (
             <>
               <ChatMenu side={CHAT_SIDE.CUSTOMER} />
               <NotificationBell context="customer" />
               {/*
-                Đổi ngôn ngữ nằm TRONG menu tài khoản (nhóm cuối), không phải một nút riêng trên
-                thanh: nó là việc làm một lần rồi thôi, còn chỗ trên thanh thì dành cho những thứ
-                người ta bấm hằng ngày. Khách CHƯA đăng nhập đổi ngôn ngữ ở chân trang (VI | EN) —
-                chọn ngôn ngữ không được nằm sau một cổng đăng nhập.
+                Đổi ngôn ngữ, đổi sáng/tối và lối "Trở thành chủ xe" nằm TRONG menu tài khoản,
+                không phải nút riêng trên thanh: chỗ trên thanh dành cho những thứ người ta bấm hằng
+                ngày. Khách CHƯA đăng nhập không có menu này nên vẫn thấy hai nút đó trên thanh, và
+                đổi ngôn ngữ ở chân trang (VI | EN) — các lựa chọn ấy không được nằm sau cổng đăng nhập.
               */}
               <Dropdown
                 trigger={['click']}
@@ -187,30 +174,45 @@ export function MarketHeader() {
               </Dropdown>
             </>
           ) : (
-            /*
-             * Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace. Đổi
-             * ngôn ngữ của khách chưa đăng nhập nằm ở chân trang (VI | EN) theo design v2.
-             */
-            <button
-              type="button"
-              className={styles.login}
-              onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
-            >
-              <span className={styles.loginIcon} aria-hidden="true">
-                <Image src="/home/icon-login.svg" width={20} height={21} alt="" unoptimized />
-              </span>
-              <span className={styles.loginText}>
-                {t.rich('loginOrRegister', { br: () => <br /> })}
-              </span>
-            </button>
+            <>
+              <button
+                type="button"
+                className={styles.themeToggle}
+                onClick={toggleTheme}
+                aria-label={t('toggleTheme')}
+                title={theme === 'dark' ? t('themeLight') : t('themeDark')}
+              >
+                {theme === 'dark' ? (
+                  <SunOutlined className={styles.themeIcon} aria-hidden="true" />
+                ) : (
+                  <MoonOutlined className={styles.themeIcon} aria-hidden="true" />
+                )}
+              </button>
+              {/*
+                Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace. Đổi
+                ngôn ngữ của khách chưa đăng nhập nằm ở chân trang (VI | EN) theo design v2.
+              */}
+              <button
+                type="button"
+                className={styles.login}
+                onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
+              >
+                <span className={styles.loginIcon} aria-hidden="true">
+                  <Image src="/home/icon-login.svg" width={20} height={21} alt="" unoptimized />
+                </span>
+                <span className={styles.loginText}>
+                  {t.rich('loginOrRegister', { br: () => <br /> })}
+                </span>
+              </button>
+              {/*
+                Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản
+                riêng ở đó (ADR 0053). Khách đã đăng nhập đi lối này từ menu tài khoản.
+              */}
+              <CtaButton href={resolveOwnerCtaHref()} className={styles.ownerCta}>
+                {t('becomeOwner')}
+              </CtaButton>
+            </>
           )}
-          {/*
-            Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở
-            đó (ADR 0053). Hiện cho cả khách đã đăng nhập: một khách thuê vẫn có thể muốn cho thuê.
-          */}
-          <CtaButton href={resolveOwnerCtaHref()} className={styles.ownerCta}>
-            {t('becomeOwner')}
-          </CtaButton>
         </div>
       </div>
     </header>

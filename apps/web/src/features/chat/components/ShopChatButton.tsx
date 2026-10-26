@@ -32,6 +32,7 @@ export function ShopChatButton({
   size,
   type,
   className,
+  appearance,
   onNavigate,
 }: {
   /** Slug gian hàng — luôn cần, vì lượt hỏi "tôi được nhắn chưa" đi theo gian hàng. */
@@ -44,6 +45,8 @@ export function ShopChatButton({
   size?: 'middle' | 'large';
   type?: 'default' | 'primary';
   className?: string;
+  /** Hình thái nút — xem `ChatWithShopButton` (`icon` = nút tròn chỉ có icon, `label` thành tên). */
+  appearance?: 'antd' | 'cta' | 'icon';
   onNavigate?: () => void;
 }) {
   const eligibility = useChatEligibility(shopSlug, { enabled: !publicChatOpen });
@@ -57,6 +60,7 @@ export function ShopChatButton({
       {...(size ? { size } : {})}
       {...(type ? { type } : {})}
       {...(className ? { className } : {})}
+      {...(appearance ? { appearance } : {})}
       {...(onNavigate ? { onNavigate } : {})}
     />
   );

@@ -1,13 +1,14 @@
 'use client';
 
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
-import { cx } from '@/lib/cx';
 import { useTranslations } from 'next-intl';
-import styles from './ShopContactActions.module.css';
 
 /**
  * Liên hệ ở thẻ danh tính trang gian hàng — client island nhỏ nhất có thể, để phần còn lại của
  * đầu trang ở lại Server Component (SEO của khu `(public)`).
+ *
+ * Nút tròn chỉ có icon ở góc phải hàng danh tính (Figma `20063:59358`); chữ "Nhắn tin" thành tên
+ * khả truy cập và tooltip. Hình dáng do `className` của đầu trang quyết.
  *
  * ## Không có nút "Gọi", và không có số điện thoại
  *
@@ -22,8 +23,7 @@ import styles from './ShopContactActions.module.css';
  * cả hai vế; chặn thật nằm ở `ChatService` (`CHAT_REQUIRES_BOOKING`).
  *
  * KHÔNG có `<div>` bọc quanh nút: nút tự biến mất được, và một lớp bọc luôn render sẽ để lại một
- * phần tử flex rỗng trong thẻ danh tính — vô hình trên desktop, nhưng dưới 900px nó là một hàng
- * kéo hết chiều ngang mà không ai thấy có gì trong đó.
+ * phần tử flex rỗng trong thẻ danh tính.
  */
 export function ShopContactActions({
   slug,
@@ -34,16 +34,15 @@ export function ShopContactActions({
   chatOpen: boolean;
   className?: string;
 }) {
-  const t = useTranslations('Shops.header');
+  const t = useTranslations('Shops.profile');
 
   return (
     <ShopChatButton
       shopSlug={slug}
       publicChatOpen={chatOpen}
-      type="primary"
-      size="large"
+      appearance="icon"
       label={t('message')}
-      className={cx(styles.button, className)}
+      {...(className ? { className } : {})}
     />
   );
 }

@@ -141,10 +141,14 @@
   font-weight: var(--xp-font-weight-medium);
 }
 
+/*
+ * Hàng ba chỉ số của thẻ "Chủ xe" ở PC — Figma `19707:83457`: mỗi ô canh giữa, nhãn `14/22 Regular`
+ * `Text/Gray/low`, giá trị `14/22 Medium` `Text/Gray/high`; các ô cách nhau 40.
+ */
 .inlineList {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: var(--xp-space-40);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -154,18 +158,21 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 0;
 }
 
 .inlineLabel {
-  font-size: 13px;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
   color: var(--xp-color-text-tertiary);
   white-space: nowrap;
 }
 
 .inlineValue {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
   color: var(--xp-color-text);
   white-space: nowrap;
 }

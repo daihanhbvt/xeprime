@@ -1,58 +1,80 @@
+/*
+ * Đánh giá xe — tiêu đề khối cùng khuôn trang chi tiết (vạch vàng 3×18 + `16/24 Semibold`); mỗi
+ * đánh giá: tên `14/22 Semibold`, ngày `12/18` `Text/Gray/low`, nội dung `14/22` `Text/Gray/medium`.
+ */
 .wrap {
-  margin-top: 8px;
+  margin: 0;
 }
 
 .head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--xp-space-12);
   flex-wrap: wrap;
+  margin-bottom: var(--xp-space-12);
 }
 
+/* Cùng khuôn với `ListingDetailView.module.css` `.sectionTitle`. */
 .title {
-  font-size: 17px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text);
-  margin: 0 0 6px;
+}
+
+.title::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 18px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
 }
 
 .summary {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--xp-space-sm);
 }
 
 .avg {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-gold-deep);
   font-variant-numeric: tabular-nums;
 }
 
 .count {
-  font-size: 12.5px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-tertiary);
 }
 
 .empty {
-  font-size: 13.5px;
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
   color: var(--xp-color-text-secondary);
-  margin: 6px 0 0;
 }
 
 .list {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--xp-space-md);
 }
 
 .item {
   border-bottom: 1px solid var(--xp-color-border);
-  padding-bottom: 12px;
+  padding-bottom: var(--xp-space-md);
 }
 
 .item:last-child {
@@ -63,26 +85,41 @@
 .itemHead {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--xp-space-sm);
   flex-wrap: wrap;
 }
 
 .name {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
   color: var(--xp-color-text);
 }
 
 .date {
-  font-size: 12px;
-  color: var(--xp-color-text-tertiary);
   margin-left: auto;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
 }
 
 .comment {
-  margin: 6px 0 0;
-  font-size: 13.5px;
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
   color: var(--xp-color-text-secondary);
-  line-height: 1.5;
   white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* Mobile (≤640px): tiêu đề khối `18px/Semibold` như các khối khác của bản vẽ mobile. */
+@media (max-width: 640px) {
+  .head {
+    margin-bottom: var(--xp-space-sm);
+  }
+
+  .title {
+    font-size: var(--xp-font-size-h3);
+    line-height: var(--xp-line-height-h3);
+  }
 }

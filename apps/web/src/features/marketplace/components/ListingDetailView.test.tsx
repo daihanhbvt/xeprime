@@ -211,7 +211,8 @@ describe('ListingDetailView pricing', () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByLabelText('Giảm 15%').textContent).toBe('-15%');
-    expect(screen.getByText('408.000 ₫')).toBeTruthy();
+    // Giá niêm yết ở thẻ đặt xe là dạng RÚT GỌN như thẻ kết quả (Figma 19707:84080).
+    expect(screen.getByText('408k')).toBeTruthy();
     expect(screen.queryByText(/Cuối tuần/)).toBeNull();
     expect(screen.queryByText(/Thuê giờ/)).toBeNull();
     expect(screen.queryByText(/550\.000/)).toBeNull();
@@ -677,7 +678,7 @@ describe('ListingDetailView — khuyến mãi trực tiếp chỉ của tự lá
 
     expect(screen.queryByLabelText('Giảm 15%')).toBeNull();
     expect(screen.queryByText(/Khuyến mãi trực tiếp/)).toBeNull();
-    expect(screen.getByText('1.300.000 ₫')).toBeTruthy();
+    expect(screen.getByText('1,3tr')).toBeTruthy();
   });
 });
 

@@ -61,6 +61,10 @@ Every surface handles all of its states, not just the one with data: loading, em
 
 Think through the edge cases the domain guarantees will occur: the very long name, the missing optional field, the record with no related rows, the concurrent edit, the number that overflows the column. Handle them now, while the code is in front of you, because "we'll fix it when a user reports it" is the most expensive way to build.
 
+## Figma is a visual reference, never a business spec
+
+When a screen is rebuilt from a Figma design, the design decides layout, spacing, type sizes and colours — not what the product does. Every existing function on that screen survives the redesign: a filter, toggle, link or state the code already supports is moved into the new layout, never hidden, deleted, or swapped for a different behaviour because the mock-up has no slot for it. The reverse holds too: a control the design draws but the backend cannot serve (a filter dimension with no data, a promise the policy does not make) is not shipped as a button that does nothing — list it for the user and ask before adding the backend for it. Layer names in Figma are reused carelessly; read labels from the design's text, not from layer names. Data the admin manages (brand logos, body-type images) comes from the catalog (`catalog_items.icon_url`, editable on the admin catalog screen), not from static files guessed by key.
+
 ## Server versus client components
 
 Default to Server Components; reach for `'use client'` only when a boundary genuinely needs state, effects, events, or browser APIs. Push the client boundary as far down the tree as it will go — a page can be a Server Component with a small client island inside it. The `(public)` marketplace is where this matters most for SEO; the partner and admin sites are mostly client by nature, but that is a reason to keep its client components small and focused, not an excuse to mark everything.

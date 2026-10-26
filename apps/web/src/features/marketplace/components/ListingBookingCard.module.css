@@ -1,16 +1,23 @@
-/* Thẻ đặt xe và chi phí cột phải theo Figma v2 (node 19707:84080): 440px */
+/*
+ * Thẻ đặt xe và chi phí cột phải theo Figma v2 (node 19707:84080): 440px.
+ *
+ * `--bk-line-height-14`: chữ 14px của bản vẽ cao dòng 22, còn token `--xp-line-height-body` là 20
+ * (thang chữ chung chưa chốt 22 — `docs/design-token-map.md`). Một biến cục bộ thay cho 22px rải rác.
+ */
 .wrap {
+  --bk-line-height-14: 22px;
+
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--xp-space-20);
   width: 100%;
 }
 
 .card {
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(10, 13, 18, 0.04);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: 0 0 4px rgba(10, 13, 18, 0.04);
   overflow: hidden;
 }
 
@@ -27,8 +34,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text-secondary, #414651);
   background: transparent;
   border: none;
@@ -44,48 +52,69 @@
 
 .serviceTabActive {
   background: var(--xp-color-bg-container, #ffffff);
-  color: var(--xp-color-primary-dark, #cb9115) !important;
-  font-weight: 600;
-  border-bottom: 2px solid #d3a94d;
+  color: var(--xp-color-primary-hover) !important;
+  font-weight: var(--xp-font-weight-semibold);
+  border-bottom: 2px solid var(--xp-color-primary-accent);
 }
 
 .body {
-  padding: 20px;
+  padding: var(--xp-space-md);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--xp-space-md);
 }
 
-/* Dòng giá */
+/* Dòng giá: giá gạch 18/28 · giá chính 24/32 Semibold vàng · đơn vị 20/30 `Text/Gray/low`. */
 .priceRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: var(--xp-space-sm);
 }
 
 .priceGroup {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--xp-space-xs);
 }
 
 .oldPrice {
-  font-size: 16px;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 28px;
   color: var(--xp-color-text-disabled, #d5d7da);
   text-decoration: line-through;
 }
 
 .mainPrice {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
   color: var(--xp-color-primary, #e9ac29);
-  line-height: 1;
-  letter-spacing: -0.5px;
 }
 
 .unit {
-  font-size: 16px;
-  color: var(--xp-color-text-secondary, #717680);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-lead);
+  color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * Viên giảm giá XANH của bản vẽ (`success-low` nền, `success-high` chữ 14/22 Medium) — chỉ ở thẻ này.
+ * `DiscountTag` chung giữ màu của mình ở các màn khác; bộ chọn kép để thắng `.tag` của module kia bất
+ * kể thứ tự nạp CSS.
+ */
+.priceRow .discountPill {
+  flex: none;
+  min-height: auto;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--bk-line-height-14);
 }
 
 .discountBadge {
@@ -139,28 +168,30 @@
 .locationSection {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--xp-space-12);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
 }
 
+/* Khay `BG/gray-50` bo 12; ô đang chọn trắng, viền vàng, bo 12, đệm 12 (Figma "Pickup Location"). */
 .deliveryToggle {
   display: flex;
-  gap: 8px;
+  gap: 0;
   background: var(--xp-color-bg, #fafafa);
-  padding: 4px;
-  border-radius: 12px;
+  padding: 0;
+  border-radius: var(--xp-border-radius-control);
 }
 
 .toggleBtn {
   flex: 1;
-  padding: 10px;
-  border-radius: 10px;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
   border: 1px solid transparent;
   background: transparent;
   display: flex;
@@ -178,30 +209,34 @@
 }
 
 .toggleLabel {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text, #0e0f12);
 }
 
 .toggleSub {
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
   font-style: italic;
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-success);
 }
 
 .toggleSubDanger {
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
   font-style: italic;
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-error);
 }
 
 .addressBox {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
   color: var(--xp-color-text-secondary, #414651);
-  line-height: 18px;
+  line-height: var(--bk-line-height-14);
 }
 
 .deliveryAddressCard {
@@ -268,14 +303,20 @@
   border-color: #cb9115;
 }
 
+/* Icon 20px; cao dòng 22 nên lề trên 1px canh tâm icon với dòng chữ đầu. */
 .addressIcon {
+  flex: none;
   color: var(--xp-color-primary, #e9ac29);
-  margin-top: 2px;
+  font-size: 20px;
+  margin-top: 1px;
 }
 
+/* 14/22 Light nghiêng `Text/Gray/low` — Light (300) chưa có token trọng lượng. */
 .addressNote {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--xp-font-size-body);
+  font-weight: 300;
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text-tertiary, #717680);
   font-style: italic;
 }
@@ -291,7 +332,8 @@
 
 .insuranceNote {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-tertiary, #717680);
   font-style: italic;
 }
@@ -330,36 +372,36 @@
 .breakdownCard {
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+  border-radius: var(--xp-border-radius-card);
+  padding: var(--xp-space-md);
+  box-shadow: var(--xp-elevation-ambient);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--xp-space-md);
 }
 
 .breakdownTitle {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 700;
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text, #0e0f12);
 }
 
+/* Đường kẻ 1px `Stroke/gray-low` của bản vẽ — khoảng cách đã do `gap` của thẻ lo. */
 .dashedDivider {
-  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
-  margin: 2px 0;
+  border-top: 1px solid var(--xp-color-border, #e9eaeb);
 }
 
 .solidDivider {
   border-top: 1px solid var(--xp-color-border, #e9eaeb);
-  margin: 4px 0;
 }
 
 .promoGroupTitle {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
-  margin-top: 2px;
 }
 
 .promoCodeButton {
@@ -368,13 +410,14 @@
   justify-content: space-between;
   background: var(--xp-color-success-subtle);
   border: 1px solid var(--xp-color-success);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: var(--xp-border-radius-control);
+  padding: var(--xp-space-12);
   color: var(--xp-color-success);
   cursor: pointer;
   width: 100%;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--bk-line-height-14);
   transition: all 0.15s ease;
 }
 
@@ -389,98 +432,110 @@
 }
 
 .promoGiftIcon {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .promoArrowIcon {
-  font-size: 14px;
+  font-size: var(--xp-font-size-body);
 }
 
-.priceLine {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  font-size: 14px;
-  line-height: 20px;
-}
-
+/* Dòng chi phí: nhãn 14/22 `Text/Gray/high`, giá trị 16/24 Medium. */
+.priceLine,
 .priceLineTop {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  font-size: 14px;
-  line-height: 20px;
-  gap: 16px;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--bk-line-height-14);
 }
 
 .priceLabel {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   color: var(--xp-color-text, #0e0f12);
 }
 
+/* Dòng phụ dưới nhãn ("2 ngày x 870k/ngày", ghi chú cọc): 14/22 `Text/Gray/low`. */
 .priceSubLabel {
-  font-size: 12px;
+  font-size: var(--xp-font-size-body);
   color: var(--xp-color-text-tertiary, #717680);
   max-width: 260px;
-  line-height: 16px;
+  line-height: var(--bk-line-height-14);
 }
 
 .priceValue {
-  font-weight: 600;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
   white-space: nowrap;
 }
 
+/* Đi kèm `.priceValue` — chỉ đổi màu sang `Text/success-high`. */
 .discountValue {
-  color: #12b76a;
-  font-weight: 600;
+  color: var(--xp-color-success);
   white-space: nowrap;
+}
+
+/* Tiền giữ chỗ: nhãn `Text/Gray/medium`, câu giải thích 12/18 `Text/Gray/low`. */
+.holdLine .priceLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+.holdLine .priceSubLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .totalRow {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding-top: 12px;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
   border-top: 1px solid var(--xp-color-border, #e9eaeb);
-  margin-top: 4px;
 }
 
 .totalLabel {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text, #0e0f12);
 }
 
+/*
+ * 20/30 Semibold chữ gradient `#d6a439 → #ba8b26` của bản vẽ — không token gradient nào trùng
+ * (`--xp-gradient-text-gold` là `#d3a94d → #cb9c03`, `-hero` bắt đầu `#eeb924`).
+ */
 .totalAmount {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
   background: linear-gradient(90deg, #d6a439, #ba8b26);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
 }
 
 /* Chú thích dưới tổng / trạng thái chưa có báo giá — câu của server-side luật hiển thị. */
 .costNote {
   margin: 0;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-tertiary, #717680);
-}
-
-.ctaBtnWrapper {
-  margin-top: 6px;
 }
 
 .ctaBtnWrapper :global(.ant-btn) {
   height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #e9c336 0%, #e8c664 48.08%, #e3b012 100%) !important;
-  color: #0e0f12 !important;
-  font-size: 16px;
-  font-weight: 700;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-gradient-primary) !important;
+  color: var(--xp-color-primary-contrast) !important;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   border: none;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
   transition: all 0.2s ease;
@@ -491,8 +546,9 @@
   transform: translateY(-1px);
 }
 
+/* Nút nhắn shop đi sát nút chính (gap 16 của thẻ − 8). */
 .chatBtnWrapper {
-  margin-top: 6px;
+  margin-top: calc(-1 * var(--xp-space-sm));
 }
 
 .chatBtnWrapper :global(.ant-btn) {
@@ -506,9 +562,11 @@
   gap: 8px;
 }
 
+/* Tiêu đề khối lựa chọn — cùng bậc với "Vị trí nhận xe" (16/24 Semibold). */
 .routeLabel {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
 }
 
@@ -526,8 +584,9 @@
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text-secondary, #717680);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -559,8 +618,9 @@
   border-radius: 8px;
   border: 1px solid var(--xp-color-border, #e9eaeb);
   background: var(--xp-color-bg-container, #ffffff);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text-secondary, #717680);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -643,8 +703,9 @@
 }
 
 .inputLabel {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text, #0e0f12);
 }
 
@@ -709,8 +770,9 @@
   border-radius: 8px;
   border: 1px solid var(--xp-color-border, #e9eaeb);
   background: var(--xp-color-bg-container, #ffffff);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-text-secondary, #717680);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -766,8 +828,10 @@
 /* Tùy biến RentalDateTimeRangeField trong booking card */
 .bookingRangeField {
   border: 1px solid var(--xp-color-border, #e9eaeb) !important;
-  border-radius: 12px !important;
-  padding: 12px 16px !important;
+  border-radius: var(--xp-border-radius-control) !important;
+  padding: var(--xp-space-sm) var(--xp-space-md) !important;
+  /* Chỉ khoảng ngang — `row-gap` khi viên thời lượng xuống hàng (≤640px) vẫn của component chung. */
+  column-gap: var(--xp-space-20) !important;
   background: var(--xp-color-bg-container, #ffffff) !important;
   transition: all 0.15s ease;
   width: 100%;
@@ -778,12 +842,42 @@
 }
 
 /*
+ * Chữ trong ô thời gian (biến thể `stacked` của `RentalDateTimeRangeField`) theo bản vẽ: nhãn
+ * "Nhận xe"/"Trả xe" 14/22 `Text/Gray/medium`, mốc 16/24 Medium, gạch nối 14 `Text/Gray/very-low`.
+ * Lớp bên trong thuộc module của component chung nên chọn theo cấu trúc DOM của nó
+ * (cột mốc = `span > span` · gạch nối = `span[aria-hidden]`) — chỉ ở thẻ này, ô chung không đổi.
+ */
+.bookingRangeField > span > span:first-child {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--bk-line-height-14);
+  color: var(--xp-color-text-secondary);
+}
+
+.bookingRangeField > span > span:nth-child(2) {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.bookingRangeField > span[aria-hidden] {
+  padding: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-placeholder);
+}
+
+/*
  * ── Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72244` ─────────────────
  *
  * Thẻ đặt xe và thẻ "Thành tiền" TRÀN MÉP (lề âm = `--page-gutter` của trang), cách nhau 16 — số đo
  * 16 của bản vẽ là `--xp-space-lg` ở mobile (tầng token hạ `md` xuống 12). Thanh tab
  * nền `BG/gray-100`, tab đang chọn là ô trắng bo trên 12 có gạch chân vàng. Tiêu đề khối có vạch
- * vàng 4px bên trái như các khối của trang. Chữ theo thang 14/16/18 của bản vẽ.
+ * vàng 4px bên trái như các khối của trang.
+ *
+ * Chữ: CÙNG thang với desktop (nhãn 14/22, giá trị 16/24) — mobile không bao giờ to hơn desktop.
+ * Chỉ giá chính co theo token (`h2` hạ 24/32 → 20/28) và đơn vị hạ 20 → 16 để không to bằng giá.
  */
 @media (max-width: 640px) {
   .wrap {
@@ -807,7 +901,7 @@
     border-radius: 0;
   }
 
-  /* ── Thanh tab (Figma "Rental Type Tabs") ── */
+  /* ── Thanh tab (Figma "Rental Type Tabs") — ba tab trong 358px nên chữ 14 ── */
   .tabHeader {
     background: var(--xp-color-bg-muted);
     border-bottom: none;
@@ -817,15 +911,11 @@
     padding: 0 var(--xp-space-12);
     border-radius: var(--xp-space-12) var(--xp-space-12) 0 0;
     font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
+    line-height: var(--bk-line-height-14);
   }
 
   .serviceTab:first-child {
     border-top-left-radius: var(--xp-border-radius-card);
-  }
-
-  .serviceTabActive {
-    border-bottom-color: var(--xp-color-primary-accent);
   }
 
   .body {
@@ -833,164 +923,54 @@
     padding: var(--xp-space-lg);
   }
 
-  /* ── Giá: giá gạch `18px`, giá chính `36px/Semibold` vàng, đơn vị `20px` (Figma "Vehicle Card Footer") ── */
-  .priceRow {
-    align-items: center;
-    gap: var(--xp-space-sm);
-  }
-
+  /* ── Giá: giá rút gọn ("870k") nên giá gạch + giá + đơn vị vừa một hàng 358px ── */
   .priceGroup {
     flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: var(--xp-space-6);
+    column-gap: var(--xp-space-xs);
     min-width: 0;
   }
 
-  /* Giá gạch một dòng riêng phía trên — giá thật đầy đủ "585.000 ₫" + "/ngày" không còn vừa một hàng 358px. */
-  .oldPrice {
-    flex-basis: 100%;
-    font-size: 18px;
-    line-height: 28px;
-  }
-
-  .mainPrice {
-    font-size: var(--xp-font-size-display-sm);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-display-sm);
-    letter-spacing: -0.02em;
-  }
-
   .unit {
-    color: var(--xp-color-text-tertiary);
-    font-size: var(--xp-font-size-lead);
-    line-height: var(--xp-line-height-lead);
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
   }
 
-  /* ── Vị trí nhận xe (Figma "Pickup Location") ── */
-  .locationSection {
-    gap: var(--xp-space-12);
-  }
-
+  /* ── Tiêu đề khối có vạch vàng (Figma "Pickup Location") ── */
   .sectionTitle,
   .breakdownTitle {
-    margin: 0;
     padding: 0 var(--xp-space-12);
     border-left: 4px solid var(--xp-color-primary-accent);
-    font-size: var(--xp-font-size-h3);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-h3);
   }
 
-  /* Hai lựa chọn trong khay `BG/gray-50` cao 72; ô đang chọn trắng, viền vàng, bo 12. */
+  /* Hai lựa chọn trong khay `BG/gray-50` cao 72. */
   .deliveryToggle {
-    gap: 0;
     min-height: 72px;
-    padding: 0;
   }
 
   .toggleBtn {
     justify-content: center;
-    padding: var(--xp-space-12);
-    border-radius: var(--xp-space-12);
-  }
-
-  .toggleLabel {
-    font-size: var(--xp-font-size-body-lg);
-    line-height: var(--xp-line-height-body-lg);
-  }
-
-  .toggleSub,
-  .toggleSubDanger {
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
   }
 
   .addressBox {
     gap: var(--xp-space-6);
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
   }
 
-  .addressNote {
-    font-size: var(--xp-font-size-body);
-    font-weight: var(--xp-font-weight-regular);
-    line-height: var(--xp-line-height-body);
-  }
-
-  /* ── Thành tiền: dòng `16px`, chú thích `14px` `Text/Gray/low` (Figma "Additional Services") ── */
-  .priceLine,
-  .priceLineTop {
-    gap: var(--xp-space-lg);
-    font-size: var(--xp-font-size-body-lg);
-    line-height: var(--xp-line-height-body-lg);
-  }
-
+  /* ── Thành tiền ── */
   .priceLabel {
     flex: 1 1 auto;
     min-width: 0;
   }
 
-  .costNote {
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
-  }
-
   .priceSubLabel {
     max-width: none;
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .promoGroupTitle {
-    margin-top: 0;
-    font-size: var(--xp-font-size-body-lg);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-body-lg);
-  }
-
-  .promoCodeButton {
-    padding: var(--xp-space-12);
-    font-weight: var(--xp-font-weight-regular);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .promoGiftIcon {
-    font-size: 20px;
-  }
-
-  .discountValue {
-    color: var(--xp-color-success-accent);
   }
 
   .totalRow {
-    align-items: center;
-    gap: var(--xp-space-sm);
-    margin-top: 0;
     padding-top: var(--xp-space-lg);
-  }
-
-  .totalLabel {
-    font-size: var(--xp-font-size-body-lg);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-body-lg);
-  }
-
-  .totalAmount {
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-h2);
-    white-space: nowrap;
   }
 
   .ctaBtnWrapper {
     margin-top: 0;
-  }
-
-  .ctaBtnWrapper :global(.ant-btn) {
-    font-weight: var(--xp-font-weight-semibold);
-  }
-
-  .chatBtnWrapper {
-    margin-top: calc(-1 * var(--xp-space-sm));
   }
 
   /* Gói dài hạn: 4 ô một hàng quá chật ở 358px → hai hàng. */
