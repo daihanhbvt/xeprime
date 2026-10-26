@@ -62,6 +62,7 @@ import { TextField } from '@/components/form/TextField';
 import { ROUTES, paymentPath } from '@/constants/routes';
 import { useListingDetail } from '@/features/marketplace/hooks/use-listing-detail';
 import type { PublicListingDetail } from '@/features/marketplace/types';
+import { useAccountPhonePrompt } from '@/features/auth/components/AccountPhoneGate';
 import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
@@ -204,8 +205,9 @@ export type RequestBookingResult = 'sent' | 'notice';
  * Không có gì được GỬI trước khi khách tự bấm "Gửi yêu cầu", và chưa đăng nhập thì không có yêu
  * cầu, không có phiên khách vãng lai, không giữ lịch.
  *
- * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) xác minh ở `AccountPhoneGate`
- * của vỏ site; server vẫn là chốt (`PHONE_NOT_VERIFIED`).
+ * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) — khách có thể đã "Để sau" ở
+ * hộp nhắc của vỏ site (ADR 0071) — được hỏi lại ĐÚNG lúc bấm "Tiếp tục" (`useAccountPhonePrompt`);
+ * xác minh xong luồng tự đi tiếp. Server vẫn là chốt (`PHONE_NOT_VERIFIED`).
  *
  * **Giao xe tận nơi**: chỉ hỏi địa chỉ. Lựa chọn này chỉ hiện khi CHÍNH SÁCH hiệu lực cho phép
  * (`listing.deliveryAvailable`), không phải khi hồ sơ xe gắn chip tiện ích.
@@ -302,6 +304,13 @@ export function RequestBookingFlow({
    * sau một lần 401) thì mốc là lúc GHI bản nháp: phiên nạp sau đó mới là phiên thật.
    */
   const [signInRequestedAt, setSignInRequestedAt] = useState(() => restoredDraft?.savedAt ?? 0);
+  /**
+   * Đang chờ khách xác minh SĐT của tài khoản (hộp xác minh của vỏ site đang mở, hoặc khách vừa
+   * "Để sau"). Có số đã xác minh là luồng tự đi tiếp — xem khối "quay lại sau đăng nhập".
+   */
+  const [awaitingPhone, setAwaitingPhone] = useState(false);
+  /** Mỗi lượt hỏi số tăng một — effect mở hộp, kể cả khi khách đã đóng lượt trước. */
+  const [phonePromptTick, setPhonePromptTick] = useState(0);
   /** Đang đọc bằng lái để quyết định có cần bước bằng lái không — giữ nút Tiếp tục ở trạng thái chờ. */
   const [checkingLicence, setCheckingLicence] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -343,6 +352,7 @@ export function RequestBookingFlow({
   const meQuery = useCurrentUser();
   const me = meQuery.data;
   const authModal = useAuthModal();
+  const promptAccountPhone = useAccountPhonePrompt();
   /*
    * Khách đang giữ những chuyến nào chưa trả — đọc NGAY khi mở hộp thoại. Đã chạm trần thì server
    * sẽ từ chối mọi yêu cầu mới (`HOLD_LIMIT_REACHED`), nên nói trước khi khách mất công điền form.
@@ -1076,11 +1086,12 @@ export function RequestBookingFlow({
       }
       /*
        * Server nói SĐT của tài khoản chưa xác minh trong khi `/auth/me` đang giữ bản cũ. Làm mới
-       * nó: `AccountPhoneGate` của vỏ site hiện bước xác minh số ngay trên hộp này, rồi khách bấm
-       * gửi lại.
+       * nó và mở hộp xác minh số ngay trên hộp này; xác minh xong lỗi tự gỡ và khách bấm gửi lại.
+       * Lỗi vẫn hiện để khách bấm "Để sau" còn biết vì sao chưa gửi được.
        */
       if (code === API_ERROR_CODE.PHONE_NOT_VERIFIED) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+        requestPhoneVerification();
         setStepError(errorMessage(e));
         return;
       }
@@ -1151,8 +1162,8 @@ export function RequestBookingFlow({
   }, []);
 
   /**
-   * Rời bước Chuyến đi. Chưa đăng nhập ⇒ giữ bản nháp + mời đăng nhập (ADR 0060). Đã đăng nhập ⇒
-   * đi tiếp tới bằng lái / Xác nhận.
+   * Rời bước Chuyến đi. Chưa đăng nhập ⇒ giữ bản nháp + mời đăng nhập (ADR 0060). Đã đăng nhập mà
+   * chưa có SĐT đã xác minh ⇒ hỏi số (ADR 0071). Đủ cả hai ⇒ đi tiếp tới bằng lái / Xác nhận.
    */
   async function afterTripStep() {
     if (!alive.current) return;
@@ -1160,8 +1171,23 @@ export function RequestBookingFlow({
       requestSignIn();
       return;
     }
+    // Ngoài vỏ site khách (không có hộp nhắc) thì đi tiếp — server vẫn chặn ở nút gửi.
+    if (!me.phoneVerified && promptAccountPhone) {
+      requestPhoneVerification();
+      return;
+    }
     await continueToReview();
   }
+
+  /** Mở hộp xác minh SĐT của vỏ site và chờ — có số rồi luồng tự đi tiếp (khối `resumeTick`). */
+  function requestPhoneVerification() {
+    setAwaitingPhone(true);
+    setPhonePromptTick((n) => n + 1);
+  }
+
+  useEffect(() => {
+    if (phonePromptTick > 0) promptAccountPhone?.();
+  }, [phonePromptTick, promptAccountPhone]);
 
   /**
    * Mời đăng nhập / đăng ký NGAY trên hộp này, giữ nguyên thứ khách đã nhập.
@@ -1193,17 +1219,29 @@ export function RequestBookingFlow({
    * rồi bằng lái, rồi Xác nhận. Không TỰ GỬI gì — khách vẫn tự bấm "Gửi yêu cầu", nên đăng nhập
    * lại hay quay về sau Google/Facebook không bao giờ sinh thêm một yêu cầu.
    *
-   * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) thì ĐỢI: `AccountPhoneGate`
-   * đang hỏi số, và đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng.
+   * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) thì chuyển sang chờ SĐT: hộp
+   * xác minh mở ngay, và đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng. Có số ⇒ đi tiếp ở
+   * bước Chuyến đi; ở màn Xem lại (server vừa từ chối lượt gửi) thì chỉ gỡ lỗi, khách tự bấm gửi lại.
    *
    * Đổi state NGAY TRONG render (cùng mẫu với bước bằng lái ở trên) để mỗi lượt đăng nhập kích
    * đúng MỘT lần đi tiếp; effect chỉ chạy phần bất đồng bộ.
    */
   const [resumeTick, setResumeTick] = useState(0);
-  if (awaitingAuth && me?.phoneVerified && meQuery.dataUpdatedAt > signInRequestedAt) {
+  if (awaitingAuth && me && meQuery.dataUpdatedAt > signInRequestedAt) {
     setAwaitingAuth(false);
     setStepError(null);
-    setResumeTick((n) => n + 1);
+    if (me.phoneVerified || !promptAccountPhone) {
+      setResumeTick((n) => n + 1);
+    } else {
+      // = `requestPhoneVerification()`, viết thẳng: trong render chỉ được đổi state của chính nó.
+      setAwaitingPhone(true);
+      setPhonePromptTick((n) => n + 1);
+    }
+  }
+  if (awaitingPhone && me?.phoneVerified) {
+    setAwaitingPhone(false);
+    setStepError(null);
+    if (step === 'trip') setResumeTick((n) => n + 1);
   }
 
   /**

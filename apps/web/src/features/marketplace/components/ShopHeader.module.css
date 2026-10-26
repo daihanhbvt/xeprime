@@ -1,31 +1,26 @@
 /*
- * Đầu trang gian hàng. Hai mặt tiền dùng chung bộ class; biến thể `*Shop` chỉ thêm những gì
- * gian hàng tuyến gói có mà chủ xe cá nhân không có (ảnh bìa, vành vàng, thẻ đè lên bìa).
+ * Đầu trang gian hàng — Figma chủ xe cá nhân `20058:71218`, gian hàng `20063:59332` (khung 1200).
+ * Hai mặt tiền dùng chung bộ class; biến thể `*Shop` chỉ thêm những gì gian hàng tuyến gói có mà
+ * chủ xe cá nhân không có (ảnh bìa, thẻ viền vàng đè lên bìa, vương miện, vành logo).
  */
 
 .header {
-  background: var(--xp-color-bg-layout);
+  position: relative;
 }
 
-/* ——— Dải bìa (chỉ mặt tiền gian hàng) ——— */
+/* ——— Dải bìa (chỉ mặt tiền gian hàng): 1440×328 trong bản vẽ ——— */
 
-/*
- * Tỉ lệ dải bìa theo design: rộng và thấp (~5.5:1 ở khổ container). `26vw` của bản trước cho ra
- * hơn 330px trên màn 1900 — một khối tối chiếm gần nửa màn hình đầu tiên, và đó là lý do cả
- * trang trông như bị đè.
- */
 .cover {
-  position: relative;
-  height: clamp(170px, 17vw, 260px);
+  height: clamp(180px, 22.8vw, 328px);
   overflow: hidden;
   background: var(--xp-hero-backdrop);
 }
 
 .coverImg {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 .coverFallback {
@@ -34,118 +29,92 @@
   background: var(--xp-hero-backdrop);
 }
 
-/*
- * Lớp phủ tối dần từ đáy: chip trắng phải đọc được trên MỌI ảnh bìa mà chủ shop tải lên, kể cả
- * một bức chụp ban ngày nền trắng. Không có nó thì độ tương phản của chữ phụ thuộc vào ảnh —
- * tức là không bảo đảm được.
- */
-.coverScrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(20, 16, 8, 0.1) 0%,
-    rgba(20, 16, 8, 0) 35%,
-    rgba(20, 16, 8, 0.58) 100%
-  );
-}
-
-.highlights {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 auto;
-  padding: 0 20px 18px;
-  max-width: var(--xp-container-max-width);
-  list-style: none;
-}
-
-.highlight {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  border-radius: var(--xp-border-radius-pill);
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: #fff;
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
-  backdrop-filter: blur(6px);
-}
-
-.highlight::before {
-  content: '✓';
-  margin-right: 6px;
-  font-weight: var(--xp-font-weight-bold);
-}
-
-/* ——— Thẻ danh tính ——— */
-
 .inner {
-  max-width: var(--xp-container-max-width);
+  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
   margin: 0 auto;
-  padding: 20px 20px 0;
+  padding: var(--xp-space-40) var(--xp-space-md) 0;
+}
+
+/* Thẻ gian hàng đè lên mép dưới dải bìa 66px — bản vẽ: bìa kết thúc ở 456, thẻ bắt đầu ở 390. */
+.headerShop .inner {
+  margin-top: -66px;
+  padding-top: 0;
+}
+
+/* ——— Thẻ hồ sơ ——— */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+/*
+ * Vành vàng (đáy dày 3px) + vân lụa vàng mờ 20% của bản vẽ. Vân là một lớp nền phủ trắng 80% chứ
+ * không phải `opacity` trên phần tử: vương miện nằm trong thẻ và phải tràn RA ngoài góc, nên thẻ
+ * không được `overflow: hidden`.
+ */
+.cardShop {
+  border-color: var(--xp-color-primary-glow);
+  border-bottom-width: 3px;
+  border-radius: 24px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
+    url('/shops/card-texture.webp') center top / cover no-repeat,
+    var(--xp-color-bg-container);
+}
+
+.crown {
+  position: absolute;
+  top: -16px;
+  right: -22px;
+  width: 84px;
+  height: 84px;
+  pointer-events: none;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding-bottom: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.cardShop .summary {
+  gap: var(--xp-space-20);
 }
 
 .identity {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 18px 20px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
-}
-
-/*
- * Thẻ danh tính của gian hàng nằm DƯỚI dải bìa, không đè lên.
- *
- * Bản trước kéo nó lên `-56px` để "khoá" vào bìa — và nuốt mất đúng hàng chip năng lực nằm ở
- * mép dưới dải bìa, tức là xoá thông tin bằng CSS. Dải bìa và thẻ là hai khối kể hai chuyện
- * khác nhau (họ trông ra sao / họ là ai), một khoảng thở giữa chúng đọc rõ hơn hẳn.
- *
- * Viền VÀNG là dấu hạng của tuyến gói — cùng một màu với dấu xác thực và vành logo bên trong,
- * nên cả thẻ nói đúng một điều thay vì ba sắc độ rời rạc.
- */
-.identityShop {
-  border-color: var(--xp-color-primary);
-  box-shadow: var(--xp-shadow-raised);
+  align-items: flex-start;
+  gap: var(--xp-space-12);
 }
 
 .avatar {
   position: relative;
   flex: none;
-  width: 84px;
-  height: 84px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  overflow: hidden;
-  background: var(--xp-gold-wash);
+  background: var(--xp-color-primary-light);
 }
 
-/*
- * Vành vàng của gian hàng đã xác minh. `box-shadow` chứ không `border`: border ăn vào 84px làm
- * ảnh bên trong co lại và lệch so với avatar của mặt tiền cá nhân ngay bên cạnh trên cùng một
- * danh sách kết quả.
- */
 .avatarShop {
-  width: 96px;
-  height: 96px;
-  box-shadow:
-    0 0 0 3px var(--xp-color-bg-container),
-    0 0 0 5px var(--xp-color-primary);
+  border: 1px solid var(--xp-color-primary-glow);
 }
 
 .avatarImg {
+  display: block;
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
-  display: block;
 }
 
 .avatarFallback {
@@ -154,137 +123,305 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-family: var(--xp-font-family-display);
-  font-size: 38px;
-  font-weight: var(--xp-font-weight-bold);
-  color: var(--xp-gold-deep);
-  background: var(--xp-gold-wash);
+  border-radius: 50%;
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Dấu xác thực đặt ở góc dưới-phải logo, trên một đế trắng tròn 20px như bản vẽ. */
+.avatarMark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
 }
 
 .info {
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-6);
   min-width: 0;
+}
+
+.cardShop .info {
+  gap: var(--xp-space-sm);
 }
 
 .nameRow {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 8px 10px;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-12);
 }
 
 .name {
   margin: 0;
   font-family: var(--xp-font-family-display);
-  font-size: var(--xp-font-size-h1);
-  line-height: var(--xp-line-height-h1);
+  font-size: 28px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 36px;
   color: var(--xp-color-text);
-  /* Tên gian hàng là dữ liệu người dùng nhập — không có trần độ dài nào ép nó xuống dòng đẹp. */
+  /* Tên là dữ liệu người dùng nhập — không có trần độ dài nào ép nó xuống dòng đẹp. */
   overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-
-.verified {
-  flex: none;
 }
 
 .badge {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  padding: 3px 12px;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-neutral-bg);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body);
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
   white-space: nowrap;
-}
-
-.badgeShop {
-  background: var(--xp-gold-wash);
-  color: var(--xp-gold-deep);
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 16px;
-  margin-top: 8px;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body-lg);
+  gap: var(--xp-space-sm) var(--xp-space-40);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .metaItem {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--xp-space-sm);
   min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
-.pin {
-  flex: none;
-  color: var(--xp-color-primary);
-}
-
-.star {
-  color: var(--xp-color-primary);
-  font-size: 15px;
-  line-height: 1;
-}
-
-.ratingText {
+.metaStrong {
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 
-/*
- * Gạch ngăn TRƯỚC mốc "Đối tác từ …": nó thuộc nhóm khác với địa bàn + đánh giá (một bên mô tả
- * dịch vụ, một bên mô tả thâm niên). Thuần trang trí nên nó biến mất cùng lúc với việc các mục
- * xuống dòng — một gạch dọc đứng đầu dòng thứ hai là rác thị giác.
- */
-.metaDivider {
-  width: 1px;
-  height: 14px;
-  background: var(--xp-color-border-strong);
+.metaMuted {
+  color: var(--xp-color-text-placeholder);
 }
 
-@media (max-width: 720px) {
-  .metaDivider {
-    display: none;
-  }
-}
-
-.actions {
+.metaIcon {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
 }
 
-/*
- * Dưới 900px thẻ danh tính xếp dọc: ba khối (avatar · tên+meta · nút) cạnh nhau cần ~700px để
- * không khối nào bị bóp, và tên gian hàng là khối bị bóp trước.
- */
-@media (max-width: 900px) {
-  .identity {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
+/* Nút nhắn tin tròn 38px (Figma "Solution Icon"), góc phải hàng danh tính. */
+.chat {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
 
-  .actions {
-    align-self: stretch;
+.chat:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.chat:focus-visible {
+  outline: var(--xp-focus-outline-width, 2px) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.chat:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* Cạnh phải chừa chỗ cho vương miện tràn vào góc thẻ. */
+.cardShop .chat {
+  margin-right: var(--xp-space-40);
+}
+
+.highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+}
+
+/* ——— Giới thiệu ——— */
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.aboutTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.bio,
+.address {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.bio + .address {
+  margin-top: var(--xp-space-xs);
+}
+
+/* ——— Ô số liệu ——— */
+
+.stats {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--xp-space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  /* Ngang 8 chứ không 20 như bản vẽ: sáu ô ở khung 1158 chỉ còn ~173px, và nhãn dài nhất
+     ("Chuyến đã hoàn thành") phải nằm trên MỘT dòng như bản vẽ vẽ. */
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  text-align: center;
+}
+
+/* Trên nền vân vàng của gian hàng, ô số liệu là ô TRẮNG (bản vẽ), không phải xám. */
+.cardShop .stat {
+  background: var(--xp-color-bg-container);
+}
+
+.statValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.statLabel {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+  max-width: 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.statHint {
+  font-size: 12px;
+}
+
+.joined {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-lg);
+  font-style: italic;
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* ——— Khổ hẹp ——— */
+
+@media (max-width: 900px) {
+  .stats {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--xp-space-12);
   }
 }
 
 @media (max-width: 640px) {
   .inner {
-    padding: 16px 16px 0;
+    padding-top: var(--xp-space-md);
   }
 
-  .identity {
-    padding: 16px;
+  .headerShop .inner {
+    margin-top: -40px;
+  }
+
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .crown {
+    top: -12px;
+    right: -6px;
+    width: 56px;
+    height: 56px;
+  }
+
+  /* Vương miện 56px chiếm ~44px mép phải thẻ — nút nhắn tin đứng hẳn ra ngoài vùng đó. */
+  .cardShop .chat {
+    margin-right: 44px;
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
   }
 
   .name {
@@ -292,8 +429,21 @@
     line-height: var(--xp-line-height-h2);
   }
 
-  .highlights {
-    padding: 0 16px 14px;
-    gap: 8px;
+  .meta {
+    flex-direction: column;
+    gap: var(--xp-space-xs);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat {
+    padding: var(--xp-space-sm) var(--xp-space-12);
+  }
+
+  .joined {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
   }
 }

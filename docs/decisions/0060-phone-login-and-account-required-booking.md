@@ -105,6 +105,10 @@ native.
 
 ### 5. Tài khoản chưa có SĐT đã xác minh: cổng bắt buộc
 
+> **Site khách (realm `customer`) bị [ADR 0071](0071-customer-phone-reminder-not-gate.md) ghi đè
+> (26/10/2026):** hộp nhắc đóng được, luồng đặt xe hỏi lại lúc gửi yêu cầu. Site partner giữ nguyên
+> điều này.
+
 Tài khoản tạo bằng Google/Facebook không có SĐT; tài khoản đăng ký trước bản này có thể có SĐT chưa
 xác minh. Trên web, `AccountPhoneGate` (mount ở layout site khách và site partner) chặn mọi tài khoản
 `customer`/`partner` có `phoneVerified = false` bằng một hộp KHÔNG đóng được: xác minh SĐT (purpose

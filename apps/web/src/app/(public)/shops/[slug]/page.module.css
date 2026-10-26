@@ -1,0 +1,42 @@
+/*
+ * Khung trang gian hàng — Figma `20058:71206` / `20063:59202`: thanh đường dẫn trắng dưới header,
+ * thân trang nền gần trắng (`gray-25`) khung 1200 với khe 48 giữa các khối. Nền thân là màu
+ * container chứ không phải xám `--xp-color-bg`: thẻ đánh giá dùng chính màu xám đó, đặt trên nền
+ * cùng màu thì thẻ biến mất. Token cũng tự đổi đúng ở giao diện tối.
+ */
+
+.page {
+  --page-gutter: var(--xp-space-md);
+
+  background: var(--xp-color-bg-container);
+}
+
+.crumbBar {
+  background: var(--xp-color-bg-container);
+}
+
+.crumbs {
+  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--page-gutter));
+  margin: 0 auto;
+  padding: var(--xp-space-sm) var(--page-gutter) var(--xp-space-20);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-48);
+  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--page-gutter));
+  margin: 0 auto;
+  padding: var(--xp-space-48) var(--page-gutter) var(--xp-space-64);
+}
+
+@media (max-width: 640px) {
+  .crumbs {
+    padding: 0 var(--page-gutter);
+  }
+
+  .body {
+    gap: var(--xp-space-xl);
+    padding: var(--xp-space-xl) var(--page-gutter) var(--xp-space-48);
+  }
+}

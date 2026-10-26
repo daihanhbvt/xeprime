@@ -55,7 +55,7 @@ export async function ShopReviews({ slug }: { slug: string }) {
                   <span className={styles.name}>{review.customerName}</span>
                   <span className={styles.date}>{fmt.date(review.createdAt)}</span>
                 </div>
-                <Stars value={review.rating} size="sm" />
+                <Stars value={review.rating} size="lg" />
               </div>
 
               {review.comment ? <p className={styles.comment}>{review.comment}</p> : null}

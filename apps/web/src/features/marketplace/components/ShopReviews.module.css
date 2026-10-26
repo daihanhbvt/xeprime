@@ -1,41 +1,36 @@
+/*
+ * "Đánh giá từ khách hàng" — Figma `20058:71273`: lưới 2 cột (592px) khe 16, thẻ nền xám nhạt bo
+ * 16, avatar 32, tên 16/24 Semibold, năm sao 20px bên phải, nhận xét 14/22.
+ */
+
 .section {
-  max-width: var(--xp-container-max-width);
-  margin: 0 auto;
-  padding: 8px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
 }
 
-/*
- * Tiêu đề khối dùng font CHỮ THƯỜNG đậm, không phải serif hiển thị.
- *
- * Serif ở trang này dành cho hai thứ mang danh tính: TÊN gian hàng và các con số nổi bật. Dùng
- * nó cho cả tiêu đề khối nữa thì ba cấp chữ cùng một kiểu và không cấp nào nổi lên — tên gian
- * hàng mất chỗ đứng của nó.
- */
 .title {
-  margin: 0 0 16px;
-  font-size: var(--xp-font-size-h3);
-  line-height: var(--xp-line-height-h3);
-  font-weight: var(--xp-font-weight-bold);
+  margin: 0;
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
 }
 
 .empty {
   margin: 0;
-  padding: 28px;
+  padding: var(--xp-space-lg);
   border: 1px dashed var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  border-radius: var(--xp-border-radius-card);
   color: var(--xp-color-text-secondary);
   text-align: center;
 }
 
-/*
- * Lưới tự co: một gian hàng mới có thể chỉ có một đánh giá, và một thẻ kéo dài hết 1280px trông
- * như lỗi. `auto-fill` với minmax giữ bề rộng thẻ ổn định ở mọi số lượng.
- */
 .list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--xp-space-md);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -44,54 +39,58 @@
 .item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
 }
 
 .head {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
 }
 
+/*
+ * Avatar dựng từ chữ cái đầu chứ không phải ảnh thật của khách — xem docblock `ShopReviews`.
+ * Cỡ 32 và lề trên 7 để tâm avatar ngang tâm khối tên hai dòng (46px) như bản vẽ.
+ */
 .avatar {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
+  margin: 7px var(--xp-space-xs) 0 0;
   border-radius: 50%;
-  background: var(--xp-gold-wash);
-  color: var(--xp-gold-deep);
-  font-weight: var(--xp-font-weight-bold);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .who {
   display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
 }
 
 .name {
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  font-weight: var(--xp-font-weight-semibold);
-  color: var(--xp-color-text);
   overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .date {
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 /*
@@ -100,45 +99,40 @@
  * vẫn mở rộng đúng khi người dùng phóng to chữ.
  */
 .comment {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  line-height: 1.6;
+  line-height: 22px;
   white-space: pre-line;
   overflow-wrap: anywhere;
-  display: -webkit-box;
   -webkit-line-clamp: 4;
   line-clamp: 4;
   -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
+/* Liên kết về chiếc xe được đánh giá — trả lời "4 sao này là của xe nào". */
 .vehicle {
   align-self: flex-start;
   max-width: 100%;
-  padding: 4px 10px;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body);
   overflow: hidden;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .vehicle:hover {
-  background: var(--xp-color-bg-selected);
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-primary-active);
+  text-decoration: underline;
 }
 
-@media (max-width: 640px) {
-  .section {
-    padding: 8px 16px 40px;
-  }
-
-
+@media (max-width: 760px) {
   .list {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

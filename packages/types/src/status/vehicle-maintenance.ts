@@ -268,6 +268,38 @@ export function vehicleMaintenanceSchedule(
   };
 }
 
+/**
+ * Trang gian hàng công khai: lần bảo dưỡng gần nhất phải trong chừng này THÁNG LỊCH thì xe mới
+ * được đếm là "đang trong chu kỳ bảo dưỡng". Không có vế ngày thì một xe ít chạy, bảo dưỡng lần
+ * cuối từ hai năm trước vẫn "trong chu kỳ km" mãi mãi.
+ */
+export const PUBLIC_MAINTENANCE_RECENT_MONTHS = 6;
+
+/**
+ * Xe có ĐANG trong chu kỳ bảo dưỡng không — con số "X/Y xe đúng hạn bảo dưỡng" ở trang gian hàng.
+ *
+ * Hai vế, cả hai bắt buộc:
+ *   1. theo KM: `vehicleMaintenanceSchedule` cho `ok` hoặc `due_soon` — CHÍNH phép tính của Trung
+ *      tâm bảo dưỡng, nên trang công khai không bao giờ khen một xe mà khu quản lý đang báo quá hạn;
+ *   2. theo NGÀY: lần bảo dưỡng gần nhất trong `PUBLIC_MAINTENANCE_RECENT_MONTHS` tháng lịch.
+ *
+ * Thiếu dữ liệu (`unknown`, chưa từng ghi ngày bảo dưỡng) ⇒ `false`: không có sổ thì không có gì
+ * để nói, và im lặng đúng hơn là khen hộ.
+ */
+export function isMaintenanceOnSchedule(
+  input: MaintenanceScheduleInput & { lastServiceAt: Date | string | null | undefined },
+  now: Date = new Date(),
+): boolean {
+  if (!input.lastServiceAt) return false;
+  const status = vehicleMaintenanceSchedule(input).status;
+  if (status !== MAINTENANCE_DUE_STATUS.OK && status !== MAINTENANCE_DUE_STATUS.DUE_SOON) {
+    return false;
+  }
+  const recentFrom = new Date(now);
+  recentFrom.setUTCMonth(recentFrom.getUTCMonth() - PUBLIC_MAINTENANCE_RECENT_MONTHS);
+  return new Date(input.lastServiceAt).getTime() >= recentFrom.getTime();
+}
+
 /** Bộ lọc việc-cần-làm của Trung tâm bảo dưỡng (§9.2) — thứ tự này là thứ tự tab trên UI. */
 export const MAINTENANCE_BOARD_FILTER = {
   ALL: 'all',

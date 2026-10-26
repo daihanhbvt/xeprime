@@ -172,6 +172,24 @@ export function priceBandsFor(vehicleType: string | null | undefined): readonly 
     : PRICE_BANDS[VEHICLE_TYPE.CAR];
 }
 
+/**
+ * Thanh trượt giá của hộp Bộ lọc: đầu phải là "không giới hạn" — kéo chạm `max` thì bỏ `priceMax`
+ * khỏi URL thay vì chặn trên đúng con số đó, nên xe đắt hơn mốc cuối vẫn không bị giấu đi.
+ */
+export const PRICE_SLIDER: Readonly<Record<VehicleType, { max: number; step: number }>> = {
+  [VEHICLE_TYPE.CAR]: { max: 3_000_000, step: 50_000 },
+  [VEHICLE_TYPE.MOTORBIKE]: { max: 500_000, step: 10_000 },
+};
+
+export function priceSliderFor(vehicleType: string | null | undefined): {
+  max: number;
+  step: number;
+} {
+  return vehicleType === VEHICLE_TYPE.MOTORBIKE
+    ? PRICE_SLIDER[VEHICLE_TYPE.MOTORBIKE]
+    : PRICE_SLIDER[VEHICLE_TYPE.CAR];
+}
+
 /** Mốc đang được chọn khi khoảng giá hiện tại TRÙNG KHÍT nó (cả hai đầu). */
 export function isPriceBandSelected(
   band: PriceBand,
@@ -193,6 +211,14 @@ export const QUICK_TRANSMISSIONS: Readonly<Record<VehicleType, readonly Transmis
     TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH,
   ],
 };
+
+/**
+ * Trang gian hàng: đội xe từ chừng này chiếc trở xuống hiện dạng THẺ NGANG (đủ chỗ cho thông số +
+ * chỉ số chủ xe trên từng xe); nhiều hơn thì thành lưới thẻ đứng kèm tab tỉnh và chip lọc. Đếm trên
+ * TỔNG số xe công khai của gian hàng, không trên kết quả đã lọc — bố cục không được lật qua lại mỗi
+ * lần khách bấm chip.
+ */
+export const SHOP_LIST_LAYOUT_MAX_VEHICLES = 3;
 
 export function quickTransmissionsFor(
   vehicleType: string | null | undefined,

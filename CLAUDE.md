@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **63 ADR (0001–0070; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **64 ADR (0001–0071; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.

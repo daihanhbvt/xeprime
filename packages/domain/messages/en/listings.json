@@ -238,7 +238,8 @@
         "title": "Total",
         "discountGroup": "Discounts/Promotions",
         "promoRemove": "Remove promo code",
-        "promoApply": "Apply a promo / referral code"
+        "promoApply": "Apply a promo / referral code",
+        "feeUnitLine": "{quantity, plural, one {# day} other {# days}} × {unit}"
       }
     },
     "deliveryModal": {

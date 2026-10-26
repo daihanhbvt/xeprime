@@ -85,6 +85,11 @@ vi.mock('@/hooks/use-current-user', () => ({
  */
 const authModal = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock('@/features/auth/components/AuthModalProvider', () => ({ useAuthModal: () => authModal }));
+/** Hộp xác minh SĐT của vỏ site khách (`AccountPhoneReminderProvider`, ADR 0071) — cũng ở vỏ. */
+const phonePrompt = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock('@/features/auth/components/AccountPhoneGate', () => ({
+  useAccountPhonePrompt: () => phonePrompt.open,
+}));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
 /*
@@ -459,6 +464,7 @@ beforeEach(() => {
   quote.data = null;
   Object.values(api).forEach((fn) => fn.mockReset());
   authModal.open.mockReset();
+  phonePrompt.open.mockReset();
   // Bản nháp chờ đăng nhập sống ở `sessionStorage` — không được rò từ test này sang test khác.
   window.sessionStorage.clear();
   api.fetchDriverLicenceOverview.mockResolvedValue({
@@ -1541,18 +1547,30 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Vừa vào bằng Google/Facebook nên chưa có SĐT đã xác minh: việc xác minh là của
-     * `AccountPhoneGate` ở vỏ site, và server vẫn là chốt (`PHONE_NOT_VERIFIED`). Màn này chỉ
-     * không được NÓI là đã xác thực.
+     * Vừa vào bằng Google/Facebook và đã "Để sau" ở hộp nhắc (ADR 0071): bấm "Tiếp tục" mở lại hộp
+     * xác minh SĐT và ĐỢI ở bước Chuyến đi — tới Xác nhận lúc này chỉ để server từ chối ở nút gửi.
+     * Xác minh xong thì luồng tự đi tiếp; bấm lại lần nữa thì hộp lại mở.
      */
-    it('SĐT tài khoản CHƯA xác minh → dòng Người thuê KHÔNG gắn nhãn "Đã xác thực"', async () => {
+    it('SĐT tài khoản CHƯA xác minh → "Tiếp tục" mở hộp xác minh, xác minh xong mới tới Xác nhận', async () => {
       me.data = { ...verifiedMe, phoneVerified: false };
-      renderModal();
-      await advanceToReview();
+      const { rerenderTree } = renderModal();
+      api.checkAvailability.mockResolvedValue({ available: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
+      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeNull();
+      expect(api.fetchDriverLicenceOverview).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(2));
+
+      me.data = verifiedMe;
+      rerenderTree();
+
+      await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
       const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
       expect(within(renter).getByDisplayValue('Trần Minh Tuấn')).toBeTruthy();
-      expect(within(renter).queryByText('Đã xác thực')).toBeNull();
+      expect(api.submitBookingRequest).not.toHaveBeenCalled();
     });
   });
 
@@ -1648,10 +1666,10 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Vào bằng Google/Facebook ⇒ có phiên nhưng chưa có SĐT đã xác minh. `AccountPhoneGate` của vỏ
-     * site đang hỏi số; đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng.
+     * Vào bằng Google/Facebook ⇒ có phiên nhưng chưa có SĐT đã xác minh. Luồng mở hộp xác minh SĐT
+     * của vỏ site (ADR 0071) và đợi; đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng.
      */
-    it('đăng nhập mà SĐT CHƯA xác minh → ĐỢI ở bước Chuyến đi, xác minh xong mới đi tiếp', async () => {
+    it('đăng nhập mà SĐT CHƯA xác minh → mở hộp xác minh, ĐỢI ở bước Chuyến đi, xác minh xong mới đi tiếp', async () => {
       const { rerenderTree } = renderModal();
       await continueAsGuest();
 
@@ -1660,6 +1678,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       // Đủ lâu để một lượt đi tiếp (nếu có) kịp hỏi lịch và soát bằng lái.
       await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
 
+      expect(phonePrompt.open).toHaveBeenCalledTimes(1);
       expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeNull();
       expect(screen.getByRole('button', { name: /Thời gian thuê:/ })).toBeTruthy();
       expect(api.checkAvailability).toHaveBeenCalledTimes(1);
@@ -1840,9 +1859,9 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Server nói SĐT chưa xác minh trong khi `/auth/me` còn giữ bản cũ. Làm mới nó để
-     * `AccountPhoneGate` hiện bước xác minh; chữ hiện cho khách đi theo MÃ lỗi (ADR 0012), không
-     * phải `message` của backend.
+     * Server nói SĐT chưa xác minh trong khi `/auth/me` còn giữ bản cũ. Làm mới nó và mở hộp xác
+     * minh SĐT của vỏ site; chữ hiện cho khách đi theo MÃ lỗi (ADR 0012), không phải `message` của
+     * backend.
      */
     it('server trả PHONE_NOT_VERIFIED → câu theo mã lỗi, làm mới /auth/me, ở lại Xác nhận', async () => {
       me.data = LOGGED_IN_ME;
@@ -1864,6 +1883,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       ).toBeTruthy();
       expect(screen.queryByText('Vui lòng xác thực số điện thoại')).toBeNull();
       expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all });
+      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(1));
       expect(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeTruthy();
       expect(authModal.open).not.toHaveBeenCalled();
     });

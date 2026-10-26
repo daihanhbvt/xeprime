@@ -6,21 +6,37 @@
   box-shadow: none;
 }
 
+/*
+ * Tiêu đề khối — cùng khuôn với `ListingDetailView.module.css` `.sectionTitle`: vạch vàng 3×18 bo
+ * tròn + chữ `16/24 Semibold`, khe 8.
+ */
 .sectionTitle {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
-  border-left: 4px solid #d6a439;
-  padding-left: 12px;
-  line-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0 0 var(--xp-space-12);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
 }
 
+.sectionTitle::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 18px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+}
+
+/* Thân `14/22 Regular` `Text/Gray/medium`. */
 .descBody {
   margin: 0;
-  font-size: 15px;
-  line-height: 24px;
-  color: var(--xp-color-text-secondary, #414651);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
   white-space: pre-line;
   word-break: break-word;
 }
@@ -35,20 +51,21 @@
 .toggleBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--xp-space-xs);
   background: transparent;
   border: none;
   padding: 0;
-  margin-top: 10px;
-  color: #d6a439;
-  font-size: 14px;
-  font-weight: 600;
+  margin-top: var(--xp-space-sm);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .toggleBtn:hover {
-  opacity: 0.8;
+  color: var(--xp-color-primary-hover);
 }
 
 .icon {
@@ -90,7 +107,7 @@
 @media (max-width: 640px) {
   .sectionTitle {
     margin-bottom: var(--xp-space-sm);
-    font-weight: var(--xp-font-weight-semibold);
+    font-size: var(--xp-font-size-h3);
     line-height: var(--xp-line-height-h3);
   }
 
@@ -110,8 +127,6 @@
   }
 
   .toggleBtn {
-    margin-top: var(--xp-space-sm);
-    color: var(--xp-color-primary);
     font-size: var(--xp-font-size-body-lg);
     line-height: var(--xp-line-height-body-lg);
   }

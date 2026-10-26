@@ -7,6 +7,7 @@ import type { PublicQuote } from '@/features/rental-policies/types';
 import { useNow } from '@/hooks/use-now';
 import { appWallClockToIso, type Dayjs } from '@/lib/datetime';
 import { useAppFormat } from '@/i18n/use-app-format';
+import styles from './NearPickupHoldNotice.module.css';
 
 const MINUTE_MS = 60_000;
 
@@ -67,5 +68,5 @@ export function NearPickupHoldNotice({
   // Chuyến đủ xa mà chỉ thiếu huỷ miễn phí thì không phải "đặt sát giờ" — tiêu đề nói đúng chuyện.
   const title = windows.tooShort || nearPickup ? t('title') : t('noFreeCancelTitle');
 
-  return <Alert type="warning" showIcon title={title} description={`${body} ${t('estimate')}`} />;
+  return <Alert className={styles.notice} type="warning" showIcon title={title} description={`${body} ${t('estimate')}`} />;
 }

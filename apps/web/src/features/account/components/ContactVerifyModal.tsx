@@ -34,6 +34,12 @@ interface ContactVerifyModalProps {
    * sẵn SĐT hiện có (chưa xác minh) của tài khoản: việc ở đây là CHỨNG MINH số đó, không phải đổi.
    */
   readonly required?: { readonly onSignOut: () => void };
+  /**
+   * Hộp NHẮC — site khách (ADR 0071, `AccountPhoneReminderProvider`). Giống hộp bắt buộc ở chỗ
+   * điền sẵn SĐT hiện có và nói rõ vì sao cần, nhưng ĐÓNG ĐƯỢC: nút phụ là "Để sau" (gọi
+   * `onClose`). `lead` là câu mở theo ngữ cảnh mở hộp (nhắc chung, hay đang gửi yêu cầu thuê).
+   */
+  readonly reminder?: { readonly lead: string };
 }
 
 /**
@@ -52,6 +58,7 @@ export function ContactVerifyModal({
   onClose,
   current,
   required,
+  reminder,
 }: ContactVerifyModalProps) {
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common');
@@ -59,6 +66,8 @@ export function ContactVerifyModal({
   const errorMessage = useErrorMessage();
 
   const isPhone = channel === CONTACT_CHANNEL.PHONE;
+  /** Hộp hỏi SĐT cho CHÍNH tài khoản (bắt buộc hoặc nhắc) — không phải lượt đổi số ở trang tài khoản. */
+  const asksAccountPhone = Boolean(required || reminder);
   const flow = useContactVerify(channel);
   const [code, setCode] = useState('');
 
@@ -68,7 +77,7 @@ export function ContactVerifyModal({
   );
   const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
-    defaultValues: { identifier: required ? (current ?? '') : '' },
+    defaultValues: { identifier: asksAccountPhone ? (current ?? '') : '' },
   });
 
   /*
@@ -87,7 +96,7 @@ export function ContactVerifyModal({
 
   const sendCode = handleSubmit((values) => flow.send(values.identifier));
 
-  const title = required
+  const title = asksAccountPhone
     ? t('requiredTitle')
     : isPhone
       ? current
@@ -114,7 +123,7 @@ export function ContactVerifyModal({
         </Button>
       ) : (
         <Button onClick={onClose} disabled={flow.verifying}>
-          {tCommon('actions.cancel')}
+          {reminder ? t('later') : tCommon('actions.cancel')}
         </Button>
       )}
       {isIdentifierStep ? (
@@ -158,14 +167,16 @@ export function ContactVerifyModal({
           {isIdentifierStep
             ? required
               ? t('requiredLead')
-              : isPhone
+              : reminder
+                ? reminder.lead
+                : isPhone
                 ? t('phoneLead')
                 : t('emailLead')
             : t('codeSentTo')}{' '}
           {isIdentifierStep ? null : <strong className={styles.strong}>{flow.sentTo}</strong>}
         </p>
 
-        {current && isIdentifierStep && !required ? (
+        {current && isIdentifierStep && !asksAccountPhone ? (
           <p className={styles.current}>
             {t('currentValue')} <strong className={styles.strong}>{current}</strong>
           </p>

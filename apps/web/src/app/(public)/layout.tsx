@@ -1,6 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
-import { ROUTES } from '@/constants/routes';
-import { AccountPhoneGate } from '@/features/auth/components/AccountPhoneGate';
+import { AccountPhoneReminderProvider } from '@/features/auth/components/AccountPhoneGate';
 import { AuthModal } from '@/features/auth/components/AuthModal';
 import { AuthModalProvider, AuthUrlSync } from '@/features/auth/components/AuthModalProvider';
 import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
@@ -23,27 +22,29 @@ import styles from './public-layout.module.css';
  * đang xem. Nó không đọc `useSearchParams` (xem docblock của provider) nên `children` vẫn
  * render tĩnh bình thường; phần đọc URL là `AuthUrlSync`, một leaf được bọc Suspense riêng.
  *
- * `AccountPhoneGate`: tài khoản khách chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook,
- * hoặc tài khoản cũ) phải xác minh số trước khi dùng tiếp — ADR 0060.
+ * `AccountPhoneReminderProvider`: tài khoản khách chưa có SĐT đã xác minh (vừa vào bằng
+ * Google/Facebook, hoặc tài khoản cũ) được NHẮC xác minh, đóng được; luồng đặt xe hỏi lại lúc gửi
+ * yêu cầu — ADR 0071.
  */
 export default function PublicLayout({ children }: { children: ReactNode }) {
   // Gốc SITE KHÁCH (`xeprime.vn`, realm `customer` — ADR 0051 điều 2).
   return (
     <ZoneProvider zone={ZONE.MARKET}>
       <AuthModalProvider>
-        <Suspense fallback={null}>
-          <AuthUrlSync />
-        </Suspense>
-        <div className={styles.wrapper}>
-          <MarketHeader />
-          <main className={styles.main}>{children}</main>
-          <MarketFooterSlot />
-          <MobileTabBar />
-        </div>
-        <AuthModal />
-        <AccountPhoneGate signOutTo={ROUTES.HOME} />
-        {/* Lượt thích xe bị gián đoạn vì chưa đăng nhập — hoàn tất sau khi có phiên (BRD §5.1.7). */}
-        <FavoriteIntentResumer />
+        <AccountPhoneReminderProvider>
+          <Suspense fallback={null}>
+            <AuthUrlSync />
+          </Suspense>
+          <div className={styles.wrapper}>
+            <MarketHeader />
+            <main className={styles.main}>{children}</main>
+            <MarketFooterSlot />
+            <MobileTabBar />
+          </div>
+          <AuthModal />
+          {/* Lượt thích xe bị gián đoạn vì chưa đăng nhập — hoàn tất sau khi có phiên (BRD §5.1.7). */}
+          <FavoriteIntentResumer />
+        </AccountPhoneReminderProvider>
       </AuthModalProvider>
     </ZoneProvider>
   );

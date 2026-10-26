@@ -1,17 +1,22 @@
-/* Thẻ 4 thông số chính theo Figma v2 (node 19707:83377): hàng ngang phẳng, không đóng khung viền */
+/*
+ * Hàng 4 thông số chính — Figma `19707:83378`: trải đều (space-between), đệm ngang 12, không khung.
+ * Mỗi ô: vòng icon 48 (đệm 12 + icon 24 vàng, nền `BG/primary-25`) cách chữ 12; nhãn `14/22
+ * Regular` `Text/Gray/low`, giá trị `16/24 Medium` `Text/Gray/medium`, cách nhau 2.
+ */
 .card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--xp-space-md);
   margin: 0;
-  padding: 6px 0 16px;
+  padding: 0 var(--xp-space-12);
 }
 
 .item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--xp-space-12);
+  min-width: 0;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -19,15 +24,15 @@
 }
 
 .iconWrapper {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: #fef6ee;
-  color: #d6a439;
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 24px;
   flex-shrink: 0;
 }
 
@@ -35,71 +40,48 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: var(--xp-space-2);
 }
 
 .label {
-  font-size: 13px;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
   color: var(--xp-color-text-tertiary);
-  line-height: 18px;
   white-space: nowrap;
 }
 
 .value {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  line-height: 22px;
+  overflow: hidden;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text-secondary);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 768px) {
   .card {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--xp-space-md);
+    padding: 0;
   }
 }
 
 /*
- * Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72494`: lưới 2 × 2, hàng cách 16, mỗi ô là vòng
- * icon 48 (đệm 12 + icon 24, nền `BG/primary-25`) + nhãn `14px` `Text/Gray/low` + giá trị
- * `16px/Medium` `Text/Gray/medium`.
+ * Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72494`: lưới 2 × 2, hàng cách 16, cùng khuôn ô
+ * như PC (vòng icon 48, nhãn 14 `Text/Gray/low`, giá trị `16px/Medium` `Text/Gray/medium`).
  */
 @media (max-width: 640px) {
   .card {
     gap: var(--xp-space-lg) 0;
-    padding: 0;
-  }
-
-  .item {
-    min-width: 0;
-  }
-
-  .iconWrapper {
-    width: 48px;
-    height: 48px;
-    background: var(--xp-color-primary-subtle);
-    font-size: 24px;
-  }
-
-  .label {
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .value {
-    overflow: hidden;
-    color: var(--xp-color-text-secondary);
-    font-size: var(--xp-font-size-body-lg);
-    font-weight: var(--xp-font-weight-medium);
-    line-height: var(--xp-line-height-body-lg);
-    text-overflow: ellipsis;
   }
 }
 
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
-   Vòng icon kem `#fef6ee` thành một đốm sáng chói trên nền tối — đổi sang vàng pha trong suốt. */
+   Vòng icon kem thành một đốm sáng chói trên nền tối — đổi sang vàng pha trong suốt. */
 :global([data-theme='dark']) .iconWrapper {
   background: var(--xp-color-primary-light);
 }

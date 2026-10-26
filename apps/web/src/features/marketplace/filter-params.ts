@@ -1,5 +1,10 @@
 import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
-import { LISTING_AMENITY_VALUES, LISTING_SORT_VALUES, type ListingAmenity } from '@xeprime/types';
+import {
+  LISTING_AMENITY_VALUES,
+  LISTING_MIN_RATING_VALUES,
+  LISTING_SORT_VALUES,
+  type ListingAmenity,
+} from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import type { QueryParams } from '@/services/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
@@ -34,6 +39,8 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     transmission: filters.transmission?.length ? filters.transmission.join(',') : null,
     // Toggle tiện ích: `1` khi bật, vắng khi tắt — đúng bộ `LISTING_AMENITY` (xem `BOOLEAN_KEYS`).
     ...Object.fromEntries(BOOLEAN_KEYS.map((key) => [key, filters[key] ? '1' : null])),
+    instantBook: filters.instantBook ? '1' : null,
+    minRating: filters.minRating ?? null,
     minSeats: filters.minSeats ?? null,
     priceMin: filters.priceMin ?? null,
     priceMax: filters.priceMax ?? null,
@@ -88,6 +95,8 @@ const STRING_KEYS = [
 export const FACET_FILTER_KEYS = [
   ...ARRAY_KEYS,
   ...BOOLEAN_KEYS,
+  'instantBook',
+  'minRating',
   'priceMin',
   'priceMax',
   'sort',
@@ -126,6 +135,15 @@ export function parseFilters(searchParams: URLSearchParams): MarketplaceFilters 
   }
   for (const key of BOOLEAN_KEYS) {
     if (searchParams.get(key) === '1') filters[key] = true;
+  }
+  // "Không cần xác nhận" — không thuộc bộ tiện ích của tin đăng (nó là năng lực ĐẶT NGAY theo
+  // dịch vụ), nên đọc riêng thay vì chen vào `LISTING_AMENITY`.
+  if (searchParams.get('instantBook') === '1') filters.instantBook = true;
+  // Mức sao chỉ nhận đúng các mốc API chấp nhận — link sửa tay `minRating=3.7` bị bỏ qua thay vì
+  // biến cả trang thành lỗi 400.
+  const minRating = Number(searchParams.get('minRating'));
+  if ((LISTING_MIN_RATING_VALUES as readonly number[]).includes(minRating)) {
+    filters.minRating = minRating;
   }
 
   const sort = searchParams.get('sort');

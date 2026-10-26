@@ -12,10 +12,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { isNewListing } from '@xeprime/domain';
 import {
-  FUEL_TYPE,
   SERVICE_TYPE,
   VEHICLE_TYPE,
   transmissionFamily,
+  type HostMetrics as HostMetricsShape,
   type VehicleType,
 } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
@@ -27,6 +27,7 @@ import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
+import { HostMetrics } from './HostMetrics';
 import styles from './VehicleCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
@@ -34,6 +35,12 @@ import { useTranslations } from 'next-intl';
 export interface VehicleCardProps {
   listing: PublicListing;
   variant?: 'grid' | 'list';
+  /**
+   * Ba chỉ số của CHỦ XE, vẽ ở hàng đáy thẻ ngang. Chỉ trang GIAN HÀNG truyền vào: ở đó mọi xe
+   * cùng một chủ, nên đây là MỘT phép gộp đã có sẵn trong hồ sơ — không phải 48 phép gộp của một
+   * trang kết quả (ADR 0045 điều 3), nơi thẻ cố ý không mang chỉ số.
+   */
+  hostMetrics?: HostMetricsShape | null;
 }
 
 /**
@@ -42,7 +49,7 @@ export interface VehicleCardProps {
  * - 'grid' (mặc định): dạng thẻ đứng 4 cột
  * - 'list': dạng thẻ ngang 1200x206px
  */
-export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
+export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleCardProps) {
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
   const fmt = useAppFormat();
@@ -144,9 +151,24 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
     const bodyTypeName = listing.bodyType
       ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType)
       : null;
-    const transmissionText = listing.transmission
-      ? t(`transmissionFamily.${transmissionFamily(listing.transmission)}`)
-      : t('transmissionFamily.automatic');
+    /*
+     * Chỉ hiện thông số XE CÓ khai. Trước đây thẻ ngang tự điền "4 chỗ", "Xăng", "Số tự động",
+     * "60 kwh/100km" khi thiếu dữ liệu — tức là in một thông tin sai về chiếc xe của người khác.
+     */
+    const listSpecs = [
+      listing.seatCount
+        ? { key: 'seats', Icon: TeamOutlined, label: t('seats', { count: listing.seatCount }) }
+        : null,
+      listing.transmission
+        ? {
+            key: 'transmission',
+            Icon: ControlOutlined,
+            label: t(`transmissionFamily.${transmissionFamily(listing.transmission)}`),
+          }
+        : null,
+      fuel ? { key: 'fuel', Icon: ThunderboltOutlined, label: fuel } : null,
+      bodyTypeName ? { key: 'bodyType', Icon: CompassOutlined, label: bodyTypeName } : null,
+    ].filter((spec): spec is NonNullable<typeof spec> => spec !== null);
 
     return (
       <article className={styles.listCard}>
@@ -235,24 +257,16 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
               </p>
             ) : null}
 
-            <div className={styles.listSpecsRow}>
-              <div className={styles.specBox}>
-                <TeamOutlined className={styles.specBoxIcon} aria-hidden />
-                <span>{t('seats', { count: listing.seatCount ?? 4 })}</span>
-              </div>
-              <div className={styles.specBox}>
-                <ControlOutlined className={styles.specBoxIcon} aria-hidden />
-                <span>{transmissionText}</span>
-              </div>
-              <div className={styles.specBox}>
-                <ThunderboltOutlined className={styles.specBoxIcon} aria-hidden />
-                <span>{fuel ?? fuelTypeLabel(FUEL_TYPE.GASOLINE)}</span>
-              </div>
-              <div className={styles.specBox}>
-                <CompassOutlined className={styles.specBoxIcon} aria-hidden />
-                <span>{bodyTypeName ?? '60 kwh/100km'}</span>
-              </div>
-            </div>
+            {listSpecs.length > 0 ? (
+              <ul className={styles.listSpecsRow} aria-label={t('specsLabel')}>
+                {listSpecs.map(({ key, Icon, label }) => (
+                  <li key={key} className={styles.specBox}>
+                    <Icon className={styles.specBoxIcon} aria-hidden />
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           <div className={styles.listBottomRow}>
@@ -298,21 +312,13 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
               </span>
             </Link>
 
-            <div className={styles.listMetrics}>
-              <div className={styles.metricItem}>
-                <span>{tResults('responseRate')}</span>
-                <span className={styles.metricVal}>100%</span>
-              </div>
-              <div className={styles.metricItem}>
-                <span>{tResults('responseTime')}</span>
-                <span className={styles.metricVal}>10 phút</span>
-              </div>
-              <div className={styles.metricItem}>
-                <span>{tResults('acceptRate')}</span>
-                <span className={styles.metricVal}>100%</span>
-              </div>
-            </div>
-
+            {/*
+              Thẻ ở trang KẾT QUẢ không mang chỉ số uy tín (ADR 0045 điều 3 — một trang 48 xe là 48
+              phép gộp); chỉ trang gian hàng truyền `hostMetrics` (một chủ, một phép gộp có sẵn).
+            */}
+            {hostMetrics ? (
+              <HostMetrics metrics={hostMetrics} variant="inline" className={styles.listMetrics} />
+            ) : null}
             <Link href={detailHref} className={styles.listDetailBtn}>
               <span>{tResults('viewDetail')}</span>
               <ArrowRightOutlined aria-hidden />
@@ -418,38 +424,6 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
           </ul>
         ) : null}
 
-        <Link
-          href={shopPath.detail(listing.shopSlug)}
-          className={styles.shop}
-          title={listing.shopName}
-          aria-label={
-            isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
-          }
-        >
-          <span
-            className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
-            aria-hidden="true"
-          >
-            {listing.shopLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
-            ) : (
-              initialOf(listing.shopName)
-            )}
-            {isShopTrack ? (
-              <span className={styles.shopMark}>
-                <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
-              </span>
-            ) : null}
-          </span>
-          <span className={styles.shopCopy}>
-            <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
-            <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
-              {listing.shopName}
-            </span>
-          </span>
-        </Link>
-
         <div className={styles.footer}>
           {hasRating ? (
             <span
@@ -491,6 +465,38 @@ export function VehicleCard({ listing, variant = 'grid' }: VehicleCardProps) {
             )}
           </div>
         </div>
+
+        <Link
+          href={shopPath.detail(listing.shopSlug)}
+          className={styles.shop}
+          title={listing.shopName}
+          aria-label={
+            isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
+          }
+        >
+          <span
+            className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
+            aria-hidden="true"
+          >
+            {listing.shopLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
+            ) : (
+              initialOf(listing.shopName)
+            )}
+            {isShopTrack ? (
+              <span className={styles.shopMark}>
+                <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
+              </span>
+            ) : null}
+          </span>
+          <span className={styles.shopCopy}>
+            <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
+            <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
+              {listing.shopName}
+            </span>
+          </span>
+        </Link>
       </div>
     </article>
   );

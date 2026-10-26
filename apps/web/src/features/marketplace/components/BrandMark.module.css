@@ -1,18 +1,21 @@
+/* Ô logo 20×20 bo 4 — Figma "Partner Logo" (`19719:47877`). */
 .logo {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xp-border-radius-sm);
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .monogram {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--xp-gold-wash);
-  color: var(--xp-gold-deep);
-  font-size: 12px;
-  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -1,0 +1,140 @@
+/*
+ * "Xe đang cho thuê" — thẻ ngang (Figma `20058:71267`) hoặc lưới thẻ đứng kèm tab/chip lọc
+ * (Figma `20063:59260`): tiêu đề 20/30, khe 16 giữa các hàng.
+ */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12) var(--xp-space-xl);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-12);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-outline-width, 2px) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.chipActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Bốn cột ở khung 1200 (thẻ ~285px, khe 20) — tự rút cột khi hẹp. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--xp-space-20);
+}
+
+.skeleton {
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.skeletonImg {
+  width: 100% !important;
+  height: 150px !important;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.skeletonRow {
+  display: flex;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+}
+
+.skeletonRowImg {
+  flex: none;
+  width: 271px !important;
+  height: 172px !important;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.empty {
+  padding: var(--xp-space-48) 0;
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--xp-space-12);
+}
+
+@media (max-width: 640px) {
+  .head {
+    gap: var(--xp-space-12);
+  }
+
+  /* Chip tràn ngang thay vì xếp nhiều dòng — một hàng cuộn được trên 390px. */
+  .chips {
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * var(--xp-space-md));
+    padding: 0 var(--xp-space-md) var(--xp-space-2);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .skeletonRow {
+    flex-direction: column;
+  }
+
+  .skeletonRowImg {
+    width: 100% !important;
+  }
+}

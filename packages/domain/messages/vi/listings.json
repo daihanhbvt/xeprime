@@ -238,7 +238,8 @@
         "title": "Thành tiền",
         "discountGroup": "Giảm giá/Khuyến mãi",
         "promoRemove": "Gỡ mã khuyến mãi",
-        "promoApply": "Áp dụng mã khuyến mãi / giới thiệu"
+        "promoApply": "Áp dụng mã khuyến mãi / giới thiệu",
+        "feeUnitLine": "{quantity, plural, other {# ngày}} × {unit}"
       }
     },
     "deliveryModal": {

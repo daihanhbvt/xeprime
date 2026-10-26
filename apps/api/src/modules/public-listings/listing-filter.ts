@@ -81,6 +81,18 @@ function serviceTypeFilter(serviceType: string): Prisma.PublicListingWhereInput 
   return { serviceTypes: { has: serviceType } };
 }
 
+/**
+ * Lọc xe "Đặt ngay": `instant_book_service_types` là các dịch vụ đang bật tự động nhận chuyến
+ * (cùng nghĩa với `instantBookEnabled` của điều khoản thuê — `ListingsService` ghi snapshot). Đang
+ * tìm một dịch vụ cụ thể thì xe phải bật Đặt ngay cho ĐÚNG dịch vụ đó (xe chỉ tự nhận chuyến tự lái
+ * thì với khách tìm xe có tài xế vẫn phải chờ duyệt); không chọn dịch vụ thì chỉ cần mảng khác rỗng.
+ */
+function instantBookFilter(serviceType?: string): Prisma.PublicListingWhereInput {
+  return serviceType
+    ? { instantBookServiceTypes: { has: serviceType } }
+    : { instantBookServiceTypes: { isEmpty: false } };
+}
+
 /** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
 function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput {
   if (min == null && max == null) return {};
@@ -162,6 +174,9 @@ export function buildListingWhere(
   if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
   if (query.serviceType) and.push(serviceTypeFilter(query.serviceType));
   if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
+  if (query.instantBook) and.push(instantBookFilter(query.serviceType));
+  // `rating_avg` NULL (chưa có điểm) không thoả `gte` — xe chưa được đánh giá bị loại.
+  if (query.minRating != null) and.push({ ratingAvg: { gte: query.minRating } });
   const availability = availabilityFilter(query.pickupAt, query.returnAt);
   if (Object.keys(availability).length > 0) and.push(availability);
   // Từ khoá (luật ở `keyword-match.ts`): mỗi từ khớp đầu từ của tên xe, HOẶC chủ xe có tên
@@ -268,6 +283,17 @@ export function buildListingWhereSql(
     and.push(Prisma.sql`pl."service_types" @> ARRAY[${query.serviceType}]::varchar[]`);
   }
   if (query.minSeats) and.push(Prisma.sql`pl."seat_count" >= ${query.minSeats}`);
+  if (query.instantBook) {
+    and.push(
+      query.serviceType
+        ? Prisma.sql`pl."instant_book_service_types" @> ARRAY[${query.serviceType}]::varchar[]`
+        : Prisma.sql`cardinality(pl."instant_book_service_types") > 0`,
+    );
+  }
+  // NULL không thoả `>=` — loại xe chưa có điểm, đúng như vế Prisma.
+  if (query.minRating != null) {
+    and.push(Prisma.sql`pl."rating_avg" >= ${query.minRating}::numeric`);
+  }
 
   const availability = availabilitySql(query.pickupAt, query.returnAt);
   if (availability) and.push(availability);

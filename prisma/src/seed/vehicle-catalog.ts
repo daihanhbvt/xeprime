@@ -125,9 +125,17 @@ export const ADDITIONAL_BRANDS: readonly {
   label: string;
   vehicleTypes: readonly string[];
   sortOrder: number;
+  /** Logo mặc định lúc TẠO hãng (file trong `apps/web/public/brands`); admin đổi ở màn danh mục. */
+  iconUrl?: string;
 }[] = [
   { key: 'piaggio', label: 'Piaggio', vehicleTypes: [VEHICLE_TYPE.MOTORBIKE], sortOrder: 17 },
-  { key: 'sym', label: 'SYM', vehicleTypes: [VEHICLE_TYPE.MOTORBIKE], sortOrder: 18 },
+  {
+    key: 'sym',
+    label: 'SYM',
+    vehicleTypes: [VEHICLE_TYPE.MOTORBIKE],
+    sortOrder: 18,
+    iconUrl: '/brands/sym.webp',
+  },
   /*
    * Vespa là HÃNG RIÊNG trong danh mục, không gộp vào Piaggio dù cùng tập đoàn: chủ xe tìm ô
    * "Hãng xe" theo chữ trên yếm xe, và "Piaggio / Vespa Sprint" là một cái tên không tồn tại ở

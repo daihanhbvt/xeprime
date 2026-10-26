@@ -1,34 +1,51 @@
+/*
+ * "Quy định & Chính sách" — Figma v2 `19707:83494`. Tiêu đề khối cùng khuôn trang chi tiết (vạch vàng
+ * 3×18 + `16/24 Semibold`); tab `14/22`, tab đang chọn `Semibold` vàng có gạch chân; thân `14/22`
+ * `Text/Gray/medium`.
+ */
 .wrap {
-  background: var(--xp-color-bg-container, #ffffff);
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  border-radius: 16px;
-  padding: 24px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  padding: var(--xp-space-lg);
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
 }
 
+/* Cùng khuôn với `ListingDetailView.module.css` `.sectionTitle`. */
 .title {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
-  border-left: 4px solid #d6a439;
-  padding-left: 12px;
-  line-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0 0 var(--xp-space-12);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.title::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 18px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
 }
 
 .tabList {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
-  margin-bottom: 20px;
+  gap: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border);
+  margin-bottom: var(--xp-space-md);
   overflow-x: auto;
 }
 
 .tabButton {
-  padding: 10px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--xp-color-text-secondary, #717680);
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -38,13 +55,13 @@
 }
 
 .tabButton:hover {
-  color: var(--xp-color-primary, #e9ac29);
+  color: var(--xp-color-primary);
 }
 
 .tabActive {
-  color: var(--xp-color-primary, #e9ac29) !important;
-  font-weight: 600;
-  border-bottom-color: var(--xp-color-primary, #e9ac29);
+  color: var(--xp-color-primary) !important;
+  font-weight: var(--xp-font-weight-semibold);
+  border-bottom-color: var(--xp-color-primary);
 }
 
 .content {
@@ -57,16 +74,16 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 14px;
+  font-size: var(--xp-font-size-body);
   line-height: 22px;
-  color: var(--xp-color-text, #0e0f12);
+  color: var(--xp-color-text-secondary);
 }
 
 .bullet {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--xp-color-primary, #e9ac29);
+  background: var(--xp-color-primary);
   margin-top: 8px;
   flex-shrink: 0;
 }
@@ -75,11 +92,11 @@
   margin-top: 8px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: var(--xp-color-primary-subtle, #fff9f0);
-  border: 1px solid var(--xp-color-primary-muted, #f6ebd5);
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--xp-color-text, #0e0f12);
+  background: var(--xp-color-primary-subtle);
+  border: 1px solid var(--xp-color-primary-muted);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
 }
 
 .subSection {
@@ -88,25 +105,27 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 14px;
-  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
+  border-top: 1px dashed var(--xp-color-border);
 }
 
 .subSectionTitle {
   margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  color: var(--xp-color-text);
 }
 
 .instantBadge {
   display: inline-block;
-  padding: 2px 8px;
-  background: var(--xp-color-primary-subtle, #fff9f0);
-  color: var(--xp-color-primary, #e9ac29);
-  border: 1px solid var(--xp-color-primary, #e9ac29);
+  padding: 0 8px;
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+  border: 1px solid var(--xp-color-primary);
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
   margin-right: 6px;
 }
 
@@ -129,7 +148,7 @@
 
   .title {
     margin-bottom: var(--xp-space-sm);
-    font-weight: var(--xp-font-weight-semibold);
+    font-size: var(--xp-font-size-h3);
     line-height: var(--xp-line-height-h3);
   }
 

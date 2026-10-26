@@ -10,6 +10,13 @@
   font-size: 12.5px;
 }
 
+/* Thẻ đánh giá v2 (Figma `20058:71283`): sao 20px, khe 4. */
+.stars.lg {
+  gap: var(--xp-space-xs);
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
 /*
  * MỘT sắc vàng cho mọi ngôi sao trong sản phẩm — cùng token với sao ở thẻ xe, thẻ gian hàng và
  * khối gian hàng nổi bật. Trước 23/09/2026 chỗ này dùng `--xp-gold-deep` (nâu hơn), nên dãy sao

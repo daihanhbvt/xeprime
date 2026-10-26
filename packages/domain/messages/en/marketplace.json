@@ -104,7 +104,7 @@
     "quickChipsLabel": "Vehicle and service",
     "allServices": "All",
     "filters": "Filters",
-    "sortLabel": "Sort:",
+    "sortLabel": "Sort",
     "sortAriaLabel": "Sort results",
     "dateRange": "{from} – {to}",
     "dateRangeWithDays": "{from} – {to} ({days, plural, one {# day} other {# days}})",
@@ -150,7 +150,8 @@
       "verified": "Shop verified by XePrime",
       "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
       "searchAll": "See all vehicles matching “{q}”"
-    }
+    },
+    "viewMode": "View mode"
   },
   "filterPanel": {
     "title": "Filters",
@@ -193,7 +194,35 @@
     "priceUnder": "Under {max}",
     "priceOver": "Over {min}",
     "vatInvoice": "VAT invoice available",
-    "labelWithCount": "{label} ({count})"
+    "labelWithCount": "{label} ({count})",
+    "modal": {
+      "service": "Rental type",
+      "bodyType": "Vehicle style",
+      "priceRange": "Price range",
+      "seats": "Seats",
+      "fuelType": "Fuel",
+      "all": "All",
+      "noBrands": "No brands for this vehicle type yet.",
+      "priceNote": "Daily rental price, excluding additional charges.",
+      "pickupMethod": "Pick-up method",
+      "deliveryOption": "Delivered to you",
+      "offers": "Offers",
+      "offersHint": "Vehicles with an offer currently published by the owner.",
+      "hasOffer": "Has an offer",
+      "instantBook": "No confirmation needed",
+      "instantBookHint": "Only show vehicles you can book instantly, without waiting for the owner to approve.",
+      "policyNote": "These are search criteria, not a promise of no deposit, refunds or insurance. The actual policy is confirmed on the vehicle page.",
+      "ratingFrom": "{rating, number, ::.0}+ stars",
+      "rentalTerms": "Rental terms",
+      "removeChip": "Remove {label}",
+      "chips": {
+        "delivery": "Delivery",
+        "discount": "Has an offer",
+        "instantBook": "No confirmation needed",
+        "noCollateral": "No asset collateral",
+        "vatInvoice": "VAT invoice"
+      }
+    }
   },
   "searchDialog": {
     "title": "Search",
