@@ -120,6 +120,15 @@ describe('MarketHeader', () => {
     expect(screen.getByRole('button', { name: /^Đăng nhập\/\s*Đăng ký$/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Tài khoản' })).toBeNull();
   });
+
+  it('khách CHƯA đăng nhập thấy nút "Trở thành chủ xe" ngay trên thanh — họ không có menu tài khoản', () => {
+    state.user = null;
+    render(<MarketHeader />);
+
+    const ownerLinks = screen.getAllByRole('link', { name: /Trở thành chủ xe/ });
+    expect(ownerLinks).toHaveLength(1);
+    expect(ownerLinks[0]!.getAttribute('href')).toBe('/list-your-vehicle');
+  });
 });
 
 /**
@@ -174,10 +183,11 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
       '/trips',
     );
-    // Hai lối "Trở thành chủ xe" — nút trên thanh và dòng trong menu — cùng một đích.
+    // Đã đăng nhập: lối "Trở thành chủ xe" CHỈ còn trong menu — thanh trên cùng dành cho việc hằng
+    // ngày (26/10/2026). Nút trên thanh chỉ còn cho khách chưa đăng nhập (test riêng bên dưới).
     const ownerLinks = screen.getAllByRole('link', { name: /Trở thành chủ xe/ });
-    expect(ownerLinks).toHaveLength(2);
-    for (const link of ownerLinks) expect(link.getAttribute('href')).toBe('/list-your-vehicle');
+    expect(ownerLinks).toHaveLength(1);
+    expect(ownerLinks[0]!.getAttribute('href')).toBe('/list-your-vehicle');
     expect(screen.queryByRole('link', { name: /Xe của tôi/ })).toBeNull();
     expect(screen.queryByText('Hồ sơ gian hàng')).toBeNull();
   });
