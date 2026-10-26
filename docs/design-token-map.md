@@ -514,3 +514,28 @@ code của màn trang chủ Figma `19695:40693`.
 
 Banner admin (không phải token nhưng cùng hợp đồng kích thước): giữ khổ dải cũ — PC **1440×300** ·
 tablet 1024×320 · mobile 780×390 (`apps/web/src/features/banners/banner-media.ts`, ADR 0062 điều 8).
+
+## 23. Chuyển động — chợ v2 ✅ (26/10/2026)
+
+Nhóm CHỈ WEB đọc, cùng phạm vi §22. Thông số đo từ trang mẫu GoRental `index-three`
+(`assets/css/style.css` + `assets/js/main.js`). Bộ dùng ở `apps/web/src/components/motion/`
+(`motion.module.css` · `Reveal` · `useReveal` · `SplitText` · `enterClass` / `kenBurnsClass`) —
+CSS thuần + MỘT `IntersectionObserver` dùng chung, không thư viện hoạt cảnh.
+
+| Token | Giá trị | Trang mẫu | Dùng ở |
+| --- | --- | --- | --- |
+| `--xp-motion-duration-fast` | `0.3s` | `--transition: all .3s` | rê chuột: nhấc thẻ, phóng ảnh, đổi viền/bóng |
+| `--xp-motion-duration-reveal` | `1s` | animate.css `.animated` | khối/chữ hiện ra |
+| `--xp-motion-duration-ambient` | `40s` | `zoomEffect 40s` | một nhịp "thở" của nền hero |
+| `--xp-motion-ease-standard` | `ease` | mặc định của `transition`/animate.css | mọi chuyển động thường |
+| `--xp-motion-ease-overshoot` | `cubic-bezier(.175,.885,.32,1.275)` | GSAP `Back.easeOut` | ký tự tiêu đề (`SplitText`) |
+| `--xp-motion-distance-reveal` | `40px` | `translate3d(0, 30%, 0)` | khối trượt lên |
+| `--xp-motion-distance-char` | `50px` | SplitText `x: 50` | ký tự trượt vào từ phải |
+| `--xp-motion-lift-hover` | `-4px` | — (bổ sung) | thẻ nhấc lên; khung `HomeCarousel` chừa đúng 4px phía trên |
+| `--xp-motion-scale-media-hover` | `1.05` | `.car-image img { scale(1.05) }` | ảnh trong thẻ khi rê chuột |
+| `--xp-motion-scale-ambient` | `1.08` | `zoomEffect` đỉnh `1.2` | đỉnh nhịp thở hero |
+
+Hai chỗ lệch có chủ ý so với trang mẫu: khối trượt **40px cố định** thay vì 30% chiều cao (30% của
+một lưới xe cao 600px là 180px — quá xa); đỉnh nhịp thở **1.08** thay vì 1.2, neo **mép trái** ở
+dải banner admin vì thông điệp banner nằm mép trái (1.2 cắt mất chữ). `prefers-reduced-motion`
+tắt hẳn mọi hoạt cảnh (không chỉ rút ngắn như `globals.css`).

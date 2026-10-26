@@ -5,6 +5,7 @@ import type { CatalogItem } from '@/features/catalog/types';
 import { marketplaceSearchHref } from '../filter-params';
 import { CtaButton } from './CtaButton';
 import { HomeCarousel } from './HomeCarousel';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './VehicleTypes.module.css';
 
@@ -53,27 +54,30 @@ export async function VehicleTypes({ items }: { items: readonly CatalogItem[] })
           </CtaButton>
         }
       />
-      <HomeCarousel ariaLabel={t('title')} perView={4}>
-        {items.map((item) => (
-          <Link key={item.key} href={typeHref(item)} className={styles.card}>
-            <span className={styles.media}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- ảnh admin tải lên R2 không nằm trong remotePatterns của next/image */}
-              <img
-                src={item.showcaseImageUrl ?? ''}
-                alt=""
-                loading="lazy"
-                className={styles.image}
-              />
-            </span>
-            <span className={styles.details}>
-              <span className={styles.name}>{item.label}</span>
-              {item.showcaseExamples ? (
-                <span className={styles.examples}>{item.showcaseExamples}</span>
-              ) : null}
-            </span>
-          </Link>
-        ))}
-      </HomeCarousel>
+      {/* Băng chuyền trượt lên sau tiêu đề khi cuộn tới (≈ `.category-slider wow fadeInUp` 0.2s). */}
+      <Reveal delay={200}>
+        <HomeCarousel ariaLabel={t('title')} perView={4}>
+          {items.map((item) => (
+            <Link key={item.key} href={typeHref(item)} className={styles.card}>
+              <span className={styles.media}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- ảnh admin tải lên R2 không nằm trong remotePatterns của next/image */}
+                <img
+                  src={item.showcaseImageUrl ?? ''}
+                  alt=""
+                  loading="lazy"
+                  className={styles.image}
+                />
+              </span>
+              <span className={styles.details}>
+                <span className={styles.name}>{item.label}</span>
+                {item.showcaseExamples ? (
+                  <span className={styles.examples}>{item.showcaseExamples}</span>
+                ) : null}
+              </span>
+            </Link>
+          ))}
+        </HomeCarousel>
+      </Reveal>
       {/* Mobile: "Xem tất cả" canh giữa dưới slider (nút ở hàng tiêu đề ẩn đi). */}
       <div className={styles.mobileAction}>
         <CtaButton href={viewAllHref} variant="outline">

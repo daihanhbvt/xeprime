@@ -12,6 +12,7 @@ import { initialOf } from '@/lib/initials';
 import { useFeaturedShops } from '../hooks/use-featured-shops';
 import type { PublicShopSummary } from '../types';
 import { HomeCarousel } from './HomeCarousel';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './FeaturedHosts.module.css';
 
@@ -37,23 +38,26 @@ export function FeaturedHosts() {
     <section className={styles.section} aria-labelledby="home-hosts">
       <SectionHeading id="home-hosts" kicker={t('kicker')} title={t('title')} />
 
-      {isError ? (
-        <Alert type="error" showIcon title={t('loadError')} description={errorMessage(error)} />
-      ) : isLoading ? (
-        <div className={styles.skeletonRow} aria-busy="true">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className={styles.card}>
-              <Skeleton active avatar={{ size: 48 }} paragraph={{ rows: 3 }} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <HomeCarousel ariaLabel={t('title')} perView={3} overhang>
-          {shops.map((shop) => (
-            <HostCard key={shop.slug} shop={shop} />
-          ))}
-        </HomeCarousel>
-      )}
+      {/* Một khung cho cả ba trạng thái — dữ liệu về sau khi đã hiện thì không chạy lại. */}
+      <Reveal delay={200}>
+        {isError ? (
+          <Alert type="error" showIcon title={t('loadError')} description={errorMessage(error)} />
+        ) : isLoading ? (
+          <div className={styles.skeletonRow} aria-busy="true">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className={styles.card}>
+                <Skeleton active avatar={{ size: 48 }} paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <HomeCarousel ariaLabel={t('title')} perView={3} overhang>
+            {shops.map((shop) => (
+              <HostCard key={shop.slug} shop={shop} />
+            ))}
+          </HomeCarousel>
+        )}
+      </Reveal>
     </section>
   );
 }

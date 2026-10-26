@@ -93,8 +93,14 @@ describe('MarketHeader', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
 
-    await waitFor(() => expect(screen.getByText('Tiếng Việt')).toBeTruthy());
-    expect(screen.getByText('English')).toBeTruthy();
+    // Nút gạt VI | EN — tên đọc được là tên đầy đủ của ngôn ngữ, ngôn ngữ đang dùng được nhấn.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Tiếng Việt' })).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Tiếng Việt' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'English' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
   });
 
   it('nút đổi giao diện sáng/tối hiển thị trên thanh header cho cả khách vãng lai', () => {
@@ -106,7 +112,11 @@ describe('MarketHeader', () => {
   it('đổi giao diện sáng/tối có trong menu tài khoản khi đã đăng nhập', async () => {
     render(<MarketHeader />);
     fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
-    await waitFor(() => expect(screen.getByText('Giao diện tối')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Giao diện tối' })).toBeTruthy());
+    // Mặc định là giao diện sáng (không có ThemeProvider ⇒ DEFAULT_THEME).
+    expect(
+      screen.getByRole('button', { name: 'Giao diện sáng' }).getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   /**
@@ -174,14 +184,16 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     expect(screen.getByRole('button', { name: 'Thông báo' })).toBeTruthy();
   });
 
-  it('menu tài khoản: hồ sơ, chuyến, tin nhắn và lối "Trở thành chủ xe" tới trang giới thiệu đăng xe', async () => {
+  it('menu tài khoản: chuyến, xe yêu thích, tin nhắn và lối "Trở thành chủ xe" tới trang giới thiệu đăng xe', async () => {
     await openMenu();
 
-    expect(screen.getByRole('link', { name: /Tài khoản của tôi/ }).getAttribute('href')).toBe(
-      '/account',
-    );
+    // "Tài khoản của tôi" đã gộp vào thẻ danh tính (Figma 26/10/2026) — không còn dòng riêng.
+    expect(screen.queryByRole('link', { name: /Tài khoản của tôi/ })).toBeNull();
     expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
       '/trips',
+    );
+    expect(screen.getByRole('link', { name: /Xe yêu thích/ }).getAttribute('href')).toBe(
+      '/account/favorites',
     );
     // Đã đăng nhập: lối "Trở thành chủ xe" CHỈ còn trong menu — thanh trên cùng dành cho việc hằng
     // ngày (26/10/2026). Nút trên thanh chỉ còn cho khách chưa đăng nhập (test riêng bên dưới).

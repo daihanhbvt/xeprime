@@ -1,0 +1,269 @@
+/*
+ * Menu tài khoản site khách — Figma "Homepage - Dropdown" `20063:57521` (264px).
+ *
+ * Hai lớp: vỏ ngoài nền xám nhạt chứa chân menu (Ngôn ngữ · Đăng xuất), và một MẶT trắng nổi bên
+ * trong chứa thẻ danh tính + các lối đi. Mặt trong bo 12 ở trên, 16 ở dưới — góc dưới lớn hơn để
+ * nó trông như tấm thẻ đặt lên vỏ, đúng bản vẽ.
+ */
+.menu {
+  display: flex;
+  width: 264px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-shadow-overlay);
+}
+
+.surface {
+  border: 1px solid var(--xp-color-border);
+  margin: -1px -1px 0;
+  border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 16px 16px;
+  background: var(--xp-color-bg-container);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-6) 0;
+  gap: var(--xp-space-2);
+}
+
+.section + .section {
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-xs) 0 var(--xp-space-6);
+  gap: var(--xp-space-2);
+}
+
+/* Lề 6px hai bên của MỌI dòng — vùng hover không chạm mép menu. */
+.item {
+  padding: 0 var(--xp-space-6);
+}
+
+/* ── Thẻ danh tính ───────────────────────────────────────────────────────── */
+
+.identity {
+  display: flex;
+  align-items: center;
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-tertiary);
+  gap: var(--xp-space-12);
+  transition: background-color 0.15s ease;
+}
+
+.identity:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-primary);
+}
+
+/*
+ * Ghép hai lớp để thắng nền xám mặc định của AntD: style CSS-in-JS của nó (`:where(.css-…)
+ * .ant-avatar`) cùng độ ưu tiên với một lớp đơn và được chèn SAU CSS Modules.
+ */
+.identity .avatar {
+  flex: none;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.identityText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+/*
+ * Tên và email là DỮ LIỆU người dùng nhập — không có trần độ dài nào bảo vệ bố cục, nên cắt bằng
+ * ellipsis thay vì để chúng đẩy mũi tên ra khỏi menu.
+ */
+.identityName,
+.identityContact {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityName {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+.identityContact {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+/* ── Một dòng ─────────────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-color-text-tertiary);
+  gap: var(--xp-space-sm);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Chỉ dòng là LIÊN KẾT mới sáng lên khi rê — dòng mang nút gạt không phải chỗ để bấm cả dòng. */
+a.row:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-primary);
+}
+
+.row:focus-visible,
+.identity:focus-visible,
+.logout:focus-visible,
+.trigger:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.rowIcon {
+  font-size: 20px;
+}
+
+.rowLabel {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Nút gạt (Giao diện ☀|☾ · Ngôn ngữ VI|EN) ──────────────────────────────── */
+
+.toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  gap: var(--xp-space-2);
+}
+
+/* Viền trong suốt ở nút không chọn để đổi lựa chọn không làm cả nhóm nhích 1px. */
+.toggleButton {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.toggleButton:hover {
+  color: var(--xp-color-primary);
+}
+
+.toggleButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.toggleButton:disabled {
+  cursor: progress;
+}
+
+.toggleActive {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px rgba(10, 13, 18, 0.05);
+  color: var(--xp-color-primary);
+}
+
+.toggleIcon {
+  font-size: 20px;
+}
+
+.toggleText {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+}
+
+/* ── Đăng xuất ───────────────────────────────────────────────────────────── */
+
+.logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-sm) 14px;
+  border: none;
+  border-radius: var(--xp-border-radius-control);
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-6);
+  line-height: 22px;
+}
+
+.logout:hover {
+  color: var(--xp-color-error);
+}
+
+/* ── Nút mở menu trên thanh (avatar + mũi tên) ──────────────────────────── */
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: var(--xp-border-radius-pill);
+  cursor: pointer;
+  gap: var(--xp-space-xs);
+}
+
+.trigger .triggerAvatar {
+  flex: none;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+/* Figma vẽ mũi tên HƯỚNG LÊN lúc menu mở; đóng thì quay xuống. */
+.caret {
+  color: var(--xp-color-primary-strong);
+  font-size: 16px;
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.triggerOpen .caret {
+  transform: none;
+}
+
+:global([data-theme='dark']) .caret {
+  color: var(--xp-color-primary);
+}

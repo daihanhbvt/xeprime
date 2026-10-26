@@ -3,6 +3,9 @@
  * Dải đối tác và dải đánh giá (nền xám nhạt) tràn hết bề ngang — khung nằm BÊN TRONG chúng.
  */
 .page {
+  /* Ký tự tiêu đề trượt vào từ phải 50px (`SplitText`) — không để nó đẻ thanh cuộn ngang trên
+     mobile. `clip` chứ không `hidden`: không tạo khung cuộn, `position: sticky` bên trong vẫn chạy. */
+  overflow-x: clip;
   background: var(--xp-color-bg-container);
 }
 

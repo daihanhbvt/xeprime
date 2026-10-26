@@ -18,14 +18,30 @@ import { RentalSteps } from '@/features/marketplace/components/RentalSteps';
 import { CustomerReviews } from '@/features/marketplace/components/CustomerReviews';
 import { AppBanner } from '@/features/marketplace/components/AppBanner';
 import { BANNER_PLACEMENT, CATALOG_TYPE } from '@xeprime/types';
+import { Reveal } from '@/components/motion/Reveal';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { APP_NAME } from '@/constants/app-name';
+import { ROUTES } from '@/constants/routes';
 import { cx } from '@/lib/cx';
+import { absoluteUrl, openGraphFor } from '@/lib/seo';
 import styles from './page.module.css';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { resolveAppLocale } from '@/i18n/config';
 
+/** Logo thương hiệu dạng ảnh tĩnh, đường dẫn ổn định (không hash) — dùng cho Open Graph + JSON-LD. */
+const BRAND_LOGO_PATH = '/brand/xeprime-logo.png';
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Marketplace.meta.home');
-  return { title: t('title'), description: t('description') };
+  const title = t('title');
+  const description = t('description');
+  // Canonical là `/` trần: `?auth=login`, `?serviceType=` chỉ đổi trạng thái giao diện.
+  return {
+    title,
+    description,
+    alternates: { canonical: ROUTES.HOME },
+    openGraph: openGraphFor({ title, description, path: ROUTES.HOME, images: [BRAND_LOGO_PATH] }),
+  };
 }
 
 /**
@@ -58,6 +74,15 @@ export default async function MarketplacePage() {
 
   return (
     <div className={styles.page}>
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: APP_NAME,
+          url: absoluteUrl(ROUTES.HOME),
+          logo: absoluteUrl(BRAND_LOGO_PATH),
+        }}
+      />
       <HomeHero banners={banners} />
       <Suspense fallback={<SearchCardFallback />}>
         <SearchExperience />
@@ -74,9 +99,9 @@ export default async function MarketplacePage() {
 
       {/* Banner khuyến mãi do admin quản lý — chưa có banner nào đang hiển thị thì không dựng khối. */}
       {promoBanners.length > 0 ? (
-        <div className={cx(styles.container, styles.blockBottom)}>
+        <Reveal className={cx(styles.container, styles.blockBottom)}>
           <PromoBanners banners={promoBanners} />
-        </div>
+        </Reveal>
       ) : null}
 
       {/* Kiểu dáng bật "Hiện ở trang chủ" trong Danh mục lọc — chưa có mục nào thì không dựng khối. */}
@@ -93,7 +118,9 @@ export default async function MarketplacePage() {
         <FeaturedHosts />
       </div>
 
-      <PartnerBanner />
+      <Reveal>
+        <PartnerBanner />
+      </Reveal>
 
       <div className={cx(styles.container, styles.block)}>
         <RentalSteps />

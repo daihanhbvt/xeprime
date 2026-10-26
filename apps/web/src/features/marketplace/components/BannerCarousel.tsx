@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { kenBurnsClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import { BannerLink } from '@/features/banners/components/BannerLink';
 import type { PublicBanner } from '@/features/banners/types';
@@ -79,46 +80,49 @@ export function BannerCarousel({
       }}
       onTouchEnd={(e) => onTouchEnd(e.changedTouches[0]?.clientX ?? 0)}
     >
-      {slides.map((banner, i) => {
-        /*
-         * Ba nguồn theo ba slot tỉ lệ chuẩn (xem `banner-media.ts`) — khung chứa cũng đặt
-         * `aspect-ratio` đúng các tỉ lệ đó nên ảnh ĐÚNG slot thì chỉ scale, không bao giờ crop.
-         * Fallback dần: mobile → tablet → PC (thiếu slot nào thì dùng ảnh gần nhất, chấp nhận
-         * crop có kiểm soát về mép trái).
-         */
-        const tabletSrc = banner.tabletImageUrl ?? banner.imageUrl;
-        const mobileSrc = banner.mobileImageUrl ?? tabletSrc;
-        const img = (
-          // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
-          <picture>
-            <source media="(max-width: 640px)" srcSet={mobileSrc} />
-            <source media="(max-width: 1024px)" srcSet={tabletSrc} />
-            <img
-              src={banner.imageUrl}
-              alt={banner.altText}
-              className={styles.image}
-              loading={i === 0 ? 'eager' : 'lazy'}
-              fetchPriority={i === 0 ? 'high' : 'auto'}
-              onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
-            />
-          </picture>
-        );
-        return (
-          <div
-            key={banner.id}
-            className={cx(styles.slide, i === current && styles.slideActive)}
-            aria-hidden={i !== current}
-          >
-            <BannerLink
-              href={banner.linkUrl}
-              className={styles.slideLink}
-              tabIndex={i === current ? 0 : -1}
+      {/* Khung "thở" chứa mọi slide (không theo từng slide — đổi slide không làm ảnh giật). */}
+      <div className={cx(styles.stage, kenBurnsClass)}>
+        {slides.map((banner, i) => {
+          /*
+           * Ba nguồn theo ba slot tỉ lệ chuẩn (xem `banner-media.ts`) — khung chứa cũng đặt
+           * `aspect-ratio` đúng các tỉ lệ đó nên ảnh ĐÚNG slot thì chỉ scale, không bao giờ crop.
+           * Fallback dần: mobile → tablet → PC (thiếu slot nào thì dùng ảnh gần nhất, chấp nhận
+           * crop có kiểm soát về mép trái).
+           */
+          const tabletSrc = banner.tabletImageUrl ?? banner.imageUrl;
+          const mobileSrc = banner.mobileImageUrl ?? tabletSrc;
+          const img = (
+            // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
+            <picture>
+              <source media="(max-width: 640px)" srcSet={mobileSrc} />
+              <source media="(max-width: 1024px)" srcSet={tabletSrc} />
+              <img
+                src={banner.imageUrl}
+                alt={banner.altText}
+                className={styles.image}
+                loading={i === 0 ? 'eager' : 'lazy'}
+                fetchPriority={i === 0 ? 'high' : 'auto'}
+                onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
+              />
+            </picture>
+          );
+          return (
+            <div
+              key={banner.id}
+              className={cx(styles.slide, i === current && styles.slideActive)}
+              aria-hidden={i !== current}
             >
-              {img}
-            </BannerLink>
-          </div>
-        );
-      })}
+              <BannerLink
+                href={banner.linkUrl}
+                className={styles.slideLink}
+                tabIndex={i === current ? 0 : -1}
+              >
+                {img}
+              </BannerLink>
+            </div>
+          );
+        })}
+      </div>
 
       {count > 1 ? (
         <div className={styles.dots} role="tablist" aria-label={t('selectLabel')}>

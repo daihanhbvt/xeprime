@@ -23,6 +23,17 @@
   }
 }
 
+/*
+ * Khung chứa các slide — "thở" chậm 1 → 1.08 → 1 (`kenBurnsClass`). Neo phóng ở mép TRÁI: thông
+ * điệp của banner nằm mép trái, phóng từ đó thì chữ không bao giờ bị đẩy ra ngoài khung, phần bị
+ * cắt chỉ là mép phải. Chấm chuyển slide nằm NGOÀI khung nên không phóng theo.
+ */
+.stage {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+
 .slide {
   position: absolute;
   inset: 0;

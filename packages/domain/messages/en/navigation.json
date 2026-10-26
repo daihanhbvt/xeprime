@@ -23,7 +23,10 @@
     "loginOrRegister": "Sign in/<br></br>Sign up",
     "themeLight": "Light mode",
     "themeDark": "Dark mode",
-    "toggleTheme": "Toggle light/dark theme"
+    "toggleTheme": "Toggle light/dark theme",
+    "favorites": "Saved vehicles",
+    "appearance": "Appearance",
+    "accountSubtitle": "XePrime account"
   },
   "account": {
     "menuLabel": "Account menu",

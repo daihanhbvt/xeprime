@@ -15,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
+import { enterClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import { CtaButton } from '../components/CtaButton';
 import { LocationPicker } from './LocationPicker';
@@ -76,7 +77,13 @@ export function SearchCard({
 
   return (
     <div className={styles.cardOuter} ref={observerRef}>
-      <div role="search" aria-label={t('card.searchLabel')} className={styles.card}>
+      {/* Trượt lên khi gắn (≈ `.banner-btn-area wow fadeInUp` của trang mẫu). Trễ 0.2s thay vì
+          1.2s: đây là ô tìm kiếm chính, không phải nút trang trí — người dùng không phải chờ. */}
+      <div
+        role="search"
+        aria-label={t('card.searchLabel')}
+        className={cx(styles.card, enterClass(200))}
+      >
         {/*
           Dải tab dịch vụ CHỈ rộng bằng các tab của nó (Figma): phần còn lại của hàng trên cùng
           để lộ ảnh hero phía sau. Bảng ô nhập bên dưới vì thế chỉ bo góc PHẢI ở trên.
