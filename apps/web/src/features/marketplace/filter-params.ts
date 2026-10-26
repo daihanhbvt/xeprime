@@ -6,8 +6,66 @@ import {
   type ListingAmenity,
 } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import type { QueryParams } from '@/services/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
+
+/**
+ * Ngày giờ thuê trên URL: **giờ Việt Nam tới phút**, ISO 8601 không kèm múi giờ —
+ * `pickupAt=2026-10-26T21:00`. Khách đọc link là thấy đúng giờ mình chọn.
+ *
+ * Bên trong app và trên dây tới API vẫn là ISO UTC (`2026-10-26T14:00:00.000Z`): chỉ hai hàm
+ * dưới đây đổi qua lại, ở đúng biên URL (`parseFilters` · `applyFilterPatch` · trang xe). Không
+ * component nào được đưa chuỗi URL thẳng cho `dayjs()` — nó đọc theo giờ MÁY, tức sai giờ trên
+ * server (UTC) và trên máy khách ở nước ngoài.
+ */
+export const DATETIME_PARAM_FORMAT = 'YYYY-MM-DDTHH:mm';
+
+const DATETIME_KEYS = ['pickupAt', 'returnAt'] as const;
+
+/** Có múi giờ tường minh (`Z`, `+07:00`) — link cũ trước 26/10/2026 mang ISO UTC. */
+const HAS_ZONE_SUFFIX = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+/** Mặt đồng hồ không múi giờ — đọc là giờ Việt Nam. */
+const WALL_CLOCK_PARAM = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/;
+
+/** ISO UTC → tham số URL giờ VN (`2026-10-26T21:00`). Chuỗi không đọc được thì để nguyên. */
+export function formatDateTimeParam(iso: string): string {
+  const instant = dayjs(iso);
+  return instant.isValid() ? instant.tz(APP_TIME_ZONE).format(DATETIME_PARAM_FORMAT) : iso;
+}
+
+/**
+ * Tham số URL → ISO UTC. Nhận dạng mới (giờ VN) và dạng cũ (ISO có `Z`/offset) để link đã chia
+ * sẻ trước đây vẫn mở đúng. Ngày không có thật (`2026-02-30T25:00`) hay chuỗi rác ⇒ `undefined`:
+ * bỏ tham số thay vì gửi API một mốc sai hoặc làm cả trang lỗi 400.
+ */
+export function parseDateTimeParam(raw: string | null | undefined): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  if (HAS_ZONE_SUFFIX.test(value)) {
+    const instant = dayjs(value);
+    return instant.isValid() ? instant.toISOString() : undefined;
+  }
+  if (!WALL_CLOCK_PARAM.test(value)) return undefined;
+  const instant = dayjs.tz(value, APP_TIME_ZONE);
+  // Đọc lại đúng mặt đồng hồ đã gõ — chặn ngày tràn (tháng 13, 30/02) mà Date tự cuộn sang.
+  const roundTrip = instant.isValid() && instant.tz(APP_TIME_ZONE).format(DATETIME_PARAM_FORMAT);
+  return roundTrip === value.slice(0, DATETIME_PARAM_FORMAT.length)
+    ? instant.toISOString()
+    : undefined;
+}
+
+function isDateTimeKey(key: string): key is (typeof DATETIME_KEYS)[number] {
+  return (DATETIME_KEYS as readonly string[]).includes(key);
+}
+
+/**
+ * Query string của URL bộ lọc. Giữ `:` nguyên dạng (`T21:00` thay vì `T21%3A00`): RFC 3986 cho
+ * phép `:` trong query, và trình duyệt/`URLSearchParams` đọc hai dạng như nhau.
+ */
+export function filterQueryString(params: URLSearchParams): string {
+  return params.toString().replace(/%3A/gi, ':');
+}
 
 /**
  * Filter → query param gửi API (`/public/listings` và `/public/listings/facets`).
@@ -111,6 +169,12 @@ export function parseFilters(searchParams: URLSearchParams): MarketplaceFilters 
     const raw = searchParams.get(key);
     if (raw) filters[key] = raw;
   }
+  // URL nói giờ VN, phần còn lại của app nói ISO UTC — đổi ngay tại cửa vào.
+  for (const key of DATETIME_KEYS) {
+    const iso = parseDateTimeParam(filters[key]);
+    if (iso) filters[key] = iso;
+    else delete filters[key];
+  }
   // Link tự sửa tay có thể dài hơn trần của API — cắt thay vì để cả trang thành lỗi 400; chuỗi
   // chỉ toàn khoảng trắng thì coi như không có từ khoá.
   if (filters.q !== undefined) {
@@ -176,7 +240,7 @@ export function applyFilterPatch(
       if (value) params.set(key, '1');
       else params.delete(key);
     } else {
-      params.set(key, String(value));
+      params.set(key, isDateTimeKey(key) ? formatDateTimeParam(String(value)) : String(value));
     }
   }
   if (!('page' in patch)) params.delete('page');
@@ -190,6 +254,6 @@ export function applyFilterPatch(
 export function marketplaceSearchHref(patch: Partial<MarketplaceFilters>): string {
   const params = new URLSearchParams();
   applyFilterPatch(params, patch);
-  const qs = params.toString();
+  const qs = filterQueryString(params);
   return qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH;
 }

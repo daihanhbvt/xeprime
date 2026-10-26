@@ -2,6 +2,7 @@ import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_TYPE, SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import type { MarketplaceFilters } from '../types';
+import { parseDateTimeParam } from '../filter-params';
 import {
   buildSearchHref,
   draftFromFilters,
@@ -108,8 +109,8 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.CAR);
     expect(query.get('serviceType')).toBe(SERVICE_TYPE.SELF_DRIVE);
     expect(query.get('provinceCode')).toBe('48');
-    expect(query.get('pickupAt')).toBe(appWallClockToIso(draft.rental.pickupAt!));
-    expect(query.get('returnAt')).toBe(appWallClockToIso(draft.rental.returnAt!));
+    expect(parseDateTimeParam(query.get('pickupAt'))).toBe(appWallClockToIso(draft.rental.pickupAt!));
+    expect(parseDateTimeParam(query.get('returnAt'))).toBe(appWallClockToIso(draft.rental.returnAt!));
     expect(query.has('routeType')).toBe(false);
   });
 
@@ -119,7 +120,7 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
 
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.MOTORBIKE);
     expect(query.get('provinceCode')).toBe('79');
-    expect(query.get('pickupAt')).toBe(appWallClockToIso(base.rental.pickupAt!));
+    expect(parseDateTimeParam(query.get('pickupAt'))).toBe(appWallClockToIso(base.rental.pickupAt!));
   });
 
   it('chế độ thuê theo giờ đi vào filter `hourly` sẵn có, không đẻ tham số mới', () => {
@@ -208,8 +209,8 @@ describe('đổi dịch vụ — patch XOÁ đúng những tham số hết nghĩ
     expect(queryOf(draft).has('pickupAt')).toBe(false);
 
     const back = queryOf({ ...draft, serviceType: SERVICE_TYPE.SELF_DRIVE });
-    expect(back.get('pickupAt')).toBe('2026-10-05T03:00:00.000Z');
-    expect(back.get('returnAt')).toBe('2026-10-09T03:00:00.000Z');
+    expect(back.get('pickupAt')).toBe('2026-10-05T10:00');
+    expect(back.get('returnAt')).toBe('2026-10-09T10:00');
   });
 });
 

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   applyFilterPatch,
   FACET_FILTER_KEYS,
+  filterQueryString,
+  formatDateTimeParam,
+  marketplaceSearchHref,
+  parseDateTimeParam,
   parseFilters,
   toListingQueryParams,
 } from './filter-params';
@@ -161,5 +165,53 @@ describe('toListingQueryParams — filter → query API', () => {
     expect(parseFilters(new URLSearchParams('minRating=3.7')).minRating).toBeUndefined();
     expect(parseFilters(new URLSearchParams('minRating=abc')).minRating).toBeUndefined();
     expect(parseFilters(new URLSearchParams('instantBook=0')).instantBook).toBeUndefined();
+  });
+});
+
+describe('ngày giờ thuê trên URL — giờ Việt Nam tới phút', () => {
+  it('ISO UTC → giờ VN gọn (14:00Z = 21:00 giờ VN)', () => {
+    expect(formatDateTimeParam('2026-10-26T14:00:00.000Z')).toBe('2026-10-26T21:00');
+    // Qua nửa đêm UTC vẫn đúng ngày lịch Việt Nam.
+    expect(formatDateTimeParam('2026-10-26T18:30:00.000Z')).toBe('2026-10-27T01:30');
+  });
+
+  it('giờ VN → ISO UTC, và đọc được link CŨ dạng ISO có Z/offset', () => {
+    expect(parseDateTimeParam('2026-10-26T21:00')).toBe('2026-10-26T14:00:00.000Z');
+    expect(parseDateTimeParam('2026-10-26T14:00:00.000Z')).toBe('2026-10-26T14:00:00.000Z');
+    expect(parseDateTimeParam('2026-10-26T21:00:00+07:00')).toBe('2026-10-26T14:00:00.000Z');
+  });
+
+  it('chuỗi rác hoặc ngày không có thật ⇒ undefined (bỏ tham số, không gửi API mốc sai)', () => {
+    for (const raw of ['', 'abc', '2026-02-30T10:00', '2026-13-01T10:00', '2026-10-26T25:00', '1793023200000']) {
+      expect(parseDateTimeParam(raw)).toBeUndefined();
+    }
+  });
+
+  it('parseFilters đổi sang ISO UTC; tham số hỏng thì bị bỏ', () => {
+    const filters = parseFilters(
+      new URLSearchParams('pickupAt=2026-10-26T21:00&returnAt=khong-phai-ngay'),
+    );
+    expect(filters.pickupAt).toBe('2026-10-26T14:00:00.000Z');
+    expect(filters).not.toHaveProperty('returnAt');
+  });
+
+  it('link dựng ra gọn, giữ dấu hai chấm, và đọc ngược lại đúng mốc', () => {
+    const href = marketplaceSearchHref({
+      vehicleType: 'car',
+      provinceCode: '79',
+      pickupAt: '2026-10-26T14:00:00.000Z',
+      returnAt: '2026-10-27T14:00:00.000Z',
+    });
+    expect(href).toBe(
+      '/search?vehicleType=car&provinceCode=79&pickupAt=2026-10-26T21:00&returnAt=2026-10-27T21:00',
+    );
+    const back = parseFilters(new URLSearchParams(href.split('?')[1]));
+    expect(back.pickupAt).toBe('2026-10-26T14:00:00.000Z');
+    expect(back.returnAt).toBe('2026-10-27T14:00:00.000Z');
+  });
+
+  it('filterQueryString chỉ bỏ mã hoá dấu hai chấm, các ký tự khác vẫn được mã hoá', () => {
+    const params = new URLSearchParams({ q: 'mazda & kia', pickupAt: '2026-10-26T21:00' });
+    expect(filterQueryString(params)).toBe('q=mazda+%26+kia&pickupAt=2026-10-26T21:00');
   });
 });

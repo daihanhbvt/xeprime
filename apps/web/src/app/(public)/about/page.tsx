@@ -7,6 +7,7 @@ import { ContentSection } from '@/features/content-page/components/ContentSectio
 import { FeatureCard } from '@/features/content-page/components/FeatureCard';
 import { InfoNote } from '@/features/content-page/components/InfoNote';
 import { PageHero } from '@/features/content-page/components/PageHero';
+import { openGraphFor } from '@/lib/seo';
 import styles from './page.module.css';
 
 /**
@@ -25,7 +26,14 @@ import styles from './page.module.css';
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('About');
-  return { title: t('meta.title'), description: t('meta.description') };
+  const title = t('meta.title');
+  const description = t('meta.description');
+  return {
+    title,
+    description,
+    alternates: { canonical: ROUTES.ABOUT },
+    openGraph: openGraphFor({ title, description, path: ROUTES.ABOUT }),
+  };
 }
 
 const SERVICES = ['selfDrive', 'withDriver', 'longTerm'] as const;
