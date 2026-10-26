@@ -380,6 +380,21 @@ export const XP_TOKENS = {
   'gradient-destination-shade':
     'linear-gradient(180deg, rgb(26, 21, 14) 0%, rgba(36, 26, 15, 0) 40.385%, rgba(23, 20, 13, 0) 65.385%, rgba(34, 24, 13, 0) 100%), linear-gradient(180deg, rgb(26, 21, 14) 31.784%, rgba(50, 35, 0, 0) 100%)',
 
+  // ─── Chuyển động (chợ v2 — `apps/web/src/components/motion`) ──────────────
+  // Thông số đo từ trang mẫu GoRental (index-three, 26/10/2026): transition `all .3s`, WOW
+  // `fadeInUp` 1s, SplitText trượt 50px với `Back.easeOut`, nền hero `zoomEffect` 40s.
+  'motion-duration-fast': '0.3s', // rê chuột: nhấc thẻ, phóng ảnh, đổi viền/bóng
+  'motion-duration-reveal': '1s', // khối/chữ hiện ra khi tải trang hoặc cuộn tới
+  'motion-duration-ambient': '40s', // một nhịp "thở" của ảnh nền hero
+  'motion-ease-standard': 'ease',
+  // Penner `easeOutBack` (s = 1.70158) — đúng `Back.easeOut` của GSAP: vượt đích nhẹ rồi về.
+  'motion-ease-overshoot': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+  'motion-distance-reveal': '40px', // khối trượt lên từ dưới
+  'motion-distance-char': '50px', // từng ký tự tiêu đề trượt vào từ phải
+  'motion-lift-hover': '-4px', // thẻ nhấc lên khi rê chuột (khung băng chuyền chừa đúng 4px)
+  'motion-scale-media-hover': '1.05',
+  'motion-scale-ambient': '1.08', // đỉnh nhịp thở hero
+
   // ─── Focus ────────────────────────────────────────────────────────────────
   // Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 (ring 3px
   // trên control 32px trông quá dày). Border focus vẫn 2px.

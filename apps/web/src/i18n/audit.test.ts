@@ -50,8 +50,10 @@ describe('i18n:audit — dò được chuỗi giao diện thô', () => {
      * `admin-vehicles` cũng được chuyển — tức là nó đang canh một thứ đã không còn tồn tại.
      * Một canary khớp theo hậu tố là một canary không canh gì cả.
      */
+    // `booking-requests` rời danh sách ngày 26/10/2026 (luồng đặt hộ đã i18n hoá) — canary thứ hai
+    // chuyển sang `contracts`, khu còn nguyên chuỗi thô. Khu nào sạch thì đổi canary, đừng xoá nó.
     expect(audit.stdout).toContain('  handovers —');
-    expect(audit.stdout).toContain('  booking-requests —');
+    expect(audit.stdout).toContain('  contracts —');
   });
 
   it('phân loại được vị trí, không chỉ nói "có chữ tiếng Việt"', () => {

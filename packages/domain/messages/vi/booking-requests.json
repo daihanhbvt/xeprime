@@ -580,5 +580,102 @@
     "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn nhận toàn bộ phần giữ chỗ dành cho chủ xe (phần cam kết giữ xe tính trên tiền thuê) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
     "tooShort": "Giờ nhận xe quá gần để khách kịp chuyển tiền giữ chỗ — lượt duyệt sẽ không thành công. Hãy liên hệ khách để thoả thuận trực tiếp.",
     "longTermPickPickup": "Chọn giờ nhận xe để xem khách có bao lâu để thanh toán. Mã QR tiền giữ chỗ chỉ được gửi cho khách sau khi bạn chốt lịch và bấm duyệt."
+  },
+  "staffFlow": {
+    "title": "Đặt xe cho khách",
+    "pickVehicleTitle": "Chọn xe cho đơn thuê",
+    "changeVehicle": "Chọn xe khác",
+    "journey": {
+      "trip": "Chọn chuyến",
+      "review": "Khách & xác nhận",
+      "created": "Đã tạo đơn"
+    },
+    "trip": {
+      "packageLabel": "Gói thuê",
+      "packageGroupLabel": "Gói thuê dài hạn",
+      "packageHint": "Chọn gói để hệ thống báo giá.",
+      "pickupTimeLabel": "Giờ nhận xe",
+      "pickupTimeField": "Ngày và giờ nhận xe",
+      "returnDerived": "Ngày trả: {date} — tính theo tháng lịch.",
+      "returnPending": "Chọn gói và giờ nhận để biết ngày trả.",
+      "selfHint": "Khách tới nhận xe tại điểm của gian hàng",
+      "deliveryHint": "Mang xe tới địa chỉ của khách",
+      "deliveryAddressLabel": "Địa chỉ giao xe",
+      "deliveryAddressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
+      "deliveryFeeLabel": "Phí giao nhận",
+      "deliveryFeeLater": "Chốt sau",
+      "deliveryFeeNote": "Thoả thuận phí với khách rồi cập nhật vào đơn bằng “Cập nhật phí giao nhận”.",
+      "driverPickupLabel": "Địa chỉ đón khách",
+      "driverPickupPlaceholder": "123 Lê Lợi, Q.1, TP.HCM",
+      "destinationLabel": "Điểm đến",
+      "destinationPlaceholder": "TP. Đà Lạt, Lâm Đồng",
+      "noPrice": "Xe chưa cấu hình giá ngày — bạn nhập tiền thuê ở bước sau.",
+      "priceTitle": "Tạm tính cho khoảng thời gian đã chọn",
+      "packagePriceTitle": "Giá gói {months, plural, other {# tháng}}",
+      "barTotal": "Tổng tiền thuê",
+      "barEstimate": "Tạm tính",
+      "barChooseTime": "Chọn thời gian để xem giá",
+      "barChoosePackage": "Chọn gói để xem giá",
+      "barNoPrice": "Nhập tiền thuê ở bước sau",
+      "packageRequired": "Chọn gói thuê dài hạn trước khi tiếp tục."
+    },
+    "review": {
+      "title": "Xem lại và tạo đơn thuê",
+      "description": "Kiểm tra chuyến đi, nhập thông tin khách rồi tạo đơn. Xe được giữ lịch ngay khi đơn được tạo.",
+      "selfPickupBranch": "Tại chi nhánh đang giữ xe",
+      "customer": {
+        "title": "Thông tin khách thuê",
+        "description": "Họ tên và số điện thoại ghi trên đơn — dùng để liên hệ và làm hợp đồng.",
+        "name": "Họ và tên",
+        "namePlaceholder": "Nguyễn Văn A",
+        "phone": "Số điện thoại",
+        "phonePlaceholder": "0901234567",
+        "noteLabel": "Ghi chú nội bộ (không bắt buộc)",
+        "notePlaceholder": "Ví dụ: khách quen, cần ghế trẻ em"
+      },
+      "costs": {
+        "title": "Tiền thuê",
+        "systemNote": "Giá tính bởi hệ thống (đã gồm giá riêng theo ngày và ưu đãi dài hạn nếu có).",
+        "noPrice": "Xe chưa cấu hình giá ngày — nhập tiền thuê đã thoả thuận với khách.",
+        "baseAmount": "Tiền thuê (cả kỳ)",
+        "deposit": "Tiền cọc thu trực tiếp",
+        "depositHint": "Khoản khách nộp cho gian hàng khi nhận xe, ghi vào đơn để đối chiếu lúc trả xe."
+      },
+      "submit": {
+        "cta": "Tạo đơn thuê",
+        "hint": "Đơn được tạo ngay ở trạng thái Đã giữ chỗ."
+      },
+      "next": {
+        "title": "Sau khi tạo đơn",
+        "body": "Xe được khoá lịch ngay cho khách. Gian hàng thu tiền thuê và tiền cọc trực tiếp từ khách khi giao xe."
+      }
+    },
+    "validation": {
+      "nameRequired": "Nhập tên khách",
+      "nameMax": "Tên khách tối đa {max} ký tự",
+      "phoneRequired": "Nhập số điện thoại khách",
+      "phoneInvalid": "Số điện thoại không hợp lệ",
+      "pickupRequired": "Chọn thời gian nhận xe",
+      "returnRequired": "Chọn thời gian trả xe",
+      "returnAfterPickup": "Thời gian trả phải sau thời gian nhận",
+      "deliveryAddressRequired": "Nhập địa chỉ giao xe",
+      "driverPickupRequired": "Nhập địa chỉ đón khách",
+      "destinationRequired": "Nhập điểm đến cho lộ trình liên tỉnh",
+      "addressMax": "Địa chỉ tối đa {max} ký tự",
+      "noteMax": "Ghi chú tối đa {max} ký tự",
+      "amountMin": "Số tiền không được âm",
+      "baseAmountRequired": "Xe chưa cấu hình giá — nhập tiền thuê trước khi tạo đơn."
+    },
+    "scheduleConflict": "Xe vừa được đặt vào khung giờ này. Bấm “Chỉnh sửa” để chọn khoảng khác.",
+    "deliveryNoteLine": "Giao xe tận nơi: {address}",
+    "done": {
+      "title": "Đã tạo đơn thuê",
+      "lead": "Xe đã được giữ lịch cho khách. Lịch xe phía sau sẽ tự cập nhật.",
+      "codeLabel": "Mã đơn:",
+      "copyCode": "Sao chép mã đơn",
+      "total": "Tổng tiền thuê",
+      "openBooking": "Mở chi tiết đơn",
+      "close": "Đóng"
+    }
   }
 }

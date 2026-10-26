@@ -183,6 +183,9 @@ services:
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
       # Fetch phía server của trang công khai (SEO): `/api` không có origin trên server.
       API_INTERNAL_URL: http://api:4000
+      # Khác `production` (staging) ⇒ robots.txt chặn toàn bộ + mọi trang `noindex`
+      # (`apps/web/src/lib/seo.ts`). Thiếu thì coi như production — không âm thầm gỡ site thật.
+      APP_ENV: ${APP_ENV:-production}
     working_dir: /app/apps/web
     command: ['node_modules/.bin/next', 'start', '--port', '3000']
     healthcheck:

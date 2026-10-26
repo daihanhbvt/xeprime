@@ -10,6 +10,7 @@ import { initialOf } from '@/lib/initials';
 import { useFeaturedReviews } from '../hooks/use-featured-reviews';
 import type { FeaturedReview } from '../types';
 import { HomeCarousel } from './HomeCarousel';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './CustomerReviews.module.css';
 
@@ -35,23 +36,25 @@ export function CustomerReviews({ className }: { className?: string }) {
     <section className={cx(styles.section, className)} aria-labelledby="home-reviews">
       <SectionHeading id="home-reviews" kicker={t('kicker')} title={t('title')} />
 
-      {isError ? (
-        <Alert type="error" showIcon title={t('loadError')} description={errorMessage(error)} />
-      ) : isLoading ? (
-        <div className={styles.skeletonRow} aria-busy="true">
-          {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className={styles.card}>
-              <Skeleton active avatar={{ size: 32 }} paragraph={{ rows: 3 }} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <HomeCarousel ariaLabel={t('title')} perView={2} peek>
-          {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
-          ))}
-        </HomeCarousel>
-      )}
+      <Reveal delay={200}>
+        {isError ? (
+          <Alert type="error" showIcon title={t('loadError')} description={errorMessage(error)} />
+        ) : isLoading ? (
+          <div className={styles.skeletonRow} aria-busy="true">
+            {Array.from({ length: 2 }, (_, i) => (
+              <div key={i} className={styles.card}>
+                <Skeleton active avatar={{ size: 32 }} paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <HomeCarousel ariaLabel={t('title')} perView={2} peek>
+            {reviews.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </HomeCarousel>
+        )}
+      </Reveal>
     </section>
   );
 }

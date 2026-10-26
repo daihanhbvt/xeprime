@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './WhyChooseUs.module.css';
 
@@ -31,7 +32,8 @@ export async function WhyChooseUs() {
         align="center"
         divider
       />
-      <ul className={styles.list}>
+      {/* Bốn ý lần lượt trượt lên khi cuộn tới (≈ `.single-item wow fadeInUp` 0.2 · 0.4 · 0.6s). */}
+      <Reveal as="ul" effect="stagger" className={styles.list}>
         {ITEMS.map((item) => (
           <li key={item.key} className={styles.item}>
             <span className={styles.iconWrap} aria-hidden="true">
@@ -45,7 +47,7 @@ export async function WhyChooseUs() {
             </div>
           </li>
         ))}
-      </ul>
+      </Reveal>
     </section>
   );
 }

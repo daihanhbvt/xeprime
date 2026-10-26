@@ -223,6 +223,7 @@ mới là thứ quyết định luật nào được áp:
 | --- | --- | --- |
 | **Bảo mật** — https · cookie Secure · secret không còn giá trị mẫu · CORS toàn https | bắt buộc | **bắt buộc y hệt** |
 | **Năng lực** — eSMS · SMTP · đủ bộ R2 | bắt buộc | được miễn |
+| **SEO** — `robots.txt` mở crawl + `sitemap.xml` ở site khách | có | **chặn toàn bộ + mọi trang `noindex`** (container `web` nhận `APP_ENV` qua compose) |
 
 Staging không được miễn bảo mật vì nó cũng nằm trên Internet công khai và cũng phát cookie phiên
 thật. Được miễn năng lực vì thiếu chúng app chỉ suy giảm có kiểm soát: mã OTP vào log, email đặt
@@ -243,7 +244,7 @@ là thứ phát hiện việc chép nhầm file env sang máy production ngay t�
 | --- | --- | --- | --- |
 | `SESSION_COOKIE_NAME` | `xp_session` | **`xp_session_stg`** | Cookie giờ là host-only theo từng site (ADR 0053) nên hai môi trường không còn ghi đè nhau; vẫn giữ khác tên để nhìn devtools là biết đang ở môi trường nào, và để một file env chép nhầm không âm thầm trùng |
 | `R2_BUCKET` / `R2_PRIVATE_BUCKET` | bucket thật | bucket riêng | Ảnh test và tài liệu test nằm lẫn trong kho của khách hàng thật |
-| `APP_ENV` | `production` | **`staging`** | Để `production` trên máy staging ⇒ API từ chối boot vì thiếu eSMS/SMTP/R2. Để `staging` trên máy production ⇒ mã OTP của khách bị trả thẳng trong response |
+| `APP_ENV` | `production` | **`staging`** | Để `production` trên máy staging ⇒ API từ chối boot vì thiếu eSMS/SMTP/R2. Để `staging` trên máy production ⇒ mã OTP của khách bị trả thẳng trong response, và cả site khách bị gỡ khỏi Google (`noindex`) |
 
 `SESSION_COOKIE_NAME` là tên GỐC: API phát `<tên>_customer` · `<tên>_partner` · `<tên>_platform`,
 mỗi cái host-only của đúng site. Nó được đọc lúc **chạy** ở cả hai phía (API phát cookie, `proxy.ts`

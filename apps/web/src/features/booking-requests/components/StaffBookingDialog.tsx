@@ -1,8 +1,10 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import type { VehicleListItem } from '@/features/vehicles/types';
+import { bookingResultDialogClassNames } from './BookingResult';
 import { StaffBookingFlow } from './StaffBookingFlow';
 import { StaffVehiclePicker } from './StaffVehiclePicker';
 
@@ -40,8 +42,9 @@ interface StaffBookingDialogProps {
 
 /**
  * Vỏ đựng luồng "Đặt xe" của gian hàng — CÙNG hình thái với `RequestBookingModal` của khách
- * (xl hai cột khi nhập, thu về md ở màn kết quả, mobile toàn màn hình). Nghiệp vụ nằm trong
- * `StaffBookingFlow`; chỉ render khi mở để mỗi lần mở là state mới.
+ * (xl hai cột khi nhập; màn kết quả là hộp 600 không thanh tiêu đề như "Đã gửi yêu cầu"; mobile
+ * toàn màn hình). Nghiệp vụ nằm trong `StaffBookingFlow`; chỉ render khi mở để mỗi lần mở là
+ * state mới.
  *
  * MỘT hộp thoại cho mọi lối tạo đơn thủ công (lịch · danh sách đơn · hồ sơ khách): lối nào biết
  * sẵn xe thì vào thẳng, lối nào chưa biết thì chọn xe trước. Dựng một form tạo đơn thứ hai cho
@@ -63,6 +66,7 @@ export function StaffBookingDialog({
   open,
   onClose,
 }: StaffBookingDialogProps) {
+  const t = useTranslations('BookingRequests.staffFlow');
   const [busy, setBusy] = useState(false);
   const [isResult, setIsResult] = useState(false);
   const [picked, setPicked] = useState<PickedVehicle | null>(null);
@@ -74,21 +78,27 @@ export function StaffBookingDialog({
 
   function handleClose() {
     setPicked(null);
+    setIsResult(false);
     onClose();
   }
 
+  const title = vehicle ? t('title') : t('pickVehicleTitle');
+
   return (
     <ResponsiveDialog
-      title={vehicle ? 'Đặt xe cho khách' : 'Chọn xe cho đơn thuê'}
+      // Hộp kết quả tự có tiêu đề lớn — tên hộp vẫn còn cho trình đọc màn hình.
+      {...(isResult ? { hideHeaderTitle: true as const, ariaLabel: title } : { title })}
       open={open}
       onClose={handleClose}
-      size={isResult ? 'md' : 'xl'}
+      size={isResult ? 'fit' : 'xl'}
       // Bố cục hai cột tự cuộn từng bên (RequestBookingFlow `.left`/`.right`, StaffVehiclePicker
       // `.scroller`) — thân overlay phải khoá cuộn để không thành hai lớp lồng nhau.
       bodyScroll="content"
       mobileMode="fullscreen"
       footer={null}
       confirmLoading={busy}
+      className={isResult ? bookingResultDialogClassNames.className : undefined}
+      bodyClassName={isResult ? bookingResultDialogClassNames.bodyClassName : undefined}
     >
       {!open ? null : vehicle ? (
         <StaffBookingFlow

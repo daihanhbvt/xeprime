@@ -8,6 +8,7 @@ import {
 } from '@/services/api-client';
 import type {
   CalendarAvailability,
+  CalendarBusyDays,
   CalendarDailyPrice,
   CalendarEvent,
   CalendarQuote,
@@ -65,6 +66,17 @@ export type CalendarQuoteParams =
 
 export const fetchCalendarQuote = (query: CalendarQuoteParams): Promise<CalendarQuote> =>
   apiGet<CalendarQuote>('/calendar/quote', query);
+
+/**
+ * Lịch bận theo ngày của MỘT xe của gian hàng — cùng phép tính và cùng hình dạng với cửa công khai
+ * của khách, nhưng scope theo tenant nên xe chưa lên chợ cũng tô được ô chọn thời gian.
+ */
+export const fetchCalendarBusyDays = (
+  vehicleId: string,
+  from: string,
+  to: string,
+): Promise<CalendarBusyDays> =>
+  apiGet<CalendarBusyDays>('/calendar/busy-days', { vehicleId, from, to });
 
 // ── Khoá xe (blocked_range) ────────────────────────────────────────────────
 

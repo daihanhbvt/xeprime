@@ -2,11 +2,20 @@ import {
   REVALIDATE_LISTING_SECONDS,
   REVALIDATE_REVIEWS_SECONDS,
   REVALIDATE_SHOP_SECONDS,
+  REVALIDATE_SITEMAP_SECONDS,
 } from '@/constants/cache';
 import type { GeoPoint } from '@xeprime/domain';
 import { staticMapHref } from '@/lib/api-href';
 import { apiGet, apiRequest, getApiBaseUrl } from '@/services/api-client';
-import type { PublicListingDetail, PublicShop, ReviewPage, ShopReviewPage } from './types';
+import type {
+  ListingSort,
+  PublicListing,
+  PublicListingDetail,
+  PublicShop,
+  PublicShopSummary,
+  ReviewPage,
+  ShopReviewPage,
+} from './types';
 
 /**
  * Cùng dữ liệu với `fetchListingDetail` nhưng gọi TỪ TRÌNH DUYỆT (qua `apiGet`, có cookie).
@@ -111,6 +120,84 @@ export async function fetchShopReviews(
   );
   if (!res.ok) return null;
   return (await res.json()) as ShopReviewPage;
+}
+
+/** Trần `limit` của `GET /public/listings` và `GET /public/shops` (`@Max(48)` ở DTO API). */
+const SITEMAP_PAGE_SIZE = 48;
+
+/**
+ * Trần số trang mỗi loại — 200 × 48 = 9.600 mục, dưới xa giới hạn 50.000 URL của một sitemap.
+ * Chợ vượt mốc đó thì chuyển sang `generateSitemaps` (sitemap index) thay vì nâng số này.
+ */
+const SITEMAP_MAX_PAGES = 200;
+
+/** Số trang gọi song song khi quét — đủ nhanh mà không dội một loạt request vào API. */
+const SITEMAP_FETCH_CONCURRENCY = 4;
+
+/** `newest` thay vì sort mặc định theo điểm xếp hạng: thứ tự ổn định hơn giữa các trang. */
+const SITEMAP_LISTING_SORT: ListingSort = 'newest';
+
+interface PublicPage<T> {
+  data: T[];
+  meta: { total: number; hasNext: boolean };
+}
+
+async function fetchSitemapPage<T>(path: string, query: URLSearchParams): Promise<PublicPage<T> | null> {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}${path}?${query}`, {
+      cache: 'force-cache',
+      next: { revalidate: REVALIDATE_SITEMAP_SECONDS },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PublicPage<T>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Quét mọi trang của một danh sách công khai. Trang hỏng thì bỏ qua — sitemap thiếu vài mục vẫn
+ * hơn một sitemap 500; trang đầu hỏng thì trả rỗng.
+ */
+async function collectSitemapItems<T>(
+  path: string,
+  baseQuery: Record<string, string>,
+): Promise<T[]> {
+  const queryFor = (page: number) =>
+    new URLSearchParams({ ...baseQuery, page: String(page), limit: String(SITEMAP_PAGE_SIZE) });
+
+  const first = await fetchSitemapPage<T>(path, queryFor(1));
+  if (!first) return [];
+  const pageCount = Math.min(
+    Math.ceil(first.meta.total / SITEMAP_PAGE_SIZE),
+    SITEMAP_MAX_PAGES,
+  );
+
+  const items = [...first.data];
+  for (let start = 2; start <= pageCount; start += SITEMAP_FETCH_CONCURRENCY) {
+    const pages = Array.from(
+      { length: Math.min(SITEMAP_FETCH_CONCURRENCY, pageCount - start + 1) },
+      (_, i) => fetchSitemapPage<T>(path, queryFor(start + i)),
+    );
+    for (const page of await Promise.all(pages)) {
+      if (page) items.push(...page.data);
+    }
+  }
+  return items;
+}
+
+/** Id mọi xe đang công khai — cho `sitemap.xml`. Không trùng lặp dù thứ tự xê dịch giữa hai trang. */
+export async function fetchSitemapListingIds(): Promise<string[]> {
+  const listings = await collectSitemapItems<PublicListing>('/public/listings', {
+    sort: SITEMAP_LISTING_SORT,
+  });
+  return [...new Set(listings.map((listing) => listing.id))];
+}
+
+/** Slug mọi gian hàng đang hoạt động — cho `sitemap.xml`. */
+export async function fetchSitemapShopSlugs(): Promise<string[]> {
+  const shops = await collectSitemapItems<PublicShopSummary>('/public/shops', {});
+  return [...new Set(shops.map((shop) => shop.slug))];
 }
 
 /**

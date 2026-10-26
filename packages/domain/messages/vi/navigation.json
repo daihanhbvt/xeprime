@@ -23,7 +23,10 @@
     "loginOrRegister": "Đăng nhập/<br></br>Đăng ký",
     "themeLight": "Giao diện sáng",
     "themeDark": "Giao diện tối",
-    "toggleTheme": "Đổi giao diện sáng/tối"
+    "toggleTheme": "Đổi giao diện sáng/tối",
+    "favorites": "Xe yêu thích",
+    "appearance": "Giao diện",
+    "accountSubtitle": "Tài khoản XePrime"
   },
   "account": {
     "menuLabel": "Menu tài khoản",

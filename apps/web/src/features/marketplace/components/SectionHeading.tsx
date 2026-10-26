@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { enterClass } from '@/components/motion/motion-classes';
+import { Reveal } from '@/components/motion/Reveal';
+import { SplitText } from '@/components/motion/SplitText';
 import { cx } from '@/lib/cx';
 import styles from './SectionHeading.module.css';
 
@@ -32,26 +35,43 @@ export function SectionHeading({
   action?: ReactNode;
   className?: string;
 }) {
+  /*
+   * Hiện ra khi cuộn tới, như tiêu đề khối của trang mẫu: dòng nhỏ trượt lên (0.1s), tiêu đề hiện
+   * từng ký tự (chuỗi) hoặc trượt nguyên dòng (node có định dạng), gạch vàng + nút phụ theo sau.
+   * Khung ngoài chỉ làm CỔNG chờ cuộn (`effect="none"`), bản thân nó đứng yên.
+   */
   const heading = (
     <div className={cx(styles.heading, align === 'center' && styles.center)}>
-      <p className={styles.kicker}>{kicker}</p>
-      <h2 id={id} className={styles.title}>
-        {title}
-      </h2>
+      <p className={cx(styles.kicker, enterClass(100))}>{kicker}</p>
+      {typeof title === 'string' ? (
+        <h2 id={id} className={styles.title}>
+          <SplitText text={title} delay={200} />
+        </h2>
+      ) : (
+        <h2 id={id} className={cx(styles.title, enterClass(200))}>
+          {title}
+        </h2>
+      )}
       {/* Mobile: MỌI tiêu đề khối canh giữa và có gạch vàng (bản vẽ mobile v2) — kể cả khi desktop không có. */}
       <span
-        className={cx(styles.divider, !divider && styles.dividerMobileOnly)}
+        className={cx(styles.divider, !divider && styles.dividerMobileOnly, enterClass(400))}
         aria-hidden="true"
       />
     </div>
   );
 
-  if (!action) return <div className={className}>{heading}</div>;
+  if (!action) {
+    return (
+      <Reveal effect="none" className={className}>
+        {heading}
+      </Reveal>
+    );
+  }
 
   return (
-    <div className={cx(styles.row, className)}>
+    <Reveal effect="none" className={cx(styles.row, className)}>
       {heading}
-      <div className={styles.action}>{action}</div>
-    </div>
+      <div className={cx(styles.action, enterClass(400))}>{action}</div>
+    </Reveal>
   );
 }

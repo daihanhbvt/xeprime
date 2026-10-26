@@ -30,3 +30,10 @@ export const REVALIDATE_REVIEWS_SECONDS = PUBLIC_CACHE_SECONDS.reviews;
 
 /** Danh mục, địa điểm — admin quản, đổi vài lần một tháng. */
 export const REVALIDATE_CATALOG_SECONDS = PUBLIC_CACHE_SECONDS.catalog;
+
+/**
+ * Danh sách xe + gian hàng của `sitemap.xml`. Ngoại lệ duy nhất không lấy từ `PUBLIC_CACHE_SECONDS`:
+ * chỉ web đọc nó, và bot đọc sitemap vài lần một ngày — một giờ là đủ tươi mà không quét lại
+ * cả chợ ở mỗi lượt bot ghé.
+ */
+export const REVALIDATE_SITEMAP_SECONDS = 60 * 60;

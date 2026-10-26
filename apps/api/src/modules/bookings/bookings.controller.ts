@@ -9,6 +9,7 @@ import {
   CurrentUser,
   Realms,
   RequirePermissions,
+  SubscriptionTrackOnly,
   SupportAction,
   TenantScoped,
 } from '../../common/decorators';
@@ -67,7 +68,15 @@ export class BookingsController {
     return this.bookings.getOne(tenant.tenantId, id);
   }
 
+  /*
+   * LẬP ĐƠN TAY chỉ dành cho gian hàng tuyến gói (26/10/2026). Đơn lập tay không qua chợ nên không
+   * mang phí sàn `S` lẫn hoa hồng `H`: mở nó cho tuyến hoa hồng là cho chủ xe kéo khách từ chợ ra
+   * ngoài rồi ghi lại chuyến với `H = 0`, và nó còn tự ghi sổ khách — công cụ của gói (ADR 0027
+   * điều 1). Chủ xe cá nhân giữ lịch cho chuyến ngoài chợ bằng KHOÁ LỊCH. Mọi route còn lại của
+   * controller mở cho cả hai tuyến: đơn đã có (từ chợ) là việc vận hành của bậc cơ bản.
+   */
   @Post()
+  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BOOKING_CREATE)
   @ApiOperation({ summary: 'Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB)' })
   @ApiCreatedResponse({ type: BookingDetailDto })

@@ -8,6 +8,7 @@ import { cx } from '@/lib/cx';
 import { marketplaceSearchHref } from '../filter-params';
 import { useAllDestinations } from '../hooks/use-destinations';
 import { HomeCarousel } from './HomeCarousel';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './FeaturedLocations.module.css';
 
@@ -46,87 +47,89 @@ export function FeaturedLocations() {
         divider
       />
       {/* Lưới 4 thẻ từ tablet trở lên; mobile là slider thẻ-ở-giữa (bản vẽ mobile v2). */}
-      <HomeCarousel ariaLabel={t('title')} perView={4} layout="grid" gap={24}>
-        {CITIES.map((city) => {
-          const name = t(`cities.${city.key}`);
-          const stats = byCode.get(city.provinceCode);
-          return (
-            <Link
-              key={city.key}
-              href={marketplaceSearchHref({ provinceCode: city.provinceCode })}
-              className={styles.card}
-              aria-label={t('exploreAria', { city: name })}
-            >
-              <span className={styles.art} aria-hidden="true">
-                <span className={styles.backdrop}>
-                  <Image
-                    src="/home/dest-bg.webp"
-                    alt=""
-                    fill
-                    sizes="470px"
-                    className={styles.layer}
-                  />
-                </span>
-                <span className={cx(styles.illustration, city.className)}>
-                  <Image
-                    src="/home/dest-cities.webp"
-                    alt=""
-                    fill
-                    sizes="1300px"
-                    className={styles.layer}
-                  />
-                </span>
-              </span>
-
-              <span className={styles.details}>
-                <span className={styles.city}>{name}</span>
-                {stats ? (
-                  <span className={styles.meta}>
-                    <span>{t('available', { count: stats.vehicleCount })}</span>
-                    {stats.minDailyPrice ? (
-                      <span>
-                        {t.rich('fromPrice', {
-                          price: fmt.moneyCompact(stats.minDailyPrice, { price: true }),
-                          strong: (chunks) => <b>{chunks}</b>,
-                        })}
-                      </span>
-                    ) : null}
+      <Reveal delay={200}>
+        <HomeCarousel ariaLabel={t('title')} perView={4} layout="grid" gap={24}>
+          {CITIES.map((city) => {
+            const name = t(`cities.${city.key}`);
+            const stats = byCode.get(city.provinceCode);
+            return (
+              <Link
+                key={city.key}
+                href={marketplaceSearchHref({ provinceCode: city.provinceCode })}
+                className={styles.card}
+                aria-label={t('exploreAria', { city: name })}
+              >
+                <span className={styles.art} aria-hidden="true">
+                  <span className={styles.backdrop}>
+                    <Image
+                      src="/home/dest-bg.webp"
+                      alt=""
+                      fill
+                      sizes="470px"
+                      className={styles.layer}
+                    />
                   </span>
-                ) : null}
-              </span>
-
-              <span className={styles.footer} aria-hidden="true">
-                <Image
-                  src="/home/dest-wave-1.svg"
-                  alt=""
-                  width={282}
-                  height={128}
-                  unoptimized
-                  className={styles.waveBack}
-                />
-                <Image
-                  src="/home/dest-wave-2.svg"
-                  alt=""
-                  width={270}
-                  height={65}
-                  unoptimized
-                  className={styles.waveFront}
-                />
-                <span className={styles.explore}>
-                  {t('explore')}
-                  <Image
-                    src="/home/arrow-right-dark.svg"
-                    alt=""
-                    width={5}
-                    height={10}
-                    unoptimized
-                  />
+                  <span className={cx(styles.illustration, city.className)}>
+                    <Image
+                      src="/home/dest-cities.webp"
+                      alt=""
+                      fill
+                      sizes="1300px"
+                      className={styles.layer}
+                    />
+                  </span>
                 </span>
-              </span>
-            </Link>
-          );
-        })}
-      </HomeCarousel>
+
+                <span className={styles.details}>
+                  <span className={styles.city}>{name}</span>
+                  {stats ? (
+                    <span className={styles.meta}>
+                      <span>{t('available', { count: stats.vehicleCount })}</span>
+                      {stats.minDailyPrice ? (
+                        <span>
+                          {t.rich('fromPrice', {
+                            price: fmt.moneyCompact(stats.minDailyPrice, { price: true }),
+                            strong: (chunks) => <b>{chunks}</b>,
+                          })}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </span>
+
+                <span className={styles.footer} aria-hidden="true">
+                  <Image
+                    src="/home/dest-wave-1.svg"
+                    alt=""
+                    width={282}
+                    height={128}
+                    unoptimized
+                    className={styles.waveBack}
+                  />
+                  <Image
+                    src="/home/dest-wave-2.svg"
+                    alt=""
+                    width={270}
+                    height={65}
+                    unoptimized
+                    className={styles.waveFront}
+                  />
+                  <span className={styles.explore}>
+                    {t('explore')}
+                    <Image
+                      src="/home/arrow-right-dark.svg"
+                      alt=""
+                      width={5}
+                      height={10}
+                      unoptimized
+                    />
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </HomeCarousel>
+      </Reveal>
     </section>
   );
 }

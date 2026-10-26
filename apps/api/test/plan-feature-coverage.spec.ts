@@ -229,6 +229,18 @@ describe('phủ cổng chặn năng lực — bất biến chung', () => {
     expect(open).toEqual(['get', 'list', 'map', 'update']);
   });
 
+  it('đơn thuê: chỉ LẬP ĐƠN TAY mang cổng tuyến — vận hành đơn đã có mở cho cả hai tuyến', () => {
+    /*
+     * Lập đơn tay không có phí sàn lẫn hoa hồng: mở cho tuyến hoa hồng là lối né `H` (26/10/2026).
+     * Nhưng xem, sửa, chuyển trạng thái, gán tài xế một đơn TỪ CHỢ là việc của bậc cơ bản — gác
+     * thêm một route ở đây là khoá chủ xe cá nhân khỏi chính chuyến của họ.
+     */
+    const gated = routesOf('BookingsController')
+      .filter((r) => r.trackOnly)
+      .map((r) => r.handler);
+    expect(gated).toEqual(['create']);
+  });
+
   it('escrow_hold chỉ gác đường GHI công tắc thu cọc — đường ĐỌC luôn mở (Phase 6)', () => {
     /*
      * Gác cả `GET` sẽ làm gian hàng thiếu cờ không đọc nổi trạng thái của chính mình, và màn

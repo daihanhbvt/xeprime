@@ -559,7 +559,8 @@ describe('ListingDetailView — không có dữ liệu giả', () => {
     const back = screen.getByRole('link', { name: 'Quay lại danh sách xe' });
     const href = new URL(back.getAttribute('href') ?? '', 'http://x');
     expect(href.pathname).toBe('/search');
-    expect(href.searchParams.get('pickupAt')).toBe('2026-11-01T01:00:00.000Z');
+    // URL mang giờ VN tới phút: 01:00Z = 08:00 giờ Việt Nam.
+    expect(href.searchParams.get('pickupAt')).toBe('2026-11-01T08:00');
     expect(href.searchParams.get('serviceType')).toBe('self_drive');
     expect(href.searchParams.get('provinceCode')).toBe('79');
   });
