@@ -1,7 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { ContactVerifyModal } from '@/features/account/components/ContactVerifyModal';
 import { CONTACT_CHANNEL } from '@/features/account/types';
@@ -65,22 +73,36 @@ function writeDismissedFor(userId: string) {
   }
 }
 
-/** Mở lại hộp xác minh SĐT ngay lúc cần — vd khách bấm "Tiếp tục" để gửi yêu cầu thuê. */
-const AccountPhonePromptContext = createContext<(() => void) | null>(null);
+export interface AccountPhonePromptOptions {
+  /** Số điền sẵn — vd SĐT liên hệ khách vừa gõ ở màn Xem lại. Trống ⇒ số hiện có của tài khoản. */
+  readonly phone?: string | null;
+  /** Gọi khi khách xác minh XONG trong chính lượt hộp này — "Để sau" thì không gọi. */
+  readonly onVerified?: () => void;
+}
+
+export type AccountPhonePrompt = (options?: AccountPhonePromptOptions) => void;
+
+interface AccountPhonePromptContextValue {
+  readonly prompt: AccountPhonePrompt;
+  /** Tắt lời nhắc TỰ BẬT trong lúc một luồng tự hỏi số đúng lúc của nó; trả hàm bật lại. */
+  readonly suppressReminder: () => () => void;
+}
+
+const AccountPhonePromptContext = createContext<AccountPhonePromptContextValue | null>(null);
 
 /**
  * NHẮC XÁC MINH SĐT ở SITE KHÁCH (ADR 0071 — nới ADR 0060 điều 5 cho realm `customer`).
  *
  * Khách vào bằng Google/Facebook (hoặc tài khoản cũ chưa xác minh số) được nhắc MỘT lần mỗi phiên
  * tab, và đóng được bằng "Để sau": tìm xe, xem xe, lưu xe yêu thích không cần SĐT. Việc CẦN số thì
- * hỏi lại đúng lúc — luồng đặt xe gọi `useAccountPhonePrompt()` khi khách bấm "Tiếp tục", và hộp
- * mở lại kể cả khi đã "Để sau".
+ * hỏi đúng lúc — luồng đặt xe gọi `useAccountPhonePrompt()` khi khách bấm GỬI yêu cầu, và hộp mở
+ * lại kể cả khi đã "Để sau". Trong lúc luồng đó mở (`useSuppressAccountPhoneReminder`), lời nhắc
+ * chung không tự bật đè lên — khách chưa xem gì đã bị hỏi số là đúng thứ ADR 0071 gỡ.
  *
  * Hộp là UX; chốt chặn thật vẫn ở server: gửi yêu cầu thuê ⇒ `PHONE_NOT_VERIFIED`, nhận lời mời
  * tài xế/thành viên đòi SĐT đã xác minh (ADR 0060 điều 6, 8).
  *
- * Xác minh xong thì `/auth/me` được làm mới (`useContactVerify`) và hộp tự biến mất; luồng đang dở
- * phía dưới (vd hộp đặt xe) vẫn nguyên và tự đi tiếp.
+ * Xác minh xong thì `/auth/me` được làm mới (`useContactVerify`) và hộp tự biến mất.
  */
 export function AccountPhoneReminderProvider({ children }: { children: ReactNode }) {
   const t = useTranslations('Account.contact');
@@ -92,32 +114,48 @@ export function AccountPhoneReminderProvider({ children }: { children: ReactNode
   const [dismissedFor, setDismissedFor] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : readDismissedFor(),
   );
-  /** Một luồng vừa CẦN số (đặt xe) — mở hộp bất kể đã "Để sau", với câu mở theo đúng việc đó. */
-  const [prompted, setPrompted] = useState(false);
+  /**
+   * Một luồng vừa CẦN số (đặt xe) — mở hộp bất kể đã "Để sau", với câu mở theo đúng việc đó.
+   * `seq` dựng lại hộp ở mỗi lượt hỏi để số điền sẵn là số của lượt này.
+   */
+  const [prompted, setPrompted] = useState<
+    (AccountPhonePromptOptions & { readonly seq: number }) | null
+  >(null);
+  const [suppressors, setSuppressors] = useState(0);
 
-  const prompt = useCallback(() => setPrompted(true), []);
+  const prompt = useCallback<AccountPhonePrompt>((options = {}) => {
+    setPrompted((prev) => ({ ...options, seq: (prev?.seq ?? 0) + 1 }));
+  }, []);
+  const suppressReminder = useCallback(() => {
+    setSuppressors((n) => n + 1);
+    return () => setSuppressors((n) => n - 1);
+  }, []);
+  const value = useMemo(() => ({ prompt, suppressReminder }), [prompt, suppressReminder]);
 
   const userId = user?.id ?? null;
   const close = useCallback(() => {
-    setPrompted(false);
+    setPrompted(null);
     if (!userId) return;
     setDismissedFor(userId);
     writeDismissedFor(userId);
   }, [userId]);
 
   const needsPhone = user != null && user.realm === ACCOUNT_REALM.CUSTOMER && !user.phoneVerified;
-  const open = needsPhone && (prompted || dismissedFor !== user.id);
+  const open =
+    needsPhone && (prompted !== null || (suppressors === 0 && dismissedFor !== user.id));
 
   return (
-    <AccountPhonePromptContext.Provider value={prompt}>
+    <AccountPhonePromptContext.Provider value={value}>
       {children}
       {/* Render CÓ ĐIỀU KIỆN — mỗi lần mở là một instance sạch (xem docblock `ContactVerifyModal`). */}
       {open ? (
         <ContactVerifyModal
+          key={prompted?.seq ?? 0}
           channel={CONTACT_CHANNEL.PHONE}
           open
           onClose={close}
-          current={user.phone}
+          onVerified={prompted?.onVerified}
+          current={prompted?.phone?.trim() || user.phone}
           reminder={{ lead: prompted ? t('bookingLead') : t('reminderLead') }}
         />
       ) : null}
@@ -129,6 +167,12 @@ export function AccountPhoneReminderProvider({ children }: { children: ReactNode
  * Hàm mở hộp xác minh SĐT của site khách. Ngoài `AccountPhoneReminderProvider` (site partner,
  * test dựng lẻ một luồng) trả `null` — nơi gọi tự quyết, server vẫn là chốt.
  */
-export function useAccountPhonePrompt(): (() => void) | null {
-  return useContext(AccountPhonePromptContext);
+export function useAccountPhonePrompt(): AccountPhonePrompt | null {
+  return useContext(AccountPhonePromptContext)?.prompt ?? null;
+}
+
+/** Luồng tự hỏi số đúng lúc của nó (hộp đặt xe) — lời nhắc chung không tự bật khi nó đang mở. */
+export function useSuppressAccountPhoneReminder() {
+  const suppressReminder = useContext(AccountPhonePromptContext)?.suppressReminder;
+  useEffect(() => suppressReminder?.(), [suppressReminder]);
 }

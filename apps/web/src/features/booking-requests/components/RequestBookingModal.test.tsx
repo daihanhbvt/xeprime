@@ -89,6 +89,7 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({ useAuthModal: (
 const phonePrompt = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock('@/features/auth/components/AccountPhoneGate', () => ({
   useAccountPhonePrompt: () => phonePrompt.open,
+  useSuppressAccountPhoneReminder: () => undefined,
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
@@ -1547,29 +1548,58 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Vừa vào bằng Google/Facebook và đã "Để sau" ở hộp nhắc (ADR 0071): bấm "Tiếp tục" mở lại hộp
-     * xác minh SĐT và ĐỢI ở bước Chuyến đi — tới Xác nhận lúc này chỉ để server từ chối ở nút gửi.
-     * Xác minh xong thì luồng tự đi tiếp; bấm lại lần nữa thì hộp lại mở.
+     * Vừa vào bằng Google/Facebook (ADR 0071): đi hết tới màn Xem lại như thường — KHÔNG hỏi số ở
+     * "Tiếp tục". Bấm GỬI mới mở hộp xác minh SĐT, điền sẵn số liên hệ vừa gõ; "Để sau" thì không
+     * gửi gì; xác minh xong thì lượt gửi đó đi tiếp.
      */
-    it('SĐT tài khoản CHƯA xác minh → "Tiếp tục" mở hộp xác minh, xác minh xong mới tới Xác nhận', async () => {
+    it('SĐT tài khoản CHƯA xác minh → tới Xem lại bình thường, bấm GỬI mới hỏi số, xác minh xong thì gửi', async () => {
       me.data = { ...verifiedMe, phoneVerified: false };
       const { rerenderTree } = renderModal();
-      api.checkAvailability.mockResolvedValue({ available: true });
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+      await advanceToReview();
+      expect(phonePrompt.open).not.toHaveBeenCalled();
+
+      const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
+      fireEvent.change(within(renter).getByDisplayValue('0901234567'), {
+        target: { value: '0988776655' },
+      });
+      api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
+      submitFromReview();
 
       await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(1));
-      expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeNull();
-      expect(api.fetchDriverLicenceOverview).not.toHaveBeenCalled();
+      const options = phonePrompt.open.mock.calls[0]![0] as {
+        phone: string;
+        onVerified: () => void;
+      };
+      expect(options.phone).toBe('0988776655');
+      expect(api.submitBookingRequest).not.toHaveBeenCalled();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(2));
-
+      // Xác minh xong: hộp báo về, rồi `/auth/me` làm mới mang số đã xác minh.
+      act(() => options.onVerified());
+      expect(api.submitBookingRequest).not.toHaveBeenCalled();
       me.data = verifiedMe;
       rerenderTree();
 
-      await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
-      const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
-      expect(within(renter).getByDisplayValue('Trần Minh Tuấn')).toBeTruthy();
+      await screen.findByText('Đã gửi yêu cầu');
+      expect(api.submitBookingRequest).toHaveBeenCalledTimes(1);
+      expect(api.submitBookingRequest.mock.calls[0]![0]).toMatchObject({
+        customerPhone: '0988776655',
+      });
+    });
+
+    it('SĐT tài khoản CHƯA xác minh, bấm GỬI rồi "Để sau" → không gửi, ở lại Xem lại; bấm lại thì hỏi lại', async () => {
+      me.data = { ...verifiedMe, phoneVerified: false };
+      renderModal();
+      await advanceToReview();
+
+      submitFromReview();
+      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(1));
+      // "Để sau" = hộp đóng mà không gọi `onVerified`.
+      await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+      expect(api.submitBookingRequest).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeTruthy();
+
+      submitFromReview();
+      await waitFor(() => expect(phonePrompt.open).toHaveBeenCalledTimes(2));
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
     });
   });
@@ -1666,28 +1696,19 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Vào bằng Google/Facebook ⇒ có phiên nhưng chưa có SĐT đã xác minh. Luồng mở hộp xác minh SĐT
-     * của vỏ site (ADR 0071) và đợi; đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng.
+     * Vào bằng Google/Facebook ⇒ có phiên nhưng chưa có SĐT đã xác minh. Luồng đi tiếp tới Xem lại
+     * như mọi phiên khác — số được hỏi ở nút GỬI (ADR 0071), không phải ngay khi vừa đăng nhập.
      */
-    it('đăng nhập mà SĐT CHƯA xác minh → mở hộp xác minh, ĐỢI ở bước Chuyến đi, xác minh xong mới đi tiếp', async () => {
+    it('đăng nhập mà SĐT CHƯA xác minh → vẫn tự đi tiếp tới Xem lại, KHÔNG hỏi số lúc này', async () => {
       const { rerenderTree } = renderModal();
       await continueAsGuest();
 
       me.data = { ...LOGGED_IN_ME, phone: null, phoneVerified: false };
       rerenderTree();
-      // Đủ lâu để một lượt đi tiếp (nếu có) kịp hỏi lịch và soát bằng lái.
-      await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
-
-      expect(phonePrompt.open).toHaveBeenCalledTimes(1);
-      expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeNull();
-      expect(screen.getByRole('button', { name: /Thời gian thuê:/ })).toBeTruthy();
-      expect(api.checkAvailability).toHaveBeenCalledTimes(1);
-      expect(hasBookingDraft('V1')).toBe(true);
-
-      me.data = LOGGED_IN_ME;
-      rerenderTree();
 
       expect(await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeTruthy();
+      expect(phonePrompt.open).not.toHaveBeenCalled();
+      expect(api.checkAvailability).toHaveBeenCalledTimes(2);
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
     });
 
