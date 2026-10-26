@@ -52,6 +52,7 @@ import { PromoPicker, PromoStatusNote } from '@/features/promo-codes/components/
 import type { PromoTripParams } from '@/features/promo-codes/types';
 import { readDeliveryAddress } from '@/lib/delivery-address-memory';
 import { DeliveryAddressModal, type ConfirmedDeliveryInfo } from './DeliveryAddressModal';
+import { filterQueryString, formatDateTimeParam } from '../filter-params';
 import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingBookingCard.module.css';
@@ -186,7 +187,7 @@ export function ListingBookingCard({
     const params = new URLSearchParams(searchParams.toString());
     params.set('serviceType', s);
     if (s !== SERVICE_TYPE.WITH_DRIVER) params.delete('routeType');
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${filterQueryString(params)}`, { scroll: false });
   };
 
   // Đổi lộ trình có tài xế
@@ -194,7 +195,7 @@ export function ListingBookingCard({
     setCurrentRouteType(r);
     const params = new URLSearchParams(searchParams.toString());
     params.set('routeType', r);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${filterQueryString(params)}`, { scroll: false });
   };
 
   // Cập nhật khoảng ngày thuê
@@ -203,9 +204,9 @@ export function ListingBookingCard({
     if (next.pickupAt && next.returnAt) {
       rememberRentalRange({ ...next, mode: rentalMode });
       const params = new URLSearchParams(searchParams.toString());
-      params.set('pickupAt', appWallClockToIso(next.pickupAt));
-      params.set('returnAt', appWallClockToIso(next.returnAt));
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      params.set('pickupAt', formatDateTimeParam(appWallClockToIso(next.pickupAt)));
+      params.set('returnAt', formatDateTimeParam(appWallClockToIso(next.returnAt)));
+      router.replace(`${pathname}?${filterQueryString(params)}`, { scroll: false });
     }
   };
 

@@ -15,6 +15,7 @@ import {
 import { provinceLabelOf } from '../province-options';
 import { CtaButton } from './CtaButton';
 import { HomeCarousel } from './HomeCarousel';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import { VehicleCard } from './VehicleCard';
 import styles from './VehiclePreview.module.css';
@@ -102,40 +103,45 @@ export function VehiclePreview() {
         <p className={styles.sub}>{t('nearProvinceMixed', { province: nearProvinceName })}</p>
       ) : null}
 
-      {isLoading ? (
-        <ul className={styles.grid} aria-busy="true">
-          {/* Khung chờ dựng đúng số ô và đúng tỉ lệ thẻ thật → không giật layout khi có dữ liệu. */}
-          {Array.from({ length: RECOMMENDED_LIMIT }, (_, i) => (
-            <li key={i} className={styles.skeletonCard}>
-              <Skeleton.Image active className={styles.skeletonImg} />
-              <Skeleton active paragraph={{ rows: 2 }} title={{ width: '70%' }} />
-            </li>
-          ))}
-        </ul>
-      ) : isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={t('loadError')}
-          description={errorMessage(error)}
-          action={
-            <Link href={ROUTES.SEARCH}>
-              <Button size="small">{t('openSearch')}</Button>
-            </Link>
-          }
-        />
-      ) : items.length === 0 ? (
-        <Empty
-          description={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
-        />
-      ) : (
-        // Lưới responsive (4-6 cột tuỳ màn hình); mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).
-        <HomeCarousel ariaLabel={tHome('title')} perView={4} layout="grid" responsiveGrid>
-          {items.map((listing) => (
-            <VehicleCard key={listing.id} listing={listing} />
-          ))}
-        </HomeCarousel>
-      )}
+      {/* Lưới xe trượt lên sau tiêu đề khi cuộn tới (≈ `.portfolio-feed wow fadeInUp` 0.4s). */}
+      <Reveal delay={400}>
+        {isLoading ? (
+          <ul className={styles.grid} aria-busy="true">
+            {/* Khung chờ dựng đúng số ô và đúng tỉ lệ thẻ thật → không giật layout khi có dữ liệu. */}
+            {Array.from({ length: RECOMMENDED_LIMIT }, (_, i) => (
+              <li key={i} className={styles.skeletonCard}>
+                <Skeleton.Image active className={styles.skeletonImg} />
+                <Skeleton active paragraph={{ rows: 2 }} title={{ width: '70%' }} />
+              </li>
+            ))}
+          </ul>
+        ) : isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={t('loadError')}
+            description={errorMessage(error)}
+            action={
+              <Link href={ROUTES.SEARCH}>
+                <Button size="small">{t('openSearch')}</Button>
+              </Link>
+            }
+          />
+        ) : items.length === 0 ? (
+          <Empty
+            description={
+              serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')
+            }
+          />
+        ) : (
+          // Lưới responsive (4-6 cột tuỳ màn hình); mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).
+          <HomeCarousel ariaLabel={tHome('title')} perView={4} layout="grid" responsiveGrid>
+            {items.map((listing) => (
+              <VehicleCard key={listing.id} listing={listing} />
+            ))}
+          </HomeCarousel>
+        )}
+      </Reveal>
 
       {/* Mobile: "Xem tất cả xe" xuống dưới slider, trải hết bề ngang (nút ở tiêu đề ẩn đi). */}
       <div className={styles.mobileAction}>

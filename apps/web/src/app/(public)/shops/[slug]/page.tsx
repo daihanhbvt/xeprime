@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation';
 import { STOREFRONT_KIND } from '@xeprime/types';
 import { getTranslations } from 'next-intl/server';
 import { PageBreadcrumb } from '@/components/navigation/PageBreadcrumb';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, shopPath } from '@/constants/routes';
 import { fetchPublicShop } from '@/features/marketplace/api';
+import { metaDescription, openGraphFor } from '@/lib/seo';
 import { ShopBranches } from '@/features/marketplace/components/ShopBranches';
 import { ShopHeader } from '@/features/marketplace/components/ShopHeader';
 import { ShopReviews } from '@/features/marketplace/components/ShopReviews';
@@ -23,13 +24,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations('Marketplace.meta.shop'),
   ]);
   if (!shop) return { title: t('notFound') };
-  return {
-    title: t('title', { name: shop.name }),
-    description:
-      shop.bio ??
+  const title = t('title', { name: shop.name });
+  const description = metaDescription(
+    shop.bio ||
       (shop.provinceName
         ? t('descriptionWithProvince', { name: shop.name, province: shop.provinceName })
         : t('description', { name: shop.name })),
+  );
+  // Canonical không mang bộ lọc xe của gian hàng (`?vehicleType=`, `?page=`…) — cùng một hồ sơ.
+  const path = shopPath.detail(shop.slug);
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: openGraphFor({ title, description, path, images: [shop.coverUrl, shop.logoUrl] }),
   };
 }
 

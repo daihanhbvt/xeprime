@@ -50,6 +50,11 @@ export interface BookingTrip {
   pickupWindow?: { start: string; end: string } | null;
   /** Ngày trả dự kiến của gói — chỉ có khi khách đã chọn MỘT ngày nhận cụ thể (ADR 0011). */
   expectedReturnDate: Dayjs | null;
+  /**
+   * Lịch dài hạn ĐÃ CHỐT giờ — luồng đặt hộ: gian hàng là bên chốt lịch nên đơn có giờ nhận thật và
+   * ngày trả suy từ gói (`pickupAt`/`returnAt`), không có "nguyện vọng" nào để kể.
+   */
+  scheduleFixed?: boolean;
   isDelivery: boolean;
   /** Chuỗi địa chỉ giao xe xem trước — cùng `formatAddress` server dùng để lưu. */
   deliveryAddress: string | null;
@@ -103,6 +108,16 @@ interface BookingTripCardProps {
    * ngay dưới `h1` của một trang (chuyến chờ chủ xe phản hồi): không nhảy bậc dàn ý.
    */
   headingLevel?: 2 | 3;
+  /**
+   * Hàng chủ xe (avatar + tên) — `false` ở luồng đặt hộ: người đang xem CHÍNH LÀ chủ xe. Dòng tóm
+   * tắt dịch vụ · thời lượng vẫn ở lại, vì đó là chỗ duy nhất thẻ nói dịch vụ của chuyến.
+   */
+  showOwner?: boolean;
+  /**
+   * Câu thay cho điểm nhận xe khi không có tin đăng — xe nội bộ của luồng đặt hộ. Câu mặc định
+   * ("chủ xe gửi địa chỉ khi xác nhận") là lời nói với KHÁCH, sai khi người đọc là gian hàng.
+   */
+  selfPickupFallback?: string;
 }
 
 /**
@@ -128,6 +143,8 @@ export function BookingTripCard({
   ownerAction,
   ownerHref,
   headingLevel = 3,
+  showOwner = true,
+  selfPickupFallback,
 }: BookingTripCardProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const t = useTranslations('BookingRequests.flow');
@@ -139,58 +156,70 @@ export function BookingTripCard({
   const isWithDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const name = listing?.name ?? vehicleName;
   const image = listing?.mainImageUrl ?? vehicleImageUrl;
-  const owner = listing
-    ? { name: listing.shopName, logoUrl: listing.shopLogoUrl ?? null }
-    : fallback
-      ? { name: fallback.ownerName, logoUrl: null }
-      : null;
+  const owner = !showOwner
+    ? null
+    : listing
+      ? { name: listing.shopName, logoUrl: listing.shopLogoUrl ?? null }
+      : fallback
+        ? { name: fallback.ownerName, logoUrl: null }
+        : null;
 
   /* ── Mốc thời gian: dài hạn là GÓI + nguyện vọng, không phải một lịch đã chốt (ADR 0011) ── */
   const pickupWindow =
     trip.pickupWindow === undefined ? longTermPickupWindow(new Date()) : trip.pickupWindow;
-  const timeRows: Array<{ key: string; label: string; value: string }> = isLongTerm
-    ? [
-        {
-          key: 'package',
-          label: t('reviewPage.trip.package'),
-          value: fmt.packageLabel(trip.packageMonths) ?? '—',
-        },
-        {
-          key: 'wish',
-          label: t('reviewPage.trip.pickupWish'),
-          // Câu nguyện vọng DÙNG CHUNG mọi bề mặt dài hạn (`fmt.pickupWish`); khoảng "trong 7 ngày"
-          // tính từ hôm nay như server sẽ tính lúc nhận yêu cầu.
-          value: fmt.pickupWish({
-            pickupPreference: trip.pickupPreference,
-            requestedPickupDate: trip.requestedPickupDate?.format('YYYY-MM-DD') ?? null,
-            pickupWindowStartDate: pickupWindow?.start ?? null,
-            pickupWindowEndDate: pickupWindow?.end ?? null,
-          }),
-        },
-        ...(trip.expectedReturnDate
-          ? [
-              {
-                key: 'expectedReturn',
-                label: t('reviewPage.trip.expectedReturn'),
-                value: t('review.expectedReturnValue', {
-                  date: fmt.dateKey(trip.expectedReturnDate.format('YYYY-MM-DD')),
-                }),
-              },
-            ]
-          : []),
-      ]
-    : [
-        {
-          key: 'pickup',
-          label: t('reviewPage.trip.pickupAt'),
-          value: trip.pickupAt ? fmt.dateTime(appWallClockToIso(trip.pickupAt)) : '—',
-        },
-        {
-          key: 'return',
-          label: t('reviewPage.trip.returnAt'),
-          value: trip.returnAt ? fmt.dateTime(appWallClockToIso(trip.returnAt)) : '—',
-        },
-      ];
+  const exactRows = [
+    {
+      key: 'pickup',
+      label: t('reviewPage.trip.pickupAt'),
+      value: trip.pickupAt ? fmt.dateTime(appWallClockToIso(trip.pickupAt)) : '—',
+    },
+    {
+      key: 'return',
+      label: t('reviewPage.trip.returnAt'),
+      value: trip.returnAt ? fmt.dateTime(appWallClockToIso(trip.returnAt)) : '—',
+    },
+  ];
+  const timeRows: Array<{ key: string; label: string; value: string }> = !isLongTerm
+    ? exactRows
+    : trip.scheduleFixed
+      ? [
+          {
+            key: 'package',
+            label: t('reviewPage.trip.package'),
+            value: fmt.packageLabel(trip.packageMonths) ?? '—',
+          },
+          ...exactRows,
+        ]
+      : [
+          {
+            key: 'package',
+            label: t('reviewPage.trip.package'),
+            value: fmt.packageLabel(trip.packageMonths) ?? '—',
+          },
+          {
+            key: 'wish',
+            label: t('reviewPage.trip.pickupWish'),
+            // Câu nguyện vọng DÙNG CHUNG mọi bề mặt dài hạn (`fmt.pickupWish`); khoảng "trong 7
+            // ngày" tính từ hôm nay như server sẽ tính lúc nhận yêu cầu.
+            value: fmt.pickupWish({
+              pickupPreference: trip.pickupPreference,
+              requestedPickupDate: trip.requestedPickupDate?.format('YYYY-MM-DD') ?? null,
+              pickupWindowStartDate: pickupWindow?.start ?? null,
+              pickupWindowEndDate: pickupWindow?.end ?? null,
+            }),
+          },
+          ...(trip.expectedReturnDate
+            ? [
+                {
+                  key: 'expectedReturn',
+                  label: t('reviewPage.trip.expectedReturn'),
+                  value: t('review.expectedReturnValue', {
+                    date: fmt.dateKey(trip.expectedReturnDate.format('YYYY-MM-DD')),
+                  }),
+                },
+              ]
+            : []),
+        ];
 
   /* ── Nơi nhận xe: ba hình thức loại trừ nhau ─────────────────────────────────────────────── */
   const pickupPoint = listing?.pickupPoint ?? null;
@@ -230,7 +259,7 @@ export function BookingTripCard({
               title: t('reviewPage.trip.selfPickup'),
               body: pickupPoint
                 ? pickupPointText(pickupPoint)
-                : t('reviewPage.trip.selfPickupPending'),
+                : (selfPickupFallback ?? t('reviewPage.trip.selfPickupPending')),
             },
           ];
   /*
@@ -314,32 +343,34 @@ export function BookingTripCard({
 
       {children}
 
-      {owner ? (
+      {owner || !showOwner ? (
         <>
           <div className={styles.divider} role="presentation" />
           <div className={styles.ownerRow}>
-            <div className={styles.ownerGroup}>
-              <div className={styles.owner}>
-                <Avatar
-                  size={32}
-                  src={owner.logoUrl ?? undefined}
-                  icon={<UserOutlined />}
-                  alt=""
-                  className={styles.ownerAvatar}
-                />
-                <div className={styles.ownerText}>
-                  <span className={styles.ownerCaption}>{t('reviewPage.trip.owner')}</span>
-                  {ownerHref ? (
-                    <Link href={ownerHref} className={cx(styles.ownerName, styles.ownerLink)}>
-                      {owner.name}
-                    </Link>
-                  ) : (
-                    <span className={styles.ownerName}>{owner.name}</span>
-                  )}
+            {owner ? (
+              <div className={styles.ownerGroup}>
+                <div className={styles.owner}>
+                  <Avatar
+                    size={32}
+                    src={owner.logoUrl ?? undefined}
+                    icon={<UserOutlined />}
+                    alt=""
+                    className={styles.ownerAvatar}
+                  />
+                  <div className={styles.ownerText}>
+                    <span className={styles.ownerCaption}>{t('reviewPage.trip.owner')}</span>
+                    {ownerHref ? (
+                      <Link href={ownerHref} className={cx(styles.ownerName, styles.ownerLink)}>
+                        {owner.name}
+                      </Link>
+                    ) : (
+                      <span className={styles.ownerName}>{owner.name}</span>
+                    )}
+                  </div>
                 </div>
+                {ownerAction ? <div className={styles.ownerAction}>{ownerAction}</div> : null}
               </div>
-              {ownerAction ? <div className={styles.ownerAction}>{ownerAction}</div> : null}
-            </div>
+            ) : null}
             <span className={styles.tripSummary}>
               {durationText
                 ? t('reviewPage.trip.summary', { service: serviceText, duration: durationText })

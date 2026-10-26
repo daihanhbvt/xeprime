@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BILLING_MODE,
   BOOKING_LIST_PRESET,
   BOOKING_STATUS,
   HANDOVER_STATUS,
@@ -34,6 +35,12 @@ vi.mock('@/hooks/use-permissions', () => ({
     hasAny: (...keys: string[]) => keys.some((key) => permissions.granted.has(key)),
     isLoading: false,
   }),
+}));
+
+// Tuyến của gian hàng đọc từ `/auth/me` — lập đơn tay chỉ có ở tuyến gói (26/10/2026).
+const me = vi.hoisted(() => ({ billingMode: 'package' as string }));
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({ data: { tenant: { billingMode: me.billingMode } } }),
 }));
 
 const routerPush = vi.hoisted(() => vi.fn());
@@ -106,6 +113,7 @@ function row(over: Partial<BookingListItem> & { id: string }): BookingListItem {
 
 beforeEach(() => {
   permissions.granted = new Set([PERMISSION.BOOKING_VIEW, PERMISSION.BOOKING_CREATE]);
+  me.billingMode = BILLING_MODE.PACKAGE;
   filters.value = {};
   filters.setFilters.mockClear();
   routerPush.mockClear();
@@ -219,5 +227,13 @@ describe('Chờ giao xe — trạng thái rỗng', () => {
 
     expect(screen.getByText('Tạo đơn đầu tiên')).toBeTruthy();
     expect(screen.queryByText('Xem tất cả đơn thuê')).toBeNull();
+  });
+
+  it('gian hàng về tuyến HOA HỒNG (hết gói): không còn lối lập đơn tay dù vẫn có bookings.create', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    renderWithIntl(<BookingsListView />);
+
+    expect(screen.queryByText('Tạo đơn đầu tiên')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tạo đơn' })).toBeNull();
   });
 });

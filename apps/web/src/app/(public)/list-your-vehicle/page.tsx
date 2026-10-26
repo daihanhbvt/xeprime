@@ -2,12 +2,21 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { REGISTRATION_TRACK } from '@xeprime/types';
 
-import { partnerRegisterHref } from '@/constants/routes';
+import { ROUTES, partnerRegisterHref } from '@/constants/routes';
 import { ListYourVehicleLanding } from '@/features/list-vehicle/components/ListYourVehicleLanding';
+import { metaDescription, openGraphFor } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('ListYourVehicle.landing');
-  return { title: t('metaTitle'), description: t('subtitle') };
+  const title = t('metaTitle');
+  const description = metaDescription(t('subtitle'));
+  const path = ROUTES.LIST_YOUR_VEHICLE.ROOT;
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: openGraphFor({ title, description, path }),
+  };
 }
 
 /**

@@ -4,7 +4,7 @@ import { BellOutlined } from '@ant-design/icons';
 import { Button, Empty, Popover, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
@@ -24,8 +24,16 @@ import { useAppFormat } from '@/i18n/use-app-format';
  * Chuông thông báo — badge số chưa đọc + popover danh sách. Dùng chung ở Topbar khu quản lý
  * (`context="manage"`) và MarketHeader khu khách (`context="customer"`) — link click-through
  * khác nhau theo ngữ cảnh.
+ *
+ * `icon` để khu khách vẽ chuông bằng bộ icon của design v2 (`LineIcon`); bỏ trống là icon AntD.
  */
-export function NotificationBell({ context }: { context: NotificationContext }) {
+export function NotificationBell({
+  context,
+  icon = <BellOutlined />,
+}: {
+  context: NotificationContext;
+  icon?: ReactNode;
+}) {
   const t = useTranslations('Notifications');
   const fmt = useAppFormat();
 
@@ -110,7 +118,7 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
       styles={{ content: { padding: 0 } }}
     >
       <HeaderIconButton
-        icon={<BellOutlined />}
+        icon={icon}
         label={t('title')}
         count={unreadCount}
         active={open}

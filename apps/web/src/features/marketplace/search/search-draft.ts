@@ -1,6 +1,6 @@
 import { SEARCH_OWNED_KEYS, draftToFilterPatch, type SearchDraft } from '@xeprime/domain';
 import { ROUTES } from '@/constants/routes';
-import { applyFilterPatch } from '../filter-params';
+import { applyFilterPatch, filterQueryString } from '../filter-params';
 import type { MarketplaceFilters } from '../types';
 
 /**
@@ -45,6 +45,6 @@ export function searchContextSignature(source: Partial<MarketplaceFilters>): str
 export function buildSearchHref(draft: SearchDraft): string {
   const params = new URLSearchParams();
   applyFilterPatch(params, draftToFilterPatch(draft));
-  const qs = params.toString();
+  const qs = filterQueryString(params);
   return qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH;
 }

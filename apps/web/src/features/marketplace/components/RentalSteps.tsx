@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { cx } from '@/lib/cx';
+import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './RentalSteps.module.css';
 
@@ -43,7 +44,8 @@ export async function RentalSteps() {
         align="center"
         divider
       />
-      <ol className={styles.steps}>
+      {/* Các bước lần lượt trượt lên khi cuộn tới (≈ `.single-process-item wow fadeInUp`). */}
+      <Reveal as="ol" effect="stagger" className={styles.steps}>
         {STEPS.map((step, index) => (
           <li key={step.key} className={styles.step}>
             <span className={styles.artFrame} aria-hidden="true">
@@ -63,7 +65,7 @@ export async function RentalSteps() {
             </div>
           </li>
         ))}
-      </ol>
+      </Reveal>
     </section>
   );
 }

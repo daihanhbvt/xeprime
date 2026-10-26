@@ -1,6 +1,9 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
+import { enterClass, kenBurnsClass } from '@/components/motion/motion-classes';
+import { SplitText } from '@/components/motion/SplitText';
 import type { PublicBanner } from '@/features/banners/types';
+import { cx } from '@/lib/cx';
 import { BannerCarousel } from './BannerCarousel';
 import styles from './HomeHero.module.css';
 
@@ -26,15 +29,17 @@ export async function HomeHero({ banners }: { banners: PublicBanner[] }) {
         fill
         priority
         sizes="100vw"
-        className={styles.fallbackImage}
+        className={cx(styles.fallbackImage, kenBurnsClass)}
       />
       <span className={styles.fog} aria-hidden="true" />
+      {/* Chữ vào so le như trang mẫu: tiêu đề tách ký tự → dòng nhấn → mô tả (0.9s). Chữ nhấn là
+          gradient cắt theo chữ nên trượt nguyên dòng, không tách ký tự. */}
       <div className={styles.overlay} aria-hidden="true">
         <p className={styles.title}>
-          <span className={styles.titleLead}>{t('title')}</span>{' '}
-          <span className={styles.titleAccent}>{t('titleAccent')}</span>
+          <SplitText text={t('title')} className={styles.titleLead} />{' '}
+          <span className={cx(styles.titleAccent, enterClass(600))}>{t('titleAccent')}</span>
         </p>
-        <p className={styles.subtitle}>{t('subtitle')}</p>
+        <p className={cx(styles.subtitle, enterClass(900))}>{t('subtitle')}</p>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { applyFilterPatch, parseFilters } from '../filter-params';
+import { applyFilterPatch, filterQueryString, parseFilters } from '../filter-params';
 import type { MarketplaceFilters } from '../types';
 
 /**
@@ -76,7 +76,7 @@ export function useMarketplaceFilters() {
     const { pathname, search } = window.location;
     const params = new URLSearchParams(search);
     applyFilterPatch(params, patch);
-    const qs = params.toString();
+    const qs = filterQueryString(params);
     const next = qs ? `${pathname}?${qs}` : pathname;
     if (`${pathname}${search}` !== next) {
       window.history.replaceState(null, '', next);

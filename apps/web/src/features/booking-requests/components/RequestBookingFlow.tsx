@@ -100,7 +100,6 @@ import { BookingJourney } from './BookingJourney';
 import { BookingReviewStep, type BookingReviewNextStep } from './BookingReviewStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
 import type { BookingTrip } from './BookingTripCard';
-import type { BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
 
@@ -179,6 +178,12 @@ interface RequestBookingFlowProps {
  *    hộp `md` thường.
  */
 export type RequestBookingResult = 'sent' | 'notice';
+
+/**
+ * Chỗ khách đang đứng trong hộp — gồm cả những trạng thái KHÔNG có chặng riêng trên thanh tiến trình
+ * (`licence` nằm giữa hai bước, `done` là màn kết quả).
+ */
+type BookingStepKey = 'trip' | 'licence' | 'review' | 'done';
 
 /**
  * Luồng "Yêu cầu thuê xe" của khách — **hai bước**: `Chuyến đi` → `Xem lại`.
@@ -1727,7 +1732,10 @@ export function RequestBookingFlow({
               (ADR 0032 điều 5 · ADR 0064). Dài hạn chưa có giờ nhận nên không ước được.
             */}
             {watchedService === SERVICE_TYPE.LONG_TERM ? null : (
-              <NearPickupHoldNotice pickupAt={watchedPickup} fees={quoteWithPromo?.breakdown.fees} />
+              <NearPickupHoldNotice
+                pickupAt={watchedPickup}
+                fees={quoteWithPromo?.breakdown.fees}
+              />
             )}
           </>
         }

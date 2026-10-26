@@ -4,7 +4,7 @@ import { MessageOutlined, RightOutlined } from '@ant-design/icons';
 import { Avatar, Badge, Button, Empty, Popover, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { nowInAppTz, toAppTz } from '@xeprime/domain';
 import type { ChatInbox, ChatSide } from '@xeprime/types';
 import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
@@ -35,8 +35,16 @@ const CONVERSATION_PARAM = 'c';
  *  - **Mobile**: đi THẲNG tới màn chat. Một popup 340px trên màn 390px thì gần bằng cả màn hình
  *    nhưng chỉ hiện được vài dòng — nó là bản sao tệ hơn của chính trang chat, cộng thêm một
  *    nhịp chạm. Ở đó biểu tượng là một liên kết thật, mở tab mới cũng được.
+ *
+ * `icon` để khu khách vẽ bằng bộ icon của design v2 (`LineIcon`); bỏ trống là icon AntD.
  */
-export function ChatMenu({ side }: { side: ChatSide }) {
+export function ChatMenu({
+  side,
+  icon = <MessageOutlined />,
+}: {
+  side: ChatSide;
+  icon?: ReactNode;
+}) {
   const t = useTranslations('Chat');
   const badge = useChatBadge(side);
   const isMobile = useIsMobile();
@@ -45,7 +53,7 @@ export function ChatMenu({ side }: { side: ChatSide }) {
   if (isMobile) {
     return (
       <HeaderIconButton
-        icon={<MessageOutlined />}
+        icon={icon}
         label={t('inboxTitle')}
         count={badge.count}
         href={badge.href}
@@ -70,7 +78,7 @@ export function ChatMenu({ side }: { side: ChatSide }) {
       styles={{ content: { padding: 0 } }}
     >
       <HeaderIconButton
-        icon={<MessageOutlined />}
+        icon={icon}
         label={t('inboxTitle')}
         count={badge.count}
         active={open}

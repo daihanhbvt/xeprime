@@ -3,7 +3,9 @@ import { Google_Sans_Flex } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
+import { APP_NAME } from '@/constants/app-name';
 import { getServerLocale } from '@/i18n/locale';
+import { isIndexableDeployment, siteUrl } from '@/lib/seo';
 import { getServerNavPreferences } from '@/lib/ui-preferences.server';
 import { XP_TOKENS } from '@/styles/theme';
 import { ZONE, zoneForHost } from '@/zones';
@@ -40,11 +42,21 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Common.meta');
 
   return {
+    // Gốc của mọi URL tương đối trong metadata (canonical, og:url, og:image) — luôn là site khách:
+    // site partner/admin không có trang nào để chia sẻ hay index.
+    metadataBase: siteUrl(),
     title: {
       default: t('defaultTitle'),
       template: t('titleTemplate'),
     },
     description: t('defaultDescription'),
+    // Chỉ phần chung. KHÔNG khai `title` ở đây: trang không tự khai Open Graph sẽ thừa hưởng nó và
+    // mọi link chia sẻ hiện cùng một tiêu đề; thiếu `og:title` thì Zalo/Facebook đọc `<title>`.
+    openGraph: { type: 'website', siteName: APP_NAME },
+    twitter: { card: 'summary_large_image' },
+    // Staging: chặn index MỌI trang. Trang tự khai `robots` riêng đều là `noindex` nên không trang
+    // nào mở lại được.
+    ...(isIndexableDeployment() ? {} : { robots: { index: false, follow: false } }),
   };
 }
 

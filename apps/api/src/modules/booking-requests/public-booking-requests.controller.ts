@@ -8,9 +8,8 @@ import {
   CheckAvailabilityDto,
   CheckAvailabilityResultDto,
   CreateBookingRequestDto,
-  VehicleBusyDaysDto,
-  VehicleBusyDaysQueryDto,
 } from './dto/booking-request.dto';
+import { VehicleBusyDaysDto, VehicleBusyDaysQueryDto } from '../calendar/dto/busy-days.dto';
 import { BookingRequestsService } from './booking-requests.service';
 
 /**

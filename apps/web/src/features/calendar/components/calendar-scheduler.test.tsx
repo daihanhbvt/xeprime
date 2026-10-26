@@ -1,7 +1,7 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { BILLING_MODE, PERMISSION, type Permission } from '@xeprime/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
 import { CalendarScheduler } from './CalendarScheduler';
@@ -38,6 +38,12 @@ vi.mock('@/hooks/use-permissions', () => ({
     hasAny: () => permissions.granted.size > 0,
     isLoading: false,
   }),
+}));
+
+// Tuyến của gian hàng đọc từ `/auth/me` — lập đơn tay chỉ có ở tuyến gói (26/10/2026).
+const me = vi.hoisted(() => ({ billingMode: 'package' as string }));
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({ data: { tenant: { billingMode: me.billingMode } } }),
 }));
 
 // Virtualizer đo bằng kích thước thật của DOM — jsdom không có layout nên trả thẳng mọi hàng.
@@ -194,6 +200,7 @@ beforeEach(() => {
     PERMISSION.VEHICLE_BLOCK_SCHEDULE,
     PERMISSION.VEHICLE_UPDATE,
   ]);
+  me.billingMode = BILLING_MODE.PACKAGE;
   data.resources = [resource()];
   data.eventsByResource = new Map();
   data.priceMarkers = new Map();
@@ -254,6 +261,18 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(within(menu).getByText('Khóa xe')).toBeTruthy();
     expect(within(menu).queryByText('Đặt xe')).toBeNull();
     expect(within(menu).queryByText('Đặt giá')).toBeNull();
+  });
+
+  it('chủ xe tuyến HOA HỒNG không lập đơn tay — ô chỉ mời Khóa xe/Đặt giá dù có bookings.create', () => {
+    // Đơn lập tay không mang phí sàn lẫn hoa hồng; chuyến ngoài chợ giữ lịch bằng khoá xe.
+    me.billingMode = BILLING_MODE.COMMISSION;
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText(/Tạo lịch cho Toyota Vios 2023 ngày 12\/10/));
+
+    const menu = screen.getByRole('menu');
+    expect(within(menu).queryByText('Đặt xe')).toBeNull();
+    expect(within(menu).getByText('Khóa xe')).toBeTruthy();
+    expect(within(menu).getByText('Đặt giá')).toBeTruthy();
   });
 
   it('không còn quyền thao tác nào thì ô KHÔNG phải nút — người chỉ xem không bị mời bấm', () => {

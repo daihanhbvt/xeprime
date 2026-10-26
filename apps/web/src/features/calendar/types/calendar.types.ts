@@ -36,6 +36,8 @@ export type SaveDailyPricesInput = Schemas['SaveDailyPricesDto'];
 
 /** Báo giá nội bộ (`/calendar/quote`) — cùng shape với báo giá công khai. */
 export type CalendarQuote = Schemas['QuoteBreakdownDto'];
+/** Lịch bận theo ngày của một xe (`GET /calendar/busy-days`) — cùng DTO với cửa công khai. */
+export type CalendarBusyDays = Schemas['VehicleBusyDaysDto'];
 
 /**
  * Thao tác HÀNG LOẠT cho một khoảng ngày — khoá hoặc đặt giá cả đội xe từ thẻ ngày trên lịch.

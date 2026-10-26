@@ -1,0 +1,67 @@
+/*
+ * Cỡ theo `font-size` của chỗ đặt (1em) — cùng cách icon AntD nhận cỡ, nên thay được cho nhau
+ * trong `HeaderIconButton` hay một dòng menu mà không phải sửa CSS của nơi đó.
+ */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  vertical-align: -0.15em;
+}
+
+.arrow-right {
+  mask-image: url('/icons/menu/arrow-right.svg');
+}
+
+.bell {
+  mask-image: url('/icons/menu/bell.svg');
+}
+
+.calendar {
+  mask-image: url('/icons/menu/calendar.svg');
+}
+
+.caret-up {
+  mask-image: url('/icons/menu/caret-up.svg');
+}
+
+.chevron-right {
+  mask-image: url('/icons/menu/chevron-right.svg');
+}
+
+.globe {
+  mask-image: url('/icons/menu/globe.svg');
+}
+
+.heart {
+  mask-image: url('/icons/menu/heart.svg');
+}
+
+.logout {
+  mask-image: url('/icons/menu/logout.svg');
+}
+
+.message {
+  mask-image: url('/icons/menu/message.svg');
+}
+
+.moon {
+  mask-image: url('/icons/menu/moon.svg');
+}
+
+.palette {
+  mask-image: url('/icons/menu/palette.svg');
+}
+
+.sun {
+  mask-image: url('/icons/menu/sun.svg');
+}
+
+.work {
+  mask-image: url('/icons/menu/work.svg');
+}

@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { listingPath } from '@/constants/routes';
 import { fetchCatalogServer } from '@/features/catalog/api';
 import { fetchListingDetail } from '@/features/marketplace/api';
+import { parseDateTimeParam } from '@/features/marketplace/filter-params';
 import { ListingDetailView } from '@/features/marketplace/components/ListingDetailView';
+import { listingJsonLd } from '@/features/marketplace/listing-seo';
+import { metaDescription, openGraphFor } from '@/lib/seo';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { resolveAppLocale } from '@/i18n/config';
 
@@ -26,10 +31,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations('Marketplace.meta.listing'),
   ]);
   if (!listing) return { title: t('notFound') };
+  const title = t('title', { name: listing.name });
+  const description = metaDescription(
+    listing.description || t('description', { name: listing.name, shop: listing.shopName }),
+  );
+  // Canonical KHÔNG mang query: `?pickupAt=&serviceType=` chỉ prefill luồng đặt, cùng một chiếc
+  // xe không được thành hàng trăm URL trùng nội dung trong mắt công cụ tìm kiếm.
+  const path = listingPath.detail(listing.id);
   return {
-    title: t('title', { name: listing.name }),
-    description:
-      listing.description ?? t('description', { name: listing.name, shop: listing.shopName }),
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: openGraphFor({
+      title,
+      description,
+      path,
+      images: [listing.mainImageUrl, listing.images[0]],
+    }),
   };
 }
 
@@ -38,20 +56,29 @@ export default async function ListingDetailPage({ params, searchParams }: PagePr
   const { pickupAt, returnAt, serviceType, routeType, provinceCode } = await searchParams;
   // Trang này render trên server cho SEO nên không dùng được `useCatalog`; danh mục lấy song
   // song với chi tiết xe để tra nhãn hãng/kiểu dáng/nhiên liệu/tiện ích từ key đã lưu.
-  const [listing, catalog] = await Promise.all([
+  const [listing, catalog, tBreadcrumb] = await Promise.all([
     fetchListingDetail(id),
     fetchCatalogServer(resolveAppLocale(await getLocale())),
+    getTranslations('Listings.detail.breadcrumb'),
   ]);
   if (!listing) notFound();
   return (
-    <ListingDetailView
-      listing={listing}
-      catalog={catalog}
-      pickupAt={pickupAt}
-      returnAt={returnAt}
-      serviceType={serviceType}
-      routeType={routeType}
-      searchProvinceCode={provinceCode}
-    />
+    <>
+      {listingJsonLd(listing, { home: tBreadcrumb('home'), search: tBreadcrumb('search') }).map(
+        (data, index) => (
+          <JsonLd key={index} data={data} />
+        ),
+      )}
+      <ListingDetailView
+        listing={listing}
+        catalog={catalog}
+        // URL mang giờ VN (`2026-10-26T21:00`), component và API nói ISO UTC.
+        pickupAt={parseDateTimeParam(pickupAt)}
+        returnAt={parseDateTimeParam(returnAt)}
+        serviceType={serviceType}
+        routeType={routeType}
+        searchProvinceCode={provinceCode}
+      />
+    </>
   );
 }

@@ -1,0 +1,181 @@
+/*
+ * Bộ chuyển động của chợ v2 — tái hiện trang mẫu GoRental (index-three) bằng CSS thuần:
+ *
+ * - `kenBurns`   ≈ `.rts-banner-slider-active-three { animation: zoomEffect 40s }` — ảnh nền "thở".
+ * - `enter`      ≈ WOW.js + animate.css `fadeInUp` — chạy khi phần tử được vẽ; nằm trong một
+ *                  `Reveal` còn chờ thì chờ cuộn tới cùng nó.
+ * - `stagger`    ≈ `data-wow-delay` 0.2s · 0.4s · 0.6s… cho các mục con của một danh sách.
+ * - `splitChar`  ≈ GSAP SplitText `.rts-slide-anim`: từng ký tự trượt 50px từ phải, so le 0.02s.
+ * - `gate`       = gốc của `Reveal`/`useReveal`: mang `data-reveal="pending"` tới khi cuộn tới.
+ *
+ * Chỉ động vào `transform` + `opacity` (GPU, không reflow). Mọi thông số là token `--xp-motion-*`
+ * (`@xeprime/ui`). `--motion-delay` là biến CỤC BỘ của bộ này, đặt qua lớp `delay*`, không phải token.
+ */
+
+@keyframes xpFadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--xp-motion-distance-reveal), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes xpCharIn {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--xp-motion-distance-char), 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes xpKenBurns {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(var(--xp-motion-scale-ambient));
+  }
+}
+
+/* ─── Ảnh nền hero "thở" ─────────────────────────────────────────────────────
+   Chạy liên tục trên KHUNG chứa ảnh (không theo từng slide) — đổi slide không làm ảnh giật về 1.
+   Điểm neo phóng do chỗ dùng đặt (`transform-origin`) — banner có chữ ở mép trái thì neo trái. */
+.kenBurns {
+  animation: xpKenBurns var(--xp-motion-duration-ambient) ease-in-out infinite;
+  backface-visibility: hidden;
+}
+
+/* ─── Trượt lên + hiện dần ──────────────────────────────────────────────── */
+.enter,
+.stagger > * {
+  animation: xpFadeInUp var(--xp-motion-duration-reveal) var(--xp-motion-ease-standard)
+    var(--motion-delay, 0s) both;
+}
+
+/* Mục thứ n trễ n × 0.2s (như `data-wow-delay`); từ mục thứ 6 trở đi đứng ở 1.2s. */
+.stagger > :nth-child(1) {
+  --motion-delay: 0.2s;
+}
+
+.stagger > :nth-child(2) {
+  --motion-delay: 0.4s;
+}
+
+.stagger > :nth-child(3) {
+  --motion-delay: 0.6s;
+}
+
+.stagger > :nth-child(4) {
+  --motion-delay: 0.8s;
+}
+
+.stagger > :nth-child(5) {
+  --motion-delay: 1s;
+}
+
+.stagger > :nth-child(n + 6) {
+  --motion-delay: 1.2s;
+}
+
+/* Độ trễ theo bậc của trang mẫu (0.1 · 0.2 · 0.4 · 0.6 · 0.9 · 1.2s). Chữ tách ký tự bên trong
+   một khối có độ trễ cũng thừa hưởng độ trễ đó (biến tuỳ biến được kế thừa). */
+.delay100 {
+  --motion-delay: 0.1s;
+}
+
+.delay200 {
+  --motion-delay: 0.2s;
+}
+
+.delay400 {
+  --motion-delay: 0.4s;
+}
+
+.delay600 {
+  --motion-delay: 0.6s;
+}
+
+.delay900 {
+  --motion-delay: 0.9s;
+}
+
+.delay1200 {
+  --motion-delay: 1.2s;
+}
+
+/* ─── Tiêu đề tách ký tự ────────────────────────────────────────────────── */
+
+/* Một từ không bao giờ bị ngắt dòng giữa hai ký tự — xuống dòng chỉ ở khoảng trắng giữa các từ. */
+.splitWord {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* `--char-index` là vị trí ký tự trong câu đã dịch — chỉ biết lúc render (ngoại lệ inline style). */
+.splitChar {
+  display: inline-block;
+  animation: xpCharIn var(--xp-motion-duration-reveal) var(--xp-motion-ease-overshoot)
+    calc(var(--motion-delay, 0s) + var(--char-index, 0) * 0.02s) both;
+}
+
+/* Câu đầy đủ cho trình đọc màn hình; các ký tự rời được `aria-hidden`. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ─── Chờ cuộn tới (Reveal) ──────────────────────────────────────────────── */
+
+/* Khung bọc không được nới bề rộng tối thiểu của cột flex/grid chứa nó. */
+.gate {
+  min-width: 0;
+}
+
+/*
+ * Chỉ JS mới gắn `data-reveal="pending"`, và chỉ cho phần tử còn nằm DƯỚI màn hình lúc gắn. HTML
+ * server không mang nó: tắt JS hay hydrate chậm thì nội dung vẫn hiện, không bao giờ "mất". Gỡ
+ * thuộc tính ⇒ `animation` được gán lại ⇒ hoạt cảnh chạy từ đầu.
+ */
+.gate[data-reveal='pending'].enter,
+.gate[data-reveal='pending'] .enter,
+.gate[data-reveal='pending'].stagger > *,
+.gate[data-reveal='pending'] .stagger > *,
+.gate[data-reveal='pending'] .splitChar {
+  animation: none;
+  opacity: 0;
+}
+
+/*
+ * Người dùng yêu cầu giảm chuyển động: không ảnh thở, không trượt, không chờ — nội dung đứng yên
+ * và hiện ngay. (globals.css chỉ rút ngắn thời lượng; ở đây tắt hẳn để không loé một khung hình.)
+ */
+@media (prefers-reduced-motion: reduce) {
+  .kenBurns,
+  .enter,
+  .stagger > *,
+  .splitChar,
+  .gate[data-reveal='pending'].enter,
+  .gate[data-reveal='pending'] .enter,
+  .gate[data-reveal='pending'].stagger > *,
+  .gate[data-reveal='pending'] .stagger > *,
+  .gate[data-reveal='pending'] .splitChar {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

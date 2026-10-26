@@ -8,7 +8,9 @@ import {
   vnDayStart,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { CalendarController } from '../src/modules/calendar/calendar.controller';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
+import type { TenantContext } from '../src/common/types/request-context';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingRequestsService,
@@ -251,4 +253,58 @@ describe('lịch bận công khai của một xe', () => {
       requests.listPublicBusyDays(draftVehicleId, '2026-09-01', '2026-09-30'),
     ).rejects.toMatchObject({ status: 404 });
   });
+});
+
+/**
+ * `GET /calendar/busy-days` — cửa NỘI BỘ của luồng đặt hộ: cùng phép tính, khác phạm vi. Phép tính
+ * đã được khoá ở bộ trên (một hàm `OccupancyService.listBusyDays`); ở đây chỉ khoá PHẠM VI.
+ */
+describe('lịch bận nội bộ của gian hàng', () => {
+  const calendar = new CalendarController(asService, occupancy, pricing);
+  const scope = (over: Partial<TenantContext> = {}) =>
+    ({ tenantId, allowedBranchIds: null, ...over }) as TenantContext;
+
+  maybe('xe NỘI BỘ (chưa lên chợ) vẫn tra được — đơn lập tay nhận cả xe nội bộ', async () => {
+    await prisma.vehicleOccupancy.create({
+      data: {
+        id: newId(),
+        tenantId,
+        vehicleId: draftVehicleId,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+        sourceId: newId(),
+        startAt: vnAt('2026-09-10', 0),
+        endAt: vnAt('2026-09-11', 0),
+      },
+    });
+
+    const res = await calendar.busyDays(scope(), {
+      vehicleId: draftVehicleId,
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+    expect(res.days).toEqual([{ date: '2026-09-10', fullyBusy: true, periods: [] }]);
+  });
+
+  maybe('xe của gian hàng KHÁC trả 404 — không dò được lịch qua vehicleId đoán được', async () => {
+    await expect(
+      calendar.busyDays(scope({ tenantId: newId() }), {
+        vehicleId,
+        from: '2026-09-01',
+        to: '2026-09-30',
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  maybe(
+    'nhân viên giới hạn chi nhánh: xe ngoài chi nhánh được giao trả 404 (ADR 0052)',
+    async () => {
+      await expect(
+        calendar.busyDays(scope({ allowedBranchIds: [newId()] }), {
+          vehicleId,
+          from: '2026-09-01',
+          to: '2026-09-30',
+        }),
+      ).rejects.toMatchObject({ status: 404 });
+    },
+  );
 });

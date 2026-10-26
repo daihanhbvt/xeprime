@@ -276,6 +276,18 @@
     ),
     linear-gradient(180deg, rgb(26, 21, 14) 31.784%, rgba(50, 35, 0, 0) 100%);
 
+  /* ─── Chuyển động (chợ v2 — apps/web/src/components/motion) ───────────── */
+  --xp-motion-duration-fast: 0.3s;
+  --xp-motion-duration-reveal: 1s;
+  --xp-motion-duration-ambient: 40s;
+  --xp-motion-ease-standard: ease;
+  --xp-motion-ease-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --xp-motion-distance-reveal: 40px;
+  --xp-motion-distance-char: 50px;
+  --xp-motion-lift-hover: -4px;
+  --xp-motion-scale-media-hover: 1.05;
+  --xp-motion-scale-ambient: 1.08;
+
   /* ─── Focus ───────────────────────────────────────────────────────────── */
   --xp-focus-outline-width: 2px;
   /* Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 — giữ khớp

@@ -13,12 +13,28 @@
   min-width: 0;
   flex-direction: column;
   border-radius: var(--xp-border-radius-card);
+  /* Viền vẽ bằng bóng (không chiếm chỗ) để thẻ không xê dịch 1px khi viền hiện ra. */
+  box-shadow: 0 0 0 1px transparent;
   color: inherit;
-  transition: background-color 0.18s ease;
+  transition:
+    transform var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    box-shadow var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
 }
 
+/* Rê chuột (≈ `.single-category-item:hover` của trang mẫu): nền ngả vàng, viền vàng + bóng sâu. */
 .card:hover {
   background: var(--xp-color-primary-subtle);
+  box-shadow:
+    0 0 0 1px var(--xp-color-primary-border),
+    var(--xp-elevation-lg);
+}
+
+/* Nhấc thẻ chỉ ở thiết bị có chuột thật — trên màn cảm ứng `:hover` dính lại sau cú chạm. */
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(var(--xp-motion-lift-hover));
+  }
 }
 
 .card:focus-visible {
@@ -41,11 +57,11 @@
   height: 100%;
   inset: 0;
   object-fit: contain;
-  transition: transform 0.25s ease;
+  transition: transform var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
 }
 
 .card:hover .image {
-  transform: scale(1.04);
+  transform: scale(var(--xp-motion-scale-media-hover));
 }
 
 .details {
@@ -60,6 +76,7 @@
 
 .name {
   color: var(--xp-color-text);
+  transition: color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
   font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-h3);
@@ -94,10 +111,21 @@
   }
 }
 
+/* Tên chuyển sang vàng đậm (đủ tương phản trên nền vàng nhạt — vàng chính thì không). */
+.card:hover .name {
+  color: var(--xp-color-primary-strong);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card,
-  .image {
+  .image,
+  .name {
     transition: none;
+  }
+
+  .card:hover,
+  .card:hover .image {
+    transform: none;
   }
 }
 
@@ -116,3 +144,6 @@
   color: #d5d7da;
 }
 
+:global([data-theme="dark"]) .card:hover .name {
+  color: var(--xp-color-primary);
+}

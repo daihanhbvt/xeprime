@@ -25,6 +25,7 @@ import { initialOf } from '@/lib/initials';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
+import { filterQueryString, formatDateTimeParam } from '../filter-params';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import { HostMetrics } from './HostMetrics';
@@ -101,16 +102,17 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
 
   const dateQs = new URLSearchParams();
   if (filters.provinceCode) dateQs.set('provinceCode', filters.provinceCode);
-  if (filters.pickupAt) dateQs.set('pickupAt', filters.pickupAt);
-  if (filters.returnAt) dateQs.set('returnAt', filters.returnAt);
+  if (filters.pickupAt) dateQs.set('pickupAt', formatDateTimeParam(filters.pickupAt));
+  if (filters.returnAt) dateQs.set('returnAt', formatDateTimeParam(filters.returnAt));
   if (activeService) {
     dateQs.set('serviceType', activeService);
     if (activeService === SERVICE_TYPE.WITH_DRIVER && filters.routeType) {
       dateQs.set('routeType', filters.routeType);
     }
   }
-  const detailHref = dateQs.toString()
-    ? `${listingPath.detail(listing.id)}?${dateQs.toString()}`
+  const detailQs = filterQueryString(dateQs);
+  const detailHref = detailQs
+    ? `${listingPath.detail(listing.id)}?${detailQs}`
     : listingPath.detail(listing.id);
 
   const amenities = [
