@@ -89,5 +89,80 @@
       "responseTime": "Responds within",
       "acceptKeep": "Acceptance rate"
     }
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "home": "Home",
+    "personal": "Owner profile",
+    "shop": "Shop profile",
+    "back": "Back to search"
+  },
+  "profile": {
+    "badgePersonal": "Individual owner",
+    "badgeShop": "Shop owner",
+    "ratingCount": "({count, plural, one {# review} other {# reviews}})",
+    "trips": "{count, plural, one {# trip} other {# trips}}",
+    "highlightsLabel": "Highlights",
+    "verified": "Verified",
+    "branches": "{count, plural, one {# branch} other {# branches}}",
+    "delivery": "Doorstep delivery",
+    "aboutTitle": "About",
+    "address": "Address: {address}",
+    "joined": "Joined {date}",
+    "message": "Message",
+    "stats": {
+      "label": "Stats",
+      "branches": "Branches",
+      "vehicles": "Vehicles for rent",
+      "completedTrips": "Completed trips",
+      "rating": "Rating",
+      "responseRate": "Response rate",
+      "acceptKeep": "Accept & keep rate"
+    }
+  },
+  "branches": {
+    "title": "Branches",
+    "vehicles": "{count, plural, one {# vehicle available} other {# vehicles available}}",
+    "rating": "Rated {rating} out of 5"
+  },
+  "vehicleFilters": {
+    "provinceLabel": "Filter by city/province",
+    "all": "All",
+    "label": "Filter vehicles",
+    "withDriver": "With driver",
+    "longTerm": "Long-term rental",
+    "delivery": "Doorstep delivery",
+    "instantBook": "Instant booking",
+    "noCollateral": "No collateral",
+    "vatInvoice": "VAT invoice",
+    "emptyFiltered": "No vehicles match the selected filters.",
+    "clear": "Clear filters"
+  },
+  "trust": {
+    "sectionLabel": "Shop credibility",
+    "title": "XePrime verification",
+    "badge": "Verified Partner",
+    "legalEntity": {
+      "household_business": "Household business verified by XePrime, business licence checked",
+      "company": "Registered company, business licence checked"
+    },
+    "shopVerified": "Shop profile approved by XePrime",
+    "contactVerified": "Contact details and branch addresses verified",
+    "tiles": {
+      "legal": {
+        "title": "Legal & clear invoicing",
+        "vat": "The shop issues VAT invoices for the rental fee on request.",
+        "verified": "Legal documents verified by XePrime."
+      },
+      "maintenance": {
+        "title": "Regular maintenance",
+        "body": "{onSchedule}/{total} vehicles are within their service interval, per the maintenance log the shop keeps on XePrime."
+      },
+      "deposit": {
+        "title": "Deposit & refund policy",
+        "body": "The reservation fee is paid through XePrime; cancelling within the free-cancellation window (if the trip has one) refunds everything you paid.",
+        "noCollateral": "{count}/{total} vehicles need no collateral."
+      }
+    }
   }
 }

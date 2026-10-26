@@ -20,9 +20,9 @@
 .methodsTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-lead);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 /* Một thẻ phương thức: đệm 16, bo 16; mở thì viền `Stroke/primary-300`. */
@@ -228,9 +228,9 @@
 .summaryTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 /* Xe: ảnh 114×64 bo 8 · tên `18px/Semibold` · thông số `14px/Regular`. */
@@ -260,10 +260,10 @@
 
 .vehicleName {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
   overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .vehicleSpecs {
@@ -346,11 +346,11 @@
 
 .totalAmount {
   color: var(--xp-color-primary-hover);
-  font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h1);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-h2);
+  line-height: var(--xp-line-height-h2);
 }
 
 /*

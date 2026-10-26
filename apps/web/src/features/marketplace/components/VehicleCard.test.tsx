@@ -271,13 +271,15 @@ describe('VehicleCard', () => {
     expect(screen.getByText('Xuất hoá đơn VAT')).toBeTruthy();
   });
 
-  it('không để lại vùng hành động rỗng ở chân thẻ', () => {
+  it('không để lại vùng hành động rỗng ở chân thẻ — giá nằm trên, dòng chủ xe chốt đáy', () => {
     const { container } = render(<VehicleCard listing={LISTING} />);
-    // Phần tử cuối trong thân thẻ phải là hàng điểm + giá, không phải một khối trống nơi nút
-    // thuê từng đứng.
+    // Figma list v2 (`21636:46969`): hàng điểm + giá rồi tới dòng chủ xe ở đáy — không còn
+    // khối trống nơi nút thuê từng đứng.
     const body = container.querySelector('article > div:last-child');
     const last = body?.lastElementChild;
-    expect(last?.textContent).toContain('1,05tr');
+    const beforeLast = last?.previousElementSibling;
+    expect(last?.textContent).toContain(LISTING.shopName);
+    expect(beforeLast?.textContent).toContain('1,05tr');
   });
 });
 

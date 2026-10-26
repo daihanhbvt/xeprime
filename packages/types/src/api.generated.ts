@@ -18652,6 +18652,16 @@ export interface components {
             insuranceOfferedByKind: components["schemas"]["InsuranceOfferedByKindDto"];
             autoAccept?: components["schemas"]["AutoAcceptPreviewDto"] | null;
         };
+        PublicShopBranchDto: {
+            id: string;
+            name: string;
+            provinceName?: string | null;
+            /** @description Số xe công khai đang ở chi nhánh */
+            vehicleCount: number;
+            /** @description Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá */
+            ratingAvg?: string | null;
+            ratingCount: number;
+        };
         PublicShopDto: {
             name: string;
             /** @description Slug gian hàng */
@@ -18684,12 +18694,24 @@ export interface components {
             branchCount: number;
             /** @description Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần */
             serviceProvinceNames: string[];
+            /** @description Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần */
+            serviceProvinces: components["schemas"]["PublicShopProvinceDto"][];
+            /** @description Chi nhánh đang giữ xe công khai — theo số xe giảm dần */
+            branches: components["schemas"]["PublicShopBranchDto"][];
+            vehicleFilterCounts: components["schemas"]["ShopVehicleFilterCountsDto"];
+            trust: components["schemas"]["ShopTrustDto"];
             /** @description Có ít nhất một xe công khai hỗ trợ giao tận nơi */
             deliveryAvailable: boolean;
         };
         PublicShopPageDto: {
             data: components["schemas"]["PublicShopSummaryDto"][];
             meta: components["schemas"]["PublicListingPageMetaDto"];
+        };
+        PublicShopProvinceDto: {
+            /** @description Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode` */
+            code: string;
+            name: string;
+            vehicleCount: number;
         };
         PublicShopSummaryDto: {
             name: string;
@@ -19662,6 +19684,37 @@ export interface components {
             summary: components["schemas"]["ReviewSummaryDto"];
             data: components["schemas"]["ShopReviewDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        ShopTrustDto: {
+            /**
+             * @description Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null
+             * @enum {string|null}
+             */
+            legalEntityType?: "household_business" | "company" | null;
+            /** @description Thời điểm nền tảng xác minh hồ sơ người bán (ISO-8601 UTC) */
+            legalEntityVerifiedAt?: string | null;
+            /** @description Phiếu duyệt gian hàng mới nhất đã được nền tảng DUYỆT (SHOP_VERIFICATION) */
+            shopVerified: boolean;
+            /** @description Gian hàng đã duyệt + SĐT chủ đã xác minh OTP + không chi nhánh giữ xe công khai nào đang chờ soát lại vị trí */
+            contactVerified: boolean;
+            /** @description Gian hàng cam kết xuất hoá đơn VAT cho tiền thuê (ADR 0059) */
+            vatInvoiceSupported: boolean;
+            /** @description Số xe công khai ĐANG trong chu kỳ bảo dưỡng theo sổ bảo dưỡng (isMaintenanceOnSchedule) */
+            maintenanceOnScheduleCount: number;
+        };
+        ShopVehicleFilterCountsDto: {
+            /** @description serviceType=with_driver */
+            withDriver: number;
+            /** @description serviceType=long_term */
+            longTerm: number;
+            /** @description delivery=true */
+            delivery: number;
+            /** @description instantBook=true */
+            instantBook: number;
+            /** @description noCollateral=true */
+            noCollateral: number;
+            /** @description vatInvoice=true */
+            vatInvoice: number;
         };
         SlotUsageDto: {
             /** @description Số xe chưa xoá (điểm chặn tạo xe) */
@@ -74905,6 +74958,10 @@ export interface operations {
                 discount?: boolean;
                 /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
                 vatInvoice?: boolean;
+                /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
+                instantBook?: boolean;
+                /** @description Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
+                minRating?: 4 | 4.5 | 4.8;
                 /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
                 minSeats?: number;
                 /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
@@ -75594,6 +75651,10 @@ export interface operations {
                 discount?: boolean;
                 /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
                 vatInvoice?: boolean;
+                /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
+                instantBook?: boolean;
+                /** @description Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
+                minRating?: 4 | 4.5 | 4.8;
                 /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
                 minSeats?: number;
                 /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
@@ -76420,6 +76481,17 @@ export interface operations {
     PublicShopsController_getShopListings: {
         parameters: {
             query?: {
+                serviceType?: "self_drive" | "with_driver" | "long_term";
+                /** @description Chỉ xe giao tận nơi */
+                delivery?: boolean;
+                /** @description Chỉ xe miễn thế chấp */
+                noCollateral?: boolean;
+                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
+                vatInvoice?: boolean;
+                /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
+                instantBook?: boolean;
+                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                provinceCode?: string;
                 sort?: "recommended" | "newest" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;

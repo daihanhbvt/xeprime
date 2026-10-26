@@ -23,6 +23,14 @@ vi.mock('@/i18n/server-format', async () => {
   return { getAppFormat: async () => createTestAppFormat('vi') };
 });
 
+const NO_METRICS = {
+  sampleCount: 0,
+  responseRatePercent: null,
+  acceptKeepRatePercent: null,
+  responseMinutesMedian: null,
+  instantBook: false,
+};
+
 const BASE = {
   name: 'XePrime Sài Gòn',
   slug: 'xeprime-sai-gon',
@@ -39,11 +47,31 @@ const BASE = {
   ratingCount: 156,
   vehicleCount: 36,
   completedTripCount: 500,
-  responseRatePercent: 99,
+  metrics: NO_METRICS,
   branchCount: 4,
   serviceProvinceNames: ['Hồ Chí Minh', 'Hà Nội'],
+  serviceProvinces: [],
+  branches: [],
+  vehicleFilterCounts: {
+    withDriver: 0,
+    longTerm: 0,
+    delivery: 0,
+    instantBook: 0,
+    noCollateral: 0,
+    vatInvoice: 0,
+  },
+  trust: {
+    legalEntityType: null,
+    legalEntityVerifiedAt: null,
+    shopVerified: false,
+    contactVerified: false,
+    vatInvoiceSupported: false,
+    maintenanceOnScheduleCount: 0,
+  },
   deliveryAvailable: true,
-} as unknown as PublicShop;
+} satisfies PublicShop;
+
+const REVIEWED = { ...BASE.trust, shopVerified: true };
 
 const shop = (patch: Partial<PublicShop>): PublicShop => ({ ...BASE, ...patch });
 
@@ -56,15 +84,25 @@ afterEach(cleanup);
 const renderHeader = async (value: PublicShop) => render(await ShopHeader({ shop: value }));
 
 describe('ShopHeader — mặt tiền gian hàng (tuyến gói)', () => {
-  it('có dấu xác thực, nhãn Đối tác và các năng lực ĐẾM ĐƯỢC trên ảnh bìa', async () => {
-    await renderHeader(shop({ storefrontKind: STOREFRONT_KIND.SHOP, verified: true }));
+  it('có ảnh bìa, dấu xác thực, nhãn "Chủ gian hàng" và các điểm nổi bật ĐẾM ĐƯỢC', async () => {
+    await renderHeader(
+      shop({
+        storefrontKind: STOREFRONT_KIND.SHOP,
+        verified: true,
+        coverUrl: 'https://img.example/cover.jpg',
+        trust: REVIEWED,
+      }),
+    );
 
+    expect(screen.getByAltText('Ảnh bìa gian hàng XePrime Sài Gòn')).toBeTruthy();
     expect(screen.getByLabelText('Gian hàng đã được XePrime xác minh')).toBeTruthy();
-    expect(screen.getByText('Đối tác')).toBeTruthy();
-    expect(screen.getByText('Đã xác minh doanh nghiệp')).toBeTruthy();
+    expect(screen.getByText('Chủ gian hàng')).toBeTruthy();
+    expect(screen.getByText('Đã xác minh')).toBeTruthy();
     expect(screen.getByText('4 chi nhánh')).toBeTruthy();
-    expect(screen.getByText('Giao xe tận nơi')).toBeTruthy();
-    expect(screen.getByText('Đối tác từ Tháng 3 năm 2024')).toBeTruthy();
+    expect(screen.getByText('Hỗ trợ giao xe tận nơi')).toBeTruthy();
+    expect(screen.getByText('Đã tham gia từ Tháng 3 năm 2024')).toBeTruthy();
+    // Ô "Chi nhánh" chỉ có ở mặt tiền gian hàng.
+    expect(screen.getByText('Chi nhánh')).toBeTruthy();
   });
 
   /*
@@ -78,52 +116,116 @@ describe('ShopHeader — mặt tiền gian hàng (tuyến gói)', () => {
         verified: true,
         branchCount: 1,
         deliveryAvailable: false,
+        trust: REVIEWED,
       }),
     );
 
-    expect(screen.getByText('Đã xác minh doanh nghiệp')).toBeTruthy();
-    expect(screen.queryByText(/chi nhánh/)).toBeNull();
-    expect(screen.queryByText('Giao xe tận nơi')).toBeNull();
-  });
-});
-
-describe('ShopHeader — mặt tiền chủ xe cá nhân', () => {
-  it('không dấu xác thực, không ảnh bìa, không chip năng lực', async () => {
-    await renderHeader(shop({ coverUrl: 'https://img.example/cover.jpg' }));
-
-    expect(screen.queryByLabelText('Gian hàng đã được XePrime xác minh')).toBeNull();
-    expect(screen.getByText('Chủ xe cá nhân')).toBeTruthy();
-    expect(screen.getByText('Tham gia từ Tháng 3 năm 2024')).toBeTruthy();
-    // Ảnh bìa có trong dữ liệu nhưng KHÔNG được vẽ: dải bìa là ngôn ngữ của doanh nghiệp đã
-    // được xác minh, không phải của một người có vài chiếc xe.
-    expect(screen.queryByAltText(/Ảnh bìa/)).toBeNull();
-    expect(screen.queryByText('Đã xác minh doanh nghiệp')).toBeNull();
+    expect(screen.getByText('Đã xác minh')).toBeTruthy();
+    expect(screen.queryByText(/\d+ chi nhánh/)).toBeNull();
+    expect(screen.queryByText('Hỗ trợ giao xe tận nơi')).toBeNull();
+    expect(screen.queryByText(/Hỗ trợ phí đặt xe|24\/7/)).toBeNull();
   });
 });
 
 /*
- * Số điện thoại KHÔNG được xuất hiện trên trang công khai, và nút "Nhắn tin" của tuyến hoa hồng
- * cũng không — kênh đó mở sau khi khách gửi yêu cầu thuê. Hai bài dưới khoá cả hai lại, vì cả
- * hai đều là thứ rất dễ bị "tiện tay" thêm lại khi ai đó muốn trang trông đầy đủ hơn.
+ * ADR 0040 điều 5: trả tiền gói KHÔNG làm gian hàng thành "đã xác minh". Dấu xanh trên logo là dấu
+ * gian hàng tuyến gói (cùng dấu ở thẻ xe); chip "Đã xác minh" chỉ có khi phiếu duyệt đã được duyệt.
+ */
+describe('ShopHeader — chip "Đã xác minh" đọc phiếu duyệt, không đọc tuyến gói', () => {
+  it('gian hàng tuyến gói chưa được duyệt hồ sơ: có dấu logo, KHÔNG có chip', async () => {
+    await renderHeader(shop({ storefrontKind: STOREFRONT_KIND.SHOP, verified: true }));
+
+    expect(screen.getByLabelText('Gian hàng đã được XePrime xác minh')).toBeTruthy();
+    expect(screen.queryByText('Đã xác minh')).toBeNull();
+  });
+});
+
+describe('ShopHeader — mặt tiền chủ xe cá nhân', () => {
+  it('không dấu xác thực, không ảnh bìa, không ô chi nhánh', async () => {
+    await renderHeader(shop({ coverUrl: 'https://img.example/cover.jpg' }));
+
+    expect(screen.queryByLabelText('Gian hàng đã được XePrime xác minh')).toBeNull();
+    expect(screen.getByText('Chủ xe cá nhân')).toBeTruthy();
+    // Ảnh bìa có trong dữ liệu nhưng KHÔNG được vẽ: dải bìa là ngôn ngữ của doanh nghiệp đã
+    // được xác minh, không phải của một người có vài chiếc xe.
+    expect(screen.queryByAltText(/Ảnh bìa/)).toBeNull();
+    expect(screen.queryByText('Đã xác minh')).toBeNull();
+    expect(screen.queryByText('Chi nhánh')).toBeNull();
+  });
+});
+
+describe('ShopHeader — giới thiệu và số liệu', () => {
+  it('có giới thiệu thì hiện khối "Thông tin" kèm địa chỉ; không có thì không dựng khối', async () => {
+    await renderHeader(shop({ bio: 'Ba xe khu trung tâm.', address: '35 Lê Thánh Tôn' }));
+    expect(screen.getByText('Thông tin')).toBeTruthy();
+    expect(screen.getByText('Ba xe khu trung tâm.')).toBeTruthy();
+    expect(screen.getByText('Địa chỉ: 35 Lê Thánh Tôn')).toBeTruthy();
+
+    cleanup();
+    await renderHeader(shop({}));
+    expect(screen.queryByText('Thông tin')).toBeNull();
+  });
+
+  it('số đếm nhỏ hiện hai chữ số như bản vẽ, điểm hiện kèm sao', async () => {
+    await renderHeader(shop({ vehicleCount: 2, completedTripCount: 4, ratingAvg: '4.80' }));
+
+    expect(screen.getByText('02')).toBeTruthy();
+    expect(screen.getByText('04')).toBeTruthy();
+    expect(screen.getByText('Xe cho thuê')).toBeTruthy();
+    expect(screen.getByText('Chuyến đã hoàn thành')).toBeTruthy();
+    // Điểm đứng ở cả dòng meta dưới tên lẫn ô số liệu — đúng như bản vẽ.
+    expect(screen.getAllByText('4,8')).toHaveLength(2);
+  });
+
+  it('đủ mẫu ⇒ hai ô uy tín hiện phần trăm thật', async () => {
+    await renderHeader(
+      shop({
+        metrics: {
+          sampleCount: 12,
+          responseRatePercent: 98,
+          acceptKeepRatePercent: 85,
+          responseMinutesMedian: 40,
+          instantBook: false,
+        },
+      }),
+    );
+
+    expect(screen.getByText('Tỷ lệ phản hồi')).toBeTruthy();
+    expect(screen.getByText('98%')).toBeTruthy();
+    expect(screen.getByText('Nhận & giữ chuyến')).toBeTruthy();
+    expect(screen.getByText('85%')).toBeTruthy();
+  });
+
+  /*
+   * `null` nghĩa là chưa đủ dữ liệu (ADR 0045 điều 3). Ô biến mất — không có "0%" nào là lời vu
+   * khống về một gian hàng chưa ai hỏi thuê, và không có ô điểm "0" khi chưa ai chấm.
+   */
+  it('chưa có dữ liệu thì ô biến mất, không hiện 0', async () => {
+    await renderHeader(shop({ ratingAvg: '0', ratingCount: 0 }));
+
+    expect(screen.queryByText('Tỷ lệ phản hồi')).toBeNull();
+    expect(screen.queryByText('Nhận & giữ chuyến')).toBeNull();
+    expect(screen.queryByText('0%')).toBeNull();
+    expect(screen.queryByText('Đánh giá')).toBeNull();
+    expect(screen.getByText('Chưa có đánh giá')).toBeTruthy();
+  });
+});
+
+/*
+ * Số điện thoại KHÔNG được xuất hiện trên trang công khai, kể cả khi bản vẽ có — `PublicShopDto`
+ * không trả nó. Bài dưới khoá điều đó ở tầng vẽ, vì đây là thứ rất dễ bị "tiện tay" thêm lại.
  */
 describe('ShopHeader — liên hệ', () => {
   it('gian hàng mở hộp thư: có nút nhắn tin, KHÔNG có số điện thoại', async () => {
     await renderHeader(shop({ storefrontKind: STOREFRONT_KIND.SHOP, verified: true }));
 
     expect(screen.getByText('Liên hệ')).toBeTruthy();
-    expect(screen.queryByText(/09d{8}/)).toBeNull();
+    expect(screen.queryByText(/0\d{9}|0\d{3} \d{3} \d{3}/)).toBeNull();
     expect(screen.queryByText(/Gọi/)).toBeNull();
   });
 });
 
 describe('ShopHeader — dữ liệu thiếu', () => {
-  it('chưa có đánh giá thì nói "Chưa có đánh giá", không hiện 0 sao', async () => {
-    await renderHeader(shop({ ratingAvg: '0', ratingCount: 0 }));
-
-    expect(screen.getByText('Chưa có đánh giá')).toBeTruthy();
-    expect(screen.queryByText(/đánh giá\)/)).toBeNull();
-  });
-
   /*
    * Gian hàng chưa có xe công khai nào ⇒ `serviceProvinceNames` rỗng. Dòng địa bàn phải rơi về
    * tỉnh trong hồ sơ chứ không biến mất — một trang gian hàng không nói được mình ở đâu là một

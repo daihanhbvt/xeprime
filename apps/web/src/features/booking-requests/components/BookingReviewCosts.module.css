@@ -94,18 +94,18 @@
 
 .totalLabel {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .totalAmount {
   color: var(--xp-color-primary-hover);
-  font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h1);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-lead);
+  line-height: var(--xp-line-height-lead);
 }
 
 /* "Tiết kiệm X nhờ ưu đãi thời hạn" — chỉ nói về ưu đãi CAM KẾT của gói dài hạn. */
@@ -145,24 +145,24 @@
 }
 
 .otherLabel {
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
-  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .otherBody {
   margin: 0;
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .otherAmount {
   flex: none;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
-  font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-lg);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  font-weight: var(--xp-font-weight-medium);
 }

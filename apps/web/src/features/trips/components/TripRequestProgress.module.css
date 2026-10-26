@@ -12,9 +12,9 @@
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .steps {

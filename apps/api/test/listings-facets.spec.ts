@@ -42,13 +42,16 @@ let ownerId: string;
 let customerId: string;
 let tenantId: string;
 let branchId: string;
-/** sedan Toyota 5 chỗ xăng, bluetooth+gps, thuê giờ, giảm 10%, 600k, rating 5.00 (1 review). */
+/** sedan Toyota 5 chỗ xăng, bluetooth+gps, thuê giờ, giảm 10%, 600k, rating 5.00 (1 review), Đặt ngay tự lái. */
 let vSedan: string;
 /** suv Mazda 7 chỗ dầu, bluetooth+camera_360+sunroof, giao tận nơi, 1.2tr, rating 4.00. */
 let vSuv: string;
 /** mini Kia 4 chỗ xăng, không tính năng, miễn thế chấp + thuê giờ, 400k, chưa có review. */
 let vMini: string;
-/** cuv VinFast 5 chỗ điện, gps+screen, giao tận nơi + miễn thế chấp + giảm 5%, 900k, rating 5.00 (2 review). */
+/**
+ * cuv VinFast 5 chỗ điện, gps+screen, giao tận nơi + miễn thế chấp + giảm 5%, 900k, rating 5.00
+ * (2 review). Nhận cả tự lái lẫn có tài xế nhưng CHỈ bật Đặt ngay cho có tài xế.
+ */
 let vCuv: string;
 
 interface FacetVehicle {
@@ -63,6 +66,10 @@ interface FacetVehicle {
   noCollateral?: boolean;
   discount?: number;
   ratings?: readonly number[];
+  /** Dịch vụ xe nhận — mặc định chỉ tự lái (default của cột). */
+  serviceTypes?: readonly string[];
+  /** Dịch vụ bật tự động nhận chuyến ("Đặt ngay") — qua `vehicle_service_settings` như production. */
+  instantBook?: readonly string[];
 }
 
 async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
@@ -85,8 +92,21 @@ async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
       deliveryEnabled: v.delivery ?? false,
       discountPercent: v.discount ?? null,
       mainImageUrl: 'https://img.example/x.jpg',
+      ...(v.serviceTypes ? { serviceTypes: [...v.serviceTypes] } : {}),
     },
   });
+  // Snapshot `instant_book_service_types` do `syncFromVehicle` tự dựng từ bảng này.
+  if (v.instantBook?.length) {
+    await prisma.vehicleServiceSetting.createMany({
+      data: v.instantBook.map((serviceType) => ({
+        id: newId(),
+        tenantId,
+        vehicleId: id,
+        serviceType,
+        autoAcceptEnabled: true,
+      })),
+    });
+  }
   /*
    * "Miễn thế chấp" từ 20/08 là HỆ QUẢ của chính sách thuê hiệu lực, không còn là cờ trên xe —
    * nên muốn xe có nhãn đó thì phải cho nó một bản ghi đè chính sách ở chế độ `none`.
@@ -199,6 +219,7 @@ beforeAll(async () => {
     hourly: '90000',
     discount: 10,
     ratings: [5],
+    instantBook: [SERVICE_TYPE.SELF_DRIVE],
   });
   vSuv = await seedFacetVehicle({
     brand: 'Mazda',
@@ -230,6 +251,8 @@ beforeAll(async () => {
     noCollateral: true,
     discount: 5,
     ratings: [5, 5],
+    serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+    instantBook: [SERVICE_TYPE.WITH_DRIVER],
   });
 });
 
@@ -324,6 +347,39 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(ids).toHaveLength(2);
     expect(ids).toContain(vSedan);
     expect(ids).toContain(vMini);
+  });
+
+  maybe('instantBook: không chọn dịch vụ thì xe bật Đặt ngay cho ít nhất một dịch vụ', async () => {
+    const res = await service.search(sq({ instantBook: true }));
+    expect(res.data.map((v) => v.id).sort()).toEqual([vSedan, vCuv].sort());
+
+    const f = await service.facets(fq({ instantBook: true }));
+    expect(f.total).toBe(2);
+  });
+
+  maybe('instantBook + serviceType: xe phải bật Đặt ngay cho ĐÚNG dịch vụ đó', async () => {
+    // vCuv nhận tự lái nhưng chỉ tự nhận chuyến có tài xế ⇒ với khách tìm tự lái nó vẫn phải chờ duyệt.
+    const selfDrive = await service.search(
+      sq({ instantBook: true, serviceType: SERVICE_TYPE.SELF_DRIVE }),
+    );
+    expect(selfDrive.data.map((v) => v.id)).toEqual([vSedan]);
+
+    const withDriver = await service.search(
+      sq({ instantBook: true, serviceType: SERVICE_TYPE.WITH_DRIVER }),
+    );
+    expect(withDriver.data.map((v) => v.id)).toEqual([vCuv]);
+  });
+
+  maybe('minRating: chỉ xe có điểm >= mức, xe chưa có điểm bị loại', async () => {
+    const atLeast4 = await service.search(sq({ minRating: 4 }));
+    // vSuv đúng 4.00 vẫn lọt (>=); vMini chưa có review bị loại chứ không coi là 0 hay 5.
+    expect(atLeast4.data.map((v) => v.id).sort()).toEqual([vSedan, vSuv, vCuv].sort());
+
+    const atLeast48 = await service.search(sq({ minRating: 4.8 }));
+    expect(atLeast48.data.map((v) => v.id).sort()).toEqual([vSedan, vCuv].sort());
+
+    const f = await service.facets(fq({ minRating: 4.5 }));
+    expect(f.total).toBe(2);
   });
 
   /*
@@ -436,6 +492,12 @@ describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bả
     ['tìm chữ không khớp gì', sq({ q: 'khong-ton-tai-xyz' })],
     ['vehicleType', sq({ vehicleType: VEHICLE_TYPE.CAR })],
     ['serviceType', sq({ serviceType: SERVICE_TYPE.SELF_DRIVE })],
+    ['Đặt ngay (mọi dịch vụ)', sq({ instantBook: true })],
+    ['Đặt ngay + tự lái', sq({ instantBook: true, serviceType: SERVICE_TYPE.SELF_DRIVE })],
+    ['Đặt ngay + có tài xế', sq({ instantBook: true, serviceType: SERVICE_TYPE.WITH_DRIVER })],
+    ['điểm từ 4', sq({ minRating: 4 })],
+    ['điểm từ 4.5', sq({ minRating: 4.5 })],
+    ['điểm từ 4.8', sq({ minRating: 4.8 })],
     ['tỉnh không tồn tại', sq({ provinceCode: '00' })],
     [
       'gộp nhiều chiều',
@@ -444,6 +506,8 @@ describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bả
         fuelType: [FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC],
         priceMin: 800_000,
         delivery: true,
+        instantBook: true,
+        minRating: 4.5,
       }),
     ],
   ];

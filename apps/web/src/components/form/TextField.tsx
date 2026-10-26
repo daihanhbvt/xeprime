@@ -17,6 +17,8 @@ interface TextFieldProps<T extends FieldValues> {
   placeholder?: string;
   autoComplete?: string;
   prefix?: ReactNode;
+  /** Phần tử ở mép phải TRONG ô (vd nút bút mở khoá một ô đang khoá). */
+  suffix?: ReactNode;
   autoFocus?: boolean;
   disabled?: boolean;
   /** Hiện dấu bắt buộc của AntD. Ràng buộc thật vẫn nằm ở schema Yup, đây chỉ là dấu hiệu. */
@@ -49,6 +51,7 @@ export function TextField<T extends FieldValues>({
   placeholder,
   autoComplete,
   prefix,
+  suffix,
   autoFocus,
   disabled,
   required,
@@ -74,6 +77,7 @@ export function TextField<T extends FieldValues>({
     inputMode: type === 'tel' ? ('tel' as const) : undefined,
     autoFocus,
     prefix,
+    suffix,
     disabled,
     'aria-describedby': helpText ? describedById : undefined,
     'aria-invalid': fieldState.error ? true : undefined,

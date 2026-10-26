@@ -147,4 +147,19 @@ describe('toListingQueryParams — filter → query API', () => {
     expect(q.provinceCode).toBeNull();
     expect(q.province).toBe('Bà Rịa - Vũng Tàu');
   });
+
+  it('"Không cần xác nhận" và mức sao: sống trên URL, gửi đúng tham số, "Xoá bộ lọc" xoá được', () => {
+    const filters = parseFilters(new URLSearchParams('instantBook=1&minRating=4.5'));
+    expect(filters).toMatchObject({ instantBook: true, minRating: 4.5 });
+    const q = toListingQueryParams(filters);
+    expect(q.instantBook).toBe('1');
+    expect(q.minRating).toBe(4.5);
+    expect(FACET_FILTER_KEYS).toEqual(expect.arrayContaining(['instantBook', 'minRating']));
+  });
+
+  it('mức sao ngoài các mốc API nhận thì bị bỏ, không thành lỗi 400', () => {
+    expect(parseFilters(new URLSearchParams('minRating=3.7')).minRating).toBeUndefined();
+    expect(parseFilters(new URLSearchParams('minRating=abc')).minRating).toBeUndefined();
+    expect(parseFilters(new URLSearchParams('instantBook=0')).instantBook).toBeUndefined();
+  });
 });

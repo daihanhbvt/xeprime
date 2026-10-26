@@ -36,10 +36,10 @@
 .headAmount {
   margin: 0;
   color: var(--xp-color-price);
-  font-size: 28px;
-  font-weight: var(--xp-font-weight-bold);
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
 }
 
 /*

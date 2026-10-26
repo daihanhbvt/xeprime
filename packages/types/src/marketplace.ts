@@ -76,6 +76,13 @@ export interface MarketplaceFilters {
   discount?: boolean;
   /** Chỉ xe mà chủ xe hỗ trợ xuất hoá đơn VAT (thông tin chủ xe công bố — ADR 0059). */
   vatInvoice?: boolean;
+  /**
+   * Chỉ xe "Đặt ngay" (tự động nhận chuyến, không chờ chủ xe xác nhận). Có `serviceType` thì xe
+   * phải bật Đặt ngay cho ĐÚNG dịch vụ đó; không có thì bật cho ít nhất một dịch vụ.
+   */
+  instantBook?: boolean;
+  /** Điểm đánh giá tối thiểu (LISTING_MIN_RATING_VALUES) — xe chưa có điểm bị loại. */
+  minRating?: number;
   minSeats?: number;
   priceMin?: number;
   priceMax?: number;

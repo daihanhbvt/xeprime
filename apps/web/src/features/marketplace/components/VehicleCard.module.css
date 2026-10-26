@@ -148,12 +148,11 @@
 }
 
 .listTitle {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text);
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
 
 .badgeInstantBlue {
@@ -188,9 +187,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
 }
 
 .starIcon {
@@ -199,8 +198,7 @@
 }
 
 .listRatingCount {
-  color: var(--xp-color-text-tertiary);
-  font-weight: 400;
+  color: var(--xp-color-text-placeholder);
 }
 
 .listPrice {
@@ -210,21 +208,22 @@
 }
 
 .listOldPrice {
-  font-size: 13px;
-  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-disabled);
   text-decoration: line-through;
 }
 
+/* Cùng thang với thẻ lưới: giá 16/24 SemiBold vàng, đơn vị 14 xám. */
 .listCurrentPrice {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-primary);
 }
 
 .priceUnit {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-tertiary);
 }
 
 .listFavoriteBtn {
@@ -256,7 +255,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
   color: var(--xp-color-text-secondary);
   margin: 4px 0 0;
 }
@@ -266,7 +266,9 @@
   align-items: center;
   gap: 10px;
   margin: 8px 0;
+  padding: 0;
   flex-wrap: wrap;
+  list-style: none;
 }
 
 .specBox {
@@ -277,9 +279,10 @@
   border-radius: 8px;
   background: #fbfbfa;
   border: 1px solid #f0f0ee;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
 }
 
 .specBoxIcon {
@@ -304,33 +307,20 @@
   z-index: 2;
 }
 
+/* Chỉ số chủ xe (chỉ trang gian hàng) — đứng giữa chủ xe và "Xem chi tiết", Figma `20058:73312`. */
 .listMetrics {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  font-size: 12px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.metricItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.metricVal {
-  font-weight: 700;
-  color: var(--xp-color-text);
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 var(--xp-space-20);
 }
 
 .listDetailBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--xp-color-primary-strong);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
   text-decoration: none;
   z-index: 2;
   transition: color 0.16s ease;
@@ -341,6 +331,18 @@
 }
 
 @media (max-width: 860px) {
+  /* Hàng đáy hẹp: chỉ số xuống một dòng riêng, trải đều chiều ngang. */
+  .listBottomRow {
+    flex-wrap: wrap;
+    row-gap: var(--xp-space-12);
+  }
+
+  .listMetrics {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+  }
+
   .listCard {
     flex-direction: column;
     height: auto;
@@ -348,9 +350,6 @@
   .listMedia {
     width: 100%;
     height: 180px;
-  }
-  .listMetrics {
-    display: none;
   }
 }
 
@@ -591,6 +590,8 @@
   display: flex;
   min-width: 0;
   align-items: center;
+  /* Dòng chủ xe bám đáy thẻ để các thẻ cùng hàng thẳng nhau khi tên/tiện ích dài ngắn khác nhau. */
+  margin-top: auto;
   border-radius: var(--xp-border-radius-chip);
   color: inherit;
   gap: var(--xp-space-12);
@@ -669,13 +670,12 @@
   color: var(--xp-color-primary-hover);
 }
 
-/* ─── Chân thẻ: điểm đánh giá + giá ───────────────────────────────────────── */
+/* ─── Điểm đánh giá + giá — nằm TRÊN dòng chủ xe (Figma list v2) ───────────── */
 .footer {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
   gap: var(--xp-space-sm);
 }
 
@@ -716,12 +716,12 @@
   white-space: nowrap;
 }
 
-/* Số tiền — 20/30 SemiBold vàng; rê chuột thì đậm thêm một bậc (Figma thẻ đang rê). */
+/* Số tiền — 16/24 SemiBold vàng (Figma list v2 `21636:46969`); rê chuột thì đậm thêm một bậc. */
 .currentPrice b {
   color: var(--xp-color-primary);
-  font-size: 20px;
+  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 30px;
+  line-height: var(--xp-line-height-body-lg);
   transition: color 0.18s ease;
 }
 

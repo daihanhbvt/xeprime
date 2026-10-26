@@ -1,48 +1,63 @@
+/*
+ * Thẻ "Tự nhận xe" — Figma `19707:83510`: viền 1px `#d3a94d`, bo 16, đệm 16, các phần cách nhau 12,
+ * nền gradient `BG/primary-25` → trắng. Tiêu đề `16/24 Semibold`; mỗi cam kết là vòng tích xanh 24
+ * + chữ `14/22 Medium` `Text/Gray/medium` (khe 8); lối "Cách thức hoạt động" `14/22 Semibold` vàng
+ * kèm mũi tên trong đĩa 20 `BG/primary-low`.
+ */
 .card {
-  background: #fffdfa;
-  border: 1px solid #f6d899;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(214, 164, 57, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-accent);
+  border-radius: var(--xp-border-radius-card);
+  background: linear-gradient(
+    240.77deg,
+    var(--xp-color-primary-subtle) 0.77%,
+    var(--xp-color-bg-container) 102%
+  );
 }
 
 .title {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 700;
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text);
 }
 
 .list {
   list-style: none;
   padding: 0;
-  margin: 0 0 16px;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--xp-space-sm);
+  align-self: stretch;
 }
 
 .item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 20px;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
   color: var(--xp-color-text-secondary);
 }
 
 .checkIconWrap {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
   background: var(--xp-color-success-bg);
-  color: #12b76a;
+  color: var(--xp-color-success-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
-  margin-top: 1px;
 }
 
 .checkIcon {
@@ -52,27 +67,34 @@
 .link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #d6a439;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  color: var(--xp-color-primary);
   text-decoration: none;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .link:hover {
-  color: #ba8b26;
-  gap: 8px;
+  color: var(--xp-color-primary-hover);
 }
 
+/* Mũi tên trong đĩa tròn 20 `BG/primary-low` (`#fff5e5`). */
 .arrowIcon {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  font-size: 10px;
 }
 
 /*
- * Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72529`: tiêu đề `16px/Semibold` và lối "Cách thức
- * hoạt động" cùng một hàng (mũi tên trong đĩa 24 `BG/primary-low`), danh sách bên dưới; vòng tích
- * xanh 24. Nền chuyển từ `BG/primary-25` sang trắng, viền vàng đậm, đệm 16.
+ * Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72529`: lối "Cách thức hoạt động" lên cùng hàng
+ * với tiêu đề (mũi tên trong đĩa 24), danh sách bên dưới. Còn lại cùng khuôn với PC.
  */
 @media (max-width: 640px) {
   .card {
@@ -81,68 +103,32 @@
     align-items: center;
     gap: var(--xp-space-12) var(--xp-space-sm);
     padding: var(--xp-space-lg);
-    border-color: var(--xp-color-primary-accent);
     background: linear-gradient(
       247deg,
       var(--xp-color-primary-subtle) 0%,
       var(--xp-color-bg-container) 100%
     );
-    box-shadow: none;
-  }
-
-  .title {
-    margin: 0;
-    font-size: var(--xp-font-size-body-lg);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-body-lg);
   }
 
   .link {
     grid-column: 2;
     grid-row: 1;
-    gap: var(--xp-space-sm);
-    color: var(--xp-color-primary);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .link:hover {
-    gap: var(--xp-space-sm);
   }
 
   .arrowIcon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 24px;
     height: 24px;
-    border-radius: var(--xp-border-radius-pill);
-    background: var(--xp-color-primary-light);
+    font-size: 12px;
   }
 
   .list {
     grid-column: 1 / -1;
-    gap: var(--xp-space-sm);
-    margin: 0;
-  }
-
-  .item {
-    align-items: center;
-    gap: var(--xp-space-sm);
-    font-weight: var(--xp-font-weight-medium);
-  }
-
-  .checkIconWrap {
-    width: 24px;
-    height: 24px;
-    margin-top: 0;
-    font-size: 12px;
   }
 }
 
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
-   Bản sáng là thẻ kem viền vàng nhạt; giữ ý "thẻ viền vàng" nhưng trên bề mặt tối của trang. */
+   Bản sáng là thẻ kem viền vàng; giữ ý "thẻ viền vàng" nhưng trên bề mặt tối của trang. */
 :global([data-theme='dark']) .card {
   background: var(--xp-color-bg-container);
   border-color: var(--xp-color-primary-muted);
-  box-shadow: none;
 }

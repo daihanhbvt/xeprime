@@ -618,6 +618,14 @@ export const LISTING_AMENITY = {
 export type ListingAmenity = (typeof LISTING_AMENITY)[keyof typeof LISTING_AMENITY];
 export const LISTING_AMENITY_VALUES = Object.values(LISTING_AMENITY) as ListingAmenity[];
 
+/**
+ * Các mức "điểm đánh giá từ" mà bộ lọc chợ nhận (`minRating` của `GET /public/listings`):
+ * chỉ xe có `rating_avg >= mức`, xe chưa có điểm bị loại. Danh sách ĐÓNG — server `@IsIn` đúng
+ * mảng này, nên giá trị tự do trên URL không thành một phép lọc lạ (cũng không phình khoá cache).
+ */
+export const LISTING_MIN_RATING_VALUES = [4, 4.5, 4.8] as const;
+export type ListingMinRating = (typeof LISTING_MIN_RATING_VALUES)[number];
+
 export const LISTING_AMENITY_LABEL: Readonly<Record<ListingAmenity, string>> = {
   [LISTING_AMENITY.HOURLY]: 'Thuê theo giờ',
   [LISTING_AMENITY.DELIVERY]: 'Giao xe tận nơi',

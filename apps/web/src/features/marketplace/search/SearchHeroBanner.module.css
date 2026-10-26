@@ -51,7 +51,10 @@
   display: flex;
   align-items: center;
   height: 52px;
-  background: #ffffff;
+  /* Token, không phải #fff: chữ trong thanh (ngày giờ, từ khoá) đi theo token nên ở giao diện tối
+     nó sáng màu — nền trắng cứng làm chữ biến mất. Viền giữ thanh tách khỏi nền hero tối. */
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
   border-radius: 9999px;
   padding: 4px 6px 4px 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);

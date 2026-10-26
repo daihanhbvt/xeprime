@@ -155,6 +155,10 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   }, [catalog, filters.vehicleType]);
   const featureItems = catalog[CATALOG_TYPE.VEHICLE_FEATURE];
   const { brandLabel } = useCatalogLabels();
+  const brandIcon = useMemo(
+    () => new Map(catalog[CATALOG_TYPE.VEHICLE_BRAND].map((b) => [b.key.toLowerCase(), b.iconUrl])),
+    [catalog],
+  );
 
   const countOf = useMemo(() => {
     const maps = {
@@ -305,7 +309,12 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
                 label={brandLabel(b.key) ?? b.key}
                 count={facets ? b.count : null}
                 active={draft.brand.includes(b.key)}
-                icon={<BrandMark brand={b.key} />}
+                icon={
+                  <BrandMark
+                    label={brandLabel(b.key) ?? b.key}
+                    iconUrl={brandIcon.get(b.key.toLowerCase())}
+                  />
+                }
                 onToggle={() => setDraft((d) => ({ ...d, brand: toggle(d.brand, b.key) }))}
               />
             ))}

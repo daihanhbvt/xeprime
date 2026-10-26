@@ -1,0 +1,12 @@
+/* Hộp cảnh báo đặt sát giờ — chữ cùng thang với các thẻ của màn Xem lại (Figma 19727:55409):
+   tiêu đề 14/22 SemiBold, nội dung 14/22. Alert AntD mặc định để tiêu đề 16 khi có mô tả. */
+.notice :global(.ant-alert-title) {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+.notice :global(.ant-alert-description) {
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}

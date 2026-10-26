@@ -104,7 +104,7 @@
     "quickChipsLabel": "Loại xe và dịch vụ",
     "allServices": "Tất cả",
     "filters": "Bộ lọc",
-    "sortLabel": "Sắp xếp:",
+    "sortLabel": "Sắp xếp",
     "sortAriaLabel": "Sắp xếp kết quả",
     "dateRange": "{from} – {to}",
     "dateRangeWithDays": "{from} – {to} ({days, plural, other {# ngày}})",
@@ -150,7 +150,8 @@
       "verified": "Gian hàng đã được XePrime xác minh",
       "vehicleCount": "{count, plural, other {# xe}}",
       "searchAll": "Xem mọi xe khớp “{q}”"
-    }
+    },
+    "viewMode": "Chế độ hiển thị"
   },
   "filterPanel": {
     "title": "Bộ lọc",
@@ -193,7 +194,35 @@
     "priceUnder": "Dưới {max}",
     "priceOver": "Trên {min}",
     "vatInvoice": "Xuất hoá đơn VAT",
-    "labelWithCount": "{label} ({count})"
+    "labelWithCount": "{label} ({count})",
+    "modal": {
+      "service": "Loại hình thuê xe",
+      "bodyType": "Kiểu xe",
+      "priceRange": "Khoảng giá",
+      "seats": "Số chỗ ngồi",
+      "fuelType": "Nhiên liệu",
+      "all": "Tất cả",
+      "noBrands": "Chưa có hãng xe nào cho loại xe này.",
+      "priceNote": "Giá thuê theo ngày, chưa gồm phí phát sinh.",
+      "pickupMethod": "Hình thức nhận xe",
+      "deliveryOption": "Giao xe tận nơi",
+      "offers": "Ưu đãi",
+      "offersHint": "Lọc xe có ưu đãi đang được chủ xe công bố.",
+      "hasOffer": "Có ưu đãi",
+      "instantBook": "Không cần xác nhận",
+      "instantBookHint": "Chỉ hiển thị xe đặt được ngay, không chờ chủ xe duyệt.",
+      "policyNote": "Đây là tiêu chí tìm kiếm, không phải cam kết miễn cọc, hoàn tiền hay bảo hiểm. Chính sách thực tế được xác nhận tại chi tiết xe.",
+      "ratingFrom": "Từ {rating, number, ::.0} sao",
+      "rentalTerms": "Điều kiện thuê",
+      "removeChip": "Bỏ tiêu chí {label}",
+      "chips": {
+        "delivery": "Giao xe tận nơi",
+        "discount": "Có ưu đãi",
+        "instantBook": "Không cần xác nhận",
+        "noCollateral": "Không cọc tài sản",
+        "vatInvoice": "Xuất hoá đơn VAT"
+      }
+    }
   },
   "searchDialog": {
     "title": "Tìm kiếm",

@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   z-index: 1000;
-  background: #ffffff;
+  /* Token, không phải #fff: chữ, chip và logo trong thanh đều đổi theo giao diện tối. */
+  background: var(--xp-color-bg-container);
   border-bottom: 1px solid var(--xp-color-border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 10px 0 12px;
@@ -61,7 +62,7 @@
 
 .searchBar:focus-within {
   border-color: var(--xp-color-primary);
-  background: #ffffff;
+  background: var(--xp-color-bg-container);
 }
 
 .inputGroup {

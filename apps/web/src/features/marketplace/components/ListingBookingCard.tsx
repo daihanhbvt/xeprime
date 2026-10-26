@@ -354,11 +354,19 @@ export function ListingBookingCard({
             {basePrice != null && finalDailyPrice != null ? (
               <>
                 <div className={styles.priceGroup}>
-                  {discount > 0 && <span className={styles.oldPrice}>{fmt.money(basePrice)}</span>}
-                  <span className={styles.mainPrice}>{fmt.money(finalDailyPrice)}</span>
+                  {/* Giá niêm yết rút gọn ("1.050k", "870k") như thẻ xe ở trang kết quả (Figma 19707:84080);
+                      mọi khoản tiền của chuyến bên dưới vẫn hiện đầy đủ bằng `fmt.money`. */}
+                  {discount > 0 && (
+                    <span className={styles.oldPrice}>
+                      {fmt.moneyCompact(basePrice, { price: true })}
+                    </span>
+                  )}
+                  <span className={styles.mainPrice}>
+                    {fmt.moneyCompact(finalDailyPrice, { price: true })}
+                  </span>
                   <span className={styles.unit}>{unitLabel}</span>
                 </div>
-                {discount > 0 && <DiscountTag percent={discount} />}
+                {discount > 0 && <DiscountTag percent={discount} className={styles.discountPill} />}
               </>
             ) : (
               <span className={styles.onRequest}>{tFlow('price.onRequest')}</span>
@@ -694,7 +702,10 @@ export function ListingBookingCard({
                       line.percent != null
                         ? `${line.percent}%`
                         : line.unitAmount && line.quantity
-                          ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                          ? t('costs.feeUnitLine', {
+                              quantity: line.quantity,
+                              unit: fmt.money(line.unitAmount),
+                            })
                           : null,
                       line.partnerName,
                     ]
@@ -757,7 +768,7 @@ export function ListingBookingCard({
 
             {/* Tiền giữ chỗ (D + S + IV + IP − P) và phần còn lại trả tay chủ xe — ADR 0032 · 0044. */}
             {cost.holdAmount ? (
-              <div className={styles.priceLineTop}>
+              <div className={cx(styles.priceLineTop, styles.holdLine)}>
                 <div className={styles.priceLabel}>
                   <span>{tPrice('holdAmount')}</span>
                   <span className={styles.priceSubLabel}>{tPrice('holdHint')}</span>
