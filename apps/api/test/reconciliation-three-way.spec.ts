@@ -373,7 +373,19 @@ describe('Công thức ba vế đóng trên một ngày có đủ năm loại gi
     );
     expect(withBalance.bankBalanceEod).toBe(String(eod));
     expect(withBalance.variance).toBe('0');
-    expect(withBalance.walletDrift.wallets).toBe(0);
+    /*
+     * `walletDrift` đếm TOÀN SÀN, mà DB dùng chung với spec khác đang ghi ví dở dang (hoặc cố ý
+     * làm lệch để kiểm bộ phát hiện) — khẳng định nó bằng 0 là đỏ vì lý do không liên quan.
+     * Bất biến ADR 0023 điều 6 kiểm trên CHÍNH ví của spec: tổng bút toán = số dư + treo.
+     */
+    const ownWallet = await prisma.wallet.findUniqueOrThrow({ where: { id: walletId } });
+    const ownEntries = await prisma.walletEntry.aggregate({
+      where: { walletId },
+      _sum: { amount: true },
+    });
+    expect(ownEntries._sum.amount?.toFixed(0)).toBe(
+      ownWallet.balance.add(ownWallet.pendingWithdrawAmount).toFixed(0),
+    );
   });
 });
 
