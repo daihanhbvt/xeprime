@@ -19,7 +19,13 @@ import {
   type OccupancySourceType,
   SUPPORT_CAPABILITY,
 } from '@xeprime/types';
-import { CurrentTenant, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -35,6 +41,7 @@ import {
   CheckConflictDto,
   CheckConflictResultDto,
 } from './dto/calendar.dto';
+import { VehicleBusyDaysDto, VehicleBusyDaysQueryDto } from './dto/busy-days.dto';
 import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -246,6 +253,42 @@ export class CalendarController {
         : null,
       discountPercent: vehicle.discountPercent,
     });
+  }
+
+  /**
+   * Lịch bận theo ngày của MỘT xe của gian hàng — cho ô chọn thời gian của luồng đặt hộ, để ngày đã
+   * kín bị khoá (gạch chéo) y như phía khách. Cửa công khai (`/public/booking-requests/busy-days`)
+   * chỉ trả cho xe đang lên chợ; xe nội bộ cũng nhận đơn lập tay nên cần cửa này, scope theo TENANT.
+   *
+   * Cùng phép tính với phía khách (`OccupancyService.listBusyDays`) — hai luồng tô một chiếc xe y
+   * hệt nhau. Cùng quyền với báo giá nội bộ: dữ liệu này chỉ phục vụ việc lập đơn. Xe ngoài phạm vi
+   * chi nhánh được giao trả 404 như xe của gian hàng khác (ADR 0052).
+   *
+   * ADR 0006: preview cho UX — constraint lúc tạo đơn mới là chốt chặn.
+   */
+  @Get('busy-days')
+  @RequirePermissions(PERMISSION.BOOKING_CREATE)
+  @ApiOperation({
+    summary: 'Lịch bận theo ngày của một xe của gian hàng (tô ô chọn thời gian thuê)',
+  })
+  @ApiOkResponse({ type: VehicleBusyDaysDto })
+  async busyDays(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: VehicleBusyDaysQueryDto,
+  ): Promise<VehicleBusyDaysDto> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: query.vehicleId,
+        tenantId: tenant.tenantId,
+        deletedAt: null,
+        branchId: resolveBranchScope(undefined, tenant.allowedBranchIds),
+      },
+      select: { id: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy xe' });
+    }
+    return this.occupancy.listBusyDays(vehicle.id, query.from, query.to);
   }
 
   /**

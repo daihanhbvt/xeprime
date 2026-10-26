@@ -41,6 +41,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { StaffBookingDialog } from '@/features/booking-requests/components/StaffBookingDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-booking';
 import { APP_TIME_ZONE, dayjs, type Dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { priceMarkerKey, useCalendarData } from '../hooks/use-calendar-data';
@@ -149,7 +150,8 @@ export function CalendarScheduler() {
   const t = useTranslations('Calendar');
 
   const canView = has(PERMISSION.CALENDAR_VIEW);
-  const canCreate = has(PERMISSION.BOOKING_CREATE);
+  // Lập đơn tay: quyền + tuyến gói. Chủ xe cá nhân chỉ còn "Khoá lịch" cho chuyến ngoài chợ.
+  const canCreate = useCanCreateBooking();
   const canBlock = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
   /*
    * Phiên hỗ trợ gian hàng (ADR 0050 §13): `vehicles.update` của phiên là để sửa thông tin/vận hành

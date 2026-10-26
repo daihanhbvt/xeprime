@@ -53,13 +53,6 @@
   flex: 1;
 }
 
-.stepHint {
-  margin: 0;
-  font-size: var(--xp-font-size);
-  line-height: var(--xp-line-height);
-  color: var(--xp-color-text-secondary);
-}
-
 .fieldLabel {
   display: block;
   font-size: var(--xp-font-size-sm);
@@ -126,21 +119,6 @@
   margin: 0;
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
-}
-
-/* Ngày đã chọn (ở bước liên hệ) + nút đổi */
-.dateSummary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-gold-wash);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-color-text);
 }
 
 /* ── Hình thức nhận xe ─────────────────────────────────────────────────── */
@@ -267,42 +245,6 @@
   font-size: var(--xp-font-size-sm);
 }
 
-/* ── Bước xác nhận ─────────────────────────────────────────────────────── */
-
-.reviewList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin: 0;
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  min-width: 0;
-}
-
-.reviewRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
-.reviewRow dt {
-  flex: none;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-}
-
-.reviewRow dd {
-  margin: 0;
-  font-weight: 600;
-  color: var(--xp-color-text);
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
 /* ── Tiêu đề của bước chen giữa (bằng lái) ───────────────────────────────── */
 
 .otpTitle {
@@ -344,6 +286,35 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--xp-space-sm);
+}
+
+/*
+ * Dòng tổng của luồng ĐẶT HỘ — cùng hình thái thanh tổng của khách (`BookingPriceSummary` `.bar`).
+ * Không có nút "Chi tiết": bảng chi tiết của luồng này luôn mở ở cuối thân bước.
+ */
+.staffBar {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.staffBarLabel {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.staffBarAmount {
+  font-size: var(--xp-font-size-h4);
+  font-weight: 700;
+  color: var(--xp-color-price);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ── Màn kết (thành công / trùng lặp) ──────────────────────────────────── */

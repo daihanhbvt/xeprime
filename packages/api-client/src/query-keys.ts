@@ -81,6 +81,12 @@ export const queryKeys = {
     block: (id: string) => ['calendar', 'block', id] as const,
     /** Báo giá nội bộ cho luồng Đặt xe trên lịch. */
     quote: (params: QueryParams) => ['calendar', 'quote', params] as const,
+    /**
+     * Lịch bận theo ngày của MỘT xe cho ô chọn thời gian của luồng đặt hộ. Dưới nhánh `calendar`
+     * để mọi lần tạo đơn / khoá xe (vốn làm mới cả nhánh) tô lại ngay ngày vừa kín.
+     */
+    busyDays: (vehicleId: string, from: string, to: string) =>
+      ['calendar', 'busy-days', vehicleId, from, to] as const,
     /** Bản ghi đè giá theo ngày của MỘT xe (dialog đặt giá). */
     vehicleDailyPrices: (vehicleId: string, params: QueryParams) =>
       ['calendar', 'vehicle-daily-prices', vehicleId, params] as const,

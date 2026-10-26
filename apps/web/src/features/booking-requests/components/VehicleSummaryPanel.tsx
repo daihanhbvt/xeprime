@@ -36,10 +36,17 @@ interface VehicleSummaryPanelProps {
   /** Gói dài hạn đang chọn — có gói thì hiện giá gói thật thay cho giá cơ sở /tháng. */
   packageMonths?: number | null;
   /**
-   * Mobile: thu thành thẻ gọn (ảnh nhỏ cạnh tên, bỏ điểm nhận + bảng thông số). Chỉ luồng của KHÁCH
-   * bật — khách vừa rời trang chi tiết xe; nhân viên gian hàng tạo đơn hộ thì chưa thấy những thứ đó.
+   * Mobile: thu thành thẻ gọn (ảnh nhỏ cạnh tên, bỏ điểm nhận + bảng thông số). Cả hai luồng đặt xe
+   * bật: khách vừa rời trang chi tiết xe, còn gian hàng đặt hộ chính chiếc xe của mình — và điểm nhận
+   * xe đã nằm ngay trong lựa chọn "Nhận tại điểm hẹn" bên dưới. Để panel đầy đủ thì trên điện thoại
+   * biểu mẫu bị đẩy xuống dưới cả một màn hình.
    */
   compactOnMobile?: boolean;
+  /**
+   * Thẻ gian hàng (điểm, số chuyến, "Xem gian hàng") — `false` ở luồng đặt hộ: người đang đặt CHÍNH
+   * LÀ gian hàng đó, thẻ chào hàng chỉ chiếm chỗ của phần thao tác.
+   */
+  showShop?: boolean;
 }
 
 /**
@@ -64,6 +71,7 @@ export function VehicleSummaryPanel({
   serviceType,
   packageMonths = null,
   compactOnMobile = false,
+  showShop = true,
 }: VehicleSummaryPanelProps) {
   const t = useTranslations('BookingRequests.flow');
   const dl = useDomainLabel();
@@ -233,31 +241,33 @@ export function VehicleSummaryPanel({
             chính panel này trên CÙNG một phần tử sẽ phụ thuộc thứ tự nạp CSS Module giữa hai
             file — không đảm bảo được.
           */}
-          <div className={styles.shop}>
-            <ShopQuickInfoCard
-              shop={{
-                name: listing.shopName,
-                slug: listing.shopSlug,
-                logoUrl: listing.shopLogoUrl,
-                verified: listing.shopVerified,
-                ratingAvg: listing.shopRatingAvg,
-                ratingCount: listing.shopRatingCount,
-                completedTripCount: listing.shopCompletedTripCount,
-              }}
-              metrics={listing.shopMetrics}
-              variant="compact"
-              actions={
-                <Link
-                  href={shopPath.detail(listing.shopSlug)}
-                  className={styles.shopLink}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t('panel.viewShop')}
-                </Link>
-              }
-            />
-          </div>
+          {showShop ? (
+            <div className={styles.shop}>
+              <ShopQuickInfoCard
+                shop={{
+                  name: listing.shopName,
+                  slug: listing.shopSlug,
+                  logoUrl: listing.shopLogoUrl,
+                  verified: listing.shopVerified,
+                  ratingAvg: listing.shopRatingAvg,
+                  ratingCount: listing.shopRatingCount,
+                  completedTripCount: listing.shopCompletedTripCount,
+                }}
+                metrics={listing.shopMetrics}
+                variant="compact"
+                actions={
+                  <Link
+                    href={shopPath.detail(listing.shopSlug)}
+                    className={styles.shopLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t('panel.viewShop')}
+                  </Link>
+                }
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </aside>

@@ -580,5 +580,102 @@
     "lateCancel": "If the customer cancels after the free window, the whole owner's share of the reservation payment (the holding commitment calculated on the rental) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
     "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time — approval will fail. Contact the customer to arrange it directly.",
     "longTermPickPickup": "Pick a pickup time to see how long the customer has to pay. The reservation QR code is only sent to the customer after you confirm the schedule and approve."
+  },
+  "staffFlow": {
+    "title": "Book for a customer",
+    "pickVehicleTitle": "Choose a vehicle for the booking",
+    "changeVehicle": "Choose another vehicle",
+    "journey": {
+      "trip": "Choose trip",
+      "review": "Customer & confirm",
+      "created": "Booking created"
+    },
+    "trip": {
+      "packageLabel": "Package",
+      "packageGroupLabel": "Long-term package",
+      "packageHint": "Choose a package to get a price.",
+      "pickupTimeLabel": "Pick-up time",
+      "pickupTimeField": "Pick-up date and time",
+      "returnDerived": "Return: {date} — counted in calendar months.",
+      "returnPending": "Choose a package and pick-up time to see the return date.",
+      "selfHint": "The customer picks the vehicle up at your location",
+      "deliveryHint": "Bring the vehicle to the customer's address",
+      "deliveryAddressLabel": "Delivery address",
+      "deliveryAddressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
+      "deliveryFeeLabel": "Delivery fee",
+      "deliveryFeeLater": "Set later",
+      "deliveryFeeNote": "Agree the fee with the customer, then add it to the booking with “Update delivery fee”.",
+      "driverPickupLabel": "Customer pick-up address",
+      "driverPickupPlaceholder": "123 Le Loi, District 1, HCMC",
+      "destinationLabel": "Destination",
+      "destinationPlaceholder": "Da Lat, Lam Dong",
+      "noPrice": "This vehicle has no daily price yet — you will enter the rental amount in the next step.",
+      "priceTitle": "Estimate for the selected period",
+      "packagePriceTitle": "{months, plural, one {# month} other {# months}} package price",
+      "barTotal": "Rental total",
+      "barEstimate": "Estimate",
+      "barChooseTime": "Choose a time to see the price",
+      "barChoosePackage": "Choose a package to see the price",
+      "barNoPrice": "Enter the rental amount in the next step",
+      "packageRequired": "Choose a long-term package before continuing."
+    },
+    "review": {
+      "title": "Review and create the booking",
+      "description": "Check the trip, enter the customer details, then create the booking. The vehicle is held as soon as the booking exists.",
+      "selfPickupBranch": "At the branch holding the vehicle",
+      "customer": {
+        "title": "Customer details",
+        "description": "The name and phone number on the booking — used for contact and the contract.",
+        "name": "Full name",
+        "namePlaceholder": "Nguyen Van A",
+        "phone": "Phone number",
+        "phonePlaceholder": "0901234567",
+        "noteLabel": "Internal note (optional)",
+        "notePlaceholder": "E.g. returning customer, needs a child seat"
+      },
+      "costs": {
+        "title": "Rental",
+        "systemNote": "Calculated by the system (includes per-day prices and long-term discounts, if any).",
+        "noPrice": "This vehicle has no daily price yet — enter the amount agreed with the customer.",
+        "baseAmount": "Rental amount (whole period)",
+        "deposit": "Deposit collected directly",
+        "depositHint": "What the customer leaves with you at pick-up, recorded on the booking to check at return."
+      },
+      "submit": {
+        "cta": "Create booking",
+        "hint": "The booking is created straight away as Reserved."
+      },
+      "next": {
+        "title": "After the booking is created",
+        "body": "The vehicle is blocked on the calendar for this customer right away. You collect the rental and the deposit directly from the customer at pick-up."
+      }
+    },
+    "validation": {
+      "nameRequired": "Enter the customer's name",
+      "nameMax": "Customer name can be at most {max} characters",
+      "phoneRequired": "Enter the customer's phone number",
+      "phoneInvalid": "Invalid phone number",
+      "pickupRequired": "Choose a pick-up time",
+      "returnRequired": "Choose a return time",
+      "returnAfterPickup": "Return time must be after pick-up time",
+      "deliveryAddressRequired": "Enter the delivery address",
+      "driverPickupRequired": "Enter the customer pick-up address",
+      "destinationRequired": "Enter a destination for an intercity route",
+      "addressMax": "Address can be at most {max} characters",
+      "noteMax": "Note can be at most {max} characters",
+      "amountMin": "Amount cannot be negative",
+      "baseAmountRequired": "This vehicle has no price — enter the rental amount before creating the booking."
+    },
+    "scheduleConflict": "The vehicle was just booked for this time. Click “Edit” to choose another period.",
+    "deliveryNoteLine": "Delivery to: {address}",
+    "done": {
+      "title": "Booking created",
+      "lead": "The vehicle is held for the customer. The calendar behind updates by itself.",
+      "codeLabel": "Booking code:",
+      "copyCode": "Copy booking code",
+      "total": "Rental total",
+      "openBooking": "Open booking",
+      "close": "Close"
+    }
   }
 }

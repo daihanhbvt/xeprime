@@ -9,7 +9,6 @@ import { useState } from 'react';
 import {
   BOOKING_LIST_PRESET,
   BOOKING_STATUS_SELECTABLE_VALUES,
-  PERMISSION,
   type BookingListPreset,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -19,12 +18,12 @@ import { ALL_FILTER } from '@/constants/filters';
 import { bookingPath, ROUTES } from '@/constants/routes';
 import { withBranchReturn } from '@/features/branches/branch-link';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
-import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
 import { StaffBookingDialog } from '@/features/booking-requests/components/StaffBookingDialog';
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
+import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-booking';
 import { useBookings } from '@/features/bookings/hooks/use-bookings';
 import type { BookingFilters, BookingSort } from '@/features/bookings/types';
 
@@ -45,7 +44,6 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { has } = usePermissions();
   const t = useTranslations('Bookings');
   const label = useDomainLabel();
   const { filters, setFilters } = useBookingFilters();
@@ -95,7 +93,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  const canCreate = has(PERMISSION.BOOKING_CREATE);
+  const canCreate = useCanCreateBooking();
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: BOOKINGS_DEFAULT_LIMIT, total: 0, hasNext: false };
   const hasFilters = Boolean(filters.q || filters.status || filters.branchId || filters.serviceType);
