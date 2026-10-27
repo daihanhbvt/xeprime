@@ -90,11 +90,15 @@ Cổng chỉ là UX — server tự chặn: gửi yêu cầu thuê ⇒ `PHONE_NO
 
 ## 5. Đặt xe (khách)
 
-Chọn xe → "Yêu cầu thuê" → bottom-sheet (mobile) / modal (desktop):
+Chọn xe → chọn chuyến ở **thẻ đặt xe** của trang chi tiết (`ListingBookingCard`: dịch vụ, thời gian —
+lịch khoá ngày xe đã kín, địa chỉ giao/đón, gói dài hạn, mã, bảo hiểm) → "Chọn thuê" → bottom-sheet
+(mobile) / modal (desktop). Từ 27/10/2026 hộp KHÔNG còn bước "Chuyến đi": thẻ chỉ mở hộp khi chuyến
+đã đủ (thiếu địa chỉ thì mở hộp chọn địa chỉ, thiếu ngày thì nhắc ngay ở thẻ), và muốn đổi chuyến thì
+khách đóng hộp, chọn lại ở thẻ.
 
-- **Chuyến đi:** thời gian (prefill từ bộ lọc "Tìm xe khả dụng"), dịch vụ, địa chỉ giao/đón, gói dài
-  hạn. "Tiếp tục" → kiểm dữ liệu + `POST /public/booking-requests/check-availability` (preview — chốt
-  thật là constraint lúc duyệt, ADR 0006).
+- **Kiểm khi mở:** hộp tự kiểm dữ liệu + `POST /public/booking-requests/check-availability` (preview —
+  chốt thật là constraint lúc duyệt, ADR 0006). Khung giờ bận / dữ liệu sai ⇒ lời báo + "Chọn lại
+  chuyến" (đóng hộp); lỗi mạng ⇒ thêm "Thử lại".
 - **Chưa đăng nhập:** lưu **bản nháp** rồi mở hộp đăng nhập ngữ cảnh đặt xe (có link "Đăng ký ngay";
   đăng ký xong không hiện màn chào mừng mà quay lại chuyến).
 - **[Bằng lái]** nếu thuê tự lái/dài hạn và bằng chưa hợp lệ cho chuyến (ADR 0057).
@@ -114,7 +118,7 @@ Chọn xe → "Yêu cầu thuê" → bottom-sheet (mobile) / modal (desktop):
 | Đi tiếp = | kiểm lại dữ liệu + khung giờ → bằng lái → Xác nhận; mã khuyến mãi đánh giá lại một lần cho tài khoản vừa vào; ô điều khoản bỏ tick. **Không tự gửi** |
 | Xoá khi | gửi thành công · khách đóng hộp · luồng đã đi tiếp |
 
-Lỗi lúc gửi: 401 (phiên vừa hết) ⇒ về bước Chuyến đi + mời đăng nhập lại; `PHONE_NOT_VERIFIED` ⇒ làm
+Lỗi lúc gửi: 401 (phiên vừa hết) ⇒ lời mời đăng nhập (giữ bản nháp) + mở hộp đăng nhập lại; `PHONE_NOT_VERIFIED` ⇒ làm
 mới `/auth/me` (cổng §4 hiện ra) + báo lỗi; mã lỗi bằng lái ⇒ bước bằng lái.
 
 Server (`BookingRequestsService.submitPublic(dto, customerUserId)`): tên/SĐT/email đọc từ tài khoản;
@@ -187,7 +191,7 @@ cd apps/web && npx vitest run src/features/auth src/features/booking-requests sr
   `REALM_NOT_ALLOWED`, trường liên hệ của app cũ bị bỏ qua chứ không 400.
 - `RequestBookingModal.test.tsx`: bản nháp, quay lại sau đăng nhập, vòng 401 với cache cũ, không tự gửi.
 
-Thử tay (dev): (1) mở một xe → "Yêu cầu thuê" → chọn ngày → "Tiếp tục" khi chưa đăng nhập → đăng ký
+Thử tay (dev): (1) mở một xe → chọn ngày ở thẻ đặt xe → "Chọn thuê" khi chưa đăng nhập → đăng ký
 trong hộp (mã test) → quay lại đúng chuyến, sang Xác nhận, tự bấm gửi. (2) Làm lại với Google → quay
 về trang xe, hộp tự mở lại với dữ liệu cũ → cổng xác minh SĐT → đi tiếp. (3) Site partner: mời một
 SĐT → sao chép liên kết → đăng ký tài khoản đối tác bằng đúng số đó ở cửa sổ ẩn danh → đồng ý. Tài

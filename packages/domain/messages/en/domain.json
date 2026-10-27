@@ -1176,6 +1176,7 @@
       "contact_reveal": "Reveal customer contact on booking",
       "delivery_fee_update": "Update delivery fee",
       "driver_assign": "Assign driver",
+      "driver_release": "Driver released the assignment",
       "deposit_refund": {
         "record": "Record deposit refund",
         "correct": "Correct deposit refund"

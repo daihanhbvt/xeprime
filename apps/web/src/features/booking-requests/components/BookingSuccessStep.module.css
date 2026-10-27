@@ -1,5 +1,5 @@
 /**
- * Phần RIÊNG của hộp "Đã gửi yêu cầu" — Figma `19759:22026`. Khung hộp (rộng 600, cuộn thân, ô mã,
+ * Phần RIÊNG của hộp "Đã gửi yêu cầu" — Figma `19759:22026`. Khung hộp (rộng 750, cuộn thân, ô mã,
  * dòng tổng, hàng nút dính đáy) là của chung với hộp "Thanh toán thành công" — `BookingResult`.
  */
 
@@ -27,14 +27,14 @@
 }
 
 /*
- * Nút phụ 48px, bo 12, chữ 16/Semibold xám đậm. Lặp class để thắng style runtime của AntD — nó
- * tiêm SAU stylesheet của CSS Module và bộ chọn `.ant-btn-color-default.ant-btn-variant-outlined`
- * của nó đã là (0,2,0).
+ * Nút phụ 44px, đệm 10/18, bo 12, chữ 16/Semibold xám đậm (Figma "Footer cố định"). Lặp class để
+ * thắng style runtime của AntD — nó tiêm SAU stylesheet của CSS Module và bộ chọn
+ * `.ant-btn-color-default.ant-btn-variant-outlined` của nó đã là (0,2,0).
  */
 .secondary.secondary.secondary {
   flex: none;
-  height: 48px;
-  padding: var(--xp-space-12) var(--xp-space-20);
+  height: 44px;
+  padding: 10px 18px;
   border-color: var(--xp-color-border-strong);
   border-radius: var(--xp-border-radius-control);
   color: var(--xp-color-text-secondary);
@@ -43,15 +43,18 @@
   line-height: var(--xp-line-height-body-lg);
 }
 
-.primary {
-  flex: 1 1 160px;
-  min-width: 160px;
+/* Nút chính rộng 180, cao 44 như hai nút phụ. */
+.primary.primary {
+  flex: none;
+  width: 180px;
+  min-height: 44px;
+  padding: 10px 18px;
 }
 
 /* 640px = `--xp-bp-mobile`: hàng nút xếp dọc (`BookingResult`), mỗi nút rộng hết hàng. */
 @media (max-width: 640px) {
   .secondary.secondary.secondary,
-  .primary {
+  .primary.primary {
     flex: none;
     width: 100%;
     min-width: 0;

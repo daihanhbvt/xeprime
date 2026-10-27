@@ -315,6 +315,7 @@
       "driverPickup": "Đón tại: {address}",
       "notReserved": "Xe chưa được giữ chỗ — chủ xe cần duyệt yêu cầu trước.",
       "myTrips": "Chuyến của tôi",
+      "viewDetail": "Xem chi tiết",
       "chatShop": "Nhắn chủ xe",
       "chatHost": "Nhắn tin cho chủ xe",
       "close": "Quay lại",
@@ -502,10 +503,19 @@
     "nearPickup": {
       "title": "Bạn đang đặt sát giờ nhận xe",
       "noFreeCancelTitle": "Chuyến này không có thời gian huỷ miễn phí",
-      "short": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và được huỷ miễn phí trong khoảng {freeCancel} sau lúc chủ xe nhận. Chủ xe nhận càng muộn, hai khoảng này càng ngắn.",
+      "short": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ. Sau khi thanh toán thành công, bạn được huỷ miễn phí trong khoảng {freeCancel}. Thanh toán càng sát giờ nhận xe, thời gian huỷ miễn phí càng ngắn.",
       "noFreeCancel": "Nếu chủ xe nhận ngay, bạn có khoảng {payment} để thanh toán tiền giữ chỗ và không có thời gian huỷ miễn phí: huỷ sau khi thanh toán chỉ được hoàn tiền bảo hiểm (nếu có).",
       "tooShort": "Giờ nhận xe quá gần để kịp thanh toán tiền giữ chỗ qua XePrime — chủ xe có thể không nhận được chuyến này. Hãy chọn giờ nhận muộn hơn.",
-      "estimate": "Đây là ước tính; mốc chính xác hiện ngay khi chủ xe nhận chuyến."
+      "estimate": "Đây là ước tính; hạn thanh toán chính xác hiện ngay khi chủ xe nhận chuyến, mốc huỷ miễn phí hiện khi bạn thanh toán xong."
+    },
+    "check": {
+      "signInTitle": "Đăng nhập để gửi yêu cầu",
+      "signInBody": "Chuyến bạn chọn vẫn được giữ nguyên — đăng nhập hoặc tạo tài khoản để xem lại và gửi yêu cầu thuê xe.",
+      "signIn": "Đăng nhập",
+      "issueTitle": "Chưa thể tiếp tục với chuyến này",
+      "retry": "Thử lại",
+      "chooseAgain": "Chọn lại chuyến",
+      "invalid": "Thông tin chuyến chưa hợp lệ. Vui lòng chọn lại ở trang chi tiết xe."
     }
   },
   "approved": {
@@ -582,7 +592,7 @@
     "estimate": "Ước tính",
     "noHold": "Chuyến này không thu tiền giữ chỗ online — đơn thuê được tạo ngay khi bạn duyệt, không có mã QR.",
     "paymentWindow": "Khách có {duration} để chuyển tiền giữ chỗ (tới khoảng {time}); quá hạn thì lịch tự nhả.",
-    "freeCancel": "Khách được huỷ miễn phí trong {duration} sau khi bạn duyệt (tới khoảng {time}).",
+    "freeCancel": "Khách được huỷ miễn phí trong {duration} kể từ lúc thanh toán thành công (tới khoảng {time} nếu khách trả ngay khi bạn duyệt).",
     "noFreeCancel": "Chuyến này khách không có thời gian huỷ miễn phí.",
     "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn nhận toàn bộ phần giữ chỗ dành cho chủ xe (phần cam kết giữ xe tính trên tiền thuê) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
     "tooShort": "Giờ nhận xe quá gần để khách kịp chuyển tiền giữ chỗ — lượt duyệt sẽ không thành công. Hãy liên hệ khách để thoả thuận trực tiếp.",

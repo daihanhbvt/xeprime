@@ -14,10 +14,11 @@ const MINUTE_MS = 60_000;
 /**
  * Cảnh báo ĐẶT SÁT GIỜ trước khi khách gửi yêu cầu — ADR 0032 điều 5 · ADR 0064.
  *
- * Cửa sổ thanh toán (30% của ΔT) và cửa sổ huỷ miễn phí (20% của ΔT) co theo khoảng cách từ lúc
- * chủ xe nhận tới giờ nhận xe (`holdWindowsFor`, ADR 0066). Khách phải biết điều đó TRƯỚC khi
- * gửi, không phải phát hiện lúc đã trả. Ước tính giả định chủ xe nhận NGAY — gắn nhãn rõ: mốc thật
- * chỉ có khi chủ xe nhận chuyến (server tính và lưu).
+ * Cửa sổ thanh toán (30% của khoảng từ lúc chủ xe nhận tới giờ nhận xe — ADR 0066) và cửa sổ huỷ
+ * miễn phí (20% của khoảng từ lúc THANH TOÁN ĐỦ tới giờ nhận xe — ADR 0072) đều co lại khi đặt sát
+ * giờ. Khách phải biết điều đó TRƯỚC khi gửi. Ước tính giả định chủ xe nhận và khách trả NGAY
+ * (`holdWindowsPreview`) — gắn nhãn rõ: hạn thanh toán thật có khi chủ xe nhận, mốc huỷ miễn phí
+ * thật có khi tiền về đủ (server tính và lưu).
  *
  * Không vẽ gì khi cả hai cửa sổ còn TRỌN trần của chính sách (chuyến đủ xa) VÀ có huỷ miễn phí,
  * hoặc chuyến không thu tiền giữ chỗ. So với trần chứ không với một ngưỡng giờ cố định: trần là

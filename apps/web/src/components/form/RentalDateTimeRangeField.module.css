@@ -128,6 +128,7 @@
 
 /* --- Biến thể `stacked`: nhãn ở trên, mốc ngày giờ ở dưới --- */
 .triggerStacked {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -144,6 +145,19 @@
 
 .triggerStacked:hover {
   border-color: var(--xp-color-primary, #f5a623);
+}
+
+/*
+ * Viên thời lượng ngồi ở góc trên bên phải, ĐÈ nửa đường viền — kiểu nhãn gắn lên ô. Ra khỏi
+ * dòng chảy flex nên hai mốc Nhận/Trả có trọn bề ngang, không còn bị viên chiếm chỗ và cắt "…".
+ */
+.triggerStacked .durationPill {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 16px;
+  line-height: 1.4;
+  transform: translateY(-50%);
 }
 
 .endpointStacked {
@@ -178,9 +192,9 @@
 }
 
 /*
- * Màn hẹp (≤640px = `--xp-bp-mobile`): hai mốc giữ đủ bề rộng chữ của mình; không đủ chỗ cho cả
- * viên thời lượng thì VIÊN xuống hàng dưới — cắt mất giờ nhận/trả để nhường chỗ cho "1 ngày" là sai
- * thứ tự ưu tiên (mốc tiếng Anh "Wed, 10/21 · 21:00" dài hơn bản tiếng Việt).
+ * Màn hẹp (≤640px = `--xp-bp-mobile`): hai mốc giữ đủ bề rộng chữ của mình; không đủ chỗ thì mốc
+ * TRẢ xuống hàng dưới thay vì bị cắt (mốc tiếng Anh "Wed, 10/21 · 21:00" dài hơn bản tiếng Việt).
+ * Viên thời lượng nằm trên đường viền nên không tham gia việc chia hàng.
  */
 @media (max-width: 640px) {
   .triggerStacked {

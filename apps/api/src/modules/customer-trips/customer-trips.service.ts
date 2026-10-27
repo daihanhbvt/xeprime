@@ -507,11 +507,10 @@ export class CustomerTripsService {
       where: { customerUserId, OR: [{ id }, { bookingId: id }] },
       select: {
         status: true,
-        // Mốc NHẬN chuyến đã đóng băng — `acceptedAt` mà `freeCancelUntil` tính xuôi từ đó.
-        decidedAt: true,
         booking: { select: { id: true, tenantId: true, status: true } },
         hold: {
-          select: { status: true, paidAmount: true, freeCancelUntil: true, createdAt: true },
+          // `paidAt` là mốc BẮT ĐẦU của cửa sổ huỷ miễn phí (ADR 0072).
+          select: { status: true, paidAmount: true, freeCancelUntil: true, paidAt: true },
         },
       },
     });
@@ -528,10 +527,12 @@ export class CustomerTripsService {
       insuranceRefundAmount: '0',
       forfeitAmount: '0',
       ownerCompensationAmount: '0',
-      freeCancelUntil: hold?.freeCancelUntil.toISOString() ?? null,
-      freeCancelAvailable: hold
-        ? hasFreeCancelWindow(hold.freeCancelUntil, row.decidedAt ?? hold.createdAt)
-        : true,
+      // Chưa trả đủ thì chưa có mốc huỷ miễn phí — chưa có đơn để huỷ, và chưa mất đồng nào.
+      freeCancelUntil: hold?.freeCancelUntil?.toISOString() ?? null,
+      freeCancelAvailable:
+        hold?.paidAt && hold.freeCancelUntil
+          ? hasFreeCancelWindow(hold.freeCancelUntil, hold.paidAt)
+          : true,
       deferred: false,
     };
     const result = (
@@ -565,7 +566,7 @@ export class CustomerTripsService {
           insuranceRefundAmount: preview.insuranceRefundAmount,
           forfeitAmount: preview.forfeitAmount,
           ownerCompensationAmount: preview.ownerCompensationAmount,
-          freeCancelUntil: preview.freeCancelUntil.toISOString(),
+          freeCancelUntil: preview.freeCancelUntil?.toISOString() ?? null,
           deferred: preview.deferred,
         },
       );

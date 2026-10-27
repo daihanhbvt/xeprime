@@ -50,14 +50,14 @@ describe('NearPickupHoldNotice', () => {
     renderAt(5 * 60);
     expect(screen.getByText('Bạn đang đặt sát giờ nhận xe')).toBeTruthy();
     expect(
-      screen.getByText(/khoảng 1 giờ 30 phút để thanh toán .* trong khoảng 1 giờ sau lúc/),
+      screen.getByText(/khoảng 1 giờ 30 phút để thanh toán .* huỷ miễn phí trong khoảng 1 giờ/),
     ).toBeTruthy();
   });
 
   it('gấp (90 phút) ⇒ VẪN có huỷ miễn phí: 27 phút thanh toán, 18 phút huỷ', () => {
     renderAt(90);
     expect(
-      screen.getByText(/khoảng 27 phút để thanh toán .* trong khoảng 18 phút sau lúc/),
+      screen.getByText(/khoảng 27 phút để thanh toán .* huỷ miễn phí trong khoảng 18 phút/),
     ).toBeTruthy();
   });
 

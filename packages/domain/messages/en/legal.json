@@ -310,17 +310,17 @@
         },
         "paymentWindow": {
           "heading": "3. The payment and free-cancellation windows",
-          "body": "Once the shop accepts, you get a window to transfer the holding amount and a free-cancellation window. How long both last depends on the time between the shop's acceptance and the pick-up time; both run FORWARD from acceptance and never past pick-up. Current terms:",
+          "body": "Once the shop accepts, you get a window to transfer the holding amount. When the full holding amount arrives, the trip becomes a booking and only then does the free-cancellation window start. Both windows scale with the time left until pick-up and never run past pick-up. Current terms:",
           "items": {
             "payment": "The payment window is 30% of the time between the shop's acceptance and pick-up, at least 15 minutes and at most 120 minutes — with pick-up about 7 hours or more away you get the full 120 minutes.",
-            "cancel": "Free cancellation is 20% of that time, at least 15 minutes and at most 2 hours — with pick-up 10 hours or more away you get the full 2 hours. For trips with pick-up less than 10 hours away, free cancellation ends BEFORE the payment deadline; the exact time is shown, with a countdown, before you pay.",
+            "cancel": "Free cancellation starts when your payment succeeds and lasts 20% of the time from then until pick-up, at least 15 minutes and at most 2 hours — paying 10 hours or more before pick-up gives you the full 2 hours. The closer to pick-up you pay, the shorter the free-cancellation window.",
             "tooShort": "Neither deadline ever runs past pick-up. If too little time is left to pay (under 15 minutes), the trip cannot be held through XePrime.",
-            "expiry": "We remind you before the payment window closes. If the full amount has not arrived by then, the slot is released to other renters and the trip does not go ahead; anything you already transferred is refunded in full to your Points wallet. The payment window cannot be extended."
+            "expiry": "We remind you before the payment window closes. If the full amount has not arrived by then, the request is cancelled automatically: the slot is released to other renters and the trip does not go ahead; anything you already transferred is refunded in full to your Points wallet. The payment window cannot be extended."
           }
         },
         "freeCancel": {
           "heading": "4. Free cancellation",
-          "body": "After you have transferred the holding amount, you may cancel and have 100% of it refunded to your Points wallet if you cancel before your trip's free-cancellation deadline (section 3). That deadline is fixed once, when the shop accepts: paying, or the shop moving the pick-up time, does not change it. The exact deadline for your trip — or a note that it has no free-cancellation window — is shown before you pay."
+          "body": "After you have transferred the full holding amount, you may cancel and have 100% of it refunded to your Points wallet if you cancel before your trip's free-cancellation deadline (section 3). That deadline is fixed once, the moment the full holding amount arrives: the shop moving the pick-up time does not change it. Before you pay you see how long free cancellation would last if you paid now; after you pay, the exact deadline is shown with a countdown."
         },
         "afterFreeCancel": {
           "heading": "5. Cancelling after the free-cancellation deadline",

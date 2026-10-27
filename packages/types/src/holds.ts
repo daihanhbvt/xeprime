@@ -98,24 +98,6 @@ export const HOLD_COUNTDOWN_SEGMENT_MINUTES = 60;
 export const HOLD_COUNTDOWN_URGENT_MINUTES = HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL;
 
 /**
- * Cửa sổ huỷ miễn phí của khoản giữ chỗ đóng TRƯỚC hạn thanh toán — khách trả ở cuối hạn sẽ trả
- * khi quyền huỷ miễn phí đã hết. ADR 0032 điều 5 buộc báo khách điều này TRƯỚC khi trả.
- *
- * Từ ADR 0066 hai cửa sổ cùng tỉ lệ với ΔT (huỷ 20%, trả 30%), nên chuyến có ΔT dưới
- * `freeCancelHours × 5` (10 giờ ở chính sách 2 giờ) rơi vào ca này — trừ chuyến cực gấp mà cả hai
- * cửa sổ cùng chạm sàn 15′ hoặc cùng bị kẹp bởi giờ nhận xe. So NGHIÊM NGẶT: chuyến xa
- * có hai mốc trùng nhau (cùng trần 120′) — đó là thường lệ, không phải "ngắn".
- *
- * So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ nhận xe.
- */
-export function isFreeCancelWindowShort(hold: {
-  freeCancelUntil: Date | string;
-  expiresAt: Date | string;
-}): boolean {
-  return new Date(hold.freeCancelUntil).getTime() < new Date(hold.expiresAt).getTime();
-}
-
-/**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
  *
  * **Đây là SÀN, không phải làm tròn** (ADR 0021 ràng buộc 3): VietQR mang sẵn số tiền, khách
@@ -222,12 +204,17 @@ export function holdExpiresAt(
 // ── Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe — ADR 0066 (22/10/2026) ──────────────────────
 
 /**
- * Tỷ lệ và sàn của cửa sổ động. Gọi `ΔT = pickupAt − acceptedAt`, MỘT công thức cho mọi ΔT:
+ * Tỷ lệ và sàn của cửa sổ động — MỘT công thức cho mọi ΔT, nhưng hai cửa sổ BẮT ĐẦU ở hai mốc khác
+ * nhau (ADR 0072 ghi đè ADR 0066 điều 3 ở mốc bắt đầu của huỷ miễn phí):
  *
- * | Cửa sổ         | Độ dài                                                                  |
- * | -------------- | ----------------------------------------------------------------------- |
- * | Hạn thanh toán | `clamp(round(ΔT × 30%), 15′, holdPaymentWindowMinutes)` (trần 120′)      |
- * | Huỷ miễn phí   | `clamp(round(ΔT × 20%), 15′, freeCancelHours × 60)` (trần 2 giờ)         |
+ * | Cửa sổ         | Bắt đầu        | ΔT                     | Độ dài                                              |
+ * | -------------- | -------------- | ---------------------- | --------------------------------------------------- |
+ * | Hạn thanh toán | `acceptedAt`   | `pickupAt − acceptedAt` | `clamp(round(ΔT × 30%), 15′, holdPaymentWindowMinutes)` |
+ * | Huỷ miễn phí   | `paidAt` (đủ)  | `pickupAt − paidAt`     | `clamp(round(ΔT × 20%), 15′, freeCancelHours × 60)`     |
+ *
+ * Huỷ miễn phí chỉ có nghĩa khi đã có ĐƠN: trước khi trả đủ khách chưa mất đồng nào, và không trả
+ * thì hết hạn là tự huỷ (ADR 0044 điều 3). Nên đồng hồ huỷ miễn phí chạy từ lúc tiền về đủ — không
+ * còn ca "huỷ miễn phí hết trước khi khách kịp trả" của ADR 0066.
  *
  * Chuyến xa tự chạm trần (ΔT ≥ 400′ với trần 120′ cho thanh toán; ΔT ≥ 600′ với trần 2 giờ cho
  * huỷ) — không còn ngưỡng "xa/gần/gấp" rời rạc. ADR 0066 bỏ luật cũ "ΔT < 2 giờ ⇒ không có huỷ
@@ -239,9 +226,8 @@ export function holdExpiresAt(
  * Hai mốc vẫn đếm XUÔI từ `acceptedAt`, KẸP bởi `pickupAt`, được LƯU một lần lúc tạo hold, không
  * gia hạn — không có đường nào tính lại lúc đọc (ADR 0032 điều 5 giữ nguyên).
  *
- * ⚠️ Với ΔT dưới ~10 giờ, hạn thanh toán (30%) DÀI HƠN cửa sổ huỷ miễn phí (20%): khách trả ở cuối
- * hạn đã qua mốc huỷ miễn phí. Đó là chủ đích — UI phải nói rõ mốc huỷ TRƯỚC khi khách trả
- * (`isFreeCancelWindowShort`, đồng hồ huỷ miễn phí ở màn thanh toán).
+ * Mốc thanh toán được LƯU lúc tạo hold; mốc huỷ miễn phí được LƯU một lần lúc tiền về đủ
+ * (`freeCancelWindowFromPayment`). Không mốc nào được tính lại lúc đọc.
  */
 export const HOLD_DYNAMIC_WINDOW = {
   /** Phần của ΔT dành cho huỷ miễn phí. */
@@ -308,8 +294,11 @@ export interface HoldWindows {
 }
 
 /**
- * Hai mốc của một hold — MỘT phép tính cho mọi nơi tạo hold. SERVER tính và lưu vào cột; client
- * đọc mốc đã lưu, không tự tính lại.
+ * Hai cửa sổ của một hold tính từ `acceptedAt` — MỘT phép tính cho mọi nơi tạo hold. SERVER tính.
+ *
+ * Chỉ `expiresAt` được LƯU lúc tạo hold. `freeCancelUntil` ở đây là mốc huỷ miễn phí NẾU khách trả
+ * đủ ngay lúc được nhận — dùng cho bản XEM TRƯỚC (màn duyệt của gian hàng); mốc thật tính lúc tiền
+ * về bằng `freeCancelWindowFromPayment` (ADR 0072).
  */
 export function holdWindowsFor(input: {
   acceptedAt: Date;
@@ -330,6 +319,34 @@ export function holdWindowsFor(input: {
     paymentWindowMinutes,
     freeCancelUntil: new Date(Math.min(from + freeCancelMinutes * MS_PER_MINUTE, pickupMs)),
     expiresAt: new Date(Math.min(from + paymentWindowMinutes * MS_PER_MINUTE, pickupMs)),
+  };
+}
+
+/**
+ * Mốc huỷ miễn phí của một hold VỪA được trả đủ — ADR 0072. `ΔT = pickupAt − paidAt`, độ dài
+ * `clamp(round(ΔT × 20%), 15′, freeCancelHours × 60)`, đếm xuôi từ `paidAt`, kẹp bởi giờ nhận xe.
+ *
+ * SERVER gọi đúng MỘT lần, trong lượt lật hold sang `paid`, rồi lưu vào cột — không tính lại. Cũng
+ * dùng để XEM TRƯỚC (`paidAt = now`) cho khách đang ở màn thanh toán: "trả bây giờ thì được huỷ
+ * miễn phí trong N phút".
+ */
+export function freeCancelWindowFromPayment(input: {
+  paidAt: Date;
+  pickupAt: Date;
+  /** `FeePolicyValues.freeCancelHours` đã đóng băng trong snapshot của hold — TRẦN của cửa sổ. */
+  freeCancelHours: number;
+}): { leadMinutes: number; freeCancelMinutes: number; freeCancelUntil: Date } {
+  const leadMinutes = leadMinutesOf(input.paidAt, input.pickupAt);
+  const freeCancelMinutes = holdFreeCancelMinutes(leadMinutes, input.freeCancelHours);
+  return {
+    leadMinutes,
+    freeCancelMinutes,
+    freeCancelUntil: new Date(
+      Math.min(
+        input.paidAt.getTime() + freeCancelMinutes * MS_PER_MINUTE,
+        input.pickupAt.getTime(),
+      ),
+    ),
   };
 }
 
@@ -508,18 +525,18 @@ export const CUSTOMER_CANCEL_PREVIEW_KIND_VALUES = Object.values(
 ) as CustomerCancelPreviewKind[];
 
 /**
- * Chuyến có cửa sổ huỷ miễn phí không — so HAI MỐC ĐÃ LƯU (`freeCancelUntil` với mốc nhận chuyến).
+ * Chuyến có cửa sổ huỷ miễn phí không — so mốc huỷ miễn phí với MỐC BẮT ĐẦU của nó.
  *
- * Từ ADR 0066 mọi hold MỚI có ít nhất 15′ huỷ miễn phí, nên hàm này chỉ còn trả `false` khi
- * `freeCancelUntil = acceptedAt`: chính sách phí tắt huỷ miễn phí (`freeCancelHours = 0`), giờ nhận
- * xe đã ở ngay lúc nhận chuyến, hoặc hold cũ tạo theo luật trước ADR 0066 ("ΔT < 2 giờ ⇒ 0") —
+ * Mốc bắt đầu là `paid_at` (ADR 0072); hold trả trước ADR 0072 bắt đầu từ lúc nhận chuyến. Mọi hold
+ * có ít nhất 15′, nên hàm này chỉ trả `false` khi chính sách phí tắt huỷ miễn phí
+ * (`freeCancelHours = 0`), giờ nhận xe kẹp cửa sổ về 0, hoặc hold cũ tạo theo luật trước ADR 0066 —
  * mốc đã lưu không bao giờ được tính lại.
  */
 export function hasFreeCancelWindow(
   freeCancelUntil: Date | string,
-  acceptedAt: Date | string,
+  startedAt: Date | string,
 ): boolean {
-  return new Date(freeCancelUntil).getTime() > new Date(acceptedAt).getTime();
+  return new Date(freeCancelUntil).getTime() > new Date(startedAt).getTime();
 }
 
 /**

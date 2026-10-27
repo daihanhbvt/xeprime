@@ -628,15 +628,15 @@ describe('ListingDetailView — thẻ "Tự nhận xe"', () => {
 });
 
 describe('ListingDetailView — tab "Quy định & Chính sách"', () => {
-  it('điều khoản huỷ: miễn phí tính XUÔI từ lúc chủ xe nhận chuyến, cửa sổ giữ chỗ theo hằng số', async () => {
+  it('điều khoản huỷ: miễn phí tính XUÔI từ lúc thanh toán thành công, cửa sổ giữ chỗ theo hằng số', async () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
     fireEvent.click(screen.getByRole('tab', { name: 'Điều khoản huỷ' }));
 
     const panel = screen.getByRole('tabpanel', { name: 'Điều khoản huỷ' });
-    // ADR 0032 · 0066: tính XUÔI từ lúc được nhận, theo tỉ lệ của ΔT — không "trước giờ nhận xe".
+    // ADR 0072: huỷ miễn phí tính XUÔI từ lúc tiền giữ chỗ về đủ, theo tỉ lệ của ΔT — không "trước giờ nhận xe".
     expect(
       within(panel).getByText(
-        /kể từ lúc chủ xe nhận chuyến.*trong 20% .*tối thiểu 15 phút, tối đa 2 giờ/,
+        /kể từ lúc thanh toán tiền giữ chỗ thành công.*trong 20% .*tối thiểu 15 phút, tối đa 2 giờ/,
       ),
     ).toBeTruthy();
     expect(within(panel).queryByText(/trước giờ nhận xe/)).toBeNull();
@@ -724,6 +724,20 @@ describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', 
     await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
     expect(screen.queryByText('3.000.000 ₫')).toBeNull();
     expect(screen.queryByText('Cọc thế chấp khi nhận xe')).toBeNull();
+  });
+
+  it('xe có cọc tiền mặt: thẻ "Thành tiền" KHÔNG nhắc lại cọc — tab Tài sản thế chấp đã nói', async () => {
+    const listing = {
+      ...LISTING,
+      noCollateral: false,
+      collateral: { mode: 'cash', depositAmount: '5000000', assetTypes: [] },
+    } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
+    const costs = within(screen.getByRole('region', { name: 'Thành tiền' }));
+    expect(costs.queryByText('Cọc thế chấp khi nhận xe')).toBeNull();
+    expect(costs.queryByText('5.000.000 ₫')).toBeNull();
   });
 
   it('báo giá không về: nói thẳng, không bịa số — vẫn đặt được', async () => {

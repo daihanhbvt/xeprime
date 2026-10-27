@@ -3,9 +3,11 @@
 import { CheckCircleFilled, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { COLLATERAL_MODE } from '@xeprime/types';
 import type { DriverLicence } from '@/features/driver-licence/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import type { CustomerDepositView } from '../hooks/use-customer-cost-view';
 import styles from './BookingReviewStep.module.css';
 
 interface BookingRequirementsCardProps {
@@ -16,6 +18,11 @@ interface BookingRequirementsCardProps {
   licence: { required: boolean; current: DriverLicence | null };
   /** Điều kiện chủ xe công bố cho đúng dịch vụ của chuyến (giấy tờ, điều khoản). */
   hostTerms: { text: string | null; documents: string[] } | null;
+  /**
+   * Cọc thế chấp khi nhận xe (`useCustomerCostView`) — là điều kiện NHẬN XE, trao tay chủ xe, nên nằm
+   * ở thẻ này chứ không ở thẻ tiền. Không truyền = không vẽ.
+   */
+  deposit?: CustomerDepositView | null;
   /**
    * Bậc tiêu đề của thẻ — `h3` trong hộp đặt xe (dưới tiêu đề `h2` của bước), `h2` khi thẻ đứng
    * ngay dưới `h1` của một trang (chuyến chờ chủ xe phản hồi): không nhảy bậc dàn ý.
@@ -31,8 +38,10 @@ interface BookingRequirementsCardProps {
 export function BookingRequirementsCard({
   licence,
   hostTerms,
+  deposit = null,
   headingLevel = 3,
 }: BookingRequirementsCardProps) {
+  const tCommon = useTranslations('Common');
   const t = useTranslations('BookingRequests.flow');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const dl = useDomainLabel();
@@ -95,6 +104,19 @@ export function BookingRequirementsCard({
               .join(', '),
           })}
         </p>
+      ) : null}
+      {deposit ? (
+        <div className={styles.requirementBlock}>
+          <p className={styles.depositHead}>
+            <span className={styles.requirementTitle}>{tCommon('components.price.deposit')}</span>
+            <strong className={styles.depositAmount}>
+              {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
+                ? fmt.money(deposit.amount)
+                : dl('collateralMode', deposit.mode)}
+            </strong>
+          </p>
+          <p className={styles.requirementBody}>{deposit.note}</p>
+        </div>
       ) : null}
       {hostTerms?.text ? (
         <div className={styles.hostTerms}>

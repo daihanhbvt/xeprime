@@ -30,6 +30,13 @@ vi.mock('@/features/auth/hooks/use-market-logout', () => ({
   useMarketLogout: () => logout,
 }));
 
+/** Khoảng % hoa hồng của lời mời hợp tác — API công khai, đọc qua React Query (`usePartnerOffer`). */
+vi.mock('@/features/account/hooks/use-partner-offer', () => ({
+  usePartnerOffer: () => ({
+    data: { minOwnerCommissionPercent: 0, maxOwnerCommissionPercent: 10 },
+  }),
+}));
+
 function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
   return {
     id: 'u1',

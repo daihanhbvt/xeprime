@@ -19,6 +19,7 @@ const conversation = (over: Partial<ConversationSummary> & { id: string }): Conv
   lastMessageText: 'Anh có bớt lộc là thêm không ạ?',
   lastMessageAt: '2026-09-07T03:24:00.000Z',
   lastSenderType: 'customer',
+  canSend: true,
   unread: 0,
   status: 'open',
   ...over,

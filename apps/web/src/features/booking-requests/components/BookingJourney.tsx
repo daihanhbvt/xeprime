@@ -5,8 +5,13 @@ import { useTranslations } from 'next-intl';
 import { cx } from '@/lib/cx';
 import styles from './BookingJourney.module.css';
 
-/** Các chặng của một chuyến từ phía khách — ADR 0044: yêu cầu → duyệt → giữ chỗ → đơn thuê. */
-export type BookingJourneyStage = 'trip' | 'request' | 'payment' | 'confirmed';
+/**
+ * Các chặng của một chuyến từ phía khách — ADR 0044: yêu cầu → (duyệt) → giữ chỗ → đơn thuê.
+ *
+ * KHÔNG có chặng "Chọn chuyến" (27/10/2026): chuyến được chọn ở thẻ đặt xe của trang chi tiết, và
+ * hộp yêu cầu thuê mở thẳng ở màn Xem lại — hành trình khách thấy bắt đầu từ "Gửi yêu cầu".
+ */
+export type BookingJourneyStage = 'request' | 'payment' | 'confirmed';
 
 /**
  * Các chặng của luồng ĐẶT HỘ (gian hàng lập đơn tay). Không có duyệt, không có giữ chỗ: người bấm
@@ -19,7 +24,7 @@ const STAFF_STAGES: readonly StaffJourneyStage[] = ['trip', 'review', 'created']
 type BookingJourneyProps =
   | {
       audience?: 'customer';
-      /** Chặng khách đang đứng trong hộp yêu cầu thuê — `trip` (chọn/sửa chuyến) hoặc `request`. */
+      /** Chặng khách đang đứng — hộp yêu cầu thuê luôn ở `request`, các trang chuyến ở chặng sau. */
       current: BookingJourneyStage;
       /**
        * Chuyến này có khoản thu trước không (`fees.holdAmount` của báo giá server). Không có thì
@@ -47,11 +52,12 @@ interface JourneyStep {
 }
 
 /**
- * Tiến trình CẢ HÀNH TRÌNH đặt xe — "Bước 2 / 4 · Gửi yêu cầu" (Figma `19727:55959`).
+ * Tiến trình CẢ HÀNH TRÌNH đặt xe — "Bước 1 / 3 · Gửi yêu cầu". Figma `19727:55959` vẽ 4 chặng; chặng
+ * "Chọn chuyến" đã chuyển hẳn ra trang chi tiết xe (27/10/2026) nên thanh đếm từ "Gửi yêu cầu".
  *
  * Khác `BookingSteps` (thanh bước của BIỂU MẪU, luồng đặt hộ của gian hàng vẫn dùng): khách cần biết
  * gửi xong chưa phải là xong — còn chờ chủ xe nhận và trả tiền giữ chỗ. Vì thế thanh này kể đủ các
- * chặng tới lúc có đơn thuê, dù hộp thoại chỉ chứa hai chặng đầu.
+ * chặng tới lúc có đơn thuê, dù hộp thoại chỉ chứa chặng đầu.
  *
  * Chữ chú thích là thứ duy nhất đọc được bằng mắt; các chấm là hình minh hoạ cho nó, nên nhãn từng
  * chấm chỉ dành cho trình đọc màn hình.
@@ -71,11 +77,11 @@ export function BookingJourney(props: BookingJourneyProps) {
     currentKey = props.current;
   } else {
     const stages: BookingJourneyStage[] = props.hasHoldStage
-      ? ['trip', 'request', 'payment', 'confirmed']
-      : ['trip', 'request', 'confirmed'];
+      ? ['request', 'payment', 'confirmed']
+      : ['request', 'confirmed'];
     steps = stages.map((stage) => ({ key: stage, label: t(`journey.steps.${stage}`) }));
     // Chặng không có trên thanh (vd 'payment' của chuyến không thu trước) ⇒ đứng ở chặng đầu.
-    currentKey = stages.includes(props.current) ? props.current : 'trip';
+    currentKey = stages.includes(props.current) ? props.current : 'request';
     complete = props.complete ?? false;
   }
 

@@ -113,12 +113,18 @@ export function ThreadPanel({
         onDiscardMessage={thread.discard}
       />
 
-      <MessageComposer
-        onSend={thread.send}
-        disabled={thread.loading || thread.error !== null}
-        vehicleContext={vehicleContext}
-        {...(onClearPendingVehicle ? { onClearVehicleContext: onClearPendingVehicle } : {})}
-      />
+      {/*
+        Kênh với chủ xe cá nhân chỉ mở khi hai bên đã có đơn (ADR 0073): thread cũ chưa có đơn còn
+        đọc được nhưng không soạn tin — server chấm `canSend` và chặn `POST …/messages`.
+      */}
+      {conversation.canSend ? (
+        <MessageComposer
+          onSend={thread.send}
+          disabled={thread.loading || thread.error !== null}
+          vehicleContext={vehicleContext}
+          {...(onClearPendingVehicle ? { onClearVehicleContext: onClearPendingVehicle } : {})}
+        />
+      ) : null}
     </div>
   );
 }

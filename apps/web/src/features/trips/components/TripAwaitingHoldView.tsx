@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import {
   BOOKING_HOLD_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
   holdRemainingMs,
   isAwaitingPayment,
@@ -41,8 +40,6 @@ import layout from './TripRequestLayout.module.css';
 import styles from './TripAwaitingHoldView.module.css';
 
 type Hold = NonNullable<CustomerTripDetail['hold']>;
-
-const SEGMENT_MS = HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000;
 
 /**
  * Chuyến của KHÁCH đã được chủ xe nhận, chờ khách trả tiền giữ chỗ — Figma `19737:23904` (khung PC
@@ -236,11 +233,9 @@ function HoldPaymentCard({
       <Countdown
         deadline={hold.expiresAt}
         urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
-        segmentMs={SEGMENT_MS}
         labels={{
           remaining: tHold('countdownRemaining'),
           expired: tHold('countdownExpired'),
-          segment: (index, total) => tHold('countdownSegment', { index, total }),
         }}
       />
       <FreeCancelCountdown hold={hold} />

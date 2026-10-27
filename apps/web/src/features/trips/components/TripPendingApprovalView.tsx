@@ -35,7 +35,8 @@ import styles from './TripPendingApprovalView.module.css';
  *    (`ChatService.canCustomerOpenChat`) — đúng trường hợp của màn này, như hộp "Đã gửi yêu cầu".
  *  - Huỷ theo `canCustomerCancelTrip`; cửa chặn thật là `POST /trips/:id/cancel`.
  *  - Bảng giá là TẠM TÍNH theo chính sách đang hiệu lực; số chốt sinh ra lúc duyệt (ADR 0024).
- *    Báo giá còn tạm tính ở mức sâu hơn (`estimateNote`) thì tổng mang nhãn "Tạm tính".
+ *    Tổng chưa chốt mang nhãn "Tổng thanh toán dự kiến"; báo giá còn tạm tính ở mức sâu hơn
+ *    (`estimateNote`) thì lý do đó nằm ngay trong chú thích dưới tổng.
  */
 export function TripPendingApprovalView({
   trip,

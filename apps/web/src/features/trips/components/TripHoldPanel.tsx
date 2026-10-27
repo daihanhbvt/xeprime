@@ -7,7 +7,6 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
   BOOKING_HOLD_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
   HOLD_REFUND_STATUS,
 } from '@xeprime/types';
@@ -104,11 +103,9 @@ export function TripHoldPanel({
         <Countdown
           deadline={hold.expiresAt}
           urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
-          segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
           labels={{
             remaining: t('countdownRemaining'),
             expired: t('countdownExpired'),
-            segment: (index, total) => t('countdownSegment', { index, total }),
           }}
         />
         <FreeCancelCountdown hold={hold} />

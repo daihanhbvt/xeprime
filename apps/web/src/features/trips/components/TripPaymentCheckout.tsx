@@ -12,13 +12,13 @@ import {
 } from '@ant-design/icons';
 import { Alert, Tag } from 'antd';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useId, useState, type ReactNode } from 'react';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
   BOOKING_HOLD_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
   PAYMENT_GATEWAY_PROVIDER,
   PAYMENT_RETURN_PARAM,
@@ -26,6 +26,7 @@ import {
   type PaymentGatewayProvider,
 } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
+import { tripPath } from '@/constants/routes';
 import { useListingSpecSummary } from '@/features/booking-requests/hooks/use-listing-spec-summary';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { BankTransferDetails } from '@/features/payment-gateway/components/BankTransferDetails';
@@ -59,7 +60,6 @@ const METHOD_GROUP = {
 
 type MethodGroup = (typeof METHOD_GROUP)[keyof typeof METHOD_GROUP];
 
-const SEGMENT_MS = HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000;
 const URGENT_MS = HOLD_COUNTDOWN_URGENT_MINUTES * 60_000;
 
 /** Khẩu hiệu dưới tên ví (Figma `19759:37942` · `19759:37946`) — bảng tra literal để khoá có kiểu. */
@@ -398,9 +398,15 @@ function PaymentSummaryCard({
 
   return (
     <section className={styles.summary} aria-labelledby={titleId}>
-      <h2 id={titleId} className={styles.summaryTitle}>
-        {tCheckout('summary.title')}
-      </h2>
+      {/* Tiêu đề + lối sang trang chi tiết CHÍNH chuyến này (đầy đủ bảng kê, chính sách, chủ xe). */}
+      <div className={styles.summaryHead}>
+        <h2 id={titleId} className={styles.summaryTitle}>
+          {tCheckout('summary.title')}
+        </h2>
+        <Link href={tripPath.detail(trip.id)} className={styles.summaryLink}>
+          {t('summary.viewDetail')}
+        </Link>
+      </div>
 
       <div className={styles.vehicle}>
         {trip.vehicle.imageUrl ? (
@@ -471,12 +477,10 @@ function PaymentSummaryCard({
         <Countdown
           deadline={hold.expiresAt}
           urgentMs={URGENT_MS}
-          segmentMs={SEGMENT_MS}
           className={styles.countdown}
           labels={{
             remaining: t('summary.countdown'),
             expired: tHold('countdownExpired'),
-            segment: (index, total) => tHold('countdownSegment', { index, total }),
           }}
         />
         <FreeCancelCountdown hold={hold} className={styles.countdown} />

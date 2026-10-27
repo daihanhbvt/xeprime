@@ -319,7 +319,7 @@
     "countdownExpired": "Đã hết hạn thanh toán",
     "freeCancelCountdown": "Còn lại để huỷ miễn phí:",
     "freeCancelCountdownExpired": "Đã hết thời gian huỷ miễn phí",
-    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên thời gian huỷ miễn phí kết thúc TRƯỚC hạn thanh toán: chỉ huỷ trước {time} mới được hoàn 100% số đã thanh toán.",
+    "freeCancelSoon": "Thời gian huỷ miễn phí tính từ lúc thanh toán thành công: nếu thanh toán ngay bây giờ, huỷ trước {time} được hoàn 100% số đã thanh toán.",
     "qrCaption": "Quét mã để chuyển khoản",
     "vsDepositHint": "Tiền giữ chỗ chuyển cho XePrime để chốt chuyến và được trừ vào tiền thuê. Khác với cọc thế chấp — khoản bạn đặt lại cho chủ xe lúc nhận xe và lấy về khi trả xe nguyên vẹn.",
     "vsDepositHintLabel": "Tiền giữ chỗ khác cọc thế chấp thế nào",
@@ -334,7 +334,9 @@
     "lateCancelRefund": "Huỷ sau mốc này: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm; phí đặt xe và phần tiền thuê trả trước không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
     "lateCancelNoRefund": "Huỷ sau mốc này thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
     "noFreeCancelRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm; phí đặt xe và phần tiền thuê trả trước không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
-    "noFreeCancelNoRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime)."
+    "noFreeCancelNoRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
+    "freeCancelFromPayment": "Huỷ miễn phí trong {duration} kể từ lúc thanh toán thành công — huỷ trong khoảng đó được hoàn 100% số đã thanh toán.",
+    "freeCancelFromPaymentShort": "Huỷ miễn phí: {duration} kể từ lúc thanh toán thành công"
   },
   "sides": {
     "ariaLabel": "Chọn phía của chuyến",
@@ -427,6 +429,7 @@
       "package": "Gói thuê",
       "pickupWish": "Nguyện vọng nhận xe",
       "point": "{weekday}, {dateTime}",
+      "viewDetail": "Xem chi tiết",
       "customerTotal": "Tổng bạn trả",
       "payOwner": "Trả chủ xe",
       "payOwnerNote": "Khoản tiền cần trả cho chủ xe sau khi đã trừ hết các khoản cần thanh toán.",

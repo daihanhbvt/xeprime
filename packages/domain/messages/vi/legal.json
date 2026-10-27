@@ -310,17 +310,17 @@
         },
         "paymentWindow": {
           "heading": "3. Cửa sổ thanh toán và huỷ miễn phí",
-          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ và một cửa sổ huỷ miễn phí. Độ dài của cả hai phụ thuộc khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe; cả hai tính XUÔI từ lúc nhận chuyến và không bao giờ vượt quá giờ nhận xe. Mức hiện hành:",
+          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ. Khi tiền giữ chỗ về đủ, chuyến thành đơn thuê và cửa sổ huỷ miễn phí mới bắt đầu. Cả hai cửa sổ co giãn theo khoảng thời gian còn lại tới giờ nhận xe và không bao giờ vượt quá giờ nhận xe. Mức hiện hành:",
           "items": {
             "payment": "Thời gian thanh toán bằng 30% khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe, tối thiểu 15 phút và tối đa 120 phút — nhận xe sau từ khoảng 7 giờ trở lên thì được trọn 120 phút.",
-            "cancel": "Thời gian huỷ miễn phí bằng 20% khoảng thời gian đó, tối thiểu 15 phút và tối đa 2 giờ — nhận xe sau từ 10 giờ trở lên thì được trọn 2 giờ. Với chuyến nhận xe sau dưới 10 giờ, thời gian huỷ miễn phí kết thúc TRƯỚC hạn thanh toán; mốc chính xác hiển thị và được đếm ngược trước khi bạn thanh toán.",
+            "cancel": "Thời gian huỷ miễn phí tính từ lúc thanh toán thành công, bằng 20% khoảng thời gian từ lúc đó tới giờ nhận xe, tối thiểu 15 phút và tối đa 2 giờ — thanh toán trước giờ nhận xe từ 10 giờ trở lên thì được trọn 2 giờ. Thanh toán càng sát giờ nhận xe, thời gian huỷ miễn phí càng ngắn.",
             "tooShort": "Cả hai mốc không bao giờ vượt quá giờ nhận xe. Nếu thời gian còn lại quá ngắn để kịp thanh toán (dưới 15 phút), chuyến không thể giữ chỗ qua XePrime.",
-            "expiry": "Bạn được nhắc trước khi hết giờ thanh toán. Hết cửa sổ mà chưa nhận đủ tiền thì chỗ được nhả cho khách khác và chuyến không thành; phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm. Cửa sổ thanh toán không được gia hạn."
+            "expiry": "Bạn được nhắc trước khi hết giờ thanh toán. Hết cửa sổ mà chưa nhận đủ tiền thì yêu cầu tự động huỷ: chỗ được nhả cho khách khác và chuyến không thành; phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm. Cửa sổ thanh toán không được gia hạn."
           }
         },
         "freeCancel": {
           "heading": "4. Huỷ miễn phí",
-          "body": "Sau khi đã chuyển tiền giữ chỗ, bạn được huỷ và hoàn 100% số đã chuyển vào Ví điểm nếu huỷ trước mốc huỷ miễn phí của chuyến (mục 3). Mốc này được chốt một lần khi gian hàng nhận chuyến: thanh toán xong hay gian hàng dời giờ nhận xe đều không làm nó thay đổi. Mốc chính xác của chuyến bạn — hoặc dòng báo chuyến không có thời gian huỷ miễn phí — hiển thị trước khi bạn thanh toán."
+          "body": "Sau khi đã chuyển đủ tiền giữ chỗ, bạn được huỷ và hoàn 100% số đã chuyển vào Ví điểm nếu huỷ trước mốc huỷ miễn phí của chuyến (mục 3). Mốc này được chốt một lần, ngay lúc tiền giữ chỗ về đủ: gian hàng dời giờ nhận xe cũng không làm nó thay đổi. Trước khi thanh toán, bạn thấy trước độ dài thời gian huỷ miễn phí nếu thanh toán ngay; sau khi thanh toán, mốc chính xác được hiển thị và đếm ngược."
         },
         "afterFreeCancel": {
           "heading": "5. Huỷ sau mốc huỷ miễn phí",

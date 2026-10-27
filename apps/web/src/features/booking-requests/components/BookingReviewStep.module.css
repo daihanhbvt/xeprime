@@ -294,6 +294,23 @@
   line-height: var(--xp-line-height-body);
 }
 
+/* Cọc thế chấp khi nhận xe: tên bên trái, số tiền / hình thức bên phải. */
+.depositHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.depositAmount {
+  flex: none;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
 .licenceOk {
   display: flex;
   align-items: flex-start;

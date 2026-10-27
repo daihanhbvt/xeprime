@@ -34,7 +34,7 @@ import { RequestBookingModal } from './RequestBookingModal';
  * nếu không ẩn thì tên khả truy cập của nút thành `car Chọn thuê` — trình đọc màn hình đọc thừa
  * một từ vô nghĩa, và mọi truy vấn theo nhãn nút đều trượt.
  *
- * **Quay về sau đăng nhập** (ADR 0060). Khách chưa đăng nhập bấm "Tiếp tục" thì luồng giữ bản
+ * **Quay về sau đăng nhập** (ADR 0060). Khách chưa đăng nhập mở hộp thì luồng kiểm chuyến, giữ bản
  * nháp cho xe này (`booking-draft.ts`) rồi mời đăng nhập. Google/Facebook RỜI TRANG và quay về
  * đúng trang xe — có bản nháp của xe này + đã có phiên thì hộp tự mở lại, và luồng bên trong đi
  * tiếp từ bản nháp. Khách tự đóng hộp ⇒ bỏ bản nháp: lần ghé trang sau không bị hộp bật lên.
@@ -50,6 +50,7 @@ export function RequestBookingButton({
   routeType,
   deliveryProvinceCode,
   prefill,
+  beforeOpen,
   block,
   size,
   className,
@@ -66,10 +67,15 @@ export function RequestBookingButton({
   /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
   deliveryProvinceCode?: string | null;
   /**
-   * Thứ khách đã chọn ở thẻ đặt xe (cách nhận xe, địa chỉ giao, gói, mã khuyến mãi) — mang sang hộp
-   * để không phải chọn lại. `autoContinue` cho hộp tự đi thẳng tới màn Xem lại.
+   * TOÀN BỘ chuyến khách đã chọn ở thẻ đặt xe — hộp mở thẳng ở màn Xem lại từ đó, không có bước chọn
+   * lại (xem `RequestBookingPrefill`).
    */
   prefill?: RequestBookingPrefill | null;
+  /**
+   * Cổng trước khi mở hộp — `false` thì KHÔNG mở. Thẻ đặt xe dùng nó để chỉ ra phần chuyến còn thiếu
+   * (địa chỉ, ngày nhận…) ngay tại thẻ, vì hộp không còn biểu mẫu nào để điền chúng.
+   */
+  beforeOpen?: () => boolean;
   block?: boolean;
   size?: 'small' | 'middle' | 'large';
   className?: string;
@@ -110,7 +116,10 @@ export function RequestBookingButton({
         block={block}
         size={size}
         className={className}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (beforeOpen && !beforeOpen()) return;
+          setOpen(true);
+        }}
       >
         {t('cta')}
       </Button>

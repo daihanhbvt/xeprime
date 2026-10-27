@@ -2,8 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { useState } from 'react';
-import { compactPhoneInput, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { useEffect, useState } from 'react';
+import {
+  AUTH_PROVIDER_VALUES,
+  compactPhoneInput,
+  PHONE_VERIFICATION_PURPOSE,
+} from '@xeprime/types';
 import type { LoginValues, PhoneLoginValues, RegisterValues } from '@xeprime/validators';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { resolveAppLocale } from '@/i18n/config';
@@ -70,6 +74,25 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
   const [code, setCode] = useState('');
 
   const busy = pending !== null;
+
+  /*
+   * Quay lại từ trang Google/Facebook bằng nút Back: trình duyệt khôi phục trang từ bfcache với
+   * NGUYÊN state lúc rời đi — nút mạng xã hội còn quay và `busy` khoá mọi nút khác, phải F5 mới
+   * thoát. `pageshow` + `persisted` là tín hiệu duy nhất của lần khôi phục đó; nhả lượt chờ
+   * của nút mạng xã hội (lượt mật khẩu/OTP là lời gọi API, tự kết thúc).
+   */
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (!event.persisted) return;
+      setPending((current) =>
+        current !== null && (AUTH_PROVIDER_VALUES as readonly string[]).includes(current)
+          ? null
+          : current,
+      );
+    }
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   /*
    * Nạp mã lỗi từ URL NGAY TRONG RENDER, không qua `useEffect`.
@@ -194,7 +217,8 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
    * `onAuthenticated` sẽ không bao giờ chạy — khi quay lại, đây là một lần tải trang mới đã có
    * cookie phiên của ĐÚNG site đang mở (realm ghi trong `oauth_states`). Tài khoản mới tạo bằng
    * Google/Facebook chưa có SĐT ⇒ bước "Hoàn thiện hồ sơ" (`AccountPhoneGate`) hiện ngay sau đó.
-   * Trạng thái `pending` vẫn đặt để nút khoá lại trong lúc trình duyệt điều hướng.
+   * Trạng thái `pending` vẫn đặt để nút khoá lại trong lúc trình duyệt điều hướng; quay lại bằng
+   * Back thì effect `pageshow` ở trên nhả nó.
    */
   function signIn(provider: AuthProvider): void {
     if (busy) return;

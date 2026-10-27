@@ -78,19 +78,23 @@ $$T_{\text{pay}} = \begin{cases}
 
 *Quy tắc nghiệp vụ:*
 - Trong thời gian $T_{\text{pay}}$, xe được khóa lịch trên chợ (`awaiting_hold`), các khách khác không thể đặt trùng khung giờ này (`SLOT_TAKEN`).
-- Quá hạn $T_{\text{pay}}$ mà SePay chưa ghi nhận đủ tiền: Chuyển `hold_expired`, nhả lịch xe ngay lập tức.
+- Quá hạn $T_{\text{pay}}$ mà SePay chưa ghi nhận đủ tiền ⇒ **tự động huỷ**: hold `expired`, yêu cầu `hold_expired`, nhả lịch xe ngay lập tức, nhả lượt mã khuyến mãi, hoàn phần đã chuyển (nếu có) vào Ví điểm, báo khách + chủ xe. Không gia hạn; tiền về sau hạn không tạo đơn (ADR 0044).
+- Trong $T_{\text{pay}}$ **chưa có huỷ miễn phí**: chưa có đơn để huỷ và khách chưa mất đồng nào. Khách rút lúc này không mất gì (phần đã chuyển thiếu được hoàn đủ).
 
 ---
 
-### 2.3. Chặng 3: SLA Huỷ miễn phí cho khách ($T_{\text{cancel}}$)
-Tính từ thời điểm chủ xe duyệt yêu cầu (`acceptedAt`):
+### 2.3. Chặng 3: SLA Huỷ miễn phí cho khách ($T_{\text{cancel}}$) — ADR 0072 (27/10/2026)
+Tính từ thời điểm **tiền giữ chỗ về ĐỦ** (`paidAt` — cũng là lúc đơn thuê ra đời), KHÔNG từ lúc chủ xe duyệt. Với $\Delta T_{\text{paid}} = \text{pickupAt} - \text{paidAt}$:
 $$T_{\text{cancel}} = \begin{cases}
-120\text{ phút (2 giờ)} & \Delta T \ge 10\text{ giờ} \\
-\min\big(120,\ \max(15,\ \text{round}(\Delta T \times 20\%))\big)\text{ phút} & \Delta T < 10\text{ giờ}
+120\text{ phút (2 giờ)} & \Delta T_{\text{paid}} \ge 10\text{ giờ} \\
+\min\big(120,\ \max(15,\ \text{round}(\Delta T_{\text{paid}} \times 20\%))\big)\text{ phút} & \Delta T_{\text{paid}} < 10\text{ giờ}
 \end{cases}$$
+`free_cancel_until = min(paidAt + T_cancel, pickupAt)` — ghi MỘT lần trong lượt lật hold sang `paid` (cột NULL trước đó; CHECK `booking_holds_paid_has_free_cancel`), không tính lại khi chủ xe dời giờ nhận.
 
-*Quy tắc chống bẫy thời gian:*
-- Màn hình thanh toán QR SePay bắt buộc hiển thị đếm ngược: *"Thời hạn huỷ miễn phí còn lại: XX phút. Nếu huỷ sau mốc này, bạn sẽ bị phạt tiền giữ chỗ."*
+*Quy tắc hiển thị:*
+- Trước khi trả (màn thanh toán QR): KHÔNG có đồng hồ huỷ miễn phí — chưa có đơn để huỷ, khách chưa mất đồng nào. Chỉ một dòng *"Huỷ miễn phí: {N} kể từ lúc thanh toán thành công"* (N = độ dài nếu trả ngay bây giờ, server tính).
+- Sau khi trả đủ: đồng hồ đếm ngược tới `free_cancel_until`. Huỷ trước mốc ⇒ hoàn 100% số đã chuyển; sau mốc ⇒ huỷ muộn (chủ xe nhận trọn $D$, XePrime giữ $S + H - P$, bảo hiểm hoàn 100%).
+- Đồng hồ hạn thanh toán hiện MỘT con số cho toàn bộ thời gian còn lại (`h:mm:ss`), không chia chặng 60′.
 
 ---
 

@@ -32,6 +32,7 @@ import {
   HOLD_MIN_USABLE_WINDOW_MINUTES,
   allocationTotals,
   customerHoldAllocation,
+  freeCancelWindowFromPayment,
   hasFreeCancelWindow,
   holdWindowsFor,
   isHoldPastDue,
@@ -107,13 +108,13 @@ const CUSTOMER_SELECT = {
   paidAt: true,
   allocationJson: true,
   /*
-   * Mốc NHẬN chuyến đã đóng băng (`booking_requests.decided_at` — `acceptedAt` mà `holdWindowsFor`
-   * dùng để tính `freeCancelUntil`) — so với `freeCancelUntil` để biết chuyến có cửa sổ huỷ miễn
-   * phí không (`freeCancelAvailable`). `createdAt` của hold chỉ là dự phòng cho hàng cũ thiếu
-   * `decided_at`: nó ghi SAU `acceptedAt` vài mili-giây, và so với nó là so với một mốc khác.
+   * Mốc BẮT ĐẦU của cửa sổ huỷ miễn phí là `paid_at` (ADR 0072). `decided_at`/`createdAt` chỉ còn là
+   * dự phòng cho hàng trả trước ADR 0072 mà thiếu `paid_at` — không có đường nào sinh ra hàng đó nữa.
    */
   createdAt: true,
   bookingRequest: { select: { decidedAt: true } },
+  // Giờ nhận xe đã chốt — nuôi bản XEM TRƯỚC mốc huỷ miễn phí khi khách chưa trả đủ.
+  scheduleJson: true,
   // Năm dòng tiền + tài trợ — nuôi `lateCancelRefundAmount` bằng ĐÚNG phép chia lượt huỷ thật dùng.
   depositAmount: true,
   serviceFeeAmount: true,
@@ -134,6 +135,79 @@ const CUSTOMER_SELECT = {
     },
   },
 } satisfies Prisma.BookingHoldSelect;
+
+/**
+ * Đầu vào của mốc huỷ miễn phí — giờ nhận xe đã chốt (`schedule_json`) và TRẦN của chính sách phí
+ * đã đóng băng (`price_snapshot_json.fees.policy.freeCancelHours`). Đọc từ hold chứ không từ chính
+ * sách HÔM NAY: admin đổi chính sách sau lúc duyệt không viết lại lời hứa của chuyến này (ADR 0024).
+ */
+function freeCancelInputsOf(hold: {
+  priceSnapshotJson: Prisma.JsonValue;
+  scheduleJson: Prisma.JsonValue;
+}): { pickupAt: Date; freeCancelHours: number } {
+  const snapshot = hold.priceSnapshotJson as unknown as BookingPriceSnapshot;
+  const schedule = hold.scheduleJson as unknown as { pickupAt: string };
+  return {
+    pickupAt: new Date(schedule.pickupAt),
+    freeCancelHours: snapshot.fees?.policy.freeCancelHours ?? 0,
+  };
+}
+
+/**
+ * Mốc huỷ miễn phí nhìn từ phía KHÁCH (ADR 0072).
+ *
+ *  - ĐÃ trả đủ (`paid_at`): mốc ĐÃ LƯU lúc tiền về — đồng hồ đang chạy.
+ *  - CHƯA trả đủ: chưa có mốc nào được lưu. Trả bản XEM TRƯỚC "trả ngay bây giờ thì được huỷ miễn phí
+ *    tới …" — server tính bằng đúng hàm lượt tiền về dùng, client không tự tính. `freeCancelUntil`
+ *    vẫn mang một mốc (bản xem trước) để app đã phát hành — vốn đọc nó như mốc đã lưu — không vỡ.
+ */
+function customerFreeCancelView(row: {
+  paidAt: Date | null;
+  freeCancelUntil: Date | null;
+  createdAt: Date;
+  bookingRequest: { decidedAt: Date | null };
+  priceSnapshotJson: Prisma.JsonValue;
+  scheduleJson: Prisma.JsonValue;
+}): {
+  freeCancelUntil: string;
+  freeCancelStarted: boolean;
+  freeCancelMinutes: number;
+  freeCancelAvailable: boolean;
+} {
+  if (row.paidAt && row.freeCancelUntil) {
+    const startedAt = row.paidAt;
+    return {
+      freeCancelUntil: row.freeCancelUntil.toISOString(),
+      freeCancelStarted: true,
+      freeCancelMinutes: Math.max(
+        0,
+        Math.round((row.freeCancelUntil.getTime() - startedAt.getTime()) / 60_000),
+      ),
+      freeCancelAvailable: hasFreeCancelWindow(row.freeCancelUntil, startedAt),
+    };
+  }
+  const now = new Date();
+  const inputs = freeCancelInputsOf(row);
+  if (Number.isNaN(inputs.pickupAt.getTime())) {
+    // Hold thiếu giờ nhận đã chốt (dữ liệu tay) — không có gì để xem trước, nói "không có".
+    return {
+      freeCancelUntil: (row.freeCancelUntil ?? row.createdAt).toISOString(),
+      freeCancelStarted: false,
+      freeCancelMinutes: 0,
+      freeCancelAvailable: false,
+    };
+  }
+  const preview = freeCancelWindowFromPayment({ paidAt: now, ...inputs });
+  return {
+    freeCancelUntil: preview.freeCancelUntil.toISOString(),
+    freeCancelStarted: false,
+    freeCancelMinutes: Math.max(
+      0,
+      Math.round((preview.freeCancelUntil.getTime() - now.getTime()) / 60_000),
+    ),
+    freeCancelAvailable: hasFreeCancelWindow(preview.freeCancelUntil, now),
+  };
+}
 
 const PLATFORM_SELECT = {
   id: true,
@@ -254,11 +328,14 @@ export class BookingHoldsService {
     await this.assertHoldQuotaWithinTx(tx, input.customerUserId);
 
     /*
-     * HAI CỬA SỔ ĐỘNG theo `ΔT = pickupAt − acceptedAt` (ADR 0066 — `holdWindowsFor`): trả tiền
-     * `clamp(ΔT × 30%, 15′, holdPaymentWindowMinutes)`, huỷ miễn phí `clamp(ΔT × 20%, 15′,
-     * freeCancelHours)` — trần là của chính sách phí, chuyến xa tự chạm trần, mọi chuyến có ít nhất
-     * 15′ huỷ miễn phí. Cả hai mốc vẫn đếm XUÔI từ `acceptedAt`, kẹp bởi giờ nhận, được LƯU vào cột
-     * và không bao giờ tính lại lúc đọc.
+     * HẠN THANH TOÁN động theo `ΔT = pickupAt − acceptedAt` (ADR 0066 — `holdWindowsFor`):
+     * `clamp(ΔT × 30%, 15′, holdPaymentWindowMinutes)`, đếm XUÔI từ `acceptedAt`, kẹp bởi giờ nhận,
+     * được LƯU vào cột và không bao giờ tính lại lúc đọc.
+     *
+     * Mốc HUỶ MIỄN PHÍ KHÔNG được ghi ở đây (ADR 0072): trước khi khách trả đủ chưa có đơn nào để
+     * huỷ và khách chưa mất đồng nào — không trả thì hết hạn là tự huỷ. Mốc đó tính từ `paidAt`
+     * trong lượt tiền về đủ (`applyBankPaymentWithinTx`). `windows.freeCancelMinutes` chỉ còn đi
+     * vào audit như mức "nếu trả ngay lúc được nhận".
      *
      * Hạn chuyển KHÔNG vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
      * một chỗ bị khoá vô nghĩa. Phần còn lại quá ngắn để ai kịp mở app ngân hàng thì không phát QR
@@ -274,7 +351,7 @@ export class BookingHoldsService {
       freeCancelHours: fees.policy.freeCancelHours,
       paymentWindowMinutes: fees.policy.holdPaymentWindowMinutes,
     });
-    const { expiresAt, freeCancelUntil } = windows;
+    const { expiresAt } = windows;
     /*
      * Đo cửa sổ từ `acceptedAt` (mốc lượt duyệt vừa ghi, cùng transaction), KHÔNG từ `now`: sàn của
      * cửa sổ động ĐÚNG BẰNG ngưỡng này (15′ — ADR 0066), nên đo từ `now` (vài mili-giây sau
@@ -427,7 +504,7 @@ export class BookingHoldsService {
           returnAt: input.schedule.returnAt.toISOString(),
           packageMonths: input.schedule.packageMonths,
         } as Prisma.InputJsonValue,
-        freeCancelUntil,
+        // `freeCancelUntil` để NULL — ghi lúc tiền về đủ (ADR 0072).
         expiresAt,
       },
     });
@@ -460,11 +537,9 @@ export class BookingHoldsService {
             : {}),
           policyVersion: fees.policy.version,
           expiresAt: expiresAt.toISOString(),
-          freeCancelUntil: freeCancelUntil.toISOString(),
-          // Vì sao hai mốc ra con số này — cửa sổ động tính từ khoảng cách tới giờ nhận xe.
+          // Vì sao hạn ra con số này — cửa sổ động tính từ khoảng cách tới giờ nhận xe.
           leadMinutes: Math.round(windows.leadMinutes),
           paymentWindowMinutes: windows.paymentWindowMinutes,
-          freeCancelMinutes: windows.freeCancelMinutes,
         },
       },
       tx,
@@ -614,6 +689,8 @@ export class BookingHoldsService {
         amount: true,
         expiresAt: true,
         customerUserId: true,
+        priceSnapshotJson: true,
+        scheduleJson: true,
       },
     });
     if (!hold) return { outcome: 'hold_not_found' };
@@ -718,9 +795,20 @@ export class BookingHoldsService {
       };
     }
 
+    /*
+     * Tiền ĐỦ ⇒ đồng hồ HUỶ MIỄN PHÍ bắt đầu chạy từ đây (ADR 0072): `ΔT = pickupAt − paidAt`,
+     * `clamp(ΔT × 20%, 15′, freeCancelHours)`, kẹp bởi giờ nhận xe. Ghi trong CHÍNH câu lật `paid`
+     * — CHECK `booking_holds_paid_has_free_cancel` không cho một hold có `paid_at` mà thiếu mốc.
+     */
+    const paidAt = new Date();
+    const freeCancel = freeCancelWindowFromPayment({ paidAt, ...freeCancelInputsOf(hold) });
     const claimed = await tx.bookingHold.updateMany({
       where: { id: hold.id, status: { in: awaiting } },
-      data: { status: BOOKING_HOLD_STATUS.PAID, paidAt: new Date() },
+      data: {
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAt,
+        freeCancelUntil: freeCancel.freeCancelUntil,
+      },
     });
     if (claimed.count === 0) {
       // Tiền đã cộng vào hold nhưng không có yêu cầu hoàn nào cho phần này — người xử lý phải thấy.
@@ -1046,11 +1134,7 @@ export class BookingHoldsService {
       paidAmount: row.paidAmount.toFixed(0),
       remainingAmount: remaining.toFixed(0),
       expiresAt: row.expiresAt.toISOString(),
-      freeCancelUntil: row.freeCancelUntil.toISOString(),
-      freeCancelAvailable: hasFreeCancelWindow(
-        row.freeCancelUntil,
-        row.bookingRequest.decidedAt ?? row.createdAt,
-      ),
+      ...customerFreeCancelView(row),
       lateCancelRefundAmount: allocationTotals(
         allocationForHold(row, BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) ?? [],
       )[ALLOCATION_TARGET.CUSTOMER_BALANCE],
@@ -1170,7 +1254,7 @@ export class BookingHoldsService {
         amount: r.amount.toFixed(0),
         paidAmount: r.paidAmount.toFixed(0),
         expiresAt: r.expiresAt.toISOString(),
-        freeCancelUntil: r.freeCancelUntil.toISOString(),
+        freeCancelUntil: r.freeCancelUntil?.toISOString() ?? null,
         paidAt: r.paidAt?.toISOString() ?? null,
         releasedAt: r.releasedAt?.toISOString() ?? null,
         disputeOpen: r.bookingId ? disputes.has(r.bookingId) : false,

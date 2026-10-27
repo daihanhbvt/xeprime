@@ -5,7 +5,7 @@ import { Tag } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { LIST_SEPARATOR, isNegativeMoney, subtractMoney, canShowHostChatOnTrip } from '@xeprime/domain';
+import { isNegativeMoney, subtractMoney, canShowHostChatOnTrip } from '@xeprime/domain';
 import {
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
@@ -68,9 +68,8 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
         ? t('pickup.delivery')
         : t('pickup.agency');
   /* Yêu cầu dài hạn chưa duyệt chưa có lịch — nói gói + nguyện vọng, không bịa ngày. */
-  const wish = [fmt.packageLabel(trip.longTermPackageMonths), fmt.pickupWish(trip)]
-    .filter(Boolean)
-    .join(LIST_SEPARATOR);
+  const packageLabel = fmt.packageLabel(trip.longTermPackageMonths);
+  const wish = fmt.pickupWish(trip);
 
   const paid = trip.holdPaidAmount ?? ZERO_MONEY;
   const rawRemaining = trip.totalAmount ? subtractMoney(trip.totalAmount, paid) : ZERO_MONEY;
@@ -95,8 +94,17 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
               <ScheduleRow label={t('detail.returnAt')} value={fmt.dateTime(trip.returnAt)} />
             </>
           ) : (
-            /* Yêu cầu dài hạn chưa duyệt chưa có lịch — nói gói + nguyện vọng, không bịa ngày. */
-            <ScheduleRow label={t('detail.pickupWish')} value={wish || '—'} />
+            /*
+              Yêu cầu dài hạn chưa duyệt chưa có lịch — nói gói + nguyện vọng, không bịa ngày. Hai
+              dòng riêng: gộp làm một thì chuỗi dài tràn khỏi cột ảnh và đè lên cột tiền. Nguyện
+              vọng ("Trong 7 ngày tới: 28/10 – 03/11/2026") xếp nhãn trên, giá trị dưới, xuống dòng được.
+            */
+            <>
+              {packageLabel ? (
+                <ScheduleRow label={t('detail.package')} value={packageLabel} />
+              ) : null}
+              <ScheduleRow label={t('detail.pickupWish')} value={wish || '—'} stacked />
+            </>
           )}
         </dl>
       </div>
@@ -165,8 +173,8 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
               </div>
             )}
             {/*
-              Kênh chat trong sàn mở cho mọi khách đã gửi yêu cầu tới gian hàng
-              (`ChatService.canCustomerOpenChat`) — không theo `canContact` (cờ đó gác SĐT/biển số).
+              Kênh chat trong sàn: gian hàng tuyến gói mọi chặng, chủ xe cá nhân chỉ khi đã có đơn
+              (ADR 0073, server gác ở `ChatService`) — không theo `canContact` (cờ đó gác SĐT/biển số).
             */}
             {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) ? (
               <ChatWithShopButton
@@ -242,10 +250,21 @@ function HostIdentity({
   );
 }
 
-/** Một mốc của lịch thuê dưới ảnh — nhãn trái 12 xám, giờ phải 12 đậm vừa. */
-function ScheduleRow({ label, value }: { label: string; value: string }) {
+/**
+ * Một mốc của lịch thuê dưới ảnh — nhãn trái 12 xám, giờ phải 12 đậm vừa. `stacked`: nhãn trên,
+ * giá trị dưới và được xuống dòng — cho giá trị dài hơn bề ngang cột ảnh.
+ */
+function ScheduleRow({
+  label,
+  value,
+  stacked = false,
+}: {
+  label: string;
+  value: string;
+  stacked?: boolean;
+}) {
   return (
-    <div className={styles.scheduleRow}>
+    <div className={cx(styles.scheduleRow, stacked && styles.scheduleRowStacked)}>
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>

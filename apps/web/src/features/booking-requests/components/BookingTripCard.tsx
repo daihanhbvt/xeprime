@@ -74,12 +74,14 @@ interface BookingTripCardProps {
    * Hình dạng của thẻ — cùng NỘI DUNG, khác bố cục:
    *
    *  - `review`: màn Xem lại (Figma `19727:55974`) — ảnh xe lớn bên trái, lịch xếp dọc bên phải.
-   *  - `receipt`: hộp "Đã gửi yêu cầu" (Figma `19759:22185`, rộng 600) — ảnh xe nhỏ cạnh tên,
-   *    nhận/trả nằm chung một hàng, tiêu đề có gạch chân.
+   *  - `receipt`: hộp kết quả 600 (Figma `19759:22185` — "Thanh toán thành công", đặt hộ) — ảnh
+   *    xe nhỏ cạnh tên, nhận/trả nằm chung một hàng, tiêu đề có gạch chân.
+   *  - `sent`: hộp "Đã gửi yêu cầu" 750 (Figma `21621:53711`, bản 27/10/2026) — bố cục của
+   *    `review` thu nhỏ: ảnh 224 bên trái, nhận · trả · nơi nhận xếp dọc bên phải.
    *
    *  Màn chuyến chờ chủ xe phản hồi (Figma `19727:60709`) dùng `review` — cùng khối "Trip review".
    */
-  variant: 'review' | 'receipt';
+  variant: 'review' | 'receipt' | 'sent';
   /** Hành động ở đầu thẻ — "Chỉnh sửa" của màn Xem lại. */
   action?: ReactNode;
   /**

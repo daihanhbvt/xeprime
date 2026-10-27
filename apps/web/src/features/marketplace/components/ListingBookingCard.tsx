@@ -9,11 +9,10 @@ import {
   GiftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { DatePicker, Skeleton } from 'antd';
+import { App, DatePicker, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   addCalendarMonthsVn,
-  COLLATERAL_MODE,
   INSURANCE_PRODUCT_KIND,
   isRouteType,
   PICKUP_PREFERENCE,
@@ -32,6 +31,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { useCustomerCostView } from '@/features/booking-requests/hooks/use-customer-cost-view';
+import { useVehicleBusyDays } from '@/features/booking-requests/hooks/use-vehicle-busy-days';
 import {
   publicQuoteParams,
   usePublicQuote,
@@ -84,6 +84,7 @@ export function ListingBookingCard({
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   const surchargeLine = useDriverSurchargeLine();
+  const { message } = App.useApp();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -123,6 +124,14 @@ export function ListingBookingCard({
     };
   });
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  /*
+   * Lịch bận của CHÍNH xe này — lịch khoá ngày đã kín và tô ngày bận vài giờ, như hộp gửi yêu cầu.
+   * Cùng khoá cache với hộp đó. Dài hạn không có ô chọn khoảng ⇒ không hỏi.
+   */
+  const { busyDays, busyLoading } = useVehicleBusyDays(
+    listing.id,
+    activeService !== SERVICE_TYPE.LONG_TERM,
+  );
 
   // 3. Quản lý lộ trình cho dịch vụ "Có tài xế"
   const [currentRouteType, setCurrentRouteType] = useState<RouteType>(() => {
@@ -313,6 +322,42 @@ export function ListingBookingCard({
    */
   const promoAvailable = quoteQ.data?.breakdown.fees?.holdAmount != null;
 
+  /**
+   * Chuyến đã ĐỦ để mở hộp yêu cầu thuê chưa. Hộp không còn bước "Chuyến đi" (27/10/2026) — nó mở
+   * thẳng ở màn Xem lại từ đúng những gì thẻ này đưa sang — nên thiếu gì thì nói NGAY ở thẻ: mở đúng
+   * hộp chọn địa chỉ, hoặc một lời nhắc ngắn chỉ vào ô còn trống. Đây chỉ là cổng giao diện; hộp vẫn
+   * kiểm lại dữ liệu + khung giờ trống, và server vẫn là chốt.
+   */
+  function ensureTripReady(): boolean {
+    if (activeService === SERVICE_TYPE.LONG_TERM) {
+      if (selectedMonths == null) {
+        void message.warning(t('incomplete.package'));
+        return false;
+      }
+      if (pickupPreference === 'specific_date' && !requestedPickupDate) {
+        void message.warning(t('incomplete.pickupDate'));
+        return false;
+      }
+    } else if (!range.pickupAt || !range.returnAt) {
+      void message.warning(t('incomplete.range'));
+      return false;
+    }
+    if (activeService === SERVICE_TYPE.WITH_DRIVER) {
+      if (!driverPickupInfo?.address) {
+        setDriverAddressModalOpen(true);
+        return false;
+      }
+      if (currentRouteType !== ROUTE_TYPE.IN_CITY && !destination.trim()) {
+        void message.warning(t('incomplete.destination'));
+        return false;
+      }
+    } else if (deliveryMode === 'delivery' && !deliveryInfo?.address) {
+      setAddressModalOpen(true);
+      return false;
+    }
+    return true;
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
@@ -481,6 +526,8 @@ export function ListingBookingCard({
                 onModeChange={setRentalMode}
                 variant="stacked"
                 className={styles.bookingRangeField}
+                busyDays={busyDays}
+                busyLoading={busyLoading}
               />
             </div>
           )}
@@ -786,20 +833,10 @@ export function ListingBookingCard({
               </div>
             ) : null}
 
-            {/* Cọc thế chấp khi nhận xe — đặt lại rồi lấy về, không nằm trong tổng. */}
-            {cost.deposit ? (
-              <div className={styles.priceLineTop}>
-                <div className={styles.priceLabel}>
-                  <span>{tPrice('deposit')}</span>
-                  <span className={styles.priceSubLabel}>{cost.deposit.note}</span>
-                </div>
-                <span className={styles.priceValue}>
-                  {cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
-                    ? fmt.money(cost.deposit.amount)
-                    : dl('collateralMode', cost.deposit.mode)}
-                </span>
-              </div>
-            ) : null}
+            {/*
+              Cọc thế chấp khi nhận xe KHÔNG nhắc lại ở đây — tab "Tài sản thế chấp" của mục Quy định
+              & Chính sách đã nói đủ hình thức và số tiền, và nó không nằm trong tổng.
+            */}
 
             <div className={styles.totalRow}>
               <span className={styles.totalLabel}>{cost.total?.label}</span>
@@ -863,25 +900,24 @@ export function ListingBookingCard({
                         longitude: deliveryInfo.lng,
                       }
                     : null,
+              destination:
+                activeService === SERVICE_TYPE.WITH_DRIVER &&
+                currentRouteType !== ROUTE_TYPE.IN_CITY
+                  ? destination.trim()
+                  : null,
+              rentalMode,
               packageMonths: activeService === SERVICE_TYPE.LONG_TERM ? selectedMonths : null,
+              pickupPreference:
+                pickupPreference === 'specific_date'
+                  ? PICKUP_PREFERENCE.SPECIFIC_DATE
+                  : PICKUP_PREFERENCE.WITHIN_7_DAYS,
+              requestedPickupDate:
+                pickupPreference === 'specific_date' ? requestedPickupDate : null,
               promoCode: promo.appliedCode,
               vehicleProtectionSelected,
               personalAccidentSelected,
-              autoContinue:
-                activeService === SERVICE_TYPE.LONG_TERM
-                  ? selectedMonths != null &&
-                    (pickupPreference === 'asap' || requestedPickupDate != null) &&
-                    (deliveryMode !== 'delivery' || Boolean(deliveryInfo?.address))
-                  : activeService === SERVICE_TYPE.WITH_DRIVER
-                    ? Boolean(
-                        range.pickupAt &&
-                        range.returnAt &&
-                        driverPickupInfo?.address &&
-                        (currentRouteType === ROUTE_TYPE.IN_CITY || destination.trim()),
-                      )
-                    : Boolean(range.pickupAt && range.returnAt) &&
-                      (deliveryMode !== 'delivery' || Boolean(deliveryInfo?.address)),
             }}
+            beforeOpen={ensureTripReady}
             size="large"
             block
           />

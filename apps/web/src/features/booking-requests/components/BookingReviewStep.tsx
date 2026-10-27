@@ -14,6 +14,7 @@ import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
+import type { CustomerDepositView } from '../hooks/use-customer-cost-view';
 import type { RequestFormValues } from '../schema';
 import { BookingRenterCard } from './BookingRenterCard';
 import { BookingRequirementsCard } from './BookingRequirementsCard';
@@ -37,6 +38,8 @@ interface BookingReviewStepProps {
   licence: { required: boolean; current: DriverLicence | null };
   /** Điều kiện chủ xe công bố cho đúng dịch vụ đang chọn (giấy tờ, điều khoản). */
   hostTerms: { text: string | null; documents: string[] } | null;
+  /** Cọc thế chấp khi nhận xe — vẽ trong thẻ giấy tờ & điều kiện, không ở thẻ tiền. */
+  deposit: CustomerDepositView | null;
   /**
    * Ô đồng ý phủ cả điều khoản thuê của chủ xe (chủ xe có điều khoản) — đổi CÂU của ô cho khớp với
    * thứ payload sẽ khai (`acceptedTerms`).
@@ -52,7 +55,6 @@ interface BookingReviewStepProps {
   stepError: string | null;
   submitting: boolean;
   onSubmit: () => void;
-  onEdit: () => void;
 }
 
 /**
@@ -61,8 +63,9 @@ interface BookingReviewStepProps {
  * - TRÁI: thẻ chuyến đi (`BookingTripCard`) · người thuê + lời nhắn · giấy tờ.
  * - PHẢI: chi phí · các khoản khác · đồng ý điều khoản + nút gửi · chuyện xảy ra sau khi gửi.
  *
- * Màn này KHÔNG sửa chuyến: "Chỉnh sửa" đưa khách về bước Chuyến đi, nơi có lịch bận, bản đồ và
- * báo giá sống. Thứ duy nhất nhập được ở đây là lời nhắn cho chủ xe và ô đồng ý.
+ * Màn này KHÔNG sửa chuyến và không có lối "Chỉnh sửa": chuyến được chọn ở thẻ đặt xe của trang chi
+ * tiết (nơi có lịch bận, bản đồ và báo giá sống) — muốn đổi thì khách đóng hộp và chọn lại ở đó.
+ * Thứ nhập được ở đây là liên hệ, lời nhắn cho chủ xe và ô đồng ý.
  *
  * Người thuê là TÀI KHOẢN đang đăng nhập (ADR 0060): họ tên và SĐT đã xác minh hiện để soát, không
  * sửa được — server đọc chúng từ tài khoản, không từ payload. Thiết kế vẽ chúng thành ô nhập; ở
@@ -80,6 +83,7 @@ export function BookingReviewStep({
   control,
   licence,
   hostTerms,
+  deposit,
   agreementCoversHostTerms,
   journey,
   costs,
@@ -88,7 +92,6 @@ export function BookingReviewStep({
   stepError,
   submitting,
   onSubmit,
-  onEdit,
 }: BookingReviewStepProps) {
   const t = useTranslations('BookingRequests.flow');
 
@@ -112,17 +115,6 @@ export function BookingReviewStep({
             trip={trip}
             variant="review"
             showMileage
-            action={
-              <button
-                type="button"
-                className={styles.editLink}
-                onClick={onEdit}
-                aria-label={t('reviewPage.trip.editLabel')}
-                disabled={submitting}
-              >
-                {t('reviewPage.trip.edit')}
-              </button>
-            }
           >
             {deliveryEstimate}
           </BookingTripCard>
@@ -145,7 +137,7 @@ export function BookingReviewStep({
             </Form>
           </BookingRenterCard>
 
-          <BookingRequirementsCard licence={licence} hostTerms={hostTerms} />
+          <BookingRequirementsCard licence={licence} hostTerms={hostTerms} deposit={deposit} />
         </div>
 
         {/* ── Cột phải: tiền · đồng ý + gửi · sau khi gửi ─────────────────────────────── */}

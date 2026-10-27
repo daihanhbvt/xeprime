@@ -315,6 +315,7 @@
       "driverPickup": "Pick-up at: {address}",
       "notReserved": "The car is not held yet — the host has to accept your request first.",
       "myTrips": "My trips",
+      "viewDetail": "View details",
       "chatShop": "Message the host",
       "chatHost": "Message the host",
       "close": "Back",
@@ -502,10 +503,19 @@
     "nearPickup": {
       "title": "You are booking close to pickup time",
       "noFreeCancelTitle": "This trip has no free-cancellation window",
-      "short": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and can cancel for free for about {freeCancel} after they accept. The later the owner accepts, the shorter both windows get.",
+      "short": "If the owner accepts right away, you will have about {payment} to pay the reservation payment. Once your payment succeeds, you can cancel for free for about {freeCancel}. The closer to pick-up you pay, the shorter the free-cancellation window.",
       "noFreeCancel": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and there is no free-cancellation window: cancelling after you pay only refunds the insurance (if any).",
       "tooShort": "Pickup is too close to pay the reservation payment through XePrime in time — the owner may not be able to accept this trip. Please pick a later pickup time.",
-      "estimate": "This is an estimate; the exact deadlines appear as soon as the owner accepts."
+      "estimate": "This is an estimate; the exact payment deadline appears as soon as the owner accepts, and the free-cancellation deadline once you have paid."
+    },
+    "check": {
+      "signInTitle": "Sign in to send your request",
+      "signInBody": "Your trip is kept as is — sign in or create an account to review and send your rental request.",
+      "signIn": "Sign in",
+      "issueTitle": "Can't continue with this trip",
+      "retry": "Try again",
+      "chooseAgain": "Choose again",
+      "invalid": "The trip details are not valid. Please choose again on the car page."
     }
   },
   "approved": {
@@ -582,7 +592,7 @@
     "estimate": "Estimate",
     "noHold": "This trip has no online reservation payment — the booking is created as soon as you approve, with no QR code.",
     "paymentWindow": "The customer has {duration} to transfer the reservation payment (until about {time}); after that the slot is released automatically.",
-    "freeCancel": "The customer can cancel for free for {duration} after you approve (until about {time}).",
+    "freeCancel": "The customer can cancel for free for {duration} from the moment their payment succeeds (until about {time} if they pay as soon as you approve).",
     "noFreeCancel": "The customer gets no free-cancellation window on this trip.",
     "lateCancel": "If the customer cancels after the free window, the whole owner's share of the reservation payment (the holding commitment calculated on the rental) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
     "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time — approval will fail. Contact the customer to arrange it directly.",

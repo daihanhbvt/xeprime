@@ -126,6 +126,7 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
     customerAvatarUrl: null,
     customerRiskLevel: TENANT_CUSTOMER_RISK_LEVEL.NORMAL,
     canMessageOnPlatform: true,
+    chatOpen: true,
     pickupAt: PICKUP_AT,
     returnAt: RETURN_AT,
     serviceType: SERVICE_TYPE.SELF_DRIVE,
@@ -802,6 +803,14 @@ describe('/manage/booking-requests — liên hệ khách', () => {
     );
     expect(mutations.conversation.mutate).toHaveBeenCalledWith('req-1', expect.anything());
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith('/manage/chat?c=conv-9'));
+  });
+
+  it('chủ xe tuyến hoa hồng, yêu cầu chưa thành đơn ⇒ ẩn hẳn nút nhắn tin (ADR 0073)', () => {
+    setRows([request({ chatOpen: false })]);
+    renderPage();
+    expect(
+      within(cardFor('Kia Carnival 2025')).queryByRole('button', { name: /Nhắn tin cho/ }),
+    ).toBeNull();
   });
 
   it('khách vãng lai (chưa có tài khoản) ⇒ nút nhắn tin bị khoá kèm lời giải thích', async () => {
