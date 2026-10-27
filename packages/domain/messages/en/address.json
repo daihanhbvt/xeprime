@@ -28,5 +28,19 @@
     "title": "This address does not match the current administrative catalogue",
     "hint": "Since 1 July 2025 Vietnam uses a two-tier model: province/city → ward/commune/special zone. Open the form, pick the ward again, and confirm the address.",
     "legacyValue": "The old data says: {value}"
+  },
+  "currentLocation": {
+    "action": "Use my current location",
+    "locating": "Getting your location…",
+    "errors": {
+      "unsupported": "This browser cannot share your location. Please pick or type an address.",
+      "insecure": "Location is only available over a secure (HTTPS) connection.",
+      "denied": "Location access is blocked for this site. Allow it in your browser’s site settings and try again.",
+      "deniedIos": "Location access is blocked. Go to Settings › Privacy & Security › Location Services › Safari Websites, choose “While Using the App”, then try again.",
+      "unavailable": "We couldn’t determine your location. Turn on location services and try again.",
+      "timeout": "Getting your location took too long. Try again somewhere with a better signal.",
+      "lookupUnavailable": "We can’t look up the address right now. Try again or choose manually.",
+      "notFound": "No address found at your location. Please choose manually."
+    }
   }
 }

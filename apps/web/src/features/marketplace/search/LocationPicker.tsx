@@ -11,7 +11,13 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProvinceAlias } from '@xeprime/types';
+import { CurrentLocationButton } from '@/features/locations/components/CurrentLocationButton';
+import {
+  deliveryAddressFromCurrentPlace,
+  type CurrentPlace,
+} from '@/features/locations/hooks/use-current-place';
 import { cx } from '@/lib/cx';
+import { rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { NATIONWIDE_VALUE, provinceLabelOf } from '../province-options';
 import type { PublicDestination } from '../types';
@@ -123,7 +129,33 @@ function LocationPanel({
   const t = useTranslations('HomeSearch.location');
   const errorMessage = useErrorMessage();
   const [query, setQuery] = useState('');
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const inputRef = useRef<InputRef>(null);
+
+  /*
+   * "Vị trí hiện tại": TỈNH đi vào bộ lọc như một cú bấm tỉnh (người dùng chủ động bấm, nên ghi
+   * vào bộ nhớ tỉnh là đúng — ADR 0042 điều 6), còn ĐỊA CHỈ CỤ THỂ được nhớ làm địa chỉ giao xe để
+   * điền sẵn khi khách chọn thuê xe. Địa chỉ chỉ được nhớ khi phép đo đủ chính xác — xem
+   * `deliveryAddressFromCurrentPlace`.
+   *
+   * Tỉnh đo được nhưng không có trong danh mục điểm đến (chưa có xe) ⇒ KHÔNG đổi bộ lọc, giữ panel
+   * mở và nói thẳng — chọn một tỉnh rỗng là dẫn khách tới một trang kết quả trống. Danh mục chưa về
+   * (hiếm: lượt đo mất vài giây) thì vẫn chọn — mã đã qua bảng bí danh ở server nên luôn hợp lệ.
+   */
+  const handleLocated = (place: CurrentPlace) => {
+    const address = deliveryAddressFromCurrentPlace(place);
+    if (address) rememberDeliveryAddress(address);
+
+    if (!place.provinceCode) {
+      setLocationNotice(t('noProvinceNearby'));
+      return;
+    }
+    if (destinations && !destinations.some((d) => d.provinceCode === place.provinceCode)) {
+      setLocationNotice(t('noVehiclesNearby'));
+      return;
+    }
+    onSelect(place.provinceCode);
+  };
 
   /*
    * Panel mở ra là gõ được ngay. KHÔNG dùng `autoFocus`: nó focus kèm cuộn, và với popup vừa
@@ -160,6 +192,13 @@ function LocationPanel({
         placeholder={t('searchPlaceholder')}
         prefix={<SearchOutlined aria-hidden="true" />}
         aria-label={t('searchAriaLabel')}
+      />
+
+      <CurrentLocationButton
+        label={t('useCurrent')}
+        onLocateStart={() => setLocationNotice(null)}
+        onLocated={handleLocated}
+        notice={locationNotice}
       />
 
       {error ? (

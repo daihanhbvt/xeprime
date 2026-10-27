@@ -34,6 +34,13 @@ vi.mock('../hooks/use-destinations', () => ({
 
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => true }));
 
+// Nút "vị trí hiện tại" trong panel địa điểm dùng TanStack Query; harness không có
+// `QueryClientProvider` nên chặn ở tầng hook. Hành vi của nút được kiểm ở `search-experience.test.tsx`.
+vi.mock('@/features/locations/hooks/use-current-place', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/locations/hooks/use-current-place')>()),
+  useCurrentPlace: () => ({ locate: vi.fn(), isLocating: false, errorCode: null, reset: vi.fn() }),
+}));
+
 beforeEach(() => {
   nav.push.mockClear();
   nav.searchParams = new URLSearchParams();

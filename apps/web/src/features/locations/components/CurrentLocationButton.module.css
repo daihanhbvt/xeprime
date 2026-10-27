@@ -1,0 +1,58 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-2);
+}
+
+/* Nút dạng liên kết (Figma: chữ xanh + icon tâm ngắm) — vùng bấm 36px cho ngón tay trên điện thoại. */
+.action {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-link);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-sm);
+  /* Safari iOS: bỏ chớp xám khi chạm và độ trễ double-tap-zoom. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.action:hover:not(:disabled) {
+  color: var(--xp-color-link-hover);
+}
+
+.action:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.action:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.icon {
+  font-size: 18px;
+}
+
+.error,
+.notice {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.error {
+  color: var(--xp-color-error);
+}
+
+.notice {
+  color: var(--xp-color-text-secondary);
+}

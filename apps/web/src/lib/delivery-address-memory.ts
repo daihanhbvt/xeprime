@@ -13,10 +13,13 @@
  *   3. **Tỉnh của chính chiếc xe** — giao tận nơi có bán kính vài chục km, nên xe ở đâu thì địa
  *      chỉ giao gần như chắc chắn ở đó.
  *
- * ## Chỉ ghi khi đã GỬI THÀNH CÔNG
+ * ## Chỉ ghi một địa chỉ ĐÃ CHỐT
  *
- * `rememberDeliveryAddress` được gọi từ đúng một chỗ: sau khi yêu cầu thuê gửi đi thành công.
- * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau.
+ * `rememberDeliveryAddress` chỉ được gọi khi khách đã chốt trọn một địa chỉ: gửi yêu cầu thuê
+ * thành công, bấm "Xác nhận địa chỉ" ở hộp giao xe tận nơi, hoặc bấm "vị trí hiện tại" ở bộ chọn
+ * địa điểm trang chủ (chỉ khi phép đo đủ chính xác — `deliveryAddressFromCurrentPlace`). Lượt ghi
+ * mới nhất thắng: đó là câu trả lời gần nhất của khách cho "giao xe tới đâu". Ghi lúc đang gõ dở
+ * sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau.
  *
  * ## An toàn hydration
  *

@@ -268,7 +268,9 @@
       "manualDefault": "The owner confirms the delivery fee directly when approving your rental request.",
       "notFoundTitle": "Couldn't find a route automatically",
       "notFoundBody": "We couldn't work out the distance for this address automatically. The owner will tell you the delivery fee later.",
-      "confirm": "Confirm address"
+      "confirm": "Confirm address",
+      "useCurrent": "Use my current location",
+      "imprecise": "Your location isn’t precise enough (about {distance} off). Please type your exact address."
     }
   },
   "reviews": {
