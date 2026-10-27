@@ -1,133 +1,206 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { PAYMENT_KIND, PAYMENT_METHOD, PAYMENT_STATUS } from '@xeprime/types';
+import { App } from 'antd';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ACCOUNT_TRANSACTION_STATUS } from '@xeprime/types';
 import { AccountPaymentsView } from './AccountPaymentsView';
-import type { AccountPayment, AccountPaymentPage } from '../types';
+import type { AccountTransaction, AccountTransactionPage } from '../types';
 
 /**
- * "Tiền của các chuyến đã thuê" — `/account/payments`.
+ * Tab "Lịch sử giao dịch" — `/account/payments` (Figma Account / History `21695:27193`).
  *
- * Phép kiểm số 1 ở đây là PHONG BÌ, vì đó là chỗ màn này đã vỡ thật:
- * `Cannot read properties of undefined (reading 'paidTotal')`. Nguyên nhân là tổng từng được
- * trả thành khoá thứ ba ngang hàng `data`/`meta`, rồi bị client làm rụng khi nó lấy phần trong
- * phong bì. Test này dựng dữ liệu đúng hình dạng HTTP THẬT (`meta.totals`) và đọc bốn con số —
- * nếu ai dời `totals` ra ngoài `meta` lần nữa thì đỏ ở đây chứ không đỏ trên máy người dùng.
- *
- * Hai điều còn lại là lý do màn này tồn tại tách khỏi màn số dư:
- *
- *  · Dải đầu màn phải nói ra BA loại tiền ở ba chỗ, và trỏ sang màn SỐ DƯ. Bỏ nó đi là để người
- *    dùng đọc con số ở đây rồi tưởng đó là số dư của mình.
- *  · Tiền CỌC phải kèm câu "sẽ được hoàn khi trả xe". Không có câu đó thì một khoản cọc 5 triệu
- *    đọc như tiền đã mất.
+ * Điều được khoá:
+ *  · Mỗi dòng nói đúng DẤU tiền theo góc nhìn của khách (`+` tiền về, `-` tiền đi) và nhãn trạng
+ *    thái — không bao giờ in số âm kèm dấu trừ thứ hai.
+ *  · Mã của dòng thuộc một chuyến là LIÊN KẾT về chuyến đó; dòng không thuộc chuyến thì chỉ là chữ.
+ *  · Bộ lọc sống trên URL (ADR 0004): đổi chip trạng thái là `router.replace` với `?status=`, và
+ *    đổi bộ lọc thì về trang 1.
+ *  · Lệnh rút còn chờ duyệt có lối "Huỷ yêu cầu"; dòng khác thì không.
+ *  · Rỗng có lời giải thích — khác nhau giữa "chưa có gì" và "không khớp bộ lọc".
  */
 const query = vi.hoisted(() => ({
-  data: undefined as AccountPaymentPage | undefined,
+  data: undefined as AccountTransactionPage | undefined,
   isLoading: false,
   isFetching: false,
   isError: false,
   refetch: vi.fn(),
 }));
+const lastFilters = vi.hoisted(() => ({ value: null as unknown }));
 
-vi.mock('../hooks/use-account-payments', () => ({
-  useAccountPayments: () => query,
+vi.mock('../hooks/use-account-transactions', () => ({
+  useAccountTransactions: (filters: unknown) => {
+    lastFilters.value = filters;
+    return query;
+  },
 }));
 
+const cancelWithdrawal = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+vi.mock('@/features/wallet/hooks', () => ({
+  useCancelWithdrawal: () => cancelWithdrawal,
+}));
+
+const nav = vi.hoisted(() => ({ params: new URLSearchParams(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  useSearchParams: () => nav.params,
 }));
 
-vi.mock('@/hooks/use-media-query', () => ({
-  useIsMobile: () => false,
-  useIsTablet: () => false,
-  useIsDesktop: () => true,
-  useMediaQuery: () => false,
-}));
-
-function row(over: Partial<AccountPayment> = {}): AccountPayment {
+function row(over: Partial<AccountTransaction> = {}): AccountTransaction {
   return {
-    id: 'p1',
-    bookingId: 'b1',
-    bookingCode: 'DH2609001',
-    tenantName: 'Việt Car Hà Nội',
-    vehicleName: 'Mazda 3',
-    // Cố ý KHÁC mọi con số ở `totals`: trùng số thì phép kiểm không phân biệt được nó đọc thẻ
-    // tổng hay đọc dòng trong bảng.
-    amount: '250000',
-    currency: 'VND',
-    kind: PAYMENT_KIND.RENTAL,
-    method: PAYMENT_METHOD.BANK_TRANSFER,
-    status: PAYMENT_STATUS.SUCCEEDED,
-    paidAt: '2026-09-10T03:00:00.000Z',
-    createdAt: '2026-09-10T03:00:00.000Z',
+    id: 'tx1',
+    kind: 'hold_payment',
+    title: 'hold_payment',
+    code: 'XPH23456789',
+    amount: '-320000',
+    status: ACCOUNT_TRANSACTION_STATUS.SUCCEEDED,
+    occurredAt: '2026-10-27T03:00:39.000Z',
+    tripId: 'RQ1',
+    bookingCode: null,
+    cancellable: false,
     ...over,
   };
 }
 
-/** Đúng hình dạng phong bì HTTP: tổng nằm TRONG `meta`. */
-function page(over: Partial<AccountPaymentPage['meta']['totals']> = {}): AccountPaymentPage {
-  return {
-    data: [row()],
-    meta: {
-      page: 1,
-      limit: 20,
-      total: 1,
-      hasNext: false,
-      totals: {
-        paidTotal: '1000000',
-        rentalTotal: '700000',
-        depositTotal: '300000',
-        tripCount: 1,
-        ...over,
-      },
-    },
-  };
+function page(rows: AccountTransaction[], total = rows.length): AccountTransactionPage {
+  return { data: rows, meta: { page: 1, limit: 20, total, hasNext: total > 20 } };
 }
 
-describe('AccountPaymentsView — phong bì và bốn con số', () => {
-  it('đọc tổng từ `meta.totals`, không phải khoá ngang hàng `data`', () => {
-    query.data = page();
-    render(<AccountPaymentsView />);
+function renderView() {
+  return render(
+    <App>
+      <AccountPaymentsView />
+    </App>,
+  );
+}
 
-    expect(screen.getByText('1.000.000 ₫')).toBeTruthy();
-    expect(screen.getByText('700.000 ₫')).toBeTruthy();
-    expect(screen.getByText('300.000 ₫')).toBeTruthy();
-    // Số chuyến là số đếm, không định dạng tiền.
-    expect(screen.getByText('Số chuyến')).toBeTruthy();
+beforeEach(() => {
+  query.data = undefined;
+  query.isLoading = false;
+  query.isFetching = false;
+  query.isError = false;
+  nav.params = new URLSearchParams();
+  nav.replace.mockReset();
+  cancelWithdrawal.mutate.mockReset();
+});
+
+describe('AccountPaymentsView — dòng giao dịch', () => {
+  it('tiền đi mang dấu "-", tiền về mang dấu "+", kèm nhãn trạng thái', () => {
+    query.data = page([
+      row(),
+      row({
+        id: 'tx2',
+        kind: 'hold_refund',
+        title: 'hold_refund',
+        amount: '150000',
+        status: ACCOUNT_TRANSACTION_STATUS.PENDING,
+      }),
+    ]);
+    renderView();
+
+    const list = screen.getByRole('list', { name: 'Lịch sử giao dịch' });
+    const [paid, refund] = within(list).getAllByRole('listitem');
+    expect(within(paid!).getByText('Thanh toán giữ chỗ')).toBeTruthy();
+    expect(within(paid!).getByText('-320.000 ₫')).toBeTruthy();
+    expect(within(paid!).getByText('Thành công')).toBeTruthy();
+    expect(within(refund!).getByText('Hoàn tiền giữ chỗ')).toBeTruthy();
+    expect(within(refund!).getByText('+150.000 ₫')).toBeTruthy();
+    expect(within(refund!).getByText('Đang chờ')).toBeTruthy();
   });
 
-  it('nói ra ba loại tiền và trỏ sang màn Số dư — không để ai đọc đây thành số dư', () => {
-    query.data = page();
-    render(<AccountPaymentsView />);
+  it('mã của dòng thuộc chuyến dẫn về chuyến đó; dòng không thuộc chuyến chỉ là chữ', () => {
+    query.data = page([
+      row(),
+      row({ id: 'tx2', kind: 'withdrawal', title: 'withdrawal', code: 'XPW0001', tripId: null }),
+    ]);
+    renderView();
 
-    expect(screen.getByText('Đây là tiền bạn đã trả cho gian hàng')).toBeTruthy();
-    const link = screen.getByText('Số dư của tôi').closest('a');
-    expect(link?.getAttribute('href')).toBe('/account/balance');
+    expect(screen.getByRole('link', { name: '#XPH23456789' }).getAttribute('href')).toBe(
+      '/trips/RQ1',
+    );
+    expect(screen.getByText('#XPW0001')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: '#XPW0001' })).toBeNull();
   });
 
-  it('có cọc thì kèm câu cọc sẽ được hoàn; không có cọc thì không hiện câu thừa', () => {
-    query.data = page();
-    render(<AccountPaymentsView />);
-    expect(screen.getByText(/sẽ được hoàn khi bạn trả xe/)).toBeTruthy();
+  it('chỉ lệnh rút còn chờ duyệt mới có "Huỷ yêu cầu"', () => {
+    query.data = page([
+      row(),
+      row({
+        id: 'wd1',
+        kind: 'withdrawal',
+        title: 'withdrawal',
+        code: 'XPW0001',
+        tripId: null,
+        amount: '-500000',
+        status: ACCOUNT_TRANSACTION_STATUS.PENDING,
+        cancellable: true,
+      }),
+    ]);
+    renderView();
 
-    query.data = page({ depositTotal: '0' });
-    render(<AccountPaymentsView />);
-    expect(screen.queryAllByText(/sẽ được hoàn khi bạn trả xe/)).toHaveLength(1);
+    const cancel = screen.getAllByRole('button', { name: 'Huỷ yêu cầu' });
+    expect(cancel).toHaveLength(1);
+    fireEvent.click(cancel[0]!);
+    // Bấm chỉ mở hộp xác nhận — chưa gọi huỷ.
+    expect(screen.getByText('Huỷ yêu cầu rút này?')).toBeTruthy();
+    expect(cancelWithdrawal.mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('AccountPaymentsView — bộ lọc trên URL', () => {
+  it('đọc trạng thái, khoảng ngày và trang từ URL rồi gửi xuống server', () => {
+    nav.params = new URLSearchParams('status=pending&from=2026-10-01&to=2026-10-27&page=3');
+    query.data = page([row()]);
+    renderView();
+
+    expect(lastFilters.value).toEqual({
+      status: 'pending',
+      from: '2026-10-01',
+      to: '2026-10-27',
+      page: 3,
+    });
+    expect(screen.getByRole('button', { name: 'Đang chờ' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 
-  it('chưa có khoản nào ⇒ màn rỗng có lời giải thích, không phải lỗi', () => {
-    query.data = {
-      data: [],
-      meta: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        hasNext: false,
-        totals: { paidTotal: '0', rentalTotal: '0', depositTotal: '0', tripCount: 0 },
-      },
-    };
-    render(<AccountPaymentsView />);
+  it('giá trị rác trên URL bị bỏ qua, không gửi xuống server', () => {
+    nav.params = new URLSearchParams('status=hacked&from=27-10-2026&page=-2');
+    query.data = page([row()]);
+    renderView();
 
-    expect(screen.getByText('Bạn chưa có khoản nào được gian hàng ghi nhận.')).toBeTruthy();
+    expect(lastFilters.value).toEqual({ status: null, from: null, to: null, page: 1 });
+  });
+
+  it('đổi chip trạng thái ⇒ `?status=` mới và về trang 1', () => {
+    nav.params = new URLSearchParams('page=4');
+    query.data = page([row()]);
+    renderView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thất bại' }));
+    expect(nav.replace).toHaveBeenCalledWith('/account/payments?status=failed', {
+      scroll: false,
+    });
+  });
+});
+
+describe('AccountPaymentsView — trạng thái màn', () => {
+  it('chưa có giao dịch nào ⇒ lời giải thích, không phải lỗi', () => {
+    query.data = page([]);
+    renderView();
+    expect(screen.getByText('Bạn chưa có giao dịch nào.')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('có bộ lọc mà rỗng ⇒ nói là không khớp bộ lọc', () => {
+    nav.params = new URLSearchParams('status=failed');
+    query.data = page([]);
+    renderView();
+    expect(screen.getByText('Không có giao dịch nào khớp bộ lọc.')).toBeTruthy();
+  });
+
+  it('lỗi tải ⇒ báo lỗi kèm nút thử lại', () => {
+    query.isError = true;
+    renderView();
+    fireEvent.click(screen.getByRole('button', { name: /Thử lại/ }));
+    expect(query.refetch).toHaveBeenCalled();
   });
 });

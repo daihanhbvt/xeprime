@@ -1,0 +1,41 @@
+/* Viên trạng thái kiểu Figma "_Badge": bo 16, đệm 2/12, chữ 14/500 — "Trung tâm Tài xế" và trang tài xế site partner. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--xp-space-2) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-card);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.warning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.success {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.info {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+.danger {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.purple {
+  background: var(--xp-color-processing-bg);
+  color: var(--xp-color-processing);
+}
+
+.neutral {
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+}

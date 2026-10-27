@@ -28,6 +28,7 @@
   },
   "withdraw": {
     "action": "Withdraw to bank",
+    "actionLinked": "Withdraw to linked bank",
     "title": "Withdrawal request",
     "amount": "Amount to withdraw",
     "amountHint": "Minimum {min}. You have {available} available now.",
@@ -169,6 +170,7 @@
   "pill": {
     "label": "Balance",
     "hide": "Hide balance",
-    "show": "Show balance"
+    "show": "Show balance",
+    "prefix": "Balance:"
   }
 }

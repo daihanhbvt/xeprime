@@ -2,14 +2,7 @@
 
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import {
-  clockText,
-  countdownSegment,
-  countdownState,
-  holdRemainingMs,
-  longClockText,
-  type CountdownState,
-} from '@xeprime/types';
+import { countdownState, holdRemainingMs, longClockText } from '@xeprime/types';
 import styles from './Countdown.module.css';
 
 /**
@@ -18,15 +11,8 @@ import styles from './Countdown.module.css';
  */
 const TICK_MS = 1_000;
 
-/*
- * `countdownState` / `clockText` / `countdownSegment` đã chuyển sang `@xeprime/types`: chia
- * chặng là LUẬT trình bày cửa sổ tiền (ADR 0032 điều 2), và app native phải chia y hệt. Re-export
- * để nơi gọi cũ không phải đổi đường import.
- */
-export { clockText, countdownSegment, countdownState, type CountdownState };
-
 /**
- * Đồng hồ đếm ngược tới một mốc do SERVER chốt.
+ * Đồng hồ đếm ngược tới một mốc do SERVER chốt — một mạch, không chia chặng.
  *
  * Đồng hồ chạy bằng giờ CỦA MÁY KHÁCH, còn cửa chặn thật luôn nằm ở server (`expires_at`,
  * `respond_by` trong chính câu `UPDATE` của lệnh). Lệch giờ vài giây vì thế chỉ làm con số hiển
@@ -39,7 +25,6 @@ export { clockText, countdownSegment, countdownState, type CountdownState };
 export function Countdown({
   deadline,
   urgentMs,
-  segmentMs,
   labels,
   className,
 }: {
@@ -47,13 +32,9 @@ export function Countdown({
   deadline: string;
   /** Dưới mốc này thì đổi sắc thái cảnh báo. */
   urgentMs: number;
-  /** Chia thành chặng bao nhiêu mili-giây; bỏ trống thì đếm một mạch. */
-  segmentMs?: number;
   labels: {
     remaining: string;
     expired: string;
-    /** Nhãn chặng, ví dụ "lượt 2/2" — chỉ hiện khi có `segmentMs` và còn nhiều hơn một chặng. */
-    segment?: (index: number, total: number) => string;
   };
   className?: string;
 }) {
@@ -81,8 +62,6 @@ export function Countdown({
   }, [deadline]);
 
   const state = countdownState(remaining, urgentMs);
-  const segment = segmentMs ? countdownSegment(remaining, segmentMs) : null;
-  const shown = segment ? segment.remainingInSegment : remaining;
 
   return (
     <p
@@ -106,17 +85,11 @@ export function Countdown({
           {labels.remaining}{' '}
           <span className={styles.clock} suppressHydrationWarning>
             {/*
-              Có chặng ⇒ mỗi chặng tối đa 60′, `m:ss`. Đếm một mạch ⇒ cửa sổ có thể dài hơn một
-              giờ (hạn phản hồi tới 4 giờ, huỷ miễn phí tới 2 giờ — ADR 0066) ⇒ `h:mm:ss`.
+              MỘT con số cho toàn bộ thời gian còn lại (`h:mm:ss` khi quá một giờ) — không chia chặng
+              60′: "15:45 · giờ 2/2" đọc thành "còn 15 phút" trong khi thật ra còn 1:15:45.
             */}
-            {segment ? clockText(shown) : longClockText(shown)}
+            {longClockText(remaining)}
           </span>
-          {segment && segment.total > 1 && labels.segment ? (
-            <span className={styles.segment} suppressHydrationWarning>
-              {' '}
-              {labels.segment(segment.index, segment.total)}
-            </span>
-          ) : null}
         </>
       )}
     </p>

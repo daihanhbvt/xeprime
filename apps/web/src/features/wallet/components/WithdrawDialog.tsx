@@ -12,6 +12,7 @@ import { BankAccountCard } from '@/features/bank-accounts/components/BankAccount
 import { BankAccountForm } from '@/features/bank-accounts/components/BankAccountForm';
 import { currentBankAccount } from '@/features/bank-accounts/current-account';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -58,6 +59,8 @@ export function WithdrawDialog({
 
   const summary = useWalletSummary(scope);
   const accountScope = scope === 'shop' ? 'shop' : 'account';
+  const isAccount = accountScope === 'account';
+  const tCommon = useTranslations('Common');
   const {
     data: accounts,
     isPending: accountsPending,
@@ -113,6 +116,19 @@ export function WithdrawDialog({
         okDisabled={!valid}
         confirmLoading={create.isPending}
         size="sm"
+        // Khu tài khoản khách: hàng nút của bảng nút v2, cùng dáng hộp "Đổi tài khoản nhận tiền".
+        footer={
+          isAccount ? (
+            <div className={styles.footer}>
+              <CtaButton variant="neutral" onClick={onClose} disabled={create.isPending}>
+                {tCommon('actions.cancel')}
+              </CtaButton>
+              <CtaButton onClick={submit} disabled={!valid} loading={create.isPending}>
+                {t('submit')}
+              </CtaButton>
+            </div>
+          ) : undefined
+        }
       >
         <label className={styles.field}>
           <span className={styles.label}>{t('amount')}</span>
@@ -138,9 +154,7 @@ export function WithdrawDialog({
         <p className={styles.label}>{t('account')}</p>
         {accountsPending ? <Skeleton active paragraph={{ rows: 1 }} /> : null}
 
-        {accountsError ? (
-          <Alert type="error" showIcon title={tAccounts('loadError')} />
-        ) : null}
+        {accountsError ? <Alert type="error" showIcon title={tAccounts('loadError')} /> : null}
 
         {account ? (
           <BankAccountCard
@@ -183,6 +197,7 @@ export function WithdrawDialog({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         replacing={account}
+        appearance={isAccount ? 'account' : 'standard'}
       />
     </>
   );

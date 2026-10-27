@@ -5,8 +5,8 @@ import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BOOKING_REQUEST_RESPOND_WINDOW } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { tripPath } from '@/constants/routes';
+import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
@@ -31,7 +31,8 @@ interface BookingSuccessStepProps {
 }
 
 /**
- * Hộp "Đã gửi yêu cầu" — Figma `19759:22026` (modal 600 rộng trong khung `19759:21680`).
+ * Hộp "Đã gửi yêu cầu" — Figma `19759:22026` (modal 750 rộng trong khung `19759:21680`, bản vẽ lại
+ * 27/10/2026: biểu tượng phong bì, thẻ chuyến hai cột có dòng tổng, ba nút dồn phải).
  *
  * Chỉ dành cho yêu cầu CHƯA cần thanh toán: chuyến được nhận ngay mà có tiền giữ chỗ đã sang trang
  * `/payment/:id` từ `onSuccess` của luồng. Còn lại hai lối ra của `submitPublic`:
@@ -44,7 +45,10 @@ interface BookingSuccessStepProps {
  *    chỗ). Lúc này gọi là "đã gửi yêu cầu" là nói thiếu, nên tiêu đề đổi và không có lời nhắc.
  *
  * Mã yêu cầu là mã khách đọc cho tổng đài, nên nó CHÉP được. Khung hộp (huy hiệu, ô mã, hàng nút)
- * là của chung với hộp "Thanh toán thành công" — `BookingResult`.
+ * là của chung với hộp "Thanh toán thành công" — `BookingResult`, biến thể `sent`.
+ *
+ * Lời nhắc "xe chưa được giữ chỗ" không có trong bản vẽ nhưng được GIỮ: thiếu nó, "Đã gửi yêu cầu"
+ * đọc như "đã đặt được xe" (ADR 0044 điều 1).
  *
  * Thẻ chuyến là `BookingTripCard` — cùng thẻ với màn Xem lại, và dòng tổng dùng cùng luật đặt tên
  * với thẻ chi phí ở đó (`useQuoteTotal`): khách vừa đọc "Tổng bạn trả" thì không được thấy cùng con
@@ -65,13 +69,15 @@ export function BookingSuccessStep({
   const total = useQuoteTotal(breakdown);
   const confirmed = receipt.autoAccepted;
 
-  function openTrips() {
+  /** Chi tiết CHÍNH chuyến vừa gửi — `tripPath` nhận id yêu cầu, chuyến lên đơn rồi vẫn mở đúng. */
+  function openTrip() {
     onClose();
-    router.push(ROUTES.TRIPS);
+    router.push(tripPath.detail(receipt.id));
   }
 
   return (
     <BookingResult
+      variant="sent"
       title={confirmed ? t('done.confirmedTitle') : t('done.title')}
       lead={
         confirmed
@@ -100,18 +106,23 @@ export function BookingSuccessStep({
           </Button>
           {/*
             Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao sớm hơn
-            được không). Nút nhắn shop sẵn có tự lo cả lượt mời đăng nhập lại; overlay đóng trước khi
-            rời sang khu tin nhắn.
+            được không) — nhưng chỉ gian hàng tuyến gói mở hộp thư lúc này. Chủ xe cá nhân chỉ nhắn
+            được khi đã có ĐƠN (ADR 0073), nên `ShopChatButton` hỏi server và ẩn hẳn nút. Overlay đóng
+            trước khi rời sang khu tin nhắn.
           */}
-          <ChatWithShopButton
-            vehicleId={vehicleId}
-            label={t('done.chatHost')}
-            size="large"
-            className={styles.secondary}
-            onNavigate={onClose}
-          />
-          <CtaButton variant="gradient" size="form" onClick={openTrips} className={styles.primary}>
-            {t('done.myTrips')}
+          {listing ? (
+            <ShopChatButton
+              shopSlug={listing.shopSlug}
+              vehicleId={vehicleId}
+              publicChatOpen={listing.shopChatOpen}
+              label={t('done.chatHost')}
+              size="large"
+              className={styles.secondary}
+              onNavigate={onClose}
+            />
+          ) : null}
+          <CtaButton variant="gradient" size="form" onClick={openTrip} className={styles.primary}>
+            {t('done.viewDetail')}
           </CtaButton>
         </>
       }
@@ -121,9 +132,11 @@ export function BookingSuccessStep({
         vehicleName={vehicleName}
         vehicleImageUrl={vehicleImageUrl}
         trip={trip}
-        variant="receipt"
+        variant="sent"
       >
-        {total ? <BookingResultTotal label={total.label} amount={total.amount} /> : null}
+        {total ? (
+          <BookingResultTotal variant="sent" label={total.label} amount={total.amount} />
+        ) : null}
       </BookingTripCard>
 
       {/*

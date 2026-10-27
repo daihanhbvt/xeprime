@@ -10,6 +10,7 @@ export {
   absoluteMoney,
   applyDiscountPercent,
   compactMoneyParts,
+  moneyInThousands,
   formatMoneyVnd,
   isNegativeMoney,
   isPositiveMoney,

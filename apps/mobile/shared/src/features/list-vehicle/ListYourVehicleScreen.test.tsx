@@ -75,7 +75,7 @@ async function renderScreen(session: authApi.CurrentUser | null) {
 async function pressTrack(view: Awaited<ReturnType<typeof render>>, name: string) {
   // Tuyến gói phải được CHỌN trước — nút ghim đáy màn chỉ mang hành động của tuyến đang chọn.
   if (name === SHOP_CTA)
-    await fireEvent.press(view.getByRole('radio', { name: 'Mở gian hàng cho thuê' }));
+    await fireEvent.press(view.getByRole('radio', { name: 'Gian hàng chuyên nghiệp' }));
   const cta = view.getByRole('button', { name });
   await waitFor(() => expect(cta.props.accessibilityState?.disabled).toBe(false));
   await fireEvent.press(cta);
@@ -110,7 +110,7 @@ describe('ListYourVehicleScreen', () => {
 
     expect(await view.findByText(SUBTITLE)).toBeTruthy();
     expect(view.getByText('Đăng xe cá nhân')).toBeTruthy();
-    expect(view.getByText('Mở gian hàng cho thuê')).toBeTruthy();
+    expect(view.getByText('Gian hàng chuyên nghiệp')).toBeTruthy();
     expect(view.getByText('Linh hoạt chuyển đổi khi cần')).toBeTruthy();
   });
 

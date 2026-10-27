@@ -155,11 +155,11 @@ Khách gửi yêu cầu (không thu tiền, không chiếm lịch)
 | Tình huống | Kết quả |
 | --- | --- |
 | Huỷ trước khi trả / hết 120′ chưa đủ tiền | Nhả lịch; phần đã chuyển dở được hoàn; không phí huỷ |
-| Huỷ trong **4 giờ kể từ `acceptedAt`** | Hoàn 100% số đã chuyển online |
+| Huỷ trong **thời gian huỷ miễn phí, tính từ lúc tiền giữ chỗ về đủ (`paidAt`, ADR 0072)** | Hoàn 100% số đã chuyển online |
 | Huỷ sau cửa sổ miễn phí, trước bàn giao | Hoàn 100% `IV + IP`; `D + S` chia 50/50 chủ xe ↔ XePrime; không tính thuế |
 | Tiền về sau khi hold đã chết | Không tạo đơn; giao dịch nằm lại cho admin đối soát |
 
-Cả hai mốc (hạn thanh toán, hủy miễn phí) tính XUÔI từ `acceptedAt`, snapshot ở server. Đơn sát giờ (nhận xe cách < 4 giờ) phải cảnh báo trước khi khách trả tiền. Tiền hoàn vào **ví điểm** của tài khoản khách; khách không có tài khoản thì chuyển khoản tay ([ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) điều 5).
+Hạn thanh toán tính XUÔI từ `acceptedAt`; huỷ miễn phí chỉ bắt đầu khi tiền giữ chỗ về ĐỦ và tính XUÔI từ `paidAt` (ADR 0072); hết hạn thanh toán mà chưa đủ tiền là tự huỷ. Các mốc snapshot ở server. Đơn sát giờ phải cảnh báo trước khi khách gửi yêu cầu. Tiền hoàn vào **ví điểm** của tài khoản khách; khách không có tài khoản thì chuyển khoản tay ([ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) điều 5).
 
 **Chủ xe/gian hàng** — theo chặng ([ADR 0045](../decisions/0045-host-cancellation-and-reputation.md) điều 1–2):
 

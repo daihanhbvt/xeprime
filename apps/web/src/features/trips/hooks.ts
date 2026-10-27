@@ -7,6 +7,7 @@ import {
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
   type BookingHoldStatus,
+  type CustomerCancellationReason,
   type HandoverPhotoSlot,
   type HandoverType,
 } from '@xeprime/types';
@@ -24,6 +25,7 @@ import {
   provideRefundAccount,
   reportTripNotReceived,
   tripsToParams,
+  type TripListNarrow,
 } from './api';
 import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
 
@@ -34,11 +36,17 @@ import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './
  * thẻ tài khoản của vỏ quản lý (`ManageUserCard`) đếm chuyến đi thuê còn dở trên MỌI trang —
  * và nhân sự nền tảng thì không bao giờ có chuyến nào để đếm.
  */
-export function useTrips(filter: string, page: number, role?: string, enabled = true) {
+export function useTrips(
+  filter: string,
+  page: number,
+  role?: string,
+  enabled = true,
+  narrow?: TripListNarrow,
+) {
   return useQuery({
-    // `role` nằm trong queryKey: đổi tab vai phải là một lần đọc KHÁC, không phải cùng cache.
-    queryKey: queryKeys.trips.list(tripsToParams(filter, page, role)),
-    queryFn: () => fetchTrips(filter, page, role),
+    // `role` + ô tìm/khoảng ngày nằm trong queryKey: mỗi tổ hợp là một lần đọc KHÁC.
+    queryKey: queryKeys.trips.list(tripsToParams(filter, page, role, narrow)),
+    queryFn: () => fetchTrips(filter, page, role, narrow),
     enabled,
     // Đổi tab không nháy sang trống rồi mới có dữ liệu.
     placeholderData: keepPreviousData,
@@ -191,7 +199,7 @@ export function useTripCancelPreview(id: string, enabled: boolean) {
 export function useCancelTrip(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => cancelTrip(id),
+    mutationFn: (reasonCategory: CustomerCancellationReason) => cancelTrip(id, reasonCategory),
     onSuccess: (trip) => {
       queryClient.setQueryData(queryKeys.trips.detail(id), trip);
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });

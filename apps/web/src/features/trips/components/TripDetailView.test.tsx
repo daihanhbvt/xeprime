@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BOOKING_HOLD_STATUS,
@@ -103,6 +103,15 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({
 
 vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
   ChatWithShopButton: ({ label }: { label?: string }) => <button type="button">{label}</button>,
+}));
+
+/** Form đánh giá của chuyến hoàn thành gửi qua React Query — hook có test riêng. */
+const createReview = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+vi.mock('@/features/reviews/hooks/use-create-review', () => ({
+  useCreateReview: () => createReview,
+}));
+vi.mock('@/features/reviews/hooks/use-update-review', () => ({
+  useUpdateReview: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const TRIP: CustomerTripDetail = {
@@ -276,7 +285,7 @@ describe('Chờ chủ xe phản hồi (khách)', () => {
       screen.getByRole('heading', { level: 2, name: 'Yêu cầu của bạn đã được tiếp nhận' }),
     ).toBeTruthy();
     // Nhãn chặng đọc từ `Domain` — cùng chữ với danh sách chuyến (ADR 0005).
-    expect(screen.getByText('Chờ xác nhận')).toBeTruthy();
+    expect(screen.getAllByText('Chờ chủ xe phản hồi').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('status').some((el) => el.textContent?.includes('Còn'))).toBe(true);
     // Yêu cầu chờ duyệt KHÔNG giữ xe — không được đọc như "đã đặt được".
     expect(screen.getByText(/Xe chưa được giữ cho bạn/)).toBeTruthy();
@@ -296,7 +305,8 @@ describe('Chờ chủ xe phản hồi (khách)', () => {
       estimate: { ...ESTIMATE, estimateNote: 'Giá lộ trình chưa niêm yết' },
     });
     renderView();
-    expect(screen.getByText('Tạm tính')).toBeTruthy();
+    expect(screen.getByText('Tổng thanh toán dự kiến')).toBeTruthy();
+    expect(screen.queryByText('Tổng thanh toán')).toBeNull();
     expect(screen.getByText(/Giá lộ trình chưa niêm yết/)).toBeTruthy();
   });
 
@@ -357,9 +367,8 @@ describe('Chờ chủ xe phản hồi (khách)', () => {
     expect(screen.queryByText(TRIP.shop.phone!)).toBeNull();
   });
 
-  it('lối ra: tìm xe khác, chính sách huỷ, hotline gọi được', () => {
+  it('lối ra: chính sách huỷ, hotline gọi được', () => {
     renderView();
-    expect(screen.getByRole('link', { name: 'Tìm xe khác' }).getAttribute('href')).toBe('/search');
     expect(screen.getByRole('link', { name: 'Xem chính sách áp dụng' }).getAttribute('href')).toBe(
       '/legal/cancellation',
     );
@@ -416,6 +425,8 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
       expiresAt: new Date(now + 90 * 60_000).toISOString(),
       freeCancelUntil: new Date(now + 4 * 60 * 60_000).toISOString(),
       freeCancelAvailable: true,
+      freeCancelStarted: false,
+      freeCancelMinutes: 120,
       lateCancelRefundAmount: '0',
       paidAt: null,
       allocation: [],
@@ -438,14 +449,14 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
 
   it('thẻ trạng thái: chủ xe đã đồng ý, nhãn chặng chung, không có dòng thời gian hai mốc', () => {
     renderView();
-    expect(screen.getByRole('heading', { level: 1, name: 'Chủ xe đã đồng ý' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Thanh toán giữ chỗ' })).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: 'Sẵn sàng cho bước giữ chỗ' }),
     ).toBeTruthy();
     // Tiến trình hành trình ở đầu trang: đang ở chặng thanh toán giữ chỗ.
-    expect(screen.getByText('Bước 3 / 4 · Thanh toán giữ chỗ')).toBeTruthy();
+    expect(screen.getByText('Bước 2 / 3 · Thanh toán giữ chỗ')).toBeTruthy();
     // Nhãn chặng đọc từ `Domain` — cùng chữ với danh sách chuyến (ADR 0005).
-    expect(screen.getByText('Đã được nhận · chờ thanh toán')).toBeTruthy();
+    expect(screen.getAllByText('Chờ thanh toán').length).toBeGreaterThan(0);
     expect(screen.getByText(/Gian hàng Minh Tuấn đã đồng ý với yêu cầu thuê xe/)).toBeTruthy();
     expect(timeline()).toBeNull();
   });
@@ -563,7 +574,7 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     expect(screen.queryByText(TRIP.shop.phone!)).toBeNull();
   });
 
-  it('lối ra: chính sách huỷ, hotline gọi được, hạn huỷ miễn phí đọc từ mốc của server', () => {
+  it('lối ra: chính sách huỷ, hotline gọi được, huỷ miễn phí tính TỪ LÚC THANH TOÁN (ADR 0072)', () => {
     renderView();
     expect(screen.getByRole('link', { name: 'Xem chính sách áp dụng' }).getAttribute('href')).toBe(
       '/legal/cancellation',
@@ -571,13 +582,18 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     expect(screen.getByRole('link', { name: SUPPORT_HOTLINE.display }).getAttribute('href')).toBe(
       `tel:${SUPPORT_HOTLINE.tel}`,
     );
-    expect(screen.getByText(/Sau khi thanh toán: Huỷ trước .+ được hoàn 100%/)).toBeTruthy();
+    // Chưa trả ⇒ chưa có mốc nào: nói độ dài cửa sổ server xem trước, không in một giờ cụ thể.
+    expect(
+      screen.getByText(
+        /Sau khi thanh toán: Huỷ miễn phí trong 2 giờ kể từ lúc thanh toán thành công/,
+      ),
+    ).toBeTruthy();
   });
 
   it('huỷ: nói đúng hệ quả của chặng — nhả xe đang giữ, không phải "huỷ đơn"', () => {
     renderView();
     fireEvent.click(screen.getByRole('button', { name: CANCEL_TRIP }));
-    expect(screen.getByText('Huỷ chuyến đi?')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Hủy chuyến đi' })).toBeTruthy();
     expect(screen.getByText(/Chủ xe đang giữ xe cho bạn/)).toBeTruthy();
     expect(screen.queryByText(/Đơn thuê sẽ bị huỷ/)).toBeNull();
     expect(cancelMutation.mutate).not.toHaveBeenCalled();
@@ -615,7 +631,7 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
 /**
  * Chuyến đã xác nhận, chờ ngày nhận xe — màn design v2 (Figma `19879:72913`).
  *
- * Điều được khoá: đầu trang nói "đã xác nhận" với tiến trình 4/4 đều xong; tiền là số ĐÃ ĐÓNG BĂNG
+ * Điều được khoá: đầu trang nói "đã xác nhận" với tiến trình 3/3 đều xong; tiền là số ĐÃ ĐÓNG BĂNG
  * của đơn — bảng kê chỉ khi server nói nó còn khớp (`finance.breakdown`), không thì thẻ tiền đầy
  * đủ; checklist nhận xe chỉ dặn những gì áp dụng cho CHÍNH chuyến này; không có lối "Chỉnh sửa".
  */
@@ -631,6 +647,8 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
     expiresAt: '2026-08-01T03:00:00.000Z',
     freeCancelUntil: '2026-08-01T05:00:00.000Z',
     freeCancelAvailable: true,
+    freeCancelStarted: true,
+    freeCancelMinutes: 120,
     lateCancelRefundAmount: '0',
     paidAt: '2026-08-01T02:30:00.000Z',
     paidVia: 'vnpay',
@@ -659,12 +677,12 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
     }),
   );
 
-  it('đầu trang: đã xác nhận, tiến trình 4/4 đều xong; thẻ trạng thái kể xe + chủ xe', () => {
+  it('đầu trang: đã xác nhận, tiến trình 3/3 đều xong; thẻ trạng thái kể xe + chủ xe', () => {
     renderView();
     expect(
       screen.getByRole('heading', { level: 1, name: 'Chuyến đi đã được xác nhận' }),
     ).toBeTruthy();
-    expect(screen.getByText('Bước 4 / 4 · Đã xác nhận')).toBeTruthy();
+    expect(screen.getByText('Bước 3 / 3 · Đã xác nhận')).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: 'Hẹn bạn vào ngày nhận xe' }),
     ).toBeTruthy();
@@ -706,7 +724,7 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
   it('chi phí: bảng kê đóng băng của đơn, tiền giữ chỗ "Đã thanh toán"', () => {
     renderView();
     expect(screen.getByText('Chi phí thuê xe')).toBeTruthy();
-    expect(screen.getByText('Đã thanh toán')).toBeTruthy();
+    expect(screen.getAllByText('Đã thanh toán').length).toBeGreaterThan(0);
     expect(screen.queryByText('Cần thanh toán')).toBeNull();
   });
 
@@ -723,7 +741,7 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
     expect(screen.getByRole('link', { name: 'Gọi chủ xe 0909123456' }).getAttribute('href')).toBe(
       'tel:0909123456',
     );
-    expect(screen.getByRole('link', { name: 'Gian hàng Minh Tuấn' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /^Gian hàng Minh Tuấn/ }).getAttribute('href')).toBe(
       '/shops/minh-tuan',
     );
   });
@@ -783,15 +801,58 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
   });
 });
 
-describe('Sẵn sàng và Đang thuê', () => {
-  it('đang thuê dùng đúng hai mốc, không sinh mốc thứ ba', () => {
-    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE });
+describe('Đang thuê (phía khách)', () => {
+  beforeEach(() => setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
+
+  it('dòng thời gian đúng hai mốc ở đầu trang, không sinh mốc thứ ba', () => {
     renderView();
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByText('Đã xác nhận')).toBeTruthy();
-    expect(screen.getByText('Hoàn thành')).toBeTruthy();
+    const steps = within(timeline()!).getAllByRole('listitem');
+    expect(steps).toHaveLength(2);
+    expect(timeline()?.textContent).toContain('Đã xác nhận');
+    expect(timeline()?.textContent).toContain('Hoàn thành');
   });
 
+  it('Đang thuê là nhãn trạng thái, không phải một mốc trên dòng thời gian', () => {
+    renderView();
+    expect(screen.getAllByText('Đang thuê').length).toBeGreaterThan(0);
+    expect(timeline()?.textContent).not.toContain('Đang thuê');
+  });
+
+  it('thẻ trạng thái: hành trình đang diễn ra, kèm giờ trả xe dự kiến', () => {
+    renderView();
+    expect(screen.getByRole('heading', { name: 'Hành trình đang diễn ra' })).toBeTruthy();
+    expect(screen.getByText(/Thời gian trả xe dự kiến/)).toBeTruthy();
+  });
+
+  it('thẻ chuyến có biển số; gian hàng mang nhãn "Gian hàng" và dấu xác minh', () => {
+    renderView();
+    expect(screen.getByText('43A-123.45')).toBeTruthy();
+    expect(screen.getByLabelText(/gian hàng đã được XePrime xác minh/)).toBeTruthy();
+  });
+
+  it('chủ xe cá nhân ⇒ không có dấu xác minh gian hàng', () => {
+    setTrip({
+      stage: CUSTOMER_TRIP_STAGE.ACTIVE,
+      shop: { ...TRIP.shop, shopKind: STOREFRONT_KIND.PERSONAL },
+    });
+    renderView();
+    expect(screen.queryByLabelText(/gian hàng đã được XePrime xác minh/)).toBeNull();
+  });
+
+  it('khách KHÔNG có nút xác nhận giao/nhận xe, và KHÔNG huỷ được đơn đang thuê', () => {
+    renderView();
+    const labels = screen.queryAllByRole('button').map((btn) => btn.textContent ?? '');
+    expect(labels.some((label) => /xác nhận.*(giao|nhận) xe/i.test(label))).toBe(false);
+    expect(screen.queryByRole('button', { name: CANCEL_TRIP })).toBeNull();
+  });
+
+  it('vẫn liên hệ được chủ xe', () => {
+    renderView();
+    expect(screen.getByRole('button', { name: 'Nhắn tin cho chủ xe' })).toBeTruthy();
+  });
+});
+
+describe('Chủ xe mở chuyến — bố cục cũ', () => {
   it('chủ xe mở chuyến sẵn sàng ⇒ vẫn bố cục cũ với dòng thời gian hai mốc', () => {
     setTrip({ role: TRIP_ROLE.HOST });
     renderView();
@@ -799,24 +860,11 @@ describe('Sẵn sàng và Đang thuê', () => {
     expect(screen.queryByText('Checklist nhận xe')).toBeNull();
   });
 
-  it('Đang thuê là BADGE trạng thái, không phải một mốc trên dòng thời gian', () => {
-    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE });
+  it('chủ xe mở chuyến đang thuê ⇒ vẫn bố cục cũ, không có thẻ trạng thái mới', () => {
+    setTrip({ role: TRIP_ROLE.HOST, stage: CUSTOMER_TRIP_STAGE.ACTIVE });
     renderView();
-    expect(screen.getByText('Đang thuê')).toBeTruthy();
-    expect(timeline()?.textContent).not.toContain('Đang thuê');
-  });
-
-  it('khách KHÔNG có nút xác nhận giao/nhận xe', () => {
-    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE });
-    renderView();
-    const labels = screen.queryAllByRole('button').map((btn) => btn.textContent ?? '');
-    expect(labels.some((label) => /xác nhận.*(giao|nhận) xe/i.test(label))).toBe(false);
-  });
-
-  it('vẫn liên hệ được chủ xe', () => {
-    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE });
-    renderView();
-    expect(screen.getByText('Nhắn tin cho cửa hàng')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hành trình đang diễn ra' })).toBeTruthy();
+    expect(screen.queryByText('Nhắn tin cho chủ xe/gian hàng')).toBeNull();
   });
 });
 
@@ -831,6 +879,8 @@ describe('Bố cục theo có/không QR chuyển khoản', () => {
     expiresAt: '2026-09-08T03:00:00.000Z',
     freeCancelUntil: '2026-09-16T03:00:00.000Z',
     freeCancelAvailable: true,
+    freeCancelStarted: false,
+    freeCancelMinutes: 120,
     lateCancelRefundAmount: '0',
     paidAt: null,
     allocation: [],
@@ -849,11 +899,12 @@ describe('Bố cục theo có/không QR chuyển khoản', () => {
    * hoặc không có hold nào) thì việc này chỉ đẩy "Chi tiết giá" xuống dưới một khối tóm tắt cao
    * mà không được gì — phải quay lại bố cục hai cột kinh điển.
    */
-  // Bố cục cũ của trang chuyến — chặng đang thuê (chặng sẵn sàng của khách đã sang màn design v2).
-  beforeEach(() => setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
+  // Bố cục cũ của trang chuyến — từ khi mọi chặng phía khách sang khung mới, chỉ còn phía CHỦ XE.
+  beforeEach(() => setTrip({ role: TRIP_ROLE.HOST, stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
 
   it('đang chờ chuyển khoản (còn QR) ⇒ tóm tắt chuyến tách riêng, full-width', () => {
     setTrip({
+      role: TRIP_ROLE.HOST,
       stage: CUSTOMER_TRIP_STAGE.ACTIVE,
       hold: { ...HOLD_BASE, status: BOOKING_HOLD_STATUS.PENDING },
     });
@@ -863,6 +914,7 @@ describe('Bố cục theo có/không QR chuyển khoản', () => {
 
   it('hold đã hết hạn (hết QR, chỉ còn Alert) ⇒ KHÔNG tách tóm tắt ra riêng nữa', () => {
     setTrip({
+      role: TRIP_ROLE.HOST,
       stage: CUSTOMER_TRIP_STAGE.ACTIVE,
       hold: { ...HOLD_BASE, status: BOOKING_HOLD_STATUS.EXPIRED },
     });
@@ -871,31 +923,9 @@ describe('Bố cục theo có/không QR chuyển khoản', () => {
   });
 
   it('không có khoản giữ chỗ nào ⇒ KHÔNG tách tóm tắt ra riêng', () => {
-    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE, hold: null });
+    setTrip({ role: TRIP_ROLE.HOST, stage: CUSTOMER_TRIP_STAGE.ACTIVE, hold: null });
     const { container } = renderView();
     expect(container.querySelector('[class*="summary"]')).toBeNull();
-  });
-});
-
-describe('Nhãn mặt tiền theo tuyến', () => {
-  it('gian hàng tuyến gói ⇒ "Xem gian hàng"', () => {
-    setTrip({
-      stage: CUSTOMER_TRIP_STAGE.ACTIVE,
-      shop: { ...TRIP.shop, shopKind: STOREFRONT_KIND.SHOP },
-    });
-    renderView();
-    expect(screen.getByText('Xem gian hàng →')).toBeTruthy();
-    expect(screen.queryByText('Xem chủ xe →')).toBeNull();
-  });
-
-  it('chủ xe cá nhân tuyến hoa hồng ⇒ "Xem chủ xe", KHÔNG "Xem gian hàng"', () => {
-    setTrip({
-      stage: CUSTOMER_TRIP_STAGE.ACTIVE,
-      shop: { ...TRIP.shop, shopKind: STOREFRONT_KIND.PERSONAL },
-    });
-    renderView();
-    expect(screen.getByText('Xem chủ xe →')).toBeTruthy();
-    expect(screen.queryByText('Xem gian hàng →')).toBeNull();
   });
 });
 
@@ -909,16 +939,33 @@ describe('Hoàn thành', () => {
     }),
   );
 
-  it('đóng cả hai mốc', () => {
+  /* Màn chuyến đã khép (Figma `21621:68041`): thẻ trạng thái thay cho dòng thời gian. */
+  it('nói rõ chuyến đã hoàn tất, trên khung của khu tài khoản', () => {
     renderView();
-    const items = screen.getAllByRole('listitem');
-    expect(items.every((item) => item.textContent?.includes('đã xong'))).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Chuyến đi đã hoàn tất' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Chuyến của tôi' }).getAttribute('href')).toBe(
+      '/trips',
+    );
   });
 
-  it('hiện hành trình thực tế và mở nút đánh giá', () => {
+  it('hiện hành trình thực tế và mở form đánh giá ngay trên trang', () => {
     renderView();
     expect(screen.getByText('Hành trình thực tế')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Đánh giá/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Gửi đánh giá/ })).toBeTruthy();
+  });
+
+  it('không điền sẵn số sao: gửi khi chưa chọn thì báo lỗi, chọn rồi mới gửi', async () => {
+    createReview.mutate.mockClear();
+    renderView();
+    fireEvent.click(screen.getByRole('button', { name: /Gửi đánh giá/ }));
+    expect(await screen.findByText('Chọn số sao')).toBeTruthy();
+    expect(createReview.mutate).not.toHaveBeenCalled();
+
+    const stars = document.querySelectorAll('.ant-rate-star > div');
+    fireEvent.click(stars[3] as Element);
+    fireEvent.click(screen.getByRole('button', { name: /Gửi đánh giá/ }));
+    await waitFor(() => expect(createReview.mutate).toHaveBeenCalled());
+    expect(createReview.mutate.mock.calls[0]?.[0]).toMatchObject({ bookingId: 'BK1', rating: 4 });
   });
 
   it('đã đánh giá rồi thì hiện lại đánh giá, không mời đánh giá lần hai', () => {
@@ -931,6 +978,7 @@ describe('Hoàn thành', () => {
         rating: 5,
         comment: 'Xe cực kỳ mới',
         createdAt: '2026-08-13T00:00:00.000Z',
+        canEdit: false,
       },
     });
     renderView();
@@ -957,7 +1005,7 @@ describe('Kết cục hỏng', () => {
 
     setTrip({ stage: CUSTOMER_TRIP_STAGE.NO_SHOW });
     renderView();
-    expect(screen.getByText('Khách không nhận xe')).toBeTruthy();
+    expect(screen.getByText('Chuyến được ghi nhận không nhận xe')).toBeTruthy();
     expect(timeline()).toBeNull();
   });
 });
@@ -1056,7 +1104,7 @@ describe('Huỷ chuyến', () => {
 
     fireEvent.click(screen.getByRole('button', { name: CANCEL_TRIP }));
 
-    expect(screen.getByText('Huỷ chuyến đi?')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Hủy chuyến đi' })).toBeTruthy();
     expect(cancelMutation.mutate).not.toHaveBeenCalled();
   });
 

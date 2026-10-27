@@ -29,8 +29,9 @@ export interface AccountPageHeaderProps {
  * Tiêu đề chuẩn của một trang trong khu tài khoản — cặp song sinh của `ManagePageHeader` cho vỏ
  * `/account`.
  *
- * Là NƠI DUY NHẤT sinh `<h1>` của các trang mới trong khu này (trang hồ sơ và `TripsView` có `h1`
- * riêng từ trước và không đi qua đây). Vỏ `AccountShell` không mang tiêu đề chung, nên mỗi trang
+ * Là nơi sinh `<h1>` của các trang dạng "tiêu đề trơn" trong khu này. Các mục theo design Account
+ * (22/10/2026) — thẻ hồ sơ, "Quản lý thanh toán" — mang tiêu đề trong khung thẻ `AccountPanel`;
+ * `TripsView` có `h1` riêng từ trước. Vỏ `AccountShell` không mang tiêu đề chung, nên mỗi trang
  * đúng một `h1`, không hai.
  *
  * Client island vì dùng icon của AntD — mọi component có icon trong repo này đều là client.

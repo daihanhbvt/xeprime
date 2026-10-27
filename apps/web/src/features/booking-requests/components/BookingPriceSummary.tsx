@@ -245,6 +245,8 @@ export function BookingPriceSummary({
         isDelivery={isDelivery}
         listedRows={unitRows}
         promoSlot={promoSlot}
+        // Cọc nằm ở thẻ "Giấy tờ & điều kiện nhận xe" của màn Xem lại.
+        showDeposit={false}
       />
     );
   }

@@ -66,6 +66,11 @@ interface SelectFieldProps<T extends FieldValues> {
    * nó cần thêm một ref đọc lúc render để nhớ mốc cũ — hai thứ `react-hooks` chặn đúng chỗ.
    */
   onAfterChange?: (value: string | string[] | null) => void;
+  /**
+   * Vẽ một lựa chọn — dùng cho CẢ dòng trong danh sách lẫn giá trị đang chọn (vd logo ngân hàng
+   * trước tên). Lọc khi gõ vẫn chạy trên `label` chữ, nên phần vẽ thêm không làm hỏng tìm kiếm.
+   */
+  renderOption?: (option: SelectFieldOption) => ReactNode;
 }
 
 /**
@@ -89,6 +94,7 @@ export function SelectField<T extends FieldValues>({
   onSearch,
   onAfterChange,
   notFoundContent,
+  renderOption,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -110,7 +116,11 @@ export function SelectField<T extends FieldValues>({
         id={selectId}
         aria-describedby={helpText ? describedById : undefined}
         mode={mode}
-        value={(field.value as string | string[] | null | undefined) ?? undefined}
+        // `''` là "chưa chọn" của form (giá trị mặc định) — đưa về `undefined` để AntD hiện
+        // placeholder thay vì vẽ một lựa chọn rỗng.
+        value={
+          field.value === '' ? undefined : ((field.value as string | string[] | null | undefined) ?? undefined)
+        }
         // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
         onChange={(value: string | string[] | undefined) => {
           const next = value ?? (mode === 'multiple' ? [] : null);
@@ -136,6 +146,14 @@ export function SelectField<T extends FieldValues>({
         // Mặc định AntD lọc theo `value` (là key slug), nên gõ "Mercedes" không ra `mercedes`.
         optionFilterProp={showSearch && !onSearch ? 'label' : undefined}
         status={fieldState.error ? 'error' : undefined}
+        {...(renderOption
+          ? {
+              optionRender: (option: { value?: unknown; label?: ReactNode }) =>
+                renderOption({ value: String(option.value), label: String(option.label ?? '') }),
+              labelRender: (option: { value?: unknown; label?: ReactNode }) =>
+                renderOption({ value: String(option.value), label: String(option.label ?? '') }),
+            }
+          : {})}
       />
     </Form.Item>
   );

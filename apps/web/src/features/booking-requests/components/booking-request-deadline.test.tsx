@@ -68,6 +68,7 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
     customerAvatarUrl: null,
     customerRiskLevel: null,
     canMessageOnPlatform: false,
+    chatOpen: true,
     pickupAt: inMinutes(3 * 24 * 60),
     returnAt: inMinutes(5 * 24 * 60),
     serviceType: SERVICE_TYPE.SELF_DRIVE,

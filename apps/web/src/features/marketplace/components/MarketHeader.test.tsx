@@ -73,8 +73,8 @@ describe('MarketHeader', () => {
     expect(unnamed).toHaveLength(0);
   });
 
-  /** Bốn mục điều hướng của design v2, đúng thứ tự và đúng đích có thật. */
-  it('menu chính: Trang chủ · Tìm xe · Về XePrime · Liên hệ', () => {
+  /** Bốn mục điều hướng, đúng thứ tự và đúng đích có thật — "Liên hệ" đã xuống chân trang. */
+  it('menu chính: Trang chủ · Tìm xe · Chuyến đi · Về XePrime', () => {
     render(<MarketHeader />);
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
     const links = within(nav)
@@ -83,8 +83,8 @@ describe('MarketHeader', () => {
     expect(links).toEqual([
       ['Trang chủ', '/'],
       ['Tìm xe', '/search'],
+      ['Chuyến đi', '/trips'],
       ['Về Xe Prime', '/about'],
-      ['Liên hệ', '/support'],
     ]);
   });
 

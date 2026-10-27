@@ -97,18 +97,22 @@
 * **Expected Result:** $30\% \times 100' = 30$ phút $\rightarrow$ `expires_at = acceptedAt + 30 phút`.
 * **Trạng thái:** ✅ **PASS** (`packages/types/src/holds.test.ts`).
 
-#### TC-SLA-04: Cửa sổ huỷ miễn phí $T_{\text{cancel}} = \text{clamp}(20\% \Delta T, 15', 120')$
-* **Pre-conditions:** Chủ xe duyệt đơn, $\Delta T = 500$ phút.
-* **Test Steps:** Kiểm tra `free_cancel_until` trong `holdWindowsFor`.
-* **Expected Result:** $20\% \times 500' = 100$ phút $\rightarrow$ `free_cancel_until = acceptedAt + 100 phút`.
-* **Trạng thái:** ✅ **PASS** (`holds.test.ts`).
+#### TC-SLA-04: Cửa sổ huỷ miễn phí $T_{\text{cancel}} = \text{clamp}(20\% \times (\text{pickupAt} - \text{paidAt}), 15', 120')$ — ADR 0072
+* **Pre-conditions:** Chủ xe duyệt lúc T, giờ nhận T + 6 giờ; khách chuyển đủ tiền giữ chỗ lúc T + 35 phút.
+* **Test Steps:** (1) Ngay sau khi duyệt, đọc `booking_holds.free_cancel_until`. (2) Bắn webhook SePay đủ tiền, đọc lại.
+* **Expected Result:** (1) `free_cancel_until = NULL` (chưa có huỷ miễn phí). (2) $\Delta T_{\text{paid}} = 325'$ ⇒ $20\% = 65'$ ⇒ `free_cancel_until = paid_at + 65 phút`.
+* **Trạng thái:** ✅ **PASS** (`packages/types/src/holds.test.ts` · `apps/api/test/booking-hold-lifecycle.spec.ts`).
 
-#### TC-SLA-05: Cảnh báo UI khi $T_{\text{pay}} > T_{\text{cancel}}$
-* **Pre-conditions:** Đơn đặt gấp có hạn thanh toán dài hơn hạn huỷ miễn phí.
-* **Test Steps:** Mở màn hình quét QR thanh toán `/trips/[id]`.
-* **Expected Result:** Hiển thị component `NearPickupHoldNotice` cảnh báo đếm ngược hạn huỷ miễn phí trước khi khách thanh toán.
-* **Trạng thái:** ✅ **PASS** (`apps/web/src/features/booking-requests/components/NearPickupHoldNotice.test.tsx`).
+#### TC-SLA-05: Màn thanh toán trước khi trả — không có đồng hồ huỷ miễn phí (ADR 0072)
+* **Pre-conditions:** Chuyến `awaiting_hold`, chưa chuyển đủ.
+* **Test Steps:** Mở `/payment/[id]`.
+* **Expected Result:** Đồng hồ hạn thanh toán hiện MỘT con số cho toàn bộ thời gian còn lại (vd `1:15:45`, không phải "15:45 · giờ 2/2"); dòng *"Huỷ miễn phí: {N} kể từ lúc thanh toán thành công"*; KHÔNG có câu "huỷ miễn phí kết thúc TRƯỚC hạn thanh toán".
+* **Trạng thái:** ✅ **PASS** (`apps/web/src/features/trips/use-free-cancel-note.test.tsx` · `TripDetailView.test.tsx`).
 
+#### TC-SLA-06: Hết hạn thanh toán ⇒ tự động huỷ
+* **Pre-conditions:** Chuyến `awaiting_hold`, khách chuyển thiếu 40.000đ rồi để quá `expires_at`.
+* **Test Steps:** Chờ worker `booking-hold-expiry` (nhịp 60 giây).
+* **Expected Result:** Hold `expired`, yêu cầu `hold_expired`, lịch xe được nhả, 40.000đ vào Ví điểm của khách, thông báo cho khách và chủ xe. Không có đơn thuê; tiền về sau hạn nằm ở hàng đợi đối soát, không tạo đơn.
 ---
 
 ### SUITE 3: GÁN TÀI XẾ & ĐIỀU PHỐI XE CÓ TÀI (`TS-DRIVER-03`)

@@ -119,7 +119,7 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
     const view = await renderScreen();
     await view.findByRole('button', { name: EDIT_PROFILE });
     // Khớp CHÍNH XÁC: dòng "Đổi mật khẩu" bên dưới cũng mang nhãn bắt đầu bằng "Đổi".
-    expect(view.getAllByRole('button', { name: 'Đổi' })).toHaveLength(2);
+    expect(view.getAllByRole('button', { name: 'Thay đổi' })).toHaveLength(2);
   });
 
   it('còn trống: nút đổi thành "Thêm" — cùng một luồng, khác chữ theo việc', async () => {

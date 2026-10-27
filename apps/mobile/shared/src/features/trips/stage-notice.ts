@@ -56,7 +56,7 @@ export function stageNotice(stage: CustomerTripStage): StageNotice | null {
     case CUSTOMER_TRIP_STAGE.EXPIRED:
       return { tone: 'info', titleKey: 'expiredTitle', bodyKey: 'expiredBody' };
     case CUSTOMER_TRIP_STAGE.CANCELLED:
-      return { tone: 'info', titleKey: 'cancelledTitle', bodyKey: 'cancelledBody' };
+      return { tone: 'danger', titleKey: 'cancelledTitle', bodyKey: 'cancelledBody' };
     /*
      * Khung giờ bị khách khác lấy mất (ADR 0044 điều 6) — KHÔNG phải `REJECTED`.
      *
@@ -67,6 +67,53 @@ export function stageNotice(stage: CustomerTripStage): StageNotice | null {
       return { tone: 'info', titleKey: 'slotTakenTitle', bodyKey: 'slotTakenBody' };
     case CUSTOMER_TRIP_STAGE.NO_SHOW:
       return { tone: 'danger', titleKey: 'noShowTitle', bodyKey: 'noShowBody' };
+    default:
+      return null;
+  }
+}
+
+export type ClosedNoticeTone = 'success' | 'danger' | 'warning';
+
+export interface ClosedNotice {
+  tone: ClosedNoticeTone;
+  /** Khoá trong `Trips.closed.status` — cùng câu chữ với `TripClosedView` bên web. */
+  titleKey:
+    | 'completedTitle'
+    | 'cancelledTitle'
+    | 'rejectedTitle'
+    | 'noShowTitle'
+    | 'expiredTitle'
+    | 'slotTakenTitle';
+  bodyKey:
+    | 'completedBody'
+    | 'cancelledBody'
+    | 'rejectedBody'
+    | 'noShowBody'
+    | 'expiredBody'
+    | 'slotTakenBody';
+}
+
+/**
+ * Thẻ trạng thái của chuyến ĐÃ KHÉP phía khách — bản native của `TripClosedView` (web, Figma
+ * `21621:68041` · `21621:67556`). Cùng sắc thái với web: hoàn thành ⇒ xanh; hỏng do một BÊN (huỷ, từ
+ * chối, không nhận xe) ⇒ đỏ; không ai có lỗi (quá hạn phản hồi, xe đã có khách khác) ⇒ vàng.
+ *
+ * Chặng còn chạy ⇒ `null` (dùng `stageNotice`).
+ */
+export function closedNotice(stage: CustomerTripStage): ClosedNotice | null {
+  switch (stage) {
+    case CUSTOMER_TRIP_STAGE.COMPLETED:
+      return { tone: 'success', titleKey: 'completedTitle', bodyKey: 'completedBody' };
+    case CUSTOMER_TRIP_STAGE.CANCELLED:
+      return { tone: 'danger', titleKey: 'cancelledTitle', bodyKey: 'cancelledBody' };
+    case CUSTOMER_TRIP_STAGE.REJECTED:
+      return { tone: 'danger', titleKey: 'rejectedTitle', bodyKey: 'rejectedBody' };
+    case CUSTOMER_TRIP_STAGE.NO_SHOW:
+      return { tone: 'danger', titleKey: 'noShowTitle', bodyKey: 'noShowBody' };
+    case CUSTOMER_TRIP_STAGE.EXPIRED:
+      return { tone: 'warning', titleKey: 'expiredTitle', bodyKey: 'expiredBody' };
+    case CUSTOMER_TRIP_STAGE.SLOT_TAKEN:
+      return { tone: 'warning', titleKey: 'slotTakenTitle', bodyKey: 'slotTakenBody' };
     default:
       return null;
   }

@@ -367,7 +367,18 @@ export const ROUTES = {
      * Không gác bằng `OwnerGate`: khách thuê cũng có số dư (tiền hoàn cọc) và họ là phần đông.
      */
     balance: (): Href => '/account/balance',
-    /** Tài khoản NHẬN tiền hoàn và khoản phải trả — cũng không gác theo vai chủ xe. */
+    /**
+     * Khối "Tài khoản nhận tiền" trong tab "Tài khoản thanh toán" của mục Quản lý thanh toán —
+     * web `accountBalancePayoutPath()` (design Account 22/10/2026).
+     */
+    balancePayout: (): Href => ({
+      pathname: '/account/balance',
+      params: { [BALANCE_SECTION_PARAM]: BALANCE_PAYOUT_SECTION },
+    }),
+    /**
+     * ALIAS cũ của tài khoản nhận tiền — nay chuyển tới `balancePayout()`, như web chuyển
+     * `/account/bank-accounts`.
+     */
     bankAccounts: (): Href => '/account/bank-accounts',
     /** Yêu cầu hỗ trợ của CHÍNH người dùng — khác `/support` công khai của chợ xe. */
     support: (): Href => '/account/support',

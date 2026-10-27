@@ -12,6 +12,7 @@ import {
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
   type BookingHoldStatus,
+  type CustomerCancellationReason,
 } from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { useBadgeRealtimeLive } from '@/features/badges/BadgeRealtimeProvider';
@@ -21,6 +22,7 @@ import {
   tripsApi,
   TRIPS_DEFAULT_LIMIT,
   type CreateReviewInput,
+  type UpdateReviewInput,
   type CustomerTripDetail,
   type CustomerTripHandoverEvidence,
   type ProvideRefundAccountInput,
@@ -201,7 +203,7 @@ export function useCancelTrip(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => tripsApi.cancel(id),
+    mutationFn: (reasonCategory: CustomerCancellationReason) => tripsApi.cancel(id, reasonCategory),
     onSuccess: (trip) => {
       queryClient.setQueryData(queryKeys.trips.detail(id), trip);
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
@@ -221,6 +223,23 @@ export function useCreateReview(tripId: string) {
   return useMutation({
     mutationFn: (body: CreateReviewInput) => reviewsApi.create(body),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });
+    },
+  });
+}
+
+/**
+ * Sửa đánh giá (MỘT lần) — cùng nhánh làm mới với `useCreateReview`. Làm mới cả khi lỗi: 409
+ * `REVIEW_EDIT_LIMIT` nghĩa là lượt sửa đã dùng ở nơi khác, `canEdit` mới từ server ẩn nút sửa.
+ */
+export function useUpdateReview(tripId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateReviewInput & { id: string }) => reviewsApi.update(id, body),
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });

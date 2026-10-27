@@ -59,4 +59,6 @@ export const drivingApi = {
   acceptTrip: (id: string) =>
     getApiClient().post<DriverTripDetail>(`${one('/driver/trips', id)}/accept`),
   declineTrip: (id: string) => getApiClient().post<unknown>(`${one('/driver/trips', id)}/decline`),
+  /** Trả lại chuyến đã nhận — trong cửa sổ `releaseUntil` (sửa ADR 0063 điều 6). Đơn không bị huỷ. */
+  releaseTrip: (id: string) => getApiClient().post<unknown>(`${one('/driver/trips', id)}/release`),
 };

@@ -22,14 +22,14 @@ import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-s
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
- * Số xe tối đa của chủ xe tuyến hoa hồng và mức phí dịch vụ thí điểm (ADR 0028).
+ * Số xe tối đa của chủ xe tuyến hoa hồng (Owner Lite — ADR 0041 điều 4).
  *
- * Để ở ĐÂY, không rải vào câu dịch: hai con số này xuất hiện ở cả `vi` lẫn `en`, và một ngày nào
- * đó chúng đổi theo `fee_policies`/gói — lúc đó phải chỉ có MỘT chỗ để sửa. Cùng hằng số, cùng giá
- * trị với `ListYourVehicleLanding` bên web; đổi một bên là đổi cả hai.
+ * Để ở ĐÂY, không rải vào câu dịch: con số xuất hiện ở cả `vi` lẫn `en`, và một ngày nào đó nó đổi
+ * theo gói — lúc đó phải chỉ có MỘT chỗ để sửa. Cùng hằng số, cùng giá trị với
+ * `ListYourVehicleLanding` bên web; đổi một bên là đổi cả hai. Mức hoa hồng KHÔNG in thành số: nó là
+ * bậc thang theo ngày thuê trong `fee_policies` (ADR 0064 điều 3).
  */
 const BASIC_OWNER_VEHICLE_CAP = 3;
-const PLATFORM_SERVICE_FEE_PILOT_PERCENT = 10;
 
 /** Đường kính số thứ tự của một bước trong dải "3 bước". */
 const STEP_DOT = 28;
@@ -147,15 +147,17 @@ export function ListYourVehicleScreen({
               icon="car-sport-outline"
               badge={t('personal.badge')}
               title={t('personal.title')}
-              tagline={t('personal.appTagline')}
+              tagline={t('personal.tagline')}
               selected={isPersonal}
               selectedLabel={t('selected')}
               onSelect={() => setTrack(REGISTRATION_TRACK.COMMISSION)}
             />
             <TrackOption
               icon="storefront-outline"
+              badge={t('shop.badge')}
+              recommended={t('shop.recommended')}
               title={t('shop.title')}
-              tagline={t('shop.appTagline')}
+              tagline={t('shop.tagline')}
               selected={!isPersonal}
               selectedLabel={t('selected')}
               onSelect={() => setTrack(REGISTRATION_TRACK.PACKAGE)}
@@ -185,10 +187,7 @@ export function ListYourVehicleScreen({
               artNote={t('personal.art')}
               offerIcon="pricetag-outline"
               offerTitle={t('personal.offerTitle')}
-              offerBody={t.rich('personal.offerBody', {
-                percent: PLATFORM_SERVICE_FEE_PILOT_PERCENT,
-                strong,
-              })}
+              offerBody={t.rich('personal.offerBody', { strong })}
             />
           ) : (
             <TrackDetail
@@ -205,8 +204,8 @@ export function ListYourVehicleScreen({
               art={images.ownerShopShowroom}
               artRatio={OWNER_SHOP_SHOWROOM_RATIO}
               offerIcon="ribbon-outline"
-              offerTitle={t('shop.appOfferTitle')}
-              offerBody={t('shop.appOfferBody')}
+              offerTitle={t('shop.offerTitle')}
+              offerBody={t('shop.offerBody')}
             />
           )}
 
@@ -329,6 +328,7 @@ function Hero({
 function TrackOption({
   icon,
   badge,
+  recommended,
   title,
   tagline,
   selected,
@@ -337,6 +337,8 @@ function TrackOption({
 }: {
   icon: IconName;
   badge?: string;
+  /** Nhãn "Gói đề xuất" — cùng nhãn góc thẻ gian hàng của web (Figma `20043:54654`). */
+  recommended?: string;
   title: string;
   tagline: string;
   selected: boolean;
@@ -375,6 +377,22 @@ function TrackOption({
           />
         </YStack>
         <YStack f={1} minWidth={0} gap={2}>
+          {recommended ? (
+            <XStack
+              alignSelf="flex-start"
+              ai="center"
+              gap={4}
+              px={space.xs}
+              py={2}
+              br={radius.pill}
+              bg={colors.danger}
+            >
+              <Ionicons name="thumbs-up" size={iconSize.xs} color={colors.surface} />
+              <Text col={colors.surface} fos={fontSize.meta} fow={fontWeight.bold}>
+                {recommended}
+              </Text>
+            </XStack>
+          ) : null}
           {badge ? (
             <Text col={colors.primaryActive} fos={fontSize.meta} fow={fontWeight.semibold}>
               {badge}

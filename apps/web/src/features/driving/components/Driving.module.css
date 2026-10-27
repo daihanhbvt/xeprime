@@ -1,4 +1,4 @@
-/* Khu tài xế ở site khách (ADR 0063) — cùng nhịp với `TripsView.module.css`. */
+/* Khu tài xế ở site khách (ADR 0063) — cùng nhịp với danh sách "Chuyến của tôi" (`TripsView`). */
 
 .page {
   display: flex;
@@ -165,4 +165,21 @@
   .heading {
     font-size: var(--xp-font-size-h2);
   }
+}
+
+/* Khối "Chuyến tôi lái" đầu trang "Nơi tôi làm tài xế". */
+.tripsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding-bottom: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
 }

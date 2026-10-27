@@ -6,7 +6,7 @@
   "scope": {
     "title": "Đây là tiền bạn đã trả cho gian hàng",
     "body": "Khoản chuyển giữ chỗ cho XePrime nằm trong chi tiết từng chuyến. Tiền XePrime đang nợ bạn nằm ở",
-    "balanceLink": "Số dư của tôi"
+    "balanceLink": "Tài khoản thanh toán"
   },
   "depositNote": "Tiền cọc trả gian hàng sẽ được hoàn khi bạn trả xe, sau khi trừ phát sinh (nếu có). Đây không phải khoản mất đi.",
   "stats": {
@@ -16,7 +16,17 @@
     "trips": "Số chuyến"
   },
   "filters": {
-    "all": "Tất cả"
+    "all": "Tất cả",
+    "label": "Lọc theo loại khoản"
+  },
+  "balance": {
+    "notes": {
+      "title": "Lưu ý khi thêm tài khoản nhận tiền:",
+      "holder": "<strong>Đúng tên chủ tài khoản:</strong> tên người thụ hưởng phải trùng khớp với tên đăng ký ở ngân hàng — sai tên thì ngân hàng trả lệnh chuyển về.",
+      "timing": "<strong>Thời gian nhận tiền:</strong> XePrime chuyển trong tối đa {days, plural, other {# ngày làm việc}} kể từ khi duyệt lệnh rút.",
+      "accountType": "<strong>Loại tài khoản:</strong> chỉ nhận tài khoản ngân hàng trong nước. Không chuyển về thẻ tín dụng hay ví điện tử.",
+      "change": "<strong>Đổi tài khoản:</strong> lệnh rút đã gửi vẫn chuyển vào tài khoản đã chọn lúc gửi lệnh."
+    }
   },
   "columns": {
     "trip": "Chuyến",
@@ -30,5 +40,53 @@
     "all": "Bạn chưa có khoản nào được gian hàng ghi nhận.",
     "rental": "Chưa có khoản tiền thuê nào được ghi nhận.",
     "deposit": "Chưa có khoản cọc nào được ghi nhận."
+  },
+  "hub": {
+    "title": "Quản lý thanh toán",
+    "subtitle": "Xem số dư ví & lịch sử giao dịch của bạn",
+    "tabsLabel": "Mục quản lý thanh toán",
+    "tabs": {
+      "balance": "Tài khoản thanh toán",
+      "history": "Lịch sử giao dịch"
+    }
+  },
+  "history": {
+    "title": "Lịch sử giao dịch",
+    "loadError": "Không tải được lịch sử giao dịch",
+    "total": "{count, plural, other {# giao dịch}}",
+    "filters": {
+      "all": "Tất cả",
+      "label": "Lọc theo trạng thái",
+      "range": "Khoảng thời gian",
+      "rangePlaceholder": "Chọn khoảng thời gian",
+      "rangeTo": "Đến ngày",
+      "clearRange": "Xoá khoảng ngày"
+    },
+    "status": {
+      "succeeded": "Thành công",
+      "pending": "Đang chờ",
+      "failed": "Thất bại"
+    },
+    "titles": {
+      "hold_payment": "Thanh toán giữ chỗ",
+      "withdrawal": "Rút về tài khoản liên kết",
+      "hold_refund": "Hoàn tiền giữ chỗ",
+      "hold_overpay": "Hoàn phần chuyển thừa",
+      "hold_release": "Tiền giữ chỗ của chuyến",
+      "hold_forfeit": "Bồi thường huỷ chuyến",
+      "adjustment": "Điều chỉnh số dư",
+      "rental": "Thanh toán tiền thuê",
+      "deposit": "Thanh toán cọc"
+    },
+    "empty": {
+      "all": "Bạn chưa có giao dịch nào.",
+      "filtered": "Không có giao dịch nào khớp bộ lọc."
+    },
+    "cancel": {
+      "action": "Huỷ yêu cầu",
+      "confirm": "Huỷ yêu cầu rút này?",
+      "hint": "Số tiền sẽ trở lại số dư khả dụng ngay.",
+      "done": "Đã huỷ yêu cầu rút"
+    }
   }
 }

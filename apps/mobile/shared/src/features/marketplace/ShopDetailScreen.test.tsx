@@ -60,6 +60,10 @@ function shop(overrides: Partial<PublicShop> = {}): PublicShop {
     branchCount: 2,
     serviceProvinceNames: ['Đà Nẵng'],
     deliveryAvailable: true,
+    serviceProvinces: [],
+    branches: [],
+    vehicleFilterCounts: { withDriver: 0, longTerm: 0, delivery: 0, instantBook: 0, noCollateral: 0, vatInvoice: 0 },
+    trust: { legalEntityType: null, legalEntityVerifiedAt: null, shopVerified: false, contactVerified: false, vatInvoiceSupported: false, maintenanceOnScheduleCount: 0 },
     metrics: EMPTY_HOST_METRICS,
     ...overrides,
   };

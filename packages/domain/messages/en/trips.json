@@ -1,8 +1,9 @@
 {
   "list": {
     "heading": "My trips",
-    "sub": "Track and manage every trip you have booked on XePrime",
+    "sub": "Manage your journeys and trip details",
     "tabLabel": "{label} ({count})",
+    "tabsLabel": "Trip groups",
     "emptyCurrentTitle": "You have no trips in progress",
     "emptyCurrentBody": "Find a car you like and book your first trip.",
     "emptyHistoryTitle": "No finished trips yet",
@@ -19,6 +20,14 @@
     "stageEmptyAction": "Tap to clear the filter and see all trips.",
     "stageEmptyBody": "The filter applies to the page you are viewing. Clear it or try another page.",
     "stageClear": "Clear status filter",
+    "searchPlaceholder": "Search trips",
+    "searchLabel": "Search by vehicle name or booking code",
+    "rangeStart": "Choose a date range",
+    "rangeEnd": "End date",
+    "rangeLabel": "Rental date range",
+    "narrowEmptyTitle": "No trips found",
+    "narrowEmptyBody": "Try another keyword or change the date range.",
+    "narrowClear": "Clear filters",
     "emptyTransitionalTitle": "No rental trips in progress",
     "emptyTransitionalBody": "Every trip you rented has been closed. Trips where customers book your shop are under Bookings."
   },
@@ -31,6 +40,7 @@
   "card": {
     "owner": "Host",
     "total": "Total",
+    "paid": "Paid",
     "awaitingQuote": "Awaiting quote",
     "viewDetail": "View details",
     "viewDetailOf": "View {name} details",
@@ -43,7 +53,8 @@
     "estimated": "Estimate · final on approval",
     "estimatedClosed": "Quote at request time",
     "cancel": "Cancel trip",
-    "driver": "Driver"
+    "driver": "Driver",
+    "remaining": "Remaining"
   },
   "pickup": {
     "delivery": "Delivered to you",
@@ -169,16 +180,16 @@
     "hostOpenBody": "XePrime is holding the money for this trip and will contact both sides to verify. If you have handed the vehicle over, confirm the handover record (with photos if you have them) so XePrime has evidence to verify."
   },
   "cancel": {
-    "title": "Cancel this trip?",
-    "leadPending": "Your request will be withdrawn and the host will be notified. You can send a new request for this car at any time.",
+    "title": "Cancel trip",
+    "leadPending": "Your rental request will be withdrawn and the host will be notified. You can send a new request for this car at any time. This cannot be undone!",
     "leadReady": "The booking will be cancelled and the car opens up for other renters. This cannot be undone.",
     "leadAwaitingHold": "The owner is holding the car for you. If you cancel, the car opens up for other renters. This cannot be undone.",
     "paidTitle": "You have already paid for this trip",
     "rentalPaid": "Rent paid: {amount}",
     "depositPaid": "Deposit paid: {amount}",
     "refundNote": "XePrime only records status — it does not move money. Please contact the host to arrange the refund.",
-    "confirm": "Cancel trip",
-    "keep": "Keep trip",
+    "confirm": "Confirm cancellation",
+    "keep": "Go back",
     "preview": {
       "error": "We couldn't preview your refund. You can still cancel — the refund follows the cancellation & refund policy at the moment you confirm.",
       "fullRefundTitle": "{amount} will be refunded to your Points wallet",
@@ -194,6 +205,16 @@
       "deferred": "This trip has an open dispute — XePrime will settle this amount once it is resolved.",
       "notAllowedTitle": "This trip can no longer be cancelled",
       "notAllowedBody": "The trip has already started or ended. To return the vehicle early, contact the owner to hand it back and settle up."
+    },
+    "leadPaid": "You have paid the reservation fee for this trip. Your refund follows the <policy>Cancellation policy</policy>. This cannot be undone!",
+    "expectedRefund": "Expected refund: <gold>{amount}</gold>",
+    "reasonLabel": "Cancellation reason",
+    "reasonPlaceholder": "Select a reason",
+    "reasonRequired": "Please select a cancellation reason",
+    "reasons": {
+      "customer_changed_plan": "No longer needed",
+      "schedule_conflict": "Change of schedule",
+      "other": "Other reason"
     }
   },
   "finance": {
@@ -227,7 +248,28 @@
     "refundedTail": ". Please check against your own account.",
     "awaitingRefund": "The host will transfer this back and mark the deposit as refunded here. XePrime records the status; it does not move money.",
     "holding": "The host holds this deposit for the whole trip. The refund amount is settled after you return the car.",
-    "settled": "The deposit was fully used for the extra charges above, so there is nothing left to refund."
+    "settled": "The deposit was fully used for the extra charges above, so there is nothing left to refund.",
+    "invoice": {
+      "rentFee": "Rental fee",
+      "total": "Total payment",
+      "paid": "Paid",
+      "status": "Status",
+      "refundAmount": "Refund",
+      "surchargesAfter": "Charged at return",
+      "pill": {
+        "paid": "Paid",
+        "unpaid": "Unpaid",
+        "refundPaid": "Refunded",
+        "refundCredited": "Refunded to Points wallet",
+        "refundProcessing": "Processing",
+        "refundNeedsAccount": "Awaiting account details",
+        "noRefund": "No refund"
+      },
+      "refundPaidAt": "Refunded on {date}.",
+      "refundRef": "Transaction reference: {reference}.",
+      "refundAccount": "Receiving account ending {hint}.",
+      "refundNeedsAccount": "Tell us which account to send this refund to."
+    }
   },
   "review": {
     "title": "Rate this trip",
@@ -242,7 +284,12 @@
       "ratingRequired": "Pick a star rating",
       "ratingRange": "Pick between {min} and {max} stars",
       "commentTooLong": "Comment can be at most {max} characters"
-    }
+    },
+    "edit": "Edit review",
+    "editHint": "You can edit your review only once.",
+    "edited": "Edited",
+    "saveEdit": "Save changes",
+    "editSuccess": "Your review has been updated."
   },
   "hold": {
     "title": "Reservation payment",
@@ -272,7 +319,7 @@
     "countdownExpired": "Payment window closed",
     "freeCancelCountdown": "Free cancellation ends in:",
     "freeCancelCountdownExpired": "Free cancellation has ended",
-    "freeCancelSoon": "This trip starts soon, so free cancellation ends BEFORE the payment deadline: only cancelling before {time} gets you a full refund of what you paid.",
+    "freeCancelSoon": "Free cancellation starts when your payment succeeds: if you pay now, cancelling before {time} refunds 100% of what you paid.",
     "qrCaption": "Scan to transfer",
     "vsDepositHint": "The reservation payment goes to XePrime to confirm the trip and counts towards your rental. It is not the security deposit — that is left with the host at pickup and returned when you bring the car back undamaged.",
     "vsDepositHintLabel": "How the reservation payment differs from the security deposit",
@@ -287,7 +334,9 @@
     "lateCancelRefund": "After that: the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
     "lateCancelNoRefund": "After that, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
     "noFreeCancelRefund": "This trip has no free-cancellation window. If you cancel after paying, the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
-    "noFreeCancelNoRefund": "This trip has no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime)."
+    "noFreeCancelNoRefund": "This trip has no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
+    "freeCancelFromPayment": "Free cancellation for {duration} from the moment your payment succeeds — cancelling within that time refunds 100% of what you paid.",
+    "freeCancelFromPaymentShort": "Free cancellation: {duration} from successful payment"
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -380,6 +429,7 @@
       "package": "Package",
       "pickupWish": "Preferred pickup",
       "point": "{weekday}, {dateTime}",
+      "viewDetail": "View details",
       "customerTotal": "Your total",
       "payOwner": "Pay the owner",
       "payOwnerNote": "What you pay the owner after every amount due online is deducted.",
@@ -469,7 +519,7 @@
       "afterPaid": "If you cancel before paying in full, the car reopens for other renters and anything you have already transferred is refunded in full to your Points wallet. After you pay: {note}"
     },
     "page": {
-      "title": "The owner accepted",
+      "title": "Pay the reservation",
       "description": "Pay the reservation amount before it expires so the owner holds the vehicle and your trip is confirmed."
     }
   },
@@ -504,7 +554,40 @@
     "breadcrumbLabel": "Breadcrumb",
     "home": "Home",
     "vehicle": "Vehicle details",
-    "request": "Send rental request"
+    "request": "Send rental request",
+    "account": "My account",
+    "trips": "My trips",
+    "tripDetail": "Trip details"
+  },
+  "closed": {
+    "subtitle": "This trip has ended",
+    "status": {
+      "cancelledTag": "Cancelled",
+      "completedTitle": "Trip completed",
+      "completedBody": "Thank you for travelling with XePrime. Please take a moment to rate your trip.",
+      "completedBodyNoReview": "Thank you for travelling with XePrime.",
+      "cancelledTitle": "Trip cancelled",
+      "cancelledBody": "Anything you paid (if any) is refunded under the cancellation policy. The details are in the trip's service invoice.",
+      "rejectedTitle": "Request declined",
+      "rejectedBody": "The owner can't take this request. You can look for another vehicle for the same schedule.",
+      "noShowTitle": "Trip recorded as not picked up",
+      "noShowBody": "This trip was marked as not picked up on time. Contact the owner or XePrime if you think this is a mistake.",
+      "expiredTitle": "The owner didn't respond in time",
+      "expiredBody": "The request closed because the owner didn't reply before the deadline. You can choose another vehicle for the same schedule.",
+      "slotTakenTitle": "Another customer got this car",
+      "slotTakenBody": "Another customer has just booked the time you chose. You can pick another vehicle or change your times.",
+      "reason": "Reason: <b>{reason}</b>"
+    },
+    "support": {
+      "title": "Need help?",
+      "body": "Still have questions about this trip? Choose one of the contact options below.",
+      "chatOwner": "Message the owner/shop",
+      "contactXePrime": "Contact XePrime support",
+      "hotline": "Or call our support hotline: <tel>{phone}</tel>"
+    },
+    "cancelledHeading": "Trip cancelled",
+    "cancelledByCustomer": "You cancelled this trip. Please review the payment details below",
+    "cancelledByOther": "This trip was cancelled. Please review the payment details below"
   },
   "confirmed": {
     "page": {
@@ -546,8 +629,7 @@
       "asset": {
         "title": "Leave a collateral item",
         "body": "One of the following: {assets}. You get it back when you return the vehicle."
-      },
-      "guidance": "Specific document requirements and verification will be explained under the current policy before pickup."
+      }
     },
     "costs": {
       "holdTag": "Paid"
@@ -557,5 +639,11 @@
       "bodyAfter": "The free cancellation deadline ({time}) has passed. Cancelling now is refunded under the trip's cancellation & refund policy.",
       "bodyNoHold": "You can cancel before pickup time. See the cancellation & refund policy for the conditions."
     }
+  },
+  "cancelledBy": {
+    "customer": "You cancelled this trip",
+    "host": "The owner cancelled this trip",
+    "platform": "XePrime cancelled this trip",
+    "force_majeure": "Cancelled due to force majeure"
   }
 }

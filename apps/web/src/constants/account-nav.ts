@@ -1,8 +1,5 @@
 import {
-  BankOutlined,
   CarOutlined,
-  CreditCardOutlined,
-  DeleteOutlined,
   HeartOutlined,
   SolutionOutlined,
   LockOutlined,
@@ -44,6 +41,13 @@ export interface AccountNavItem {
   readonly href: string;
   readonly icon: ComponentType<{ className?: string }>;
   readonly external?: boolean;
+  /**
+   * Các đường KHÁC cũng thuộc mục này — mục gộp nhiều trang ("Quản lý thanh toán" gồm số dư, lịch
+   * sử thanh toán, tài khoản nhận tiền) vẫn sáng khi người dùng đứng ở bất kỳ trang nào của nó.
+   */
+  readonly matches?: readonly string[];
+  /** Lời MỜI rời khu tài khoản (không phải một trang của khu) — menu vẽ thêm mũi tên →. */
+  readonly cta?: boolean;
 }
 
 export interface AccountNavGroup {
@@ -84,44 +88,31 @@ const TRIPS: AccountNavItem = {
 };
 
 /**
- * "Lịch sử thanh toán" — tiền ĐÃ TRẢ CHO GIAN HÀNG của các chuyến mình thuê. KHÁC `BALANCE`: đây là
- * tiền mình đã trả ĐI, `BALANCE` là tiền XePrime đang nợ mình.
+ * "Quản lý thanh toán" — MỘT mục cho ba trang tiền của tài khoản khách (design 22/10/2026):
+ * số dư ví điểm + tài khoản nhận tiền (`BALANCE`, tab "Tài khoản thanh toán") và tiền ĐÃ TRẢ CHO
+ * GIAN HÀNG của các chuyến mình thuê (`PAYMENTS`, tab "Lịch sử giao dịch"). Hai sổ vẫn KHÁC nhau —
+ * ví là tiền XePrime đang nợ mình (ADR 0033), lịch sử là tiền mình đã trả đi; chỉ cửa vào là một.
+ * `BANK_ACCOUNTS` còn giữ đường để link cũ chuyển về tab số dư.
  */
 const PAYMENTS: AccountNavItem = {
   key: 'payments',
-  labelKey: 'account.payments',
-  href: ROUTES.ACCOUNT.PAYMENTS,
-  icon: CreditCardOutlined,
-};
-
-/** "Ví điểm" — tiền hoàn khoản giữ chỗ chảy vào đây (ADR 0033 điều 5). Ví của TÀI KHOẢN này. */
-const BALANCE: AccountNavItem = {
-  key: 'balance',
-  labelKey: 'account.balance',
+  labelKey: 'account.paymentsHub',
   href: ROUTES.ACCOUNT.BALANCE,
   icon: WalletOutlined,
+  matches: [ROUTES.ACCOUNT.PAYMENTS, ROUTES.ACCOUNT.BANK_ACCOUNTS],
 };
 
-/** Nơi khai số tài khoản ngân hàng để XePrime chuyển tiền hoàn về — không phải nơi giữ tiền. */
-const BANK_ACCOUNTS: AccountNavItem = {
-  key: 'bankAccounts',
-  labelKey: 'account.bankAccounts',
-  href: ROUTES.ACCOUNT.BANK_ACCOUNTS,
-  icon: BankOutlined,
-};
-
-const CHANGE_PASSWORD: AccountNavItem = {
-  key: 'changePassword',
-  labelKey: 'account.changePassword',
+/**
+ * "Bảo mật tài khoản" — MỘT mục (design Account / Security 22/10/2026): đổi mật khẩu và lối mở hộp
+ * YÊU CẦU xoá tài khoản (support case, nền tảng xử lý tay) trên cùng một trang. `DELETE_ACCOUNT`
+ * chỉ còn là đường cũ chuyển về trang này và mở sẵn hộp.
+ */
+const SECURITY: AccountNavItem = {
+  key: 'security',
+  labelKey: 'account.security',
   href: ROUTES.ACCOUNT.CHANGE_PASSWORD,
   icon: LockOutlined,
-};
-
-const DELETE_ACCOUNT: AccountNavItem = {
-  key: 'deleteAccount',
-  labelKey: 'account.deleteAccount',
-  href: ROUTES.ACCOUNT.DELETE_ACCOUNT,
-  icon: DeleteOutlined,
+  matches: [ROUTES.ACCOUNT.DELETE_ACCOUNT],
 };
 
 /**
@@ -134,6 +125,7 @@ const BECOME_OWNER: AccountNavItem = {
   href: resolveOwnerCtaHref(),
   icon: ShopOutlined,
   external: true,
+  cta: true,
 };
 
 /**
@@ -146,16 +138,14 @@ const BECOME_OWNER: AccountNavItem = {
  */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   // Giấy tờ & Xác minh nằm TRONG trang hồ sơ (design 22/10/2026), không còn là mục riêng.
+  // Thứ tự theo design Account: việc thường ngày trước, lối sang site partner đứng cuối.
   PROFILE,
-  BECOME_OWNER,
   TRIPS,
+  PAYMENTS,
   FAVORITES,
   DRIVING,
-  PAYMENTS,
-  BALANCE,
-  BANK_ACCOUNTS,
-  CHANGE_PASSWORD,
-  DELETE_ACCOUNT,
+  SECURITY,
+  BECOME_OWNER,
 ];
 
 /** Người đang đăng nhập là CHỦ gian hàng (dùng ở site partner — menu ẩn mục `ownerOnly`). */
@@ -182,20 +172,24 @@ export function resolveAccountNav(opts: { hasDriverLinks?: boolean } = {}): Acco
 
 /**
  * Mục đang mở theo đường dẫn hiện tại: khớp tuyệt đối trước, không thì mục có `href` là tiền tố dài
- * nhất (để `/trips/abc` sáng "Chuyến của tôi"). `/account` chỉ khớp tuyệt đối — nếu không thì mọi
- * trang con đều dính vào nó. Link sang site khác (URL tuyệt đối) không bao giờ là mục đang mở.
+ * nhất (để `/trips/abc` sáng "Chuyến của tôi"), xét cả `matches` của mục gộp. `/account` chỉ khớp
+ * tuyệt đối — nếu không thì mọi trang con đều dính vào nó. Link sang site khác (URL tuyệt đối)
+ * không bao giờ là mục đang mở.
  */
 export function matchAccountNavKey(
   pathname: string,
   items: readonly AccountNavItem[] = ACCOUNT_NAV,
 ): string | undefined {
-  let best: AccountNavItem | undefined;
+  let best: { key: string; length: number } | undefined;
   for (const item of items) {
     if (!item.href.startsWith('/')) continue;
-    const isMatch =
-      pathname === item.href ||
-      (item.href !== ROUTES.ACCOUNT.ROOT && pathname.startsWith(`${item.href}/`));
-    if (isMatch && (!best || item.href.length > best.href.length)) best = item;
+    for (const href of [item.href, ...(item.matches ?? [])]) {
+      const isMatch =
+        pathname === href || (href !== ROUTES.ACCOUNT.ROOT && pathname.startsWith(`${href}/`));
+      if (isMatch && (!best || href.length > best.length)) {
+        best = { key: item.key, length: href.length };
+      }
+    }
   }
   return best?.key;
 }

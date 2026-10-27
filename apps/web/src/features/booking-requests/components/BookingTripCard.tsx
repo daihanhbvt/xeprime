@@ -1,13 +1,14 @@
 'use client';
 
 import {
+  AppstoreOutlined,
   CalendarOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
   FlagOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import { Avatar } from 'antd';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -26,6 +27,7 @@ import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
+import { initialOf } from '@/lib/initials';
 import { appWallClockToIso, type Dayjs } from '@/lib/datetime';
 import { useListingSpecSummary, type ListingSpecSource } from '../hooks/use-listing-spec-summary';
 import { pickupPointText } from '../pickup-point';
@@ -72,12 +74,14 @@ interface BookingTripCardProps {
    * Hình dạng của thẻ — cùng NỘI DUNG, khác bố cục:
    *
    *  - `review`: màn Xem lại (Figma `19727:55974`) — ảnh xe lớn bên trái, lịch xếp dọc bên phải.
-   *  - `receipt`: hộp "Đã gửi yêu cầu" (Figma `19759:22185`, rộng 600) — ảnh xe nhỏ cạnh tên,
-   *    nhận/trả nằm chung một hàng, tiêu đề có gạch chân.
+   *  - `receipt`: hộp kết quả 600 (Figma `19759:22185` — "Thanh toán thành công", đặt hộ) — ảnh
+   *    xe nhỏ cạnh tên, nhận/trả nằm chung một hàng, tiêu đề có gạch chân.
+   *  - `sent`: hộp "Đã gửi yêu cầu" 750 (Figma `21621:53711`, bản 27/10/2026) — bố cục của
+   *    `review` thu nhỏ: ảnh 224 bên trái, nhận · trả · nơi nhận xếp dọc bên phải.
    *
    *  Màn chuyến chờ chủ xe phản hồi (Figma `19727:60709`) dùng `review` — cùng khối "Trip review".
    */
-  variant: 'review' | 'receipt';
+  variant: 'review' | 'receipt' | 'sent';
   /** Hành động ở đầu thẻ — "Chỉnh sửa" của màn Xem lại. */
   action?: ReactNode;
   /**
@@ -108,6 +112,15 @@ interface BookingTripCardProps {
    * ngay dưới `h1` của một trang (chuyến chờ chủ xe phản hồi): không nhảy bậc dàn ý.
    */
   headingLevel?: 2 | 3;
+  /**
+   * Bên cho thuê của một chuyến ĐÃ GỬI (`GET /trips/:id` → `shop`) — ảnh thật (`avatarUrl`: logo gian
+   * hàng hoặc ảnh chủ xe) và tuyến (`isShop`). Có thì hàng chủ xe vẽ như thẻ chuyến ở danh sách
+   * (`CustomerTripCard`) và thẻ xe ngoài chợ: GIAN HÀNG nổi hơn chủ xe cá nhân — viền vàng, dấu xác
+   * minh, nhãn "Gian hàng", tên vàng. Màn Xem lại / hộp kết quả không truyền ⇒ giữ hàng mặc định.
+   */
+  host?: { name: string; avatarUrl: string | null; isShop: boolean };
+  /** Biển số — chỉ có sau khi chủ xe nhận chuyến (server quyết); `null` thì không vẽ. */
+  plateNumber?: string | null;
   /**
    * Hàng chủ xe (avatar + tên) — `false` ở luồng đặt hộ: người đang xem CHÍNH LÀ chủ xe. Dòng tóm
    * tắt dịch vụ · thời lượng vẫn ở lại, vì đó là chỗ duy nhất thẻ nói dịch vụ của chuyến.
@@ -143,11 +156,14 @@ export function BookingTripCard({
   ownerAction,
   ownerHref,
   headingLevel = 3,
+  host,
+  plateNumber = null,
   showOwner = true,
   selfPickupFallback,
 }: BookingTripCardProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const t = useTranslations('BookingRequests.flow');
+  const tHost = useTranslations('Listings.card');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const specs = useListingSpecSummary(listing ?? fallback?.specs ?? null);
@@ -158,11 +174,18 @@ export function BookingTripCard({
   const image = listing?.mainImageUrl ?? vehicleImageUrl;
   const owner = !showOwner
     ? null
+    : host
+    ? { name: host.name, logoUrl: host.avatarUrl, isShop: host.isShop }
     : listing
-      ? { name: listing.shopName, logoUrl: listing.shopLogoUrl ?? null }
+      ? { name: listing.shopName, logoUrl: listing.shopLogoUrl ?? null, isShop: false }
       : fallback
-        ? { name: fallback.ownerName, logoUrl: null }
+        ? { name: fallback.ownerName, logoUrl: null, isShop: false }
         : null;
+  const ownerCaption = host
+    ? host.isShop
+      ? tHost('shop')
+      : tHost('owner')
+    : t('reviewPage.trip.owner');
 
   /* ── Mốc thời gian: dài hạn là GÓI + nguyện vọng, không phải một lịch đã chốt (ADR 0011) ── */
   const pickupWindow =
@@ -327,6 +350,21 @@ export function BookingTripCard({
               </div>
             ))}
           </div>
+          {/*
+            Biển số là một mục của khung lịch (Figma `21731:15889` "Biển số xe"), không nằm dưới tên
+            xe. Chỉ có khi server đã mở (sau lượt nhận chuyến).
+          */}
+          {plateNumber ? (
+            <div className={styles.scheduleRow}>
+              <span className={styles.scheduleIcon} aria-hidden>
+                <AppstoreOutlined />
+              </span>
+              <div className={styles.scheduleText}>
+                <span className={styles.scheduleLabel}>{t('reviewPage.trip.plate')}</span>
+                <span className={styles.scheduleValue}>{plateNumber}</span>
+              </div>
+            </div>
+          ) : null}
           {placeRows.map((row) => (
             <div key={row.key} className={cx(styles.scheduleRow, styles.placeRow)}>
               <span className={styles.scheduleIcon} aria-hidden>
@@ -348,24 +386,51 @@ export function BookingTripCard({
           <div className={styles.divider} role="presentation" />
           <div className={styles.ownerRow}>
             {owner ? (
-              <div className={styles.ownerGroup}>
-                <div className={styles.owner}>
+            <div className={styles.ownerGroup}>
+              <div className={styles.owner}>
+                <span className={styles.ownerAvatarWrap}>
                   <Avatar
                     size={32}
                     src={owner.logoUrl ?? undefined}
-                    icon={<UserOutlined />}
                     alt=""
-                    className={styles.ownerAvatar}
-                  />
-                  <div className={styles.ownerText}>
-                    <span className={styles.ownerCaption}>{t('reviewPage.trip.owner')}</span>
-                    {ownerHref ? (
-                      <Link href={ownerHref} className={cx(styles.ownerName, styles.ownerLink)}>
-                        {owner.name}
-                      </Link>
-                    ) : (
-                      <span className={styles.ownerName}>{owner.name}</span>
-                    )}
+                    className={cx(styles.ownerAvatar, owner.isShop && styles.ownerAvatarShop)}
+                  >
+                    {/* Chưa có ảnh ⇒ chữ cái đầu, như thẻ chuyến ở danh sách (`CustomerTripCard`). */}
+                    {owner.logoUrl ? null : initialOf(owner.name)}
+                  </Avatar>
+                  {owner.isShop ? (
+                    <span className={styles.ownerMark} aria-hidden="true">
+                      <Image
+                        src="/home/card-verified.svg"
+                        alt=""
+                        width={10}
+                        height={10}
+                        unoptimized
+                      />
+                    </span>
+                  ) : null}
+                </span>
+                <div className={styles.ownerText}>
+                  <span className={styles.ownerCaption}>{ownerCaption}</span>
+                  {ownerHref ? (
+                    <Link
+                      href={ownerHref}
+                      className={cx(
+                        styles.ownerName,
+                        owner.isShop && styles.ownerNameShop,
+                        styles.ownerLink,
+                      )}
+                      aria-label={
+                        owner.isShop ? tHost('shopVerifiedAria', { name: owner.name }) : undefined
+                      }
+                    >
+                      {owner.name}
+                    </Link>
+                  ) : (
+                    <span className={cx(styles.ownerName, owner.isShop && styles.ownerNameShop)}>
+                      {owner.name}
+                    </span>
+                  )}
                   </div>
                 </div>
                 {ownerAction ? <div className={styles.ownerAction}>{ownerAction}</div> : null}

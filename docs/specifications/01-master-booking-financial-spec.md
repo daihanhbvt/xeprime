@@ -35,7 +35,7 @@ Tài liệu này đóng vai trò là **Nguồn sự thật duy nhất (Single So
 | **Bảo hiểm vật chất xe** | Vehicle Protection | $IV$ | Bảo hiểm vật chất thân vỏ (tuỳ chọn, khách trả theo ngày). Hoàn 100% nếu chuyến bị huỷ. |
 | **Bảo hiểm tai nạn người** | Personal Accident | $IP$ | Bảo hiểm tai nạn người ngồi trên xe (tuỳ chọn, khách trả theo ngày). Hoàn 100% nếu chuyến bị huỷ. |
 | **Tiền giữ chỗ** | Booking Hold Amount | — | Khoản khách chuyển khoản online qua VietQR SePay để xác nhận đặt xe. **Tuyệt đối không gọi là "Cọc" trên UI**. |
-| **Cửa sổ co giãn động** | Dynamic Window | — | Khoảng thời gian duyệt, chuyển tiền và huỷ miễn phí co giãn theo khoảng cách tới giờ nhận xe ($\Delta T$). |
+| **Cửa sổ co giãn động** | Dynamic Window | — | Khoảng thời gian duyệt, chuyển tiền và huỷ miễn phí co giãn theo khoảng cách tới giờ nhận xe ($\Delta T$). Hạn chuyển tiền tính từ lúc chủ xe nhận chuyến; **huỷ miễn phí chỉ tính từ lúc tiền giữ chỗ về đủ** (ADR 0072). |
 
 ---
 

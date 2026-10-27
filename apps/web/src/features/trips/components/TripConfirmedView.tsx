@@ -1,9 +1,8 @@
 'use client';
 
-import { PhoneOutlined } from '@ant-design/icons';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useId } from 'react';
+import { useId, useMemo, useSyncExternalStore } from 'react';
 import { isZeroMoney } from '@xeprime/domain';
 import {
   COLLATERAL_MODE,
@@ -12,11 +11,17 @@ import {
   serviceRequiresDriverLicence,
 } from '@xeprime/types';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
+import { ROUTES } from '@/constants/routes';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
+import {
+  parsePickupChecklist,
+  pickupChecklistSnapshot,
+  subscribePickupChecklist,
+  writePickupChecklist,
+} from '@/lib/pickup-checklist-memory';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { tripFinanceBreakdown } from '../booking-trip-view';
 import type { CustomerTripDetail } from '../types';
@@ -24,7 +29,8 @@ import { TripDriverCard } from './TripDriverCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
-import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
+import { TripOwnerActions } from './TripOwnerActions';
+import { TripPageHeader, useTripDetailCrumbs } from './TripPageHeader';
 import {
   TripColumns,
   TripPlanChangeCard,
@@ -53,8 +59,8 @@ import styles from './TripConfirmedView.module.css';
  *  - Kênh liên hệ mở theo `canContact` (ADR 0028 điều 9 · ADR 0056).
  *  - Huỷ theo `canCustomerCancelTrip` (`TripPlanChangeCard`); cửa chặn thật là
  *    `POST /trips/:id/cancel`.
- *  - Checklist là LỜI DẶN cho ngày nhận xe, không phải ô khách tự đánh dấu: các mục chỉ hoàn tất ở
- *    biên bản bàn giao — nên chúng hiện chưa đánh dấu và không bấm được.
+ *  - Checklist là LỜI DẶN cho ngày nhận xe; khách tự tick để nhớ, dấu tick chỉ lưu trong trình
+ *    duyệt (`pickup-checklist-memory`), không gửi server — biên bản bàn giao vẫn là nơi chốt.
  *
  * Hình thức thiết kế có lối "Chỉnh sửa" ở thẻ chuyến; chuyến đã xác nhận KHÔNG có đường sửa nào
  * (lịch đã giữ, giá đã chốt) nên lối đó bị ẩn hẳn.
@@ -71,7 +77,7 @@ export function TripConfirmedView({
   const fmt = useAppFormat();
   const data = useTripRequestData(trip);
   const checklistId = useId();
-  const crumbs = useTripFlowCrumbs(trip.vehicle.id);
+  const crumbs = useTripDetailCrumbs(ROUTES.TRIPS);
   const now = useNow();
 
   const hold = trip.hold ?? null;
@@ -89,37 +95,13 @@ export function TripConfirmedView({
       : t('policy.bodyAfter', { time: fmt.dateTime(hold.freeCancelUntil) })
     : t('policy.bodyNoHold');
 
-  const ownerAction = trip.canContact ? (
-    <>
-      {/*
-        Nhắn tin là lối liên hệ CHÍNH của bản vẽ (nút tròn cạnh tên chủ xe). Gọi điện giữ lại từ màn
-        chuyến cũ — cùng hình dáng, chỉ khi có số.
-      */}
-      <ChatWithShopButton
-        vehicleId={trip.vehicle.id}
-        appearance="icon"
-        className={styles.circleAction}
-        label={t('chatOwner')}
-      />
-      {trip.shop.phone ? (
-        <a
-          href={`tel:${trip.shop.phone}`}
-          className={styles.circleAction}
-          aria-label={t('callOwner', { phone: trip.shop.phone })}
-          title={t('callOwner', { phone: trip.shop.phone })}
-        >
-          <PhoneOutlined aria-hidden />
-        </a>
-      ) : null}
-    </>
-  ) : null;
-
   return (
     <TripColumns
       header={
         <TripPageHeader
           backHref={backHref}
           backLabel={tDetail('back')}
+          home={false}
           crumbs={crumbs}
           title={t('page.title')}
           description={t('page.description')}
@@ -141,7 +123,11 @@ export function TripConfirmedView({
       }
       main={
         <>
-          <TripRequestTripCard trip={trip} data={data} ownerAction={ownerAction} />
+          <TripRequestTripCard
+            trip={trip}
+            data={data}
+            ownerAction={<TripOwnerActions trip={trip} />}
+          />
 
           {/* Người sẽ đến đón — chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
           <TripDriverCard trip={trip} />
@@ -205,6 +191,7 @@ export function TripConfirmedView({
               }
               headingLevel={2}
               surface="trip"
+              paidAmount={hold?.paidAt ? hold.paidAmount : null}
               frozen
             />
           ) : finance ? (
@@ -241,6 +228,22 @@ function PickupChecklist({
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   const titleId = useId();
+
+  /*
+   * Dấu tick là ghi nhớ CÁ NHÂN trong trình duyệt (theo chuyến), không gửi server — biên bản bàn
+   * giao vẫn là nơi chốt. Đọc qua `useSyncExternalStore` với ảnh chụp server rỗng: HTML của server
+   * và lượt render đầu khớp nhau, rồi React đọc kho thật — không setState trong effect.
+   */
+  const checkedRaw = useSyncExternalStore(
+    subscribePickupChecklist,
+    () => pickupChecklistSnapshot(trip.id),
+    () => '',
+  );
+  const checked = useMemo(() => parsePickupChecklist(checkedRaw), [checkedRaw]);
+  const toggle = (key: string, on: boolean) => {
+    const rest = checked.filter((k) => k !== key);
+    writePickupChecklist(trip.id, on ? [...rest, key] : rest);
+  };
 
   const terms =
     data.listing?.rentalTerms?.find((term) => term.serviceType === trip.serviceType) ?? null;
@@ -306,17 +309,22 @@ function PickupChecklist({
       <p className={layout.cardLead}>{t('lead')}</p>
       <ul className={styles.checklist}>
         {items.map((item) => (
-          <li key={item.key} className={styles.checkItem}>
-            {/* Ô vuông là tín hiệu thị giác "chưa hoàn tất" — câu dẫn ngay trên đã nói điều đó. */}
-            <span className={styles.checkBox} aria-hidden />
-            <span className={styles.checkText}>
-              <span className={styles.checkTitle}>{item.title}</span>
-              <span className={styles.checkBody}>{item.body}</span>
-            </span>
+          <li key={item.key}>
+            <label className={styles.checkItem}>
+              <input
+                type="checkbox"
+                className={styles.checkBox}
+                checked={checked.includes(item.key)}
+                onChange={(event) => toggle(item.key, event.target.checked)}
+              />
+              <span className={styles.checkText}>
+                <span className={styles.checkTitle}>{item.title}</span>
+                <span className={styles.checkBody}>{item.body}</span>
+              </span>
+            </label>
           </li>
         ))}
       </ul>
-      <p className={styles.guidance}>{t('guidance')}</p>
     </section>
   );
 }

@@ -30,6 +30,12 @@ export interface TripListProps {
    * xem xe của mình), nên phần này do màn cha dựng.
    */
   empty: ReactNode;
+  /**
+   * `inline` (mặc định) — hàng tab AntD của danh sách, bộ lọc chặng ở khe phải (site partner).
+   * `external` — màn cha tự vẽ bộ chuyển tab ở nơi khác (đầu thẻ "Chuyến của tôi" của site khách,
+   * `TripFilterTabs`); danh sách KHÔNG có bộ lọc chặng — đúng bản vẽ, chỉ hai tab.
+   */
+  tabs?: 'inline' | 'external';
 }
 
 /**
@@ -51,6 +57,7 @@ export function TripList({
   onNavigate,
   renderTrip,
   empty,
+  tabs = 'inline',
 }: TripListProps) {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
@@ -69,44 +76,52 @@ export function TripList({
   const items = stageFilter ? pageItems.filter((trip) => trip.stage === stageFilter) : pageItems;
   const meta = data?.meta;
 
+  const stageSelect = (
+    <Select<CustomerTripStage>
+      className={styles.stageFilter}
+      aria-label={t('list.stageFilterLabel')}
+      placeholder={t('list.stageAll')}
+      allowClear
+      value={stageFilter}
+      onChange={(value) => setStageFilter(value)}
+      /*
+       * Chỉ chặng của TAB ĐANG MỞ: "Chờ xác nhận" trong tab Lịch sử là một lựa chọn chắc
+       * chắn ra danh sách trống. `CUSTOMER_TRIP_FILTER_STAGES` cũng đã loại chặng đã gỡ
+       * (ADR 0055) — cùng nguồn server dùng để chia tab.
+       */
+      options={CUSTOMER_TRIP_FILTER_STAGES[filter].map((stage) => ({
+        value: stage,
+        label: dl('customerTripStage', stage),
+      }))}
+    />
+  );
+
   return (
     <>
-      <Tabs
-        activeKey={filter}
-        onChange={(key) => {
-          // Đổi tab là đổi tập chuyến — một chặng chỉ có ở tab kia sẽ cho ra danh sách trống
-          // mà không ai giải thích được, nên bộ lọc chặng rơi lại.
-          setStageFilter(undefined);
-          onNavigate({ filter: key as CustomerTripFilter });
-        }}
-        items={CUSTOMER_TRIP_FILTER_VALUES.map((key) => ({
-          key,
-          label: counts
-            ? t('list.tabLabel', { label: dl('customerTripFilter', key), count: counts[key] })
-            : dl('customerTripFilter', key),
-        }))}
-        tabBarExtraContent={{
-          right: (
-            <Select<CustomerTripStage>
-              className={styles.stageFilter}
-              aria-label={t('list.stageFilterLabel')}
-              placeholder={t('list.stageAll')}
-              allowClear
-              value={stageFilter}
-              onChange={(value) => setStageFilter(value)}
-              /*
-               * Chỉ chặng của TAB ĐANG MỞ: "Chờ xác nhận" trong tab Lịch sử là một lựa chọn chắc
-               * chắn ra danh sách trống. `CUSTOMER_TRIP_FILTER_STAGES` cũng đã loại chặng đã gỡ
-               * (ADR 0055) — cùng nguồn server dùng để chia tab.
-               */
-              options={CUSTOMER_TRIP_FILTER_STAGES[filter].map((stage) => ({
-                value: stage,
-                label: dl('customerTripStage', stage),
-              }))}
-            />
-          ),
-        }}
-      />
+      {tabs === 'inline' ? (
+        <Tabs
+          activeKey={filter}
+          onChange={(key) => {
+            // Đổi tab là đổi tập chuyến — một chặng chỉ có ở tab kia sẽ cho ra danh sách trống
+            // mà không ai giải thích được, nên bộ lọc chặng rơi lại.
+            setStageFilter(undefined);
+            onNavigate({ filter: key as CustomerTripFilter });
+          }}
+          items={CUSTOMER_TRIP_FILTER_VALUES.map((key) => ({
+            key,
+            label: counts
+              ? t('list.tabLabel', { label: dl('customerTripFilter', key), count: counts[key] })
+              : dl('customerTripFilter', key),
+          }))}
+          tabBarExtraContent={{
+            right: stageSelect,
+          }}
+        />
+      ) : /*
+       * Site khách (design "Chuyến của tôi", Figma `19879:69348`): CHỈ hai tab ở đầu thẻ, không
+       * có ô lọc chặng — nhãn chặng trên từng thẻ đã nói đủ. Bộ lọc chặng chỉ còn ở site partner.
+       */
+      null}
 
       {isLoading ? (
         <div className={styles.list} aria-busy="true">

@@ -167,7 +167,7 @@ describe('Bước 1 — chọn tuyến TRƯỚC', () => {
     renderView();
 
     expect(screen.getByRole('heading', { name: 'Đăng xe cá nhân' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Mở gian hàng cho thuê' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Gian hàng Chuyên nghiệp' })).toBeTruthy();
     expect(screen.queryByLabelText(/Mật khẩu/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe(
       '/manage/login',
@@ -182,7 +182,7 @@ describe('Bước 1 — chọn tuyến TRƯỚC', () => {
       '/manage/register?track=commission',
     );
     expect(
-      screen.getByRole('link', { name: /Tìm hiểu và tạo gian hàng/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /Tìm hiểu các gói Gian hàng/ }).getAttribute('href'),
     ).toBe('/manage/register?track=package');
     expect(nav.replace).not.toHaveBeenCalled();
   });

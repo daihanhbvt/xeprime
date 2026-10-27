@@ -2,6 +2,8 @@ import type { components } from '@xeprime/types';
 import { getApiClient } from '@xeprime/api-client';
 
 export type CreateReviewInput = components['schemas']['CreateReviewDto'];
+export type UpdateReviewInput = components['schemas']['UpdateReviewDto'];
+export type OwnReview = components['schemas']['OwnReviewDto'];
 
 /**
  * Chỉ còn đúng việc TẠO đánh giá: danh sách chuyến là bề mặt của `trips` (nó mang cả tiền, cọc
@@ -12,5 +14,9 @@ export type CreateReviewInput = components['schemas']['CreateReviewDto'];
 export const reviewsApi = {
   create(body: CreateReviewInput): Promise<{ id: string }> {
     return getApiClient().post<{ id: string }>('/reviews', body);
+  },
+  /** Sửa đánh giá của chính mình — server chỉ cho MỘT lần (409 `REVIEW_EDIT_LIMIT`). */
+  update(id: string, body: UpdateReviewInput): Promise<OwnReview> {
+    return getApiClient().patch<OwnReview>(`/reviews/${encodeURIComponent(id)}`, body);
   },
 };

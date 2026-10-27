@@ -36,6 +36,7 @@ function DriverLinkCardImpl({
   onViewTrips: () => void;
 }) {
   const t = useTranslations('Driving.links');
+  const tDialog = useTranslations('Driving.linkDialog');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -136,6 +137,31 @@ function DriverLinkCardImpl({
             <Text col={colors.textMuted} fos={fontSize.label}>
               {timeline}
             </Text>
+            {/* Liên hệ mở rộng + số chuyến (Figma popup `21788:71387`) — đủ thông tin như web. */}
+            {[
+              link.employerContact.representativeName
+                ? `${tDialog('representative')}: ${link.employerContact.representativeName}`
+                : null,
+              link.employerContact.email,
+              link.employerContact.areaName,
+            ].some(Boolean) ? (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {[
+                  link.employerContact.representativeName
+                    ? `${tDialog('representative')}: ${link.employerContact.representativeName}`
+                    : null,
+                  link.employerContact.email,
+                  link.employerContact.areaName,
+                ]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR)}
+              </Text>
+            ) : null}
+            {working ? (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {`${tDialog('completedTrips')}: ${fmt.count(link.completedTripCount)}`}
+              </Text>
+            ) : null}
             {link.linkStatus === DRIVER_LINK_STATUS.SUSPENDED ? (
               <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
                 {t('suspendedHint')}

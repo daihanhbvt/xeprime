@@ -8,7 +8,7 @@ import type { PublicDestination } from '../types';
  *
  *   1. Phân tầng: loại xe → dịch vụ → form của riêng dịch vụ đó.
  *   2. Mỗi dịch vụ phát ĐÚNG bộ tham số của nó; dài hạn không bao giờ mang lịch (ADR 0011).
- *   3. Hero và thanh thu gọn là MỘT trạng thái — sửa ở đâu cũng vào cùng một chỗ.
+ *   3. Trang chủ CHỈ có thẻ hero — cuộn qua nó không mọc thêm thanh tìm kiếm thu gọn.
  *   4. Đổi tab không dọn form: quay lại tự lái là có lại đúng khoảng thuê cũ.
  */
 
@@ -37,6 +37,27 @@ vi.mock('../hooks/use-destinations', () => ({
 
 // Desktop: Popover thay vì Drawer. Test mobile riêng ở phần cuối.
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
+
+/**
+ * Nút "vị trí hiện tại": harness không có `QueryClientProvider` nên chặn ở tầng hook. `nextPlace`
+ * là kết quả của lượt đo kế tiếp — `null` thì lượt đo không bao giờ xong (đúng như người dùng chưa
+ * bấm). Phần đo GPS + tra ngược nằm ngoài phạm vi: thứ khoá ở đây là bộ chọn DÙNG kết quả ra sao.
+ */
+const currentPlace = vi.hoisted(() => ({
+  nextPlace: null as import('@/features/locations/hooks/use-current-place').CurrentPlace | null,
+}));
+
+vi.mock('@/features/locations/hooks/use-current-place', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/locations/hooks/use-current-place')>()),
+  useCurrentPlace: () => ({
+    locate: (onSuccess: (place: unknown) => void) => {
+      if (currentPlace.nextPlace) onSuccess(currentPlace.nextPlace);
+    },
+    isLocating: false,
+    errorCode: null,
+    reset: () => undefined,
+  }),
+}));
 
 /** Các instance IntersectionObserver đang sống — dùng để giả lập hero rời khỏi viewport. */
 const observers: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
@@ -108,16 +129,12 @@ function heroCard(): HTMLElement {
   return screen.getByRole('search', { name: 'Tìm xe cho thuê' });
 }
 
-/** Hero: vùng form có `role="tabpanel"`. Thanh thu gọn: landmark `search` riêng của nó. */
+/** Hero: vùng form có `role="tabpanel"`. */
 function hero(): HTMLElement {
   return screen.getByRole('tabpanel');
 }
 
-function sticky(): HTMLElement {
-  return screen.getByRole('search', { name: 'Tìm kiếm nhanh' });
-}
-
-/** Đẩy hero ra khỏi viewport → thanh thu gọn hiện (chờ hết hai khung hình hoạt cảnh vào). */
+/** Đẩy hero ra khỏi viewport (chờ hết hai khung hình hoạt cảnh nếu có gì định hiện ra). */
 async function scrollHeroOutOfView() {
   await act(async () => {
     for (const notify of observers) notify([{ isIntersecting: false }]);
@@ -370,88 +387,17 @@ describe('đổi dịch vụ giữ ngữ cảnh tương thích', () => {
   });
 });
 
-describe('hero ↔ thanh thu gọn — một trạng thái, hai trình bày', () => {
-  it('hero còn thấy thì thanh thu gọn không tồn tại; hero khuất thì nó hiện ra', async () => {
+describe('trang chủ không có thanh tìm kiếm thu gọn', () => {
+  it('cuộn cho hero khuất khỏi màn hình cũng không mọc thêm thanh tìm kiếm nào', async () => {
     await renderExperience();
+    await scrollHeroOutOfView();
+
     expect(screen.queryByRole('search', { name: 'Tìm kiếm nhanh' })).toBeNull();
-
-    await scrollHeroOutOfView();
-    expect(screen.getByRole('search', { name: 'Tìm kiếm nhanh' })).toBeTruthy();
-  });
-
-  it('đổi loại xe và dịch vụ ở thanh thu gọn thì hero đổi theo — không có nguồn thứ hai', async () => {
-    await renderExperience();
-    await scrollHeroOutOfView();
-
-    fireEvent.click(within(sticky()).getByRole('button', { name: /Loại xe và dịch vụ/ }));
-    const panel = screen.getByRole('dialog', { name: 'Loại xe và dịch vụ' });
-    clickTab(within(panel).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
-    clickTab(
-      within(panel).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
-      'Thuê xe dài hạn',
-    );
-
-    // Hero (đang ngoài màn hình) phản ánh ngay: nhóm chọn của nó cũng đổi theo.
-    const heroVehicle = within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' });
-    expect(within(heroVehicle).getByRole('radio', { name: 'Xe máy' })).toHaveProperty(
-      'ariaChecked',
-      'true',
-    );
-    expect(within(hero()).getByText(/Chọn xe trước, sau đó chọn gói thuê/)).toBeTruthy();
-  });
-
-  it('đổi địa điểm ở thanh thu gọn cập nhật cả hero lẫn URL tìm kiếm', async () => {
-    await renderExperience();
-    await scrollHeroOutOfView();
-    pickProvince(sticky(), /Địa điểm nhận xe/, 'Đà Nẵng');
-
-    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
-
-    fireEvent.click(within(sticky()).getByRole('button', { name: 'Tìm xe' }));
-    expect(submittedQuery().get('provinceCode')).toBe('48');
-  });
-
-  it('đổi chế độ thuê theo giờ ở thanh thu gọn đi vào cùng một khoảng thuê của hero', async () => {
-    await renderExperience();
-    await scrollHeroOutOfView();
-
-    fireEvent.click(within(sticky()).getByRole('button', { name: /Thời gian thuê/ }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Thuê theo giờ' }));
-
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
-    expect(submittedQuery().get('hourly')).toBe('1');
-  });
-
-  it('thanh thu gọn của dài hạn không hiện ô thời gian', async () => {
-    await renderExperience();
-    clickTab(
-      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
-      'Thuê xe dài hạn',
-    );
-    await scrollHeroOutOfView();
-
-    expect(within(sticky()).queryByRole('button', { name: /Thời gian thuê/ })).toBeNull();
-    expect(within(sticky()).getByRole('button', { name: /Địa điểm nhận xe/ })).toBeTruthy();
-    expect(within(sticky()).getByRole('button', { name: 'Tìm xe' })).toBeTruthy();
+    expect(screen.getAllByRole('search')).toHaveLength(1);
   });
 });
 
 describe('panel chỉnh sửa', () => {
-  it('mở panel ở thanh thu gọn thì panel neo ở ĐÓ, không phải ở hero', async () => {
-    await renderExperience();
-    await scrollHeroOutOfView();
-
-    const trigger = within(sticky()).getByRole('button', { name: /Địa điểm nhận xe/ });
-    fireEvent.click(trigger);
-
-    expect(trigger.getAttribute('aria-expanded')).toBe('true');
-    expect(
-      within(hero())
-        .getByRole('button', { name: /Địa điểm nhận xe/ })
-        .getAttribute('aria-expanded'),
-    ).toBe('false');
-  });
-
   it('Esc đóng panel và trả focus về đúng nút đã mở nó', async () => {
     await renderExperience();
     const trigger = within(hero()).getByRole('button', { name: /Địa điểm nhận xe/ });
@@ -543,6 +489,61 @@ describe('panel chỉnh sửa', () => {
     expect(within(hero()).queryByRole('button', { name: /không còn khả dụng/i })).toBeNull();
     // Bộ nhớ còn nguyên: màn địa chỉ ở nơi khác vẫn điền sẵn được tỉnh này.
     expect(window.localStorage.getItem('xp.provinceCode')).toContain('24');
+  });
+});
+
+describe('vị trí hiện tại', () => {
+  const HERE = {
+    latitude: 16.0678,
+    longitude: 108.2208,
+    formattedAddress: '12 Bạch Đằng, Phường Hải Châu, Đà Nẵng',
+    provinceCode: '48',
+  };
+
+  afterEach(() => {
+    currentPlace.nextPlace = null;
+  });
+
+  function clickCurrentLocation() {
+    fireEvent.click(within(hero()).getByRole('button', { name: /Địa điểm nhận xe/ }));
+    const panel = screen.getByRole('dialog', { name: 'Bạn muốn thuê xe ở đâu?' });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Truy cập vị trí hiện tại' }));
+    return panel;
+  }
+
+  it('chọn đúng tỉnh đang đứng, và nhớ ĐỊA CHỈ CỤ THỂ để điền sẵn ô giao xe', async () => {
+    currentPlace.nextPlace = { ...HERE, accuracy: 25, precise: true };
+    await renderExperience();
+    clickCurrentLocation();
+
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+    const remembered = JSON.parse(window.localStorage.getItem('xp.deliveryAddress') ?? '{}');
+    expect(remembered).toMatchObject({
+      provinceCode: '48',
+      addressLine: HERE.formattedAddress,
+      latitude: HERE.latitude,
+      longitude: HERE.longitude,
+      locationSource: 'map_pin',
+    });
+  });
+
+  it('sai số lớn (định vị qua IP) vẫn chọn tỉnh nhưng KHÔNG nhớ địa chỉ của một chỗ khác', async () => {
+    currentPlace.nextPlace = { ...HERE, accuracy: 4000, precise: false };
+    await renderExperience();
+    clickCurrentLocation();
+
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+    expect(window.localStorage.getItem('xp.deliveryAddress')).toBeNull();
+  });
+
+  it('khu vực chưa có xe → giữ panel mở, nói thẳng, không đổi bộ lọc', async () => {
+    // `'24'` (Bắc Ninh) hợp lệ nhưng không có trong `DESTINATIONS` — tỉnh chưa có xe nào.
+    currentPlace.nextPlace = { ...HERE, provinceCode: '24', accuracy: 25, precise: true };
+    await renderExperience();
+    const panel = clickCurrentLocation();
+
+    expect(within(panel).getByText(/Khu vực của bạn chưa có xe/)).toBeTruthy();
+    expect(within(hero()).getByRole('button', { name: /Toàn quốc/ })).toBeTruthy();
   });
 });
 

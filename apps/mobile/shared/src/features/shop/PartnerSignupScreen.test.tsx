@@ -101,7 +101,7 @@ beforeEach(() => {
 describe('PartnerSignupScreen — đăng ký đối tác một form', () => {
   it('hiện lựa chọn tuyến TRƯỚC, chưa có form', async () => {
     const view = await renderScreen();
-    expect(await view.findByText('Mở gian hàng cho thuê')).toBeTruthy();
+    expect(await view.findByText('Gian hàng chuyên nghiệp')).toBeTruthy();
     expect(view.getByText('Đăng xe cá nhân')).toBeTruthy();
     expect(view.queryByLabelText('Mật khẩu')).toBeNull();
   });
@@ -113,7 +113,7 @@ describe('PartnerSignupScreen — đăng ký đối tác một form', () => {
     const registerShop = jest.spyOn(tenantsApi, 'register').mockResolvedValue({} as MyShop);
     const view = await renderScreen();
 
-    await fireEvent.press(await view.findByText('Mở gian hàng cho thuê'));
+    await fireEvent.press(await view.findByText('Gian hàng chuyên nghiệp'));
     await fireEvent.press(view.getByRole('button', { name: 'Tìm hiểu và tạo gian hàng' }));
 
     expect((await view.findAllByText('Đăng ký gian hàng')).length).toBeGreaterThan(0);

@@ -2,8 +2,9 @@
 
 import { Alert, Button, Empty, Skeleton } from 'antd';
 import { PlusOutlined, SwapOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { cx } from '@/lib/cx';
 import { currentBankAccount } from '../current-account';
 import { useBankAccounts } from '../hooks/use-bank-accounts';
@@ -30,9 +31,13 @@ import styles from './BankAccountList.module.css';
  * ĐỔI, và bấm "Thêm" trong lúc đó là âm thầm thay một tài khoản người dùng không thấy.
  *
  * `id`/`className`/`title`/`subtitle` để phần tử cha NHÚNG được panel này vào bố cục của nó
- * (trang "Số dư & rút tiền" của site partner đặt nó ngay dưới nút Rút, có khung thẻ và có anchor
- * `?section=payout`) mà không phải dựng một khối thứ hai. Bỏ trống thì panel tự xưng như cũ —
- * `/account/bank-accounts` và `AccountMoneyPanel` không phải đổi gì.
+ * (trang số dư của CẢ HAI site đặt nó ngay dưới nút Rút, có khung thẻ và có anchor
+ * `?section=payout`) mà không phải dựng một khối thứ hai. Bỏ trống thì panel tự xưng như cũ.
+ *
+ * `appearance="account"` là dáng tab "Tài khoản thanh toán" của khu tài khoản khách (Figma
+ * `19879:74829`): đầu thẻ chữ 18px gạch chân, nút của bảng nút v2 (`CtaButton`), thẻ tài khoản hình
+ * `detail`, hộp thoại khai tài khoản dáng v2, và `footer` (khối lưu ý) dưới thẻ. Site partner giữ
+ * dáng `standard`.
  */
 export function BankAccountList({
   scope,
@@ -40,12 +45,17 @@ export function BankAccountList({
   className,
   title,
   subtitle,
+  appearance = 'standard',
+  footer,
 }: {
   scope: BankAccountScope;
   id?: string;
   className?: string;
   title?: string;
   subtitle?: string;
+  appearance?: 'standard' | 'account';
+  /** Nội dung dưới thẻ tài khoản (khối lưu ý) — chỉ hiện khi đã biết có/không có tài khoản. */
+  footer?: ReactNode;
 }) {
   const t = useTranslations('BankAccounts');
   const [formOpen, setFormOpen] = useState(false);
@@ -53,13 +63,15 @@ export function BankAccountList({
   const { data, isPending, isError } = useBankAccounts(scope);
   const account = currentBankAccount(data);
   const settled = !isPending && !isError;
+  const isAccount = appearance === 'account';
+  const openForm = () => setFormOpen(true);
 
   const headingId = id ? `${id}-title` : undefined;
 
   return (
     <section
       id={id}
-      className={cx(styles.panel, className)}
+      className={cx(styles.panel, isAccount && styles.account, className)}
       aria-labelledby={headingId}
       aria-label={headingId ? undefined : t('title')}
       // Đích của `?section=` khi panel này được nhúng — xem `SectionCard`.
@@ -72,17 +84,25 @@ export function BankAccountList({
           </h2>
           <p className={styles.subtitle}>{subtitle ?? t('subtitle')}</p>
         </div>
-        {settled ? (
+        {!settled ? null : isAccount ? (
           account ? (
-            <Button icon={<SwapOutlined />} onClick={() => setFormOpen(true)}>
+            <CtaButton variant="neutral" onClick={openForm}>
               {t('actions.change')}
-            </Button>
+            </CtaButton>
           ) : (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+            <CtaButton iconStart={<PlusOutlined />} onClick={openForm}>
               {t('actions.add')}
-            </Button>
+            </CtaButton>
           )
-        ) : null}
+        ) : account ? (
+          <Button icon={<SwapOutlined />} onClick={openForm}>
+            {t('actions.change')}
+          </Button>
+        ) : (
+          <Button type="primary" icon={<PlusOutlined />} onClick={openForm}>
+            {t('actions.add')}
+          </Button>
+        )}
       </header>
 
       {isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
@@ -91,13 +111,18 @@ export function BankAccountList({
         <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : null}
 
-      {account ? <BankAccountCard account={account} /> : null}
+      {account ? (
+        <BankAccountCard account={account} variant={isAccount ? 'detail' : 'row'} />
+      ) : null}
+
+      {settled && footer ? footer : null}
 
       <BankAccountForm
         scope={scope}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         replacing={account}
+        appearance={appearance}
       />
     </section>
   );

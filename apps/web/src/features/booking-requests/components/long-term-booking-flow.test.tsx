@@ -1,20 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import dayjs from 'dayjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
+import { LONG_TERM_PACKAGE_MONTHS, PICKUP_PREFERENCE, SERVICE_TYPE } from '@xeprime/types';
 import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { readBookingDraft } from '../booking-draft';
+import type { RequestBookingPrefill } from '../types';
 import { RequestBookingModal } from './RequestBookingModal';
 
 /**
  * Đặc tả UI của luồng THUÊ DÀI HẠN theo GÓI CỐ ĐỊNH (ADR 0011).
  *
- * Những gì phải KHÔNG còn: ô chọn khoảng ngày, ngày trả do khách nhập, badge phần trăm nổi trên
- * gói, giá tự lái và khuyến mãi tự lái trong panel, dòng "tiết kiệm so với thuê theo ngày".
- * Những gì phải CÓ: đúng sáu gói kèm tiền thật, hai nguyện vọng nhận xe, và payload gửi lên
- * mang gói + nguyện vọng chứ không mang lịch — cũng không mang họ tên/SĐT (ADR 0060).
+ * Gói và nguyện vọng được chọn ở THẺ ĐẶT XE (27/10/2026); hộp yêu cầu thuê mở thẳng ở màn Xem lại.
+ * Những gì phải KHÔNG có trong hộp: biểu mẫu chọn gói, ô chọn khoảng ngày, ngày trả do khách nhập,
+ * giá tự lái và khuyến mãi tự lái. Những gì phải CÓ: đúng gói thẻ đưa sang (gói lạ ⇒ gói nhỏ nhất),
+ * và payload gửi lên mang gói + nguyện vọng chứ không mang lịch (ADR 0011).
  */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const api = vi.hoisted(() => ({
@@ -223,7 +225,7 @@ const VALID_LICENCE = {
   coversCar: true,
   coversMotorbike: false,
 };
-function renderModal() {
+function renderModal(prefill: RequestBookingPrefill = { packageMonths: 6 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -233,6 +235,8 @@ function renderModal() {
         <RequestBookingModal
           vehicleId="V1"
           vehicleName="Kia Carnival 2025"
+          serviceType={SERVICE_TYPE.LONG_TERM}
+          prefill={prefill}
           open
           onClose={vi.fn()}
         />
@@ -244,12 +248,10 @@ function renderModal() {
   return { ...utils, rerenderTree: () => utils.rerender(tree()) };
 }
 
-/** Chờ hồ sơ xe về rồi chuyển sang tab Thuê dài hạn. */
-async function openLongTerm() {
-  const utils = renderModal();
-  const tab = await screen.findByText('Thuê dài hạn');
-  fireEvent.click(tab);
-  await screen.findByRole('radiogroup', { name: 'Gói thuê dài hạn' });
+/** Hộp mở thẳng màn Xem lại — chờ nút gửi xuất hiện. */
+async function openReview(prefill?: RequestBookingPrefill) {
+  const utils = renderModal(prefill);
+  await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
   return utils;
 }
 
@@ -270,140 +272,58 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Thuê dài hạn — chọn GÓI thay cho chọn khoảng ngày', () => {
-  it('không có ô chọn khoảng thuê và không có ngày trả để khách nhập', async () => {
-    await openLongTerm();
+/*
+ * Gói + nguyện vọng được chọn ở THẺ ĐẶT XE của trang chi tiết (27/10/2026) — hộp không còn bước
+ * "Chuyến đi" nào để chọn lại. Đặc tả ở đây khoá việc hộp nhận ĐÚNG gói/nguyện vọng thẻ đưa sang.
+ */
+describe('Thuê dài hạn — hộp nhận gói từ thẻ đặt xe', () => {
+  it('mở thẳng màn Xem lại: không có biểu mẫu chọn gói, không có ô khoảng thuê hay ngày trả', async () => {
+    await openReview();
 
+    expect(screen.queryByRole('radiogroup', { name: 'Gói thuê dài hạn' })).toBeNull();
     expect(screen.queryByText('Thời gian thuê')).toBeNull();
-    expect(screen.queryByText('TRẢ XE')).toBeNull();
-    // "Tuỳ chỉnh" (thời lượng tự do) đã bị bỏ hẳn khỏi mô hình gói.
-    expect(screen.queryByText(/Tuỳ chỉnh/)).toBeNull();
+    expect(screen.queryByText('Trả xe')).toBeNull();
+    // Báo giá không thu trước ⇒ hai chặng; hộp đứng ở chặng đầu.
+    expect(screen.getByText('Bước 1 / 2 · Gửi yêu cầu')).toBeTruthy();
+    // Không có lối "Chỉnh sửa" quay về một bước không còn tồn tại.
+    expect(screen.queryByRole('button', { name: 'Chỉnh sửa thông tin chuyến đi' })).toBeNull();
   });
 
-  it('đúng SÁU gói, mỗi gói mang % ƯU ĐÃI CAM KẾT của chính gói đó', async () => {
-    await openLongTerm();
-
-    const group = screen.getByRole('radiogroup', { name: 'Gói thuê dài hạn' });
-    const options = within(group).getAllByRole('radio');
-    expect(options).toHaveLength(LONG_TERM_PACKAGE_MONTHS.length);
-    // % trên thẻ là mốc ưu đãi thời hạn của gói (server tính), KHÔNG phải so với giá thuê ngày.
-    expect(options.map((o) => o.textContent)).toEqual([
-      '-5%1 tháng',
-      '-5%2 tháng',
-      '-15%3 tháng',
-      '-20%6 tháng',
-      '-20%9 tháng',
-      '-20%12 tháng',
-    ]);
-  });
-
-  /**
-   * Tiền của gói nằm ở khối giá dùng chung dưới đáy cột (một chỗ duy nhất cho cả luồng), không
-   * còn ở một khối "Tóm tắt lựa chọn" riêng của bước dài hạn — trước đây hai khối cùng dựng từ
-   * một `quote` nên cùng một con số hiện hai lần cạnh nhau.
-   */
-  it('chọn gói → khối giá hiện TIỀN THẬT của gói đó', async () => {
-    await openLongTerm();
-    fireEvent.click(screen.getByRole('radio', { name: /9 tháng/ }));
-
-    // Thu gọn: chỉ tổng của gói.
-    expect(await screen.findByText('86.400.000 ₫')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /Chi tiết/ }));
-
-    const detail = await screen.findByLabelText('Chi tiết giá gói 9 tháng');
-    expect(within(detail).getByText('Giá cơ sở gói 9 tháng')).toBeTruthy();
-    expect(within(detail).getByText('108.000.000 ₫')).toBeTruthy();
-    expect(within(detail).getByText('Ưu đãi cam kết 9 tháng (20%)')).toBeTruthy();
-    expect(within(detail).getByText('-21.600.000 ₫')).toBeTruthy();
-  });
-
-  it('không có gói 4/5/7/8/10/11 tháng', async () => {
-    await openLongTerm();
-    const group = screen.getByRole('radiogroup', { name: 'Gói thuê dài hạn' });
-    for (const invalid of [4, 5, 7, 8, 10, 11]) {
-      expect(within(group).queryByText(`${invalid} tháng`)).toBeNull();
-    }
-  });
-
-  it('chọn gói → báo giá hỏi SERVER theo gói, không gửi ngày nào', async () => {
-    await openLongTerm();
-    fireEvent.click(screen.getByRole('radio', { name: /9 tháng/ }));
+  it('báo giá hỏi SERVER theo GÓI của thẻ, không gửi ngày nào', async () => {
+    await openReview();
 
     await waitFor(() => expect(quoteCalls.length).toBeGreaterThan(0));
-    expect(quoteCalls.at(-1)).toEqual({ serviceType: 'long_term', packageMonths: 9 });
+    expect(quoteCalls.at(-1)).toEqual({ serviceType: SERVICE_TYPE.LONG_TERM, packageMonths: 6 });
   });
 
-  it('câu "tiết kiệm" so với GIÁ GỐC CỦA GÓI, không so với giá thuê theo ngày', async () => {
-    await openLongTerm();
-    fireEvent.click(screen.getByRole('radio', { name: /9 tháng/ }));
+  it('gói ngoài sáu gói của ADR 0011 ⇒ về gói NHỎ NHẤT, không gửi gói 4 tháng', async () => {
+    await openReview({ packageMonths: 4 });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Chi tiết/ }));
-    await screen.findByLabelText('Chi tiết giá gói 9 tháng');
-    expect(screen.getByText(/Tiết kiệm .* nhờ ưu đãi thời hạn 9 tháng/)).toBeTruthy();
-    expect(screen.queryByText(/so với thuê theo ngày/)).toBeNull();
-    // Con số "tiết kiệm" bịa từ chênh lệch giá ngày (67.500.000) không được xuất hiện.
-    expect(screen.queryByText(/67\.500\.000/)).toBeNull();
+    await waitFor(() => expect(quoteCalls.length).toBeGreaterThan(0));
+    expect(quoteCalls.at(-1)).toEqual({
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      packageMonths: LONG_TERM_PACKAGE_MONTHS[0],
+    });
   });
 
-  it('panel xe KHÔNG hiện giá tự lái hay khuyến mãi tự lái khi đang chọn dài hạn', async () => {
-    await openLongTerm();
+  it('màn Xem lại KHÔNG hiện giá tự lái hay khuyến mãi tự lái', async () => {
+    await openReview();
 
     expect(screen.queryByText('585.000 ₫')).toBeNull();
     expect(screen.queryByText('-10%')).toBeNull();
-    // Panel nói giá của GÓI đang chọn (mặc định 1 tháng), không phải giá tự lái theo ngày.
-    expect(screen.getAllByText('11.400.000 ₫').length).toBeGreaterThan(0);
-    expect(screen.getByText('/1 tháng')).toBeTruthy();
-  });
-
-  it('badge % chỉ nằm trên THẺ GÓI — tab dịch vụ sạch', async () => {
-    await openLongTerm();
-
-    // Badge suy từ chênh lệch giá ngày ↔ giá tháng (mô hình cũ) không được tồn tại ở đâu cả.
-    expect(screen.queryByText('-38%')).toBeNull();
-
-    const tab = screen.getByText('Thuê dài hạn').closest('label');
-    expect(tab?.textContent).toBe('Thuê dài hạn');
-
-    // Còn trên thẻ gói thì badge % là hợp lệ: đó là mốc ưu đãi cam kết của gói.
-    const group = screen.getByRole('radiogroup', { name: 'Gói thuê dài hạn' });
-    expect(within(group).getAllByText('-20%').length).toBe(3);
   });
 });
 
-describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
-  it('mặc định là khoảng linh hoạt; bấm "ngày cụ thể" mở LỊCH ngay, không thêm ô nhập', async () => {
-    await openLongTerm();
-
-    expect(screen.getByRole('radio', { name: 'Trong 7 ngày tới' })).toBeTruthy();
-    expect(
-      screen.getByText('Gian hàng sẽ xác nhận ngày và giờ nhận xe trong 7 ngày tới.'),
-    ).toBeTruthy();
-    // Chưa bấm: không có lịch nào đang mở.
-    expect(document.querySelector('.ant-picker-dropdown')).toBeNull();
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Chọn ngày cụ thể' }));
-
-    expect(screen.getByText('Gian hàng sẽ xác nhận giờ nhận xe.')).toBeTruthy();
-    // Lịch bật ra ngay từ cú bấm đó — khách không phải bấm thêm một ô nhập nữa.
-    await waitFor(() => expect(document.querySelector('.ant-picker-dropdown')).toBeTruthy());
-  });
-
-  it('gửi yêu cầu: payload mang GÓI + nguyện vọng, KHÔNG mang ngày nhận/trả', async () => {
+describe('Thuê dài hạn — gửi yêu cầu', () => {
+  it('payload mang GÓI + nguyện vọng, KHÔNG mang ngày nhận/trả', async () => {
     api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
-    await openLongTerm();
-
-    fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
-    // Đã đăng nhập: một cú Tiếp tục là sang thẳng Xác nhận (bằng lái mặc định đã hợp lệ).
-    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
+    await openReview();
     // Dài hạn KHÔNG gọi check-availability: chưa có khung giờ nào để kiểm (ADR 0006).
     expect(api.checkAvailability).not.toHaveBeenCalled();
 
-    // Bước xác nhận nói GÓI và NGUYỆN VỌNG, không hiện một lịch giả.
+    // Màn Xem lại nói GÓI và NGUYỆN VỌNG, không hiện một lịch giả.
     expect(screen.getByText('Gói thuê')).toBeTruthy();
     expect(screen.getByText('Nguyện vọng nhận xe')).toBeTruthy();
-    expect(screen.queryByText('Trả xe')).toBeNull();
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đã đọc và đồng ý/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }));
@@ -420,6 +340,7 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(payload.pickupAt).toBeUndefined();
     expect(payload.returnAt).toBeUndefined();
     expect(payload.pickupWindowStartDate).toBeUndefined();
+    expect(payload.requestedPickupDate).toBeUndefined();
     // Danh tính người thuê mặc định từ tài khoản (ADR 0063).
     expect(payload).toMatchObject({
       customerName: LOGGED_IN_ME.displayName,
@@ -427,27 +348,44 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     });
   });
 
+  it('ngày nhận CỤ THỂ khách chọn ở thẻ đi nguyên vào payload', async () => {
+    api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
+    await openReview({
+      packageMonths: 3,
+      pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
+      requestedPickupDate: dayjs('2098-03-15'),
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đã đọc và đồng ý/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }));
+
+    await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalled());
+    expect(api.submitBookingRequest.mock.calls[0]![0]).toMatchObject({
+      longTermPackageMonths: 3,
+      pickupPreference: 'specific_date',
+      requestedPickupDate: '2098-03-15',
+    });
+  });
+
   /**
-   * Chưa đăng nhập (ADR 0060): dài hạn không có khung giờ nào để kiểm, nên "Tiếp tục" đi thẳng tới
-   * việc GIỮ bản nháp và mời đăng nhập. Thứ phải sống qua lượt đăng nhập là GÓI khách vừa chọn —
-   * không phải gói mặc định 1 tháng.
+   * Chưa đăng nhập (ADR 0060): dài hạn không có khung giờ nào để kiểm, nên hộp đi thẳng tới việc GIỮ
+   * bản nháp và mời đăng nhập. Thứ phải sống qua lượt đăng nhập là GÓI khách đã chọn ở thẻ.
    */
-  it('chưa đăng nhập: giữ GÓI vào bản nháp, mời đăng nhập — đăng nhập xong đi tiếp với đúng gói', async () => {
+  it('chưa đăng nhập: giữ GÓI vào bản nháp, mời đăng nhập — đăng nhập xong vào màn Xem lại với đúng gói', async () => {
     me.data = undefined;
-    const { rerenderTree } = await openLongTerm();
+    const { rerenderTree } = renderModal();
 
-    fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-
-    await waitFor(() =>
-      expect(authModal.open).toHaveBeenCalledWith({
-        mode: AUTH_MODE.LOGIN,
-        context: AUTH_CONTEXT.BOOKING,
-      }),
-    );
+    // Lời mời, không phải một biểu mẫu — hộp đăng nhập chỉ mở khi khách bấm "Đăng nhập".
+    expect(await screen.findByText('Đăng nhập để gửi yêu cầu')).toBeTruthy();
     expect(readBookingDraft('V1')?.values).toMatchObject({
       serviceType: SERVICE_TYPE.LONG_TERM,
       longTermPackageMonths: 6,
+    });
+    expect(authModal.open).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+    expect(authModal.open).toHaveBeenCalledWith({
+      mode: AUTH_MODE.LOGIN,
+      context: AUTH_CONTEXT.BOOKING,
     });
     expect(api.submitBookingRequest).not.toHaveBeenCalled();
 
@@ -459,34 +397,5 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     // Không có lịch để kiểm ở CẢ hai lượt — trước và sau đăng nhập.
     expect(api.checkAvailability).not.toHaveBeenCalled();
     expect(api.submitBookingRequest).not.toHaveBeenCalled();
-  });
-
-  it('gói 1 tháng được chọn sẵn — mở ra là đã có giá thật để so', async () => {
-    await openLongTerm();
-
-    const group = screen.getByRole('radiogroup', { name: 'Gói thuê dài hạn' });
-    const checked = within(group)
-      .getAllByRole('radio')
-      .filter((o) => o.getAttribute('aria-checked') === 'true');
-    expect(checked).toHaveLength(1);
-    expect(checked[0]!.textContent).toContain('1 tháng');
-
-    /*
-     * Và báo giá của gói mặc định được hỏi ngay, không đợi khách bấm.
-     *
-     * Lọc theo `serviceType` thay vì lấy `quoteCalls[0]`: modal mở ra ở tab TỰ LÁI, và tab đó nay
-     * điền sẵn một khoảng thuê gợi ý, nên nó đã hỏi giá ngày của chính nó TRƯỚC khi ta bấm sang
-     * tab dài hạn. Thứ cần khoá ở đây là gói mặc định được hỏi giá mà khách không phải thao tác
-     * gì — không phải thứ tự của nó so với báo giá của tab khác.
-     */
-    const longTermQuotes = () =>
-      quoteCalls.filter(
-        (params) => (params as { serviceType?: string }).serviceType === SERVICE_TYPE.LONG_TERM,
-      );
-    await waitFor(() => expect(longTermQuotes().length).toBeGreaterThan(0));
-    expect(longTermQuotes()[0]).toEqual({
-      serviceType: SERVICE_TYPE.LONG_TERM,
-      packageMonths: 1,
-    });
   });
 });

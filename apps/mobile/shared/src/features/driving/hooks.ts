@@ -63,3 +63,4 @@ export const useDeclineDriverLink = () => useDrivingMutation(drivingApi.declineL
 export const useLeaveDriverLink = () => useDrivingMutation(drivingApi.leaveLink);
 export const useAcceptDriverTrip = () => useDrivingMutation(drivingApi.acceptTrip);
 export const useDeclineDriverTrip = () => useDrivingMutation(drivingApi.declineTrip);
+export const useReleaseDriverTrip = () => useDrivingMutation(drivingApi.releaseTrip);

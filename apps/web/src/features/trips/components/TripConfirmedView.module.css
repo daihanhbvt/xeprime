@@ -3,58 +3,20 @@
  * thái, nhãn viên thuốc và khối "Cần thay đổi kế hoạch?" là của chung — `TripRequestLayout`.
  */
 
-/* "Xem hướng dẫn nhận xe" (Figma `19759:40561`) — `16px/Semibold` `Text/Brand/primary`. */
+/* "Xem hướng dẫn nhận xe" (Figma `19759:40561`) — `14px/Semibold` `Text/Brand/primary` (Figma `21621:66921`). */
 .guideLink {
   align-self: flex-start;
   color: var(--xp-color-primary);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .guideLink:hover {
   color: var(--xp-color-primary-hover);
 }
 
-/*
- * Nút tròn cạnh tên chủ xe (Figma `19879:73248` "Solution Icon"): nền trắng, viền
- * `Stroke/gray-low200`, đệm 8, icon 20.
- */
-.circleAction {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-text-secondary);
-  font-size: 20px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.circleAction:hover {
-  border-color: var(--xp-color-primary-border);
-  color: var(--xp-color-primary-hover);
-}
-
-.circleAction:focus-visible {
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-.circleAction:disabled {
-  cursor: progress;
-  opacity: var(--xp-disabled-opacity);
-}
-
-/* ── Checklist nhận xe (Figma `19759:40566`) ─────────────────────────────── */
+/* ── Checklist nhận xe (Figma `21621:67364`) ─────────────────────────────── */
 .checklist {
   display: flex;
   flex-direction: column;
@@ -64,22 +26,31 @@
   list-style: none;
 }
 
-/* Một mục: ô vuông 20 · tiêu đề `14px/Semibold` + lời dặn `14px/Regular`, cách 12. */
+/* Một mục: ô vuông 20 · tiêu đề `14px/Medium` + lời dặn `14px/Regular` (lh 22, khe 4), cách 12. */
 .checkItem {
   display: flex;
   align-items: flex-start;
   gap: var(--xp-space-12);
   min-width: 0;
+  cursor: pointer;
 }
 
-/* Ô chưa đánh dấu — viền `Stroke/gray-low300`, bo 6 (Figma "_Checkbox base"). */
+/* Ô đánh dấu — viền `Stroke/gray-low300`, bo 6 (Figma "_Checkbox base"); tick bằng màu thương hiệu. */
 .checkBox {
   flex: none;
   width: 20px;
   height: 20px;
+  margin: var(--xp-space-2) 0 0;
   border: 1px solid var(--xp-color-border-strong);
   border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg-container);
+  accent-color: var(--xp-color-primary);
+  cursor: pointer;
+}
+
+.checkBox:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
 }
 
 .checkText {
@@ -88,25 +59,15 @@
   gap: var(--xp-space-xs);
   min-width: 0;
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  overflow-wrap: anywhere;
 }
 
 .checkTitle {
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .checkBody {
   color: var(--xp-color-text-tertiary);
-}
-
-/* Lời dặn cuối thẻ (Figma `19759:40594`): nền `BG/primary-25`, đệm 16, bo 12, chữ cam. */
-.guidance {
-  margin: 0;
-  padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-warning);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
 }

@@ -33,9 +33,10 @@
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
+  /* Figma `21777:55888`: 20/30 Semibold. */
+  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h2);
+  line-height: var(--xp-line-height-lead);
   overflow-wrap: anywhere;
 }
 

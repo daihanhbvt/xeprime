@@ -802,7 +802,7 @@ export class HoldSettlementService {
 export function decideOutcome(input: {
   to: BookingStatus;
   actorScope: AuditActorScope;
-  freeCancelUntil: Date;
+  freeCancelUntil: Date | null;
   now?: Date;
 }): { outcome: BookingHoldOutcome; refundReason: HoldRefundReason | null } | null {
   switch (input.to) {
@@ -920,7 +920,7 @@ export interface CustomerCancelPreview {
   forfeitAmount: string;
   /** Phần chủ xe được đền vì giữ lịch (trọn `D` khi huỷ muộn — ADR 0066). */
   ownerCompensationAmount: string;
-  freeCancelUntil: Date;
+  freeCancelUntil: Date | null;
   withinFreeCancel: boolean;
   /** Có tranh chấp mở — tiền chờ admin chốt, không tự chia. */
   deferred: boolean;

@@ -45,6 +45,9 @@
     "loadError": "Couldn't load the list of locations",
     "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
     "noMatch": "No province matches “{query}”. Try another name or pick Nationwide.",
-    "placeholder": "Enter pick-up point"
+    "placeholder": "Enter pick-up point",
+    "useCurrent": "Use my current location",
+    "noVehiclesNearby": "There are no vehicles in your area yet. Choose Nationwide or another province.",
+    "noProvinceNearby": "We couldn’t tell which province you’re in. Please choose manually."
   }
 }

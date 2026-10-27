@@ -19,6 +19,12 @@
   justify-content: center;
 }
 
+/* Hàng công cụ khi bộ chuyển tab nằm ở màn cha (`tabs="external"`) — chỉ bộ lọc chặng. */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .refreshing {
   align-self: center;
 }
@@ -32,5 +38,9 @@
 @media (max-width: 640px) {
   .stageFilter {
     min-width: 148px;
+  }
+
+  .toolbar .stageFilter {
+    width: 100%;
   }
 }

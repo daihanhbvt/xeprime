@@ -30,6 +30,13 @@ vi.mock('@/features/auth/hooks/use-market-logout', () => ({
   useMarketLogout: () => logout,
 }));
 
+/** Khoảng % hoa hồng của lời mời hợp tác — API công khai, đọc qua React Query (`usePartnerOffer`). */
+vi.mock('@/features/account/hooks/use-partner-offer', () => ({
+  usePartnerOffer: () => ({
+    data: { minOwnerCommissionPercent: 0, maxOwnerCommissionPercent: 10 },
+  }),
+}));
+
 function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
   return {
     id: 'u1',
@@ -58,10 +65,13 @@ describe('AccountSidebar — tài khoản khách', () => {
   it('hiện menu cá nhân, KHÔNG có mục quản lý xe nào', () => {
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByText('Tài khoản của tôi')).toBeTruthy();
+    expect(screen.getByText('Quản lý tài khoản')).toBeTruthy();
+    expect(screen.getByText('Quản lý thanh toán')).toBeTruthy();
     expect(screen.getByText('Chuyến của tôi')).toBeTruthy();
-    expect(screen.getByText('Đổi mật khẩu')).toBeTruthy();
-    expect(screen.getByText('Yêu cầu xoá tài khoản')).toBeTruthy();
+    // Đổi mật khẩu + yêu cầu xoá tài khoản là MỘT mục (design Account / Security).
+    expect(screen.getByText('Bảo mật tài khoản')).toBeTruthy();
+    expect(screen.queryByText('Đổi mật khẩu')).toBeNull();
+    expect(screen.queryByText('Yêu cầu xoá tài khoản')).toBeNull();
 
     expect(screen.queryByText('Danh sách xe')).toBeNull();
     expect(screen.queryByText('Lịch xe')).toBeNull();
@@ -102,7 +112,9 @@ describe('AccountSidebar — hành vi chung', () => {
   it('mục đã dựng là liên kết thật', () => {
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe('/trips');
+    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+      '/trips',
+    );
   });
 
   it('đánh dấu mục đang mở bằng aria-current, kể cả route ngoài /account', () => {
@@ -113,7 +125,7 @@ describe('AccountSidebar — hành vi chung', () => {
       'page',
     );
     expect(
-      screen.getByRole('link', { name: /Tài khoản của tôi/ }).getAttribute('aria-current'),
+      screen.getByRole('link', { name: /Quản lý tài khoản/ }).getAttribute('aria-current'),
     ).toBeNull();
   });
 
@@ -122,7 +134,7 @@ describe('AccountSidebar — hành vi chung', () => {
     render(<AccountSidebar user={user()} />);
 
     expect(
-      screen.getByRole('link', { name: /Lịch sử thanh toán/ }).getAttribute('aria-current'),
+      screen.getByRole('link', { name: /Quản lý thanh toán/ }).getAttribute('aria-current'),
     ).toBe('page');
   });
 

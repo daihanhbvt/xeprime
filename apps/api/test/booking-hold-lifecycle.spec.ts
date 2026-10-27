@@ -424,82 +424,77 @@ describe('Nhận chuyến ⇒ tạo hold: chiếm lịch, phát QR, CHƯA có đ
   });
 
   /**
-   * ADR 0032 điều 5 đổi cách tính: đếm XUÔI từ `acceptedAt`, không tính ngược từ giờ nhận.
-   *
-   * Công thức cũ (`pickupAt − 4h`) cho khách đặt trước mười ngày nguyên mười ngày để đổi ý
-   * miễn phí, còn khách đặt sát giờ thì gần như không có phút nào — cùng một "chính sách 4 giờ"
-   * mà hai người nhận hai thứ khác hẳn.
+   * ADR 0072: lúc NHẬN chuyến chỉ có HẠN TRẢ. Chưa trả thì chưa có đơn để huỷ và khách chưa mất
+   * đồng nào — không trả thì hết hạn là tự huỷ — nên chưa có mốc huỷ miễn phí nào được lưu.
    */
-  maybe('mốc huỷ miễn phí đếm XUÔI 4 giờ từ lúc duyệt, không tính ngược từ giờ nhận', async () => {
+  maybe('lúc nhận chuyến: CHƯA có mốc huỷ miễn phí, hạn trả đếm XUÔI từ decided_at', async () => {
     const { holdId } = await makeHold(10);
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
 
-    const fromAccepted = req.decidedAt!.getTime() + 4 * 3600_000;
-    expect(hold.freeCancelUntil.getTime()).toBe(fromAccepted);
-    // Và chuyến này nhận xe sau 10 ngày, nên mốc KHÔNG dính gì tới giờ nhận.
-    expect(hold.freeCancelUntil.getTime()).toBeLessThan(req.pickupAt!.getTime());
+    expect(hold.freeCancelUntil).toBeNull();
+    // Chính sách của spec này để cửa sổ 1440 phút (xem `snapshotOf`).
+    expect(hold.expiresAt.getTime()).toBe(req.decidedAt!.getTime() + 1440 * 60_000);
   });
 
   /**
-   * Mốc duyệt và mốc tiền phải là MỘT: hai lần gọi `new Date()` trong cùng transaction sinh ra
-   * hai con số lệch vài mili-giây, đủ để đồng hồ đếm ngược trên màn hình và bản ghi audit nói
-   * hai điều khác nhau về cùng một chuyến.
+   * Tiền về ĐỦ ⇒ đồng hồ huỷ miễn phí bắt đầu: `ΔT = pickupAt − paidAt`, `clamp(ΔT × 20%, 15′,
+   * trần chính sách)`, đếm XUÔI từ `paid_at` (ADR 0072) — chuyến xa chạm trần 4 giờ của spec này.
    */
-  maybe(
-    'hạn trả cọc và mốc huỷ miễn phí cùng gốc với decided_at — một mốc, không phải ba',
-    async () => {
-      const { holdId } = await makeHold(10);
-      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-      const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
+  maybe('tiền về đủ ⇒ mốc huỷ miễn phí đếm XUÔI từ paid_at, ghi CÙNG lượt lật paid', async () => {
+    const { code, holdId } = await makeHold(10);
+    await sepay.ingest(payload(code, Number(HOLD_AMOUNT)));
 
-      const accepted = req.decidedAt!.getTime();
-      // Chính sách của spec này để cửa sổ 1440 phút (xem `snapshotOf`).
-      expect(hold.expiresAt.getTime()).toBe(accepted + 1440 * 60_000);
-      expect(hold.freeCancelUntil.getTime()).toBe(accepted + 4 * 3600_000);
-    },
-  );
-
-  /**
-   * Chuyến CẬN NGÀY: hai cửa sổ co theo `ΔT = pickupAt − acceptedAt` (ADR 0066 —
-   * `holdWindowsFor`): huỷ miễn phí `ΔT × 20%`, thanh toán `ΔT × 30%` (sàn 15′, trần của chính
-   * sách) — cả hai vẫn đếm XUÔI từ `decided_at` và không vượt giờ nhận xe.
-   */
-  maybe('chuyến nhận xe cận ngày ⇒ hai cửa sổ co theo khoảng cách tới giờ nhận', async () => {
-    const { holdId } = await makeHold(3 / 24);
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
-
-    const accepted = req.decidedAt!.getTime();
-    const leadMinutes = (req.pickupAt!.getTime() - accepted) / 60_000;
-    expect(hold.freeCancelUntil.getTime()).toBe(
-      accepted + holdFreeCancelMinutes(leadMinutes, 4) * 60_000,
-    );
-    expect(hold.expiresAt.getTime()).toBe(
-      accepted + holdPaymentWindowMinutes(leadMinutes, 1440) * 60_000,
-    );
-    // ~3 giờ ⇒ ~36 phút huỷ miễn phí, ~54 phút thanh toán — ngắn hơn hẳn 4 giờ / 1440 phút.
-    expect(hold.freeCancelUntil.getTime() - accepted).toBeLessThan(60 * 60_000);
-    expect(hold.expiresAt.getTime()).toBeLessThan(req.pickupAt!.getTime());
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
+    expect(hold.paidAt).not.toBeNull();
+    expect(hold.freeCancelUntil!.getTime()).toBe(hold.paidAt!.getTime() + 4 * 3600_000);
   });
 
   /**
-   * Đặt GẤP (< 2 giờ): ADR 0066 bỏ luật "không có huỷ miễn phí" — vẫn có `ΔT × 20%` (sàn 15′),
-   * và mốc huỷ đóng TRƯỚC hạn thanh toán (`ΔT × 30%`).
+   * Chuyến CẬN NGÀY: hạn trả co theo ΔT tính từ lúc NHẬN (30%), mốc huỷ miễn phí co theo ΔT tính
+   * từ lúc TRẢ (20%) — không còn ca "huỷ miễn phí đã hết trước khi khách kịp trả" của ADR 0066.
    */
-  maybe('chuyến nhận xe dưới 2 giờ ⇒ vẫn có cửa sổ huỷ miễn phí ngắn', async () => {
-    const { holdId } = await makeHold(1.5 / 24);
+  maybe('chuyến cận ngày ⇒ hạn trả theo ΔT lúc nhận, huỷ miễn phí theo ΔT lúc trả', async () => {
+    const { code, holdId } = await makeHold(3 / 24);
+    const before = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
+    const accepted = req.decidedAt!.getTime();
+    const acceptLead = (req.pickupAt!.getTime() - accepted) / 60_000;
+    expect(before.expiresAt.getTime()).toBe(
+      accepted + holdPaymentWindowMinutes(acceptLead, 1440) * 60_000,
+    );
+
+    await sepay.ingest(payload(code, Number(HOLD_AMOUNT)));
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    const paidAt = hold.paidAt!.getTime();
+    const payLead = (req.pickupAt!.getTime() - paidAt) / 60_000;
+    expect(hold.freeCancelUntil!.getTime()).toBe(
+      paidAt + holdFreeCancelMinutes(payLead, 4) * 60_000,
+    );
+    // ~3 giờ ⇒ ~36 phút huỷ miễn phí tính TỪ LÚC TRẢ — luôn ở sau lúc trả.
+    expect(hold.freeCancelUntil!.getTime()).toBeGreaterThan(paidAt);
+    expect(hold.freeCancelUntil!.getTime() - paidAt).toBeLessThan(60 * 60_000);
+  });
+
+  /** Đặt GẤP (< 2 giờ): trả đủ rồi vẫn có ít nhất 15′ huỷ miễn phí (kẹp bởi giờ nhận xe). */
+  maybe('chuyến nhận xe dưới 2 giờ ⇒ trả xong vẫn có cửa sổ huỷ miễn phí', async () => {
+    const { code, holdId } = await makeHold(1.5 / 24);
+    await sepay.ingest(payload(code, Number(HOLD_AMOUNT)));
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
 
-    const accepted = req.decidedAt!.getTime();
-    const leadMinutes = (req.pickupAt!.getTime() - accepted) / 60_000;
-    expect(hold.freeCancelUntil.getTime()).toBe(
-      accepted + holdFreeCancelMinutes(leadMinutes, 4) * 60_000,
-    );
-    // ~90 phút ⇒ ~18 phút huỷ miễn phí, ~27 phút thanh toán.
-    expect(hold.freeCancelUntil.getTime()).toBeGreaterThan(accepted);
-    expect(hold.freeCancelUntil.getTime()).toBeLessThan(hold.expiresAt.getTime());
+    const paidAt = hold.paidAt!.getTime();
+    expect(hold.freeCancelUntil!.getTime() - paidAt).toBeGreaterThanOrEqual(15 * 60_000);
+    expect(hold.freeCancelUntil!.getTime()).toBeLessThanOrEqual(req.pickupAt!.getTime());
+  });
+
+  /** CHECK `booking_holds_paid_has_free_cancel`: DB không cho một hold đã trả mà thiếu mốc huỷ. */
+  maybe('DB từ chối hold có paid_at mà thiếu mốc huỷ miễn phí', async () => {
+    const { holdId } = await makeHold(10);
+    await expect(
+      prisma.bookingHold.update({ where: { id: holdId }, data: { paidAt: new Date() } }),
+    ).rejects.toThrow(/booking_holds_paid_has_free_cancel/);
   });
 });
 

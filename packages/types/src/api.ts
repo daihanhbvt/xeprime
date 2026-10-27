@@ -147,6 +147,8 @@ export const API_ERROR_CODE = {
   MONEY_STEP_1000: 'MONEY_STEP_1000',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
+  /** Khách đã dùng lượt chỉnh sửa đánh giá duy nhất (`reviews.edited_at` khác null). */
+  REVIEW_EDIT_LIMIT: 'REVIEW_EDIT_LIMIT',
   /**
    * Lưu/bật banner trang chủ làm vượt trần số banner HIỂN THỊ CÙNG LÚC (`details.max`). Mã riêng
    * thay vì `VALIDATION_FAILED`: dữ liệu banner hợp lệ, thứ sai là lịch chồng lên các banner khác
@@ -739,12 +741,11 @@ export const API_ERROR_CODE = {
   CHAT_CUSTOMER_UNAVAILABLE: 'CHAT_CUSTOMER_UNAVAILABLE',
 
   /**
-   * Khách muốn nhắn cho một CHỦ XE CÁ NHÂN (tuyến hoa hồng) mà chưa từng gửi yêu cầu thuê nào
-   * cho họ. Kênh chat của tuyến hoa hồng mở SAU yêu cầu, không mở sẵn — xem
-   * `storefrontAllowsPublicChat`.
+   * Mở hội thoại / gửi tin giữa khách và một CHỦ XE CÁ NHÂN (tuyến hoa hồng) khi hai bên chưa có
+   * ĐƠN nào — kênh chat của tuyến hoa hồng chỉ mở sau khi tiền giữ chỗ về đủ (`chatOpenBetween`,
+   * ADR 0073). Áp cho cả hai phía: khách nhắn chủ xe và chủ xe nhắn khách.
    *
    * 403 chứ không 404: gian hàng có thật và khách nhìn thấy nó, chỉ là chưa tới lúc mở kênh.
-   * FE dùng mã này để giải thích bước tiếp theo ("gửi yêu cầu thuê trước"), không hiện alert lỗi.
    */
   CHAT_REQUIRES_BOOKING: 'CHAT_REQUIRES_BOOKING',
 

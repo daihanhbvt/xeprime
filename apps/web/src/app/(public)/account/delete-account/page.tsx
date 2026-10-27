@@ -1,14 +1,12 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 
-import { DeleteAccountView } from '@/features/account/components/DeleteAccountView';
+import { accountDeletionPath } from '@/constants/routes';
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('Navigation.account');
-  return { title: t('deleteAccount'), robots: { index: false, follow: false } };
-}
-
-/** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
+/**
+ * Đường cũ của "Yêu cầu xoá tài khoản" — giờ là một hộp trên trang Bảo mật tài khoản (design
+ * Account / Security, 22/10/2026). Giữ đường để link cũ (trang `/delete-account` công khai, email,
+ * dấu trang) mở thẳng hộp đó.
+ */
 export default function DeleteAccountPage() {
-  return <DeleteAccountView />;
+  redirect(accountDeletionPath());
 }

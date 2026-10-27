@@ -179,7 +179,7 @@
       },
       "cancellation": {
         "title": "Cancellation & reservation policy",
-        "free": "<strong>Free cancellation:</strong> after the owner accepts your trip, you get back 100% of what you paid if you cancel within {percent}% of the time left until pick-up (at least {minMinutes} minutes, at most {hours} hours, never past pick-up).",
+        "free": "<strong>Free cancellation:</strong> from the moment your holding payment succeeds, you get back 100% of what you paid if you cancel within {percent}% of the time left until pick-up (at least {minMinutes} minutes, at most {hours} hours, never past pick-up).",
         "hold": "<strong>Reservation window:</strong> once the owner accepts your trip, you have {percent}% of the time left until pick-up to pay the reservation fee (at least {minMinutes} minutes, at most {minutes} minutes).",
         "release": "If the reservation fee isn't paid in full in time, the request closes automatically and the vehicle's dates open up for other renters.",
         "protection": "Renter protection: if the owner cancels after you have paid the reservation fee, you get back 100% of what you paid."
@@ -240,6 +240,12 @@
         "promoRemove": "Remove promo code",
         "promoApply": "Apply a promo / referral code",
         "feeUnitLine": "{quantity, plural, one {# day} other {# days}} × {unit}"
+      },
+      "incomplete": {
+        "range": "Choose the pick-up and return time first.",
+        "package": "Choose a long-term package first.",
+        "pickupDate": "Choose your preferred pick-up date first.",
+        "destination": "Enter the destination of your intercity trip first."
       }
     },
     "deliveryModal": {
@@ -262,7 +268,9 @@
       "manualDefault": "The owner confirms the delivery fee directly when approving your rental request.",
       "notFoundTitle": "Couldn't find a route automatically",
       "notFoundBody": "We couldn't work out the distance for this address automatically. The owner will tell you the delivery fee later.",
-      "confirm": "Confirm address"
+      "confirm": "Confirm address",
+      "useCurrent": "Use my current location",
+      "imprecise": "Your location isn’t precise enough (about {distance} off). Please type your exact address."
     }
   },
   "reviews": {

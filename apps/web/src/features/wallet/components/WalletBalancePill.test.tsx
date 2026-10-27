@@ -56,7 +56,7 @@ describe('WalletBalancePill', () => {
     renderWithIntl(<WalletBalancePill />);
 
     expect(screen.getByText('1.850.000 ₫')).toBeTruthy();
-    expect(screen.getByText('Số dư').closest('a')?.getAttribute('href')).toBe(
+    expect(screen.getByText('Số dư:').closest('a')?.getAttribute('href')).toBe(
       ROUTES.ACCOUNT.BALANCE,
     );
   });
@@ -66,7 +66,7 @@ describe('WalletBalancePill', () => {
     state.user = { realm: ACCOUNT_REALM.PARTNER, tenant: { roleKey: TENANT_ROLE.SHOP_OWNER } };
     renderWithIntl(<WalletBalancePill />);
 
-    expect(screen.getByText('Số dư').closest('a')?.getAttribute('href')).toBe(
+    expect(screen.getByText('Số dư:').closest('a')?.getAttribute('href')).toBe(
       ROUTES.MANAGE.BALANCE,
     );
   });

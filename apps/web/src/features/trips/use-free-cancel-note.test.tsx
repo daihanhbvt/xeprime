@@ -7,13 +7,15 @@ import type { CustomerTripDetail } from './types';
 type Hold = NonNullable<CustomerTripDetail['hold']>;
 
 /**
- * Câu "huỷ thế nào thì tiền đi đâu" — ba trạng thái (ADR 0064). Hàm chỉ CHỌN câu; mọi con số do
+ * Câu "huỷ thế nào thì tiền đi đâu" — ba trạng thái (ADR 0064 · ADR 0072). Hàm chỉ CHỌN câu; mọi con số do
  * server đưa (`lateCancelRefundAmount`), nên test khoá đúng lựa chọn câu theo từng trạng thái.
  */
 function hold(overrides: Partial<Hold>): Hold {
   return {
     freeCancelAvailable: true,
-    // Mốc huỷ miễn phí SAU hạn thanh toán ⇒ cửa sổ thường lệ.
+    // Mặc định: ĐÃ trả đủ — mốc huỷ miễn phí đã lưu, đếm từ lúc trả (ADR 0072).
+    freeCancelStarted: true,
+    freeCancelMinutes: 120,
     expiresAt: '2026-08-10T03:00:00.000Z',
     freeCancelUntil: '2026-08-10T05:00:00.000Z',
     lateCancelRefundAmount: '0',
@@ -40,35 +42,23 @@ describe('useFreeCancelNote', () => {
     expect(text).not.toContain('bảo hiểm');
   });
 
-  it('cửa sổ NGẮN (huỷ miễn phí đóng TRƯỚC hạn thanh toán) ⇒ báo rõ + câu huỷ muộn', () => {
+  /**
+   * ADR 0072: CHƯA trả thì chưa có mốc huỷ miễn phí nào — câu nói ĐỘ DÀI cửa sổ tính từ lúc thanh
+   * toán thành công (server xem trước), không in một giờ cụ thể, không nói "kết thúc trước hạn".
+   */
+  it('chưa trả ⇒ huỷ miễn phí tính TỪ LÚC THANH TOÁN, nói độ dài chứ không nói giờ', () => {
     const text = note(
-      hold({
-        freeCancelUntil: '2026-08-10T02:30:00.000Z',
-        expiresAt: '2026-08-10T03:00:00.000Z',
-        lateCancelRefundAmount: '50000',
-      }),
+      hold({ freeCancelStarted: false, freeCancelMinutes: 65, lateCancelRefundAmount: '50000' }),
     );
-    expect(text).toContain('kết thúc TRƯỚC hạn thanh toán');
-    expect(text).toContain('Huỷ sau mốc này');
+    expect(text).toMatch(/^Huỷ miễn phí trong 1 giờ 5 phút kể từ lúc thanh toán thành công/);
+    expect(text).not.toContain('Huỷ trước');
+    expect(text).not.toContain('TRƯỚC hạn thanh toán');
     expect(text).toContain('50.000');
   });
 
-  /** ADR 0066: chuyến xa có hai mốc TRÙNG nhau (cùng trần 120′) — đó là thường lệ, không "ngắn". */
-  it('hai mốc trùng nhau ⇒ câu thường lệ', () => {
-    const text = note(
-      hold({
-        freeCancelUntil: '2026-08-10T03:00:00.000Z',
-        expiresAt: '2026-08-10T03:00:00.000Z',
-      }),
-    );
-    expect(text).toMatch(/^Huỷ trước .+ được hoàn 100%/);
-    expect(text).not.toContain('kết thúc TRƯỚC hạn thanh toán');
-  });
-
-  it('thường lệ ⇒ mốc huỷ miễn phí + câu huỷ muộn không bảo hiểm', () => {
+  it('đã trả ⇒ mốc huỷ miễn phí ĐÃ LƯU + câu huỷ muộn không bảo hiểm', () => {
     const text = note(hold({}));
     expect(text).toMatch(/^Huỷ trước .+ được hoàn 100%/);
-    expect(text).not.toContain('kết thúc TRƯỚC hạn thanh toán');
     expect(text).toContain('Huỷ sau mốc này thì tiền giữ chỗ không được hoàn');
   });
 });

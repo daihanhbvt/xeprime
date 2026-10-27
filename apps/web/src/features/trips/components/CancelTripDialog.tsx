@@ -1,13 +1,20 @@
 'use client';
 
-import { Alert, Skeleton } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Alert, Select, Skeleton } from 'antd';
+import Link from 'next/link';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CUSTOMER_CANCEL_PREVIEW_KIND,
+  CUSTOMER_CANCELLATION_REASON_VALUES,
+  type CustomerCancellationReason,
   CUSTOMER_TRIP_STAGE,
   type CustomerTripStage,
 } from '@xeprime/types';
+import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { cx } from '@/lib/cx';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { isZeroMoney } from '@/lib/money';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -64,12 +71,29 @@ export function CancelTripDialog({
    * bàn giao trả xe). Chặn nút ngay ở đây thay vì để khách bấm rồi nhận một lỗi.
    */
   const notAllowed = preview.data?.allowed === false;
+  /** Nhóm lý do — bắt buộc chọn (Figma 21621:31264). Ai chịu trách nhiệm vẫn do server suy (ADR 0045). */
+  const [reason, setReason] = useState<CustomerCancellationReason | undefined>(undefined);
+  const [reasonTouched, setReasonTouched] = useState(false);
+  /** Có tiền giữ chỗ qua XePrime ⇒ câu "đã thanh toán" + "Dự kiến hoàn lại" (số do server tính). */
+  const refundable =
+    preview.data &&
+    (preview.data.kind === CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND ||
+      preview.data.kind === CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL)
+      ? preview.data
+      : null;
+  const close = () => {
+    setReason(undefined);
+    setReasonTouched(false);
+    onClose();
+  };
 
   return (
     <ResponsiveDialog
       title={t('title')}
+      hideHeaderTitle
+      ariaLabel={t('title')}
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="sm"
       okText={t('confirm')}
       okDisabled={notAllowed}
@@ -78,14 +102,49 @@ export function CancelTripDialog({
       onOk={() => {
         // Enter gửi form cả khi nút OK đang quay — không bắn lượt huỷ thứ hai.
         if (cancel.isPending || notAllowed) return;
-        cancel.mutate(undefined, { onSuccess: onClose });
+        if (!reason) {
+          setReasonTouched(true);
+          return;
+        }
+        cancel.mutate(reason, { onSuccess: close });
       }}
       confirmLoading={cancel.isPending}
     >
       <div className={styles.body}>
-        <p className={styles.lead}>
-          {pending ? t('leadPending') : awaitingHold ? t('leadAwaitingHold') : t('leadReady')}
-        </p>
+        <div className={styles.header}>
+          <span className={styles.featuredIcon} aria-hidden>
+            <ExclamationCircleOutlined />
+          </span>
+          <h2 className={styles.title}>{t('title')}</h2>
+          <p className={styles.lead}>
+            {refundable
+              ? t.rich('leadPaid', {
+                  policy: (chunks) => (
+                    <Link
+                      href={legalPath.doc(LEGAL_DOC.CANCELLATION)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.policyLink}
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })
+              : pending
+                ? t('leadPending')
+                : awaitingHold
+                  ? t('leadAwaitingHold')
+                  : t('leadReady')}
+          </p>
+          {refundable ? (
+            <p className={styles.lead}>
+              {t.rich('expectedRefund', {
+                amount: fmt.money(refundable.refundAmount),
+                gold: (chunks) => <strong className={styles.refundAmount}>{chunks}</strong>,
+              })}
+            </p>
+          ) : null}
+        </div>
 
         {preview.isLoading ? (
           <Skeleton active title={false} paragraph={{ rows: 2 }} />
@@ -121,6 +180,34 @@ export function CancelTripDialog({
             }
           />
         ) : null}
+
+        {notAllowed ? null : (
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="cancel-trip-reason">
+              {t('reasonLabel')}
+              <span className={styles.required} aria-hidden>
+                *
+              </span>
+            </label>
+            <Select<CustomerCancellationReason>
+              id="cancel-trip-reason"
+              size="large"
+              value={reason}
+              placeholder={t('reasonPlaceholder')}
+              onChange={(value) => setReason(value)}
+              status={reasonTouched && !reason ? 'error' : undefined}
+              options={CUSTOMER_CANCELLATION_REASON_VALUES.map((value) => ({
+                value,
+                label: t(`reasons.${value}`),
+              }))}
+            />
+            {reasonTouched && !reason ? (
+              <span className={styles.error} role="alert">
+                {t('reasonRequired')}
+              </span>
+            ) : null}
+          </div>
+        )}
 
         {cancel.isError ? (
           <Alert type="error" showIcon role="alert" title={errorMessage(cancel.error)} />
@@ -164,38 +251,36 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   }
 
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL) {
+    const title = preview.freeCancelAvailable ? t('lateTitle') : t('noFreeCancelTitle');
+    /*
+     * Quá mốc huỷ miễn phí — khung phiếu sạch theo hộp thoại Figma `21621:31264` (nền xám nhạt, bo 12,
+     * hàng nhãn/số), không dùng khung cảnh báo cam đặc. Lời nhắc hệ quả nằm ở dải vàng nhạt bên dưới.
+     */
     return (
-      <Alert
-        type="warning"
-        showIcon
-        title={preview.freeCancelAvailable ? t('lateTitle') : t('noFreeCancelTitle')}
-        description={
-          <>
-            <dl className={styles.facts}>
-              <div className={styles.factRow}>
-                <dt>{t('paid')}</dt>
-                <dd>{fmt.money(preview.paidAmount)}</dd>
-              </div>
-              <div className={styles.factRow}>
-                <dt>{t('refund')}</dt>
-                <dd>
-                  <strong>{fmt.money(preview.refundAmount)}</strong>
-                </dd>
-              </div>
-              <div className={styles.factRow}>
-                <dt>{t('forfeit')}</dt>
-                <dd>{fmt.money(preview.forfeitAmount)}</dd>
-              </div>
-            </dl>
-            <p className={styles.note}>
-              {isZeroMoney(preview.insuranceRefundAmount)
-                ? t('lateBodyNoInsurance')
-                : t('lateBody', { insurance: fmt.money(preview.insuranceRefundAmount) })}
-            </p>
-            {deferred}
-          </>
-        }
-      />
+      <section className={styles.refundBox} aria-label={title}>
+        <p className={styles.refundTitle}>{title}</p>
+        <dl className={styles.facts}>
+          <div className={styles.factRow}>
+            <dt>{t('paid')}</dt>
+            <dd>{fmt.money(preview.paidAmount)}</dd>
+          </div>
+          <div className={styles.factRow}>
+            <dt>{t('forfeit')}</dt>
+            <dd className={styles.factForfeit}>{fmt.money(preview.forfeitAmount)}</dd>
+          </div>
+          <div className={styles.factDivider} role="presentation" />
+          <div className={cx(styles.factRow, styles.factTotal)}>
+            <dt>{t('refund')}</dt>
+            <dd>{fmt.money(preview.refundAmount)}</dd>
+          </div>
+        </dl>
+        <p className={styles.refundHint}>
+          {isZeroMoney(preview.insuranceRefundAmount)
+            ? t('lateBodyNoInsurance')
+            : t('lateBody', { insurance: fmt.money(preview.insuranceRefundAmount) })}
+        </p>
+        {deferred}
+      </section>
     );
   }
 

@@ -1,41 +1,35 @@
 'use client';
 
 import {
-  ApartmentOutlined,
-  ArrowLeftOutlined,
   ArrowRightOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
+  BankOutlined,
   CarOutlined,
-  CrownOutlined,
-  FileTextOutlined,
-  PercentageOutlined,
-  SafetyCertificateOutlined,
   SettingOutlined,
-  SyncOutlined,
+  TagOutlined,
 } from '@ant-design/icons';
-import { Button } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
-import { LEGAL_DOC, legalPath } from '@/constants/legal';
+import { PageBreadcrumb, type PageCrumb } from '@/components/navigation/PageBreadcrumb';
+import { ROUTES } from '@/constants/routes';
+import { usePartnerOffer } from '@/features/account/hooks/use-partner-offer';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
 
 import styles from './ListYourVehicleLanding.module.css';
 
 /**
- * Số xe tối đa của chủ xe tuyến hoa hồng và mức phí dịch vụ thí điểm (ADR 0028).
+ * Số xe tối đa của chủ xe tuyến hoa hồng (Owner Lite — ADR 0041 điều 4).
  *
- * Để ở ĐÂY, không rải vào câu dịch: hai con số này xuất hiện ở cả `vi` lẫn `en`, và một
- * ngày nào đó chúng đổi theo `fee_policies`/gói — lúc đó phải chỉ có MỘT chỗ để sửa, không
- * phải đi dò bốn chuỗi. Đây là trang giới thiệu tĩnh nên không gọi API để lấy số: khi mức
- * phí thật được công bố qua endpoint công khai, thay hằng số này bằng giá trị đọc từ đó.
+ * Để ở ĐÂY, không rải vào câu dịch: con số xuất hiện ở cả `vi` lẫn `en`, và một ngày nào đó nó đổi
+ * theo gói — lúc đó phải chỉ có MỘT chỗ để sửa. Trang giới thiệu tĩnh nên không gọi API để lấy số.
+ *
+ * Mức hoa hồng KHÔNG in thành con số: nó là bậc thang theo ngày thuê nằm trong `fee_policies`
+ * (ADR 0064 điều 3), một con số cứng ở đây sẽ sai ngay lần admin chỉnh nấc.
  */
 const BASIC_OWNER_VEHICLE_CAP = 3;
-const PLATFORM_SERVICE_FEE_PILOT_PERCENT = 10;
 
 export interface ListYourVehicleLandingProps {
   /** Đích của "Đăng xe đầu tiên" (tuyến hoa hồng). */
@@ -43,8 +37,9 @@ export interface ListYourVehicleLandingProps {
   /** Đích của "Tìm hiểu và tạo gian hàng" (tuyến gói). */
   shopHref: string;
   /**
-   * Nút "Quay lại" (lịch sử trình duyệt). Site khách bật — người ta tới đây từ chợ xe. Site partner
-   * tắt: ngay sau khi tạo tài khoản đối tác, trang trước là chính form đăng ký.
+   * Đầu trang "Trở thành chủ xe" — nút quay lại tròn + đường dẫn + tiêu đề trang (Figma "Account /
+   * Upgrade", `20037:6383`). Site khách bật — người ta tới đây từ menu tài khoản hoặc từ chợ xe.
+   * Site partner tắt: ngay sau khi tạo tài khoản đối tác, trang trước là chính form đăng ký.
    */
   showBack?: boolean;
   /**
@@ -55,12 +50,16 @@ export interface ListYourVehicleLandingProps {
 }
 
 /**
- * "Bắt đầu cho thuê xe theo cách phù hợp với bạn" — HAI tuyến song song, một nội dung cho hai nơi:
+ * "Chọn mô hình hợp tác cùng XePrime" — HAI tuyến song song, một nội dung cho hai nơi:
  *
- *  - **site khách** (`/list-your-vehicle`, công khai, cần SEO): người chưa có tài khoản đối tác đọc
- *    trước khi giao email; hai nút dẫn sang `/register?track=…` của site partner;
+ *  - **site khách** (`/list-your-vehicle`, công khai, cần SEO; cũng là đích của mục "Trở thành chủ
+ *    xe" trong menu tài khoản): hai nút dẫn sang `/register?track=…` của site partner;
  *  - **site partner** (`/register`, ngay SAU khi tạo tài khoản đối tác — ADR 0053): hai nút dẫn vào
  *    bước tiếp theo của tuyến — wizard đăng xe nhanh (hoa hồng) · onboarding gói.
+ *
+ * Bố cục theo Figma "Account / Upgrade" `20037:6621`: PC và máy tính bảng hai thẻ CẠNH NHAU, hình
+ * minh hoạ ở góc phải mỗi thẻ; điện thoại một cột. Hình minh hoạ, nền thẻ gian hàng và ruy băng là ẢNH xuất từ
+ * Figma (`public/list-your-vehicle/`), cắt đúng khung của bản vẽ.
  *
  * Trang chỉ TRÌNH BÀY hai lựa chọn độc lập của ADR 0028 và không tự chuyển lựa chọn này thành lựa
  * chọn kia; nơi dùng quyết định đích. Không tự tạo tenant cho ai.
@@ -73,107 +72,143 @@ export function ListYourVehicleLanding({
 }: ListYourVehicleLandingProps) {
   const linkTarget = openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
   const t = useTranslations('ListYourVehicle.landing');
-  const router = useRouter();
+  // Khoảng % hoa hồng đọc từ chính sách phí hiện hành; chưa có thì giữ câu chung, không đoán số.
+  const offer = usePartnerOffer().data;
+  const commissionRange =
+    offer?.minOwnerCommissionPercent != null && offer.maxOwnerCommissionPercent != null
+      ? { min: offer.minOwnerCommissionPercent, max: offer.maxOwnerCommissionPercent }
+      : null;
+  // Có đầu trang thì `h1` là "Trở thành chủ xe" của đầu trang — mỗi trang đúng một `h1`.
+  const heroLevel = showBack ? 'h2' : 'h1';
+  const cardLevel = showBack ? 'h3' : 'h2';
 
   return (
     <div className={styles.page}>
-      {showBack ? (
-        <div className={styles.backRow}>
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => router.back()}
-            className={styles.back}
-          >
-            {t('back')}
-          </Button>
+      {showBack ? <LandingPageHeader /> : null}
+
+      <div className={styles.body}>
+        <header className={styles.intro}>
+          <Heading as={heroLevel} className={styles.title}>
+            {t.rich('heroTitle', {
+              brand: (chunks) => <span className={styles.brand}>{chunks}</span>,
+            })}
+          </Heading>
+          <p className={styles.subtitle}>{t.rich('subtitle', { br: () => <br /> })}</p>
+        </header>
+
+        <div className={styles.tracks}>
+          <TrackCard
+            variant="personal"
+            headingLevel={cardLevel}
+            badge={t('personal.badge')}
+            title={t('personal.title')}
+            tagline={t('personal.tagline')}
+            body={t('personal.body', { maxVehicles: BASIC_OWNER_VEHICLE_CAP })}
+            features={[
+              { key: 'noFee', icon: <TagOutlined />, label: t('personal.features.noFee') },
+              {
+                key: 'vehicleCap',
+                icon: <CarOutlined />,
+                label: t('personal.features.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
+              },
+              { key: 'simple', icon: <SettingOutlined />, label: t('personal.features.simple') },
+            ]}
+            art={{ src: '/list-your-vehicle/owner-personal.webp', width: 884, height: 729 }}
+            offerTitle={t('personal.offerTitle')}
+            offerBody={
+              commissionRange
+                ? t.rich('personal.offerBodyRange', {
+                    ...commissionRange,
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })
+                : t.rich('personal.offerBody', {
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })
+            }
+            cta={
+              <Link
+                href={personalHref}
+                {...linkTarget}
+                className={cx(styles.cta, styles.ctaOutline)}
+              >
+                {t('personal.cta')}
+                <ArrowRightOutlined aria-hidden="true" />
+              </Link>
+            }
+          />
+
+          <TrackCard
+            variant="shop"
+            headingLevel={cardLevel}
+            ribbon={t('shop.recommended')}
+            badge={t('shop.badge')}
+            title={t('shop.title')}
+            tagline={t('shop.tagline')}
+            body={t.rich('shop.body', { strong: (chunks) => <strong>{chunks}</strong> })}
+            features={[
+              { key: 'fleet', icon: <BankOutlined />, label: t('shop.features.fleet') },
+              { key: 'operations', icon: <CarOutlined />, label: t('shop.features.operations') },
+              { key: 'reports', icon: <SettingOutlined />, label: t('shop.features.reports') },
+            ]}
+            art={{ src: '/list-your-vehicle/owner-shop.webp', width: 829, height: 734 }}
+            offerTitle={t.rich('shop.offerHighlight', {
+              big: (chunks) => <span className={styles.offerBig}>{chunks}</span>,
+            })}
+            offerBody={t('shop.offerBody')}
+            cta={
+              <Link href={shopHref} {...linkTarget} className={cx(styles.cta, styles.ctaPrimary)}>
+                {t('shop.cta')}
+                <ArrowRightOutlined aria-hidden="true" />
+              </Link>
+            }
+          />
         </div>
-      ) : null}
-
-      <header className={styles.intro}>
-        <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.subtitle}>{t('subtitle')}</p>
-      </header>
-
-      <TrackCard
-        featured
-        badge={t('personal.badge')}
-        title={t('personal.title')}
-        tagline={t('personal.tagline')}
-        body={t('personal.body', { maxVehicles: BASIC_OWNER_VEHICLE_CAP })}
-        features={[
-          { key: 'noFee', icon: <FileTextOutlined />, label: t('personal.features.noFee') },
-          {
-            key: 'vehicleCap',
-            icon: <CarOutlined />,
-            label: t('personal.features.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
-          },
-          { key: 'simple', icon: <SettingOutlined />, label: t('personal.features.simple') },
-        ]}
-        art={{ src: '/illustrations/owner-personal-car.svg', width: 640, height: 420 }}
-        artNote={t('personal.art')}
-        offerIcon={<PercentageOutlined />}
-        offerTitle={t('personal.offerTitle')}
-        offerBody={t.rich('personal.offerBody', {
-          percent: PLATFORM_SERVICE_FEE_PILOT_PERCENT,
-          strong: (chunks) => <strong>{chunks}</strong>,
-        })}
-        cta={
-          <Link href={personalHref} {...linkTarget} className={styles.ctaLink}>
-            <Button type="primary" size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
-              {t('personal.cta')}
-            </Button>
-          </Link>
-        }
-      />
-
-      <TrackCard
-        badge={t('shop.badge')}
-        title={t('shop.title')}
-        tagline={t('shop.tagline')}
-        body={t.rich('shop.body', { strong: (chunks) => <strong>{chunks}</strong> })}
-        features={[
-          { key: 'fleet', icon: <ApartmentOutlined />, label: t('shop.features.fleet') },
-          {
-            key: 'operations',
-            icon: <CalendarOutlined />,
-            label: t('shop.features.operations'),
-          },
-          { key: 'reports', icon: <BarChartOutlined />, label: t('shop.features.reports') },
-        ]}
-        art={{ src: '/illustrations/owner-shop-showroom.svg', width: 720, height: 420 }}
-        offerIcon={<CrownOutlined />}
-        offerTitle={t('shop.offerTitle')}
-        offerBody={t('shop.offerBody')}
-        cta={
-          <Link href={shopHref} {...linkTarget} className={styles.ctaLink}>
-            <Button size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
-              {t('shop.cta')}
-            </Button>
-          </Link>
-        }
-      />
-
-      <section className={styles.upgrade}>
-        <span className={styles.upgradeIcon} aria-hidden="true">
-          <SyncOutlined />
-        </span>
-        <div>
-          <h2 className={styles.upgradeTitle}>{t('upgrade.title')}</h2>
-          <p className={styles.upgradeBody}>{t('upgrade.body')}</p>
-        </div>
-      </section>
-
-      {/*
-        Link chính sách trỏ tới TÀI LIỆU CÓ THẬT (quy định sử dụng chợ). Nền tảng chưa có văn
-        bản "hỗ trợ phạt nguội", nên ở đây không hứa điều đó — một link chết hoặc một cam kết
-        pháp lý tự viết còn tệ hơn không có link.
-      */}
-      <Link href={legalPath.doc(LEGAL_DOC.MARKETPLACE_RULES)} className={styles.policyLink}>
-        <SafetyCertificateOutlined aria-hidden="true" /> {t('policyLink')}
-      </Link>
+      </div>
     </div>
   );
+}
+
+/**
+ * Đầu trang "Trở thành chủ xe" (Figma `20037:6383`): dải trắng hết bề ngang dưới header chợ — nút
+ * quay lại tròn + đường dẫn, rồi tiêu đề trang.
+ *
+ * Trang KHÔNG nằm trong vỏ `/account`: nó là landing công khai (SEO) cho cả người chưa đăng nhập.
+ * Vì vậy mắt đầu của đường dẫn đi theo phiên — khách đã đăng nhập (tới từ menu tài khoản) thấy
+ * "Tài khoản của tôi", người chưa đăng nhập thấy "Trang chủ" — và nút tròn lùi về đúng mắt đó (một
+ * đường dẫn thật, không phải `router.back()`: mở tab mới hay F5 vẫn về đúng chỗ).
+ */
+function LandingPageHeader() {
+  const t = useTranslations('ListYourVehicle.landing');
+  const { data: user } = useCurrentUser();
+
+  const parent: PageCrumb = user
+    ? { key: 'account', label: t('breadcrumb.account'), href: ROUTES.ACCOUNT.ROOT }
+    : { key: 'home', label: t('breadcrumb.home'), href: ROUTES.HOME };
+
+  return (
+    <div className={styles.pageHeader}>
+      <div className={styles.pageHeaderInner}>
+        <PageBreadcrumb
+          ariaLabel={t('breadcrumb.label')}
+          crumbs={[parent, { key: 'current', label: t('pageTitle') }]}
+          back={{ href: parent.href ?? ROUTES.HOME, label: t('back') }}
+        />
+        <h1 className={styles.pageTitle}>{t('pageTitle')}</h1>
+      </div>
+    </div>
+  );
+}
+
+function Heading({
+  as: Tag,
+  className,
+  children,
+}: {
+  as: 'h1' | 'h2' | 'h3';
+  className?: string;
+  children: ReactNode;
+}) {
+  return <Tag className={className}>{children}</Tag>;
 }
 
 interface TrackFeature {
@@ -183,57 +218,67 @@ interface TrackFeature {
 }
 
 interface TrackCardProps {
-  /** Tuyến được nền tảng gợi ý trước: viền gold, nền kem, nút chính. */
-  featured?: boolean;
+  /**
+   * `personal`: nền trắng, viền vàng nhạt, nút viền.
+   * `shop`: nền ảnh kem, viền vàng đậm, nhãn "Gói đề xuất", nút chính gradient.
+   */
+  variant: 'personal' | 'shop';
+  headingLevel: 'h2' | 'h3';
+  /** Nhãn nổi ở góc trên phải (Figma "Gói đề xuất"). */
+  ribbon?: string;
   badge: string;
   title: string;
   tagline: string;
   body: ReactNode;
   features: TrackFeature[];
   art: { src: string; width: number; height: number };
-  /** Chú thích nổi trên hình — chỉ tuyến cá nhân dùng. */
-  artNote?: string;
-  offerIcon: ReactNode;
-  offerTitle: string;
+  offerTitle: ReactNode;
   offerBody: ReactNode;
   cta: ReactNode;
 }
 
 /**
- * Một tuyến doanh thu = một thẻ. Hai thẻ dùng CHUNG cấu trúc và chỉ khác nhau ở mức nhấn
- * (`featured`) — tách ra để hai bên không trôi khỏi nhau khi sửa một bên.
+ * Một tuyến doanh thu = một thẻ. Hai thẻ dùng CHUNG cấu trúc và chỉ khác nhau ở `variant` — tách ra
+ * để hai bên không trôi khỏi nhau khi sửa một bên.
+ *
+ * Bốn vùng là bốn con TRỰC TIẾP của lưới (`head`, `art`, `features`, `offer`) để mỗi khổ màn tự
+ * xếp lại bằng `grid-template-areas`: ≥768px hình ở góc phải cạnh phần mở đầu, điện thoại xếp dọc.
  */
 function TrackCard({
-  featured = false,
+  variant,
+  headingLevel,
+  ribbon,
   badge,
   title,
   tagline,
   body,
   features,
   art,
-  artNote,
-  offerIcon,
   offerTitle,
   offerBody,
   cta,
 }: TrackCardProps) {
   return (
-    <section className={cx(styles.card, featured && styles.cardFeatured)}>
-      <div className={styles.cardMain}>
+    <section className={cx(styles.card, variant === 'shop' && styles.cardShop)}>
+      {/*
+        Ruy băng "Gói đề xuất" — ảnh của bản vẽ (Figma `20043:54654`, đã có dấu like), chữ ĐÈ lên
+        bằng HTML để vẫn dịch được và đọc được bằng trình đọc màn hình.
+      */}
+      {ribbon ? (
+        <span className={styles.ribbon}>
+          <span className={styles.ribbonText}>{ribbon}</span>
+        </span>
+      ) : null}
+
+      <div className={styles.cardHead}>
         <span className={styles.badge}>{badge}</span>
-        <h2 className={styles.cardTitle}>{title}</h2>
-        <p className={styles.tagline}>{tagline}</p>
+        <div className={styles.cardHeading}>
+          <Heading as={headingLevel} className={styles.cardTitle}>
+            {title}
+          </Heading>
+          <p className={styles.tagline}>{tagline}</p>
+        </div>
         <p className={styles.cardBody}>{body}</p>
-        <ul className={styles.features}>
-          {features.map((feature) => (
-            <li key={feature.key} className={styles.feature}>
-              <span className={styles.featureIcon} aria-hidden="true">
-                {feature.icon}
-              </span>
-              <span className={styles.featureLabel}>{feature.label}</span>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div className={styles.cardArt}>
@@ -243,21 +288,31 @@ function TrackCard({
           width={art.width}
           height={art.height}
           className={styles.artImage}
-          priority={featured}
+          priority={variant === 'personal'}
         />
-        {artNote ? <span className={styles.artNote}>{artNote}</span> : null}
       </div>
 
-      <aside className={styles.offer}>
-        <div className={styles.offerHead}>
-          <span className={styles.offerIcon} aria-hidden="true">
-            {offerIcon}
-          </span>
-          <h3 className={styles.offerTitle}>{offerTitle}</h3>
+      <ul className={styles.features}>
+        {features.map((feature, index) => (
+          <Fragment key={feature.key}>
+            {index > 0 ? <li className={styles.featureDivider} aria-hidden="true" /> : null}
+            <li className={styles.feature}>
+              <span className={styles.featureIcon} aria-hidden="true">
+                {feature.icon}
+              </span>
+              <span className={styles.featureLabel}>{feature.label}</span>
+            </li>
+          </Fragment>
+        ))}
+      </ul>
+
+      <div className={styles.offer}>
+        <div className={styles.offerText}>
+          <p className={styles.offerTitle}>{offerTitle}</p>
+          <p className={styles.offerBody}>{offerBody}</p>
         </div>
-        <p className={styles.offerBody}>{offerBody}</p>
         {cta}
-      </aside>
+      </div>
     </section>
   );
 }

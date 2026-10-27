@@ -29,6 +29,33 @@ export class CreateReviewDto {
   comment?: string;
 }
 
+/** Khách sửa đánh giá của chính mình — cùng luật với lúc tạo, chỉ được MỘT lần. */
+export class UpdateReviewDto {
+  @ApiProperty({ minimum: RATING_MIN, maximum: RATING_MAX, example: 5 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(RATING_MIN)
+  @Max(RATING_MAX)
+  rating!: number;
+
+  @ApiPropertyOptional({ maxLength: 2000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  comment?: string;
+}
+
+/** Đánh giá của chính khách sau khi sửa. */
+export class OwnReviewDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ minimum: RATING_MIN, maximum: RATING_MAX }) rating!: number;
+  @ApiPropertyOptional({ type: String, nullable: true }) comment!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  editedAt!: string | null;
+  @ApiProperty({ description: 'Còn lượt sửa không (luôn false sau khi sửa)' }) canEdit!: boolean;
+}
+
 export class ReviewListQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()

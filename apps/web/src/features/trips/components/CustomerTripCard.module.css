@@ -1,0 +1,440 @@
+/**
+ * Thẻ chuyến đi thuê — Figma "Vehicle Card" (`19879:71822`): nền trắng bo 16, bóng mảnh; hover/focus
+ * viền vàng + nền vàng rất nhạt (thẻ thứ hai của `19879:69348`).
+ *
+ * Desktop: cột ảnh 193 (dưới là hai mốc lịch) + cột nội dung (cuối là ba cột tiền). Mobile: ảnh + tên ở trên, phần còn lại xếp dọc bên dưới.
+ */
+
+.card {
+  position: relative;
+  display: flex;
+  gap: var(--xp-space-20);
+  align-items: stretch;
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-ambient);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+/* Cùng hover với "Trung tâm Tài xế" — Figma `21788:63094`: viền #e9c336 + nền vàng 20%. */
+.card:hover,
+.card:focus-within {
+  border-color: var(--xp-color-primary-glow);
+  background: var(--xp-gradient-card-hover);
+}
+
+.media {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  width: 193px;
+}
+
+.image,
+.imageFallback {
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Figma: [tên + dòng dữ kiện] cách 6, khối đó cách hàng chủ xe 12, cả cụm cách lịch thuê 16. */
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-12);
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.nameLink {
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+/* Lớp phủ của liên kết trải kín thẻ — cả thẻ bấm được, nhưng chỉ một đích cho trình đọc màn hình. */
+.nameLink::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: '';
+}
+
+.nameLink:hover {
+  color: var(--xp-color-text);
+}
+
+.nameLink:focus-visible {
+  outline: none;
+}
+
+.card:has(.nameLink:focus-visible) {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.status :global(.ant-tag) {
+  margin-inline-end: 0;
+  padding: var(--xp-space-2) var(--xp-space-12);
+  border: 0;
+  border-radius: var(--xp-border-radius-card);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+}
+
+.code {
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: 22px;
+}
+
+/* Biển số | dịch vụ | hình thức nhận xe — vạch dọc mảnh giữa các mục. */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plate {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.facts > .fact:not(:first-child)::before {
+  width: 1px;
+  height: 12px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  content: '';
+}
+
+.ownerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+/* Gian hàng là một liên kết sang mặt tiền — nằm TRÊN lớp phủ của tên xe để bấm được riêng. */
+.ownerLink {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--xp-border-radius-sm);
+  text-decoration: none;
+}
+
+.ownerLink:hover .ownerName {
+  text-decoration: underline;
+}
+
+.ownerLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Ảnh bên cho thuê — cùng dáng khối gian hàng của `VehicleCard` (trang chủ). */
+.avatar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Gian hàng tuyến gói nổi hơn chủ xe cá nhân: viền vàng + dấu xác minh. */
+.avatarShop {
+  border-color: var(--xp-color-primary-glow);
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--xp-border-radius-pill);
+  object-fit: cover;
+}
+
+/* Dấu xác minh — vòng trắng 12px ở góc phải dưới avatar. */
+.avatarMark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+}
+
+.ownerText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ownerLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+.ownerName {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+/* Nút nhắn tin tròn — nằm TRÊN lớp phủ của liên kết để bấm được riêng. */
+.chat {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.chat:hover:not(:disabled) {
+  border-color: var(--xp-color-primary-border);
+  color: var(--xp-color-primary-active);
+}
+
+.chat:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.chat:disabled {
+  cursor: progress;
+  opacity: var(--xp-disabled-opacity);
+}
+
+/* Hai mốc lịch thuê dưới ảnh — Figma: nhãn 12 xám trái, giờ 12 Medium phải, cách nhau 6. */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  margin: 0;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+.scheduleRow dt {
+  color: var(--xp-color-text-tertiary);
+}
+
+.scheduleRow dd {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.scheduleRowStacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-2);
+}
+
+.scheduleRowStacked dd {
+  text-align: left;
+  white-space: normal;
+}
+
+/* Ba cột tiền — Figma: cột chia đều, gap 12, vạch dọc trước "Còn lại". */
+.money {
+  display: flex;
+  align-items: stretch;
+  gap: var(--xp-space-12);
+  margin: 0;
+}
+
+.moneyCell {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-2);
+  min-width: 0;
+  text-align: center;
+}
+
+.moneyCell dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+.moneyCell dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.moneyCell .moneyHighlight {
+  color: var(--xp-color-primary);
+}
+
+.moneyDivider {
+  flex: none;
+  width: 1px;
+  background: var(--xp-color-border);
+}
+
+/* Chưa có báo giá: chữ, không phải tiền. */
+.moneyPending {
+  color: var(--xp-color-text-secondary);
+  white-space: normal;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .card {
+    flex-direction: column;
+    gap: var(--xp-space-12);
+    padding: var(--xp-space-12);
+  }
+
+  .media {
+    width: 100%;
+  }
+
+  .image,
+  .imageFallback {
+    height: 160px;
+  }
+
+  .name {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .fact,
+  .plate {
+    font-size: var(--xp-font-size-body-sm);
+  }
+
+  .money {
+    gap: var(--xp-space-sm);
+  }
+
+  .chat {
+    width: var(--xp-touch-target-min);
+    height: var(--xp-touch-target-min);
+  }
+}
+
+/* Nhãn "Bạn đã hủy chuyến" / "Chủ xe đã hủy chuyến" — một dòng, không ngắt giữa câu. */
+.cancelTag {
+  white-space: nowrap;
+}

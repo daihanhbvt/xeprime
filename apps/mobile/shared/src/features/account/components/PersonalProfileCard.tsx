@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { STATUS_COLOR } from '@xeprime/types';
+import { IMAGE_UPLOAD_MAX_BYTES, STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
@@ -25,6 +25,8 @@ import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Đường kính hình tròn dẫn đầu một dòng liên hệ — cùng cỡ với đĩa của `IconDisc`. */
 const DISC = 32;
+/** Trần dung lượng ảnh hiện trong gợi ý — đọc từ hằng của server, không gõ tay một con số. */
+const AVATAR_MAX_MB = Math.round(IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024));
 
 /**
  * THẺ HỒ SƠ CON NGƯỜI — khối nhận diện, tên/ảnh, và thông tin đăng nhập.
@@ -168,16 +170,6 @@ export function PersonalProfileCard({
                       {t('profile.description')}
                     </Text>
                   </YStack>
-                  <TextField
-                    control={control}
-                    name="displayName"
-                    label={t('displayName')}
-                    placeholder={t('displayNamePlaceholder')}
-                    icon="person-outline"
-                    autoComplete="name"
-                    editable={!update.isPending}
-                    required
-                  />
                   {/*
                     Ảnh đại diện đi ĐÚNG đường của mọi ảnh khác trong sản phẩm: chọn từ máy →
                     presign → PUT thẳng lên R2 → field nhận URL công khai. Ô dán URL trước đây bắt
@@ -189,8 +181,18 @@ export function PersonalProfileCard({
                     name="avatarUrl"
                     label={t('avatarUrl')}
                     presign={uploadsApi.avatar}
-                    hint={t('avatarHelp')}
+                    hint={t('profileEdit.avatarHelp', { max: AVATAR_MAX_MB })}
                     disabled={update.isPending}
+                  />
+                  <TextField
+                    control={control}
+                    name="displayName"
+                    label={t('profileEdit.displayName')}
+                    placeholder={t('displayNamePlaceholder')}
+                    icon="person-outline"
+                    autoComplete="name"
+                    editable={!update.isPending}
+                    required
                   />
                   <XStack gap={space.sm}>
                     <YStack flexShrink={0}>

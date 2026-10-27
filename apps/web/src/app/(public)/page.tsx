@@ -57,8 +57,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * LCP không chờ client island. Mỗi khu còn lại là island độc lập tự lo skeleton/lỗi của mình —
  * một mục hỏng không kéo cả trang chủ về một cái Spin.
  *
- * `SearchExperience` gồm thẻ tìm kiếm ở hero VÀ thanh thu gọn dính dưới header — hai trình bày
- * của cùng một trạng thái, nên chúng phải nằm trong cùng một island.
+ * `SearchExperience` chỉ là thẻ tìm kiếm ở hero — trang chủ không có thanh tìm kiếm thu gọn khi
+ * cuộn.
  *
  * **Mọi island đọc `useSearchParams` phải có Suspense RIÊNG** — `SearchExperience` (ngữ cảnh tìm
  * kiếm) và `VehiclePreview` (đọc `?serviceType=` để lọc lại). Thiếu một cái là Next huỷ prerender TOÀN TRANG với

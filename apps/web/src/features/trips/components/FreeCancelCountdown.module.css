@@ -1,0 +1,13 @@
+/**
+ * Dòng "huỷ miễn phí tính từ lúc thanh toán" khi khách CHƯA trả — cùng hình dáng với đồng hồ đếm
+ * ngược (`Countdown` sắc thái trung tính) để hai dòng dưới số tiền đứng thẳng hàng nhau.
+ */
+.preview {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

@@ -163,12 +163,12 @@
     "history": "Trip history"
   },
   "customerTripStage": {
-    "pending_approval": "Awaiting confirmation",
-    "awaiting_hold": "Accepted · payment due",
+    "pending_approval": "Awaiting host response",
+    "awaiting_hold": "Awaiting payment",
     "ready": "Ready",
     "active": "On rent",
     "completed": "Completed",
-    "cancelled": "Trip cancelled",
+    "cancelled": "Cancelled",
     "rejected": "Declined",
     "expired": "No response in time",
     "no_show": "Not picked up",
@@ -1176,6 +1176,7 @@
       "contact_reveal": "Reveal customer contact on booking",
       "delivery_fee_update": "Update delivery fee",
       "driver_assign": "Assign driver",
+      "driver_release": "Driver released the assignment",
       "deposit_refund": {
         "record": "Record deposit refund",
         "correct": "Correct deposit refund"
@@ -1486,9 +1487,6 @@
       "activate": "Activate plan guide email template",
       "delete": "Delete plan guide email template",
       "send_test": "Send test plan guide email"
-    },
-    "insurance_product": {
-      "update": "Update insurance product"
     }
   },
   "auditTargetType": {
@@ -1543,8 +1541,7 @@
     "vehicle_handover": "Handover record",
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
-    "withdrawal_request": "Withdrawal request",
-    "insurance_product": "Insurance product"
+    "withdrawal_request": "Withdrawal request"
   },
   "auditField": {
     "planCode": "Plan code",

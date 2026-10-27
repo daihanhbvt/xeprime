@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
+  CANCELLATION_PARTY_VALUES,
+  CANCELLATION_REASON_CATEGORY_VALUES,
+  CUSTOMER_CANCELLATION_REASON_VALUES,
   CUSTOMER_CANCEL_PREVIEW_KIND_VALUES,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
@@ -17,6 +20,7 @@ import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   Matches,
@@ -69,6 +73,31 @@ export class CustomerTripListQueryDto {
   @IsOptional()
   @IsIn(TRIP_ROLE_VALUES)
   role?: string;
+
+  /**
+   * Tìm theo tên xe hoặc mã đơn — ô "Tìm kiếm chuyến đi" (Figma `19879:72400`). KHÔNG tìm theo biển
+   * số: biển số chỉ lộ sau khi chủ xe nhận chuyến, tìm được bằng nó là đoán được biển của yêu cầu
+   * chưa duyệt.
+   */
+  @ApiPropertyOptional({ description: 'Tìm theo tên xe hoặc mã đơn', maxLength: 80 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+
+  /**
+   * Ô "Chọn khoảng thời gian": giữ chuyến có lịch thuê GIAO với `[dateFrom, dateTo]`. Chuyến chưa
+   * có lịch (dài hạn chờ duyệt) rơi khỏi kết quả khi đang lọc ngày.
+   */
+  @ApiPropertyOptional({ description: 'Từ thời điểm (ISO-8601, inclusive)' })
+  @IsOptional()
+  @IsISO8601()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Đến thời điểm (ISO-8601, inclusive)' })
+  @IsOptional()
+  @IsISO8601()
+  dateTo?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -128,6 +157,12 @@ export class CustomerTripShopDto {
    * được mời "Xem gian hàng" một người không có mặt tiền doanh nghiệp nào để xem.
    */
   @ApiProperty({ enum: STOREFRONT_KIND_VALUES }) shopKind!: string;
+  /**
+   * Ảnh đại diện CÔNG KHAI của bên cho thuê — logo gian hàng (tuyến gói) hoặc ảnh tài khoản chủ xe
+   * (tuyến hoa hồng), cùng `resolveStorefront` với thẻ xe ngoài chợ (`shopLogoUrl`, ADR 0054).
+   * `null` khi chưa có ảnh.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) avatarUrl!: string | null;
 }
 
 /** Một khoản phát sinh, bản của KHÁCH: không có người ghi, không có ghi chú nội bộ. */
@@ -267,6 +302,29 @@ export class CustomerTripContactDto {
   @ApiProperty() phone!: string;
 }
 
+/** Lý do huỷ đã ghi ở `booking_cancellations.reason_category` (sổ của ĐƠN thắng sổ của YÊU CẦU). */
+export class CustomerTripCancelReasonDto {
+  @ApiProperty({
+    enum: CANCELLATION_REASON_CATEGORY_VALUES,
+    description: '@xeprime/types CancellationReasonCategory',
+  })
+  category!: string;
+}
+
+/**
+ * Thân `POST /trips/:id/cancel`. Khách chọn nhóm lý do trong tập con phía khách; app cũ không
+ * gửi thân ⇒ mặc định `customer_changed_plan`. Chỉ mô tả VÌ SAO — ai chịu do server suy (ADR 0045).
+ */
+export class CancelCustomerTripDto {
+  @ApiPropertyOptional({
+    enum: CUSTOMER_CANCELLATION_REASON_VALUES,
+    description: 'Nhóm lý do khách chọn; bỏ trống = customer_changed_plan (tương thích app cũ)',
+  })
+  @IsOptional()
+  @IsIn(CUSTOMER_CANCELLATION_REASON_VALUES)
+  reasonCategory?: string;
+}
+
 export class CustomerTripListItemDto {
   /** Định danh chuyến = id YÊU CẦU thuê — tồn tại từ lúc gửi, trước cả khi có đơn. */
   @ApiProperty() id!: string;
@@ -327,6 +385,29 @@ export class CustomerTripListItemDto {
    */
   @ApiProperty({ description: 'Tổng tiền còn tạm tính, chưa chốt vào đơn' })
   totalIsEstimate!: boolean;
+  /**
+   * Khoản giữ chỗ khách ĐÃ THỰC CHUYỂN qua XePrime cho đơn này — cùng nguồn với
+   * `finance.holdPaidAmount` ở chi tiết (`booking_holds.paid_amount`), để thẻ danh sách hiện
+   * "Đã thanh toán" mà client không tự cộng trừ. `null` khi chưa có đơn hoặc đơn không đi qua
+   * khoản giữ chỗ.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Đã chuyển qua XePrime (khoản giữ chỗ), string — ADR 0007',
+  })
+  holdPaidAmount!: string | null;
+  /**
+   * AI đã huỷ chuyến — CHỈ có khi `stage = cancelled`, `null` ở mọi chặng khác. Đọc
+   * `booking_cancellations.responsible_party` (server suy từ người thao tác, ADR 0045 điều 2 —
+   * không ai tự khai); yêu cầu khách tự rút trước khi chủ xe quyết (`cancelled_by_customer`) mà
+   * không có dòng sổ huỷ thì vẫn là `customer`. Thẻ khách hiện "Bạn đã huỷ" / "Chủ xe đã huỷ".
+   */
+  @ApiPropertyOptional({ enum: CANCELLATION_PARTY_VALUES, nullable: true })
+  cancelledBy!: string | null;
+  /** Lý do huỷ đã ghi — CHỈ khi `stage = cancelled` và có dòng sổ huỷ; `null` ở mọi chặng khác. */
+  @ApiPropertyOptional({ type: CustomerTripCancelReasonDto, nullable: true })
+  cancelReason!: CustomerTripCancelReasonDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn (sau khi được nhận)' })
   code!: string | null;
@@ -451,6 +532,18 @@ export class CustomerTripReviewDto {
   @ApiProperty() rating!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) comment!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — mốc khách đã chỉnh sửa (null = chưa sửa)',
+  })
+  editedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Server quyết: còn lượt sửa duy nhất (chuyến hoàn thành, published, chưa sửa)',
+  })
+  canEdit!: boolean;
 }
 
 export class CustomerTripDetailDto extends CustomerTripListItemDto {

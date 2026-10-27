@@ -1,8 +1,10 @@
 'use client';
 
+import { LeftOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { ROUTES, tripPath } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import {
   BookingResult,
   BookingResultTotal,
@@ -45,6 +47,7 @@ export function TripPaymentSuccessDialog({
 }) {
   const t = useTranslations('Trips.payment.success');
   const tFlow = useTranslations('BookingRequests.flow');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   // Thường đã nằm sẵn trong cache của luồng đặt xe; tin đã ẩn/gỡ thì thẻ rơi về dữ liệu chuyến.
@@ -83,11 +86,18 @@ export function TripPaymentSuccessDialog({
         }}
         footer={
           <>
-            <CtaButton href={ROUTES.TRIPS} variant="neutral" size="form">
-              {t('myTrips')}
+            {/* Figma: Quay lại · Nhắn tin cho chủ xe · Chuyến của tôi (nút chính). */}
+            <CtaButton onClick={onClose} variant="neutral" size="form" iconStart={<LeftOutlined />}>
+              {tCommon('actions.back')}
             </CtaButton>
-            <CtaButton href={tripPath.detail(trip.id)} size="form">
-              {t('viewTrip')}
+            <ChatWithShopButton
+              vehicleId={trip.vehicle.id}
+              appearance="cta"
+              ctaVariant="neutral"
+              label={tFlow('done.chatHost')}
+            />
+            <CtaButton href={ROUTES.TRIPS} size="form">
+              {t('myTrips')}
             </CtaButton>
           </>
         }

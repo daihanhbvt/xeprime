@@ -7,6 +7,13 @@
   "defaultTag": "Mặc định",
   "verifiedTag": "Đã đối chiếu",
   "accountNumberLine": "STK: {number}",
+  "detail": {
+    "bank": "Ngân hàng",
+    "number": "Số tài khoản",
+    "holder": "Người thụ hưởng",
+    "label": "Tên gợi nhớ",
+    "noLabel": "—"
+  },
   "actions": {
     "add": "Thêm tài khoản",
     "change": "Đổi tài khoản",
@@ -39,7 +46,12 @@
       "numberDigits": "Số tài khoản chỉ gồm chữ số",
       "nameRequired": "Nhập tên chủ tài khoản"
     },
-    "bankNotFound": "Không tìm thấy ngân hàng nào khớp."
+    "bankNotFound": "Không tìm thấy ngân hàng nào khớp.",
+    "accountNamePlaceholder": "Nhập đúng họ tên đăng ký ở ngân hàng",
+    "accountNumberPlaceholder": "Số tài khoản ngân hàng",
+    "saved": {
+      "title": "Thành công"
+    }
   },
   "refund": {
     "title": "Tài khoản nhận tiền hoàn",

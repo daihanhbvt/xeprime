@@ -47,10 +47,3 @@
   font-variant-numeric: tabular-nums;
   font-weight: var(--xp-font-weight-semibold);
 }
-
-/* Nhãn chặng đứng sau đồng hồ, nhạt hơn: nó là ngữ cảnh, không phải con số cần đọc trước. */
-.segment {
-  color: inherit;
-  font-size: var(--xp-font-size-caption);
-  opacity: 0.8;
-}

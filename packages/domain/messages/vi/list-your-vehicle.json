@@ -1,43 +1,46 @@
 {
   "landing": {
     "metaTitle": "Đăng xe cho thuê",
-    "title": "Bắt đầu cho thuê xe theo cách phù hợp với bạn",
+    "title": "Chọn mô hình hợp tác cùng XePrime",
     "back": "Quay lại",
-    "subtitle": "Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể nâng cấp lên gian hàng mà vẫn giữ tài khoản và xe.",
+    "subtitle": "Tối ưu doanh thu từ xe nhàn rỗi hoặc xây dựng thương hiệu kinh doanh chuyên nghiệp.<br></br>Chọn gói phù hợp nhất với quy mô của bạn",
     "policyLink": "Quy định sử dụng chợ xe",
     "personal": {
-      "badge": "Phù hợp khi bắt đầu",
+      "badge": "Dành cho chủ xe mới",
       "title": "Đăng xe cá nhân",
-      "tagline": "Tuyến hoa hồng · phù hợp khi bắt đầu",
-      "body": "Dành cho chủ xe muốn cho thuê xe cá nhân một cách đơn giản, nhanh chóng. Không phí đăng ký, tối đa {maxVehicles} xe, quản lý xe và chuyến trong Tài khoản.",
+      "tagline": "Linh hoạt, dễ dàng, không phí duy trì",
+      "body": "Giải pháp hoàn hảo để tạo thu nhập thụ động từ chiếc xe của bạn. Đăng ký nhanh chóng, vận hành đơn giản ngay trên ứng dụng mà không cần cam kết doanh số.",
       "features": {
-        "noFee": "Không phí đăng ký",
+        "noFee": "Miễn phí đăng ký",
         "vehicleCap": "Tối đa {maxVehicles} xe",
-        "simple": "Quản lý đơn giản trong Tài khoản"
+        "simple": "Quản lý lịch trình cơ bản"
       },
       "art": "Chia sẻ xe của bạn đến hàng nghìn khách hàng",
-      "offerTitle": "Phí nền tảng theo chuyến",
-      "offerBody": "Phí nền tảng được cộng vào tổng giá khách trả. Mức thí điểm hiện tại là <strong>{percent}% giá thuê</strong>.",
+      "offerTitle": "Tính phí theo chuyến (Hoa hồng)",
+      "offerBodyRange": "Không thuê bao. Hoa hồng chỉ từ <strong>{min}% đến {max}%</strong> tiền thuê bạn nhận, giảm dần theo số ngày thuê — thuê càng dài, phí càng thấp.",
+      "offerBody": "Không thuê bao. Mỗi đơn thuê, nền tảng trừ hoa hồng vào tiền thuê bạn nhận, với tỉ lệ <strong>giảm dần theo số ngày thuê</strong>.",
       "cta": "Đăng xe đầu tiên",
       "appTagline": "Chủ xe cá nhân · phù hợp khi bắt đầu"
     },
     "shop": {
-      "badge": "Dành cho người muốn vận hành chuyên nghiệp",
-      "title": "Mở gian hàng cho thuê",
-      "tagline": "Tuyến gói · dành cho người muốn vận hành chuyên nghiệp",
-      "body": "Phù hợp cho cá nhân, doanh nghiệp có nhiều xe. Trả phí gói theo quy mô xe, <strong>0% phí nền tảng</strong> theo chuyến khi gói có hiệu lực. Đầy đủ công cụ quản lý nhiều xe, lịch, nhân viên, chi nhánh, tài chính và báo cáo.",
+      "badge": "Dành cho Đội xe / Doanh nghiệp",
+      "title": "Gian hàng Chuyên nghiệp",
+      "tagline": "Công cụ quản trị toàn diện, tối đa hóa lợi nhuận",
+      "body": "Nền tảng quản lý đội xe chuyên sâu dành cho mô hình kinh doanh quy mô lớn. Tận hưởng chính sách 0% phí hoa hồng cùng hệ thống báo cáo, phân quyền nhân viên và quản lý đa chi nhánh mạnh mẽ.",
       "features": {
-        "fleet": "Quản lý nhiều xe và chi nhánh",
-        "operations": "Quản lý lịch, nhân viên",
-        "reports": "Báo cáo doanh thu và hiệu suất"
+        "fleet": "Quản lý\nđa chi nhánh",
+        "operations": "Phân quyền\nnhân viên",
+        "reports": "Báo cáo tài chính\nchi tiết"
       },
-      "offerTitle": "0% phí nền tảng theo chuyến",
-      "offerBody": "Khi gói có hiệu lực. Nhiều công cụ hỗ trợ vận hành chuyên nghiệp, phù hợp với quy mô lớn.",
-      "cta": "Tìm hiểu và tạo gian hàng",
+      "offerTitle": "0% hoa hồng theo chuyến",
+      "offerBody": "Áp dụng mô hình trả phí thuê bao (Subscription) theo quy mô đội xe. Không thu hoa hồng trên chuyến khi gói còn hiệu lực.",
+      "cta": "Tìm hiểu các gói Gian hàng",
       "appTagline": "Gian hàng · dành cho người muốn vận hành chuyên nghiệp",
       "appBody": "Phù hợp cho cá nhân, doanh nghiệp có nhiều xe. Đầy đủ công cụ quản lý nhiều xe, lịch, nhân viên, chi nhánh, tài chính và báo cáo.",
       "appOfferTitle": "Công cụ vận hành chuyên nghiệp",
-      "appOfferBody": "Tài khoản gian hàng có hạn mức xe và thời hạn sử dụng riêng. XePrime xem xét và kích hoạt tài khoản sau khi bạn đăng ký."
+      "appOfferBody": "Tài khoản gian hàng có hạn mức xe và thời hạn sử dụng riêng. XePrime xem xét và kích hoạt tài khoản sau khi bạn đăng ký.",
+      "offerHighlight": "<big>0%</big> phí hoa hồng/chuyến",
+      "recommended": "Gói đề xuất"
     },
     "upgrade": {
       "title": "Linh hoạt nâng cấp khi cần",
@@ -62,7 +65,14 @@
         "desc": "XePrime duyệt hồ sơ rồi đưa xe lên chợ."
       }
     },
-    "appSubtitle": "Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể chuyển sang tài khoản gian hàng mà vẫn giữ tài khoản và xe."
+    "appSubtitle": "Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể chuyển sang tài khoản gian hàng mà vẫn giữ tài khoản và xe.",
+    "heroTitle": "Chọn mô hình hợp tác cùng <brand>XePrime</brand>",
+    "pageTitle": "Trở thành chủ xe",
+    "breadcrumb": {
+      "label": "Đường dẫn trang",
+      "home": "Trang chủ",
+      "account": "Tài khoản của tôi"
+    }
   },
   "ownerProfile": {
     "step": {

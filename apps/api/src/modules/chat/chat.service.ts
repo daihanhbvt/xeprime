@@ -17,6 +17,7 @@ import {
 } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
   CHAT_INBOX,
   CHAT_SIDE,
   CONVERSATION_STATUS,
@@ -27,6 +28,8 @@ import {
   OUTBOX_STATUS,
   SENDER_TYPE,
   TENANT_STATUS,
+  chatOpenBetween,
+  isBookingRequestEngaged,
   resolveEffectiveBilling,
   resolveStorefrontKind,
   storefrontAllowsPublicChat,
@@ -34,6 +37,7 @@ import {
   type ChatSide,
   type PaginationMeta,
   type SenderType,
+  type StorefrontKind,
 } from '@xeprime/types';
 import { chatNotificationCopy } from '@xeprime/domain';
 import {
@@ -105,6 +109,14 @@ const MESSAGE_SELECT = {
   },
 } satisfies Prisma.MessageSelect;
 
+/**
+ * Yêu cầu đã thành ĐƠN — cùng nghĩa với `isBookingRequestEngaged` (tiền giữ chỗ về đủ), viết
+ * bằng ngôn ngữ Prisma. Đây là bằng chứng mà kênh chat của tuyến hoa hồng đòi (ADR 0073).
+ */
+const ENGAGED_REQUEST_WHERE = {
+  OR: [{ bookingId: { not: null } }, { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING }],
+} satisfies Prisma.BookingRequestWhereInput;
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -140,6 +152,7 @@ export class ChatService {
         vehicleId: target.vehicleId,
       }),
       CHAT_SIDE.CUSTOMER,
+      true,
     );
   }
 
@@ -197,26 +210,25 @@ export class ChatService {
    * một cái nút hiện ra rồi bấm vào báo lỗi, hay một cái nút bị ẩn trong khi khách thừa quyền,
    * đều là cùng một lỗi — hai bản sao của cùng một luật trôi khỏi nhau.
    *
-   * Luật:
+   * Luật (`chatOpenBetween`, ADR 0073):
    *
    *  - Tuyến GÓI mở hộp thư công khai (`storefrontAllowsPublicChat`) — luôn được.
-   *  - Tuyến HOA HỒNG chỉ mở sau khi khách đã gửi ít nhất một yêu cầu thuê cho chủ xe đó.
+   *  - Tuyến HOA HỒNG chỉ mở khi khách đã có ĐƠN với chủ xe đó — tiền giữ chỗ về đủ. Gửi yêu cầu,
+   *    hay được duyệt mà chưa trả, đều CHƯA: một kênh nhắn riêng trước lúc đó là đường để hai bên
+   *    thoả thuận rồi chốt ngoài sàn. Trước khi có đơn khách hỏi qua chính luồng yêu cầu.
    *  - Tenant chưa xác định được tuyến (`unconfigured` — ADR 0038 điều 1) đi theo nhánh CHẶT:
    *    mặc định "mở" khi không biết là mở một kênh thông báo đẩy tới điện thoại của một người
    *    thật dựa trên phỏng đoán.
    *
-   * ## "Đã đặt xe" = đã gửi YÊU CẦU, không phải đã có đơn
-   *
-   * Yêu cầu là mốc sớm nhất mà khách thể hiện ý định thật, và cũng chính là lúc họ cần hỏi chủ
-   * xe nhất ("giao tới đây được không?"). Đợi tới khi có `bookings` thì kênh mở sau khi mọi câu
-   * hỏi đã hết cần thiết. Mọi trạng thái yêu cầu đều tính — kể cả bị từ chối hay đã huỷ: hai bên
-   * vẫn có thể còn chuyện dở dang, và đóng hộp thư ngay sau một lời từ chối là cách chắc chắn để
-   * không ai giải thích được điều gì cho ai.
-   *
-   * Khách vãng lai gửi yêu cầu bằng OTP mà chưa đăng nhập sẽ không khớp `customerUserId`. Đó là
-   * đúng: hội thoại thuộc về một TÀI KHOẢN, và họ chưa có tài khoản để gắn vào.
+   * Một đơn ĐÃ từng có (kể cả đã huỷ, đã xong) vẫn giữ kênh mở: hai bên có thể còn chuyện hoàn
+   * tiền, đồ để quên — và họ đã là một quan hệ thật trên sàn.
    */
   async canCustomerOpenChat(userId: string, tenantId: string): Promise<boolean> {
+    return this.chatOpenFor(await this.storefrontKindOf(tenantId), tenantId, userId);
+  }
+
+  /** Mặt tiền theo tuyến HIỆU LỰC của tenant — tenant không có ⇒ cá nhân (nhánh chặt). */
+  private async storefrontKindOf(tenantId: string): Promise<StorefrontKind> {
     const now = new Date();
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -227,16 +239,25 @@ export class ChatService {
         },
       },
     });
-    const kind = resolveStorefrontKind(
-      resolveEffectiveBilling(tenant?.subscriptions, now).billingMode,
-    );
-    if (storefrontAllowsPublicChat(kind)) return true;
+    return resolveStorefrontKind(resolveEffectiveBilling(tenant?.subscriptions, now).billingMode);
+  }
 
-    const request = await this.prisma.bookingRequest.findFirst({
-      where: { tenantId, customerUserId: userId },
+  /**
+   * `chatOpenBetween` khi đã biết tuyến: chỉ tuyến hoa hồng mới tốn thêm một truy vấn.
+   * `customerUserId` null (tài khoản khách đã xoá) ⇒ không có đơn nào để làm bằng chứng.
+   */
+  private async chatOpenFor(
+    kind: StorefrontKind,
+    tenantId: string,
+    customerUserId: string | null,
+  ): Promise<boolean> {
+    if (storefrontAllowsPublicChat(kind)) return true;
+    if (!customerUserId) return false;
+    const engaged = await this.prisma.bookingRequest.findFirst({
+      where: { tenantId, customerUserId, ...ENGAGED_REQUEST_WHERE },
       select: { id: true },
     });
-    return request !== null;
+    return chatOpenBetween({ kind, engaged: engaged !== null });
   }
 
   /**
@@ -245,11 +266,7 @@ export class ChatService {
    */
   private async assertCustomerMayOpenChat(userId: string, tenantId: string): Promise<void> {
     if (await this.canCustomerOpenChat(userId, tenantId)) return;
-
-    throw new ForbiddenException({
-      code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING,
-      message: 'Hãy gửi yêu cầu thuê trước — chủ xe cá nhân mở kênh nhắn tin sau bước đó',
-    });
+    throw chatLocked();
   }
 
   /**
@@ -289,7 +306,7 @@ export class ChatService {
   ): Promise<ConversationSummaryDto> {
     const request = await this.prisma.bookingRequest.findFirst({
       where: { id: requestId, tenantId },
-      select: { customerUserId: true, vehicleId: true },
+      select: { customerUserId: true, vehicleId: true, status: true, bookingId: true },
     });
     if (!request) {
       throw new NotFoundException({
@@ -303,6 +320,16 @@ export class ChatService {
         message: 'Khách chưa có tài khoản trên nền tảng — hãy gọi điện hoặc nhắn Zalo',
       });
     }
+    /*
+     * ADR 0073: chủ xe tuyến hoa hồng chưa nhắn được khách khi CHÍNH yêu cầu này chưa thành đơn —
+     * hộp thư yêu cầu là đường vòng nếu chỉ gác chiều khách → chủ xe. Chấm theo yêu cầu, cùng phép
+     * với nút "Nhắn tin" của thẻ (`BookingRequestDto.chatOpen`) và với SĐT khách
+     * (`hostSeesCustomerContact`).
+     */
+    const engaged = isBookingRequestEngaged(request.status, request.bookingId != null);
+    if (!chatOpenBetween({ kind: await this.storefrontKindOf(tenantId), engaged })) {
+      throw chatLocked();
+    }
 
     return toSummary(
       await this.getOrCreateFor({
@@ -311,6 +338,7 @@ export class ChatService {
         vehicleId: request.vehicleId,
       }),
       CHAT_SIDE.SHOP,
+      true,
     );
   }
 
@@ -433,7 +461,7 @@ export class ChatService {
        * Suy từ `customerUserId` là AN TOÀN vì hai vế của phạm vi rời nhau theo định nghĩa: vế gian
        * hàng loại trừ chính những hội thoại mà người này là khách (`chatInboxScope`).
        */
-      data: rows.map((c) => toSummary(c, sideOfRow(c, userId))),
+      data: await this.withChatOpen(rows, (c, open) => toSummary(c, sideOfRow(c, userId), open)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -471,7 +499,12 @@ export class ChatService {
         message: 'Không tìm thấy hội thoại',
       });
     }
-    return toSummary(row, side);
+    const open = await this.chatOpenFor(
+      resolveStorefront(row.tenant, new Date()).kind,
+      row.tenantId,
+      row.customerUserId,
+    );
+    return toSummary(row, side, open);
   }
 
   /**
@@ -524,6 +557,16 @@ export class ChatService {
     dto: SendMessageDto,
   ): Promise<MessageDto> {
     const { conversation, side } = await this.resolveAccess(userId, conversationId);
+    /*
+     * Gác cả hội thoại ĐÃ mở (ADR 0073): thread mở theo luật cũ (sau khi gửi yêu cầu) hay mở lúc
+     * còn tuyến gói rồi hết gói không được thành kênh chốt ngoài sàn. Lịch sử vẫn đọc được.
+     */
+    const open = await this.chatOpenFor(
+      resolveStorefront(conversation.tenant, new Date()).kind,
+      conversation.tenantId,
+      conversation.customerUserId,
+    );
+    if (!open) throw chatLocked();
 
     const text = dto.text?.trim() || null;
     const attachments = dto.attachments ?? [];
@@ -879,6 +922,44 @@ export class ChatService {
   }
 
   /**
+   * `chatOpenFor` cho cả một trang hội thoại bằng MỘT truy vấn: tuyến đọc sẵn từ dòng
+   * (`storefrontTenantSelect`), còn bằng chứng "đã có đơn" của các cặp tuyến hoa hồng gom vào một
+   * câu `findMany` — không N+1 theo số dòng.
+   */
+  private async withChatOpen<T>(
+    rows: ConversationRow[],
+    map: (row: ConversationRow, open: boolean) => T,
+  ): Promise<T[]> {
+    const now = new Date();
+    const gated = rows.filter(
+      (c) => c.customerUserId && !storefrontAllowsPublicChat(resolveStorefront(c.tenant, now).kind),
+    );
+    const engaged = new Set<string>();
+    if (gated.length > 0) {
+      const found = await this.prisma.bookingRequest.findMany({
+        where: {
+          AND: [
+            ENGAGED_REQUEST_WHERE,
+            { OR: gated.map((c) => ({ tenantId: c.tenantId, customerUserId: c.customerUserId })) },
+          ],
+        },
+        distinct: ['tenantId', 'customerUserId'],
+        select: { tenantId: true, customerUserId: true },
+      });
+      for (const r of found) engaged.add(`${r.tenantId}:${r.customerUserId}`);
+    }
+    return rows.map((c) =>
+      map(
+        c,
+        chatOpenBetween({
+          kind: resolveStorefront(c.tenant, now).kind,
+          engaged: engaged.has(`${c.tenantId}:${c.customerUserId}`),
+        }),
+      ),
+    );
+  }
+
+  /**
    * Nạp hội thoại + xác định phía của actor.
    *
    * `expected` có mặt khi lời gọi đến TỪ một bề mặt cụ thể (mở deep link ở `/chat` hay
@@ -985,7 +1066,7 @@ type ConversationAccessRow = {
   id: string;
   tenantId: string;
   customerUserId: string | null;
-  tenant: StorefrontTenantRow | null;
+  tenant: StorefrontTenantRow;
   customer: { displayName: string | null } | null;
 };
 
@@ -1015,7 +1096,7 @@ function sideOfRow(c: { customerUserId: string | null }, userId: string): ChatSi
   return c.customerUserId === userId ? CHAT_SIDE.CUSTOMER : CHAT_SIDE.SHOP;
 }
 
-function toSummary(c: ConversationRow, side: ChatSide): ConversationSummaryDto {
+function toSummary(c: ConversationRow, side: ChatSide, canSend: boolean): ConversationSummaryDto {
   const viewingAsCustomer = side === CHAT_SIDE.CUSTOMER;
   // Khách thấy chủ xe đúng như ở chợ: tên + ảnh theo tuyến hiệu lực (ADR 0054).
   const storefront = viewingAsCustomer ? resolveStorefront(c.tenant, new Date()) : null;
@@ -1032,7 +1113,19 @@ function toSummary(c: ConversationRow, side: ChatSide): ConversationSummaryDto {
     lastSenderType: c.lastSenderType,
     unread: viewingAsCustomer ? c.unreadCustomerCount : c.unreadTenantCount,
     status: c.status,
+    canSend,
   };
+}
+
+/**
+ * Kênh chat của tuyến hoa hồng chưa mở (ADR 0073) — một lỗi cho mọi cổng: mở hội thoại từ hai
+ * phía và gửi tin.
+ */
+function chatLocked(): ForbiddenException {
+  return new ForbiddenException({
+    code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING,
+    message: 'Với chủ xe cá nhân, kênh nhắn tin mở sau khi tiền giữ chỗ được thanh toán thành công',
+  });
 }
 
 function toMessageDto(m: MessageRow): MessageDto {

@@ -83,7 +83,8 @@
     "linkDeclined": "Invitation declined",
     "linkLeft": "You've stopped driving for them",
     "tripAccepted": "Trip accepted",
-    "tripDeclined": "Trip declined"
+    "tripDeclined": "Trip declined",
+    "tripReleased": "Trip handed back to the owner"
   },
   "outcome": {
     "declined": "You declined",
@@ -92,6 +93,85 @@
     "no_show": "Customer no-show",
     "completed": "Completed",
     "expired": "Not confirmed in time"
+  },
+  "center": {
+    "title": "Driver Center",
+    "subtitle": "Connect with vehicle owners, take trips easily and manage your journeys.",
+    "viewLabel": "Section",
+    "viewTrips": "My trips",
+    "viewPartners": "Partner owners",
+    "tabsLabel": "Scope",
+    "tabTripsCurrent": "Current",
+    "tabTripsEnded": "Ended",
+    "tabPartnersOpen": "Partnering",
+    "tabPartnersClosed": "Ended",
+    "tabLabel": "{label}, {count, plural, one {# item} other {# items}}"
+  },
+  "tripCard": {
+    "owner": "Owner",
+    "customer": "Customer",
+    "time": "Time",
+    "days": "({count, plural, one {# day} other {# days}})",
+    "pickup": "Pick-up at",
+    "destination": "Destination",
+    "noImage": "No vehicle photo",
+    "respondLeft": "Time left to confirm: ",
+    "respondExpired": "Time to confirm has passed",
+    "confirmed": "You have confirmed this trip!",
+    "releaseLeft": "You can cancel within: ",
+    "callCustomer": "Call customer",
+    "decline": "Decline",
+    "accept": "Take trip",
+    "release": "Cancel trip",
+    "releaseConfirmTitle": "Cancel this accepted trip?",
+    "releaseConfirmBody": "The trip goes back to the owner to assign another driver. The customer's booking is not cancelled.",
+    "support": "Contact support",
+    "openDetail": "View trip {code}"
+  },
+  "tripBadge": {
+    "pending": "Awaiting confirmation",
+    "accepted": "Confirmed",
+    "awaitingHandover": "Awaiting handover",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "released": "You cancelled",
+    "declined": "You declined",
+    "expired": "Confirmation expired",
+    "unassigned": "No longer assigned to you",
+    "cancelled": "Booking cancelled",
+    "no_show": "Customer no-show"
+  },
+  "linkStatus": {
+    "invited": "Awaiting confirmation",
+    "active": "Partnering",
+    "suspended": "Suspended",
+    "declined": "You declined",
+    "ended": "Partnership ended"
+  },
+  "linkCard": {
+    "ownerKind": "Owner type",
+    "driverType": "Partnership type",
+    "joinedAt": "Joined at",
+    "invitedAt": "Invited at",
+    "completedTrips": "Completed trips",
+    "activeTrips": "Assigned trips",
+    "contact": "Contact",
+    "decline": "Decline",
+    "accept": "Confirm partnership",
+    "leave": "Stop driving",
+    "openDetail": "View details of {name}"
+  },
+  "linkDialog": {
+    "title": "Partner owner details",
+    "subtitle": "{kind} · Partner owner",
+    "contactSection": "Contact information",
+    "representative": "Representative",
+    "phone": "Phone number",
+    "email": "Email",
+    "area": "Operating area",
+    "partnershipSection": "Partnership information",
+    "completedTrips": "Completed trips",
+    "activeTrips": "Assigned trips"
   },
   "respond": {
     "remaining": "Answer within",

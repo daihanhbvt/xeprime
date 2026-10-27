@@ -1,0 +1,59 @@
+/*
+ * Bộ chuyển tab của "Quản lý thanh toán" — Figma `19879:74829`: một khay xám bo 12, tab đang mở
+ * là ô trắng viền vàng nhạt, chữ vàng.
+ */
+.tabs {
+  display: inline-flex;
+  max-width: 100%;
+  padding: var(--xp-space-2);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  overflow-x: auto;
+}
+
+.tab {
+  flex: none;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--xp-color-text);
+}
+
+.tab:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.active,
+.active:hover {
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary);
+}
+
+@media (max-width: 640px) {
+  .tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    padding-inline: var(--xp-space-sm);
+    font-size: var(--xp-font-size-body);
+    text-align: center;
+  }
+}

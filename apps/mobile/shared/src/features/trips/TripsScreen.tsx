@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import type { Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -92,10 +92,9 @@ export function TripsScreen({
 
   const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
   /*
-   * Lọc theo CHẶNG chỉ ở client, đúng như web: hai tab đã chia sẵn 'còn chạy / đã khép' và server
-   * chưa nhận tham số chặng. Nó thu hẹp thứ đang đọc chứ không mở một chiều truy vấn mới.
+   * KHÔNG có bộ lọc chặng ở màn của KHÁCH — đúng web (design "Chuyến của tôi" chỉ có hai tab; nhãn
+   * chặng trên từng thẻ đã nói đủ). Bộ lọc chặng chỉ còn ở màn chuyến của chủ xe (`OwnerTripsScreen`).
    */
-  const [stage, setStage] = useState<CustomerTripStage | null>(null);
   // App này chỉ phục vụ tài khoản KHÁCH (ADR 0053): chuyến luôn là chuyến mình ĐI THUÊ — web
   // `TripsView` khoá `TRIP_ROLE.RENTER` cùng lý do.
   const query = useTripsInfinite(filter, TRIP_ROLE.RENTER);
@@ -103,11 +102,6 @@ export function TripsScreen({
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
   // Số đếm giống nhau ở mọi trang (server tính trên toàn bộ), nên đọc trang đầu là đủ.
   const counts = query.data?.pages[0]?.counts;
-
-  const visibleItems = useMemo(
-    () => (stage === null ? items : items.filter((trip) => trip.stage === stage)),
-    [items, stage],
-  );
 
   /*
    * `useNavigateOnce`, KHÔNG phải `router.push` trần: chạm nhanh ba lần vào cùng một thẻ thì ba
@@ -158,23 +152,7 @@ export function TripsScreen({
     [isRefetching, onRefresh],
   );
 
-  /*
-   * Tự kéo tiếp khi bộ lọc chặng gạt gần hết trang đang có — xem `STAGE_FILTER_MIN_ROWS`. Vòng
-   * này DỪNG chắc chắn: mỗi nhịp chỉ chạy khi còn trang sau, và `hasNextPage` tắt ở trang cuối.
-   */
-  useEffect(() => {
-    if (stage === null) return;
-    if (!hasNextPage || isFetchingNextPage) return;
-    if (visibleItems.length >= STAGE_FILTER_MIN_ROWS) return;
-    void fetchNextPage();
-  }, [stage, hasNextPage, isFetchingNextPage, fetchNextPage, visibleItems.length]);
-
-  /* Đổi tab là đổi tập chuyến: một chặng chỉ có ở tab kia sẽ cho danh sách trống không ai giải
-     thích được, nên bộ lọc chặng rơi lại cùng lúc. */
-  const changeFilter = useCallback((next: CustomerTripFilter) => {
-    setFilter(next);
-    setStage(null);
-  }, []);
+  const changeFilter = useCallback((next: CustomerTripFilter) => setFilter(next), []);
 
   const renderTrip = useCallback(
     ({ item }: ListRenderItemInfo<CustomerTrip>) => <TripCard trip={item} onPress={openTrip} />,
@@ -186,11 +164,7 @@ export function TripsScreen({
    * một màn không cuộn là ăn mất nửa chiều cao điện thoại nhỏ khi có vài chuyến chờ tiền. Các
    * trạng thái khác (đang tải / lỗi / rỗng) còn chỗ thừa, nên nó đứng trên như web `TripsView`.
    */
-  const rendersList =
-    !query.isPending &&
-    !query.isError &&
-    !(visibleItems.length === 0 && stage !== null) &&
-    items.length > 0;
+  const rendersList = !query.isPending && !query.isError && items.length > 0;
 
   return (
     <>
@@ -215,8 +189,6 @@ export function TripsScreen({
           counts={counts}
           onChange={changeFilter}
           domainLabel={domainLabel}
-          stage={stage}
-          onStageChange={setStage}
         />
 
         {query.isPending ? (
@@ -230,35 +202,6 @@ export function TripsScreen({
             error={query.error}
             title={t('list.errorTitle')}
             onRetry={() => void query.refetch()}
-          />
-        ) : visibleItems.length === 0 && stage !== null && (hasNextPage || isFetchingNextPage) ? (
-          /*
-            Còn trang chưa kéo về: đây KHÔNG phải "không có chuyến nào ở trạng thái này" mà là
-            chưa biết — hiệu ứng ở trên đang tự kéo tiếp. Kết luận sớm rồi đổi ý khi trang sau về
-            là màn hình tự cãi chính mình.
-          */
-          <YStack p={layout.screenX} gap={layout.inline}>
-            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-              <TripCardSkeleton key={i} />
-            ))}
-          </YStack>
-        ) : visibleItems.length === 0 && stage !== null ? (
-          /*
-            Màn rỗng này phải TỰ nói ra nó rỗng vì lý do gì: người dùng nhìn vào một danh sách
-            trống sẽ tin mình không có chuyến nào, không ai nghĩ tới một bộ lọc mình đã bấm vài
-            giây trước. Nên nó gọi tên trạng thái đang lọc và cho sẵn lối thoát.
-          */
-          <ScreenMessage
-            icon="filter-outline"
-            title={t('list.stageEmptyTitle')}
-            /* Gọi TÊN trạng thái đang lọc: màn rỗng mà không nói đang lọc gì thì người dùng kết
-               luận mình không có chuyến nào, trong khi chỉ cần bỏ lọc là thấy. */
-            description={t('list.stageEmptyFiltered', {
-              stage: domainLabel('customerTripStage', stage),
-            })}
-            actionLabel={t('list.stageClear')}
-            actionIcon="close-circle-outline"
-            onAction={() => setStage(null)}
           />
         ) : items.length === 0 ? (
           <ScreenMessage
@@ -276,7 +219,7 @@ export function TripsScreen({
           />
         ) : (
           <FlatList
-            data={visibleItems}
+            data={items}
             keyExtractor={tripKey}
             renderItem={renderTrip}
             contentContainerStyle={styles.listContent}
@@ -319,15 +262,16 @@ export const TripFilterTabs = memo(function FilterTabs({
   counts,
   onChange,
   domainLabel,
-  stage,
+  stage = null,
   onStageChange,
 }: {
   value: CustomerTripFilter;
   counts: CustomerTripCounts | undefined;
   onChange: (next: CustomerTripFilter) => void;
   domainLabel: (group: 'customerTripFilter' | 'customerTripStage', code: string) => string;
-  stage: CustomerTripStage | null;
-  onStageChange: (next: CustomerTripStage | null) => void;
+  /** Bộ lọc chặng — CHỈ màn chủ xe truyền; màn của khách không có (design "Chuyến của tôi"). */
+  stage?: CustomerTripStage | null;
+  onStageChange?: (next: CustomerTripStage | null) => void;
 }) {
   const t = useTranslations('Trips.list');
 
@@ -362,16 +306,18 @@ export const TripFilterTabs = memo(function FilterTabs({
           style={styles.tabsList}
           renderItem={renderChip}
         />
-        <StageFilter
-          filter={value}
-          value={stage}
-          onChange={onStageChange}
-          domainLabel={domainLabel}
-        />
+        {onStageChange ? (
+          <StageFilter
+            filter={value}
+            value={stage}
+            onChange={onStageChange}
+            domainLabel={domainLabel}
+          />
+        ) : null}
       </XStack>
       {/* Icon thôi không nói đang lọc CÁI GÌ: danh sách rỗng mà không thấy bộ lọc thì người dùng
         tưởng mình không có chuyến. Viên này hiện tên chặng và chạm vào là xoá lọc. */}
-      {stage !== null ? (
+      {stage !== null && onStageChange ? (
         <XStack paddingHorizontal={layout.screenX} pb={space.sm}>
           <Chip
             label={domainLabel('customerTripStage', stage)}

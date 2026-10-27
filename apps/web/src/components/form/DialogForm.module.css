@@ -61,3 +61,16 @@
     width: 100%;
   }
 }
+
+/* Nhãn trên ô nhập ở mọi bề ngang (`labelPosition="top"`) — khoảng giữa các ô 16px như bản vẽ v2. */
+.top :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-md);
+}
+
+.top :global(.ant-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.top :global(.ant-form-item-label) {
+  padding-bottom: var(--xp-space-6);
+}

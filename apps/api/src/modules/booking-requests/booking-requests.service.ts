@@ -2712,6 +2712,8 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     // Có tài khoản ⇒ có phía bên kia để mở hội thoại. `customerUserId` KHÔNG ra ngoài, chỉ sự
     // thật boolean này ra — vừa đủ để bật/tắt nút "Nhắn tin".
     canMessageOnPlatform: r.customerUserId != null,
+    // Cùng cổng với SĐT khách: hộp thư không được thành kênh chốt ngoài sàn trước khi có đơn (ADR 0073).
+    chatOpen: showContact,
     pickupAt: r.pickupAt ? (r.pickupAt as unknown as string) : null,
     returnAt: r.returnAt ? (r.returnAt as unknown as string) : null,
     serviceType: r.serviceType,

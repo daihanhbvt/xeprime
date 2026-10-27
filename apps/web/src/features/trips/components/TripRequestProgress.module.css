@@ -52,22 +52,33 @@
   background: currentColor;
 }
 
+/*
+ * Ba trạng thái theo Figma `_Step icon base` / `Milestone status` (`19737:23963`):
+ *  - xong: tròn vàng `bg/primary`, dấu tích TRẮNG 12px;
+ *  - đang ở: tròn vàng đặc, tâm trắng 8px, vòng sáng 2px trắng + 4px `primary-2`;
+ *  - chưa tới: nền trắng, viền 1.5px `stroke/gray-low200`, tâm xám `gray-low300` 8px.
+ */
 .done {
   background: var(--xp-color-primary);
-  color: var(--xp-color-bg-container);
+  color: var(--xp-color-text-light-solid, #fff);
+  font-size: 12px;
 }
 
-/* Vòng sáng ngoài (Figma: icon "Current" tràn 4px quanh chấm) — bóng viền, không đẩy bố cục. */
+.done :global(.anticon) {
+  color: var(--xp-color-text-light-solid, #fff);
+}
+
 .current {
-  border: 2px solid var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
-  box-shadow: 0 0 0 4px var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  box-shadow:
+    0 0 0 2px var(--xp-color-bg-container),
+    0 0 0 4px var(--xp-color-primary-hover);
+  color: var(--xp-color-text-light-solid, #fff);
 }
 
 .todo {
   border: 1.5px solid var(--xp-color-border);
-  background: var(--xp-color-bg);
+  background: var(--xp-color-bg-container);
   color: var(--xp-color-border-strong);
 }
 

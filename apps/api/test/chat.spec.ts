@@ -4,7 +4,9 @@ import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
+  BOOKING_REQUEST_STATUS,
   bookingRequestRespondBy,
+  CHAT_INBOX,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
@@ -37,6 +39,7 @@ const notifications = makeNotificationService(asService);
 const chat = new ChatService(asService, fakeConfig, notifications);
 
 const gatedTenantIds: string[] = [];
+const gatedUserIds: string[] = [];
 let dbAvailable = false;
 let customerId: string;
 let ownerId: string;
@@ -182,7 +185,7 @@ afterAll(async () => {
       where: { id: { in: [tenantId, otherTenantId, ...gatedTenantIds] } },
     });
     await prisma.user.deleteMany({
-      where: { id: { in: [customerId, ownerId, staffId, strangerId] } },
+      where: { id: { in: [customerId, ownerId, staffId, strangerId, ...gatedUserIds] } },
     });
   }
   await prisma.$disconnect();
@@ -226,11 +229,15 @@ async function seedGatedTenant(
   return { id, slug, vehicleId };
 }
 
-/** Yêu cầu thuê của KHÁCH ĐANG ĐĂNG NHẬP — bằng chứng mà cổng đòi. */
+/**
+ * Yêu cầu thuê của KHÁCH ĐANG ĐĂNG NHẬP. `converted` = đã thành ĐƠN (tiền giữ chỗ về đủ) — bằng
+ * chứng mà cổng đòi (ADR 0073); mặc định chỉ là một yêu cầu đang chờ, CHƯA đủ.
+ */
 async function seedRequestFor(
   tenantId: string,
   vehicleId: string,
   customerUserId: string,
+  converted = false,
 ): Promise<void> {
   await prisma.bookingRequest.create({
     data: {
@@ -238,6 +245,9 @@ async function seedRequestFor(
       tenantId,
       vehicleId,
       customerUserId,
+      ...(converted
+        ? { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, decidedAt: new Date() }
+        : {}),
       customerName: 'Người lạ',
       customerPhone: '0900000111',
       respondBy: bookingRequestRespondBy(new Date()),
@@ -314,12 +324,78 @@ describe('ChatService — hội thoại', () => {
     expect(await prisma.conversation.count({ where: { tenantId: gated.id } })).toBe(0);
   });
 
-  maybe('tuyến hoa hồng + khách ĐÃ gửi yêu cầu → mở được hội thoại', async () => {
+  maybe('tuyến hoa hồng + mới GỬI yêu cầu (chưa có đơn) → vẫn 403', async () => {
     const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
     await seedRequestFor(gated.id, gated.vehicleId, strangerId);
 
+    await expect(
+      chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING },
+    });
+  });
+
+  maybe('tuyến hoa hồng + đã có ĐƠN (tiền giữ chỗ về đủ) → mở được hội thoại', async () => {
+    const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId, true);
+
     const conv = await chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug });
     expect(conv.id).toBeTruthy();
+    expect(conv.canSend).toBe(true);
+  });
+
+  /*
+   * Hội thoại ĐÃ mở theo luật cũ (sau khi gửi yêu cầu) không được thành kênh chốt ngoài sàn: cả
+   * hai phía bị chặn gửi, danh sách báo `canSend = false`, lịch sử vẫn đọc được.
+   */
+  maybe('tuyến hoa hồng: thread cũ chưa có đơn → chặn GỬI ở cả hai phía', async () => {
+    const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId);
+    const legacy = await prisma.conversation.create({
+      data: { id: newId(), tenantId: gated.id, customerUserId: strangerId },
+    });
+    // Một tài khoản đối tác thuộc tối đa MỘT gian hàng (ADR 0053) — chủ xe riêng cho tenant này.
+    const hostId = newId();
+    await prisma.user.create({
+      data: {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: hostId,
+        displayName: 'Chủ xe hoa hồng',
+        email: `host-${hostId}@xeprime.test`,
+      },
+    });
+    await prisma.tenantMembership.create({
+      data: {
+        id: newId(),
+        tenantId: gated.id,
+        userId: hostId,
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+      },
+    });
+    gatedUserIds.push(hostId);
+
+    for (const sender of [strangerId, hostId]) {
+      await expect(
+        chat.sendMessage(sender, legacy.id, { text: 'Số em 09…, mình chốt ngoài nhé' }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING } });
+    }
+    expect(await prisma.message.count({ where: { conversationId: legacy.id } })).toBe(0);
+
+    const detail = await chat.getConversation(strangerId, legacy.id, CHAT_INBOX.CUSTOMER);
+    expect(detail.canSend).toBe(false);
+    const page = await chat.listConversations(strangerId, {
+      side: CHAT_INBOX.CUSTOMER,
+    } as never);
+    expect(page.data.find((c) => c.id === legacy.id)?.canSend).toBe(false);
+    expect((await chat.listMessages(strangerId, legacy.id, {} as never)).data).toEqual([]);
+
+    // Có đơn ⇒ mở lại cho cả hai phía, cùng một thread.
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId, true);
+    await chat.sendMessage(strangerId, legacy.id, { text: 'Mai em nhận xe lúc 8h' });
+    await chat.sendMessage(hostId, legacy.id, { text: 'Ok em' });
+    const after = await chat.listConversations(strangerId, { side: CHAT_INBOX.CUSTOMER } as never);
+    expect(after.data.find((c) => c.id === legacy.id)?.canSend).toBe(true);
   });
 
   maybe('tenant CHƯA xác định được tuyến → chặn như tuyến hoa hồng', async () => {
@@ -345,12 +421,15 @@ describe('ChatService — hội thoại', () => {
     expect(await chat.chatEligibilityForShop(strangerId, tenant.slug)).toBe(true);
   });
 
-  maybe('eligibility: tuyến hoa hồng đổi false → true ngay khi có yêu cầu', async () => {
+  maybe('eligibility: tuyến hoa hồng đổi false → true khi có ĐƠN, không phải khi có yêu cầu', async () => {
     const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
 
     expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(false);
 
     await seedRequestFor(gated.id, gated.vehicleId, strangerId);
+    expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(false);
+
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId, true);
 
     expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(true);
     // Và nút hiện ra thì bấm vào phải CHẠY — cùng một phép suy ở cả hai đầu.

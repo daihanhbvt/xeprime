@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 
 import { IntlTestProvider } from '@/i18n/test-utils';
@@ -10,12 +10,10 @@ import type { PublicDestination } from '../types';
  * Đổi NGÔN NGỮ không được đổi NGHIỆP VỤ.
  *
  * Bài test này canh đúng ranh giới đó ở khu dễ vỡ nhất — trải nghiệm tìm kiếm trang chủ, nơi
- * hai bề mặt (hero + thanh thu gọn) chia nhau một trạng thái và trạng thái đó chảy thẳng ra
- * URL. Ba nhóm khẳng định:
+ * trạng thái của thẻ hero chảy thẳng ra URL. Hai nhóm khẳng định:
  *
  *   1. Cùng một thao tác, ở hai ngôn ngữ, phát ra ĐÚNG một query string.
- *   2. Hero và thanh thu gọn vẫn là một trạng thái ở cả hai ngôn ngữ.
- *   3. Thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR 0011) — bản dịch không lén mang
+ *   2. Thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR 0011) — bản dịch không lén mang
  *      ngày, gói thuê hay câu "tối thiểu 7 ngày" quay lại.
  */
 
@@ -43,39 +41,16 @@ vi.mock('../hooks/use-destinations', () => ({
 
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
 
-const observers: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
-
-class TestIntersectionObserver {
-  constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
-    observers.push(callback);
-  }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-  takeRecords() {
-    return [];
-  }
-}
-
-const realIntersectionObserver = window.IntersectionObserver;
-
 beforeEach(() => {
   nav.push.mockClear();
   nav.searchParams = new URLSearchParams();
-  observers.length = 0;
   window.history.replaceState(null, '', '/');
-  window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
-});
-
-afterEach(() => {
-  window.IntersectionObserver = realIntersectionObserver;
 });
 
 /** Nhãn giao diện theo ngôn ngữ — chỉ dùng để TÌM phần tử, không phải thứ đang được khoá. */
 const UI = {
   vi: {
     heroSearch: 'Tìm xe cho thuê',
-    sticky: 'Tìm kiếm nhanh',
     vehicleTabs: 'Loại xe',
     serviceTabs: 'Loại dịch vụ thuê xe',
     submit: 'Tìm kiếm',
@@ -88,7 +63,6 @@ const UI = {
   },
   en: {
     heroSearch: 'Search vehicles for rent',
-    sticky: 'Quick search',
     vehicleTabs: 'Vehicle type',
     serviceTabs: 'Rental service',
     submit: 'Search',
@@ -121,13 +95,6 @@ function heroCard(name: string): HTMLElement {
 
 function heroFields(): HTMLElement {
   return screen.getByRole('tabpanel');
-}
-
-async function scrollHeroOutOfView() {
-  await act(async () => {
-    for (const notify of observers) notify([{ isIntersecting: false }]);
-    await new Promise((resolve) => setTimeout(resolve, 60));
-  });
 }
 
 function submittedQuery(): URLSearchParams {
@@ -166,26 +133,6 @@ describe('tham số tìm kiếm KHÔNG đổi theo ngôn ngữ', () => {
       document.body.innerHTML = '';
     }
     expect(queries[0]).toBe(queries[1]);
-  });
-});
-
-describe('hero ↔ thanh thu gọn vẫn là MỘT trạng thái ở cả hai ngôn ngữ', () => {
-  it.each(['vi', 'en'] as const)('%s: đổi ở hero thì thanh thu gọn nói theo', async (locale) => {
-    const ui = await renderAt(locale);
-
-    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('radio', { name: ui.motorbike }));
-    await scrollHeroOutOfView();
-
-    const bar = screen.getByRole('search', { name: ui.sticky });
-    // Viên ngữ cảnh của thanh thu gọn ghép "loại xe · dịch vụ" từ CÙNG một draft.
-    expect(bar.textContent).toContain(ui.motorbike);
-  });
-
-  it.each(['vi', 'en'] as const)('%s: thanh thu gọn chỉ hiện khi hero đã khuất', async (locale) => {
-    const ui = await renderAt(locale);
-    expect(screen.queryByRole('search', { name: ui.sticky })).toBeNull();
-    await scrollHeroOutOfView();
-    expect(screen.getByRole('search', { name: ui.sticky })).toBeTruthy();
   });
 });
 

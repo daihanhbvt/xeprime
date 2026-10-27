@@ -1,10 +1,16 @@
 'use client';
 
+import { ArrowRightOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useId, useState, type ReactNode } from 'react';
-import { canCustomerCancelTrip, serviceRequiresDriverLicence } from '@xeprime/types';
+import {
+  STOREFRONT_KIND,
+  canCustomerCancelTrip,
+  serviceRequiresDriverLicence,
+} from '@xeprime/types';
 import { SUPPORT_HOTLINE } from '@/constants/contact';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { shopPath } from '@/constants/routes';
@@ -20,6 +26,7 @@ import { hasHoldStage } from '@/lib/customer-price-view';
 import { tripEstimateBreakdown, tripToBookingTrip } from '../booking-trip-view';
 import type { CustomerTripDetail } from '../types';
 import { CancelTripDialog } from './CancelTripDialog';
+import { TripOwnerActions } from './TripOwnerActions';
 import { TripRequestProgress, type TripRequestStep } from './TripRequestProgress';
 import styles from './TripRequestLayout.module.css';
 
@@ -63,8 +70,11 @@ export function useTripRequestData(trip: CustomerTripDetail) {
 
 export type TripRequestData = ReturnType<typeof useTripRequestData>;
 
-/** Sắc thái nhãn viên thuốc — đúng bốn màu thiết kế dùng trên hai màn. */
-export type TripRequestTone = 'warning' | 'success' | 'primary' | 'info';
+/**
+ * Sắc thái nhãn viên thuốc — bốn màu của các màn yêu cầu, thêm `danger` cho kết cục hỏng (đã huỷ, bị
+ * từ chối, không nhận xe — Figma `21621:67556`).
+ */
+export type TripRequestTone = 'warning' | 'success' | 'primary' | 'info' | 'danger';
 
 /** Nhãn viên thuốc (Figma "Request status") — trạng thái yêu cầu, tình trạng khoản giữ chỗ. */
 export function TripRequestPill({
@@ -90,13 +100,27 @@ export function TripRequestPill({
  *
  * `variant="confirmed"` — chuyến đã xác nhận (Figma `19759:40235`): nền `Status/success-25`, viền NÉT
  * ĐỨT `Status/success-500`, đệm 24. Hai màn còn lại là khung thẻ thường.
+ *
+ * Chuyến đã khép (`TripClosedView`): `completed` — nền xanh nhạt viền LIỀN xanh (Figma `21621:68041`);
+ * `failed` — nền đỏ nhạt viền đỏ (`21621:67556`); `notice` — nền vàng nhạt cho kết cục không ai
+ * có lỗi (quá hạn phản hồi, xe đã có khách khác). `badge` thay huy hiệu ảnh mặc định.
  */
+/** Dấu tích xanh — chờ giữ chỗ, đã xác nhận, đã hoàn tất (Figma `6b95c.png` ở `21621:54650`). */
+export const SUCCESS_STATUS_IMAGE = '/trips/status-success.webp';
+/** Dấu X đỏ — chuyến đã huỷ / bị từ chối / không nhận xe (Figma `21621:55005`). */
+export const FAILED_STATUS_IMAGE = '/trips/status-cancelled.webp';
+const DEFAULT_STATUS_IMAGE = SUCCESS_STATUS_IMAGE;
+/** Ảnh phong bì của chặng chờ chủ xe phản hồi (Figma `21788:60649`). */
+export const REQUEST_SENT_STATUS_IMAGE = '/trips/request-sent.webp';
+
 export function TripRequestStatusCard({
   tag,
   tone,
   title,
   body,
   variant = 'default',
+  badge,
+  image = DEFAULT_STATUS_IMAGE,
   children,
 }: {
   /** Nhãn CHẶNG — cùng từ vựng với danh sách chuyến (`Domain`, ADR 0005). */
@@ -104,13 +128,25 @@ export function TripRequestStatusCard({
   tone: TripRequestTone;
   title: string;
   body: string;
-  variant?: 'default' | 'confirmed';
+  variant?: 'default' | 'confirmed' | 'active' | 'completed' | 'failed' | 'notice';
+  /** Huy hiệu riêng (biểu tượng) thay ảnh "đã gửi yêu cầu" — trang trí, `aria-hidden`. */
+  badge?: ReactNode;
+  /** Ảnh minh hoạ khi không có `badge` — chờ chủ xe phản hồi dùng ảnh phong bì (Figma `21788:60649`). */
+  image?: string;
   children?: ReactNode;
 }) {
   const titleId = useId();
   return (
     <section
-      className={cx(styles.card, variant === 'confirmed' && styles.statusConfirmed)}
+      className={cx(
+        styles.card,
+        styles.status,
+        variant === 'confirmed' && styles.statusConfirmed,
+        variant === 'active' && styles.statusActive,
+        variant === 'completed' && styles.statusCompleted,
+        variant === 'failed' && styles.statusFailed,
+        variant === 'notice' && styles.statusNotice,
+      )}
       aria-labelledby={titleId}
     >
       <div className={styles.statusHead}>
@@ -118,13 +154,22 @@ export function TripRequestStatusCard({
           Huy hiệu là TRANG TRÍ — tiêu đề ngay cạnh đã nói đúng điều nó nói. Ba màn dùng CÙNG một
           ảnh (Figma `6b95c.png` ở `19727:61071`, `19737:23919` và `19759:40237`).
         */}
-        <Image
-          src="/booking/request-sent.webp"
-          alt=""
-          width={64}
-          height={64}
-          className={styles.statusBadge}
-        />
+        {badge ? (
+          <span
+            className={cx(styles.statusIcon, tone === 'success' && styles.statusSuccessIcon)}
+            aria-hidden="true"
+          >
+            {badge}
+          </span>
+        ) : (
+          <Image
+            src={image}
+            alt=""
+            width={64}
+            height={64}
+            className={styles.statusBadge}
+          />
+        )}
         <div className={styles.statusCopy}>
           <TripRequestPill tone={tone}>{tag}</TripRequestPill>
           <h2 id={titleId} className={styles.statusTitle}>
@@ -216,12 +261,22 @@ export function TripRequestTripCard({
       trip={tripToBookingTrip(trip)}
       variant="review"
       fallback={{ specs: trip.vehicle, ownerName: trip.shop.name }}
-      ownerAction={ownerAction}
+      ownerAction={ownerAction ?? <TripOwnerActions trip={trip} />}
       /*
        * Tên chủ xe dẫn tới mặt tiền của họ — lối "Xem gian hàng / Xem chủ xe" của màn chuyến cũ;
        * trang `/shops/:slug` tự vẽ đúng mặt tiền theo tuyến (ADR 0038 điều 1).
        */
       ownerHref={shopPath.detail(trip.shop.slug)}
+      /*
+       * Ảnh thật của bên cho thuê + gian hàng nổi hơn chủ xe cá nhân — cùng cách kể với thẻ chuyến
+       * ở danh sách (`CustomerTripCard`). Biển số chỉ có khi server đã mở (sau lượt nhận chuyến).
+       */
+      host={{
+        name: trip.shop.name,
+        avatarUrl: trip.shop.avatarUrl ?? null,
+        isShop: trip.shop.shopKind === STOREFRONT_KIND.SHOP,
+      }}
+      plateNumber={trip.vehicle.plateNumber ?? null}
       headingLevel={2}
     />
   );
@@ -337,9 +392,11 @@ export function TripPlanChangeCard({
         <p className={styles.policyBody}>{body}</p>
       </div>
       {actions}
-      <CtaButton href={legalPath.doc(LEGAL_DOC.CANCELLATION)} variant="neutral" size="form" block>
+      {/* Figma `21768:22478`: lối xem chính sách là liên kết chữ có mũi tên, không phải nút khung. */}
+      <Link href={legalPath.doc(LEGAL_DOC.CANCELLATION)} className={styles.policyLink}>
         {t('view')}
-      </CtaButton>
+        <ArrowRightOutlined className={styles.policyLinkIcon} aria-hidden="true" />
+      </Link>
       {canCancel ? (
         <CtaButton variant="danger" size="form" block onClick={() => setCancelOpen(true)}>
           {t('cancel')}

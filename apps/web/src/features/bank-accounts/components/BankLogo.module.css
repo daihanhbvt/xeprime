@@ -1,0 +1,59 @@
+/* Logo ngân hàng — nền trắng viền mảnh để logo nền trong suốt vẫn có khung. */
+.logo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.xs {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.sm {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius);
+}
+
+.lg {
+  width: 172px;
+  height: 172px;
+  border-radius: var(--xp-border-radius-card);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Logo VietQR là dải ngang nhiều lề trắng — gần như kín ô để đọc ra ngay. */
+.xs .image {
+  transform: scale(1.3);
+}
+
+.lg .image {
+  padding: var(--xp-space-xs);
+  transform: scale(1.35);
+}
+
+.initials {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.02em;
+}
+
+.xs .initials {
+  font-size: 9px;
+}
+
+.lg .initials {
+  font-size: var(--xp-font-size-h1);
+}

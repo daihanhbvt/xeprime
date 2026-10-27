@@ -20,11 +20,13 @@
   min-width: 0;
 }
 
-/* Số tiền — 30/38 Semibold `Text/Brand/primary 2`, cùng cỡ với tổng ở thẻ chi phí. */
+/* Số tiền — Figma `19759:19945`: 24/32 Semibold `Text/Brand/primary`. */
 .amount {
   margin: 0;
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
+  font-size: 24px;
   font-weight: var(--xp-font-weight-semibold);
+  line-height: 32px;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   font-size: var(--xp-font-size-h2);

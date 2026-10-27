@@ -2,19 +2,18 @@
 
 import { CreditCardOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
   BOOKING_HOLD_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_COUNTDOWN_URGENT_MINUTES,
   HOLD_REFUND_STATUS,
 } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { paymentPath } from '@/constants/routes';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import { useFreeCancelNote } from '../use-free-cancel-note';
@@ -104,11 +103,9 @@ export function TripHoldPanel({
         <Countdown
           deadline={hold.expiresAt}
           urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
-          segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
           labels={{
             remaining: t('countdownRemaining'),
             expired: t('countdownExpired'),
-            segment: (index, total) => t('countdownSegment', { index, total }),
           }}
         />
         <FreeCancelCountdown hold={hold} />
@@ -128,11 +125,15 @@ export function TripHoldPanel({
         MỘT nút, không phải một mã QR thứ hai: trang thanh toán là nơi duy nhất có đủ kênh trả và là
         nơi cổng quay về. Hai chỗ trả là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau.
       */}
-      <Link href={paymentPath.trip(tripId)} className={styles.payLink}>
-        <Button type="primary" size="large" block icon={<CreditCardOutlined aria-hidden />}>
-          {t('payNow')}
-        </Button>
-      </Link>
+      <CtaButton
+        href={paymentPath.trip(tripId)}
+        size="lg"
+        block
+        className={styles.payLink}
+        iconStart={<CreditCardOutlined aria-hidden />}
+      >
+        {t('payNow')}
+      </CtaButton>
 
       <ul className={styles.notes}>
         <li>{t('expires')}</li>

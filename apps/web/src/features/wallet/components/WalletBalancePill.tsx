@@ -19,7 +19,7 @@ const MASK = '••••••';
  * Số dư ở góc trên phải hồ sơ "Tài khoản của tôi" — một lối tắt, không phải một thẻ tiền.
  *
  * Trả lời đúng MỘT câu ("tôi còn bao nhiêu") và mở thẳng màn số dư đầy đủ. Ba con số, sổ giao
- * dịch và các lệnh rút vẫn nằm ở `AccountMoneyPanel` phía dưới và ở màn đích — nhân bản chúng
+ * dịch và các lệnh rút vẫn nằm ở màn đích "Quản lý thanh toán" — nhân bản chúng
  * lên đây là mở đường cho hai chỗ hiện hai số dư khác nhau cho cùng một người.
  *
  * ## Vì sao có con mắt, và vì sao nó phải bấm được thật
@@ -46,7 +46,9 @@ export function WalletBalancePill() {
 
   const scope = walletScopeFor(user);
   // Chưa biết người dùng là ai, hoặc tài khoản không có ví (nhân viên gian hàng) → không gọi.
-  const { data } = useWalletSummary(scope ?? 'account', { enabled: Boolean(user) && scope !== null });
+  const { data } = useWalletSummary(scope ?? 'account', {
+    enabled: Boolean(user) && scope !== null,
+  });
 
   if (!user || !scope || !data) return null;
 
@@ -62,7 +64,7 @@ export function WalletBalancePill() {
         {hidden ? <EyeInvisibleOutlined aria-hidden="true" /> : <EyeOutlined aria-hidden="true" />}
       </button>
       <Link href={walletHrefFor(scope)} className={styles.link}>
-        <span className={styles.label}>{t('pill.label')}</span>
+        <span className={styles.label}>{t('pill.prefix')}</span>
         <span className={styles.amount}>{hidden ? MASK : fmt.money(data.available)}</span>
         <RightOutlined aria-hidden="true" className={styles.chevron} />
       </Link>

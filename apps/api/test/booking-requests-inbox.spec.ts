@@ -761,6 +761,23 @@ describe('Liên hệ của khách theo tuyến', () => {
       const shown = await requests.getOne(cTenant, converted);
       expect(shown.customerPhone).toBe('0901234567');
       expect(shown.customerEmail).toBe('an@test.vn');
+
+      // Kênh nhắn tin đi theo CÙNG cổng (ADR 0073): nút ẩn, và endpoint chặn thật.
+      expect(hidden.chatOpen).toBe(false);
+      expect(shown.chatOpen).toBe(true);
+      const pendingWithAccount = await seedRequest({
+        tenantId: cTenant,
+        vehicleId: cVehicle,
+        customerUserId,
+        pickupAt: at(13),
+      });
+      await expect(
+        chat.getOrCreateConversationForBookingRequest(cTenant, pendingWithAccount),
+      ).rejects.toMatchObject({
+        status: 403,
+        response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING },
+      });
+      expect(await prisma.conversation.count({ where: { tenantId: cTenant } })).toBe(0);
     } finally {
       await prisma.bookingRequest.deleteMany({ where: { tenantId: cTenant } });
       await prisma.vehicle.deleteMany({ where: { tenantId: cTenant } });
@@ -774,6 +791,7 @@ describe('Liên hệ của khách theo tuyến', () => {
     const row = await requests.getOne(tenantId, id);
     expect(row.customerPhone).toBe('0901234567');
     expect(row.customerEmail).toBe('an@test.vn');
+    expect(row.chatOpen).toBe(true);
   });
 });
 

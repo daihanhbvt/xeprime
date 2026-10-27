@@ -15,14 +15,14 @@ import {
   DRIVER_LINK_END_PARTY,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_FILTER_ANY,
-  DRIVER_LINK_STATUS_META,
   DRIVER_LINK_STATUS_VALUES,
   DRIVER_TYPE_VALUES,
   PERMISSION,
   isDriverLinkStatus,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { ToneBadge } from '@/components/data-display/ToneBadge';
+import { driverLinkTone } from '@xeprime/domain';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -189,7 +189,10 @@ function DriversPageInner() {
       width: 170,
       render: (_, row) => (
         <div>
-          <StatusTag value={row.linkStatus} meta={DRIVER_LINK_STATUS_META} group="driverLinkStatus" />
+          {/* Cùng viên trạng thái với "Trung tâm Tài xế" ở site khách — một sắc cho một trạng thái. */}
+          <ToneBadge tone={driverLinkTone(row.linkStatus)}>
+            {domainLabel('driverLinkStatus', row.linkStatus)}
+          </ToneBadge>
           {row.linkStatus === DRIVER_LINK_STATUS.ENDED && row.endedByParty ? (
             <div className={styles.meta}>
               {row.endedByParty === DRIVER_LINK_END_PARTY.DRIVER

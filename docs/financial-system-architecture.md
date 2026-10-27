@@ -217,17 +217,20 @@ Bốn đồng hồ cùng một hình dạng $\text{clamp}(\text{round}(\Delta T 
 | Đồng hồ | $\Delta T$ | Công thức | Hết hạn |
 | :--- | :--- | :--- | :--- |
 | Chủ xe phản hồi yêu cầu | `pickupAt − createdAt` | 240′ nếu $\Delta T \ge 24$h; ngược lại clamp(20%, 15′, 240′); dài hạn chưa có giờ nhận ⇒ 240′ | `expired`, tính vào tỉ lệ phản hồi |
-| Khách trả tiền giữ chỗ $T_{\text{pay}}$ | `pickupAt − acceptedAt` | clamp(30%, 15′, 120′) | `hold_expired`, nhả lịch |
-| Huỷ miễn phí $T_{\text{cancel}}$ | `pickupAt − acceptedAt` | clamp(20%, 15′, 2h) | qua mốc ⇒ huỷ muộn (§7.3) |
+| Khách trả tiền giữ chỗ $T_{\text{pay}}$ | `pickupAt − acceptedAt` | clamp(30%, 15′, 120′) | **tự động huỷ**: `hold_expired`, nhả lịch, hoàn phần đã chuyển |
+| Huỷ miễn phí $T_{\text{cancel}}$ | `pickupAt − paidAt` (tiền về ĐỦ — ADR 0072) | clamp(20%, 15′, 2h) | qua mốc ⇒ huỷ muộn (§7.3) |
 | Tài xế nhận cuốc | `pickupAt − lúc gán` | clamp(10%, 15′, 60′) | nhả lượt gán + báo khẩn gian hàng (§3.1) |
 
-Hai mốc của hold tính **xuôi từ `acceptedAt`**, kẹp bởi `pickupAt` (`holdWindowsFor`). Không gia hạn; nhắc ở mốc còn 60′ và 15′ (mốc nào dài hơn cả cửa sổ thì bỏ qua). Hạn phản hồi của yêu cầu lưu ở `booking_requests.respond_by` lúc gửi; worker nhắc chủ xe theo phần còn lại, cũng ở 60′ và 15′.
+Hạn thanh toán tính **xuôi từ `acceptedAt`**, kẹp bởi `pickupAt` (`holdWindowsFor`), lưu lúc tạo hold. Mốc huỷ miễn phí tính **xuôi từ `paidAt`** với ΔT = `pickupAt − paidAt` (`freeCancelWindowFromPayment`), ghi MỘT lần trong lượt lật hold sang `paid` — `free_cancel_until` NULL tới lúc đó (ADR 0072). Trước khi trả đủ không có huỷ miễn phí: chưa có đơn, khách chưa mất đồng nào, hết hạn là tự huỷ. Không gia hạn; nhắc ở mốc còn 60′ và 15′ (mốc nào dài hơn cả cửa sổ thì bỏ qua). Hạn phản hồi của yêu cầu lưu ở `booking_requests.respond_by` lúc gửi; worker nhắc chủ xe theo phần còn lại, cũng ở 60′ và 15′.
 
 ```mermaid
 flowchart TD
     Accept["Chủ xe duyệt / Đặt ngay: acceptedAt"] --> Delta["ΔT = pickupAt − acceptedAt"]
     Delta --> Pay["Hạn thanh toán: clamp(30% × ΔT, 15′, 120′)"]
-    Delta --> Cancel["Huỷ miễn phí: clamp(20% × ΔT, 15′, 2h)"]
+    Pay --> Paid{"Tiền về ĐỦ trước hạn?"}
+    Paid -- không --> Expire["Tự động huỷ: nhả lịch, hoàn phần đã chuyển"]
+    Paid -- có --> Booking["Đơn thuê ra đời: paidAt"]
+    Booking --> Cancel["Huỷ miễn phí: clamp(20% × (pickupAt − paidAt), 15′, 2h)"]
     Accept --> Short{"Cửa sổ còn lại < 15′?"}
     Short -- có --> Reject["HOLD_WINDOW_TOO_SHORT — thoả thuận trực tiếp"]
 ```
@@ -235,21 +238,22 @@ flowchart TD
 ### 7.1. Công thức
 $$T_{\text{pay}} = \min\big(120,\ \max(15,\ \text{round}(\Delta T \times 30\%))\big)\ \text{phút}
 \qquad
-T_{\text{cancel}} = \min\big(120,\ \max(15,\ \text{round}(\Delta T \times 20\%))\big)\ \text{phút}$$
+T_{\text{cancel}} = \min\big(120,\ \max(15,\ \text{round}(\Delta T_{\text{paid}} \times 20\%))\big)\ \text{phút}$$
 
-Trần là dữ liệu chính sách (`holdPaymentWindowMinutes` = 120′, `freeCancelHours` = 2h ở v8). Luôn có tối thiểu 15′ huỷ miễn phí (vẫn kẹp bởi `pickupAt`) — quy tắc "dưới 2h không có huỷ miễn phí" của bản v2.2 đã bỏ. Khi $50′ < \Delta T < 10$h, $T_{\text{pay}}$ (30%) **dài hơn** $T_{\text{cancel}}$ (20%): khách trả ở cuối hạn đã qua mốc huỷ miễn phí. Màn thanh toán phải hiện **đồng hồ đếm ngược** mốc huỷ miễn phí **trước** khi khách quét QR.
+$\Delta T$ của $T_{\text{pay}}$ là `pickupAt − acceptedAt`; $\Delta T_{\text{paid}}$ của $T_{\text{cancel}}$ là `pickupAt − paidAt` (ADR 0072). Trần là dữ liệu chính sách (`holdPaymentWindowMinutes` = 120′, `freeCancelHours` = 2h ở v8). Luôn có tối thiểu 15′ huỷ miễn phí sau khi trả (vẫn kẹp bởi `pickupAt`). Huỷ miễn phí bắt đầu khi tiền về đủ, nên không còn ca "khách trả ở cuối hạn đã qua mốc huỷ miễn phí" của ADR 0066: màn thanh toán chỉ nói trước độ dài cửa sổ ("Huỷ miễn phí: N kể từ lúc thanh toán thành công"), đồng hồ huỷ miễn phí chỉ chạy sau khi trả.
 
 ### 7.2. Bảng tình huống
 
-| Tình huống | $\Delta T$ | Huỷ miễn phí | Hạn thanh toán | Khách huỷ sau mốc miễn phí (trước bàn giao) |
+| Tình huống | $\Delta T$ (lúc nhận / lúc trả) | Huỷ miễn phí (từ lúc trả) | Hạn thanh toán (từ lúc nhận) | Khách huỷ sau mốc miễn phí (trước bàn giao) |
 | :--- | :--- | :--- | :--- | :--- |
 | Đặt trước 3 ngày | 72 giờ | **2 giờ** | **120 phút** | chủ xe nhận trọn $D$; XePrime giữ $S + H - P$; $IV + IP$ hoàn 100% |
 | Đặt trước 1 ngày | 24 giờ | **2 giờ** | **120 phút** | như trên |
 | Đặt trước 10 tiếng | 10 giờ | **2 giờ** (600′ × 20%) | **120 phút** (600′ × 30% = 180′, kẹp 120′) | như trên |
-| Đặt trước 4 tiếng | 4 giờ (240′) | **48 phút** | **72 phút** | như trên — trả ở phút 60 là đã qua mốc 48′ |
-| Đặt gấp trước 90 phút | 1,5 giờ | **18 phút** | **27 phút** | như trên |
+| Đặt trước 4 tiếng, trả sau 60′ | 240′ / 180′ | **36 phút** (180′ × 20%) | **72 phút** | như trên — mốc tính từ lúc trả, không còn "đã qua mốc trước khi trả" |
+| Đặt gấp trước 90 phút, trả ngay | 1,5 giờ | **18 phút** | **27 phút** | như trên |
 | Đặt gấp trước 30 phút | 30′ | **15 phút** (sàn) | **15 phút** (sàn) | như trên |
 | Giờ nhận còn dưới 15′ | < 15′ | — | — | Không phát QR: `HOLD_WINDOW_TOO_SHORT` |
+| Hết hạn thanh toán mà chưa đủ tiền | — | — | — | **Tự động huỷ**: nhả lịch, hoàn phần đã chuyển vào Ví điểm, báo hai bên |
 
 ### 7.3. Phân bổ khi huỷ (theo ví dụ §5) — ADR 0066 điều 2
 

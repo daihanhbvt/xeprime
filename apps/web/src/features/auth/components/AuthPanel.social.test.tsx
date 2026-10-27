@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthModal } from './AuthModal';
 import { AuthModalProvider, AuthUrlSync } from './AuthModalProvider';
@@ -91,7 +91,40 @@ describe('AuthPanel — bấm nút mạng xã hội', () => {
 
     expect(social.start).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * Back từ trang Google/Facebook: trình duyệt khôi phục trang từ bfcache với nguyên state lúc rời
+   * đi. Không nhả lượt chờ thì nút quay mãi và mọi nút khác bị khoá tới khi F5.
+   */
+  it('quay lại bằng nút Back (bfcache) → nút thôi quay, bấm lại được', async () => {
+    renderModal('auth=login');
+
+    const google = await screen.findByRole('button', { name: /Google/ });
+    fireEvent.click(google);
+    expect(social.start).toHaveBeenCalledTimes(1);
+
+    // Lần hiện trang KHÔNG từ bfcache (tải mới) thì không đụng gì.
+    act(() => {
+      window.dispatchEvent(pageShow(false));
+    });
+    fireEvent.click(google);
+    expect(social.start).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      window.dispatchEvent(pageShow(true));
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Facebook/ }));
+    expect(social.start).toHaveBeenCalledTimes(2);
+    expect(social.start.mock.calls[1]![0]).toBe('facebook');
+  });
 });
+
+/** jsdom không có `PageTransitionEvent` — dựng `pageshow` với cờ `persisted` bằng tay. */
+function pageShow(persisted: boolean): Event {
+  const event = new Event('pageshow');
+  Object.defineProperty(event, 'persisted', { value: persisted });
+  return event;
+}
 
 describe('AuthPanel — lỗi mang về từ ?authError=', () => {
   it('hiện câu đã dịch, không phải mã thô', async () => {

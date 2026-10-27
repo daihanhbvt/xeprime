@@ -130,8 +130,8 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
 
     expect(view.getByText('an@xeprime.test')).toBeTruthy();
     expect(view.getByText('0901234567')).toBeTruthy();
-    // Đã xác thực = dấu tích tròn; trình đọc màn hình nghe thấy nó qua nhãn khả truy cập.
-    expect(view.getAllByLabelText('Đã xác thực')).toHaveLength(2);
+    // Đã xác minh = dấu tích tròn; trình đọc màn hình nghe thấy nó qua nhãn khả truy cập.
+    expect(view.getAllByLabelText('Đã xác minh')).toHaveLength(2);
     // Màn này không có ô nhập nào — hồ sơ chỉ đọc.
     expect(view.queryByText(/Họ tên hiển thị/)).toBeNull();
   });
@@ -146,7 +146,7 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
 
     expect(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') })).toBeTruthy();
     // Khớp CHÍNH XÁC: mục "Đổi mật khẩu" trong menu cũng mang nhãn bắt đầu bằng "Đổi".
-    expect(view.getAllByRole('button', { name: 'Đổi' })).toHaveLength(2);
+    expect(view.getAllByRole('button', { name: 'Thay đổi' })).toHaveLength(2);
   });
 
   /**
@@ -161,15 +161,15 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
     await view.findByText(PROFILE_CARD_TEXT);
 
     expect(view.queryByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') })).toBeNull();
-    expect(view.queryAllByRole('button', { name: 'Đổi' })).toHaveLength(0);
+    expect(view.queryAllByRole('button', { name: 'Thay đổi' })).toHaveLength(0);
     expect(view.queryAllByRole('button', { name: 'Thêm' })).toHaveLength(0);
   });
 
-  it('chưa xác thực: hiện CHỮ "Chưa xác thực", không phải một dấu tích im lặng', async () => {
+  it('chưa xác thực: hiện CHỮ "Chưa xác minh", không phải một dấu tích im lặng', async () => {
     const view = await renderScreen({ ...PROFILE, phoneVerified: false, emailVerified: false });
     await view.findByText(PROFILE_CARD_TEXT);
-    expect(view.getAllByText('Chưa xác thực')).toHaveLength(2);
-    expect(view.queryByLabelText('Đã xác thực')).toBeNull();
+    expect(view.getAllByText('Chưa xác minh')).toHaveLength(2);
+    expect(view.queryByLabelText('Đã xác minh')).toBeNull();
   });
 
   it('không có email/SĐT: nói rõ chưa có, không để ô trống', async () => {
@@ -179,7 +179,7 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
     expect(view.getByText('Chưa có email')).toBeTruthy();
     expect(view.getByText('Chưa có số điện thoại')).toBeTruthy();
     // Không có giá trị thì cũng không có dấu xác thực nào để hiện.
-    expect(view.queryByLabelText('Đã xác thực')).toBeNull();
+    expect(view.queryByLabelText('Đã xác minh')).toBeNull();
   });
 
   it('lỗi tải hồ sơ: hiện lỗi có nút thử lại, không hiện form rỗng', async () => {
@@ -213,14 +213,14 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     await view.findByText(PROFILE_CARD_TEXT);
 
     const order = view
-      .getAllByText(/^(Tài khoản của tôi|Thông tin đăng nhập)$/)
+      .getAllByText(/^(Quản lý tài khoản|Thông tin đăng nhập)$/)
       .map((node) => node.props.children);
     /*
      * Thẻ HỒ SƠ mở đầu màn; menu đứng sau nó. Người mở tab Tài khoản muốn thấy mình là ai
      * trước, rồi mới tới danh sách lối đi — thứ tự do người dùng chốt ngày 15/09/2026.
      */
     expect(order[0]).toBe('Thông tin đăng nhập');
-    expect(order).toContain('Tài khoản của tôi');
+    expect(order).toContain('Quản lý tài khoản');
   });
 
   it('khách chưa có gian hàng: bảy mục, có "Trở thành chủ xe", không có mục chủ xe', async () => {
@@ -228,19 +228,16 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     await view.findByText(PROFILE_CARD_TEXT);
 
     for (const label of [
-      'Tài khoản của tôi',
+      'Quản lý tài khoản',
       'Trở thành chủ xe',
       'Chuyến của tôi',
       /*
-       * Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào sổ của họ (ADR 0033 điều 5).
-       *
-       * Nhãn là "Số dư của tôi" từ 16/09/2026 — ví đổi tên khỏi "Ví điểm" ở gốc message dùng chung
-       * (`Navigation.account.balance`), nên một nhãn "Ví điểm" ở đây là app nói khác web.
+       * Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào sổ của họ (ADR 0033 điều 5). Số dư,
+       * tài khoản nhận tiền và lịch sử thanh toán là MỘT mục "Quản lý thanh toán" (web 22/10/2026).
        */
-      'Số dư của tôi',
-      'Tài khoản nhận tiền',
-      'Đổi mật khẩu',
-      'Yêu cầu xoá tài khoản',
+      'Quản lý thanh toán',
+      // Đổi mật khẩu + yêu cầu xoá tài khoản là MỘT mục "Bảo mật tài khoản" (web 22/10/2026).
+      'Bảo mật tài khoản',
     ]) {
       expect(view.getAllByRole('menuitem', { name: label }).length).toBeGreaterThan(0);
     }
@@ -271,7 +268,7 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
-    const profileItem = view.getAllByRole('menuitem', { name: 'Tài khoản của tôi' })[0]!;
+    const profileItem = view.getAllByRole('menuitem', { name: 'Quản lý tài khoản' })[0]!;
     expect(profileItem.props.accessibilityState?.selected).toBe(true);
 
     await fireEvent.press(profileItem);
@@ -280,11 +277,11 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('mục "Đổi mật khẩu" mở đúng màn, không phải một chỗ trống', async () => {
+  it('mục "Bảo mật tài khoản" mở màn đổi mật khẩu, không phải một chỗ trống', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
-    await fireEvent.press(view.getAllByRole('menuitem', { name: 'Đổi mật khẩu' })[0]!);
+    await fireEvent.press(view.getAllByRole('menuitem', { name: 'Bảo mật tài khoản' })[0]!);
     expect(mockPush).toHaveBeenCalledWith('/account/change-password');
   });
 

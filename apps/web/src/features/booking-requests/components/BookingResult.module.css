@@ -128,6 +128,49 @@
   white-space: nowrap;
 }
 
+/*
+ * ── Biến thể `sent` — "Đã gửi yêu cầu" (Figma `19759:22026`, bản 27/10/2026) ──────────────
+ *
+ * Rộng 750, phong bì 64×63, tiêu đề `18px/Semibold`, lời dẫn `14px/Regular` `Text/Gray/medium`,
+ * các khối trạng thái cách 8. Tổng tiền `14px` · `18px` vàng sẫm. Hàng nút dồn PHẢI, đệm đáy 20.
+ */
+.sent {
+  width: 750px;
+}
+
+.sent .status {
+  gap: var(--xp-space-sm);
+}
+
+.sent .badge {
+  width: 64px;
+  height: 63px;
+}
+
+.sent .title {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
+.sent .lead {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+.sent .footer {
+  justify-content: flex-end;
+}
+
+.totalSent .totalLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+.totalSent .totalAmount {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
 /* ── Hàng nút (Figma "Footer cố định") ─────────────────────────────────────── */
 .footer {
   display: flex;
@@ -178,7 +221,8 @@
  * chỗ: xếp dọc, nút chính lên trên cho ngón cái.
  */
 @media (max-width: 640px) {
-  .result {
+  .result,
+  .sent {
     width: auto;
     height: 100%;
     max-height: none;

@@ -8,6 +8,7 @@ import { SELLER_PROFILE_STATUS } from '@xeprime/types';
 import { useSellerProfile } from '@/features/seller-profile/hooks/use-seller-profile';
 import { cx } from '@/lib/cx';
 import { useAppFormat } from '@/i18n/use-app-format';
+import type { ReactNode } from 'react';
 import { useWalletSummary } from '../hooks';
 import type { WalletScope } from '../types';
 import styles from './WalletSummaryCard.module.css';
@@ -39,7 +40,12 @@ import styles from './WalletSummaryCard.module.css';
  * xác minh — nó là câu trả lời duy nhất mà người ta mở màn này để đọc. `variant="compact"` là
  * thẻ nằm lẫn giữa các khối khác trong hồ sơ.
  *
- * Hai hình thái đi qua CÙNG component thay vì hai component: chúng đọc cùng một `useWalletSummary`
+ * `variant="panel"` là thẻ mở đầu tab "Tài khoản thanh toán" của khu tài khoản khách (Figma
+ * `19879:74829`): con số khả dụng bên trái, nút rút (`action`) bên phải cùng hàng, hai con số phụ
+ * ở hàng dưới. Nút do màn ví truyền vào để quy tắc "rút được hay chưa" chỉ sống ở MỘT nơi
+ * (`WalletView`); `hint` là dòng giải thích vì sao nút đang khoá.
+ *
+ * Các hình thái đi qua CÙNG component thay vì nhiều component: chúng đọc cùng một `useWalletSummary`
  * và nói cùng ba con số. Tách đôi là mở đường cho hai màn hiện hai số dư khác nhau — đúng cái
  * đoạn trên vừa nói tới.
  */
@@ -48,10 +54,16 @@ export function WalletSummaryCard({
   variant = 'compact',
   onWithdraw,
   href,
+  action,
+  hint,
 }: {
   scope: WalletScope;
-  variant?: 'compact' | 'hero';
+  variant?: 'compact' | 'hero' | 'panel';
   onWithdraw?: () => void;
+  /** `panel`: nút hành động đứng cùng hàng con số khả dụng. */
+  action?: ReactNode;
+  /** `panel`: dòng gợi ý cuối thẻ (vì sao chưa rút được). */
+  hint?: ReactNode;
   /** Màn ví đầy đủ — hiện một liên kết thay cho nút Rút khi thẻ đứng ngoài màn đó. */
   href?: string;
 }) {
@@ -66,6 +78,33 @@ export function WalletSummaryCard({
   const frozen = data.status === 'frozen';
   const canWithdraw = !frozen && Number(data.available) >= Number(data.minWithdrawAmount);
   const title = t(`title.${scope === 'shop' ? 'tenant' : 'user'}`);
+
+  if (variant === 'panel') {
+    return (
+      <section className={cx(styles.card, styles.panel)} aria-label={title}>
+        <h2 className={styles.srOnly}>{title}</h2>
+        {frozen ? <Alert type="warning" showIcon title={t('balance.frozen')} /> : null}
+        <div className={styles.panelTop}>
+          <div className={styles.panelMain}>
+            <p className={styles.panelLabel}>{t('balance.available')}</p>
+            <p className={styles.panelBig}>{fmt.money(data.available)}</p>
+          </div>
+          {action ? <div className={styles.panelAction}>{action}</div> : null}
+        </div>
+        <dl className={styles.panelFigures}>
+          <div>
+            <dt>{t('balance.pending')}</dt>
+            <dd>{fmt.money(data.pending)}</dd>
+          </div>
+          <div>
+            <dt>{t('balance.total')}</dt>
+            <dd>{fmt.money(data.total)}</dd>
+          </div>
+        </dl>
+        {hint ? <p className={styles.panelHint}>{hint}</p> : null}
+      </section>
+    );
+  }
 
   return (
     <section className={cx(styles.card, hero && styles.hero)} aria-label={title}>
