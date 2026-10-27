@@ -268,7 +268,9 @@
       "manualDefault": "Phí giao xe sẽ được chủ xe xác nhận trực tiếp khi duyệt yêu cầu thuê.",
       "notFoundTitle": "Không tra được tuyến đường tự động",
       "notFoundBody": "Hệ thống không tính được cự ly tự động cho địa chỉ này. Phí giao xe sẽ do chủ xe thông báo sau.",
-      "confirm": "Xác nhận địa chỉ"
+      "confirm": "Xác nhận địa chỉ",
+      "useCurrent": "Lấy vị trí hiện tại",
+      "imprecise": "Vị trí lấy được chưa đủ chính xác (sai số khoảng {distance}). Hãy nhập địa chỉ cụ thể."
     }
   },
   "reviews": {

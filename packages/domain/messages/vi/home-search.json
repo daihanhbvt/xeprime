@@ -45,6 +45,9 @@
     "loadError": "Không tải được danh sách địa điểm",
     "vehicleCount": "{count, plural, other {# xe}}",
     "noMatch": "Không có tỉnh/thành nào khớp “{query}”. Thử tên khác hoặc chọn Toàn quốc.",
-    "placeholder": "Nhập điểm đón"
+    "placeholder": "Nhập điểm đón",
+    "useCurrent": "Truy cập vị trí hiện tại",
+    "noVehiclesNearby": "Khu vực của bạn chưa có xe. Hãy chọn Toàn quốc hoặc tỉnh/thành khác.",
+    "noProvinceNearby": "Không xác định được tỉnh/thành từ vị trí của bạn. Hãy chọn thủ công."
   }
 }

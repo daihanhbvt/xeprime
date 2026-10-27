@@ -28,5 +28,19 @@
     "title": "Địa chỉ chưa khớp danh mục hành chính hiện hành",
     "hint": "Từ 01/07/2025 Việt Nam dùng mô hình hai cấp: tỉnh/thành → xã/phường/đặc khu. Hãy mở ra chọn lại xã/phường và xác nhận lại địa chỉ.",
     "legacyValue": "Dữ liệu cũ ghi: {value}"
+  },
+  "currentLocation": {
+    "action": "Lấy vị trí hiện tại",
+    "locating": "Đang lấy vị trí…",
+    "errors": {
+      "unsupported": "Trình duyệt này không hỗ trợ lấy vị trí. Hãy chọn hoặc nhập địa chỉ.",
+      "insecure": "Chỉ lấy được vị trí khi trang chạy qua kết nối bảo mật (HTTPS).",
+      "denied": "Bạn đang chặn quyền vị trí cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi thử lại.",
+      "deniedIos": "Bạn đang chặn quyền vị trí. Vào Cài đặt › Quyền riêng tư & Bảo mật › Dịch vụ định vị › Trang web Safari, chọn “Khi dùng ứng dụng”, rồi thử lại.",
+      "unavailable": "Không xác định được vị trí của bạn. Hãy bật dịch vụ định vị trên máy rồi thử lại.",
+      "timeout": "Lấy vị trí quá lâu. Hãy thử lại ở nơi có tín hiệu tốt hơn.",
+      "lookupUnavailable": "Chưa tra được địa chỉ lúc này. Hãy thử lại hoặc chọn thủ công.",
+      "notFound": "Không tìm thấy địa chỉ tại vị trí của bạn. Hãy chọn thủ công."
+    }
   }
 }

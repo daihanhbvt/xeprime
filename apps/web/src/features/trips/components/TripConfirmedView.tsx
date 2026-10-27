@@ -2,7 +2,7 @@
 
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useState } from 'react';
+import { useId, useMemo, useSyncExternalStore } from 'react';
 import { isZeroMoney } from '@xeprime/domain';
 import {
   COLLATERAL_MODE,
@@ -16,7 +16,12 @@ import { BookingReviewCosts } from '@/features/booking-requests/components/Booki
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { readPickupChecklist, writePickupChecklist } from '@/lib/pickup-checklist-memory';
+import {
+  parsePickupChecklist,
+  pickupChecklistSnapshot,
+  subscribePickupChecklist,
+  writePickupChecklist,
+} from '@/lib/pickup-checklist-memory';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { tripFinanceBreakdown } from '../booking-trip-view';
 import type { CustomerTripDetail } from '../types';
@@ -226,18 +231,18 @@ function PickupChecklist({
 
   /*
    * Dấu tick là ghi nhớ CÁ NHÂN trong trình duyệt (theo chuyến), không gửi server — biên bản bàn
-   * giao vẫn là nơi chốt. Đọc sau khi mount để HTML của server và lượt render đầu khớp nhau.
+   * giao vẫn là nơi chốt. Đọc qua `useSyncExternalStore` với ảnh chụp server rỗng: HTML của server
+   * và lượt render đầu khớp nhau, rồi React đọc kho thật — không setState trong effect.
    */
-  const [checked, setChecked] = useState<string[]>([]);
-  useEffect(() => {
-    setChecked(readPickupChecklist(trip.id));
-  }, [trip.id]);
+  const checkedRaw = useSyncExternalStore(
+    subscribePickupChecklist,
+    () => pickupChecklistSnapshot(trip.id),
+    () => '',
+  );
+  const checked = useMemo(() => parsePickupChecklist(checkedRaw), [checkedRaw]);
   const toggle = (key: string, on: boolean) => {
-    setChecked((prev) => {
-      const next = on ? [...prev.filter((k) => k !== key), key] : prev.filter((k) => k !== key);
-      writePickupChecklist(trip.id, next);
-      return next;
-    });
+    const rest = checked.filter((k) => k !== key);
+    writePickupChecklist(trip.id, on ? [...rest, key] : rest);
   };
 
   const terms =

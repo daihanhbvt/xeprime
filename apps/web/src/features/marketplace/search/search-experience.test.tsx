@@ -38,6 +38,27 @@ vi.mock('../hooks/use-destinations', () => ({
 // Desktop: Popover thay vì Drawer. Test mobile riêng ở phần cuối.
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
 
+/**
+ * Nút "vị trí hiện tại": harness không có `QueryClientProvider` nên chặn ở tầng hook. `nextPlace`
+ * là kết quả của lượt đo kế tiếp — `null` thì lượt đo không bao giờ xong (đúng như người dùng chưa
+ * bấm). Phần đo GPS + tra ngược nằm ngoài phạm vi: thứ khoá ở đây là bộ chọn DÙNG kết quả ra sao.
+ */
+const currentPlace = vi.hoisted(() => ({
+  nextPlace: null as import('@/features/locations/hooks/use-current-place').CurrentPlace | null,
+}));
+
+vi.mock('@/features/locations/hooks/use-current-place', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/locations/hooks/use-current-place')>()),
+  useCurrentPlace: () => ({
+    locate: (onSuccess: (place: unknown) => void) => {
+      if (currentPlace.nextPlace) onSuccess(currentPlace.nextPlace);
+    },
+    isLocating: false,
+    errorCode: null,
+    reset: () => undefined,
+  }),
+}));
+
 /** Các instance IntersectionObserver đang sống — dùng để giả lập hero rời khỏi viewport. */
 const observers: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
 
@@ -468,6 +489,61 @@ describe('panel chỉnh sửa', () => {
     expect(within(hero()).queryByRole('button', { name: /không còn khả dụng/i })).toBeNull();
     // Bộ nhớ còn nguyên: màn địa chỉ ở nơi khác vẫn điền sẵn được tỉnh này.
     expect(window.localStorage.getItem('xp.provinceCode')).toContain('24');
+  });
+});
+
+describe('vị trí hiện tại', () => {
+  const HERE = {
+    latitude: 16.0678,
+    longitude: 108.2208,
+    formattedAddress: '12 Bạch Đằng, Phường Hải Châu, Đà Nẵng',
+    provinceCode: '48',
+  };
+
+  afterEach(() => {
+    currentPlace.nextPlace = null;
+  });
+
+  function clickCurrentLocation() {
+    fireEvent.click(within(hero()).getByRole('button', { name: /Địa điểm nhận xe/ }));
+    const panel = screen.getByRole('dialog', { name: 'Bạn muốn thuê xe ở đâu?' });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Truy cập vị trí hiện tại' }));
+    return panel;
+  }
+
+  it('chọn đúng tỉnh đang đứng, và nhớ ĐỊA CHỈ CỤ THỂ để điền sẵn ô giao xe', async () => {
+    currentPlace.nextPlace = { ...HERE, accuracy: 25, precise: true };
+    await renderExperience();
+    clickCurrentLocation();
+
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+    const remembered = JSON.parse(window.localStorage.getItem('xp.deliveryAddress') ?? '{}');
+    expect(remembered).toMatchObject({
+      provinceCode: '48',
+      addressLine: HERE.formattedAddress,
+      latitude: HERE.latitude,
+      longitude: HERE.longitude,
+      locationSource: 'map_pin',
+    });
+  });
+
+  it('sai số lớn (định vị qua IP) vẫn chọn tỉnh nhưng KHÔNG nhớ địa chỉ của một chỗ khác', async () => {
+    currentPlace.nextPlace = { ...HERE, accuracy: 4000, precise: false };
+    await renderExperience();
+    clickCurrentLocation();
+
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+    expect(window.localStorage.getItem('xp.deliveryAddress')).toBeNull();
+  });
+
+  it('khu vực chưa có xe → giữ panel mở, nói thẳng, không đổi bộ lọc', async () => {
+    // `'24'` (Bắc Ninh) hợp lệ nhưng không có trong `DESTINATIONS` — tỉnh chưa có xe nào.
+    currentPlace.nextPlace = { ...HERE, provinceCode: '24', accuracy: 25, precise: true };
+    await renderExperience();
+    const panel = clickCurrentLocation();
+
+    expect(within(panel).getByText(/Khu vực của bạn chưa có xe/)).toBeTruthy();
+    expect(within(hero()).getByRole('button', { name: /Toàn quốc/ })).toBeTruthy();
   });
 });
 

@@ -11,6 +11,8 @@ import { Alert, AutoComplete, Button, Input, Spin } from 'antd';
 import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
+import { CurrentLocationButton } from '@/features/locations/components/CurrentLocationButton';
+import type { CurrentPlace } from '@/features/locations/hooks/use-current-place';
 import { placeMapSrc, usePlaceDetail, usePlaceSearch } from '@/features/locations/hooks/use-places';
 import { fetchDeliveryDistance } from '@/features/rental-policies/api';
 import type { DeliveryDistance } from '@/features/rental-policies/types';
@@ -20,7 +22,12 @@ import {
 } from '@/lib/delivery-address-memory';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { isZeroMoney } from '@/lib/money';
-import { DELIVERY_DISTANCE_STATUS, DELIVERY_MANUAL_REASON, LOCATION_SOURCE } from '@xeprime/types';
+import {
+  DELIVERY_DISTANCE_STATUS,
+  DELIVERY_MANUAL_REASON,
+  LOCATION_SOURCE,
+  type LocationSource,
+} from '@xeprime/types';
 import { cx } from '@/lib/cx';
 import type { PublicListingDetail } from '../types';
 import styles from './DeliveryAddressModal.module.css';
@@ -66,9 +73,12 @@ export function DeliveryAddressModal({
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState(initialAddress ?? '');
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  /** Nguồn của địa chỉ đang chọn — nhớ cùng địa chỉ để lần thuê sau biết nó đã được xác nhận chưa. */
+  const [selectedSource, setSelectedSource] = useState<LocationSource>(LOCATION_SOURCE.MANUAL);
   const [suggestedProvinceCode, setSuggestedProvinceCode] = useState<string | null>(
     listing.provinceCode ?? null,
   );
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
 
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [deliveryResult, setDeliveryResult] = useState<DeliveryDistance | null>(null);
@@ -81,6 +91,8 @@ export function DeliveryAddressModal({
       ? { lat: Number(listing.pickupPoint.latitude), lng: Number(listing.pickupPoint.longitude) }
       : null,
     enabled: open && query.trim().length >= 3,
+    // Ô đang hiện đúng địa chỉ vừa chốt (chọn gợi ý / vị trí hiện tại) ⇒ không tra lại nó.
+    except: selectedAddress,
   });
 
   // Khi modal vừa MỞ, nạp lại địa chỉ ban đầu nếu có — chỉnh state ngay lúc render khi `open` đổi
@@ -88,6 +100,7 @@ export function DeliveryAddressModal({
   const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
+    setLocationNotice(null);
     if (open && initialAddress) {
       setQuery(initialAddress);
       setSelectedAddress(initialAddress);
@@ -116,6 +129,7 @@ export function DeliveryAddressModal({
       setSelectedPlaceId(null);
       setSelectedAddress(typed);
       setSelectedCoords(null);
+      setSelectedSource(LOCATION_SOURCE.MANUAL);
       setSuggestedProvinceCode(listing.provinceCode ?? null);
       calculateDistance(typed, null);
       return;
@@ -125,6 +139,7 @@ export function DeliveryAddressModal({
     if (!item) return;
 
     setSelectedPlaceId(value);
+    setSelectedSource(LOCATION_SOURCE.GOOGLE_PLACE);
     setQuery(item.primaryText + (item.secondaryText ? `, ${item.secondaryText}` : ''));
 
     try {
@@ -148,8 +163,29 @@ export function DeliveryAddressModal({
     } catch {
       // Tra chi tiết lỗi thì dùng tạm text đã chọn
       setSelectedAddress(item.primaryText);
+      setSelectedSource(LOCATION_SOURCE.MANUAL);
       calculateDistance(item.primaryText, null);
     }
+  };
+
+  /*
+   * "Lấy vị trí hiện tại": điền địa chỉ tra ngược + TOẠ ĐỘ đo được, rồi tính phí giao như một gợi ý
+   * vừa chọn. Phép đo sai số lớn (máy tính định vị qua IP) thì KHÔNG điền — địa chỉ tra ra là của
+   * một chỗ khác, và phí giao sẽ tính tới chỗ sai đó. Lúc đó nói rõ sai số và mời gõ địa chỉ.
+   */
+  const handleLocated = (place: CurrentPlace) => {
+    if (!place.precise) {
+      setLocationNotice(t('imprecise', { distance: fmt.distanceKm(place.accuracy / 1000) }));
+      return;
+    }
+    const coords = { lat: place.latitude, lng: place.longitude };
+    setSelectedPlaceId(null);
+    setSelectedAddress(place.formattedAddress);
+    setQuery(place.formattedAddress);
+    setSelectedCoords(coords);
+    setSelectedSource(LOCATION_SOURCE.MAP_PIN);
+    setSuggestedProvinceCode(place.provinceCode ?? listing.provinceCode ?? null);
+    calculateDistance(place.formattedAddress, coords);
   };
 
   // Xác nhận địa chỉ
@@ -178,7 +214,7 @@ export function DeliveryAddressModal({
         latitude: info.lat,
         longitude: info.lng,
         placeId: info.placeId,
-        locationSource: info.placeId ? LOCATION_SOURCE.GOOGLE_PLACE : LOCATION_SOURCE.MANUAL,
+        locationSource: selectedSource,
       };
       rememberDeliveryAddress(mem);
     }
@@ -257,6 +293,12 @@ export function DeliveryAddressModal({
               size="large"
             />
           </AutoComplete>
+          <CurrentLocationButton
+            label={t('useCurrent')}
+            onLocateStart={() => setLocationNotice(null)}
+            onLocated={handleLocated}
+            notice={locationNotice}
+          />
         </div>
 
         {/* Trạng thái đang tải toạ độ hoặc đang tính khoảng cách */}
