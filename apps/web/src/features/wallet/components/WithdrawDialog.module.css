@@ -107,3 +107,16 @@
 .commitment {
   margin-top: var(--xp-space-md);
 }
+
+/* Hàng nút khu tài khoản khách — "Huỷ" viền xám + nút vàng, dồn phải (cùng dáng `BankAccountForm`). */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}
+
+@media (max-width: 640px) {
+  .footer > * {
+    flex: 1 1 0;
+  }
+}

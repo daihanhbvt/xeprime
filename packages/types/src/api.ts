@@ -147,6 +147,8 @@ export const API_ERROR_CODE = {
   MONEY_STEP_1000: 'MONEY_STEP_1000',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
+  /** Khách đã dùng lượt chỉnh sửa đánh giá duy nhất (`reviews.edited_at` khác null). */
+  REVIEW_EDIT_LIMIT: 'REVIEW_EDIT_LIMIT',
   /**
    * Lưu/bật banner trang chủ làm vượt trần số banner HIỂN THỊ CÙNG LÚC (`details.max`). Mã riêng
    * thay vì `VALIDATION_FAILED`: dữ liệu banner hợp lệ, thứ sai là lịch chồng lên các banner khác

@@ -41,20 +41,20 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 const keys = (items: readonly { key: string }[]) => items.map((item) => item.key);
 
 describe('ACCOUNT_NAV — thành phần', () => {
-  it('đúng mười mục, đúng thứ tự', () => {
+  it('đúng bảy mục, đúng thứ tự (design Account 22/10/2026)', () => {
     expect(keys(ACCOUNT_NAV)).toEqual([
       // Giấy tờ & Xác minh nằm TRONG trang hồ sơ (design 22/10/2026), không còn là mục riêng.
       'profile',
-      'becomeOwner',
       'trips',
+      // Số dư, lịch sử thanh toán, tài khoản nhận tiền gộp thành MỘT mục "Quản lý thanh toán".
+      'payments',
       // Xe yêu thích — BRD customer favorites (21/10/2026).
       'favorites',
       'driving',
-      'payments',
-      'balance',
-      'bankAccounts',
-      'changePassword',
-      'deleteAccount',
+      // Đổi mật khẩu + yêu cầu xoá tài khoản gộp thành MỘT mục "Bảo mật tài khoản".
+      'security',
+      // Lối sang trang đăng xe đứng cuối, như design.
+      'becomeOwner',
     ]);
   });
 
@@ -149,9 +149,12 @@ describe('isShopOwner / isCommissionOwner (dùng ở site partner)', () => {
 describe('matchAccountNavKey', () => {
   it('khớp tuyệt đối', () => {
     expect(matchAccountNavKey(ROUTES.ACCOUNT.ROOT)).toBe('profile');
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.BALANCE)).toBe('balance');
+  });
+
+  it('mục gộp "Quản lý thanh toán" sáng ở cả ba trang tiền', () => {
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.BALANCE)).toBe('payments');
     expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS)).toBe('payments');
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.BANK_ACCOUNTS)).toBe('bankAccounts');
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.BANK_ACCOUNTS)).toBe('payments');
   });
 
   it('trang con vẫn sáng mục cha', () => {
@@ -172,7 +175,10 @@ describe('matchAccountNavKey', () => {
     // Ở chế độ `host` href là URL tuyệt đối — không sáng trên một trang của site khách.
     expect(
       matchAccountNavKey(ROUTES.ACCOUNT.ROOT, [
-        { ...ACCOUNT_NAV[1]!, href: 'https://partner.xeprime.vn/register' },
+        {
+          ...ACCOUNT_NAV.find((item) => item.key === 'becomeOwner')!,
+          href: 'https://partner.xeprime.vn/register',
+        },
       ]),
     ).toBeUndefined();
   });

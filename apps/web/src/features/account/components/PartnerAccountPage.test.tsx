@@ -155,8 +155,8 @@ describe('Tài khoản & bảo mật — bốn section', () => {
     expect(screen.getAllByText('0903000001')).toHaveLength(1);
 
     const login = section('login');
-    expect(login.getByText('Đã xác thực')).toBeTruthy();
-    expect(login.getByText('Chưa xác thực')).toBeTruthy();
+    expect(login.getByText('Đã xác minh')).toBeTruthy();
+    expect(login.getByText('Chưa xác minh')).toBeTruthy();
     expect(login.getByRole('button', { name: /Đổi Email/ })).toBeTruthy();
     expect(login.getByRole('button', { name: /Đổi Số điện thoại/ })).toBeTruthy();
   });

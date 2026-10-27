@@ -1,41 +1,40 @@
+/* Thẻ "Đăng xe cho thuê" — design Account / Profile (Figma `19760:56452`). */
 .card {
-  margin-bottom: var(--xp-space-md);
-  border-radius: var(--xp-border-radius);
-  background: linear-gradient(
-    100deg,
-    var(--xp-color-primary-light) 0%,
-    var(--xp-color-bg-container) 62%
-  );
-}
-
-.inner {
   display: flex;
   align-items: center;
   gap: var(--xp-space-md);
-  padding: 18px 20px;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-primary-subtle);
 }
 
 .badge {
   display: grid;
   flex: none;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-primary-active);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-hover);
   font-size: 20px;
 }
 
 .text {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
   min-width: 0;
 }
 
 .title {
+  margin: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
-  font-weight: var(--xp-font-weight-bold);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   /* Tên gian hàng do người dùng đặt — dài bao nhiêu cũng không được đẩy nút ra khỏi thẻ. */
   overflow: hidden;
   text-overflow: ellipsis;
@@ -43,10 +42,10 @@
 }
 
 .body {
-  margin: 2px 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.5;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .action {
@@ -54,9 +53,9 @@
 }
 
 @media (max-width: 640px) {
-  .inner {
+  .card {
     flex-wrap: wrap;
-    padding: 16px;
+    padding: var(--xp-space-md);
   }
 
   .text {
@@ -66,9 +65,5 @@
 
   .action {
     flex-basis: 100%;
-  }
-
-  .action > :global(.ant-btn) {
-    width: 100%;
   }
 }

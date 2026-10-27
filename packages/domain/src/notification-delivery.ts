@@ -1,6 +1,8 @@
 import {
   ANDROID_NOTIFICATION_CHANNEL,
   CHAT_NOTIFICATION_COPY,
+  DRIVER_CENTER_VIEW,
+  DRIVER_CENTER_VIEW_PARAM,
   MESSAGE_TYPE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -132,7 +134,7 @@ export function notificationDeepLink(
       case NOTIFICATION_TARGET_TYPE.DRIVER_TRIP:
         return id ? `/trips/driving/${id}` : '/trips?tab=driving';
       case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
-        return '/account/driving';
+        return `/account/driving?${DRIVER_CENTER_VIEW_PARAM}=${DRIVER_CENTER_VIEW.PARTNERS}`;
       // Backend nhận CẢ id yêu cầu lẫn id đơn cho `/trips/:id` — một chuyến, hai giai đoạn.
       case NOTIFICATION_TARGET_TYPE.BOOKING:
       case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:

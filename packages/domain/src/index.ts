@@ -38,6 +38,7 @@ export {
   formatMoneyVnd,
   formatMoneyVndVi,
   compactMoneyParts,
+  moneyInThousands,
   wholeUnits,
   moneyChangePercent,
   applyDiscountPercent,
@@ -130,6 +131,14 @@ export {
   driverTripDeclinedEmployerCopy,
   type DriverTripReleasedCopyInput,
 } from './driver-trip-copy';
+
+export {
+  driverLinkTone,
+  driverTripBadges,
+  type DriverTripBadge,
+  type DriverTripBadgeKey,
+  type DriverTripBadgeTone,
+} from './driver-trip-badges';
 
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
@@ -270,7 +279,14 @@ export { PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from './pickup-queu
 
 export { buildVietQrUrl } from './vietqr';
 
-export { VIETNAM_BANKS, findBank, bankDisplayName, bankInitials, type VietnamBank } from './banks';
+export {
+  VIETNAM_BANKS,
+  findBank,
+  bankDisplayName,
+  bankInitials,
+  bankLogoUrl,
+  type VietnamBank,
+} from './banks';
 
 /**
  * Hợp nhất tin nhắn của một thread chat — dùng chung web ↔ native.
@@ -402,3 +418,5 @@ export {
   type ServiceInUseDetails,
 } from './service-in-use';
 export { holderNameDiffers, normalizeHolderName } from './licence-holder-name';
+
+export { canShowHostChatOnTrip } from './trip-chat';

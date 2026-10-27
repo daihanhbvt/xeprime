@@ -47,21 +47,21 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 }
 
 describe('resolveAccountNav — MỘT menu khách', () => {
-  it('chín mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
+  it('sáu mục, cùng thứ tự với ACCOUNT_NAV bên web (design Account 22/10/2026)', () => {
     const groups = resolveAccountNav(user(), { hasDriverLinks: true });
     expect(groups.map((g) => g.key)).toEqual(['account']);
     expect(groups[0]?.items.map((i) => i.key)).toEqual([
       // Giấy tờ & Xác minh nằm TRONG tab Tài khoản (design 22/10/2026).
       'profile',
-      'becomeOwner',
       'trips',
+      // Số dư, lịch sử thanh toán, tài khoản nhận tiền gộp thành MỘT mục "Quản lý thanh toán".
+      'payments',
       // Nơi tôi làm tài xế (ADR 0063).
       'driving',
-      'payments',
-      'balance',
-      'bankAccounts',
-      'changePassword',
-      'deleteAccount',
+      // Đổi mật khẩu + yêu cầu xoá tài khoản gộp thành MỘT mục "Bảo mật tài khoản".
+      'security',
+      // Lối sang app Partner đứng cuối, như design.
+      'becomeOwner',
     ]);
   });
 
@@ -78,7 +78,9 @@ describe('resolveAccountNav — MỘT menu khách', () => {
       user({ tenant: tenant({ billingMode: BILLING_MODE.PACKAGE }) }),
       user({ tenant: tenant({ roleKey: TENANT_ROLE.SHOP_STAFF }) }),
     ]) {
-      expect(flattenAccountNav(resolveAccountNav(u, { hasDriverLinks: true }))).toEqual(ACCOUNT_NAV);
+      expect(flattenAccountNav(resolveAccountNav(u, { hasDriverLinks: true }))).toEqual(
+        ACCOUNT_NAV,
+      );
     }
   });
 
@@ -143,7 +145,9 @@ describe('matchAccountNavKey', () => {
   const items = flattenAccountNav(resolveAccountNav(user(), { hasDriverLinks: true }));
 
   it('khớp tuyệt đối', () => {
-    expect(matchAccountNavKey('/account/change-password', items)).toBe('changePassword');
+    expect(matchAccountNavKey('/account/change-password', items)).toBe('security');
+    // Màn yêu cầu xoá đẩy lên từ màn bảo mật — vẫn sáng mục đó.
+    expect(matchAccountNavKey('/account/delete-account', items)).toBe('security');
   });
 
   it('màn con vẫn sáng mục cha', () => {
@@ -152,7 +156,12 @@ describe('matchAccountNavKey', () => {
 
   it('gốc /account KHÔNG nuốt các màn con', () => {
     expect(matchAccountNavKey('/account', items)).toBe('profile');
-    expect(matchAccountNavKey('/account/balance', items)).toBe('balance');
+  });
+
+  it('mục gộp "Quản lý thanh toán" sáng ở cả ba màn tiền', () => {
+    expect(matchAccountNavKey('/account/balance', items)).toBe('payments');
+    expect(matchAccountNavKey('/account/payments', items)).toBe('payments');
+    expect(matchAccountNavKey('/account/bank-accounts', items)).toBe('payments');
   });
 
   it('đường dẫn ngoài khu thì không mục nào sáng', () => {

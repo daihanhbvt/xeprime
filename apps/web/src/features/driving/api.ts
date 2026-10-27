@@ -43,3 +43,6 @@ export const acceptDriverTrip = (id: string): Promise<DriverTripDetail> =>
   apiPost<DriverTripDetail>(`/driver/trips/${id}/accept`);
 export const declineDriverTrip = (id: string): Promise<unknown> =>
   apiPost<unknown>(`/driver/trips/${id}/decline`);
+/** Trả lại chuyến đã nhận — trong cửa sổ `releaseUntil` (sửa ADR 0063 điều 6). Đơn không bị huỷ. */
+export const releaseDriverTrip = (id: string): Promise<unknown> =>
+  apiPost<unknown>(`/driver/trips/${id}/release`);

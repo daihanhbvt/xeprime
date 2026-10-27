@@ -21,6 +21,7 @@ import {
   driverTripDeclinedEmployerCopy,
 } from '@xeprime/domain';
 import {
+  driverReleaseUntil,
   driverRespondByFor,
   ACCOUNT_REALM,
   API_ERROR_CODE,
@@ -977,6 +978,78 @@ export class DriversService {
               targetId: bookingId,
               pushExpiresAt: driverReassignPushExpiresAt(now),
             },
+        tx,
+      );
+    });
+  }
+
+  /**
+   * Tài xế TRẢ LẠI một chuyến đã nhận (sửa ADR 0063 điều 6, 26/10/2026). Chỉ đơn còn `reserved` và
+   * chưa tới giờ nhận — điều kiện nằm trong WHERE để đua với bên thuê đổi người / giao xe thì 409.
+   * Đơn KHÔNG bị huỷ: đi đúng đường "từ chối" (đơn về chưa có tài xế, bên thuê được báo khẩn).
+   * Lượt khép `declined` kèm `acceptedAt` — chính cặp đó phân biệt "trả lại" với "từ chối".
+   */
+  async releaseTrip(userId: string, bookingId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, driverUserId: userId, deletedAt: null },
+        select: {
+          id: true,
+          code: true,
+          tenantId: true,
+          pickupAt: true,
+          driverRespondedAt: true,
+          driver: { select: { name: true } },
+        },
+      });
+      if (!booking) throw tripNotFound();
+      // Cửa sổ trả lại tính như huỷ miễn phí của khách — quá mốc thì phải nhờ bên thuê đổi người.
+      if (
+        !booking.driverRespondedAt ||
+        driverReleaseUntil(booking.driverRespondedAt, booking.pickupAt).getTime() <= now.getTime()
+      ) {
+        throw assignmentStateConflict();
+      }
+
+      const claimed = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          driverUserId: userId,
+          driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+          status: BOOKING_STATUS.RESERVED,
+          pickupAt: { gt: now },
+          deletedAt: null,
+        },
+        data: CLEARED_ASSIGNMENT,
+      });
+      if (claimed.count === 0) throw assignmentStateConflict();
+      await closeOpenAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DECLINED, userId);
+      await markDriverMissingAlertCovered(tx, bookingId, now);
+
+      await this.audit.record(
+        {
+          tenantId: booking.tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+          action: 'booking.driver_release',
+          targetType: AUDIT_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+        },
+        tx,
+      );
+      await this.notifications.emitToTenantMembers(
+        booking.tenantId,
+        {
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
+          ...driverTripDeclinedEmployerCopy({
+            driverName: driverDisplayName(booking.driver?.name),
+            bookingCode: booking.code,
+          }),
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          pushExpiresAt: driverReassignPushExpiresAt(now),
+        },
         tx,
       );
     });

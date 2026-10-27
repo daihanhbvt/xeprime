@@ -117,15 +117,12 @@ describe('TripDetailScreen — bằng chứng bàn giao', () => {
   it.each<CustomerTripDetail['stage']>([
     CUSTOMER_TRIP_STAGE.CANCELLED,
     CUSTOMER_TRIP_STAGE.REJECTED,
-  ])(
-    'chặng %s, chưa có mốc bàn giao: KHÔNG gọi API bằng chứng',
-    async (stage) => {
-      const view = await renderTrip(trip({ stage }));
+  ])('chặng %s, chưa có mốc bàn giao: KHÔNG gọi API bằng chứng', async (stage) => {
+    const view = await renderTrip(trip({ stage }));
 
-      expect(await view.findByText('Toyota Vios 2022')).toBeTruthy();
-      expect(view.evidenceSpy).not.toHaveBeenCalled();
-    },
-  );
+    expect(await view.findByText('Toyota Vios 2022')).toBeTruthy();
+    expect(view.evidenceSpy).not.toHaveBeenCalled();
+  });
 
   it('đã có mốc nhận xe thật: gọi API bằng chứng', async () => {
     const view = await renderTrip(
@@ -133,5 +130,30 @@ describe('TripDetailScreen — bằng chứng bàn giao', () => {
     );
 
     await waitFor(() => expect(view.evidenceSpy).toHaveBeenCalledWith(trip().id));
+  });
+});
+
+/*
+ * Chuyến ĐANG THUÊ phía khách — cùng khuôn với web `TripActiveView`: thẻ trạng thái kèm giờ trả xe,
+ * thông tin người thuê, khối "Cần hỗ trợ?" và KHÔNG có nút huỷ (ADR 0045 điều 1).
+ */
+describe('TripDetailScreen — chuyến đang thuê', () => {
+  it('KHÁCH: thẻ trạng thái + giờ trả xe, người thuê, cần hỗ trợ, không huỷ', async () => {
+    const view = await renderTrip(trip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
+
+    expect(await view.findByText(viTrips.detail.activeTitle)).toBeTruthy();
+    expect(view.getByText(viTrips.detail.activeReturn)).toBeTruthy();
+    expect(view.getByText(viTrips.closed.support.title)).toBeTruthy();
+    expect(view.getByText(viTrips.requestView.noteLabel)).toBeTruthy();
+    expect(view.queryByText(actions.cancel)).toBeNull();
+  });
+
+  it('CHỦ XE: giữ khối cũ, không có "Cần hỗ trợ?"', async () => {
+    const view = await renderTrip(
+      trip({ role: TRIP_ROLE.HOST, stage: CUSTOMER_TRIP_STAGE.ACTIVE }),
+    );
+
+    expect(await view.findByText(viTrips.detail.activeTitle)).toBeTruthy();
+    expect(view.queryByText(viTrips.closed.support.title)).toBeNull();
   });
 });

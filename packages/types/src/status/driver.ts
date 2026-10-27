@@ -233,6 +233,36 @@ export function driverResponseWindowMinutes(assignedAt: Date, pickupAt: Date): n
   );
 }
 
+/**
+ * Hai khu của "Trung tâm Tài xế" (`/account/driving`, Figma `21768:51021`) — tham số URL `view`.
+ * Mặc định (vắng tham số) là `trips`; thông báo lời mời đưa thẳng tới `partners`. Web, app native
+ * và đích thông báo (`@xeprime/domain`) dùng chung chuỗi này.
+ */
+export const DRIVER_CENTER_VIEW_PARAM = 'view';
+export const DRIVER_CENTER_VIEW = {
+  TRIPS: 'trips',
+  PARTNERS: 'partners',
+} as const;
+export type DriverCenterView = (typeof DRIVER_CENTER_VIEW)[keyof typeof DRIVER_CENTER_VIEW];
+
+/**
+ * Trần (giờ) của cửa sổ tài xế được TRẢ LẠI chuyến đã nhận — cùng công thức huỷ miễn phí của
+ * khách (ADR 0066 điều 3): `clamp(20% × ΔT, 15′, trần)` với `ΔT = pickupAt − acceptedAt`, tính
+ * XUÔI từ lúc nhận, kẹp bởi giờ nhận (sửa ADR 0063 điều 6, 26/10/2026).
+ */
+export const DRIVER_RELEASE_WINDOW_MAX_HOURS = 2;
+
+/** Mốc cuối tài xế còn được trả lại chuyến đã nhận lúc `acceptedAt`. Server và client dùng chung. */
+export function driverReleaseUntil(acceptedAt: Date, pickupAt: Date): Date {
+  const leadMinutes = Math.max(0, (pickupAt.getTime() - acceptedAt.getTime()) / MINUTE_MS);
+  const ratio = 0.2;
+  const minutes = Math.min(
+    DRIVER_RELEASE_WINDOW_MAX_HOURS * 60,
+    Math.max(DRIVER_RESPONSE_WINDOW.MIN_MINUTES, Math.round(leadMinutes * ratio)),
+  );
+  return new Date(Math.min(acceptedAt.getTime() + minutes * MINUTE_MS, pickupAt.getTime()));
+}
+
 /** Mốc hết hạn trả lời — giá trị ghi vào `bookings.driver_respond_by`. */
 export function driverRespondByFor(assignedAt: Date, pickupAt: Date): Date {
   return new Date(

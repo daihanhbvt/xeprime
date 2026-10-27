@@ -1,0 +1,84 @@
+/* Hộp thoại "Cập nhật thông tin" — Figma `20063:65207`. Đầu và chân có vạch ngăn, thân lề 32px. */
+
+/* (0,2,0) để thắng padding mặc định `:where(.css-<hash>).ant-modal-container` của AntD. */
+.container.container {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-card);
+}
+
+.header.header {
+  margin: 0;
+  padding: var(--xp-space-lg) 64px var(--xp-space-20) var(--xp-space-xl);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.header :global(.ant-modal-title) {
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.container :global(.ant-modal-close) {
+  top: var(--xp-space-20);
+  right: var(--xp-space-20);
+}
+
+.body.body {
+  padding: var(--xp-space-lg) var(--xp-space-xl);
+}
+
+.footer.footer {
+  margin: 0;
+  padding: var(--xp-space-20) var(--xp-space-xl);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Khoảng cách giữa các ô do `.form` lo — bỏ lề dưới mặc định của Form.Item. */
+.form :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.form :global(.ant-form-item-label > label) {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}
+
+/* Nút chính của bản vẽ rộng cố định 160px — chữ "Xác nhận" không nhảy bề ngang khi đang quay. */
+.confirm {
+  min-width: 160px;
+}
+
+@media (max-width: 480px) {
+  .header.header {
+    padding: var(--xp-space-20) 56px var(--xp-space-md) var(--xp-space-md);
+  }
+
+  .body.body {
+    padding: var(--xp-space-20) var(--xp-space-md);
+  }
+
+  .footer.footer {
+    padding: var(--xp-space-md);
+  }
+
+  .actions > * {
+    flex: 1 1 0;
+  }
+
+  .confirm {
+    min-width: 0;
+  }
+}

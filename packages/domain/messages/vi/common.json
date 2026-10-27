@@ -113,6 +113,7 @@
       "million": "{value}tr",
       "thousand": "{value}k"
     },
+    "thousands": "{value} K",
     "range": "{from} → {to}",
     "shortDateTime": "{time} · {date}",
     "rentalPoint": "{weekday}, {date}",

@@ -6,12 +6,12 @@ import {
   SafetyCertificateOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
-import { Button, Card } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useId } from 'react';
 import { canUpgradeToPackageTrack } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { ZONE, siteHref } from '@/zones';
 import { canUseManagePortal, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -34,6 +34,7 @@ import styles from './ShopEntryCard.module.css';
 export function ShopEntryCard() {
   const t = useTranslations('Account.shopEntry');
   const { data: user, isLoading } = useCurrentUser();
+  const titleId = useId();
 
   // Chưa biết mình là ai thì chưa đoán: hiện thẻ "Đăng xe cho thuê" cho một chủ shop đang chờ
   // `/auth/me` trả về là mời họ làm lại thứ họ đã làm rồi.
@@ -96,24 +97,29 @@ export function ShopEntryCard() {
     },
   }[variant];
 
+  // Hai biến thể MỜI làm một việc mới đi nút gradient; hai biến thể dẫn về nơi quen thuộc thì không.
+  const invite = variant === 'noShop' || variant === 'upgrade';
+
   return (
-    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
-      <div className={styles.inner}>
-        <span className={styles.badge}>{config.icon}</span>
-        <div className={styles.text}>
-          <div className={styles.title}>
-            {/* Tên gian hàng thật đọc rõ hơn nhãn chung — nhưng chỉ khi đã có gian hàng. */}
-            {variant === 'hasShop' ? (user.tenant?.name ?? t('hasShop.title')) : t(`${variant}.title`)}
-          </div>
-          <p className={styles.body}>{t(`${variant}.body`)}</p>
-        </div>
-        <Link href={config.href} className={styles.action}>
-          {/* Hai biến thể MỜI làm một việc mới đi nút chính; hai biến thể dẫn về nơi quen thuộc thì không. */}
-          <Button type={variant === 'noShop' || variant === 'upgrade' ? 'primary' : 'default'}>
-            {t(`${variant}.action`)} <ArrowRightOutlined aria-hidden />
-          </Button>
-        </Link>
+    <section className={styles.card} aria-labelledby={titleId}>
+      <span className={styles.badge}>{config.icon}</span>
+      <div className={styles.text}>
+        <h2 id={titleId} className={styles.title}>
+          {/* Tên gian hàng thật đọc rõ hơn nhãn chung — nhưng chỉ khi đã có gian hàng. */}
+          {variant === 'hasShop'
+            ? (user.tenant?.name ?? t('hasShop.title'))
+            : t(`${variant}.title`)}
+        </h2>
+        <p className={styles.body}>{t(`${variant}.body`)}</p>
       </div>
-    </Card>
+      <CtaButton
+        href={config.href}
+        variant={invite ? 'gradient' : 'neutral'}
+        iconEnd={<ArrowRightOutlined />}
+        className={styles.action}
+      >
+        {t(`${variant}.action`)}
+      </CtaButton>
+    </section>
   );
 }

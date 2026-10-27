@@ -1,0 +1,255 @@
+/* Hộp "Yêu cầu xoá tài khoản" — Figma `21621:68914` (chưa gửi) · `21621:69376` (đang xử lý). */
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-right: var(--xp-space-lg);
+}
+
+.title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.subtitle {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 22px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sectionText {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Hai ô số dư trong một khung viền — tự xuống một cột khi hẹp. */
+.balances {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.balance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  min-width: 0;
+}
+
+.balanceLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+}
+
+.balanceValue {
+  margin: var(--xp-space-2) 0 0;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+.checkIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+.checkOk {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.checkWarn {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+}
+
+/* "Quy trình xử lý yêu cầu" — mảng đỏ nhạt, icon tròn bên trái. */
+.process {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.processIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  font-size: 22px;
+}
+
+.processText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+.processText p {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+}
+
+.processTitle {
+  margin: 0;
+  color: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Đã gửi — mảng xanh thông tin (Figma `21621:69376`). */
+.processing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+.processingIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--xp-space-xs);
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  font-size: 20px;
+}
+
+.processingTitle {
+  margin: 0;
+  color: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.processingText {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Chấm đỏ đầu dòng như bản vẽ — ký hiệu, không phải nội dung. */
+.item {
+  position: relative;
+  padding-left: var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+.item::before {
+  position: absolute;
+  top: 0.6em;
+  left: var(--xp-space-2);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--xp-color-error);
+  content: '';
+}
+
+.acknowledge {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .footer > :global(.ant-btn) {
+    flex: 1 1 0;
+  }
+}

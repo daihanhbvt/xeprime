@@ -162,19 +162,24 @@ export function DriverLicenceVerifier({
           title={booking ? t('verified.bookingTitle') : t('verified.title')}
           body={booking ? null : t('verified.body')}
         />
-        {/* Bằng mới vừa nộp chưa thành — bằng đang dùng vẫn dùng được, nhưng khách phải biết. */}
+        <DriverLicenceDetails licence={verified} />
+        {/*
+          Bằng mới vừa nộp chưa thành — bằng đang dùng vẫn dùng được, nhưng khách phải biết. Một
+          dòng chú thích dưới thông tin bằng, không phải khối cảnh báo: việc chính (bằng hợp lệ)
+          vẫn là thông báo xanh phía trên.
+        */}
         {rejected ? (
-          <Alert
-            type="warning"
-            showIcon
-            title={t('verified.replaceFailed', {
+          <p className={styles.replaceFailed} role="status">
+            <ExclamationCircleFilled className={styles.replaceFailedIcon} aria-hidden="true" />
+            <span>
+              {t('verified.replaceFailed', {
               reason: t(
                 `reasons.${(rejected.rejectionReason ?? 'other') as DriverLicenceRejectReason}`,
               ),
             })}
-          />
+            </span>
+          </p>
         ) : null}
-        <DriverLicenceDetails licence={verified} />
         <div className={styles.footerActions}>
           <Button icon={<EditOutlined aria-hidden="true" />} onClick={() => setReplacing(true)}>
             {t('verified.replace')}

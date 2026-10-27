@@ -1,16 +1,51 @@
+/*
+ * Vỏ khu tài khoản — design Account (Figma `19760:55546`): dải giới thiệu trắng hết bề ngang, rồi
+ * menu 272px + nội dung, canh cùng lề với header chợ (`--xp-market-container-max-width`).
+ */
+.intro {
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.introInner,
 .wrap {
-  /* Bề ngang chuẩn của khu tài khoản khách. */
-  max-width: 1220px;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
   margin: 0 auto;
-  padding: var(--xp-space-xl) var(--xp-space-md)
-    calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
+  padding-inline: var(--xp-space-md);
+}
+
+.introInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-block: var(--xp-space-md);
+}
+
+.introTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h2);
+}
+
+.introSubtitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.wrap {
+  padding-top: var(--xp-space-xl);
+  padding-bottom: calc(var(--xp-space-64) + env(safe-area-inset-bottom));
 }
 
 .body {
   display: grid;
-  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-columns: 272px minmax(0, 1fr);
   align-items: start;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-xl);
 }
 
 .aside {
@@ -24,10 +59,17 @@
   min-width: 0;
 }
 
+@media (max-width: 1100px) {
+  .body {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--xp-space-lg);
+  }
+}
 
 @media (max-width: 900px) {
   .wrap {
     padding-top: var(--xp-space-md);
+    padding-bottom: calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
   }
 
   .body {
@@ -37,5 +79,16 @@
 
   .aside {
     position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .introInner {
+    padding-block: var(--xp-space-sm);
+  }
+
+  /* Trên điện thoại header chợ đã nói "đây là tài khoản" — mô tả chỉ đẩy nội dung xuống. */
+  .introSubtitle {
+    display: none;
   }
 }

@@ -429,6 +429,7 @@
         "edit": "Edit",
         "editLabel": "Edit trip details",
         "pickupAt": "Pick-up",
+        "plate": "Plate number",
         "returnAt": "Return",
         "package": "Package",
         "pickupWish": "Preferred pick-up",
@@ -472,10 +473,16 @@
       "costs": {
         "title": "Rental cost",
         "totalNote": "Includes the items above. The holding payment is deducted from this total; the security deposit is paid separately at pick-up.",
-        "listedNote": "We couldn't load the price for this trip — these are the listed rates. The owner confirms the price when approving the request."
+        "listedNote": "We couldn't load the price for this trip — these are the listed rates. The owner confirms the price when approving the request.",
+        "paid": "Paid",
+        "remaining": "Remaining",
+        "remainingNote": "Pay the remaining amount to the owner before pickup!",
+        "tripTotal": "Total payment",
+        "tripEstimatedTotal": "Estimated total"
       },
       "others": {
         "title": "Other payments",
+        "deposit": "Vehicle deposit",
         "assetBody": "Leave one of the following at pick-up: {assets}. Returned when you bring the car back.",
         "noDepositBody": "This car needs no security deposit at pick-up."
       },

@@ -107,7 +107,14 @@ export function WalletSummaryCard({
               dòng đó thì một nút xám là một ngõ cụt câm — chỗ mà người ta gọi hỗ trợ.
             */}
             {pageVariant ? null : (
-              <Button label={t('withdraw.action')} disabled={!canWithdraw} onPress={onWithdraw} />
+              <Button
+                // Tài khoản khách: "Rút về ngân hàng liên kết" — đúng nhãn web (Figma `19879:74829`).
+                label={t(
+                  scope === WALLET_SCOPE.ACCOUNT ? 'withdraw.actionLinked' : 'withdraw.action',
+                )}
+                disabled={!canWithdraw}
+                onPress={onWithdraw}
+              />
             )}
             {/*
               Ví bị khoá thì dải cảnh báo ở ĐẦU THẺ đã nói rồi — khác web, nơi dải nằm trong thẻ

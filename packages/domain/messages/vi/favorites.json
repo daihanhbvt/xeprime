@@ -1,6 +1,7 @@
 {
   "page": {
-    "title": "Xe yêu thích"
+    "title": "Xe yêu thích",
+    "subtitle": "Danh sách các mẫu xe bạn đã lưu để dễ dàng theo dõi và đặt chuyến bất cứ lúc nào."
   },
   "tabs": {
     "label": "Loại xe",
@@ -19,8 +20,7 @@
     "servicesLabel": "Dịch vụ của xe",
     "serviceLinkAria": "Xem {name} với dịch vụ {service}",
     "highlightsLabel": "Tiện ích của xe",
-    "savedAt": "Đã lưu {dateTime}",
-    "viewDetail": "Xem chi tiết"
+    "savedAt": "Đã lưu {dateTime}"
   },
   "empty": {
     "car": "Chưa có ô tô nào trong danh sách yêu thích",

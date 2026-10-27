@@ -1,211 +1,212 @@
-.card {
-  border-radius: var(--xp-border-radius);
-}
-
-.card :global(.ant-card-body) {
-  padding: 0;
-}
-
-.inner {
-  padding: var(--xp-space-xl);
-}
-
-.cardHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-  padding-bottom: var(--xp-space-lg);
-  border-bottom: 1px solid var(--xp-color-border-subtle);
-}
-
-/*
- * Cột hành động ở góc phải: nút sửa hồ sơ, rồi lối tắt số dư.
- *
- * Xếp DỌC và canh phải, không nằm ngang: viên thuốc số dư rộng theo con số bên trong, và đặt
- * cạnh nút sửa thì một số dư tám chữ số sẽ đẩy nút ra khỏi mép thẻ trên màn laptop.
- */
-.cardHeadActions {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--xp-space-sm);
-}
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  color: var(--xp-color-primary-active);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.title {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
-  font-weight: var(--xp-font-weight-bold);
-}
-
-.description {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: 1.5;
-}
+/* Thẻ "Thông tin tài khoản" — design Account / Profile (Figma `21621:65695`). */
 
 .profileGrid {
   display: grid;
-  grid-template-columns: minmax(180px, 0.72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(200px, 365px) minmax(0, 1fr);
+  align-items: center;
   gap: var(--xp-space-xl);
-  padding: var(--xp-space-xl) 0;
 }
 
 .summary {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding-right: var(--xp-space-xl);
-  border-right: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-12);
+  min-width: 0;
 }
 
 .avatar {
   flex: none;
   background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
   font-size: var(--xp-font-size-h2);
 }
 
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
 .name {
-  margin-top: var(--xp-space-md);
+  margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
-  font-weight: var(--xp-font-weight-bold);
-  line-height: 1.3;
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
   overflow-wrap: anywhere;
 }
 
-.accountLabel {
-  margin-top: var(--xp-space-xs);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+.role {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
+
+/* ── Hai kênh liên lạc ────────────────────────────────────────────────── */
 
 .details {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+}
+
+.detailIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+}
+
+.detailBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+.detailLabel {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.detailValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  min-width: 0;
   margin: 0;
 }
 
 /*
- * Cột nhãn rộng ĐÚNG bằng nhãn dài nhất ("Số điện thoại"), không phải một tỉ lệ của hàng.
- *
- * Bản trước chia `0.8fr / 1.2fr`, nên nhãn — một chuỗi cố định dài ~110px — chiếm 40% chiều
- * rộng hàng và ép giá trị vào phần còn lại: một địa chỉ gmail bình thường bị ngắt làm hai dòng
- * giữa chừng. Con số cứng giữ hai hàng thẳng cột với nhau (mỗi `.detailRow` là một grid riêng
- * nên `max-content` sẽ cho hai hàng hai bề rộng khác nhau).
+ * Giá trị liên lạc và nhãn "chưa có" nằm cùng một chỗ trong hàng, nhưng không cùng sức nặng:
+ * một địa chỉ thật là dữ liệu, còn "Chưa có email" là một khoảng trống cần lấp.
  */
-.detailRow {
-  display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  align-items: center;
-  gap: var(--xp-space-md);
-  padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-}
-
-.detailRow dt {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.detailRow dd {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--xp-space-sm);
+.contactValue {
   min-width: 0;
-  margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   overflow-wrap: anywhere;
 }
 
-.verified {
-  flex: none;
-  margin: 0;
+.contactEmpty {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: 22px;
 }
 
 /*
- * ĐÃ xác thực chỉ còn dấu tích, KHÔNG kèm chữ: đó là trạng thái bình thường, và một cái nhãn
- * đầy đủ cho mọi hàng đúng thì hút mất chỗ của chính dữ liệu (email dài bị ngắt hai dòng). Hàng
- * CHƯA xác thực thì ngược lại — nó là việc còn phải làm nên vẫn giữ nguyên nhãn có chữ.
- * Tên đọc được vẫn còn qua `aria-label` + tooltip, nên trình đọc màn hình không mất gì.
+ * Nhãn xác minh — viên thuốc viền mảnh của bản vẽ. Đã xác minh: xanh; chưa: cam — nó là việc còn
+ * phải làm nên phải nổi hơn trạng thái bình thường.
  */
-.detailRow dd .verifiedMark {
+.badge {
   flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--xp-color-success);
-  color: #fff;
-  font-size: 10px;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border: 1px solid;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
 }
 
-.form {
-  padding-top: var(--xp-space-lg);
-  border-top: 1px solid var(--xp-color-border-subtle);
+.badgeOk {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
 }
 
-.fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--xp-space-md);
+.badgeTodo {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
 }
 
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--xp-space-sm);
+/* "Thay đổi"/"Thêm" — chữ vàng trơn sát lề phải, không chiếm chỗ của giá trị. */
+.detailAction {
+  flex: none;
+  padding: var(--xp-space-xs) 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
 }
+
+.detailAction:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.detailAction:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* ── Ghi chú đăng nhập ────────────────────────────────────────────────── */
 
 .securityNote {
   display: flex;
   align-items: flex-start;
-  gap: var(--xp-space-sm);
-  margin-top: var(--xp-space-lg);
+  gap: var(--xp-space-12);
   padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-info-bg);
 }
 
 .securityIcon {
-  margin-top: 2px;
-  color: var(--xp-color-info);
-  font-size: var(--xp-font-size-body-lg);
+  flex: none;
+  margin-top: 1px;
+  color: var(--xp-color-info-strong);
+  font-size: 20px;
 }
 
 .securityTitle {
   margin: 0;
-  color: var(--xp-color-text);
+  color: var(--xp-color-info-strong);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
 }
 
 .securityDescription {
   margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.5;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Nút phụ của bản vẽ (`CtaButton` neutral): chữ xám đậm như "Hủy" của hộp thoại. */
+.updateButton {
+  color: var(--xp-color-text-secondary);
 }
 
 .center {
@@ -217,77 +218,25 @@
   text-align: center;
 }
 
-@media (max-width: 640px) {
-  .inner {
-    padding: var(--xp-space-lg);
-  }
-
-  .cardHead {
-    flex-direction: column;
-  }
-
-  /* Trên điện thoại hàng hành động trải ngang cả thẻ — nút chạm được, viên thuốc vẫn ôm nội dung. */
-  .cardHeadActions {
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .cardHeadActions > :global(.ant-btn) {
-    width: 100%;
-  }
-
-  .profileGrid,
-  .fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+@media (max-width: 900px) {
   .profileGrid {
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--xp-space-lg);
   }
 
+  /* Màn hẹp: ảnh cạnh tên, không chiếm cả một khối chỉ cho một tấm ảnh. */
   .summary {
-    padding-right: 0;
-    padding-bottom: var(--xp-space-lg);
-    border-right: 0;
-    border-bottom: 1px solid var(--xp-color-border-subtle);
+    flex-direction: row;
+    align-items: center;
   }
+}
 
+@media (max-width: 640px) {
   .detailRow {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--xp-space-xs);
+    align-items: flex-start;
   }
 
-  .detailRow dd {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .formActions {
-    flex-direction: column-reverse;
-  }
-
-  .formActions > :global(.ant-btn) {
+  .updateButton {
     width: 100%;
   }
-}
-
-/*
- * Giá trị liên lạc và nhãn "chưa có" nằm cùng một chỗ trong hàng, nhưng không cùng sức nặng:
- * một địa chỉ thật là dữ liệu, còn "Chưa có email" là một khoảng trống cần lấp.
- */
-.contactValue {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.contactEmpty {
-  color: var(--xp-color-text-tertiary);
-  font-weight: var(--xp-font-weight-regular);
-  font-style: italic;
-}
-
-/* Nút "Đổi"/"Thêm" là hành động phụ trong hàng — sát lề phải, không chiếm chỗ của giá trị. */
-.detailRow dd > :global(.ant-btn-link) {
-  flex: none;
-  padding-inline: 0;
 }

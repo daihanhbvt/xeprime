@@ -50,6 +50,14 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({
   useNextFromCurrentPath: () => () => '/trips',
 }));
 
+/** Nút nhắn tin trên thẻ mở hội thoại qua React Query — có test riêng; ở đây chỉ cần nó có mặt. */
+vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
+  ChatWithShopButton: ({ label }: { label?: string }) => (
+    <button type="button" aria-label={label}>
+      chat
+    </button>
+  ),
+}));
 
 const TRIP = {
   id: 'RQ1',
@@ -116,8 +124,13 @@ describe('Danh sách chuyến', () => {
     // Trang chỉ có 1 thẻ nhưng tab phải nói 3 — đếm ở client là sai ngay khi có nhiều hơn một
     // trang. Và chỉ hai tab: một tab cho mỗi chặng là màn cũ.
     expect(screen.getAllByRole('tab')).toHaveLength(2);
-    expect(screen.getByText('Chuyến hiện tại (3)')).toBeTruthy();
-    expect(screen.getByText('Lịch sử chuyến (1)')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Chuyến hiện tại (3)' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Lịch sử chuyến (1)' })).toBeTruthy();
+  });
+
+  it('tiêu đề trang là h1 của thẻ "Chuyến của tôi"', () => {
+    renderView();
+    expect(screen.getByRole('heading', { level: 1, name: 'Chuyến của tôi' })).toBeTruthy();
   });
 
   it('thẻ chuyến hiện tổng tiền và cách nhận xe', () => {
@@ -126,6 +139,11 @@ describe('Danh sách chuyến', () => {
     // Thẻ giờ ghép dịch vụ + cách nhận xe: "Tự lái · Giao xe tận nơi" (17/08).
     expect(screen.getByText(/Giao xe tận nơi/)).toBeTruthy();
     expect(screen.getByText(/2\.772\.000/)).toBeTruthy();
+    // Mã chuyến, biển số, chủ xe và lối nhắn tin — Figma "Vehicle Card".
+    expect(screen.getByText('#XP-0042')).toBeTruthy();
+    expect(screen.getByText('43A-123.45')).toBeTruthy();
+    expect(screen.getByText('Gian hàng Minh Tuấn')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nhắn tin cho chủ xe' })).toBeTruthy();
   });
 
   it('chuyến chưa có giá chốt nói `Chờ báo giá`, không hiện 0 đ', () => {
@@ -203,12 +221,13 @@ describe('Danh sách chuyến', () => {
    * Wave 11.1 — `<Button>` lồng trong `<Link>` cho trình đọc màn hình hai đích cho cùng một
    * hành động, và bàn phím phải Tab hai lần để đi qua nó.
    */
-  it('hành động "Xem chi tiết" là MỘT liên kết, không phải nút lồng trong liên kết', () => {
+  it('lối vào chi tiết là MỘT liên kết (tên xe), không phải nút lồng trong liên kết', () => {
     renderView();
-    const link = screen.getByRole('link', { name: 'Xem chi tiết' });
+    const link = screen.getByRole('link', { name: 'Toyota Camry 2024' });
     expect(link.getAttribute('href')).toBe('/trips/RQ1');
     expect(link.querySelector('button')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Xem chi tiết' })).toBeNull();
+    // Nút nhắn tin là đích RIÊNG, đứng ngoài liên kết.
+    expect(screen.getByRole('button', { name: 'Nhắn tin cho chủ xe' }).closest('a')).toBeNull();
   });
 
   it('đang tải lần đầu thì báo bận, không hiện "chưa có chuyến nào"', () => {
@@ -250,7 +269,7 @@ describe('TripsView — chỉ chuyến đi thuê', () => {
     nav.params = new URLSearchParams('role=host&ref=mail');
     renderView();
 
-    fireEvent.click(screen.getByText(/Lịch sử chuyến/));
+    fireEvent.click(screen.getByRole('tab', { name: /Lịch sử chuyến/ }));
 
     const [href] = nav.replace.mock.calls.at(-1) as [string];
     expect(href.startsWith(`${ROUTES.TRIPS}?`)).toBe(true);

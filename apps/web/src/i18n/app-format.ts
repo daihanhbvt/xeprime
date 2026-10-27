@@ -3,7 +3,13 @@ import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xe
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { nowInAppTz, rentalDurationParts, toAppTz, type Dayjs } from '@/lib/datetime';
 import { pickupWishParts, type PickupWish } from '@/lib/long-term';
-import { compactMoneyParts, formatMoneyVnd, wholeUnits, type MoneySeparators } from '@/lib/money';
+import {
+  compactMoneyParts,
+  formatMoneyVnd,
+  moneyInThousands,
+  wholeUnits,
+  type MoneySeparators,
+} from '@/lib/money';
 import { remainingKm as remainingKmParts } from '@/lib/odometer';
 import { FORMAT_LOCALE, type AppLocale } from './config';
 import type { DomainLabel } from './domain';
@@ -31,6 +37,8 @@ export interface AppFormat {
    * số là GIÁ khách dùng để so hai lựa chọn; xem docblock `compactMoneyParts`.
    */
   moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
+  /** Tính bằng nghìn: `1.350 K` (vi) · `1,350 K` (en). Dưới 1.000đ rơi về `money`. */
+  moneyThousands: (value: MoneyString | null | undefined) => string;
   /** `1.200.000 ₫/ngày` · `1,200,000 ₫/day`. `null` ⇒ "Miễn phí"/"Free". */
   pricePerDay: (value: MoneyString | null | undefined) => string;
   pricePerHour: (value: MoneyString | null | undefined) => string;
@@ -286,6 +294,11 @@ export function createAppFormat(
       const parts = compactMoneyParts(value, separators, opts?.price === true ? 2 : 1);
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}`, { value: parts.value });
+    },
+    moneyThousands: (value) => {
+      if (value === null || value === undefined || value === '') return empty;
+      const thousands = moneyInThousands(value, separators);
+      return thousands ? t('units.thousands', { value: thousands }) : money(value);
     },
     pricePerDay: (value) => priceWithSuffix(value, 'perDay'),
     pricePerHour: (value) => priceWithSuffix(value, 'perHour'),

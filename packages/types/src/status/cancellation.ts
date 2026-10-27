@@ -134,6 +134,19 @@ export const CANCELLATION_REASON_CATEGORY_META: Readonly<
   [CANCELLATION_REASON_CATEGORY.OTHER]: { label: 'Lý do khác', color: STATUS_COLOR.NEUTRAL },
 };
 
+/**
+ * Tập con nhóm lý do KHÁCH được chọn khi tự huỷ chuyến của mình. Các nhóm còn lại mô tả lý do
+ * phía chủ xe (xe hỏng, khách không đáp ứng…) — khách chọn chúng là tự khai sai.
+ * Chỉ mô tả VÌ SAO; ai chịu trách nhiệm vẫn do server suy (ADR 0045 điều 2).
+ */
+export const CUSTOMER_CANCELLATION_REASON_VALUES = [
+  CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+  CANCELLATION_REASON_CATEGORY.SCHEDULE_CONFLICT,
+  CANCELLATION_REASON_CATEGORY.OTHER,
+] as const satisfies readonly CancellationReasonCategory[];
+
+export type CustomerCancellationReason = (typeof CUSTOMER_CANCELLATION_REASON_VALUES)[number];
+
 /** Nhóm nào bắt buộc kèm chữ giải thích — `other` không nói được gì nếu đứng một mình. */
 export function cancellationReasonNeedsText(category: CancellationReasonCategory): boolean {
   return category === CANCELLATION_REASON_CATEGORY.OTHER;

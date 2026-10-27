@@ -3,19 +3,11 @@
 import { WarningOutlined } from '@ant-design/icons';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
-import {
-  CUSTOMER_TRIP_FILTER,
-  TENANT_ROLE,
-  TRIP_ROLE,
-  WITHDRAWAL_STATUS_HOLDING_FUNDS,
-  type WithdrawalStatus,
-} from '@xeprime/types';
+import { TENANT_ROLE } from '@xeprime/types';
 
-import { useTrips } from '@/features/trips/hooks';
-import { useWalletSummary, useWithdrawals } from '@/features/wallet/hooks';
-import { walletScopeFor } from '@/features/wallet/wallet-scope';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppFormat } from '@/i18n/use-app-format';
+
+import { useAccountDeletionImpact } from '../hooks/use-account-deletion';
 
 import styles from './AccountDeletionImpact.module.css';
 
@@ -47,36 +39,13 @@ import styles from './AccountDeletionImpact.module.css';
 export function AccountDeletionImpact() {
   const t = useTranslations('Account.deletionImpact');
   const fmt = useAppFormat();
-  const { data: user } = useCurrentUser();
-
-  // Nhân viên gian hàng không có ví (`null`) — không hỏi, khối số dư tự ẩn.
-  const scope = walletScopeFor(user);
-  const hasWallet = Boolean(user) && scope !== null;
-  const wallet = useWalletSummary(scope ?? 'account', { enabled: hasWallet });
-  const withdrawals = useWithdrawals(scope ?? 'account', { enabled: hasWallet });
-  /*
-   * Chuyến ĐI THUÊ, không phải chuyến cho thuê: đơn khách đặt xe của gian hàng thuộc về pháp
-   * nhân và không đi theo tài khoản cá nhân này. Trang 1 là đủ — chỉ cần `counts`, không cần
-   * danh sách.
-   */
-  const renterTrips = useTrips(CUSTOMER_TRIP_FILTER.CURRENT, 1, TRIP_ROLE.RENTER);
+  // Số liệu (ví, lệnh rút, chuyến chưa khép) đọc chung với hộp thoại của site khách.
+  const { user, wallet, holding, openTrips, hasMoney, loading, failed } =
+    useAccountDeletionImpact();
 
   if (!user) return null;
 
   const isOwner = user.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-  const queries = [wallet, withdrawals, renterTrips];
-  const loading = queries.some((q) => q.isLoading);
-  const failed = queries.some((q) => q.isError);
-
-  const holding = (withdrawals.data ?? []).filter((row) =>
-    (WITHDRAWAL_STATUS_HOLDING_FUNDS as readonly string[]).includes(row.status as WithdrawalStatus),
-  ).length;
-  const openTrips = renterTrips.data?.counts.current ?? 0;
-  // Còn nghĩa vụ tiền = còn thứ phải đối soát TRƯỚC khi đóng, không phải sau.
-  const hasMoney =
-    Number(wallet.data?.available ?? 0) > 0 ||
-    Number(wallet.data?.pending ?? 0) > 0 ||
-    holding > 0;
 
   return (
     <section className={styles.block} aria-live="polite">
@@ -101,15 +70,15 @@ export function AccountDeletionImpact() {
                 <dd className={styles.value}>{user.tenant.name}</dd>
               </div>
             ) : null}
-            {wallet.data ? (
+            {wallet ? (
               <>
                 <div className={styles.fact}>
                   <dt className={styles.label}>{t('balance')}</dt>
-                  <dd className={styles.value}>{fmt.money(wallet.data.available)}</dd>
+                  <dd className={styles.value}>{fmt.money(wallet.available)}</dd>
                 </div>
                 <div className={styles.fact}>
                   <dt className={styles.label}>{t('pending')}</dt>
-                  <dd className={styles.value}>{fmt.money(wallet.data.pending)}</dd>
+                  <dd className={styles.value}>{fmt.money(wallet.pending)}</dd>
                 </div>
               </>
             ) : null}

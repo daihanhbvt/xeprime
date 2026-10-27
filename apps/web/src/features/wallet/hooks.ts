@@ -26,11 +26,16 @@ export function useWalletSummary(scope: WalletScope, options: { enabled?: boolea
   });
 }
 
-export function useWalletEntries(scope: WalletScope, page: number) {
+export function useWalletEntries(
+  scope: WalletScope,
+  page: number,
+  options: { enabled?: boolean } = {},
+) {
   const params = walletEntriesParams(page);
   return useQuery({
     queryKey: queryKeys.wallet.entries(scope, params),
     queryFn: () => fetchWalletEntries(scope, params),
+    enabled: options.enabled ?? true,
     // Giữ trang cũ trong lúc tải trang mới — sổ tiền nhấp nháy trắng mỗi lần lật là khó đọc.
     placeholderData: keepPreviousData,
   });
@@ -55,6 +60,10 @@ function useInvalidateWallet(scope: WalletScope) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.summary(scope) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.withdrawals(scope) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+    // Lệnh rút là một dòng của "Lịch sử giao dịch" phía khách.
+    if (scope === 'account') {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accountTransactions.all });
+    }
   };
 }
 

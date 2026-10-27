@@ -31,3 +31,47 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
+
+/*
+ * Dáng `account` — "Profile Heading" của Figma `19879:74829`: đầu thẻ chữ 18px nửa đậm, mô tả
+ * xám, gạch mảnh ngăn với nội dung; nút căn giữa theo chiều dọc với khối chữ.
+ */
+.account {
+  gap: var(--xp-space-20);
+}
+
+.account .head {
+  align-items: center;
+  padding-bottom: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.account .title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.account .subtitle {
+  margin-top: var(--xp-space-2);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Máy hẹp: nút Thêm/Đổi đứng cạnh tiêu đề thay vì rơi xuống dòng riêng. */
+@media (max-width: 640px) {
+  .head {
+    flex-wrap: nowrap;
+  }
+
+  .head > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .head > :last-child {
+    flex: none;
+  }
+}

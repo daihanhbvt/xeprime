@@ -57,6 +57,11 @@ export interface AccountNavItem {
   readonly target: NavTarget;
   /** Huy hiệu việc CẦN LÀM — đếm do server trả, chỉ mục khai mới gắn. */
   readonly badge?: AccountNavBadge;
+  /**
+   * Các đường KHÁC cũng thuộc mục này — mục gộp ("Quản lý thanh toán" gồm số dư, lịch sử thanh
+   * toán, tài khoản nhận tiền) vẫn sáng ở mọi màn của nó. Cùng trường `matches` bên web.
+   */
+  readonly matches?: readonly Href[];
 }
 
 export interface AccountNavGroup {
@@ -92,44 +97,33 @@ const DRIVING: AccountNavItem = {
   badge: ACCOUNT_NAV_BADGE.DRIVER_INVITES,
 };
 
-const CHANGE_PASSWORD: AccountNavItem = {
-  key: 'changePassword',
-  labelKey: 'account.changePassword',
+/**
+ * "Bảo mật tài khoản" — MỘT mục (design Account / Security 22/10/2026, web `SECURITY` của
+ * `account-nav.ts`): màn đổi mật khẩu mang thêm lối gửi YÊU CẦU xoá tài khoản (support case, nền
+ * tảng xử lý tay). Màn yêu cầu xoá vẫn là một màn riêng đẩy lên từ đó, nên nó thuộc mục này.
+ */
+const SECURITY: AccountNavItem = {
+  key: 'security',
+  labelKey: 'account.security',
   href: ROUTES.account.changePassword(),
   icon: 'lock-closed-outline',
   target: NAV_TARGET.SCREEN,
+  matches: [ROUTES.account.deleteAccount()],
 };
 
-const BALANCE: AccountNavItem = {
-  key: 'balance',
-  labelKey: 'account.balance',
+/**
+ * "Quản lý thanh toán" — MỘT mục cho ba màn tiền của tài khoản khách (design Account 22/10/2026,
+ * web `PAYMENTS` của `account-nav.ts`): tab "Tài khoản thanh toán" (số dư + tài khoản nhận tiền,
+ * `/account/balance`) và tab "Lịch sử giao dịch" (`/account/payments`). Hai sổ vẫn khác nhau —
+ * ví là tiền XePrime nợ mình (ADR 0033), lịch sử là tiền mình đã trả đi; chỉ cửa vào là một.
+ */
+const PAYMENTS: AccountNavItem = {
+  key: 'payments',
+  labelKey: 'account.paymentsHub',
   href: ROUTES.account.balance(),
   icon: 'wallet-outline',
   target: NAV_TARGET.SCREEN,
-};
-
-const BANK_ACCOUNTS: AccountNavItem = {
-  key: 'bankAccounts',
-  labelKey: 'account.bankAccounts',
-  href: ROUTES.account.bankAccounts(),
-  icon: 'card-outline',
-  target: NAV_TARGET.SCREEN,
-};
-
-const PAYMENTS: AccountNavItem = {
-  key: 'payments',
-  labelKey: 'account.payments',
-  href: ROUTES.account.payments(),
-  icon: 'card-outline',
-  target: NAV_TARGET.SCREEN,
-};
-
-const DELETE_ACCOUNT: AccountNavItem = {
-  key: 'deleteAccount',
-  labelKey: 'account.deleteAccount',
-  href: ROUTES.account.deleteAccount(),
-  icon: 'trash-outline',
-  target: NAV_TARGET.SCREEN,
+  matches: [ROUTES.account.payments(), ROUTES.account.bankAccounts()],
 };
 
 /**
@@ -151,18 +145,15 @@ const BECOME_OWNER: AccountNavItem = {
 /** Menu tài khoản KHÁCH — cùng thứ tự với `ACCOUNT_NAV` bên web. */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   // Giấy tờ & Xác minh nằm TRONG tab Tài khoản, ngay dưới hồ sơ (design 22/10/2026) — không còn
-  // là mục riêng, cùng cách với web.
+  // là mục riêng, cùng cách với web. Lối sang trang đăng xe đứng cuối, như design.
   PROFILE,
-  BECOME_OWNER,
   TRIPS,
-  DRIVING,
+  // Số dư, lịch sử thanh toán, tài khoản nhận tiền gộp thành MỘT mục (web 22/10/2026).
   PAYMENTS,
-  // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5), và tài
-  // khoản nhận tiền là nơi khai số để rút nó ra.
-  BALANCE,
-  BANK_ACCOUNTS,
-  CHANGE_PASSWORD,
-  DELETE_ACCOUNT,
+  DRIVING,
+  // Đổi mật khẩu + yêu cầu xoá tài khoản gộp thành MỘT mục (web 22/10/2026).
+  SECURITY,
+  BECOME_OWNER,
 ];
 
 /**
@@ -203,7 +194,8 @@ export function resolveAccountNav(
 export function showsDeleteAccountCard(user: CurrentUser | null | undefined): boolean {
   if (!user) return false;
   return !flattenAccountNav(resolveAccountNav(user)).some(
-    (item) => item.key === DELETE_ACCOUNT.key,
+    // Mục "Bảo mật tài khoản" mang lối yêu cầu xoá — có nó trong menu là đã có lối vào.
+    (item) => item.key === SECURITY.key,
   );
 }
 
@@ -224,7 +216,7 @@ export function navItemPath(href: Href): string {
  * Mục đang mở theo đường dẫn hiện tại — cùng luật với `matchAccountNavKey` bên web.
  *
  * Khớp tuyệt đối trước, không thì lấy mục có đường dẫn là tiền tố dài nhất (để `/trips/abc` vẫn
- * sáng "Chuyến của tôi"). `/account` chỉ khớp tuyệt đối — nếu không thì mọi màn con đều dính vào
+ * sáng "Chuyến của tôi"), xét cả `matches` của mục gộp. `/account` chỉ khớp tuyệt đối — nếu không thì mọi màn con đều dính vào
  * nó và menu luôn chỉ sai chỗ đứng.
  */
 export function matchAccountNavKey(
@@ -235,10 +227,12 @@ export function matchAccountNavKey(
   let best: { key: string; length: number } | undefined;
 
   for (const item of items) {
-    const href = navItemPath(item.href);
-    const isMatch = pathname === href || (href !== root && pathname.startsWith(`${href}/`));
-    if (isMatch && (!best || href.length > best.length)) {
-      best = { key: item.key, length: href.length };
+    for (const candidate of [item.href, ...(item.matches ?? [])]) {
+      const href = navItemPath(candidate);
+      const isMatch = pathname === href || (href !== root && pathname.startsWith(`${href}/`));
+      if (isMatch && (!best || href.length > best.length)) {
+        best = { key: item.key, length: href.length };
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Form } from 'antd';
+import { Form, type FormProps } from 'antd';
 import type { FormHTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
@@ -12,6 +12,13 @@ interface DialogFormProps extends Omit<FormHTMLAttributes<HTMLFormElement>, 'chi
   children: ReactNode;
   /** Độ rộng cột nhãn desktop; mobile luôn tự chuyển về nhãn nằm trên ô nhập. */
   labelWidth?: LabelWidth;
+  /**
+   * `top`: nhãn luôn nằm TRÊN ô nhập, cả ở desktop — hộp thoại dáng v2 của bề mặt khách (Figma
+   * Account `19973:50994`). Mặc định `side` giữ cột nhãn của các khu quản lý.
+   */
+  labelPosition?: 'side' | 'top';
+  /** Dấu bắt buộc — vd `trailingRequiredMark` để `*` đứng SAU nhãn như bản vẽ. */
+  requiredMark?: FormProps['requiredMark'];
 }
 
 /**
@@ -25,13 +32,27 @@ export function DialogForm({
   children,
   className,
   labelWidth = 'md',
+  labelPosition = 'side',
+  requiredMark,
   ...formProps
 }: DialogFormProps) {
+  const top = labelPosition === 'top';
   return (
-    <Form component={false} layout="horizontal" labelAlign="left" labelWrap colon={false}>
+    <Form
+      component={false}
+      layout={top ? 'vertical' : 'horizontal'}
+      labelAlign="left"
+      labelWrap
+      colon={false}
+      requiredMark={requiredMark}
+    >
       <form
         {...formProps}
-        className={cx(styles.form, styles[`label-${labelWidth}`], className)}
+        className={cx(
+          top ? styles.top : styles.form,
+          !top && styles[`label-${labelWidth}`],
+          className,
+        )}
         noValidate={formProps.noValidate ?? true}
       >
         {children}

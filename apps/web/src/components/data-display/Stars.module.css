@@ -14,6 +14,12 @@
 .stars.lg {
   gap: var(--xp-space-xs);
   font-size: 20px;
+}
+
+/* Khối đánh giá chuyến đi — Figma `21621:68524`: sao 28px, cách nhau 8px. */
+.stars.xl {
+  gap: var(--xp-space-sm);
+  font-size: 28px;
   letter-spacing: 0;
 }
 

@@ -1,45 +1,228 @@
+/* Tab "Lịch sử giao dịch" — Figma Account / History (`21695:27193`). */
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-12);
+  min-width: 0;
 }
 
-/*
- * Bốn con số trên một hàng ở desktop, tự xuống hàng ở máy hẹp. `auto-fit` thay vì số cột cố
- * định: thêm/bớt một chỉ số về sau không phải sửa breakpoint.
- */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius-lg);
+/* `21695:45836`: chip trạng thái bên trái, ô khoảng ngày bên phải, đệm dưới 8. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  padding-bottom: var(--xp-space-sm);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-12);
+}
+
+/* "_Card Filter": viên thuốc viền xám nhạt, bóng xs. */
+.chip {
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-bg-container);
-  gap: var(--xp-space-md);
-}
-
-.link {
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.muted {
-  margin: 0;
+  box-shadow: 0 1px 1px rgba(10, 13, 18, 0.05);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-primary-border);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Chip đang chọn: nền vàng rất nhạt (primary-25), viền + chữ vàng. */
+.chipActive,
+.chipActive:hover {
+  border-color: var(--xp-color-primary);
+  background: color-mix(in srgb, var(--xp-color-primary) 6%, var(--xp-color-bg-container));
+  color: var(--xp-color-primary);
+}
+
+/* "Chọn khoảng thời gian" — rộng 235 ở desktop, bo 12, viền xám 300. */
+.range {
+  width: 260px;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.15s ease;
+}
+
+/* Đang tải trang/bộ lọc mới — giữ dòng cũ nhưng mờ đi, không nhảy về khung chờ. */
+.listBusy {
+  opacity: 0.6;
+}
+
+/* `21695:41670`: chi tiết co giãn · số tiền · cột trạng thái 140 canh phải; gạch chân xám. */
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-20);
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.rowMain {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.rowTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-2) var(--xp-space-md);
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.code {
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+a.code:hover {
+  color: var(--xp-color-link-hover);
+  text-decoration: underline;
+}
+
+.time {
+  color: var(--xp-color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .amount {
+  flex: none;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
 }
 
-/*
- * Khoản CHƯA thành tiền đã trả (`pending`/`failed`/`refunded`) hiện mờ đi.
- *
- * Nhãn trạng thái ở cột bên là tín hiệu mang nghĩa; màu ở đây chỉ giúp mắt bỏ qua nhanh những
- * dòng không tính vào tổng. Không dùng gạch ngang: một khoản đang xử lý chưa bị huỷ.
- */
-.amountMuted {
-  font-variant-numeric: tabular-nums;
+.rowSide {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-xs);
+  width: 140px;
+}
+
+/* "_Badge": viên thuốc bo 16, đệm 2/8, chữ 14 medium. */
+.badge {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid transparent;
+  border-radius: 16px;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.badgeSuccess {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.badgePending {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.badgeFailed {
+  border-color: color-mix(in srgb, var(--xp-color-error) 45%, transparent);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/* "Huỷ yêu cầu" — liên kết chữ nhỏ dưới nhãn, không cạnh tranh với số tiền. */
+.cancel {
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-caption, 12px);
+  line-height: 18px;
+  text-decoration: underline;
+}
+
+.cancel:hover {
+  color: var(--xp-color-error);
+}
+
+.cancel:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.pagination {
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .range {
+    width: 100%;
+  }
+
+  .row {
+    flex-wrap: wrap;
+    gap: var(--xp-space-sm);
+  }
+
+  .rowMain {
+    flex-basis: 100%;
+  }
+
+  .amount {
+    flex: 1 1 auto;
+  }
+
+  .rowSide {
+    width: auto;
+  }
 }

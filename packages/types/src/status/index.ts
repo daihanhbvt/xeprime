@@ -34,6 +34,7 @@ export * from './hold-refund';
 export * from './insurance';
 export * from './tax';
 export * from './wallet';
+export * from './account-transaction';
 export * from './seller';
 export * from './support';
 export * from './billing';

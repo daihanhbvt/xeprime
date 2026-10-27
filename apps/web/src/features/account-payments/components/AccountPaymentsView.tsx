@@ -1,149 +1,146 @@
 'use client';
 
-import { Alert, Button, Empty, Segmented, Skeleton, Statistic } from 'antd';
+import { CalendarOutlined } from '@ant-design/icons';
+import { Alert, App, Button, DatePicker, Empty, Pagination, Popconfirm, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  PAYMENT_KIND,
-  PAYMENT_KIND_VALUES,
-  PAYMENT_METHOD_META,
-  PAYMENT_STATUS,
-  PAYMENT_STATUS_META,
-  isPaymentKind,
+  ACCOUNT_TRANSACTION_STATUS,
+  ACCOUNT_TRANSACTION_STATUS_VALUES,
+  isAccountTransactionStatus,
+  type AccountTransactionStatus,
 } from '@xeprime/types';
-import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
-import { StatusTag } from '@/components/data-display/StatusTag';
 import { ROUTES, tripPath } from '@/constants/routes';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
-import { useAccountPayments } from '../hooks/use-account-payments';
-import type { AccountPayment } from '../types';
+import { useCancelWithdrawal } from '@/features/wallet/hooks';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
+import { DAY_PARAM_FORMAT, dayjs, toAppTz } from '@/lib/datetime';
+import { absoluteMoney, isNegativeMoney, isZeroMoney } from '@/lib/money';
+import { useAccountTransactions } from '../hooks/use-account-transactions';
+import type { AccountTransaction } from '../types';
 
 import styles from './AccountPaymentsView.module.css';
 
-const MIN_TABLE_WIDTH = 760;
+/** Mốc thời gian của một dòng — "19:00:39 16/07/2026" như bản vẽ, giờ Việt Nam. */
+const ROW_TIME_FORMAT = 'HH:mm:ss DD/MM/YYYY';
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const STATUS_CLASS: Record<AccountTransactionStatus, string | undefined> = {
+  [ACCOUNT_TRANSACTION_STATUS.SUCCEEDED]: styles.badgeSuccess,
+  [ACCOUNT_TRANSACTION_STATUS.PENDING]: styles.badgePending,
+  [ACCOUNT_TRANSACTION_STATUS.FAILED]: styles.badgeFailed,
+};
+
+function dayParam(value: string | null | undefined): string | null {
+  return value && DAY_PATTERN.test(value) ? value : null;
+}
 
 /**
- * "Tiền của các chuyến đã thuê" — `/account/payments` (PROMPT 5).
+ * Tab "Lịch sử giao dịch" (`/account/payments`) — Figma Account / History (`21695:27193`).
  *
- * ## Màn này KHÔNG phải màn số dư
+ * MỘT danh sách hợp nhất mọi lần tiền của khách dịch chuyển (`GET /account/transactions`): tiền giữ
+ * chỗ đã chuyển, lệnh rút ví điểm, tiền hoàn, khoản tiền thuê/cọc gian hàng ghi nhận. Lọc theo
+ * trạng thái (chip) và khoảng ngày — cả hai chạy ở SERVER, nên số dòng và phân trang đúng trên toàn
+ * bộ lịch sử.
  *
- * Khách có BA loại tiền ở ba chỗ, và trộn chúng là cách chắc chắn để một người tưởng mình đã
- * được hoàn tiền khi thật ra chưa:
+ * Bộ lọc và trang sống trên URL (ADR 0004): `?status=&from=&to=&page=`.
  *
- *   · **Đã trả cho gian hàng** — `payments`. Màn này.
- *   · **Đã chuyển giữ chỗ cho XePrime** — `booking_holds`, ở chi tiết từng chuyến.
- *   · **XePrime đang nợ mình** — Ví điểm, ở `/account/balance`.
- *
- * Dải liên kết ở đầu màn nói ra đúng ba câu đó thay vì để người dùng tự đoán họ đang xem cái nào.
- *
- * ## Lọc và trang ở URL (ADR 0004)
- *
- * Gửi link được, F5 không mất, nút Back quay đúng trang trước. Không có bản sao state nào ở
- * component — và `totals` cố ý KHÔNG theo bộ lọc: nó là "tôi đã trả bao nhiêu cho các chuyến
- * của mình", nên nó không được nhảy mỗi lần người dùng thu hẹp danh sách.
+ * Lệnh rút còn chờ duyệt có nút nhỏ "Huỷ yêu cầu" — trước đây nằm ở khối "Yêu cầu rút" của tab
+ * số dư; tab đó nay chỉ còn thẻ số dư + tài khoản nhận tiền.
  */
 export function AccountPaymentsView() {
-  const t = useTranslations('AccountPayments');
+  const t = useTranslations('AccountPayments.history');
   const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const router = useRouter();
   const params = useSearchParams();
+  const datePattern = useDatePickerPattern();
 
-  const rawKind = params?.get('kind');
-  const kind = isPaymentKind(rawKind) ? rawKind : null;
+  const rawStatus = params?.get('status');
+  const status = isAccountTransactionStatus(rawStatus) ? rawStatus : null;
+  const from = dayParam(params?.get('from'));
+  const to = dayParam(params?.get('to'));
   const page = Math.max(1, Number(params?.get('page') ?? 1) || 1);
 
-  const { data, isLoading, isFetching, isError, refetch } = useAccountPayments({ kind, page });
+  const { data, isLoading, isFetching, isError, refetch } = useAccountTransactions({
+    status,
+    from,
+    to,
+    page,
+  });
 
-  function go(next: { kind?: string | null; page?: number }) {
+  function go(next: {
+    status?: AccountTransactionStatus | null;
+    from?: string | null;
+    to?: string | null;
+    page?: number;
+  }) {
     const query = new URLSearchParams(params?.toString() ?? '');
-    const nextKind = next.kind === undefined ? kind : next.kind;
-    if (nextKind) query.set('kind', nextKind);
-    else query.delete('kind');
+    const setOrDelete = (key: string, value: string | null | undefined) => {
+      if (value) query.set(key, value);
+      else query.delete(key);
+    };
+    const filterChanged =
+      next.status !== undefined || next.from !== undefined || next.to !== undefined;
+    setOrDelete('status', next.status === undefined ? status : next.status);
+    setOrDelete('from', next.from === undefined ? from : next.from);
+    setOrDelete('to', next.to === undefined ? to : next.to);
     // Đổi bộ lọc thì về trang 1 — giữ `page=4` trên một danh sách vừa hẹp lại là một trang trống.
-    const nextPage = next.page ?? (next.kind === undefined ? page : 1);
-    if (nextPage > 1) query.set('page', String(nextPage));
-    else query.delete('page');
+    const nextPage = next.page ?? (filterChanged ? 1 : page);
+    setOrDelete('page', nextPage > 1 ? String(nextPage) : null);
     const qs = query.toString();
     router.replace(qs ? `${ROUTES.ACCOUNT.PAYMENTS}?${qs}` : ROUTES.ACCOUNT.PAYMENTS, {
       scroll: false,
     });
   }
 
-  const columns: DataTableColumn<AccountPayment>[] = [
-    {
-      key: 'trip',
-      title: t('columns.trip'),
-      render: (row) => (
-        <div>
-          {/* Mỗi khoản dẫn về CHUYẾN của nó: câu hỏi kế tiếp luôn là "khoản này của chuyến nào". */}
-          <Link className={styles.link} href={tripPath.detail(row.bookingId)}>
-            {row.bookingCode}
-          </Link>
-          <p className={styles.muted}>{row.vehicleName}</p>
-        </div>
-      ),
-    },
-    { key: 'shop', title: t('columns.shop'), render: (row) => row.tenantName },
-    {
-      key: 'kind',
-      title: t('columns.kind'),
-      render: (row) => domainLabel('paymentKind', row.kind),
-    },
-    {
-      key: 'amount',
-      title: t('columns.amount'),
-      render: (row) => (
-        <span
-          className={
-            row.status === PAYMENT_STATUS.SUCCEEDED ? styles.amount : styles.amountMuted
-          }
-        >
-          {fmt.money(row.amount)}
-        </span>
-      ),
-    },
-    {
-      key: 'method',
-      title: t('columns.method'),
-      render: (row) => (
-        <StatusTag value={row.method} meta={PAYMENT_METHOD_META} group="paymentMethod" />
-      ),
-    },
-    {
-      key: 'status',
-      title: t('columns.status'),
-      render: (row) => (
-        <div>
-          <StatusTag value={row.status} meta={PAYMENT_STATUS_META} group="paymentStatus" />
-          <p className={styles.muted}>
-            {row.paidAt ? fmt.dateTime(row.paidAt) : t('notPaidYet')}
-          </p>
-        </div>
-      ),
-    },
+  const chips: { value: AccountTransactionStatus | null; label: string }[] = [
+    { value: null, label: t('filters.all') },
+    ...ACCOUNT_TRANSACTION_STATUS_VALUES.map((value) => ({
+      value,
+      label: t(`status.${value}`),
+    })),
   ];
+  const filtered = status !== null || from !== null || to !== null;
 
   return (
     <div className={styles.page}>
-      {/*
-        Ba loại tiền, ba màn — nói ra ngay ở đầu. Không nói thì người dùng sẽ đọc con số ở đây và
-        tưởng đó là số dư của mình.
-      */}
-      <Alert
-        type="info"
-        showIcon
-        title={t('scope.title')}
-        description={
-          <span>
-            {t('scope.body')}{' '}
-            <Link href={ROUTES.ACCOUNT.BALANCE}>{t('scope.balanceLink')}</Link>
-          </span>
-        }
-      />
+      <div className={styles.filters}>
+        <div className={styles.chips} role="group" aria-label={t('filters.label')}>
+          {chips.map((chip) => {
+            const active = chip.value === status;
+            return (
+              <button
+                key={chip.value ?? 'all'}
+                type="button"
+                className={cx(styles.chip, active && styles.chipActive)}
+                aria-pressed={active}
+                onClick={() => {
+                  if (!active) go({ status: chip.value });
+                }}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+        <DatePicker.RangePicker
+          className={styles.range}
+          aria-label={t('filters.range')}
+          placeholder={[t('filters.rangePlaceholder'), t('filters.rangeTo')]}
+          format={datePattern.date}
+          suffixIcon={<CalendarOutlined />}
+          allowEmpty={[true, true]}
+          value={[from ? dayjs(from, DAY_PARAM_FORMAT) : null, to ? dayjs(to, DAY_PARAM_FORMAT) : null]}
+          onChange={(dates) =>
+            go({
+              from: dates?.[0] ? dates[0].format(DAY_PARAM_FORMAT) : null,
+              to: dates?.[1] ? dates[1].format(DAY_PARAM_FORMAT) : null,
+            })
+          }
+        />
+      </div>
 
       {isLoading ? <Skeleton active paragraph={{ rows: 6 }} /> : null}
 
@@ -161,58 +158,99 @@ export function AccountPaymentsView() {
       ) : null}
 
       {data ? (
-        <>
-          <div className={styles.stats}>
-            <Statistic title={t('stats.paidTotal')} value={fmt.money(data.meta.totals.paidTotal)} />
-            <Statistic title={t('stats.rental')} value={fmt.money(data.meta.totals.rentalTotal)} />
-            <Statistic title={t('stats.deposit')} value={fmt.money(data.meta.totals.depositTotal)} />
-            <Statistic title={t('stats.trips')} value={data.meta.totals.tripCount} />
-          </div>
-
-          {Number(data.meta.totals.depositTotal) > 0 ? (
-            <Alert type="warning" showIcon title={t('depositNote')} />
-          ) : null}
-
-          <Segmented
-            value={kind ?? 'all'}
-            onChange={(value) => go({ kind: value === 'all' ? null : String(value) })}
-            options={[
-              { value: 'all', label: t('filters.all') },
-              ...PAYMENT_KIND_VALUES.map((value) => ({
-                value,
-                label: domainLabel('paymentKind', value),
-              })),
-            ]}
+        data.meta.total === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={filtered ? t('empty.filtered') : t('empty.all')}
           />
-
-          {data.meta.total === 0 ? (
-            <Empty
-              description={
-                kind === PAYMENT_KIND.DEPOSIT
-                  ? t('empty.deposit')
-                  : kind === PAYMENT_KIND.RENTAL
-                    ? t('empty.rental')
-                    : t('empty.all')
-              }
-            />
-          ) : (
-            <DataTable<AccountPayment>
-              label={t('title')}
-              columns={columns}
-              items={data.data}
-              rowKey={(row) => row.id}
-              minWidth={MIN_TABLE_WIDTH}
-              loading={isFetching}
-              empty={{ title: t('empty.all') }}
-              pagination={{
-                meta: data.meta,
-                onChange: (next) => go({ page: next }),
-                totalLabel: (total) => t('total', { count: total }),
-              }}
-            />
-          )}
-        </>
+        ) : (
+          <>
+            <ul
+              className={cx(styles.list, isFetching && styles.listBusy)}
+              aria-label={t('title')}
+              aria-busy={isFetching}
+            >
+              {data.data.map((row) => (
+                <TransactionRow key={row.id} row={row} />
+              ))}
+            </ul>
+            {data.meta.total > data.meta.limit ? (
+              <Pagination
+                className={styles.pagination}
+                current={data.meta.page}
+                pageSize={data.meta.limit}
+                total={data.meta.total}
+                showSizeChanger={false}
+                showTotal={(total) => t('total', { count: total })}
+                onChange={(next) => go({ page: next })}
+              />
+            ) : null}
+          </>
+        )
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Một dòng (Figma `21695:41670`): tên khoản · "#mã  giờ ngày" bên dưới · số tiền có dấu · nhãn
+ * trạng thái (xanh / cam / đỏ). Mã dẫn về chuyến khi dòng thuộc một chuyến.
+ */
+function TransactionRow({ row }: { row: AccountTransaction }) {
+  const t = useTranslations('AccountPayments.history');
+  const fmt = useAppFormat();
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const cancel = useCancelWithdrawal('account');
+
+  const negative = isNegativeMoney(row.amount) && !isZeroMoney(row.amount);
+  const sign = isZeroMoney(row.amount) ? '' : negative ? '-' : '+';
+  const codeText = row.code ? `#${row.code}` : null;
+
+  return (
+    <li className={styles.row}>
+      <div className={styles.rowMain}>
+        <p className={styles.rowTitle}>{t(`titles.${row.title}`)}</p>
+        <p className={styles.rowMeta}>
+          {codeText ? (
+            row.tripId ? (
+              <Link className={styles.code} href={tripPath.detail(row.tripId)}>
+                {codeText}
+              </Link>
+            ) : (
+              <span className={styles.code}>{codeText}</span>
+            )
+          ) : null}
+          <time className={styles.time} dateTime={row.occurredAt}>
+            {toAppTz(row.occurredAt).format(ROW_TIME_FORMAT)}
+          </time>
+        </p>
+      </div>
+      <p className={styles.amount}>
+        {sign}
+        {fmt.money(absoluteMoney(row.amount))}
+      </p>
+      <div className={styles.rowSide}>
+        <span className={cx(styles.badge, STATUS_CLASS[row.status])}>
+          {t(`status.${row.status}`)}
+        </span>
+        {row.cancellable ? (
+          <Popconfirm
+            title={t('cancel.confirm')}
+            description={t('cancel.hint')}
+            onConfirm={() =>
+              cancel.mutate(row.id, {
+                onSuccess: () => message.success(t('cancel.done')),
+                onError: (err: unknown) => message.error(errorMessage(err)),
+              })
+            }
+          >
+            <button type="button" className={styles.cancel} disabled={cancel.isPending}>
+              {t('cancel.action')}
+            </button>
+          </Popconfirm>
+        ) : null}
+      </div>
+    </li>
   );
 }

@@ -163,12 +163,12 @@
     "history": "Lịch sử chuyến"
   },
   "customerTripStage": {
-    "pending_approval": "Chờ xác nhận",
-    "awaiting_hold": "Đã được nhận · chờ thanh toán",
+    "pending_approval": "Chờ chủ xe phản hồi",
+    "awaiting_hold": "Chờ thanh toán",
     "ready": "Sẵn sàng",
     "active": "Đang thuê",
     "completed": "Hoàn thành",
-    "cancelled": "Đã hủy chuyến",
+    "cancelled": "Đã hủy",
     "rejected": "Bị từ chối",
     "expired": "Quá hạn phản hồi",
     "no_show": "Không nhận xe",
@@ -1486,9 +1486,6 @@
       "activate": "Bật mẫu email hướng dẫn gói",
       "delete": "Xoá mẫu email hướng dẫn gói",
       "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
-    },
-    "insurance_product": {
-      "update": "Cập nhật sản phẩm bảo hiểm"
     }
   },
   "auditTargetType": {
@@ -1543,8 +1540,7 @@
     "vehicle_handover": "Biên bản bàn giao",
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
-    "withdrawal_request": "Yêu cầu rút điểm",
-    "insurance_product": "Sản phẩm bảo hiểm"
+    "withdrawal_request": "Yêu cầu rút điểm"
   },
   "auditField": {
     "planCode": "Mã gói",

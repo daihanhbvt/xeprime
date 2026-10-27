@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -30,6 +30,8 @@ export interface SelectControlOption {
   readonly label: string;
   /** Dòng phụ dưới nhãn trong danh sách — dùng khi nhãn thôi chưa đủ để chọn đúng. */
   readonly hint?: string;
+  /** Phần tử đứng trước nhãn trong danh sách — vd logo ngân hàng. */
+  readonly leading?: ReactNode;
 }
 
 /**
@@ -204,6 +206,7 @@ export function SelectControl({
               key={option.value}
               label={option.label}
               {...(option.hint === undefined ? {} : { hint: option.hint })}
+              {...(option.leading === undefined ? {} : { leading: option.leading })}
               selected={option.value === value}
               onPress={() => {
                 onChange(option.value);

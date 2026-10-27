@@ -1,0 +1,29 @@
+/*
+ * Phần RIÊNG của màn chuyến đang thuê. Khung hai cột, khung thẻ, thẻ trạng thái và khối hỗ trợ là
+ * của chung — `TripRequestLayout` / `TripClosedView`.
+ */
+
+/* Giờ trả xe dự kiến — hàng nền trắng trong thẻ trạng thái, giá trị đậm: điều khách cần nhớ nhất. */
+.returnAt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.returnIcon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--xp-color-info);
+}
+
+.returnValue {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}

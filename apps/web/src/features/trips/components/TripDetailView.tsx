@@ -54,7 +54,9 @@ import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
+import { TripActiveView } from './TripActiveView';
 import { TripAwaitingHoldView } from './TripAwaitingHoldView';
+import { CUSTOMER_CLOSED_VIEW_STAGES, TripClosedView } from './TripClosedView';
 import { TripConfirmedView } from './TripConfirmedView';
 import { TripPendingApprovalView } from './TripPendingApprovalView';
 import { telHref } from '@/lib/contact';
@@ -189,9 +191,11 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
    * các thẻ của màn "Xem lại yêu cầu" trên khung chung (`TripRequestLayout`):
    *   · chờ chủ xe phản hồi — `TripPendingApprovalView` (Figma `19727:60694`);
    *   · chủ xe đã đồng ý, chờ giữ chỗ — `TripAwaitingHoldView` (Figma `19737:23904`);
-   *   · đã xác nhận, chờ ngày nhận xe — `TripConfirmedView` (Figma `19879:72913`).
-   * Chủ xe mở cùng chuyến vẫn ở bố cục dưới, nơi có cụm Duyệt/Từ chối/Huỷ của họ; các chặng sau
-   * ngày nhận xe (đang thuê, hoàn thành, kết cục hỏng) cũng vậy.
+   *   · đã xác nhận, chờ ngày nhận xe — `TripConfirmedView` (Figma `19879:72913`);
+   *   · đang thuê — `TripActiveView` (chưa có bản vẽ riêng; cùng khung với hai màn kề nó);
+   *   · đã khép — hoàn thành và kết cục hỏng — `TripClosedView` (Figma `21621:68041` · `21621:67556`).
+   * Chủ xe mở cùng chuyến vẫn ở bố cục dưới, nơi có cụm Duyệt/Từ chối/Huỷ của họ — bố cục đó chỉ còn
+   * phục vụ phía chủ xe.
    */
   const flowView = isHost ? null : stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL ? (
     <TripPendingApprovalView trip={data} backHref={backHref} />
@@ -199,6 +203,10 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
     <TripAwaitingHoldView trip={data} backHref={backHref} />
   ) : stage === CUSTOMER_TRIP_STAGE.READY ? (
     <TripConfirmedView trip={data} backHref={backHref} />
+  ) : stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
+    <TripActiveView trip={data} backHref={backHref} />
+  ) : CUSTOMER_CLOSED_VIEW_STAGES.includes(stage) ? (
+    <TripClosedView trip={data} backHref={backHref} />
   ) : null;
   if (flowView) {
     // Đầu trang của các màn này (`TripPageHeader`) mang sẵn nút quay lại + đường dẫn.

@@ -289,9 +289,24 @@ export class DriverEmployerDto {
   kind!: string;
 }
 
+/**
+ * Liên hệ mở rộng của bên thuê — CHỈ cho tài xế có liên kết với bên đó (mở rộng ADR 0054 cho bề
+ * mặt tài xế, chốt 26/10/2026). Không bao giờ vào DTO công khai.
+ */
+export class DriverEmployerContactDto {
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Họ tên chủ tài khoản bên thuê' })
+  representativeName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành của gian hàng' })
+  areaName!: string | null;
+}
+
 export class MyDriverLinkDto {
   @ApiProperty() id!: string;
   @ApiProperty({ type: DriverEmployerDto }) employer!: DriverEmployerDto;
+  @ApiProperty({ type: DriverEmployerContactDto }) employerContact!: DriverEmployerContactDto;
+  @ApiProperty({ description: 'Số chuyến tôi đã hoàn thành cho bên này' })
+  completedTripCount!: number;
   @ApiProperty({ enum: DRIVER_TYPE_VALUES }) driverType!: string;
   @ApiProperty({ enum: DRIVER_LINK_STATUS_VALUES }) linkStatus!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) invitedAt!: string;
@@ -401,6 +416,13 @@ export class DriverTripDto {
     description: 'Lượt của tài xế kết thúc lúc',
   })
   endedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua.',
+  })
+  releaseUntil!: string | null;
   @ApiProperty() pickupAt!: string;
   @ApiProperty() returnAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;

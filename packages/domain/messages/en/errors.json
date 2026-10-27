@@ -30,6 +30,7 @@
     "MONEY_STEP_1000": "Prices must be a multiple of 1,000 VND",
     "NOT_FOUND": "We couldn't find that.",
     "CONFLICT": "This changed somewhere else. Reload and try again.",
+    "REVIEW_EDIT_LIMIT": "You have already used your one review edit.",
     "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "You already have a plan invoice that has received part of its payment. Transfer the remaining amount using the original reference code, or contact support — don't create a new invoice.",
     "BOOKING_SCHEDULE_CONFLICT": "This vehicle is already booked for that period.",
     "BOOKING_REQUEST_DUPLICATE": "You've already sent an identical request and the shop is reviewing it.",

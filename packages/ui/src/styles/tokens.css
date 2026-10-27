@@ -166,6 +166,8 @@
   --xp-line-height-body-lg: 24px;
   --xp-font-size-body: 14px;
   --xp-line-height-body: 20px;
+  /* Thân 14px của design v2 (Figma `14px/Regular` · `14px/Medium`: line-height 22). */
+  --xp-line-height-body-relaxed: 22px;
   --xp-font-size-body-sm: 12px;
   --xp-line-height-body-sm: 18px;
   --xp-font-size-label: 12px;
@@ -213,17 +215,26 @@
   --xp-color-primary-pale: #f0ddb7;
   --xp-color-primary-accent: #d3a94d;
   --xp-color-primary-glow: #e9c336;
+  /* Viền thẻ nổi bật (thẻ "Gian hàng Chuyên nghiệp" — Figma `20037:6949`). */
+  --xp-color-primary-highlight: #fddb5d;
   --xp-color-destination-border: #e9bb68;
   /* Luồng đặt xe v2 (Figma `RHDyFsURFZQ9BC5JCLQzeE`, 19/10/2026) — các bậc màn đó đặt tên rõ. */
   --xp-color-primary-border: #e8ca8d;
   --xp-color-success-accent: #12b76a;
   --xp-color-success-border: #6ce9a6;
+  --xp-color-warning-border: #fec84b;
+  --xp-color-warning-strong: #ec4a0a;
+  --xp-color-info-strong: #1570ef;
   --xp-color-warning-subtle: #fffaeb;
   --xp-market-footer-bg: #060403;
   --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
   --xp-gradient-text-hero: linear-gradient(90deg, #eeb924 0%, #ba8b26 100%);
   --xp-gradient-text-gold: linear-gradient(90deg, #d3a94d 0%, #cb9c03 100%);
   --xp-gradient-gold-soft: linear-gradient(90deg, #edd3a4 0.89%, #d6a439 100.89%);
+  /* Nền thẻ danh sách khi hover/focus (Figma "Vehicle Card" hover, `21788:63094`): vàng 20% trên trắng. */
+  --xp-gradient-card-hover:
+    linear-gradient(174.5deg, rgba(243, 229, 205, 0.2) 24.208%, rgba(243, 239, 226, 0.2) 88.612%),
+    linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
   --xp-gradient-text-destination: linear-gradient(90deg, #fded9d 0%, #f7dd91 52.404%, #f1a940 100%);
   --xp-gradient-instant-badge: linear-gradient(90deg, #a4dded 0.89%, #dfe7f1 100.89%);
   --xp-gradient-card-highlight: linear-gradient(
@@ -462,6 +473,9 @@
      (`Stroke/primary-100` tối); hai nền pastel thành chính sắc đó pha trong suốt. */
   --xp-color-primary-border: #946e1f;
   --xp-color-success-border: rgba(108, 233, 166, 0.45);
+  --xp-color-warning-border: rgba(254, 200, 75, 0.45);
+  --xp-color-warning-strong: #fb6514;
+  --xp-color-info-strong: #53b1fd;
   --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);
 
   /* Chữ sáng trên nền tối */

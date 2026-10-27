@@ -1,21 +1,27 @@
 'use client';
 
+import { CreditCardOutlined, TagOutlined, UserOutlined } from '@ant-design/icons';
 import { Alert, App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import { VIETNAM_BANKS } from '@xeprime/domain';
 import { DialogForm } from '@/components/form/DialogForm';
+import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SelectField, type SelectFieldOption } from '@/components/form/SelectField';
+import { cx } from '@/lib/cx';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { bankAccountTitle } from '../current-account';
 import { useCreateBankAccount } from '../hooks/use-bank-accounts';
 import type { BankAccount, BankAccountScope } from '../types';
 import styles from './BankAccountForm.module.css';
+import { BankAccountSavedDialog } from './BankAccountSavedDialog';
+import { BankLogo } from './BankLogo';
 
 /**
  * Khai tài khoản nhận tiền — THÊM khi chưa có, ĐỔI khi đã có (`replacing`).
@@ -40,23 +46,35 @@ import styles from './BankAccountForm.module.css';
  *
  * Đóng hộp thoại là bỏ bản nháp: form sống ở component cha của dialog nên không tự mất khi dialog
  * gỡ nội dung, và mở lại để ĐỔI mà còn số tài khoản gõ dở lần trước là mời gửi nhầm đích.
+ *
+ * ## Dáng `account` (Figma `19973:50994` · `19973:52952`)
+ *
+ * Bề mặt khách: nhãn trên ô nhập, biểu tượng đầu ô, dòng "thay cho…" màu cảnh báo, nút của bảng
+ * nút v2, và lưu xong mở hộp "Thành công" thay cho toast. Khai lại đúng tài khoản đang dùng thì
+ * vẫn là toast — không có gì thành công để chúc mừng.
  */
 export function BankAccountForm({
   scope,
   open,
   onClose,
   replacing = null,
+  appearance = 'standard',
 }: {
   scope: BankAccountScope;
   open: boolean;
   onClose: () => void;
   /** Tài khoản đang dùng — có thì hộp thoại là "Đổi tài khoản", tài khoản mới thay cho nó. */
   replacing?: BankAccount | null;
+  appearance?: 'standard' | 'account';
 }) {
   const t = useTranslations('BankAccounts.form');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
+  const isAccount = appearance === 'account';
+  /** Câu của hộp "Thành công" (dáng `account`) — `null` là hộp đang đóng. */
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
 
   /*
    * Nhãn ghép tên gọi hằng ngày + tên đầy đủ: VIB và VietinBank, SCB và Sacombank là bốn cái tên
@@ -117,9 +135,11 @@ export function BankAccountForm({
       {
         onSuccess: (account) => {
           // Khai lại đúng tài khoản đang dùng: server không đổi gì, và nói "đã đổi" là nói sai.
+          const unchanged = replacing?.id === account.id;
           let toast = t('created');
-          if (replacing) toast = replacing.id === account.id ? t('unchanged') : t('changed');
-          message.success(toast);
+          if (replacing) toast = unchanged ? t('unchanged') : t('changed');
+          if (isAccount && !unchanged) setSavedNotice(toast);
+          else message.success(toast);
           close();
         },
         onError: (err: unknown) => message.error(errorMessage(err)),
@@ -128,55 +148,105 @@ export function BankAccountForm({
   });
 
   return (
-    <ResponsiveDialog
-      title={replacing ? t('changeTitle') : t('title')}
-      open={open}
-      onClose={close}
-      okText={t('submit')}
-      onOk={() => void onSubmit()}
-      confirmLoading={create.isPending}
-      size="sm"
-    >
-      {replacing ? (
-        <Alert
-          type="info"
-          showIcon
-          className={styles.replaces}
-          title={t('replaces', {
-            account: `${bankAccountTitle(replacing)} · ${replacing.accountNumberMasked}`,
-          })}
-        />
-      ) : null}
-      <DialogForm onSubmit={onSubmit} labelWidth="lg">
-        <SelectField
-          control={control}
-          name="bankCode"
-          label={t('bankCode')}
-          options={bankOptions}
-          placeholder={t('bankCodePlaceholder')}
-          notFoundContent={t('bankNotFound')}
-          // Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn.
-          showSearch
-          required
-        />
-        {/*
+    <>
+      <ResponsiveDialog
+        title={replacing ? t('changeTitle') : t('title')}
+        open={open}
+        onClose={close}
+        okText={t('submit')}
+        onOk={() => void onSubmit()}
+        confirmLoading={create.isPending}
+        size="sm"
+        className={cx(isAccount && styles.dialog)}
+        footer={
+          isAccount ? (
+            <div className={styles.footer}>
+              <CtaButton variant="neutral" onClick={close} disabled={create.isPending}>
+                {tCommon('actions.cancel')}
+              </CtaButton>
+              <CtaButton onClick={() => void onSubmit()} loading={create.isPending}>
+                {t('submit')}
+              </CtaButton>
+            </div>
+          ) : undefined
+        }
+      >
+        {replacing ? (
+          <Alert
+            type={isAccount ? 'warning' : 'info'}
+            showIcon={!isAccount}
+            className={styles.replaces}
+            title={t('replaces', {
+              account: `${bankAccountTitle(replacing)} · ${replacing.accountNumberMasked}`,
+            })}
+          />
+        ) : null}
+        <DialogForm
+          onSubmit={onSubmit}
+          labelWidth="lg"
+          labelPosition={isAccount ? 'top' : 'side'}
+          requiredMark={isAccount ? trailingRequiredMark : undefined}
+        >
+          <SelectField
+            control={control}
+            name="bankCode"
+            label={t('bankCode')}
+            options={bankOptions}
+            placeholder={t('bankCodePlaceholder')}
+            notFoundContent={t('bankNotFound')}
+            // Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn.
+            showSearch
+            required
+            renderOption={isAccount ? renderBankOption : undefined}
+          />
+          {/*
           Tên người thụ hưởng đứng TRƯỚC số tài khoản: người dùng nhớ tên mình trước, và ngân
           hàng đối chiếu tên trước khi ghi có.
         */}
-        <TextField
-          control={control}
-          name="accountName"
-          label={t('accountName')}
-          help={t('accountNameHint')}
-        />
-        <TextField control={control} name="accountNumber" label={t('accountNumber')} />
-        <TextField
-          control={control}
-          name="label"
-          label={t('label')}
-          placeholder={t('labelPlaceholder')}
-        />
-      </DialogForm>
-    </ResponsiveDialog>
+          <TextField
+            control={control}
+            name="accountName"
+            label={t('accountName')}
+            help={t('accountNameHint')}
+            placeholder={isAccount ? t('accountNamePlaceholder') : undefined}
+            prefix={isAccount ? <UserOutlined aria-hidden="true" /> : undefined}
+            required
+          />
+          <TextField
+            control={control}
+            name="accountNumber"
+            label={t('accountNumber')}
+            placeholder={isAccount ? t('accountNumberPlaceholder') : undefined}
+            prefix={isAccount ? <CreditCardOutlined aria-hidden="true" /> : undefined}
+            required
+          />
+          <TextField
+            control={control}
+            name="label"
+            label={t('label')}
+            placeholder={t('labelPlaceholder')}
+            prefix={isAccount ? <TagOutlined aria-hidden="true" /> : undefined}
+          />
+        </DialogForm>
+      </ResponsiveDialog>
+
+      <BankAccountSavedDialog
+        open={savedNotice !== null}
+        message={savedNotice ?? ''}
+        onClose={() => setSavedNotice(null)}
+      />
+    </>
+  );
+}
+
+/** Một dòng ngân hàng của dáng `account`: logo vuông trước tên (Figma `19973:52549`). */
+function renderBankOption(option: SelectFieldOption): ReactNode {
+  // Chưa chọn (hoặc mã lạ) ⇒ chỉ chữ — không vẽ ô logo "?".
+  if (!option.value) return option.label;
+  return (
+    <span className={styles.bankOption}>
+      <BankLogo code={option.value} size="xs" />
+      <span className={styles.bankOptionLabel}>{option.label}</span>
+    </span>
   );
 }

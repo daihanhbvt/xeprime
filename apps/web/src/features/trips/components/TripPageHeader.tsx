@@ -26,6 +26,7 @@ export function TripPageHeader({
   title,
   description,
   aside,
+  home = true,
 }: {
   /** Đích của nút tròn — danh sách chuyến, hoặc chi tiết chuyến khi đang ở trang thanh toán. */
   backHref: string;
@@ -36,6 +37,11 @@ export function TripPageHeader({
   description?: string;
   /** Tiến trình hành trình — `BookingJourney`. */
   aside?: ReactNode;
+  /**
+   * Mắt đầu "Trang chủ". Chi tiết chuyến ĐÃ KHÉP đi từ khu tài khoản ("Tài khoản của tôi / Chuyến của
+   * tôi / Chi tiết chuyến" — Figma `21621:68041`) nên bỏ mắt này.
+   */
+  home?: boolean;
 }) {
   const t = useTranslations('Trips.pageHeader');
   /*
@@ -43,7 +49,7 @@ export function TripPageHeader({
    * giữa ẩn đi, nút tròn đã là lối về bước trước.
    */
   const trail: TripCrumb[] = [
-    { key: 'home', label: t('home'), href: ROUTES.HOME },
+    ...(home ? [{ key: 'home', label: t('home'), href: ROUTES.HOME }] : []),
     ...crumbs.map((crumb, index) =>
       index < crumbs.length - 1 ? { ...crumb, hideOnMobile: true } : crumb,
     ),
@@ -75,6 +81,19 @@ export function TripPageHeader({
  *
  * Chưa biết xe nào (đang tải) ⇒ "Chi tiết xe" là chữ thường, không phải một liên kết hỏng.
  */
+/**
+ * Đường dẫn của MỌI màn chi tiết chuyến — "Tài khoản của tôi / Chuyến của tôi / Chi tiết chuyến"
+ * (Figma `21788:60267` · `21788:58956` · `21621:68041`). Dùng kèm `home={false}`.
+ */
+export function useTripDetailCrumbs(tripsHref: string): TripCrumb[] {
+  const t = useTranslations('Trips.pageHeader');
+  return [
+    { key: 'account', label: t('account'), href: ROUTES.ACCOUNT.ROOT },
+    { key: 'trips', label: t('trips'), href: tripsHref },
+    { key: 'detail', label: t('tripDetail') },
+  ];
+}
+
 export function useTripFlowCrumbs(
   vehicleId: string | null,
   opts: { requestHref?: string } = {},

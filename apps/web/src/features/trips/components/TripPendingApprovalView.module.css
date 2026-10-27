@@ -14,5 +14,5 @@
   background: var(--xp-color-primary-subtle);
   color: var(--xp-color-warning);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }

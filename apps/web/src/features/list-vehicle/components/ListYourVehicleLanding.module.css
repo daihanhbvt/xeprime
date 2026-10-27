@@ -1,241 +1,356 @@
 /*
- * Landing "Đăng xe cho thuê" — hai tuyến doanh thu xếp DỌC, mỗi tuyến một thẻ rộng.
+ * "Trở thành chủ xe" — Figma "Account / Upgrade" `20037:6621`, số đo lấy thẳng từ bản vẽ. MỘT bố cục
+ * cho PC lẫn máy tính bảng (≥768px): hai thẻ cạnh nhau (khe 24); trong thẻ, phần mở đầu và hình
+ * 218×177 chung một hàng, dưới là ba điểm nhấn rồi ô phí + nút canh giữa. Điện thoại (<768px): một cột.
  *
- * Bố cục thẻ là grid ba vùng `main | art | offer`. Xếp dọc chứ không cạnh nhau vì hai lựa
- * chọn KHÔNG cân nhau: tuyến cá nhân là lối vào mặc định, tuyến gian hàng là bước sau. Hai
- * cột ngang sẽ nói ngược điều đó.
+ * Ảnh (hình minh hoạ, nền thẻ gian hàng, ruy băng) xuất từ Figma vào `public/list-your-vehicle/`.
  */
 .page {
-  max-width: var(--xp-container-max-width);
-  margin: 0 auto;
-  padding: var(--xp-space-md) var(--xp-space-md) var(--xp-space-xl);
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  min-width: 0;
 }
 
-.backRow {
+/* ── Đầu trang: đường dẫn (Figma "Search Fields" `20037:6624`: đệm 8/20) ─────── */
+.pageHeader {
+  background: var(--xp-color-bg-container);
+}
+
+.pageHeaderInner,
+.body {
+  width: 100%;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  margin: 0 auto;
+  padding-inline: var(--xp-space-md);
+}
+
+.pageHeaderInner {
+  padding-block: var(--xp-space-sm) var(--xp-space-20);
+}
+
+/* Bản vẽ chỉ có đường dẫn — tiêu đề vẫn là `h1` cho trình đọc màn hình. */
+.pageTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Thân trang (Figma "Why Choose Us Section": đệm 40, khe 32) ─────────────── */
+.body {
   display: flex;
-}
-
-.back {
-  padding-inline: 0;
-  font-weight: var(--xp-font-weight-medium);
+  flex-direction: column;
+  gap: var(--xp-space-xl);
+  padding-block: var(--xp-space-40);
 }
 
 .intro {
-  text-align: center;
-  max-width: 1180px;
-  margin: 0 auto var(--xp-space-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  align-items: center;
+  gap: var(--xp-space-xs);
+  text-align: center;
 }
 
+/* 30/38 Bold. */
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-display);
-  line-height: var(--xp-line-height-display);
-  font-weight: var(--xp-font-weight-bold);
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h1);
 }
 
+/* "XePrime" tô gradient vàng thương hiệu (Figma `Gradient/Special`). */
+.brand {
+  background: var(--xp-gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* 18/28 Regular, xám nhạt. */
 .subtitle {
-  margin: 0 auto;
-  max-width: 780px;
+  max-width: 720px;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h3);
+  line-height: 28px;
+}
+
+.tracks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-lg);
+}
+
+/* ── Thẻ một tuyến: đệm 16, bo 16, khe 10; [mở đầu | hình] · điểm nhấn · ô phí ── */
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    'head art'
+    'features features'
+    'offer offer';
+  gap: 10px var(--xp-space-20);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-muted);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+/* Thẻ gian hàng: viền #fddb5d, nền ảnh kem 30%, hình canh đáy theo chữ. */
+.cardShop {
+  border-color: var(--xp-color-primary-highlight);
+}
+
+.cardShop::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: url('/list-your-vehicle/shop-card-bg.webp') right top / cover no-repeat;
+  content: '';
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cardShop .cardArt {
+  align-self: end;
+}
+
+.cardHead,
+.cardArt,
+.features,
+.offer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Ruy băng "Gói đề xuất" (Figma `21621:70760`: ~147×47, lòi khỏi mép phải ~18px) ── */
+.ribbon {
+  position: absolute;
+  top: -22px;
+  right: -17px;
+  z-index: 2;
+  width: 191px;
+  height: 64px;
+  background: url('/list-your-vehicle/ribbon.webp') center / contain no-repeat;
+  pointer-events: none;
+  transform: scale(0.75);
+  transform-origin: top right;
+}
+
+.ribbonText {
+  position: absolute;
+  top: 27px;
+  left: 82px;
+  color: var(--xp-color-text-on-dark);
+  font-size: 24px;
+  font-weight: var(--xp-font-weight-bold);
+  font-style: italic;
+  line-height: 24px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* ── Phần mở đầu: khe 12 ────────────────────────────────────────────────── */
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  grid-area: head;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+/* Nhãn đối tượng: đệm 4/8, nền #fff9f0, chữ #cb9115 12/500/18. */
+.badge {
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* Nhãn của gian hàng: gradient vàng, viền #d3a94d, chữ TRẮNG. */
+.cardShop .badge {
+  border: 1px solid var(--xp-color-primary-accent);
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-text-on-dark);
+}
+
+.cardHeading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+/* 20/30 SemiBold. */
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
+}
+
+/* 16/24 Medium. */
+.tagline {
+  margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body-lg);
 }
 
-/* ── Thẻ một tuyến ──────────────────────────────────────────────────────── */
-.card {
-  display: grid;
-  grid-template-areas: 'main art offer';
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) 300px;
-  gap: var(--xp-space-lg);
-  align-items: center;
-  padding: var(--xp-space-xl);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border);
-}
-
-/*
- * Tuyến được gợi ý trước: viền gold nhạt + nền kem rất mỏng. Nền pha từ token thay vì gõ
- * một mã hex mới — đổi `--xp-color-primary-light` là chỗ này đi theo.
- */
-.cardFeatured {
-  border: 2px solid var(--xp-gold-soft);
-  background: color-mix(in srgb, var(--xp-color-primary-light) 45%, var(--xp-color-bg-container));
-}
-
-.cardMain {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-}
-
-.badge {
-  align-self: flex-start;
-  padding: 4px var(--xp-space-md);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.cardFeatured .badge {
-  background: var(--xp-gold-soft);
-  color: var(--xp-gold-deep);
-}
-
-.cardTitle {
-  margin: 0;
-  font-size: var(--xp-font-size-h2);
-  line-height: var(--xp-line-height-h2);
-  font-weight: var(--xp-font-weight-bold);
-  color: var(--xp-color-text);
-}
-
-.tagline {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
+/* 14/22 Regular, xám nhạt. */
 .cardBody {
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  line-height: 1.7;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .cardBody strong {
-  color: var(--xp-color-text);
+  color: var(--xp-color-text-secondary);
   font-weight: var(--xp-font-weight-semibold);
 }
 
-/*
- * Ba điểm nhấn đứng thành MỘT hàng ba cột bằng nhau. Dùng grid thay cho flex-wrap để
- * nhãn hai dòng không đẩy ô thứ ba xuống hàng dưới — bậc thang lệch đó phá nhịp của thẻ.
- */
+/* ── Hình minh hoạ 218×177 ──────────────────────────────────────────────── */
+.cardArt {
+  grid-area: art;
+  width: 218px;
+  height: 177px;
+  pointer-events: none;
+}
+
+.artImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /*
+   * Ảnh xuất có nền trắng đặc và mép cắt sát khung (bệ đường của ảnh gian hàng chạm mép trái/dưới):
+   * `multiply` tan nền trắng vào nền kem của thẻ, mặt nạ làm mờ dần bốn mép để không còn góc cắt cứng.
+   */
+  mix-blend-mode: multiply;
+  mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 70%, transparent 100%);
+}
+
+/* ── Ba điểm nhấn: dồn xuống đáy thẻ, cách ô phí 16 (10 khe + 6) ───────── */
 .features {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  grid-area: features;
+  align-self: end;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--xp-space-md);
-  margin: var(--xp-space-sm) 0 0;
+  margin: 0 0 var(--xp-space-6);
   padding: 0;
   list-style: none;
 }
 
+/* Đệm 8/0 (cá nhân) · 8/16 (gian hàng). */
 .feature {
   display: flex;
   align-items: center;
   gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) 0;
+  border-radius: var(--xp-border-radius-control);
+  backdrop-filter: blur(20px);
 }
 
-.featureIcon {
+.cardShop .feature {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.featureDivider {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-primary-light);
-  color: var(--xp-gold-deep);
-  font-size: 18px;
+  width: 1px;
+  height: 24px;
+  background: var(--xp-color-border);
 }
 
+/* Ô icon 32: nền #fff9f0 (cá nhân) · #fff5e5 (gian hàng). */
+.featureIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+  font-size: 16px;
+}
+
+.cardShop .featureIcon {
+  background: var(--xp-color-primary-light);
+}
+
+/* 14/22 Medium; nhãn gian hàng xuống hai dòng như bản vẽ ("\n" trong bản dịch). */
 .featureLabel {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: pre-line;
 }
 
-/* ── Hình minh hoạ ──────────────────────────────────────────────────────── */
-.cardArt {
-  grid-area: art;
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
-.artImage {
-  width: 100%;
-  max-width: 460px;
-  height: auto;
-  margin-inline: auto;
-}
-
-/*
- * Chú thích nổi trên hình. Là CHỮ THẬT của giao diện (đi qua i18n), không vẽ vào SVG —
- * chữ nằm trong ảnh thì không dịch được và không đọc được bằng trình đọc màn hình.
- */
-.artNote {
-  position: absolute;
-  top: 6%;
-  right: 0;
-  max-width: 190px;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border);
-  box-shadow: var(--xp-shadow-card);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-/* ── Ô ưu đãi + CTA ─────────────────────────────────────────────────────── */
+/* ── Ô phí + nút: đệm 12/16, khe 12, canh giữa ─────────────────────────── */
 .offer {
-  grid-area: offer;
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-muted);
-}
-
-.cardFeatured .offer {
-  background: var(--xp-color-primary-light);
-}
-
-.offerHead {
-  display: flex;
+  grid-area: offer;
   align-items: center;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  text-align: center;
 }
 
-.offerIcon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--xp-border-radius-pill);
+.cardShop .offer {
   background: var(--xp-color-bg-container);
-  color: var(--xp-gold-deep);
-  font-size: 18px;
+}
+
+.offerText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
 }
 
 .offerTitle {
   margin: 0;
-  font-size: var(--xp-font-size-h4);
-  line-height: var(--xp-line-height-h4);
-  font-weight: var(--xp-font-weight-bold);
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+/* "0%" 18/28 SemiBold, xanh. */
+.offerBig {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-h3);
+  line-height: 28px;
 }
 
 .offerBody {
-  margin: 0 0 var(--xp-space-xs);
+  margin: 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.6;
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .offerBody strong {
@@ -243,94 +358,111 @@
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.ctaLink {
-  display: block;
-  margin-top: auto;
-}
-
-/* ── Dải "nâng cấp sau" ─────────────────────────────────────────────────── */
-.upgrade {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-md);
-  padding: var(--xp-space-md) var(--xp-space-lg);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-primary-light);
-}
-
-.upgradeIcon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-gold-deep);
-  font-size: 18px;
-}
-
-.upgradeTitle {
-  margin: 0 0 var(--xp-space-xs);
-  font-size: var(--xp-font-size-h4);
-  line-height: var(--xp-line-height-h4);
-  font-weight: var(--xp-font-weight-bold);
-  color: var(--xp-color-text);
-}
-
-.upgradeBody {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.6;
-}
-
-.policyLink {
-  align-self: center;
+/* Nút: bo 12, đệm 10/16, chữ 14/600/22, icon 20, bóng vàng 0 4 12. */
+.cta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--xp-gold-deep);
-  font-size: var(--xp-font-size-body-sm);
+  justify-content: center;
+  gap: var(--xp-space-6);
+  padding: 10px var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  box-shadow: var(--xp-elevation-glow);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
 }
 
-/* ── Thu hẹp dần ────────────────────────────────────────────────────────── */
-@media (max-width: 1180px) {
-  .card {
-    grid-template-areas:
-      'main main'
-      'art offer';
-    grid-template-columns: minmax(0, 1fr) 300px;
-    align-items: center;
-  }
-
-  .cardMain {
-    align-items: flex-start;
-  }
+.cta :global(.anticon) {
+  font-size: 20px;
 }
 
-@media (max-width: 760px) {
-  .card {
-    grid-template-areas:
-      'main'
-      'art'
-      'offer';
-    grid-template-columns: minmax(0, 1fr);
+.cta:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.ctaOutline {
+  border-color: var(--xp-color-primary-muted);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary);
+}
+
+.ctaOutline:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary-hover);
+}
+
+.ctaPrimary {
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.ctaPrimary:hover {
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(0.96);
+}
+
+/* ── Khổ hẹp hơn khung 1200: hình nhỏ lại, điểm nhấn xếp dọc ────────────── */
+@media (max-width: 1099px) {
+  .cardArt {
+    width: 160px;
+    height: 130px;
   }
 
   .features {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--xp-space-sm);
-  }
-
-  .artNote {
-    position: static;
-    max-width: none;
-    margin-top: var(--xp-space-sm);
-  }
-
-  .cardArt {
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .featureDivider {
+    display: none;
+  }
+}
+
+/* ── Điện thoại: một cột ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .title {
+    font-size: var(--xp-font-size-h2);
+    line-height: var(--xp-line-height-h2);
+  }
+
+  .subtitle {
+    font-size: var(--xp-font-size-body);
+    line-height: 22px;
+  }
+
+  .tracks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'art'
+      'head'
+      'features'
+      'offer';
+  }
+
+  .cardArt,
+  .cardShop .cardArt {
+    justify-self: center;
+    align-self: auto;
+    width: 218px;
+    height: 177px;
+  }
+
+  .ribbon {
+    right: -8px;
+  }
+
+  .cta {
+    width: 100%;
   }
 }

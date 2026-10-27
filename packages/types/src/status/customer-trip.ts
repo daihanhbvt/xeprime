@@ -111,11 +111,11 @@ export const CUSTOMER_TRIP_STAGE_LIVE_VALUES = CUSTOMER_TRIP_STAGE_VALUES.filter
 
 export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, StatusMeta>> = {
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: {
-    label: 'Chờ xác nhận',
-    color: STATUS_COLOR.WAITING,
+    label: 'Chờ chủ xe phản hồi',
+    color: STATUS_COLOR.WARNING,
   },
   [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: {
-    label: 'Đã được nhận · chờ thanh toán',
+    label: 'Chờ thanh toán',
     color: STATUS_COLOR.WARNING,
   },
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID]: {
@@ -127,7 +127,7 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
   [CUSTOMER_TRIP_STAGE.COMPLETED]: { label: 'Hoàn thành', color: STATUS_COLOR.SUCCESS },
   [CUSTOMER_TRIP_STAGE.CANCELLED]: {
     label: 'Đã hủy chuyến',
-    color: STATUS_COLOR.NEUTRAL,
+    color: STATUS_COLOR.DANGER,
   },
   [CUSTOMER_TRIP_STAGE.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
   [CUSTOMER_TRIP_STAGE.EXPIRED]: { label: 'Quá hạn phản hồi', color: STATUS_COLOR.NEUTRAL },

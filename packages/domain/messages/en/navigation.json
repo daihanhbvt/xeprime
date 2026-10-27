@@ -30,14 +30,15 @@
   },
   "account": {
     "menuLabel": "Account menu",
-    "profile": "My account",
+    "security": "Account security",
+    "profile": "Manage account",
     "personalProfile": "Personal profile",
     "trips": "My trips",
     "payments": "Payment history",
     "favorites": "Saved vehicles",
     "addresses": "My addresses",
     "documents": "Documents & verification",
-    "driving": "Where I drive",
+    "driving": "Driver Center",
     "notifications": "Notifications",
     "support": "Support",
     "settings": "Settings",
@@ -57,7 +58,8 @@
     "ownerProfile": "Host profile",
     "messages": "Guest messages",
     "subscription": "Subscription",
-    "shopProfile": "Shop profile"
+    "shopProfile": "Shop profile",
+    "paymentsHub": "Payments"
   },
   "manage": {
     "home": "Home",

@@ -73,6 +73,10 @@ function useInvalidateWallet(scope: WalletScope) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.summary(scope) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.withdrawals(scope) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+    // Lệnh rút là một dòng của "Lịch sử giao dịch" phía khách.
+    if (scope === WALLET_SCOPE.ACCOUNT) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accountTransactions.all });
+    }
   };
 }
 

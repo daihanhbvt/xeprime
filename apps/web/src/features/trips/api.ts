@@ -1,4 +1,10 @@
-import type { HandoverPhotoSlot, HandoverType, PaginationMeta } from '@xeprime/types';
+import type {
+  CustomerCancellationReason,
+  HandoverPhotoSlot,
+  HandoverType,
+  PaginationMeta,
+} from '@xeprime/types';
+import { startOfAppDay } from '@/lib/datetime';
 import { apiGet, apiRequest, type QueryParams } from '@/services/api-client';
 import type {
   CustomerTrip,
@@ -30,8 +36,33 @@ const EMPTY_COUNTS: CustomerTripCounts = { current: 0, history: 0 };
  *
  * Bỏ trống ⇒ server trả cả hai vai, như trước.
  */
-export function tripsToParams(filter: string, page: number, role?: string): QueryParams {
-  return { filter, page, limit: TRIPS_DEFAULT_LIMIT, ...(role ? { role } : {}) };
+export function tripsToParams(
+  filter: string,
+  page: number,
+  role?: string,
+  narrow?: TripListNarrow,
+): QueryParams {
+  return {
+    filter,
+    page,
+    limit: TRIPS_DEFAULT_LIMIT,
+    ...(role ? { role } : {}),
+    ...(narrow?.q ? { q: narrow.q } : {}),
+    // URL giữ `YYYY-MM-DD` (giờ VN) → API nhận mốc tuyệt đối: từ 00:00 ngày đầu đến hết ngày cuối.
+    ...(narrow?.from ? { dateFrom: startOfAppDay(narrow.from).toISOString() } : {}),
+    ...(narrow?.to
+      ? {
+          dateTo: startOfAppDay(narrow.to).add(1, 'day').subtract(1, 'millisecond').toISOString(),
+        }
+      : {}),
+  };
+}
+
+/** Ô "Tìm kiếm chuyến đi" + "Chọn khoảng thời gian" — ngày ở dạng `YYYY-MM-DD` giờ VN. */
+export interface TripListNarrow {
+  q?: string;
+  from?: string;
+  to?: string;
 }
 
 /**
@@ -49,9 +80,10 @@ export async function fetchTrips(
   filter: string,
   page: number,
   role?: string,
+  narrow?: TripListNarrow,
 ): Promise<TripsResult> {
   const res = (await apiRequest<CustomerTrip[]>('/trips', {
-    query: tripsToParams(filter, page, role),
+    query: tripsToParams(filter, page, role, narrow),
   })) as TripsEnvelope;
 
   return {
@@ -118,8 +150,14 @@ export function fetchTripCancelPreview(id: string): Promise<CustomerTripCancelPr
  * Trả về chính chuyến đó sau khi huỷ (đã đổi chặng) nên nơi gọi ghi thẳng vào cache, không cần
  * một lượt đọc thứ hai chỉ để biết kết quả của việc mình vừa làm.
  */
-export function cancelTrip(id: string): Promise<CustomerTripDetail> {
-  return apiRequest<CustomerTripDetail>(`/trips/${id}/cancel`, { method: 'POST' }).then(
+export function cancelTrip(
+  id: string,
+  reasonCategory: CustomerCancellationReason,
+): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/cancel`, {
+    method: 'POST',
+    body: { reasonCategory },
+  }).then(
     (res) => res.data,
   );
 }

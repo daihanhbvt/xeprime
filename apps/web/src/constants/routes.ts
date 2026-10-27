@@ -84,9 +84,15 @@ export const ROUTES = {
    */
   ACCOUNT: {
     ROOT: '/account',
-    /** Đổi mật khẩu (có mật khẩu hiện tại) hoặc đặt lần đầu (tài khoản OTP/social). */
+    /**
+     * "Bảo mật tài khoản": đổi mật khẩu (hoặc đặt lần đầu với tài khoản OTP/social) + lối mở hộp
+     * yêu cầu xoá tài khoản (`accountDeletionPath()`).
+     */
     CHANGE_PASSWORD: '/account/change-password',
-    /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
+    /**
+     * Đường cũ của YÊU CẦU xoá tài khoản (support case `account_deletion`, nền tảng xử lý tay) —
+     * nay chuyển về trang Bảo mật tài khoản và mở sẵn hộp yêu cầu.
+     */
     DELETE_ACCOUNT: '/account/delete-account',
     /** Tiền của các chuyến đã thuê — đọc từ `payments`, không phải ví. */
     PAYMENTS: '/account/payments',
@@ -1093,6 +1099,26 @@ export function balancePayoutPath(): string {
 }
 
 /**
+ * Bản của SITE KHÁCH: khối "Tài khoản nhận tiền" trong tab "Tài khoản thanh toán" của mục Quản lý
+ * thanh toán (design Account 22/10/2026) — đích của đường cũ `/account/bank-accounts`.
+ */
+export function accountBalancePayoutPath(): string {
+  return `${ROUTES.ACCOUNT.BALANCE}?${SECTION_PARAM}=${BALANCE_PAYOUT_SECTION}`;
+}
+
+/**
+ * Hộp "Yêu cầu xoá tài khoản" trên trang Bảo mật tài khoản của SITE KHÁCH (design Account /
+ * Security, 22/10/2026) — mở/đóng theo `?deletion=open`, nên đường cũ `ACCOUNT.DELETE_ACCOUNT`
+ * chuyển về đây và mở sẵn hộp.
+ */
+export const ACCOUNT_DELETION_PARAM = 'deletion';
+export const ACCOUNT_DELETION_OPEN = 'open';
+
+export function accountDeletionPath(): string {
+  return `${ROUTES.ACCOUNT.CHANGE_PASSWORD}?${ACCOUNT_DELETION_PARAM}=${ACCOUNT_DELETION_OPEN}`;
+}
+
+/**
  * ── TÀI KHOẢN (site partner, 05/10/2026) ─────────────────────────────────────────────────────
  *
  * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập — gộp "Hồ sơ cá nhân" và "Bảo mật tài
@@ -1287,7 +1313,8 @@ export const TRIPS_TAB = {
 export type TripsTab = (typeof TRIPS_TAB)[keyof typeof TRIPS_TAB];
 
 export const drivingTripPath = {
-  list: `${ROUTES.TRIPS}?${TRIPS_TAB_PARAM}=${TRIPS_TAB.DRIVING}`,
+  /** Danh sách "Chuyến tôi lái" nằm đầu trang "Nơi tôi làm tài xế". */
+  list: ROUTES.ACCOUNT.DRIVING,
   detail: (bookingId: string): string => `${ROUTES.TRIPS}/driving/${encodeURIComponent(bookingId)}`,
 };
 

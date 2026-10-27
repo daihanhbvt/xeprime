@@ -1,9 +1,9 @@
 import { memo, useCallback, useState } from 'react';
-import { Pressable } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isDriverTripAwaitingAnswer } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, telHref } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
@@ -15,7 +15,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { DriverTrip } from '../api';
 import { DrivingTripBookingBadge, DrivingTripStatusBadge, drivingTripColor } from './DrivingTripTags';
-import { useAcceptDriverTrip, useDeclineDriverTrip } from '../hooks';
+import { useAcceptDriverTrip, useDeclineDriverTrip, useReleaseDriverTrip } from '../hooks';
 
 /**
  * MỘT chuyến tôi lái — bản native của `DrivingTripCard` (web). Vạch màu mép trái theo lượt gán
@@ -39,8 +39,12 @@ function DrivingTripCardImpl({
   const errorMessage = useErrorMessage();
   const accept = useAcceptDriverTrip();
   const decline = useDeclineDriverTrip();
+  const release = useReleaseDriverTrip();
+  const tCard = useTranslations('Driving.tripCard');
   const [confirmingDecline, setConfirmingDecline] = useState(false);
-  const busy = accept.isPending || decline.isPending;
+  const [confirmingRelease, setConfirmingRelease] = useState(false);
+  const busy = accept.isPending || decline.isPending || release.isPending;
+  const customerPhone = trip.customer.phone;
 
   const pending = isDriverTripAwaitingAnswer(trip);
   const open = useCallback(() => onPress(trip), [onPress, trip]);
@@ -103,6 +107,33 @@ function DrivingTripCardImpl({
               </YStack>
             </Pressable>
 
+            {trip.releaseUntil || (customerPhone && !pending) ? (
+              <XStack jc="flex-end" gap={space.sm} px={space.sm} pb={space.sm}>
+                {customerPhone ? (
+                  <Button
+                    label={tCard('callCustomer')}
+                    icon="call-outline"
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => {
+                      const href = telHref(customerPhone);
+                      if (href) void Linking.openURL(href);
+                    }}
+                  />
+                ) : null}
+                {trip.releaseUntil ? (
+                  <Button
+                    label={tCard('release')}
+                    variant="ghostDanger"
+                    size="sm"
+                    disabled={busy}
+                    loading={release.isPending}
+                    onPress={() => setConfirmingRelease(true)}
+                  />
+                ) : null}
+              </XStack>
+            ) : null}
+
             {pending ? (
               <XStack jc="flex-end" gap={space.sm} px={space.sm} pb={space.sm}>
                 <Button
@@ -131,6 +162,31 @@ function DrivingTripCardImpl({
           </YStack>
         </XStack>
       </Card>
+
+      {trip.releaseUntil ? (
+        <AlertDialog
+          open={confirmingRelease}
+          title={tCard('releaseConfirmTitle')}
+          message={tCard('releaseConfirmBody')}
+          confirmLabel={tCard('release')}
+          cancelLabel={tActions('close')}
+          destructive
+          loading={release.isPending}
+          onConfirm={() =>
+            release.mutate(trip.id, {
+              onSuccess: () => {
+                setConfirmingRelease(false);
+                toast.showSuccess(tToast('tripReleased'));
+              },
+              onError: (err) => {
+                setConfirmingRelease(false);
+                toast.showError(errorMessage(err));
+              },
+            })
+          }
+          onCancel={() => setConfirmingRelease(false)}
+        />
+      ) : null}
 
       {pending ? (
         <AlertDialog

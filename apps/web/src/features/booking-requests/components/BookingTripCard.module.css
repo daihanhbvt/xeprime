@@ -128,24 +128,25 @@
   font-size: 20px;
 }
 
+/* Figma `Date details`: nhãn 12/18 `Text/Gray/low`, giá trị 14/22 Semibold, khe 2. */
 .scheduleText {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-2);
   min-width: 0;
 }
 
 .scheduleLabel {
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
 }
 
 .scheduleValue {
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
   font-size: var(--xp-font-size-body);
-  line-height: 22px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .placeTitle {
@@ -198,9 +199,42 @@
   min-width: 0;
 }
 
+.ownerAvatarWrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
 .ownerAvatar {
   flex: none;
   border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Gian hàng tuyến gói nổi hơn chủ xe cá nhân — viền vàng + dấu xác minh (như `CustomerTripCard`). */
+.ownerAvatar.ownerAvatarShop {
+  border-color: var(--xp-color-primary-glow);
+}
+
+/* Dấu xác minh — vòng trắng 12px ở góc phải dưới ảnh. */
+.ownerMark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+}
+
+.ownerName.ownerNameShop {
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .ownerText {
@@ -243,6 +277,18 @@
 /* Khung lịch cao bằng cột ảnh + tên xe (Figma `Rental schedule` `self-stretch`). */
 .review .schedule {
   align-self: stretch;
+}
+
+/* Figma `21731:15445`: Nhận xe · Trả xe đứng chung một hàng, mỗi mốc một nửa. */
+.review .times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@container (max-width: 420px) {
+  .review .times {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @container (max-width: 600px) {
   .review .body {

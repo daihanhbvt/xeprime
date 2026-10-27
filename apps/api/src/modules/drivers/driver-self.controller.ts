@@ -134,4 +134,19 @@ export class DriverSelfController {
     await this.drivers.respondToTrip(user.id, id, false);
     return { ok: true };
   }
+
+  @Post('trips/:id/release')
+  @ApiOperation({
+    summary: 'Trả lại chuyến đã nhận',
+    description:
+      'Chỉ khi đơn còn `reserved` và trước `releaseUntil` (= clamp(20%·ΔT, 15′, 2h) tính xuôi từ lúc nhận, kẹp bởi giờ nhận — cùng công thức huỷ miễn phí của khách). Đơn KHÔNG bị huỷ: quay về chưa có tài xế, bên thuê được báo khẩn để gán người khác. Lượt khép với kết cục `declined` (có `acceptedAt`). Khác điều kiện ⇒ 409 `CONFLICT`.',
+  })
+  @ApiOkResponse({ type: OkResultDto })
+  async releaseTrip(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ ok: true }> {
+    await this.drivers.releaseTrip(user.id, id);
+    return { ok: true };
+  }
 }

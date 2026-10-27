@@ -20,21 +20,6 @@
   background: var(--xp-color-primary-light);
 }
 
-.badge {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-text);
-  color: var(--xp-color-bg-container);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-bold);
-  letter-spacing: 0.02em;
-}
-
 .text {
   display: flex;
   flex: 1 1 auto;
@@ -75,4 +60,110 @@
 
 .action {
   flex: none;
+}
+
+/*
+ * Hình `detail` — Figma `19879:74829` ("Tài khoản nhận tiền"): logo ngân hàng 172px bên trái,
+ * bảng thông tin bên phải với cột nhãn 150px. Máy hẹp: logo thu về 72px và đứng trên.
+ */
+.detail {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+.detailBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.fact dt {
+  flex: none;
+  width: 150px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.fact dd {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+}
+
+.factNumber {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tên thụ hưởng viết HOA như trên sao kê — cùng quy tắc với hình một dòng. */
+.factHolder {
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  /* Máy hẹp: logo 56px đứng cạnh bảng thông tin thay vì chiếm một dòng riêng. */
+  .detail {
+    align-items: flex-start;
+    gap: var(--xp-space-12);
+  }
+
+  /* (0,2,0) để thắng cỡ `lg` của `BankLogo`. */
+  .detail .detailLogo {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--xp-border-radius-lg);
+  }
+
+  .fact {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .fact dt {
+    width: auto;
+    font-size: var(--xp-font-size-body-sm);
+  }
+
+  .fact dd {
+    font-size: var(--xp-font-size-body);
+  }
 }

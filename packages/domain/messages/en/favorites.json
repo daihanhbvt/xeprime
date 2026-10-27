@@ -1,6 +1,7 @@
 {
   "page": {
-    "title": "Saved vehicles"
+    "title": "Saved vehicles",
+    "subtitle": "Vehicles you saved so you can keep an eye on them and book any time."
   },
   "tabs": {
     "label": "Vehicle type",
@@ -19,8 +20,7 @@
     "servicesLabel": "Services offered",
     "serviceLinkAria": "View {name} with {service}",
     "highlightsLabel": "Vehicle perks",
-    "savedAt": "Saved {dateTime}",
-    "viewDetail": "View details"
+    "savedAt": "Saved {dateTime}"
   },
   "empty": {
     "car": "You haven't saved any cars yet",

@@ -4,6 +4,7 @@ import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { COLLATERAL_MODE, FEE_LINE, PRICE_ROW } from '@xeprime/types';
+import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -53,6 +54,11 @@ interface BookingReviewCostsProps {
    */
   surface?: 'review' | 'trip';
   /**
+   * Số khách ĐÃ chuyển (tiền giữ chỗ đã thanh toán) — chỉ màn chuyến (Figma `21777:56433`). Có thì
+   * cuối thẻ là "Đã thanh toán" + "Còn lại" (= tổng − đã trả, không âm) thay cho dòng tổng.
+   */
+  paidAmount?: string | null;
+  /**
    * Số đã CHỐT — bảng kê đóng băng lúc chủ xe nhận chuyến (khoản giữ chỗ, ADR 0039) hoặc của đơn
    * (ADR 0024). Lúc đó câu "giá chốt do chủ xe xác nhận khi duyệt" là sai, và tổng không còn là
    * "dự kiến".
@@ -87,6 +93,7 @@ export function BookingReviewCosts({
   emptyNote,
   headingLevel = 3,
   surface = 'review',
+  paidAmount = null,
   frozen = false,
 }: BookingReviewCostsProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
@@ -184,8 +191,19 @@ export function BookingReviewCosts({
 
             <div className={reviewStyles.divider} role="presentation" />
 
-            <div className={styles.total}>
-              <span className={styles.totalLabel}>{total?.label}</span>
+            {onTrip && paidAmount ? (
+              <TripPaidRemaining
+                total={total?.amount ?? breakdown.totalAmount}
+                paid={paidAmount}
+              />
+            ) : (
+            <div className={cx(styles.total, onTrip && styles.tripTotal)}>
+              {/* Màn chuyến (Figma `21788:60666`): nhãn + số cùng một hàng, số vàng 20/30. */}
+              <span className={styles.totalLabel}>
+                {onTrip
+                  ? t(frozen ? 'reviewPage.costs.tripTotal' : 'reviewPage.costs.tripEstimatedTotal')
+                  : total?.label}
+              </span>
               <strong className={styles.totalAmount}>
                 {fmt.money(total?.amount ?? breakdown.totalAmount)}
               </strong>
@@ -200,6 +218,7 @@ export function BookingReviewCosts({
               ) : null}
               <p className={styles.note}>{costNote}</p>
             </div>
+            )}
           </>
         ) : listedRows.length > 0 ? (
           <>
@@ -278,18 +297,47 @@ export function BookingReviewCosts({
           {deposit ? (
             <div className={styles.block}>
               <div className={styles.row}>
-                <span className={styles.label}>{tCommon('components.price.deposit')}</span>
+                {/*
+                  Màn chuyến (Figma `21621:53895`): "Cọc xe" — cọc THẾ CHẤP trả tay khi nhận xe, KHÁC
+                  tiền giữ chỗ chuyển qua QR ở trên (ADR 0044 điều 9).
+                */}
+                <span className={cx(styles.label, onTrip && styles.depositLabel)}>
+                  {onTrip ? t('reviewPage.others.deposit') : tCommon('components.price.deposit')}
+                </span>
                 <strong className={styles.amount}>
                   {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
                     ? fmt.money(deposit.amount)
                     : dl('collateralMode', deposit.mode)}
                 </strong>
               </div>
-              <p className={styles.note}>{deposit.note}</p>
+              <p className={cx(styles.note, onTrip && styles.depositNote)}>{deposit.note}</p>
             </div>
           ) : null}
         </section>
       ) : null}
+    </>
+  );
+}
+
+/** "Đã thanh toán" + "Còn lại" cuối thẻ chi phí của màn chuyến — Figma `21777:56433`. */
+function TripPaidRemaining({ total, paid }: { total: string; paid: string }) {
+  const t = useTranslations('BookingRequests.flow');
+  const fmt = useAppFormat();
+  const raw = subtractMoney(total, paid);
+  const remaining = isNegativeMoney(raw) ? '0.00' : raw;
+  return (
+    <>
+      <div className={styles.row}>
+        <span className={styles.label}>{t('reviewPage.costs.paid')}</span>
+        <strong className={styles.amount}>{fmt.money(paid)}</strong>
+      </div>
+      <div className={styles.remaining}>
+        <div className={styles.remainingRow}>
+          <span className={styles.remainingLabel}>{t('reviewPage.costs.remaining')}</span>
+          <strong className={styles.remainingAmount}>{fmt.money(remaining)}</strong>
+        </div>
+        <p className={styles.note}>{t('reviewPage.costs.remainingNote')}</p>
+      </div>
     </>
   );
 }

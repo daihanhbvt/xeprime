@@ -1,0 +1,37 @@
+/*
+ * Nút tròn cạnh tên chủ xe (Figma `19879:73248` "Solution Icon"): nền trắng, viền
+ * `Stroke/gray-low200`, đệm 8, icon 20.
+ */
+.circleAction {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.circleAction:hover {
+  border-color: var(--xp-color-primary-border);
+  color: var(--xp-color-primary-hover);
+}
+
+.circleAction:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.circleAction:disabled {
+  cursor: progress;
+  opacity: var(--xp-disabled-opacity);
+}

@@ -1,33 +1,28 @@
 'use client';
 
 import {
-  CheckOutlined,
   EditOutlined,
-  ExclamationCircleFilled,
   MailOutlined,
   PhoneOutlined,
-  PlusOutlined,
   SafetyCertificateOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
-import { Alert, Avatar, Button, Card, Spin, Tag, Tooltip } from 'antd';
+import { Alert, Avatar, Button, Spin } from 'antd';
 import { useState, type ReactNode } from 'react';
-import { useWatch } from 'react-hook-form';
-import { STATUS_COLOR } from '@xeprime/types';
-import { ImageUploadField } from '@/components/form/ImageUploadField';
-import { TextField } from '@/components/form/TextField';
+import { useTranslations } from 'next-intl';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { WalletBalancePill } from '@/features/wallet/components/WalletBalancePill';
-import { presignAvatar } from '@/services/upload';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { cx } from '@/lib/cx';
+import { initialOf } from '@/lib/initials';
 import { useMyProfile } from '../hooks/use-account';
-import { useAccountProfileForm } from '../hooks/use-account-profile-form';
+import { useAccountIdentityLabel } from '../hooks/use-account-identity-label';
 import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../types';
+import { AccountPanel } from './AccountPanel';
+import { AccountProfileEditModal } from './AccountProfileEditModal';
 import { ContactVerifyModal } from './ContactVerifyModal';
-import { AccountTrackBadge } from './AccountTrackBadge';
 import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
-import { useTranslations } from 'next-intl';
-import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
  * Trang gốc của khu tài khoản — hồ sơ của CON NGƯỜI đang đăng nhập.
@@ -44,169 +39,107 @@ export function AccountView() {
   const errorMessage = useErrorMessage();
   const profile = useMyProfile();
 
+  if (profile.isLoading) {
+    return (
+      <div className={styles.center}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+  if (profile.isError) {
+    return (
+      <div className={styles.center}>
+        <Alert type="error" showIcon title={errorMessage(profile.error)} />
+        <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
+      </div>
+    );
+  }
+  if (!profile.data) return null;
+
   return (
     <>
-      {profile.isLoading ? (
-        <div className={styles.center}>
-          <Spin size="large" />
-        </div>
-      ) : profile.isError ? (
-        <div className={styles.center}>
-          <Alert type="error" showIcon title={errorMessage(profile.error)} />
-          <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
-        </div>
-      ) : profile.data ? (
-        <>
-          <ProfileForm profile={profile.data} />
-          <ShopEntryCard />
-        </>
-      ) : null}
+      <ProfileCard profile={profile.data} />
+      <ShopEntryCard />
     </>
   );
 }
 
-function ProfileForm({ profile }: { profile: UserProfile }) {
+/**
+ * Thẻ "Thông tin tài khoản" — design Account / Profile (Figma `21621:65695`): danh tính bên trái,
+ * hai kênh liên lạc bên phải, ghi chú đăng nhập, rồi nút "Cập nhật thông tin" mở hộp thoại sửa.
+ *
+ * Góc phải đầu thẻ là lối tắt SỐ DƯ: nó là câu hỏi người dùng mang theo khi mở trang tài khoản.
+ * Viên số dư chỉ nói MỘT con số và mở màn "Quản lý thanh toán" — sổ và lệnh rút ở đúng một chỗ.
+ */
+function ProfileCard({ profile }: { profile: UserProfile }) {
   const t = useTranslations('Account');
-  const tCommon = useTranslations('Common');
   // `/auth/me` đã nằm sẵn trong cache (vỏ khu tài khoản gọi nó trước khi render) — đọc lại ở
-  // đây không thêm request nào, và nó là nguồn DUY NHẤT của tuyến (ADR 0038 điều 1).
+  // đây không thêm request nào, và nó là nguồn DUY NHẤT của nhãn vai (ADR 0038 điều 1).
   const { data: user } = useCurrentUser();
-  const [isEditing, setIsEditing] = useState(false);
+  const identityLabel = useAccountIdentityLabel();
+  const [editing, setEditing] = useState(false);
   /** Kênh liên lạc đang được đổi — `null` là không có modal nào mở. */
   const [editingContact, setEditingContact] = useState<ContactChannel | null>(null);
 
-  const { form, submit, revert, saving } = useAccountProfileForm(profile, {
-    onSaved: () => setIsEditing(false),
-  });
-  const { control, formState } = form;
-
-  // `useWatch` thay cho `watch()`: chỉ component này render lại khi hai field đó đổi, và nó là
-  // API React Compiler memo hoá được (`watch()` trả hàm mới mỗi render nên bị bỏ qua).
-  const avatarUrl = useWatch({ control, name: 'avatarUrl' });
-  const displayName = useWatch({ control, name: 'displayName' });
-
-  function cancelEditing() {
-    revert();
-    setIsEditing(false);
-  }
-
   return (
-    <Card className={styles.card}>
-      <div className={styles.inner}>
-        <div className={styles.cardHead}>
-          <div>
-            <span className={styles.eyebrow}>
-              <SafetyCertificateOutlined aria-hidden />
-              {t('profile.eyebrow')}
-            </span>
-            {/* h1 của trang: vỏ `AccountShell` không còn tiêu đề chung, mỗi trang tự mang một h1. */}
-            <h1 className={styles.title}>{t('profile.title')}</h1>
-            <p className={styles.description}>{t('profile.description')}</p>
+    <AccountPanel
+      as="h1"
+      title={t('profile.title')}
+      subtitle={t('profile.description')}
+      extra={<WalletBalancePill />}
+    >
+      <div className={styles.profileGrid}>
+        <section className={styles.summary} aria-label={t('profile.accountLabel')}>
+          <Avatar size={64} src={profile.avatarUrl || undefined} className={styles.avatar}>
+            {initialOf(profile.displayName)}
+          </Avatar>
+          <div className={styles.identity}>
+            <p className={styles.name}>{profile.displayName}</p>
+            {/* Nhãn danh tính đọc TUYẾN, không đọc bảng vai — cùng nguồn với menu trái. */}
+            <p className={styles.role}>{identityLabel(user)}</p>
           </div>
-          {/*
-            Góc phải: sửa hồ sơ, rồi tới lối tắt SỐ DƯ.
-            Tiền đứng ở đây vì nó là câu hỏi người dùng mang theo khi mở trang tài khoản, và
-            trước đợt này họ phải cuộn hết thẻ hồ sơ mới thấy con số. Viên thuốc chỉ nói MỘT con
-            số và mở màn số dư đầy đủ — ba con số, sổ và lệnh rút vẫn ở đúng một chỗ.
-          */}
-          <div className={styles.cardHeadActions}>
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => setIsEditing(true)}
-              disabled={isEditing || saving}
-            >
-              {t('profile.edit')}
-            </Button>
-            <WalletBalancePill />
-          </div>
-        </div>
+        </section>
 
-        <div className={styles.profileGrid}>
-          <section className={styles.summary} aria-label={t('profile.accountLabel')}>
-            <Avatar size={104} src={avatarUrl || undefined} className={styles.avatar}>
-              {initial(displayName || profile.displayName)}
-            </Avatar>
-            <div className={styles.name}>{displayName || profile.displayName}</div>
-            <div className={styles.accountLabel}>{t('profile.accountLabel')}</div>
-            {/*
-              Nhãn TUYẾN ngay dưới tên, không chôn trong trang gói: đây là câu trả lời cho
-              "tôi đang là ai trên sàn này", và nó quyết định menu của họ trông ra sao. Bắt người
-              dùng mở /account/subscription để biết mình thuộc tuyến nào là giấu câu trả lời sau
-              một màn nói về hoá đơn.
-            */}
-            <AccountTrackBadge tenant={user?.tenant ?? null} />
-          </section>
-
-          <dl className={styles.details}>
-            <ContactRow
-              icon={<MailOutlined aria-hidden />}
-              label={t('profile.email')}
-              value={profile.email}
-              emptyLabel={t('noEmail')}
-              verified={profile.emailVerified}
-              onEdit={() => setEditingContact(CONTACT_CHANNEL.EMAIL)}
-            />
-            <ContactRow
-              icon={<PhoneOutlined aria-hidden />}
-              label={t('profile.phone')}
-              value={profile.phone}
-              emptyLabel={t('noPhone')}
-              verified={profile.phoneVerified}
-              onEdit={() => setEditingContact(CONTACT_CHANNEL.PHONE)}
-            />
-          </dl>
-        </div>
-
-        {isEditing ? (
-          <form onSubmit={submit} noValidate className={styles.form}>
-            <div className={styles.fields}>
-              <TextField
-                control={control}
-                name="displayName"
-                label={t('displayName')}
-                placeholder={t('displayNamePlaceholder')}
-                autoComplete="name"
-                prefix={<UserOutlined />}
-                disabled={saving}
-              />
-              {/*
-                Ảnh đại diện đi ĐÚNG đường của mọi ảnh khác trong sản phẩm: chọn file → presign →
-                PUT thẳng lên R2 → field nhận URL công khai. Ô dán URL trước đây bắt người dùng
-                tự tìm một chỗ host ảnh, thứ gần như không ai làm — nên trên thực tế ảnh đại diện
-                là một trường chết.
-              */}
-              <ImageUploadField
-                control={control}
-                name="avatarUrl"
-                label={t('avatarUrl')}
-                presign={presignAvatar}
-                help={t('avatarHelp')}
-              />
-            </div>
-            <div className={styles.formActions}>
-              <Button onClick={cancelEditing} disabled={saving}>
-                {tCommon('actions.cancel')}
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={saving}
-                disabled={!formState.isDirty && !saving}
-              >
-                {tCommon('actions.saveChanges')}
-              </Button>
-            </div>
-          </form>
-        ) : null}
-
-        <div className={styles.securityNote}>
-          <SafetyCertificateOutlined className={styles.securityIcon} aria-hidden />
-          <div>
-            <h3 className={styles.securityTitle}>{t('profile.securityTitle')}</h3>
-            <p className={styles.securityDescription}>{t('profile.securityDescription')}</p>
-          </div>
+        <div className={styles.details}>
+          <ContactRow
+            icon={<MailOutlined aria-hidden />}
+            label={t('profile.email')}
+            value={profile.email}
+            emptyLabel={t('noEmail')}
+            verified={profile.emailVerified}
+            onEdit={() => setEditingContact(CONTACT_CHANNEL.EMAIL)}
+          />
+          <ContactRow
+            icon={<PhoneOutlined aria-hidden />}
+            label={t('profile.phone')}
+            value={profile.phone}
+            emptyLabel={t('noPhone')}
+            verified={profile.phoneVerified}
+            onEdit={() => setEditingContact(CONTACT_CHANNEL.PHONE)}
+          />
         </div>
       </div>
+
+      <div className={styles.securityNote}>
+        <SafetyCertificateOutlined className={styles.securityIcon} aria-hidden />
+        <div>
+          <h2 className={styles.securityTitle}>{t('profile.securityTitle')}</h2>
+          <p className={styles.securityDescription}>{t('profile.securityDescription')}</p>
+        </div>
+      </div>
+
+      <div className={styles.actions}>
+        <CtaButton
+          variant="neutral"
+          iconStart={<EditOutlined />}
+          className={styles.updateButton}
+          onClick={() => setEditing(true)}
+        >
+          {t('profile.update')}
+        </CtaButton>
+      </div>
+
+      <AccountProfileEditModal profile={profile} open={editing} onClose={() => setEditing(false)} />
 
       {/*
         `key` theo kênh: modal giữ state của riêng nó (bước, mã đã gửi, đếm ngược), nên mở email
@@ -221,16 +154,16 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
           current={editingContact === CONTACT_CHANNEL.EMAIL ? profile.email : profile.phone}
         />
       ) : null}
-    </Card>
+    </AccountPanel>
   );
 }
 
 /**
- * Một dòng liên lạc: giá trị + tình trạng xác thực + lối vào để đổi.
+ * Một dòng liên lạc: giá trị + tình trạng xác minh + lối vào để đổi.
  *
- * Tình trạng xác thực luôn hiện khi đã có giá trị, kể cả khi CHƯA xác thực: một tài khoản tạo
- * bằng email/mật khẩu có email nhưng chưa ai chứng minh hộp thư đó tồn tại, và người dùng cần
- * thấy khoảng cách đó để biết còn việc phải làm — không thấy thì họ tưởng mình đã xong.
+ * Tình trạng luôn hiện khi đã có giá trị, kể cả khi CHƯA xác minh: một tài khoản tạo bằng
+ * email/mật khẩu có email nhưng chưa ai chứng minh hộp thư đó tồn tại, và người dùng cần thấy
+ * khoảng cách đó để biết còn việc phải làm — không thấy thì họ tưởng mình đã xong.
  */
 function ContactRow({
   icon,
@@ -251,54 +184,30 @@ function ContactRow({
 
   return (
     <div className={styles.detailRow}>
-      <dt>
-        {icon}
-        {label}
-      </dt>
-      <dd>
-        <span className={value ? styles.contactValue : styles.contactEmpty}>
-          {value ?? emptyLabel}
-        </span>
-        {value && verified ? (
-          <Tooltip title={t('verified')}>
-            {/*
-              Huy hiệu tự vẽ chứ không phải `CheckCircleFilled` tô màu: biểu tượng của AntD nhận
-              màu bằng `color`, mà `color` là thuộc tính KẾ THỪA — nó nằm cùng chỗ với màu chữ
-              của cả hàng, nên chỉ cần một quy tắc nào đó trúng phần tử trước là dấu tích lặng lẽ
-              đen trở lại. Ở đây màu xanh nằm ở `background`, thứ không kế thừa từ đâu cả.
-            */}
-            <span className={styles.verifiedMark} role="img" aria-label={t('verified')}>
-              <CheckOutlined aria-hidden />
+      <span className={styles.detailIcon}>{icon}</span>
+      <div className={styles.detailBody}>
+        <p className={styles.detailLabel}>{label}</p>
+        <p className={styles.detailValue}>
+          <span className={value ? styles.contactValue : styles.contactEmpty}>
+            {value ?? emptyLabel}
+          </span>
+          {value ? (
+            <span className={cx(styles.badge, verified ? styles.badgeOk : styles.badgeTodo)}>
+              {verified ? t('verified') : t('profile.unverified')}
             </span>
-          </Tooltip>
-        ) : null}
-        {value && !verified ? (
-          <Tag
-            color={STATUS_COLOR.WARNING}
-            className={styles.verified}
-            icon={<ExclamationCircleFilled />}
-          >
-            {t('profile.unverified')}
-          </Tag>
-        ) : null}
-        <Button
-          size="small"
-          type="link"
-          icon={value ? <EditOutlined /> : <PlusOutlined />}
-          onClick={onEdit}
-          aria-label={
-            value
-              ? t('contact.changeAria', { field: label })
-              : t('contact.addAria', { field: label })
-          }
-        >
-          {value ? t('contact.change') : t('contact.add')}
-        </Button>
-      </dd>
+          ) : null}
+        </p>
+      </div>
+      <button
+        type="button"
+        className={styles.detailAction}
+        onClick={onEdit}
+        aria-label={
+          value ? t('contact.changeAria', { field: label }) : t('contact.addAria', { field: label })
+        }
+      >
+        {value ? t('contact.change') : t('contact.add')}
+      </button>
     </div>
   );
-}
-
-function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || 'K';
 }

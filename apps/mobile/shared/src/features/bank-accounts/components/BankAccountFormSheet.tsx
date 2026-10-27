@@ -15,6 +15,10 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import type { BankAccount, BankAccountScope } from '@/api/bank-accounts/api';
 import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { BankLogo } from './BankLogo';
+
+/** Cỡ logo ở mỗi dòng ngân hàng — vuông 32px như dòng của web. */
+const BANK_OPTION_LOGO = 32;
 import { bankAccountSaveOutcome, bankAccountSummary } from '../current-account';
 
 const BANK_CODE_MAX = 20;
@@ -84,7 +88,12 @@ export function BankAccountFormSheet({
         bank.code.toLowerCase().includes(needle) ||
         bank.shortName.toLowerCase().includes(needle) ||
         bank.fullName.toLowerCase().includes(needle),
-    ).map((bank) => ({ value: bank.code, label: `${bank.shortName} — ${bank.fullName}` }));
+    ).map((bank) => ({
+      value: bank.code,
+      label: `${bank.shortName} — ${bank.fullName}`,
+      // Logo trước tên — cùng danh sách chọn có logo của web (Figma `19973:52549`).
+      leading: <BankLogo code={bank.code} size={BANK_OPTION_LOGO} radius={6} />,
+    }));
   }, [bankSearch]);
 
   const schema = useMemo(
@@ -169,6 +178,7 @@ export function BankAccountFormSheet({
           control={control}
           name="accountNumber"
           label={t('accountNumber')}
+          placeholder={t('accountNumberPlaceholder')}
           keyboardType="number-pad"
           required
         />
@@ -177,6 +187,7 @@ export function BankAccountFormSheet({
           name="accountName"
           label={t('accountName')}
           hint={t('accountNameHint')}
+          placeholder={t('accountNamePlaceholder')}
           autoCapitalize="characters"
           required
         />

@@ -1,15 +1,11 @@
-import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
-import { RequireSession } from '@/features/auth/RequireSession';
-import { BankAccountListScreen } from '@/features/bank-accounts/BankAccountListScreen';
+import { Redirect } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
 
 /**
- * Tài khoản NHẬN tiền hoàn của khách. Tài khoản ở app này luôn là tài khoản khách (ADR 0053), nên
- * sổ luôn là sổ `account` — sổ nhận tiền của gian hàng nằm ở app XePrime Partner.
+ * ALIAS cũ của "Tài khoản nhận tiền" — từ design Account (22/10/2026) nó là khối của tab "Tài khoản
+ * thanh toán" trong mục Quản lý thanh toán, ngay dưới nút Rút (web `/account/bank-accounts` →
+ * `accountBalancePayoutPath()`). Giữ route để deep link cũ không gãy.
  */
 export default function AccountBankAccountsRoute() {
-  return (
-    <RequireSession>
-      <BankAccountListScreen scope={BANK_ACCOUNT_SCOPE.ACCOUNT} />
-    </RequireSession>
-  );
+  return <Redirect href={ROUTES.account.balancePayout()} />;
 }
