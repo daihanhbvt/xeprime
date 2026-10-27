@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   API_ERROR_CODE,
+  BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_RESPOND_WINDOW,
   BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
@@ -69,7 +70,15 @@ const me = vi.hoisted(() => ({
 }));
 /** Lời nhắc thanh toán (`useUnpaidHolds`) — mặc định chưa có dữ liệu: không chặn gì. */
 const unpaid = vi.hoisted(() => ({ data: undefined as unknown }));
-vi.mock('@/features/trips/hooks', () => ({ useUnpaidHolds: () => unpaid }));
+/**
+ * Chi tiết chuyến mà hộp "Đã gửi yêu cầu" theo dõi (`useTrip`) — mặc định chưa có dữ liệu. Đặt
+ * `hold` chờ trả rồi `rerenderTree()` là mô phỏng thông báo "chủ xe đã duyệt" làm mới query đó.
+ */
+const trip = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock('@/features/trips/hooks', () => ({
+  useUnpaidHolds: () => unpaid,
+  useTrip: () => trip,
+}));
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({
     data: me.data,
@@ -451,6 +460,7 @@ beforeEach(() => {
   me.data = LOGGED_IN_ME;
   me.updatedAt = undefined;
   unpaid.data = undefined;
+  trip.data = undefined;
   promoApi.previewPromoCode.mockReset();
   promoApi.previewPromoCode.mockResolvedValue({ applicable: false, code: 'GIAM50', reason: null });
   listing.data = null;
@@ -767,6 +777,28 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(onClose).toHaveBeenCalled();
       // Không dựng màn "đã gửi, chờ chủ xe" cho một chuyến đã được nhận.
       expect(screen.queryByText(/sẽ xem xét và phản hồi/i)).toBeNull();
+    });
+
+    /**
+     * CHỦ XE DUYỆT trong lúc hộp "Đã gửi yêu cầu" còn mở ⇒ hộp đóng, sang trang thanh toán — cùng
+     * đích với chuyến "Đặt ngay". Thông báo duyệt làm mới chi tiết chuyến (`useTrip`), và chỉ một
+     * khoản giữ chỗ CHỜ TRẢ mới kéo khách đi: chưa có hold thì hộp đứng yên.
+     */
+    it('chủ xe duyệt khi hộp đã gửi còn mở: đóng hộp và sang trang thanh toán', async () => {
+      const { onClose, rerenderTree } = renderModal();
+      await advanceToReview();
+
+      api.submitBookingRequest.mockResolvedValue({ id: 'R7', status: 'pending_host_approval' });
+      submitFromReview();
+      await screen.findByText('Đã gửi yêu cầu');
+      expect(nav.push).not.toHaveBeenCalled();
+
+      trip.data = { hold: { status: BOOKING_HOLD_STATUS.PENDING } };
+      rerenderTree();
+
+      await waitFor(() => expect(nav.push).toHaveBeenCalledWith('/payment/R7'));
+      expect(nav.push).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalled();
     });
 
     /**

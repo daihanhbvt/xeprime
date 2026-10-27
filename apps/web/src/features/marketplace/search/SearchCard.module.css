@@ -1,9 +1,8 @@
 /*
- * Thẻ tìm kiếm trang chủ v2 (Figma "Search Panel" `19694:26192`, ADR 0062).
+ * Thẻ tìm kiếm trang chủ v2 (Figma node `21844:63647`, ADR 0062).
  *
- * Desktop: thẻ rộng 1200px, đè lên 102px dưới cùng của dải banner đầu trang (như Figma). Dải tab
- * dịch vụ chỉ rộng bằng các tab của nó và để lộ ảnh hero ở bên phải; bảng ô nhập trắng bên dưới
- * bo góc 16px ở ba góc còn lại.
+ * Desktop: Bố cục dạng viên thuốc (pill) thanh thoát, dải tab dịch vụ nổi phía trên nối liền mạch
+ * bằng góc lượn ngược (concave curve) sang hai bên. Các ô nhập và nút tìm kiếm xếp trên cùng một hàng.
  */
 .cardOuter {
   position: relative;
@@ -13,28 +12,59 @@
   margin: 0 auto;
 }
 
+@media (min-width: 1025px) {
+  .cardOuter {
+    margin-top: -64px;
+  }
+}
+
 .card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  width: 100%;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.08));
+}
+
+.tabsOuter {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: -1px;
+  z-index: 1;
+}
+
+.tabCornerLeft,
+.tabCornerRight {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  pointer-events: none;
+}
+
+.tabCornerLeft svg,
+.tabCornerRight svg {
+  display: block;
 }
 
 .tabs {
   position: relative;
-  z-index: 1;
-  max-width: 100%;
+  display: flex;
+  align-items: stretch;
+  background: var(--xp-color-bg-container);
+  border-radius: 20px 20px 0 0;
+  height: 48px;
 }
 
 .panel {
   display: flex;
   width: 100%;
   flex-direction: column;
-  padding: var(--xp-space-lg) var(--xp-space-20);
-  border-radius: 0 var(--xp-border-radius-card) var(--xp-border-radius-card)
-    var(--xp-border-radius-card);
+  padding: 12px 18px;
+  border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-elevation-panel);
-  gap: var(--xp-space-md);
+  box-shadow: none;
+  gap: var(--xp-space-sm);
 }
 
 /* Hàng Lộ trình (dịch vụ Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
@@ -42,73 +72,77 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px 14px;
+  padding: 4px 16px 8px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
 }
 
 .routeHint {
   flex-basis: 100%;
+  text-align: center;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
 
 .fields {
-  display: grid;
-  align-items: end;
-  gap: var(--xp-space-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
-@media (min-width: 1025px) {
-  /* Loại xe (vừa nội dung) | Địa điểm | Thời gian | Tìm kiếm — hai ô nhập chia đều phần còn lại. */
-  .fields {
-    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
-  }
-
-  /* Dài hạn không có ô thời gian: địa điểm nở ra, KHÔNG chừa một cột trống giữ chỗ. */
-  .fieldsCompact {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-}
-
-@media (min-width: 641px) and (max-width: 1024px) {
-  .fields {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .cellVehicle {
-    grid-column: 1 / -1;
-  }
-
-  .submit {
-    grid-column: 1 / -1;
-  }
+.fieldsCompact .cellLocation {
+  flex: 1 1 0;
 }
 
 .cell {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-6);
+  align-items: center;
 }
 
-.cellLabel {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+.cellVehicle {
+  flex: none;
 }
 
-/* Ô thời gian — cùng hình với ô địa điểm (`LocationPicker.module.css` › `.field`). */
-.box {
-  height: 44px;
-  padding: 10px 14px !important;
-  border: 1px solid var(--xp-color-border-strong) !important;
-  border-radius: var(--xp-border-radius-control);
+.cellLocation {
+  flex: 1 1 0;
+  min-width: 170px;
+}
+
+.cellRental {
+  flex: 1.35 1 0;
+  min-width: 250px;
+}
+
+/* Ô nhập địa điểm dạng pill */
+.locationField {
+  height: 44px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--xp-color-border) !important;
+  border-radius: var(--xp-border-radius-pill) !important;
   background: var(--xp-color-bg-container) !important;
-  box-shadow: var(--xp-elevation-xs);
-  font-size: var(--xp-font-size-body-lg);
+  box-shadow: none !important;
+  font-size: 15px !important;
+}
+
+.locationField:hover {
+  border-color: var(--xp-color-primary) !important;
+}
+
+/* Ô thời gian dạng pill */
+.box {
+  height: 44px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--xp-color-border) !important;
+  border-radius: var(--xp-border-radius-pill) !important;
+  background: var(--xp-color-bg-container) !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  line-height: 1.5;
   gap: var(--xp-space-sm) !important;
-  line-height: var(--xp-line-height-body-lg);
 }
 
 .box:hover {
@@ -121,7 +155,7 @@
   box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
 }
 
-/* Ô icon 20px — nét vẽ SVG đặt nguyên cỡ ở giữa (SVG Figma không giãn được). */
+/* Ô icon 20px */
 .boxIcon {
   display: inline-flex;
   width: 20px;
@@ -131,21 +165,70 @@
 }
 
 .submit {
+  flex: none;
   height: 44px;
+  padding: 0 24px;
+  font-size: 15px;
 }
 
-/* Ghi chú dài hạn — nói rõ gói thuê chọn ở BƯỚC SAU, không phải ở đây. */
+/* Ẩn nhãn thị giác nhưng giữ cho trình đọc màn hình và test WAI-ARIA */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.cellLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Ghi chú dài hạn */
 .hint {
   margin: 0;
+  text-align: center;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
 
-/* Desktop: thẻ đè lên 102px cuối của dải banner (chấm chuyển banner khai cùng con số, HomeHero). */
-@media (min-width: 1025px) {
-  .cardOuter {
-    margin-top: -102px;
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tabCornerLeft,
+  .tabCornerRight {
+    display: none;
+  }
+
+  .tabs {
+    border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 0 0;
+  }
+
+  .panel {
+    border-radius: 0 0 var(--xp-border-radius-card) var(--xp-border-radius-card);
+    padding: var(--xp-space-md);
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
+  .cellVehicle {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .submit {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }
 
@@ -154,8 +237,18 @@
     padding: 0 var(--xp-space-12);
   }
 
+  .tabCornerLeft,
+  .tabCornerRight {
+    display: none;
+  }
+
+  .tabsOuter {
+    width: 100%;
+  }
+
   .tabs {
     width: 100%;
+    border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
   }
 
   .panel {
@@ -164,7 +257,17 @@
   }
 
   .fields {
+    display: flex;
+    flex-direction: column;
     gap: var(--xp-space-12);
+  }
+
+  .cell {
+    width: 100%;
+  }
+
+  .cellVehicle {
+    width: 100%;
   }
 
   .submit {

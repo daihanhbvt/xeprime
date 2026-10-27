@@ -71,6 +71,10 @@ interface RentalDateTimeRangeFieldProps {
    * thanh đó vào, nếu không lịch đứng theo toạ độ tài liệu và trôi khỏi ô khi cuộn.
    */
   getPopupContainer?: () => HTMLElement;
+  /** Custom formatter cho từng mốc ngày giờ khi đóng (mặc định dùng AppFormat). */
+  formatPoint?: (d: Dayjs) => string;
+  /** Ký tự/phần tử ngăn cách hai mốc (mặc định là '→'). */
+  separator?: ReactNode;
 }
 
 /**
@@ -102,6 +106,8 @@ export function RentalDateTimeRangeField({
   variant = 'compact',
   compactPoint = false,
   getPopupContainer,
+  formatPoint,
+  separator,
 }: RentalDateTimeRangeFieldProps) {
   const fmt = useAppFormat();
   const t = useTranslations('Common');
@@ -140,7 +146,13 @@ export function RentalDateTimeRangeField({
    * hàm đó — hai bề mặt nói về một khoảng thì phải viết nó giống hệt nhau.
    */
   const pointText = (d: Dayjs | null, fallback: string) =>
-    d ? (compactPoint ? fmt.rentalPointCompact(d) : fmt.rentalPoint(d)) : fallback;
+    d
+      ? formatPoint
+        ? formatPoint(d)
+        : compactPoint
+          ? fmt.rentalPointCompact(d)
+          : fmt.rentalPoint(d)
+      : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);
   const notSelected = t('components.rentalRange.notSelected');
@@ -225,7 +237,7 @@ export function RentalDateTimeRangeField({
               {pointText(value.pickupAt, endpointLabels.start)}
             </span>
             <span className={styles.sep} aria-hidden>
-              →
+              {separator ?? '→'}
             </span>
             <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
           </>

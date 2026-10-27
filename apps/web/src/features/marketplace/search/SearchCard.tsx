@@ -59,7 +59,7 @@ export function SearchCard() {
   const domainLabel = useDomainLabel();
   const formId = useId();
   const serviceOptions = useMemo(
-    () => serviceItems(draft.vehicleType, true, tService),
+    () => serviceItems(draft.vehicleType, false, tService),
     [draft.vehicleType, tService],
   );
   const vehicleOptions = useMemo(
@@ -81,18 +81,29 @@ export function SearchCard() {
         className={cx(styles.card, enterClass(200))}
       >
         {/*
-          Dải tab dịch vụ CHỈ rộng bằng các tab của nó (Figma): phần còn lại của hàng trên cùng
-          để lộ ảnh hero phía sau. Bảng ô nhập bên dưới vì thế chỉ bo góc PHẢI ở trên.
+          Dải tab dịch vụ theo thiết kế mới: nằm liền trên viên tìm kiếm trắng với góc lượn ngược ở hai bên.
         */}
-        <div className={styles.tabs}>
-          <SegmentedTabs
-            value={draft.serviceType}
-            onChange={setServiceType}
-            items={serviceOptions}
-            ariaLabel={t('card.serviceTypeLabel')}
-            controls={formId}
-            appearance="tabs"
-          />
+        <div className={styles.tabsOuter}>
+          <div className={styles.tabCornerLeft} aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M 24 0 V 24 H 0 C 10.745 24, 24 13.255, 24 0 Z" fill="#ffffff" />
+            </svg>
+          </div>
+          <div className={styles.tabs}>
+            <SegmentedTabs
+              value={draft.serviceType}
+              onChange={setServiceType}
+              items={serviceOptions}
+              ariaLabel={t('card.serviceTypeLabel')}
+              controls={formId}
+              appearance="tabs"
+            />
+          </div>
+          <div className={styles.tabCornerRight} aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M 0 0 V 24 H 24 C 13.255 24, 0 10.745, 0 0 Z" fill="#ffffff" />
+            </svg>
+          </div>
         </div>
 
         {/*
@@ -148,7 +159,7 @@ export function SearchCard() {
 
           <div className={cx(styles.fields, longTerm && styles.fieldsCompact)}>
             <div className={cx(styles.cell, styles.cellVehicle)}>
-              <span className={styles.cellLabel}>{t('card.vehicleTypeLabel')}</span>
+              <span className={styles.srOnly}>{t('card.vehicleTypeLabel')}</span>
               <SegmentedTabs
                 value={draft.vehicleType}
                 onChange={setVehicleType}
@@ -159,20 +170,22 @@ export function SearchCard() {
               />
             </div>
 
-            <div className={styles.cell}>
-              <span className={styles.cellLabel}>{t('location.label')}</span>
-              <LocationPicker />
+            <div className={cx(styles.cell, styles.cellLocation)}>
+              <span className={styles.srOnly}>{t('location.label')}</span>
+              <LocationPicker className={styles.locationField} />
             </div>
 
             {usesRange ? (
-              <div className={styles.cell}>
-                <span className={styles.cellLabel}>{t('rental.pickupReturnLabel')}</span>
+              <div className={cx(styles.cell, styles.cellRental)}>
+                <span className={styles.srOnly}>{t('rental.pickupReturnLabel')}</span>
                 <RentalDateTimeRangeField
                   value={draft.rental}
                   onChange={setRentalRange}
                   mode={draft.rental.mode}
                   onModeChange={setRentalMode}
                   placeholder={t('rental.placeholder')}
+                  formatPoint={(d) => d.format('HH:mm DD/MM/YYYY')}
+                  separator=" - "
                   suffix={
                     <span className={styles.boxIcon}>
                       <Image
@@ -190,6 +203,7 @@ export function SearchCard() {
             ) : null}
 
             <CtaButton
+              shape="pill"
               size="lg"
               className={styles.submit}
               onClick={submit}

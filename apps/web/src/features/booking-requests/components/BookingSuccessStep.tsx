@@ -4,12 +4,18 @@ import { InfoCircleOutlined, LeftOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { BOOKING_REQUEST_RESPOND_WINDOW } from '@xeprime/types';
-import { tripPath } from '@/constants/routes';
+import { useEffect, useRef } from 'react';
+import {
+  BOOKING_REQUEST_RESPOND_WINDOW,
+  isAwaitingPayment,
+  type BookingHoldStatus,
+} from '@xeprime/types';
+import { paymentPath, tripPath } from '@/constants/routes';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
+import { useTrip } from '@/features/trips/hooks';
 import { useQuoteTotal } from '../hooks/use-quote-total';
 import type { BookingRequestReceipt } from '../types';
 import { BookingResult, BookingResultTotal } from './BookingResult';
@@ -68,6 +74,25 @@ export function BookingSuccessStep({
   const router = useRouter();
   const total = useQuoteTotal(breakdown);
   const confirmed = receipt.autoAccepted;
+
+  /*
+   * Chủ xe duyệt trong lúc hộp còn mở ⇒ sang thẳng trang thanh toán, như chuyến "Đặt ngay".
+   *
+   * Không cần listener riêng: lượt duyệt phát thông báo `BOOKING_REQUEST_APPROVED` cho khách, bản
+   * chiếu huy hiệu (Firebase, REST dự phòng khi không nghe được) đổi số và `refreshNotificationAffected`
+   * làm mới nhánh `trips` — gồm chính query này. Chỉ chuyển khi đã có khoản giữ chỗ CHỜ TRẢ: duyệt mà
+   * không thu tiền thì đơn ra đời ngay, không có QR nào để trả (ADR 0044 điều 4).
+   */
+  const tripQ = useTrip(confirmed ? '' : receipt.id);
+  const hold = tripQ.data?.hold;
+  const awaitingPayment = hold != null && isAwaitingPayment(hold.status as BookingHoldStatus);
+  const redirected = useRef(false);
+  useEffect(() => {
+    if (!awaitingPayment || redirected.current) return;
+    redirected.current = true;
+    onClose();
+    router.push(paymentPath.trip(receipt.id));
+  }, [awaitingPayment, onClose, router, receipt.id]);
 
   /** Chi tiết CHÍNH chuyến vừa gửi — `tripPath` nhận id yêu cầu, chuyến lên đơn rồi vẫn mở đúng. */
   function openTrip() {

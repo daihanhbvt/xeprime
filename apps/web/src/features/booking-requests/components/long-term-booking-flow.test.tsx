@@ -45,7 +45,10 @@ vi.mock('@/hooks/use-current-user', () => ({
   }),
 }));
 /** Có phiên thì flow đọc lời nhắc thanh toán — spec này không khoá nó, nên cho rỗng. */
-vi.mock('@/features/trips/hooks', () => ({ useUnpaidHolds: () => ({ data: undefined }) }));
+vi.mock('@/features/trips/hooks', () => ({
+  useUnpaidHolds: () => ({ data: undefined }),
+  useTrip: () => ({ data: undefined }),
+}));
 /** Hook thật ném lỗi khi nằm ngoài `AuthModalProvider` — flow chỉ cần biết hộp được MỞ. */
 const authModal = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock('@/features/auth/components/AuthModalProvider', () => ({ useAuthModal: () => authModal }));
