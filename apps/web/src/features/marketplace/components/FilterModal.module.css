@@ -384,27 +384,6 @@
   gap: var(--xp-space-12);
 }
 
-.priceInputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--xp-space-12);
-}
-
-.priceInput {
-  width: 100%;
-  border-radius: var(--xp-border-radius-control);
-}
-
-.priceInput :global(.ant-input-number-input) {
-  text-align: right;
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.priceInputLabel {
-  color: var(--xp-color-text-tertiary);
-  white-space: nowrap;
-}
-
 .priceSlider {
   margin: var(--xp-space-xs) 6px 0;
 }
@@ -620,7 +599,6 @@
     display: none;
   }
 
-  .priceInputs,
   .fieldsRow,
   .columns {
     grid-template-columns: 1fr;

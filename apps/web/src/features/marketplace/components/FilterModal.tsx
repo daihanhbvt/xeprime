@@ -25,7 +25,6 @@ import {
   type TransmissionTypeExt,
   type VehicleType,
 } from '@xeprime/types';
-import { MoneyInput } from '@/components/form/MoneyInput';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { catalogItemAppliesTo } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
@@ -562,30 +561,6 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                     </div>
                   </FilterGroup>
 
-                  <div className={styles.priceInputs}>
-                    <MoneyInput
-                      className={styles.priceInput}
-                      prefix={<span className={styles.priceInputLabel}>{t('minPrice')}</span>}
-                      addonAfter={null}
-                      min={0}
-                      step={priceSlider.step}
-                      value={draft.priceMin ?? null}
-                      placeholder="0"
-                      aria-label={t('minPrice')}
-                      onChange={(v) => setPrice(v ?? undefined, draft.priceMax)}
-                    />
-                    <MoneyInput
-                      className={styles.priceInput}
-                      prefix={<span className={styles.priceInputLabel}>{t('maxPrice')}</span>}
-                      addonAfter={null}
-                      min={0}
-                      step={priceSlider.step}
-                      value={draft.priceMax ?? null}
-                      placeholder={t('unlimited')}
-                      aria-label={t('maxPrice')}
-                      onChange={(v) => setPrice(draft.priceMin, v ?? undefined)}
-                    />
-                  </div>
                   <Slider
                     range
                     className={styles.priceSlider}
