@@ -4,17 +4,19 @@
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius);
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
   min-width: 0;
 }
 
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-h4);
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .subTitle {
@@ -44,14 +46,14 @@
 .rows {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
   margin: 0;
   min-width: 0;
 }
 
 .row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
   min-width: 0;
@@ -60,11 +62,17 @@
 .row dt {
   color: var(--xp-color-text-secondary);
   min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .row dd {
   margin: 0;
   text-align: right;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   /* Tiền không ngắt dòng giữa cụm số. */
   white-space: nowrap;
 }
@@ -82,13 +90,15 @@
 }
 
 .surchargeReason {
-  font-size: var(--xp-font-size-sm);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-tertiary);
   overflow-wrap: anywhere;
 }
 
+/* Khuyến mãi — Figma `21621:67929`: `Status/success-high`. */
 .discount {
-  color: var(--xp-color-error);
+  color: var(--xp-color-success);
 }
 
 .free {
@@ -99,18 +109,23 @@
 .total,
 .depositTotal {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
-  padding-top: var(--xp-space-sm);
-  border-top: 1px solid var(--xp-color-border-subtle);
-  font-weight: 700;
+  border-top: 1px solid var(--xp-color-border);
+  padding-top: var(--xp-space-md);
+  font-weight: var(--xp-font-weight-regular);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text-secondary);
   min-width: 0;
 }
 
 .totalValue {
-  color: var(--xp-color-price);
-  font-size: var(--xp-font-size-h4);
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+  font-size: var(--xp-font-size-lead);
   white-space: nowrap;
 }
 
@@ -198,6 +213,86 @@
   }
 
   .totalValue {
-    font-size: var(--xp-font-size-body-lg);
+    font-size: var(--xp-font-size-h3);
+    line-height: var(--xp-line-height-h3);
   }
+}
+
+/* ── Hoá đơn chuyến đã khép (Figma `21621:68465` · `21621:67915`): kê phẳng, mỗi dòng 12px giữa nhãn và số. */
+.invoiceRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  margin: 0;
+  min-width: 0;
+}
+
+.invoiceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.invoiceLabel {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.invoiceSub {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.invoiceValue {
+  margin: 0;
+  text-align: right;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+  white-space: nowrap;
+}
+
+.invoiceValue.discount {
+  color: var(--xp-color-success);
+}
+
+.invoiceDivider {
+  height: 1px;
+  background: var(--xp-color-border);
+}
+
+/* "Khoản hoàn trả" — `Text/brand/primary` 20/30 semibold. */
+.refundValue {
+  margin: 0;
+  text-align: right;
+  font-size: var(--xp-font-size-lead);
+  line-height: var(--xp-line-height-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}
+
+.invoicePill {
+  display: flex;
+  margin: 0;
+}
+
+.invoiceNote {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+  overflow-wrap: anywhere;
 }

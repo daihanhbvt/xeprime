@@ -30,14 +30,15 @@
   },
   "account": {
     "menuLabel": "Menu tài khoản",
-    "profile": "Tài khoản của tôi",
+    "security": "Bảo mật tài khoản",
+    "profile": "Quản lý tài khoản",
     "personalProfile": "Hồ sơ cá nhân",
     "trips": "Chuyến của tôi",
     "payments": "Lịch sử thanh toán",
     "favorites": "Xe yêu thích",
     "addresses": "Địa chỉ của tôi",
     "documents": "Giấy tờ & Xác minh",
-    "driving": "Nơi tôi làm tài xế",
+    "driving": "Trung tâm Tài xế",
     "notifications": "Thông báo",
     "support": "Hỗ trợ",
     "settings": "Cài đặt",
@@ -57,7 +58,8 @@
     "ownerProfile": "Hồ sơ chủ xe",
     "messages": "Tin nhắn với khách",
     "subscription": "Gói dịch vụ",
-    "shopProfile": "Hồ sơ gian hàng"
+    "shopProfile": "Hồ sơ gian hàng",
+    "paymentsHub": "Quản lý thanh toán"
   },
   "manage": {
     "home": "Trang chủ",

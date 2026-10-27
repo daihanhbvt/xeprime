@@ -4,12 +4,11 @@
  * rỗng — tên xe đứng ngay cạnh); `next/image` cần khai domain cho một ô nhỏ không cần tối ưu. */
 
 import { CarOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { HOLD_COUNTDOWN_URGENT_MINUTES } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { paymentPath } from '@/constants/routes';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs } from '@/lib/datetime';
 import type { CustomerUnpaidHold } from '../types';
@@ -73,14 +72,14 @@ export function UnpaidHoldList({
               <span className={styles.amountLabel}>{t('unpaid.amountLabel')}</span>
               <b className={styles.amountValue}>{fmt.money(item.remainingAmount)}</b>
             </span>
-            <Link
+            <CtaButton
               href={paymentPath.trip(item.tripId)}
               className={styles.payLink}
               onClick={onNavigate}
-              aria-label={t('unpaid.payAria', { vehicle: item.vehicleName })}
+              ariaLabel={t('unpaid.payAria', { vehicle: item.vehicleName })}
             >
-              <Button type="primary">{t('unpaid.pay')}</Button>
-            </Link>
+              {t('unpaid.pay')}
+            </CtaButton>
           </div>
         </li>
       ))}

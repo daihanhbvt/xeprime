@@ -1,17 +1,23 @@
 'use client';
 
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
-import { Alert } from 'antd';
+import { Alert, Button } from 'antd';
 import { useState } from 'react';
 import {
   DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
+  FEE_LINE,
+  HOLD_REFUND_STATUS,
+  PRICE_ROW,
   hasDepositToShow,
   type DepositStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { isZeroMoney } from '@/lib/money';
-import type { CustomerTripFinance } from '../types';
+import { visibleFeeLines } from '@/lib/customer-price-view';
+import type { CustomerTripDetail, CustomerTripFinance } from '../types';
+import { RefundAccountDialog } from './RefundAccountDialog';
+import { TripRequestPill, type TripRequestTone } from './TripRequestLayout';
 import styles from './TripFinanceCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -30,11 +36,22 @@ import { useTranslations } from 'next-intl';
 export function TripFinanceCard({
   finance,
   closed,
+  settlement,
 }: {
   finance: CustomerTripFinance;
   /** Chuyến đã khép: hiện hoá đơn cuối (có phụ phí) thay cho bảng giá dự kiến. */
   closed: boolean;
+  /**
+   * Chuyến đã khép: khoản giữ chỗ + khoản hoàn GỘP vào hoá đơn (thay thẻ `TripHoldPanel` riêng).
+   * `completed` quyết nhãn trạng thái khi không có khoản hoàn.
+   */
+  settlement?: { hold: CustomerTripDetail['hold']; tripId: string; completed: boolean };
 }) {
+  if (closed) return <ClosedInvoice finance={finance} settlement={settlement} />;
+  return <OpenFinanceCard finance={finance} />;
+}
+
+function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
   const t = useTranslations('Trips.finance');
   const tCommon = useTranslations('Common');
   const dl = useDomainLabel();
@@ -60,8 +77,8 @@ export function TripFinanceCard({
   const showDeposit = hasDepositToShow(depositStatus);
 
   return (
-    <section className={styles.card} aria-label={closed ? t('invoiceTitle') : t('priceTitle')}>
-      <h2 className={styles.title}>{closed ? t('invoiceTitle') : t('priceTitle')}</h2>
+    <section className={styles.card} aria-label={t('priceTitle')}>
+      <h2 className={styles.title}>{t('priceTitle')}</h2>
 
       {finance.legacyPricing ? (
         <Alert
@@ -128,7 +145,7 @@ export function TripFinanceCard({
       ) : null}
 
       <div className={styles.total}>
-        <span>{closed ? t('totalFinal') : t('total')}</span>
+        <span>{t('total')}</span>
         <span className={styles.totalValue}>{fmt.money(finance.finalTotal)}</span>
       </div>
 
@@ -165,6 +182,262 @@ export function TripFinanceCard({
       ) : null}
 
       {showDeposit ? <DepositBlock finance={finance} status={depositStatus} /> : null}
+
+      {!isZeroMoney(finance.additionalDue) ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('additionalDue', { amount: fmt.money(finance.additionalDue) })}
+          description={t('additionalDueBody')}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+type ClosedSettlement = NonNullable<Parameters<typeof TripFinanceCard>[0]['settlement']>;
+type HoldRefund = NonNullable<NonNullable<ClosedSettlement['hold']>['refund']>;
+
+/** Tình trạng khoản hoàn → nhãn + sắc thái viên thuốc "Trạng thái". */
+function refundPill(refund: HoldRefund): { key: RefundPillKey; tone: TripRequestTone } {
+  switch (refund.status) {
+    case HOLD_REFUND_STATUS.PAID:
+      return { key: 'refundPaid', tone: 'success' };
+    case HOLD_REFUND_STATUS.CREDITED:
+      return { key: 'refundCredited', tone: 'success' };
+    case HOLD_REFUND_STATUS.REJECTED:
+      return { key: 'noRefund', tone: 'danger' };
+    default:
+      return refund.hasAccount
+        ? { key: 'refundProcessing', tone: 'warning' }
+        : { key: 'refundNeedsAccount', tone: 'warning' };
+  }
+}
+
+type RefundPillKey =
+  | 'paid'
+  | 'refundPaid'
+  | 'refundCredited'
+  | 'refundProcessing'
+  | 'refundNeedsAccount'
+  | 'noRefund';
+
+/**
+ * Hoá đơn dịch vụ của chuyến ĐÃ KHÉP — Figma `21621:68465` (hoàn thành) · `21621:67915` (đã huỷ).
+ *
+ * Kê PHẲNG mọi khoản phía khách (không gấp sau "Xem chi tiết giá"): tiền thuê kèm cách tính, khuyến
+ * mãi của chủ xe, phí giao xe, các khoản đi kèm do KHÁCH chịu (phí sàn, bảo hiểm — dòng 0đ không
+ * vẽ), mã khuyến mãi XePrime; rồi tổng, đã thanh toán, trạng thái. Khoản giữ chỗ và khoản hoàn GỘP
+ * vào đây thay cho thẻ riêng. KHÔNG bao giờ hiện thuế, hoa hồng hay các dòng phía chủ xe (ADR 0064
+ * điều 11) — `visibleFeeLines(…, 'customer')` bỏ dòng chủ xe chịu, và hai khoá đó bị loại thêm lần
+ * nữa cho chắc. Mọi con số là của server; ở đây không cộng trừ.
+ */
+function ClosedInvoice({
+  finance,
+  settlement,
+}: {
+  finance: CustomerTripFinance;
+  settlement?: ClosedSettlement;
+}) {
+  const t = useTranslations('Trips.finance');
+  const tInv = useTranslations('Trips.finance.invoice');
+  const tCommon = useTranslations('Common');
+  const tRefund = useTranslations('BankAccounts.refund');
+  const dl = useDomainLabel();
+  const fmt = useAppFormat();
+  const [accountOpen, setAccountOpen] = useState(false);
+
+  const fees = finance.breakdown?.fees ?? null;
+  const baseRow = finance.breakdown?.rows.find((row) => row.key === PRICE_ROW.BASE);
+  const feeLines = visibleFeeLines(fees?.lines ?? [], 'customer').filter(
+    (line) => line.key !== FEE_LINE.TAX && line.key !== FEE_LINE.OWNER_COMMISSION,
+  );
+  const promoDiscount = fees?.promoDiscountAmount ?? '0';
+  const totalAmount = finance.customerTotalAmount ?? finance.finalTotal;
+
+  const hold = settlement?.hold ?? null;
+  const completed = settlement?.completed ?? false;
+  const paidAmount =
+    finance.holdPaidAmount ??
+    (hold && !isZeroMoney(hold.paidAmount) ? hold.paidAmount : null) ??
+    (!isZeroMoney(finance.rentalPaid) ? finance.rentalPaid : null);
+  const refund = hold?.refund ?? null;
+  const needsAccount =
+    refund != null &&
+    refund.status === HOLD_REFUND_STATUS.PENDING &&
+    !refund.hasAccount &&
+    settlement != null;
+
+  const status: { key: RefundPillKey; tone: TripRequestTone } | null = refund
+    ? refundPill(refund)
+    : completed
+      ? { key: 'paid', tone: 'success' }
+      : paidAmount
+        ? { key: 'noRefund', tone: 'danger' }
+        : null;
+
+  const depositStatus = finance.depositStatus as DepositStatus;
+
+  return (
+    <section className={styles.card} aria-label={t('invoiceTitle')}>
+      <h2 className={styles.title}>{t('invoiceTitle')}</h2>
+
+      {finance.legacyPricing ? <Alert type="info" showIcon title={t('legacy')} /> : null}
+
+      <dl className={styles.invoiceRows}>
+        <div className={styles.invoiceRow}>
+          <dt className={styles.invoiceLabel}>
+            <span>{tInv('rentFee')}</span>
+            {baseRow?.sublabel ? (
+              <span className={styles.invoiceSub}>{baseRow.sublabel}</span>
+            ) : null}
+          </dt>
+          <dd className={styles.invoiceValue}>{fmt.money(finance.baseAmount)}</dd>
+        </div>
+
+        {!isZeroMoney(finance.discountAmount) ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>{t('discount')}</dt>
+            <dd className={`${styles.invoiceValue} ${styles.discount}`}>
+              −{fmt.money(finance.discountAmount)}
+            </dd>
+          </div>
+        ) : null}
+
+        {!isZeroMoney(finance.deliveryFee) ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>{t('deliveryFee')}</dt>
+            <dd className={styles.invoiceValue}>{fmt.money(finance.deliveryFee)}</dd>
+          </div>
+        ) : null}
+
+        {feeLines.map((line) => {
+          const sub =
+            line.unitAmount && line.quantity
+              ? tCommon('components.price.dailyRate', {
+                  days: line.quantity,
+                  amount: fmt.money(line.unitAmount),
+                })
+              : null;
+          return (
+            <div key={line.key} className={styles.invoiceRow}>
+              <dt className={styles.invoiceLabel}>
+                <span>{dl('feeLine', line.key)}</span>
+                {sub || line.partnerName ? (
+                  <span className={styles.invoiceSub}>
+                    {[sub, line.partnerName].filter(Boolean).join(' · ')}
+                  </span>
+                ) : null}
+              </dt>
+              <dd className={styles.invoiceValue}>{fmt.money(line.amount)}</dd>
+            </div>
+          );
+        })}
+
+        {!isZeroMoney(promoDiscount) ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>
+              <span>{dl('feeLine', FEE_LINE.PROMO)}</span>
+              {fees?.promo ? (
+                <span className={styles.invoiceSub}>
+                  {fees.promo.code}
+                  {fees.promo.name ? ` · ${fees.promo.name}` : ''}
+                </span>
+              ) : null}
+            </dt>
+            <dd className={`${styles.invoiceValue} ${styles.discount}`}>
+              −{fmt.money(promoDiscount)}
+            </dd>
+          </div>
+        ) : null}
+
+        <div className={styles.invoiceRow}>
+          <dt className={styles.invoiceLabel}>{tInv('total')}</dt>
+          <dd className={styles.invoiceValue}>{fmt.money(totalAmount)}</dd>
+        </div>
+
+        {paidAmount ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>{tInv('paid')}</dt>
+            <dd className={styles.invoiceValue}>{fmt.money(paidAmount)}</dd>
+          </div>
+        ) : null}
+
+        {/* Phần trả tay chủ xe lúc nhận xe — chỉ có nghĩa khi chuyến thật sự diễn ra. */}
+        {completed && finance.payAtPickupAmount != null && paidAmount ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>{tCommon('components.price.payAtHandover')}</dt>
+            <dd className={styles.invoiceValue}>{fmt.money(finance.payAtPickupAmount)}</dd>
+          </div>
+        ) : null}
+
+        {/* Phụ phí ghi lúc trả xe — đứng riêng, kèm lý do để khách đối chiếu. */}
+        {finance.surcharges.map((row, index) => (
+          <div key={`${row.category}-${row.recordedAt}-${index}`} className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>
+              <span>{dl('surchargeCategory', row.category)}</span>
+              <span className={styles.invoiceSub}>
+                {tInv('surchargesAfter')}
+                {row.reason ? ` · ${row.reason}` : ''}
+              </span>
+            </dt>
+            <dd className={styles.invoiceValue}>{fmt.money(row.amount)}</dd>
+          </div>
+        ))}
+
+        {refund ? (
+          <>
+            <div className={styles.invoiceDivider} role="presentation" />
+            <div className={styles.invoiceRow}>
+              <dt className={styles.invoiceLabel}>{tInv('refundAmount')}</dt>
+              <dd className={styles.refundValue}>{fmt.money(refund.amount)}</dd>
+            </div>
+          </>
+        ) : null}
+
+        {status ? (
+          <div className={styles.invoiceRow}>
+            <dt className={styles.invoiceLabel}>{tInv('status')}</dt>
+            <dd className={styles.invoicePill}>
+              <TripRequestPill tone={status.tone}>{tInv(`pill.${status.key}`)}</TripRequestPill>
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {refund ? (
+        <p className={styles.invoiceNote}>
+          {[
+            refund.paidAt ? tInv('refundPaidAt', { date: fmt.dateTime(refund.paidAt) }) : null,
+            refund.bankReference ? tInv('refundRef', { reference: refund.bankReference }) : null,
+            refund.accountHint ? tInv('refundAccount', { hint: refund.accountHint }) : null,
+            needsAccount ? tInv('refundNeedsAccount') : null,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        </p>
+      ) : null}
+
+      {needsAccount && settlement && refund ? (
+        <>
+          <Button type="primary" block onClick={() => setAccountOpen(true)}>
+            {tRefund('submit')}
+          </Button>
+          {/* Chỉ mount khi ĐÃ MỞ — dialog tự gọi danh sách tài khoản của khách. */}
+          {accountOpen ? (
+            <RefundAccountDialog
+              tripId={settlement.tripId}
+              amount={fmt.money(refund.amount)}
+              open={accountOpen}
+              onClose={() => setAccountOpen(false)}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {hasDepositToShow(depositStatus) ? (
+        <DepositBlock finance={finance} status={depositStatus} />
+      ) : null}
 
       {!isZeroMoney(finance.additionalDue) ? (
         <Alert

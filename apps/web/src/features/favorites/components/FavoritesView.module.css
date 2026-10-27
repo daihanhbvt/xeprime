@@ -67,3 +67,29 @@
   display: flex;
   justify-content: center;
 }
+
+/* Nhãn tab + huy hiệu số xe — Figma `21636:83301`. */
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--xp-space-6);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-label);
+  line-height: 1;
+}
+
+.tabs :global(.ant-tabs-tab-active) .tabCount {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}

@@ -1,11 +1,14 @@
 'use client';
 
-import { App, Alert, Button, Empty, Pagination, Popconfirm, Skeleton, Tag } from 'antd';
+import { App, Alert, Button, Empty, Pagination, Popconfirm, Skeleton } from 'antd';
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { absoluteMoney, isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
-import { WALLET_STATUS, WITHDRAWAL_STATUS } from '@xeprime/types';
+import { WALLET_STATUS, WITHDRAWAL_STATUS, WITHDRAWAL_STATUS_META } from '@xeprime/types';
+import { StatusTag } from '@/components/data-display/StatusTag';
+import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
+import { cx } from '@/lib/cx';
 import { nowInAppTz } from '@/lib/datetime';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -46,21 +49,31 @@ const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
  *    hoa hồng (ví thuộc tenant), qua `PartnerBalanceView` — trang đó nhúng thêm tài khoản nhận tiền.
  *  - **Khách thuê** ở `/account/balance` (site khách) — `scope="account"`. KHÔNG có bảng tổng hợp:
  *    họ không có chuyến nào ở phía bán, và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
+ *
+ * ## Hai dáng (`appearance`)
+ *
+ * `standard` là dáng của site partner. `account` là dáng tab "Tài khoản thanh toán" của khu tài
+ * khoản khách (Figma `19879:74829`): nút Rút nằm TRONG thẻ số dư, cùng hàng con số khả dụng, và
+ * mỗi khối bên dưới là một thẻ viền bo 16 có đầu thẻ gạch chân. Cùng dữ liệu, cùng quy tắc — chỉ
+ * khác bố cục.
  */
 export function WalletView({
   scope,
   variant = 'full',
   payout,
+  appearance = 'standard',
 }: {
   scope: WalletScope;
   /** Hình thái bảng tổng hợp — `compact` cho khu `/account` (khung hẹp hơn `/manage`). */
   variant?: StatementVariant;
   /**
-   * Khối "Tài khoản nhận tiền" — đứng NGAY dưới nút Rút (07/10/2026). Trang số dư của site partner
-   * truyền vào; màn ví của khách không truyền (sổ ngân hàng của họ có trang riêng ở khu tài khoản).
+   * Khối "Tài khoản nhận tiền" — đứng NGAY dưới nút Rút (07/10/2026). Trang số dư của CẢ HAI site
+   * truyền vào (`PartnerBalanceView`, và `AccountBalanceView` từ design Account 22/10/2026).
    * Là một slot chứ không phải cờ: trang quyết định id cuộn, tiêu đề và khung của khối đó.
    */
   payout?: ReactNode;
+  /** Dáng trình bày — `account` cho khu tài khoản khách (Figma Account / Balance). */
+  appearance?: 'standard' | 'account';
 }) {
   const t = useTranslations('Wallet');
   const { message } = App.useApp();
@@ -76,9 +89,15 @@ export function WalletView({
   const [page, setPage] = useState(1);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
+  const isAccount = appearance === 'account';
   const summary = useWalletSummary(scope);
-  const entries = useWalletEntries(scope, page);
-  const withdrawals = useWithdrawals(scope);
+  /*
+   * Dáng `account`: lệnh rút và sổ ví đã là các dòng của tab "Lịch sử giao dịch"
+   * (`GET /account/transactions`) — tab số dư chỉ còn thẻ số dư + tài khoản nhận tiền (Figma
+   * `19879:74829`), nên không tải hai danh sách đó ở đây.
+   */
+  const entries = useWalletEntries(scope, page, { enabled: !isAccount });
+  const withdrawals = useWithdrawals(scope, { enabled: !isAccount });
   const cancel = useCancelWithdrawal(scope);
 
   /*
@@ -106,32 +125,52 @@ export function WalletView({
     // So trên CHUỖI tiền, không qua `Number` (ADR 0007): khả dụng − ngưỡng không âm là rút được.
     !isNegativeMoney(subtractMoney(balance.available, balance.minWithdrawAmount));
 
-  return (
-    <div className={styles.page}>
-      <WalletSummaryCard scope={scope} variant="hero" />
+  /*
+   * Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá: ẩn nó đi thì người dùng không biết chức
+   * năng tồn tại, còn dòng gợi ý nói rõ vì sao chưa bấm được.
+   */
+  const withdrawHint =
+    balance && !canWithdraw
+      ? balance.status === WALLET_STATUS.FROZEN
+        ? t('balance.frozen')
+        : t('withdraw.belowMinimum', { min: fmt.money(balance.minWithdrawAmount) })
+      : null;
 
-      {/*
-        Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá: ẩn nó đi thì người dùng không biết
-        chức năng tồn tại, còn dòng gợi ý ngay dưới nói rõ vì sao chưa bấm được.
-      */}
-      <div className={styles.cta}>
-        <Button
-          type="primary"
-          size="large"
-          disabled={!canWithdraw}
-          loading={summary.isPending}
-          onClick={() => setWithdrawOpen(true)}
-        >
-          {t('withdraw.action')}
-        </Button>
-        {balance && !canWithdraw ? (
-          <p className={styles.ctaHint}>
-            {balance.status === WALLET_STATUS.FROZEN
-              ? t('balance.frozen')
-              : t('withdraw.belowMinimum', { min: fmt.money(balance.minWithdrawAmount) })}
-          </p>
-        ) : null}
-      </div>
+  return (
+    <div className={cx(styles.page, isAccount && styles.account)}>
+      {isAccount ? (
+        <WalletSummaryCard
+          scope={scope}
+          variant="panel"
+          action={
+            <CtaButton
+              variant="neutral"
+              disabled={!canWithdraw}
+              onClick={() => setWithdrawOpen(true)}
+            >
+              {t('withdraw.actionLinked')}
+            </CtaButton>
+          }
+          // Ví đóng băng đã có cảnh báo riêng trong thẻ — không nói hai lần.
+          hint={balance?.status === WALLET_STATUS.FROZEN ? null : withdrawHint}
+        />
+      ) : (
+        <>
+          <WalletSummaryCard scope={scope} variant="hero" />
+          <div className={styles.cta}>
+            <Button
+              type="primary"
+              size="large"
+              disabled={!canWithdraw}
+              loading={summary.isPending}
+              onClick={() => setWithdrawOpen(true)}
+            >
+              {t('withdraw.action')}
+            </Button>
+            {withdrawHint ? <p className={styles.ctaHint}>{withdrawHint}</p> : null}
+          </div>
+        </>
+      )}
 
       {/*
         Nơi tiền về đứng sát nút Rút: người chưa có tài khoản nào thấy chỗ khai ngay bên dưới, và
@@ -148,6 +187,8 @@ export function WalletView({
         />
       ) : null}
 
+      {isAccount ? null : (
+        <>
       <section className={styles.block} aria-label={t('requests.title')}>
         <h3 className={styles.heading}>{t('requests.title')}</h3>
         {withdrawals.isPending ? <Skeleton active paragraph={{ rows: 1 }} /> : null}
@@ -185,7 +226,12 @@ export function WalletView({
                 ) : null}
               </div>
               <div className={styles.requestSide}>
-                <Tag>{domainLabel('withdrawalStatus', request.status)}</Tag>
+                {/* Màu theo trạng thái (thành công / chờ / thất bại) như hàng giao dịch của bản vẽ. */}
+                <StatusTag
+                  value={request.status}
+                  meta={WITHDRAWAL_STATUS_META}
+                  group="withdrawalStatus"
+                />
                 {request.status === WITHDRAWAL_STATUS.PENDING ? (
                   <Popconfirm
                     title={t('requests.cancelConfirm')}
@@ -248,6 +294,8 @@ export function WalletView({
           />
         ) : null}
       </section>
+        </>
+      )}
 
       <WithdrawDialog scope={scope} open={withdrawOpen} onClose={() => setWithdrawOpen(false)} />
     </div>

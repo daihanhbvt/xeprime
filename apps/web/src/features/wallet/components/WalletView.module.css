@@ -149,3 +149,83 @@
     justify-content: flex-end;
   }
 }
+
+/*
+ * Dáng `account` — tab "Tài khoản thanh toán" của khu tài khoản khách (Figma `19879:74829`).
+ *
+ * Mỗi khối là một thẻ viền mảnh bo 16, đầu thẻ chữ 18px gạch chân (cùng hình "Profile Heading" của
+ * khối Tài khoản nhận tiền); dòng trong thẻ ngăn bằng vạch mảnh thay vì mỗi dòng một hộp viền.
+ */
+.account {
+  gap: var(--xp-space-20);
+}
+
+.account .block {
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.account .heading {
+  padding-bottom: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
+.account .list {
+  gap: 0;
+}
+
+.account .request,
+.account .entry {
+  padding: var(--xp-space-12) 0;
+  border: 0;
+  border-bottom: 1px solid var(--xp-color-border);
+  border-radius: 0;
+  background: none;
+}
+
+.account .list > li:last-child {
+  border-bottom: 0;
+}
+
+.account .entryKind,
+.account .amount,
+.account .plus,
+.account .minus {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.account .muted {
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-tertiary);
+}
+
+@media (max-width: 640px) {
+  .account .block {
+    padding: var(--xp-space-md);
+  }
+}
+
+/* Nhãn trạng thái của hàng giao dịch — viên thuốc bo tròn (Figma `21695:41670`). */
+.account :global(.ant-tag) {
+  border: 1px solid currentColor;
+  margin: 0;
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+/* Nút "Huỷ yêu cầu" cùng dáng viên thuốc với nhãn trạng thái đứng cạnh. */
+.account .requestSide :global(.ant-btn) {
+  height: 24px;
+  padding: 0 var(--xp-space-12);
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body);
+}

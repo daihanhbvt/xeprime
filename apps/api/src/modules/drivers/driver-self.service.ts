@@ -2,7 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_STATUS,
   BOOKING_STATUS_OCCUPYING,
+  driverReleaseUntil,
   DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_STATUS,
   DRIVER_LINK_OPEN_STATUSES,
@@ -105,28 +107,53 @@ export class DriverSelfService {
           respondedAt: true,
           endedAt: true,
           endedByParty: true,
-          tenant: { select: storefrontTenantSelect(now) },
+          tenant: {
+            select: {
+              ...storefrontTenantSelect(now),
+              profile: { select: { logoUrl: true, provinceName: true } },
+            },
+          },
         },
       }),
     ]);
 
-    const counts = rows.length
-      ? await this.prisma.booking.groupBy({
-          by: ['driverId'],
-          where: {
-            driverId: { in: rows.map((r) => r.id) },
-            driverUserId: userId,
-            deletedAt: null,
-            status: { in: OCCUPYING },
-          },
-          _count: { _all: true },
-        })
-      : [];
+    const ids = rows.map((r) => r.id);
+    const [counts, completed] = ids.length
+      ? await Promise.all([
+          this.prisma.booking.groupBy({
+            by: ['driverId'],
+            where: {
+              driverId: { in: ids },
+              driverUserId: userId,
+              deletedAt: null,
+              status: { in: OCCUPYING },
+            },
+            _count: { _all: true },
+          }),
+          this.prisma.bookingDriverAssignment.groupBy({
+            by: ['driverId'],
+            where: {
+              driverId: { in: ids },
+              driverUserId: userId,
+              superseded: false,
+              outcome: DRIVER_ASSIGNMENT_OUTCOME.COMPLETED,
+            },
+            _count: { _all: true },
+          }),
+        ])
+      : [[], []];
     const countOf = new Map(counts.map((c) => [c.driverId as string, c._count._all]));
+    const completedOf = new Map(completed.map((c) => [c.driverId, c._count._all]));
 
     const data: MyDriverLinkDto[] = rows.map((r) => ({
       id: r.id,
       employer: employerOf(r.tenant, now),
+      employerContact: {
+        representativeName: r.tenant.owner.displayName ?? null,
+        email: resolveStorefront(r.tenant, now).email ?? null,
+        areaName: r.tenant.profile?.provinceName ?? null,
+      },
+      completedTripCount: completedOf.get(r.id) ?? 0,
       driverType: r.driverType,
       linkStatus: r.linkStatus,
       invitedAt: r.invitedAt.toISOString(),
@@ -306,6 +333,7 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
         ? (r.driverRespondBy?.toISOString() ?? null)
         : null,
     endedAt: episode?.endedAt?.toISOString() ?? null,
+    releaseUntil: releaseUntilOf(r, current, outcome, now),
     pickupAt: r.pickupAt.toISOString(),
     returnAt: r.returnAt.toISOString(),
     routeType: r.routeType,
@@ -324,6 +352,21 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
       contactVisibleFrom: null,
     },
   };
+}
+
+/** Mốc trả lại chuyến (sửa ADR 0063 điều 6) — cùng điều kiện với `DriversService.releaseTrip`. */
+function releaseUntilOf(r: TripRow, current: boolean, outcome: string, now: Date): string | null {
+  if (
+    !current ||
+    outcome !== DRIVER_ASSIGNMENT_OUTCOME.OPEN ||
+    r.status !== BOOKING_STATUS.RESERVED ||
+    r.driverAssignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED ||
+    !r.driverRespondedAt
+  ) {
+    return null;
+  }
+  const until = driverReleaseUntil(r.driverRespondedAt, r.pickupAt);
+  return until.getTime() > now.getTime() ? until.toISOString() : null;
 }
 
 function numberOrNull(v: Prisma.Decimal | null): number | null {

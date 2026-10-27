@@ -29,6 +29,12 @@ import { IconLine } from '@/components/ui/IconLine';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
+import {
+  ACCOUNT_PAYMENTS_TAB,
+  AccountPaymentsTabs,
+} from '@/features/account-payments/components/AccountPaymentsTabs';
+import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -88,11 +94,15 @@ export function WalletScreen({
 }: {
   scope?: WalletScope;
   shell?: WalletShell;
-  /** Mở bằng `?section=payout` (alias `/manage/bank-accounts`) ⇒ cuộn tới khối tài khoản nhận tiền. */
+  /**
+   * Mở bằng `?section=payout` (alias `/manage/bank-accounts` hoặc `/account/bank-accounts`) ⇒ cuộn
+   * tới khối tài khoản nhận tiền.
+   */
   focusPayout?: boolean;
 }) {
   const t = useTranslations('Wallet');
   const tBank = useTranslations('BankAccounts');
+  const tHub = useTranslations('AccountPayments.hub');
   /*
    * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí — cùng cách `ShopProfileScreen` cuộn tới
    * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
@@ -143,14 +153,20 @@ export function WalletScreen({
     page: 1,
   }));
 
-  const entries = useWalletEntries(scope, page);
-  const withdrawals = useWithdrawals(scope);
+  /*
+   * Phía TÀI KHOẢN KHÁCH: lệnh rút và sổ ví là các dòng của tab "Lịch sử giao dịch"
+   * (`GET /account/transactions`) — tab số dư chỉ còn thẻ số dư + tài khoản nhận tiền, như web.
+   */
+  const showLedger = scope === WALLET_SCOPE.SHOP;
+  const entries = useWalletEntries(scope, page, showLedger);
+  const withdrawals = useWithdrawals(scope, showLedger);
   /*
    * Hàng tiêu đề của khu quản lý đặt hành động chính cạnh tên trang, cùng khuôn với màn
    * Giao dịch thu chi. Query này dùng chung cache với `WalletSummaryCard`, nên không tạo thêm
    * một request mạng; nó chỉ cho hàng tiêu đề biết lúc nào nút Rút được phép bật.
    */
-  const walletSummary = useWalletSummary(scope, scope === WALLET_SCOPE.SHOP);
+  // Phía tài khoản cũng đọc nó: khối lưu ý dưới tài khoản nhận tiền cần `maxBusinessDays`.
+  const walletSummary = useWalletSummary(scope);
   const requests = withdrawals.data ?? [];
   const rows = entries.data?.items ?? [];
 
@@ -166,10 +182,21 @@ export function WalletScreen({
    * lui về menu. Cùng khuôn mà `CalendarScreen` đang dùng — thân màn không biết mình đang ở đâu.
    */
   const manageShell = shell === 'manage';
+  /*
+   * Khu tài khoản: màn này là tab "Tài khoản thanh toán" của mục Quản lý thanh toán (web
+   * `AccountPaymentsHub`, design Account 22/10/2026) — tiêu đề là của MỤC, bộ chuyển tab ngay dưới.
+   */
   const header = manageShell ? (
     <ManageHeader />
   ) : (
-    <AppHeader onBack={() => goBackOr(router, ROUTES.account.home())} title={title} />
+    <>
+      <AppHeader
+        onBack={() => goBackOr(router, ROUTES.account.home())}
+        title={tHub('title')}
+        subtitle={tHub('subtitle')}
+      />
+      <AccountPaymentsTabs value={ACCOUNT_PAYMENTS_TAB.BALANCE} />
+    </>
   );
 
   return (
@@ -220,16 +247,35 @@ export function WalletScreen({
           />
 
           {/*
-            TÀI KHOẢN NHẬN TIỀN của gian hàng — khối của trang số dư từ PR #159 (web
-            `PartnerBalanceView`): rút tiền và nơi tiền về là một việc, người bấm "Rút" mà chưa có
-            tài khoản phải thấy chỗ khai ngay trên cùng màn. Màn này chỉ dựng cho CHỦ (route gác),
-            đúng `@ShopOwnerOnly` của `/shop/bank-accounts`.
+            TÀI KHOẢN NHẬN TIỀN — khối của trang số dư ở CẢ HAI phía: gian hàng từ PR #159 (web
+            `PartnerBalanceView`), tài khoản khách từ design Account 22/10/2026 (web
+            `AccountBalanceView`). Rút tiền và nơi tiền về là một việc, người bấm "Rút" mà chưa có
+            tài khoản phải thấy chỗ khai ngay trên cùng màn. Sổ đi theo ĐÚNG chủ ví (`scope`); phía
+            gian hàng chỉ dựng cho CHỦ (route gác), đúng `@ShopOwnerOnly` của `/shop/bank-accounts`.
           */}
-          {isShop ? (
-            <YStack onLayout={onPayoutLayout}>
-              <BankAccountList scope="shop" title={tBank('title')} hint={t('payout.hint')} />
-            </YStack>
-          ) : null}
+          <YStack onLayout={onPayoutLayout}>
+            {isShop ? (
+              <BankAccountList
+                scope={BANK_ACCOUNT_SCOPE.SHOP}
+                title={tBank('title')}
+                hint={t('payout.hint')}
+              />
+            ) : (
+              /*
+               * Tab "Tài khoản thanh toán" (web `AccountBalanceView`, Figma `19879:74829`): khối là
+               * MỘT thẻ — tiêu đề, mô tả, thẻ tài khoản hình `detail`, rồi khối lưu ý.
+               */
+              <SectionCard>
+                <BankAccountList
+                  scope={BANK_ACCOUNT_SCOPE.ACCOUNT}
+                  title={tBank('title')}
+                  hint={tBank('subtitle')}
+                  detailed
+                  footer={<PayoutNotes maxBusinessDays={walletSummary.data?.maxBusinessDays} />}
+                />
+              </SectionCard>
+            )}
+          </YStack>
 
           {/*
             Bảng tổng hợp chỉ có ở phía GIAN HÀNG — khách thuê thuần không có chuyến nào ở phía bán,
@@ -244,6 +290,8 @@ export function WalletScreen({
             </SectionCard>
           ) : null}
 
+          {showLedger ? (
+            <>
           <SectionCard>
             <BlockTitle>{t('requests.title')}</BlockTitle>
             {withdrawals.isPending ? (
@@ -294,6 +342,8 @@ export function WalletScreen({
               />
             ) : null}
           </SectionCard>
+            </>
+          ) : null}
 
           {/*
             Thuế TNCN/GTGT XePrime đã khấu trừ — khối CUỐI của trang số dư web (`PartnerBalanceView`

@@ -1,5 +1,5 @@
 import { apiRequest, type QueryParams } from '@/services/api-client';
-import type { AccountPaymentMeta, AccountPaymentPage } from './types';
+import type { AccountPaymentMeta, AccountPaymentPage, AccountTransactionPage } from './types';
 
 /** Trang nhỏ: đây là màn đọc trên điện thoại, không phải bảng kế toán. */
 export const ACCOUNT_PAYMENT_LIMIT = 20;
@@ -44,5 +44,45 @@ export async function fetchAccountPayments(params: QueryParams): Promise<Account
   return {
     data: res.data,
     meta: (res.meta as AccountPaymentMeta | undefined) ?? EMPTY_META(ACCOUNT_PAYMENT_LIMIT, res.data.length),
+  };
+}
+
+// ── Lịch sử giao dịch hợp nhất (`GET /account/transactions`) ────────────────
+
+export const ACCOUNT_TRANSACTION_LIMIT = 20;
+
+export interface AccountTransactionFilters {
+  status?: string | null;
+  /** `YYYY-MM-DD` — ngày lịch Việt Nam. */
+  from?: string | null;
+  to?: string | null;
+  page?: number;
+}
+
+export function accountTransactionParams(filters: AccountTransactionFilters): QueryParams {
+  return {
+    status: filters.status ?? null,
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+    page: filters.page ?? 1,
+    limit: ACCOUNT_TRANSACTION_LIMIT,
+  };
+}
+
+/** `apiRequest` để giữ nguyên phong bì `{ data, meta }` — xem docblock `fetchAccountPayments`. */
+export async function fetchAccountTransactions(
+  params: QueryParams,
+): Promise<AccountTransactionPage> {
+  const res = await apiRequest<AccountTransactionPage['data']>('/account/transactions', {
+    query: params,
+  });
+  return {
+    data: res.data,
+    meta: (res.meta as AccountTransactionPage['meta'] | undefined) ?? {
+      page: 1,
+      limit: ACCOUNT_TRANSACTION_LIMIT,
+      total: res.data.length,
+      hasNext: false,
+    },
   };
 }

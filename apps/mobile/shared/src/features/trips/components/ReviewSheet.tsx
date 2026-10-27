@@ -3,7 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
@@ -19,8 +19,8 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, sizing, space } from '@/theme/tokens';
-import { useCreateReview } from '../hooks/use-trips';
+import { colors, fontSize, sizing, space } from '@/theme/tokens';
+import { useCreateReview, useUpdateReview } from '../hooks/use-trips';
 import type { CustomerTripDetail } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
 
@@ -35,14 +35,20 @@ export function ReviewSheet({
   open,
   onClose,
   trip,
+  mode = 'create',
 }: {
   open: boolean;
   onClose: () => void;
   trip: CustomerTripDetail;
+  /** `edit` = sửa đánh giá đã gửi (MỘT lần, server bật `review.canEdit`), điền sẵn bản cũ. */
+  mode?: 'create' | 'edit';
 }) {
   const t = useTranslations('Trips.review');
   const toast = useAppToast();
   const createReview = useCreateReview(trip.id);
+  const updateReview = useUpdateReview(trip.id);
+  const editing = mode === 'edit' && trip.review !== null;
+  const pending = createReview.isPending || updateReview.isPending;
 
   /*
    * Dựng lại schema khi ngôn ngữ đổi — `t` đổi định danh theo locale, nên `useMemo` bám vào nó
@@ -61,10 +67,34 @@ export function ReviewSheet({
 
   const { control, handleSubmit } = useForm<ReviewFormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { rating: RATING_MAX, comment: '' },
+    defaultValues:
+      editing && trip.review
+        ? { rating: trip.review.rating, comment: trip.review.comment ?? '' }
+        : { rating: RATING_MAX, comment: '' },
   });
 
   const submit = handleSubmit((values) => {
+    if (pending) return;
+    if (editing && trip.review) {
+      updateReview.mutate(
+        {
+          id: trip.review.id,
+          rating: values.rating,
+          ...(values.comment ? { comment: values.comment } : {}),
+        },
+        {
+          onSuccess: () => {
+            toast.showSuccess(t('editSuccess'));
+            onClose();
+          },
+          onError: (error) => {
+            toast.showError(getErrorMessage(error));
+            onClose();
+          },
+        },
+      );
+      return;
+    }
     if (!trip.bookingId) return;
 
     createReview.mutate(
@@ -98,9 +128,9 @@ export function ReviewSheet({
       subtitle={trip.vehicle.name}
       footer={
         <Button
-          label={t('submit')}
+          label={editing ? t('saveEdit') : t('submit')}
           icon="send-outline"
-          loading={createReview.isPending}
+          loading={pending}
           onPress={() => void submit()}
         />
       }
@@ -124,6 +154,12 @@ export function ReviewSheet({
         multiline
         maxLength={REVIEW_COMMENT_MAX}
       />
+
+      {editing ? (
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('editHint')}
+        </Text>
+      ) : null}
     </BottomSheet>
   );
 }

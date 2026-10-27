@@ -1,10 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
 import { ACCOUNT_REALM } from '@xeprime/types';
-import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Realms } from '../../common/decorators';
 import { IdResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser } from '../../common/types/request-context';
-import { CreateReviewDto } from './dto/review.dto';
+import { CreateReviewDto, OwnReviewDto, UpdateReviewDto } from './dto/review.dto';
 import { ReviewService } from './review.service';
 
 /**
@@ -28,5 +28,16 @@ export class ReviewController {
     @Body() dto: CreateReviewDto,
   ): Promise<{ id: string }> {
     return this.reviews.createForBooking(user.id, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Chỉnh sửa đánh giá của chính mình — chỉ được MỘT lần' })
+  @ApiOkResponse({ type: OwnReviewDto })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateReviewDto,
+  ): Promise<OwnReviewDto> {
+    return this.reviews.updateOwn(user.id, id, dto);
   }
 }

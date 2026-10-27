@@ -1,26 +1,32 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CUSTOMER_TRIP_FILTER, TRIP_ROLE } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { ROUTES, TRIPS_TAB, TRIPS_TAB_PARAM } from '@/constants/routes';
-import { DrivingTabSwitch } from '@/features/driving/components/DrivingTabSwitch';
-import { DrivingTripsList } from '@/features/driving/components/DrivingTripsList';
+import { ROUTES, TRIPS_TAB, TRIPS_TAB_PARAM, drivingTripPath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { isUnauthenticated } from '@/services/api-client';
 import { useTrips } from '../hooks';
 import { useTripListUrl } from '../use-trip-list-url';
-import { TripCard } from './TripCard';
+import { CustomerTripCard } from './CustomerTripCard';
+import { TripFilterTabs } from './TripFilterTabs';
+import { TripHistoryFilters } from './TripHistoryFilters';
 import { TripList } from './TripList';
 import { UnpaidHoldsReminder } from './UnpaidHoldsReminder';
-import styles from './TripsView.module.css';
+import { AccountPanel } from '@/features/account/components/AccountPanel';
 
 /**
- * `Chuyến của tôi` — danh sách duy nhất cho khách.
+ * `Chuyến của tôi` — danh sách duy nhất cho khách. Design Account / My Trip (Figma `19879:69348`,
+ * `19879:71810`): MỘT thẻ `AccountPanel` trong vỏ tài khoản — tiêu đề `h1` + mô tả, bộ chuyển
+ * "Chuyến hiện tại / Lịch sử chuyến" ở góc phải (`TripFilterTabs`), rồi các thẻ chuyến.
+ *
+ * Tab lịch sử có ô "Tìm kiếm chuyến đi" + "Chọn khoảng thời gian" (`TripHistoryFilters`) — lọc ở
+ * server qua `GET /trips?q=&dateFrom=&dateTo=`; số trên tab vẫn là tổng của tab.
  *
  * Bộ lọc và trang sống ở **URL searchParams** (ADR 0004) qua `useTripListUrl`; khung tab + lọc
  * chặng + phân trang là `TripList`, dùng chung với danh sách chuyến cho thuê của chủ xe.
@@ -38,34 +44,34 @@ export function TripsView() {
   const nextFromHere = useNextFromCurrentPath();
 
   const searchParams = useSearchParams();
-  // "Chuyến tôi lái" (ADR 0063) là một tab của cùng trang — `?tab=driving`, đích thông báo dùng chuỗi này.
+  /*
+   * "Chuyến tôi lái" (ADR 0063) đã chuyển sang trang "Nơi tôi làm tài xế". Link cũ `?tab=driving`
+   * (thông báo đã gửi, dấu trang) vẫn phải tới đúng chỗ.
+   */
   const driving = searchParams?.get(TRIPS_TAB_PARAM) === TRIPS_TAB.DRIVING;
+  useEffect(() => {
+    if (driving) router.replace(drivingTripPath.list);
+  }, [driving, router]);
 
-  const { filter, page, navigate } = useTripListUrl(ROUTES.TRIPS);
+  const { filter, page, narrow, navigate } = useTripListUrl(ROUTES.TRIPS);
+  const history = filter === CUSTOMER_TRIP_FILTER.HISTORY;
+  // Ô tìm / khoảng ngày chỉ có ở tab lịch sử (Figma `19879:71810`) — tab hiện tại không gửi chúng.
+  const activeNarrow = history ? narrow : undefined;
+  const narrowed = Boolean(activeNarrow?.q || activeNarrow?.from || activeNarrow?.to);
   const { data, isLoading, isError, error, refetch, isFetching } = useTrips(
     filter,
     page,
     TRIP_ROLE.RENTER,
+    true,
+    activeNarrow,
   );
 
-  if (driving) {
-    return (
-      <div className={styles.page}>
-        <header className={styles.header}>
-          <h1 className={styles.heading}>{t('list.heading')}</h1>
-        </header>
-        <DrivingTabSwitch driving />
-        <DrivingTripsList />
-      </div>
-    );
-  }
-
-  if (isError) {
-    // Hết phiên là chuyện của đăng nhập, không phải lỗi tải dữ liệu — hai thứ cần hai lối thoát
-    // khác nhau, và "Thử lại" cho phiên hết hạn chỉ lặp lại đúng lỗi đó.
-    if (isUnauthenticated(error)) {
-      return (
-        <div className={styles.page}>
+  function renderContent() {
+    if (isError) {
+      // Hết phiên là chuyện của đăng nhập, không phải lỗi tải dữ liệu — hai thứ cần hai lối thoát
+      // khác nhau, và "Thử lại" cho phiên hết hạn chỉ lặp lại đúng lỗi đó.
+      if (isUnauthenticated(error)) {
+        return (
           <EmptyState
             variant="empty"
             title={t('auth.expiredTitle')}
@@ -79,11 +85,9 @@ export function TripsView() {
               </Button>
             }
           />
-        </div>
-      );
-    }
-    return (
-      <div className={styles.page}>
+        );
+      }
+      return (
         <EmptyState
           variant="error"
           title={t('list.errorTitle')}
@@ -94,55 +98,82 @@ export function TripsView() {
             </Button>
           }
         />
-      </div>
+      );
+    }
+
+    return (
+      <>
+        {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab. */}
+        <UnpaidHoldsReminder />
+
+        {history ? (
+          <TripHistoryFilters narrow={narrow} onChange={(next) => navigate({ narrow: next })} />
+        ) : null}
+
+        <TripList
+          /* Dựng lại theo tab: bộ lọc chặng của tab kia không mang sang (xem `TripList.tabs`). */
+          key={filter}
+          tabs="external"
+          filter={filter}
+          data={data}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          onNavigate={navigate}
+          renderTrip={(trip) => <CustomerTripCard trip={trip} />}
+          /*
+           * Hai tab trống là hai tình huống khác nhau, nên hai lối thoát khác nhau: chưa có chuyến
+           * nào đang chạy thì việc cần làm là đi tìm xe; lịch sử trống thì mời tìm xe là lạc đề —
+           * đường ra là quay về tab đang có chuyến.
+           */
+          empty={
+            narrowed ? (
+              /* Bộ lọc không khớp gì: lối ra là XOÁ bộ lọc, không phải lối thoát của tab trống. */
+              <EmptyState
+                variant="no-results"
+                title={t('list.narrowEmptyTitle')}
+                description={t('list.narrowEmptyBody')}
+                action={
+                  <Button onClick={() => navigate({ narrow: {} })}>{t('list.narrowClear')}</Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                variant="empty"
+                title={history ? t('list.emptyHistoryTitle') : t('list.emptyCurrentTitle')}
+                description={history ? t('list.emptyHistoryBody') : t('list.emptyCurrentBody')}
+                action={
+                  history ? (
+                    <Button onClick={() => navigate({ filter: CUSTOMER_TRIP_FILTER.CURRENT })}>
+                      {t('list.viewCurrent')}
+                    </Button>
+                  ) : (
+                    <Button type="primary" onClick={() => router.push(ROUTES.SEARCH)}>
+                      {t('list.findVehicle')}
+                    </Button>
+                  )
+                }
+              />
+            )
+          }
+        />
+      </>
     );
   }
 
-  const history = filter === CUSTOMER_TRIP_FILTER.HISTORY;
-
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.heading}>{t('list.heading')}</h1>
-        <p className={styles.sub}>{t('list.sub')}</p>
-      </header>
-
-      <DrivingTabSwitch driving={false} />
-
-      {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab. */}
-      <UnpaidHoldsReminder />
-
-      <TripList
-        filter={filter}
-        data={data}
-        isLoading={isLoading}
-        isFetching={isFetching}
-        onNavigate={navigate}
-        renderTrip={(trip) => <TripCard trip={trip} />}
-        /*
-         * Hai tab trống là hai tình huống khác nhau, nên hai lối thoát khác nhau: chưa có chuyến
-         * nào đang chạy thì việc cần làm là đi tìm xe; lịch sử trống thì mời tìm xe là lạc đề —
-         * đường ra là quay về tab đang có chuyến.
-         */
-        empty={
-          <EmptyState
-            variant="empty"
-            title={history ? t('list.emptyHistoryTitle') : t('list.emptyCurrentTitle')}
-            description={history ? t('list.emptyHistoryBody') : t('list.emptyCurrentBody')}
-            action={
-              history ? (
-                <Button onClick={() => navigate({ filter: CUSTOMER_TRIP_FILTER.CURRENT })}>
-                  {t('list.viewCurrent')}
-                </Button>
-              ) : (
-                <Button type="primary" onClick={() => router.push(ROUTES.SEARCH)}>
-                  {t('list.findVehicle')}
-                </Button>
-              )
-            }
-          />
-        }
-      />
-    </div>
+    <AccountPanel
+      as="h1"
+      title={t('list.heading')}
+      subtitle={t('list.sub')}
+      extra={
+        <TripFilterTabs
+          filter={filter}
+          counts={data?.counts}
+          onChange={(next) => navigate({ filter: next })}
+        />
+      }
+    >
+      {renderContent()}
+    </AccountPanel>
   );
 }

@@ -578,6 +578,14 @@ export const queryKeys = {
     all: ['platform-withdrawals'] as const,
     list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
   },
+  /** Lịch sử giao dịch HỢP NHẤT của khách — `GET /account/transactions`. */
+  accountTransactions: {
+    all: ['account-transactions'] as const,
+    list: (params: QueryParams) => ['account-transactions', 'list', params] as const,
+    /** Native cuộn vô hạn — `page` là `pageParam`, không nằm trong khoá. */
+    listInfinite: (params: QueryParams) =>
+      ['account-transactions', 'list-infinite', params] as const,
+  },
   /** Tiền KHÁCH đã trả cho chuyến đã thuê — `payments`, KHÔNG phải ví (PROMPT 5). */
   accountPayments: {
     all: ['account-payments'] as const,
@@ -651,6 +659,8 @@ export const queryKeys = {
   feePolicies: {
     all: ['fee-policies'] as const,
     list: () => ['fee-policies', 'list'] as const,
+    /** `/public/fee-policies/partner-offer` — % hoa hồng trần cho lời mời hợp tác. */
+    partnerOffer: () => ['fee-policies', 'partner-offer'] as const,
   },
   /**
    * MÃ KHUYẾN MÃI nền tảng — màn QUẢN TRỊ (ADR 0046).

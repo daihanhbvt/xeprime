@@ -28,6 +28,7 @@
   },
   "withdraw": {
     "action": "Rút về ngân hàng",
+    "actionLinked": "Rút về ngân hàng liên kết",
     "title": "Yêu cầu rút tiền",
     "amount": "Số tiền cần rút",
     "amountHint": "Rút tối thiểu {min}. Bạn đang có {available} rút được ngay.",
@@ -169,6 +170,7 @@
   "pill": {
     "label": "Số dư",
     "hide": "Ẩn số dư",
-    "show": "Hiện số dư"
+    "show": "Hiện số dư",
+    "prefix": "Số dư:"
   }
 }

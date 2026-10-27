@@ -71,33 +71,33 @@ describe('WalletSummaryCard', () => {
     const view = await renderCard(summary());
 
     expect(view.getByText('Tổng XePrime phải trả')).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Rút về ngân hàng' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Rút về ngân hàng liên kết' })).toBeTruthy();
     expect(view.queryByText(/Nạp tiền|Chuyển điểm|Thanh toán bằng điểm/)).toBeNull();
   });
 
   it('KHOÁ nút rút khi số dư chưa đạt ngưỡng của server', async () => {
     const view = await renderCard(summary({ available: '50000', minWithdrawAmount: '100000' }));
 
-    expect(view.getByRole('button', { name: 'Rút về ngân hàng' }).props.accessibilityState).toEqual(
-      expect.objectContaining({ disabled: true }),
-    );
+    expect(
+      view.getByRole('button', { name: 'Rút về ngân hàng liên kết' }).props.accessibilityState,
+    ).toEqual(expect.objectContaining({ disabled: true }));
   });
 
   it('mở nút rút khi đã đạt ngưỡng', async () => {
     const view = await renderCard(summary({ available: '100000', minWithdrawAmount: '100000' }));
 
-    expect(view.getByRole('button', { name: 'Rút về ngân hàng' }).props.accessibilityState).toEqual(
-      expect.objectContaining({ disabled: false }),
-    );
+    expect(
+      view.getByRole('button', { name: 'Rút về ngân hàng liên kết' }).props.accessibilityState,
+    ).toEqual(expect.objectContaining({ disabled: false }));
   });
 
   it('ví bị KHOÁ thì không rút được, dù số dư có đủ', async () => {
     const view = await renderCard(summary({ status: 'frozen', available: '9000000' }));
 
     expect(view.getByText(/Ví đang tạm khoá/)).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Rút về ngân hàng' }).props.accessibilityState).toEqual(
-      expect.objectContaining({ disabled: true }),
-    );
+    expect(
+      view.getByRole('button', { name: 'Rút về ngân hàng liên kết' }).props.accessibilityState,
+    ).toEqual(expect.objectContaining({ disabled: true }));
   });
 
   it('hình thái trang không lặp tiêu đề và nút đã nằm ở hàng tiêu đề', async () => {
@@ -108,7 +108,7 @@ describe('WalletSummaryCard', () => {
     );
 
     expect(view.queryByText('Số dư của tôi')).toBeNull();
-    expect(view.queryByRole('button', { name: 'Rút về ngân hàng' })).toBeNull();
+    expect(view.queryByRole('button', { name: 'Rút về ngân hàng liên kết' })).toBeNull();
     expect(view.getByText(/Rút tối thiểu 100.000 ₫/)).toBeTruthy();
   });
 });

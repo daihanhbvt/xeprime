@@ -1,0 +1,29 @@
+/* Hàng lọc tab lịch sử — Figma `19879:72400`: hai ô bằng nhau, cách 16, cao 44, viền #d5d7da, bo 12. */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xp-space-md);
+}
+
+.field {
+  width: 100%;
+  height: 44px;
+  border-color: var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  box-shadow: var(--xp-elevation-xs);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.field :global(.ant-input-prefix),
+.field :global(.ant-picker-suffix) {
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: var(--xp-space-12);
+  }
+}

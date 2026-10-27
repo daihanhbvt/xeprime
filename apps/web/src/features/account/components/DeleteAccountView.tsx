@@ -1,38 +1,24 @@
 'use client';
 
 import { CloseCircleOutlined, WarningFilled } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Popconfirm, Skeleton } from 'antd';
-import { useMemo, useState, type ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import * as yup from 'yup';
-import {
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_META,
-  type SupportCaseStatus,
-} from '@xeprime/types';
+import { SUPPORT_CASE_STATUS_META, type SupportCaseStatus } from '@xeprime/types';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { CheckboxField } from '@/components/form/CheckboxField';
-import {
-  useOpenSupportCase,
-  useSupportCases,
-  useWithdrawAccountDeletion,
-} from '@/features/support-cases/hooks/use-support-cases';
-import { SUPPORT_SURFACE } from '@/features/support-cases/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
+import {
+  ACCOUNT_DELETION_ITEMS as ITEMS,
+  useAccountDeletionForm,
+  useAccountDeletionRequest,
+} from '../hooks/use-account-deletion';
 import { AccountPageHeader } from './AccountPageHeader';
 import styles from './DeleteAccountView.module.css';
-
-interface DeleteAccountValues {
-  acknowledged: boolean;
-}
-
-const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
 
 /**
  * "Yêu cầu xoá tài khoản" — một YÊU CẦU đi vào hàng đợi support của nền tảng, không phải nút xoá.
@@ -68,54 +54,13 @@ export function DeleteAccountView({
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
-  const pendingQuery = useSupportCases(SUPPORT_SURFACE.CUSTOMER, {
-    category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
-    limit: 1,
-  });
-  const openCase = useOpenSupportCase(SUPPORT_SURFACE.CUSTOMER);
-  const withdraw = useWithdrawAccountDeletion();
+  const { pendingQuery, pending, openCase, withdraw } = useAccountDeletionRequest();
   /** Chế độ nhúng: form xác nhận đã được mở chưa. */
   const [expanded, setExpanded] = useState(false);
-
-  const schema = useMemo(
-    () =>
-      yup.object({
-        // `.test` thay vì `.oneOf([true])`: giữ kiểu `boolean` cho form, chỉ đổi luật.
-        acknowledged: yup
-          .boolean()
-          .required(t('acknowledgeRequired'))
-          .test('acknowledged', t('acknowledgeRequired'), (value) => value === true),
-      }),
-    [t],
+  const { control, onSubmit, reset, formState } = useAccountDeletionForm(openCase, () =>
+    setExpanded(false),
   );
 
-  const { control, handleSubmit, reset, formState } = useForm<DeleteAccountValues>({
-    resolver: yupResolver(schema),
-    defaultValues: { acknowledged: false },
-    // Nút gửi chỉ bật khi đã tick xác nhận — phải kiểm ngay lúc tick, không chờ tới lúc submit.
-    mode: 'onChange',
-  });
-
-  const onSubmit = handleSubmit(() => {
-    if (openCase.isPending) return;
-    openCase.mutate(
-      {
-        category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
-        subject: t('caseSubject'),
-        description: t('caseDescription'),
-      },
-      {
-        onSuccess: () => {
-          message.success(t('submitted'));
-          reset();
-          setExpanded(false);
-        },
-        onError: (err) => message.error(errorMessage(err)),
-      },
-    );
-  });
-
-  const pending = pendingQuery.data?.items[0];
   // Nhúng: section đã giữ `h2` và khung — tiêu đề con xuống `h3`, khối con không vẽ viền thứ hai.
   const SubHeading = embedded ? 'h3' : 'h2';
   const box = embedded ? styles.inset : styles.card;

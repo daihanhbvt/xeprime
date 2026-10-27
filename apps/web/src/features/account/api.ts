@@ -1,5 +1,6 @@
 import { apiGet, apiPatch, apiPost } from '@/services/api-client';
 import type {
+  PartnerOffer,
   SendEmailOtpInput,
   SendOtpResult,
   SendPhoneOtpInput,
@@ -36,3 +37,7 @@ export const sendMyEmailOtp = (body: SendEmailOtpInput): Promise<SendOtpResult> 
 /** Bước 2 đổi email: mã đúng → server ghi địa chỉ mới và báo cho địa chỉ cũ. */
 export const verifyMyEmail = (body: VerifyEmailInput): Promise<UserProfile> =>
   apiPost<UserProfile>('/users/me/email/verify', body);
+
+/** GET /public/fee-policies/partner-offer — % hoa hồng cao nhất của chính sách hiện hành (công khai). */
+export const fetchPartnerOffer = (): Promise<PartnerOffer> =>
+  apiGet<PartnerOffer>('/public/fee-policies/partner-offer');

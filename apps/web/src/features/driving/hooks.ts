@@ -13,6 +13,7 @@ import {
   fetchDriverTrips,
   fetchMyDriverLinks,
   leaveDriverLink,
+  releaseDriverTrip,
 } from './api';
 import type { DriverLinkScope } from './types';
 
@@ -34,11 +35,12 @@ export function useDriverPendingCounts(enabled = true) {
   });
 }
 
-export function useDriverTrips(tab: DriverTripTab, page: number) {
+export function useDriverTrips(tab: DriverTripTab, page: number, enabled = true) {
   return useQuery({
     queryKey: queryKeys.driving.trips(tab, page),
     queryFn: () => fetchDriverTrips(tab, page),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -64,3 +66,4 @@ export const useDeclineDriverLink = () => useDrivingMutation(declineDriverLink);
 export const useLeaveDriverLink = () => useDrivingMutation(leaveDriverLink);
 export const useAcceptDriverTrip = () => useDrivingMutation(acceptDriverTrip);
 export const useDeclineDriverTrip = () => useDrivingMutation(declineDriverTrip);
+export const useReleaseDriverTrip = () => useDrivingMutation(releaseDriverTrip);

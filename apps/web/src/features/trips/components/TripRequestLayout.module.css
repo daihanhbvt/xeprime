@@ -103,25 +103,114 @@
 .cardTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
   font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-lg);
+}
+
+/* Tiêu đề thẻ + câu dẫn ngay dưới cách nhau 2 (Figma "Section heading": gap 2). */
+.cardTitle + .cardLead {
+  margin-top: calc(var(--xp-space-2) - var(--xp-space-md));
 }
 
 .cardLead {
   margin: 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+/* Thẻ thông tin gọn (Figma "Renter Information" · "Additional Deposits"): đệm 20, khe 12. */
+.cardCompact {
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20);
+}
+
+/*
+ * Khung chung của mọi thẻ trạng thái (Figma `21621:66914` · `21621:67904`): đệm 20, khe 12. Nhãn
+ * chặng ở đây là badge `12px/Medium`, khác viên thuốc 14px trong thẻ tiền.
+ */
+.status {
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20);
+}
+
+.status .pill {
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+/* Câu giải thích của thẻ trạng thái — Figma `Description`: 14/22 `Text/Gray/low`. */
+.status .cardLead {
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 /* ── Thẻ trạng thái (Figma `19727:61071` · `19737:23919` · `19759:40235`) ────── */
 
-/* Chuyến đã xác nhận: nền `Status/success-25`, viền NÉT ĐỨT `Status/success-500`, đệm 24. */
+/* Chuyến đã xác nhận (Figma `21621:66914`): nền `Status/success-25`, viền LIỀN `Status/success-500`. */
 .statusConfirmed {
-  border: 1px dashed var(--xp-color-success-accent);
+  border: 1px solid var(--xp-color-success-accent);
   background: var(--xp-color-success-subtle);
 }
+/* Chuyến đã hoàn tất (Figma `21621:68041`): nền xanh nhạt, viền LIỀN xanh. */
+.statusCompleted {
+  border: 1px solid var(--xp-color-success-accent);
+  background: var(--xp-color-success-subtle);
+}
+
+/* Kết cục hỏng — đã huỷ, bị từ chối, không nhận xe (Figma `21621:67556`). */
+.statusFailed {
+  /* Figma `21621:67904`: viền `Status/error-high` liền, nền `BG/destructive-low`. */
+  border: 1px solid var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+/* Kết cục không ai có lỗi — quá hạn phản hồi, xe đã có khách khác. */
+.statusNotice {
+  border: 1px solid color-mix(in srgb, var(--xp-color-warning) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-warning-bg);
+}
+
+/*
+ * Chuyến ĐANG THUÊ — chưa có bản vẽ riêng; cùng khuôn với thẻ đã xác nhận/đã hoàn tất, sắc xanh
+ * dương "đang diễn ra" (khác xanh lá "đã xong").
+ */
+.statusActive {
+  border: 1px solid color-mix(in srgb, var(--xp-color-info) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-info-bg);
+}
+
+.statusActive .statusIcon {
+  color: var(--xp-color-info);
+}
+
+/* Huy hiệu biểu tượng của chuyến đã khép — vòng tròn 56 cùng sắc thái với thẻ. */
+.statusIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  font-size: 36px;
+}
+
+.statusSuccessIcon,
+.statusConfirmed .statusIcon,
+.statusCompleted .statusIcon {
+  color: var(--xp-color-success);
+}
+
+.statusFailed .statusIcon {
+  color: var(--xp-color-error);
+}
+
+.statusNotice .statusIcon {
+  color: var(--xp-color-warning);
+}
+
 .statusHead {
   display: flex;
   align-items: center;
@@ -129,11 +218,12 @@
   min-width: 0;
 }
 
+/* Minh hoạ 64×64 của Figma (`Image` trong `Status overview`), ảnh đã cắt sát nên phủ kín khung. */
 .statusBadge {
   flex: none;
   width: 64px;
   height: 64px;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .statusCopy {
@@ -145,10 +235,13 @@
   min-width: 0;
 }
 
+/* Figma `Status title`: 18/28 Semibold `Text/Gray/high`. */
 .statusTitle {
   margin: 0;
   color: var(--xp-color-text);
+  font-size: 18px;
   font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
   overflow-wrap: anywhere;
   font-size: var(--xp-font-size-h3);
   line-height: var(--xp-line-height-h3);
@@ -170,13 +263,14 @@
   border-radius: var(--xp-border-radius-card);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
+/* Figma `19727:61076` · `21621:54037`: nền `orange-low`, viền `warning-300`, chữ `orange-high`. */
 .warning {
-  border-color: color-mix(in srgb, var(--xp-color-warning) 45%, var(--xp-color-bg-container));
+  border-color: var(--xp-color-warning-border);
   background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
+  color: var(--xp-color-warning-strong);
 }
 
 .success {
@@ -191,10 +285,18 @@
   color: var(--xp-color-primary-strong);
 }
 
+/* Figma `I21621:54326;21621:54037`: nền `information-low`, viền `information-300`, chữ `information-high`. */
 .info {
-  border-color: color-mix(in srgb, var(--xp-color-info) 45%, var(--xp-color-bg-container));
+  border-color: color-mix(in srgb, var(--xp-color-info-strong) 50%, var(--xp-color-bg-container));
   background: var(--xp-color-info-bg);
-  color: var(--xp-color-info);
+  color: var(--xp-color-info-strong);
+}
+
+/* Figma `21621:55007`: nền `destructive-low`, viền `error-300`, chữ `error-700`. */
+.danger {
+  border-color: color-mix(in srgb, var(--xp-color-error) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-error-bg);
+  color: color-mix(in srgb, var(--xp-color-error) 82%, var(--xp-color-text));
 }
 
 /* Nhãn đứng dưới số tiền trong thẻ "Các khoản khác" — tách khỏi dòng chữ trên/dưới nó. */
@@ -206,15 +308,15 @@
 .noteField {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-6);
+  gap: var(--xp-space-2);
   min-width: 0;
 }
 
 .noteLabel {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .noteValue {
@@ -247,14 +349,35 @@
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .policyBody {
   margin: 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+/* "Xem chính sách áp dụng" (Figma `21768:22478`): liên kết chữ `16px/Semibold` xanh + mũi tên 20. */
+.policyLink {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.policyLink:hover {
+  color: var(--xp-color-info);
+  text-decoration: underline;
+}
+
+.policyLinkIcon {
+  font-size: 20px;
 }
 
 .hotline {
@@ -262,7 +385,7 @@
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
   font-style: italic;
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   text-align: center;
 }
 
@@ -278,13 +401,20 @@
 
 /* Mobile (≤640px = `--xp-bp-mobile`): đệm thẻ hẹp lại như màn Xem lại, tiêu đề nhỏ một bậc. */
 @media (max-width: 640px) {
-  .card {
+  .card,
+  .status,
+  .cardCompact {
     padding: var(--xp-space-md);
   }
 
-  .statusBadge {
+  .statusBadge,
+  .statusIcon {
     width: 48px;
     height: 48px;
+  }
+
+  .statusIcon {
+    font-size: 30px;
   }
 
   .statusTitle {

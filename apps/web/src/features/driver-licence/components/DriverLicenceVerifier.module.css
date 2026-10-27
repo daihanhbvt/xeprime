@@ -18,6 +18,8 @@
 
 /* Trong hộp thoại đặt xe: phẳng, không viền/bóng — hộp thoại đã là khung. */
 .panelEmbedded {
+  /* Khoảng giữa thông báo · thông tin bằng · nút như khối Giấy tờ của bản vẽ (24px). */
+  gap: var(--xp-space-lg);
   padding: 0;
   border: 0;
   box-shadow: none;
@@ -85,9 +87,9 @@
 
 .bannerTitle {
   margin: 0;
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-sm);
+  line-height: 22px;
 }
 
 .banner_success .bannerTitle {
@@ -97,8 +99,8 @@
 .bannerBody {
   margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .rejectedBody {
@@ -259,8 +261,9 @@
   flex-direction: column;
   gap: var(--xp-space-xs);
   min-width: 0;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  /* Figma `20043:49081`: nhãn và giá trị 16/24. */
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .fact dt {
@@ -365,4 +368,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
+}
+
+/* Lần thay bằng vừa rồi chưa thành — một dòng chú thích nhỏ dưới thông tin bằng. */
+.replaceFailed {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.replaceFailedIcon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-lg);
 }

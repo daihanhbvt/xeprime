@@ -1,0 +1,32 @@
+/* Khối lưu ý — nền xám bo 12, tiêu đề màu cảnh báo, gạch đầu dòng (Figma `19879:74829`). */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding-left: var(--xp-space-20);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.list strong {
+  font-weight: var(--xp-font-weight-semibold);
+}

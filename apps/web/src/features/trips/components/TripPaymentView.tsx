@@ -20,7 +20,7 @@ import { getErrorCode } from '@/services/api-client';
 import { useTrip } from '../hooks';
 import type { CustomerTripDetail } from '../types';
 import { TripHoldPanel } from './TripHoldPanel';
-import { TripPageHeader, useTripFlowCrumbs, type TripCrumb } from './TripPageHeader';
+import { TripPageHeader, useTripDetailCrumbs, type TripCrumb } from './TripPageHeader';
 import { TripPaymentCheckout } from './TripPaymentCheckout';
 import { TripPaymentSuccessDialog } from './TripPaymentSuccessDialog';
 import styles from './TripPaymentView.module.css';
@@ -51,13 +51,14 @@ export function TripPaymentView({ tripId }: { tripId: string }) {
   const trip = useTrip(tripId);
 
   const detailHref = tripPath.detail(tripId);
-  const vehicleId = trip.data?.vehicle.id ?? null;
   /*
-   * Đường dẫn của bản vẽ: Trang chủ / Chi tiết xe / Gửi yêu cầu thuê xe / Thanh toán giữ chỗ. Mắt
-   * "Chi tiết xe" chỉ là liên kết khi đã biết xe nào — lúc đang tải thì là chữ thường.
+   * Đường dẫn theo khu tài khoản như các trang chuyến khác: Tài khoản / Chuyến của tôi / Chi tiết
+   * chuyến (liên kết về trang chuyến) / Thanh toán giữ chỗ.
    */
   const crumbs: TripCrumb[] = [
-    ...useTripFlowCrumbs(vehicleId, { requestHref: detailHref }),
+    ...useTripDetailCrumbs(ROUTES.TRIPS).map((crumb) =>
+      crumb.key === 'detail' ? { ...crumb, href: detailHref } : crumb,
+    ),
     { key: 'payment', label: t('title') },
   ];
   const header = (

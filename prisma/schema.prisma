@@ -3517,6 +3517,8 @@ model Review {
   comment          String?   @db.Text
   /// @xeprime/types → ReviewStatus
   status           String    @default("published") @db.VarChar(50)
+  /// Mốc khách chỉnh sửa đánh giá. Khách chỉ được sửa MỘT lần: khác null ⇒ hết lượt sửa.
+  editedAt         DateTime? @map("edited_at") @db.Timestamptz(3)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -4131,6 +4133,8 @@ model BankTransaction {
   @@index([matchStatus, createdAt])
   @@index([referenceCode])
   @@index([direction, bankTime])
+  /// Lịch sử giao dịch của khách: hold → các khoản chuyển khớp vào nó.
+  @@index([matchedType, matchedRefId], map: "bank_transactions_matched_type_ref_idx")
   @@map("bank_transactions")
 }
 
@@ -5075,6 +5079,7 @@ model HoldRefund {
   payer    User?       @relation("refund_payer", fields: [paidBy], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+  @@index([customerUserId], map: "hold_refunds_customer_user_id_idx")
   @@map("hold_refunds")
 }
 

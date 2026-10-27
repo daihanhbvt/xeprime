@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ACCOUNT_REALM } from '@xeprime/types';
+import { ACCOUNT_REALM, type CustomerCancellationReason } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
@@ -19,6 +19,7 @@ import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
   CustomerTripCancelPreviewDto,
+  CancelCustomerTripDto,
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
@@ -168,8 +169,14 @@ export class CustomerTripsController {
   cancel(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    // Thân tuỳ chọn: app cũ gọi không thân ⇒ `customer_changed_plan` (giữ hành vi cũ).
+    @Body() dto: CancelCustomerTripDto = {},
   ): Promise<CustomerTripDetailDto> {
-    return this.trips.cancel(user.id, id);
+    return this.trips.cancel(
+      user.id,
+      id,
+      dto?.reasonCategory as CustomerCancellationReason | undefined,
+    );
   }
 
   /**

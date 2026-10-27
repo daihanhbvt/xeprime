@@ -69,6 +69,20 @@ không ai thấy lịch của nhau).
     Thông báo đi đường `notifications` + push sẵn có (không kênh Firebase mới); tin cho tài xế dùng
     bề mặt khách, tin cho bên thuê dùng khu quản lý.
 
+## Sửa đổi 26/10/2026 (chủ sản phẩm chốt khi làm lại giao diện Trung tâm Tài xế theo Figma)
+
+- **Điều 6 — tài xế được TRẢ LẠI chuyến đã nhận** (`POST /driver/trips/:id/release`): chỉ khi đơn còn
+  `reserved` và trong cửa sổ trả lại — CÙNG công thức huỷ miễn phí của khách (ADR 0066 điều 3):
+  `clamp(20% × ΔT, 15′, 2h)` với `ΔT = pickupAt − lúc nhận`, tính XUÔI từ lúc nhận, kẹp bởi giờ nhận
+  (`driverReleaseUntil`, trả ra `DriverTripDto.releaseUntil`). Quá mốc ⇒ 409, nhờ bên thuê đổi người. Đi đúng đường "từ chối": bốn cột tài xế về NULL, lượt khép
+  `declined` (giữ `acceptedAt` — cặp này phân biệt "trả lại" với "từ chối"), bên thuê được báo khẩn,
+  cột claim nhắc thiếu tài xế được đánh dấu như ADR 0067 điều 2. **Đơn KHÔNG bị huỷ**, không đồng tiền
+  nào đổi chiều; tài xế vẫn không đổi trạng thái đơn, không bàn giao.
+- **Điều 10 — giữ "không tiền"**: giao diện không hiện thu nhập chuyến / doanh thu dù bản vẽ có.
+- **Mở rộng ADR 0054 trên bề mặt tài xế**: `GET /driver/links` trả thêm `employerContact` (họ tên chủ
+  tài khoản bên thuê, email liên hệ theo `resolveStorefront`, tỉnh/thành của gian hàng) và
+  `completedTripCount`. Chỉ tài xế có liên kết với chính bên đó đọc được; không vào DTO công khai.
+
 ## Hệ quả
 
 - Xoá tài khoản khách hiện là yêu cầu hỗ trợ xử lý tay: người xử lý phải kết thúc các liên kết tài xế

@@ -1,26 +1,22 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useId } from 'react';
-import { HOLD_PAYMENT_WINDOW_MINUTES } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
 import { RespondDeadline } from '@/features/booking-requests/components/RespondDeadline';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
-import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { CustomerTripDetail } from '../types';
-import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
+import { TripPageHeader, useTripDetailCrumbs } from './TripPageHeader';
 import {
   TripPlanChangeCard,
   TripRequestLayout,
   TripRequestPill,
   TripRequestStatusCard,
   useTripRequestData,
+  REQUEST_SENT_STATUS_IMAGE,
 } from './TripRequestLayout';
-import layout from './TripRequestLayout.module.css';
 import styles from './TripPendingApprovalView.module.css';
 
 /**
@@ -28,7 +24,7 @@ import styles from './TripPendingApprovalView.module.css';
  *
  *  - TRÁI (`19727:60708`): trạng thái yêu cầu + hạn phản hồi · thẻ chuyến · tiến trình yêu cầu ·
  *    người thuê + lời nhắn · giấy tờ & điều kiện nhận xe — khung chung `TripRequestLayout`.
- *  - PHẢI (`19727:61097`): theo dõi yêu cầu (nhắn chủ xe, tìm xe khác) · chi phí tạm tính + các
+ *  - PHẢI (`19727:61097`): chi phí tạm tính + các
  *    khoản khác · cần thay đổi kế hoạch (chính sách huỷ, huỷ chuyến, hotline).
  *
  * Ranh giới nghiệp vụ, đều do SERVER quyết — màn này chỉ đọc:
@@ -51,12 +47,10 @@ export function TripPendingApprovalView({
 }) {
   const t = useTranslations('Trips.pending');
   const tDetail = useTranslations('Trips.detail');
-  const tFlow = useTranslations('BookingRequests.flow');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
-  const trackId = useId();
   const data = useTripRequestData(trip);
-  const crumbs = useTripFlowCrumbs(trip.vehicle.id);
+  const crumbs = useTripDetailCrumbs(ROUTES.TRIPS);
 
   return (
     <TripRequestLayout
@@ -66,6 +60,7 @@ export function TripPendingApprovalView({
         <TripPageHeader
           backHref={backHref}
           backLabel={tDetail('back')}
+          home={false}
           crumbs={crumbs}
           title={t('page.title')}
           description={t('page.description')}
@@ -76,6 +71,7 @@ export function TripPendingApprovalView({
       hasHoldStage={data.holdStage}
       status={
         <TripRequestStatusCard
+          image={REQUEST_SENT_STATUS_IMAGE}
           tag={dl('customerTripStage', trip.stage)}
           tone="warning"
           title={t('status.title')}
@@ -101,27 +97,6 @@ export function TripPendingApprovalView({
           </p>
         </TripRequestStatusCard>
       }
-      priority={
-        <section className={layout.card} aria-labelledby={trackId}>
-          <h2 id={trackId} className={layout.cardTitle}>
-            {t('track.title')}
-          </h2>
-          <p className={layout.cardLead}>
-            {data.holdStage
-              ? t('track.bodyHold', { minutes: HOLD_PAYMENT_WINDOW_MINUTES })
-              : t('track.body')}
-          </p>
-          <ChatWithShopButton
-            vehicleId={trip.vehicle.id}
-            appearance="cta"
-            block
-            label={tFlow('done.chatHost')}
-          />
-          <CtaButton href={ROUTES.SEARCH} variant="neutral" size="form" block>
-            {t('track.findOther')}
-          </CtaButton>
-        </section>
-      }
     >
       {/*
         Không báo giá được (xe thiếu giá, dài hạn chưa có gói) ⇒ `breakdown = null`: thẻ nói thẳng
@@ -134,7 +109,7 @@ export function TripPendingApprovalView({
         isDelivery={trip.deliveryRequested}
         listedRows={[]}
         holdTag={
-          <TripRequestPill tone="primary" inline>
+          <TripRequestPill tone="warning" inline>
             {t('costs.holdTag')}
           </TripRequestPill>
         }

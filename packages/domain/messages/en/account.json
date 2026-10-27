@@ -74,8 +74,15 @@
   "sidebar": {
     "userCard": "Signed in as"
   },
+  "partnerInvite": {
+    "title": "Partner with XePrime",
+    "commissionBadge": "{min}–{max}% fee",
+    "commissionBadgeFlat": "{percent}% fee",
+    "body": "Turn your vehicle into income of up to {min}–{max} million VND/month with XePrime",
+    "cta": "Become a partner",
+    "dismiss": "Hide invitation"
+  },
   "profile": {
-    "eyebrow": "Personal profile",
     "title": "Account details",
     "description": "Update your display name and profile photo.",
     "accountLabel": "XePrime account",
@@ -84,6 +91,7 @@
     "unverified": "Not verified",
     "securityTitle": "Sign-in details",
     "securityDescription": "Your email and phone number identify your account, so changing either takes a 6-digit code sent to the NEW address or number. When you change your email we also notify the old address, so you'll know if someone else made the change.",
+    "update": "Update details",
     "edit": "Edit profile"
   },
   "comingSoon": {
@@ -253,15 +261,23 @@
     "currentPassword": "Current password",
     "newPassword": "New password",
     "confirmPassword": "Confirm new password",
+    "placeholders": {
+      "current": "Enter your current password",
+      "new": "Enter a new password",
+      "confirm": "Re-enter the new password"
+    },
     "submit": "Update password",
     "submitFirstTime": "Set password",
     "success": "Password updated.",
     "successFirstTime": "Password set. You can sign in with it next time.",
+    "successTitle": "Success",
+    "unchanged": "Your new password must be different from your current one.",
     "requirementsTitle": "Password requirements",
     "requirements": {
       "passwordTooShort": "At least {min} characters",
       "passwordNeedsLetter": "At least 1 letter",
-      "passwordNeedsDigit": "At least 1 digit (0-9)"
+      "passwordNeedsDigit": "At least 1 digit (0-9)",
+      "notSameAsCurrent": "Different from your current password"
     },
     "requirementMet": "Met",
     "requirementUnmet": "Not met"
@@ -269,6 +285,11 @@
   "deleteAccount": {
     "title": "Request account deletion",
     "subtitle": "Send a request for XePrime to delete your account.",
+    "dialogSubtitle": "Please read the information below carefully before sending your request.",
+    "conditionsTitle": "Check before deleting your account",
+    "conditionsBody": "To protect your money, finish your current transactions and trips before XePrime reviews your account deletion request.",
+    "withdrawNow": "Withdraw now",
+    "dataTitle": "What data will be processed once the request is accepted?",
     "warningTitle": "This is a request, handled manually by XePrime",
     "warningBody": "After sending it you can keep signing in as usual until XePrime confirms and completes the deletion. You can withdraw the request while it is pending.",
     "confirmTitle": "Confirm your deletion request",
@@ -384,7 +405,8 @@
   },
   "security": {
     "title": "Account security",
-    "subtitle": "Sign-in methods, password, and actions on your account."
+    "subtitle": "Sign-in methods, password, and actions on your account.",
+    "customerSubtitle": "Change your password regularly to keep your account safe."
   },
   "hub": {
     "title": "Account & security",
@@ -437,5 +459,16 @@
       "bioPlaceholder": "A few lines about you and your cars…",
       "saved": "Host details saved"
     }
+  },
+  "shell": {
+    "title": "My account",
+    "subtitle": "Manage your personal details, balance and account settings."
+  },
+  "profileEdit": {
+    "avatarHelp": "Upload a JPG, JPEG, WEBP or PNG image.\nUp to {max}MB.",
+    "currentPhoto": "Current photo",
+    "pick": "Choose a photo",
+    "remove": "Remove profile photo",
+    "displayName": "Display name"
   }
 }

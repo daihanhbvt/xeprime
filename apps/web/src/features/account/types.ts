@@ -25,3 +25,6 @@ export const CONTACT_CHANNEL = {
   PHONE: 'phone',
 } as const;
 export type ContactChannel = (typeof CONTACT_CHANNEL)[keyof typeof CONTACT_CHANNEL];
+
+/** GET /public/fee-policies/partner-offer. */
+export type PartnerOffer = Schemas['PartnerOfferDto'];

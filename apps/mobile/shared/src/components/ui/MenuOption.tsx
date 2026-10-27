@@ -18,6 +18,7 @@ export function MenuOption({
   meta,
   selected,
   inset = false,
+  leading,
   onPress,
 }: {
   label: string;
@@ -38,6 +39,8 @@ export function MenuOption({
    * thì dải 16px hai mép rơi ra ngoài vùng chạm, và chạm vào đó không ra gì.
    */
   inset?: boolean;
+  /** Phần tử đứng TRƯỚC nhãn (vd logo ngân hàng) — trang trí, nhãn vẫn là chữ đọc được. */
+  leading?: ReactNode;
   onPress: () => void;
 }) {
   return (
@@ -55,6 +58,7 @@ export function MenuOption({
         py={space.xs}
         {...(inset ? { px: layout.screenX } : {})}
       >
+        {leading ?? null}
         <YStack f={1} gap={2}>
           <Text
             col={selected ? colors.primaryActive : colors.text}

@@ -6,7 +6,7 @@
   "scope": {
     "title": "This is money you paid to the shop",
     "body": "Reservation transfers to XePrime appear inside each trip. Money XePrime owes you is in your",
-    "balanceLink": "My balance"
+    "balanceLink": "Balance & payout"
   },
   "depositNote": "A security deposit paid to the shop is returned when you bring the vehicle back, less any charges. It is not money lost.",
   "stats": {
@@ -16,7 +16,17 @@
     "trips": "Trips"
   },
   "filters": {
-    "all": "All"
+    "all": "All",
+    "label": "Filter by payment type"
+  },
+  "balance": {
+    "notes": {
+      "title": "Before adding a payout account:",
+      "holder": "<strong>Account holder:</strong> the beneficiary name must match the name registered with your bank exactly — otherwise the bank returns the transfer.",
+      "timing": "<strong>When money arrives:</strong> XePrime transfers within {days, plural, one {# business day} other {# business days}} of approving a withdrawal.",
+      "accountType": "<strong>Account type:</strong> only Vietnamese bank accounts are supported. Transfers cannot go to credit cards or e-wallets.",
+      "change": "<strong>Changing accounts:</strong> withdrawals already requested still go to the account chosen when they were sent."
+    }
   },
   "columns": {
     "trip": "Trip",
@@ -30,5 +40,53 @@
     "all": "No payments have been recorded for you yet.",
     "rental": "No rent payments recorded yet.",
     "deposit": "No security deposits recorded yet."
+  },
+  "hub": {
+    "title": "Payments",
+    "subtitle": "See your wallet balance & transaction history",
+    "tabsLabel": "Payment sections",
+    "tabs": {
+      "balance": "Balance & payout",
+      "history": "Transaction history"
+    }
+  },
+  "history": {
+    "title": "Transaction history",
+    "loadError": "Could not load your transaction history",
+    "total": "{count, plural, one {# transaction} other {# transactions}}",
+    "filters": {
+      "all": "All",
+      "label": "Filter by status",
+      "range": "Date range",
+      "rangePlaceholder": "Select a date range",
+      "rangeTo": "End date",
+      "clearRange": "Clear dates"
+    },
+    "status": {
+      "succeeded": "Succeeded",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "titles": {
+      "hold_payment": "Booking hold payment",
+      "withdrawal": "Withdrawal to linked account",
+      "hold_refund": "Booking hold refund",
+      "hold_overpay": "Overpayment refund",
+      "hold_release": "Trip booking hold",
+      "hold_forfeit": "Cancellation compensation",
+      "adjustment": "Balance adjustment",
+      "rental": "Rental payment",
+      "deposit": "Deposit payment"
+    },
+    "empty": {
+      "all": "You have no transactions yet.",
+      "filtered": "No transactions match these filters."
+    },
+    "cancel": {
+      "action": "Cancel request",
+      "confirm": "Cancel this withdrawal request?",
+      "hint": "The amount returns to your available balance right away.",
+      "done": "Withdrawal request cancelled"
+    }
   }
 }

@@ -184,6 +184,8 @@ AntD: `fontSizeHeading1..5` ← 30/24/18/16/14 · `fontSizeLG` ← 16 · `fontSi
 ### ⚠️ Nợ: `--xp-line-height` toàn cục
 `--xp-line-height` = **1.5714** (→22px) là giá trị AntD đang chạy; Figma `body` là **14/20** (1.4286). Chưa đổi vì nó làm lệch chiều cao **mọi** hàng bảng và **mọi** form — cần QA thị giác mà Wave 1A không có. Token `--xp-line-height-body` (20px) đã có sẵn cho component dùng. **Đích: wave có QA thị giác (sớm nhất là 1C khi làm `DataTable`).**
 
+`--xp-line-height-body-relaxed` (22px, 26/10/2026) — thân 14px của design v2 (Figma `14px/Regular` · `14px/Medium` ghi line-height 22). Dùng cho các màn đã dựng theo design v2 (chi tiết chuyến của khách); không thay `--xp-line-height-body`.
+
 ## 9. Spacing ✅ — không đổi
 
 `--xp-space-{xs,sm,md,lg,xl}` = 4/8/16/24/32. Khớp Figma `14:144`–`14:156` (“4 · 8 · 16 · 24 · 32 px only”) từ trước Wave 1A. **Việc còn lại không phải đổi token mà là ép dùng** — vẫn còn số trần trong `.module.css` (`padding: 6px 8px 10px`, `0 14px`…). Dời dần khi chạm file.
@@ -499,6 +501,7 @@ code của màn trang chủ Figma `19695:40693`.
 | Gradient | `--xp-gradient-primary` | `#e9c336 → #e8c664 → #e3b012` (90°) | nút chính, pill "Khám phá" |
 | | `--xp-gradient-text-hero` / `-text-gold` / `-text-destination` | — | chữ nhấn hero / dải đối tác / tên thành phố |
 | | `--xp-gradient-gold-soft` | `#edd3a4 → #d6a439` | huy hiệu giảm giá |
+| | `--xp-gradient-card-hover` | vàng 20% trên trắng | nền thẻ danh sách khi hover (Trung tâm Tài xế, Chuyến của tôi) |
 | | `--xp-gradient-instant-badge` | `#a4dded → #dfe7f1` | huy hiệu "Không cần xác nhận" |
 | | `--xp-gradient-card-highlight` | gold 20% | nền thẻ khi hover |
 | | `--xp-gradient-promo-{dark,light}`, `--xp-gradient-destination-shade`, `--xp-hero-fog` | — | lớp phủ ảnh |

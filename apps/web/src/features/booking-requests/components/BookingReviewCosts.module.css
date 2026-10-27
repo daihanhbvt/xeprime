@@ -8,9 +8,9 @@
   border-color: var(--xp-color-primary-border);
 }
 
-/* Các màn chuyến sau khi gửi: hai thẻ đệm 24 (Figma `19727:61104` · `19759:40335`). */
+/* Các màn chuyến sau khi gửi: hai thẻ đệm 20 (Figma `21777:56433`). */
 .tripCard {
-  padding: var(--xp-space-lg);
+  padding: var(--xp-space-20);
 }
 
 @media (max-width: 640px) {
@@ -165,4 +165,70 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   font-weight: var(--xp-font-weight-medium);
+}
+
+/* "Còn lại" cuối thẻ chi phí màn chuyến — Figma `21777:56433`: nhãn 14 Semibold, số 20/30 vàng. */
+.remaining {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.remainingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.remainingLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+.remainingAmount {
+  background: linear-gradient(90deg, var(--xp-color-primary-hover), var(--xp-gold-deep));
+  background-clip: text;
+  color: transparent;
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Dòng tổng ở màn chuyến — nhãn 14 Semibold trái, số 20/30 vàng phải, chú thích xuống dòng. */
+.tripTotal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--xp-space-12);
+  row-gap: var(--xp-space-sm);
+}
+
+.tripTotal .totalLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.tripTotal .totalAmount {
+  font-size: var(--xp-font-size-lead);
+  line-height: var(--xp-line-height-lead);
+  white-space: nowrap;
+}
+
+.tripTotal > :not(.totalLabel, .totalAmount) {
+  grid-column: 1 / -1;
+}
+
+/* "Cọc xe" ở màn chuyến — Figma `21621:54112`: nhãn 14/22 `Text/Gray/high`, ghi chú 14/22 `Text/Gray/low`. */
+.depositLabel {
+  color: var(--xp-color-text);
+}
+
+.depositNote {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }

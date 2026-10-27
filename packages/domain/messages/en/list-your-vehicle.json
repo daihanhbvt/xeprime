@@ -1,43 +1,46 @@
 {
   "landing": {
     "metaTitle": "List your vehicle",
-    "title": "Start renting out your car the way that fits you",
+    "title": "Choose how to partner with XePrime",
     "back": "Back",
-    "subtitle": "Listing your first car is simple; when you need to run at a larger scale, you can upgrade to a shop and keep the same account and vehicles.",
+    "subtitle": "Earn from an idle car or build a professional rental brand.<br></br>Choose the option that best fits your scale",
     "policyLink": "Marketplace rules",
     "personal": {
-      "badge": "A good place to start",
+      "badge": "For new owners",
       "title": "List a personal vehicle",
-      "tagline": "Commission track · a good place to start",
-      "body": "For owners who want to rent out a personal car simply and quickly. No sign-up fee, up to {maxVehicles} vehicles, and you manage cars and trips from your Account.",
+      "tagline": "Flexible, easy, no running fee",
+      "body": "The easy way to earn passive income from your car. Sign up quickly and run everything simply in the app, with no sales commitment.",
       "features": {
-        "noFee": "No sign-up fee",
+        "noFee": "Free sign-up",
         "vehicleCap": "Up to {maxVehicles} vehicles",
-        "simple": "Simple management in Account"
+        "simple": "Basic schedule management"
       },
       "art": "Share your car with thousands of renters",
-      "offerTitle": "Per-trip platform fee",
-      "offerBody": "The platform fee is added to the total the renter pays. The current pilot rate is <strong>{percent}% of the rental price</strong>.",
+      "offerTitle": "Pay per trip (commission)",
+      "offerBodyRange": "No subscription. Commission is only <strong>{min}% to {max}%</strong> of the rental you receive, decreasing with the number of rental days — the longer the trip, the lower the fee.",
+      "offerBody": "No subscription. For each booking the platform deducts a commission from the rental you receive, at a rate that <strong>decreases with the number of rental days</strong>.",
       "cta": "List your first vehicle",
       "appTagline": "Personal owner · a good place to start"
     },
     "shop": {
-      "badge": "For a professional operation",
-      "title": "Open a rental shop",
-      "tagline": "Plan track · for a professional operation",
-      "body": "Suited to individuals and businesses with several vehicles. You pay a plan based on fleet size and <strong>0% platform fee</strong> per trip while the plan is active. Full tooling for vehicles, calendar, staff, branches, finance and reports.",
+      "badge": "For fleets / businesses",
+      "title": "Professional shop",
+      "tagline": "Complete management tools to maximise your profit",
+      "body": "In-depth fleet management for larger rental businesses. Enjoy 0% commission plus powerful reporting, staff permissions and multi-branch management.",
       "features": {
-        "fleet": "Manage many vehicles and branches",
-        "operations": "Manage calendar and staff",
-        "reports": "Revenue and performance reports"
+        "fleet": "Multi-branch\nmanagement",
+        "operations": "Staff\npermissions",
+        "reports": "Detailed financial\nreports"
       },
-      "offerTitle": "0% per-trip platform fee",
-      "offerBody": "While the plan is active. Plenty of tooling for a professional operation, built for larger fleets.",
-      "cta": "Learn more and create a shop",
+      "offerTitle": "0% per-trip commission",
+      "offerBody": "Pay a subscription based on your fleet size. No per-trip commission while your plan is active.",
+      "cta": "Explore shop plans",
       "appTagline": "Shop · for a professional operation",
       "appBody": "Suited to individuals and businesses with several vehicles. Full tooling for vehicles, calendar, staff, branches, finance and reports.",
       "appOfferTitle": "Professional operating tools",
-      "appOfferBody": "A shop account has its own vehicle limit and usage period. XePrime reviews and activates the account after you sign up."
+      "appOfferBody": "A shop account has its own vehicle limit and usage period. XePrime reviews and activates the account after you sign up.",
+      "offerHighlight": "<big>0%</big> commission per trip",
+      "recommended": "Recommended"
     },
     "upgrade": {
       "title": "Upgrade whenever you need to",
@@ -62,7 +65,14 @@
         "desc": "XePrime reviews it, then puts it on the marketplace."
       }
     },
-    "appSubtitle": "Listing your first car is simple; when you need to run at a larger scale, you can switch to a shop account and keep the same account and vehicles."
+    "appSubtitle": "Listing your first car is simple; when you need to run at a larger scale, you can switch to a shop account and keep the same account and vehicles.",
+    "heroTitle": "Choose how to partner with <brand>XePrime</brand>",
+    "pageTitle": "Become an owner",
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "home": "Home",
+      "account": "My account"
+    }
   },
   "ownerProfile": {
     "step": {

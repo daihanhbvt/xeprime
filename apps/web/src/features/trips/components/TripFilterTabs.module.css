@@ -1,0 +1,86 @@
+/*
+ * Bộ chuyển tab của "Chuyến của tôi" — Figma "Horizontal tabs - Home" (`19879:69972`): khay #fafafa
+ * viền #e9eaeb bo 12, không đệm; mỗi tab cao 44, đệm 8/16, bo 12, chữ 16/500/24. Tab mở = ô trắng viền
+ * #d5d7da + bóng xs, chữ #cb9115. Viên số 12/500/18, đệm 2/8: mở = nền #fff9f0 chữ #cb9115, thường =
+ * nền #f5f5f5 chữ #717680.
+ */
+.tabs {
+  display: inline-flex;
+  gap: var(--xp-space-2);
+  max-width: 100%;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-elevation-xs);
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  height: 44px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--xp-color-text);
+}
+
+.tab:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.active,
+.active:hover {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+  color: var(--xp-color-primary-hover);
+}
+
+.count {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
+  text-align: center;
+}
+
+.active .count {
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    padding-inline: var(--xp-space-sm);
+    font-size: var(--xp-font-size-body);
+  }
+}

@@ -4,7 +4,7 @@ import { Alert, Button, Empty, Result, Tabs } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
-import { AccountPageHeader } from '@/features/account/components/AccountPageHeader';
+import { AccountPanel } from '@/features/account/components/AccountPanel';
 import { marketplaceSearchHref } from '@/features/marketplace/filter-params';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -26,8 +26,7 @@ export function FavoritesView() {
   const { vehicleType, setVehicleType } = useFavoriteTab();
 
   return (
-    <div className={styles.page}>
-      <AccountPageHeader title={t('page.title')} />
+    <AccountPanel as="h1" title={t('page.title')} subtitle={t('page.subtitle')} className={styles.page}>
 
       <Tabs
         className={styles.tabs}
@@ -46,7 +45,7 @@ export function FavoritesView() {
         vehicleType={vehicleType}
         retryLabel={tCommon('actions.retry')}
       />
-    </div>
+    </AccountPanel>
   );
 }
 
@@ -59,7 +58,15 @@ function FavoriteTabLabel({ vehicleType, label }: { vehicleType: VehicleType; la
   const t = useTranslations('Favorites');
   const { total, isInitialLoading, initialError } = useFavoritesList(vehicleType);
   if (isInitialLoading || initialError) return label;
-  return t('tabs.withCount', { type: label, count: total });
+  // Số xe là huy hiệu tròn cạnh nhãn (Figma `21636:83301`); `aria-label` đọc trọn câu "Ô tô (5 xe)".
+  return (
+    <span className={styles.tabLabel} aria-label={t('tabs.withCount', { type: label, count: total })}>
+      <span aria-hidden="true">{label}</span>
+      <span aria-hidden="true" className={styles.tabCount}>
+        {total}
+      </span>
+    </span>
+  );
 }
 
 function FavoritesTab({

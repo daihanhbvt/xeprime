@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { canEditReview } from '../review/review-edit';
 import {
   findOpenTripNotReceivedReport,
   hasOpenSupportCase,
@@ -17,8 +18,11 @@ import {
   BOOKING_REQUEST_STATUS,
   type BookingPriceSnapshot,
   BOOKING_STATUS,
+  CANCELLATION_PARTY,
   CANCELLATION_REASON_CATEGORY,
+  type CustomerCancellationReason,
   CANCELLATION_STAGE,
+  CUSTOMER_TRIP_STAGE,
   CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_TRIP_FILTER,
   BOOKING_HOLD_OUTCOME,
@@ -223,7 +227,10 @@ export class CustomerTripsService {
     // một định nghĩa. Lọc ở client sẽ cho ra những trang dài ngắn khác nhau và một con số tổng
     // không khớp thứ người dùng đếm được trên màn hình.
     const role: TripRole | undefined = isTripRole(query.role) ? query.role : undefined;
-    const where = this.whereFor(scope, filter, role);
+    // Tìm / khoảng ngày chỉ thu hẹp DANH SÁCH; số trên tab vẫn là tổng của tab (`counts`).
+    const where: Prisma.BookingRequestWhereInput = {
+      AND: [this.whereFor(scope, filter, role), ...narrowWhere(query)],
+    };
 
     const [total, rows, counts] = await Promise.all([
       this.prisma.bookingRequest.count({ where }),
@@ -471,6 +478,9 @@ export class CustomerTripsService {
             rating: booking.review.rating,
             comment: booking.review.comment,
             createdAt: booking.review.createdAt.toISOString(),
+            editedAt: booking.review.editedAt?.toISOString() ?? null,
+            // Server quyết lượt sửa duy nhất — cùng điều kiện với `ReviewService.updateOwn`.
+            canEdit: canEditReview(booking.status, booking.review),
           }
         : null,
       insuranceCertificates,
@@ -589,7 +599,11 @@ export class CustomerTripsService {
    * Chống đua ở cả hai nhánh bằng điều kiện trạng thái trong WHERE, không phải bằng câu `if`
    * đọc trước: gian hàng bấm duyệt đúng lúc khách bấm huỷ là chuyện có thật.
    */
-  async cancel(customerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+  async cancel(
+    customerUserId: string,
+    id: string,
+    reasonCategory: CustomerCancellationReason = CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+  ): Promise<CustomerTripDetailDto> {
     const row = await this.prisma.bookingRequest.findFirst({
       where: { customerUserId, OR: [{ id }, { bookingId: id }] },
       select: {
@@ -622,12 +636,12 @@ export class CustomerTripsService {
             // Khách thao tác, không phải nhân viên gian hàng — audit phải phân biệt được.
             actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
             /*
-             * Nhóm lý do CỐ ĐỊNH cho đường này (ADR 0045 điều 1): khách bấm huỷ ở màn chuyến
-             * không có hộp chọn nhóm, và bịa ra một hộp chỉ để lấp dữ liệu sẽ cho ra một cột
-             * toàn "other". Phía chịu trách nhiệm suy từ `actorScope`, nên chuyến này không
-             * bao giờ tính vào chỉ số uy tín của gian hàng.
+             * Nhóm lý do khách chọn trong `CUSTOMER_CANCELLATION_REASON_VALUES` (app cũ không
+             * gửi ⇒ `customer_changed_plan`). Nhóm chỉ mô tả VÌ SAO: phía chịu trách nhiệm suy
+             * từ `actorScope`, nên chuyến này không bao giờ tính vào chỉ số uy tín gian hàng.
+             * Chặng `pending_host_approval` không ghi sổ huỷ (xem dưới) ⇒ lý do không được lưu.
              */
-            reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+            reasonCategory,
           },
         );
       });
@@ -688,7 +702,7 @@ export class CustomerTripsService {
           tenantId: row.tenantId,
           bookingRequestId: row.id,
           stage: CANCELLATION_STAGE.AWAITING_HOLD,
-          reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+          reasonCategory,
           actorUserId: customerUserId,
           actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
         });
@@ -1171,6 +1185,31 @@ const FILTER_STATUSES: FilterStatuses = Object.fromEntries(
 
 // ── Truy vấn ─────────────────────────────────────────────────────────────────
 
+/**
+ * Bộ thu hẹp của ô tìm kiếm + khoảng thời gian. Lịch lấy từ ĐƠN khi đã có đơn (lịch đã chốt), từ
+ * yêu cầu khi chưa — cùng thứ tự ưu tiên thẻ chuyến dùng để hiện ngày.
+ */
+function narrowWhere(query: CustomerTripListQueryDto): Prisma.BookingRequestWhereInput[] {
+  const and: Prisma.BookingRequestWhereInput[] = [];
+  const q = query.q?.trim();
+  if (q) {
+    and.push({
+      OR: [
+        { vehicle: { name: { contains: q, mode: 'insensitive' } } },
+        { booking: { is: { code: { contains: q, mode: 'insensitive' } } } },
+      ],
+    });
+  }
+  if (query.dateFrom || query.dateTo) {
+    const overlap = {
+      ...(query.dateTo ? { pickupAt: { lte: new Date(query.dateTo) } } : {}),
+      ...(query.dateFrom ? { returnAt: { gte: new Date(query.dateFrom) } } : {}),
+    };
+    and.push({ OR: [{ booking: { is: overlap } }, { booking: { is: null }, ...overlap }] });
+  }
+  return and;
+}
+
 const BOOKING_SELECT = {
   id: true,
   // Tài xế + trạng thái lượt gán — chủ xe theo dõi chuyến có tài xế ngay trên danh sách (ADR 0063).
@@ -1195,9 +1234,13 @@ const BOOKING_SELECT = {
   priceSnapshot: true,
   // Số đã chuyển thật; không dùng `fees.holdAmount` (số phải thu) để kể lại lịch sử thanh toán.
   hold: { select: { paidAmount: true } },
+  // Ai chịu lượt huỷ đơn (ADR 0045) — nhãn "Bạn đã huỷ / Chủ xe đã huỷ" của thẻ chuyến.
+  cancellation: { select: { responsibleParty: true, reasonCategory: true } },
   depositCollectionMode: true,
   vehicle: { select: { plateNumber: true } },
-  review: { select: { id: true, rating: true, comment: true, createdAt: true } },
+  review: {
+    select: { id: true, rating: true, comment: true, status: true, editedAt: true, createdAt: true },
+  },
 } satisfies Prisma.BookingSelect;
 
 const listSelect = (now: Date) =>
@@ -1278,6 +1321,8 @@ const listSelect = (now: Date) =>
      * với khách một con số không ai từng thu của họ.
      */
     hold: { select: { status: true, priceSnapshotJson: true } },
+    // Lượt huỷ ở chặng YÊU CẦU (chờ giữ chỗ) — đơn chưa ra đời nên sổ huỷ gắn vào yêu cầu.
+    cancellation: { select: { responsibleParty: true, reasonCategory: true } },
   }) satisfies Prisma.BookingRequestSelect;
 
 const detailSelect = (now: Date) =>
@@ -1374,6 +1419,8 @@ function toListItem(
       // Cùng phép suy với trang gian hàng công khai (`resolveStorefrontKind`, ADR 0038 điều 1):
       // `unconfigured`/hết ân hạn rơi về `personal`, KHÔNG mặc định thành `shop`.
       shopKind: storefront.kind,
+      // Ảnh công khai theo tuyến hiệu lực — đúng ảnh khách thấy trên thẻ xe ngoài chợ.
+      avatarUrl: storefront.avatarUrl,
     },
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
     // Yêu cầu dài hạn chờ duyệt chưa có lịch nào — trả null, KHÔNG suy ra ngày từ nguyện vọng.
@@ -1407,11 +1454,39 @@ function toListItem(
       ? booking.totalAmount.plus(surchargeTotals.get(booking.id) ?? ZERO).toFixed(2)
       : (customerTotalOf(estimates.get(row.id)) ?? null),
     totalIsEstimate: !booking && estimates.has(row.id),
+    // Số đã chuyển THẬT (không phải số phải thu) — cùng cột với `finance.holdPaidAmount`.
+    holdPaidAmount: booking?.hold?.paidAmount.toFixed(2) ?? null,
+    cancelledBy: stage === CUSTOMER_TRIP_STAGE.CANCELLED ? cancelledByOf(row, booking) : null,
+    cancelReason: stage === CUSTOMER_TRIP_STAGE.CANCELLED ? cancelReasonOf(row, booking) : null,
     canReview: booking?.status === BOOKING_STATUS.COMPLETED && !booking.review,
     hasReview: Boolean(booking?.review),
     createdAt: row.createdAt.toISOString(),
   };
   return item;
+}
+
+/** Lý do huỷ đã ghi — cùng thứ tự đọc với `cancelledByOf`: sổ của ĐƠN trước, rồi của YÊU CẦU. */
+function cancelReasonOf(
+  row: { cancellation: { reasonCategory: string } | null },
+  booking: { cancellation: { reasonCategory: string } | null } | null,
+): { category: string } | null {
+  const category = booking?.cancellation?.reasonCategory ?? row.cancellation?.reasonCategory;
+  return category ? { category } : null;
+}
+
+/**
+ * Ai đã huỷ chuyến: sổ huỷ của ĐƠN thắng sổ huỷ của YÊU CẦU (đơn là thứ cuối cùng bị huỷ); không
+ * có dòng sổ nào mà yêu cầu ở `cancelled_by_customer` thì là khách tự rút trước khi ai quyết.
+ */
+function cancelledByOf(
+  row: { status: string; cancellation: { responsibleParty: string } | null },
+  booking: { cancellation: { responsibleParty: string } | null } | null,
+): string | null {
+  const recorded = booking?.cancellation?.responsibleParty ?? row.cancellation?.responsibleParty;
+  if (recorded) return recorded;
+  return row.status === BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER
+    ? CANCELLATION_PARTY.CUSTOMER
+    : null;
 }
 
 /**

@@ -1,20 +1,11 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-
-import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
-
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('BankAccounts');
-  return { title: t('title'), robots: { index: false, follow: false } };
-}
+import { redirect } from 'next/navigation';
+import { accountBalancePayoutPath } from '@/constants/routes';
 
 /**
- * Tài khoản nhận tiền của MỘT CON NGƯỜI — ADR 0033.
- *
- * Không gắn `OwnerGate`: khách thuê cũng cần trang này để nhận tiền hoàn khoản giữ chỗ, và đó
- * chính là chỗ luồng hoàn tiền đang tắc trước đợt này. Chủ gian hàng có thêm một danh sách riêng
- * ở `/manage` cho tiền của gian hàng — hai loại tiền, hai sổ, không trộn.
+ * Tài khoản nhận tiền đã thành một khối của tab "Tài khoản thanh toán" trong mục Quản lý thanh toán
+ * (design Account 22/10/2026), ngay dưới nút Rút. Giữ đường cũ để link/bookmark cũ không thành 404 —
+ * chuyển tới đúng khối đó.
  */
-export default function AccountBankAccountsPage() {
-  return <BankAccountList scope="account" />;
+export default function AccountBankAccountsPage(): never {
+  redirect(accountBalancePayoutPath());
 }

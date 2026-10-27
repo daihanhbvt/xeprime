@@ -15,10 +15,9 @@ import {
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
-import { paymentPath } from '@/constants/routes';
+import { ROUTES, paymentPath } from '@/constants/routes';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { useNow } from '@/hooks/use-now';
@@ -29,7 +28,7 @@ import { payAtPickupAmount } from '@/lib/customer-price-view';
 import type { CustomerTripDetail } from '../types';
 import { useFreeCancelNote } from '../use-free-cancel-note';
 import { FreeCancelCountdown } from './FreeCancelCountdown';
-import { TripPageHeader, useTripFlowCrumbs } from './TripPageHeader';
+import { TripPageHeader, useTripDetailCrumbs } from './TripPageHeader';
 import { TripHoldPanel } from './TripHoldPanel';
 import {
   TripPlanChangeCard,
@@ -77,11 +76,10 @@ export function TripAwaitingHoldView({
 }) {
   const t = useTranslations('Trips.awaitingHold');
   const tDetail = useTranslations('Trips.detail');
-  const tFlow = useTranslations('BookingRequests.flow');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const data = useTripRequestData(trip);
-  const crumbs = useTripFlowCrumbs(trip.vehicle.id);
+  const crumbs = useTripDetailCrumbs(ROUTES.TRIPS);
 
   const hold = trip.hold ?? null;
   /** Khoản giữ chỗ còn chờ tiền — chỉ lúc đó mới có việc "thanh toán ngay". */
@@ -105,6 +103,7 @@ export function TripAwaitingHoldView({
         <TripPageHeader
           backHref={backHref}
           backLabel={tDetail('back')}
+          home={false}
           crumbs={crumbs}
           title={t('page.title')}
           description={t('page.description')}
@@ -181,19 +180,7 @@ export function TripAwaitingHoldView({
         frozen
       />
 
-      <TripPlanChangeCard
-        trip={trip}
-        body={policyBody}
-        actions={
-          <ChatWithShopButton
-            vehicleId={trip.vehicle.id}
-            appearance="cta"
-            ctaVariant="neutral"
-            block
-            label={tFlow('done.chatHost')}
-          />
-        }
-      />
+      <TripPlanChangeCard trip={trip} body={policyBody} />
     </TripRequestLayout>
   );
 }

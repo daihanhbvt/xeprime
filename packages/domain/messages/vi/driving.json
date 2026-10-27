@@ -83,7 +83,8 @@
     "linkDeclined": "Đã từ chối lời mời",
     "linkLeft": "Đã ngừng làm tài xế",
     "tripAccepted": "Đã nhận chuyến",
-    "tripDeclined": "Đã từ chối chuyến"
+    "tripDeclined": "Đã từ chối chuyến",
+    "tripReleased": "Đã trả lại chuyến cho chủ xe"
   },
   "outcome": {
     "declined": "Bạn đã từ chối",
@@ -92,6 +93,85 @@
     "no_show": "Khách không đến",
     "completed": "Hoàn thành",
     "expired": "Quá hạn xác nhận"
+  },
+  "center": {
+    "title": "Trung tâm Tài xế",
+    "subtitle": "Kết nối chủ xe, nhận chuyến dễ dàng và quản lý hành trình của bạn.",
+    "viewLabel": "Khu vực",
+    "viewTrips": "Chuyến xe của tôi",
+    "viewPartners": "Chủ xe đối tác",
+    "tabsLabel": "Phạm vi",
+    "tabTripsCurrent": "Hiện tại",
+    "tabTripsEnded": "Đã kết thúc",
+    "tabPartnersOpen": "Đang hợp tác",
+    "tabPartnersClosed": "Đã kết thúc",
+    "tabLabel": "{label}, {count, plural, other {# mục}}"
+  },
+  "tripCard": {
+    "owner": "Chủ xe",
+    "customer": "Khách hàng",
+    "time": "Thời gian",
+    "days": "({count, plural, other {# ngày}})",
+    "pickup": "Đón tại",
+    "destination": "Điểm đến",
+    "noImage": "Chưa có ảnh xe",
+    "respondLeft": "Thời gian xác nhận còn lại: ",
+    "respondExpired": "Đã hết thời gian xác nhận",
+    "confirmed": "Bạn đã xác nhận chuyến đi này!",
+    "releaseLeft": "Có thể hủy chuyến trong: ",
+    "callCustomer": "Gọi khách",
+    "decline": "Từ chối",
+    "accept": "Nhận chuyến",
+    "release": "Hủy chuyến",
+    "releaseConfirmTitle": "Hủy chuyến đã nhận?",
+    "releaseConfirmBody": "Chuyến sẽ được trả lại chủ xe để gán tài xế khác. Đơn của khách không bị huỷ.",
+    "support": "Liên hệ hỗ trợ",
+    "openDetail": "Xem chi tiết chuyến {code}"
+  },
+  "tripBadge": {
+    "pending": "Chờ xác nhận",
+    "accepted": "Đã xác nhận",
+    "awaitingHandover": "Chờ giao xe",
+    "inProgress": "Đang chạy",
+    "completed": "Hoàn thành",
+    "released": "Bạn đã hủy chuyến",
+    "declined": "Bạn đã từ chối",
+    "expired": "Hết thời gian xác nhận",
+    "unassigned": "Không còn giao cho bạn",
+    "cancelled": "Đơn đã huỷ",
+    "no_show": "Khách không đến"
+  },
+  "linkStatus": {
+    "invited": "Chờ xác nhận",
+    "active": "Đang hợp tác",
+    "suspended": "Tạm khoá",
+    "declined": "Bạn đã từ chối",
+    "ended": "Ngừng hợp tác"
+  },
+  "linkCard": {
+    "ownerKind": "Loại chủ xe",
+    "driverType": "Hình thức hợp tác",
+    "joinedAt": "Đã tham gia lúc",
+    "invitedAt": "Được mời lúc",
+    "completedTrips": "Số chuyến đã hoàn thành",
+    "activeTrips": "Chuyến đang gán",
+    "contact": "Liên hệ",
+    "decline": "Từ chối",
+    "accept": "Xác nhận hợp tác",
+    "leave": "Ngừng làm tài xế",
+    "openDetail": "Xem chi tiết {name}"
+  },
+  "linkDialog": {
+    "title": "Chi tiết chủ xe đối tác",
+    "subtitle": "{kind} · Chủ xe đối tác",
+    "contactSection": "Thông tin liên hệ",
+    "representative": "Người đại diện",
+    "phone": "Số điện thoại",
+    "email": "Email",
+    "area": "Khu vực hoạt động",
+    "partnershipSection": "Thông tin hợp tác",
+    "completedTrips": "Số chuyến đã hoàn thành",
+    "activeTrips": "Chuyến đang gán"
   },
   "respond": {
     "remaining": "Trả lời trong",

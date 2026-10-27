@@ -9,10 +9,10 @@ import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { AccountDocumentsSection } from '@/features/driver-licence/components/AccountDocumentsSection';
+import { WalletBalanceShortcut } from '@/features/wallet/components/WalletBalanceShortcut';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { showsDeleteAccountCard } from './account-nav';
-import { AccountMoneyPanel } from './components/AccountMoneyPanel';
 import { AccountNav } from './components/AccountNav';
 import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
@@ -24,8 +24,11 @@ import type { UserProfile } from './api';
  *
  * THỨ TỰ KHỐI:
  *
- *  1. thẻ hồ sơ (`PersonalProfileCard`), rồi Giấy tờ & Xác minh (`AccountDocumentsSection` — chỉ
- *     tài khoản KHÁCH, bằng lái thuộc realm `customer`; design 22/10/2026, trước là một mục menu);
+ *  1. thẻ hồ sơ (`PersonalProfileCard`) + lối tắt SỐ DƯ (`WalletBalanceShortcut` = viên "Số dư" ở
+ *     đầu thẻ hồ sơ web), rồi Giấy tờ & Xác minh (`AccountDocumentsSection` — chỉ
+ *     tài khoản KHÁCH, bằng lái thuộc realm `customer`; design 22/10/2026, trước là một mục menu).
+ *     TIỀN không còn là một khối ở đây: số dư, tài khoản nhận tiền và lịch sử thanh toán gộp thành
+ *     mục "Quản lý thanh toán" của menu (web 22/10/2026);
  *  2. điều hướng tài khoản (`AccountNav` = `AccountSidebar`, kèm Đăng xuất ở cuối) — web ở
  *     ≤900px xếp menu LÊN TRÊN, app cố ý để DƯỚI thẻ hồ sơ (người dùng chốt 15/09/2026): mở tab
  *     Tài khoản là muốn thấy mình là ai trước, rồi mới tới danh sách lối đi;
@@ -113,6 +116,8 @@ function AccountBody({
           editable={editable}
         />
 
+        <WalletBalanceShortcut />
+
         {/* Bằng lái là của TÀI KHOẢN KHÁCH (ADR 0057) — tài khoản có gian hàng không có mục này. */}
         {tenant ? null : <AccountDocumentsSection />}
 
@@ -122,12 +127,6 @@ function AccountBody({
           bấm vào bất cứ việc gì (ADR 0038 điều 11).
         */}
         <AccountTrackNotice />
-
-        {/*
-          TIỀN đứng NGAY SAU hồ sơ, trước menu — đúng thứ tự web: câu hỏi "XePrime đang nợ tôi bao
-          nhiêu" là thứ người ta mở màn này để đọc, còn menu là danh sách lối đi.
-        */}
-        <AccountMoneyPanel />
 
         <AccountNav />
 

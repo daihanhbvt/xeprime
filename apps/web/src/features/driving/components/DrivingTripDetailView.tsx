@@ -12,7 +12,12 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode } from '@/services/api-client';
-import { useAcceptDriverTrip, useDeclineDriverTrip, useDriverTrip } from '../hooks';
+import {
+  useAcceptDriverTrip,
+  useDeclineDriverTrip,
+  useDriverTrip,
+  useReleaseDriverTrip,
+} from '../hooks';
 import { placeMapUrl } from '../maps';
 import { DriverRespondCountdown } from './DriverRespondCountdown';
 import { DrivingTripTags } from './DrivingTripTags';
@@ -36,7 +41,9 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
   const { data: trip, isLoading, isError, error, refetch } = useDriverTrip(bookingId);
   const accept = useAcceptDriverTrip();
   const decline = useDeclineDriverTrip();
-  const busy = accept.isPending || decline.isPending;
+  const release = useReleaseDriverTrip();
+  const tCard = useTranslations('Driving.tripCard');
+  const busy = accept.isPending || decline.isPending || release.isPending;
 
   const back = (
     <Link href={drivingTripPath.list} className={styles.backLink}>
@@ -143,6 +150,35 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
                 </Popconfirm>
               </div>
             </>
+          }
+        />
+      ) : null}
+
+      {trip.releaseUntil ? (
+        <Alert
+          type="success"
+          showIcon
+          title={tCard('confirmed')}
+          description={
+            <div className={styles.actions}>
+              <Popconfirm
+                title={tCard('releaseConfirmTitle')}
+                description={tCard('releaseConfirmBody')}
+                okText={tCard('release')}
+                okButtonProps={{ danger: true }}
+                cancelText={tCommon('actions.close')}
+                onConfirm={() =>
+                  release.mutate(trip.id, {
+                    onSuccess: () => message.success(tToast('tripReleased')),
+                    onError: (err) => message.error(errorMessage(err)),
+                  })
+                }
+              >
+                <Button danger loading={release.isPending} disabled={busy}>
+                  {tCard('release')}
+                </Button>
+              </Popconfirm>
+            </div>
           }
         />
       ) : null}

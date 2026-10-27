@@ -1,4 +1,4 @@
-import type { components, PaginationMeta } from '@xeprime/types';
+import type { components, CustomerCancellationReason, PaginationMeta } from '@xeprime/types';
 import { getApiClient, type QueryParams } from '@xeprime/api-client';
 
 type Schemas = components['schemas'];
@@ -46,8 +46,28 @@ const EMPTY_COUNTS: CustomerTripCounts = { current: 0, history: 0 };
  * Lọc ở client bị loại có chủ đích: nó cho ra những trang dài ngắn khác nhau và một con số tổng
  * không khớp thứ người dùng đếm được trên màn hình.
  */
-export function tripsToParams(filter: string, page: number, role?: string): QueryParams {
-  return { filter, page, limit: TRIPS_DEFAULT_LIMIT, ...(role ? { role } : {}) };
+export function tripsToParams(
+  filter: string,
+  page: number,
+  role?: string,
+  narrow?: TripListNarrow,
+): QueryParams {
+  return {
+    filter,
+    page,
+    limit: TRIPS_DEFAULT_LIMIT,
+    ...(role ? { role } : {}),
+    ...(narrow?.q ? { q: narrow.q } : {}),
+    ...(narrow?.dateFrom ? { dateFrom: narrow.dateFrom } : {}),
+    ...(narrow?.dateTo ? { dateTo: narrow.dateTo } : {}),
+  };
+}
+
+/** Bộ thu hẹp của `GET /trips` (tab lịch sử) — mốc ISO tuyệt đối, cùng contract với web. */
+export interface TripListNarrow {
+  q?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 /**
@@ -62,9 +82,14 @@ interface TripsEnvelope {
 }
 
 export const tripsApi = {
-  async list(filter: string, page: number, role?: string): Promise<TripsResult> {
+  async list(
+    filter: string,
+    page: number,
+    role?: string,
+    narrow?: TripListNarrow,
+  ): Promise<TripsResult> {
     const res = (await getApiClient().request<CustomerTrip[]>('/trips', {
-      query: tripsToParams(filter, page, role),
+      query: tripsToParams(filter, page, role, narrow),
     })) as TripsEnvelope;
 
     return {
@@ -125,8 +150,10 @@ export const tripsApi = {
    * Trả về chính chuyến đó sau khi huỷ (đã đổi chặng), nên nơi gọi ghi thẳng vào cache thay vì
    * đọc lần thứ hai chỉ để biết kết quả của việc mình vừa làm.
    */
-  cancel(id: string): Promise<CustomerTripDetail> {
-    return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/cancel`);
+  cancel(id: string, reasonCategory: CustomerCancellationReason): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/cancel`, {
+      reasonCategory,
+    });
   },
 
   /**

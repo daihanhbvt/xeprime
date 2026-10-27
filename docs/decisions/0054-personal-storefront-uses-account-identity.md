@@ -79,6 +79,12 @@ xe" gom TOÀN BỘ thứ khách thấy về họ, một nút lưu: ảnh đại 
 (`PATCH /tenants/current/profile`, chỉ gửi `bio`). SĐT/email sửa ở "Thông tin đăng nhập". Khối
 còn lại của trang chủ xe: địa chỉ nhận xe.
 
+## Mở rộng 26/10/2026
+
+Tài xế ĐÃ LIÊN KẾT với một bên thuê (ADR 0063) thấy thêm họ tên chủ tài khoản, email liên hệ và
+tỉnh/thành của bên đó (`MyDriverLinkDto.employerContact`). Email vẫn đọc qua `resolveStorefront`
+nên tuân đúng luật tuyến của ADR này. Không áp cho bất kỳ bề mặt công khai nào.
+
 ## Hệ quả
 
 - Chủ xe cá nhân CHƯA xác thực SĐT thì khách không có số để gọi — giao diện nói thẳng và mời xác

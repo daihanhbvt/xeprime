@@ -26,7 +26,7 @@
   "saved": "Đã cập nhật tài khoản",
   "noEmail": "Chưa có email",
   "noPhone": "Chưa có số điện thoại",
-  "verified": "Đã xác thực",
+  "verified": "Đã xác minh",
   "displayName": "Họ tên hiển thị",
   "displayNamePlaceholder": "Nguyễn Văn A",
   "avatarUrl": "Ảnh đại diện",
@@ -34,7 +34,7 @@
   "avatarHelp": "Ảnh vuông, JPG hoặc PNG, tối đa 5MB.",
   "contact": {
     "add": "Thêm",
-    "change": "Đổi",
+    "change": "Thay đổi",
     "addAria": "Thêm {field}",
     "changeAria": "Đổi {field}",
     "addEmailTitle": "Thêm email",
@@ -74,16 +74,24 @@
   "sidebar": {
     "userCard": "Người đang đăng nhập"
   },
+  "partnerInvite": {
+    "title": "Hợp tác với XePrime",
+    "commissionBadge": "Phí {min}–{max}%",
+    "commissionBadgeFlat": "Phí {percent}%",
+    "body": "Biến xe của bạn thành nguồn thu nhập lên đến {min}–{max} triệu/tháng cùng XePrime",
+    "cta": "Trở thành đối tác",
+    "dismiss": "Ẩn lời mời"
+  },
   "profile": {
-    "eyebrow": "Hồ sơ cá nhân",
     "title": "Thông tin tài khoản",
     "description": "Cập nhật tên hiển thị và ảnh đại diện của bạn.",
     "accountLabel": "Tài khoản XePrime",
     "email": "Email",
     "phone": "Số điện thoại",
-    "unverified": "Chưa xác thực",
+    "unverified": "Chưa xác minh",
     "securityTitle": "Thông tin đăng nhập",
     "securityDescription": "Email và số điện thoại là thông tin nhận diện, nên mỗi lần đổi đều cần một mã 6 số gửi tới địa chỉ hoặc số MỚI. Khi đổi email, chúng tôi báo cho địa chỉ cũ để bạn biết nếu có ai đó không phải bạn thực hiện.",
+    "update": "Cập nhật thông tin",
     "edit": "Chỉnh sửa hồ sơ"
   },
   "comingSoon": {
@@ -253,15 +261,23 @@
     "currentPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "confirmPassword": "Xác nhận mật khẩu mới",
+    "placeholders": {
+      "current": "Nhập mật khẩu hiện tại",
+      "new": "Nhập mật khẩu mới",
+      "confirm": "Nhập lại mật khẩu mới"
+    },
     "submit": "Cập nhật mật khẩu",
     "submitFirstTime": "Đặt mật khẩu",
     "success": "Đã cập nhật mật khẩu.",
     "successFirstTime": "Đã đặt mật khẩu. Lần sau bạn đăng nhập được bằng mật khẩu này.",
-    "requirementsTitle": "Yêu cầu của mật khẩu",
+    "successTitle": "Thành công",
+    "unchanged": "Mật khẩu mới phải khác mật khẩu hiện tại.",
+    "requirementsTitle": "Yêu cầu mật khẩu",
     "requirements": {
-      "passwordTooShort": "Ít nhất {min} ký tự",
+      "passwordTooShort": "Có ít nhất {min} ký tự",
       "passwordNeedsLetter": "Chứa ít nhất 1 chữ cái",
-      "passwordNeedsDigit": "Chứa ít nhất 1 chữ số (0-9)"
+      "passwordNeedsDigit": "Chứa ít nhất 1 chữ số (0-9)",
+      "notSameAsCurrent": "Không trùng với mật khẩu hiện tại"
     },
     "requirementMet": "Đạt",
     "requirementUnmet": "Chưa đạt"
@@ -269,6 +285,11 @@
   "deleteAccount": {
     "title": "Yêu cầu xoá tài khoản",
     "subtitle": "Gửi yêu cầu để XePrime xử lý việc xoá tài khoản của bạn.",
+    "dialogSubtitle": "Vui lòng đọc kỹ các thông tin dưới đây trước khi gửi yêu cầu.",
+    "conditionsTitle": "Kiểm tra điều kiện xoá tài khoản",
+    "conditionsBody": "Để bảo đảm quyền lợi tài chính, bạn nên hoàn tất các giao dịch và chuyến đi hiện tại trước khi XePrime xét duyệt yêu cầu xoá tài khoản.",
+    "withdrawNow": "Rút tiền ngay",
+    "dataTitle": "Dữ liệu nào sẽ bị xử lý khi yêu cầu được chấp nhận?",
     "warningTitle": "Đây là một yêu cầu, XePrime xử lý thủ công",
     "warningBody": "Sau khi gửi, tài khoản vẫn đăng nhập bình thường cho tới khi XePrime xác nhận và hoàn tất. Bạn rút yêu cầu được trong lúc chờ.",
     "confirmTitle": "Xác nhận gửi yêu cầu xoá tài khoản",
@@ -384,7 +405,8 @@
   },
   "security": {
     "title": "Bảo mật tài khoản",
-    "subtitle": "Phương thức đăng nhập, mật khẩu và các thao tác với tài khoản của bạn."
+    "subtitle": "Phương thức đăng nhập, mật khẩu và các thao tác với tài khoản của bạn.",
+    "customerSubtitle": "Thường xuyên thay đổi mật khẩu để bảo vệ tài khoản của bạn."
   },
   "hub": {
     "title": "Tài khoản & bảo mật",
@@ -437,5 +459,16 @@
       "bioPlaceholder": "Vài dòng về bạn và xe của bạn…",
       "saved": "Đã lưu thông tin chủ xe"
     }
+  },
+  "shell": {
+    "title": "Tài khoản của tôi",
+    "subtitle": "Quản lý thông tin cá nhân, số dư và các thiết lập tài khoản của bạn."
+  },
+  "profileEdit": {
+    "avatarHelp": "Tải lên ảnh định dạng JPG, JPEG, WEBP, PNG.\nTối đa {max}MB.",
+    "currentPhoto": "Ảnh hiện tại",
+    "pick": "Chọn ảnh",
+    "remove": "Xoá ảnh đại diện",
+    "displayName": "Họ & tên hiển thị"
   }
 }

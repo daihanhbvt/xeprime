@@ -4,3 +4,5 @@ import type { components } from '@xeprime/types';
 type Schemas = components['schemas'];
 
 export type CreateReviewInput = Schemas['CreateReviewDto'];
+export type UpdateReviewInput = Schemas['UpdateReviewDto'];
+export type OwnReview = Schemas['OwnReviewDto'];

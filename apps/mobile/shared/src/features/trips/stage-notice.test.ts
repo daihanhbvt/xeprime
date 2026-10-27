@@ -1,6 +1,6 @@
 import { CUSTOMER_TRIP_STAGE, CUSTOMER_TRIP_STAGE_VALUES } from '@xeprime/types';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
-import { stageNotice } from './stage-notice';
+import { closedNotice, stageNotice } from './stage-notice';
 
 /**
  * Bảng CHẶNG → khối giải thích ở màn chi tiết chuyến.
@@ -69,5 +69,30 @@ describe('stageNotice — chủ xe không phản hồi kịp (PR #158)', () => {
     });
     expect(viTrips.notice.expiredTitle).toBeTruthy();
     expect(viTrips.notice.expiredBody).toBeTruthy();
+  });
+});
+
+describe('closedNotice — chuyến đã khép (cùng câu chữ với TripClosedView của web)', () => {
+  it('hoàn thành ⇒ xanh; hỏng do một bên ⇒ đỏ; không ai có lỗi ⇒ vàng', () => {
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.COMPLETED)?.tone).toBe('success');
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.CANCELLED)?.tone).toBe('danger');
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.REJECTED)?.tone).toBe('danger');
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.NO_SHOW)?.tone).toBe('danger');
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.EXPIRED)?.tone).toBe('warning');
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.SLOT_TAKEN)?.tone).toBe('warning');
+  });
+
+  it('chặng còn chạy không có thẻ trạng thái kết cục', () => {
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL)).toBeNull();
+    expect(closedNotice(CUSTOMER_TRIP_STAGE.ACTIVE)).toBeNull();
+  });
+
+  it('mọi khoá trả ra đều có trong `Trips.closed.status`', () => {
+    for (const stage of CUSTOMER_TRIP_STAGE_VALUES) {
+      const notice = closedNotice(stage);
+      if (!notice) continue;
+      expect(viTrips.closed.status).toHaveProperty(notice.titleKey);
+      expect(viTrips.closed.status).toHaveProperty(notice.bodyKey);
+    }
   });
 });

@@ -95,3 +95,18 @@ export function bankDisplayName(code: string | null | undefined): string {
 export function bankInitials(code: string | null | undefined): string {
   return ((code ?? '').trim().toUpperCase() || '?').slice(0, 4);
 }
+
+/** Kho logo ngân hàng của VietQR — khoá bằng CHÍNH mã VietQR mà danh mục này dùng. */
+const BANK_LOGO_BASE_URL = 'https://cdn.vietqr.io/img';
+
+/**
+ * URL logo của một nhà băng trong danh mục; `null` khi mã lạ.
+ *
+ * Ảnh do VietQR phục vụ (cùng hệ mã với `buildVietQrUrl`), không nằm trong repo. Nơi hiển thị
+ * PHẢI có đường lùi về {@link bankInitials}: CDN có thể chậm, chặn, hoặc thiếu đúng mã đó — ô
+ * biểu trưng không bao giờ được thành một ô ảnh vỡ trên đường tiền đi ra.
+ */
+export function bankLogoUrl(code: string | null | undefined): string | null {
+  const bank = findBank(code);
+  return bank ? `${BANK_LOGO_BASE_URL}/${bank.code}.png` : null;
+}

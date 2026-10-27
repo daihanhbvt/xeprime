@@ -3,6 +3,8 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { FinanceModule } from '../finance/finance.module';
 import { AccountPaymentsController } from './account-payments.controller';
 import { AccountPaymentsService } from './account-payments.service';
+import { AccountTransactionsController } from './account-transactions.controller';
+import { AccountTransactionsService } from './account-transactions.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
@@ -18,7 +20,7 @@ import { PaymentsService } from './payments.service';
  */
 @Module({
   imports: [FinanceModule, BookingsModule],
-  controllers: [PaymentsController, AccountPaymentsController],
-  providers: [PaymentsService, AccountPaymentsService],
+  controllers: [PaymentsController, AccountPaymentsController, AccountTransactionsController],
+  providers: [PaymentsService, AccountPaymentsService, AccountTransactionsService],
 })
 export class PaymentsModule {}

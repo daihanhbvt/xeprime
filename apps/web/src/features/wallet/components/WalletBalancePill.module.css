@@ -1,8 +1,8 @@
 /**
  * Lối tắt số dư ở góc hồ sơ.
  *
- * Một viên thuốc trắng nổi trên nền trang: nó phải nhặt ra được bằng mắt giữa một thẻ hồ sơ đầy
- * chữ, vì đây là thứ duy nhất trên trang nói về TIỀN.
+ * Hình dạng nút phụ của design Account (Figma `19760:56210`): viền xám, bo 12, "Số dư:" xám và con
+ * số vàng đậm — đứng ở góc đầu thẻ hồ sơ, nơi bản vẽ đặt hành động phụ của thẻ.
  */
 
 .pill {
@@ -10,11 +10,11 @@
   align-items: center;
   gap: var(--xp-space-xs);
   max-width: 100%;
-  padding: var(--xp-space-xs) var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-pill);
+  min-height: 44px;
+  padding: 0 var(--xp-space-md) 0 var(--xp-space-xs);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
 }
 
 /**
@@ -68,7 +68,7 @@
 
 .label {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   white-space: nowrap;
 }
 
@@ -77,7 +77,7 @@
  * thuốc đổi bề rộng và đẩy nút bên cạnh nhảy chỗ.
  */
 .amount {
-  color: var(--xp-color-price);
+  color: var(--xp-color-primary-hover);
   font-weight: var(--xp-font-weight-semibold);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

@@ -173,3 +173,90 @@
 .openLink:hover {
   text-decoration: underline;
 }
+
+/**
+ * Hình thái PANEL — tab "Tài khoản thanh toán" của khu tài khoản khách (Figma `19879:74829`):
+ * thẻ viền mảnh bo 16, con số khả dụng 24px bên trái, nút rút bên phải cùng hàng, hai con số phụ
+ * chia đôi hàng dưới.
+ */
+.panel {
+  gap: var(--xp-space-20);
+  padding: var(--xp-space-lg);
+  border-radius: var(--xp-border-radius-card);
+}
+
+.panelTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.panelMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.panelLabel,
+.panelFigures dt {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.panelBig {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
+  font-variant-numeric: tabular-nums;
+}
+
+.panelAction {
+  flex: none;
+}
+
+.panelFigures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-lg);
+  margin: 0;
+}
+
+.panelFigures dd {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.panelHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--xp-space-md);
+  }
+
+  .panelAction {
+    flex: 1 1 100%;
+  }
+
+  .panelAction > * {
+    width: 100%;
+  }
+
+  .panelFigures {
+    gap: var(--xp-space-md);
+  }
+}

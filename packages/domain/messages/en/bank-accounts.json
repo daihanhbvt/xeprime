@@ -7,6 +7,13 @@
   "defaultTag": "Default",
   "verifiedTag": "Verified",
   "accountNumberLine": "Acct: {number}",
+  "detail": {
+    "bank": "Bank",
+    "number": "Account number",
+    "holder": "Beneficiary",
+    "label": "Nickname",
+    "noLabel": "—"
+  },
   "actions": {
     "add": "Add account",
     "change": "Change account",
@@ -39,7 +46,12 @@
       "numberDigits": "Account number must be digits only",
       "nameRequired": "Enter the account holder name"
     },
-    "bankNotFound": "No matching bank."
+    "bankNotFound": "No matching bank.",
+    "accountNamePlaceholder": "Exactly as registered with your bank",
+    "accountNumberPlaceholder": "Bank account number",
+    "saved": {
+      "title": "Success"
+    }
   },
   "refund": {
     "title": "Refund destination",

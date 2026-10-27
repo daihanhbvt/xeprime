@@ -128,15 +128,16 @@ export function DeleteAccountScreen() {
       />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={space.md}>
+          {/*
+            Đứng TRƯỚC form, y như web dựng nó: một cảnh báo đọc sau khi đã bấm gửi thì không còn
+            là cảnh báo. KHÔNG chặn nút gửi — yêu cầu vẫn vào hàng đợi support. Thứ tự theo hộp
+            thoại web (design Account / Security - Delete): điều kiện → quy trình → dữ liệu.
+          */}
+          <AccountDeletionImpact />
+
           <Callout tone="danger" title={t('warningTitle')}>
             {t('warningBody')}
           </Callout>
-
-          {/*
-            Đứng TRƯỚC form, y như hai trang web dựng nó: một cảnh báo đọc sau khi đã bấm gửi thì
-            không còn là cảnh báo. KHÔNG chặn nút gửi — yêu cầu vẫn vào hàng đợi support.
-          */}
-          <AccountDeletionImpact />
 
           {pendingQuery.isLoading ? (
             <Card>
@@ -179,7 +180,7 @@ export function DeleteAccountScreen() {
             <Card>
               <YStack gap={space.sm}>
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('confirmTitle')}
+                  {t('dataTitle')}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
                   {t('confirmBody')}

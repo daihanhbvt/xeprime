@@ -4,9 +4,73 @@
   gap: var(--xp-space-md);
 }
 
+/* Đầu hộp theo Figma 21621:31264 — biểu tượng cảnh báo trong vòng đỏ, tiêu đề và lời dẫn căn giữa. */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.featuredIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--xp-space-sm);
+  border: 6px solid color-mix(in srgb, var(--xp-color-error-bg) 40%, white);
+  border-radius: 50%;
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+  font-size: 28px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.policyLink {
+  color: var(--xp-color-text-secondary);
+  text-decoration: underline;
+}
+
+.refundAmount {
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  display: inline-flex;
+  gap: var(--xp-space-2);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.required,
+.error {
+  color: var(--xp-color-error);
+}
+
+.error {
+  font-size: var(--xp-font-size-sm);
+}
+
 .lead {
   margin: 0;
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body);
 }
@@ -16,18 +80,80 @@
   margin-top: var(--xp-space-xs);
 }
 
-/* Xem trước khoản giữ chỗ — ba dòng tiền đọc thẳng hàng như một phiếu nhỏ. */
+/*
+ * Huỷ muộn — phiếu tiền sạch theo hộp thoại Figma `21621:31264`: nền `BG/gray-50`, bo 12, đệm 16,
+ * hàng nhãn 14 `Text/Gray/medium` / số 14 Medium, dòng "được hoàn" nổi lên cuối phiếu.
+ */
+.refundBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+}
+
+.refundTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
 .facts {
   display: flex;
   flex-direction: column;
-  margin: 0 0 var(--xp-space-xs);
-  gap: var(--xp-space-2);
+  margin: 0;
+  gap: var(--xp-space-sm);
 }
 
 .factRow {
   display: flex;
   justify-content: space-between;
   gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+.factRow dd {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.factRow dd.factForfeit {
+  color: var(--xp-color-error);
+}
+
+.factDivider {
+  height: 1px;
+  background: var(--xp-color-border);
+}
+
+.factTotal {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.factTotal dd {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Lời nhắc hệ quả — dải vàng nhạt chữ cam như "Status guidance" của Figma, không khung cảnh báo đặc. */
+.refundHint {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .factRow dt,

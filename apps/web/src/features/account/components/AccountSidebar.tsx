@@ -1,22 +1,20 @@
 'use client';
 
+import { ArrowRightOutlined } from '@ant-design/icons';
 import { Avatar } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
-import {
-  flattenAccountNav,
-  matchAccountNavKey,
-  resolveAccountNav,
-} from '@/constants/account-nav';
+import { flattenAccountNav, matchAccountNavKey, resolveAccountNav } from '@/constants/account-nav';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 
+import { PartnerInviteCard } from './PartnerInviteCard';
 import styles from './AccountSidebar.module.css';
 
 /**
@@ -78,6 +76,9 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
                     >
                       <Icon className={styles.icon} />
                       <span className={styles.label}>{t(item.labelKey)}</span>
+                      {item.cta ? (
+                        <ArrowRightOutlined className={styles.trailing} aria-hidden />
+                      ) : null}
                     </Link>
                   </li>
                 );
@@ -87,8 +88,10 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
         ))}
       </div>
 
+      <PartnerInviteCard />
+
       <div className={styles.userCard} aria-label={tAccount('sidebar.userCard')}>
-        <Avatar size={40} src={user.avatarUrl ?? undefined} className={styles.avatar}>
+        <Avatar size={32} src={user.avatarUrl ?? undefined} className={styles.avatar}>
           {initialOf(user.displayName || user.email)}
         </Avatar>
         <div className={styles.userText}>

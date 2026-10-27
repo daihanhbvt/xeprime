@@ -185,6 +185,23 @@ export function compactMoneyParts(
 const MONEY_WIRE_SHAPE = /^-?\d+(\.\d+)?$/;
 
 /**
+ * Số tiền tính bằng NGHÌN đồng, có nhóm chữ số — `1350000` → `1.350` (vi) · `1,350` (en); giao
+ * diện gắn đơn vị "K" (thẻ chuyến, Figma `19879:71581`). Làm tròn nửa-xa-0 tới nghìn chỉ để HIỂN
+ * THỊ, toàn bộ trên `bigint` (ADR 0007). Dưới 1.000đ trả `null` — "0 K" nói sai số tiền, người gọi
+ * rơi về dạng đầy đủ.
+ */
+export function moneyInThousands(value: MoneyString, separators: MoneySeparators): string | null {
+  if (!MONEY_WIRE_SHAPE.test(value.trim())) return null;
+  const cents = toCents(value);
+  const negative = cents < 0n;
+  const absolute = negative ? -cents : cents;
+  if (absolute < 100_000n) return null;
+  const thousands = (absolute + 50_000n) / 100_000n;
+  const grouped = String(thousands).replace(/\B(?=(\d{3})+(?!\d))/g, separators.group);
+  return `${negative ? '-' : ''}${grouped}`;
+}
+
+/**
  * Thay đổi của một số tiền so với kỳ trước, tính bằng PHẦN TRĂM NGUYÊN — mũi tên tăng/giảm trên
  * thẻ KPI ("+12% so với cùng kỳ tháng trước").
  *

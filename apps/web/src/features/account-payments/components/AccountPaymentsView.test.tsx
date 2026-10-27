@@ -96,12 +96,12 @@ describe('AccountPaymentsView — phong bì và bốn con số', () => {
     expect(screen.getByText('Số chuyến')).toBeTruthy();
   });
 
-  it('nói ra ba loại tiền và trỏ sang màn Số dư — không để ai đọc đây thành số dư', () => {
+  it('nói ra ba loại tiền và trỏ sang tab Tài khoản thanh toán — không để ai đọc đây thành số dư', () => {
     query.data = page();
     render(<AccountPaymentsView />);
 
     expect(screen.getByText('Đây là tiền bạn đã trả cho gian hàng')).toBeTruthy();
-    const link = screen.getByText('Số dư của tôi').closest('a');
+    const link = screen.getByText('Tài khoản thanh toán').closest('a');
     expect(link?.getAttribute('href')).toBe('/account/balance');
   });
 

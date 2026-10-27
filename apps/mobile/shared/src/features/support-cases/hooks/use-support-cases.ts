@@ -21,12 +21,18 @@ import {
  * cho cùng một nhánh dữ liệu; và `surface` nằm TRONG key để màn khách và màn gian hàng không
  * dùng lẫn cache của nhau — cùng một `id` trả về dòng thời gian khác nhau ở hai bề mặt.
  */
-export function useSupportCases(surface: SupportSurface, filters: SupportCaseFilters) {
+export function useSupportCases(
+  surface: SupportSurface,
+  filters: SupportCaseFilters,
+  /** `enabled: false` — màn chỉ cần danh sách ở một biến thể (lối yêu cầu xoá ở màn bảo mật). */
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   const params = supportCasesToParams(surface, filters);
 
   return useQuery({
     queryKey: queryKeys.supportCases.list(params),
     queryFn: () => supportCasesApi.list(surface, filters),
+    enabled,
     /*
      * Giữ trang TRƯỚC trong lúc trang/bộ lọc mới đang tải — đúng `keepPreviousData` của web.
      *

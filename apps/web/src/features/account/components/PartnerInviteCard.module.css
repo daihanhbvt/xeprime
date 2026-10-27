@@ -1,0 +1,104 @@
+/* Thẻ "Hợp tác với XePrime" — design Account: nền trắng, nút vàng gradient full-width. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0 var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-hover);
+  font-size: 16px;
+}
+
+.close {
+  padding: var(--xp-space-2);
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--xp-color-text);
+}
+
+.close:focus-visible,
+.cta:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.badge {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.body {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.cta {
+  display: block;
+  margin-top: var(--xp-space-sm);
+  padding: 10px var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: center;
+  text-decoration: none;
+}
+
+.cta:hover {
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(0.97);
+}
+
+/* Mobile: menu là dải cuộn ngang — thẻ mời không có chỗ. */
+@media (max-width: 900px) {
+  .card {
+    display: none;
+  }
+}

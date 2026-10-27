@@ -20,6 +20,8 @@ import { NotificationService } from '../notification/notification.service';
 import { ListingsService } from '../public-listings/listings.service';
 import {
   CreateReviewDto,
+  OwnReviewDto,
+  UpdateReviewDto,
   FEATURED_REVIEW_DEFAULT_LIMIT,
   FEATURED_REVIEW_MAX_LIMIT,
   FeaturedReviewDto,
@@ -32,6 +34,7 @@ import {
   ShopReviewDto,
 } from './dto/review.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { canEditReview } from './review-edit';
 
 /** Đánh giá nổi bật phải từ 4 sao — khối này trích lời khen, không phải mọi lời nhận xét. */
 const FEATURED_REVIEW_MIN_RATING = 4;
@@ -137,6 +140,81 @@ export class ReviewService {
     });
 
     return { id };
+  }
+
+  /**
+   * Khách sửa đánh giá CỦA MÌNH — đúng MỘT lần. Đánh giá của người khác trả 404 (không lộ tồn
+   * tại). "Một lần" chốt nguyên tử bằng `updateMany … editedAt: null`: hai lượt song song chỉ
+   * một lượt đếm được 1, lượt kia nhận 409 `REVIEW_EDIT_LIMIT`. Cùng transaction tính lại rating
+   * gian hàng + rating trên `public_listings` như lúc tạo.
+   */
+  async updateOwn(customerUserId: string, id: string, dto: UpdateReviewDto): Promise<OwnReviewDto> {
+    const review = await this.prisma.review.findFirst({
+      where: { id, customerId: customerUserId, deletedAt: null },
+      select: {
+        id: true,
+        tenantId: true,
+        vehicleId: true,
+        status: true,
+        editedAt: true,
+        booking: { select: { status: true } },
+      },
+    });
+    if (!review) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy đánh giá của bạn',
+      });
+    }
+    if (review.editedAt) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.REVIEW_EDIT_LIMIT,
+        message: 'Bạn đã dùng lượt chỉnh sửa đánh giá duy nhất',
+      });
+    }
+    if (!review.booking || !canEditReview(review.booking.status, review)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Đánh giá này không thể chỉnh sửa',
+      });
+    }
+
+    const editedAt = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.review.updateMany({
+        where: {
+          id,
+          customerId: customerUserId,
+          editedAt: null,
+          status: REVIEW_STATUS.PUBLISHED,
+          deletedAt: null,
+          booking: { status: BOOKING_STATUS.COMPLETED },
+        },
+        data: { rating: dto.rating, comment: dto.comment?.trim() || null, editedAt },
+      });
+      if (count === 0) {
+        // Đã kiểm tồn tại/sở hữu ở trên ⇒ thua cuộc đua với một lượt sửa khác.
+        throw new ConflictException({
+          code: API_ERROR_CODE.REVIEW_EDIT_LIMIT,
+          message: 'Bạn đã dùng lượt chỉnh sửa đánh giá duy nhất',
+        });
+      }
+      await this.recomputeTenantRating(tx, review.tenantId);
+      await this.listings.refreshRating(review.vehicleId, tx);
+
+      const updated = await tx.review.findUniqueOrThrow({
+        where: { id },
+        select: { id: true, rating: true, comment: true, createdAt: true, editedAt: true },
+      });
+      return {
+        id: updated.id,
+        rating: updated.rating,
+        comment: updated.comment,
+        createdAt: updated.createdAt.toISOString(),
+        editedAt: updated.editedAt?.toISOString() ?? null,
+        canEdit: false,
+      };
+    });
   }
 
   /** Đánh giá công khai của một xe — chỉ `published`, kèm điểm trung bình gian hàng của xe đó. */
