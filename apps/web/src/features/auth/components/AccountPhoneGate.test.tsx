@@ -6,6 +6,8 @@ import {
   AccountPhoneGate,
   AccountPhoneReminderProvider,
   useAccountPhonePrompt,
+  useSuppressAccountPhoneReminder,
+  type AccountPhonePromptOptions,
 } from './AccountPhoneGate';
 
 const me = vi.hoisted(() => ({ data: undefined as unknown }));
@@ -43,22 +45,34 @@ const SOCIAL_CUSTOMER = {
 
 const TITLE = 'Xác minh số điện thoại';
 
-/** Nút của một luồng cần SĐT (vd "Tiếp tục" của hộp đặt xe). */
-function NeedsPhoneButton() {
+/** Nút của một luồng cần SĐT (vd "Gửi yêu cầu" của hộp đặt xe). */
+function NeedsPhoneButton({ options }: { options?: AccountPhonePromptOptions }) {
   const prompt = useAccountPhonePrompt();
-  return <Button onClick={() => prompt?.()}>Đặt xe</Button>;
+  return <Button onClick={() => prompt?.(options)}>Đặt xe</Button>;
 }
 
-function renderReminder() {
-  const tree = () => (
+/** Hộp đặt xe đang mở — tự hỏi số đúng lúc của nó. */
+function BookingFlowOpen() {
+  useSuppressAccountPhoneReminder();
+  return null;
+}
+
+function renderReminder({
+  options,
+  bookingOpen = false,
+}: { options?: AccountPhonePromptOptions; bookingOpen?: boolean } = {}) {
+  const tree = (open = bookingOpen) => (
     <App>
       <AccountPhoneReminderProvider>
-        <NeedsPhoneButton />
+        <NeedsPhoneButton options={options} />
+        {open ? <BookingFlowOpen /> : null}
       </AccountPhoneReminderProvider>
     </App>
   );
   const view = render(tree());
-  return { rerenderTree: () => view.rerender(tree()) };
+  return {
+    rerenderTree: (open?: boolean) => view.rerender(tree(open)),
+  };
 }
 
 beforeEach(() => {
@@ -133,6 +147,58 @@ describe('AccountPhoneReminderProvider', () => {
     rerenderTree();
     fireEvent.click(screen.getByRole('button', { name: 'Đặt xe' }));
     expect(screen.queryByText(TITLE)).toBeNull();
+  });
+
+  it('luồng hỏi số kèm SĐT vừa gõ → hộp điền sẵn số đó, không phải số cũ của tài khoản', () => {
+    me.data = { ...SOCIAL_CUSTOMER, phone: '0901234567' };
+    renderReminder({ options: { phone: '0988776655' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Để sau' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt xe' }));
+
+    expect(screen.getByDisplayValue('0988776655')).toBeTruthy();
+    expect(screen.queryByDisplayValue('0901234567')).toBeNull();
+  });
+
+  it('"Để sau" ở lượt luồng hỏi → KHÔNG gọi onVerified; xác minh xong → gọi đúng một lần', () => {
+    const onVerified = vi.fn();
+    me.data = SOCIAL_CUSTOMER;
+    const { rerenderTree } = renderReminder({ options: { onVerified } });
+    fireEvent.click(screen.getByRole('button', { name: 'Để sau' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt xe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Để sau' }));
+    expect(onVerified).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt xe' }));
+    flow.verified = true;
+    act(() => rerenderTree());
+
+    expect(onVerified).toHaveBeenCalledTimes(1);
+  });
+
+  it('hộp đặt xe đang mở → lời nhắc chung KHÔNG tự bật; luồng vẫn hỏi được; đóng hộp đặt xe → nhắc lại', () => {
+    me.data = SOCIAL_CUSTOMER;
+    const { rerenderTree } = renderReminder({ bookingOpen: true });
+    expect(screen.queryByText(TITLE)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt xe' }));
+    expect(screen.getByText(/Xác minh số điện thoại để gửi yêu cầu thuê xe/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Để sau' }));
+    expect(screen.queryByText(TITLE)).toBeNull();
+
+    // "Để sau" ở lượt luồng hỏi cũng là "Để sau" của phiên tab — đóng hộp đặt xe không nhắc lại.
+    rerenderTree(false);
+    expect(screen.queryByText(TITLE)).toBeNull();
+  });
+
+  it('hộp đặt xe đóng mà khách chưa từng "Để sau" → lời nhắc chung hiện lại', () => {
+    me.data = SOCIAL_CUSTOMER;
+    const { rerenderTree } = renderReminder({ bookingOpen: true });
+    expect(screen.queryByText(TITLE)).toBeNull();
+
+    rerenderTree(false);
+    expect(screen.getByText(/Bạn vẫn tìm và xem xe bình thường khi chưa thêm/)).toBeTruthy();
   });
 
   it('xác minh xong → hộp tự đóng', () => {

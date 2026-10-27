@@ -40,6 +40,8 @@ interface ContactVerifyModalProps {
    * `onClose`). `lead` là câu mở theo ngữ cảnh mở hộp (nhắc chung, hay đang gửi yêu cầu thuê).
    */
   readonly reminder?: { readonly lead: string };
+  /** Xác minh đúng mã xong — gọi trước `onClose` (đóng vì xác minh, không phải vì "Để sau"). */
+  readonly onVerified?: () => void;
 }
 
 /**
@@ -59,6 +61,7 @@ export function ContactVerifyModal({
   current,
   required,
   reminder,
+  onVerified,
 }: ContactVerifyModalProps) {
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common');
@@ -91,7 +94,11 @@ export function ContactVerifyModal({
   useEffect(() => {
     if (!flow.verified) return;
     message.success(isPhone ? t('phoneUpdated') : t('emailUpdated'));
+    onVerified?.();
     onClose();
+    // `onVerified` cố ý ngoài deps: chỉ lượt `verified` bật lên mới được gọi nó, không phải mỗi lần
+    // nơi gọi truyền một hàm mới.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.verified, isPhone, message, onClose, t]);
 
   const sendCode = handleSubmit((values) => flow.send(values.identifier));
