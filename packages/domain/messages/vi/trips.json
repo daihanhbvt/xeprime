@@ -192,9 +192,6 @@
     "keep": "Quay lại",
     "preview": {
       "error": "Chưa xem trước được số tiền được hoàn. Bạn vẫn có thể huỷ — số hoàn được tính theo chính sách huỷ & hoàn tiền tại thời điểm bấm.",
-      "fullRefundTitle": "Bạn được hoàn {amount} vào Ví điểm",
-      "fullRefundBefore": "Bạn đã chuyển {paid} tiền giữ chỗ và đang huỷ trước {time}, nên được hoàn đủ ngay khi huỷ.",
-      "fullRefundBody": "Bạn đã chuyển {paid} tiền giữ chỗ. Khoản này được hoàn đủ vào Ví điểm ngay khi huỷ.",
       "lateTitle": "Đã qua thời gian huỷ miễn phí",
       "noFreeCancelTitle": "Chuyến này không có thời gian huỷ miễn phí",
       "paid": "Tiền giữ chỗ đã chuyển",
@@ -445,11 +442,7 @@
     "success": {
       "title": "Thanh toán thành công",
       "lead": "Hệ thống đã ghi nhận {amount} qua {channel}!",
-      "leadNoChannel": "Hệ thống đã ghi nhận {amount}!",
-      "payOwner": "Cần thanh toán cho chủ xe",
-      "payOwnerNote": "Khoản tiền cần trả cho chủ xe sau khi đã trừ hết các khoản cần thanh toán.",
-      "myTrips": "Chuyến đi của tôi",
-      "viewTrip": "Xem chi tiết chuyến"
+      "leadNoChannel": "Hệ thống đã ghi nhận {amount}!"
     }
   },
   "unpaid": {

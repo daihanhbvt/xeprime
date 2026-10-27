@@ -192,9 +192,6 @@
     "keep": "Go back",
     "preview": {
       "error": "We couldn't preview your refund. You can still cancel — the refund follows the cancellation & refund policy at the moment you confirm.",
-      "fullRefundTitle": "{amount} will be refunded to your Points wallet",
-      "fullRefundBefore": "You transferred {paid} as a reservation payment and are cancelling before {time}, so it is refunded in full as soon as you cancel.",
-      "fullRefundBody": "You transferred {paid} as a reservation payment. It is refunded in full to your Points wallet as soon as you cancel.",
       "lateTitle": "The free-cancellation window has passed",
       "noFreeCancelTitle": "This trip has no free-cancellation window",
       "paid": "Reservation payment transferred",
@@ -445,11 +442,7 @@
     "success": {
       "title": "Payment successful",
       "lead": "We have received {amount} via {channel}!",
-      "leadNoChannel": "We have received {amount}!",
-      "payOwner": "To pay the owner",
-      "payOwnerNote": "What you pay the owner after every amount due online is deducted.",
-      "myTrips": "My trips",
-      "viewTrip": "View trip details"
+      "leadNoChannel": "We have received {amount}!"
     }
   },
   "unpaid": {

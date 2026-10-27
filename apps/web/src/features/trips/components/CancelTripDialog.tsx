@@ -227,28 +227,11 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
 
   const deferred = preview.deferred ? <p className={styles.note}>{t('deferred')}</p> : null;
 
-  if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND) {
-    return (
-      <Alert
-        type="info"
-        showIcon
-        title={t('fullRefundTitle', { amount: fmt.money(preview.refundAmount) })}
-        description={
-          <>
-            <p className={styles.note}>
-              {preview.freeCancelUntil && preview.freeCancelAvailable
-                ? t('fullRefundBefore', {
-                    paid: fmt.money(preview.paidAmount),
-                    time: fmt.dateTime(preview.freeCancelUntil),
-                  })
-                : t('fullRefundBody', { paid: fmt.money(preview.paidAmount) })}
-            </p>
-            {deferred}
-          </>
-        }
-      />
-    );
-  }
+  /*
+   * Hoàn đủ: đầu hộp đã nói "đã thanh toán" + "Dự kiến hoàn lại" — không lặp lại bằng một khung
+   * nữa. Chỉ còn lời nhắc hoàn CHẬM khi server báo có, vì đầu hộp không nói điều đó.
+   */
+  if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND) return deferred;
 
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL) {
     const title = preview.freeCancelAvailable ? t('lateTitle') : t('noFreeCancelTitle');
