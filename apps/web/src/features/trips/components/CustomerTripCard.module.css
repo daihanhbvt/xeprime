@@ -337,6 +337,17 @@
   white-space: nowrap;
 }
 
+.scheduleRowStacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-2);
+}
+
+.scheduleRowStacked dd {
+  text-align: left;
+  white-space: normal;
+}
+
 /* Ba cột tiền — Figma: cột chia đều, gap 12, vạch dọc trước "Còn lại". */
 .money {
   display: flex;

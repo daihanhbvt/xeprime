@@ -590,12 +590,15 @@ export class BookingRequestApprovalWindowsDto {
   paymentWindowMinutes!: number;
   @ApiProperty({
     description:
-      'Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí',
+      'Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) — ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí',
   })
   freeCancelMinutes!: number;
   @ApiProperty({ description: 'ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe)' })
   expiresAt!: string;
-  @ApiProperty({ description: 'ISO — mốc huỷ miễn phí dự kiến' }) freeCancelUntil!: string;
+  @ApiProperty({
+    description: 'ISO — mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072)',
+  })
+  freeCancelUntil!: string;
   @ApiProperty({
     description: 'Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT`',
   })
@@ -740,6 +743,13 @@ export class BookingRequestDto {
    */
   @ApiProperty({ description: 'Nhắn tin trong ứng dụng được không' })
   canMessageOnPlatform!: boolean;
+  /**
+   * Chặng này có mở kênh nhắn tin với khách không — cùng luật với SĐT khách
+   * (`hostSeesCustomerContact`): tuyến gói luôn mở; tuyến hoa hồng chỉ khi yêu cầu đã thành ĐƠN
+   * (ADR 0073). `false` ⇒ giao diện ẩn hẳn nút "Nhắn tin"; server chặn `POST …/conversation`.
+   */
+  @ApiProperty({ description: 'Kênh nhắn tin mở ở chặng này — tuyến hoa hồng chỉ khi đã có đơn' })
+  chatOpen!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

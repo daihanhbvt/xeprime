@@ -44,11 +44,7 @@ import styles from './SearchCard.module.css';
  * Bố cục desktop/mobile khác nhau hoàn toàn bằng CSS (cùng một cây DOM): không nhánh `isMobile`
  * ở đây, nên hai bố cục không thể trôi ra hai bộ hành vi khác nhau.
  */
-export function SearchCard({
-  observerRef,
-}: {
-  observerRef: (node: HTMLDivElement | null) => void;
-}) {
+export function SearchCard() {
   const {
     draft,
     setVehicleType,
@@ -76,7 +72,7 @@ export function SearchCard({
   const usesRange = serviceUsesRentalRange(draft.serviceType);
 
   return (
-    <div className={styles.cardOuter} ref={observerRef}>
+    <div className={styles.cardOuter}>
       {/* Trượt lên khi gắn (≈ `.banner-btn-area wow fadeInUp` của trang mẫu). Trễ 0.2s thay vì
           1.2s: đây là ô tìm kiếm chính, không phải nút trang trí — người dùng không phải chờ. */}
       <div

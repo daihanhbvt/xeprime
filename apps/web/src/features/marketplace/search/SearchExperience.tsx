@@ -7,8 +7,8 @@ import { HERO_OBSERVER_ROOT_MARGIN, SearchExperienceProvider } from './search-co
 import { useElementVisibility } from './use-element-visibility';
 
 /**
- * Trải nghiệm tìm kiếm của TRANG CHỦ = thẻ đầy đủ + thanh thu gọn, **một trạng thái, hai trình
- * bày** (`SearchExperienceProvider`).
+ * Trải nghiệm tìm kiếm của TRANG CHỦ = CHỈ thẻ tìm kiếm ở hero. Trang chủ KHÔNG dựng thanh thu
+ * gọn khi cuộn — phần dưới là nội dung giới thiệu, không phải danh sách cần đổi tiêu chí liên tục.
  *
  * Đây là ranh giới client duy nhất của khu tìm kiếm: page vẫn là Server Component, chỉ đảo
  * island này sang client.
@@ -16,21 +16,8 @@ import { useElementVisibility } from './use-element-visibility';
 export function SearchExperience() {
   return (
     <SearchExperienceProvider>
-      <HomeSurfaces />
+      <SearchCard />
     </SearchExperienceProvider>
-  );
-}
-
-function HomeSurfaces() {
-  const { ref, visible } = useElementVisibility<HTMLDivElement>({
-    rootMargin: HERO_OBSERVER_ROOT_MARGIN,
-  });
-
-  return (
-    <>
-      <SearchCard observerRef={ref} />
-      <StickySearchBar active={!visible} />
-    </>
   );
 }
 

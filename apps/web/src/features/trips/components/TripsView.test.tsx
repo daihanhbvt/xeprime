@@ -138,7 +138,8 @@ describe('Danh sách chuyến', () => {
     expect(screen.getByText('Toyota Camry 2024')).toBeTruthy();
     // Thẻ giờ ghép dịch vụ + cách nhận xe: "Tự lái · Giao xe tận nơi" (17/08).
     expect(screen.getByText(/Giao xe tận nơi/)).toBeTruthy();
-    expect(screen.getByText(/2\.772\.000/)).toBeTruthy();
+    // Ba cột tiền của thẻ rút gọn theo nghìn ("2.772 K") — số đầy đủ ở trang chi tiết.
+    expect(screen.getAllByText(/2\.772 K/).length).toBeGreaterThan(0);
     // Mã chuyến, biển số, chủ xe và lối nhắn tin — Figma "Vehicle Card".
     expect(screen.getByText('#XP-0042')).toBeTruthy();
     expect(screen.getByText('43A-123.45')).toBeTruthy();

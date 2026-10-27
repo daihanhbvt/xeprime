@@ -102,9 +102,11 @@ describe('Hoá đơn sau chuyến', () => {
 
   it('phụ phí hiện kèm lý do để khách đối chiếu được', () => {
     render(<TripFinanceCard finance={WITH_SURCHARGE} closed />);
-    fireEvent.click(screen.getByText('Xem chi tiết giá'));
-    expect(screen.getByText('Trả trễ 1.5 giờ')).toBeTruthy();
-    expect(screen.getByText('Vệ sinh xe')).toBeTruthy();
+    // Hoá đơn chuyến đã khép kê PHẲNG mọi dòng — không có nút "Xem chi tiết giá" để mở.
+    expect(screen.queryByText('Xem chi tiết giá')).toBeNull();
+    // Lý do đi cùng dòng phụ phí: "Phát sinh sau chuyến · Trả trễ 1.5 giờ".
+    expect(screen.getByText(/· Trả trễ 1.5 giờ/)).toBeTruthy();
+    expect(screen.getByText(/· Vệ sinh xe/)).toBeTruthy();
   });
 
   it('nói rõ khấu trừ cọc là CÁCH TRẢ, không phải khoản bị trừ lần hai', () => {

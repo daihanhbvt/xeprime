@@ -297,7 +297,31 @@
   }
 }
 
-/* ── Hộp "Đã gửi yêu cầu": một cột, ảnh nhỏ cạnh tên, nhận/trả chung một hàng ── */
+/*
+ * ── Hộp "Đã gửi yêu cầu" (Figma `21621:53711`): ảnh 224×126 + tên bên trái, khung lịch xám bên
+ * phải cao bằng cột ảnh, nhận · trả · nơi nhận xếp dọc. Hẹp hơn hai cột thì xếp chồng.
+ */
+.sent .body {
+  grid-template-columns: 224px minmax(0, 1fr);
+}
+
+.sent .vehicleImage,
+.sent .vehiclePlaceholder {
+  aspect-ratio: 224 / 126;
+}
+
+.sent .schedule {
+  align-self: stretch;
+}
+
+@container (max-width: 520px) {
+  .sent .body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+/* ── Hộp kết quả 600: một cột, ảnh nhỏ cạnh tên, nhận/trả chung một hàng ── */
 .receipt .head {
   padding-bottom: var(--xp-space-12);
   border-bottom: 1px solid var(--xp-color-border);

@@ -247,6 +247,7 @@ export const XP_TOKENS = {
   'line-height-body-lg': '24px',
   'font-size-body': '14px', // v2 14px/Regular · ô bảng, label form
   'line-height-body': '20px',
+  'line-height-body-relaxed': '22px', // thân 14px của design v2 (Figma `14px/Regular`: line-height 22)
   'font-size-body-sm': '12px', // v2 12px/Regular · caption, help text
   'line-height-body-sm': '18px',
   'font-size-label': '12px', // v2 12px/Medium · badge, chip, tag
@@ -316,12 +317,16 @@ export const XP_TOKENS = {
   'color-primary-pale': '#f0ddb7', // v2 Text/Brand/disable — chữ thương hiệu mờ trên nền tối
   'color-primary-accent': '#d3a94d', // gạch tab đang chọn, viền thẻ khi rê chuột (điểm đầu gradient chữ)
   'color-primary-glow': '#e9c336', // vành avatar gian hàng — điểm đầu gradient nút chính
+  'color-primary-highlight': '#fddb5d', // viền thẻ nổi bật ("Gian hàng Chuyên nghiệp" — Figma `20037:6949`)
   'color-destination-border': '#e9bb68', // viền thẻ điểm đến
   // Luồng đặt xe v2 (Figma `RHDyFsURFZQ9BC5JCLQzeE`, đọc 19/10/2026) — bốn bậc màn đó đặt tên rõ.
   'color-primary-border': '#e8ca8d', // v2 Stroke/primary-300 — viền thẻ tiền, phương thức đang mở
   'color-success-accent': '#12b76a', // v2 Status/success-500 — viền nét đứt thẻ "đã xác nhận"
   'color-success-border': '#6ce9a6', // v2 Status/success-300 — viền nhãn trạng thái xanh
   'color-warning-subtle': '#fffaeb', // v2 Status/warning-low — nền hộp lưu ý trang thanh toán
+  'color-warning-border': '#fec84b', // v2 Status/warning-300 — viền nhãn trạng thái cam
+  'color-warning-strong': '#ec4a0a', // v2 Status/warning-600 — chữ nhãn trạng thái cam
+  'color-info-strong': '#1570ef', // v2 Status/info-600 — chữ nhãn trạng thái xanh dương
   'market-footer-bg': '#060403', // nền footer chợ — đen ấm, đi cùng lớp ánh vàng phía trên
   // Nút chính v2 ("Tìm kiếm", "Trở thành chủ xe", "Đăng ký ngay"…) — ADR 0062 Q1 đã có điểm màu.
   'gradient-primary': 'linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%)',
@@ -335,6 +340,9 @@ export const XP_TOKENS = {
   // Lớp vàng rất nhạt phủ lên thẻ khi rê chuột (thẻ xe, thẻ gian hàng).
   'gradient-card-highlight':
     'linear-gradient(145deg, rgba(220, 192, 148, 0.2) 24.208%, rgba(237, 233, 219, 0.2) 88.612%)',
+  // Nền thẻ danh sách khi hover/focus (Figma "Vehicle Card" hover, `21788:63094`): vàng 20% trên trắng.
+  'gradient-card-hover':
+    'linear-gradient(174.5deg, rgba(243, 229, 205, 0.2) 24.208%, rgba(243, 239, 226, 0.2) 88.612%), linear-gradient(90deg, #ffffff 0%, #ffffff 100%)',
   // Bóng v2 (tông đen lạnh) — tên `elevation-*` để không đụng ba bóng cũ mà native chốt cứng.
   'elevation-xs': '0 1px 2px 0 rgba(10, 13, 18, 0.05)',
   'elevation-sm': '0 1px 3px 0 rgba(10, 13, 18, 0.1), 0 1px 2px 0 rgba(10, 13, 18, 0.06)',

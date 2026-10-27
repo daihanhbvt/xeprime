@@ -12422,11 +12422,11 @@ export interface components {
             leadMinutes: number;
             /** @description Khách có bấy nhiêu phút để chuyển tiền giữ chỗ */
             paymentWindowMinutes: number;
-            /** @description Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí */
+            /** @description Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) — ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí */
             freeCancelMinutes: number;
             /** @description ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe) */
             expiresAt: string;
-            /** @description ISO — mốc huỷ miễn phí dự kiến */
+            /** @description ISO — mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072) */
             freeCancelUntil: string;
             /** @description Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT` */
             tooShort: boolean;
@@ -12464,6 +12464,8 @@ export interface components {
             customerRiskLevel?: "normal" | "watchlist" | "blocked" | null;
             /** @description Nhắn tin trong ứng dụng được không */
             canMessageOnPlatform: boolean;
+            /** @description Kênh nhắn tin mở ở chặng này — tuyến hoa hồng chỉ khi đã có đơn */
+            chatOpen: boolean;
             /** @description ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch */
             pickupAt?: string | null;
             /** @description ISO-8601 UTC */
@@ -13177,6 +13179,8 @@ export interface components {
             /** @description Số tin chưa đọc của phía người xem */
             unread: number;
             status: string;
+            /** @description Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073) */
+            canSend: boolean;
         };
         CorrectDepositRefundDto: {
             /** @description Số tiền thực hoàn (chuỗi — ADR 0007) */
@@ -14018,8 +14022,12 @@ export interface components {
             remainingAmount: string;
             /** @description ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả */
             expiresAt: string;
-            /** @description ISO — huỷ trước mốc này được hoàn toàn bộ */
+            /** @description ISO — đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted) */
             freeCancelUntil: string;
+            /** @description true khi đã trả đủ — mốc huỷ miễn phí đã lưu và đang đếm */
+            freeCancelStarted: boolean;
+            /** @description Số phút huỷ miễn phí (chưa trả: nếu trả ngay bây giờ) */
+            freeCancelMinutes: number;
             /** @description false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0) */
             freeCancelAvailable: boolean;
             /** @description Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string */
@@ -17500,7 +17508,7 @@ export interface components {
             amount: string;
             paidAmount: string;
             expiresAt: string;
-            freeCancelUntil: string;
+            freeCancelUntil?: string | null;
             paidAt?: string | null;
             releasedAt?: string | null;
             /** @description Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ */

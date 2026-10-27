@@ -27,8 +27,7 @@ import styles from './MarketHeader.module.css';
  * Điều hướng chính theo design v2 (ADR 0062) — thứ tự và đích cố định, nhãn theo ngôn ngữ.
  *
  * "Cẩm nang" của bản thiết kế CỐ Ý không có: chưa có trang nào cho khách ở đích đó, và một mục
- * menu dẫn tới chỗ trống tệ hơn là không có mục. "Chuyến của tôi" nằm trong menu tài khoản và
- * thanh tab dưới đáy (mobile) — nó là lối của người ĐÃ đăng nhập, không phải của mọi khách.
+ * menu dẫn tới chỗ trống tệ hơn là không có mục. "Liên hệ" (trung tâm trợ giúp) nằm ở chân trang.
  */
 const NAV = [
   // Đúng trang chủ — `isActivePath('/')` chỉ khớp chính nó, không khớp mọi đường dẫn.
@@ -44,10 +43,10 @@ const NAV = [
      */
     activeWhen: [ROUTES.SEARCH, '/listings', '/shops'],
   },
+  // Khách chưa đăng nhập tới đây vẫn được `AccountShell` mời đăng nhập ngay tại trang.
+  { key: 'trips', labelKey: 'tripsNav', href: ROUTES.TRIPS },
   // Đích thật là `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
   { key: 'about', labelKey: 'aboutXePrime', href: ROUTES.ABOUT },
-  // Trung tâm trợ giúp CÔNG KHAI là nơi liên hệ duy nhất hiện có của sàn.
-  { key: 'contact', labelKey: 'contact', href: ROUTES.SUPPORT },
 ] as const;
 
 /** Logo theo chế độ sáng/tối — tỉ lệ 128 × 40 của artwork trong Figma. */

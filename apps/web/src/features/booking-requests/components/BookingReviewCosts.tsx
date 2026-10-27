@@ -64,6 +64,11 @@ interface BookingReviewCostsProps {
    * "dự kiến".
    */
   frozen?: boolean;
+  /**
+   * Vẽ dòng cọc thế chấp khi nhận xe. Hộp đặt xe tắt nó: cọc đã nằm ở thẻ "Giấy tờ & điều kiện
+   * nhận xe" bên trái — nói hai lần cùng một khoản là thừa.
+   */
+  showDeposit?: boolean;
 }
 
 /**
@@ -95,6 +100,7 @@ export function BookingReviewCosts({
   surface = 'review',
   paidAmount = null,
   frozen = false,
+  showDeposit = true,
 }: BookingReviewCostsProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const t = useTranslations('BookingRequests.flow');
@@ -112,11 +118,12 @@ export function BookingReviewCosts({
     longTerm,
     holdAmount,
     payAtPickup,
-    deposit,
+    deposit: costDeposit,
     total,
     costNote,
   } = useCustomerCostView({ listing, breakdown, isDelivery, frozen });
   const onTrip = surface === 'trip';
+  const deposit = showDeposit ? costDeposit : null;
 
   return (
     <>

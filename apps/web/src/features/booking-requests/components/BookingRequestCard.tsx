@@ -560,7 +560,11 @@ export function BookingRequestCard({
       {/* ── Chân thẻ: liên hệ bên trái, quyết định / đường sang đơn bên phải. ── */}
       <div className={styles.footer}>
         <div className={styles.contact}>
-          {chatHidden ? null : (
+          {/*
+            Chủ xe tuyến hoa hồng chưa nhắn khách khi yêu cầu chưa thành đơn (ADR 0073) — ẩn hẳn,
+            cùng luật với SĐT khách; server chặn endpoint mở hội thoại.
+          */}
+          {chatHidden || !request.chatOpen ? null : (
             <Tooltip
               title={request.canMessageOnPlatform ? undefined : t('actions.messageUnavailable')}
             >

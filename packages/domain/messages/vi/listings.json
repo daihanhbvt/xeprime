@@ -179,7 +179,7 @@
       },
       "cancellation": {
         "title": "Chính sách huỷ chuyến & giữ chỗ",
-        "free": "<strong>Huỷ miễn phí:</strong> kể từ lúc chủ xe nhận chuyến, bạn được hoàn 100% số đã thanh toán nếu huỷ trong {percent}% khoảng thời gian còn lại tới giờ nhận xe (tối thiểu {minMinutes} phút, tối đa {hours} giờ, không quá giờ nhận xe).",
+        "free": "<strong>Huỷ miễn phí:</strong> kể từ lúc thanh toán tiền giữ chỗ thành công, bạn được hoàn 100% số đã thanh toán nếu huỷ trong {percent}% khoảng thời gian còn lại tới giờ nhận xe (tối thiểu {minMinutes} phút, tối đa {hours} giờ, không quá giờ nhận xe).",
         "hold": "<strong>Thời gian giữ chỗ:</strong> sau khi chủ xe nhận chuyến, bạn có {percent}% khoảng thời gian còn lại tới giờ nhận xe để thanh toán tiền giữ chỗ (tối thiểu {minMinutes} phút, tối đa {minutes} phút).",
         "release": "Quá thời gian giữ chỗ mà chưa thanh toán đủ, yêu cầu tự đóng và lịch xe được mở lại cho khách khác.",
         "protection": "Chính sách bảo vệ người thuê: nếu chủ xe huỷ chuyến sau khi bạn đã thanh toán tiền giữ chỗ, bạn được hoàn 100% số đã thanh toán."
@@ -240,6 +240,12 @@
         "promoRemove": "Gỡ mã khuyến mãi",
         "promoApply": "Áp dụng mã khuyến mãi / giới thiệu",
         "feeUnitLine": "{quantity, plural, other {# ngày}} × {unit}"
+      },
+      "incomplete": {
+        "range": "Chọn thời gian nhận và trả xe trước khi thuê.",
+        "package": "Chọn gói thuê dài hạn trước khi thuê.",
+        "pickupDate": "Chọn ngày nhận xe mong muốn trước khi thuê.",
+        "destination": "Nhập điểm đến của chuyến liên tỉnh trước khi thuê."
       }
     },
     "deliveryModal": {

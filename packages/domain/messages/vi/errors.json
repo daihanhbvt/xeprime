@@ -74,7 +74,7 @@
     "CUSTOMER_ARCHIVED": "Khách này đã được lưu trữ.",
     "CUSTOMER_BLOCKED": "Khách này đang trong danh sách từ chối phục vụ.",
     "CHAT_CUSTOMER_UNAVAILABLE": "Khách chưa có tài khoản XePrime nên chưa nhắn tin trong ứng dụng được — hãy gọi điện hoặc nhắn Zalo.",
-    "CHAT_REQUIRES_BOOKING": "Chủ xe cá nhân mở kênh nhắn tin sau khi bạn gửi yêu cầu thuê. Hãy chọn xe và gửi yêu cầu trước nhé.",
+    "CHAT_REQUIRES_BOOKING": "Bạn nhắn được cho chủ xe cá nhân sau khi thanh toán tiền giữ chỗ thành công. Trước đó, hãy trao đổi qua yêu cầu thuê.",
     "BRANCH_HAS_DEPENDENCIES": "Chi nhánh còn dữ liệu liên quan nên chưa xoá được.",
     "BRANCH_DEFAULT_IMMUTABLE": "Không sửa/xoá được chi nhánh mặc định.",
     "BRANCH_LOCATION_REQUIRED": "Chi nhánh cần có địa chỉ trước khi dùng.",

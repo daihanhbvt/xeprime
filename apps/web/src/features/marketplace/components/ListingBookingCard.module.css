@@ -578,8 +578,13 @@
   border-radius: 10px;
 }
 
+/*
+ * `1 1 auto`, không phải `flex: 1`: cơ sở 0 chia ĐỀU ba ô nên "Liên tỉnh (1 chiều)" bị bẻ hai dòng
+ * trong khi hai ô kia còn thừa chỗ. Cơ sở theo độ dài chữ ⇒ ô dài nhận phần rộng hơn; chỉ khi cả
+ * hàng thật sự hết chỗ (màn hẹp) chữ mới xuống dòng.
+ */
 .routeBtn {
-  flex: 1;
+  flex: 1 1 auto;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid transparent;

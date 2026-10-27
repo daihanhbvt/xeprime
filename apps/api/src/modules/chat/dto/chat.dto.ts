@@ -297,6 +297,12 @@ export class ConversationSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) lastSenderType!: string | null;
   @ApiProperty({ description: 'Số tin chưa đọc của phía người xem' }) unread!: number;
   @ApiProperty() status!: string;
+  /**
+   * Hai bên gửi tin được không (`chatOpenBetween`, ADR 0073). `false` với chủ xe tuyến hoa hồng khi
+   * cặp này chưa có đơn — lịch sử vẫn đọc được, ô soạn tin ẩn; server chặn `POST …/messages`.
+   */
+  @ApiProperty({ description: 'Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)' })
+  canSend!: boolean;
 }
 
 export class ConversationPageMetaDto {

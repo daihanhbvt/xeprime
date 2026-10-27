@@ -1,4 +1,6 @@
-import type { components, PaginationMeta } from '@xeprime/types';
+import type { components, PaginationMeta, PickupPreference } from '@xeprime/types';
+import type { Dayjs } from 'dayjs';
+import type { RentalMode } from '@/components/form/RentalDateTimeRangeField';
 import type { PickupMethod } from './schema';
 
 /** Shape yêu cầu đặt xe lấy từ contract OpenAPI (ADR 0007) — không viết tay lại DTO. */
@@ -55,19 +57,20 @@ export type BookingRequestDecisionTarget = Omit<
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 
 /**
- * Thứ khách ĐÃ chọn ở thẻ đặt xe của trang chi tiết, mang sang hộp yêu cầu thuê để không phải chọn
- * lại — cách nhận xe, địa chỉ giao đã xác nhận trên bản đồ, gói dài hạn, mã khuyến mãi.
+ * Thứ khách ĐÃ chọn ở thẻ đặt xe của trang chi tiết — TOÀN BỘ chuyến. Hộp yêu cầu thuê không còn
+ * bước "Chuyến đi" (27/10/2026): nó mở thẳng ở màn Xem lại từ đúng những giá trị này, nên thẻ đặt
+ * xe chỉ mở hộp khi chuyến đã đủ (`ListingBookingCard`).
  *
- * Chỉ là ĐIỀN SẴN: bản nháp chờ đăng nhập (ADR 0060) vẫn thắng nó, mã khuyến mãi vẫn được server
- * đánh giá lại cho đúng người (ADR 0046 điều 7), và mọi thứ vẫn sửa được ở bước Chuyến đi.
+ * Bản nháp chờ đăng nhập (ADR 0060) vẫn thắng nó, và mã khuyến mãi vẫn được server đánh giá lại cho
+ * đúng người (ADR 0046 điều 7). Muốn đổi chuyến thì khách đóng hộp và chọn lại ở thẻ.
  */
 export interface RequestBookingPrefill {
-  /**
-   * Cách nhận xe khách chọn ở thẻ. Giao tận nơi mà chưa có địa chỉ vẫn GIỮ là giao tận nơi: bước
-   * Chuyến đi hỏi địa chỉ, thay vì âm thầm đổi thành tự nhận.
-   */
+  /** Cách nhận xe khách chọn ở thẻ (tự lái / dài hạn). Có tài xế thì xe đến đón — bỏ qua. */
   pickupMethod?: PickupMethod;
-  /** Địa chỉ giao xe khách đã xác nhận (gợi ý bản đồ hoặc gõ tay). */
+  /**
+   * Địa chỉ khách đã xác nhận ở thẻ (gợi ý bản đồ hoặc gõ tay): địa chỉ GIAO XE của chuyến tự lái /
+   * dài hạn, hoặc điểm ĐÓN của chuyến có tài xế.
+   */
   delivery?: {
     addressLine: string;
     provinceCode?: string | null;
@@ -75,20 +78,21 @@ export interface RequestBookingPrefill {
     latitude?: number | null;
     longitude?: number | null;
   } | null;
+  /** Điểm đến của chuyến có tài xế liên tỉnh — chuỗi tự do. */
+  destination?: string | null;
+  /** Thuê theo ngày hay theo giờ — đổi cách kể thời lượng ở thẻ chuyến. */
+  rentalMode?: RentalMode;
   /** Gói thuê dài hạn đang chọn — ngoài sáu gói của ADR 0011 thì bỏ qua. */
   packageMonths?: number | null;
+  /** Nguyện vọng ngày nhận của thuê dài hạn — kèm ngày cụ thể khi chọn `specific_date`. */
+  pickupPreference?: PickupPreference;
+  requestedPickupDate?: Dayjs | null;
   /** Mã khuyến mãi đang áp ở thẻ đặt xe — chuỗi mã, KHÔNG phải số giảm. */
   promoCode?: string | null;
   /** Khách chọn bảo hiểm vật chất xe MIC (IV) — tùy chọn. */
   vehicleProtectionSelected?: boolean;
   /** Khách chọn bảo hiểm tai nạn người ngồi trên xe MIC (IP) — tùy chọn. */
   personalAccidentSelected?: boolean;
-  /**
-   * Thẻ đặt xe đã có ĐỦ chuyến (dịch vụ + thời gian, hoặc gói) ⇒ hộp tự chạy lượt "Tiếp tục" ngay
-   * khi mở: kiểm khung giờ, mời đăng nhập nếu cần, soát bằng lái — rồi tới thẳng màn Xem lại.
-   * Không bao giờ tự GỬI: khách vẫn tự bấm "Gửi yêu cầu thuê xe".
-   */
-  autoContinue?: boolean;
 }
 /** Body duyệt — thuê dài hạn bắt buộc `scheduledPickupAt` (ADR 0011). */
 export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];

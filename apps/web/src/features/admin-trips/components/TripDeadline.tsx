@@ -3,7 +3,6 @@
 import { ClockCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import {
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   TRIP_HANDOVER_SOON_HOURS,
   TRIP_HOLD_URGENT_MINUTES,
   TRIP_REQUEST_URGENT_MINUTES,
@@ -29,18 +28,16 @@ export function RespondByCountdown({ deadline }: { deadline: string }) {
   );
 }
 
-/** Hạn GIỮ CHỖ của khách — hai chặng 60′ như đồng hồ khách đang nhìn (ADR 0032 điều 2). */
+/** Hạn GIỮ CHỖ của khách — cùng đồng hồ một mạch khách đang nhìn (ADR 0032 điều 2). */
 export function HoldCountdown({ deadline }: { deadline: string }) {
   const t = useTranslations('AdminTrips.request');
   return (
     <Countdown
       deadline={deadline}
       urgentMs={TRIP_HOLD_URGENT_MINUTES * MINUTE_MS}
-      segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * MINUTE_MS}
       labels={{
         remaining: t('remaining'),
         expired: t('expired'),
-        segment: (index, total) => t('segment', { index, total }),
       }}
     />
   );

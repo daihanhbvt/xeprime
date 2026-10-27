@@ -27,7 +27,15 @@ vi.mock('../hooks', () => ({ useTrip: () => trip }));
 vi.mock('@/features/marketplace/hooks/use-listing-detail', () => ({
   useListingDetail: () => ({ data: undefined, isLoading: false }),
 }));
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
+// Hộp "Thanh toán thành công" có nút nhắn chủ xe — nút đó tự mời đăng nhập khi phiên mất.
+vi.mock('@/features/auth/components/AuthModalProvider', () => ({
+  useAuthModal: () => ({ open: vi.fn() }),
+  useNextFromCurrentPath: () => '/payment/01TRIP',
+}));
 const gatewayMethods = vi.hoisted(() => ({ methods: [] as unknown[] }));
 vi.mock('@/features/payment-gateway/api', () => ({
   fetchGatewayMethods: vi.fn(async () => ({
@@ -50,6 +58,8 @@ const HOLD: NonNullable<CustomerTripDetail['hold']> = {
   expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
   freeCancelUntil: new Date(Date.now() + 4 * 3600_000).toISOString(),
   freeCancelAvailable: true,
+  freeCancelStarted: false,
+  freeCancelMinutes: 120,
   lateCancelRefundAmount: '0',
   paidAt: null,
   paidVia: null,
@@ -105,8 +115,11 @@ describe('TripPaymentView', () => {
     expect(src).toContain('des=XPH23456789');
     // Không có nút tự khai đã trả — tiền về thì realtime tự lật trang.
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
-    // Quay lại là về CHUYẾN này.
-    expect(screen.getByRole('link', { name: /chi tiết chuyến/i }).getAttribute('href')).toBe(
+    // Quay lại (mũi tên + breadcrumb) và "Xem chi tiết" của thẻ thanh toán đều về CHUYẾN này.
+    const back = screen.getAllByRole('link', { name: /chi tiết chuyến/i });
+    expect(back.length).toBeGreaterThan(0);
+    for (const link of back) expect(link.getAttribute('href')).toBe('/trips/01TRIP');
+    expect(screen.getByRole('link', { name: 'Xem chi tiết' }).getAttribute('href')).toBe(
       '/trips/01TRIP',
     );
   });
@@ -150,9 +163,8 @@ describe('TripPaymentView', () => {
     expect(within(dialog).getByText(/Hệ thống đã ghi nhận 140.800.*!/)).toBeTruthy();
     expect(within(dialog).queryByText(/ qua /)).toBeNull();
     expect(within(dialog).getByText('01TRIP')).toBeTruthy();
-    expect(
-      within(dialog).getByRole('link', { name: 'Xem chi tiết chuyến' }).getAttribute('href'),
-    ).toBe('/trips/01TRIP');
+    // Figma: Quay lại · Nhắn tin cho chủ xe · Chuyến đi của tôi (nút chính).
+    expect(within(dialog).getByRole('button', { name: /Quay lại/ })).toBeTruthy();
     expect(
       within(dialog).getByRole('link', { name: 'Chuyến đi của tôi' }).getAttribute('href'),
     ).toBe('/trips');

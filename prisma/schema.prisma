@@ -4788,8 +4788,10 @@ model BookingHold {
   priceSnapshotJson      Json      @map("price_snapshot_json") @db.JsonB
   /// { pickupAt, returnAt, packageMonths } — lịch đã chốt lúc duyệt.
   scheduleJson           Json      @map("schedule_json") @db.JsonB
-  /// Mốc huỷ miễn phí — CỘT đóng băng lúc tạo (ADR 0021 điều 7 vẫn giữ), không tính lại.
-  freeCancelUntil        DateTime  @map("free_cancel_until") @db.Timestamptz(3)
+  /// Mốc huỷ miễn phí — NULL cho tới khi tiền giữ chỗ về ĐỦ; ghi MỘT lần trong cùng lượt lật `paid`
+  /// (ADR 0072: tính từ `paid_at`, không từ lúc nhận chuyến), không tính lại. CHECK
+  /// `booking_holds_paid_has_free_cancel`: đã có `paid_at` thì phải có mốc này.
+  freeCancelUntil        DateTime? @map("free_cancel_until") @db.Timestamptz(3)
   expiresAt              DateTime  @map("expires_at") @db.Timestamptz(3)
   paidAt                 DateTime? @map("paid_at") @db.Timestamptz(3)
   /// Đã bắn lần nhắc THỨ NHẤT chưa — mốc còn `HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FIRST`

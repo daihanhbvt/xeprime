@@ -35,15 +35,16 @@ interface RequestBookingModalProps {
  *
  * `size="xl"` (Wave 9) → desktop modal rộng, đủ chỗ cho HAI cột (hồ sơ xe · luồng thao tác);
  * mobile vẫn **toàn màn hình** theo Figma `130:1563` quy tắc 5 ("Form overlays → Full-Screen —
- * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, bản đồ địa chỉ và màn Xem lại hai cột
- * (Figma `19727:55409`).
+ * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: màn Xem lại hai cột (Figma `19727:55409`) và
+ * bước bằng lái.
  *
  * `footer={null}`: mỗi bước có bộ nút riêng ngay cuối cột phải, nên footer chung của dialog sẽ
  * là hàng nút thứ hai không ai bấm.
  *
- * Gửi xong thì hộp ĐỔI HÌNH (`RequestBookingResult`): "Đã gửi yêu cầu" là popup 600px riêng của
+ * Gửi xong thì hộp ĐỔI HÌNH (`RequestBookingResult`): "Đã gửi yêu cầu" là popup 750px riêng của
  * thiết kế (Figma `19759:22026`) — không thanh tiêu đề, không đệm của vỏ, tự cuộn và tự dựng hàng
- * nút; các lời báo khác (trùng lặp, bị chặn) là hộp `md` thường.
+ * nút; các lời báo khác (trùng lặp, bị chặn, mời đăng nhập, chuyến không đi tiếp được) là hộp `md`
+ * thường.
  */
 export function RequestBookingModal({
   vehicleId,

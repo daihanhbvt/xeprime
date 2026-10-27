@@ -85,6 +85,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'xe — ADR 0064. Phí ngày và việc có chào bảo hiểm hay không đến từ báo giá, không từ đây.',
       },
       {
+        name: 'public-fee-policies',
+        description:
+          'Số liệu công khai của chính sách phí hiện hành dùng cho lời mời hợp tác (khoảng % hoa ' +
+          'hồng thấp nhất → cao nhất) — không có kinh tế từng chuyến.',
+      },
+      {
         name: 'catalog',
         description: 'Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm.',
       },

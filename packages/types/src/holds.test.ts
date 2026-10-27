@@ -19,7 +19,7 @@ import {
   holdWindowsFor,
   hasFreeCancelWindow,
   holdWindowsPreview,
-  isFreeCancelWindowShort,
+  freeCancelWindowFromPayment,
   longClockText,
   CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_CANCEL_PREVIEW_KIND_VALUES,
@@ -297,11 +297,39 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066
     ).toBe(true);
   });
 
-  it('`isFreeCancelWindowShort`: chuyến gần huỷ đóng TRƯỚC hạn trả; chuyến xa hai mốc trùng là thường lệ', () => {
-    expect(isFreeCancelWindowShort(windowsAt(4))).toBe(true);
-    expect(isFreeCancelWindowShort(windowsAt(8))).toBe(true);
-    expect(isFreeCancelWindowShort(windowsAt(24))).toBe(false);
-    expect(isFreeCancelWindowShort(windowsAt(72))).toBe(false);
+  /*
+   * ADR 0072 — huỷ miễn phí đếm từ lúc TIỀN VỀ ĐỦ, ΔT tính lại từ `paidAt`. Khách nhận chuyến lúc
+   * T, giờ nhận T+6h, trả ở T+35′: ΔT = 325′ ⇒ 20% = 65′, mốc = paidAt + 65′ — không còn ca mốc
+   * huỷ miễn phí đã trôi qua lúc khách vừa trả.
+   */
+  it('`freeCancelWindowFromPayment`: đếm XUÔI từ paidAt với ΔT = pickupAt − paidAt', () => {
+    const paidAt = new Date(acceptedAt.getTime() + 35 * 60_000);
+    const pickupAt = new Date(acceptedAt.getTime() + 6 * 3_600_000);
+    const w = freeCancelWindowFromPayment({ paidAt, pickupAt, freeCancelHours: 2 });
+    expect(w.leadMinutes).toBe(325);
+    expect(w.freeCancelMinutes).toBe(65);
+    expect(w.freeCancelUntil.getTime()).toBe(paidAt.getTime() + 65 * 60_000);
+  });
+
+  it('`freeCancelWindowFromPayment`: trần chính sách, sàn 15′, và KẸP bởi giờ nhận xe', () => {
+    const far = freeCancelWindowFromPayment({
+      paidAt: acceptedAt,
+      pickupAt: new Date(acceptedAt.getTime() + 72 * 3_600_000),
+      freeCancelHours: 2,
+    });
+    expect(far.freeCancelMinutes).toBe(120);
+    // Trả sát giờ: sàn 15′ nhưng không vượt quá giờ nhận xe (còn 10′).
+    const pickupAt = new Date(acceptedAt.getTime() + 10 * 60_000);
+    const tight = freeCancelWindowFromPayment({ paidAt: acceptedAt, pickupAt, freeCancelHours: 2 });
+    expect(tight.freeCancelMinutes).toBe(15);
+    expect(tight.freeCancelUntil.getTime()).toBe(pickupAt.getTime());
+    // Chính sách tắt huỷ miễn phí ⇒ 0, sàn không nâng lên.
+    const off = freeCancelWindowFromPayment({
+      paidAt: acceptedAt,
+      pickupAt: new Date(acceptedAt.getTime() + 48 * 3_600_000),
+      freeCancelHours: 0,
+    });
+    expect(hasFreeCancelWindow(off.freeCancelUntil, acceptedAt)).toBe(false);
   });
 
   it('xem trước cửa sổ: cùng `holdWindowsFor`, `tooShort` theo CÙNG ngưỡng lượt tạo hold', () => {

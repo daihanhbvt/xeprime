@@ -72,14 +72,29 @@ export class CustomerHoldDto {
   remainingAmount!: string;
   @ApiProperty({ description: 'ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả' })
   expiresAt!: string;
-  @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' })
-  freeCancelUntil!: string;
   /**
-   * Chuyến này CÓ cửa sổ huỷ miễn phí không (`hasFreeCancelWindow`). Từ ADR 0066 mọi hold mới có
-   * ít nhất 15′, nên `false` chỉ khi `freeCancelUntil` trùng mốc nhận chuyến: chính sách phí đặt
-   * `freeCancelHours = 0`, cửa sổ bị giờ nhận xe kẹp về 0, hoặc hold cũ tạo theo luật trước ADR
-   * 0066. Khi đó mọi lượt huỷ sau khi trả là huỷ muộn. Server suy từ hai mốc ĐÃ LƯU, client không
-   * tự so.
+   * Mốc huỷ miễn phí (ADR 0072 — đếm từ lúc tiền giữ chỗ về ĐỦ). Đã trả đủ: mốc ĐÃ LƯU. Chưa trả đủ:
+   * bản XEM TRƯỚC "trả ngay bây giờ thì huỷ miễn phí tới …" — đổi theo giờ hỏi; đọc kèm
+   * `freeCancelStarted`. Luôn có giá trị để app đã phát hành không vỡ.
+   */
+  @ApiProperty({
+    description:
+      'ISO — đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted)',
+  })
+  freeCancelUntil!: string;
+  /** Đồng hồ huỷ miễn phí đã chạy chưa — `true` từ lúc tiền giữ chỗ về đủ (ADR 0072). */
+  @ApiProperty({ description: 'true khi đã trả đủ — mốc huỷ miễn phí đã lưu và đang đếm' })
+  freeCancelStarted!: boolean;
+  /**
+   * Độ dài cửa sổ huỷ miễn phí (phút): đã trả — tính từ `paidAt`; chưa trả — nếu trả NGAY bây giờ
+   * (`clamp(20% × (giờ nhận − bây giờ), 15′, trần chính sách)`, kẹp bởi giờ nhận xe). Server tính.
+   */
+  @ApiProperty({ description: 'Số phút huỷ miễn phí (chưa trả: nếu trả ngay bây giờ)' })
+  freeCancelMinutes!: number;
+  /**
+   * Chuyến này CÓ cửa sổ huỷ miễn phí không (`hasFreeCancelWindow`). Mọi hold có ít nhất 15′, nên
+   * `false` chỉ khi chính sách phí đặt `freeCancelHours = 0`, cửa sổ bị giờ nhận xe kẹp về 0, hoặc
+   * hold trả theo luật cũ mà mốc đã qua lúc trả. Khi đó mọi lượt huỷ sau khi trả là huỷ muộn.
    */
   @ApiProperty({
     description:
@@ -188,7 +203,8 @@ export class PlatformHoldDto {
   @ApiProperty() amount!: string;
   @ApiProperty() paidAmount!: string;
   @ApiProperty() expiresAt!: string;
-  @ApiProperty() freeCancelUntil!: string;
+  /** `null` cho tới khi tiền về đủ — mốc huỷ miễn phí tính từ lúc đó (ADR 0072). */
+  @ApiPropertyOptional({ type: String, nullable: true }) freeCancelUntil!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) releasedAt!: string | null;
   @ApiProperty({

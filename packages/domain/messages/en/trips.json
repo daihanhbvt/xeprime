@@ -319,7 +319,7 @@
     "countdownExpired": "Payment window closed",
     "freeCancelCountdown": "Free cancellation ends in:",
     "freeCancelCountdownExpired": "Free cancellation has ended",
-    "freeCancelSoon": "This trip starts soon, so free cancellation ends BEFORE the payment deadline: only cancelling before {time} gets you a full refund of what you paid.",
+    "freeCancelSoon": "Free cancellation starts when your payment succeeds: if you pay now, cancelling before {time} refunds 100% of what you paid.",
     "qrCaption": "Scan to transfer",
     "vsDepositHint": "The reservation payment goes to XePrime to confirm the trip and counts towards your rental. It is not the security deposit — that is left with the host at pickup and returned when you bring the car back undamaged.",
     "vsDepositHintLabel": "How the reservation payment differs from the security deposit",
@@ -334,7 +334,9 @@
     "lateCancelRefund": "After that: the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
     "lateCancelNoRefund": "After that, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
     "noFreeCancelRefund": "This trip has no free-cancellation window. If you cancel after paying, the {amount} insurance is refunded in full to your Points wallet; the booking fee and the rent paid in advance are not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
-    "noFreeCancelNoRefund": "This trip has no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime)."
+    "noFreeCancelNoRefund": "This trip has no free-cancellation window. If you cancel after paying, the reservation payment is not refunded (the owner is compensated for holding the car for you, and the remainder goes to XePrime).",
+    "freeCancelFromPayment": "Free cancellation for {duration} from the moment your payment succeeds — cancelling within that time refunds 100% of what you paid.",
+    "freeCancelFromPaymentShort": "Free cancellation: {duration} from successful payment"
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -427,6 +429,7 @@
       "package": "Package",
       "pickupWish": "Preferred pickup",
       "point": "{weekday}, {dateTime}",
+      "viewDetail": "View details",
       "customerTotal": "Your total",
       "payOwner": "Pay the owner",
       "payOwnerNote": "What you pay the owner after every amount due online is deducted.",

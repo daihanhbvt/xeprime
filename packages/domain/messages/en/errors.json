@@ -74,7 +74,7 @@
     "CUSTOMER_ARCHIVED": "This customer has been archived.",
     "CUSTOMER_BLOCKED": "This customer is on your refused-service list.",
     "CHAT_CUSTOMER_UNAVAILABLE": "This guest has no XePrime account yet, so in-app messaging is unavailable — call them or reach out on Zalo.",
-    "CHAT_REQUIRES_BOOKING": "Individual hosts open messaging once you send a rental request. Pick a car and send a request first.",
+    "CHAT_REQUIRES_BOOKING": "You can message individual hosts once your holding payment goes through. Until then, use your rental request.",
     "BRANCH_HAS_DEPENDENCIES": "This branch still has related records, so it can't be deleted.",
     "BRANCH_DEFAULT_IMMUTABLE": "The default branch can't be edited or deleted.",
     "BRANCH_LOCATION_REQUIRED": "This branch needs an address before it can be used.",

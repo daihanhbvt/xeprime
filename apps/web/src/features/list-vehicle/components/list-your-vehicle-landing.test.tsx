@@ -46,6 +46,13 @@ vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: session.user ?? undefined }),
 }));
 
+/** Khoảng % hoa hồng của lời mời hợp tác — API công khai, đọc qua React Query (`usePartnerOffer`). */
+vi.mock('@/features/account/hooks/use-partner-offer', () => ({
+  usePartnerOffer: () => ({
+    data: { minOwnerCommissionPercent: 0, maxOwnerCommissionPercent: 10 },
+  }),
+}));
+
 beforeEach(() => {
   nav.back.mockReset();
   session.user = null;

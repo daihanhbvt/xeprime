@@ -154,21 +154,6 @@
   min-width: 0;
 }
 
-/*
- * Chính sách tắt giao xe ⇒ chỉ còn một cách nhận xe. Vẫn dùng lại hình thức của một ô lựa chọn
- * (icon + nhãn + địa chỉ) nhưng KHÔNG phải nút bấm được: nó là thông tin, không phải câu hỏi.
- */
-.pickupSingle {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-muted);
-  min-width: 0;
-}
-
 .pickupOptionActive {
   border-color: var(--xp-color-primary);
   background: var(--xp-color-bg-selected);
@@ -229,15 +214,6 @@
   font-size: var(--xp-font-size-sm);
   line-height: var(--xp-line-height);
   color: var(--xp-color-text-tertiary);
-}
-
-/* ── Bảo hiểm chuyến đi MIC ─────────────────────────────────────────── */
-
-.insuranceBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-  min-width: 0;
 }
 
 .deliveryFootnote {
@@ -534,23 +510,8 @@
 }
 
 /*
- * Vỏ của bảng chi tiết giá trong thân bước. Luôn có mặt để `ref` cuộn-vào-tầm-mắt đứng yên,
- * nhưng khi bảng đang đóng thì nó rỗng — và một flex item rỗng vẫn ăn nguyên một khoảng `gap`
- * của `.stepBody`. `:empty` gỡ đúng chỗ đó.
- */
-.priceDetail {
-  min-width: 0;
-  /* Khối vừa mở dừng dưới đầu vùng cuộn một nhịp, không dán sát mép. */
-  scroll-margin-top: var(--xp-space-sm);
-}
-
-.priceDetail:empty {
-  display: none;
-}
-
-/*
- * Hộp tự đi tiếp khi mở từ thẻ đặt xe (`prefill.autoContinue`): một vòng chờ giữa thân hộp thay
- * cho biểu mẫu, trong lúc kiểm khung giờ / phiên / bằng lái.
+ * Hộp đang kiểm chuyến thẻ đặt xe đưa sang: một vòng chờ giữa thân hộp, trong lúc kiểm khung giờ /
+ * phiên / bằng lái.
  */
 .preparing {
   display: flex;

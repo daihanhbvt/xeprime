@@ -18,10 +18,16 @@
   margin-bottom: 20px;
 }
 
-/* Lưới thân trang 2 cột: Trái 728px, Phải 440px, khe 32px */
+/*
+ * Lưới thân trang 2 cột, khe 32px — khung 1200 của Figma: Trái ~728, Phải 440.
+ *
+ * Hai cột LẤP ĐẦY khung chứ không cố định 728 + 440: ở màn ≥2000px khung chợ nới ra 1440/1720
+ * (`--xp-market-container-max-width`) và dãy ảnh phía trên trải theo, nên lưới cố định bị hụt mép phải.
+ * Phải giữ tỉ lệ Figma (440 : 728 ≈ 0,6) và không bao giờ hẹp hơn 440 — ở khung 1200 kết quả y như cũ.
+ */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 728px) 440px;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.6fr);
   gap: 32px;
   align-items: start;
 }
@@ -296,7 +302,7 @@
   margin-bottom: 12px;
 }
 
-/* Cột phải sticky (440px) */
+/* Cột phải sticky (≥440px, xem `.layout`) */
 .rightCol {
   position: sticky;
   top: calc(var(--xp-market-header-height, 68px) + 20px);

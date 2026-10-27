@@ -43,7 +43,7 @@ export const LEGAL_DOC_VALUES = Object.values(LEGAL_DOC) as LegalDoc[];
  * quy chế nói về phí mà bản điều khoản chưa nói thì người đọc không biết bản nào thắng.
  * Sửa nội dung một văn bản là phải dời ngày này và ghi lại ở phần lịch sử.
  */
-export const LEGAL_EFFECTIVE_FROM = '2026-10-22';
+export const LEGAL_EFFECTIVE_FROM = '2026-10-27';
 
 /**
  * Một mục của văn bản: tên mục + (tuỳ chọn) thứ tự các GẠCH ĐẦU DÒNG bên trong nó.
@@ -135,9 +135,10 @@ export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly LegalSection[]>>
     { key: 'principle' },
     { key: 'beforeDecision' },
     /*
-     * Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe (ADR 0066 · `holdWindowsFor`): MỘT công thức
-     * cho mọi ΔT — thanh toán 30%, huỷ miễn phí 20%, sàn 15′, trần của chính sách — + chuyến quá
-     * gần + luật hết hạn. Luật tiền và chính sách công bố đi cùng một lần phát hành.
+     * Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe (ADR 0066): thanh toán 30% tính từ lúc nhận
+     * chuyến, huỷ miễn phí 20% tính từ lúc THANH TOÁN ĐỦ (ADR 0072), sàn 15′, trần của chính sách —
+     * + chuyến quá gần + hết hạn thanh toán là tự huỷ. Luật tiền và chính sách công bố đi cùng một
+     * lần phát hành.
      */
     { key: 'paymentWindow', items: ['payment', 'cancel', 'tooShort', 'expiry'] },
     { key: 'freeCancel' },

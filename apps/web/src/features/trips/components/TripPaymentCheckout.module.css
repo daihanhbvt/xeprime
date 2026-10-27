@@ -225,6 +225,30 @@
   background: var(--xp-color-bg-container);
 }
 
+.summaryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+/* "Xem chi tiết" — chữ vàng như bản vẽ, gạch chân khi rê/focus để đọc ra là một liên kết. */
+.summaryLink {
+  flex: none;
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.summaryLink:hover,
+.summaryLink:focus-visible {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
 .summaryTitle {
   margin: 0;
   color: var(--xp-color-text);

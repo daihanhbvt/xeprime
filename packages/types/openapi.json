@@ -75024,6 +75024,10 @@
       "description": "Mô tả sản phẩm bảo hiểm chuyến (quyền lợi, khấu trừ, bồi thường tối đa) cho một loại xe — ADR 0064. Phí ngày và việc có chào bảo hiểm hay không đến từ báo giá, không từ đây."
     },
     {
+      "name": "public-fee-policies",
+      "description": "Số liệu công khai của chính sách phí hiện hành dùng cho lời mời hợp tác (khoảng % hoa hồng thấp nhất → cao nhất) — không có kinh tế từng chuyến."
+    },
+    {
       "name": "catalog",
       "description": "Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm."
     },
@@ -77720,7 +77724,7 @@
           },
           "freeCancelMinutes": {
             "type": "number",
-            "description": "Khách huỷ miễn phí trong bấy nhiêu phút (sàn 15′, chưa kẹp bởi giờ nhận xe — xem `freeCancelUntil`); 0 = chính sách tắt huỷ miễn phí"
+            "description": "Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) — ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí"
           },
           "expiresAt": {
             "type": "string",
@@ -77728,7 +77732,7 @@
           },
           "freeCancelUntil": {
             "type": "string",
-            "description": "ISO — mốc huỷ miễn phí dự kiến"
+            "description": "ISO — mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072)"
           },
           "tooShort": {
             "type": "boolean",
@@ -77860,6 +77864,10 @@
           "canMessageOnPlatform": {
             "type": "boolean",
             "description": "Nhắn tin trong ứng dụng được không"
+          },
+          "chatOpen": {
+            "type": "boolean",
+            "description": "Kênh nhắn tin mở ở chặng này — tuyến hoa hồng chỉ khi đã có đơn"
           },
           "pickupAt": {
             "type": "string",
@@ -78055,6 +78063,7 @@
           "customerName",
           "customerPhone",
           "canMessageOnPlatform",
+          "chatOpen",
           "serviceType",
           "deliveryRequested",
           "createdAt",
@@ -80011,6 +80020,10 @@
           },
           "status": {
             "type": "string"
+          },
+          "canSend": {
+            "type": "boolean",
+            "description": "Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)"
           }
         },
         "required": [
@@ -80018,7 +80031,8 @@
           "partyName",
           "side",
           "unread",
-          "status"
+          "status",
+          "canSend"
         ]
       },
       "CorrectDepositRefundDto": {
@@ -82225,7 +82239,15 @@
           },
           "freeCancelUntil": {
             "type": "string",
-            "description": "ISO — huỷ trước mốc này được hoàn toàn bộ"
+            "description": "ISO — đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted)"
+          },
+          "freeCancelStarted": {
+            "type": "boolean",
+            "description": "true khi đã trả đủ — mốc huỷ miễn phí đã lưu và đang đếm"
+          },
+          "freeCancelMinutes": {
+            "type": "number",
+            "description": "Số phút huỷ miễn phí (chưa trả: nếu trả ngay bây giờ)"
           },
           "freeCancelAvailable": {
             "type": "boolean",
@@ -82276,6 +82298,8 @@
           "remainingAmount",
           "expiresAt",
           "freeCancelUntil",
+          "freeCancelStarted",
+          "freeCancelMinutes",
           "freeCancelAvailable",
           "lateCancelRefundAmount",
           "allocation",
@@ -93689,7 +93713,8 @@
             "type": "string"
           },
           "freeCancelUntil": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "paidAt": {
             "type": "string",
@@ -93764,7 +93789,6 @@
           "amount",
           "paidAmount",
           "expiresAt",
-          "freeCancelUntil",
           "disputeOpen",
           "createdAt",
           "purpose",
@@ -108564,6 +108588,7 @@
         "public-reviews",
         "public-banners",
         "public-insurance",
+        "public-fee-policies",
         "catalog",
         "locations",
         "places",

@@ -137,14 +137,14 @@ export function hasVerifiedStorefront(billingMode: string | null | undefined): b
 /**
  * Gian hàng này có mở kênh NHẮN TIN công khai không.
  *
- * Chỉ mặt tiền GIAN HÀNG (tuyến gói). Chủ xe cá nhân thì kênh chat mở SAU KHI khách gửi yêu cầu
- * thuê, và đó không phải một hạn chế tuỳ tiện:
+ * Chỉ mặt tiền GIAN HÀNG (tuyến gói). Chủ xe cá nhân thì kênh chat chỉ mở khi hai bên đã có
+ * ĐƠN — tức tiền giữ chỗ đã về đủ (`chatOpenBetween`, ADR 0073):
  *
  *  - Sau một gian hàng là một đội trực máy trong giờ làm việc; sau một chủ xe cá nhân là một
  *    người đang đi làm việc khác. Một hộp thư mở công khai cho bất kỳ ai lướt qua biến số điện
  *    thoại thứ hai của họ thành kênh hỗ trợ không lương.
- *  - Yêu cầu thuê là bằng chứng rẻ nhất rằng người nhắn có ý định thật. Nó không chặn khách
- *    thật — họ vẫn đặt được xe mà không cần hỏi trước, và kênh mở ngay khi yêu cầu được gửi.
+ *  - Trước khi có đơn, một kênh nhắn riêng là đường để hai bên thoả thuận rồi chốt ngoài sàn
+ *    ("đi đêm") — cùng lý do SĐT khách bị giấu tới lúc đó (`hostSeesCustomerContact`).
  *
  * Đây là một câu hỏi RIÊNG, không phải `hasVerifiedStorefront` gọi bằng tên khác: hôm nay hai
  * hàm cho cùng kết quả vì cùng đọc một tuyến, nhưng "đeo dấu xác thực" và "mở hộp thư công khai"
@@ -152,4 +152,19 @@ export function hasVerifiedStorefront(billingMode: string | null | undefined): b
  */
 export function storefrontAllowsPublicChat(kind: StorefrontKind): boolean {
   return kind === STOREFRONT_KIND.SHOP;
+}
+
+/**
+ * Một cặp (khách, chủ xe) có được nhắn tin cho nhau trong sàn không — ADR 0073.
+ *
+ *  - Gian hàng tuyến gói: luôn được (`storefrontAllowsPublicChat`).
+ *  - Chủ xe cá nhân (tuyến hoa hồng, cả tenant chưa xác định tuyến): chỉ khi khách đã có ĐƠN với
+ *    chủ xe đó (`engaged` — tiền giữ chỗ về đủ, `isBookingRequestEngaged`). Gửi yêu cầu, được duyệt
+ *    mà chưa trả đều CHƯA đủ.
+ *
+ * Một luật cho mọi cổng: mở hội thoại, gửi tin (cả hai phía), nút ở giao diện. Server chấm,
+ * client chỉ đọc cờ.
+ */
+export function chatOpenBetween(input: { kind: StorefrontKind; engaged: boolean }): boolean {
+  return storefrontAllowsPublicChat(input.kind) || input.engaged;
 }

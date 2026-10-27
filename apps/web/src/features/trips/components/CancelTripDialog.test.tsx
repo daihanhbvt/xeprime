@@ -65,7 +65,13 @@ function renderDialog() {
   return renderWithIntl(<CancelTripDialog trip={TRIP} open onClose={vi.fn()} />);
 }
 
-const confirmButton = () => screen.getByRole('button', { name: 'Huỷ chuyến' });
+const confirmButton = () => screen.getByRole('button', { name: 'Xác nhận hủy' });
+
+/** Lý do huỷ là BẮT BUỘC — mở ô chọn và chọn "Thay đổi lịch trình". */
+function pickReason() {
+  fireEvent.mouseDown(screen.getByRole('combobox'));
+  fireEvent.click(screen.getByText('Thay đổi lịch trình'));
+}
 
 beforeEach(() => {
   state.preview.isLoading = false;
@@ -85,7 +91,8 @@ describe('CancelTripDialog — huỷ muộn', () => {
     renderDialog();
     expect(screen.getByText('Đã qua thời gian huỷ miễn phí')).toBeTruthy();
     expect(screen.getByText('300.000 ₫')).toBeTruthy();
-    expect(screen.getByText('70.000 ₫')).toBeTruthy();
+    // Tiền hoàn ở đây đúng bằng tiền bảo hiểm — cùng một số ở hai chỗ là đúng.
+    expect(screen.getAllByText('70.000 ₫').length).toBeGreaterThan(0);
     expect(screen.getByText('230.000 ₫')).toBeTruthy();
     expect(screen.getByText(/Tiền bảo hiểm 70\.000 ₫ được hoàn đủ/)).toBeTruthy();
   });
@@ -133,6 +140,7 @@ describe('CancelTripDialog — trạng thái xem trước', () => {
     state.preview.isError = true;
     renderDialog();
     expect(screen.getByText(/Chưa xem trước được số tiền được hoàn/)).toBeTruthy();
+    pickReason();
     fireEvent.click(confirmButton());
     expect(state.cancel.mutate).toHaveBeenCalledTimes(1);
   });
@@ -157,7 +165,21 @@ describe('CancelTripDialog — trạng thái xem trước', () => {
       forfeitAmount: '0',
     });
     renderDialog();
+    pickReason();
     fireEvent.click(confirmButton());
     expect(state.cancel.mutate).toHaveBeenCalledTimes(1);
+    expect(state.cancel.mutate.mock.calls[0]![0]).toBe('schedule_conflict');
+  });
+
+  it('chưa chọn lý do ⇒ báo thiếu lý do, KHÔNG gọi huỷ', () => {
+    state.preview.data = preview({
+      kind: CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND,
+      refundAmount: '300000',
+      forfeitAmount: '0',
+    });
+    renderDialog();
+    fireEvent.click(confirmButton());
+    expect(screen.getByText('Vui lòng chọn lý do hủy')).toBeTruthy();
+    expect(state.cancel.mutate).not.toHaveBeenCalled();
   });
 });
