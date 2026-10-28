@@ -118,90 +118,141 @@
  */
 .listTabs {
   display: inline-flex;
+  align-items: center;
+  height: 48px;
   padding: 0;
-  border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
-  background: var(--xp-color-bg-muted);
+  border-radius: 20px 20px 0 0;
+  background: transparent;
   gap: 0;
 }
 
 .listTabs .tab {
-  height: 50px;
+  position: relative;
+  display: inline-flex;
+  height: 48px;
   min-height: 0;
+  align-items: center;
+  justify-content: center;
   padding: 0 var(--xp-space-20);
-  border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 0 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: 15px;
   font-weight: var(--xp-font-weight-medium);
   gap: var(--xp-space-sm);
   line-height: var(--xp-line-height-body-lg);
+  white-space: nowrap;
+  transition: color 0.18s ease-out;
 }
 
 .listTabs .tab:hover {
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-text);
 }
 
 .listTabs .tabActive,
 .listTabs .tabActive:hover {
-  background: var(--xp-color-bg-container);
+  background: transparent;
   box-shadow: none;
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-/* Gạch vàng 2px nằm dưới CẢ icon lẫn chữ, chạm đáy tab — đúng khối con có gạch chân 2px của Figma. */
+/* Vạch phân cách mảnh giữa các tab */
+.listTabs .tab:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 16px;
+  width: 1px;
+  background: var(--xp-color-border);
+}
+
+/* Gạch chân vàng bo góc 3px ở tab đang chọn */
 .listTabs .tab .tabInner {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   height: 100%;
-  border-bottom: 2px solid transparent;
 }
 
-.listTabs .tabActive .tabInner {
-  border-bottom-color: var(--xp-color-primary-accent);
+.listTabs .tabActive .tabInner::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 3px;
+  background: var(--xp-color-primary);
+  border-radius: 2px;
 }
 
 .listTabs .icon {
-  font-size: 22px;
+  font-size: 18px;
 }
 
 /*
- * `segment` — "Loại xe" trong hàng ô nhập (Figma "Horizontal tabs - Home"): khung xám rất nhạt
- * viền 1px, mục đang chọn là nút trắng viền xám, cao 44px như các ô nhập bên cạnh.
+ * `segment` — "Loại xe" trong hàng ô nhập (Figma "Horizontal tabs - Home"):
+ * Khung dạng pill viền 1px, mục đang chọn là nút viên thuốc trắng nổi bật với icon vàng.
  */
 .listSegment {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 3px;
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-bg);
-  box-shadow: var(--xp-elevation-xs);
-  gap: var(--xp-space-2);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: none;
+  gap: 2px;
 }
 
 .listSegment .tab {
-  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
   min-height: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
+  padding: 0 14px;
   border: 1px solid transparent;
-  border-radius: var(--xp-border-radius-control);
+  border-radius: var(--xp-border-radius-pill);
+  background: transparent;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: 14px;
   font-weight: var(--xp-font-weight-medium);
-  gap: var(--xp-space-sm);
-  line-height: var(--xp-line-height-body-lg);
+  gap: 6px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: all 0.18s ease-out;
 }
 
 .listSegment .tab:hover {
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-text);
 }
 
 .listSegment .tabActive,
 .listSegment .tabActive:hover {
-  border-color: var(--xp-color-border-strong);
+  border-color: var(--xp-color-border);
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-elevation-xs);
-  color: var(--xp-color-primary-hover);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.listSegment .tabActive .icon {
+  color: var(--xp-color-primary);
+}
+
+.listSegment .tab:not(.tabActive) .icon {
+  color: var(--xp-color-text-tertiary);
 }
 
 .listSegment .icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 @media (max-width: 640px) {
@@ -211,7 +262,7 @@
   }
 
   .listTabs .tab {
-    height: 46px;
+    height: 44px;
     padding: 0 var(--xp-space-sm);
     font-size: var(--xp-font-size-body);
   }
@@ -219,5 +270,9 @@
   .listSegment {
     display: flex;
     width: 100%;
+  }
+
+  .listSegment .tab {
+    flex: 1 1 0;
   }
 }

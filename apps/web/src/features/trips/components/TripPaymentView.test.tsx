@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { App } from 'antd';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, BOOKING_HOLD_STATUS } from '@xeprime/types';
@@ -11,7 +12,7 @@ import { TripPaymentView } from './TripPaymentView';
  * TRANG THANH TOÁN tiền giữ chỗ — \`/payment/:tripId\` (13/10/2026).
  *
  * Điều được khoá: trang nói đúng CHẶNG của khoản giữ chỗ — còn chờ thì mời trả (với đúng mã và số
- * CÒN THIẾU), đã đủ tiền thì báo đặt xe thành công, đã khép thì nói kết cục — và không bao giờ báo
+ * CÒN THIẾU), vừa đủ tiền thì sang trang chuyến kèm lời báo thành công, đã khép thì nói kết cục — và không bao giờ báo
  * thành công vì một lý do nào khác ngoài chính khoản giữ chỗ đã \`paid\` (ADR 0044 điều 2).
  */
 const trip = vi.hoisted(() => ({
@@ -23,18 +24,10 @@ const trip = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks', () => ({ useTrip: () => trip }));
-// Tin đăng của xe — chỉ hộp "Thanh toán thành công" đọc (thẻ chuyến); tin đã ẩn thì thẻ đọc từ chuyến.
-vi.mock('@/features/marketplace/hooks/use-listing-detail', () => ({
-  useListingDetail: () => ({ data: undefined, isLoading: false }),
-}));
+const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-}));
-// Hộp "Thanh toán thành công" có nút nhắn chủ xe — nút đó tự mời đăng nhập khi phiên mất.
-vi.mock('@/features/auth/components/AuthModalProvider', () => ({
-  useAuthModal: () => ({ open: vi.fn() }),
-  useNextFromCurrentPath: () => '/payment/01TRIP',
+  useRouter: () => nav,
 }));
 const gatewayMethods = vi.hoisted(() => ({ methods: [] as unknown[] }));
 vi.mock('@/features/payment-gateway/api', () => ({
@@ -90,12 +83,17 @@ function makeTrip(over: Partial<CustomerTripDetail> = {}): CustomerTripDetail {
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    // `App` gốc của AntD — lời báo thành công là `notification` của nó.
+    <QueryClientProvider client={client}>
+      <App>{children}</App>
+    </QueryClientProvider>
   );
   return render(<TripPaymentView tripId="01TRIP" />, { wrapper });
 }
 
 beforeEach(() => {
+  nav.push.mockReset();
+  nav.replace.mockReset();
   gatewayMethods.methods = [];
   trip.data = undefined;
   trip.isPending = false;
@@ -140,14 +138,14 @@ describe('TripPaymentView', () => {
     expect(screen.getByText(/Đã nhận/)).toBeTruthy();
   });
 
-  it('khoản đã trả đủ ⇒ ĐẶT XE THÀNH CÔNG, không còn kênh trả nào', () => {
+  it('vừa trả đủ ⇒ sang TRANG CHUYẾN và báo thành công ở góc phải', async () => {
     trip.data = makeTrip({
       hold: {
         ...HOLD,
         status: BOOKING_HOLD_STATUS.PAID,
         paidAmount: '140800',
         remainingAmount: '0',
-        // Vừa trả xong (realtime vừa lật trang) ⇒ hộp chúc mừng mở.
+        // Vừa trả xong (realtime vừa lật trang).
         paidAt: new Date().toISOString(),
       },
     });
@@ -157,38 +155,28 @@ describe('TripPaymentView', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(screen.queryByText(/chuyển khoản nhanh/i)).toBeNull();
 
-    // Hộp "Thanh toán thành công" (Figma `19759:38196`) mở sẵn đè lên trang.
-    const dialog = screen.getByRole('dialog', { name: 'Thanh toán thành công' });
+    // `replace` chứ không `push`: Back không quay lại trang thanh toán đã xong. Đúng MỘT lần.
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/trips/01TRIP'));
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Thanh toán thành công')).toBeTruthy();
     // Không biết kênh (dữ liệu cũ / nhiều kênh) ⇒ không gọi tên kênh nào.
-    expect(within(dialog).getByText(/Hệ thống đã ghi nhận 140.800.*!/)).toBeTruthy();
-    expect(within(dialog).queryByText(/ qua /)).toBeNull();
-    expect(within(dialog).getByText('01TRIP')).toBeTruthy();
-    // Figma: Quay lại · Nhắn tin cho chủ xe · Chuyến đi của tôi (nút chính).
-    expect(within(dialog).getByRole('button', { name: /Quay lại/ })).toBeTruthy();
-    expect(
-      within(dialog).getByRole('link', { name: 'Chuyến đi của tôi' }).getAttribute('href'),
-    ).toBe('/trips');
+    expect(screen.getByText(/Hệ thống đã ghi nhận 140.800.*!/).textContent).not.toMatch(/ qua /);
   });
 
-  it('đã trả đủ qua một cổng ⇒ hộp thành công gọi đúng tên kênh, kèm phần trả chủ xe', () => {
+  it('đã trả đủ qua một cổng ⇒ lời báo gọi đúng tên kênh', async () => {
     trip.data = makeTrip({
       hold: {
         ...HOLD,
         status: BOOKING_HOLD_STATUS.PAID,
         paidAmount: '140800',
         remainingAmount: '0',
-        // Vừa trả xong (realtime vừa lật trang) ⇒ hộp chúc mừng mở.
         paidAt: new Date().toISOString(),
         paidVia: 'vnpay',
       },
-      finance: { payAtPickupAmount: '1000000' },
-    } as Partial<CustomerTripDetail>);
+    });
     renderPage();
 
-    const dialog = screen.getByRole('dialog', { name: 'Thanh toán thành công' });
-    expect(within(dialog).getByText(/Hệ thống đã ghi nhận 140.800.* qua VNPAY!/)).toBeTruthy();
-    expect(within(dialog).getByText('Cần thanh toán cho chủ xe')).toBeTruthy();
-    expect(within(dialog).getByText(/1.000.000/)).toBeTruthy();
+    expect(await screen.findByText(/Hệ thống đã ghi nhận 140.800.* qua VNPAY!/)).toBeTruthy();
   });
 
   it('có cổng ví đang mở ⇒ thẻ "Ví điện tử"; chọn ví thì nút trả đổi theo ví', async () => {
@@ -218,7 +206,7 @@ describe('TripPaymentView', () => {
     expect(screen.getByText('Thông tin thanh toán')).toBeTruthy();
   });
 
-  it('mở lại trang của một khoản đã trả từ lâu ⇒ chỉ còn kết cục, KHÔNG chúc mừng lần hai', () => {
+  it('mở lại trang của một khoản đã trả từ lâu ⇒ chỉ còn kết cục, KHÔNG báo và KHÔNG đổi trang', () => {
     trip.data = makeTrip({
       hold: {
         ...HOLD,
@@ -231,10 +219,11 @@ describe('TripPaymentView', () => {
     renderPage();
 
     expect(screen.getByText('Đặt xe thành công')).toBeTruthy();
-    expect(screen.queryByRole('dialog', { name: 'Thanh toán thành công' })).toBeNull();
+    expect(screen.queryByText('Thanh toán thành công')).toBeNull();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  it('chuyển THỪA ⇒ khoản hoàn + lối khai tài khoản nhận, cả trên trang lẫn trong hộp', () => {
+  it('chuyển THỪA ⇒ khoản hoàn + lối khai tài khoản nhận, ngay trên trang', () => {
     trip.data = makeTrip({
       hold: {
         ...HOLD,
@@ -256,8 +245,7 @@ describe('TripPaymentView', () => {
     });
     renderPage();
 
-    // Một lời trên trang + một lời trong hộp thành công.
-    expect(screen.getAllByText(/Có 140.800.* chờ hoàn/).length).toBe(2);
+    expect(screen.getAllByText(/Có 140.800.* chờ hoàn/).length).toBe(1);
   });
 
   it('khoản đã hết hạn ⇒ nói kết cục, không mời trả', () => {

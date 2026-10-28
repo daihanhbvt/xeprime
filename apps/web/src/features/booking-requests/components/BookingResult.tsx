@@ -26,7 +26,7 @@ const BADGES: Record<BookingResultVariant, { src: string; width: number; height:
  * Khung của các hộp KẾT QUẢ trong hành trình đặt xe:
  *
  *  - "Đã gửi yêu cầu" — Figma `19759:22026` (`BookingSuccessStep`, biến thể `sent`);
- *  - "Thanh toán thành công" — Figma `19759:38196` (`TripPaymentSuccessDialog`).
+ *  - kết quả tạo đơn hộ khách của nhân viên gian hàng (`StaffBookingFlow`).
  *
  * Các hộp cùng một khuôn: huy hiệu · tiêu đề · lời dẫn · ô mã chép được · thẻ chuyến · hàng nút
  * dính đáy sau một đường kẻ. Khuôn sống ở đây một lần; KÍCH CỠ theo `variant`, NỘI DUNG (câu chữ,

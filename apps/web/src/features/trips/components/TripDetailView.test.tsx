@@ -622,8 +622,10 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     };
     renderView();
     fireEvent.click(screen.getByRole('button', { name: CANCEL_TRIP }));
-    expect(screen.getByText(/Bạn đã chuyển 200\.000.* tiền giữ chỗ/)).toBeTruthy();
-    expect(screen.getByText(/Bạn được hoàn 200.000.* vào Ví điểm/)).toBeTruthy();
+    expect(screen.getByText(/Bạn đã thanh toán tiền giữ chỗ/)).toBeTruthy();
+    expect(screen.getByText(/Dự kiến hoàn lại/).textContent).toMatch(/200\.000/);
+    // Đầu hộp đã đủ — không lặp lại bằng một khung "Bạn được hoàn … vào Ví điểm".
+    expect(screen.queryByText(/Bạn được hoàn/)).toBeNull();
     cancelPreview.data = undefined;
   });
 });
