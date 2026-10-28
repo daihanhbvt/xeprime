@@ -11,7 +11,7 @@ import {
   StarOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { Button, Checkbox, Popover } from 'antd';
+import { Checkbox, Popover, type PopoverProps } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import {
@@ -75,6 +75,21 @@ export function QuickFilterPills({
   // Local state for popovers to control open/close
   const [openKey, setOpenKey] = useState<string | null>(null);
 
+  /*
+   * Chỉ mở bằng `click` (đồng nhất với LocationPicker và RentalDateTimeRangeField):
+   * Dùng `['hover', 'click']` khiến rc-trigger bật cả `hoverToShow` (trễ 100ms) lẫn `clickToHide`.
+   * Khi người dùng đưa chuột vào nút rồi bấm (thao tác tự nhiên mất ~120–250ms), hover vừa mở
+   * popup ở mốc 100ms thì cú click ở mốc 150ms lập tức gọi `triggerOpen(false)` đóng sập popup lại
+   * (gây hiện tượng nháy DOM 1 cái rồi tắt).
+   */
+  const pillPopover = (key: string): PopoverProps => ({
+    trigger: ['click'],
+    open: openKey === key,
+    onOpenChange: (v) => setOpenKey(v ? key : null),
+    getPopupContainer: popupContainer,
+    placement: 'bottomLeft',
+  });
+
   const toggleArrayFilter = (
     field: 'brand' | 'bodyType' | 'motorbikeCategory' | 'seats' | 'features' | 'transmission',
     val: string,
@@ -88,11 +103,7 @@ export function QuickFilterPills({
     <div className={cx(styles.container, className)}>
       {/* 1. Nhu cầu (Service Type) */}
       <Popover
-        trigger="click"
-        open={openKey === 'demand'}
-        onOpenChange={(v) => setOpenKey(v ? 'demand' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('demand')}
         content={
           <div className={styles.popoverBody}>
             <button
@@ -170,11 +181,7 @@ export function QuickFilterPills({
 
       {/* 2. Hãng xe (Brand) */}
       <Popover
-        trigger="click"
-        open={openKey === 'brand'}
-        onOpenChange={(v) => setOpenKey(v ? 'brand' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('brand')}
         content={
           <div className={styles.popoverBody}>
             {displayedBrandItems.slice(0, 8).map((b) => {
@@ -186,11 +193,6 @@ export function QuickFilterPills({
                 </label>
               );
             })}
-            <div className={styles.applyRow}>
-              <Button size="small" type="primary" onClick={() => setOpenKey(null)}>
-                {tFilters('apply')}
-              </Button>
-            </div>
           </div>
         }
       >
@@ -208,11 +210,7 @@ export function QuickFilterPills({
 
       {/* 3. Kiểu dáng (BodyType for Car, MotorbikeCategory for Motorbike) */}
       <Popover
-        trigger="click"
-        open={openKey === 'bodyType'}
-        onOpenChange={(v) => setOpenKey(v ? 'bodyType' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('bodyType')}
         content={
           <div className={styles.popoverBody}>
             {!isMotorbike
@@ -240,11 +238,6 @@ export function QuickFilterPills({
                     </label>
                   );
                 })}
-            <div className={styles.applyRow}>
-              <Button size="small" type="primary" onClick={() => setOpenKey(null)}>
-                {tFilters('apply')}
-              </Button>
-            </div>
           </div>
         }
       >
@@ -271,11 +264,7 @@ export function QuickFilterPills({
 
       {/* 4. Khoảng giá (Price) */}
       <Popover
-        trigger="click"
-        open={openKey === 'price'}
-        onOpenChange={(v) => setOpenKey(v ? 'price' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('price')}
         content={
           <div className={styles.popoverBody}>
             <button
@@ -331,11 +320,7 @@ export function QuickFilterPills({
 
       {/* 5. Hộp số (Transmission) */}
       <Popover
-        trigger="click"
-        open={openKey === 'transmission'}
-        onOpenChange={(v) => setOpenKey(v ? 'transmission' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('transmission')}
         content={
           <div className={styles.popoverBody}>
             <button
@@ -391,11 +376,7 @@ export function QuickFilterPills({
       {/* 6. Số chỗ ngồi (Seats) - ONLY FOR CAR */}
       {!isMotorbike ? (
         <Popover
-          trigger="click"
-          open={openKey === 'seats'}
-          onOpenChange={(v) => setOpenKey(v ? 'seats' : null)}
-          getPopupContainer={popupContainer}
-          placement="bottomLeft"
+          {...pillPopover('seats')}
           content={
             <div className={styles.popoverBody}>
               {SEAT_BUCKET_VALUES.map((sb) => {
@@ -407,11 +388,6 @@ export function QuickFilterPills({
                   </label>
                 );
               })}
-              <div className={styles.applyRow}>
-                <Button size="small" type="primary" onClick={() => setOpenKey(null)}>
-                  {tFilters('apply')}
-                </Button>
-              </div>
             </div>
           }
         >
@@ -430,11 +406,7 @@ export function QuickFilterPills({
 
       {/* 7. Tiện ích (Amenities & Features) */}
       <Popover
-        trigger="click"
-        open={openKey === 'amenities'}
-        onOpenChange={(v) => setOpenKey(v ? 'amenities' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
+        {...pillPopover('amenities')}
         content={
           <div className={styles.popoverBody}>
             <label className={styles.checkboxItem}>
@@ -465,11 +437,6 @@ export function QuickFilterPills({
               />
               <span>{tFilters('amenityDesc.discount')}</span>
             </label>
-            <div className={styles.applyRow}>
-              <Button size="small" type="primary" onClick={() => setOpenKey(null)}>
-                {tFilters('apply')}
-              </Button>
-            </div>
           </div>
         }
       >

@@ -1,17 +1,14 @@
 'use client';
 
-import { Radio } from 'antd';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useId, useMemo } from 'react';
 import {
-  ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_LABEL,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE_LABEL,
-  type RouteType,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
@@ -36,8 +33,8 @@ import styles from './SearchCard.module.css';
  *
  * Form theo từng dịch vụ, KHÔNG phải một form gộp mọi trường rồi ẩn bớt:
  *   - **Tự lái**: Địa điểm · Thời gian thuê · Tìm xe.
- *   - **Có tài xế**: thêm hàng LỘ TRÌNH — ngữ cảnh để gian hàng báo giá đúng khi duyệt, không
- *     phải chiều lọc danh sách xe (xe không khai lộ trình phục vụ).
+ *   - **Có tài xế**: LỘ TRÌNH thay chỗ nhóm "Loại xe" ở đầu hàng — ngữ cảnh để gian hàng báo
+ *     giá đúng khi duyệt, không phải chiều lọc danh sách xe (xe không khai lộ trình phục vụ).
  *   - **Dài hạn**: Địa điểm · Tìm xe. **Không** hỏi ngày (ADR 0011) — khách chọn gói
  *     1/2/3/6/9/12 tháng và nêu nguyện vọng ngày nhận SAU khi đã chọn được xe.
  *
@@ -66,6 +63,14 @@ export function SearchCard() {
     () => vehicleItems(domainLabel, draft.serviceType),
     [domainLabel, draft.serviceType],
   );
+  const routeOptions = useMemo(
+    () =>
+      ROUTE_TYPE_VALUES.map((value) => ({
+        value,
+        label: domainLabel('routeType', value, ROUTE_TYPE_LABEL[value]),
+      })),
+    [domainLabel],
+  );
 
   const withDriver = draft.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = draft.serviceType === SERVICE_TYPE.LONG_TERM;
@@ -84,12 +89,9 @@ export function SearchCard() {
           Dải tab dịch vụ theo thiết kế mới: nằm liền trên viên tìm kiếm trắng với góc lượn ngược ở hai bên.
         */}
         <div className={styles.tabsOuter}>
-          <div className={styles.tabCornerLeft} aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M 24 0 V 24 H 0 C 10.745 24, 24 13.255, 24 0 Z" fill="#ffffff" />
-            </svg>
-          </div>
           <div className={styles.tabs}>
+            <TabShoulder className={styles.shoulderLeft} />
+            <TabShoulder className={styles.shoulderRight} />
             <SegmentedTabs
               value={draft.serviceType}
               onChange={setServiceType}
@@ -98,11 +100,6 @@ export function SearchCard() {
               controls={formId}
               appearance="tabs"
             />
-          </div>
-          <div className={styles.tabCornerRight} aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M 0 0 V 24 H 24 C 13.255 24, 0 10.745, 0 0 Z" fill="#ffffff" />
-            </svg>
           </div>
         </div>
 
@@ -136,38 +133,31 @@ export function SearchCard() {
           })}
           className={styles.panel}
         >
-          {withDriver ? (
-            <div className={styles.routeRow}>
-              <span className={styles.cellLabel}>{t('route.label')}</span>
-              <Radio.Group
-                value={draft.routeType}
-                onChange={(e) => setRouteType(e.target.value as RouteType)}
-                options={ROUTE_TYPE_VALUES.map((value) => ({
-                  value,
-                  label: domainLabel('routeType', value, ROUTE_TYPE_LABEL[value]),
-                }))}
-              />
-              <span className={styles.routeHint}>
-                {domainLabel(
-                  'routeTypeDescription',
-                  draft.routeType,
-                  ROUTE_TYPE_DESCRIPTION[draft.routeType],
-                )}
-              </span>
-            </div>
-          ) : null}
-
           <div className={cx(styles.fields, longTerm && styles.fieldsCompact)}>
+            {/*
+              Có tài xế chỉ phục vụ ô tô, nên nhóm "Loại xe" chỉ còn một lựa chọn — ô đầu hàng
+              nhường chỗ cho LỘ TRÌNH (Figma `21902:31701`).
+            */}
             <div className={cx(styles.cell, styles.cellVehicle)}>
-              <span className={styles.srOnly}>{t('card.vehicleTypeLabel')}</span>
-              <SegmentedTabs
-                value={draft.vehicleType}
-                onChange={setVehicleType}
-                items={vehicleOptions}
-                ariaLabel={t('card.vehicleTypeLabel')}
-                semantics="radio"
-                appearance="segment"
-              />
+              {withDriver ? (
+                <SegmentedTabs
+                  value={draft.routeType}
+                  onChange={setRouteType}
+                  items={routeOptions}
+                  ariaLabel={t('route.label')}
+                  semantics="radio"
+                  appearance="segment"
+                />
+              ) : (
+                <SegmentedTabs
+                  value={draft.vehicleType}
+                  onChange={setVehicleType}
+                  items={vehicleOptions}
+                  ariaLabel={t('card.vehicleTypeLabel')}
+                  semantics="radio"
+                  appearance="segment"
+                />
+              )}
             </div>
 
             <div className={cx(styles.cell, styles.cellLocation)}>
@@ -216,10 +206,23 @@ export function SearchCard() {
               {t('card.searchAction')}
             </CtaButton>
           </div>
-
-          {longTerm ? <p className={styles.hint}>{t('card.longTermHint')}</p> : null}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Vai" của dải tab — path lấy nguyên từ Figma (`21902:31703`): chân loe ra từ mép viên tìm kiếm,
+ * uốn chữ S lên đỉnh phẳng. Tô bằng `currentColor` để theo màu nền thẻ ở cả giao diện tối.
+ */
+function TabShoulder({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="156" height="48" viewBox="0 0 156 48" aria-hidden="true">
+      <path
+        d="M0 48H156L117 0H59.9285C47.215 0 35.7073 7.5262 30.6115 19.1738L25.2147 31.5092C20.832 41.5269 10.9345 48 0 48Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
