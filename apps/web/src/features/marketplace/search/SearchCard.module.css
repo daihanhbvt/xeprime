@@ -33,27 +33,47 @@
   z-index: 1;
 }
 
-.tabCornerLeft,
-.tabCornerRight {
-  display: flex;
-  width: 24px;
-  height: 24px;
-  flex: none;
-  pointer-events: none;
-}
-
-.tabCornerLeft svg,
-.tabCornerRight svg {
-  display: block;
-}
-
+/*
+ * Nền dải tab = hai "vai" SVG (Figma `21902:31703/31704`) + một dải phẳng ở giữa. Vai thò ra
+ * 36.5px mỗi bên và tự uốn từ mép viên tìm kiếm lên đỉnh tab, nên `.tabs` không tự bo góc —
+ * một góc bo CSS sẽ lòi ra ngoài đường cong của vai.
+ */
 .tabs {
   position: relative;
   display: flex;
   align-items: stretch;
-  background: var(--xp-color-bg-container);
-  border-radius: 20px 20px 0 0;
   height: 48px;
+  padding: 0 24px;
+}
+
+.tabs::before {
+  position: absolute;
+  inset: 0 60px;
+  background: var(--xp-color-bg-container);
+  content: '';
+}
+
+.shoulderLeft,
+.shoulderRight {
+  position: absolute;
+  top: 0;
+  display: block;
+  color: var(--xp-color-bg-container);
+  pointer-events: none;
+}
+
+.shoulderLeft {
+  left: -36.5px;
+}
+
+.shoulderRight {
+  right: -36.5px;
+  transform: scaleX(-1);
+}
+
+/* Nút tab nằm trên nền — vai và dải giữa đều đứng trước trong DOM nhưng là `position: absolute`. */
+.tabs > :last-child {
+  position: relative;
 }
 
 .panel {
@@ -65,25 +85,6 @@
   background: var(--xp-color-bg-container);
   box-shadow: none;
   gap: var(--xp-space-sm);
-}
-
-/* Hàng Lộ trình (dịch vụ Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
-.routeRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px 14px;
-  padding: 4px 16px 8px;
-  border-bottom: 1px solid var(--xp-color-border-subtle);
-}
-
-.routeHint {
-  flex-basis: 100%;
-  text-align: center;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
 }
 
 .fields {
@@ -184,29 +185,15 @@
   border-width: 0;
 }
 
-.cellLabel {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
-}
-
-/* Ghi chú dài hạn */
-.hint {
-  margin: 0;
-  text-align: center;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
 @media (min-width: 641px) and (max-width: 1024px) {
-  .tabCornerLeft,
-  .tabCornerRight {
+  .shoulderLeft,
+  .shoulderRight,
+  .tabs::before {
     display: none;
   }
 
   .tabs {
+    background: var(--xp-color-bg-container);
     border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 0 0;
   }
 
@@ -237,8 +224,9 @@
     padding: 0 var(--xp-space-12);
   }
 
-  .tabCornerLeft,
-  .tabCornerRight {
+  .shoulderLeft,
+  .shoulderRight,
+  .tabs::before {
     display: none;
   }
 
@@ -248,6 +236,7 @@
 
   .tabs {
     width: 100%;
+    background: var(--xp-color-bg-container);
     border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
   }
 

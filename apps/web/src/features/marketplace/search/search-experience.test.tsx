@@ -248,21 +248,23 @@ describe('xe máy không có dịch vụ CÓ TÀI XẾ', () => {
   });
 
   /**
-   * Chiều ngược lại của luật trên: đang tìm "Xe có tài xế" thì lựa chọn "Xe máy" biến mất — chỉ còn
-   * "Ô tô" — thay vì để khách chọn một tổ hợp không tồn tại rồi lặng lẽ đổi dịch vụ của họ.
+   * Chiều ngược lại của luật trên: "Xe có tài xế" chỉ phục vụ ô tô, nên nhóm "Loại xe" của thẻ
+   * trang chủ nhường chỗ cho Lộ trình (Figma `21902:31701`) thay vì để khách chọn "Xe máy" — một
+   * tổ hợp không tồn tại.
    */
-  it('chọn Xe có tài xế thì loại xe chỉ còn Ô tô; quay lại Tự lái thì Xe máy trở lại', async () => {
+  it('chọn Xe có tài xế thì Lộ trình thay nhóm Loại xe; quay lại Tự lái thì Xe máy trở lại', async () => {
     await renderExperience();
     const vehicles = () => within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' });
     clickTab(
       within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
       'Xe có tài xế',
     );
+    expect(within(heroCard()).queryByRole('radiogroup', { name: 'Loại xe' })).toBeNull();
     expect(
-      within(vehicles())
+      within(within(heroCard()).getByRole('radiogroup', { name: 'Lộ trình' }))
         .getAllByRole('radio')
         .map((r) => r.textContent),
-    ).toEqual(['Ô tô']);
+    ).toEqual(Object.values(ROUTE_TYPE_LABEL));
 
     clickTab(
       within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
@@ -317,13 +319,6 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
     expect(screen.queryByText(/7 ngày/)).toBeNull();
     expect(screen.queryByText('-38%')).toBeNull();
     expect(screen.queryByText(/tự chọn thời gian thuê/i)).toBeNull();
-  });
-
-  it('nói rõ gói thuê chọn ở BƯỚC SAU khi đã có xe', async () => {
-    await openLongTerm();
-    expect(
-      within(hero()).getByText(/Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận/),
-    ).toBeTruthy();
   });
 
   it('URL tìm kiếm mang địa điểm nhưng KHÔNG mang lịch, gói hay nguyện vọng', async () => {

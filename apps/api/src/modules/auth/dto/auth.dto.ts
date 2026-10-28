@@ -121,7 +121,7 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(PASSWORD_MIN, { message: `Mật khẩu tối thiểu ${PASSWORD_MIN} ký tự` })
   @Matches(/[A-Za-z]/, { message: 'Mật khẩu cần có chữ' })
-  @Matches(/d/, { message: 'Mật khẩu cần có số' })
+  @Matches(/\d/, { message: 'Mật khẩu cần có số' })
   newPassword!: string;
 }
 

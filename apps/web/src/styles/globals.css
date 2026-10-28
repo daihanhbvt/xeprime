@@ -122,6 +122,26 @@ textarea {
   background: transparent;
 }
 
+/**
+ * AntD v6 + @rc-component/trigger:
+ * `.ant-zoom-*` và `.ant-slide-*` đặt `transform: scale(0)` trên phần tử gốc của popup ở pha
+ * `-appear`/`-enter` (khi vừa gỡ `-prepare` sang `-start`) và scale < 1 trong lúc chạy keyframe.
+ * `useAlign` của `@rc-component/trigger` chạy bất đồng bộ qua microtask (`Promise.resolve().then`)
+ * và chia `offsetX / scaleX` (với `scaleX = getBoundingClientRect().width / width`):
+ *   - Nếu đo trúng lúc `scale(0)` (`scaleX === 0`), `onAlign` thoát sớm, `ready` kẹt ở `false`
+ *     và popup nằm mãi ở `left: -1000vw; top: -1000vh` (bấm chỉ nháy DOM, không thấy popup).
+ *   - Nếu đo trúng lúc `0 < scaleX < 1`, `offsetX / scaleX` vọt lên hàng chục nghìn px về bên phải,
+ *     đẩy popup ra ngoài màn hình và làm xuất hiện thanh cuộn ngang rất dài kéo qua phải.
+ * Giữ `transform: none` trên phần tử định vị của popup bảo đảm `scaleX = 1` ở mọi pha.
+ */
+.ant-popover,
+.ant-dropdown,
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-tooltip {
+  transform: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -129,6 +149,23 @@ textarea {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /**
+   * Khi Windows tắt Animation effects (`prefers-reduced-motion: reduce`), `0.01ms` có thể kết thúc
+   * trước khi `CSSMotion` kịp gắn listener `animationend`, khiến các lớp `-appear`/`-enter` của
+   * AntD giữ mãi `opacity: 0; transform: scale(0)`. Cưỡng bức hiển thị ngay ở trạng thái mở.
+   */
+  [class*='ant-zoom'][class*='-appear'],
+  [class*='ant-zoom'][class*='-enter'],
+  [class*='ant-slide'][class*='-appear'],
+  [class*='ant-slide'][class*='-enter'],
+  [class*='ant-fade'][class*='-appear'],
+  [class*='ant-fade'][class*='-enter'],
+  [class*='ant-move'][class*='-appear'],
+  [class*='ant-move'][class*='-enter'] {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
