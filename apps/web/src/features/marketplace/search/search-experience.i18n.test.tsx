@@ -184,18 +184,4 @@ describe('thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR
     expect(query.get('returnAt')).toBeNull();
     expect(query.get('packageMonths')).toBeNull();
   });
-
-  it.each(['vi', 'en'] as const)('%s: gợi ý dài hạn nói đúng thứ tự các bước', async (locale) => {
-    const ui = await renderAt(locale);
-    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.longTerm }));
-    const text = heroFields().textContent ?? '';
-
-    if (locale === 'vi') {
-      expect(text).toContain('Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận');
-    } else {
-      expect(text).toContain(
-        'Choose a vehicle first, then select a rental package and your preferred pickup date',
-      );
-    }
-  });
 });

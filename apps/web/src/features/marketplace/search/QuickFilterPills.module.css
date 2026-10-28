@@ -161,10 +161,3 @@
   flex: 1;
 }
 
-.applyRow {
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 16px 4px;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  margin-top: 4px;
-}

@@ -91,7 +91,7 @@ describe('hero mobile', () => {
     expect(new URLSearchParams(href.split('?')[1]).get('provinceCode')).toBe('48');
   });
 
-  it('dài hạn trên mobile: chỉ địa điểm + nút tìm + gợi ý, không có lịch', async () => {
+  it('dài hạn trên mobile: chỉ địa điểm + nút tìm, không có lịch', async () => {
     await renderExperience();
     fireEvent.click(
       within(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' })).getByRole('tab', {
@@ -100,7 +100,6 @@ describe('hero mobile', () => {
     );
 
     expect(within(hero()).queryByRole('button', { name: /Thời gian thuê/ })).toBeNull();
-    expect(within(hero()).getByText(/Chọn xe trước, sau đó chọn gói thuê/)).toBeTruthy();
     expect(screen.queryByText(/tối thiểu/i)).toBeNull();
   });
 });
