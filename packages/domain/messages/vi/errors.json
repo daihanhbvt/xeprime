@@ -206,7 +206,9 @@
     "DRIVER_ASSIGNMENT_LOCKED": "Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa.",
     "DRIVER_HAS_ACTIVE_TRIP": "Tài xế đang chạy chuyến. Chờ trả xe xong rồi mới kết thúc liên kết.",
     "VEHICLE_SERVICE_IN_USE": "Không bỏ được dịch vụ này vì xe còn chuyến chưa xong dùng dịch vụ đó. Hoàn tất hoặc huỷ các chuyến đó trước.",
-    "DRIVER_HAS_ACCEPTED_TRIPS": "Bạn còn chuyến đã nhận chưa giao xe. Liên hệ bên thuê để họ đổi tài xế trước khi ngừng làm tài xế."
+    "DRIVER_HAS_ACCEPTED_TRIPS": "Bạn còn chuyến đã nhận chưa giao xe. Liên hệ bên thuê để họ đổi tài xế trước khi ngừng làm tài xế.",
+    "EXTERNAL_DRIVER_NOT_SUPPORTED": "XePrime không còn nhận tài xế ngoài hệ thống. Mời tài xế liên kết tài khoản rồi gán vào chuyến.",
+    "DRIVER_DROP_NOTE_REQUIRED": "Vui lòng mô tả sự cố (ít nhất 10 ký tự) để bên thuê sắp xếp lại."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

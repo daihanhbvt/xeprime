@@ -69,8 +69,8 @@ export const updateBookingDeliveryFee = (
 ): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/delivery-fee`, body);
 
 /**
- * Gán/bỏ gán tài xế cho đơn — gửi ĐÚNG MỘT khoá: `driverId` (tài xế liên kết, `null` = bỏ gán —
- * ADR 0063) hoặc `externalDriver` (tên + SĐT tài xế ngoài hệ thống — ADR 0067). Server có audit.
+ * Gán/bỏ gán tài xế LIÊN KẾT cho đơn (`null` = bỏ gán, gỡ cả tài xế ngoài hệ thống của đơn cũ —
+ * ADR 0063 · ADR 0074). Server có audit.
  */
 export const assignBookingDriver = (
   id: string,

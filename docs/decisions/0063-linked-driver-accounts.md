@@ -1,6 +1,6 @@
 # ADR 0063 — Tài xế là TÀI KHOẢN KHÁCH được bên thuê mời liên kết; gán chuyến chờ tài xế nhận; chống trùng lịch theo NGƯỜI
 
-Ngày: 16/10/2026 · Trạng thái: Accepted (câu "Lượt chờ KHÔNG hết hạn" bị [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) điều 4 thay; điều 2 "Bỏ hồ sơ không tài khoản" nới bởi [0067](0067-external-driver-on-booking-no-auto-cancel.md) — đơn được ghi tên + SĐT tài xế ngoài hệ thống) · Ghi đè: ADR 0032 điều 6 (gạch "Tài xế không có tài khoản/app…"
+Ngày: 16/10/2026 · Trạng thái: Accepted (điều 6 mở rộng bởi [0074](0074-driver-drop-accepted-trip.md) — tài xế đã nhận RÚT được cả sau cửa sổ trả lại, kèm lý do + chế tài; câu "Lượt chờ KHÔNG hết hạn" bị [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) điều 4 thay; điều 2 "Bỏ hồ sơ không tài khoản" nới bởi [0067](0067-external-driver-on-booking-no-auto-cancel.md) — đơn được ghi tên + SĐT tài xế ngoài hệ thống) · Ghi đè: ADR 0032 điều 6 (gạch "Tài xế không có tài khoản/app…"
 và cụm "tài xế dạng bản ghi" ở gạch Manage), ADR 0027 điều 1 + `PLAN_FEATURE.DRIVERS` trong phạm vi
 module tài xế (không còn sau cờ gói, mở cho cả hai tuyến), ADR 0038 điều 4 trong phạm vi module tài xế
 (không còn `@SubscriptionTrackOnly`), ADR 0052 dòng "tài xế không có chi nhánh" giữ nguyên ·

@@ -1313,8 +1313,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Gán/bỏ gán tài xế, hoặc ghi tài xế ngoài hệ thống cho đơn (có audit)
-         * @description Gửi ĐÚNG MỘT khoá. `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống). `externalDriver`: ghi tên + SĐT tài xế ngoài hệ thống (ADR 0067) — coi là đã nhận ngay, lượt gán liên kết đang có bị đóng và người đó được báo. Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.
+         * Gán/bỏ gán tài xế liên kết cho đơn (có audit)
+         * @description `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống còn trên đơn cũ). `externalDriver` đã bỏ (ADR 0074 điều 4) ⇒ 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -3279,6 +3279,30 @@ export interface paths {
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_declineTrip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/driver/trips/{id}/drop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Báo sự cố / rút khỏi chuyến đã nhận
+         * @description ADR 0074. Chỉ chuyến của tôi đã nhận, đơn chưa giao xe (`canDrop`). Đơn KHÔNG bị huỷ: về chưa có tài xế, bên thuê được báo khẩn kèm hạn điều phối lại. Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2–12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. `other` thiếu ghi chú ⇒ 422 `DRIVER_DROP_NOTE_REQUIRED`; lượt không còn của tôi / chưa nhận ⇒ 409 `DRIVER_ASSIGNMENT_STATE_CONFLICT`.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         */
+        post: operations["DriverSelfController_dropTrip"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11948,7 +11972,10 @@ export interface components {
         AssignBookingDriverDto: {
             /** @description ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`. */
             driverId?: string | null;
-            /** @description Tài xế ngoài hệ thống (ADR 0067). Không gửi cùng `driverId`. */
+            /**
+             * @deprecated
+             * @description ĐÃ BỎ (ADR 0074 điều 4) — có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.
+             */
             externalDriver?: components["schemas"]["ExternalDriverInputDto"];
         };
         AssignSubscriptionDto: {
@@ -12229,6 +12256,7 @@ export interface components {
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            driverIncident?: components["schemas"]["BookingDriverIncidentDto"] | null;
             tenantCustomerId?: string | null;
             vehicleImageUrl?: string | null;
             /** @enum {string|null} */
@@ -12277,7 +12305,7 @@ export interface components {
             driverName: string;
             driverPhone: string;
             /** @enum {string} */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired" | "dropped";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             /** @description Người gán — null = hệ thống ("Đặt ngay" tự gán) */
@@ -12286,6 +12314,35 @@ export interface components {
             endedAt?: string | null;
             /** @description Người kết thúc lượt (gỡ/từ chối) — null khi hệ thống khép theo trạng thái đơn */
             endedByName?: string | null;
+            /**
+             * @description Chỉ lượt `dropped` — nhóm lý do tài xế rút (ADR 0074)
+             * @enum {string|null}
+             */
+            dropReasonCategory?: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other" | null;
+            /** @description Ghi chú của tài xế khi rút */
+            dropReason?: string | null;
+            /**
+             * @description Chỉ lượt `dropped` — vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt
+             * @enum {string|null}
+             */
+            dropZone?: "grace" | "far" | "same_day" | "critical" | null;
+        };
+        BookingDriverIncidentDto: {
+            /** @description ISO-8601 — lúc tài xế rút */
+            droppedAt: string;
+            /** @description ISO-8601 — hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng) */
+            reassignBy: string;
+            /** @enum {string} */
+            level: "arranging" | "rearranging" | "urgent";
+            /** @description true = khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê (quá hạn điều phối hoặc còn dưới 2 giờ) */
+            customerCanCancelFree: boolean;
+            /** @description Tên tài xế đã rút — null khi sự cố đến từ lượt "trả lại" không lý do */
+            driverName?: string | null;
+            /** @enum {string|null} */
+            reasonCategory?: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other" | null;
+            reason?: string | null;
+            /** @enum {string|null} */
+            zone?: "grace" | "far" | "same_day" | "critical" | null;
         };
         BookingDriverSummaryDto: {
             /**
@@ -12798,7 +12855,7 @@ export interface components {
              * @description Nhóm lý do — thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".
              * @enum {string}
              */
-            reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "other";
+            reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
             /** @description Bắt buộc khi reasonCategory = other */
             reason?: string;
         };
@@ -14044,7 +14101,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "paid" | "credited" | "rejected";
             /** @enum {string} */
-            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "admin_decision";
+            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "driver_incident" | "admin_decision";
             /** @description VND string */
             amount: string;
             /** @description Khách đã khai tài khoản nhận hoàn chưa */
@@ -14113,13 +14170,15 @@ export interface components {
             freeCancelAvailable: boolean;
             /** @description Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia */
             deferred: boolean;
+            /** @description true = huỷ do SỰ CỐ TÀI XẾ (ADR 0074): hoàn 100% dù đã qua mốc huỷ miễn phí, lỗi ghi cho phía cho thuê */
+            driverIncident: boolean;
         };
         CustomerTripCancelReasonDto: {
             /**
              * @description @xeprime/types CancellationReasonCategory
              * @enum {string}
              */
-            category: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "other";
+            category: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
         };
         CustomerTripContactDto: {
             name: string;
@@ -14142,6 +14201,8 @@ export interface components {
             canContact: boolean;
             /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
+            /** @description Sự cố tài xế (ADR 0074): tài xế đã nhận rồi rút, chưa ai nhận lại. Không lộ ai đã rút. `freeCancel` = khách huỷ được hoàn 100%. */
+            driverIncident?: components["schemas"]["TripDriverIncidentDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
             /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string — ADR 0007 */
@@ -14308,6 +14369,8 @@ export interface components {
             canContact: boolean;
             /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
+            /** @description Sự cố tài xế (ADR 0074): tài xế đã nhận rồi rút, chưa ai nhận lại. Không lộ ai đã rút. `freeCancel` = khách huỷ được hoàn 100%. */
+            driverIncident?: components["schemas"]["TripDriverIncidentDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
             /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string — ADR 0007 */
@@ -14575,6 +14638,12 @@ export interface components {
              * @enum {string|null}
              */
             currentOpenLinkStatus?: "invited" | "active" | "suspended" | "declined" | "ended" | null;
+            /** @description Số lần tài xế RÚT chuyến đã nhận bị tính vi phạm trong 90 ngày (ADR 0074) */
+            dropCount: number;
+            /** @description Trong đó: số lần rút khi còn dưới 2 giờ tới giờ nhận */
+            criticalDropCount: number;
+            /** @description Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ — null = không */
+            autoAssignCooldownUntil?: string | null;
         };
         DriverEmployerContactDto: {
             /** @description Họ tên chủ tài khoản bên thuê */
@@ -14701,7 +14770,7 @@ export interface components {
              * @description Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua
              * @enum {string}
              */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired" | "dropped";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
@@ -14711,6 +14780,8 @@ export interface components {
             endedAt?: string | null;
             /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
             releaseUntil?: string | null;
+            /** @description Tôi còn RÚT được khỏi chuyến này không (ADR 0074): chuyến của tôi, đã nhận, đơn chưa giao xe. Rút qua `POST /driver/trips/:id/drop`; trước `releaseUntil` thì không bị phạt. */
+            canDrop: boolean;
             pickupAt: string;
             returnAt: string;
             routeType?: string | null;
@@ -14738,7 +14809,7 @@ export interface components {
              * @description Kết quả lượt của CHÍNH tài xế: open = đang giao; còn lại là chuyến ở tab Đã qua
              * @enum {string}
              */
-            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired";
+            outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired" | "dropped";
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
@@ -14748,6 +14819,8 @@ export interface components {
             endedAt?: string | null;
             /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
             releaseUntil?: string | null;
+            /** @description Tôi còn RÚT được khỏi chuyến này không (ADR 0074): chuyến của tôi, đã nhận, đơn chưa giao xe. Rút qua `POST /driver/trips/:id/drop`; trước `releaseUntil` thì không bị phạt. */
+            canDrop: boolean;
             pickupAt: string;
             returnAt: string;
             routeType?: string | null;
@@ -14765,6 +14838,12 @@ export interface components {
             name: string;
             plateNumber?: string | null;
             mainImageUrl?: string | null;
+        };
+        DropDriverTripDto: {
+            /** @enum {string} */
+            reasonCategory: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other";
+            /** @description Mô tả sự cố — bắt buộc 10–500 ký tự khi chọn `other` (422 `DRIVER_DROP_NOTE_REQUIRED`) */
+            reason?: string;
         };
         DuplicatePlanGuideTemplateDto: {
             /** @example clean_minimal_copy */
@@ -17447,7 +17526,7 @@ export interface components {
             /** @enum {string} */
             responsibleParty: "host" | "customer" | "platform" | "force_majeure";
             /** @enum {string} */
-            reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "other";
+            reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
             reason: string | null;
             /** @description ISO-8601 UTC */
             cancelledAt: string;
@@ -17547,7 +17626,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "paid" | "credited" | "rejected";
             /** @enum {string} */
-            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "admin_decision";
+            reason: "early_cancel" | "owner_cancel" | "overpaid" | "hold_expired" | "late_cancel" | "no_show" | "driver_incident" | "admin_decision";
             bankCode?: string | null;
             bankAccountNumber?: string | null;
             bankAccountName?: string | null;
@@ -20553,7 +20632,7 @@ export interface components {
              * @description Nhóm lý do — BẮT BUỘC khi status = cancelled
              * @enum {string}
              */
-            reasonCategory?: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "other";
+            reasonCategory?: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
             /** @description Thời điểm nhận xe thực tế (khi → active) */
             actualPickupAt?: string;
             /** @description Thời điểm trả xe thực tế (khi → completed) */
@@ -20563,6 +20642,15 @@ export interface components {
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             note?: string | null;
+        };
+        TripDriverIncidentDto: {
+            /**
+             * @description `arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ — cảnh báo + hỗ trợ
+             * @enum {string}
+             */
+            level: "arranging" | "rearranging" | "urgent";
+            /** @description true = khách huỷ ngay được hoàn 100% tiền giữ chỗ (lỗi phía cho thuê) */
+            freeCancel: boolean;
         };
         UnregisterPushDeviceDto: {
             /** @description Token cần tắt. Bỏ trống = mọi thiết bị của phiên này. */
@@ -43249,6 +43337,181 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["OkResultDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DriverSelfController_dropTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DropDriverTripDto"];
+            };
+        };
         responses: {
             /** @description Thành công */
             200: {

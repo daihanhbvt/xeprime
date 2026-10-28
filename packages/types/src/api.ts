@@ -673,6 +673,13 @@ export const API_ERROR_CODE = {
   DRIVER_HAS_ACCEPTED_TRIPS: 'DRIVER_HAS_ACCEPTED_TRIPS',
   /** Còn chuyến đang chạy — chưa chấm dứt liên kết được. `details.count`. */
   DRIVER_HAS_ACTIVE_TRIP: 'DRIVER_HAS_ACTIVE_TRIP',
+  /**
+   * Gửi tài xế NGOÀI HỆ THỐNG lên `PATCH /bookings/:id/driver` — đã bỏ (ADR 0074 điều 4): mọi
+   * chuyến có tài xế phải do tài xế liên kết chạy.
+   */
+  EXTERNAL_DRIVER_NOT_SUPPORTED: 'EXTERNAL_DRIVER_NOT_SUPPORTED',
+  /** Nhóm `other` khi rút chuyến mà thiếu ghi chú đủ dài (ADR 0074). */
+  DRIVER_DROP_NOTE_REQUIRED: 'DRIVER_DROP_NOTE_REQUIRED',
 
   // OCR giấy tờ xe (Wave 5)
   /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */

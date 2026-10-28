@@ -5,19 +5,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import {
   BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY,
   DRIVER_ASSIGNMENT_STATUS,
+  DRIVER_DROP_REASON,
+  DRIVER_DROP_ZONE,
+  DRIVER_INCIDENT_LEVEL,
   DRIVER_SOURCE,
   SERVICE_TYPE,
 } from '@xeprime/types';
 
 import { IntlTestProvider } from '@/i18n/test-utils';
-import type { BookingDetail } from '../types';
+import type { BookingDetail, BookingDriverIncident } from '../types';
 import { BookingDriverSection } from './BookingDriverSection';
 
 /**
- * Khối Tài xế trên chi tiết đơn — phần tài xế NGOÀI HỆ THỐNG (ADR 0067): nhập tên + SĐT gửi đúng
- * MỘT khoá `externalDriver`, form chặn SĐT sai trước khi gọi server, tài xế ngoài hiện nhãn
- * "Ngoài hệ thống", và đơn trống tài xế sát giờ nhận hiện cảnh báo.
+ * Khối Tài xế trên chi tiết đơn (ADR 0063 · ADR 0074): không còn lối nhập tài xế ngoài hệ thống;
+ * đơn cũ còn mang tài xế ngoài vẫn hiện và gỡ được; sự cố tài xế rút hiện thẻ khẩn kèm hạn điều
+ * phối và lối "Huỷ chuyến do thiếu tài xế"; đơn trống tài xế sát giờ hiện cảnh báo.
  */
 
 const mutation = vi.hoisted(() => ({
@@ -40,6 +44,11 @@ vi.mock('@/features/drivers/hooks/use-drivers', () => ({
   useAssignableDrivers: () => ({ data: [], isLoading: false, isError: false }),
 }));
 vi.mock('./BookingDriverHistory', () => ({ BookingDriverHistory: () => null }));
+vi.mock('./BookingStatusTransitionDialog', () => ({
+  BookingStatusTransitionDialog: (props: { defaultReasonCategory?: string }) => (
+    <div data-testid="cancel-dialog">{props.defaultReasonCategory}</div>
+  ),
+}));
 
 const HOUR = 3_600_000;
 
@@ -55,6 +64,7 @@ function booking(overrides: Partial<BookingDetail> = {}): BookingDetail {
     pickupAt: new Date(Date.now() + 48 * HOUR).toISOString(),
     returnAt: new Date(Date.now() + 56 * HOUR).toISOString(),
     driver: null,
+    driverIncident: null,
     ...overrides,
   } as unknown as BookingDetail;
 }
@@ -76,106 +86,93 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('BookingDriverSection — tài xế ngoài hệ thống (ADR 0067)', () => {
-  it('nhập tên + SĐT ⇒ gửi đúng một khoá externalDriver (đã cắt khoảng trắng)', async () => {
+const EXTERNAL_DRIVER = {
+  source: DRIVER_SOURCE.EXTERNAL,
+  id: null,
+  name: 'Trần Văn Ngoài',
+  phone: '0912000111',
+  assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+  assignedAt: new Date().toISOString(),
+  respondedAt: null,
+  respondBy: null,
+};
+
+function incident(overrides: Partial<BookingDriverIncident> = {}): BookingDriverIncident {
+  return {
+    droppedAt: new Date().toISOString(),
+    reassignBy: new Date(Date.now() + HOUR).toISOString(),
+    level: DRIVER_INCIDENT_LEVEL.REARRANGING,
+    customerCanCancelFree: false,
+    driverName: 'Lê Rút',
+    reasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
+    reason: 'Sốt cao',
+    zone: DRIVER_DROP_ZONE.SAME_DAY,
+    ...overrides,
+  };
+}
+
+describe('BookingDriverSection', () => {
+  it('không còn nút nhập tài xế ngoài hệ thống', () => {
     render(
       <Harness>
         <BookingDriverSection booking={booking()} canUpdate />
       </Harness>,
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Nhập tài xế ngoài hệ thống' }));
-    fireEvent.change(await screen.findByLabelText('Tên tài xế'), {
-      target: { value: '  Nguyễn Văn Tài ' },
-    });
-    fireEvent.change(screen.getByLabelText('Số điện thoại'), {
-      target: { value: '0912 345 678' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu tài xế' }));
-
-    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
-    const body = (mutation.mutate.mock.calls[0] as unknown[])[0];
-    expect(body).toEqual({ externalDriver: { name: 'Nguyễn Văn Tài', phone: '0912345678' } });
+    expect(screen.getByRole('button', { name: 'Gán tài xế' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /ngoài hệ thống/ })).toBeNull();
   });
 
-  it('SĐT sai ⇒ báo lỗi ở form, không gọi server', async () => {
+  it('đơn cũ mang tài xế ngoài: hiện nhãn + ghi chú đã bỏ, bỏ gán gửi driverId null', async () => {
     render(
       <Harness>
-        <BookingDriverSection booking={booking()} canUpdate />
+        <BookingDriverSection booking={booking({ driver: EXTERNAL_DRIVER })} canUpdate />
       </Harness>,
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Nhập tài xế ngoài hệ thống' }));
-    fireEvent.change(await screen.findByLabelText('Tên tài xế'), {
-      target: { value: 'Nguyễn Văn Tài' },
-    });
-    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '12345' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu tài xế' }));
-
-    expect(await screen.findByText('Số điện thoại di động không hợp lệ')).toBeTruthy();
-    expect(mutation.mutate).not.toHaveBeenCalled();
-  });
-
-  it('tài xế ngoài đang ghi: hiện nhãn "Ngoài hệ thống", SĐT gọi được, nút Sửa điền sẵn', async () => {
-    render(
-      <Harness>
-        <BookingDriverSection
-          booking={booking({
-            driver: {
-              source: DRIVER_SOURCE.EXTERNAL,
-              id: null,
-              name: 'Trần Văn Ngoài',
-              phone: '0912000111',
-              assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
-              assignedAt: new Date().toISOString(),
-              respondedAt: null,
-              respondBy: null,
-            },
-          })}
-          canUpdate
-        />
-      </Harness>,
-    );
-
     expect(screen.getByText('Ngoài hệ thống')).toBeTruthy();
+    expect(screen.getByText(/XePrime không còn nhận cách này/)).toBeTruthy();
     expect(screen.getByRole('link', { name: '0912000111' }).getAttribute('href')).toContain(
       '0912000111',
     );
-    // Không hiện nhãn lượt gán của tài xế liên kết.
-    expect(screen.queryByText('Tài xế đã nhận')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sửa' }));
-    const name = (await screen.findByLabelText('Tên tài xế')) as HTMLInputElement;
-    expect(name.value).toBe('Trần Văn Ngoài');
+    fireEvent.click(screen.getByRole('button', { name: 'Bỏ gán' }));
+    fireEvent.click(await screen.findByRole('button', { name: /OK|Đồng ý|Có/ }));
+    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
+    expect((mutation.mutate.mock.calls[0] as unknown[])[0]).toEqual({ driverId: null });
   });
 
-  it('thay tài xế LIÊN KẾT đang gán: hộp thoại báo trước người đó sẽ bị gỡ', async () => {
+  it('sự cố tài xế rút: tên, lý do, hạn điều phối; nút huỷ mở hộp với nhóm "thiếu tài xế"', () => {
+    render(
+      <Harness>
+        <BookingDriverSection booking={booking({ driverIncident: incident() })} canUpdate />
+      </Harness>,
+    );
+    expect(screen.getByText('Tài xế Lê Rút đã rút khỏi chuyến')).toBeTruthy();
+    expect(screen.getByText(/Lý do: Sức khoẻ — “Sốt cao”/)).toBeTruthy();
+    expect(screen.getByText(/Gán tài xế liên kết khác trước/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến do thiếu tài xế' }));
+    expect(screen.getByTestId('cancel-dialog').textContent).toBe(
+      CANCELLATION_REASON_CATEGORY.DRIVER_UNAVAILABLE,
+    );
+  });
+
+  it('sự cố quá hạn điều phối: nói rõ khách đang được huỷ hoàn 100%; không chồng cảnh báo 2 giờ', () => {
     render(
       <Harness>
         <BookingDriverSection
           booking={booking({
-            driver: {
-              source: DRIVER_SOURCE.LINKED,
-              id: 'drv-1',
-              name: 'Lê Liên Kết',
-              phone: '0912000222',
-              assignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING,
-              assignedAt: new Date().toISOString(),
-              respondedAt: null,
-              respondBy: new Date(Date.now() + HOUR).toISOString(),
-            },
+            pickupAt: new Date(Date.now() + HOUR).toISOString(),
+            driverIncident: incident({
+              level: DRIVER_INCIDENT_LEVEL.URGENT,
+              customerCanCancelFree: true,
+            }),
           })}
           canUpdate
         />
       </Harness>,
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Nhập tài xế ngoài hệ thống' }));
-    expect(
-      await screen.findByText(
-        'Lê Liên Kết đang được gán cho chuyến này sẽ bị gỡ và nhận thông báo.',
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(/khách đang được huỷ hoàn 100%/)).toBeTruthy();
+    expect(screen.queryByText(/Còn dưới 2 giờ tới giờ nhận/)).toBeNull();
   });
 
   it('chưa có tài xế và còn dưới 2 giờ tới giờ nhận ⇒ cảnh báo; còn xa thì không', () => {
@@ -198,12 +195,13 @@ describe('BookingDriverSection — tài xế ngoài hệ thống (ADR 0067)', ()
     expect(screen.queryByText(/Còn dưới 2 giờ tới giờ nhận/)).toBeNull();
   });
 
-  it('đơn đã giao xe: chỉ đọc, không có nút nhập tài xế ngoài', () => {
+  it('đơn đã giao xe: chỉ đọc, không có nút gán / huỷ do thiếu tài xế', () => {
     render(
       <Harness>
         <BookingDriverSection booking={booking({ status: BOOKING_STATUS.ACTIVE })} canUpdate />
       </Harness>,
     );
-    expect(screen.queryByRole('button', { name: 'Nhập tài xế ngoài hệ thống' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gán tài xế' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Huỷ chuyến do thiếu tài xế' })).toBeNull();
   });
 });

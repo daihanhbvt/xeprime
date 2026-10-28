@@ -7,7 +7,9 @@ import {
   releasePromoRedemption,
 } from '@xeprime/prisma';
 import {
+  BOOKING_DRIVER_INCIDENT_SELECT,
   BOOKING_DRIVER_SELECT,
+  toRenterDriverIncident,
   toBookingDriverSummary,
   toRenterDriverSummary,
 } from '../drivers/booking-driver-summary';
@@ -38,6 +40,7 @@ import {
   HANDOVER_TYPE,
   NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES,
   SUPPORT_CASE_CATEGORY,
+  driverIncidentState,
   handoverGraceEndsAt,
   notReceivedWindowPhase,
   MEMBERSHIP_STATUS,
@@ -507,7 +510,7 @@ export class CustomerTripsService {
       where: { customerUserId, OR: [{ id }, { bookingId: id }] },
       select: {
         status: true,
-        booking: { select: { id: true, tenantId: true, status: true } },
+        booking: { select: { id: true, tenantId: true, ...BOOKING_DRIVER_INCIDENT_SELECT } },
         hold: {
           // `paidAt` là mốc BẮT ĐẦU của cửa sổ huỷ miễn phí (ADR 0072).
           select: { status: true, paidAmount: true, freeCancelUntil: true, paidAt: true },
@@ -534,6 +537,7 @@ export class CustomerTripsService {
           ? hasFreeCancelWindow(hold.freeCancelUntil, hold.paidAt)
           : true,
       deferred: false,
+      driverIncident: false,
     };
     const result = (
       kind: CustomerCancelPreviewKind,
@@ -548,13 +552,17 @@ export class CustomerTripsService {
     if (!canCustomerCancelTrip(stage)) return result(CUSTOMER_CANCEL_PREVIEW_KIND.NOT_ALLOWED);
 
     if (row.booking) {
+      // Cùng phép kiểm mà `cancel()` chạy sau khi khoá đơn (ADR 0074 điều 3).
+      const driverFault = driverIncidentState(row.booking)?.freeCancel ?? false;
       const preview = await this.holdSettlement.previewCustomerCancel(
         row.booking.id,
         row.booking.tenantId,
+        new Date(),
+        driverFault,
       );
       // Đơn không có khoản giữ chỗ đã trả chờ chốt — không có đồng nào qua XePrime để chia.
       if (!preview || Number(preview.paidAmount) <= 0) {
-        return result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
+        return result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE, { driverIncident: driverFault });
       }
       return result(
         preview.outcome === BOOKING_HOLD_OUTCOME.REFUNDED
@@ -568,6 +576,7 @@ export class CustomerTripsService {
           ownerCompensationAmount: preview.ownerCompensationAmount,
           freeCancelUntil: preview.freeCancelUntil?.toISOString() ?? null,
           deferred: preview.deferred,
+          driverIncident: driverFault,
         },
       );
     }
@@ -626,6 +635,17 @@ export class CustomerTripsService {
     const booking = row.booking;
     if (booking) {
       await this.prisma.$transaction(async (tx) => {
+        /*
+         * Sự cố tài xế (ADR 0074 điều 3) kiểm SAU khi khoá dòng đơn: tài xế mới bấm Nhận đúng lúc
+         * khách bấm huỷ thì một trong hai xếp hàng sau, và kẻ sau đọc đúng hiện trạng — không có
+         * lượt huỷ nào được hoàn 100% nhờ một sự cố vừa khép.
+         */
+        await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${booking.id} FOR UPDATE`;
+        const incident = await tx.booking.findUniqueOrThrow({
+          where: { id: booking.id },
+          select: BOOKING_DRIVER_INCIDENT_SELECT,
+        });
+        const driverFault = driverIncidentState(incident)?.freeCancel ?? false;
         await this.bookings.transitionWithinTx(
           tx,
           booking.tenantId,
@@ -643,6 +663,7 @@ export class CustomerTripsService {
              * Chặng `pending_host_approval` không ghi sổ huỷ (xem dưới) ⇒ lý do không được lưu.
              */
             reasonCategory,
+            driverFault,
           },
         );
       });
@@ -1215,6 +1236,8 @@ const BOOKING_SELECT = {
   id: true,
   // Tài xế + trạng thái lượt gán — chủ xe theo dõi chuyến có tài xế ngay trên danh sách (ADR 0063).
   ...BOOKING_DRIVER_SELECT,
+  // Sự cố tài xế (ADR 0074) — trang chuyến nói "đang sắp xếp lại" và mở nút huỷ hoàn 100%.
+  ...BOOKING_DRIVER_INCIDENT_SELECT,
   tenantId: true,
   code: true,
   status: true,
@@ -1390,6 +1413,8 @@ function toListItem(
         ? toBookingDriverSummary(booking)
         : toRenterDriverSummary(booking)
       : null,
+    // Cùng một hình cho hai vai — bên thuê xử lý chi tiết ở khu quản lý (`BookingDriverIncidentDto`).
+    driverIncident: booking ? toRenterDriverIncident(booking) : null,
     vehicle: {
       id: row.vehicle.id,
       name: row.vehicle.name,

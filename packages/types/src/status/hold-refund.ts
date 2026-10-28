@@ -80,6 +80,11 @@ export const HOLD_REFUND_REASON = {
    * báo cáo nói đúng chuyện đã xảy ra.
    */
   NO_SHOW: 'no_show',
+  /**
+   * Khách huỷ vì tài xế đã nhận rồi rút và bên thuê không bố trí lại kịp (ADR 0074) — hoàn 100% dù
+   * đã qua mốc huỷ miễn phí; trách nhiệm ghi cho phía cho thuê.
+   */
+  DRIVER_INCIDENT: 'driver_incident',
   /** Admin quyết sau tranh chấp/sự cố — bắt buộc có ghi chú. */
   ADMIN_DECISION: 'admin_decision',
 } as const;
@@ -98,6 +103,7 @@ export const HOLD_REFUND_REASON_LABEL: Readonly<Record<HoldRefundReason, string>
   [HOLD_REFUND_REASON.HOLD_EXPIRED]: 'Hết hạn giữ chỗ khi chưa đủ tiền',
   [HOLD_REFUND_REASON.LATE_CANCEL]: 'Khách huỷ sau mốc miễn phí',
   [HOLD_REFUND_REASON.NO_SHOW]: 'Khách không đến nhận xe',
+  [HOLD_REFUND_REASON.DRIVER_INCIDENT]: 'Huỷ do sự cố tài xế',
   [HOLD_REFUND_REASON.ADMIN_DECISION]: 'Quyết định của XePrime',
 };
 

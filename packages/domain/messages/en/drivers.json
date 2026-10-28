@@ -26,7 +26,8 @@
     "type": "Type",
     "licence": "Licence",
     "activeBookings": "Assigned trips",
-    "status": "Link"
+    "status": "Link",
+    "drops": "Withdrawals (90 days)"
   },
   "licence": {
     "classes": "Class {classes}",
@@ -97,23 +98,18 @@
     "legacyHint": "This booking isn't a chauffeured trip.",
     "externalTag": "External",
     "externalSetAt": "Recorded {time}",
-    "enterExternal": "Enter an external driver",
-    "editExternal": "Edit",
-    "externalSaved": "External driver saved",
-    "missingSoon": "Pick-up is less than {hours} hours away and this trip still has no driver — assign a linked driver or enter an external one.",
-    "externalForm": {
-      "title": "External driver",
-      "hint": "The driver doesn't need a XePrime account. The customer will see this name and phone number to get in touch; the system doesn't check this person's schedule for overlaps.",
-      "replaceLinked": "{name}, currently assigned to this trip, will be removed and notified.",
-      "name": "Driver name",
-      "namePlaceholder": "e.g. Nguyen Van Tai",
-      "phone": "Phone number",
-      "phonePlaceholder": "e.g. 0901234567",
-      "save": "Save driver",
-      "nameRequired": "Please enter the driver's name",
-      "nameLength": "Driver name must be {min}–{max} characters",
-      "phoneRequired": "Please enter a phone number",
-      "phoneInvalid": "Invalid mobile phone number"
+    "missingSoon": "Pickup is less than {hours} hours away and the trip has no driver — assign a linked driver, or cancel the trip if you cannot arrange one.",
+    "externalLegacy": "Driver outside the platform (older booking) — XePrime no longer accepts this. Assign a linked driver instead.",
+    "incident": {
+      "titleNamed": "Driver {name} withdrew from the trip",
+      "titleReleased": "The driver handed the trip back",
+      "reason": "Reason: {reason}",
+      "reasonWithNote": "Reason: {reason} — “{note}”",
+      "droppedAt": "Withdrew at {time}",
+      "reassignBy": "Assign another linked driver before {time}",
+      "overdue": "The rearranging deadline has passed ({time}). The customer can now cancel with a 100% refund, counted against you.",
+      "urgent": "Pickup is less than 2 hours away — the customer can cancel with a 100% refund at any time.",
+      "cancelForDriver": "Cancel trip: no driver available"
     }
   },
   "endedBy": {
@@ -132,6 +128,14 @@
     "assignedBySystem": "Auto-assigned by the system (Instant book) · {time}",
     "acceptedAt": "Driver accepted at {time}",
     "endedBy": "{name} · {time}",
-    "endedAt": "Ended at {time}"
+    "endedAt": "Ended at {time}",
+    "dropReason": "Withdrawal reason: {reason}",
+    "dropNote": "“{note}”",
+    "dropZone": "Timing: {zone}"
+  },
+  "drops": {
+    "count": "{count, plural, one {# time} other {# times}}",
+    "critical": "{count, plural, one {# last-minute} other {# last-minute}}",
+    "cooldownUntil": "No \"Instant book\" auto-assign until {time}"
   }
 }

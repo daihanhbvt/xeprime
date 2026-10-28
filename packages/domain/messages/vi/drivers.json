@@ -26,7 +26,8 @@
     "type": "Loại",
     "licence": "Bằng lái",
     "activeBookings": "Chuyến đang gán",
-    "status": "Liên kết"
+    "status": "Liên kết",
+    "drops": "Rút chuyến (90 ngày)"
   },
   "licence": {
     "classes": "Hạng {classes}",
@@ -97,23 +98,18 @@
     "legacyHint": "Đơn này không phải chuyến có tài xế.",
     "externalTag": "Ngoài hệ thống",
     "externalSetAt": "Ghi lúc {time}",
-    "enterExternal": "Nhập tài xế ngoài hệ thống",
-    "editExternal": "Sửa",
-    "externalSaved": "Đã lưu tài xế ngoài hệ thống",
-    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết hoặc nhập tài xế ngoài hệ thống.",
-    "externalForm": {
-      "title": "Tài xế ngoài hệ thống",
-      "hint": "Người lái không cần tài khoản XePrime. Khách sẽ thấy tên và số điện thoại này để liên hệ; hệ thống không kiểm tra lịch trùng của người này.",
-      "replaceLinked": "{name} đang được gán cho chuyến này sẽ bị gỡ và nhận thông báo.",
-      "name": "Tên tài xế",
-      "namePlaceholder": "VD: Nguyễn Văn Tài",
-      "phone": "Số điện thoại",
-      "phonePlaceholder": "VD: 0901234567",
-      "save": "Lưu tài xế",
-      "nameRequired": "Vui lòng nhập tên tài xế",
-      "nameLength": "Tên tài xế từ {min} đến {max} ký tự",
-      "phoneRequired": "Vui lòng nhập số điện thoại",
-      "phoneInvalid": "Số điện thoại di động không hợp lệ"
+    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết, hoặc huỷ chuyến nếu không bố trí được.",
+    "externalLegacy": "Tài xế ngoài hệ thống (đơn cũ) — XePrime không còn nhận cách này. Gán tài xế liên kết để thay.",
+    "incident": {
+      "titleNamed": "Tài xế {name} đã rút khỏi chuyến",
+      "titleReleased": "Tài xế đã trả lại chuyến",
+      "reason": "Lý do: {reason}",
+      "reasonWithNote": "Lý do: {reason} — “{note}”",
+      "droppedAt": "Rút lúc {time}",
+      "reassignBy": "Gán tài xế liên kết khác trước {time}",
+      "overdue": "Đã quá hạn điều phối ({time}). Khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.",
+      "urgent": "Còn dưới 2 giờ tới giờ đón — khách đang được huỷ hoàn 100% bất cứ lúc nào.",
+      "cancelForDriver": "Huỷ chuyến do thiếu tài xế"
     }
   },
   "endedBy": {
@@ -132,6 +128,14 @@
     "assignedBySystem": "Hệ thống tự gán (Đặt ngay) · {time}",
     "acceptedAt": "Tài xế nhận lúc {time}",
     "endedBy": "{name} · {time}",
-    "endedAt": "Kết thúc lúc {time}"
+    "endedAt": "Kết thúc lúc {time}",
+    "dropReason": "Lý do rút: {reason}",
+    "dropNote": "“{note}”",
+    "dropZone": "Thời điểm: {zone}"
+  },
+  "drops": {
+    "count": "{count, plural, other {# lần}}",
+    "critical": "{count, plural, other {# lần sát giờ}}",
+    "cooldownUntil": "Không tự gán \"Đặt ngay\" tới {time}"
   }
 }

@@ -129,6 +129,8 @@ export {
   driverResponseExpiredDriverCopy,
   driverResponseExpiredEmployerCopy,
   driverTripDeclinedEmployerCopy,
+  driverTripDroppedEmployerCopy,
+  tripDriverReassignedCustomerCopy,
   type DriverTripReleasedCopyInput,
 } from './driver-trip-copy';
 

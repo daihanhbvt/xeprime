@@ -37,7 +37,12 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
         const outcome = h.outcome as DriverAssignmentOutcome;
         return {
           key: h.id,
-          color: outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN ? 'blue' : 'gray',
+          color:
+            outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN
+              ? 'blue'
+              : outcome === DRIVER_ASSIGNMENT_OUTCOME.DROPPED
+                ? 'red'
+                : 'gray',
           children: (
             <div className={styles.stack}>
               <span>
@@ -54,6 +59,20 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
               {h.acceptedAt ? (
                 <span className={styles.meta}>
                   {t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) })}
+                </span>
+              ) : null}
+              {/* Lượt RÚT (ADR 0074): lý do + độ sát giờ — để bên thuê quyết có tạm khoá tài xế hay không. */}
+              {h.dropReasonCategory ? (
+                <span>
+                  {t('dropReason', {
+                    reason: domainLabel('driverDropReason', h.dropReasonCategory),
+                  })}
+                  {h.dropReason ? ` ${t('dropNote', { note: h.dropReason })}` : ''}
+                </span>
+              ) : null}
+              {h.dropZone ? (
+                <span className={styles.meta}>
+                  {t('dropZone', { zone: domainLabel('driverDropZone', h.dropZone) })}
                 </span>
               ) : null}
               {h.endedAt ? (

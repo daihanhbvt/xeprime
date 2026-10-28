@@ -1,7 +1,16 @@
 import { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   BRANCH_SCOPED_RESOURCE,
   BranchScoped,
@@ -126,10 +135,10 @@ export class BookingsController {
   @Patch(':id/driver')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
-    summary: 'Gán/bỏ gán tài xế, hoặc ghi tài xế ngoài hệ thống cho đơn (có audit)',
+    summary: 'Gán/bỏ gán tài xế liên kết cho đơn (có audit)',
     description:
-      'Gửi ĐÚNG MỘT khoá. `driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống). ' +
-      '`externalDriver`: ghi tên + SĐT tài xế ngoài hệ thống (ADR 0067) — coi là đã nhận ngay, lượt gán liên kết đang có bị đóng và người đó được báo. ' +
+      '`driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống còn trên đơn cũ). ' +
+      '`externalDriver` đã bỏ (ADR 0074 điều 4) ⇒ 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. ' +
       'Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.',
   })
   @ApiOkResponse({ type: BookingDetailDto })
@@ -139,10 +148,14 @@ export class BookingsController {
     @Param('id') id: string,
     @Body() dto: AssignBookingDriverDto,
   ): Promise<BookingDetailDto> {
-    // DTO bảo đảm đúng một trong hai khoá có mặt (`ExactlyOneOf`).
-    return dto.externalDriver
-      ? this.bookings.setExternalDriver(tenant.tenantId, id, user.id, dto.externalDriver)
-      : this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId ?? null);
+    // Tài xế ngoài hệ thống đã bỏ (ADR 0074 điều 4) — app cũ còn gửi khoá này thì nói đúng lý do.
+    if (dto.externalDriver !== undefined) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED,
+        message: 'XePrime không còn nhận tài xế ngoài hệ thống — gán tài xế liên kết',
+      });
+    }
+    return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId ?? null);
   }
 
   /** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */

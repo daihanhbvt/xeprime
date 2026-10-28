@@ -1,6 +1,12 @@
 'use client';
 
-import { CheckOutlined, CloseOutlined, MessageOutlined, PhoneOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  MessageOutlined,
+  PhoneOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 import { App, Button, Popconfirm } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -11,9 +17,10 @@ import { ROUTES, drivingTripPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { useAcceptDriverTrip, useDeclineDriverTrip, useReleaseDriverTrip } from '../hooks';
+import { useAcceptDriverTrip, useDeclineDriverTrip } from '../hooks';
 import type { DriverTrip } from '../types';
 import { EmployerAvatar, Fact, ToneBadge } from './DriverCenterParts';
+import { DropTripDialog } from './DropTripDialog';
 import styles from './DriverCenter.module.css';
 
 /**
@@ -22,7 +29,8 @@ import styles from './DriverCenter.module.css';
  * Không có khối "Thu nhập chuyến" của bản vẽ: tài xế không thấy tiền (ADR 0063 điều 10, chủ sản
  * phẩm chốt giữ 26/10/2026). Chân thẻ theo chặng:
  *  - chờ tôi nhận → đồng hồ hạn trả lời (ADR 0066) + Gọi khách / Từ chối / Nhận chuyến;
- *  - đã nhận, còn cửa sổ trả lại → "Bạn đã xác nhận" + Gọi khách / Hủy chuyến (sửa ADR 0063 điều 6);
+ *  - đã nhận, chưa giao xe → "Bạn đã xác nhận" (+ đồng hồ rút không phạt khi còn cửa sổ trả lại) +
+ *    Gọi khách / Báo sự cố – Rút khỏi chuyến (ADR 0074);
  *  - đã qua → Liên hệ hỗ trợ.
  */
 export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
@@ -36,8 +44,8 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
   const errorMessage = useErrorMessage();
   const accept = useAcceptDriverTrip();
   const decline = useDeclineDriverTrip();
-  const release = useReleaseDriverTrip();
-  const busy = accept.isPending || decline.isPending || release.isPending;
+  const [dropOpen, setDropOpen] = useState(false);
+  const busy = accept.isPending || decline.isPending;
   const onError = (err: unknown) => message.error(errorMessage(err));
 
   const open = trip.outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN;
@@ -177,29 +185,15 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
             </>
           ) : null}
 
-          {open && trip.releaseUntil ? (
-            <Popconfirm
-              title={t('releaseConfirmTitle')}
-              description={t('releaseConfirmBody')}
-              okText={t('release')}
-              okButtonProps={{ danger: true }}
-              cancelText={tCommon('actions.close')}
-              onConfirm={() =>
-                release.mutate(trip.id, {
-                  onSuccess: () => message.success(tToast('tripReleased')),
-                  onError,
-                })
-              }
+          {trip.canDrop ? (
+            <Button
+              className={styles.dangerOutline}
+              icon={<WarningOutlined />}
+              disabled={busy}
+              onClick={() => setDropOpen(true)}
             >
-              <Button
-                className={styles.dangerOutline}
-                icon={<CloseOutlined />}
-                loading={release.isPending}
-                disabled={busy}
-              >
-                {t('release')}
-              </Button>
-            </Popconfirm>
+              {t('drop')}
+            </Button>
           ) : null}
 
           {!open ? (
@@ -209,6 +203,9 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
           ) : null}
         </div>
       </div>
+      {trip.canDrop ? (
+        <DropTripDialog trip={trip} open={dropOpen} onClose={() => setDropOpen(false)} />
+      ) : null}
     </article>
   );
 }

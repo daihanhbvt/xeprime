@@ -39,6 +39,11 @@ interface BookingStatusTransitionDialogProps {
   target: BookingClosingTarget;
   open: boolean;
   onClose: () => void;
+  /**
+   * Nhóm lý do chọn sẵn — lối "Huỷ chuyến do thiếu tài xế" của khối Tài xế (ADR 0074) mở hộp với
+   * `driver_unavailable`. Người huỷ vẫn đổi được; chỉ có tác dụng khi huỷ.
+   */
+  defaultReasonCategory?: CancellationReasonCategory;
 }
 
 /**
@@ -74,6 +79,7 @@ export function BookingStatusTransitionDialog({
   target,
   open,
   onClose,
+  defaultReasonCategory,
 }: BookingStatusTransitionDialogProps) {
   const t = useTranslations('Bookings.statusActions.dialog');
   const { message } = App.useApp();
@@ -133,7 +139,7 @@ export function BookingStatusTransitionDialog({
    */
   const { control, handleSubmit, watch } = useForm<{ reason: string; reasonCategory: string }>({
     resolver: yupResolver(schema),
-    defaultValues: { reason: '', reasonCategory: '' },
+    defaultValues: { reason: '', reasonCategory: defaultReasonCategory ?? '' },
   });
 
   /*

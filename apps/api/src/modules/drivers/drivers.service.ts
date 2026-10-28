@@ -19,10 +19,20 @@ import {
   driverReassignPushExpiresAt,
   driverResponseExpiredEmployerCopy,
   driverTripDeclinedEmployerCopy,
+  driverTripDroppedEmployerCopy,
+  tripDriverReassignedCustomerCopy,
 } from '@xeprime/domain';
 import {
+  driverDropPolicy,
   driverReleaseUntil,
   driverRespondByFor,
+  DRIVER_DROP_NOTE_LENGTH,
+  DRIVER_DROP_REASON,
+  DRIVER_DROP_REASON_LABEL,
+  DRIVER_DROP_STATS_WINDOW_DAYS,
+  DRIVER_DROP_VIOLATION_ZONES,
+  DRIVER_DROP_ZONE,
+  type DriverDropReason,
   ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -96,6 +106,7 @@ const LINK_SELECT = {
   respondedAt: true,
   endedAt: true,
   endedByParty: true,
+  autoAssignCooldownUntil: true,
   user: { select: { displayName: true, avatarUrl: true } },
 } satisfies Prisma.DriverSelect;
 
@@ -156,10 +167,11 @@ export class DriversService {
     const closedUserIds = rows
       .filter((r) => !OPEN_LINK.includes(r.linkStatus))
       .map((r) => r.userId);
-    const [counts, licences, reopened] = await Promise.all([
+    const [counts, licences, reopened, drops] = await Promise.all([
       this.activeBookingCounts(rows.map((r) => r.id)),
       this.licenceSummaries(rows.map((r) => r.userId)),
       this.openLinkStatusByUser(tenantId, closedUserIds),
+      this.dropStats(rows.map((r) => r.id)),
     ]);
     return {
       data: rows.map((r) =>
@@ -168,6 +180,7 @@ export class DriversService {
           counts.get(r.id) ?? 0,
           licences.get(r.userId),
           OPEN_LINK.includes(r.linkStatus) ? null : (reopened.get(r.userId) ?? null),
+          drops.get(r.id),
         ),
       ),
       meta: paginationMeta(paging, total),
@@ -516,6 +529,8 @@ export class DriversService {
         tenantId,
         linkStatus: DRIVER_LINK_STATUS.ACTIVE,
         ...(window.excludeUserId ? { userId: { not: window.excludeUserId } } : {}),
+        // Đang chịu cooldown sau một lượt rút sát giờ (ADR 0074 điều 2) — không tự gán.
+        OR: [{ autoAssignCooldownUntil: null }, { autoAssignCooldownUntil: { lte: new Date() } }],
       },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: { id: true, userId: true },
@@ -713,92 +728,6 @@ export class DriversService {
   }
 
   /**
-   * Ghi / đổi tài xế NGOÀI HỆ THỐNG trên đơn (ADR 0067) — chạy TRONG transaction của bên gọi.
-   *
-   * Không có lượt chờ: lưu là coi như đã nhận. Lượt gán LIÊN KẾT đang có (chờ hay đã nhận) bị đóng
-   * như "bỏ gán" (`unassigned`) và người đó được báo — y như đổi sang tài xế liên kết khác. Không
-   * chống trùng lịch (hệ thống không biết người này), không tạo hồ sơ dùng lại.
-   *
-   * `driver_missing_alerted_at` GIỮ NGUYÊN: đó là cột claim "đã nhắc một lần", không phải trạng
-   * thái phủ — đơn đã có người thì phép quét tự bỏ qua, gỡ lại sau đó cũng không nhắc lần hai.
-   */
-  async setExternalWithinTx(
-    tx: Prisma.TransactionClient,
-    input: {
-      tenantId: string;
-      bookingId: string;
-      name: string;
-      phone: string;
-      actorUserId: string;
-    },
-  ): Promise<void> {
-    const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
-    if (!REASSIGNABLE.includes(booking.status)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
-        message: 'Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa',
-      });
-    }
-    if (booking.serviceType !== SERVICE_TYPE.WITH_DRIVER) {
-      throw new UnprocessableEntityException({
-        code: API_ERROR_CODE.DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED,
-        message: 'Chỉ đơn thuê có tài xế mới gán tài xế được',
-      });
-    }
-
-    const name = input.name.trim();
-    const phone = normalizePhone(input.phone);
-    // Gửi lại đúng người đang ghi ⇒ không đổi gì, không audit trùng.
-    if (booking.externalDriverName === name && booking.externalDriverPhone === phone) return;
-
-    const now = new Date();
-    await tx.booking.update({
-      where: { id: booking.id },
-      data: {
-        ...CLEARED_ASSIGNMENT,
-        externalDriverName: name,
-        externalDriverPhone: phone,
-        driverAssignedAt: now,
-      },
-    });
-    if (booking.driverId) {
-      await closeOpenAssignment(
-        tx,
-        booking.id,
-        DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
-        input.actorUserId,
-      );
-    }
-
-    await this.audit.record(
-      {
-        tenantId: input.tenantId,
-        actorUserId: input.actorUserId,
-        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-        action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_SET,
-        targetType: AUDIT_TARGET_TYPE.BOOKING,
-        targetId: booking.id,
-        before: {
-          driverId: booking.driverId,
-          externalDriver: maskedExternalDriver(booking),
-        },
-        after: {
-          driverId: null,
-          externalDriver: maskedExternalDriver({
-            externalDriverName: name,
-            externalDriverPhone: phone,
-          }),
-        },
-      },
-      tx,
-    );
-
-    if (booking.driverUserId) {
-      await this.notifyUnassigned(tx, booking, 'Chuyến đã được giao cho tài xế khác.');
-    }
-  }
-
-  /**
    * Đọc + KHOÁ dòng đơn trước khi đổi tài xế (`FOR UPDATE`). Hai lượt đổi song song (gán liên kết
    * ↔ ghi tài xế ngoài) nếu không khoá sẽ cùng đọc "chưa có ai" rồi kẻ thắng sau xoá lượt gán của
    * kẻ kia mà không khép sổ, không báo người bị gỡ. Khoá xếp hàng chúng; kẻ sau đọc đúng hiện trạng.
@@ -851,7 +780,9 @@ export class DriversService {
           status: true,
           driverAssignmentStatus: true,
           driverRespondBy: true,
+          driverDroppedAt: true,
           driver: { select: { name: true } },
+          bookingRequest: { select: { id: true, customerUserId: true } },
         },
       });
       if (!booking) {
@@ -934,6 +865,9 @@ export class DriversService {
               driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
               driverRespondedAt: now,
               driverRespondBy: null,
+              // Có người nhận lại ⇒ sự cố tài xế (nếu có) khép lại (ADR 0074 điều 3).
+              driverDroppedAt: null,
+              driverReassignBy: null,
             }
           : CLEARED_ASSIGNMENT,
       });
@@ -980,6 +914,21 @@ export class DriversService {
             },
         tx,
       );
+      // Khách đã thấy "Đang sắp xếp lại tài xế" — báo họ khi có người mới nhận (ADR 0074). Không
+      // nêu ai đã rút; tên + SĐT người mới đọc ở trang chuyến.
+      if (accept && booking.driverDroppedAt && booking.bookingRequest?.customerUserId) {
+        await this.notifications.emitToUser(
+          booking.bookingRequest.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+            ...tripDriverReassignedCustomerCopy({ bookingCode: booking.code }),
+            tenantId: booking.tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: booking.bookingRequest.id,
+          },
+          tx,
+        );
+      }
     });
   }
 
@@ -1004,6 +953,8 @@ export class DriversService {
         },
       });
       if (!booking) throw tripNotFound();
+      // Trả lại trong cửa sổ cũng để khách không còn ai lái: ghi sự cố như một lượt rút (ADR 0074
+      // điều 3) — chỉ không phạt tài xế.
       // Cửa sổ trả lại tính như huỷ miễn phí của khách — quá mốc thì phải nhờ bên thuê đổi người.
       if (
         !booking.driverRespondedAt ||
@@ -1021,7 +972,15 @@ export class DriversService {
           pickupAt: { gt: now },
           deletedAt: null,
         },
-        data: CLEARED_ASSIGNMENT,
+        data: {
+          ...CLEARED_ASSIGNMENT,
+          driverDroppedAt: now,
+          driverReassignBy: driverDropPolicy({
+            droppedAt: now,
+            pickupAt: booking.pickupAt,
+            releaseUntil: null,
+          }).reassignBy,
+        },
       });
       if (claimed.count === 0) throw assignmentStateConflict();
       await closeOpenAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DECLINED, userId);
@@ -1049,6 +1008,147 @@ export class DriversService {
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
           targetId: bookingId,
           pushExpiresAt: driverReassignPushExpiresAt(now),
+        },
+        tx,
+      );
+    });
+  }
+
+  /**
+   * Tài xế RÚT khỏi chuyến đã nhận vì sự cố (ADR 0074) — bất cứ lúc nào trước bàn giao.
+   *
+   * MỘT transaction, khoá dòng đơn: bốn cột tài xế về NULL (EXCLUDE nhả người này ngay), lượt trong
+   * sổ khép `dropped` kèm lý do + vùng, ghi sự cố trên đơn (hạn điều phối lại), cooldown "Đặt ngay"
+   * trên liên kết nếu rút sát giờ, audit, báo KHẨN bên thuê. Đơn KHÔNG bị huỷ, không đồng tiền nào
+   * đổi chiều; còn trong cửa sổ trả lại thì vùng là `grace` — không phạt.
+   */
+  async dropTrip(
+    userId: string,
+    bookingId: string,
+    input: { reasonCategory: DriverDropReason; reason?: string | null },
+  ): Promise<void> {
+    const note = input.reason?.trim() || null;
+    if (
+      input.reasonCategory === DRIVER_DROP_REASON.OTHER &&
+      (!note || note.length < DRIVER_DROP_NOTE_LENGTH.MIN)
+    ) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.DRIVER_DROP_NOTE_REQUIRED,
+        message: `Mô tả sự cố ít nhất ${DRIVER_DROP_NOTE_LENGTH.MIN} ký tự`,
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Khoá trước khi đọc: lượt rút đua với bên thuê đổi người / giao xe thì xếp hàng, kẻ sau đọc
+      // đúng hiện trạng (cùng kỷ luật `lockBookingForDriverChange`).
+      await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${bookingId} AND "driver_user_id" = ${userId} FOR UPDATE`;
+      const now = new Date();
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, driverUserId: userId, deletedAt: null },
+        select: {
+          id: true,
+          code: true,
+          tenantId: true,
+          status: true,
+          pickupAt: true,
+          driverId: true,
+          driverAssignmentStatus: true,
+          driverRespondedAt: true,
+          driver: { select: { name: true } },
+        },
+      });
+      if (!booking) throw tripNotFound();
+      if (
+        booking.driverAssignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED ||
+        !REASSIGNABLE.includes(booking.status)
+      ) {
+        throw assignmentStateConflict();
+      }
+
+      const policy = driverDropPolicy({
+        droppedAt: now,
+        pickupAt: booking.pickupAt,
+        releaseUntil: booking.driverRespondedAt
+          ? driverReleaseUntil(booking.driverRespondedAt, booking.pickupAt)
+          : null,
+      });
+
+      const claimed = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          driverUserId: userId,
+          driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+          status: { in: REASSIGNABLE },
+          deletedAt: null,
+        },
+        data: {
+          ...CLEARED_ASSIGNMENT,
+          driverDroppedAt: now,
+          driverReassignBy: policy.reassignBy,
+        },
+      });
+      if (claimed.count === 0) throw assignmentStateConflict();
+      await tx.bookingDriverAssignment.updateMany({
+        where: { bookingId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN },
+        data: {
+          outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+          endedAt: now,
+          endedBy: userId,
+          dropReasonCategory: input.reasonCategory,
+          dropReason: note,
+          dropZone: policy.zone,
+        },
+      });
+      // Cooldown chỉ KÉO DÀI, không rút ngắn một hình phạt đang chạy dài hơn.
+      if (policy.cooldownUntil && booking.driverId) {
+        await tx.driver.updateMany({
+          where: {
+            id: booking.driverId,
+            OR: [
+              { autoAssignCooldownUntil: null },
+              { autoAssignCooldownUntil: { lt: policy.cooldownUntil } },
+            ],
+          },
+          data: { autoAssignCooldownUntil: policy.cooldownUntil },
+        });
+      }
+      // Tin khẩn dưới đây đã đòi gán lại — worker không nhắc thêm "chưa có tài xế" (ADR 0067 điều 2).
+      await markDriverMissingAlertCovered(tx, bookingId, now);
+
+      await this.audit.record(
+        {
+          tenantId: booking.tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+          action: DRIVER_ASSIGNMENT_AUDIT_ACTION.DROPPED,
+          targetType: AUDIT_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          before: { driverId: booking.driverId, status: booking.status },
+          after: {
+            reasonCategory: input.reasonCategory,
+            zone: policy.zone,
+            reassignBy: policy.reassignBy.toISOString(),
+            cooldownUntil: policy.cooldownUntil?.toISOString() ?? null,
+          },
+        },
+        tx,
+      );
+      await this.notifications.emitToTenantMembers(
+        booking.tenantId,
+        {
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
+          ...driverTripDroppedEmployerCopy({
+            driverName: driverDisplayName(booking.driver?.name),
+            bookingCode: booking.code,
+            reassignByText: formatVnDateTime(policy.reassignBy),
+            reasonLabel: DRIVER_DROP_REASON_LABEL[input.reasonCategory],
+          }),
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          // Rung máy sau hạn điều phối là báo một việc đã quá giờ; hộp thư vẫn giữ tin.
+          pushExpiresAt: new Date(
+            Math.max(policy.reassignBy.getTime(), driverReassignPushExpiresAt(now).getTime()),
+          ),
         },
         tx,
       );
@@ -1225,6 +1325,9 @@ export class DriversService {
         acceptedAt: true,
         endedAt: true,
         endedBy: true,
+        dropReasonCategory: true,
+        dropReason: true,
+        dropZone: true,
         driver: { select: { id: true, name: true, phone: true } },
       },
     });
@@ -1249,6 +1352,9 @@ export class DriversService {
       acceptedAt: r.acceptedAt?.toISOString() ?? null,
       endedAt: r.endedAt?.toISOString() ?? null,
       endedByName: r.endedBy ? (nameOf.get(r.endedBy) ?? null) : null,
+      dropReasonCategory: r.dropReasonCategory,
+      dropReason: r.dropReason,
+      dropZone: r.dropZone,
     }));
   }
 
@@ -1350,6 +1456,35 @@ export class DriversService {
       select: { userId: true, linkStatus: true },
     });
     return new Map(rows.map((r) => [r.userId, r.linkStatus]));
+  }
+
+  /**
+   * Số lần RÚT chuyến bị tính vi phạm trong `DRIVER_DROP_STATS_WINDOW_DAYS` ngày, theo liên kết
+   * (ADR 0074 điều 2) — một groupBy cho cả trang; index một phần `booking_driver_assignments_dropped_idx`.
+   * `critical` = rút khi còn dưới 2 giờ — cờ để bên thuê cân nhắc tạm khoá.
+   */
+  private async dropStats(
+    driverIds: string[],
+  ): Promise<Map<string, { total: number; critical: number }>> {
+    if (driverIds.length === 0) return new Map();
+    const rows = await this.prisma.bookingDriverAssignment.groupBy({
+      by: ['driverId', 'dropZone'],
+      where: {
+        driverId: { in: driverIds },
+        outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+        dropZone: { in: [...DRIVER_DROP_VIOLATION_ZONES] },
+        endedAt: { gte: new Date(Date.now() - DRIVER_DROP_STATS_WINDOW_DAYS * DAY_MS) },
+      },
+      _count: { _all: true },
+    });
+    const out = new Map<string, { total: number; critical: number }>();
+    for (const r of rows) {
+      const cur = out.get(r.driverId) ?? { total: 0, critical: 0 };
+      cur.total += r._count._all;
+      if (r.dropZone === DRIVER_DROP_ZONE.CRITICAL) cur.critical += r._count._all;
+      out.set(r.driverId, cur);
+    }
+    return out;
   }
 
   /** Số đơn "sống" theo liên kết — một groupBy cho cả trang, không N+1. */
@@ -1474,6 +1609,7 @@ function toDto(
   activeBookingCount: number,
   licence: DriverLicenceSummaryDto | undefined,
   currentOpenLinkStatus: string | null = null,
+  drops: { total: number; critical: number } = { total: 0, critical: 0 },
 ): DriverDto {
   return {
     id: r.id,
@@ -1496,6 +1632,12 @@ function toDto(
     },
     activeBookingCount,
     currentOpenLinkStatus,
+    dropCount: drops.total,
+    criticalDropCount: drops.critical,
+    autoAssignCooldownUntil:
+      r.autoAssignCooldownUntil && r.autoAssignCooldownUntil.getTime() > Date.now()
+        ? r.autoAssignCooldownUntil.toISOString()
+        : null,
   };
 }
 

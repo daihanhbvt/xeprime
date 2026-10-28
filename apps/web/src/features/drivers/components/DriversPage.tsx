@@ -27,6 +27,7 @@ import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUrlFilters } from '@/hooks/use-url-filters';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { DRIVERS_DEFAULT_LIMIT } from '../api';
@@ -78,6 +79,7 @@ function DriversPageInner() {
   const { message } = App.useApp();
   const { has } = usePermissions();
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
   // Bộ lọc + trang sống trên URL (ADR 0004).
@@ -179,6 +181,34 @@ function DriversPageInner() {
       render: (_, row) =>
         row.activeBookingCount > 0 ? (
           <Tag color="blue">{t('activeBookings', { count: row.activeBookingCount })}</Tag>
+        ) : (
+          tCommon('labels.emptyValue')
+        ),
+    },
+    {
+      // Số lần RÚT chuyến đã nhận trong 90 ngày (ADR 0074) — để bên thuê tự quyết tạm khoá.
+      title: t('columns.drops'),
+      key: 'drops',
+      width: 170,
+      render: (_, row) =>
+        row.dropCount > 0 || row.autoAssignCooldownUntil ? (
+          <div>
+            {row.dropCount > 0 ? (
+              <Tag color={row.criticalDropCount > 0 ? 'red' : 'orange'}>
+                {t('drops.count', { count: row.dropCount })}
+              </Tag>
+            ) : null}
+            {row.criticalDropCount > 0 ? (
+              <div className={styles.meta}>
+                {t('drops.critical', { count: row.criticalDropCount })}
+              </div>
+            ) : null}
+            {row.autoAssignCooldownUntil ? (
+              <div className={styles.meta}>
+                {t('drops.cooldownUntil', { time: fmt.dateTime(row.autoAssignCooldownUntil) })}
+              </div>
+            ) : null}
+          </div>
         ) : (
           tCommon('labels.emptyValue')
         ),

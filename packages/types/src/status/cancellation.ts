@@ -88,6 +88,12 @@ export const CANCELLATION_REASON_CATEGORY = {
   CUSTOMER_UNREACHABLE: 'customer_unreachable',
   /** Khách đổi ý / đổi kế hoạch. */
   CUSTOMER_CHANGED_PLAN: 'customer_changed_plan',
+  /**
+   * Chuyến có tài xế không còn ai lái — tài xế đã nhận rồi rút và bên thuê không bố trí được người
+   * khác (ADR 0074). Bên thuê chọn khi tự huỷ; khách KHÔNG chọn được — server tự gắn khi lượt huỷ
+   * của khách rơi vào cửa sổ "huỷ do sự cố tài xế".
+   */
+  DRIVER_UNAVAILABLE: 'driver_unavailable',
   /** Còn lại — bắt buộc kèm chữ giải thích. */
   OTHER: 'other',
 } as const;
@@ -130,6 +136,10 @@ export const CANCELLATION_REASON_CATEGORY_META: Readonly<
   [CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN]: {
     label: 'Khách đổi kế hoạch',
     color: STATUS_COLOR.NEUTRAL,
+  },
+  [CANCELLATION_REASON_CATEGORY.DRIVER_UNAVAILABLE]: {
+    label: 'Không bố trí được tài xế',
+    color: STATUS_COLOR.WARNING,
   },
   [CANCELLATION_REASON_CATEGORY.OTHER]: { label: 'Lý do khác', color: STATUS_COLOR.NEUTRAL },
 };

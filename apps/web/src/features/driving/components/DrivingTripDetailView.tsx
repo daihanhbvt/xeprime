@@ -1,8 +1,14 @@
 'use client';
 
-import { ArrowLeftOutlined, EnvironmentOutlined, PhoneOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  EnvironmentOutlined,
+  PhoneOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 import { Alert, App, Button, Popconfirm, Skeleton } from 'antd';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, isDriverTripAwaitingAnswer } from '@xeprime/types';
@@ -12,15 +18,11 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode } from '@/services/api-client';
-import {
-  useAcceptDriverTrip,
-  useDeclineDriverTrip,
-  useDriverTrip,
-  useReleaseDriverTrip,
-} from '../hooks';
+import { useAcceptDriverTrip, useDeclineDriverTrip, useDriverTrip } from '../hooks';
 import { placeMapUrl } from '../maps';
 import { DriverRespondCountdown } from './DriverRespondCountdown';
 import { DrivingTripTags } from './DrivingTripTags';
+import { DropTripDialog } from './DropTripDialog';
 import styles from './Driving.module.css';
 
 /**
@@ -41,9 +43,9 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
   const { data: trip, isLoading, isError, error, refetch } = useDriverTrip(bookingId);
   const accept = useAcceptDriverTrip();
   const decline = useDeclineDriverTrip();
-  const release = useReleaseDriverTrip();
   const tCard = useTranslations('Driving.tripCard');
-  const busy = accept.isPending || decline.isPending || release.isPending;
+  const [dropOpen, setDropOpen] = useState(false);
+  const busy = accept.isPending || decline.isPending;
 
   const back = (
     <Link href={drivingTripPath.list} className={styles.backLink}>
@@ -154,33 +156,35 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
         />
       ) : null}
 
-      {trip.releaseUntil ? (
+      {/* Đã nhận, chưa giao xe: rút được khi có sự cố (ADR 0074) — trong cửa sổ trả lại thì không phạt. */}
+      {trip.canDrop ? (
         <Alert
           type="success"
           showIcon
           title={tCard('confirmed')}
           description={
-            <div className={styles.actions}>
-              <Popconfirm
-                title={tCard('releaseConfirmTitle')}
-                description={tCard('releaseConfirmBody')}
-                okText={tCard('release')}
-                okButtonProps={{ danger: true }}
-                cancelText={tCommon('actions.close')}
-                onConfirm={() =>
-                  release.mutate(trip.id, {
-                    onSuccess: () => message.success(tToast('tripReleased')),
-                    onError: (err) => message.error(errorMessage(err)),
-                  })
-                }
-              >
-                <Button danger loading={release.isPending} disabled={busy}>
-                  {tCard('release')}
+            <>
+              {trip.releaseUntil ? (
+                <p className={styles.meta}>
+                  {t('dropFreeUntil', { time: fmt.dateTime(trip.releaseUntil) })}
+                </p>
+              ) : null}
+              <div className={styles.actions}>
+                <Button
+                  danger
+                  icon={<WarningOutlined />}
+                  disabled={busy}
+                  onClick={() => setDropOpen(true)}
+                >
+                  {tCard('drop')}
                 </Button>
-              </Popconfirm>
-            </div>
+              </div>
+            </>
           }
         />
+      ) : null}
+      {trip.canDrop ? (
+        <DropTripDialog trip={trip} open={dropOpen} onClose={() => setDropOpen(false)} />
       ) : null}
 
       <section className={styles.section}>

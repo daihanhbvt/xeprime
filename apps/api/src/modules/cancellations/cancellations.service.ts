@@ -21,12 +21,15 @@ export interface RecordCancellationInput {
   actorUserId: string | null;
   actorScope: AuditActorScope;
   /**
-   * Ghi đè PHÍA CHỊU TRÁCH NHIỆM — **chỉ đường của `platform_admin`**.
+   * Ghi đè PHÍA CHỊU TRÁCH NHIỆM — chỉ HAI đường, cả hai do SERVER quyết, không bao giờ từ client:
    *
-   * Tồn tại cho đúng một ca: nền tảng xác minh được đây là sự cố ngoài kiểm soát và quyết định
-   * không tính cho gian hàng. Mọi đường khác bỏ trống, và phía chịu trách nhiệm được suy từ
-   * `actorScope` — nếu chủ xe tự khai được `force_majeure` thì chỉ số uy tín mất nghĩa trong
-   * một tuần.
+   *  - `platform_admin` xác minh được đây là sự cố ngoài kiểm soát và quyết định không tính cho
+   *    gian hàng;
+   *  - khách huỷ trong cửa sổ "sự cố tài xế" (ADR 0074 điều 3) — `host`, vì tài xế đã nhận rồi rút
+   *    và bên thuê không bố trí lại kịp; phép kiểm chạy ở server sau khi khoá dòng đơn.
+   *
+   * Mọi đường khác bỏ trống, và phía chịu trách nhiệm được suy từ `actorScope` — nếu chủ xe tự
+   * khai được `force_majeure` thì chỉ số uy tín mất nghĩa trong một tuần.
    */
   verifiedParty?: CancellationParty;
 }

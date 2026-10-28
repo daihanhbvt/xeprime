@@ -10,6 +10,7 @@ import {
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_TRIP_TAB,
+  isDriverReassignable,
   toLocalVnPhone,
   DRIVER_LINK_SCOPE,
 } from '@xeprime/types';
@@ -334,6 +335,12 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
         : null,
     endedAt: episode?.endedAt?.toISOString() ?? null,
     releaseUntil: releaseUntilOf(r, current, outcome, now),
+    // Cùng điều kiện với `DriversService.dropTrip` (ADR 0074) — server vẫn kiểm lại khi bấm.
+    canDrop:
+      current &&
+      outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN &&
+      r.driverAssignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED &&
+      isDriverReassignable(r.status),
     pickupAt: r.pickupAt.toISOString(),
     returnAt: r.returnAt.toISOString(),
     routeType: r.routeType,

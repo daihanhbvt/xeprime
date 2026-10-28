@@ -104,6 +104,13 @@
     "directDeposit": {
       "title": "Deposit arranged directly with the shop",
       "body": "The shop will contact you to arrange the deposit directly. XePrime neither collects nor reconciles it, so if a dispute over the deposit arises XePrime has no record to support you."
+    },
+    "driverIncident": {
+      "rearranging": "Rearranging a driver for your trip",
+      "urgentTitle": "Your trip has a driver scheduling problem",
+      "urgentBody": "The owner is arranging another driver. For immediate help, call <tel>{phone}</tel>.",
+      "freeCancelHint": "The owner has not arranged a driver in time — you can cancel with a 100% refund of your reservation payment.",
+      "freeCancel": "Cancel trip (100% refund)"
     }
   },
   "evidence": {
@@ -201,7 +208,8 @@
       "lateBodyNoInsurance": "The reservation payment (the booking fee and the rent paid in advance) is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
       "deferred": "This trip has an open dispute — XePrime will settle this amount once it is resolved.",
       "notAllowedTitle": "This trip can no longer be cancelled",
-      "notAllowedBody": "The trip has already started or ended. To return the vehicle early, contact the owner to hand it back and settle up."
+      "notAllowedBody": "The trip has already started or ended. To return the vehicle early, contact the owner to hand it back and settle up.",
+      "driverIncident": "Cancelled due to a driver issue: you get a 100% refund of your reservation payment, with no cancellation fee."
     },
     "leadPaid": "You have paid the reservation fee for this trip. Your refund follows the <policy>Cancellation policy</policy>. This cannot be undone!",
     "expectedRefund": "Expected refund: <gold>{amount}</gold>",

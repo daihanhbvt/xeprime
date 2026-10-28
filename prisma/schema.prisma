@@ -2002,6 +2002,13 @@ model Booking {
   /// từ NULL cùng transaction phát tin, nên mỗi đơn được báo tối đa MỘT lần (gán rồi gỡ cũng không
   /// báo lại). Partial index viết tay `bookings_driver_missing_sweep_idx`.
   driverMissingAlertedAt DateTime? @map("driver_missing_alerted_at") @db.Timestamptz(3)
+  /// SỰ CỐ TÀI XẾ (ADR 0074): mốc một tài xế ĐÃ NHẬN rút khỏi chuyến (rút có lý do hoặc trả lại
+  /// trong cửa sổ) và hạn bên thuê điều phối lại (`driverDropPolicy` của @xeprime/types). Hai cột đi
+  /// cùng nhau (CHECK `bookings_driver_incident_pair_check`); về NULL khi một tài xế liên kết NHẬN
+  /// lại chuyến. Sự cố mở + quá hạn điều phối / còn dưới 2 giờ ⇒ khách huỷ được hoàn 100%
+  /// (`driverIncidentState`). Writer duy nhất: `DriversService`.
+  driverDroppedAt        DateTime? @map("driver_dropped_at") @db.Timestamptz(3)
+  driverReassignBy       DateTime? @map("driver_reassign_by") @db.Timestamptz(3)
   /// Mốc worker đánh dấu đơn QUÁ ân hạn bàn giao (ADR 0066, lớp 3): `pickup_at + 120′` mà vẫn
   /// `reserved` ⇒ đã mở case `handover_unconfirmed`. Cột CLAIM — lật từ NULL cùng transaction mở
   /// case, nên một đơn có tối đa một case loại này. Partial index viết tay
@@ -2340,6 +2347,9 @@ model Driver {
   endedAt      DateTime? @map("ended_at") @db.Timestamptz(3)
   /// @xeprime/types → DriverLinkEndParty — ai chấm dứt (chỉ khi `ended`).
   endedByParty String?   @map("ended_by_party") @db.VarChar(20)
+  /// Cooldown sau một lượt RÚT chuyến sát giờ (ADR 0074 điều 2): tới mốc này liên kết bị loại khỏi
+  /// tự gán của "Đặt ngay" (`pickForAutoAssign`). Bên thuê vẫn gán tay được.
+  autoAssignCooldownUntil DateTime? @map("auto_assign_cooldown_until") @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -2376,7 +2386,7 @@ model BookingDriverAssignment {
   driverId     String    @map("driver_id") @db.Char(26)
   /// Tài khoản lái — chép từ liên kết lúc gán (tên trên liên kết có thể đổi, người thì không).
   driverUserId String    @map("driver_user_id") @db.Char(26)
-  /// @xeprime/types → DriverAssignmentOutcome (open | declined | unassigned | cancelled | no_show | completed | expired)
+  /// @xeprime/types → DriverAssignmentOutcome (open | declined | unassigned | cancelled | no_show | completed | expired | dropped)
   outcome      String    @default("open") @db.VarChar(20)
   assignedAt   DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(3)
   /// Người gán; NULL = hệ thống ("Đặt ngay" tự gán).
@@ -2386,6 +2396,11 @@ model BookingDriverAssignment {
   /// Người kết thúc lượt; NULL = hệ thống hoặc chính tài xế (đọc theo `outcome`).
   endedBy      String?   @map("ended_by") @db.Char(26)
   superseded   Boolean   @default(false)
+  /// Chỉ lượt `dropped` (ADR 0074, CHECK `booking_driver_assignments_drop_check`): nhóm lý do
+  /// (@xeprime/types → DriverDropReason), ghi chú của tài xế, vùng (DriverDropZone).
+  dropReasonCategory String? @map("drop_reason_category") @db.VarChar(30)
+  dropReason         String? @map("drop_reason") @db.Text
+  dropZone           String? @map("drop_zone") @db.VarChar(20)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 

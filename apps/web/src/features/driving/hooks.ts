@@ -8,14 +8,14 @@ import {
   acceptDriverTrip,
   declineDriverLink,
   declineDriverTrip,
+  dropDriverTrip,
   fetchDriverPendingCounts,
   fetchDriverTrip,
   fetchDriverTrips,
   fetchMyDriverLinks,
   leaveDriverLink,
-  releaseDriverTrip,
 } from './api';
-import type { DriverLinkScope } from './types';
+import type { DriverLinkScope, DropDriverTripBody } from './types';
 
 export function useMyDriverLinks(scope: DriverLinkScope, page: number, enabled = true) {
   return useQuery({
@@ -53,7 +53,7 @@ export function useDriverTrip(id: string) {
 }
 
 /** Mọi thao tác tài xế đổi cả danh sách lẫn huy hiệu — làm mới cả nhánh `driving`. */
-function useDrivingMutation<TData>(fn: (id: string) => Promise<TData>) {
+function useDrivingMutation<TData, TVars = string>(fn: (vars: TVars) => Promise<TData>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
@@ -66,4 +66,7 @@ export const useDeclineDriverLink = () => useDrivingMutation(declineDriverLink);
 export const useLeaveDriverLink = () => useDrivingMutation(leaveDriverLink);
 export const useAcceptDriverTrip = () => useDrivingMutation(acceptDriverTrip);
 export const useDeclineDriverTrip = () => useDrivingMutation(declineDriverTrip);
-export const useReleaseDriverTrip = () => useDrivingMutation(releaseDriverTrip);
+export const useDropDriverTrip = () =>
+  useDrivingMutation(({ id, body }: { id: string; body: DropDriverTripBody }) =>
+    dropDriverTrip(id, body),
+  );

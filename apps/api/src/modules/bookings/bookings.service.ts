@@ -9,6 +9,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  CANCELLATION_PARTY,
   CANCELLATION_REASON_CATEGORY,
   CANCELLATION_STAGE,
   BOOKING_HANDOVER_PLACE,
@@ -49,7 +50,12 @@ import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
-import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
+import {
+  BOOKING_DRIVER_INCIDENT_HOST_SELECT,
+  BOOKING_DRIVER_SELECT,
+  toBookingDriverIncident,
+  toBookingDriverSummary,
+} from '../drivers/booking-driver-summary';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -130,6 +136,8 @@ const LIST_SELECT = {
 
 const DETAIL_SELECT = {
   ...LIST_SELECT,
+  // Sự cố tài xế (ADR 0074) — chỉ chi tiết đơn đọc lượt rút gần nhất.
+  ...BOOKING_DRIVER_INCIDENT_HOST_SELECT,
   tenantCustomerId: true,
   // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
   // cần NHẬN RA chiếc xe, không cần xem bộ ảnh. `branch` giữ lại từ LIST_SELECT: khối này
@@ -727,27 +735,6 @@ export class BookingsService {
     );
   }
 
-  /**
-   * Ghi tài xế NGOÀI HỆ THỐNG (ADR 0067) — tên + SĐT trên đúng đơn này; lượt gán liên kết đang có
-   * bị đóng như bỏ gán. Luật ở `DriversService.setExternalWithinTx` (writer duy nhất).
-   */
-  setExternalDriver(
-    tenantId: string,
-    id: string,
-    userId: string,
-    external: { name: string; phone: string },
-  ): Promise<BookingDetailDto> {
-    return this.changeDriver(tenantId, id, (tx) =>
-      this.drivers.setExternalWithinTx(tx, {
-        tenantId,
-        bookingId: id,
-        name: external.name,
-        phone: external.phone,
-        actorUserId: userId,
-      }),
-    );
-  }
-
   /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */
   private async changeDriver(
     tenantId: string,
@@ -852,6 +839,12 @@ export class BookingsService {
        * hàng mới bắt buộc, và cửa đó nằm ở DTO.
        */
       reasonCategory?: CancellationReasonCategory;
+      /**
+       * KHÁCH huỷ vì sự cố tài xế (ADR 0074 điều 3) — bên gọi (`CustomerTripsService.cancel`) đã
+       * kiểm `driverIncidentState` sau khi khoá dòng đơn. Hệ quả do SERVER suy, không phải khai: lượt
+       * huỷ ghi cho phía cho thuê (`driver_unavailable`), tiền hoàn 100%.
+       */
+      driverFault?: boolean;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -933,10 +926,13 @@ export class BookingsService {
           from === BOOKING_STATUS.ACTIVE
             ? CANCELLATION_STAGE.BOOKING_ACTIVE
             : CANCELLATION_STAGE.BOOKING_BEFORE_PICKUP,
-        reasonCategory: opts.reasonCategory ?? CANCELLATION_REASON_CATEGORY.OTHER,
+        reasonCategory: opts.driverFault
+          ? CANCELLATION_REASON_CATEGORY.DRIVER_UNAVAILABLE
+          : (opts.reasonCategory ?? CANCELLATION_REASON_CATEGORY.OTHER),
         reason: opts.reason ?? null,
         actorUserId: userId,
         actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
+        ...(opts.driverFault ? { verifiedParty: CANCELLATION_PARTY.HOST } : {}),
       });
     }
 
@@ -951,6 +947,7 @@ export class BookingsService {
       to,
       actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
       actorUserId: userId,
+      driverFault: opts.driverFault,
     });
 
     /*
@@ -1388,6 +1385,7 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
   const priceSnapshot = (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null;
   return {
     ...toListItem(b),
+    driverIncident: toBookingDriverIncident(b),
     tenantCustomerId: b.tenantCustomerId,
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,

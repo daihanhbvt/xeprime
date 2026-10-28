@@ -206,7 +206,9 @@
     "DRIVER_ASSIGNMENT_LOCKED": "The car has been handed over or the booking has ended — the driver can no longer be changed.",
     "DRIVER_HAS_ACTIVE_TRIP": "This driver is on a trip. End the link after the vehicle is returned.",
     "VEHICLE_SERVICE_IN_USE": "This service can not be removed while the vehicle still has unfinished trips using it. Complete or cancel those trips first.",
-    "DRIVER_HAS_ACCEPTED_TRIPS": "You still have accepted trips that have not started. Ask the employer to reassign them before you stop driving for them."
+    "DRIVER_HAS_ACCEPTED_TRIPS": "You still have accepted trips that have not started. Ask the employer to reassign them before you stop driving for them.",
+    "EXTERNAL_DRIVER_NOT_SUPPORTED": "XePrime no longer accepts drivers outside the platform. Invite the driver to link their account, then assign them.",
+    "DRIVER_DROP_NOTE_REQUIRED": "Please describe the problem (at least 10 characters) so the employer can rearrange the trip."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",

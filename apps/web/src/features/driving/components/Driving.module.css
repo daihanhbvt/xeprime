@@ -183,3 +183,11 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-h3);
 }
+
+/* Hộp thoại rút chuyến (ADR 0074): hai thông báo xếp dọc trên form. */
+.dialogHints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin-bottom: var(--xp-space-md);
+}

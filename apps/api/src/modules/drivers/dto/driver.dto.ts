@@ -2,6 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DRIVER_ASSIGNMENT_OUTCOME_VALUES,
   DRIVER_ASSIGNMENT_STATUS_VALUES,
+  DRIVER_DROP_NOTE_LENGTH,
+  DRIVER_DROP_REASON_VALUES,
+  DRIVER_DROP_ZONE_VALUES,
+  DRIVER_DROP_STATS_WINDOW_DAYS,
+  DRIVER_INCIDENT_LEVEL_VALUES,
+  type DriverDropReason,
   DRIVER_SOURCE_VALUES,
   DRIVER_LICENCE_STATE_VALUES,
   DRIVER_LINK_END_PARTY_VALUES,
@@ -168,6 +174,19 @@ export class DriverDto {
       'Chỉ ở dòng LỊCH SỬ (đã từ chối / đã kết thúc): trạng thái liên kết ĐANG MỞ hiện tại của cùng tài khoản với bên thuê này — null = chưa mời lại, hiện nút "Mời lại"',
   })
   currentOpenLinkStatus!: string | null;
+  @ApiProperty({
+    description: `Số lần tài xế RÚT chuyến đã nhận bị tính vi phạm trong ${DRIVER_DROP_STATS_WINDOW_DAYS} ngày (ADR 0074)`,
+  })
+  dropCount!: number;
+  @ApiProperty({ description: 'Trong đó: số lần rút khi còn dưới 2 giờ tới giờ nhận' })
+  criticalDropCount!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ — null = không',
+  })
+  autoAssignCooldownUntil!: string | null;
 }
 
 export class DriverPageDto {
@@ -214,6 +233,48 @@ export class BookingDriverSummaryDto {
   respondBy!: string | null;
 }
 
+/**
+ * SỰ CỐ TÀI XẾ đang mở trên đơn, nhìn từ BÊN THUÊ (ADR 0074): một tài xế đã nhận rồi rút, chưa ai
+ * nhận lại. `null` khi không có sự cố hoặc đã có tài xế nhận lại / đơn đã giao xe hay khép.
+ */
+export class BookingDriverIncidentDto {
+  @ApiProperty({ description: 'ISO-8601 — lúc tài xế rút' }) droppedAt!: string;
+  @ApiProperty({
+    description: 'ISO-8601 — hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng)',
+  })
+  reassignBy!: string;
+  @ApiProperty({ enum: DRIVER_INCIDENT_LEVEL_VALUES }) level!: string;
+  @ApiProperty({
+    description:
+      'true = khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê (quá hạn điều phối hoặc còn dưới 2 giờ)',
+  })
+  customerCanCancelFree!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên tài xế đã rút — null khi sự cố đến từ lượt "trả lại" không lý do',
+  })
+  driverName!: string | null;
+  @ApiPropertyOptional({ enum: DRIVER_DROP_REASON_VALUES, nullable: true })
+  reasonCategory!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
+  @ApiPropertyOptional({ enum: DRIVER_DROP_ZONE_VALUES, nullable: true }) zone!: string | null;
+}
+
+/** Sự cố tài xế nhìn từ KHÁCH (ADR 0074) — không bao giờ lộ ai đã rút. */
+export class TripDriverIncidentDto {
+  @ApiProperty({
+    enum: DRIVER_INCIDENT_LEVEL_VALUES,
+    description:
+      '`arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ — cảnh báo + hỗ trợ',
+  })
+  level!: string;
+  @ApiProperty({
+    description: 'true = khách huỷ ngay được hoàn 100% tiền giữ chỗ (lỗi phía cho thuê)',
+  })
+  freeCancel!: boolean;
+}
+
 /** Một lượt gán trong lịch sử tài xế của đơn (khu quản lý, ADR 0063). */
 export class BookingDriverHistoryItemDto {
   @ApiProperty() id!: string;
@@ -236,6 +297,21 @@ export class BookingDriverHistoryItemDto {
     description: 'Người kết thúc lượt (gỡ/từ chối) — null khi hệ thống khép theo trạng thái đơn',
   })
   endedByName!: string | null;
+  @ApiPropertyOptional({
+    enum: DRIVER_DROP_REASON_VALUES,
+    nullable: true,
+    description: 'Chỉ lượt `dropped` — nhóm lý do tài xế rút (ADR 0074)',
+  })
+  dropReasonCategory!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú của tài xế khi rút' })
+  dropReason!: string | null;
+  @ApiPropertyOptional({
+    enum: DRIVER_DROP_ZONE_VALUES,
+    nullable: true,
+    description:
+      'Chỉ lượt `dropped` — vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt',
+  })
+  dropZone!: string | null;
 }
 
 export class AssignableDriversQueryDto {
@@ -423,6 +499,11 @@ export class DriverTripDto {
       'Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua.',
   })
   releaseUntil!: string | null;
+  @ApiProperty({
+    description:
+      'Tôi còn RÚT được khỏi chuyến này không (ADR 0074): chuyến của tôi, đã nhận, đơn chưa giao xe. Rút qua `POST /driver/trips/:id/drop`; trước `releaseUntil` thì không bị phạt.',
+  })
+  canDrop!: boolean;
   @ApiProperty() pickupAt!: string;
   @ApiProperty() returnAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;
@@ -445,6 +526,22 @@ export class DriverTripDetailDto extends DriverTripDto {
 export class DriverTripPageDto {
   @ApiProperty({ type: [DriverTripDto] }) data!: DriverTripDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+/** Body `POST /driver/trips/:id/drop` — tài xế rút khỏi chuyến đã nhận (ADR 0074). */
+export class DropDriverTripDto {
+  @ApiProperty({ enum: DRIVER_DROP_REASON_VALUES })
+  @IsIn(DRIVER_DROP_REASON_VALUES)
+  reasonCategory!: DriverDropReason;
+
+  @ApiPropertyOptional({
+    maxLength: DRIVER_DROP_NOTE_LENGTH.MAX,
+    description: `Mô tả sự cố — bắt buộc ${DRIVER_DROP_NOTE_LENGTH.MIN}–${DRIVER_DROP_NOTE_LENGTH.MAX} ký tự khi chọn \`other\` (422 \`DRIVER_DROP_NOTE_REQUIRED\`)`,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DRIVER_DROP_NOTE_LENGTH.MAX)
+  reason?: string;
 }
 
 /** Số việc đang chờ tài xế trả lời — huy hiệu ở menu tài khoản / tab chuyến. */

@@ -220,7 +220,8 @@
     "cancelled": "Booking cancelled",
     "no_show": "Customer no-show",
     "completed": "Completed",
-    "expired": "Not confirmed in time"
+    "expired": "Not confirmed in time",
+    "dropped": "Driver withdrew"
   },
   "driverLicenceState": {
     "verified": "Licence verified",
@@ -850,7 +851,8 @@
     "hold_expired": "Reservation payment window expired",
     "admin_decision": "XePrime decision",
     "late_cancel": "Cancelled after free-cancel deadline",
-    "no_show": "Customer did not show up"
+    "no_show": "Customer did not show up",
+    "driver_incident": "Cancelled due to a driver issue"
   },
   "supportCaseStatus": {
     "open": "New",
@@ -1014,7 +1016,8 @@
     "customer_requirements": "Guest does not meet the rental requirements",
     "customer_unreachable": "Could not reach the guest",
     "customer_changed_plan": "Guest changed their plans",
-    "other": "Other reason"
+    "other": "Other reason",
+    "driver_unavailable": "No driver available"
   },
   "cancellationStage": {
     "awaiting_hold": "Accepted, awaiting payment",
@@ -1642,5 +1645,18 @@
     "delivery": "Delivery fee",
     "overtime": "Overtime fee",
     "extras": "Extras"
+  },
+  "driverDropReason": {
+    "health_issue": "Health",
+    "vehicle_accident": "Accident / vehicle breakdown",
+    "family_emergency": "Family emergency",
+    "route_blocked": "Road blocked / natural disaster",
+    "other": "Other reason"
+  },
+  "driverDropZone": {
+    "grace": "Within the free release window",
+    "far": "More than 12 hours ahead",
+    "same_day": "Same day (2–12 hours)",
+    "critical": "Last minute (under 2 hours)"
   }
 }
