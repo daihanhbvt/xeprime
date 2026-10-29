@@ -36,7 +36,8 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
 
     test.beforeEach(async ({ page, context, baseURL }) => {
       await context.addCookies([{ name: 'XP_LOCALE', value: 'vi', url: baseURL ?? '' }]);
-      await page.goto('/search', { waitUntil: 'domcontentloaded' });
+      // Đợi hydrate xong: bấm vào HTML của server thì nút chưa có handler, popup không bao giờ mở.
+      await page.goto('/search', { waitUntil: 'networkidle' });
     });
 
     /** Thanh lọc đang hiện — bản thu gọn trên hero là `aria-hidden` nên getByRole tự bỏ qua. */
@@ -63,9 +64,10 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
       );
     });
 
-    test('modal "Bộ lọc" hiện trong khung nhìn', async ({ page }) => {
+    test('hộp "Bộ lọc" hiện trong khung nhìn', async ({ page }) => {
       await filterBar(page).getByRole('button', { name: 'Bộ lọc' }).click();
-      await expectInViewport(page, page.locator('.ant-modal').last());
+      // `FilterModal` là dialog tự dựng (không phải `.ant-modal`).
+      await expectInViewport(page, page.getByRole('dialog', { name: 'Bộ lọc' }));
     });
   });
 }
