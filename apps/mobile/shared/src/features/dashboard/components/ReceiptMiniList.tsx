@@ -6,7 +6,7 @@ import { Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import type { Receipt } from '@/features/finance/api';
 import { MiniListRow } from './MiniListRow';
 
@@ -29,6 +29,7 @@ export function ReceiptMiniList({
   items: readonly Receipt[];
   onSelect: (receipt: Receipt) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.receiptRow');
   const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();

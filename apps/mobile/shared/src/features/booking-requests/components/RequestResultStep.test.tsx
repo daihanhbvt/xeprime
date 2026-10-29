@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Provider as ReduxProvider } from 'react-redux';
-import { BOOKING_REQUEST_STATUS, type PublicListingDetail } from '@xeprime/types';
+import { BOOKING_REQUEST_STATUS, RENTAL_MODE, type PublicListingDetail } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import type { BookingRequestFormValues } from '../booking-schema';
@@ -33,7 +33,12 @@ const values = {
   deliveryRequested: false,
 } as unknown as BookingRequestFormValues;
 
-const listing = { id: 'v1', name: 'Mazda3 2020' } as unknown as PublicListingDetail;
+const listing = {
+  id: 'v1',
+  name: 'Mazda3 2020',
+  shopName: 'Xe Sài Gòn',
+  pickupPoint: { branchName: 'Chi nhánh Q1', address: '12 Lê Lợi, Quận 1' },
+} as unknown as PublicListingDetail;
 
 const receipt = {
   id: '01JQZX000000000000000000RQ',
@@ -65,6 +70,7 @@ async function renderResult(quote: PublicQuote | null) {
             duplicate={false}
             receipt={receipt}
             values={values}
+            rentalMode={RENTAL_MODE.DAILY}
             listing={listing}
             quote={quote}
             onClose={jest.fn()}
@@ -93,6 +99,14 @@ describe('RequestResultStep — tổng dự kiến đọc báo giá ĐÃ ÁP MÃ
     expect(await view.findByText('Mazda3 2020')).toBeTruthy();
     expect(view.queryByText(/₫/)).toBeNull();
   });
+
+  it('thẻ chuyến đầy đủ như web: điểm nhận xe thật, chủ xe, tóm tắt dịch vụ · thời lượng', async () => {
+    const view = await renderResult(null);
+
+    expect(await view.findByText('Chi nhánh Q1 · 12 Lê Lợi, Quận 1')).toBeTruthy();
+    expect(view.getByText('Xe Sài Gòn')).toBeTruthy();
+    expect(view.getByText(/^Thuê theo ngày · /)).toBeTruthy();
+  });
 });
 
 describe('RequestResultStep — chạm trần giữ chỗ (HOLD_LIMIT_REACHED)', () => {
@@ -111,6 +125,7 @@ describe('RequestResultStep — chạm trần giữ chỗ (HOLD_LIMIT_REACHED)',
               duplicate={false}
               receipt={null}
               values={values}
+              rentalMode={RENTAL_MODE.DAILY}
               listing={listing}
               quote={null}
               onClose={jest.fn()}

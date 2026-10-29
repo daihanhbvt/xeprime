@@ -24,7 +24,8 @@ import { ToggleRow } from '@/features/rental-policies/components/PolicySections'
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { MarketPriceHint } from '@/features/vehicles/components/MarketPriceHint';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { QuickVehicleValues } from '../quick-schema';
 
 /** Dải phần trăm giảm giá của luồng nhanh — hẹp hơn luật chung để tránh gõ nhầm một số 0. */
@@ -84,6 +85,7 @@ export function QuickVehicleRentalStep({
   /** Bấm "dùng giá này" → điền vào ô giá. Nơi gọi giữ ; bước này chỉ có . */
   onApplyPrice: (price: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.rental');
   const fmt = useAppFormat();
 
@@ -264,6 +266,7 @@ export function QuickVehicleRentalStep({
  * thật chỉ vào form khi thả tay.
  */
 function DiscountSlider({ control }: { control: Control<QuickVehicleValues> }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.rental');
   const { field } = useController({ control, name: 'discountPercent' });
   const value = field.value ?? DISCOUNT_RANGE.min;
@@ -359,6 +362,7 @@ function VehicleAddressBlock({
   pendingAddress: OwnerProfileValues | null;
   onEditPendingAddress?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.rental');
   const tActions = useTranslations('Common.actions');
   const { has } = usePermissions();
@@ -490,6 +494,7 @@ function PendingAddressBlock({
   address: OwnerProfileValues;
   onEdit?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.rental');
   const provinces = useProvinceOptions();
   const wards = useWardOptions(address.provinceCode);

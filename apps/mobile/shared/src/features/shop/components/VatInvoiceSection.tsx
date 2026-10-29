@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { VatInvoiceSetting } from './VatInvoiceSetting';
 
 /**
@@ -21,6 +22,7 @@ export function VatInvoiceSection({
   renderHead?: (head: { title: string; subtitle: string }) => ReactNode;
   gap?: number;
 }) {
+  const colors = useColors();
   const t = useTranslations('Shop.vatInvoice');
   const title = t('title');
   const subtitle = t('subtitle');

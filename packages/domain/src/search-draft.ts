@@ -1,5 +1,6 @@
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from './datetime';
 import {
+  RENTAL_MODE,
   ROUTE_TYPE,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
@@ -8,6 +9,7 @@ import {
   isRouteType,
   isVehicleServiceTypeAllowed,
   type MarketplaceFilters,
+  type RentalMode,
   type RouteType,
   type ServiceType,
   type VehicleType,
@@ -34,7 +36,7 @@ import {
  * ngày nào cả (ADR 0011 — khách chọn GÓI và nêu nguyện vọng ngày nhận SAU khi đã chọn xe), nên
  * nó không có ô lịch riêng chứ không phải "có ô lịch nhưng để trống".
  */
-export type RentalMode = 'daily' | 'hourly';
+export type { RentalMode };
 
 export interface SearchDraft {
   vehicleType: VehicleType;
@@ -187,7 +189,7 @@ export function draftFromFilters(
       returnAt: filters.returnAt ? toAppTz(filters.returnAt) : fallback.returnAt,
       // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — chế độ sống
       // bằng đúng hợp đồng hiện tại, không phải một param mới mà backend lơ đi.
-      mode: filters.hourly ? 'hourly' : 'daily',
+      mode: filters.hourly ? RENTAL_MODE.HOURLY : RENTAL_MODE.DAILY,
     },
     routeType: isRouteType(filters.routeType) ? filters.routeType : ROUTE_TYPE.IN_CITY,
   };
@@ -229,6 +231,6 @@ export function draftToFilterPatch(draft: SearchDraft): SearchFilterPatch {
         ? appWallClockToIso(draft.rental.returnAt)
         : undefined
       : undefined,
-    hourly: usesRange && draft.rental.mode === 'hourly' ? true : undefined,
+    hourly: usesRange && draft.rental.mode === RENTAL_MODE.HOURLY ? true : undefined,
   };
 }

@@ -15,7 +15,8 @@ import { TextField } from '@/components/ui/TextField';
 import { resetPasswordWithToken } from '@/features/auth/api';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 interface ResetPasswordScreenProps {
   /** `null` khi liên kết thiếu `?token=` — trường hợp HỢP LỆ, không phải lỗi lập trình. */
@@ -84,6 +85,7 @@ function ResetPasswordForm({
   onBack: () => void;
   onDone: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
@@ -189,6 +191,7 @@ function Outcome({
   body: string;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <>
       <AppHeader {...(onBack ? { onBack } : {})} />

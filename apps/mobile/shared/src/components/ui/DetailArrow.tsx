@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { XStack } from 'tamagui';
 import { IconButton } from './IconButton';
-import { colors, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { iconSize, space } from '@/theme/tokens';
 
 /**
  * Mũi tên "mở chi tiết" NỔI ở góc thẻ — một vùng chạm riêng, đặt tuyệt đối.
@@ -44,6 +45,7 @@ export function DetailArrow({
  * từng phải đổi sang nút có chữ.
  */
 export function DetailChevron({ size = iconSize.sm }: { size?: number }) {
+  const colors = useColors();
   return (
     <Ionicons
       name="chevron-forward"

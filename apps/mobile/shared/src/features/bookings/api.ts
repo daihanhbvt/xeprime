@@ -6,8 +6,10 @@ export { driversApi } from '@/api/drivers/api';
 export { vehiclesApi, vehicleFiltersToParams } from '@/api/vehicles/api';
 
 export type {
+  AssignBookingDriverInput,
   BookingDetail,
   BookingDriverSummary,
+  ExternalDriverInput,
   BookingFilters,
   BookingListItem,
   BookingSort,

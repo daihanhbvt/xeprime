@@ -15,7 +15,7 @@ cài song song trên cùng thiết bị, dùng chung backend/DB.
 
 ## 1. Bản đồ route hiện tại → app đích
 
-### XePrime (Customer) — giữ nguyên identity đã phát hành (`vn.xeprime.mobile`, scheme `xeprime`)
+### XePrime (Customer) — giữ nguyên identity đã phát hành (`vn.xeprime.customerapp`, scheme `xeprime`)
 
 - Tabs: `explore` · `chat` · `trips` · `account`.
 - Marketplace: `search`, `listings/[id]`, `listings/[id]/request`, `shops/[slug]`.
@@ -166,7 +166,7 @@ merge; migration chỉ THÊM cột nullable/default nên rollback code không c�
   của app này không đụng app kia.
 - `eas.json` mỗi app: profile `development`, `preview` (APK), `production` (AAB).
 - Identity Partner (PLACEHOLDER — cần team chốt trước khi phát hành): package/bundle
-  `vn.xeprime.partner`, scheme `xeprimepartner`, tên hiển thị "XePrime Partner"; icon/splash
+  `vn.xeprime.partnerapp`, scheme `xeprimepartner`, tên hiển thị "XePrime Partner"; icon/splash
   tạm dùng bộ hiện có cho tới khi có nhận diện riêng.
 
 ## 5b. Điều chỉnh trong lúc triển khai (khác thiết kế ban đầu)

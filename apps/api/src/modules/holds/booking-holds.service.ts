@@ -550,8 +550,8 @@ export class BookingHoldsService {
         input.customerUserId,
         {
           type: NOTIFICATION_TYPE.HOLD_REQUESTED,
-          title: 'Chuyến đã được nhận — thanh toán tiền giữ chỗ để chốt',
-          body: `${input.vehicleName} · tiền giữ chỗ ${formatMoneyVndVi(fees.holdAmount.toString())} · nội dung ${code}`,
+          title: `Chủ xe đã nhận chuyến ${input.vehicleName}`,
+          body: `Thanh toán ${formatMoneyVndVi(fees.holdAmount.toString())} tiền giữ chỗ để chốt chuyến (nội dung chuyển khoản: ${code}).`,
           tenantId: input.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: input.requestId,
@@ -1037,8 +1037,8 @@ export class BookingHoldsService {
         hold.customerUserId,
         {
           type: NOTIFICATION_TYPE.HOLD_PAID,
-          title: 'Đã giữ chỗ thành công',
-          body: `${req.vehicle.name} · đơn ${booking.code}. Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.`,
+          title: `Đặt xe thành công: ${req.vehicle.name}`,
+          body: `Mã chuyến ${booking.code}. Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.`,
           tenantId: hold.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
           targetId: booking.id,

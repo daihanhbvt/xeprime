@@ -164,7 +164,8 @@
     "decline": "Decline",
     "accept": "Confirm partnership",
     "leave": "Stop driving",
-    "openDetail": "View details of {name}"
+    "openDetail": "View details of {name}",
+    "acceptShort": "Confirm"
   },
   "linkDialog": {
     "title": "Partner owner details",

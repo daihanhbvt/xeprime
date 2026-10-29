@@ -17,6 +17,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { AccountDeletionImpact } from './components/AccountDeletionImpact';
+import { ACCOUNT_DELETION_ITEMS } from './hooks/use-account-deletion';
 import { Card } from '@/components/ui/Card';
 import { CheckMark } from '@/components/ui/CheckMark';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
@@ -32,13 +33,14 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
 interface DeleteAccountValues {
   acknowledged: boolean;
 }
 
-const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
+const ITEMS = ACCOUNT_DELETION_ITEMS;
 
 /**
  * "Yêu cầu xoá tài khoản" — một YÊU CẦU đi vào hàng đợi support của nền tảng, không phải nút xoá.
@@ -65,6 +67,7 @@ const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
  * thế là chép cái HÌNH của web mà bỏ mất cái NGHĨA.
  */
 export function DeleteAccountScreen() {
+  const colors = useColors();
   const t = useTranslations('Account.deleteAccount');
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();

@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { colors, fontWeight, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius } from '@/theme/tokens';
 import { VerifiedMark } from './VerifiedMark';
 
 interface AvatarProps {
@@ -27,6 +29,13 @@ interface AvatarProps {
    * hai con dấu trong cùng một hàng.
    */
   verifiedLabel?: string;
+  /**
+   * Nền chữ cái là dải `primary → gold-deep` (150°) thay cho gold phẳng — `.trigger .triggerAvatar`
+   * của `MarketAccountMenu.module.css` web: CHỈ avatar mở menu trên thanh đầu trang mang dải này,
+   * các avatar khác giữ nền phẳng. Có ảnh thì ảnh phủ kín, dải không lộ ra. `gold-deep` là
+   * `color-primary-active`.
+   */
+  gradient?: boolean;
 }
 
 /**
@@ -35,6 +44,10 @@ interface AvatarProps {
  * Nền dùng màu thương hiệu ĐẬM chứ không phải bản nhạt: ô nhạt nằm trên thẻ trắng gần như tàng
  * hình, chữ cái bên trong đọc như một vết bẩn hơn là một avatar.
  */
+/** Hướng `linear-gradient(150deg, …)` của web quy ra điểm đầu/cuối của expo-linear-gradient. */
+const GRADIENT_START = { x: 0.25, y: 0 };
+const GRADIENT_END = { x: 0.75, y: 1 };
+
 const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
 });
@@ -75,7 +88,15 @@ const markSizeFor = (size: number) => Math.max(MARK_MIN, Math.round(size * 0.32)
 const EDGE_45 = (1 - Math.SQRT1_2) / 2;
 const markOffsetFor = (size: number) => EDGE_45 * size - markSizeFor(size) / 2;
 
-export function Avatar({ name, url, size = 40, ring = false, verifiedLabel }: AvatarProps) {
+export function Avatar({
+  name,
+  url,
+  size = 40,
+  ring = false,
+  verifiedLabel,
+  gradient = false,
+}: AvatarProps) {
+  const colors = useColors();
   const initial = name.trim().charAt(0).toLocaleUpperCase();
 
   const hasRing = ring || verifiedLabel != null;
@@ -91,8 +112,22 @@ export function Avatar({ name, url, size = 40, ring = false, verifiedLabel }: Av
       jc="center"
       ov="hidden"
     >
+      {gradient && !url ? (
+        <LinearGradient
+          colors={[colors.primary, colors.primaryActive]}
+          // 150deg của CSS: từ trên-trái chéo xuống dưới-phải.
+          start={GRADIENT_START}
+          end={GRADIENT_END}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       {url ? (
-        <Image source={{ uri: url }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
+        <Image
+          source={{ uri: url }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
       ) : (
         <Text col={colors.onPrimary} fos={inner / 2.5} fow={fontWeight.bold}>
           {initial || '?'}

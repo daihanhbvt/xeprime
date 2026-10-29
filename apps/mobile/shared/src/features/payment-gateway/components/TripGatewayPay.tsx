@@ -32,12 +32,13 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useGatewayMethods, useGatewayOrder, useStartTripGatewayCheckout } from '../hooks';
 import { canStartAnotherCheckout, isHoldWindowTooShort, isOutOfRange } from '../order-state';
 import { PaymentMethodHeader } from './PaymentMethodHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { paymentProviderLogo } from '../provider-logos';
+import { paymentProviderLogo, paymentProviderMark } from '../provider-logos';
 import { ProviderLogoFrame } from '../ProviderLogoFrame';
 import { forgetTripOrder, recallTripOrder, rememberTripOrder } from '../trip-order-memory';
 
@@ -199,6 +200,7 @@ export function TripGatewayPay({
   /** Hạn của khoản giữ chỗ — còn quá ít thì không mời mở phiên cổng. */
   deadline?: string | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('PaymentGateway.checkout');
   const locale = useLocale() === 'en' ? 'en' : 'vi';
   const fmt = useAppFormat();
@@ -277,7 +279,7 @@ export function TripGatewayPay({
                 const name = label(method.provider);
                 const blocked = isOutOfRange(method, amount);
                 const checked = chosen === method.provider;
-                const logo = paymentProviderLogo(method.provider, locale);
+                const logo = paymentProviderMark(method.provider);
                 return (
                   <Pressable
                     key={method.provider}
@@ -304,9 +306,7 @@ export function TripGatewayPay({
                       bc={checked ? colors.primary : colors.border}
                       bg={checked ? colors.surfaceSelected : colors.surface}
                     >
-                      {logo ? (
-                        <ProviderLogoFrame logo={logo} dimmed={blocked} />
-                      ) : null}
+                      {logo ? <ProviderLogoFrame logo={logo} dimmed={blocked} /> : null}
                       <YStack f={1} gap={2}>
                         <Text
                           col={blocked ? colors.textMuted : colors.text}
@@ -374,12 +374,14 @@ export function TripGatewayPay({
 
 type NoticeTone = 'info' | 'success' | 'warning' | 'danger';
 
-const TONE_ICON: Record<NoticeTone, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+const useToneIcon = themed<
+  Record<NoticeTone, { icon: keyof typeof Ionicons.glyphMap; color: string }>
+>((colors) => ({
   info: { icon: 'information-circle', color: colors.info },
   success: { icon: 'checkmark-circle', color: colors.success },
   warning: { icon: 'alert-circle', color: colors.warning },
   danger: { icon: 'close-circle', color: colors.danger },
-};
+}));
 
 /**
  * Khung thẻ của MỘT lượt cổng — cùng ngôn ngữ với thẻ phương thức (`PaymentMethodHeader` và hàng
@@ -408,6 +410,8 @@ function GatewayStatusCard({
   body: string;
   children?: ReactNode;
 }) {
+  const colors = useColors();
+  const TONE_ICON = useToneIcon();
   const t = useTranslations('PaymentGateway.order');
   const locale = useLocale() === 'en' ? 'en' : 'vi';
   const logo = paymentProviderLogo(providerCode, locale);
@@ -416,9 +420,7 @@ function GatewayStatusCard({
     <Card>
       <YStack gap={layout.block}>
         <XStack ai="center" gap={space.md}>
-          {logo ? (
-            <ProviderLogoFrame logo={logo} />
-          ) : null}
+          {logo ? <ProviderLogoFrame logo={logo} /> : null}
           <YStack f={1} gap={2}>
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
               {title}
@@ -472,6 +474,7 @@ export function GatewayOrderNotice({
   /** Gọi MỘT lần mỗi khi lượt rời các chặng còn chờ — nơi gọi làm mới dữ liệu đích. */
   onSettled?: (order: PaymentOrder) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PaymentGateway.order');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();

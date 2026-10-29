@@ -3,7 +3,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BOOKING_HOLD_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_COUNTDOWN_URGENT_MINUTES,
   HOLD_REFUND_STATUS,
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
@@ -15,8 +15,11 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
+import { useFreeCancelNote } from '../use-free-cancel-note';
+import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { RefundAccountSheet } from './RefundAccountSheet';
 
 type Hold = NonNullable<CustomerTripDetail['hold']>;
@@ -50,6 +53,7 @@ export function TripHoldPanel({
   /** B − D — phần trả TRỰC TIẾP chủ xe lúc nhận xe, không đi qua khoản giữ chỗ này. */
   payAtHandoverAmount?: string | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.hold');
   const tPrice = useTranslations('Common.components.price');
   const fmt = useAppFormat();
@@ -59,12 +63,8 @@ export function TripHoldPanel({
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
   const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
-  /*
-   * Cửa sổ huỷ miễn phí hẹp hơn cửa sổ trả tiền nghĩa là nó đã bị kẹp bởi giờ nhận xe — chuyến
-   * sát giờ. So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ máy khách.
-   */
-  const freeCancelIsShort =
-    new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
+  // Ba trạng thái huỷ miễn phí (không có · ngắn · thường lệ) + hệ quả huỷ muộn — ADR 0064.
+  const freeCancelNote = useFreeCancelNote();
 
   /*
    * Bức tranh đầy đủ, CÙNG chữ dùng ở bảng "Chi tiết giá" (phản hồi 18/09/2026). Chỉ vẽ khi CẢ
@@ -101,14 +101,13 @@ export function TripHoldPanel({
           </Text>
           <Countdown
             deadline={hold.expiresAt}
-            urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
-            segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+            urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
             labels={{
               remaining: t('countdownRemaining'),
               expired: t('countdownExpired'),
-              segment: (index, total) => t('countdownSegment', { index, total }),
             }}
           />
+          <FreeCancelCountdown hold={hold} />
         </YStack>
 
         {underpaid ? (
@@ -123,7 +122,7 @@ export function TripHoldPanel({
           MỘT nút, không phải một mã QR thứ hai: màn thanh toán là nơi duy nhất có đủ kênh trả. Hai
           chỗ trả là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau.
         */}
-        <Button
+        <Button variant="gradient"
           size="lg"
           icon="card-outline"
           label={t('payNow')}
@@ -134,11 +133,9 @@ export function TripHoldPanel({
           <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
             {t('expires')}
           </Text>
-          {/* ADR 0032 điều 5: cảnh báo cửa sổ huỷ miễn phí ngắn TRƯỚC khi khách trả tiền. */}
+          {/* ADR 0032 điều 5 · ADR 0064: huỷ miễn phí tới khi nào và huỷ muộn mất gì, TRƯỚC khi trả. */}
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
-              time: fmt.dateTime(hold.freeCancelUntil),
-            })}
+            {freeCancelNote(hold)}
           </Text>
           {summary ? null : (
             <Text col={colors.textMuted} fos={fontSize.bodySm}>

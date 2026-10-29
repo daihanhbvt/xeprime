@@ -19,7 +19,9 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { usePartnerOffer } from './use-partner-offer';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Số xe tối đa của chủ xe tuyến hoa hồng (Owner Lite — ADR 0041 điều 4).
@@ -79,7 +81,20 @@ export function ListYourVehicleScreen({
   /** Phần đuôi riêng của nơi dùng (vd. dòng Đăng xuất ở app Partner). */
   footer?: ReactNode;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.landing');
+  // Khoảng % hoa hồng đọc từ chính sách phí hiện hành; chưa có thì giữ câu chung, không đoán số.
+  const offer = usePartnerOffer().data;
+  const commissionRange =
+    offer?.minOwnerCommissionPercent != null && offer.maxOwnerCommissionPercent != null
+      ? { min: offer.minOwnerCommissionPercent, max: offer.maxOwnerCommissionPercent }
+      : null;
+  /* `.offerBig` web: "0%" màu `color-success` cỡ h3 (28px) giữa tiêu đề ưu đãi gian hàng. */
+  const offerBig = (chunks: ReactNode) => (
+    <Text col={colors.success} fos={fontSize.h3} lh={28}>
+      {chunks}
+    </Text>
+  );
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const openLegalDoc = useOpenLegalDoc();
@@ -187,7 +202,11 @@ export function ListYourVehicleScreen({
               artNote={t('personal.art')}
               offerIcon="pricetag-outline"
               offerTitle={t('personal.offerTitle')}
-              offerBody={t.rich('personal.offerBody', { strong })}
+              offerBody={
+                commissionRange
+                  ? t.rich('personal.offerBodyRange', { ...commissionRange, strong })
+                  : t.rich('personal.offerBody', { strong })
+              }
             />
           ) : (
             <TrackDetail
@@ -204,7 +223,7 @@ export function ListYourVehicleScreen({
               art={images.ownerShopShowroom}
               artRatio={OWNER_SHOP_SHOWROOM_RATIO}
               offerIcon="ribbon-outline"
-              offerTitle={t('shop.offerTitle')}
+              offerTitle={t.rich('shop.offerHighlight', { big: offerBig })}
               offerBody={t('shop.offerBody')}
             />
           )}
@@ -264,6 +283,7 @@ function Hero({
   stepsTitle: string;
   steps: HeroStep[];
 }) {
+  const colors = useColors();
   return (
     <Card tone="accent">
       <YStack gap={space.md}>
@@ -345,6 +365,7 @@ function TrackOption({
   selectedLabel: string;
   onSelect: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onSelect}
@@ -443,9 +464,10 @@ function TrackDetail({
   artRatio: number;
   artNote?: string;
   offerIcon: IconName;
-  offerTitle: string;
+  offerTitle: ReactNode;
   offerBody: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <Card>
       <YStack gap={space.md}>

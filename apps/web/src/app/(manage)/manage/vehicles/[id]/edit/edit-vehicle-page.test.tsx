@@ -301,7 +301,6 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
       'Thời gian giao nhận',
       'Nhận chuyến & thủ tục',
       'Nhận chuyến & thủ tục',
-      'Phụ phí',
       // Nhóm dài hạn không có mục — chỉ công tắc và lời nhắc dẫn về Giá & chính sách.
       'Giá thuê tháng nằm ở Giá & chính sách',
       'Nguồn xe & tài chính',
@@ -338,7 +337,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
 
   it('mục của dịch vụ đang tắt: nói ra và mời bật qua CÙNG công tắc', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Phụ phí' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Nhận chuyến & thủ tục' })[1]!);
     expect(await screen.findByText('Dịch vụ Có tài xế đang tắt')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Bật Có tài xế' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));

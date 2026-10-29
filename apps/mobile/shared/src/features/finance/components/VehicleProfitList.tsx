@@ -23,7 +23,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { VehicleProfit } from '../api';
 
 /** Ô biểu tượng đầu thẻ — vừa đúng chiều cao hai dòng chữ (tên xe + biển số). */
@@ -61,6 +62,7 @@ export function VehicleProfitList({
   onSortChange: (next: string) => void;
   onPageChange: (page: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.overview.vehicles');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();

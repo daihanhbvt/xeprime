@@ -5,6 +5,7 @@ import {
   VEHICLE_OPERATION_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
+  isThousandStep,
   missingVehicleImageTypes,
   vehicleEnergySpecPolicy,
 } from '@xeprime/types';
@@ -58,8 +59,13 @@ const VEHICLE_FIELDS = [
   'discountPercent',
 ] as const satisfies ReadonlyArray<keyof VehicleFormValues>;
 
-const money = (code: string) =>
-  yup
+/**
+ * `thousandStep`: số tiền đi thẳng vào tổng khách trả (giá ngày, phí giao xe) phải là bội 1.000đ —
+ * cùng luật `@IsMoneyStep` của API (ADR 0064), như web. Báo ngay dưới ô thay vì để server trả
+ * `MONEY_STEP_1000` lúc bấm lưu.
+ */
+const money = (code: string, opts: { thousandStep?: boolean } = {}) => {
+  const schema = yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
     .typeError(`${code}TypeError`)
@@ -67,6 +73,10 @@ const money = (code: string) =>
     .min(0, `${code}Min`)
     .nullable()
     .default(null);
+  return opts.thousandStep
+    ? schema.test('thousand-step', `${code}ThousandStep`, (v) => v == null || isThousandStep(v))
+    : schema;
+};
 
 /** Chuỗi có chữ thật — rỗng/chỉ khoảng trắng là "chưa có". */
 const filledText = (value: unknown) => typeof value === 'string' && value.trim() !== '';
@@ -120,7 +130,11 @@ export const quickVehicleSchema = vehicleFormSchema
      * Giá ngày thường là thứ DUY NHẤT bắt buộc ở bước cho thuê: xe không có giá thì không lên chợ
      * được, còn mọi cấu hình khác đều có mặc định an toàn (tắt).
      */
-    weekdayPrice: money('price').test('required', 'weekdayPriceRequired', (v) => v != null),
+    weekdayPrice: money('price', { thousandStep: true }).test(
+      'required',
+      'weekdayPriceRequired',
+      (v) => v != null,
+    ),
 
     /** Bật/tắt giảm giá — mặc định TẮT. Không có ưu đãi nào tự sinh ra vì ảnh mẫu có một con số. */
     discountEnabled: yup.boolean().defined().default(false),
@@ -149,7 +163,7 @@ export const quickVehicleSchema = vehicleFormSchema
             .test('required', 'deliveryRadiusRequired', (v) => v != null)
             .moreThan(0, 'deliveryRadiusMin'),
       }),
-    deliveryFee: money('deliveryFee').when('deliveryEnabled', {
+    deliveryFee: money('deliveryFee', { thousandStep: true }).when('deliveryEnabled', {
       is: true,
       then: (s) => s.test('required', 'deliveryFeeRequired', (v) => v != null),
     }),

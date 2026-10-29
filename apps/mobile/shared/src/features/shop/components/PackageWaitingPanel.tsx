@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/Card';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useRefetchOnForeground } from '@/hooks/use-app-active';
 import { queryKeys } from '@/queries/query-keys';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 const ICON_RING = 96;
 const ICON_DISC = 64;
@@ -50,6 +51,7 @@ const NEXT_STEPS = [
 
 /** Bước 2 của tuyến GÓI trong app Partner — thẻ "Đăng ký thành công · Đang chờ kích hoạt". */
 export function PackageWaitingPanel() {
+  const colors = useColors();
   const t = useTranslations('ShopOnboarding.packageWaiting');
   // Màn này chỉ dựng khi đang chờ kích hoạt ⇒ chỉ nghe đúng lúc cần.
   usePackageActivationWatch();

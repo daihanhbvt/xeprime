@@ -113,4 +113,47 @@ describe('useOnBadgeChange', () => {
     await act(async () => view.rerender({ value: 3 }));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('null → con số ĐẦU TIÊN biết được là mốc, không phải thay đổi', async () => {
+    // Lúc mở app con số là "chưa biết"; lượt REST đầu tiên của người còn 3 thông báo chưa đọc
+    // không được coi là 0 → 3 và tải lại mọi danh sách vừa tải xong.
+    const onChange = jest.fn();
+    const view = await renderHook(
+      ({ value }: { value: number | null }) => useOnBadgeChange(value, onChange),
+      { initialProps: { value: null as number | null } },
+    );
+
+    await act(async () => view.rerender({ value: 3 }));
+    expect(onChange).not.toHaveBeenCalled();
+
+    await act(async () => view.rerender({ value: 4 }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('về null (đăng xuất) rồi có con số mới: tài khoản sau lập mốc riêng', async () => {
+    const onChange = jest.fn();
+    const view = await renderHook(
+      ({ value }: { value: number | null }) => useOnBadgeChange(value, onChange),
+      { initialProps: { value: 2 as number | null } },
+    );
+
+    await act(async () => view.rerender({ value: null }));
+    await act(async () => view.rerender({ value: 9 }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('nợ lúc ở nền KHÔNG được trả cho tài khoản sau khi về null', async () => {
+    const onChange = jest.fn();
+    appActive.mockReturnValue(false);
+    const view = await renderHook(
+      ({ value }: { value: number | null }) => useOnBadgeChange(value, onChange),
+      { initialProps: { value: 2 as number | null } },
+    );
+    await act(async () => view.rerender({ value: 3 }));
+    await act(async () => view.rerender({ value: null }));
+
+    appActive.mockReturnValue(true);
+    await act(async () => view.rerender({ value: null }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

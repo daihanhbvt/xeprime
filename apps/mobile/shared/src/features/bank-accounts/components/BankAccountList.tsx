@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { BankAccount, BankAccountScope } from '@/api/bank-accounts/api';
 import { currentBankAccount } from '../current-account';
 import { BankAccountCard } from './BankAccountCard';
@@ -57,6 +58,7 @@ export function BankAccountList({
   /** Nội dung dưới thẻ (khối lưu ý) — chỉ hiện khi đã tải xong. */
   footer?: ReactNode;
 }) {
+  const colors = useColors();
   const t = useTranslations('BankAccounts');
   const [localOpen, setLocalOpen] = useState(false);
 
@@ -117,9 +119,7 @@ export function BankAccountList({
             icon="card-outline"
             title={t('emptyTitle')}
             description={t('subtitle')}
-            actionLabel={t('actions.add')}
-            actionIcon="add"
-            onAction={() => setFormOpen(true)}
+            // Màn trống dữ liệu chỉ mô tả, không nút thêm (người dùng chốt 27/10/2026).
           />
         )}
 
@@ -164,7 +164,7 @@ function CurrentAccount({
             label={t('actions.change')}
             icon="swap-horizontal-outline"
             size="sm"
-            variant="secondary"
+            variant={detailed ? 'ghost' : 'secondary'}
             onPress={onChange}
           />
         ) : undefined

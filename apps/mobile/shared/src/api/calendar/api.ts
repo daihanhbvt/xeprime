@@ -24,6 +24,8 @@ export type CreateVehicleBlockInput = Schemas['CreateVehicleBlockDto'];
 export type UpdateVehicleBlockInput = Schemas['UpdateVehicleBlockDto'];
 
 export type VehicleDailyPrice = Schemas['VehicleDailyPriceDto'];
+/** Lịch bận theo ngày của một xe (`GET /calendar/busy-days`) — cùng DTO với cửa công khai. */
+export type CalendarBusyDays = Schemas['VehicleBusyDaysDto'];
 export type SaveDailyPricesInput = Schemas['SaveDailyPricesDto'];
 
 export type BulkDayPreview = Schemas['BulkDayPreviewDto'];
@@ -169,6 +171,15 @@ export const calendarApi = {
     return getApiClient().delete<{ deleted: number }>(
       `/vehicles/${encodeURIComponent(vehicleId)}/daily-prices?${range}`,
     );
+  },
+
+  /**
+   * Lịch bận theo ngày của MỘT xe của gian hàng — cùng phép tính và cùng hình dạng với cửa công
+   * khai của khách, nhưng scope theo tenant nên xe chưa lên chợ cũng tô được ô chọn thời gian của
+   * luồng đặt hộ (web `fetchCalendarBusyDays`).
+   */
+  busyDays(vehicleId: string, from: string, to: string): Promise<CalendarBusyDays> {
+    return getApiClient().get<CalendarBusyDays>('/calendar/busy-days', { vehicleId, from, to });
   },
 
   /**

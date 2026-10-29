@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import {
   PanResponder,
   type GestureResponderEvent,
@@ -12,7 +12,8 @@ import Animated, {
   type AnimatedStyle,
 } from 'react-native-reanimated';
 import { Text, YStack } from 'tamagui';
-import { colors, fontSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, sizing, space } from '@/theme/tokens';
 
 const THUMB = 22;
 const TRACK_HEIGHT = 4;
@@ -43,6 +44,11 @@ interface RangeSliderProps {
   /** Dòng chữ dưới thanh, dựng từ giá trị đang kéo (đã sắp). */
   caption?: (value: [number, number]) => string;
   label?: string;
+  /**
+   * Báo lúc bắt đầu / thôi kéo — vùng cuộn chứa thanh (tấm Bộ lọc) khoá cuộn trong lúc kéo, nếu
+   * không ScrollView Android giành cử chỉ và kéo cả màn theo ngón tay.
+   */
+  onDraggingChange?: (dragging: boolean) => void;
 }
 
 /**
@@ -73,11 +79,24 @@ interface RangeSliderProps {
  * bị đánh thức ở ba chỗ, tất cả đều thưa: đặt tay xuống, thả tay ra, và nhãn dưới thanh (đã hãm
  * nhịp). Bộ nhận cử chỉ cũng được ghi nhớ theo thang đo nên không bị dựng lại mỗi lần đổi chữ.
  */
-function RangeSliderImpl({ min, max, step, value, onChange, caption, label }: RangeSliderProps) {
+function RangeSliderImpl({
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  caption,
+  label,
+  onDraggingChange,
+}: RangeSliderProps) {
+  const colors = useColors();
   const [width, setWidth] = useState(0);
   /** Bản sao THƯA của hai shared value, chỉ để có chữ mà vẽ. */
   const [shown, setShown] = useState<[number, number]>(value);
   const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    onDraggingChange?.(dragging);
+  }, [dragging, onDraggingChange]);
 
   const span = Math.max(max - min, 1);
   const usable = Math.max(width - THUMB, 1);
@@ -292,6 +311,7 @@ export const RangeSlider = memo(RangeSliderImpl);
  * chuyển) sẽ nuốt mất cú chạm và mốc toạ độ tính ra sai.
  */
 const Thumb = memo(function Thumb({ style }: { style: AnimatedStyle<ViewStyle> }) {
+  const colors = useColors();
   return (
     <Animated.View
       pointerEvents="none"

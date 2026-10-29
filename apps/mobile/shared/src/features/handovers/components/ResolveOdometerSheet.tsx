@@ -23,7 +23,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 import { useResolveHandoverOdometer } from '../hooks/use-handovers';
 import type { Handover, HandoverContext } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -83,6 +84,7 @@ export function ResolveOdometerSheet({
   handover: Handover;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover.odometerFix');
   const tOdoError = useTranslations('Bookings.handover.odometerError');
   const tConflict = useTranslations('Bookings.handover.conflict');

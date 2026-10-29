@@ -13,6 +13,14 @@ export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
+export type ExternalDriverInput = Schemas['ExternalDriverInputDto'];
+/**
+ * Body của `PATCH /bookings/:id/driver` — ĐÚNG MỘT khoá (server từ chối body mang cả hai), như web:
+ * `driverId` (tài xế liên kết, `null` = bỏ gán — ADR 0063) hoặc `externalDriver` (ADR 0067).
+ */
+export type AssignBookingDriverInput =
+  | { driverId: string | null }
+  | { externalDriver: ExternalDriverInput };
 
 /** Khớp `BOOKING_SORT` ở backend DTO. */
 export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc';
@@ -124,11 +132,12 @@ export const bookingsApi = {
     );
   },
 
-  /** Gán/bỏ gán tài xế — `driverId: null` là bỏ gán tường minh; server có audit. */
-  assignDriver(id: string, driverId: string | null): Promise<BookingDetail> {
-    return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/driver`, {
-      driverId,
-    });
+  /**
+   * Gán/bỏ gán tài xế liên kết, hoặc ghi tài xế ngoài hệ thống (ADR 0067) — gửi ĐÚNG MỘT khoá.
+   * Server có audit.
+   */
+  assignDriver(id: string, body: AssignBookingDriverInput): Promise<BookingDetail> {
+    return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/driver`, body);
   },
 
   /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`. */

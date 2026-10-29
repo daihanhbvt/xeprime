@@ -44,7 +44,14 @@ export function withLatest(
 export function useSubmitDriverLicence() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (image: PreparedLicenceImage) => submitDriverLicence(image),
+    mutationFn: ({
+      image,
+      onProgress,
+    }: {
+      image: PreparedLicenceImage;
+      /** Phần trăm byte đã gửi lên R2 — chỉ để hiện `· {progress}%` như web. */
+      onProgress?: (percent: number) => void;
+    }) => submitDriverLicence(image, onProgress),
     onSuccess: (licence) => {
       queryClient.setQueryData<DriverLicenceOverview>(queryKeys.driverLicence.overview, (prev) =>
         withLatest(prev, licence),

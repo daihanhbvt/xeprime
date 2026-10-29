@@ -19,6 +19,8 @@ export function toQuoteParams(input: {
   pickupAt?: string;
   returnAt?: string;
   routeType?: string | null;
+  vehicleProtectionSelected?: boolean;
+  personalAccidentSelected?: boolean;
 }): PublicQuoteParams | null {
   if (input.serviceType === SERVICE_TYPE.LONG_TERM) {
     return input.longTermPackageMonths
@@ -31,6 +33,17 @@ export function toQuoteParams(input: {
     pickupAt: input.pickupAt,
     returnAt: input.returnAt,
     serviceType: input.serviceType,
-    ...(input.routeType ? { routeType: input.routeType } : {}),
+    // Như web `publicQuoteParams`: lộ trình chỉ có nghĩa với xe có tài xế.
+    ...(input.serviceType === SERVICE_TYPE.WITH_DRIVER && input.routeType
+      ? { routeType: input.routeType }
+      : {}),
+    // Bảo hiểm MIC (#213) — y như web `publicQuoteParams`: gửi cả `false`, để báo giá và mã KM nói
+    // về cùng một lựa chọn.
+    ...(input.vehicleProtectionSelected !== undefined
+      ? { vehicleProtectionSelected: input.vehicleProtectionSelected }
+      : {}),
+    ...(input.personalAccidentSelected !== undefined
+      ? { personalAccidentSelected: input.personalAccidentSelected }
+      : {}),
   };
 }

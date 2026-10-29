@@ -26,7 +26,8 @@ import { useAccountIdentityLabel } from '@/features/account/use-account-identity
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sidebar, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sidebar, space } from '@/theme/tokens';
 import {
   isManageNavBranch,
   manageNavForTrack,
@@ -131,6 +132,7 @@ interface ResolvedSection {
  * `comingSoon` của web; ẩn đi thì người dùng không biết chức năng có tồn tại.
  */
 export function ManageDrawer() {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const tStates = useTranslations('Common.states');
   const tShell = useTranslations('ManageCommon.shell');

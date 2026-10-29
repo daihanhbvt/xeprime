@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 
 interface SectionHeaderProps {
   title: string;
@@ -12,6 +13,7 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, count, subtitle, action }: SectionHeaderProps) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
       <YStack f={1} gap={2}>

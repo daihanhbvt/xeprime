@@ -2,7 +2,8 @@ import { Fragment, useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { Divider } from './DataRow';
 import { estimateTextWidth } from './text-fit';
 import type { IconName } from './Chip';
@@ -19,11 +20,11 @@ import type { IconName } from './Chip';
  */
 type ActionTone = 'accent' | 'success' | 'danger';
 
-const TONE: Readonly<Record<ActionTone, string>> = {
+const useTone = themed<Readonly<Record<ActionTone, string>>>((colors) => ({
   accent: colors.primaryActive,
   success: colors.success,
   danger: colors.danger,
-};
+}));
 
 export interface CardAction {
   /** Khoá React — dùng tên thao tác, đừng lấy chỉ số mảng. */
@@ -93,6 +94,7 @@ function labelsFitInline(actions: readonly CardAction[], barWidth: number): bool
  * mép thẻ, còn một đường kẻ thụt vào 16pt hai đầu đọc ra như vẽ hụt.
  */
 export function CardActionBar({ actions }: { actions: readonly CardAction[] }) {
+  const colors = useColors();
   const [width, setWidth] = useState(0);
 
   const measure = useCallback((event: LayoutChangeEvent) => {
@@ -124,10 +126,15 @@ export function CardActionBar({ actions }: { actions: readonly CardAction[] }) {
  * Nền của ô đang bị nhấn — SÁNG lên, không mờ đi: thứ người dùng cần thấy là "tôi đang chạm đúng
  * ô này", không phải "ô này đang tắt". Cùng phản hồi với một hàng của `StatGrid`.
  */
-const pressedCell = { flex: 1, backgroundColor: colors.surfaceMuted } as const;
+const usePressedCell = themed(
+  (colors) => ({ flex: 1, backgroundColor: colors.surfaceMuted }) as const,
+);
 const cell = { flex: 1 } as const;
 
 function ActionCell({ action, inline }: { action: CardAction; inline: boolean }) {
+  const colors = useColors();
+  const TONE = useTone();
+  const pressedCell = usePressedCell();
   const loading = action.loading === true;
   const blocked = action.disabled === true || loading;
 

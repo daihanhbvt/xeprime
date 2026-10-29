@@ -10,7 +10,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DriverLicenceStateBadge } from '@/features/drivers/components/DriverLicenceStateBadge';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useAssignableDrivers } from '../hooks/use-bookings';
 import type { AssignableDriver, BookingDetail } from '../api';
 
@@ -50,6 +51,7 @@ export function AssignDriverSheet({
   selectedId?: string | null;
   onSelect: (driverId: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.driver');
   const tDrivers = useTranslations('Drivers.booking');
   const errorMessage = useErrorMessage();
@@ -133,6 +135,7 @@ function DriverRow({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const tDrivers = useTranslations('Drivers.booking');
 
   /*

@@ -23,6 +23,7 @@
     "searchPlaceholder": "Tìm kiếm chuyến đi",
     "searchLabel": "Tìm theo tên xe hoặc mã đơn",
     "rangeStart": "Chọn khoảng thời gian",
+    "rangeFrom": "Từ ngày",
     "rangeEnd": "Đến ngày",
     "rangeLabel": "Khoảng thời gian thuê",
     "narrowEmptyTitle": "Không tìm thấy chuyến nào",
@@ -157,8 +158,8 @@
   },
   "timeline": {
     "ariaDone": "Tiến trình chuyến: đã hoàn thành",
-    "ariaPending": "Tiến trình chuyến: đã xác nhận, chưa hoàn thành",
-    "confirmed": "Đã xác nhận",
+    "ariaPending": "Tiến trình chuyến: đã nhận xe, chưa hoàn thành",
+    "confirmed": "Đã nhận xe",
     "completed": "Hoàn thành",
     "srDone": " — đã xong",
     "srTodo": " — chưa hoàn thành"
@@ -451,7 +452,8 @@
       "title": "Thanh toán thành công",
       "lead": "Hệ thống đã ghi nhận {amount} qua {channel}!",
       "leadNoChannel": "Hệ thống đã ghi nhận {amount}!"
-    }
+    },
+    "appTitle": "Chuyển khoản giữ chỗ"
   },
   "unpaid": {
     "listLabel": "Chuyến chờ thanh toán",
@@ -510,7 +512,8 @@
       "body": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Phần còn lại {amount} trả trực tiếp chủ xe khi nhận xe; cọc xe (nếu có) nộp riêng lúc nhận xe.",
       "bodyNoRest": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Cọc xe (nếu có) nộp riêng lúc nhận xe.",
       "acknowledge": "Tôi đã đọc <policy>chính sách giữ chỗ, huỷ & hoàn tiền</policy> áp dụng cho yêu cầu này.",
-      "submit": "Thanh toán giữ chỗ · {amount}"
+      "submit": "Thanh toán giữ chỗ · {amount}",
+      "submitShort": "Thanh toán {amount}"
     },
     "costs": {
       "holdTag": "Cần thanh toán"

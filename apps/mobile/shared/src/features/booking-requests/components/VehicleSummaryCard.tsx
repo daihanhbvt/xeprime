@@ -1,19 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { CATALOG_TYPE, SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
+import { SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
 import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
-import { catalogLabel } from '@/api/catalog';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { Card } from '@/components/ui/Card';
 import { RemoteImage } from '@/components/ui/RemoteImage';
-import { useCatalog } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { useListingSpecSummary } from '../hooks/use-listing-spec-summary';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-/** Thumbnail ngang giữ mốc nhận diện xe nhưng vẫn để step và trường đầu tiên nằm gần màn đầu. */
+/** `.compactMobile` — cột ảnh 112, tỉ lệ 4/3 (84), bo `border-radius`; khe `space-12` tới cột chữ. */
 const VEHICLE_THUMB = { width: 112, height: 84 } as const;
+const THUMB_GAP = toPx(XP_TOKENS['space-12']);
 
 /**
  * Hồ sơ xe ở đầu luồng gửi yêu cầu — bản native của `VehicleSummaryPanel`.
@@ -28,16 +30,22 @@ export function VehicleSummaryCard({
   listing,
   serviceType,
   packageMonths,
+  showShop = true,
 }: {
   listing: PublicListingDetail;
   serviceType: string;
   /** Gói dài hạn đang chọn — có gói thì hiện giá gói THẬT thay cho giá cơ sở /tháng. */
   packageMonths: number | null;
+  /**
+   * Thẻ gian hàng (điểm, số chuyến, "Xem gian hàng") — `false` ở luồng đặt hộ: người đang đặt CHÍNH
+   * LÀ gian hàng đó (web `showShop={false}`).
+   */
+  showShop?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const { catalog } = useCatalog();
 
   const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
   const isWithDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -65,31 +73,13 @@ export function VehicleSummaryCard({
       : t('price.perMonth')
     : t('price.perDay');
 
-  const specs = [
-    listing.manufactureYear
-      ? { label: t('panel.specYear'), value: String(listing.manufactureYear) }
-      : null,
-    listing.seatCount
-      ? { label: t('panel.specSeats'), value: t('panel.seatCount', { count: listing.seatCount }) }
-      : null,
-    listing.bodyType
-      ? {
-          label: t('panel.specBody'),
-          value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '—',
-        }
-      : null,
-    listing.fuelType
-      ? {
-          label: t('panel.specFuel'),
-          value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '—',
-        }
-      : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>;
+  /* `.specLine` — "4 chỗ · Số tự động · Điện", cùng dòng với thẻ chuyến ở màn Xem lại. */
+  const specLine = useListingSpecSummary(listing).join(LIST_SEPARATOR);
 
   return (
     <Card>
       <YStack gap={space.md}>
-        <XStack gap={space.md} ai="flex-start">
+        <XStack gap={THUMB_GAP} ai="flex-start">
           <YStack w={VEHICLE_THUMB.width} h={VEHICLE_THUMB.height} br={radius.md} ov="hidden">
             <RemoteImage
               uri={listing.mainImageUrl}
@@ -100,29 +90,25 @@ export function VehicleSummaryCard({
           </YStack>
 
           <YStack f={1} gap={space.xs}>
-            <XStack ai="center" gap={space.xs} flexWrap="wrap">
-              {(listing.serviceTypes ?? []).length > 0 ? (
-                <XStack bg={colors.surfaceMuted} br={radius.sm} px={space.sm} py={2}>
-                  <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-                    {(listing.serviceTypes ?? [])
-                      .map((s) => domainLabel('serviceType', s))
-                      .join(LIST_SEPARATOR)
-                      .toUpperCase()}
-                  </Text>
-                </XStack>
-              ) : null}
-              {discount > 0 ? (
-                <XStack bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
-                  <Text col={colors.onDiscount} fos={fontSize.label} fow={fontWeight.bold}>
-                    -{discount}%
-                  </Text>
-                </XStack>
-              ) : null}
-            </XStack>
+            {/* `.compactMobile .badge { display: none }` — chỉ còn nhãn giảm giá (`DiscountTag sm`). */}
+            {discount > 0 ? (
+              <XStack alignSelf="flex-start" bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
+                <Text col={colors.onDiscount} fos={fontSize.label} fow={fontWeight.bold}>
+                  -{discount}%
+                </Text>
+              </XStack>
+            ) : null}
 
-            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={2}>
+            {/* `.compactMobile .name` — body-lg semibold `color-text`. */}
+            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={2}>
               {listing.name}
             </Text>
+            {/* `.specLine` — body `text-secondary`. */}
+            {specLine ? (
+              <Text col={colors.textMuted} fos={fontSize.body}>
+                {specLine}
+              </Text>
+            ) : null}
             <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
               {[domainLabel('vehicleType', listing.vehicleType), listing.shopProvince]
                 .filter(Boolean)
@@ -155,26 +141,10 @@ export function VehicleSummaryCard({
           </YStack>
         </XStack>
 
-        {specs.length > 0 ? (
-          <XStack
-            flexWrap="wrap"
-            rowGap={space.sm}
-            p={space.sm}
-            br={radius.md}
-            bg={colors.surfaceMuted}
-          >
-            {specs.map((spec) => (
-              <YStack key={spec.label} width="50%" gap={2}>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {spec.label}
-                </Text>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {spec.value}
-                </Text>
-              </YStack>
-            ))}
-          </XStack>
-        ) : null}
+        {/*
+          `.compactMobile .pickupPoint, .specs { display: none }` — ở breakpoint điện thoại web bỏ
+          điểm nhận xe và bảng thông số khỏi hồ sơ xe (đã có ở thẻ chuyến màn Xem lại).
+        */}
 
         {/*
           Hàng gian hàng mở trang gian hàng công khai — web có liên kết "Xem gian hàng" ở đúng
@@ -189,23 +159,25 @@ export function VehicleSummaryCard({
           `compact` bỏ giới thiệu, ba chỉ số và dòng tóm tắt uy tín — thẻ này đã có ảnh xe, giá
           và thông số ngay phía trên, không phải chỗ lặp lại cả một hồ sơ gian hàng.
         */}
-        <YStack pt={space.md} borderTopWidth={1} borderColor={colors.borderSubtle}>
-          <ShopQuickInfoCard
-            shop={{
-              name: listing.shopName,
-              slug: listing.shopSlug,
-              logoUrl: listing.shopLogoUrl,
-              verified: listing.shopVerified,
-              ratingAvg: listing.shopRatingAvg,
-              ratingCount: listing.shopRatingCount,
-              completedTripCount: listing.shopCompletedTripCount,
-            }}
-            metrics={listing.shopMetrics}
-            variant="compact"
-            /* Cùng chữ với liên kết "Xem gian hàng" mà web đặt ở đúng chỗ này. */
-            openLabel={t('panel.viewShop')}
-          />
-        </YStack>
+        {showShop ? (
+          <YStack pt={space.md} borderTopWidth={1} borderColor={colors.borderSubtle}>
+            <ShopQuickInfoCard
+              shop={{
+                name: listing.shopName,
+                slug: listing.shopSlug,
+                logoUrl: listing.shopLogoUrl,
+                verified: listing.shopVerified,
+                ratingAvg: listing.shopRatingAvg,
+                ratingCount: listing.shopRatingCount,
+                completedTripCount: listing.shopCompletedTripCount,
+              }}
+              metrics={listing.shopMetrics}
+              variant="compact"
+              /* Cùng chữ với liên kết "Xem gian hàng" mà web đặt ở đúng chỗ này. */
+              openLabel={t('panel.viewShop')}
+            />
+          </YStack>
+        ) : null}
       </YStack>
     </Card>
   );

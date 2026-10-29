@@ -23,6 +23,7 @@
     "searchPlaceholder": "Search trips",
     "searchLabel": "Search by vehicle name or booking code",
     "rangeStart": "Choose a date range",
+    "rangeFrom": "From",
     "rangeEnd": "End date",
     "rangeLabel": "Rental date range",
     "narrowEmptyTitle": "No trips found",
@@ -157,8 +158,8 @@
   },
   "timeline": {
     "ariaDone": "Trip progress: completed",
-    "ariaPending": "Trip progress: confirmed, not yet completed",
-    "confirmed": "Confirmed",
+    "ariaPending": "Trip progress: picked up, not yet completed",
+    "confirmed": "Picked up",
     "completed": "Completed",
     "srDone": " — done",
     "srTodo": " — not completed"
@@ -451,7 +452,8 @@
       "title": "Payment successful",
       "lead": "We have received {amount} via {channel}!",
       "leadNoChannel": "We have received {amount}!"
-    }
+    },
+    "appTitle": "Transfer reservation fee"
   },
   "unpaid": {
     "listLabel": "Trips awaiting payment",
@@ -510,7 +512,8 @@
       "body": "This is only the reservation amount and it counts towards your trip total. The remaining {amount} is paid directly to the owner at pickup; any security deposit is handed over separately at pickup.",
       "bodyNoRest": "This is only the reservation amount and it counts towards your trip total. Any security deposit is handed over separately at pickup.",
       "acknowledge": "I have read the <policy>reservation, cancellation & refund policy</policy> that applies to this request.",
-      "submit": "Pay reservation · {amount}"
+      "submit": "Pay reservation · {amount}",
+      "submitShort": "Pay {amount}"
     },
     "costs": {
       "holdTag": "Payment due"

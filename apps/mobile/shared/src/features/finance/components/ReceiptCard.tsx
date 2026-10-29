@@ -17,7 +17,8 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { Receipt } from '../api';
 
 /**
@@ -52,6 +53,7 @@ function ReceiptCardImpl({
   showDescription?: boolean;
   onPress?: (id: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();

@@ -1,11 +1,7 @@
 {
-  "draftBanner": {
-    "title": "Bản thảo — chưa qua rà soát pháp lý",
-    "body": "Văn bản này được soạn theo đúng cách sản phẩm đang vận hành, nhưng chưa được luật sư rà soát và còn chỗ trống về pháp nhân vận hành. Không công bố cho người dùng thật trước khi hoàn tất hai việc đó."
-  },
   "entity": {
     "heading": "Đơn vị vận hành",
-    "body": "Nền tảng XePrime được vận hành bởi «điền tên pháp nhân», mã số doanh nghiệp «điền MST», địa chỉ trụ sở «điền địa chỉ». Mọi liên hệ chính thức gửi về «điền email pháp lý»."
+    "body": "Nền tảng XePrime được vận hành bởi CÔNG TY TNHH CÔNG NGHỆ SOFTRENT (SOFTRENT TECHNOLOGY COMPANY LIMITED), mã số doanh nghiệp 0402359663, địa chỉ trụ sở 133 Trung Lương 11, Phường Hòa Xuân, Thành phố Đà Nẵng, Việt Nam. Mọi liên hệ chính thức gửi về admin@softrent.vn."
   },
   "meta": {
     "effectiveFrom": "Có hiệu lực từ {date}",
@@ -35,6 +31,8 @@
     "booking": "Gửi yêu cầu tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <cancellation>Chính sách huỷ và hoàn tiền</cancellation>.",
     "bookingCheck": "Tôi đã đọc và đồng ý với <terms>Điều khoản sử dụng</terms>, <cancellation>Chính sách huỷ & hoàn tiền</cancellation> và <privacy>Chính sách bảo mật</privacy> của XePrime.",
     "bookingCheckHost": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, <terms>Điều khoản sử dụng</terms>, <cancellation>Chính sách huỷ & hoàn tiền</cancellation> và <privacy>Chính sách bảo mật</privacy> của XePrime.",
+    "bookingCheckPlain": "Tôi đã đọc và đồng ý với Điều khoản sử dụng, Chính sách huỷ & hoàn tiền và Chính sách bảo mật của XePrime.",
+    "bookingCheckHostPlain": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, Điều khoản sử dụng, Chính sách huỷ & hoàn tiền và Chính sách bảo mật của XePrime.",
     "subscription": "Mua gói tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
     "shop": "Tạo gian hàng tức là bạn đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms>.",
     "marketAuth": "Bằng cách tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách quyền riêng tư</privacy> của XePrime."
@@ -112,7 +110,8 @@
         },
         "fees": {
           "heading": "8. Phí của XePrime",
-          "body": "XePrime có hai cách thu: phí dịch vụ tính trên chuyến đối với chủ xe không dùng gói thuê bao, và phí thuê bao theo SỐ XE và kỳ hạn đối với gian hàng. Đây là khoản XePrime hưởng để vận hành sàn, hỗ trợ và chống gian lận — không phải thuế và không phải phí bảo hiểm. Mức phí, kỳ hạn và ngày hiệu lực được công bố trước khi bạn xác nhận; số tiền của một đơn đã tạo không bị tính lại khi chính sách thay đổi sau đó."
+          "body": "XePrime có hai cách thu: phí dịch vụ tính trên chuyến đối với chủ xe không dùng gói thuê bao, và phí thuê bao theo SỐ XE và kỳ hạn đối với gian hàng. Đây là khoản XePrime hưởng để vận hành sàn, hỗ trợ và chống gian lận — không phải thuế và không phải phí bảo hiểm. Mức phí, kỳ hạn và ngày hiệu lực được công bố trước khi bạn xác nhận; số tiền của một đơn đã tạo không bị tính lại khi chính sách thay đổi sau đó.",
+          "bodyInApp": "XePrime thu phí dịch vụ theo biểu phí công bố cho từng hình thức tham gia của chủ xe và gian hàng. Đây là khoản XePrime hưởng để vận hành sàn, hỗ trợ và chống gian lận — không phải thuế và không phải phí bảo hiểm. Mức phí và ngày hiệu lực được công bố trước khi bạn xác nhận; số tiền của một đơn đã tạo không bị tính lại khi chính sách thay đổi sau đó."
         },
         "tax": {
           "heading": "9. Nghĩa vụ thuế",
@@ -273,7 +272,8 @@
         },
         "fees": {
           "heading": "8. Phí trên sàn",
-          "body": "Sàn thu phí dịch vụ trên chuyến với chủ xe không dùng gói, hoặc phí thuê bao theo SỐ XE và kỳ hạn với gian hàng. Biểu phí, kỳ hạn và ngày hiệu lực được công bố trước; mọi thay đổi chỉ áp dụng cho đơn phát sinh sau ngày hiệu lực mới. Phí của sàn được hiển thị tách bạch với nghĩa vụ thuế và với các khoản phải trả chủ xe."
+          "body": "Sàn thu phí dịch vụ trên chuyến với chủ xe không dùng gói, hoặc phí thuê bao theo SỐ XE và kỳ hạn với gian hàng. Biểu phí, kỳ hạn và ngày hiệu lực được công bố trước; mọi thay đổi chỉ áp dụng cho đơn phát sinh sau ngày hiệu lực mới. Phí của sàn được hiển thị tách bạch với nghĩa vụ thuế và với các khoản phải trả chủ xe.",
+          "bodyInApp": "Sàn thu phí dịch vụ theo biểu phí công bố cho từng hình thức tham gia của chủ xe và gian hàng. Biểu phí và ngày hiệu lực được công bố trước; mọi thay đổi chỉ áp dụng cho đơn phát sinh sau ngày hiệu lực mới. Phí của sàn được hiển thị tách bạch với nghĩa vụ thuế và với các khoản phải trả chủ xe."
         },
         "violation": {
           "heading": "9. Xử lý vi phạm",
@@ -378,6 +378,9 @@
             "company": "Doanh nghiệp đã được XePrime xác minh: không bị khấu trừ — doanh nghiệp tự xuất hoá đơn và tự kê khai thuế.",
             "noProfile": "Chưa khai hồ sơ người bán, hoặc hồ sơ doanh nghiệp chưa được xác minh: được xem là cá nhân và bị khấu trừ. Thiếu thông tin không làm mất nghĩa vụ thuế.",
             "track": "Dùng gói thuê bao hay không dùng gói không quyết định việc khấu trừ: một gian hàng mua gói nhưng là hộ kinh doanh vẫn bị khấu trừ."
+          },
+          "itemsInApp": {
+            "track": "Hình thức tham gia sàn không quyết định việc khấu trừ: chủ xe là hộ kinh doanh vẫn bị khấu trừ."
           }
         },
         "rates": {

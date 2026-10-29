@@ -97,6 +97,20 @@
     "retry": "Thử mở lại",
     "headerTitle": "Trở thành chủ xe",
     "haveAccount": "Đã có tài khoản đối tác?",
-    "loginLink": "Đăng nhập"
+    "loginLink": "Đăng nhập",
+    "landing": {
+      "body": "XePrime có nền tảng Web/App riêng biệt dành cho đối tác (partner), giúp bạn đăng xe cho thuê nhanh chóng, quản lý đơn dễ dàng và nhận hỗ trợ 24/7.",
+      "headline": "Đăng xe dễ dàng,\ncó hệ thống hỗ trợ riêng",
+      "highlight": "Dành cho đối tác",
+      "perks": {
+        "fast": "Đăng xe nhanh chóng",
+        "orders": "Quản lý đơn trực tuyến",
+        "support": "Hỗ trợ 24/7",
+        "revenue": "Theo dõi doanh thu minh bạch"
+      }
+    }
+  },
+  "currentLocation": {
+    "denied": "Bạn đang chặn quyền vị trí cho ứng dụng. Hãy cho phép trong Cài đặt của máy rồi thử lại."
   }
 }

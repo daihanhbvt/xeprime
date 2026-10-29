@@ -8,8 +8,9 @@ import { serviceUsesRentalRange } from '@xeprime/domain';
 import type { Dayjs } from '@xeprime/domain';
 import { useDatePickerPattern } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
@@ -49,6 +50,8 @@ export function StickySearchBar({
   onSubmit: () => void;
   progress: SharedValue<number>;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
   const t = useTranslations('HomeSearch');
   const pattern = useDatePickerPattern();
   const [pickerOpen, setPickerOpen] = useState(false);

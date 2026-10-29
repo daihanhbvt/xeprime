@@ -41,10 +41,6 @@
   padding-top: 24px;
 }
 
-.draft {
-  margin-bottom: 4px;
-}
-
 .body {
   max-width: 68ch;
 }
@@ -209,9 +205,6 @@
  * `[data-print-root]` (globals.css) đã ẩn vỏ app. Còn lại là bỏ những thứ chỉ có nghĩa trên
  * màn hình: cột bên (liên kết neo không bấm được trên giấy), khối "văn bản liên quan", và
  * ràng buộc bề ngang của cột chữ.
- *
- * Băng bản thảo GIỮ LẠI: bản in không mang cảnh báo "chưa qua rà soát pháp lý" là bản in
- * trông như đã có hiệu lực.
  */
 @media print {
   .side,

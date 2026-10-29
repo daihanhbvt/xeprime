@@ -221,7 +221,9 @@ export interface CustomerTripTimelineState {
 
 export function customerTripTimeline(stage: CustomerTripStage): CustomerTripTimelineState {
   switch (stage) {
+    // Mốc đầu là "Đã nhận xe" (28/10/2026): chặng Sẵn sàng CHƯA nhận xe nên chưa tích mốc nào.
     case CUSTOMER_TRIP_STAGE.READY:
+      return { visible: true, confirmedDone: false, completedDone: false };
     case CUSTOMER_TRIP_STAGE.ACTIVE:
       return { visible: true, confirmedDone: true, completedDone: false };
     case CUSTOMER_TRIP_STAGE.COMPLETED:

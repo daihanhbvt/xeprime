@@ -1058,7 +1058,7 @@ export class BookingsService {
 
       /*
        * Khách cũng phải biết chuyến của mình bắt đầu, kết thúc, hay BỊ KHÉP LẠI (Wave 11 +
-       * 25/08). `reserved → confirmed` vẫn là bút toán nội bộ, khách không có việc gì với nó.
+       * 25/08), và cả lúc gian hàng XÁC NHẬN đơn (28/10 — làm mới trang chuyến của khách realtime).
        *
        * Hai kết thúc tiêu cực được thêm vào vì chúng thay đổi kế hoạch của khách: xe vừa được
        * nhả ra cho người khác đặt, nên im lặng ở đây là để một người ra bến chờ một chiếc xe
@@ -1081,8 +1081,9 @@ export class BookingsService {
             request.customerUserId,
             {
               type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-              title: customerFacing.title,
-              body: `${updated.vehicle.name} · ${customerFacing.body}`,
+              // Tên xe đứng ở TIÊU ĐỀ (người dùng chốt 28/10/2026) — thân là câu đầy đủ, không mẩu ghép.
+              title: customerFacing.title.replace('{vehicle}', updated.vehicle.name),
+              body: customerFacing.body,
               tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
               targetId: id,
@@ -1153,25 +1154,32 @@ export class BookingsService {
  *
  * Bảng thay vì chuỗi `if`: thêm một trạng thái mới vào `BOOKING_STATUS` mà quên nghĩ tới khách
  * thì ở đây là một khoá thiếu nhìn thấy được, chứ không phải một nhánh `else` im lặng.
- * `reserved`/`confirmed` cố ý vắng mặt — chúng là bút toán nội bộ của gian hàng.
+ * `reserved` cố ý vắng mặt — bút toán nội bộ của gian hàng. `confirmed` CÓ (28/10/2026): gian hàng
+ * chốt đơn là điều khách chờ, và là tín hiệu duy nhất làm mới trang chuyến của khách realtime —
+ * web + app chỉ làm mới khi người xem nhận một thông báo (bản chiếu huy hiệu).
  */
 const CUSTOMER_FACING_TRANSITIONS: Partial<Record<BookingStatus, { title: string; body: string }>> =
   {
+    // `{vehicle}` thay bằng tên xe lúc phát.
+    [BOOKING_STATUS.CONFIRMED]: {
+      title: 'Chuyến {vehicle} đã được xác nhận',
+      body: 'Xe đã sẵn sàng theo lịch hẹn. Nhớ mang GPLX và giấy tờ khi nhận xe.',
+    },
     [BOOKING_STATUS.ACTIVE]: {
-      title: 'Hành trình của bạn đã bắt đầu',
-      body: 'chúc bạn một chuyến đi an toàn',
+      title: 'Bạn đã nhận xe {vehicle}',
+      body: 'Chúc bạn một chuyến đi an toàn. Nhớ trả xe đúng giờ hẹn.',
     },
     [BOOKING_STATUS.COMPLETED]: {
-      title: 'Chuyến đi đã hoàn thành',
-      body: 'cảm ơn bạn đã đồng hành cùng XePrime',
+      title: 'Chuyến {vehicle} đã hoàn thành',
+      body: 'Cảm ơn bạn đã đồng hành cùng XePrime! Dành 1 phút đánh giá chuyến đi nhé.',
     },
     [BOOKING_STATUS.CANCELLED]: {
-      title: 'Gian hàng đã huỷ chuyến của bạn',
-      body: 'chuyến đã bị huỷ — liên hệ gian hàng nếu bạn cần biết thêm',
+      title: 'Chuyến {vehicle} đã bị huỷ',
+      body: 'Liên hệ chủ xe nếu bạn cần biết thêm. Khoản hoàn (nếu có) theo chính sách huỷ của chuyến.',
     },
     [BOOKING_STATUS.NO_SHOW]: {
-      title: 'Chuyến của bạn đã bị đóng: khách không đến',
-      body: 'gian hàng ghi nhận bạn không tới nhận xe',
+      title: 'Chuyến {vehicle} đã đóng: không nhận xe',
+      body: 'Chủ xe ghi nhận bạn không đến nhận xe. Liên hệ hỗ trợ nếu có nhầm lẫn.',
     },
   };
 

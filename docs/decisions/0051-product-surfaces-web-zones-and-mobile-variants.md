@@ -78,8 +78,8 @@ mobile (Bearer). Cơ chế session/cookie: ADR 0053.
 
 ### 5. Mobile: hai Expo project mỏng + một package dùng chung (ghi nhận hiện trạng)
 
-Đội mobile đã tách `apps/mobile` thành `customer/` (`@xeprime/mobile-customer`, `vn.xeprime.mobile`,
-scheme `xeprime`), `manage/` (`@xeprime/mobile-manage`, `vn.xeprime.partner`, scheme
+Đội mobile đã tách `apps/mobile` thành `customer/` (`@xeprime/mobile-customer`, `vn.xeprime.customerapp`,
+scheme `xeprime`), `manage/` (`@xeprime/mobile-manage`, `vn.xeprime.partnerapp`, scheme
 `xeprimepartner`) và `shared/` (`@xeprime/mobile-shared`) — thiết kế ở `docs/mobile-split-impact.md`.
 Mỗi app chỉ ghi đè `src/app-profile.ts` và `src/navigation/routes.ts` qua alias `@/*`; phiên bản thư
 viện chung qua pnpm `catalog:`. Cách này thay cho "một Expo project, hai variant" của bản 30/09.

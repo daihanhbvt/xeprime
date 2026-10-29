@@ -51,6 +51,7 @@ jest.mock('@/features/badges/hooks/use-badges', () => ({
 jest.mock('@/features/badges/BadgeRealtimeProvider', () => ({
   useBadgeRealtime: jest.fn(() => ({
     counts: { chatCustomer: 0, chatShop: 0, notificationsUnread: 0 },
+    known: true,
     live: false,
   })),
 }));

@@ -3,6 +3,7 @@ import { PAYMENT_GATEWAY_PROVIDER, type AppLocale, type PaymentGatewayProvider }
 import momo from '../../../assets/payment-methods/momo.png';
 import vnpayEn from '../../../assets/payment-methods/vnpay-en.png';
 import vnpayVi from '../../../assets/payment-methods/vnpay-vi.png';
+import vnpayMark from '../../../assets/payment-methods/vnpay-mark.png';
 
 /**
  * Logo CHÍNH THỨC của từng ví — bản native của `provider-logos.ts` (web). Ảnh gói sẵn từ
@@ -30,4 +31,19 @@ const LOGOS: Readonly<Record<PaymentGatewayProvider, Readonly<Record<AppLocale, 
 
 export function paymentProviderLogo(provider: string, locale: AppLocale): ProviderLogo | null {
   return LOGOS[provider as PaymentGatewayProvider]?.[locale] ?? null;
+}
+
+/**
+ * BIỂU TƯỢNG vuông của từng cổng — bản native của `paymentProviderMark` web (#207), cho ô chọn ví
+ * của màn thanh toán tiền giữ chỗ (Figma `19759:37876` · `19759:37935`). Logo chữ dài thu vào ô
+ * vuông chỉ còn một dải mỏng. VNPAY: `apps/web/public/payment-methods/vnpay-mark.png` (168×131).
+ */
+const MARKS: Readonly<Record<PaymentGatewayProvider, ProviderLogo>> = {
+  [PAYMENT_GATEWAY_PROVIDER.MOMO]: { source: momo, width: 144, height: 144 },
+  [PAYMENT_GATEWAY_PROVIDER.VNPAY]: { source: vnpayMark, width: 168, height: 131 },
+};
+
+/** Biểu tượng vuông của một cổng — `null` với mã cổng lạ. */
+export function paymentProviderMark(provider: string): ProviderLogo | null {
+  return MARKS[provider as PaymentGatewayProvider] ?? null;
 }

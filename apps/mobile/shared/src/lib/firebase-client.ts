@@ -86,8 +86,10 @@ export async function signInChat(token: string): Promise<void> {
  *
  * Bỏ bước này thì uid cũ còn nguyên trong tiến trình: người kế tiếp đăng nhập trên cùng máy sẽ
  * nghe Firestore bằng danh tính của người trước cho tới khi custom token mới được đổi vào.
+ *
+ * So `uid` để một lượt đăng nhập chậm của người trước không đá văng phiên của người sau.
  */
-export async function signOutChat(): Promise<void> {
-  if (!auth) return;
+export async function signOutChat(uid: string): Promise<void> {
+  if (!auth || auth.currentUser?.uid !== uid) return;
   await signOut(auth);
 }

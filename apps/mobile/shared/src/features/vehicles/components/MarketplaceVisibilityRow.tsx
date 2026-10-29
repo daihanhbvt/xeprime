@@ -15,14 +15,16 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useErrorMessage } from '@/i18n/use-error-message';
+// Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
+import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle';
 import type { VehicleDetail } from '../api';
 
 /** Màu rãnh công tắc — cùng bảng với `PolicySwitch` của khu chính sách thuê. */
-const SWITCH_TRACK = { false: colors.borderInput, true: colors.primary };
+const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: colors.primary }));
 
 /**
  * Hàng "Trên chợ" ở ĐẦU hồ sơ xe — câu trả lời đầu tiên cho "xe của tôi có đang bán không"
@@ -53,9 +55,11 @@ const SWITCH_TRACK = { false: colors.borderInput, true: colors.primary };
  * đầu màn. Và TẮT thì luôn được — một ô mờ ở đó sẽ khoá luôn quyền rút xe về.
  */
 export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
+  const SWITCH_TRACK = useSwitchTrack();
   const t = useTranslations('Vehicles.publish.visibility');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
+  const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const toggle = useSetVehicleMarketplaceVisibility(vehicle.id);
 
@@ -148,6 +152,7 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
  * suy (`marketplaceVisibilityReason`) thay vì bịa thêm một câu thứ tư.
  */
 function MarketplaceState({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.publish.visibility');
   const domainLabel = useDomainLabel();
   const reason = vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason;

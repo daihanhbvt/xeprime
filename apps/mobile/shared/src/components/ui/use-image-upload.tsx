@@ -8,7 +8,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { IMAGE_SOURCE, pickImages, uploadImageToR2, type ImageSource } from '@/lib/r2-image-upload';
-import { colors, fieldFontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, space } from '@/theme/tokens';
 
 interface Options {
   /** Tiêu đề tấm chọn nguồn — nhãn của chính ô ảnh. */
@@ -62,6 +63,7 @@ export function useImageUpload({
   onUploaded,
   onRemove,
 }: Options): ImageUpload {
+  const colors = useColors();
   const t = useTranslations('Common.image');
   const toast = useAppToast();
   /*

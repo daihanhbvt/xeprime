@@ -3,11 +3,35 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { subtractMoney } from '@xeprime/domain';
+import { isPositiveMoney, isZeroMoney, payAtPickupAmount } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+
+type FeeLineLike = PriceBreakdownFeesInput['lines'][number];
+
+/**
+ * Dòng phụ dưới tên một khoản phí — cùng luật web (`PriceBreakdown`/`BookingReviewCosts` #213):
+ * `x%` khi tính theo phần trăm, `N ngày × đơn giá` khi tính theo ngày (bảo hiểm MIC), rồi
+ * `· đối tác`. Không còn "null%" ở dòng theo ngày. Mọi con số đến từ server.
+ */
+export function useFeeLineSublabel(): (line: FeeLineLike) => string {
+  const tCommon = useTranslations('Common.components.price');
+  const fmt = useAppFormat();
+  return (line) =>
+    [
+      line.percent != null
+        ? `${line.percent}%`
+        : line.unitAmount && line.quantity
+          ? tCommon('dailyRate', { days: line.quantity, amount: fmt.money(line.unitAmount) })
+          : null,
+      line.partnerName,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+}
 
 /**
  * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 điều 1, cùng shape với `PriceBreakdownFees` bên web.
@@ -20,9 +44,12 @@ export interface PriceBreakdownFeesInput {
   lines: ReadonlyArray<{
     key: string;
     bearer: string;
+    /** `null` ở dòng tính THEO NGÀY (bảo hiểm MIC — luồng tiền v2): đọc `unitAmount × quantity`. */
     percent: number | null;
     amount: string;
     partnerName?: string | null;
+    unitAmount?: string | null;
+    quantity?: number | null;
   }>;
   customerTotalAmount: string;
   /**
@@ -119,9 +146,11 @@ export function PriceBreakdown({
    */
   promoSlot?: React.ReactNode;
 }) {
+  const colors = useColors();
   const tCommon = useTranslations('Common.components.price');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const feeLineSublabel = useFeeLineSublabel();
   const [expanded, setExpanded] = useState(!collapsible);
   const showItems = !collapsible || expanded;
 
@@ -149,17 +178,17 @@ export function PriceBreakdown({
    *
    * Chỉ ẩn ở UI; TỔNG không bao giờ ẩn, kể cả khi bằng 0.
    */
-  const visibleRows = rows.filter((row) => Number(row.amount) !== 0);
-  const visibleFeeLines = feeLines.filter((line) => Number(line.amount) !== 0);
-  const promoDiscount = Number(fees?.promoDiscountAmount ?? 0);
+  // So tiền trên CHUỖI (ADR 0007) — không `Number()`: tiền có thể vượt độ chính xác của float.
+  const visibleRows = rows.filter((row) => !isZeroMoney(row.amount));
+  const visibleFeeLines = feeLines.filter((line) => !isZeroMoney(line.amount));
+  const promoDiscount = fees?.promoDiscountAmount ?? null;
+  const hasPromo = isPositiveMoney(promoDiscount);
   /*
    * Mã khuyến mãi CŨNG kéo khối phụ phí ra (ADR 0046): một chuyến tuyến gói không có dòng phí nào
    * nhưng có mã thì `customerTotalAmount` vẫn khác `totalAmount`.
    */
-  const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || promoDiscount > 0);
-  const payAtHandoverAmount =
-    fees?.payAtPickupAmount ??
-    (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
+  const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || hasPromo);
+  const payAtHandoverAmount = payAtPickupAmount(fees);
 
   return (
     <YStack gap={space.sm}>
@@ -304,11 +333,9 @@ export function PriceBreakdown({
                         {domainLabel('feeLine', line.key)}
                       </Text>
                       <Text col={colors.placeholder} fos={fontSize.label}>
-                        {(ownerBorne
-                          ? tCommon('ownerNet')
-                          : line.percent != null
-                            ? `${line.percent}%`
-                            : '') + (line.partnerName ? ` · ${line.partnerName}` : '')}
+                        {ownerBorne
+                          ? tCommon('ownerNet') + (line.partnerName ? ` · ${line.partnerName}` : '')
+                          : feeLineSublabel(line)}
                       </Text>
                     </YStack>
                     <Text
@@ -332,7 +359,7 @@ export function PriceBreakdown({
             dưới đây là cùng một khoản giảm hiện HAI lần, đọc ra như được giảm gấp đôi. Màn chỉ
             ĐỌC không có ô nhập, và ở đó dòng này là nơi duy nhất mã hiện ra.
           */}
-          {promoDiscount > 0 && !promoSlot ? (
+          {hasPromo && !promoSlot ? (
             <XStack ai="flex-start" jc="space-between" gap={space.sm}>
               <YStack f={1} gap={2}>
                 <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -346,7 +373,7 @@ export function PriceBreakdown({
                 ) : null}
               </YStack>
               <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                −{fmt.money(String(promoDiscount))}
+                −{fmt.money(promoDiscount as string)}
               </Text>
             </XStack>
           ) : null}

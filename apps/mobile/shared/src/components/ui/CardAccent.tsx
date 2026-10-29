@@ -1,5 +1,6 @@
 import { YStack } from 'tamagui';
 import type { StatusColor } from '@xeprime/types';
+import { useColors } from '@/theme/ThemeProvider';
 import { statusTone } from './StatusBadge';
 
 /**
@@ -24,5 +25,6 @@ const ACCENT_WIDTH = 4;
  * thẻ đúng bằng phần đệm dưới.
  */
 export function CardAccent({ color }: { color: StatusColor }) {
-  return <YStack w={ACCENT_WIDTH} bg={statusTone(color).fg} />;
+  const colors = useColors();
+  return <YStack w={ACCENT_WIDTH} bg={statusTone(color, colors).fg} />;
 }

@@ -4,7 +4,8 @@ import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, sizing, space } from '@/theme/tokens';
 
 /**
  * Ô nhập CHỮ, bản KHÔNG gắn với React Hook Form.
@@ -46,6 +47,7 @@ export function TextControl({
   autoCapitalize?: TextInputProps['autoCapitalize'];
   keyboardType?: TextInputProps['keyboardType'];
 }) {
+  const colors = useColors();
   const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
 
@@ -61,7 +63,7 @@ export function TextControl({
       minHeight: multiline ? rows * lineHeight : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),
-    [multiline, rows, lineHeight],
+    [colors, multiline, rows, lineHeight],
   );
 
   return (

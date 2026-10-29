@@ -12,7 +12,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
-import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -23,7 +26,7 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { DebtCard } from './components/DebtCard';
 import { FILTER_ALL } from './constants';
 import { useDebts } from './hooks/use-finance';
@@ -49,6 +52,7 @@ const keyOf = (debt: DebtItem) => debt.bookingId;
  * hai: hai đường ghi tiền là hai bộ luật sẽ trôi khỏi nhau.
  */
 export function DebtListScreen() {
+  const colors = useColors();
   const t = useTranslations('Finance.debts');
   const tCommon = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');

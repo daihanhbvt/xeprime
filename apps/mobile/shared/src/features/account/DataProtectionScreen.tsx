@@ -10,7 +10,8 @@ import { Card } from '@/components/ui/Card';
 import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 const POINTS = ['location', 'bank', 'masking', 'rights'] as const;
 
@@ -31,6 +32,7 @@ export function DataProtectionScreen({
    */
   shell?: PageShell;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.dataProtection');
   const fmt = useAppFormat();
   const openLegalDoc = useOpenLegalDoc();

@@ -3,7 +3,8 @@ import { Image, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import type { CatalogItem } from '@/api/catalog';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { BODY_TYPE_ART } from '../body-type-art';
 
 /**
@@ -38,6 +39,7 @@ export function CatalogCardPicker({
   countSuffix?: string;
   ariaLabel: string;
 }) {
+  const colors = useColors();
   const toggle = (key: string) =>
     onChange(value.includes(key) ? value.filter((v) => v !== key) : [...value, key]);
 

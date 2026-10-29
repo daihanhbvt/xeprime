@@ -13,8 +13,13 @@ import { TextField } from '@/components/ui/TextField';
 import { Callout } from '@/components/ui/Callout';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
-import type { BankAccount, BankAccountScope } from '@/api/bank-accounts/api';
+import {
+  BANK_ACCOUNT_SCOPE,
+  type BankAccount,
+  type BankAccountScope,
+} from '@/api/bank-accounts/api';
 import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { BankAccountSavedSheet } from './BankAccountSavedSheet';
 import { BankLogo } from './BankLogo';
 
 /** Cỡ logo ở mỗi dòng ngân hàng — vuông 32px như dòng của web. */
@@ -53,8 +58,15 @@ export function BankAccountFormSheet({
   onClose,
   onCreated,
   replacing = null,
+  savedNotice = scope === BANK_ACCOUNT_SCOPE.ACCOUNT,
 }: {
   scope: BankAccountScope;
+  /**
+   * Báo lưu thành công bằng HỘP "Thành công" thay cho toast — dáng `appearance="account"` của web
+   * (tab Tài khoản thanh toán + lệnh rút của tài khoản khách). Luồng khai tài khoản nhận HOÀN
+   * TIỀN của chuyến dùng dáng chuẩn (toast) như `RefundAccountDialog` web.
+   */
+  savedNotice?: boolean;
   /** Tài khoản đang dùng sẽ bị thay — có thì tấm này là luồng ĐỔI. */
   replacing?: BankAccount | null;
   open: boolean;
@@ -74,6 +86,8 @@ export function BankAccountFormSheet({
    * `SelectField` chỉ đẩy chữ đang gõ ra ngoài, còn lọc là việc của nơi gọi.
    */
   const [bankSearch, setBankSearch] = useState('');
+  /** Câu của hộp "Thành công" (tài khoản khách); `null` = hộp đóng. */
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   /*
    * Nhãn ghép tên gọi hằng ngày + tên đầy đủ: VIB và VietinBank, SCB và Sacombank là bốn cái tên
@@ -144,7 +158,17 @@ export function BankAccountFormSheet({
       },
       {
         onSuccess: (account) => {
-          toast.showSuccess(t(bankAccountSaveOutcome(replacing, account)));
+          const outcome = bankAccountSaveOutcome(replacing, account);
+          /*
+           * Tài khoản KHÁCH: hộp "Thành công" (Figma `19973:52952`) thay toast — như dáng
+           * `account` của web. Khai lại đúng tài khoản đang dùng thì server không đổi gì ⇒ toast
+           * "không đổi", không chúc mừng một việc chưa xảy ra.
+           */
+          if (savedNotice && outcome !== 'unchanged') {
+            setSavedMessage(t(outcome));
+          } else {
+            toast.showSuccess(t(outcome));
+          }
           reset();
           onCreated?.(account);
           onClose();
@@ -155,58 +179,71 @@ export function BankAccountFormSheet({
   });
 
   return (
-    <BottomSheet open={open} onClose={close} title={replacing ? t('changeTitle') : t('title')}>
-      <YStack gap={space.md}>
-        {replacing ? (
-          <Callout tone="warning">
-            {t('replaces', { account: bankAccountSummary(replacing) })}
-          </Callout>
-        ) : null}
-        {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
-        <SelectField
-          control={control}
-          name="bankCode"
-          label={t('bankCode')}
-          options={bankOptions}
-          placeholder={t('bankCodePlaceholder')}
-          onSearch={setBankSearch}
-          searchPlaceholder={t('bankCodePlaceholder')}
-          emptyText={t('bankNotFound')}
-          required
-        />
-        <TextField
-          control={control}
-          name="accountNumber"
-          label={t('accountNumber')}
-          placeholder={t('accountNumberPlaceholder')}
-          keyboardType="number-pad"
-          required
-        />
-        <TextField
-          control={control}
-          name="accountName"
-          label={t('accountName')}
-          hint={t('accountNameHint')}
-          placeholder={t('accountNamePlaceholder')}
-          autoCapitalize="characters"
-          required
-        />
-        <TextField
-          control={control}
-          name="label"
-          label={t('label')}
-          placeholder={t('labelPlaceholder')}
-        />
-        <YStack gap={space.sm}>
-          <Button label={t('submit')} loading={create.isPending} onPress={() => void onSubmit()} />
-          <Button
-            label={tCommon('cancel')}
-            variant="ghost"
-            disabled={create.isPending}
-            onPress={close}
+    <>
+      <BottomSheet open={open} onClose={close} title={replacing ? t('changeTitle') : t('title')}>
+        <YStack gap={space.md}>
+          {replacing ? (
+            <Callout tone="warning">
+              {t('replaces', { account: bankAccountSummary(replacing) })}
+            </Callout>
+          ) : null}
+          {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
+          <SelectField
+            control={control}
+            name="bankCode"
+            label={t('bankCode')}
+            options={bankOptions}
+            placeholder={t('bankCodePlaceholder')}
+            onSearch={setBankSearch}
+            searchPlaceholder={t('bankCodePlaceholder')}
+            emptyText={t('bankNotFound')}
+            required
           />
+          <TextField
+            control={control}
+            name="accountNumber"
+            label={t('accountNumber')}
+            placeholder={t('accountNumberPlaceholder')}
+            keyboardType="number-pad"
+            required
+          />
+          <TextField
+            control={control}
+            name="accountName"
+            label={t('accountName')}
+            hint={t('accountNameHint')}
+            placeholder={t('accountNamePlaceholder')}
+            autoCapitalize="characters"
+            required
+          />
+          <TextField
+            control={control}
+            name="label"
+            label={t('label')}
+            placeholder={t('labelPlaceholder')}
+          />
+          <YStack gap={space.sm}>
+            <Button
+              icon="checkmark-outline"
+              label={t('submit')}
+              loading={create.isPending}
+              onPress={() => void onSubmit()}
+            />
+            <Button
+              label={tCommon('cancel')}
+              variant="ghost"
+              disabled={create.isPending}
+              onPress={close}
+            />
+          </YStack>
         </YStack>
-      </YStack>
-    </BottomSheet>
+      </BottomSheet>
+      {/* Hộp đứng NGOÀI tấm form: tấm đã đóng sau khi lưu, hộp vẫn phải còn để báo. */}
+      <BankAccountSavedSheet
+        open={savedMessage !== null}
+        message={savedMessage ?? ''}
+        onClose={() => setSavedMessage(null)}
+      />
+    </>
   );
 }

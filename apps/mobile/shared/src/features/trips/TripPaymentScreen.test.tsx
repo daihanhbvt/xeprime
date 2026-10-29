@@ -127,7 +127,7 @@ describe('TripPaymentScreen', () => {
     });
     await renderScreen();
 
-    expect(screen.getByText('Còn phải chuyển')).toBeTruthy();
+    expect(screen.getByText('Tiền giữ chỗ còn thiếu')).toBeTruthy();
     expect(screen.getByText(/Đã nhận/)).toBeTruthy();
   });
 
@@ -146,6 +146,33 @@ describe('TripPaymentScreen', () => {
     expect(screen.queryByLabelText('Mã VietQR chuyển khoản')).toBeNull();
     expect(screen.queryByText(/chuyển khoản nhanh/i)).toBeNull();
     expect(screen.getByText('Xem chi tiết chuyến')).toBeTruthy();
+  });
+
+  it('vừa trả trong 30′ ⇒ khối "Thanh toán thành công": kênh, mã chuyến, phần trả chủ xe', async () => {
+    mockTrip.data = makeTrip({
+      estimate: {
+        fees: {
+          customerTotalAmount: '1140800',
+          holdAmount: '140800',
+          payAtPickupAmount: '1000000',
+        },
+      } as unknown as CustomerTripDetail['estimate'],
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAmount: '140800',
+        remainingAmount: '0',
+        paidAt: new Date(Date.now() - 60_000).toISOString(),
+        paidVia: 'momo',
+      },
+    });
+    await renderScreen();
+
+    expect(screen.getByText('Thanh toán thành công')).toBeTruthy();
+    expect(screen.getByText(/qua Ví MoMo/)).toBeTruthy();
+    expect(screen.getByText('01TRIP')).toBeTruthy();
+    expect(screen.getByText('Cần thanh toán cho chủ xe')).toBeTruthy();
+    expect(screen.queryByText('Đặt xe thành công')).toBeNull();
   });
 
   it('khoản đã hết hạn ⇒ nói kết cục, không mời trả', async () => {

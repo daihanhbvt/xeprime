@@ -34,7 +34,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { BookingRequestItem } from './api';
 
 const VEHICLE_THUMB = { width: 96, height: 72 } as const;
@@ -65,6 +66,7 @@ export function BookingRequestDetailScreen({
   onCancel: (request: BookingRequestItem) => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -113,6 +115,7 @@ export function BookingRequestDetailScreen({
 
   const tel = telHref(request.customerPhone);
   const zalo = zaloHref(request.customerPhone);
+  const accountTel = telHref(request.customerAccountPhone);
 
   return (
     <>
@@ -316,6 +319,34 @@ export function BookingRequestDetailScreen({
                             onPress={() => void Linking.openURL(tel)}
                             accessibilityRole="button"
                             accessibilityLabel={t('actions.call')}
+                            hitSlop={space.sm}
+                          >
+                            <Ionicons
+                              name="call-outline"
+                              size={iconSize.sm}
+                              color={colors.primaryActive}
+                            />
+                          </Pressable>
+                        ),
+                      }
+                    : {})}
+                />
+              ) : null}
+              {/* Số tài khoản đã xác minh — chỉ có khi khách để lại số liên hệ khác nó. */}
+              {request.customerAccountPhone ? (
+                <DataRow
+                  label={t('detail.accountPhone')}
+                  value={request.customerAccountPhone}
+                  {...(accountTel
+                    ? {
+                        action: (
+                          <Pressable
+                            onPress={() => void Linking.openURL(accountTel)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('customer.accountPhoneAria', {
+                              phone: request.customerAccountPhone,
+                              name: request.customerName,
+                            })}
                             hitSlop={space.sm}
                           >
                             <Ionicons
@@ -560,6 +591,7 @@ export function BookingRequestDetailScreen({
 }
 
 function SectionTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={3} h={iconSize.sm} br={radius.pill} bg={colors.primary} />
@@ -571,6 +603,7 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function Hint({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label}>
       {children}

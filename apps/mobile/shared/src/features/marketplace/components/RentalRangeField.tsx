@@ -6,7 +6,10 @@ import { useTranslations } from 'use-intl';
 import type { RentalMode } from '@xeprime/domain';
 import type { Dayjs } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useRentalRangeLabel } from '../use-rental-range-label';
+import { useColors } from '@/theme/ThemeProvider';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { RentalRangeSheet, type RentalRangeDraft } from './RentalRangeSheet';
 
 interface RentalRangeFieldProps {
@@ -17,6 +20,13 @@ interface RentalRangeFieldProps {
   /** Gọi khi bấm "Áp dụng" — nơi gọi quyết định có nạp lại danh sách hay không. */
   onApply?: () => void;
   minDays?: number;
+  /** Chữ gợi ý khi chưa chọn gì (`rental.placeholder` của thẻ tìm kiếm web). */
+  placeholder?: string;
+  /**
+   * Nơi gọi tự mở bộ chọn (ô nằm TRONG một tấm trượt khác — iOS không trình bày `Modal` lồng
+   * `Modal`, nên tấm ngoài phải đóng trước). Có prop này thì ô không mở tấm riêng của nó.
+   */
+  onOpen?: () => void;
 }
 
 /**
@@ -35,7 +45,10 @@ export function RentalRangeField({
   onModeChange,
   onApply,
   minDays,
+  placeholder,
+  onOpen,
 }: RentalRangeFieldProps) {
+  const colors = useColors();
   const t = useTranslations('Common.components.rentalRange');
   const fmt = useAppFormat();
   const [open, setOpen] = useState(false);
@@ -45,6 +58,7 @@ export function RentalRangeField({
   );
 
   const point = (d: Dayjs | null) => (d ? fmt.rentalPoint(d) : t('notSelected'));
+  const rangeLabel = useRentalRangeLabel();
 
   function close() {
     setOpen(false);
@@ -55,6 +69,10 @@ export function RentalRangeField({
     <>
       <Pressable
         onPress={() => {
+          if (onOpen) {
+            onOpen();
+            return;
+          }
           setSnapshot({ value, mode });
           setOpen(true);
         }}
@@ -70,35 +88,34 @@ export function RentalRangeField({
           thương hiệu) — cả hai là ô nhập của cùng một thẻ tìm kiếm, `SearchCard.tsx`.
         */}
         <XStack
+          h={44}
           ai="center"
-          gap={space.xs}
+          gap={space.sm}
           bg={colors.surface}
-          br={radius.md}
-          bw={1.5}
+          br={toPx(XP_TOKENS['border-radius-control'])}
+          bw={1}
           bc={colors.borderInput}
-          px={space.sm}
-          minHeight={sizing.touchTarget - space.xs}
+          px={14}
         >
-          <Ionicons name="calendar-outline" size={16} color={colors.primaryActive} />
-          <Text
-            col={colors.text}
-            fos={fontSize.body}
-            fow={fontWeight.medium}
-            numberOfLines={1}
-            flexShrink={1}
-          >
-            {point(value.pickupAt)}
-          </Text>
-          <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
-          <Text
-            col={colors.text}
-            fos={fontSize.body}
-            fow={fontWeight.medium}
-            numberOfLines={1}
-            flexShrink={1}
-          >
-            {point(value.returnAt)}
-          </Text>
+          {value.pickupAt || value.returnAt || !placeholder ? (
+            /* MỘT dòng, tự co chữ cho vừa máy hẹp — web hiện đủ cả hai mốc, không cắt bằng dấu ba chấm. */
+            <Text
+              f={1}
+              col={colors.text}
+              fos={fontSize.body}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {rangeLabel(value.pickupAt, value.returnAt)}
+            </Text>
+          ) : (
+            <Text f={1} col={colors.placeholder} fos={fontSize.bodyLg} numberOfLines={1}>
+              {placeholder}
+            </Text>
+          )}
+          <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
         </XStack>
       </Pressable>
 

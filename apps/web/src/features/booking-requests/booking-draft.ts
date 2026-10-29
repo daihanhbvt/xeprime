@@ -1,5 +1,5 @@
 import type { RentalMode } from '@xeprime/domain';
-import { BOOKING_DRAFT_TTL_MS } from '@xeprime/types';
+import { RENTAL_MODE, BOOKING_DRAFT_TTL_MS } from '@xeprime/types';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import type { RequestFormValues } from './schema';
 
@@ -163,7 +163,7 @@ export function readBookingDraft(vehicleId: string): RestoredBookingDraft | null
       returnAt: fromWire(returnAt),
       requestedPickupDate: fromWire(requestedPickupDate),
     } as RequestFormValues,
-    rentalMode: stored.rentalMode === 'hourly' ? 'hourly' : 'daily',
+    rentalMode: stored.rentalMode === RENTAL_MODE.HOURLY ? RENTAL_MODE.HOURLY : RENTAL_MODE.DAILY,
     promoCode: typeof stored.promoCode === 'string' ? stored.promoCode : null,
     savedAt: stored.savedAt,
   };

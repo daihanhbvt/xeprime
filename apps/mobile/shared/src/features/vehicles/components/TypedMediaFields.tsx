@@ -15,7 +15,8 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useImageUpload } from '@/components/ui/use-image-upload';
 import { uploadsApi, type UploadMeta, type UploadPresign } from '@/api/uploads/api';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 
 /** Một tấm ảnh đã gán vị trí — cùng hình dạng `media[{url,type}]` của payload. */
 interface MediaItem {
@@ -54,6 +55,7 @@ export function TypedMediaFields<T extends FieldValues>({
   /** Có ảnh đang tải — nơi gọi có thể chặn "Tiếp tục"/"Lưu". */
   onUploadingChange?: (uploading: boolean) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.images');
   const domainLabel = useDomainLabel();
   const { field: mediaField, fieldState: mediaState } = useController({
@@ -151,6 +153,7 @@ function useBusyReport(busy: boolean, onBusyChange: (busy: boolean) => void) {
 }
 
 function EmptyTile() {
+  const colors = useColors();
   return (
     <YStack
       aspectRatio={TILE_RATIO}
@@ -189,6 +192,7 @@ function SlotTile({
   onRemove: (url: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.images');
   const tActions = useTranslations('Common.actions');
   const single = isSingleVehicleImageSlot(slot);
@@ -205,9 +209,9 @@ function SlotTile({
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.sm}>
         {/* Mọi ô hiện ra đều BẮT BUỘC (07/10/2026) — dấu ● "cần cho duyệt công khai", như web. */}
-          <YStack f={1}>
-            <FieldLabel label={label} publishRequired />
-          </YStack>
+        <YStack f={1}>
+          <FieldLabel label={label} publishRequired />
+        </YStack>
         {/* Web: thẻ "Đã tải lên" CHỈ khi ô có ảnh; ô trống chỉ có dòng hướng dẫn. */}
         {items.length > 0 ? (
           <Text col={colors.success} fos={fontSize.label}>

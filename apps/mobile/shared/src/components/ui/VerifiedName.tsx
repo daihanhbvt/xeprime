@@ -1,5 +1,6 @@
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight } from '@/theme/tokens';
 import { VerifiedMark } from './VerifiedMark';
 
 /**
@@ -23,7 +24,7 @@ export function VerifiedName({
   verifiedLabel,
   size = fontSize.bodySm,
   weight = fontWeight.semibold,
-  color = colors.text,
+  color: colorProp,
   center = false,
   numberOfLines = 1,
   markSize,
@@ -42,6 +43,8 @@ export function VerifiedName({
   /** Bật khi con dấu trên ảnh ngay cạnh đã đọc lên câu ấy rồi — tránh đọc hai lần. */
   decorativeMark?: boolean;
 }) {
+  const colors = useColors();
+  const color = colorProp ?? colors.text;
   return (
     <XStack ai="center" jc={center ? 'center' : 'flex-start'} gap={3} maxWidth="100%">
       {/*

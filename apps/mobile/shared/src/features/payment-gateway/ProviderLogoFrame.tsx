@@ -1,6 +1,7 @@
 import { Image } from 'react-native';
 import { XStack } from 'tamagui';
-import { colors, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 import type { ProviderLogo } from './provider-logos';
 
 /** Chiều cao khung logo — chung mọi ví để các thẻ cao bằng nhau. */
@@ -36,7 +37,14 @@ function imageStyle(logo: ProviderLogo) {
  * Logo chính thức của một ví trong khung viền cố định chiều cao — MỘT bản cho cả hàng chọn ví lẫn
  * thẻ trạng thái lượt cổng, để hai nơi đọc ra là cùng một ví.
  */
-export function ProviderLogoFrame({ logo, dimmed = false }: { logo: ProviderLogo; dimmed?: boolean }) {
+export function ProviderLogoFrame({
+  logo,
+  dimmed = false,
+}: {
+  logo: ProviderLogo;
+  dimmed?: boolean;
+}) {
+  const colors = useColors();
   return (
     <XStack
       {...frameSize(logo)}
@@ -49,7 +57,12 @@ export function ProviderLogoFrame({ logo, dimmed = false }: { logo: ProviderLogo
       ov="hidden"
       opacity={dimmed ? DIMMED_OPACITY : 1}
     >
-      <Image source={logo.source} style={imageStyle(logo)} resizeMode="contain" accessible={false} />
+      <Image
+        source={logo.source}
+        style={imageStyle(logo)}
+        resizeMode="contain"
+        accessible={false}
+      />
     </XStack>
   );
 }

@@ -6,8 +6,8 @@ import {
   type RecommendedListingParams,
 } from '@/api/marketplace/api';
 
-/** Trang chủ xem TRƯỚC — tám ô. Trần thật nằm ở backend; đây chỉ là con số mặc định. */
-export const RECOMMENDED_LIMIT = 8;
+/** Trang chủ xem TRƯỚC — mười hai ô, cùng con số với web. Trần thật nằm ở backend. */
+export const RECOMMENDED_LIMIT = 12;
 
 /**
  * Khối "Xe phù hợp với bạn" ở trang chủ (ADR 0043).

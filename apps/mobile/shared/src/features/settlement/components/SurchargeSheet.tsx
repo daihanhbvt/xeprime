@@ -19,7 +19,8 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { ExcessMileageFacts } from '@/features/bookings/components/ExcessMileageFacts';
 import type {
   BookingSettlement,
@@ -149,12 +150,9 @@ export function SurchargeSheet({
   const categoryOptions = visibleSurchargeCategories(recorded);
   const canSuggestOvertime =
     category === SURCHARGE_CATEGORY.OVERTIME && overtime.available && overtime.amount != null;
-  const hasMileageAmount =
-    excessMileage.amount != null && !isZeroMoney(excessMileage.amount);
+  const hasMileageAmount = excessMileage.amount != null && !isZeroMoney(excessMileage.amount);
   const canSuggestMileage =
-    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE &&
-    excessMileage.available &&
-    hasMileageAmount;
+    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE && excessMileage.available && hasMileageAmount;
   const showMileageFacts =
     category === SURCHARGE_CATEGORY.EXCESS_MILEAGE && excessMileage.includedKmPerDay != null;
   /** Câu ghi chú điền sẵn — dựng từ SỐ của backend, không tính lại gì. */
@@ -348,6 +346,7 @@ function Suggestion({
   actionLabel?: string;
   onApply?: () => void;
 }) {
+  const colors = useColors();
   const surface = tone === 'warning' ? colors.warningSurface : colors.infoSurface;
 
   return (

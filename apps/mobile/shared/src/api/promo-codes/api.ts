@@ -26,6 +26,7 @@ export interface PromoTripParams {
   returnAt?: string | undefined;
   packageMonths?: number | undefined;
   routeType?: string | undefined;
+  vehicleProtectionSelected?: boolean | undefined;
   personalAccidentSelected?: boolean | undefined;
 }
 
@@ -42,7 +43,10 @@ function tripBody(trip: PromoTripParams): QueryParams {
     ...(trip.returnAt ? { returnAt: trip.returnAt } : {}),
     ...(trip.packageMonths != null ? { packageMonths: trip.packageMonths } : {}),
     ...(trip.routeType ? { routeType: trip.routeType } : {}),
-    ...(trip.personalAccidentSelected
+    ...(trip.vehicleProtectionSelected !== undefined
+      ? { vehicleProtectionSelected: trip.vehicleProtectionSelected }
+      : {}),
+    ...(trip.personalAccidentSelected !== undefined
       ? { personalAccidentSelected: trip.personalAccidentSelected }
       : {}),
   };

@@ -126,7 +126,7 @@ describe('ChatRealtimeProvider', () => {
       await rerender(undefined);
     });
 
-    expect(firebase.signOutChat).toHaveBeenCalled();
+    expect(firebase.signOutChat).toHaveBeenCalledWith('user-1');
     expect(result.current.ready).toBe(false);
     expect(result.current.db).toBeNull();
   });
@@ -142,7 +142,7 @@ describe('ChatRealtimeProvider', () => {
       await rerender(undefined);
     });
 
-    expect(firebase.signOutChat).toHaveBeenCalled();
+    expect(firebase.signOutChat).toHaveBeenCalledWith('user-1');
     await waitFor(() =>
       expect(firebase.signInChat).toHaveBeenLastCalledWith('token-cua-nguoi-hai'),
     );
@@ -164,5 +164,24 @@ describe('ChatRealtimeProvider', () => {
 
     expect(firebase.signInChat).toHaveBeenCalledTimes(1);
     expect(firebase.signOutChat).not.toHaveBeenCalled();
+  });
+
+  it('đăng xuất TRONG LÚC đang đăng nhập Firebase thì tự rời phiên vừa thành hình', async () => {
+    let finish: () => void = () => undefined;
+    firebase.signInChat.mockImplementation(
+      () => new Promise<void>((resolve) => { finish = resolve; }),
+    );
+    const { result, rerender } = await renderHook(() => useChatRealtime(), { wrapper });
+    await waitFor(() => expect(firebase.signInChat).toHaveBeenCalled());
+
+    await act(async () => {
+      setUser(null);
+      await rerender(undefined);
+    });
+    firebase.signOutChat.mockClear();
+
+    await act(async () => finish());
+    expect(firebase.signOutChat).toHaveBeenCalledWith('user-1');
+    expect(result.current.ready).toBe(false);
   });
 });

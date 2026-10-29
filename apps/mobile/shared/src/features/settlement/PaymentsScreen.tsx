@@ -25,7 +25,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { usePaymentHistory, useVoidPayment } from './hooks/use-settlement';
 import type { Payment } from './api';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -43,6 +44,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
  * khoản họ chưa trả.
  */
 export function PaymentsScreen({ bookingId }: { bookingId: string }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.payments');
   const router = useRouter();
   const query = usePaymentHistory(bookingId);
@@ -93,6 +95,7 @@ export function PaymentsScreen({ bookingId }: { bookingId: string }) {
 }
 
 function PaymentRow({ bookingId, payment }: { bookingId: string; payment: Payment }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.payments');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

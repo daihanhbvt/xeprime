@@ -79,6 +79,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
        * chỉ khai được những khoá Expo đã định nghĩa sẵn. Xem chú thích trong file plugin.
        */
       '../shared/plugins/with-android-camera-memory',
+      // Icon + màu thông báo đẩy Android = logo app một màu (Android 8+/16 bỏ icon nhiều màu).
+      ['../shared/plugins/with-android-notification-icon', { source: 'notification_icon_partner' }],
       /*
        * Hai plugin cho đường BUILD RELEASE, không liên quan tới bản debug hằng ngày:
        * ký bằng upload key thật thay debug key của template, và gỡ cờ JVM mà JDK 21 không hiểu.

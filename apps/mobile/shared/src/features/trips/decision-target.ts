@@ -23,6 +23,8 @@ export function tripToDecisionTarget(trip: CustomerTrip): BookingRequestDecision
     vehiclePlate: trip.vehicle.plateNumber ?? null,
     customerName: trip.renter?.name ?? '',
     customerPhone: trip.renter?.phone ?? null,
+    // Số tài khoản chỉ có khi khách để lại số liên hệ KHÁC số đã xác minh — server tự gác.
+    customerAccountPhone: trip.renter?.accountPhone ?? null,
     serviceType: trip.serviceType,
     respondBy: trip.respondBy ?? null,
     pickupAt: trip.pickupAt ?? null,

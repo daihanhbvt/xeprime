@@ -19,17 +19,27 @@ import { Screen } from '@/components/layout/Screen';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { IconButton } from '@/components/ui/IconButton';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { isUnauthenticated } from '@xeprime/api-client';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
+import {
+  hasTripHistoryNarrow,
+  toTripListNarrow,
+  TripHistoryFilters,
+  type TripHistoryNarrow,
+} from './components/TripHistoryFilters';
 import { UnpaidHoldsReminder } from './components/UnpaidHoldsReminder';
 import { useTripsInfinite } from './hooks/use-trips';
 import type { CustomerTrip, CustomerTripCounts } from './api';
@@ -42,7 +52,6 @@ const SKELETON_ROWS = 4;
  * buộc `VirtualizedList` dựng lại toàn bộ ô đang gắn.
  */
 const tripKey = (trip: CustomerTrip) => trip.id;
-const filterKey = (filter: CustomerTripFilter) => filter;
 
 /**
  * Khi đang lọc theo chặng: số thẻ KHỚP tối thiểu phải gom được trước khi dừng tự tải thêm.
@@ -87,6 +96,7 @@ export function TripsScreen({
   /** Khối đứng trên cùng màn — bộ chuyển "thuê / lái" của app khách (ADR 0063). */
   header?: ReactNode;
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const domainLabel = useDomainLabel();
 
@@ -97,7 +107,21 @@ export function TripsScreen({
    */
   // App này chỉ phục vụ tài khoản KHÁCH (ADR 0053): chuyến luôn là chuyến mình ĐI THUÊ — web
   // `TripsView` khoá `TRIP_ROLE.RENTER` cùng lý do.
-  const query = useTripsInfinite(filter, TRIP_ROLE.RENTER);
+  const history = filter === CUSTOMER_TRIP_FILTER.HISTORY;
+  // Thanh tab nổi đè lên danh sách — thẻ cuối phải cuộn lên được khỏi nó.
+  const tabBarInset = useTabBarInset();
+  const listContentStyle = useMemo(
+    () => [styles.listContent, { paddingBottom: layout.screenX + tabBarInset }],
+    [tabBarInset],
+  );
+  /** Tìm + khoảng ngày của tab lịch sử (web `TripHistoryFilters`); tab hiện tại không thu hẹp. */
+  const [narrow, setNarrow] = useState<TripHistoryNarrow>({});
+  const narrowed = history && hasTripHistoryNarrow(narrow);
+  const listNarrow = useMemo(
+    () => (history ? toTripListNarrow(narrow) : undefined),
+    [history, narrow],
+  );
+  const query = useTripsInfinite(filter, TRIP_ROLE.RENTER, true, listNarrow);
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
   // Số đếm giống nhau ở mọi trang (server tính trên toàn bộ), nên đọc trang đầu là đủ.
@@ -149,10 +173,14 @@ export function TripsScreen({
         tintColor={colors.primaryActive}
       />
     ),
-    [isRefetching, onRefresh],
+    [colors, isRefetching, onRefresh],
   );
 
-  const changeFilter = useCallback((next: CustomerTripFilter) => setFilter(next), []);
+  // Bộ thu hẹp thuộc về MỘT tab (web `use-trip-list-url`): sang tab khác thì rơi lại.
+  const changeFilter = useCallback((next: CustomerTripFilter) => {
+    setFilter(next);
+    setNarrow({});
+  }, []);
 
   const renderTrip = useCallback(
     ({ item }: ListRenderItemInfo<CustomerTrip>) => <TripCard trip={item} onPress={openTrip} />,
@@ -178,9 +206,9 @@ export function TripsScreen({
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
         {header}
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
-        {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab (web `TripsView`). */}
-        {rendersList ? null : (
-          <YStack px={layout.screenX}>
+        {/* Chuyến đang giữ chưa trả — CHỈ ở tab chuyến hiện tại (người dùng chốt 28/10/2026), thu gọn được. */}
+        {rendersList || history ? null : (
+          <YStack px={layout.screenX} pt={layout.inline}>
             <UnpaidHoldsReminder />
           </YStack>
         )}
@@ -191,12 +219,27 @@ export function TripsScreen({
           domainLabel={domainLabel}
         />
 
+        {history ? (
+          <YStack px={layout.screenX} pt={layout.inline}>
+            <TripHistoryFilters narrow={narrow} onChange={setNarrow} />
+          </YStack>
+        ) : null}
+
         {query.isPending ? (
           <YStack p={layout.screenX} gap={layout.inline}>
             {Array.from({ length: SKELETON_ROWS }, (_, i) => (
               <TripCardSkeleton key={i} />
             ))}
           </YStack>
+        ) : query.isError && isUnauthenticated(query.error) ? (
+          // Như web: hết phiên là chuyện đăng nhập, không phải lỗi tải — Thử lại chỉ lặp đúng lỗi đó.
+          <ScreenMessage
+            icon="log-in-outline"
+            title={t('auth.expiredTitle')}
+            description={t('auth.expiredList')}
+            actionLabel={t('auth.login')}
+            onAction={() => navigateOnce(ROUTES.account.login())}
+          />
         ) : query.isError ? (
           <ScreenError
             error={query.error}
@@ -204,25 +247,33 @@ export function TripsScreen({
             onRetry={() => void query.refetch()}
           />
         ) : items.length === 0 ? (
-          <ScreenMessage
-            icon="calendar-outline"
-            title={
-              filter === CUSTOMER_TRIP_FILTER.HISTORY
-                ? t('list.emptyHistoryTitle')
-                : t('list.emptyCurrentTitle')
-            }
-            description={
-              filter === CUSTOMER_TRIP_FILTER.HISTORY
-                ? t('list.emptyHistoryBody')
-                : t('list.emptyCurrentBody')
-            }
-          />
+          narrowed ? (
+            /* Bộ lọc không khớp gì: lối ra là XOÁ bộ lọc, không phải lối thoát của tab trống. */
+            <ScreenMessage
+              icon="search-outline"
+              title={t('list.narrowEmptyTitle')}
+              description={t('list.narrowEmptyBody')}
+              actionLabel={t('list.narrowClear')}
+              onAction={() => setNarrow({})}
+            />
+          ) : (
+            /*
+              Hai tab trống là hai tình huống khác nhau, nên hai lối thoát khác nhau (web `TripsView`):
+              chưa có chuyến đang chạy ⇒ đi tìm xe; lịch sử trống ⇒ quay về tab đang có chuyến.
+            */
+            <ScreenMessage
+              icon="calendar-outline"
+              title={history ? t('list.emptyHistoryTitle') : t('list.emptyCurrentTitle')}
+              description={history ? t('list.emptyHistoryBody') : t('list.emptyCurrentBody')}
+              // Màn trống dữ liệu chỉ mô tả, không nút tìm/chuyển (người dùng chốt 27/10/2026).
+            />
+          )
         ) : (
           <FlatList
             data={items}
             keyExtractor={tripKey}
             renderItem={renderTrip}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={listContentStyle}
             onEndReached={loadMore}
             refreshControl={refreshControl}
             /*
@@ -230,7 +281,7 @@ export function TripsScreen({
               ở mỗi lần render, nên `VirtualizedList` coi chân danh sách là đã đổi và dựng lại nó
               suốt. Tham chiếu hàm thì bền.
             */
-            ListHeaderComponent={UnpaidHoldsReminder}
+            ListHeaderComponent={history ? null : UnpaidHoldsReminder}
             ListFooterComponent={query.isFetchingNextPage ? TripCardSkeleton : null}
             {...LIST_TUNING}
           />
@@ -275,36 +326,25 @@ export const TripFilterTabs = memo(function FilterTabs({
 }) {
   const t = useTranslations('Trips.list');
 
-  const renderChip = useCallback(
-    ({ item }: ListRenderItemInfo<CustomerTripFilter>) => (
-      <Chip
-        label={t('tabLabel', {
-          label: domainLabel('customerTripFilter', item),
-          count: countOf(counts, item),
-        })}
-        selected={value === item}
-        size="sm"
-        onPress={() => onChange(item)}
-      />
-    ),
-    [counts, domainLabel, onChange, t, value],
-  );
-
   return (
     /*
       MỘT hàng: dải tab chiếm phần co giãn, nút lọc chặng là một ICON gọn ghim ở mép phải.
       Icon 32dp ăn rất ít bề ngang; tên tab dài ra thì chính dải tab cuộn ngang, nút lọc đứng yên.
     */
     <YStack>
-      <XStack ai="center" paddingRight={layout.screenX} py={space.sm} gap={space.xs}>
-        <FlatList
-          horizontal
-          data={CUSTOMER_TRIP_FILTER_VALUES}
-          keyExtractor={filterKey}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}
-          style={styles.tabsList}
-          renderItem={renderChip}
+      <XStack ai="center" px={layout.screenX} pt={space.sm} gap={space.xs}>
+        {/*
+          Dải chọn PHÂN ĐOẠN (Figma "Chuyến của tôi"): khay xám, ô đang chọn nổi nền trắng, mỗi ô một
+          viên đếm. Số đọc từ `counts` của server.
+        */}
+        <SegmentedTabs
+          items={CUSTOMER_TRIP_FILTER_VALUES.map((item) => {
+            const label = domainLabel('customerTripFilter', item);
+            const count = countOf(counts, item);
+            return { key: item, label, count, accessibilityLabel: t('tabLabel', { label, count }) };
+          })}
+          value={value}
+          onChange={onChange}
         />
         {onStageChange ? (
           <StageFilter
@@ -413,15 +453,7 @@ const styles = StyleSheet.create({
   listContent: {
     gap: layout.inline,
     padding: layout.screenX,
-  },
-  tabsContent: {
-    gap: space.xs,
-    paddingHorizontal: layout.screenX,
-  },
-  // `flexGrow: 0` bắt buộc: một `FlatList` ngang trong cột dọc sẽ nuốt hết chiều cao còn lại và
-  // đẩy danh sách chuyến ra khỏi màn.
-  // Trong hàng ngang: `flex: 1` để dải tab nhường đúng chỗ cho nút lọc ở mép phải.
-  tabsList: {
-    flex: 1,
+    // Khe tab → khối đầu = khe giữa hai thẻ, để trên dưới đều nhau.
+    paddingTop: layout.inline,
   },
 });

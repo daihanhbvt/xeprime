@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { isCustomerAppWebView } from '@/lib/in-app-webview';
 import { legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
 import { ContentSection } from '@/features/content-page/components/ContentSection';
 import { FeatureCard } from '@/features/content-page/components/FeatureCard';
-import { InfoNote } from '@/features/content-page/components/InfoNote';
 import { PageHero } from '@/features/content-page/components/PageHero';
 import { openGraphFor } from '@/lib/seo';
 import styles from './page.module.css';
@@ -44,6 +44,8 @@ const TRUST = ['listing', 'calendar', 'metrics'] as const;
 export default async function AboutPage() {
   const t = await getTranslations('About');
   const tNav = await getTranslations('Navigation.public');
+  // WebView app khách: câu trung tính, không nhắc gói/thuê bao (né IAP).
+  const inApp = await isCustomerAppWebView();
 
   return (
     <>
@@ -97,8 +99,8 @@ export default async function AboutPage() {
 
         <ContentSection id="about-owners" heading={t('owners.heading')} lead={t('owners.lead')}>
           <div className={styles.grid2}>
-            <FeatureCard title={t('owners.basic.title')} desc={t('owners.basic.desc')} />
-            <FeatureCard title={t('owners.shop.title')} desc={t('owners.shop.desc')} />
+            <FeatureCard title={t('owners.basic.title')} desc={t(inApp ? 'owners.basic.descInApp' : 'owners.basic.desc')} />
+            <FeatureCard title={t('owners.shop.title')} desc={t(inApp ? 'owners.shop.descInApp' : 'owners.shop.desc')} />
           </div>
           <Link href={ROUTES.LIST_YOUR_VEHICLE.ROOT} className={styles.primaryAction}>
             {t('owners.action')}
@@ -121,10 +123,6 @@ export default async function AboutPage() {
           Nói thẳng sản phẩm chưa mở. Cùng lý do với băng bản thảo ở trang pháp lý: một trang
           giới thiệu viết như thể mọi thứ đã chạy là một lời hứa mà sản phẩm chưa giữ được.
         */}
-        <InfoNote tone="warning" title={t('status.title')}>
-          <p>{t('status.body')}</p>
-        </InfoNote>
-
         <ContentSection id="about-next" heading={t('next.heading')}>
           <div className={styles.grid3}>
             <FeatureCard

@@ -125,6 +125,25 @@ Hai điều cấm, vì cả hai đều tạo một sự thật thứ hai:
 * **Không nhân bản dữ liệu server vào Redux.** Hồ sơ, quyền và tenant scope đọc từ
   `useCurrentUser()` (TanStack Query). Chép vào store là tạo một bản cũ đúng vào lúc quyền bị thu hồi.
 
+## 3b. Theme — sáng VÀ tối
+
+* **Màu luôn qua `useColors()`**; style tĩnh qua `makeStyles` / `themed` / `byPalette`
+  (`src/theme/ThemeProvider.tsx`). Không hằng màu cấp module, không `PALETTES.light` cho UI.
+* **Chạm vào UI nào thì chuyển luôn phần đó sang hook theme**, rồi xem cả sáng lẫn tối.
+* **Viền vàng ở giao diện tối — không tự pha màu viền:**
+  - Bề mặt nổi (sheet, dialog, menu, popover, toast): `useFloatingSurfaceBorder('sheet' | 'all')`
+    hoặc `useFloatingBorderColor()` (tỉ lệ `FLOATING_BORDER_RATIO`).
+  - Thẻ trong trang tách mục danh sách: `useDarkAccentBorder()` (nhạt hơn, `CARD_BORDER_RATIO`).
+    `Card` đã tự áp cho `tone="surface"` không `flat`/`seamless` — thẻ lồng/trang trí thì không.
+  - Cả hai trả `{}` / `null` ở giao diện sáng.
+* **Chip / nhãn trạng thái luôn có VIỀN** (chốt 28/10/2026): viền 1px cùng màu chữ (`StatusBadge`, `ToneBadge`
+  đều vậy). Chip tự dựng (nền nhạt + chữ màu) phải thêm `bw={1}` + `bc` cùng tông — chỉ nền nhạt thì chìm vào thẻ.
+* **Nút luôn có VIỀN nhìn thấy được** (chốt 28/10/2026): mọi biến thể `Button` có nền đều mang viền
+  (vàng → `primaryHover`, đỏ → `danger`, trung tính → `borderInput`); viền trùng màu nền = không viền,
+  không được. Chỉ `ghost`/`ghostDanger` (dạng chữ) không viền. Nút tự dựng ngoài `Button` cũng theo luật này.
+* **Không `useMemo` màu mà thiếu deps** (đổi theme sẽ không ăn). Giữ list nặng được memo hoá
+  (`memo` item, `keyExtractor`, style từ `makeStyles`) để chuyển theme vẫn nhanh.
+
 ## 4. Điều hướng — một bản đồ route, một namespace cho mỗi domain
 
 Đường dẫn route sống trong cây `app/`, nên một `router.push('/listings/...')` rải khắp component

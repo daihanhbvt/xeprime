@@ -25,9 +25,14 @@ function parseBoxShadow(value: string): {
   shadowOpacity: number;
   shadowRadius: number;
 } {
+  /*
+   * iOS chỉ vẽ MỘT lớp bóng. Token nhiều lớp (`elevation-panel` = bóng lớn + viền tóc 1px) giữ lớp
+   * ĐẦU — lớp tạo cảm giác nổi; dấu phẩy trong `rgba(...)` không phải chỗ tách.
+   */
+  const first = value.split(/,(?![^(]*\))/)[0] ?? value;
   const match =
     /^(-?[\d.]+)(?:px)?\s+(-?[\d.]+)(?:px)?\s+(-?[\d.]+)(?:px)?\s+(-?[\d.]+)(?:px)?\s+rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(
-      value.trim(),
+      first.trim(),
     );
 
   if (!match) {
@@ -52,9 +57,13 @@ function parseBoxShadow(value: string): {
  * Android không có khái niệm offset/blur riêng — chỉ một số `elevation`. Ánh xạ thủ công theo
  * ba bậc bóng của hệ thiết kế (Elevation 1/2/3 trong Figma).
  */
-const ANDROID_ELEVATION = { card: 2, raised: 6, overlay: 12 } as const;
+// Thẻ ở trạng thái nghỉ đổ bóng MẢNH (người dùng chốt 28/10/2026: giảm bóng các thẻ) — card = xs.
+const ANDROID_ELEVATION = { xs: 1, card: 1, raised: 6, panel: 8, overlay: 12 } as const;
 
-function shadow(level: keyof typeof ANDROID_ELEVATION, token: `shadow-${string}`): ViewStyle {
+function shadow(
+  level: keyof typeof ANDROID_ELEVATION,
+  token: `shadow-${string}` | `elevation-${string}`,
+): ViewStyle {
   return Platform.select<ViewStyle>({
     ios: parseBoxShadow(XP_TOKENS[token as keyof typeof XP_TOKENS]),
     android: { elevation: ANDROID_ELEVATION[level] },
@@ -63,10 +72,20 @@ function shadow(level: keyof typeof ANDROID_ELEVATION, token: `shadow-${string}`
 }
 
 export const elevation = {
+  /** `--xp-elevation-xs` — bóng mảnh của viên lọc / dải chọn (web `box-shadow: var(--xp-elevation-xs)`). */
+  xs: shadow('xs', 'elevation-xs'),
   /** Thẻ ở trạng thái nghỉ. */
-  card: shadow('card', 'shadow-card'),
+  // Thẻ nghỉ: bóng NHẠT HƠN nữa (người dùng chốt 28/10/2026, hai lần) — Android elevation 1 với màu bóng
+  // nhạt (Android 9+ tôn trọng `shadowColor`), iOS nửa độ đậm của `elevation-xs`. Thẻ có viền nên vẫn tách nền.
+  card: Platform.select<ViewStyle>({
+    ios: { ...parseBoxShadow(XP_TOKENS['elevation-xs']), shadowOpacity: parseBoxShadow(XP_TOKENS['elevation-xs']).shadowOpacity / 2 },
+    android: { elevation: 1, shadowColor: 'rgba(16, 24, 40, 0.35)' },
+    default: {},
+  }) as ViewStyle,
   /** Nổi lên: nhấn giữ, dropdown. */
   raised: shadow('raised', 'shadow-raised'),
+  /** `--xp-elevation-panel` — bảng ô nhập của thẻ tìm kiếm trang chủ (`SearchCard .panel`). */
+  panel: shadow('panel', 'elevation-panel'),
   /** Lớp phủ: modal, sheet. */
   overlay: shadow('overlay', 'shadow-overlay'),
 } as const;

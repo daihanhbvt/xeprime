@@ -5,16 +5,16 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "xeprime",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "icon": "../shared/assets/images/xeprime-icon.png",
     "ios": {
-      "bundleIdentifier": "vn.xeprime.mobile",
+      "bundleIdentifier": "vn.xeprime.customerapp",
       "buildNumber": "1",
       "supportsTablet": false
     },
     "android": {
-      "package": "vn.xeprime.mobile",
-      "versionCode": 5,
+      "package": "vn.xeprime.customerapp",
+      "versionCode": 11,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "../shared/assets/images/xeprime-icon-foreground.png",
@@ -43,14 +43,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh từ máy (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác trong ứng dụng)."
+          "photosPermission": "XePrime cần truy cập thư viện ảnh để bạn chọn ảnh đại diện, ảnh bằng lái xe khi xác minh thuê xe, và ảnh gửi trong tin nhắn với chủ xe."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
-          "locationWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "locationAlwaysAndWhenInUsePermission": "XePrime chỉ dùng vị trí khi bạn đang mở ứng dụng, để gợi ý xe gần bạn và điền nhanh địa chỉ nhận hoặc giao xe.",
+          "locationWhenInUsePermission": "XePrime dùng vị trí của bạn để gợi ý xe ở tỉnh/thành bạn đang đứng và điền nhanh địa chỉ nhận hoặc giao xe. Bạn vẫn có thể tự chọn địa điểm khác.",
           "isAndroidBackgroundLocationEnabled": false,
           "isIosBackgroundLocationEnabled": false
         }
@@ -58,7 +58,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh ngay trong ứng dụng (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác).",
+          "cameraPermission": "XePrime cần dùng máy ảnh để bạn chụp ảnh bằng lái xe khi xác minh thuê xe, ảnh đại diện và ảnh gửi trong tin nhắn với chủ xe.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

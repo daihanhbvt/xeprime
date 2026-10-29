@@ -9,8 +9,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
-import { SHOP_COVER_RATIO, SHOP_LOGO } from './ShopCover';
-import { colors, radius, space } from '@/theme/tokens';
+import { SHOP_LOGO, useShopCoverHeight } from './ShopCover';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 
 interface SkeletonProps {
@@ -97,6 +98,7 @@ export function Skeleton({
   fill = false,
   round = false,
 }: SkeletonProps) {
+  const colors = useColors();
   /*
    * Giữ nhịp sống đúng bằng vòng đời của khung chờ. Effect chạy SAU khung hình đầu, nên khung
    * hình đó vẽ ở `opacity: 0.5` — đứng yên một nhịp rồi mới thở, thay vì nhấp nháy.
@@ -142,6 +144,7 @@ export function SkeletonText({ lines = 3, height = 13 }: { lines?: number; heigh
 
 /** Khung chờ cho một thẻ xe — cùng tỉ lệ ảnh và cùng số dòng với thẻ thật. */
 export function VehicleCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <Skeleton height={190} />
@@ -164,6 +167,7 @@ export function VehicleCardSkeleton() {
  * về.
  */
 export function FleetVehicleCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <Skeleton aspectRatio={2} />
@@ -184,6 +188,7 @@ export function FleetVehicleCardSkeleton() {
 
 /** Khung chờ cho một dòng danh sách có avatar (địa điểm, gian hàng). */
 export function ListRowSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.md} bw={1} bc={colors.border} p={space.md}>
       <YStack gap={space.xs}>
@@ -202,6 +207,7 @@ export function ListRowSkeleton() {
  * ra và cả khối đổi hình. Số dòng lấy đúng số dòng sắp hiện.
  */
 export function MiniRowsSkeleton({ rows = 3 }: { rows?: number }) {
+  const colors = useColors();
   return (
     <YStack>
       {Array.from({ length: rows }, (_, i) => (
@@ -225,6 +231,7 @@ export function MiniRowsSkeleton({ rows = 3 }: { rows?: number }) {
 
 /** Khung chờ cho một thẻ chuyến — ảnh vuông trái, ba dòng phải, hàng tiền dưới cùng. */
 export function TripCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack
       bg={colors.surface}
@@ -250,6 +257,7 @@ export function TripCardSkeleton() {
 
 /** Khung chờ cho một thẻ đơn/yêu cầu ở khu quản lý — hàng trạng thái + hai cột thông tin. */
 export function RecordCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack
       bg={colors.surface}
@@ -279,6 +287,7 @@ export function RecordCardSkeleton() {
  * ra để tránh.
  */
 export function ActionCardSkeleton() {
+  const colors = useColors();
   return (
     <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} ov="hidden">
       <XStack>
@@ -310,6 +319,7 @@ export function ActionCardSkeleton() {
 
 /** Khung chờ cho trang chi tiết xe — dựng đúng hình dạng thật để nội dung về không đẩy trang. */
 export function ListingDetailSkeleton() {
+  const colors = useColors();
   return (
     <YStack f={1} bg={colors.background}>
       <Skeleton height={260} />
@@ -375,9 +385,11 @@ export function ListingDetailSkeleton() {
 
 /** Khung chờ màn hồ sơ gian hàng: bìa tràn viền · logo tròn đè lên · tên · các khối biểu mẫu. */
 export function ShopProfileSkeleton() {
+  const colors = useColors();
+  const coverHeight = useShopCoverHeight();
   return (
     <YStack>
-      <Skeleton aspectRatio={SHOP_COVER_RATIO} />
+      <Skeleton height={coverHeight} />
 
       <YStack px={space.md} gap={space.lg} mt={-SHOP_LOGO / 2}>
         <YStack gap={space.sm}>
@@ -402,6 +414,7 @@ export function ShopProfileSkeleton() {
 
 /** Khung chờ cho màn tài khoản: avatar + tên/email, rồi các hàng thiết lập. */
 export function ProfileSkeleton() {
+  const colors = useColors();
   return (
     <YStack gap={space.lg}>
       <XStack ai="center" gap={space.md}>
@@ -431,32 +444,39 @@ export function ProfileSkeleton() {
   );
 }
 
+/** Avatar thẻ hồ sơ ở bề ngang điện thoại — `ShopHeader.module.css` @640px (56). */
+const SHOP_CARD_AVATAR = 56;
+
 /**
- * Khung chờ trang gian hàng công khai (MKT-05): bìa tràn viền · logo tròn đè lên · tên · dòng
- * meta · vài thẻ xe.
+ * Khung chờ trang gian hàng công khai — theo bố cục `ShopHeader` mới (#222, web ≤640px): MỘT thẻ
+ * hồ sơ (avatar 56 · tên · hai dòng meta, ngăn bằng đường kẻ) rồi tiêu đề + vài thẻ xe.
  *
- * Hai số hình học đọc thẳng từ `ShopCover` — chính component vẽ ảnh bìa và logo thật, ở cả
- * trang công khai lẫn khu quản lý. Khung chờ mà lệch với nó là đầu trang nhảy đúng lúc dữ liệu
- * về, thứ mà khung chờ sinh ra để tránh.
+ * Không vẽ ảnh bìa: lúc chờ chưa biết là gian hàng (có bìa) hay chủ xe cá nhân (không bìa). Vẽ bìa
+ * sẵn thì trang của chủ xe cá nhân — phần đông — nhảy lên cả khối 180dp khi dữ liệu về; còn gian
+ * hàng chỉ có bìa mọc thêm ở trên, thẻ hồ sơ vẫn đúng chỗ của nó.
  */
 export function ShopDetailSkeleton() {
+  const colors = useColors();
   return (
-    <YStack>
-      <Skeleton aspectRatio={SHOP_COVER_RATIO} />
+    <YStack px={space.md} pt={space.md} gap={space.lg}>
+      {/* Thẻ hồ sơ — web `.card`: đệm md, viền `border` 1px, bo `radius-card`. */}
+      <YStack p={space.md} gap={space.md} bw={1} bc={colors.border} br={radius.card}>
+        <XStack gap={space.sm + space.xs} ai="flex-start">
+          <Skeleton width={SHOP_CARD_AVATAR} height={SHOP_CARD_AVATAR} round />
+          <YStack f={1} gap={space.sm}>
+            <Skeleton width="60%" height={20} />
+            <Skeleton width="45%" height={13} />
+            <Skeleton width="35%" height={13} />
+          </YStack>
+        </XStack>
+        <SkeletonText lines={2} />
+      </YStack>
 
-      <YStack px={space.md} gap={space.lg} mt={-SHOP_LOGO / 2}>
-        <YStack gap={space.sm}>
-          <Skeleton width={SHOP_LOGO} height={SHOP_LOGO} round />
-          <Skeleton width="55%" height={20} />
-          <Skeleton width="40%" height={13} />
-        </YStack>
-
-        <YStack gap={space.md}>
-          <Skeleton width="45%" height={18} />
-          {Array.from({ length: 2 }, (_, i) => (
-            <VehicleCardSkeleton key={i} />
-          ))}
-        </YStack>
+      <YStack gap={space.md}>
+        <Skeleton width="45%" height={20} />
+        {Array.from({ length: 2 }, (_, i) => (
+          <VehicleCardSkeleton key={i} />
+        ))}
       </YStack>
     </YStack>
   );

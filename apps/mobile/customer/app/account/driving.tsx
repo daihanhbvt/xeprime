@@ -1,11 +1,11 @@
 import { RequireSession } from '@/features/auth/RequireSession';
-import { DriverLinksScreen } from '@/features/driving/DriverLinksScreen';
+import { DriverCenterScreen } from '@/features/driving/DriverCenterScreen';
 
-/** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản khách (ADR 0063). */
+/** "Trung tâm Tài xế" — chuyến tôi lái + chủ xe đối tác của tài khoản khách (ADR 0063). */
 export default function AccountDrivingRoute() {
   return (
     <RequireSession>
-      <DriverLinksScreen />
+      <DriverCenterScreen />
     </RequireSession>
   );
 }

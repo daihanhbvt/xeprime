@@ -20,8 +20,9 @@ import {
 } from '@/components/layout/focus-reveal';
 import { IconButton } from './IconButton';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Chiều cao bàn phím đang che, đo trực tiếp từ sự kiện của hệ điều hành.
@@ -97,6 +98,9 @@ export function BottomSheet({
   dismissable = true,
   scroll = true,
 }: BottomSheetProps) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -208,6 +212,7 @@ export function BottomSheet({
               borderTopRightRadius={radius.lg}
               borderTopWidth={1}
               borderColor={colors.borderSubtle}
+              {...floatingBorder}
               ov="hidden"
               /*
             Lề đáy có SÀN, không chỉ là safe-area inset.

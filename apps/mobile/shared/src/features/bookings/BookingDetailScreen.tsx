@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -10,7 +10,11 @@ import {
   BOOKING_STATUS_META,
   canTransitionBooking,
   DRIVER_ASSIGNMENT_STATUS_META,
+  DRIVER_MISSING_ALERT_LEAD_MINUTES,
+  DRIVER_SOURCE,
+  isDriverMissingAlertDue,
   isDriverReassignable,
+  STATUS_COLOR,
   HANDOVER_TYPE,
   isBookingFinal,
   isNoShowGracePassed,
@@ -24,9 +28,9 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
-import { IconButton } from '@/components/ui/IconButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -39,23 +43,27 @@ import { queryKeys } from '@/queries/query-keys';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
-import { isZeroMoney, LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
+import { isZeroMoney, LIST_SEPARATOR, telHref, toAppTz } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useNow } from '@/hooks/use-now';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { AssignDriverSheet } from './components/AssignDriverSheet';
 import { BookingDriverHistory } from './components/BookingDriverHistory';
 import { BookingMoneyCard } from './components/BookingMoneyCard';
 import { BookingStatusSheet, type Decision } from './components/BookingStatusSheet';
 import { BookingSettlementCard } from './components/BookingSettlementCard';
+import { BookingInsurancePanel } from './components/BookingInsurancePanel';
 import { BookingTripCard } from './components/BookingTripCard';
 import { DeliveryFeeSheet } from './components/DeliveryFeeSheet';
 import { EditBookingSheet } from './components/EditBookingSheet';
+import { ExternalDriverSheet } from './components/ExternalDriverSheet';
 import {
   useAssignDriver,
   useBooking,
@@ -69,17 +77,18 @@ import { getErrorMessage } from '@/lib/get-error-message';
 const VEHICLE_IMAGE = { width: 96, height: 72 } as const;
 
 /* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   vehicleImage: {
     width: VEHICLE_IMAGE.width,
     height: VEHICLE_IMAGE.height,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));
 
 /** Nhãn của một KHỐI trong thẻ chi tiết — nhỏ, viết hoa, mờ. Cùng vai `blockTitle` của web. */
 function BlockTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={3} h={iconSize.sm} br={radius.pill} bg={colors.primary} />
@@ -102,6 +111,9 @@ function BlockTitle({ children }: { children: string }) {
  *
  * Thao tác phụ bày thẳng, không giấu sau menu ba chấm — chúng đều là việc thường ngày ở quầy.
  */
+/** Web `BookingDriverSection .row { gap: 10px }` — không có bậc này trên thang token. */
+const UNASSIGNED_ROW_GAP = 10;
+
 export function BookingDetailScreen({ bookingId }: { bookingId: string }) {
   const t = useTranslations('Bookings.detail');
   const router = useRouter();
@@ -191,6 +203,8 @@ function useBookingRefresh(bookingId: string) {
 }
 
 function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack: () => void }) {
+  const colors = useColors();
+  const styles = useStyles();
   const { refreshing, onRefresh } = useBookingRefresh(booking.id);
   const t = useTranslations('Bookings');
   const fmt = useAppFormat();
@@ -209,18 +223,20 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
 
   const tDriver = useTranslations('Drivers.booking');
   const [confirmingUnassign, setConfirmingUnassign] = useState(false);
+  const [externalOpen, setExternalOpen] = useState(false);
+  const now = useNow();
 
   /** Bỏ gán HỎI LẠI, đúng `Popconfirm` của web: tài xế đã nhận chuyến sẽ mất chuyến đó (ADR 0063). */
   const unassignDriver = useCallback(
     () =>
-      assignDriver.mutate(null, {
+      assignDriver.mutate({ driverId: null }, {
         onSuccess: () => {
           setConfirmingUnassign(false);
           toast.showSuccess(t('driver.unassignSuccess'));
         },
         onError: (error) => {
           setConfirmingUnassign(false);
-          toast.showError(getErrorMessage(error));
+          toast.showError(errorMessage(error));
         },
       }),
     [assignDriver, t, toast],
@@ -236,13 +252,23 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
    * Tài xế mở cho CẢ HAI tuyến, không sau cờ gói (ADR 0063) — chỉ gác bằng quyền. Và CHỈ đơn
    * `with_driver` mới nhận tài xế: đơn khác chỉ còn đọc tài xế gán từ trước (dữ liệu cũ).
    */
-  const canAssignDriver =
+  const canWriteDriver =
     canUpdate &&
     withDriver &&
     !closed &&
     // Đã giao xe ⇒ người cầm lái đã chốt: chỉ đọc (server chặn — DRIVER_ASSIGNMENT_LOCKED).
+    isDriverReassignable(booking.status);
+  // Bộ chọn tài xế LIÊN KẾT đọc `/drivers/assignable` (DRIVER_VIEW); ghi tài xế NGOÀI HỆ THỐNG chỉ
+  // cần quyền sửa đơn (ADR 0067) — cùng phép tách `canPickLinked` của web.
+  const canAssignDriver = canWriteDriver && permissions.has(PERMISSION.DRIVER_VIEW);
+  const driver = booking.driver ?? null;
+  const isExternalDriver = driver?.source === DRIVER_SOURCE.EXTERNAL;
+  // Chưa có ai mà giờ nhận còn dưới 2 giờ ⇒ cảnh báo (worker cũng báo khẩn một lần — ADR 0067).
+  const driverMissingSoon =
+    withDriver &&
     isDriverReassignable(booking.status) &&
-    permissions.has(PERMISSION.DRIVER_VIEW);
+    isDriverMissingAlertDue({ pickupAt: booking.pickupAt, hasDriver: driver !== null }, new Date(now));
+  const enterExternalLabel = isExternalDriver ? tDriver('editExternal') : tDriver('enterExternal');
 
   /**
    * NHÓM lý do đi kèm CHỈ khi huỷ — `TransitionBookingDto` đòi nó ở đúng nhánh đó (ADR 0045
@@ -478,18 +504,24 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     {[
                       domainLabel('routeType', booking.routeType),
                       booking.pickupAddress
-                        ? t('driver.routePickup', { address: booking.pickupAddress })
+                        ? tDriver('pickup', { address: booking.pickupAddress })
                         : null,
                     ]
                       .filter(Boolean)
                       .join(LIST_SEPARATOR)}
                     {booking.destination
-                      ? ` ${t('driver.routeDestination', { address: booking.destination })}`
+                      ? ` ${tDriver('destination', { destination: booking.destination })}`
                       : ''}
                   </Text>
                 ) : null}
+                {driverMissingSoon ? (
+                  <Callout
+                    tone="warning"
+                    title={tDriver('missingSoon', { hours: DRIVER_MISSING_ALERT_LEAD_MINUTES / 60 })}
+                  />
+                ) : null}
                 {booking.driver ? (
-                  <XStack ai="center" gap={space.sm}>
+                  <XStack ai="center" gap={space.sm} flexWrap="wrap">
                     <Ionicons
                       name="person-circle-outline"
                       size={iconSize.lg}
@@ -500,21 +532,32 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
                           {booking.driver.name}
                         </Text>
-                        <StatusBadge
-                          label={domainLabel(
-                            'driverAssignmentStatus',
-                            booking.driver.assignmentStatus,
-                            DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].label,
-                          )}
-                          color={
-                            DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].color
-                          }
-                          size="sm"
-                        />
+                        {isExternalDriver ? (
+                          <StatusBadge
+                            label={tDriver('externalTag')}
+                            color={STATUS_COLOR.NEUTRAL}
+                            size="sm"
+                          />
+                        ) : (
+                          <StatusBadge
+                            label={domainLabel(
+                              'driverAssignmentStatus',
+                              booking.driver.assignmentStatus,
+                              DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].label,
+                            )}
+                            color={
+                              DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].color
+                            }
+                            size="sm"
+                          />
+                        )}
                       </XStack>
                       {booking.driver.phone ? (
                         <Pressable
-                          onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
+                          onPress={() => {
+                            const tel = telHref(booking.driver?.phone ?? '');
+                            if (tel) void Linking.openURL(tel);
+                          }}
                           accessibilityRole="button"
                           accessibilityLabel={booking.driver.phone}
                         >
@@ -524,29 +567,53 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                         </Pressable>
                       ) : null}
                       <Text col={colors.textMuted} fos={fontSize.label}>
-                        {booking.driver.respondedAt
-                          ? tDriver('respondedAt', {
-                              time: fmt.dateTime(booking.driver.respondedAt),
-                            })
-                          : tDriver('assignedAt', {
+                        {isExternalDriver
+                          ? tDriver('externalSetAt', {
                               time: fmt.dateTime(booking.driver.assignedAt),
-                            })}
+                            })
+                          : booking.driver.respondedAt
+                            ? tDriver('respondedAt', {
+                                time: fmt.dateTime(booking.driver.respondedAt),
+                              })
+                            : tDriver('assignedAt', {
+                                time: fmt.dateTime(booking.driver.assignedAt),
+                              })}
                       </Text>
+                      {/* Hạn tài xế trả lời (ADR 0066) — quá hạn thì hệ thống trả lượt về và báo khẩn. */}
+                      {booking.driver.respondBy ? (
+                        <Text col={colors.warning} fos={fontSize.label}>
+                          {tDriver('respondBy', { time: fmt.dateTime(booking.driver.respondBy) })}
+                        </Text>
+                      ) : null}
                     </YStack>
 
-                    {/* Icon-only, NGAY hàng với tên: "Đổi" mở lại danh sách, "Bỏ gán" gỡ hẳn (hỏi lại). */}
-                    {canAssignDriver ? (
-                      <XStack gap={space.xs}>
-                        <IconButton
-                          icon="swap-horizontal-outline"
-                          label={t('driver.change')}
-                          tone="accent"
-                          onPress={() => setAssigningDriver(true)}
+                    {/*
+                      Cụm nút CHỮ nhỏ, đúng nhãn/thứ tự của web `BookingDriverSection`: Đổi tài xế ·
+                      nhập/sửa tài xế ngoài · Bỏ gán (hỏi lại). Hàng tự xuống dòng khi hẹp, như `.row`.
+                    */}
+                    {canWriteDriver ? (
+                      <XStack gap={space.xs} flexWrap="wrap">
+                        {canAssignDriver ? (
+                          <Button
+                            label={tDriver('change')}
+                            variant="secondary"
+                            size="sm"
+                            block={false}
+                            onPress={() => setAssigningDriver(true)}
+                          />
+                        ) : null}
+                        <Button
+                          label={enterExternalLabel}
+                          variant="secondary"
+                          size="sm"
+                          block={false}
+                          onPress={() => setExternalOpen(true)}
                         />
-                        <IconButton
-                          icon="person-remove-outline"
-                          label={t('driver.unassign')}
-                          tone="dangerSurface"
+                        <Button
+                          label={tDriver('unassign')}
+                          variant="secondary"
+                          size="sm"
+                          block={false}
                           loading={assignDriver.isPending}
                           onPress={() => setConfirmingUnassign(true)}
                         />
@@ -554,24 +621,38 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     ) : null}
                   </XStack>
                 ) : (
-                  <XStack ai="center" gap={space.sm}>
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={iconSize.lg}
-                      color={colors.textMuted}
-                    />
+                  /*
+                    Web `BookingDriverSection .row` (nhánh chưa phân công): xuống dòng khi hẹp
+                    (`flex-wrap`), hai đầu (`space-between`), khe 10. Chữ `.missing` — màu
+                    `color-warning`, medium; KHÔNG có icon. Cụm `.actions` khe 8: "Gán tài xế" (primary
+                    nhỏ) + "Nhập tài xế ngoài hệ thống" (nút phụ nhỏ).
+                  */
+                  <XStack ai="center" jc="space-between" flexWrap="wrap" gap={UNASSIGNED_ROW_GAP}>
                     {/* Đơn có tài xế chưa phân công là chưa chạy được — nhắc bằng màu cảnh báo. */}
-                    <Text f={1} col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
-                      {t('driver.noneWithDriver')}
+                    <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                      {tDriver('unassigned')}
                     </Text>
-                    {canAssignDriver ? (
-                      <Button
-                        label={t('driver.assign')}
-                        variant="primary"
-                        size="sm"
-                        block={false}
-                        onPress={() => setAssigningDriver(true)}
-                      />
+                    {canAssignDriver || canWriteDriver ? (
+                      <XStack gap={space.sm} flexWrap="wrap">
+                        {canAssignDriver ? (
+                          <Button
+                            label={t('driver.assign')}
+                            variant="primary"
+                            size="sm"
+                            block={false}
+                            onPress={() => setAssigningDriver(true)}
+                          />
+                        ) : null}
+                        {canWriteDriver ? (
+                          <Button
+                            label={enterExternalLabel}
+                            variant="secondary"
+                            size="sm"
+                            block={false}
+                            onPress={() => setExternalOpen(true)}
+                          />
+                        ) : null}
+                      </XStack>
                     ) : null}
                   </XStack>
                 )}
@@ -583,6 +664,9 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
           <BookingTripCard bookingId={booking.id} bookingStatus={status} />
 
           <BookingSettlementCard bookingId={booking.id} />
+
+          {/* Bảo hiểm chuyến theo từng sản phẩm (ADR 0064) — có ngay khi có đơn, chỉ đọc; như web. */}
+          <BookingInsurancePanel bookingId={booking.id} />
         </YStack>
       </Screen>
 
@@ -603,15 +687,25 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
         booking={booking}
         pending={assignDriver.isPending}
         onSelect={(driverId) =>
-          assignDriver.mutate(driverId, {
+          assignDriver.mutate({ driverId }, {
             onSuccess: () => {
               toast.showSuccess(tDriver('assigned'));
               setAssigningDriver(false);
             },
-            onError: (error) => toast.showError(getErrorMessage(error)),
+            onError: (error) => toast.showError(errorMessage(error)),
           })
         }
       />
+
+      {/* Mount có điều kiện: mỗi lần mở là một form mới, không mang lượt nhập dở sang. */}
+      {externalOpen && canWriteDriver ? (
+        <ExternalDriverSheet
+          bookingId={booking.id}
+          current={isExternalDriver && driver ? { name: driver.name, phone: driver.phone } : null}
+          replacingLinkedName={driver && !isExternalDriver ? driver.name : null}
+          onClose={() => setExternalOpen(false)}
+        />
+      ) : null}
 
       <AlertDialog
         open={confirmingUnassign}
@@ -639,7 +733,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                 toast.showSuccess(t('deliveryFee.success'));
                 setEditingFee(false);
               },
-              onError: (error) => toast.showError(getErrorMessage(error)),
+              onError: (error) => toast.showError(errorMessage(error)),
             })
           }
         />
@@ -667,6 +761,7 @@ function BookingActionBar({
   /** Mở hộp xác nhận cho một quyết định khép đơn (huỷ / khách không đến). */
   onDecide: (decision: Decision) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.actionBar');
   const tStatus = useTranslations('Bookings.statusActions');
   const [collecting, setCollecting] = useState(false);

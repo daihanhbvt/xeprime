@@ -16,6 +16,7 @@ import {
   COLLATERAL_MODE,
   type CollateralMode,
   COLLATERAL_MODE_VALUES,
+  DELIVERY_TIER_FEE_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
 } from '@xeprime/types';
@@ -33,8 +34,8 @@ import { SelectControl } from '@/components/ui/SelectControl';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { themed, useColors } from '@/theme/ThemeProvider';
 import {
-  colors,
   fieldFontSize,
   fontSize,
   fontWeight,
@@ -61,13 +62,16 @@ interface SectionTone {
   icon: IconName;
 }
 
-const TONE = {
-  deposit: { fg: colors.info, surface: colors.infoSurface, icon: 'shield-checkmark' },
-  delivery: { fg: colors.primaryActive, surface: colors.primaryLight, icon: 'navigate' },
-  overtime: { fg: colors.warning, surface: colors.warningSurface, icon: 'time' },
-  mileage: { fg: colors.info, surface: colors.infoSurface, icon: 'speedometer' },
-  discount: { fg: colors.success, surface: colors.successSurface, icon: 'pricetags' },
-} as const satisfies Record<string, SectionTone>;
+const useTone = themed(
+  (colors) =>
+    ({
+      deposit: { fg: colors.info, surface: colors.infoSurface, icon: 'shield-checkmark' },
+      delivery: { fg: colors.primaryActive, surface: colors.primaryLight, icon: 'navigate' },
+      overtime: { fg: colors.warning, surface: colors.warningSurface, icon: 'time' },
+      mileage: { fg: colors.info, surface: colors.infoSurface, icon: 'speedometer' },
+      discount: { fg: colors.success, surface: colors.successSurface, icon: 'pricetags' },
+    }) as const satisfies Record<string, SectionTone>,
+);
 
 /**
  * Đầu một khối: đĩa hình mang tông + tiêu đề + (tuỳ khối) công tắc bật/tắt.
@@ -86,6 +90,7 @@ function SectionHead({
   hint: string;
   toggle?: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.sm}>
@@ -131,6 +136,7 @@ export function ToggleRow({
   disabled?: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm} py={space.xs}>
       <YStack f={1} gap={2}>
@@ -154,7 +160,7 @@ export function ToggleRow({
 }
 
 /** Màu rãnh công tắc. `false` phải ĐẬM hơn nền thẻ, nếu không công tắc tắt nhìn như không có. */
-const SWITCH_TRACK = { false: colors.borderInput, true: colors.primary };
+const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: colors.primary }));
 
 function PolicySwitch({
   label,
@@ -167,6 +173,8 @@ function PolicySwitch({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
+  const SWITCH_TRACK = useSwitchTrack();
   return (
     <Switch
       value={checked}
@@ -200,6 +208,7 @@ function arrayErrorOf(
  * không phải giá trị của dòng nào.
  */
 function TierStatus({ error, ok }: { error?: string; ok?: string }) {
+  const colors = useColors();
   if (error) {
     return (
       <IconLine icon="alert-circle" tone={colors.danger}>
@@ -293,6 +302,7 @@ function TierCard({
   onRemove: () => void;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack br={radius.md} bw={1} bc={colors.border} bg={colors.surface} ov="hidden">
       {/* Không đặt chiều cao: `alignItems: stretch` mặc định của RN cho vạch cao bằng cả dòng. */}
@@ -345,6 +355,7 @@ function TierCard({
 
 /** Nhãn của một NHÓM ô trong khối (bảng bậc), kèm câu giải thích quy tắc của nhóm. */
 function GroupLabel({ label, hint }: { label: string; hint?: string }) {
+  const colors = useColors();
   return (
     <YStack gap={2}>
       <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
@@ -377,6 +388,7 @@ function NotePanel({
   title: string;
   body: string;
 }) {
+  const colors = useColors();
   return (
     <XStack gap={space.sm} p={space.sm} br={radius.md} bw={1} bc={tone.fg} bg={tone.surface}>
       <YStack pt={1}>
@@ -520,6 +532,8 @@ function DepositSection({
   title?: string;
   optionDescriptions?: Partial<Record<string, string>>;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.deposit');
   const domainLabel = useDomainLabel();
   const mode = useWatch({ control, name: 'collateralMode' });
@@ -639,6 +653,7 @@ function DeliverySection({
   disabled: boolean;
   step: StepTitle;
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.delivery');
   const fmt = useAppFormat();
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
@@ -718,14 +733,56 @@ function DeliverySection({
                       min={0}
                       editable={!disabled}
                     />
-                    <MoneyField
+                    {/*
+                      Hai cách tính LOẠI TRỪ nhau (ADR 0064): trọn gói cho cả bậc, hoặc đơn giá theo
+                      km nhân khoảng cách thật. Chỉ ô của cách đang chọn được dựng — như web.
+                    */}
+                    <Controller
                       control={control}
-                      name={`deliveryTiers.${index}.fee`}
-                      label={t('feeLabel')}
-                      // Cùng luật "miễn phí" với dòng tóm tắt khách thấy (@xeprime/domain) — y như web.
-                      hint={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
-                      editable={!disabled}
+                      name={`deliveryTiers.${index}.feeMode`}
+                      render={({ field }) => (
+                        <YStack gap={space.xs}>
+                          <FieldLabel label={t('feeModeLabel', { index: index + 1 })} />
+                          <XStack gap={space.sm}>
+                            {[
+                              { value: DELIVERY_TIER_FEE_MODE.FLAT, label: t('feeModeFlat') },
+                              { value: DELIVERY_TIER_FEE_MODE.PER_KM, label: t('feeModePerKm') },
+                            ].map((option) => (
+                              <YStack key={option.value} f={1}>
+                                <RadioOption
+                                  label={option.label}
+                                  checked={
+                                    (field.value ?? DELIVERY_TIER_FEE_MODE.FLAT) === option.value
+                                  }
+                                  disabled={disabled}
+                                  onPress={() => field.onChange(option.value)}
+                                />
+                              </YStack>
+                            ))}
+                          </XStack>
+                        </YStack>
+                      )}
                     />
+                    {tiers[index]?.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM ? (
+                      <MoneyField
+                        key="perKm"
+                        control={control}
+                        name={`deliveryTiers.${index}.perKm`}
+                        label={`${t('tierPerKmLabel', { index: index + 1 })} (${t('perKmUnit')})`}
+                        hint={t('perKmHint')}
+                        editable={!disabled}
+                      />
+                    ) : (
+                      <MoneyField
+                        key="fee"
+                        control={control}
+                        name={`deliveryTiers.${index}.fee`}
+                        label={t('feeLabel')}
+                        // Cùng luật "miễn phí" với dòng tóm tắt khách thấy (@xeprime/domain) — y như web.
+                        hint={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
+                        editable={!disabled}
+                      />
+                    )}
                   </TierCard>
                 );
               })}
@@ -737,7 +794,14 @@ function DeliverySection({
                   disabled={false}
                   /* Bậc mới luôn RỖNG: mốc bắt đầu của nó là mốc kết thúc của bậc trước và được
                      suy ra lúc vẽ, nên không có gì để điền sẵn. Giống `append` của web. */
-                  onPress={() => append({ toKm: null, fee: null })}
+                  onPress={() =>
+                    append({
+                      toKm: null,
+                      feeMode: DELIVERY_TIER_FEE_MODE.FLAT,
+                      fee: null,
+                      perKm: null,
+                    })
+                  }
                 />
               )}
 
@@ -764,7 +828,12 @@ function DeliverySection({
               <Callout tone="info" title={t('previewTitle')}>
                 {deliverySummaryText(
                   { deliveryTiers: tiers, deliveryMaxRadiusKm: maxRadiusKm },
-                  { money: fmt.money, free: t('free'), quote: t('summaryQuote') },
+                  {
+                    money: fmt.money,
+                    free: t('free'),
+                    quote: t('summaryQuote'),
+                    perKm: (amount) => t('perKmSummary', { amount }),
+                  },
                 )}
               </Callout>
             ) : null}
@@ -804,6 +873,8 @@ function MileageSection({
   /** Tiêu đề do nơi gọi đặt (web `MileagePolicySection title`). */
   title?: string;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.mileage');
   const fmt = useAppFormat();
   const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
@@ -888,6 +959,7 @@ function OvertimeSection({
   disabled: boolean;
   step: StepTitle;
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.overtime');
   const fmt = useAppFormat();
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
@@ -961,6 +1033,7 @@ function LongTermDiscountSection({
   step: StepTitle;
   legacyTiers?: readonly LegacyTierView[];
 }) {
+  const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.longTermDiscount');
   const tUnits = useTranslations('Common.units');
   const enabled = useWatch({ control, name: 'discountEnabled' });

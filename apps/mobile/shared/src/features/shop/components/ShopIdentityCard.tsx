@@ -14,7 +14,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useImageUpload } from '@/components/ui/use-image-upload';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { uploadsApi } from '../api';
 
 interface Props {
@@ -63,6 +64,7 @@ export function ShopIdentityCard({
   onViewPublicPage,
   logoPickerRef,
 }: Props) {
+  const colors = useColors();
   const t = useTranslations('Shop');
   const tImage = useTranslations('Common.image');
   const domainLabel = useDomainLabel();

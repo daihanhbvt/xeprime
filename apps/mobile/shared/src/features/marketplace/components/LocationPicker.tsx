@@ -11,16 +11,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { normalizeProvinceAlias } from '@xeprime/types';
+import { LOCATION_SOURCE, normalizeProvinceAlias } from '@xeprime/types';
 import type { PublicDestination } from '@xeprime/types';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { layout } from '@/theme/layout';
-import { appStyles } from '@/theme/styles';
+import { useAppStyles } from '@/theme/styles';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import {
-  colors,
   fieldFontSize,
   fontSize,
   fontWeight,
@@ -30,6 +30,11 @@ import {
   space,
 } from '@/theme/tokens';
 import { LIST_TUNING } from '@/theme/list-tuning';
+import {
+  CurrentLocationButton,
+  type CurrentPlace,
+} from '@/features/locations/components/CurrentLocationButton';
+import { rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import { useSearchExperience } from '../search-context';
 import { SectionError } from './SectionError';
 
@@ -71,6 +76,9 @@ interface LocationPickerProps {
  * xe — app không có danh sách tỉnh riêng, nên tỉnh bị admin ẩn biến mất khỏi cả hai client.
  */
 export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('HomeSearch.location');
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -101,6 +109,35 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
   const nationwideLabel = t('nationwide');
   const showNationwide =
     !normalizedQuery || normalizeProvinceAlias(nationwideLabel).includes(normalizedQuery);
+
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  /*
+   * "Vị trí hiện tại" — như web #231: TỈNH vào bộ lọc như một cú bấm tỉnh; ĐỊA CHỈ CỤ THỂ (chỉ khi
+   * phép đo đủ chính xác) được nhớ làm địa chỉ giao xe để điền sẵn khi thuê. Tỉnh chưa có xe ⇒ KHÔNG
+   * đổi bộ lọc, giữ tấm mở và nói thẳng — chọn tỉnh rỗng là dẫn tới trang kết quả trống.
+   */
+  const handleLocated = (place: CurrentPlace) => {
+    if (place.precise && place.provinceCode) {
+      rememberDeliveryAddress({
+        provinceCode: place.provinceCode,
+        wardCode: '',
+        addressLine: place.formattedAddress,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        placeId: null,
+        locationSource: LOCATION_SOURCE.MAP_PIN,
+      });
+    }
+    if (!place.provinceCode) {
+      setLocationNotice(t('noProvinceNearby'));
+      return;
+    }
+    if (destinations && !destinations.some((d) => d.provinceCode === place.provinceCode)) {
+      setLocationNotice(t('noVehiclesNearby'));
+      return;
+    }
+    pick(place.provinceCode);
+  };
 
   const pick = useCallback(
     (provinceCode: string) => {
@@ -146,6 +183,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={insets.bottom}
           >
             <YStack
@@ -191,6 +229,15 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                   }}
                 />
               </XStack>
+            </YStack>
+
+            <YStack px={layout.screenX} pb={space.sm}>
+              <CurrentLocationButton
+                label={t('useCurrent')}
+                onLocateStart={() => setLocationNotice(null)}
+                onLocated={handleLocated}
+                notice={locationNotice}
+              />
             </YStack>
 
             {destinationsError ? (
@@ -262,6 +309,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
 }
 
 function GroupTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold} pt={space.xs}>
       {children.toLocaleUpperCase()}
@@ -296,6 +344,7 @@ const Row = memo(function Row({
   value: string;
   onPress: (value: string) => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={() => onPress(value)}

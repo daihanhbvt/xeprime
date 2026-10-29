@@ -8,7 +8,8 @@ import { InlineAction } from '@/components/ui/InlineAction';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /**
  * Bốn tông của một khối Tổng quan — nền đầu khối và màu đĩa hình.
@@ -22,15 +23,18 @@ import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
  * việc sắp tới, `success` cho tiền đã vào, `primary` cho một bản kê trung tính. Chọn tông theo
  * "khối này trông sẽ đẹp" là cách màu mất hết nghĩa sau khối thứ ba.
  */
-const TONE = {
-  primary: { fg: colors.primaryActive, bg: colors.primaryLight },
-  info: { fg: colors.info, bg: colors.infoSurface },
-  success: { fg: colors.success, bg: colors.successSurface },
-  warning: { fg: colors.warning, bg: colors.warningSurface },
-  danger: { fg: colors.danger, bg: colors.dangerSurface },
-} as const;
+const useTone = themed(
+  (colors) =>
+    ({
+      primary: { fg: colors.primaryActive, bg: colors.primaryLight },
+      info: { fg: colors.info, bg: colors.infoSurface },
+      success: { fg: colors.success, bg: colors.successSurface },
+      warning: { fg: colors.warning, bg: colors.warningSurface },
+      danger: { fg: colors.danger, bg: colors.dangerSurface },
+    }) as const,
+);
 
-export type DashboardPanelTone = keyof typeof TONE;
+export type DashboardPanelTone = keyof ReturnType<typeof useTone>;
 
 /** Đĩa hình ở đầu khối — nhỏ hơn đĩa của một ô số, vì đây là nhãn của khối chứ không phải nội dung. */
 const HEAD_DISC = 28;
@@ -81,6 +85,8 @@ export function DashboardPanel({
   action?: { label: string; onPress: () => void };
   children?: ReactNode;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const tStates = useTranslations('Common.states');
   const tActions = useTranslations('Common.actions');
   const skin = TONE[tone];

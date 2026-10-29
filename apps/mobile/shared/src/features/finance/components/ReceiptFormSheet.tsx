@@ -30,7 +30,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   RECEIPT_DESCRIPTION_MAX,
   RECEIPT_LINK_MODE,
@@ -114,6 +115,7 @@ export function ReceiptFormSheet({
   /** Xe chọn sẵn khi form mở từ sổ đang lọc theo một chiếc xe. Chỉ là giá trị KHỞI TẠO. */
   initialVehicleId?: string | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.form');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
@@ -267,9 +269,9 @@ export function ReceiptFormSheet({
         ? { bookingId: values.bookingId || undefined, vehicleId: values.vehicleId || undefined }
         : values.linkMode === RECEIPT_LINK_MODE.VEHICLE
           ? { vehicleId: values.vehicleId || undefined }
-          // Chỉ khoản KHÔNG gắn mới mang chi nhánh tự khai — gắn xe thì chi nhánh suy TỪ XE, và
-          // server từ chối nếu nhận cả hai (ADR 0052).
-          : { branchId: values.branchId || undefined };
+          : // Chỉ khoản KHÔNG gắn mới mang chi nhánh tự khai — gắn xe thì chi nhánh suy TỪ XE, và
+            // server từ chối nếu nhận cả hai (ADR 0052).
+            { branchId: values.branchId || undefined };
 
     const body: CreateReceiptInput = {
       type: values.type as CreateReceiptInput['type'],

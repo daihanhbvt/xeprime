@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { MAP_PREVIEW_RATIO } from '@/lib/map-static';
-import { colors, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius } from '@/theme/tokens';
 
 const styles = StyleSheet.create({
   frame: { width: '100%', aspectRatio: MAP_PREVIEW_RATIO },
@@ -51,6 +52,7 @@ export function MapPreview({
   /** Nội dung duy nhất trình đọc màn hình có được về tấm bản đồ. */
   accessibilityLabel?: string;
 }) {
+  const colors = useColors();
   const [failedUri, setFailedUri] = useState<string | null>(null);
   if (failedUri === uri) return null;
 

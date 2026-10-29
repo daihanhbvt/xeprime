@@ -74,9 +74,9 @@ export interface AccountNavGroup {
 const PROFILE: AccountNavItem = {
   key: 'profile',
   labelKey: 'account.profile',
-  href: ROUTES.account.home(),
+  href: ROUTES.account.profile(),
   icon: 'person-outline',
-  target: NAV_TARGET.TAB,
+  target: NAV_TARGET.SCREEN,
 };
 
 const TRIPS: AccountNavItem = {
@@ -108,7 +108,18 @@ const SECURITY: AccountNavItem = {
   href: ROUTES.account.changePassword(),
   icon: 'lock-closed-outline',
   target: NAV_TARGET.SCREEN,
-  matches: [ROUTES.account.deleteAccount()],
+};
+
+/**
+ * "Yêu cầu xoá tài khoản" — mục RIÊNG trong menu (người dùng chốt 28/10/2026), không còn chỉ nấp
+ * trong màn Bảo mật. Cùng màn `/account/delete-account`, cùng API yêu cầu xoá.
+ */
+const DELETE_ACCOUNT: AccountNavItem = {
+  key: 'deleteAccount',
+  labelKey: 'account.deleteAccount',
+  href: ROUTES.account.deleteAccount(),
+  icon: 'trash-outline',
+  target: NAV_TARGET.SCREEN,
 };
 
 /**
@@ -124,6 +135,15 @@ const PAYMENTS: AccountNavItem = {
   icon: 'wallet-outline',
   target: NAV_TARGET.SCREEN,
   matches: [ROUTES.account.payments(), ROUTES.account.bankAccounts()],
+};
+
+/** Xe yêu thích — xe khách đã lưu để xem/đặt sau (web `FAVORITES` của `account-nav.ts`). */
+const FAVORITES: AccountNavItem = {
+  key: 'favorites',
+  labelKey: 'account.favorites',
+  href: ROUTES.account.favorites(),
+  icon: 'heart-outline',
+  target: NAV_TARGET.SCREEN,
 };
 
 /**
@@ -150,9 +170,11 @@ export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   TRIPS,
   // Số dư, lịch sử thanh toán, tài khoản nhận tiền gộp thành MỘT mục (web 22/10/2026).
   PAYMENTS,
+  FAVORITES,
   DRIVING,
   // Đổi mật khẩu + yêu cầu xoá tài khoản gộp thành MỘT mục (web 22/10/2026).
   SECURITY,
+  DELETE_ACCOUNT,
   BECOME_OWNER,
 ];
 
@@ -194,8 +216,8 @@ export function resolveAccountNav(
 export function showsDeleteAccountCard(user: CurrentUser | null | undefined): boolean {
   if (!user) return false;
   return !flattenAccountNav(resolveAccountNav(user)).some(
-    // Mục "Bảo mật tài khoản" mang lối yêu cầu xoá — có nó trong menu là đã có lối vào.
-    (item) => item.key === SECURITY.key,
+    // Menu đã có mục "Yêu cầu xoá tài khoản" riêng ⇒ không vẽ thẻ thứ hai.
+    (item) => item.key === DELETE_ACCOUNT.key,
   );
 }
 

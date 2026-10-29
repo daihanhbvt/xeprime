@@ -3,14 +3,19 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
-import { applyDiscountPercent } from '@xeprime/domain';
+import { applyDiscountPercent, isZeroMoney } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { BookingReviewCosts } from './BookingReviewCosts';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { PublicQuote } from '../api';
+import { useLocalizePriceRows } from '../hooks/use-localized-price-rows';
+import { useQuoteTotal } from '../hooks/use-quote-total';
+import { visibleFeeLines } from '../customer-price-view';
 
 /** Một dòng đơn giá khi CHƯA có báo giá — bảng NIÊM YẾT, không phải breakdown. */
 interface UnitRow {
@@ -42,6 +47,7 @@ export function BookingPriceSummary({
   expanded,
   onExpandedChange,
   promoSlot,
+  showDeposit = true,
 }: {
   listing: PublicListingDetail;
   serviceType: string;
@@ -51,7 +57,7 @@ export function BookingPriceSummary({
   /** Khách đã chọn đủ (khoảng thuê, hoặc gói dài hạn) để server báo giá được chưa. */
   hasSelection: boolean;
   isDelivery?: boolean;
-  variant: 'bar' | 'detail';
+  variant: 'bar' | 'detail' | 'review';
   expanded: boolean;
   onExpandedChange: (next: boolean) => void;
   /**
@@ -61,10 +67,13 @@ export function BookingPriceSummary({
    * và nhét một ô nhập vào đó là nhét một mục tiêu chạm vào chỗ khách đang bấm "Tiếp tục".
    */
   promoSlot?: React.ReactNode;
+  /** Chỉ ở `review`: tắt dòng cọc khi màn đã vẽ cọc ở thẻ giấy tờ (web #230). */
+  showDeposit?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
-  const tPrice = useTranslations('Common.components.price');
   const domainLabel = useDomainLabel();
+  const localizeRows = useLocalizePriceRows();
   const fmt = useAppFormat();
 
   const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
@@ -85,15 +94,17 @@ export function BookingPriceSummary({
    * nhãn của thanh thu gọn. Chỉ đếm dòng phụ phí sẽ để một chuyến tuyến gói có mã hiện nhãn
    * "Tổng dự kiến" cho một con số đã trừ mã.
    */
+  // Cùng luật `customerTotalView`: dòng 0đ và dòng CHỦ XE chịu (thuế khấu trừ) không phải phụ phí khách.
   const hasFees =
-    Boolean(breakdown?.fees?.lines?.length) ||
-    Number(breakdown?.fees?.promoDiscountAmount ?? 0) > 0;
+    visibleFeeLines(breakdown?.fees?.lines ?? [], 'customer').length > 0 ||
+    !isZeroMoney(breakdown?.fees?.promoDiscountAmount ?? '0');
   const rentalLabel = breakdown?.estimateNote
     ? t('price.subtotal')
     : hasFees
       ? t('price.rentalTotal')
       : t('price.total');
-  const barLabel = hasFees ? tPrice('customerTotal') : rentalLabel;
+  // Thanh thu gọn: tên + số của dòng TỔNG — một nguồn với thẻ Xem lại và bước "Đã gửi yêu cầu".
+  const quoteTotal = useQuoteTotal(breakdown);
 
   const unitRows = buildUnitRows();
   const headline = unitRows[0];
@@ -176,6 +187,21 @@ export function BookingPriceSummary({
     ].filter(Boolean) as UnitRow[];
   }
 
+  /* Màn Xem lại: hai thẻ tiền riêng — cùng báo giá, cùng bảng niêm yết dự phòng (web develop). */
+  if (variant === 'review') {
+    return (
+      <BookingReviewCosts
+        listing={listing}
+        breakdown={hasSelection ? breakdown : null}
+        loading={hasSelection && quoteLoading}
+        isDelivery={isDelivery}
+        listedRows={unitRows}
+        promoSlot={promoSlot}
+        showDeposit={showDeposit}
+      />
+    );
+  }
+
   // Không có giá niêm yết lẫn báo giá thì "Chi tiết" chỉ mở ra một khoảng trống.
   const hasExpandable = (hasSelection && (quoteLoading || breakdown != null)) || headline != null;
   const showDetail = expanded && hasExpandable;
@@ -201,12 +227,12 @@ export function BookingPriceSummary({
       return (
         <Bar onExpand={() => onExpandedChange(true)}>
           <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-            {barLabel}
+            {quoteTotal?.label}
           </Text>
           {/* Thanh thu gọn hiện số KHÁCH TRẢ (đã gồm phụ phí) — hiện giá thuê trần ở đây rồi
               bung ra một con số lớn hơn là đúng thứ ADR 0029 cấm. */}
           <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-            {fmt.money(breakdown.fees?.customerTotalAmount ?? breakdown.totalAmount)}
+            {fmt.money(quoteTotal?.amount ?? breakdown.totalAmount)}
           </Text>
         </Bar>
       );
@@ -216,7 +242,7 @@ export function BookingPriceSummary({
       <Card>
         <YStack gap={space.sm}>
           <PriceBreakdown
-            rows={breakdown.rows}
+            rows={localizeRows(breakdown.rows, Boolean(breakdown.longTerm))}
             totalAmount={breakdown.totalAmount}
             totalLabel={rentalLabel}
             depositAmount={breakdown.depositAmount}
@@ -350,6 +376,7 @@ export function BookingPriceSummary({
 
 /** Dòng tổng dính đáy + nút MỞ. Nhãn nói VIỆC SẮP XẢY RA, không phải trạng thái hiện tại. */
 function Bar({ children, onExpand }: { children: React.ReactNode; onExpand: () => void }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow.price');
 
   return (
@@ -367,10 +394,10 @@ function Bar({ children, onExpand }: { children: React.ReactNode; onExpand: () =
       {children}
       <Pressable onPress={onExpand} accessibilityRole="button" hitSlop={space.sm}>
         <XStack ai="center" gap={2}>
-          <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {t('expand')}
           </Text>
-          <Ionicons name="chevron-down" size={iconSize.xs} color={colors.primaryActive} />
+          <Ionicons name="chevron-down" size={iconSize.xs} color={colors.primary} />
         </XStack>
       </Pressable>
     </XStack>
@@ -378,15 +405,16 @@ function Bar({ children, onExpand }: { children: React.ReactNode; onExpand: () =
 }
 
 function CollapseButton({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow.price');
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
       <XStack ai="center" jc="center" gap={2} minHeight={sizing.touchTarget - 12}>
-        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {t('collapse')}
         </Text>
-        <Ionicons name="chevron-up" size={iconSize.xs} color={colors.primaryActive} />
+        <Ionicons name="chevron-up" size={iconSize.xs} color={colors.primary} />
       </XStack>
     </Pressable>
   );

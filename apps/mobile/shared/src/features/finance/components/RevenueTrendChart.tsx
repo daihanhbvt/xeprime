@@ -4,7 +4,8 @@ import { BarChart, CurveType } from 'react-native-gifted-charts';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { chartColors, colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useChartColors, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
   axisWithDotHeadroom,
   chartValue,
@@ -66,11 +67,13 @@ const X_AXIS_LABEL_HEIGHT = 22;
  * `lineHeight` khai tường minh: bỏ trống thì RN bó dòng sát cỡ chữ và ngọn dấu tiếng Việt bị dòng
  * kẻ cắt. 1,4 lần cỡ chữ, và vẫn nhỏ hơn {@link X_AXIS_LABEL_HEIGHT} để ô chứa trọn dòng.
  */
-const AXIS_LABEL_STYLE = {
-  color: chartColors.axis,
-  fontSize: fontSize.label,
-  lineHeight: Math.round(fontSize.label * 1.4),
-} as const;
+function axisLabelStyle(color: string) {
+  return {
+    color,
+    fontSize: fontSize.label,
+    lineHeight: Math.round(fontSize.label * 1.4),
+  } as const;
+}
 
 /**
  * Tên vùng cuộn cho test.
@@ -132,6 +135,9 @@ export function RevenueTrendChart({
   /** Tên ĐẦY ĐỦ của mốc, cho thẻ chi tiết và trình đọc màn hình — trục quá hẹp để chứa nó. */
   titleOf: (bucket: string) => string;
 }) {
+  const colors = useColors();
+  const chartColors = useChartColors();
+  const AXIS_LABEL_STYLE = useMemo(() => axisLabelStyle(chartColors.axis), [chartColors.axis]);
   const t = useTranslations('Finance.entity');
   const tChart = useTranslations('Finance.overview.chart');
   const fmt = useAppFormat();
@@ -192,7 +198,7 @@ export function RevenueTrendChart({
           spacing: layout.groupGap,
         },
       ]),
-    [buckets, labelOf, layout, shownLabels],
+    [chartColors, AXIS_LABEL_STYLE, buckets, labelOf, layout, shownLabels],
   );
 
   /**
@@ -212,7 +218,7 @@ export function RevenueTrendChart({
         dataPointRadius: index === activeIndex ? ACTIVE_DOT_RADIUS : DOT_RADIUS,
         dataPointColor: chartColors.profit,
       })),
-    [buckets, activeIndex],
+    [chartColors, buckets, activeIndex],
   );
 
   const values = useMemo(
@@ -451,6 +457,7 @@ export function RevenueTrendChart({
 }
 
 function TooltipRow({ color, label, value }: { color: string; label: string; value: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={8} h={8} br={radius.pill} bg={color} />
@@ -465,6 +472,7 @@ function TooltipRow({ color, label, value }: { color: string; label: string; val
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <YStack w={8} h={8} br={radius.pill} bg={color} />

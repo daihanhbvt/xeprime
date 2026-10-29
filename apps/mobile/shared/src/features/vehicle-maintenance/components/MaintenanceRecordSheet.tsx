@@ -27,7 +27,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, fieldFontSize, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, iconSize, space } from '@/theme/tokens';
 import { maintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
 import { useSaveMaintenanceRecord, useTransitionMaintenanceRecord } from '../hooks/use-maintenance';
 import type { MaintenanceRecord } from '../api';
@@ -77,6 +78,7 @@ export function MaintenanceRecordSheet({
   canViewFiles?: boolean;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.records');
   /* Dòng chứng từ dùng CHUNG khoá với web, và khoá đó sống ở namespace `Maintenance`. */
   const tMaintenance = useTranslations('Maintenance');
@@ -359,6 +361,7 @@ function MomentField({
   label: string;
   hint?: string;
 }) {
+  const colors = useColors();
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const { field, fieldState } = useController({ control, name });

@@ -26,7 +26,8 @@ import {
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSteps';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { suggestVehicleName } from '../quick-mappers';
 import type { QuickVehicleValues } from '../quick-schema';
 
@@ -54,6 +55,7 @@ export function QuickVehicleInfoStep({
   control: Control<QuickVehicleValues>;
   setValue: UseFormSetValue<QuickVehicleValues>;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.info');
   const tForm = useTranslations('Vehicles.form');
   const domainLabel = useDomainLabel();

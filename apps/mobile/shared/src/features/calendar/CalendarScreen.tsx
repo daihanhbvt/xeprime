@@ -13,6 +13,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-booking';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -21,7 +22,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource } from './api';
 import { BulkDayBlockSheet, type BulkDayBlockState } from './components/BulkDayBlockSheet';
 import { BulkDayPriceSheet, type BulkDayPriceState } from './components/BulkDayPriceSheet';
@@ -93,6 +95,7 @@ type SheetState =
 export type CalendarShell = 'manage' | 'account';
 
 export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } = {}) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const tAccount = useTranslations('Account.calendar');
   const tCommon = useTranslations('Common.actions');
@@ -178,7 +181,8 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   }, [routeSignature, params.q, params.from, params.days, setFilters]);
 
   const canView = has(PERMISSION.CALENDAR_VIEW);
-  const canCreate = has(PERMISSION.BOOKING_CREATE);
+  // Lập đơn tay: quyền + tuyến gói. Chủ xe cá nhân chỉ còn "Khoá lịch" cho chuyến ngoài chợ.
+  const canCreate = useCanCreateBooking();
   const canBlock = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
   const canPrice = has(PERMISSION.VEHICLE_UPDATE);
 
@@ -327,6 +331,8 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             vehicleId: target.vehicleId,
             // Tên đi CÙNG id: ô lịch đã biết nó, và màn đích không phải chắc chắn hỏi lại được.
             vehicleName: resource?.name ?? target.vehicleName,
+            // Ảnh xe như web `StaffBookingDialog vehicleImageUrl` — xe nội bộ không có tin đăng.
+            ...(resource?.mainImageUrl ? { vehicleImageUrl: resource.mainImageUrl } : {}),
             pickupAt: pickupAt.toISOString(),
             returnAt: pickupAt.add(1, 'day').toISOString(),
           }),
@@ -694,6 +700,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
  * bên dưới, nơi biết lưới có đang lệch khoảng hay không.
  */
 function GridBusyOverlay() {
+  const colors = useColors();
   const t = useTranslations('Calendar');
 
   return (

@@ -30,7 +30,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { RecordPaymentSheet } from './components/RecordPaymentSheet';
 import { RefundSheet } from './components/RefundSheet';
 import { SurchargeSheet } from './components/SurchargeSheet';
@@ -112,6 +113,7 @@ function SettlementBody({
   onRefresh: () => void;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.settlement');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -439,6 +441,7 @@ function SurchargeRow({
   loading: boolean;
   onRemove: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.settlement.surcharges');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

@@ -14,7 +14,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useRecordPayment } from '../hooks/use-settlement';
 import type { RecordPaymentInput } from '../api';
 
@@ -76,6 +77,7 @@ export function RecordPaymentSheet({
   /** Số gợi ý sẵn, dạng CHUỖI như mọi số tiền đi trên dây (ADR 0007). */
   debtAmount?: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.payments');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

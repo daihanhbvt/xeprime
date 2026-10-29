@@ -18,6 +18,7 @@ import {
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -32,7 +33,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 interface ChangePasswordValues {
   currentPassword: string;
@@ -68,6 +70,7 @@ export function ChangePasswordScreen({
   variant = 'default',
 }: { variant?: 'default' | 'security' } = {}) {
   const isSecurity = variant === 'security';
+  const colors = useColors();
   const t = useTranslations('Account.changePassword');
   const tSecurity = useTranslations('Account.security');
   const tDelete = useTranslations('Account.deleteAccount');
@@ -84,6 +87,9 @@ export function ChangePasswordScreen({
    */
   const hasPassword = user?.hasPassword ?? true;
   const [formError, setFormError] = useState<string | null>(null);
+  /** Câu báo thành công đang hiện trong hộp (chỉ `variant="security"`) — `null` là hộp đóng. */
+  const [successNote, setSuccessNote] = useState<string | null>(null);
+  const tCommonActions = useTranslations('Common.actions');
   /*
    * Yêu cầu xoá đang mở (nếu có) — CÙNG khoá truy vấn với `DeleteAccountScreen`, nên hai màn đọc
    * một bản cache. Chỉ hỏi ở biến thể bảo mật.
@@ -154,7 +160,9 @@ export function ChangePasswordScreen({
         ? changeAccountPassword(values.currentPassword, values.newPassword)
         : setAccountPassword(values.newPassword),
     onSuccess: () => {
-      toast.showSuccess(hasPassword ? t('success') : t('successFirstTime'));
+      const note = hasPassword ? t('success') : t('successFirstTime');
+      if (isSecurity) setSuccessNote(note);
+      else toast.showSuccess(note);
       reset();
       void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
     },
@@ -306,9 +314,54 @@ export function ChangePasswordScreen({
           ) : null}
         </YStack>
       </Screen>
+
+      {/*
+        Khu tài khoản báo thành công bằng HỘP như web (`ChangePasswordForm appearance="account"`):
+        dấu tích tròn vành xanh, tiêu đề, câu báo, nút Xác nhận trọn bề ngang. Màn Partner giữ toast.
+      */}
+      {isSecurity ? (
+        <BottomSheet
+          open={successNote !== null}
+          onClose={() => setSuccessNote(null)}
+          footer={
+            <Button
+              label={tCommonActions('confirm')}
+              variant="gradient"
+              onPress={() => setSuccessNote(null)}
+            />
+          }
+        >
+          <YStack ai="center" gap={space.md} pt={space.xs} accessibilityRole="summary">
+            <YStack
+              w={SUCCESS_ICON}
+              h={SUCCESS_ICON}
+              br={radius.pill}
+              bw={6}
+              bc={colors.successSubtle}
+              bg={colors.successSurface}
+              ai="center"
+              jc="center"
+            >
+              <Ionicons name="checkmark-circle-outline" size={SUCCESS_GLYPH} color={colors.success} />
+            </YStack>
+            <YStack gap={2} ai="center">
+              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} ta="center">
+                {t('successTitle')}
+              </Text>
+              <Text col={colors.placeholder} fos={fontSize.body} ta="center">
+                {successNote}
+              </Text>
+            </YStack>
+          </YStack>
+        </BottomSheet>
+      ) : null}
     </>
   );
 }
+
+/** Ô dấu tích 56×56 + glyph 26px của hộp thành công web (`.successIcon`). */
+const SUCCESS_GLYPH = 26;
+const SUCCESS_ICON = 56;
 
 /**
  * Nhãn của một quy tắc. Khoá của `t()` phải TĨNH, nên mã quy tắc đi qua bảng tra này chứ không

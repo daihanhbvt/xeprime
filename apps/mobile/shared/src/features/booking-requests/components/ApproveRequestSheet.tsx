@@ -5,20 +5,22 @@ import { useTranslations } from 'use-intl';
 import {
   isBookingRequestPastDue,
   LONG_TERM_PACKAGE_MONTHS,
-  longTermReturnAt,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
+  holdWindowsPreview,
+  toHoldWindowsPreviewDto,
   type LongTermPackageMonths,
 } from '@xeprime/types';
 import {
-  appWallClockToInstant,
   appWallClockToIso,
   LIST_SEPARATOR,
+  longTermReturnFromWallClock,
   nowInAppTz,
   startOfAppDay,
   toAppTz,
   type Dayjs,
 } from '@xeprime/domain';
+import { bookingRequestsApi } from '@/api/booking-requests/api';
 import { bookingsApi } from '@/api/bookings/api';
 import { Callout } from '@/components/ui/Callout';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
@@ -30,9 +32,12 @@ import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { Chip } from '@/components/ui/Chip';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
+import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
+import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
 
 /** Giờ nhận mặc định khi điền sẵn từ một NGÀY nguyện vọng — cùng hằng với web. */
 const DEFAULT_PICKUP_HOUR = 9;
@@ -79,6 +84,7 @@ export function ApproveRequestSheet({
   onConfirm: (body?: ApproveBookingRequestInput) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -109,10 +115,44 @@ export function ApproveRequestSheet({
   const returnAt = useMemo(
     () =>
       pickupAt && effectivePackage != null
-        ? toAppTz(longTermReturnAt(appWallClockToInstant(pickupAt).toDate(), effectivePackage))
+        ? longTermReturnFromWallClock(pickupAt, effectivePackage)
         : null,
     [pickupAt, effectivePackage],
   );
+
+  /*
+   * Đọc LẠI yêu cầu mỗi lần mở tấm (như web): hai cửa sổ của khách (`approvalPreview.windows`) được
+   * server ước theo "duyệt NGAY" lúc trả dòng hộp thư — một dòng tải từ 20 phút trước sẽ hứa một
+   * cửa sổ thanh toán dài hơn thật, hoặc giấu cảnh báo `tooShort`. Cùng khoá với chi tiết yêu cầu.
+   * Trong lúc chờ thì hiện bản của dòng đang có.
+   */
+  const fresh = useQuery({
+    queryKey: queryKeys.bookingRequests.detail(request.id),
+    queryFn: () => bookingRequestsApi.detail(request.id),
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const approvalPreview =
+    (fresh.data?.id === request.id ? fresh.data.approvalPreview : request.approvalPreview) ?? null;
+
+  /*
+   * Dài hạn: hai cửa sổ của khách NẾU duyệt ngay với giờ nhận vừa chọn — CÙNG `holdWindowsPreview`
+   * server dùng cho yêu cầu theo ngày, trên trần cửa sổ của chính sách phí server trả về. Vẫn là
+   * ƯỚC TÍNH, mốc thật chốt lúc duyệt.
+   */
+  const now = useNow();
+  const longTermWindows = useMemo<ApprovalWindows | null>(() => {
+    if (!longTerm || !approvalPreview?.collectsHold || !pickupAt) return null;
+    return toHoldWindowsPreviewDto(
+      holdWindowsPreview({
+        now: new Date(now),
+        pickupAt: new Date(appWallClockToIso(pickupAt)),
+        freeCancelHours: approvalPreview.policyFreeCancelHours,
+        paymentWindowMinutes: approvalPreview.policyPaymentWindowMinutes,
+      }),
+    );
+  }, [longTerm, approvalPreview, pickupAt, now]);
 
   const quoteParams =
     longTerm && effectivePackage != null
@@ -184,7 +224,10 @@ export function ApproveRequestSheet({
 
       <Card tone="muted" lift="flat">
         <YStack gap={space.xs}>
-          <DataRow label={t('approve.vehicle')} value={request.vehicleName} />
+          <DataRow
+            label={t('approve.vehicle')}
+            value={`${request.vehicleName}${request.vehiclePlate ? `${LIST_SEPARATOR}${request.vehiclePlate}` : ''}`}
+          />
           {/*
             Nối bằng `filter(Boolean)`, không phải chuỗi mẫu: chuyến tuyến hoa hồng còn chờ duyệt
             KHÔNG trả SĐT (ADR 0028 điều 9), và `${null}` in ra đúng bốn chữ "null" ngay cạnh tên
@@ -192,9 +235,13 @@ export function ApproveRequestSheet({
           */}
           <DataRow
             label={t('approve.customer')}
-            value={[request.customerName, request.customerPhone]
-              .filter(Boolean)
-              .join(LIST_SEPARATOR)}
+            value={
+              [request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR) +
+              // Như web: số tài khoản đã xác minh đi kèm khi khách để lại số liên hệ khác nó.
+              (request.customerAccountPhone
+                ? ` (${t('customer.accountPhone', { phone: request.customerAccountPhone })})`
+                : '')
+            }
           />
           {longTerm ? (
             <DataRow
@@ -206,10 +253,27 @@ export function ApproveRequestSheet({
               }
             />
           ) : request.pickupAt && request.returnAt ? (
+            // Như web: hai mốc + thời lượng thuê.
             <DataRow
               label={t('approve.schedule')}
-              value={fmt.shortDateTimeRange(request.pickupAt, request.returnAt)}
+              value={`${fmt.rentalPoint(toAppTz(request.pickupAt))} → ${fmt.rentalPoint(
+                toAppTz(request.returnAt),
+              )}${LIST_SEPARATOR}${fmt.rentalDuration(
+                toAppTz(request.pickupAt),
+                toAppTz(request.returnAt),
+              )}`}
             />
+          ) : null}
+          {/* Như web `ApproveBookingRequestDialog` (#213): tiền thuê + tổng khách — số của server. */}
+          {request.pricing ? (
+            <>
+              <DataRow label={t('approve.rentalTotal')} value={fmt.money(request.pricing.rentalTotal)} />
+              <DataRow
+                label={t('approve.customerTotal')}
+                value={fmt.money(request.pricing.customerTotalAmount)}
+                strong
+              />
+            </>
           ) : null}
         </YStack>
       </Card>
@@ -303,13 +367,29 @@ export function ApproveRequestSheet({
         </>
       ) : null}
 
+      {/*
+        Xem trước lượt duyệt (ADR 0064): khách chuyển bao nhiêu qua QR, trả bạn bao nhiêu lúc nhận
+        xe, hoa hồng/thuế, ví điểm nhận gì — và khách có bao lâu để trả / huỷ miễn phí nếu duyệt
+        NGAY. Dài hạn legacy chưa mang gói: chỉ hiện hai cửa sổ (tiền xem ở bảng giá gói phía trên).
+      */}
+      {approvalPreview ? (
+        longTerm ? (
+          <ApprovalPreviewSummary
+            preview={approvalPreview}
+            windows={longTermWindows}
+            windowsPendingHint={t('approvalPreview.longTermPickPickup')}
+            showMoney={requestPackage != null}
+          />
+        ) : (
+          <ApprovalPreviewSummary preview={approvalPreview} />
+        )
+      ) : null}
+
       <Text col={colors.textMuted} fos={fontSize.label}>
         {t('approve.effect')}
       </Text>
       {request.deliveryRequested ? (
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('approve.deliveryNote')}
-        </Text>
+        <Callout tone="info" title={t('approve.deliveryNote')} />
       ) : null}
     </BottomSheet>
   );

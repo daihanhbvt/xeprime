@@ -149,6 +149,20 @@ describe('BookingRequestCard — Nhắn tin', () => {
 
     expect(await view.findByLabelText('Gọi Nguyễn Văn An theo số 0901234567')).toBeTruthy();
   });
+
+  it('khách để lại số khác số tài khoản: hiện thêm SĐT tài khoản, chạm là gọi', async () => {
+    const view = await renderCard(request({ customerAccountPhone: '0912345678' }));
+
+    expect(await view.findByText('SĐT tài khoản: 0912345678')).toBeTruthy();
+    expect(view.getByLabelText('Gọi số tài khoản 0912345678 của Nguyễn Văn An')).toBeTruthy();
+  });
+
+  it('không có SĐT tài khoản (server không trả): không hiện dòng nào', async () => {
+    const view = await renderCard(request({ customerAccountPhone: null }));
+
+    await view.findByText('Nguyễn Văn An');
+    expect(view.queryByText(/SĐT tài khoản/)).toBeNull();
+  });
 });
 
 describe('BookingRequestCard — lối vào hồ sơ khách / xe', () => {

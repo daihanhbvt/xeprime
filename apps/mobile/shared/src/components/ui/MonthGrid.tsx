@@ -6,7 +6,8 @@ import { useTranslations } from 'use-intl';
 import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@xeprime/domain';
 import { IconButton } from './IconButton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /** `day()` của Day.js: 0 = Chủ nhật, khớp thứ tự nhãn `Common.weekdayShort.0…6`. */
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -88,6 +89,7 @@ export function MonthGrid<TMark>({
   renderDay,
   legend,
 }: MonthGridProps<TMark>) {
+  const colors = useColors();
   const t = useTranslations('Common');
   const fmt = useAppFormat();
 
@@ -210,6 +212,7 @@ export function DayCell({
   /** Ổn định theo `YYYY-MM-DD` ở nơi gọi — không suy từ nhãn a11y (đổi theo ngôn ngữ/định dạng). */
   testID?: string;
 }) {
+  const colors = useColors();
   const label = useDayAccessibilityLabel();
   const selected = mark?.selected ?? false;
   const disabled = mark?.disabled ?? false;

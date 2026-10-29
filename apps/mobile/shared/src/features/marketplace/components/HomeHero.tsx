@@ -1,37 +1,37 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ViewStyle,
 } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  withTiming,
-} from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { images } from '@/assets';
+import { webAssetUrl } from '@/lib/web-base-url';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useAppActive } from '@/hooks/use-app-active';
 import { useScreenFocused } from '@/hooks/use-screen-focused';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import { duration, easing } from '@/theme/motion';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { duration } from '@/theme/motion';
 import type { PublicBanner } from '../api';
 
 /** Tỉ lệ ảnh banner mobile của backend (780×390) — cùng tỉ lệ web dùng dưới 640px. */
 const BANNER_RATIO = 780 / 390;
 
+/** Nhịp tự chuyển slide — 6s, cùng `BannerCarousel` của web. */
+const AUTO_ROTATE_MS = 6000;
 /**
- * Nhịp tự chuyển slide.
- *
- * 3s chứ không 6s như `BannerCarousel` của web: banner native chiếm trọn bề ngang và nằm ngay
- * đầu màn, mắt đọc hết tấm ảnh trong một cái liếc — nhịp của web được canh cho một hero rộng mà
- * người dùng còn phải quét qua chữ.
+ * Chấm CHƯA chọn nằm đè lên ẢNH banner — trắng 55% như `BannerCarousel.module.css` web. Không token
+ * nào mang độ mờ này (`color-glass*` là 5/10/32%), và nó đứng trên ảnh chứ không trên nền theme.
  */
-const AUTO_ROTATE_MS = 3000;
+const DOT_IDLE_ON_PHOTO = 'rgba(255, 255, 255, 0.55)';
 
 /**
  * Vùng banner trang chủ.
@@ -39,11 +39,12 @@ const AUTO_ROTATE_MS = 3000;
  * Chiều cao do TỈ LỆ ảnh quyết định và giữ nguyên qua cả ba trạng thái (đang tải, có banner,
  * không banner) — nhờ vậy thẻ tìm kiếm đè bên dưới không nhảy khi dữ liệu về.
  *
- * Không có banner nào đang bật thì để một nền trơn, KHÔNG viết chữ thay thế: tiêu đề của web
- * là phần dành cho SEO (`<h1>` ẩn thị giác), native không có nhu cầu đó, và một dòng chữ lớn
- * nằm giữa chỗ đáng ra là ảnh trông như trang bị lỗi.
+ * Không có banner nào đang bật ⇒ khối mặc định CÙNG KHỔ: ảnh nền + tiêu đề của design v2
+ * (`Home.hero`) — đúng như `HomeHero` bên web từ trang chủ v2. Có hay không có banner, trang
+ * không đổi hình dạng.
  */
 export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLoading: boolean }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.banner');
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(0);
@@ -56,6 +57,8 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   const activeRef = useRef(0);
 
   const focused = useScreenFocused();
+  // App xuống nền thì dừng vòng quay — không đếm giờ cho một màn không ai nhìn.
+  const appActive = useAppActive();
   const reducedMotion = useReducedMotion();
 
   const height = width / BANNER_RATIO;
@@ -87,22 +90,14 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
    */
   const count = banners.length;
   useEffect(() => {
-    if (count <= 1 || dragging || !focused || reducedMotion) return;
+    if (count <= 1 || dragging || !focused || !appActive || reducedMotion) return;
 
     const timer = setInterval(() => goTo((activeRef.current + 1) % count), AUTO_ROTATE_MS);
     return () => clearInterval(timer);
-  }, [count, dragging, focused, reducedMotion, goTo]);
+  }, [count, dragging, focused, appActive, reducedMotion, goTo]);
 
-  /*
-   * Bo hai góc DƯỚI của banner — mép trên vẫn vuông (chạm cạnh màn), mép dưới bo để ảnh mở đầu
-   * đọc như một khối nổi lên thay vì một dải chữ nhật cứng ngắt trước khi thẻ tìm kiếm đè lên.
-   * `overflow: hidden` bắt buộc đi kèm, không thì bo góc không cắt được ảnh/scrollview bên trong.
-   */
-  const heroCorners: ViewStyle = {
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-    overflow: 'hidden',
-  };
+  // Web: banner tràn viền, góc vuông, thẻ tìm kiếm nằm NGAY dưới (không đè) — chấm vì vậy thấy được.
+  const heroCorners: ViewStyle = { overflow: 'hidden' };
 
   if (isLoading) {
     return (
@@ -113,7 +108,7 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   }
 
   if (count === 0) {
-    return <YStack w="100%" h={height} bg={colors.surfaceMuted} style={heroCorners} />;
+    return <HeroFallback height={height} style={heroCorners} />;
   }
 
   return (
@@ -135,40 +130,18 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
         ))}
       </ScrollView>
 
-      {/*
-        Chỉ báo nằm TRONG khung ảnh và lùi lên trên phần thẻ tìm kiếm đè xuống (`space.xl`),
-        nếu không nó bị thẻ che mất và người dùng không biết đang ở slide thứ mấy.
-
-        Nền TRẮNG chứ không phải lớp phủ tối: ảnh banner phần lớn đã tối sẵn, thêm một mảng đen
-        mờ nữa là chấm và con số chìm vào ảnh. Trắng đục tách khỏi mọi ảnh, và chấm đang chọn
-        dùng luôn màu thương hiệu.
-
-        Một banner thì không có gì để chỉ — ẩn hẳn.
-      */}
+      {/* Chấm như `BannerCarousel.module.css` (≤640px): trái-dưới, 10px, trắng 55% · vàng đang chọn. */}
       {banners.length > 1 ? (
-        <XStack
-          pos="absolute"
-          bottom={space.xl + space.sm}
-          right={space.md}
-          ai="center"
-          gap={space.xs}
-          bg={colors.surface}
-          br={radius.pill}
-          px={space.sm}
-          py={space.xs}
-        >
+        <XStack pos="absolute" bottom={10} left={16} gap={8} pointerEvents="none">
           {banners.map((banner, index) => (
             <YStack
               key={banner.id}
-              w={index === active ? space.md : space.xs}
-              h={space.xs}
+              w={10}
+              h={10}
               br={radius.pill}
-              bg={index === active ? colors.primary : colors.border}
+              bg={index === active ? colors.primary : DOT_IDLE_ON_PHOTO}
             />
           ))}
-          <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold} marginLeft={2}>
-            {active + 1}/{banners.length}
-          </Text>
         </XStack>
       ) : null}
     </YStack>
@@ -192,43 +165,70 @@ const BannerSlide = memo(function BannerSlide({
   width: number;
   height: number;
 }) {
+  const colors = useColors();
   // Backend trả ba cỡ ảnh; native luôn bắt đầu từ bản mobile rồi mới lùi dần — tải ảnh desktop
   // trên 4G chỉ để thu nhỏ lại là lãng phí đúng thứ người dùng phải trả tiền.
-  const source = banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl;
+  const source = webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl);
 
   // Chờ RIÊNG cho tấm ảnh, tách khỏi chờ API: danh sách về không có nghĩa là ẢNH về, và
   // `<Image>` vẽ ô rỗng cho tới byte cuối — trên banner tràn viền nó đọc ra như màn hình trắng.
-  const [loaded, setLoaded] = useState(false);
-  const fade = useAnimatedStyle(() => ({
-    opacity: withTiming(loaded ? 1 : 0, {
-      duration: duration.base,
-      easing: Easing.bezier(...easing.standard),
-    }),
-  }));
-
+  /*
+   * Mờ dần do CHÍNH expo-image lo (`transition`). Bản cũ bọc ảnh trong `Animated.View` có
+   * `opacity` đọc state JS qua worklet — trên máy thật lớp đó kẹt ở 0 nên banner chỉ còn ô nền
+   * tối dù ảnh đã tải xong.
+   */
   const image = (
     <YStack w={width} h={height} bg={colors.surfaceMuted}>
-      {loaded ? null : (
-        <YStack pos="absolute" top={0} left={0} right={0} bottom={0}>
-          <Skeleton width="100%" height={height} />
-        </YStack>
-      )}
-
-      <Animated.View style={fade}>
-        <Image
-          source={{ uri: source }}
-          style={{ width, height }}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          accessibilityLabel={banner.altText}
-          onLoad={() => setLoaded(true)}
-          // Ảnh hỏng: dừng nhịp thở — chạy mãi là hứa một tấm ảnh không bao giờ tới.
-          onError={() => setLoaded(true)}
-        />
-      </Animated.View>
+      <Image
+        source={{ uri: source }}
+        style={{ width, height }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={duration.base}
+        accessibilityLabel={banner.altText}
+      />
     </YStack>
   );
 
   // Banner chỉ hiển thị: đích của nó là link web, app không mở trình duyệt ra ngoài.
   return image;
 });
+
+/**
+ * Khối mặc định khi chưa có banner — ảnh nền `hero-fallback` của web, chữ đè góc trái-trên như
+ * bản vẽ mobile v2 (`19771:52810`). Lớp mờ trắng bên trái giữ chữ tối đọc được trên ảnh.
+ */
+function HeroFallback({ height, style }: { height: number; style: ViewStyle }) {
+  const colors = useColors();
+  const t = useTranslations('Home.hero');
+
+  return (
+    <YStack w="100%" h={height} bg={colors.surfaceMuted} style={style}>
+      <Image
+        source={images.homeHeroFallback}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition="right"
+        accessibilityElementsHidden
+      />
+      <LinearGradient
+        colors={[colors.surface, 'transparent']}
+        locations={[0.25, 0.8]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <YStack px={space.md} pt={space.lg} gap={space.xs} maxWidth="70%" accessibilityRole="header">
+        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+          {t('title')}
+        </Text>
+        <Text col={colors.primary} fos={fontSize.h2} fow={fontWeight.bold}>
+          {t('titleAccent')}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('subtitle')}
+        </Text>
+      </YStack>
+    </YStack>
+  );
+}

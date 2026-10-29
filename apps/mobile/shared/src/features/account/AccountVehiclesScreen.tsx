@@ -37,7 +37,8 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import {
   DEFAULT_VEHICLE_SORT,
   VEHICLE_SORT_VALUES,
@@ -79,6 +80,7 @@ export function AccountVehiclesScreen({
 }: {
   shell?: 'account' | 'manage';
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.vehicles');
   const tVehicles = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
@@ -284,7 +286,6 @@ export function AccountVehiclesScreen({
       {/* Trang chủ Owner Lite mở đầu bằng dải tuyến như web `OwnerLiteHome`. */}
       <AccountTrackNotice />
 
-
       {/* Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN — web nói ra ở đầu lưới. */}
       {alerts.isError ? (
         <Callout tone="warning" title={tVehicles('grid.alertsErrorTitle')}>
@@ -332,15 +333,14 @@ export function AccountVehiclesScreen({
       icon={filtered ? 'search-outline' : 'car-outline'}
       title={filtered ? tVehicles('grid.noResultsTitle') : tVehicles('grid.emptyTitle')}
       description={filtered ? tVehicles('grid.noResultsBody') : tVehicles('grid.emptyBody')}
+      // Trống vì bộ lọc ⇒ "Xoá lọc"; trống thật ⇒ chỉ mô tả, không nút thêm (người dùng chốt 27/10/2026).
       {...(filtered
         ? {
             actionLabel: tActions('clear'),
             actionIcon: 'close-outline' as const,
             onAction: clearFilters,
           }
-        : canCreate
-          ? { actionLabel: t('addVehicle'), actionIcon: 'add' as const, onAction: openRegister }
-          : {})}
+        : {})}
     />
   );
 

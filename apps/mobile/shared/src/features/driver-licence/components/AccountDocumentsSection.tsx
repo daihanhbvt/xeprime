@@ -1,27 +1,29 @@
-import { Text, YStack } from 'tamagui';
+import type { LayoutChangeEvent } from 'react-native';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { AccountPanel } from '@/features/account/components/AccountPanel';
 import { DriverLicenceVerifier } from './DriverLicenceVerifier';
 
 /**
  * Khối "Giấy tờ & Xác minh" ngay trong tab Tài khoản, dưới thẻ hồ sơ (design Account / Profile) —
- * bản native của `AccountDocumentsCard` bên web. Thay cho màn riêng `/account/documents` trước đây.
- * Bước bằng lái khi đặt xe dùng cùng bộ xác thực, nên nộp ở đâu thì chỗ kia cũng thấy (ADR 0057).
+ * bản native của `AccountDocumentsCard` web: CÙNG khung `AccountPanel` với thẻ hồ sơ phía trên
+ * (bo 16, viền `color-border`, tiêu đề h3 semibold + mô tả 14 `text-tertiary`, gạch dưới đầu thẻ),
+ * bản `spacious` (khe giữa các khối 24). Bộ xác thực bên trong là `embedded` nên vẽ PHẲNG — khung
+ * đã có, không lồng thêm một thẻ thứ hai.
+ *
+ * Thay cho màn riêng `/account/documents` trước đây; `onLayout` cho màn cha cuộn thẳng tới khối
+ * này khi mở bằng link cũ (`#documents` của web). Bước bằng lái khi đặt xe dùng cùng bộ xác thực,
+ * nên nộp ở đâu thì chỗ kia cũng thấy (ADR 0057).
  */
-export function AccountDocumentsSection() {
+export function AccountDocumentsSection({
+  onLayout,
+}: {
+  onLayout?: (event: LayoutChangeEvent) => void;
+}) {
   const t = useTranslations('DriverLicence.page');
   const tn = useTranslations('Navigation.account');
   return (
-    <YStack gap={space.sm}>
-      <YStack gap={space.xs}>
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-          {tn('documents')}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('subtitle')}
-        </Text>
-      </YStack>
+    <AccountPanel title={tn('documents')} subtitle={t('subtitle')} spacious onLayout={onLayout}>
       <DriverLicenceVerifier embedded />
-    </YStack>
+    </AccountPanel>
   );
 }

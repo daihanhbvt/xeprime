@@ -9,6 +9,7 @@ import {
   rentalDurationParts,
   toAppTz,
   wholeUnits,
+  moneyInThousands,
   LIST_SEPARATOR,
   type Dayjs,
   type MoneySeparators,
@@ -44,6 +45,8 @@ export interface AppFormat {
    * độ lớn chứ không cần con số chính xác.
    */
   moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
+  /** Tính bằng nghìn: `1.350 K` (vi) · `1,350 K` (en) — như web. Dưới 1.000đ rơi về `money`. */
+  moneyThousands: (value: MoneyString | null | undefined) => string;
   /** `1.200.000 ₫/ngày` · `1,200,000 ₫/day`. `null` ⇒ "Miễn phí"/"Free". */
   pricePerDay: (value: MoneyString | null | undefined) => string;
   pricePerHour: (value: MoneyString | null | undefined) => string;
@@ -97,6 +100,11 @@ export interface AppFormat {
    */
   rentalPointCompact: (value: Dayjs, opts?: { withYear?: boolean }) => string;
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
+  /**
+   * Một số PHÚT dạng chữ: `45 phút` · `2 giờ` · `2 giờ 30 phút` — như web. Chỉ để KỂ một cửa sổ
+   * thời gian (thanh toán, huỷ miễn phí): làm tròn tới phút, âm thì 0.
+   */
+  minutesDuration: (totalMinutes: number) => string;
   /**
    * Dòng tóm tắt khoảng thuê: hai mốc gọn + thời lượng — `14/09 17:00 → 15/09 17:00 (1 ngày)`.
    *
@@ -236,6 +244,15 @@ export function createAppFormat(
     return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
   };
 
+  const minutesDuration = (totalMinutes: number) => {
+    const total = Math.max(0, Math.round(totalMinutes));
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
+    if (hours === 0) return t('units.minute', { count: minutes });
+    if (minutes === 0) return t('units.hour', { count: hours });
+    return t('units.hourAndMinute', { hours, minutes });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -251,6 +268,13 @@ export function createAppFormat(
       const parts = compactMoneyParts(value, separators, opts?.price === true ? 2 : 1);
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}` as never, { value: parts.value } as never);
+    },
+    moneyThousands: (value) => {
+      if (value === null || value === undefined || value === '') return empty;
+      const thousands = moneyInThousands(value, separators);
+      return thousands
+        ? t('units.thousands' as never, { value: thousands } as never)
+        : money(value);
     },
     pricePerDay: (value) => priceWithSuffix(value, 'perDay'),
     pricePerHour: (value) => priceWithSuffix(value, 'perHour'),
@@ -282,6 +306,7 @@ export function createAppFormat(
     },
     rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
     rentalDuration: duration,
+    minutesDuration,
     rentalRangeSummary: (from, to) => {
       /*
        * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm

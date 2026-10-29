@@ -19,8 +19,8 @@ export const VEHICLE_ICON: Record<VehicleType, IconName> = {
 };
 
 export const SERVICE_ICON: Record<ServiceType, IconName> = {
-  [SERVICE_TYPE.SELF_DRIVE]: 'key-outline',
-  [SERVICE_TYPE.WITH_DRIVER]: 'person-outline',
+  [SERVICE_TYPE.SELF_DRIVE]: 'car-outline', // web CarOutlined
+  [SERVICE_TYPE.WITH_DRIVER]: 'id-card-outline', // web IdcardOutlined
   [SERVICE_TYPE.LONG_TERM]: 'calendar-outline',
 };
 

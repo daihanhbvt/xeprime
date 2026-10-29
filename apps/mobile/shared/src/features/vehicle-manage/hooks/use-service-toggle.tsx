@@ -19,7 +19,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorCode, getErrorDetails } from '@/lib/api-client';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 
 export interface ServiceToggleState {
   /** Vì sao KHÔNG bật/tắt được — `null` = được. Nhãn đã dịch để nơi gọi hiện thẳng. */
@@ -39,6 +39,7 @@ export interface ServiceToggleState {
  * nhất một dịch vụ. Tắt một dịch vụ đang có giá chuyên biệt thì hỏi lại, vì server dọn giá mồ côi.
  */
 export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): ServiceToggleState {
+  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tCommon = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();

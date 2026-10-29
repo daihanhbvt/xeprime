@@ -1041,9 +1041,10 @@ describe('Hoàn cọc — khách chỉ đọc', () => {
       orderBy: { createdAt: 'asc' },
       select: { title: true },
     });
+    // Tiêu đề mang TÊN XE (câu chữ push 28/10/2026) — khớp khuôn, không khớp tên xe seed.
     expect(sent.map((row) => row.title)).toEqual([
-      'Hành trình của bạn đã bắt đầu',
-      'Chuyến đi đã hoàn thành',
+      expect.stringMatching(/^Bạn đã nhận xe .+/),
+      expect.stringMatching(/^Chuyến .+ đã hoàn thành$/),
     ]);
   });
 });

@@ -9,7 +9,8 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { InlineAction } from '@/components/ui/InlineAction';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import type { VehicleRegistrationSource } from '@/navigation/vehicle-registration-source';
@@ -50,6 +51,7 @@ export function QuickVehicleSuccess({
   onAddAnother: () => void;
   onDone: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.success');
   const tRequirement = useTranslations('Vehicles.publish.requirements');
   const router = useRouter();

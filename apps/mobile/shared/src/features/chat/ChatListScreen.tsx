@@ -1,11 +1,12 @@
 import type { ConversationSummary } from '@/features/chat/api';
 import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { FlatList, RefreshControl, type ListRenderItemInfo } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
-import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { ListEnd } from '@/components/ui/ListEnd';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
@@ -18,7 +19,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { ConversationRow } from './components/ConversationRow';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversationsInfinite } from './hooks/use-chat';
@@ -50,6 +52,7 @@ const conversationKey = (conversation: ConversationSummary) => conversation.id;
  * theo màn (ADR 0004, mục "Screen filters").
  */
 export function ChatListScreen({ side }: { side: ChatSide }) {
+  const colors = useColors();
   const t = useTranslations('Chat');
   const tNav = useTranslations('Navigation.manage');
   const navigateOnce = useNavigateOnce();
@@ -68,6 +71,9 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
     ...(unreadOnly ? { unreadOnly: true } : {}),
   });
 
+  // Thanh tab nổi đè lên danh sách (khu khách) — hội thoại cuối phải cuộn lên được khỏi nó.
+  const tabBarInset = useTabBarInset();
+  const listContentStyle = useMemo(() => ({ paddingBottom: space.lg + tabBarInset }), [tabBarInset]);
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
 
   const openConversation = useCallback(
@@ -96,7 +102,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
         tintColor={colors.primaryActive}
       />
     ),
-    [isRefetching, refetch],
+    [colors, isRefetching, refetch],
   );
 
   const renderRow = useCallback(
@@ -124,21 +130,21 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
 
       <YStack gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.sm}>
         <SearchInput
+          variant="boxed"
           value={search}
           onChange={setSearch}
           label={t('searchPlaceholder')}
           placeholder={t('searchPlaceholder')}
         />
-        <XStack gap={space.xs}>
-          <Chip
-            label={t('filterAll')}
-            selected={!unreadOnly}
-            onPress={() => setUnreadOnly(false)}
-          />
-          <Chip
-            label={t('filterUnread')}
-            selected={unreadOnly}
-            onPress={() => setUnreadOnly(true)}
+        {/* Cùng dải phân đoạn với màn Chuyến (người dùng chốt 28/10/2026). */}
+        <XStack>
+          <SegmentedTabs
+            items={[
+              { key: 'all', label: t('filterAll') },
+              { key: 'unread', label: t('filterUnread') },
+            ]}
+            value={unreadOnly ? 'unread' : 'all'}
+            onChange={(next) => setUnreadOnly(next === 'unread')}
           />
         </XStack>
       </YStack>
@@ -166,7 +172,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
           data={items}
           keyExtractor={conversationKey}
           renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentStyle}
           onEndReached={loadMore}
           refreshControl={refreshControl}
           /*
@@ -191,9 +197,3 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  listContent: {
-    paddingBottom: space.lg,
-  },
-});

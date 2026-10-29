@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, type ImageContentFit } from 'expo-image';
 import { StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { duration } from '@/theme/motion';
 import { Skeleton } from './Skeleton';
 
@@ -81,6 +81,7 @@ export function RemoteImage({
    */
   pendingOverlay?: ReactNode;
 }) {
+  const colors = useColors();
   const [phase, setPhase] = useState<Phase>('pending');
   /**
    * Ảnh trong instance này ĐÃ từng hiện được hay chưa — mốc phân biệt lượt tải ĐẦU với lượt THAY.

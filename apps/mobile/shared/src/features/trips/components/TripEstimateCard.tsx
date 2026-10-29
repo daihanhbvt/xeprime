@@ -3,7 +3,8 @@ import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { CustomerTripEstimate } from '../api';
 
 /**
@@ -37,6 +38,7 @@ export function TripEstimateCard({
    */
   settled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.estimate');
   const fmt = useAppFormat();
 
@@ -60,15 +62,15 @@ export function TripEstimateCard({
           <YStack gap={space.xs}>
             {/*
               Chỉ chủ xe: tổng khách trả không phải doanh thu của họ. `ownerNetAmount` do server
-              tính theo đúng công thức của ADR 0029 — client KHÔNG tự trừ ra.
+              tính và CHỈ trả cho vai chủ xe — bảng phí `fees` là bản công khai (ADR 0064). Client KHÔNG tự trừ ra.
             */}
-            {isHost && (estimate as { ownerNetAmount?: string | null }).ownerNetAmount ? (
+            {isHost && estimate.ownerNetAmount ? (
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
                 <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
                   {t('ownerNet')}
                 </Text>
                 <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.bold}>
-                  {fmt.money((estimate as { ownerNetAmount?: string | null }).ownerNetAmount!)}
+                  {fmt.money(estimate.ownerNetAmount)}
                 </Text>
               </XStack>
             ) : null}

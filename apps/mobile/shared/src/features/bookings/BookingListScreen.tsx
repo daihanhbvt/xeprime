@@ -19,7 +19,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { withBranchParam, withBranchReturn } from '@/features/branches/branch-link';
-import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -31,10 +34,11 @@ import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
 import { BookingCard } from './components/BookingCard';
 import { useBookingsPage } from './hooks/use-bookings';
+import { useCanCreateBooking } from './hooks/use-can-create-booking';
 import type { BookingListItem, BookingSort } from './api';
 
 /** Khớp `BOOKING_SORT` ở DTO backend — bốn giá trị, không nhiều hơn. */
@@ -76,11 +80,14 @@ export function BookingListScreen({
    */
   preset?: BookingListPreset;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.list');
   const tRoot = useTranslations('Bookings');
   const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
+  // Lập đơn tay: quyền + tuyến gói (web `useCanCreateBooking`).
+  const canCreate = useCanCreateBooking();
   const domainLabel = useDomainLabel();
 
   const awaitingPickup = preset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
@@ -89,7 +96,10 @@ export function BookingListScreen({
    * Bộ lọc KHỞI TẠO từ tham số route — thẻ Tổng quan mở sẵn "Đang thuê, trả sớm nhất trước" như
    * `?status=active&sort=return_asc` của web. Giá trị lạ bị bỏ qua; người dùng vẫn đổi được.
    */
-  const routeStatus = useListParam('status', awaitingPickup ? [] : BOOKING_STATUS_SELECTABLE_VALUES);
+  const routeStatus = useListParam(
+    'status',
+    awaitingPickup ? [] : BOOKING_STATUS_SELECTABLE_VALUES,
+  );
   const routeSort = useListParam('sort', BOOKING_SORT_VALUES);
   const [status, setStatus] = useState<string>(routeStatus ?? STATUS_ALL);
   /*
@@ -276,14 +286,16 @@ export function BookingListScreen({
            * rỗng bên dưới dẫn thẳng sang đó.
            */
           action={
-            permissions.has(PERMISSION.BOOKING_CREATE) && !awaitingPickup ? (
+            canCreate && !awaitingPickup ? (
               <IconButton
                 icon="add"
                 // Nút ở đầu danh sách: `Bookings.list.create` ("Tạo đơn") — đúng nút của web.
                 label={t('create')}
                 tone="primary"
                 // Bộ chọn xe mở sẵn ở chi nhánh đang lọc — gợi ý, đổi được (ADR 0052 điều 6).
-                onPress={() => navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))}
+                onPress={() =>
+                  navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))
+                }
               />
             ) : null
           }
@@ -372,25 +384,15 @@ export function BookingListScreen({
                     icon="checkmark-done-outline"
                     title={tRoot('awaitingPickup.emptyTitle')}
                     description={tRoot('awaitingPickup.emptyBody')}
-                    actionLabel={tRoot('awaitingPickup.goToAll')}
-                    onAction={() => navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId))}
+                    // Màn trống dữ liệu chỉ mô tả, không nút chuyển (người dùng chốt 27/10/2026).
                   />
                 ) : (
                   <ScreenMessage
                     icon="document-text-outline"
                     title={t('emptyTitle')}
                     description={t('emptyBody')}
-                    /*
-                      Danh sách rỗng lần đầu thì lối ra là TẠO đơn — đúng `list.createFirst` của
-                      web. Nút ở đầu màn là một icon nhỏ, còn ở đây nó là hành động duy nhất trên
-                      cả màn hình và phải đọc được thành chữ.
-                    */
-                    {...(permissions.has(PERMISSION.BOOKING_CREATE)
-                      ? {
-                          actionLabel: t('createFirst'),
-                          onAction: () => navigateOnce(ROUTES.manage.bookingCreate()),
-                        }
-                      : {})}
+                    // Màn trống dữ liệu chỉ mô tả, không nút tạo đơn (người dùng chốt 27/10/2026) —
+                    // tạo đơn vẫn có ở nút đầu màn.
                   />
                 ),
               )

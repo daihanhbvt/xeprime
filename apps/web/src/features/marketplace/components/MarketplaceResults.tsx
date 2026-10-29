@@ -9,7 +9,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import { Button, Select, Skeleton } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   DEFAULT_LISTING_SORT,
   LISTING_AMENITY_LABEL,
@@ -45,12 +45,33 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 /** Số ô khung chờ — bằng đúng cỡ trang của API để lưới không đổi hình khi dữ liệu về. */
 const SKELETON_COUNT = 12;
 
+type ViewMode = 'grid' | 'list';
+/** Khoá nhớ chế độ xem kết quả trên thiết bị — cùng tên với app native. */
+const VIEW_MODE_KEY = 'xp:marketplace-view-mode';
+
 export function MarketplaceResults() {
   return (
     <SearchExperienceProvider>
       <MarketplaceResultsContent />
     </SearchExperienceProvider>
   );
+}
+
+/** Nguồn chế độ hiển thị cho `useSyncExternalStore`: localStorage, dự phòng bộ nhớ khi bị chặn. */
+const viewModeListeners = new Set<() => void>();
+let viewModeFallback: ViewMode = 'grid';
+function subscribeViewMode(listener: () => void) {
+  viewModeListeners.add(listener);
+  return () => viewModeListeners.delete(listener);
+}
+function readViewMode(): ViewMode {
+  try {
+    const saved = window.localStorage.getItem(VIEW_MODE_KEY);
+    if (saved === 'grid' || saved === 'list') return saved;
+  } catch {
+    // Chế độ riêng tư / chặn lưu trữ: dùng bản trong bộ nhớ.
+  }
+  return viewModeFallback;
 }
 
 function MarketplaceResultsContent() {
@@ -66,8 +87,21 @@ function MarketplaceResultsContent() {
   const { data: destinations } = useAllDestinations();
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
 
-  // Chế độ hiển thị: 'grid' (mặc định) hoặc 'list' (thẻ ngang 1200px)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  /*
+   * Chế độ hiển thị: 'grid' (mặc định) hoặc 'list' (thẻ ngang). NHỚ trên thiết bị — tiện ích cá
+   * nhân, không phải dữ liệu (người dùng chốt 27/10/2026). Đọc SAU khi mount: đọc lúc render là
+   * lệch HTML giữa server và client.
+   */
+  const viewMode = useSyncExternalStore(subscribeViewMode, readViewMode, () => 'grid' as ViewMode);
+  const setViewMode = (next: ViewMode) => {
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, next);
+    } catch {
+      // Không lưu được thì chỉ mất phần "nhớ", nút vẫn đổi chế độ.
+    }
+    viewModeFallback = next;
+    viewModeListeners.forEach((listener) => listener());
+  };
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 

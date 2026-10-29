@@ -25,7 +25,8 @@ import { SelectField } from '@/components/ui/SelectField';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleOperationSettings } from './api';
 import {
@@ -137,6 +138,7 @@ function HandoverForm({
   vehicleId: string;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
@@ -300,6 +302,7 @@ function WindowsEditor({
   title: string;
   disabled: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.handover');
   const { fields, append, remove } = useFieldArray({ control, name });
   const { errors } = useFormState({ control, name });

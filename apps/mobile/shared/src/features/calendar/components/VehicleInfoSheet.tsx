@@ -15,7 +15,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CalendarResource } from '../api';
 
 /** Ảnh nhận diện ở đầu thẻ — đủ lớn để nhận ra chiếc xe, không lớn tới mức đẩy dữ liệu xuống. */
@@ -50,6 +51,7 @@ export function VehicleInfoSheet({
   onClose: () => void;
   onOpenVehicle: (vehicleId: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -215,6 +217,7 @@ function IdentityPill({
   value: string;
   strong?: boolean;
 }) {
+  const colors = useColors();
   return (
     <XStack
       ai="center"
@@ -241,6 +244,7 @@ function IdentityPill({
 
 /** Một mức giá trong khối giá — nhãn nhỏ ở trên, con số đậm ở dưới. */
 function PriceBlock({ icon, label, value }: { icon: IconName; label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} gap={2} minWidth={0}>
       <XStack ai="center" gap={4}>

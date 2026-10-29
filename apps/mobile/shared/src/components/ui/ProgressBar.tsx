@@ -1,5 +1,6 @@
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Ba vai của `status` trên `<Progress>` bên web: đang chạy · xong · vượt ngưỡng. */
 type Tone = 'active' | 'success' | 'exception';
@@ -13,11 +14,11 @@ type Size = 'sm' | 'md';
  */
 const TRACK_HEIGHT: Readonly<Record<Size, number>> = { sm: 4, md: 8 };
 
-const TONE: Readonly<Record<Tone, string>> = {
+const useTone = themed<Readonly<Record<Tone, string>>>((colors) => ({
   active: colors.primary,
   success: colors.success,
   exception: colors.danger,
-};
+}));
 
 /**
  * Thanh tiến độ — bản native của `<Progress>` (AntD).
@@ -40,6 +41,8 @@ export function ProgressBar({
   size?: Size;
   label?: string;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const clamped = Math.min(100, Math.max(0, percent));
   const height = TRACK_HEIGHT[size];
 

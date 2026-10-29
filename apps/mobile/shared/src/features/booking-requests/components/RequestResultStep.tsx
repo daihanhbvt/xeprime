@@ -1,32 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
+import { BackHandler } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  PICKUP_PREFERENCE,
-  SERVICE_TYPE,
+  BOOKING_REQUEST_RESPOND_WINDOW,
+  isAwaitingPayment,
+  type BookingHoldStatus,
   type PublicListingDetail,
 } from '@xeprime/types';
-import { dayjs } from '@xeprime/domain';
+import type { RentalMode } from '@xeprime/domain';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
 import type { BookingRequestFormValues } from '../booking-schema';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { HeaderActions } from '@/components/layout/HeaderActions';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { DataRow } from '@/components/ui/DataRow';
-import { IconButton } from '@/components/ui/IconButton';
 import { StatusIcon, STATUS_TONE } from '@/components/ui/StatusIcon';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
-import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
+import { useShopChatAvailable } from '@/features/chat/hooks/use-shop-chat-available';
+import { useTrip } from '@/features/trips/hooks/use-trips';
 import { UnpaidHoldList } from '@/features/trips/components/UnpaidHoldList';
 import type { CustomerUnpaidHolds } from '@/features/trips/api';
-import { useCopy } from '@/hooks/use-copy';
+import { useQuoteTotal } from '../hooks/use-quote-total';
+import { BookingTripCard } from './BookingTripCard';
+import { BookingResult, BookingResultTotal } from './BookingResult';
 import { type BookingBlocked } from '../hooks/use-booking-request-flow';
 import type { BookingRequestReceipt, PublicQuote } from '../api';
 
@@ -57,6 +61,7 @@ export function RequestResultStep({
   duplicate,
   receipt,
   values,
+  rentalMode,
   listing,
   quote,
   onClose,
@@ -69,6 +74,8 @@ export function RequestResultStep({
   duplicate: boolean;
   receipt: BookingRequestReceipt | null;
   values: BookingRequestFormValues;
+  /** Theo ngày / theo giờ — dòng tóm tắt dịch vụ của thẻ chuyến, như web. */
+  rentalMode: RentalMode;
   listing: PublicListingDetail;
   /**
    * Báo giá ĐÃ ÁP MÃ của chính luồng vừa gửi (`quoteWithPromo`) — cùng nguồn web đọc ở màn
@@ -80,6 +87,7 @@ export function RequestResultStep({
   /** Rời luồng sang màn thanh toán một chuyến đang giữ (`replace`) — dọn bản nháp. */
   onLeave?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const router = useRouter();
 
@@ -108,15 +116,27 @@ export function RequestResultStep({
             {unpaidHolds && unpaidHolds.items.length > 0 ? (
               <UnpaidHoldList items={unpaidHolds.items} onNavigate={onLeave} replace />
             ) : null}
-            <YStack gap={space.sm}>
+            {/*
+              Hai nút MỘT hàng có icon (người dùng chốt 28/10/2026): "Đóng" viền bên trái, "Xem
+              chuyến của tôi" vàng chính bên phải — lối đi tiếp chính là trả một chuyến đang giữ.
+            */}
+            <XStack gap={space.sm}>
               <Button
-                label={tTrips('unpaid.viewTrips')}
-                size="lg"
+                label={t('blocked.close')}
+                icon="close-outline"
                 variant="secondary"
-                onPress={goToTrips}
+                block={false}
+                onPress={onClose}
               />
-              <Button label={t('blocked.close')} variant="ghost" onPress={onClose} />
-            </YStack>
+              <YStack f={1}>
+                <Button
+                  label={tTrips('unpaid.viewTrips')}
+                  icon="car-sport-outline"
+                  variant="gradient"
+                  onPress={goToTrips}
+                />
+              </YStack>
+            </XStack>
           </YStack>
         </Screen>
       </>
@@ -172,7 +192,7 @@ export function RequestResultStep({
                 </Text>
               </YStack>
               <YStack alignSelf="stretch" gap={space.sm}>
-                <Button label={t('duplicate.viewTrips')} size="lg" onPress={goToTrips} />
+                <Button variant="gradient" icon="document-text-outline" label={t('duplicate.viewTrips')} size="lg" onPress={goToTrips} />
                 <Button label={t('duplicate.close')} variant="ghost" onPress={onClose} />
               </YStack>
             </YStack>
@@ -182,193 +202,206 @@ export function RequestResultStep({
     );
   }
 
-  return <DoneResult values={values} listing={listing} receipt={receipt} quote={quote} />;
+  return (
+    <DoneResult
+      values={values}
+      rentalMode={rentalMode}
+      listing={listing}
+      receipt={receipt}
+      quote={quote}
+    />
+  );
 }
 
 /**
- * Nhánh "đã gửi xong" — năm dòng tóm tắt cùng thứ tự với web: Xe · Thời gian · Dịch vụ · Nhận xe
- * · Tổng dự kiến.
+ * Nhánh "đã gửi xong" — thẻ chuyến đầy đủ như web (`BookingTripCard` bố cục `receipt`) kèm dòng tổng.
  *
- * Là component riêng vì nó gọi `useCopy`, mà hook không đặt được trong thân
+ * Là component riêng vì nó gọi hook (`useQuoteTotal`), mà hook không đặt được trong thân
  * `RequestResultStep` do nhánh `duplicate` return sớm.
  */
 function DoneResult({
   values,
+  rentalMode,
   listing,
   receipt,
   quote,
 }: {
   values: BookingRequestFormValues;
+  rentalMode: RentalMode;
   listing: PublicListingDetail;
   receipt: BookingRequestReceipt | null;
   quote: PublicQuote | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const router = useRouter();
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
 
-  const copy = useCopy();
+  /** Đặt ngay mà không có tiền giữ chỗ ⇒ đơn đã ra đời; còn lại là yêu cầu đang chờ chủ xe. */
+  const confirmed = Boolean(receipt?.autoAccepted);
 
-  const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
-  const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const breakdown = quote?.breakdown ?? null;
-  // Ghép bằng CHÍNH hàm server dùng để dựng chuỗi lưu xuống DB — xem `useAddressPreview`.
-  const pickupAddress = useAddressPreview(
-    values.pickupProvinceCode,
-    values.pickupWardCode,
-    values.pickupAddressLine,
+  const total = useQuoteTotal(breakdown);
+  const tNav = useTranslations('Navigation.public');
+  // Hỏi cổng nhắn tin Ở ĐÂY: ô `f={1}` bọc nút vẫn giữ chỗ khi nút tự ẩn, nên phải bỏ cả ô.
+  const canChat = useShopChatAvailable(listing.shopSlug, listing.shopChatOpen);
+
+  /*
+   * Mọi lối LUI ở màn này về TRANG CHỦ (người dùng chốt 28/10/2026): yêu cầu đã gửi xong, quay về
+   * luồng đặt xe hay trang xe là mở lại một việc đã làm xong. Gồm nút lui trên thanh đầu và phím
+   * Back của Android.
+   */
+  const goHome = useCallback(() => router.replace(ROUTES.explore.home()), [router]);
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goHome]),
   );
+
+  /*
+   * TỰ CHUYỂN khi chủ xe NHẬN chuyến — như web `BookingSuccessStep` (PR #233): theo dõi chuyến vừa
+   * gửi; khoản giữ chỗ vừa mở (chờ thanh toán) thì đưa khách thẳng sang màn thanh toán. Đơn đã ra
+   * đời ngay (`autoAccepted`) thì không theo dõi gì. Lắng nghe thêm bằng một nhịp hỏi lại định kỳ:
+   * `useTrip` chỉ tự hỏi khi ĐÃ chờ thanh toán, còn ở đây ta đang chờ chính cái mốc đó.
+   */
+  const tripId = !confirmed && receipt?.id ? receipt.id : '';
+  const tripQ = useTrip(tripId);
+  const hold = tripQ.data?.hold;
+  const awaitingPayment = hold != null && isAwaitingPayment(hold.status as BookingHoldStatus);
+  const redirected = useRef(false);
+  const { refetch } = tripQ;
+  useEffect(() => {
+    if (!tripId || awaitingPayment) return;
+    const timer = setInterval(() => void refetch(), APPROVAL_POLL_MS);
+    return () => clearInterval(timer);
+  }, [tripId, awaitingPayment, refetch]);
+  useEffect(() => {
+    if (!awaitingPayment || redirected.current || !receipt?.id) return;
+    redirected.current = true;
+    // Đường như web (người dùng chốt 28/10/2026): Chuyến của tôi → Chi tiết chuyến → Thanh toán giữ
+    // chỗ (QR). Lui từ màn QR về chi tiết chuyến, lui tiếp về Chuyến của tôi.
+    router.replace(ROUTES.booking.list());
+    router.push(ROUTES.booking.detail(receipt.id));
+    router.push(ROUTES.booking.payment(receipt.id));
+  }, [awaitingPayment, receipt?.id, router]);
+
+  /*
+   * "Xem chi tiết" ⇒ chi tiết chuyến ĐÈ LÊN danh sách "Chuyến": lui từ chi tiết về danh sách chuyến
+   * (người dùng chốt 28/10/2026), không về màn "Đã gửi" hay luồng đặt xe đã xong.
+   */
+  const openTrip = () => {
+    router.replace(ROUTES.booking.list());
+    if (receipt?.id) router.push(ROUTES.booking.detail(receipt.id));
+  };
 
   return (
     <>
-      <AppHeader right={<HeaderActions />} />
-      <Screen edges={['left', 'right', 'bottom']}>
-        <YStack ai="center" gap={layout.section} pt={layout.section}>
-          <YStack
-            alignSelf="stretch"
-            ai="center"
-            gap={space.md}
-            p={space.lg}
-            br={radius.lg}
-            bg={colors.successSurface}
-          >
-            <StatusIcon icon="checkmark" tone={STATUS_TONE.SUCCESS} />
-
-            <YStack ai="center" gap={space.xs}>
-              {/*
-                Ba chặng, ba câu. Chặng chờ tiền KHÔNG được nói "đã gửi yêu cầu, chủ xe sẽ
-                phản hồi": chuyến đã được nhận, đồng hồ đang chạy, việc tiếp theo thuộc về KHÁCH.
-              */}
-              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
-                {t('done.title')}
-              </Text>
-              {/*
-                Mã yêu cầu là thứ khách đọc cho tổng đài khi gọi hỗ trợ, nên nó phải CHÉP ĐƯỢC —
-                một chuỗi 26 ký tự đọc qua điện thoại là một chuỗi đọc sai.
-              */}
-              {receipt?.id ? (
-                <XStack ai="center" gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                    {t('done.requestCode', { code: receipt.id })}
-                  </Text>
-                  <IconButton
-                    icon="copy-outline"
-                    label={t('done.copyRequestCode')}
-                    onPress={() => void copy(receipt.id)}
-                  />
-                </XStack>
-              ) : null}
-              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                {t('done.body')}
-              </Text>
-            </YStack>
-          </YStack>
-
-          <YStack alignSelf="stretch">
-            <Card>
-              <YStack gap={space.sm}>
-                <DataRow label={t('review.vehicle')} value={listing.name} />
-
-                {/* Dài hạn CHƯA có khung giờ (ADR 0011) — thay bằng gói thuê và nguyện vọng nhận xe. */}
-                {longTerm ? (
-                  <>
-                    <DataRow
-                      label={t('review.package')}
-                      value={fmt.packageLabel(values.longTermPackageMonths) ?? '—'}
-                    />
-                    <DataRow
-                      label={t('review.pickupPreference')}
-                      value={
-                        values.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
-                          ? fmt.dateKey(values.requestedPickupDate)
-                          : domainLabel('pickupPreference', values.pickupPreference)
-                      }
-                    />
-                  </>
-                ) : (
-                  <DataRow
-                    label={t('done.time')}
-                    value={`${fmt.rentalPoint(dayjs(values.pickupAt))} → ${fmt.rentalPoint(dayjs(values.returnAt))}`}
-                  />
-                )}
-
-                <DataRow
-                  label={t('review.service')}
-                  value={
-                    domainLabel('serviceType', values.serviceType) +
-                    (withDriver && values.routeType
-                      ? ` · ${domainLabel('routeType', values.routeType)}`
-                      : '')
-                  }
+      <AppHeader onBack={goHome} right={<HeaderActions />} />
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        /*
+          Ba nút DÍNH ĐÁY, MỘT hàng (người dùng chốt 28/10/2026; Figma `21836:55889`): Trang chủ ·
+          nhắn chủ xe · Xem chi tiết. Nút nhắn tự ẩn với chủ xe cá nhân chưa có đơn (ADR 0073 —
+          `ShopChatButton` hỏi server), như web; khi đó hai nút còn lại chia hàng.
+        */
+        footer={
+          /*
+            HAI hàng (người dùng chốt 28/10/2026): "Nhắn tin cho chủ xe" trải hết hàng trên; "Trang
+            chủ" + "Xem chi tiết" hàng dưới — CẢ BA vàng gradient (người dùng chốt 28/10/2026). Nút nhắn tự ẩn với chủ xe cá nhân
+            chưa có đơn (ADR 0073) — khi đó chỉ còn hàng dưới.
+          */
+          <YStack gap={space.sm}>
+            {canChat ? (
+              <ShopChatButton
+                shopSlug={listing.shopSlug}
+                vehicleId={listing.id}
+                publicChatOpen={listing.shopChatOpen}
+                label={t('done.chatHost')}
+                variant="primary"
+              />
+            ) : null}
+            <XStack gap={space.sm}>
+              <YStack f={1}>
+                <Button
+                  label={tNav('home')}
+                  icon="home-outline"
+                  variant="gradient"
+                  onPress={goHome}
                 />
-
-                <DataRow
-                  label={t('done.pickupMethod')}
-                  value={
-                    withDriver
-                      ? t('done.driverPickup', { address: pickupAddress ?? '—' })
-                      : values.deliveryRequested
-                        ? t('pickup.delivery')
-                        : t('pickup.self')
-                  }
-                />
-
-                {/* Còn phụ phí chưa tính (`estimateNote`) thì KHÔNG gọi là "Tổng dự kiến". */}
-                {breakdown ? (
-                  <DataRow
-                    label={breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
-                    /*
-                      Số khách PHẢI CHUẨN BỊ, không phải tiền thuê: `totalAmount` là `B`, bỏ cả
-                      phụ phí lẫn mã khuyến mãi, nên màn xác nhận từng hiện một con số thứ ba
-                      khác với bảng giá vừa bấm qua (24/09/2026).
-                    */
-                    value={fmt.money(breakdown.fees?.customerTotalAmount ?? breakdown.totalAmount)}
-                    tone="price"
-                  />
-                ) : null}
               </YStack>
-            </Card>
+              <YStack f={1}>
+                <Button
+                  variant="gradient"
+                  icon="document-text-outline"
+                  label={t('done.viewDetail')}
+                  onPress={openTrip}
+                />
+              </YStack>
+            </XStack>
           </YStack>
+        }
+      >
+        {/*
+          Khung chung của hộp kết quả (web `BookingSuccessStep` → `BookingResult`). Chặng chờ tiền
+          KHÔNG tới màn này: luồng đã chuyển thẳng sang màn thanh toán của chuyến (web PR #183).
+        */}
+        <BookingResult
+          variant="sent"
+          title={confirmed ? t('done.confirmedTitle') : t('done.title')}
+          lead={
+            confirmed
+              ? t('done.autoAccepted')
+              : // Hạn thật (động theo giờ nhận, ADR 0066) hiện ở trang chuyến; ở đây chỉ nói trần.
+                t('done.pendingBody', { hours: BOOKING_REQUEST_RESPOND_WINDOW.MAX_MINUTES / 60 })
+          }
+          code={
+            receipt?.id
+              ? {
+                  label: t('done.requestCodeLabel'),
+                  value: receipt.id,
+                  copyLabel: t('done.copyRequestCode'),
+                }
+              : null
+          }
+          footer={null}
+        >
+          {/* Thẻ chuyến `receipt` + dòng tổng `BookingResultTotal` (số khách PHẢI CHUẨN BỊ). */}
+          <BookingTripCard listing={listing} values={values} rentalMode={rentalMode} variant="review">
+            {total ? (
+              <BookingResultTotal variant="sent" label={total.label} amount={total.amount} />
+            ) : null}
+          </BookingTripCard>
 
           {/*
-            Hai nhánh: tự nhận ⇒ lịch đã giữ, nói mừng; còn lại ⇒ CHƯA GIỮ XE, lời quan trọng nhất
-            của màn này (ADR 0006). Chặng CHỜ TIỀN không tới màn này: luồng đã chuyển thẳng sang màn
-            thanh toán của chuyến (web PR #183).
+            Web `BookingSuccessStep .note`: yêu cầu chờ duyệt KHÔNG giữ lịch (ADR 0044 điều 1). Nền
+            `color-primary-subtle`, bo `radius-control`, đệm `space-12`, chữ body `text-secondary`,
+            icon thông tin màu `color-warning` — không viền.
           */}
-          <XStack
-            alignSelf="stretch"
-            ai="flex-start"
-            gap={space.sm}
-            bg={receipt?.autoAccepted ? colors.successSurface : colors.warningSurface}
-            bw={1}
-            bc={receipt?.autoAccepted ? colors.success : colors.warning}
-            p={space.md}
-            br={radius.md}
-          >
-            <Ionicons
-              name={receipt?.autoAccepted ? 'checkmark-circle' : 'alert-circle'}
-              size={iconSize.md}
-              color={receipt?.autoAccepted ? colors.success : colors.warning}
-            />
-            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-              {t(receipt?.autoAccepted ? 'done.autoAccepted' : 'done.notReserved')}
-            </Text>
-          </XStack>
-
-          {/*
-            Hai lối đi, đúng cặp web bày ở đây: sang Chuyến của tôi, hoặc nhắn thẳng chủ xe.
-          */}
-          <YStack alignSelf="stretch" gap={space.sm}>
-            <Button
-              label={t('done.myTrips')}
-              size="lg"
-              onPress={() => router.replace(ROUTES.booking.list())}
-            />
-            <ChatWithShopButton vehicleId={listing.id} label={t('done.chatShop')} size="lg" />
-          </YStack>
-        </YStack>
+          {confirmed ? null : (
+            <XStack
+              ai="flex-start"
+              gap={space.sm}
+              p={NOTE_PADDING}
+              br={radius.control}
+              bg={colors.primarySubtle}
+            >
+              <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.warning} />
+              <Text f={1} col={colors.textMuted} fos={fontSize.body}>
+                {t('done.notReserved')}
+              </Text>
+            </XStack>
+          )}
+        </BookingResult>
       </Screen>
     </>
   );
 }
+
+/** Nhịp hỏi lại chuyến vừa gửi để bắt lượt chủ xe NHẬN (tự chuyển sang thanh toán). */
+const APPROVAL_POLL_MS = 15_000;
+
+/** `BookingSuccessStep .note { padding: var(--xp-space-12) }`. */
+const NOTE_PADDING = toPx(XP_TOKENS['space-12']);

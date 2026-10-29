@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { FlatList, Pressable, RefreshControl, type ListRenderItemInfo } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { HeaderChip } from '@/components/layout/HeaderChip';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { badgeOffset, CountBadge } from '@/components/ui/CountBadge';
+import { badgeOffset, CountBadge, HEADER_BADGE_MAX } from '@/components/ui/CountBadge';
 import { ListEnd } from '@/components/ui/ListEnd';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -13,8 +15,9 @@ import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useAppStyles } from '@/theme/styles';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { NotificationItem } from '@/features/notifications/api';
 import {
   useMarkAllNotificationsRead,
@@ -62,11 +65,17 @@ const notificationKey = (item: NotificationItem) => item.id;
 export function NotificationBell({
   context,
   compact = false,
+  chip = false,
 }: {
   context: NotificationContext;
   /** Vẽ nhỏ lại, vùng chạm giữ nguyên — cho thanh trên CHẬT của khu quản lý. */
   compact?: boolean;
+  /** Vòng tròn có viền + bóng như `HeaderIconButton` web — thanh trên khu khách. */
+  chip?: boolean;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Notifications');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -75,6 +84,8 @@ export function NotificationBell({
 
   const unreadCount = useBadges().notificationsUnread;
   const list = useNotificationsInfinite(open);
+  // Kéo để làm mới danh sách trong tấm (kèm số chưa đọc — `refreshBadges` nằm trong lượt đọc).
+  const pull = usePullRefresh(list.refetch);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
@@ -125,32 +136,44 @@ export function NotificationBell({
 
   return (
     <>
-      <Pressable
-        onPress={() => setOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={
-          unreadCount > 0 ? t('bellWithCount', { count: unreadCount }) : t('title')
-        }
-        hitSlop={compact ? Math.ceil((sizing.touchTarget - sizing.compactBox) / 2) : space.xs}
-        style={compact ? styles.bellCompact : styles.bell}
-      >
-        <Ionicons
-          name="notifications-outline"
-          size={compact ? iconSize.sm : iconSize.md}
-          color={colors.text}
+      {chip ? (
+        <HeaderChip
+          // Khu khách vẽ chuông bằng bộ icon nét design v2 (web `LineIcon name="bell"`).
+          icon={{ line: 'bell' }}
+          onPress={() => setOpen(true)}
+          accessibilityLabel={
+            unreadCount > 0 ? t('bellWithCount', { count: unreadCount }) : t('title')
+          }
+          badgeCount={unreadCount}
         />
-        {unreadCount > 0 ? (
-          <YStack
-            pos="absolute"
-            {...badgeOffset(
-              compact ? sizing.compactBox : sizing.touchTarget,
-              compact ? iconSize.sm : iconSize.md,
-            )}
-          >
-            <CountBadge count={unreadCount} tone="danger" size="sm" />
-          </YStack>
-        ) : null}
-      </Pressable>
+      ) : (
+        <Pressable
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            unreadCount > 0 ? t('bellWithCount', { count: unreadCount }) : t('title')
+          }
+          hitSlop={compact ? Math.ceil((sizing.touchTarget - sizing.compactBox) / 2) : space.xs}
+          style={compact ? styles.bellCompact : styles.bell}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={compact ? iconSize.sm : iconSize.md}
+            color={colors.text}
+          />
+          {unreadCount > 0 ? (
+            <YStack
+              pos="absolute"
+              {...badgeOffset(
+                compact ? sizing.compactBox : sizing.touchTarget,
+                compact ? iconSize.sm : iconSize.md,
+              )}
+            >
+              <CountBadge count={unreadCount} tone="danger" size="sm" max={HEADER_BADGE_MAX} />
+            </YStack>
+          ) : null}
+        </Pressable>
+      )}
 
       <BottomSheet
         open={open}
@@ -210,6 +233,14 @@ export function NotificationBell({
             */
             style={appStyles.fill}
             onEndReached={loadMore}
+            refreshControl={
+              <RefreshControl
+                refreshing={pull.refreshing}
+                onRefresh={pull.onRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
             ListFooterComponent={
               list.isFetchingNextPage ? ListRowSkeleton : list.hasNextPage ? null : ListEnd
             }
@@ -232,6 +263,8 @@ function NotificationRow({
   unreadLabel: string;
   onPress: (item: NotificationItem) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const isUnread = !item.readAt;
 
   return (
@@ -260,20 +293,16 @@ function NotificationRow({
           w={sizing.touchTarget}
           h={sizing.touchTarget}
           br={radius.pill}
-          /*
-           * Viên tròn luôn mang màu gold đậm của app, kể cả ở dòng đã đọc: một viên trắng/xám
-           * trên nền trắng không đọc ra là biểu tượng gì cho tới khi nhìn kỹ, còn gold đặc cho
-           * mỗi dòng một điểm neo mắt. Chưa đọc vẫn phân biệt bằng nền dòng + chấm bên phải, và
-           * viên tròn đậm thêm một bậc (`primaryActive`) để không chìm vào nền gold nhạt đó.
-           */
-          bg={isUnread ? colors.primaryActive : colors.primary}
+          // Viên `gold-soft` + icon `gold-deep` như web, đọc hay chưa đọc như nhau (web không có
+          // bản tối của gold-soft ⇒ `primaryMuted`, bậc gần nhất).
+          bg={colors.primaryMuted}
           ai="center"
           jc="center"
         >
           <Ionicons
             name={notificationIcon(item.type)}
             size={iconSize.sm}
-            color={colors.onPrimary}
+            color={colors.primaryActive}
           />
         </YStack>
 
@@ -300,7 +329,7 @@ function NotificationRow({
             w={UNREAD_DOT}
             h={UNREAD_DOT}
             br={radius.pill}
-            bg={colors.primary}
+            bg={colors.primaryActive}
             mt={space.xs}
           />
         ) : null}
@@ -309,7 +338,7 @@ function NotificationRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   bell: {
     alignItems: 'center',
     height: sizing.touchTarget,
@@ -335,4 +364,4 @@ const styles = StyleSheet.create({
   rowPressed: {
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));

@@ -38,7 +38,8 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useRegisterShop } from './hooks/use-shop';
 import { getErrorMessage } from '@/lib/get-error-message';
 
@@ -103,6 +104,7 @@ export function ShopOnboardingScreen({
   /** Cửa vào người dùng vừa bấm — đọc từ `?track=` ở file route, không đoán trong component. */
   track?: RegistrationTrack;
 }) {
+  const colors = useColors();
   const t = useTranslations('ShopOnboarding');
   const [guideOpen, setGuideOpen] = useState(false);
   const navigateOnce = useNavigateOnce();

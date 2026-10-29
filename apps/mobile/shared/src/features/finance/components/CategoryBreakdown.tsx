@@ -15,7 +15,8 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type {
   FinanceCategoryBreakdown,
   FinanceCategoryBreakdownItem,
@@ -53,6 +54,7 @@ export function CategoryBreakdown({
   loading: boolean;
   error: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.overview.categories');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();

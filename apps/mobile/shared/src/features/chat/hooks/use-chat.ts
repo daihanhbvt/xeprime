@@ -12,7 +12,7 @@ import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { ROUTES } from '@/navigation/routes';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useBadges } from '@/features/badges/hooks/use-badges';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 import { queryKeys } from '@/queries/query-keys';
 import { resolveChatInbox } from '../chat-inbox';
 
@@ -50,7 +50,7 @@ export function useConversationsInfinite(inbox: ChatInbox, filters: Conversation
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.unreadOnly ? { unreadOnly: true } : {}),
   };
-  const { counts, live } = useBadgeRealtime();
+  const { live } = useBadgeRealtime();
   const queryClient = useQueryClient();
   const appActive = useAppActive();
 
@@ -59,11 +59,12 @@ export function useConversationsInfinite(inbox: ChatInbox, filters: Conversation
    * tải lại danh sách. Đây là cầu nối mà trước đây thiếu: bản chiếu huy hiệu biết MỌI hội
    * thoại, còn listener của thread chỉ biết một.
    */
-  const watched = inbox === CHAT_INBOX.CUSTOMER ? counts.chatCustomer : counts.chatShop;
-
-  useOnBadgeChange(watched, () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(inbox) });
-  });
+  useOnBadgeSignal(
+    (counts) => (inbox === CHAT_INBOX.CUSTOMER ? counts.chatCustomer : counts.chatShop),
+    () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(inbox) });
+    },
+  );
 
   const query = useInfiniteQuery({
     // KHÔNG có `page` trong khoá — page là `pageParam` của TanStack (quy ước `*Infinite`).

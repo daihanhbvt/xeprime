@@ -11,8 +11,8 @@ import {
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePlanPromotionEnabledPassive } from '@/features/app-config/use-partner-app-config';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * "Tôi là ai trên sàn này" — MỘT nhãn, giải bằng `resolveAccountTrack` (ADR 0038).
@@ -45,17 +45,22 @@ export function AccountTrackBadge({
   variant?: 'badge' | 'plain';
   center?: boolean;
 }) {
+  const colors = useColors();
+  const PLAIN_TONE = usePlainTone();
   const t = useTranslations('Account.trackBadge');
   const { track, roleKey, planName, serviceFeePercent } = resolveAccountTrack(tenant);
   // Tên gói là thông tin gói — app Partner chỉ hiện khi nền tảng bật cờ (quy định store).
   // Chỉ hỏi cờ khi thật sự có tên gói để hiện — app khách (không gian hàng) không gọi endpoint này.
-  const showPlanName = usePlanPromotionEnabledPassive(track === ACCOUNT_TRACK.SHOP_OWNER && !!planName);
+  const showPlanName = usePlanPromotionEnabledPassive(
+    track === ACCOUNT_TRACK.SHOP_OWNER && !!planName,
+  );
 
   /** Chữ của nhãn — một nguồn cho cả hai vỏ, để `plain` không đẻ ra một bó khoá thứ hai. */
   const labelFor = () => {
     if (track === ACCOUNT_TRACK.PACKAGE_PENDING) return t('appPackagePending');
     if (track === ACCOUNT_TRACK.UNCONFIGURED) return t('appUnconfigured');
-    if (track === ACCOUNT_TRACK.SHOP_MEMBER) return t(accountTrackLabelKey(track, roleKey) ?? 'shopMember');
+    if (track === ACCOUNT_TRACK.SHOP_MEMBER)
+      return t(accountTrackLabelKey(track, roleKey) ?? 'shopMember');
     if (track === ACCOUNT_TRACK.SHOP_OWNER) {
       return planName && showPlanName ? t('shopOwnerWithPlan', { plan: planName }) : t('shopOwner');
     }
@@ -91,7 +96,9 @@ export function AccountTrackBadge({
    * của nền tảng. Dùng tông lỗi cho cả hai là gắn nhãn "hỏng" lên mọi gian hàng vừa mở.
    */
   if (track === ACCOUNT_TRACK.PACKAGE_PENDING) {
-    return <StatusBadge label={t('appPackagePending')} color={STATUS_COLOR.PROCESSING} size={size} />;
+    return (
+      <StatusBadge label={t('appPackagePending')} color={STATUS_COLOR.PROCESSING} size={size} />
+    );
   }
 
   if (track === ACCOUNT_TRACK.UNCONFIGURED) {
@@ -119,6 +126,8 @@ export function AccountTrackBadge({
         py={space.xs}
         br={radius.pill}
         bg={colors.primaryLight}
+        bw={1}
+        bc={colors.primaryMuted}
       >
         <VerifiedMark label={t('verifiedHint')} size={iconSize.sm} decorative />
         <Text
@@ -141,11 +150,11 @@ export function AccountTrackBadge({
  * Chủ gian hàng mang gold đậm (`primaryActive`, không phải `primary`): chữ trên nền sáng phải
  * đạt ngưỡng tương phản, còn `primary` là màu của MẢNG và của hình, không phải của chữ.
  */
-const PLAIN_TONE: Readonly<Record<AccountTrack, string>> = {
+const usePlainTone = themed<Readonly<Record<AccountTrack, string>>>((colors) => ({
   [ACCOUNT_TRACK.RENTER]: colors.textMuted,
   [ACCOUNT_TRACK.SHOP_OWNER]: colors.primaryActive,
   [ACCOUNT_TRACK.COMMISSION_OWNER]: colors.success,
   [ACCOUNT_TRACK.SHOP_MEMBER]: colors.textMuted,
   [ACCOUNT_TRACK.PACKAGE_PENDING]: colors.info,
   [ACCOUNT_TRACK.UNCONFIGURED]: colors.danger,
-};
+}));

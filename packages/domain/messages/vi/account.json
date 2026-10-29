@@ -317,7 +317,8 @@
     "loadError": "Không kiểm tra được yêu cầu hiện có.",
     "embeddedIntro": "Bạn sẽ xem trước những gì bị ảnh hưởng trước khi gửi. Sau khi gửi, tài khoản vẫn dùng bình thường cho tới khi XePrime xử lý xong, và bạn có thể rút yêu cầu.",
     "start": "Yêu cầu xoá tài khoản",
-    "collapse": "Để sau"
+    "collapse": "Để sau",
+    "submitShort": "Gửi yêu cầu"
   },
   "publicDeletion": {
     "eyebrow": "Tài khoản XePrime",

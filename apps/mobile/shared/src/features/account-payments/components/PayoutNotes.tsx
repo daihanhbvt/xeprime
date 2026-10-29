@@ -2,13 +2,19 @@ import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
-const strong = (chunks: ReactNode) => (
-  <Text col={colors.text} fow={fontWeight.semibold}>
-    {chunks}
-  </Text>
-);
+function StrongText({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <Text col={colors.text} fow={fontWeight.semibold}>
+      {children}
+    </Text>
+  );
+}
+
+const strong = (chunks: ReactNode) => <StrongText>{chunks}</StrongText>;
 
 /**
  * "Lưu ý khi thêm tài khoản nhận tiền" — bản native của web `PayoutNotes` (Figma `19879:74829`).
@@ -19,6 +25,7 @@ const strong = (chunks: ReactNode) => (
  * XePrime không thu phí rút.
  */
 export function PayoutNotes({ maxBusinessDays }: { maxBusinessDays?: number }) {
+  const colors = useColors();
   const t = useTranslations('AccountPayments.balance.notes');
 
   const items: ReactNode[] = [

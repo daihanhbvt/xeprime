@@ -15,7 +15,8 @@ import { useRegister } from '@/features/auth/hooks/use-auth';
 import { OtpCodeStep } from '@/features/phone-verification/components/OtpCodeStep';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Đăng ký tài khoản — bản native của nhánh đăng ký trong `AuthPanel` của web, CÙNG luồng (ADR 0060):
@@ -45,6 +46,7 @@ export function RegisterForm({
   /** Báo màn biết form đang ở bước nhập mã — màn ẩn phần mạng xã hội như web. */
   onStepChange?: (inCodeStep: boolean) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();

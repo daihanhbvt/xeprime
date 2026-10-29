@@ -19,7 +19,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useServiceToggle } from '@/features/vehicle-manage/hooks/use-service-toggle';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { VehicleDetail } from '../api';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
@@ -136,6 +137,7 @@ export function VehicleServiceChips({
   vehicle: VehicleDetail;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.basic');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();

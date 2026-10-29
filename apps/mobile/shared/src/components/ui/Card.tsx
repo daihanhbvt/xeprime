@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
+import { CardHighlightOverlay, useCardHighlightBorder } from '@/components/ui/CardHighlight';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,17 +10,19 @@ import Animated, {
 import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { elevation } from '@/theme/elevation';
+import { layout } from '@/theme/layout';
 import { duration, easing } from '@/theme/motion';
-import { colors, radius, space } from '@/theme/tokens';
+import { themed, useDarkAccentBorder } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 
 type Tone = 'surface' | 'muted' | 'accent';
 type Lift = 'flat' | 'card' | 'raised';
 
-const TONE: Record<Tone, { bg: string; border: string }> = {
+const useTone = themed<Record<Tone, { bg: string; border: string }>>((colors) => ({
   surface: { bg: colors.surface, border: colors.border },
   muted: { bg: colors.surfaceMuted, border: colors.borderSubtle },
   accent: { bg: colors.primaryLight, border: colors.primaryLight },
-};
+}));
 
 interface CardProps {
   children: ReactNode;
@@ -34,7 +38,27 @@ interface CardProps {
    * banner chẳng hạn); không đổi mặc định chung vì `radius.lg` đang khớp input/modal toàn app.
    */
   radius?: number;
+  /**
+   * Viền cùng màu nền thẻ (chỉ còn bóng) — thẻ trang chủ/kết quả của web (`.card` VehicleCard:
+   * `border: 1px solid bg-container`). Mặc định giữ viền `border` của toàn app.
+   */
+  seamless?: boolean;
+  /** Viền riêng của một thẻ cần nhấn (vd khoản giữ chỗ — `primary-border` web). */
+  borderColor?: string;
+  /**
+   * Trạng thái NHẤN = hover thẻ danh sách của web (`CustomerTripCard.module.css` `.card:hover`):
+   * viền `color-primary-glow` + nền `gradient-card-hover` (vàng 20% trên mặt thẻ). Dùng CHUNG cho
+   * mọi thẻ bấm được trong danh sách (người dùng chốt 27/10/2026). Chỉ có tác dụng khi có `onPress`.
+   */
+  pressHighlight?: boolean;
+  /**
+   * Bật SẴN đúng trạng thái trên (không cần nhấn) — thẻ đang ở GIỮA băng chuyền "Xe tiêu biểu",
+   * thay cho hover chuột của web trên màn cảm ứng (người dùng chốt 27/10/2026).
+   */
+  highlighted?: boolean;
 }
+
+
 
 /**
  * Mặt phẳng chứa nội dung. Gom bo góc + viền + bóng vào một chỗ để mọi thẻ trong app cùng độ
@@ -51,20 +75,41 @@ export function Card({
   onPress,
   accessibilityLabel,
   radius: cornerRadius = radius.lg,
+  seamless = false,
+  borderColor: borderOverride,
+  pressHighlight = false,
+  highlighted: highlightedProp = false,
 }: CardProps) {
+  const [pressed, setPressed] = useState(false);
+  const highlighted = highlightedProp || (pressHighlight && pressed);
+  const highlightBorder = useCardHighlightBorder();
+  const TONE = useTone();
   const skin = TONE[tone];
   const shadow: ViewStyle = lift === 'flat' ? {} : elevation[lift];
+  // Giao diện tối: thẻ nổi tách mục danh sách nhận viền vàng nhạt. Thẻ lồng (`flat`/`muted`),
+  // thẻ nhấn `accent` và thẻ `seamless` giữ nguyên — tránh vạch vàng khắp nơi.
+  const accentBorder = useDarkAccentBorder().borderColor;
+  const borderColor = borderOverride
+    ? borderOverride
+    : seamless
+    ? skin.bg
+    : tone === 'surface' && lift !== 'flat' && accentBorder
+      ? accentBorder
+      : skin.border;
 
   const body = (
     <YStack
       bg={skin.bg}
       br={cornerRadius}
       bw={1}
-      bc={skin.border}
+      bc={highlighted ? highlightBorder : borderColor}
       ov="hidden"
-      {...(padded ? { p: space.md } : {})}
+      {...(padded ? { p: layout.cardPad } : {})}
       style={shadow}
     >
+      {highlighted ? (
+        <CardHighlightOverlay />
+      ) : null}
       {children}
     </YStack>
   );
@@ -72,7 +117,11 @@ export function Card({
   if (!onPress) return body;
 
   return (
-    <PressableCard onPress={onPress} label={accessibilityLabel}>
+    <PressableCard
+      onPress={onPress}
+      label={accessibilityLabel}
+      {...(pressHighlight ? { onPressedChange: setPressed } : {})}
+    >
       {body}
     </PressableCard>
   );
@@ -95,10 +144,13 @@ function PressableCard({
   children,
   onPress,
   label,
+  onPressedChange,
 }: {
   children: ReactNode;
   onPress: () => void;
   label?: string;
+  /** Báo ra ngoài lúc ngón tay chạm/rời — `Card` dùng cho `pressHighlight`. */
+  onPressedChange?: (pressed: boolean) => void;
 }) {
   const pressed = useSharedValue(0);
 
@@ -119,8 +171,14 @@ function PressableCard({
       onPress={onPress}
       accessibilityRole="button"
       {...(label ? { accessibilityLabel: label } : {})}
-      onPressIn={() => to(1, duration.fast * PRESS_IN_DURATION_RATIO)}
-      onPressOut={() => to(0, duration.fast)}
+      onPressIn={() => {
+        onPressedChange?.(true);
+        to(1, duration.fast * PRESS_IN_DURATION_RATIO);
+      }}
+      onPressOut={() => {
+        onPressedChange?.(false);
+        to(0, duration.fast);
+      }}
     >
       <Animated.View style={style}>{children}</Animated.View>
     </Pressable>

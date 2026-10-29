@@ -19,7 +19,8 @@ import type { ShopProfileWithContactValues } from '@xeprime/validators';
 import type { ShopOwnerAccount } from '../api';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
 
@@ -73,6 +74,7 @@ export function ShopProfileChecklist({
   /** Ảnh đại diện tài khoản chủ — ảnh mặt tiền của `PERSONAL`. */
   ownerAvatarUrl?: string | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('Shop.checklist');
   const tPersonal = useTranslations('Shop.personal.checklist');
   const personal = kind === STOREFRONT_KIND.PERSONAL;
@@ -222,6 +224,7 @@ function Group({
   tone: 'required' | 'suggested' | 'done';
   labelOf: (item: ChecklistItem) => string;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.xs}>
       <Text

@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  RENTAL_MODE,
   API_ERROR_CODE,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
@@ -140,7 +141,7 @@ export function StaffBookingFlow({
   const router = useRouter();
 
   const [step, setStep] = useState<StaffStep>('trip');
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   // Dịch vụ của ĐƠN — mặc định tự lái; đối chiếu với năng lực xe khi hồ sơ về.
   const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
   /**
@@ -645,7 +646,7 @@ export function StaffBookingFlow({
                 {hasRange ? (
                   <>
                     <ClockCircleOutlined aria-hidden />{' '}
-                    {rentalMode === 'hourly' ? tFlow('time.modeHourly') : tFlow('time.modeDaily')} ·{' '}
+                    {rentalMode === RENTAL_MODE.HOURLY ? tFlow('time.modeHourly') : tFlow('time.modeDaily')} ·{' '}
                     {tFlow('time.changeHint')}
                   </>
                 ) : (

@@ -959,8 +959,8 @@ Mobile là **hai Expo project mỏng** + một package dùng chung (ADR 0051 §5
 
 | Package | Thư mục | App | Bundle / package id | Scheme |
 | --- | --- | --- | --- | --- |
-| `@xeprime/mobile-customer` | `apps/mobile/customer` | XePrime (khách) | `vn.xeprime.mobile` | `xeprime` |
-| `@xeprime/mobile-manage` | `apps/mobile/manage` | XePrime Partner | `vn.xeprime.partner` | `xeprimepartner` |
+| `@xeprime/mobile-customer` | `apps/mobile/customer` | XePrime (khách) | `vn.xeprime.customerapp` | `xeprime` |
+| `@xeprime/mobile-manage` | `apps/mobile/manage` | XePrime Partner | `vn.xeprime.partnerapp` | `xeprimepartner` |
 | `@xeprime/mobile-shared` | `apps/mobile/shared` | mã dùng chung của hai app | — | — |
 
 Cả ba **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile` chỉ cài

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 /**
@@ -54,6 +55,7 @@ export function IconLine({
   strong?: boolean;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" gap={space.xs}>
       <YStack pt={BASELINE_NUDGE}>

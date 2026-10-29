@@ -7,11 +7,13 @@ import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
   DRIVER_ASSIGNMENT_STATUS_META,
+  DRIVER_SOURCE,
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
   VN_PHONE_PATTERN,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -24,12 +26,19 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { useAssignDriver, useAssignableDrivers, useUpdateBooking } from '../hooks/use-bookings';
 import type { BookingDetail, UpdateBookingInput } from '../api';
 import { AssignDriverSheet } from './AssignDriverSheet';
 
 const NOTE_MAX = 2000;
+/**
+ * Giá trị chọn đại diện tài xế NGOÀI HỆ THỐNG đang ghi trên đơn (ADR 0067) — không có id liên kết,
+ * như `EXTERNAL_DRIVER` của web. Giữ nguyên là không gửi gì; sửa tên/SĐT làm ở khối Tài xế của
+ * chi tiết đơn.
+ */
+const EXTERNAL_DRIVER = '__external__';
 
 /** Suy từ CHÍNH schema — xem ghi chú ở `CreateBookingScreen`. */
 type EditFormValues = yup.InferType<ReturnType<typeof buildEditSchema>>;
@@ -73,10 +82,12 @@ export function EditBookingSheet({
   booking: BookingDetail;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.edit');
   const permissions = usePermissions();
   const tCreate = useTranslations('Bookings.create');
   const tDriver = useTranslations('Bookings.driver');
+  const tDriverBooking = useTranslations('Drivers.booking');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -88,7 +99,11 @@ export function EditBookingSheet({
   // Bộ chọn tài xế chỉ có khi đơn CHƯA giao xe — sau bàn giao tài xế đã chốt (DRIVER_ASSIGNMENT_LOCKED).
   const driverEditable =
     withDriver && isDriverReassignable(booking.status) && permissions.has(PERMISSION.DRIVER_VIEW);
-  const currentDriverId = booking.driver?.id ?? null;
+  const currentDriverId = booking.driver
+    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL
+      ? EXTERNAL_DRIVER
+      : (booking.driver.id ?? null)
+    : null;
   const [driverId, setDriverId] = useState<string | null>(currentDriverId);
   const [picking, setPicking] = useState(false);
   const [detailsSaved, setDetailsSaved] = useState(false);
@@ -139,7 +154,7 @@ export function EditBookingSheet({
     }
     if (driverChanged) {
       try {
-        await assign.mutateAsync(driverId);
+        await assign.mutateAsync({ driverId });
       } catch (error) {
         toast.showError(t('driverFailed', { error: errorMessage(error) }));
         return;
@@ -153,10 +168,12 @@ export function EditBookingSheet({
   const selectedName =
     driverId === null
       ? null
-      : driverId === booking.driver?.id
-        ? booking.driver.name
-        : (drivers.data?.find((d) => d.id === driverId)?.name ?? null);
-  const showsCurrentStatus = booking.driver && driverId === booking.driver.id;
+      : driverId === EXTERNAL_DRIVER && booking.driver
+        ? `${booking.driver.name}${LIST_SEPARATOR}${tDriverBooking('externalTag')}`
+        : driverId === booking.driver?.id
+          ? booking.driver.name
+          : (drivers.data?.find((d) => d.id === driverId)?.name ?? null);
+  const showsCurrentStatus = booking.driver?.id != null && driverId === booking.driver.id;
 
   return (
     <>
@@ -165,7 +182,7 @@ export function EditBookingSheet({
         onClose={onClose}
         title={t('title')}
         subtitle={booking.code}
-        footer={<Button label={t('save')} loading={pending} onPress={() => void submit()} />}
+        footer={<Button icon="save-outline" label={t('save')} loading={pending} onPress={() => void submit()} />}
       >
         {/* Phần đã chốt — đọc, không sửa; nói rõ vì sao ngay tại chỗ. */}
         <Card tone="muted" lift="flat">

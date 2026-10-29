@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Huy hiệu tròn quanh biểu tượng — vừa đủ ôm một icon 13pt, không lấn chỗ con số. */
 const BADGE_SIZE = 22;
@@ -43,12 +44,15 @@ export interface Metric {
 }
 
 /** Bốn vai đang dùng ở hai dải xếp hạng — nơi gọi chọn vai, không tự bốc màu. */
-export const METRIC_TONE = {
-  revenue: { fg: colors.success, bg: colors.successSurface },
-  cost: { fg: colors.danger, bg: colors.dangerSurface },
-  count: { fg: colors.info, bg: colors.infoSurface },
-  share: { fg: colors.primaryActive, bg: colors.primaryLight },
-} as const;
+export const useMetricTone = themed(
+  (colors) =>
+    ({
+      revenue: { fg: colors.success, bg: colors.successSurface },
+      cost: { fg: colors.danger, bg: colors.dangerSurface },
+      count: { fg: colors.info, bg: colors.infoSurface },
+      share: { fg: colors.primaryActive, bg: colors.primaryLight },
+    }) as const,
+);
 
 /**
  * Dải số phụ trong một thẻ danh sách — mỗi chỉ số MỘT HÀNG: huy hiệu + nhãn bên trái, giá trị
@@ -69,6 +73,7 @@ export const METRIC_TONE = {
  * khối DANH TÍNH.
  */
 export function MetricStrip({ items }: { items: readonly Metric[] }) {
+  const colors = useColors();
   return (
     <YStack borderTopWidth={1} borderTopColor={colors.borderSubtle} pt={space.xs} gap={space.xs}>
       {items.map((item) => (

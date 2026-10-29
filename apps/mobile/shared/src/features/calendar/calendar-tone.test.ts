@@ -4,15 +4,19 @@ import {
   OCCUPANCY_SOURCE_TYPE,
   type OccupancySourceType,
 } from '@xeprime/types';
-import { colors } from '@/theme/tokens';
+
 import {
-  CAL_SURFACE,
+  calSurfaceOf,
   eventTone,
   isDashedEvent,
   LEGEND_BOOKING_STATUSES,
   sourceTone,
   statusColorTone,
 } from './calendar-tone';
+import { PALETTES } from '@/theme/tokens';
+
+const colors = PALETTES.light.colors;
+const CAL_SURFACE = calSurfaceOf(colors);
 
 /** Đủ hình cho `eventTone` — nó chỉ đọc `type` và `status`. */
 const event = (type: OccupancySourceType, status?: string) =>
@@ -51,8 +55,11 @@ describe('bảng màu lưới lịch', () => {
    * thấy được trên lưới. Web đã tách bằng token `color-processing`.
    */
   it('đã xác nhận và đang thuê là HAI tông khác nhau', () => {
-    const confirmed = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.CONFIRMED));
-    const active = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.ACTIVE));
+    const confirmed = eventTone(
+      event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.CONFIRMED),
+      colors,
+    );
+    const active = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.ACTIVE), colors);
 
     expect(confirmed.bg).not.toBe(active.bg);
     expect(confirmed.fg).toBe(colors.info);
@@ -67,8 +74,8 @@ describe('bảng màu lưới lịch', () => {
    */
   it('mọi mục chú giải trạng thái dùng đúng tông của thanh event cùng trạng thái', () => {
     for (const status of LEGEND_BOOKING_STATUSES) {
-      expect(statusColorTone(BOOKING_STATUS_META[status].color)).toEqual(
-        eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, status)),
+      expect(statusColorTone(BOOKING_STATUS_META[status].color, colors)).toEqual(
+        eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, status), colors),
       );
     }
   });
@@ -88,23 +95,23 @@ describe('bảng màu lưới lịch', () => {
    * lưới thì thanh bảo dưỡng tan vào nền cột và không còn đọc ra.
    */
   it('thanh bảo dưỡng không tan vào nền cột hôm nay', () => {
-    const maintenance = eventTone(event(OCCUPANCY_SOURCE_TYPE.MAINTENANCE));
+    const maintenance = eventTone(event(OCCUPANCY_SOURCE_TYPE.MAINTENANCE), colors);
 
     expect(maintenance.bg).not.toBe(CAL_SURFACE.todayBg);
     expect(maintenance.fg).toBe(colors.eventMaintenance);
   });
 
   it('khoá xe ăn màu theo LOẠI, không theo trạng thái đơn', () => {
-    const blocked = eventTone(event(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE, 'maintenance'));
+    const blocked = eventTone(event(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE, 'maintenance'), colors);
 
     expect(blocked.fg).toBe(colors.eventBlocked);
   });
 
   /** Khoản giữ chỗ lấy màu từ META của chính loại nguồn (`WAITING` → gold), không phải hằng tay. */
   it('chờ giữ chỗ ăn màu theo META của loại nguồn', () => {
-    const held = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST));
+    const held = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST), colors);
 
-    expect(held).toEqual(sourceTone(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST));
+    expect(held).toEqual(sourceTone(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, colors));
     expect(held.fg).toBe(colors.primaryActive);
   });
 
@@ -120,7 +127,7 @@ describe('bảng màu lưới lịch', () => {
   });
 
   it('viền thanh event là màu trạng thái PHA LOÃNG, không phải màu chữ', () => {
-    const tone = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.ACTIVE));
+    const tone = eventTone(event(OCCUPANCY_SOURCE_TYPE.BOOKING, BOOKING_STATUS.ACTIVE), colors);
 
     expect(tone.border).not.toBe(tone.fg);
     expect(tone.border).not.toBe(tone.bg);

@@ -110,8 +110,13 @@
   border-radius: 12px;
 }
 
-/* Hàng chấm chỉ dành cho ảnh trượt mobile. */
-.pager {
+/* Bộ đếm + dải ảnh nhỏ chỉ dành cho ảnh trượt mobile. */
+.viewport {
+  position: relative;
+}
+
+.counter,
+.thumbs {
   display: none;
 }
 
@@ -163,66 +168,107 @@
     display: none;
   }
 
-  .pager {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: var(--xp-space-xs) 0 0;
+  /* Bộ đếm "n / N" nổi góc dưới phải ảnh — nền tối cố định vì nó nằm trên ẢNH, không trên nền trang. */
+  .counter {
+    position: absolute;
+    right: var(--xp-space-sm);
+    bottom: var(--xp-space-sm);
+    display: block;
+    margin: 0;
+    padding: 2px var(--xp-space-sm);
+    border-radius: var(--xp-border-radius-pill);
+    /*
+     * Không dùng `--xp-color-bg-overlay` (xám 45%): trên ảnh sáng chữ trắng chỉ còn ~2.9:1. Chưa có
+     * token "nền tối trên ảnh" nên giữ đen 55% (~4:1); chữ dùng token `text-on-dark`.
+     */
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--xp-color-text-on-dark);
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+    pointer-events: none;
   }
 
   /*
-   * Chấm 8px; chấm đang xem là viên thuốc 24 × 8 `Shape/gray-high` (Figma `19771:53869`). Hình chấm vẽ
-   * bằng `::before`; nút thật rộng 24 × 24 (viên thuốc: 32) — vùng chạm tối thiểu của WCAG 2.5.8, nên
-   * các chấm thưa hơn bản vẽ (bước 24 thay vì 14).
+   * Dải ảnh nhỏ 4:3 (ảnh xe là ảnh ngang), khe 8. Dải nằm trong lề `--page-gutter` của trang nên hai
+   * mép trái/phải bằng nhau, và 5 ô (một xe thường có 5 ảnh) vừa khít bề rộng nội dung:
+   * `(100% − 4 khe) / 5`, kẹp trong [56px, 88px] — màn quá hẹp giữ cỡ tối thiểu rồi cuộn thay vì co
+   * tiếp, màn rộng không phình ô. Chỉ cuộn ngang khi thật sự tràn (nhiều hơn 5 ảnh). Ảnh đang xem
+   * viền màu chính, các ảnh khác mờ — khớp app native `ListingGalleryThumbs`.
    */
-  .dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
+  .thumbs {
+    --thumb-gap: var(--xp-space-sm);
+
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: clamp(56px, calc((100% - 4 * var(--thumb-gap)) / 5), 88px);
+    gap: var(--thumb-gap);
+    margin-top: var(--xp-space-sm);
+    /* Chỉ đệm dọc cho viền/vòng focus; đệm ngang làm hai mép lệch so với nội dung trang. */
+    padding: 2px 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .thumbs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .thumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    position: relative;
     padding: 0;
+    overflow: hidden;
     border: 0;
-    background: none;
+    border-radius: var(--xp-border-radius-sm);
+    background: var(--xp-color-bg-muted);
+    opacity: 0.55;
     cursor: pointer;
+    transition: opacity 0.2s ease;
   }
 
-  .dot::before {
+  /*
+   * Viền vàng là lớp PHỦ lên ảnh, không phải `border` của ô: viền trong suốt ở ô không chọn vẫn
+   * chiếm 2px nên ảnh lùi vào và mép ô cuối trông lệch khỏi lề nội dung.
+   */
+  .thumb::after {
     content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: var(--xp-border-radius-pill);
-    background: var(--xp-color-border-strong);
-    transition:
-      width 0.2s ease,
-      background-color 0.2s ease;
+    position: absolute;
+    inset: 0;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    pointer-events: none;
+    transition: border-color 0.2s ease;
   }
 
-  .dotActive {
-    width: 32px;
+  .thumbActive {
+    opacity: 1;
   }
 
-  .dotActive::before {
-    width: 24px;
-    background: var(--xp-color-text);
+  .thumbActive::after {
+    border-color: var(--xp-color-primary);
   }
 
-  .dot:focus-visible {
-    border-radius: var(--xp-border-radius-pill);
+  .thumb:focus-visible {
     outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-    outline-offset: 0;
+    /* Vẽ vào trong: ô đầu/cuối sát mép khung cuộn, vòng ngoài sẽ bị cắt. */
+    outline-offset: -2px;
+    opacity: 1;
   }
 
-  .counter {
-    color: var(--xp-color-text-tertiary);
-    font-size: var(--xp-font-size-body-sm);
-    line-height: var(--xp-line-height-body-sm);
+  .thumbImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .photo,
-  .dot::before {
+  .thumb,
+  .thumb::after {
     transition: none;
   }
 }

@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import type { PaginationMeta } from '@xeprime/types';
 import { queryKeys } from '@/queries/query-keys';
 import { marketplaceApi, type PublicListing, type PublicShop } from '../api';
+import type { ShopListingFilters } from '@/api/marketplace/api';
 
 /** Cùng con số với lưới xe của gian hàng bên web (`ShopVehicleGrid`). */
 const PAGE_SIZE = 12;
@@ -30,13 +31,22 @@ interface ShopListingsPage {
  * Lỗi tách đôi giống `useInfinitePublicListings`: hỏng ở trang ĐẦU là màn lỗi cả khối, hỏng ở
  * trang KẾ chỉ là một dòng thử lại dưới đáy — danh sách đang xem không được biến mất.
  */
-export function useInfiniteShopListings(slug: string) {
+export function useInfiniteShopListings(slug: string, filters: ShopListingFilters = {}) {
   const query = useInfiniteQuery({
-    queryKey: queryKeys.marketplace.shopListingsInfinite(slug, { limit: PAGE_SIZE }),
+    // Bộ lọc nằm TRONG khoá: đổi tab tỉnh / chip là một danh sách khác, không phải trang tiếp theo.
+    queryKey: queryKeys.marketplace.shopListingsInfinite(slug, {
+      limit: PAGE_SIZE,
+      provinceCode: filters.provinceCode ?? null,
+      serviceType: filters.serviceType ?? null,
+      delivery: filters.delivery ? '1' : null,
+      instantBook: filters.instantBook ? '1' : null,
+      noCollateral: filters.noCollateral ? '1' : null,
+      vatInvoice: filters.vatInvoice ? '1' : null,
+    }),
     queryFn: async ({ pageParam, signal }): Promise<ShopListingsPage> => {
       const { items, meta } = await marketplaceApi.shopListings(
         slug,
-        { page: pageParam, limit: PAGE_SIZE },
+        { page: pageParam, limit: PAGE_SIZE, filters },
         signal,
       );
       return { listings: items, meta };
@@ -79,5 +89,7 @@ export function useInfiniteShopListings(slug: string) {
     fetchNextPage,
     retryInitial,
     retryNextPage,
+    /** Kéo-để-làm-mới — lời hứa cho `usePullRefresh`. */
+    refresh: refetch,
   };
 }

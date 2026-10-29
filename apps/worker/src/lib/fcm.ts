@@ -83,6 +83,10 @@ function toAdminMessage(
         // rơi về kênh dự phòng của nó nên thông báo vẫn hiện, chỉ chưa tách được âm báo chat ↔ đơn.
         // Gửi đúng id ngay từ bây giờ để ngày app khai kênh thì không phải sửa gì ở đây.
         channelId: message.androidChannelId,
+        // Âm báo MẶC ĐỊNH của máy — kênh dự phòng của Firebase trên một số máy im lặng nếu gói không
+        // khai `sound` (người dùng báo 28/10/2026: có thông báo nhưng không kêu).
+        sound: 'default',
+        defaultSound: true,
         // Gộp trên KHAY: cùng tag thì tin mới thay chỗ tin cũ. Khác `collapseKey` ở trên (cái
         // đó là gộp trên ĐƯỜNG TRUYỀN, khi máy đang offline).
         ...(message.collapseKey ? { tag: message.collapseKey } : {}),

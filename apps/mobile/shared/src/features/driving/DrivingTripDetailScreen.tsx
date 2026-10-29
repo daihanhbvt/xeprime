@@ -3,10 +3,7 @@ import { Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  API_ERROR_CODE,
-  isDriverTripAwaitingAnswer,
-} from '@xeprime/types';
+import { API_ERROR_CODE, isDriverTripAwaitingAnswer } from '@xeprime/types';
 import { LIST_SEPARATOR, mapExternalUrl, mapSearchUrl, toGeoPoint } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -26,8 +23,10 @@ import { getErrorCode } from '@/lib/api-client';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { DrivingTripBookingBadge, DrivingTripStatusBadge } from './components/DrivingTripTags';
+import { DriverRespondCountdown } from './components/DriverRespondCountdown';
 import { useAcceptDriverTrip, useDeclineDriverTrip, useDriverTrip } from './hooks';
 
 /** Có toạ độ thì mở đúng điểm (ADR 0061); chỉ có địa chỉ chữ thì tìm theo chữ. */
@@ -41,6 +40,7 @@ function placeMapUrl(
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
+  const colors = useColors();
   return (
     <Card>
       <YStack gap={space.sm}>
@@ -60,6 +60,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
  * Gọi điện (`tel:`) và mở bản đồ đi qua ứng dụng của máy.
  */
 export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
+  const colors = useColors();
   const t = useTranslations('Driving.detail');
   const tToast = useTranslations('Driving.toast');
   const tActions = useTranslations('Common.actions');
@@ -161,6 +162,7 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
                   {t('pendingBody')}
                 </Text>
+                <DriverRespondCountdown respondBy={trip.respondBy} />
                 <XStack gap={space.sm}>
                   <YStack flexShrink={0}>
                     <Button

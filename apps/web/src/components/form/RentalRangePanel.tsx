@@ -27,6 +27,7 @@ import {
 import styles from './RentalRangePanel.module.css';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { useLocale } from 'next-intl';
+import { RENTAL_MODE } from '@xeprime/types';
 
 /** Định nghĩa gốc ở `@xeprime/domain` (search-draft) — bản nháp tìm kiếm mang chính giá trị này. */
 export type { RentalMode } from '@xeprime/domain';
@@ -231,7 +232,7 @@ export function RentalRangePanel({
   function switchMode(next: RentalMode) {
     onModeChange(next);
     // Sang tab giờ: chuẩn hoá ngay giá trị về "bắt đầu + thời lượng" để hai tab không đá nhau.
-    if (next === 'hourly') setHourly(hourlyStart, hourlyDuration);
+    if (next === RENTAL_MODE.HOURLY) setHourly(hourlyStart, hourlyDuration);
   }
 
   const complete = Boolean(value.pickupAt && value.returnAt);
@@ -312,8 +313,8 @@ export function RentalRangePanel({
         >
           {(
             [
-              { key: 'daily', label: t('components.rentalRange.modeDaily') },
-              { key: 'hourly', label: t('components.rentalRange.modeHourly') },
+              { key: RENTAL_MODE.DAILY, label: t('components.rentalRange.modeDaily') },
+              { key: RENTAL_MODE.HOURLY, label: t('components.rentalRange.modeHourly') },
             ] as const
           ).map((tab) => (
             <button
@@ -330,7 +331,7 @@ export function RentalRangePanel({
         </div>
       )}
 
-      {mode === 'daily' ? (
+      {mode === RENTAL_MODE.DAILY ? (
         <>
           <DayPicker
             mode="range"
@@ -495,7 +496,7 @@ export function RentalRangePanel({
 
       <div className={styles.footer}>
         {/* Chú giải màu — Figma 20/08. Chỉ hiện khi lịch THẬT SỰ có ngày bận để tô. */}
-        {mode === 'daily' && busyDays.size > 0 ? (
+        {mode === RENTAL_MODE.DAILY && busyDays.size > 0 ? (
           <ul className={styles.legend}>
             {(
               [

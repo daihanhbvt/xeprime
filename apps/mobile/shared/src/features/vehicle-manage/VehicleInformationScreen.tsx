@@ -29,11 +29,13 @@ import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { branchMapUri } from '@/lib/map-static';
 import { useAuthImageHeaders } from '@/lib/use-auth-image-headers';
-import { useErrorMessage } from '@/i18n/use-error-message';
+// Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
+import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { VehicleDetail } from '@/features/vehicles/api';
 import { VehicleManageShell } from './components/VehicleManageShell';
 
@@ -102,7 +104,7 @@ function InformationForm({
   const tEdit = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
+  const errorMessage = usePlanAwareErrorMessage();
   const update = useUpdateVehicle(vehicleId);
 
   /*
@@ -279,6 +281,7 @@ function InformationForm({
       {canEdit ? (
         <YStack gap={space.sm}>
           <Button
+            icon="save-outline"
             label={tActions('saveChanges')}
             disabled={!formState.isDirty}
             loading={update.isPending}
@@ -314,6 +317,7 @@ function InformationForm({
  * có sẵn, không bao giờ để trống thẻ.
  */
 function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const colors = useColors();
   const [editing, setEditing] = useState(false);
   const t = useTranslations('VehicleManage.information');
   const tAddress = useTranslations('Address');

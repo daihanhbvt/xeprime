@@ -1,61 +1,41 @@
+import { useState, type ReactNode, type RefObject } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
-import { Controller } from 'react-hook-form';
+import { Pressable, type View } from 'react-native';
+import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  appliesExcessMileage,
-  longTermReturnAt,
-  PICKUP_PREFERENCE,
-  ROUTE_TYPE,
-  SERVICE_TYPE,
+  COLLATERAL_MODE,
+  HOLD_PAYMENT_WINDOW_MINUTES,
+  isSameVnPhone,
   type PublicListingDetail,
 } from '@xeprime/types';
-import {
-  dayjs,
-  DAY_PARAM_FORMAT,
-  nowInAppTz,
-  type RentalMode,
-  LIST_SEPARATOR,
-} from '@xeprime/domain';
-import type { BookingRequestFormValues } from '../booking-schema';
-import type { RequestForm } from '../RequestBookingScreen';
-import { Callout, CalloutBody } from '@/components/ui/Callout';
+import { type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
+import type { DriverLicence } from '@/api/driver-licence/api';
 import { CheckMark } from '@/components/ui/CheckMark';
 import { FormSection } from '@/components/ui/FormSection';
-import { DataRow } from '@/components/ui/DataRow';
+import { TextField } from '@/components/ui/TextField';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
-import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import type { BookingRequestFormValues } from '../booking-schema';
+import { CUSTOMER_NAME_MAX, NOTE_MAX } from '../booking-schema';
+import type { RequestForm } from '../RequestBookingScreen';
 import { DeliveryEstimate } from './RequestTripStep';
-import { usePublicQuote } from '../hooks/use-booking-request-flow';
-import { toQuoteParams } from '../quote-params';
+import { BookingTripCard } from './BookingTripCard';
+import {
+  useCustomerCostView,
+  type CustomerCostBreakdown,
+} from '../hooks/use-customer-cost-view';
 
-/**
- * Nguyện vọng nhận xe linh hoạt được diễn giải thành một KHOẢNG gợi ý, không phải ngày cụ thể
- * của đơn — cùng hai mốc với web.
- */
-const PICKUP_WINDOW_START_DAYS = 1;
-const PICKUP_WINDOW_END_DAYS = 7;
+/** Chuyện xảy ra sau khi gửi — cùng bốn nhánh `BookingReviewNextStep` của web. */
+export type BookingReviewNextStep = 'instantHold' | 'instantConfirmed' | 'hold' | 'general';
 
-/**
- * Bước "Xác nhận" — tóm tắt những gì sắp gửi, và **báo giá của SERVER**.
- *
- * Không có phép nhân nào ở client: giá có bậc cuối tuần, ngày lễ và ưu đãi cam kết thời hạn, nên
- * mọi bản tính lại ở đây đều lệch với con số gian hàng nhìn thấy khi duyệt. Vẫn là ƯỚC TÍNH cho
- * tới lúc gian hàng duyệt (ADR 0014).
- */
-export function RequestReviewStep({
-  values,
-  form,
-  listing,
-  rentalMode,
-  renter,
-}: {
+interface RequestReviewStepProps {
   values: BookingRequestFormValues;
-  /** Cùng form của bước Chuyến đi — `DeliveryEstimate` theo dõi địa chỉ giao qua `control`. */
+  /** Cùng form của bước Chuyến đi — ô lời nhắn và ô đồng ý ghi vào đây. */
   form: RequestForm;
   listing: PublicListingDetail;
   /** Cách tính thời gian đang chọn — vào dòng "Hình thức", đúng như web. */
@@ -64,301 +44,393 @@ export function RequestReviewStep({
    * Người thuê = TÀI KHOẢN đang đăng nhập (ADR 0060) — server đọc đúng họ tên + SĐT đó để ghi vào
    * yêu cầu. Chỉ đọc: đổi số là việc của màn tài khoản, không phải của một lượt đặt xe.
    */
-  renter: { name: string; phone: string | null; verified: boolean } | null;
-}) {
+  renter: { name: string; phone: string | null; email: string | null; verified: boolean } | null;
+  /** Chuyến cần bằng lái (tự lái/dài hạn — ADR 0057) và bằng ĐÃ XÁC THỰC của tài khoản. */
+  licence: { required: boolean; current: DriverLicence | null };
+  /** Ô đồng ý có phủ điều khoản của CHỦ XE không — đổi câu đồng ý (`bookingCheckHost`). */
+  agreementCoversHostTerms: boolean;
+  nextStep: BookingReviewNextStep;
+  /** Khách bấm gửi khi chưa tick ô đồng ý. */
+  agreementMissing: boolean;
+  /** Gắn vào khối ô đồng ý — màn cha cuộn tới đó khi khách bấm Gửi mà chưa tick. */
+  consentRef?: RefObject<View | null>;
+  /** Báo giá đã áp mã — để đọc CỌC THẾ CHẤP khi nhận xe (vẽ ở thẻ giấy tờ, như web #230). */
+  breakdown: CustomerCostBreakdown | null;
+  isDelivery: boolean;
+  disabled?: boolean;
+  /** Hai thẻ tiền (`BookingPriceSummary variant="review"`) — kèm ô áp mã khuyến mãi. */
+  costs?: ReactNode;
+}
+
+/**
+ * Màn "Xem lại yêu cầu thuê xe" — bản native của `BookingReviewStep` bên web (#205): chuyến ·
+ * người thuê + lời nhắn · giấy tờ & điều kiện · ô đồng ý BẮT BUỘC · chuyện xảy ra sau khi gửi.
+ *
+ * Tiền là **báo giá của SERVER** (slot `costs` do màn cha truyền, đặt trước ô đồng ý như web) — không có
+ * phép nhân nào ở đây. Nút gửi nằm ở khối dính đáy của màn cha (bản native của nút trong thẻ đồng
+ * ý bên web: trên điện thoại nút chính luôn ở tầm ngón cái).
+ */
+export function RequestReviewStep({
+  values,
+  form,
+  listing,
+  rentalMode,
+  renter,
+  licence,
+  agreementCoversHostTerms,
+  nextStep,
+  agreementMissing,
+  consentRef,
+  breakdown,
+  isDelivery,
+  costs,
+}: RequestReviewStepProps) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
+  const tLegal = useTranslations('Legal');
+  const tPrice = useTranslations('Common.components.price');
+  // Cọc thế chấp khi nhận xe — điều kiện NHẬN XE, trao tay chủ xe, nên nằm ở thẻ giấy tờ (web #230).
+  const { deposit } = useCustomerCostView({ listing, breakdown, isDelivery });
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-
-  const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
 
   /** Điều khoản chủ xe cho ĐÚNG dịch vụ đang chọn — cùng phép chọn với web và với lượt gửi. */
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === values.serviceType) ?? null;
-  const requiresTermsAcceptance = Boolean(activeTerms?.requireTermsAcceptance);
-  const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
-  /*
-   * Hai chuỗi địa chỉ để soát lại. Ghép bằng CHÍNH hàm server dùng (`formatAddress`), nên thứ
-   * khách đọc ở đây là đúng thứ sẽ được lưu (ADR 0035 điều 3).
-   */
-  const pickupAddress = useAddressPreview(
-    values.pickupProvinceCode,
-    values.pickupWardCode,
-    values.pickupAddressLine,
-  );
-  const deliveryAddress = useAddressPreview(
-    values.deliveryProvinceCode,
-    values.deliveryWardCode,
-    values.deliveryAddressLine,
-  );
-  const quote = usePublicQuote(listing.id, toQuoteParams(values));
-
-  /**
-   * Ngày trả DỰ KIẾN của gói dài hạn = ngày nhận + N THÁNG LỊCH.
-   *
-   * `longTermReturnAt` — hàm DUY NHẤT được phép suy ngày trả của gói dài hạn (ADR 0011); tuyệt
-   * đối không nhân `số tháng × 30`, phép đó sai đúng vào các tháng 28/30/31 ngày. Vẫn là con số
-   * DỰ KIẾN: giờ nhận do gian hàng chốt khi duyệt, và SERVER mới là nơi tính ngày trả thật.
-   */
-  const expectedReturn =
-    longTerm &&
-    values.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE &&
-    values.requestedPickupDate &&
-    values.longTermPackageMonths
-      ? longTermReturnAt(dayjs(values.requestedPickupDate).toDate(), values.longTermPackageMonths)
-      : null;
-
+  const verifiedLicence = licence.required ? licence.current : null;
+  const licenceMeta = verifiedLicence
+    ? [
+        verifiedLicence.classes.length
+          ? t('reviewPage.requirements.licenceClasses', {
+              classes: verifiedLicence.classes.join(', '),
+            })
+          : null,
+        verifiedLicence.noExpiry
+          ? t('reviewPage.requirements.licenceNoExpiry')
+          : verifiedLicence.expiresOn
+            ? t('reviewPage.requirements.licenceExpires', {
+                date: fmt.dateKey(verifiedLicence.expiresOn),
+              })
+            : null,
+      ]
+        .filter(Boolean)
+        .join(LIST_SEPARATOR)
+    : '';
+  const hostDocuments = activeTerms?.requiredDocuments ?? [];
   return (
     <YStack gap={space.lg}>
-      {/* Cùng thứ tự dòng với `<dl className={styles.reviewList}>` của web, không thiếu dòng nào. */}
-      <FormSection title={t('review.vehicle')} icon="document-text-outline">
-        <YStack gap={space.sm}>
-          <DataRow label={t('review.vehicle')} value={listing.name} />
+      <YStack gap={space.xs}>
+        <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} accessibilityRole="header">
+          {t('reviewPage.title')}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('reviewPage.description')}
+        </Text>
+      </YStack>
 
-          {renter ? (
-            <RenterRow name={renter.name} phone={renter.phone} verified={renter.verified} />
-          ) : null}
+      {/*
+        Thẻ chuyến biến thể `review` — Figma `21850:69704` + web `BookingTripCard variant="review"`:
+        ảnh lớn, tên + thông số căn giữa, khung lịch có icon tròn, nơi nhận xe, chủ xe + tóm tắt
+        "dịch vụ · thời lượng" vàng. Ước tính giao xe (không nằm trong tổng — ADR 0018) chen giữa.
+      */}
+      <BookingTripCard
+        listing={listing}
+        values={values}
+        rentalMode={rentalMode}
+        variant="review"
+        showMileage
+      >
+        {values.deliveryRequested ? <DeliveryEstimate form={form} vehicleId={listing.id} /> : null}
+      </BookingTripCard>
 
-          <DataRow
-            label={t('review.service')}
-            value={
-              domainLabel('serviceType', values.serviceType) +
-              (withDriver && values.routeType
-                ? ` · ${domainLabel('routeType', values.routeType)}`
-                : '')
-            }
-          />
-
-          {longTerm ? (
-            <>
-              <DataRow
-                label={t('review.package')}
-                value={fmt.packageLabel(values.longTermPackageMonths) ?? '—'}
-              />
-              <DataRow
-                label={t('review.pickupPreference')}
-                value={
-                  domainLabel('pickupPreference', values.pickupPreference) +
-                  (values.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE &&
-                  values.requestedPickupDate
-                    ? ` · ${fmt.dateKey(values.requestedPickupDate)}`
-                    : ` · ${t('longTerm.windowValue', {
-                        start: nowInAppTz().add(PICKUP_WINDOW_START_DAYS, 'day').format('DD/MM'),
-                        end: fmt.dateKey(
-                          nowInAppTz().add(PICKUP_WINDOW_END_DAYS, 'day').format(DAY_PARAM_FORMAT),
-                        ),
-                      })}`)
-                }
-              />
-              {/* Ngày trả dự kiến chỉ nói được khi khách đã chọn một ngày cụ thể (ADR 0011). */}
-              {expectedReturn ? (
-                <DataRow
-                  label={t('review.expectedReturn')}
-                  value={t('review.expectedReturnValue', {
-                    date: fmt.dateKey(dayjs(expectedReturn).format(DAY_PARAM_FORMAT)),
-                  })}
-                />
-              ) : null}
-            </>
-          ) : (
-            <>
-              <DataRow
-                label={t('review.pickupAt')}
-                value={fmt.rentalPoint(dayjs(values.pickupAt))}
-              />
-              <DataRow
-                label={t('review.returnAt')}
-                value={fmt.rentalPoint(dayjs(values.returnAt))}
-              />
-              <DataRow
-                label={t('review.mode')}
-                value={
-                  (rentalMode === 'hourly' && !withDriver
-                    ? t('time.modeHourly')
-                    : t('time.modeDaily')) +
-                  (withDriver
-                    ? ''
-                    : ` · ${values.deliveryRequested ? t('pickup.delivery') : t('pickup.self')}`)
-                }
-              />
-            </>
-          )}
-
-          {/* Nhắc LẠI địa chỉ nhận xe: đây là lần cuối khách soát trước khi gửi. */}
-          {!withDriver && !values.deliveryRequested && listing.pickupPoint ? (
-            <DataRow
-              block
-              label={t('pickup.self')}
-              value={
-                [listing.pickupPoint.branchName, listing.pickupPoint.address]
-                  .filter(Boolean)
-                  .join(LIST_SEPARATOR) || '—'
-              }
-            />
-          ) : null}
-
-          {withDriver ? (
-            <>
-              <DataRow block label={t('review.driverPickupAddress')} value={pickupAddress ?? '—'} />
-              {values.routeType !== ROUTE_TYPE.IN_CITY ? (
-                <DataRow block label={t('review.destination')} value={values.destination || '—'} />
-              ) : null}
-            </>
-          ) : null}
-
-          {values.deliveryRequested ? (
-            <DataRow block label={t('review.deliveryAddress')} value={deliveryAddress ?? '—'} />
-          ) : null}
-
-          {/*
-            HẠN MỨC QUÃNG ĐƯỜNG — nhắc lại ở lần soát cuối, không chỉ ở trang xe.
-
-            Phí vượt km là khoản DUY NHẤT có thể phát sinh sau chuyến mà không nằm trong bảng giá
-            bên dưới; khách phải đọc nó ngay trước khi cam kết, chứ không phải nhớ lại từ một màn
-            đã rời đi. Không tự nhân ra tổng km cho cả chuyến: số ngày TÍNH PHÍ là của server, và
-            một con số tự tính ở đây sẽ lệch với thứ dùng lúc quyết toán.
-
-            Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm `SettlementService` dùng để
-            quyết định có đề xuất phí vượt hay không, nên cổng CÔNG BỐ và cổng THU TIỀN không thể
-            lệch nhau.
-          */}
-          {appliesExcessMileage(values.serviceType) && listing.mileagePolicy ? (
-            <DataRow
-              block
-              label={t('review.mileage')}
-              value={t('review.mileageValue', {
-                km: fmt.km(listing.mileagePolicy.includedKmPerDay),
-                fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
-              })}
-            />
-          ) : null}
-        </YStack>
+      {/* ── Thông tin người thuê + lời nhắn ──────────────────────────────────── */}
+      <FormSection title={t('reviewPage.renter.title')} icon="person-outline">
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {/* Chưa có tài khoản để điền thì chưa có ô nào để sửa — câu chỉ-đọc, như web. */}
+          {renter ? t('reviewPage.renter.description') : t('reviewPage.renter.readonlyDescription')}
+        </Text>
+        {/*
+          Màn này chỉ tới được khi đã có phiên; phiên mất giữa chừng thì lượt gửi trả 401 và luồng
+          mời đăng nhập lại — không dựng một khung chờ không bao giờ xong.
+        */}
+        {/*
+          LIÊN HỆ của chuyến (ADR 0063) — mặc định là của tài khoản, khách sửa được; SĐT khác số tài
+          khoản không cần OTP. Danh tính vẫn là TÀI KHOẢN ở server. Cùng `BookingRenterCard` web.
+        */}
+        {renter ? <RenterContactFields control={form.control} renter={renter} /> : null}
+        <TextField
+          control={form.control}
+          name="note"
+          label={t('reviewPage.renter.noteLabel')}
+          placeholder={t('reviewPage.renter.notePlaceholder')}
+          multiline
+          rows={3}
+          maxLength={NOTE_MAX}
+        />
       </FormSection>
 
-      {/*
-        QUÃNG ĐƯỜNG + PHÍ GIAO DỰ KIẾN, nhắc lại ở lần soát cuối.
-
-        Con số này KHÔNG nằm trong tổng bên dưới (ADR 0018: ước tính, chủ xe chốt lúc duyệt). Nếu
-        nó chỉ xuất hiện ở bước Chuyến đi rồi biến mất, khách bấm gửi mà không còn thấy khoản duy
-        nhất có thể phát sinh thêm TRƯỚC chuyến — hoặc tệ hơn, không còn thấy cảnh báo "ngoài bán
-        kính, chủ xe sẽ liên hệ chốt phí".
-      */}
-      {values.deliveryRequested ? (
-        <FormSection title={t('pickup.feeLabel')} icon="navigate-outline">
-          <DeliveryEstimate form={form} vehicleId={listing.id} />
-        </FormSection>
-      ) : null}
-
-      {/*
-        ĐẶT NGAY — chỉ NÓI khi server đã xem trước và không thấy blocker nào.
-
-        `autoAccept.eligible` là kết luận của server trên chính bộ tham số đang gửi, không phải
-        cờ `autoAcceptEnabled` của chiếc xe: một xe bật Đặt ngay vẫn rơi về duyệt tay khi khoảng
-        thuê chạm lịch bận, khách chưa đủ điều kiện, hay chính sách chặn. Hứa nhầm ở đây là hứa
-        một chuyến đã chắc chắn, rồi để khách ngồi chờ duyệt.
-      */}
-      {quote.data?.autoAccept?.eligible ? (
-        <Callout tone="success" title={t('review.instantBook')}>
-          <CalloutBody>{t('review.instantBookHint')}</CalloutBody>
-        </Callout>
-      ) : null}
-
-      {/*
-        Điều khoản của CHỦ XE — đúng khối `termsBox` của web: hiện khi chủ xe có viết điều khoản
-        HOẶC bắt đồng ý; ô tick chỉ có khi bắt đồng ý. Xe không cấu hình gì thì không có khối này.
-      */}
-      {activeTerms?.termsText || requiresTermsAcceptance ? (
-        <YStack
-          gap={space.sm}
-          p={space.md}
-          br={radius.md}
-          bw={1}
-          bc={colors.border}
-          bg={colors.surface}
-        >
-          {activeTerms?.termsText ? (
+      {/* ── Giấy tờ & điều kiện nhận xe ──────────────────────────────────────── */}
+      <FormSection title={t('reviewPage.requirements.title')} icon="shield-checkmark-outline">
+        <YStack gap={2}>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {licence.required
+              ? t('reviewPage.requirements.licenceTitle')
+              : t('reviewPage.requirements.driverTitle')}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {licence.required
+              ? t('reviewPage.requirements.licenceBody')
+              : t('reviewPage.requirements.driverBody')}
+          </Text>
+        </YStack>
+        {verifiedLicence ? (
+          <XStack
+            ai="flex-start"
+            gap={space.xs}
+            p={space.sm}
+            br={radius.md}
+            bg={colors.successSurface}
+            bw={1}
+            bc={colors.successBorder}
+          >
+            <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+              <Text fow={fontWeight.semibold}>{t('reviewPage.requirements.licenceVerified')}</Text>
+              {licenceMeta ? `${LIST_SEPARATOR}${licenceMeta}` : ''}
+            </Text>
+          </XStack>
+        ) : null}
+        {hostDocuments.length > 0 ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('reviewPage.requirements.documents', {
+              documents: hostDocuments
+                .map((doc) => domainLabel('customerDocumentType', doc))
+                .join(', '),
+            })}
+          </Text>
+        ) : null}
+        {deposit ? (
+          // `.depositHead` web: nhãn cọc + số (đậm) cùng hàng, câu giải thích bên dưới.
+          <YStack gap={2}>
+            <XStack ai="center" jc="space-between" gap={space.sm}>
+              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                {tPrice('deposit')}
+              </Text>
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
+                  ? fmt.money(deposit.amount)
+                  : domainLabel('collateralMode', deposit.mode)}
+              </Text>
+            </XStack>
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {deposit.note}
+            </Text>
+          </YStack>
+        ) : null}
+        {activeTerms?.termsText ? (
+          <YStack gap={2} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {t('reviewPage.requirements.hostTerms')}
+            </Text>
             <Text col={colors.text} fos={fontSize.bodySm}>
               {activeTerms.termsText}
             </Text>
-          ) : null}
-          {requiresTermsAcceptance ? (
-            <Controller
-              control={form.control}
-              name="acceptedTerms"
-              render={({ field }) => (
-                <Pressable
-                  onPress={() => field.onChange(!field.value)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: Boolean(field.value) }}
-                  accessibilityLabel={t('review.termsCheckbox')}
-                >
-                  <XStack ai="flex-start" gap={space.sm} py={space.xs}>
-                    <YStack pt={2}>
-                      <CheckMark checked={Boolean(field.value)} />
-                    </YStack>
-                    <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                      {t('review.termsCheckbox')}
-                    </Text>
-                  </XStack>
-                </Pressable>
-              )}
-            />
-          ) : null}
+          </YStack>
+        ) : null}
+        {/* Figma: hộp nhắc nền cam nhạt, chữ cam — việc xác minh giấy tờ cụ thể theo chính sách. */}
+        <YStack p={space.sm} br={radius.md} bg={colors.warningSurface} bw={1} bc={colors.warningBorder}>
+          <Text col={colors.warning} fos={fontSize.bodySm}>
+            {t('reviewPage.requirements.reminder')}
+          </Text>
         </YStack>
-      ) : null}
+      </FormSection>
+
+      {/* Hai thẻ tiền "Chi phí thuê xe" + "Các khoản khác" (gồm cọc) — đầu cột phải bên web. */}
+      {costs}
 
       {/*
-        Bước cuối trước khi gửi yêu cầu là chỗ duy nhất khách còn dừng lại được — và chính sách
-        huỷ/hoàn tiền là văn bản họ sẽ cần đúng lúc chuyến hỏng. Cùng câu, cùng chỗ đặt với web
-        (`LegalConsentNote place="booking"`); liên kết mở ra ngoài nên biểu mẫu đang điền không mất.
+        Ô ĐỒNG Ý — BẮT BUỘC cho mọi chuyến (web #205). Khi chủ xe có điều khoản riêng, CÙNG ô đó phủ
+        luôn điều khoản ấy (`bookingCheckHost`) và server kiểm lại khi xe bắt buộc
+        (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`). Liên kết trong câu mở webview trong app, nên biểu mẫu
+        đang điền không mất.
       */}
-      <LegalConsentNote place="booking" />
+      {/* Chưa tick mà bấm Gửi: khối viền đỏ + cuộn tới đây (người dùng chốt 28/10/2026). */}
+      <YStack
+        ref={consentRef}
+        gap={space.xs}
+        {...(agreementMissing
+          ? { p: space.sm, bw: 1, bc: colors.danger, br: radius.control, bg: colors.dangerSurface }
+          : {})}
+      >
+        <Controller
+          control={form.control}
+          name="acceptedTerms"
+          render={({ field }) => (
+            <Pressable
+              onPress={() => field.onChange(!field.value)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: Boolean(field.value) }}
+              accessibilityLabel={tLegal(
+                agreementCoversHostTerms
+                  ? 'consent.bookingCheckHostPlain'
+                  : 'consent.bookingCheckPlain',
+              )}
+            >
+              <XStack ai="flex-start" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
+                <YStack pt={2}>
+                  <CheckMark checked={Boolean(field.value)} />
+                </YStack>
+                <YStack f={1}>
+                  <LegalConsentNote
+                    place={agreementCoversHostTerms ? 'bookingCheckHost' : 'bookingCheck'}
+                  />
+                </YStack>
+              </XStack>
+            </Pressable>
+          )}
+        />
+        {agreementMissing ? (
+          <Text col={colors.danger} fos={fontSize.label} accessibilityRole="alert">
+            {t('reviewPage.submit.agreementRequired')}
+          </Text>
+        ) : null}
+        <Text col={colors.placeholder} fos={fontSize.label}>
+          {t('reviewPage.submit.hint')}
+        </Text>
+      </YStack>
+
+      {/* ── Sau khi gửi yêu cầu — "Đặt ngay" do SERVER xem trước, không suy theo dịch vụ ── */}
+      <YStack gap={space.xs} p={space.md} br={radius.lg} bg={colors.infoSurface}>
+        <XStack ai="center" gap={space.xs}>
+          <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.info} />
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {t('reviewPage.next.title')}
+          </Text>
+        </XStack>
+        <Text col={colors.text} fos={fontSize.bodySm}>
+          {nextStep === 'instantHold'
+            ? t('reviewPage.next.instant')
+            : nextStep === 'instantConfirmed'
+              ? t('reviewPage.next.instantConfirmed')
+              : nextStep === 'hold'
+                ? t('reviewPage.next.hold', { minutes: HOLD_PAYMENT_WINDOW_MINUTES })
+                : t('reviewPage.next.general')}
+        </Text>
+      </YStack>
     </YStack>
   );
 }
 
 /**
- * Dòng "Người thuê": giá trị + chip đã-xác-thực.
- *
- * Không dùng `DataRow` được vì cột phải còn có chip trạng thái, mà `DataRow` chỉ nhận chuỗi.
+ * Dòng dưới ô SĐT: số TRÙNG số tài khoản đã xác minh ⇒ dấu "đã xác thực"; KHÁC ⇒ nhắc chủ xe sẽ thấy
+ * cả số tài khoản. Tài khoản chưa có số (vào bằng Google/Facebook) thì chưa có "số thứ hai" nào để
+ * nói tới. Cùng `usePhoneNote` của web.
  */
-function RenterRow({
-  name,
-  phone,
-  verified,
+type ContactField = 'customerName' | 'customerPhone';
+
+/**
+ * Hai ô liên hệ của màn Xem lại — bản native của `RenterContactFields` web (#222). Luật nằm ở
+ * schema, server kiểm lại.
+ *
+ * Ô nào tài khoản ĐÃ CÓ giá trị thì mở ra ở trạng thái khoá (điền sẵn), bút ở mép phải mới mở cho
+ * sửa — đa số khách thuê cho chính mình, khỏi phải để ý hai ô đã đúng. Ô tài khoản còn trống (vào
+ * bằng Google chưa có SĐT) thì nhập được ngay. Ô đang lỗi validate không bao giờ bị khoá: khoá một
+ * ô lỗi là chặn khách sửa đúng chỗ cần sửa.
+ *
+ * Không có dòng email: chủ xe liên hệ qua SĐT, email tài khoản không đi theo yêu cầu thuê.
+ */
+function RenterContactFields({
+  control,
+  renter,
 }: {
-  name: string;
-  phone: string | null;
-  verified: boolean;
+  control: Control<BookingRequestFormValues>;
+  renter: NonNullable<RequestReviewStepProps['renter']>;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
+  const { errors } = useFormState({ control, name: ['customerName', 'customerPhone'] });
+  const [unlocked, setUnlocked] = useState<Record<ContactField, boolean>>(() => ({
+    customerName: !renter.name?.trim(),
+    customerPhone: !renter.phone?.trim(),
+  }));
+  /** Ô vừa được KHÁCH mở khoá bằng bút — dựng lại với `autoFocus` để con trỏ vào ngay, như web. */
+  const [justUnlocked, setJustUnlocked] = useState<ContactField | null>(null);
+
+  const locked = (field: ContactField) => !unlocked[field] && !errors[field];
+  const unlock = (field: ContactField) => {
+    setUnlocked((prev) => ({ ...prev, [field]: true }));
+    setJustUnlocked(field);
+  };
+  const editButton = (field: ContactField, label: string) =>
+    locked(field) ? (
+      <Pressable
+        onPress={() => unlock(field)}
+        accessibilityRole="button"
+        accessibilityLabel={t('reviewPage.renter.edit', { field: label })}
+        hitSlop={space.sm}
+      >
+        <Ionicons name="create-outline" size={iconSize.sm} color={colors.primary} />
+      </Pressable>
+    ) : undefined;
 
   return (
-    <XStack
-      ai="flex-start"
-      jc="space-between"
-      gap={space.md}
-      p={space.sm}
-      br={radius.md}
-      bg={verified ? colors.successSurface : colors.surfaceMuted}
-    >
-      <Text col={colors.textMuted} fos={fontSize.bodySm} flexShrink={0}>
-        {t('review.renter')}
-      </Text>
-      <YStack f={1} ai="flex-end" gap={2}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
-          {phone ? `${name} · ${phone}` : name}
-        </Text>
-        {verified ? (
-          <XStack ai="center" gap={2}>
-            <Ionicons name="checkmark-circle" size={iconSize.xs} color={colors.success} />
-            <Text col={colors.success} fos={fontSize.label}>
-              {t('contact.verified')}
-            </Text>
-          </XStack>
-        ) : null}
-      </YStack>
-    </XStack>
+    <YStack gap={space.sm}>
+      <TextField
+        key={`customerName:${justUnlocked === 'customerName'}`}
+        control={control}
+        name="customerName"
+        label={t('reviewPage.renter.name')}
+        placeholder={t('reviewPage.renter.namePlaceholder')}
+        autoComplete="name"
+        maxLength={CUSTOMER_NAME_MAX}
+        required
+        editable={!locked('customerName')}
+        autoFocus={justUnlocked === 'customerName'}
+        suffix={editButton('customerName', t('reviewPage.renter.name'))}
+      />
+      <TextField
+        key={`customerPhone:${justUnlocked === 'customerPhone'}`}
+        control={control}
+        name="customerPhone"
+        label={t('reviewPage.renter.phone')}
+        placeholder={t('reviewPage.renter.phonePlaceholder')}
+        autoComplete="tel"
+        keyboardType="phone-pad"
+        required
+        editable={!locked('customerPhone')}
+        autoFocus={justUnlocked === 'customerPhone'}
+        suffix={editButton('customerPhone', t('reviewPage.renter.phone'))}
+      />
+      <PhoneNote control={control} renter={renter} />
+    </YStack>
   );
+}
+
+function PhoneNote({
+  control,
+  renter,
+}: {
+  control: Control<BookingRequestFormValues>;
+  renter: { phone: string | null; verified: boolean };
+}) {
+  const colors = useColors();
+  const t = useTranslations('BookingRequests.flow');
+  const phone = useWatch({ control, name: 'customerPhone' });
+  if (!phone?.trim()) return null;
+  if (isSameVnPhone(phone, renter.phone)) {
+    return renter.verified ? (
+      <XStack ai="center" gap={2}>
+        <Ionicons name="checkmark-circle" size={iconSize.xs} color={colors.success} />
+        <Text col={colors.success} fos={fontSize.label}>
+          {t('contact.verified')}
+        </Text>
+      </XStack>
+    ) : null;
+  }
+  return renter.phone ? (
+    <Text col={colors.textMuted} fos={fontSize.label}>
+      {t('reviewPage.renter.phoneDifferent', { accountPhone: renter.phone })}
+    </Text>
+  ) : null;
 }

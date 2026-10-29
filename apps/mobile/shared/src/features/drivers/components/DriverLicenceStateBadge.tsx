@@ -10,7 +10,8 @@ import { holderNameDiffers, LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize } from '@/theme/tokens';
 import type { DriverLicenceSummary } from '../api';
 
 const COLOR: Readonly<Record<DriverLicenceState, StatusColor>> = {
@@ -43,6 +44,7 @@ export function DriverLicenceDetail({
   /** Tên bên thuê nhập khi mời — lệch với tên trên bằng thì cảnh báo. */
   invitedName?: string;
 }) {
+  const colors = useColors();
   const domainLabel = useDomainLabel();
   const t = useTranslations('Drivers');
   const fmt = useAppFormat();

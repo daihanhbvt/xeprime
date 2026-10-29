@@ -1,5 +1,6 @@
 import { RequireSession } from '@/features/auth/RequireSession';
-import { AccountPaymentsScreen } from '@/features/account-payments/AccountPaymentsScreen';
+import { AccountPaymentsHub } from '@/features/account-payments/AccountPaymentsHub';
+import { ACCOUNT_PAYMENTS_TAB } from '@/features/account-payments/components/AccountPaymentsTabs';
 
 /**
  * Lịch sử thanh toán của CHÍNH khách — không gác `OwnerGate`.
@@ -9,7 +10,7 @@ import { AccountPaymentsScreen } from '@/features/account-payments/AccountPaymen
 export default function AccountPaymentsRoute() {
   return (
     <RequireSession>
-      <AccountPaymentsScreen />
+      <AccountPaymentsHub initialTab={ACCOUNT_PAYMENTS_TAB.HISTORY} />
     </RequireSession>
   );
 }

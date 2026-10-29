@@ -5,14 +5,15 @@ import { STATUS_COLOR } from '@xeprime/types';
 import { findBank } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BankAccount } from '@/api/bank-accounts/api';
 import { bankAccountTitle } from '../current-account';
 import { BankLogo } from './BankLogo';
 
 const BADGE_SIZE = 40;
-/** Logo của hình `detail` — web 172px ở desktop, 72px ở máy hẹp. */
-const DETAIL_BADGE_SIZE = 72;
+/** Logo của hình `detail` — đủ lớn để đọc được chữ trong logo ngân hàng. */
+const DETAIL_BADGE_SIZE = 56;
 
 /**
  * Thẻ MỘT tài khoản nhận tiền — bản native của web `BankAccountCard`. Cùng một hình ở mọi nơi tài
@@ -21,9 +22,8 @@ const DETAIL_BADGE_SIZE = 72;
  * `emphasis` cho nơi thẻ là ĐÍCH của một lệnh chi sắp gửi (tấm rút): nền màu chính. `action` là
  * lối rẽ phụ đặt dưới thẻ (nút "Đổi tài khoản") — xếp DỌC để không chật trên màn hẹp.
  *
- * `variant="detail"` — hình của tab "Tài khoản thanh toán" khu tài khoản khách (web
- * `BankAccountCard variant="detail"`, Figma `19879:74829`): ô biểu trưng lớn nền tối, nhãn đối
- * chiếu, rồi bốn dòng ngân hàng (tên đầy đủ) · số tài khoản (đã che) · người thụ hưởng · tên gợi nhớ.
+ * `variant="detail"` — hình của tab "Tài khoản thanh toán" khu tài khoản khách: hàng đầu logo +
+ * tên ngân hàng + `action` (nút "Đổi" gọn), rồi số tài khoản (đã che) · người thụ hưởng · tên gợi nhớ.
  */
 export function BankAccountCard({
   account,
@@ -36,29 +36,46 @@ export function BankAccountCard({
   emphasis?: boolean;
   variant?: 'row' | 'detail';
 }) {
+  const colors = useColors();
   const t = useTranslations('BankAccounts');
 
   if (variant === 'detail') {
     const bank = findBank(account.bankCode);
+    /*
+     * Dựng lại 29/10/2026 (người dùng chốt): đầu thẻ logo 56 + tên ngắn đậm + tên đầy đủ xuống dòng;
+     * thông tin thành hàng nhãn ↔ giá trị; nút "Đổi tài khoản" ở chân thẻ, căn phải.
+     */
     return (
-      <YStack gap={space.md}>
+      <YStack gap={space.sm} p={space.md} br={radius.lg} bw={1} bc={colors.borderSubtle} bg={colors.surface}>
         <XStack ai="center" gap={space.md}>
-          <BankLogo code={account.bankCode} size={DETAIL_BADGE_SIZE} radius={radius.lg} />
-          {account.verifiedAt ? (
-            <StatusBadge label={t('verifiedTag')} color={STATUS_COLOR.SUCCESS} />
-          ) : null}
+          <BankLogo code={account.bankCode} size={DETAIL_BADGE_SIZE} radius={radius.md} />
+          <YStack f={1} minWidth={0} gap={2}>
+            {/* Tên ngân hàng là tên riêng — không dịch (ADR 0012). Tên đầy đủ được XUỐNG DÒNG, không cắt '…'. */}
+            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+              {bank?.shortName ?? bankAccountTitle(account)}
+            </Text>
+            {bank ? (
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {bank.fullName}
+              </Text>
+            ) : null}
+            {account.verifiedAt ? (
+              <XStack pt={2}>
+                <StatusBadge label={t('verifiedTag')} color={STATUS_COLOR.SUCCESS} size="sm" />
+              </XStack>
+            ) : null}
+          </YStack>
         </XStack>
-        <YStack gap={space.sm}>
-          {/* Tên ngân hàng là tên riêng — không dịch (ADR 0012). */}
-          <Fact
-            label={t('detail.bank')}
-            value={bank ? `${bank.fullName} (${bank.shortName})` : bankAccountTitle(account)}
-          />
+        <YStack gap={space.xs} pt={space.sm} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
           <Fact label={t('detail.number')} value={account.accountNumberMasked} />
           <Fact label={t('detail.holder')} value={account.accountName.toUpperCase()} />
           <Fact label={t('detail.label')} value={account.label || t('detail.noLabel')} />
         </YStack>
-        {action ?? null}
+        {action ? (
+          <XStack jc="flex-end" pt={space.xs} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
+            {action}
+          </XStack>
+        ) : null}
       </YStack>
     );
   }
@@ -98,14 +115,15 @@ export function BankAccountCard({
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
-    <YStack gap={2}>
+    <XStack ai="flex-start" gap={space.sm}>
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {label}
       </Text>
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+      <Text f={1} ta="right" col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
         {value}
       </Text>
-    </YStack>
+    </XStack>
   );
 }

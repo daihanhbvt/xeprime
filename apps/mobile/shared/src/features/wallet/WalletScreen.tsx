@@ -1,19 +1,17 @@
-import { useRouter } from 'expo-router';
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { absoluteMoney, bankDisplayName, isNegativeMoney, nowInAppTz } from '@xeprime/domain';
 import {
   STATUS_COLOR,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_STATUS_META,
-  WALLET_STATUS,
   type StatusColor,
   type WithdrawalStatus,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -30,10 +28,6 @@ import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
-import {
-  ACCOUNT_PAYMENTS_TAB,
-  AccountPaymentsTabs,
-} from '@/features/account-payments/components/AccountPaymentsTabs';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
@@ -42,10 +36,9 @@ import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { goBackOr } from '@/navigation/go-back-or';
-import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   WALLET_ENTRIES_PAGE_SIZE,
   WALLET_SCOPE,
@@ -54,6 +47,7 @@ import {
   type WalletStatementFilters,
   type WithdrawalRequest,
 } from '@/api/wallet/api';
+import { canWithdraw } from './can-withdraw';
 import { WalletStatementPanel } from './components/WalletStatementPanel';
 import { WalletSummaryCard } from './components/WalletSummaryCard';
 import { WithdrawSheet } from './components/WithdrawSheet';
@@ -100,9 +94,9 @@ export function WalletScreen({
    */
   focusPayout?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const tBank = useTranslations('BankAccounts');
-  const tHub = useTranslations('AccountPayments.hub');
   /*
    * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí — cùng cách `ShopProfileScreen` cuộn tới
    * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
@@ -111,8 +105,14 @@ export function WalletScreen({
   const columnY = useRef<number | null>(null);
   const payoutY = useRef<number | null>(null);
   const scrolled = useRef(false);
+  /*
+   * Chỉ cuộn khi thẻ số dư phía trên ĐÃ có dữ liệu — như web (`summary.isSuccess`,
+   * `AccountBalanceView`): đo lúc thẻ còn là khung chờ thì skeleton thấp hơn thẻ thật, khối đích
+   * bị đẩy xuống sau đó và lượt cuộn duy nhất dừng phía trên nó.
+   */
+  const summaryReady = useRef(false);
   const scrollToPayout = useCallback(() => {
-    if (!focusPayout || scrolled.current) return;
+    if (!focusPayout || scrolled.current || !summaryReady.current) return;
     if (columnY.current === null || payoutY.current === null) return;
     scrolled.current = true;
     scrollRef.current?.scrollTo({
@@ -137,7 +137,6 @@ export function WalletScreen({
     },
     [scrollToPayout],
   );
-  const router = useRouter();
   const [page, setPage] = useState(1);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   /*
@@ -167,15 +166,29 @@ export function WalletScreen({
    */
   // Phía tài khoản cũng đọc nó: khối lưu ý dưới tài khoản nhận tiền cần `maxBusinessDays`.
   const walletSummary = useWalletSummary(scope);
+  // Kéo để làm mới số dư, sổ và các lệnh rút cùng lúc.
+  const pull = usePullRefresh(
+    useCallback(
+      () =>
+        Promise.all([
+          walletSummary.refetch(),
+          // Sổ + lệnh rút chỉ khi khối sổ đang hiện — `refetch` bỏ qua `enabled`.
+          ...(showLedger ? [entries.refetch(), withdrawals.refetch()] : []),
+        ]),
+      [walletSummary, entries, withdrawals, showLedger],
+    ),
+  );
+  // Dữ liệu vừa về: khối đích sẽ đo lại (onLayout), nhưng nếu nó không xê dịch thì cuộn từ đây.
+  useEffect(() => {
+    summaryReady.current = walletSummary.isSuccess;
+    if (walletSummary.isSuccess) scrollToPayout();
+  }, [walletSummary.isSuccess, scrollToPayout]);
   const requests = withdrawals.data ?? [];
   const rows = entries.data?.items ?? [];
 
   const isShop = scope === WALLET_SCOPE.SHOP;
   const title = t(isShop ? 'title.tenant' : 'title.user');
-  const canWithdraw =
-    walletSummary.data !== undefined &&
-    walletSummary.data.status !== WALLET_STATUS.FROZEN &&
-    Number(walletSummary.data.available) >= Number(walletSummary.data.minWithdrawAmount);
+  const withdrawable = canWithdraw(walletSummary.data);
 
   /*
    * Hai VỎ cho cùng một màn: khu gian hàng có thanh quản lý + tiêu đề trang, khu tài khoản có nút
@@ -186,23 +199,19 @@ export function WalletScreen({
    * Khu tài khoản: màn này là tab "Tài khoản thanh toán" của mục Quản lý thanh toán (web
    * `AccountPaymentsHub`, design Account 22/10/2026) — tiêu đề là của MỤC, bộ chuyển tab ngay dưới.
    */
-  const header = manageShell ? (
-    <ManageHeader />
-  ) : (
-    <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
-        title={tHub('title')}
-        subtitle={tHub('subtitle')}
-      />
-      <AccountPaymentsTabs value={ACCOUNT_PAYMENTS_TAB.BALANCE} />
-    </>
-  );
+  // Khu tài khoản: header + dải tab do `AccountPaymentsHub` dựng (đổi tab tại chỗ, 29/10/2026).
+  const header = manageShell ? <ManageHeader /> : null;
 
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']} padded={!manageShell} scrollRef={scrollRef}>
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        padded={!manageShell}
+        scrollRef={scrollRef}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
+      >
         {/*
           Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) — cùng
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
@@ -217,7 +226,7 @@ export function WalletScreen({
                   icon="cash-outline"
                   label={t('withdraw.action')}
                   tone="primary"
-                  disabled={!canWithdraw}
+                  disabled={!withdrawable}
                   loading={walletSummary.isPending}
                   onPress={() => setWithdrawOpen(true)}
                 />
@@ -292,56 +301,56 @@ export function WalletScreen({
 
           {showLedger ? (
             <>
-          <SectionCard>
-            <BlockTitle>{t('requests.title')}</BlockTitle>
-            {withdrawals.isPending ? (
-              <MiniRowsSkeleton rows={2} />
-            ) : requests.length === 0 ? (
-              <EmptyNote>{t('requests.empty')}</EmptyNote>
-            ) : (
-              requests.map((request) => (
-                <WithdrawalRow key={request.id} request={request} scope={scope} />
-              ))
-            )}
-          </SectionCard>
+              <SectionCard>
+                <BlockTitle>{t('requests.title')}</BlockTitle>
+                {withdrawals.isPending ? (
+                  <MiniRowsSkeleton rows={2} />
+                ) : requests.length === 0 ? (
+                  <EmptyNote>{t('requests.empty')}</EmptyNote>
+                ) : (
+                  requests.map((request) => (
+                    <WithdrawalRow key={request.id} request={request} scope={scope} />
+                  ))
+                )}
+              </SectionCard>
 
-          <SectionCard>
-            <BlockTitle>{t('entries.title')}</BlockTitle>
-            {entries.isPending ? (
-              <MiniRowsSkeleton rows={4} />
-            ) : entries.isError ? (
-              <ScreenError
-                error={entries.error}
-                title={t('loadError')}
-                onRetry={() => void entries.refetch()}
-              />
-            ) : rows.length === 0 ? (
-              <EmptyNote>{t('entries.empty')}</EmptyNote>
-            ) : (
-              /*
-               * Sổ là MỘT mặt phẳng chia bằng kẻ ngang chạy sát hai mép thẻ, không phải N thẻ rời.
-               * Bản trước đệm cả cụm rồi kẻ bên trong: đường kẻ thụt vào 16pt hai đầu đọc ra như
-               * vẽ hụt, và mỗi dòng phải gánh thêm một lớp `YStack` chỉ để chở đường kẻ đó.
-               */
-              <YStack mx={-space.md}>
-                {rows.map((entry, index) => (
-                  <Fragment key={entry.id}>
-                    {index > 0 ? <Divider /> : null}
-                    <EntryRow entry={entry} />
-                  </Fragment>
-                ))}
-              </YStack>
-            )}
+              <SectionCard>
+                <BlockTitle>{t('entries.title')}</BlockTitle>
+                {entries.isPending ? (
+                  <MiniRowsSkeleton rows={4} />
+                ) : entries.isError ? (
+                  <ScreenError
+                    error={entries.error}
+                    title={t('loadError')}
+                    onRetry={() => void entries.refetch()}
+                  />
+                ) : rows.length === 0 ? (
+                  <EmptyNote>{t('entries.empty')}</EmptyNote>
+                ) : (
+                  /*
+                   * Sổ là MỘT mặt phẳng chia bằng kẻ ngang chạy sát hai mép thẻ, không phải N thẻ rời.
+                   * Bản trước đệm cả cụm rồi kẻ bên trong: đường kẻ thụt vào 16pt hai đầu đọc ra như
+                   * vẽ hụt, và mỗi dòng phải gánh thêm một lớp `YStack` chỉ để chở đường kẻ đó.
+                   */
+                  <YStack mx={-space.md}>
+                    {rows.map((entry, index) => (
+                      <Fragment key={entry.id}>
+                        {index > 0 ? <Divider /> : null}
+                        <EntryRow entry={entry} />
+                      </Fragment>
+                    ))}
+                  </YStack>
+                )}
 
-            {(entries.data?.total ?? 0) > (entries.data?.limit ?? ENTRIES_LIMIT) ? (
-              <Pagination
-                page={page}
-                limit={entries.data?.limit ?? ENTRIES_LIMIT}
-                total={entries.data?.total ?? 0}
-                onChange={setPage}
-              />
-            ) : null}
-          </SectionCard>
+                {(entries.data?.total ?? 0) > (entries.data?.limit ?? ENTRIES_LIMIT) ? (
+                  <Pagination
+                    page={page}
+                    limit={entries.data?.limit ?? ENTRIES_LIMIT}
+                    total={entries.data?.total ?? 0}
+                    onChange={setPage}
+                  />
+                ) : null}
+              </SectionCard>
             </>
           ) : null}
 
@@ -381,6 +390,7 @@ function SectionCard({ children }: { children: ReactNode }) {
 }
 
 function EmptyNote({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Card tone="muted" lift="flat">
       <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
@@ -402,6 +412,7 @@ function EmptyNote({ children }: { children: string }) {
  * chỉ tạo ra một nút mà server luôn từ chối.
  */
 function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: WalletScope }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -532,6 +543,7 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
  * cả trang.
  */
 function EntryRow({ entry }: { entry: WalletEntry }) {
+  const colors = useColors();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

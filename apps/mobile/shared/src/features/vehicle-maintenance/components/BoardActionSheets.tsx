@@ -6,7 +6,8 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { useMaintenanceProfile, useTransitionMaintenanceRecord } from '../hooks/use-maintenance';
 import { MaintenanceRecordSheet } from './MaintenanceRecordSheet';
 import { OdometerCorrectionSheet } from './OdometerCorrectionSheet';
@@ -38,6 +39,7 @@ export function BoardActionSheets({
   action: BoardAction | null;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Maintenance');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();

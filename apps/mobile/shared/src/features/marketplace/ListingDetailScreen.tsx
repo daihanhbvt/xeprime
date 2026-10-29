@@ -1,56 +1,77 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Linking,
   Pressable,
-  RefreshControl,
   ScrollView,
+  Share,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { appliesExcessMileage } from '@xeprime/types';
+import { MapPreview } from '@/components/map/MapPreview';
+import { pickupMapUri } from '@/lib/map-static';
 import {
+  RENTAL_MODE,
   CATALOG_TYPE,
-  COLLATERAL_ASSET_TYPE_LABEL,
-  COLLATERAL_MODE,
-  CUSTOMER_DOCUMENT_TYPE_LABEL,
-  requiredIdentityDocuments,
+  PICKUP_PREFERENCE,
+  ROUTE_TYPE,
   SERVICE_TYPE,
   type ServiceType,
 } from '@xeprime/types';
-import { applyDiscountPercent, LIST_SEPARATOR, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
+import {
+  applyDiscountPercent,
+  appWallClockToIso,
+  isNewListing,
+  LIST_SEPARATOR,
+  mapExternalUrl,
+  toGeoPoint,
+  type RentalMode,
+} from '@xeprime/domain';
+import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { catalogLabel } from '@/api/catalog';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { MapPreview } from '@/components/map/MapPreview';
-import { ListingConditionCards } from './components/ListingConditionCards';
+import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
+import { Avatar } from '@/components/ui/Avatar';
+import { MarketSectionTitle } from '@/components/ui/MarketSectionTitle';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { Button } from '@/components/ui/Button';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { GradientButton } from './components/home/GradientButton';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { useShopChatAvailable } from '@/features/chat/hooks/use-shop-chat-available';
 import { Card } from '@/components/ui/Card';
+import { DiscountTag } from '@/components/ui/DiscountTag';
 import { Stars } from '@/components/ui/Stars';
-import type { IconName } from '@/components/ui/Chip';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
-import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { scrollThrottle } from '@/theme/motion';
-import { pickupMapUri } from '@/lib/map-static';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, market, radius, sizing, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
+import type { BookingRequestPrefillParams } from '@/navigation/routes-base';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
-import { FeatureChip } from './components/FeatureChip';
-import { ServiceSelector } from './components/ServiceSelector';
+import { FeatureItem } from './components/FeatureChip';
+import { HomeCarousel } from './components/home/HomeCarousel';
+import { STAR_ART } from './components/home/home-art';
+import { ListingGalleryThumbs } from './components/ListingGalleryThumbs';
+import { PhotoViewer } from '@/components/ui/PhotoViewer';
+import { ListingBenefitsCard } from './components/ListingBenefitsCard';
+import {
+  ListingBookingCard,
+  type ListingTripDraft,
+  type TripInputKind,
+  type TripInputRequest,
+} from './components/ListingBookingCard';
+import { ListingPoliciesTabs } from './components/ListingPoliciesTabs';
 
 /**
  * Dịch vụ mở sẵn khi vào trang: ngữ cảnh mang từ danh sách sang nếu xe phục vụ được → ưu tiên
@@ -69,22 +90,31 @@ function defaultServiceOf(
   return services[0] ?? SERVICE_TYPE.SELF_DRIVE;
 }
 
-/** Ảnh 4:3 — cao hơn thẻ ở danh sách vì đây là chỗ khách thật sự ngắm xe. */
-const PHOTO_RATIO = 4 / 3;
+/** Tỉ lệ ảnh 358 × 170 của bản vẽ mobile (web ≤640px `.slide { aspect-ratio: 358 / 170 }`). */
+const PHOTO_RATIO = 358 / 170;
 
-/** Cuộn qua bao nhiêu thì tiêu đề hiện lên header nổi. Bằng non nửa chiều cao ảnh. */
-const TITLE_REVEAL = 160;
+/**
+ * Cỡ chữ thân các khối nội dung (địa chỉ, mô tả, tiện ích, vị trí, chủ xe, đánh giá) — 13, nhỏ hơn
+ * thân 14 chung của app (người dùng chốt 28/10/2026: chữ các khối này to hơn web).
+ */
+/** Một ô của lưới 2 cột (nửa bề ngang, khe phải 12) — prop tắt `pr` không qua được kiểu của YStack này. */
+const HALF_CELL = { width: '50%', paddingRight: 12 } as const;
+const BODY_TEXT = 13;
 
-/** Biểu tượng cho từng dòng thông số — nhận ra bằng mắt nhanh hơn đọc nhãn. */
-const SPEC_ICON: Record<string, IconName> = {
-  vehicleType: 'car-outline',
-  bodyType: 'cube-outline',
-  seatCount: 'people-outline',
-  fuelType: 'water-outline',
-  manufactureYear: 'calendar-outline',
-  color: 'color-palette-outline',
-  brand: 'pricetag-outline',
-};
+/** Khe giữa hai ảnh khi trượt — `.grid { gap: space-sm }` của web ≤640px. */
+const SLIDE_GAP = space.sm;
+
+/** Mô tả dài hơn chừng này thì thu gọn còn 4 dòng, kèm "Xem tiếp" — như `ListingDescription` web. */
+const DESCRIPTION_CLAMP_CHARS = 220;
+
+/**
+ * Đĩa nút Chia sẻ / Yêu thích cạnh tên xe — `.actionBtn` của web ở ≤640px (bản mobile của mockup):
+ * đĩa 32, icon 16, vùng chạm vẫn 44 (`::after` bên web ⇔ `hitSlop` ở đây).
+ */
+const ACTION_DISC = 32;
+
+/** `.actionIcons` ≤640px: khoảng cách hai đĩa `--xp-space-12`. */
+const ACTION_GAP = toPx(XP_TOKENS['space-12']);
 
 /**
  * Trang chi tiết xe công khai (MKT-04) — bản native của `ListingDetailView.tsx`.
@@ -106,27 +136,51 @@ export function ListingDetailScreen({
   initialServiceType?: string;
   onBack: () => void;
 }) {
+  const colors = useColors();
+  const tDetail = useTranslations('Listings.detail');
   const listing = useListing(vehicleId);
-  const [scrolled, setScrolled] = useState(false);
   /*
-   * Dịch vụ đang chọn sống ở VỎ, không trong `DetailBody`: thanh CTA đáy màn nằm ngoài vùng
-   * cuộn nên nó không đọc được state bên trong, mà nó phải mở wizard đúng loại khách vừa xem giá.
+   * Chuyến khách đang cấu hình sống ở VỎ, không trong `DetailBody`: thanh "Thuê xe" đáy màn nằm
+   * ngoài vùng cuộn và phải mang ĐÚNG chuyến đó sang luồng gửi yêu cầu (prefill — web #205).
    *
-   * `null` = chưa có dữ liệu xe nên chưa suy được mặc định; lúc đó chưa render thanh CTA.
+   * `null` = chưa có dữ liệu xe nên chưa suy được mặc định.
    */
-  const [chosenService, setChosenService] = useState<string | null>(null);
+  const [trip, setTrip] = useState<ListingTripDraft | null>(null);
+  /** Lệnh mở ô còn thiếu trên thẻ đặt xe — "Chọn thuê" khi chuyến chưa đủ (xem `missingTripInput`). */
+  const [inputRequest, setInputRequest] = useState<TripInputRequest | null>(null);
+  const [initialRange, setInitialRange] = useState<{
+    pickupAt: string;
+    returnAt: string;
+    rentalMode: RentalMode;
+  } | null>(null);
 
-  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const passed = event.nativeEvent.contentOffset.y > TITLE_REVEAL;
-    // Chỉ set khi giá trị thực sự đổi — `onScroll` bắn liên tục, render lại cả trang mỗi khung
-    // hình là giật ngay trên máy tầm trung.
-    setScrolled((prev) => (prev === passed ? prev : passed));
+  // Khoảng thuê mặc định = lựa chọn khách đã nhớ, hoặc gợi ý — cùng nguồn với thẻ tìm kiếm.
+  useEffect(() => {
+    let alive = true;
+    void rememberedOrDefaultRentalRange().then((range) => {
+      if (!alive) return;
+      setInitialRange({
+        pickupAt: appWallClockToIso(range.pickupAt),
+        returnAt: appWallClockToIso(range.returnAt),
+        rentalMode: range.mode,
+      });
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  /*
+   * Header ĐẶC NỀN có tên trang — thanh "quay lại + đường dẫn" của web ≤640px (Figma `19771:72104`).
+   * Ảnh đã thụt vào trong lề (không còn tràn mép trên), nên không còn lý do cho header nổi đè ảnh.
+   * Cùng một header ở cả ba trạng thái: đổi kiểu giữa chừng làm nút Lui nhảy chỗ.
+   */
+  const header = <AppHeader onBack={onBack} title={tDetail('breadcrumb.current')} />;
 
   if (listing.isError) {
     return (
       <YStack f={1} bg={colors.background}>
-        <AppHeader onBack={onBack} />
+        {header}
         <ScreenError error={listing.error} onRetry={() => void listing.refetch()} />
       </YStack>
     );
@@ -134,48 +188,69 @@ export function ListingDetailScreen({
 
   if (listing.isPending) {
     return (
-      // Overlay y như khi đã có dữ liệu — đổi kiểu header giữa chừng làm nút Lui nhảy chỗ.
       <YStack f={1} bg={colors.background}>
-        <AppHeader variant="overlay" onBack={onBack} />
+        {header}
         <ListingDetailSkeleton />
       </YStack>
     );
   }
 
+  const current: ListingTripDraft = trip ?? {
+    serviceType: defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType),
+    pickupAt: initialRange?.pickupAt ?? null,
+    returnAt: initialRange?.returnAt ?? null,
+    rentalMode: initialRange?.rentalMode ?? RENTAL_MODE.DAILY,
+    routeType: ROUTE_TYPE.IN_CITY,
+    packageMonths: listing.data.longTermPackages?.[0]?.packageMonths ?? null,
+    pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+    requestedPickupDate: '',
+    deliveryRequested: false,
+    delivery: null,
+    driverPickup: null,
+    destination: '',
+    promoCode: null,
+    vehicleProtectionSelected: false,
+    personalAccidentSelected: false,
+  };
+  const patchTrip = (patch: Partial<ListingTripDraft>) =>
+    setTrip((prev) => ({ ...(prev ?? current), ...patch }));
+
   return (
     <YStack f={1} bg={colors.background}>
+      {header}
       {/*
-        Header NỔI lên trên ảnh: ảnh chạm mép trên màn hình, nên một thanh đặc phía trên sẽ cắt
-        mất phần đẹp nhất của tấm ảnh. Tiêu đề chỉ hiện sau khi cuộn qua ảnh — lúc đó tên xe ở
-        thân trang đã khuất và header mới cần nhắc lại nó.
+        `Screen` giữ vùng cuộn + BÀN PHÍM (ô "Điểm đến" của thẻ đặt xe nằm sâu dưới màn — gõ vào
+        là được đẩy lên trên bàn phím, cùng cơ chế các màn form của app Partner; người dùng chốt
+        27/10/2026). Ẩn thanh đáy lúc đang gõ để nó không che ô.
+
+        Thanh hành động DÍNH ĐÁY — lối duy nhất vào luồng gửi yêu cầu thuê. Web đặt nút "Thuê xe"
+        trong thẻ đặt xe ở cột phải luôn nhìn thấy; native không có cột phải, nên nút nổi trên nội
+        dung và mang theo chuyến khách vừa cấu hình.
       */}
-      <AppHeader variant="overlay" onBack={onBack} title={listing.data.name} showTitle={scrolled} />
-      <DetailBody
-        listing={listing.data}
-        activeService={
-          chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
-        }
-        onScroll={onScroll}
-        onServiceChange={setChosenService}
+      <Screen
+        edges={['bottom']}
+        padded={false}
+        hideFooterWhileTyping
         refreshing={listing.isRefetching}
         onRefresh={() => void listing.refetch()}
-      />
-
-      {/*
-        Thanh hành động DÍNH ĐÁY — lối duy nhất vào luồng gửi yêu cầu thuê.
-        
-        Web đặt nút trong cột phải luôn nhìn thấy; native không có cột phải, nên nút phải nổi
-        trên nội dung. Không có nó thì khách phải cuộn hết trang mới thấy cách đặt xe.
-      */}
-      <RequestBar
-        vehicleId={listing.data.id}
-        shopSlug={listing.data.shopSlug}
-        shopChatOpen={listing.data.shopChatOpen}
-        serviceType={
-          chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
+        footer={
+          <RequestBar
+            vehicleId={listing.data.id}
+            shopSlug={listing.data.shopSlug}
+            shopChatOpen={listing.data.shopChatOpen}
+            trip={current}
+            onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
+            {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
+          />
         }
-        {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
-      />
+      >
+        <DetailBody
+          listing={listing.data}
+          trip={current}
+          onTripChange={patchTrip}
+          inputRequest={inputRequest}
+        />
+      </Screen>
     </YStack>
   );
 }
@@ -183,70 +258,122 @@ export function ListingDetailScreen({
 /**
  * Thanh CTA đáy màn chi tiết xe.
  *
- * Mang theo dịch vụ đang chọn để wizard mở ra đúng loại khách vừa xem giá — mở mặc định "tự
- * lái" sau khi khách vừa xem giá "có tài xế" là bắt họ chọn lại thứ đã chọn.
+ * Mang theo CHUYẾN đang cấu hình (dịch vụ, khoảng thuê, lộ trình, gói, cách nhận xe) để luồng gửi
+ * yêu cầu mở ra đúng thứ khách vừa xem giá — cùng vai trò `prefill` của `RequestBookingButton` web.
+ * Không tự gửi gì: khách vẫn soát lại và tự bấm gửi ở màn Xem lại (ADR 0060).
  */
+/**
+ * Tham số mở luồng gửi yêu cầu — y hệt `prefill` mà `ListingBookingCard` web giao cho
+ * `RequestBookingButton`, KỂ CẢ những chỗ web chưa mang sang (nguyện vọng ngày nhận, ngày cụ thể,
+ * điểm đến, địa chỉ đón có tài xế). `autoContinue` chép nguyên điều kiện web, kể cả lỗi M3: với
+ * có tài xế / dài hạn nó đòi dữ liệu mà prefill không mang sang — ghi ở sổ đồng bộ, mục "Lỗi WEB
+ * ghi nhận" (M3). Không tự sửa hành vi ở app.
+ */
+function requestPrefill(
+  trip: ListingTripDraft,
+  listingProvinceCode: string | undefined,
+): BookingRequestPrefillParams {
+  const longTerm = trip.serviceType === SERVICE_TYPE.LONG_TERM;
+  const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  // Web: có tài xế lấy tỉnh của địa chỉ đón, còn lại tỉnh của địa chỉ giao — rồi tới tỉnh của xe.
+  const province =
+    (withDriver ? trip.driverPickup?.provinceCode : trip.delivery?.provinceCode) ??
+    listingProvinceCode;
+  const delivery = !withDriver && trip.deliveryRequested ? trip.delivery : null;
+  const autoContinue = longTerm
+    ? trip.packageMonths != null &&
+      (trip.pickupPreference !== PICKUP_PREFERENCE.SPECIFIC_DATE ||
+        Boolean(trip.requestedPickupDate)) &&
+      (!trip.deliveryRequested || Boolean(trip.delivery))
+    : withDriver
+      ? Boolean(
+          trip.pickupAt &&
+          trip.returnAt &&
+          trip.driverPickup &&
+          (trip.routeType === ROUTE_TYPE.IN_CITY || trip.destination.trim()),
+        )
+      : Boolean(trip.pickupAt && trip.returnAt) &&
+        (!trip.deliveryRequested || Boolean(trip.delivery));
+
+  return {
+    serviceType: trip.serviceType,
+    ...(province ? { provinceCode: province } : {}),
+    ...(trip.pickupAt ? { pickupAt: trip.pickupAt } : {}),
+    ...(trip.returnAt ? { returnAt: trip.returnAt } : {}),
+    ...(withDriver ? { routeType: trip.routeType } : {}),
+    ...(longTerm && trip.packageMonths ? { packageMonths: String(trip.packageMonths) } : {}),
+    ...(!withDriver && trip.deliveryRequested ? { delivery: '1' } : {}),
+    ...(delivery
+      ? {
+          deliveryAddressLine: delivery.addressLine,
+          ...(delivery.placeId ? { deliveryPlaceId: delivery.placeId } : {}),
+          ...(delivery.latitude != null && delivery.longitude != null
+            ? { deliveryLat: String(delivery.latitude), deliveryLng: String(delivery.longitude) }
+            : {}),
+        }
+      : {}),
+    ...(trip.promoCode ? { promoCode: trip.promoCode } : {}),
+    ...(trip.vehicleProtectionSelected ? { vehicleProtection: '1' } : {}),
+    ...(trip.personalAccidentSelected ? { personalAccident: '1' } : {}),
+    ...(autoContinue ? { autoContinue: '1' } : {}),
+  };
+}
+
+/**
+ * Ô CÒN THIẾU để chuyến đủ đi thẳng tới Xem lại — cùng điều kiện `autoContinue` của `requestPrefill`,
+ * nhưng chỉ những ô MỞ ĐƯỢC trên thẻ đặt xe. `null` = đủ, hoặc thiếu thứ thẻ không có ô riêng (gói dài
+ * hạn chưa niêm yết, điểm đến liên tỉnh) — khi đó luồng đặt xe tự hiện bước Chuyến đi như web.
+ */
+function missingTripInput(trip: ListingTripDraft): TripInputKind | null {
+  if (trip.serviceType === SERVICE_TYPE.LONG_TERM) {
+    if (trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && !trip.requestedPickupDate) {
+      return 'date';
+    }
+    return trip.deliveryRequested && !trip.delivery ? 'delivery' : null;
+  }
+  if (!trip.pickupAt || !trip.returnAt) return 'range';
+  if (trip.serviceType === SERVICE_TYPE.WITH_DRIVER) return trip.driverPickup ? null : 'driver';
+  return trip.deliveryRequested && !trip.delivery ? 'delivery' : null;
+}
+
 function RequestBar({
   vehicleId,
   shopSlug,
   shopChatOpen,
-  serviceType,
+  trip,
   provinceCode,
+  onNeedInput,
 }: {
+  /** Thẻ còn thiếu một ô mở được trên trang ⇒ mở ô đó thay vì sang bước Chuyến đi. */
+  onNeedInput: (kind: TripInputKind) => void;
   vehicleId: string;
   /** Gian hàng của chiếc xe — cổng nhắn tin hỏi theo GIAN HÀNG, không theo xe. */
   shopSlug: string;
   /** Gian hàng mở hộp thư công khai chưa; chưa thì nút hỏi tiếp cổng eligibility. */
   shopChatOpen: boolean;
-  serviceType?: string;
+  trip: ListingTripDraft;
   /** Tỉnh của chính chiếc xe — điền sẵn ô địa chỉ giao xe (ADR 0035). */
   provinceCode?: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const navigateOnce = useNavigateOnce();
-  const insets = useSafeAreaInsets();
   /*
     Hỏi cổng nhắn tin Ở ĐÂY chứ không để nút tự giấu mình: ô `f={1}` bọc ngoài vẫn giữ nửa bề
     ngang kể cả khi ruột nó rỗng, nên nút đặt xe sẽ không bao giờ nở ra hết hàng.
   */
   const canChat = useShopChatAvailable(shopSlug, shopChatOpen);
-
   return (
-    <YStack
-      px={layout.screenX}
-      pt={space.sm}
-      pb={insets.bottom + space.sm}
-      gap={space.sm}
-      bg={colors.surface}
-      borderTopWidth={1}
-      borderColor={colors.borderSubtle}
-      style={elevation.raised}
-    >
+    // Khung (nền, vạch trên, đệm) do `Screen` vẽ cho `footer` — ở đây chỉ còn hàng nút; tự vẽ thêm
+    // một lớp nữa là thành hai hộp lồng nhau.
+    <YStack>
       {/*
-        "Nhắn shop" nằm CẠNH nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi trước khi
-        đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay ra tab Tin
-        nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
-
-        Chủ xe cá nhân chưa mở kênh thì KHÔNG có nút nhắn. Lúc đó hàng chỉ còn MỘT hành động, và
-        nó phải chiếm trọn bề ngang như mọi hành động chính đơn độc khác — nên ô chứa nút nhắn
-        biến mất hẳn, chứ không đứng lại giữ chỗ với ruột rỗng.
-
-        Cỡ `md` khi đứng cặp chứ KHÔNG `lg`: thành một hàng hai nút thì mỗi nút chỉ còn ~160dp,
-        mà riêng đệm ngang đã ăn 48dp — ở `lg` (chữ 16px) nhãn tiếng Anh "Select this car" không
-        còn chỗ. Đứng một mình thì trả lại `lg`, cỡ dành cho hành động chính đơn độc.
-
-        Khi có cả hai, chúng chia ĐỀU và phân biệt nhau bằng MÀU (vàng đặc so với viền), không
-        bằng bề ngang: đây là hai lối rẽ song song, không phải một hành động chính kèm một lối
-        thoát.
+        "Nhắn shop" CẠNH nút đặt xe, đúng cặp web bày ở cột phải. Chủ xe cá nhân chưa mở kênh thì
+        không có nút nhắn và nút đặt xe chiếm trọn bề ngang (cỡ `lg`); đứng cặp thì cỡ `md`.
       */}
       <XStack gap={space.sm}>
         {canChat ? (
           <YStack f={1}>
-            {/*
-              Nút nhắn tin đi qua cổng "khách này có nhắn được không": chủ xe cá nhân không mở
-              hộp thư công khai, họ chỉ mở kênh sau khi khách đã gửi yêu cầu thuê
-              (CHAT_REQUIRES_BOOKING). Nút vẫn mang vehicleId để hội thoại gắn đúng chiếc xe.
-            */}
             <ShopChatButton
               shopSlug={shopSlug}
               vehicleId={vehicleId}
@@ -255,18 +382,20 @@ function RequestBar({
           </YStack>
         ) : null}
         <YStack f={1}>
-          <Button
+          {/* Nút "Thuê xe" của web (.ctaBtnWrapper): gradient-primary, bo border-radius-control. */}
+          <GradientButton
             label={t('cta')}
-            icon="car-sport-outline"
-            size={canChat ? 'md' : 'lg'}
-            onPress={() =>
-              navigateOnce(
-                ROUTES.booking.request(vehicleId, {
-                  ...(serviceType ? { serviceType } : {}),
-                  ...(provinceCode ? { provinceCode } : {}),
-                }),
-              )
-            }
+            iconStart="car-sport-outline"
+            radius={toPx(XP_TOKENS['border-radius-control'])}
+            onPress={() => {
+              /*
+               * Chuyến chưa đủ ⇒ mở NGAY ô còn thiếu trên trang xe (người dùng chốt 28/10/2026) —
+               * không sang bước Chuyến đi của luồng đặt xe. Đủ thì đi thẳng tới Xem lại.
+               */
+              const missing = missingTripInput(trip);
+              if (missing) onNeedInput(missing);
+              else navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
+            }}
           />
         </YStack>
       </XStack>
@@ -276,394 +405,308 @@ function RequestBar({
 
 function DetailBody({
   listing,
-  activeService,
-  onScroll,
-  onServiceChange,
-  refreshing,
-  onRefresh,
+  trip,
+  onTripChange,
+  inputRequest,
 }: {
   listing: PublicListingDetail;
-  /** Dịch vụ đang chọn — do VỎ giữ, vì thanh CTA đáy nằm ngoài vùng cuộn này. */
-  activeService: string;
-  onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  onServiceChange: (serviceType: string) => void;
-  refreshing: boolean;
-  onRefresh: () => void;
+  trip: ListingTripDraft;
+  onTripChange: (patch: Partial<ListingTripDraft>) => void;
+  inputRequest: TripInputRequest | null;
 }) {
+  const colors = useColors();
+  const { scheme } = useAppScheme();
   const t = useTranslations('Listings.detail');
-  const tMileage = useTranslations('Listings.detail.mileage');
   const tCard = useTranslations('Listings.card');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const { catalog } = useCatalog();
-  const insets = useSafeAreaInsets();
-
-  const services: readonly string[] = listing.serviceTypes ?? [];
-
-  // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
-  const discount = listing.discountPercent ?? 0;
-  const displayPrice =
-    discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
-
-  const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
-  const rating = Number(listing.ratingAvg);
-  // `?? 0`: cột DB cho phép NULL ở xe chưa từng được đồng bộ lại rating (dữ liệu cũ) dù DTO
-  // khai `ratingCount` không optional — hợp đồng kiểu và thực tế lệch nhau.
-  const hasRating = (listing.ratingCount ?? 0) > 0 && Number.isFinite(rating);
-
-  const specs: { key: string; label: string; value: string }[] = [
-    {
-      key: 'vehicleType',
-      label: t('specs.vehicleType'),
-      value: domainLabel('vehicleType', listing.vehicleType),
-    },
-    ...(listing.bodyType
-      ? [
-          {
-            key: 'bodyType',
-            label: t('specs.bodyType'),
-            value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
-          },
-        ]
-      : []),
-    ...(listing.seatCount
-      ? [
-          {
-            key: 'seatCount',
-            label: t('specs.seats'),
-            value: tCard('seats', { count: listing.seatCount }),
-          },
-        ]
-      : []),
-    ...(listing.fuelType
-      ? [
-          {
-            key: 'fuelType',
-            label: t('specs.fuelType'),
-            value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
-          },
-        ]
-      : []),
-    ...(listing.manufactureYear
-      ? [{ key: 'manufactureYear', label: t('specs.year'), value: String(listing.manufactureYear) }]
-      : []),
-    ...(listing.color ? [{ key: 'color', label: t('specs.color'), value: listing.color }] : []),
-    ...(brand
-      ? [
-          {
-            key: 'brand',
-            label: t('specs.brand'),
-            value: [brand, listing.model].filter(Boolean).join(' '),
-          },
-        ]
-      : []),
+  // Hãng + màu (web #212 `attributes`) — thiếu cái nào thì bỏ cái đó.
+  const brandAttr = listing.brand
+    ? catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand)
+    : null;
+  const colorAttr = listing.color?.trim() || null;
+  const descriptionAttributes = [
+    ...(brandAttr ? [{ key: 'brand' as const, value: brandAttr }] : []),
+    ...(colorAttr ? [{ key: 'color' as const, value: colorAttr }] : []),
   ];
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const activeService = trip.serviceType;
 
+  // % khuyến mãi trực tiếp là của giá TỰ LÁI (ADR 0011) — `PriceBlock` chỉ dùng nó ở nhánh tự lái.
+  const discount = listing.discountPercent ?? 0;
+
+  // Chưa có đánh giá nào = xe mới lên chợ — cùng luật với thẻ xe và với web.
+  const isNewVehicle = isNewListing({
+    ratingCount: listing.ratingCount ?? 0,
+    ratingAvg: listing.ratingAvg,
+  });
+  // Địa chỉ THẬT của điểm nhận xe; không có thì không hiện dòng này, không dùng địa chỉ mẫu.
+  const locationLine = [
+    listing.pickupPoint?.address,
+    listing.pickupPoint?.provinceName || listing.shopProvince,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  /*
+   * Bốn thông số tiêu biểu của bản vẽ v2. Thông số chủ xe CHƯA khai thì bỏ ô đó — không điền giá
+   * trị mẫu (cùng luật `ListingDetailView` web sau khi bỏ giá trị giả).
+   */
+  const specs = [
+    {
+      key: 'seatCount',
+      icon: 'people-outline' as const,
+      label: t('specs.seats'),
+      value: listing.seatCount ? tCard('seats', { count: listing.seatCount }) : null,
+    },
+    {
+      key: 'bodyType',
+      icon: 'car-outline' as const,
+      label: t('specs.bodyType'),
+      value: listing.bodyType
+        ? (catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? null)
+        : null,
+    },
+    {
+      key: 'fuelType',
+      icon: 'water-outline' as const,
+      label: t('specs.fuelType'),
+      value: listing.fuelType
+        ? (catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? null)
+        : null,
+    },
+    {
+      key: 'manufactureYear',
+      icon: 'calendar-outline' as const,
+      label: t('specs.year'),
+      value: listing.manufactureYear ? String(listing.manufactureYear) : null,
+    },
+  ].filter((spec): spec is typeof spec & { value: string } => spec.value != null);
+
+  const share = () => {
+    void Share.share({
+      message: `${listing.name} — ${resolveWebBaseUrl()}/listings/${listing.id}`,
+    }).catch(() => {});
+  };
+
+  // Vùng cuộn + bàn phím do `Screen` giữ (vỏ màn) — ở đây chỉ còn nội dung.
   return (
-    <ScrollView
-      // Màn tràn viền nên không có SafeAreaView bọc ngoài: lề đáy phải tự cộng inset, nếu
-      // không khối cuối bị thanh điều hướng Android che mất.
-      contentContainerStyle={{ paddingBottom: layout.section + insets.bottom }}
-      onScroll={onScroll}
-      scrollEventThrottle={scrollThrottle.half}
-      /*
-        Kéo-làm-mới đặt ở ĐÂY chứ không ở khung ngoài: khung ngoài là một `YStack` không cuộn,
-        còn cử chỉ kéo chỉ nảy trên chính vùng đang cuộn.
-      */
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-    >
+    <YStack pb={layout.section}>
       <Gallery name={listing.name} mainImageUrl={listing.mainImageUrl} images={listing.images} />
 
-      {/* Thân trang ĐÈ lên mép dưới ảnh, bo góc trên — cùng ngôn ngữ với thẻ tìm kiếm trang chủ. */}
-      <YStack
-        bg={colors.background}
-        borderTopLeftRadius={radius.lg}
-        borderTopRightRadius={radius.lg}
-        marginTop={-layout.heroOverlap}
-        px={layout.screenX}
-        pt={layout.section}
-        gap={layout.section}
-      >
-        <YStack gap={layout.block}>
-          <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
-              {listing.name}
-            </Text>
-
-            <XStack ai="center" gap={space.sm} rowGap={space.sm} flexWrap="wrap">
-              {hasRating ? (
-                <XStack ai="center" gap={space.xs}>
-                  <Ionicons name="star" size={iconSize.xs} color={colors.primaryActive} />
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {fmt.rating(rating)}
-                  </Text>
-                </XStack>
-              ) : (
-                <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.medium}>
-                  {tCard('newVehicle')}
-                </Text>
-              )}
-              <Text col={colors.placeholder} fos={fontSize.bodySm}>
-                ·
+      {/*
+        Thứ tự khối = bản vẽ mobile v2 (Figma `19771:71482`) + nội dung của `ListingDetailView` web:
+        tên · địa chỉ · thông số → lợi ích → thẻ đặt xe → mô tả → tiện ích → vị trí → chủ xe →
+        Quy định & Chính sách → đánh giá.
+      */}
+      {/*
+        Khối cách khối 16, tiêu đề khối cách nội dung 8 — web ≤640px (`.layout { gap: lg }` ở thang
+        mật độ mobile, nơi `lg` = 16). Phẳng, không còn tấm nền bo góc đè lên ảnh: ảnh đã thụt lề.
+      */}
+      <YStack px={layout.screenX} pt={space.md} gap={space.md}>
+        <YStack gap={space.sm}>
+          <XStack ai="flex-start" gap={ACTION_GAP}>
+            <XStack f={1} ai="center" gap={space.sm} rowGap={space.xs} flexWrap="wrap">
+              {/* Figma `19771:72411`: 24 Semibold, giữ hoa/thường như dữ liệu. */}
+              <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold}>
+                {listing.name}
               </Text>
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="stats-chart" size={12} color={colors.success} />
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {tCard('completedTrips', { count: listing.completedTripCount ?? 0 })}
-                </Text>
-              </XStack>
-              {listing.shopProvince ? (
-                <>
-                  <Text col={colors.placeholder} fos={fontSize.bodySm}>
-                    ·
-                  </Text>
-                  <XStack ai="center" gap={space.xs}>
-                    <Ionicons name="location-outline" size={iconSize.xs} color={colors.textMuted} />
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {listing.shopProvince}
-                    </Text>
-                  </XStack>
-                </>
-              ) : null}
+              {isNewVehicle ? <Badge tone="success" label={tCard('newVehicle')} /> : null}
+              {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
             </XStack>
-          </YStack>
+            {/* Vùng Chia sẻ & Yêu thích — cụm `.actionIcons` của `ListingHeaderActions` web ≤640px: gap space-12. */}
+            <XStack gap={ACTION_GAP}>
+              <Pressable
+                onPress={share}
+                accessibilityRole="button"
+                accessibilityLabel={t('share.label')}
+                hitSlop={(sizing.touchTarget - ACTION_DISC) / 2}
+              >
+                {/* `.actionBtn` web ≤640px: đĩa 32, nền `bg-container`, viền `border` 1px, icon 16 `text-secondary`. */}
+                <YStack
+                  w={ACTION_DISC}
+                  h={ACTION_DISC}
+                  br={radius.pill}
+                  ai="center"
+                  jc="center"
+                  bw={1}
+                  bc={colors.border}
+                  bg={colors.surface}
+                >
+                  <Ionicons name="share-social-outline" size={iconSize.sm} color={colors.textMuted} />
+                </YStack>
+              </Pressable>
+              <FavoriteButton vehicleId={listing.id} vehicleName={listing.name} variant="action" />
+            </XStack>
+          </XStack>
 
-          {/* Xe nhiều dịch vụ → selector ngay trên khối giá; giá lớn đổi theo. */}
-          {services.length > 0 ? (
-            <YStack gap={space.sm} accessibilityLabel={t('serviceSelector')}>
-              <SectionLabel>{t('serviceLabel')}</SectionLabel>
-              <ServiceSelector
-                services={services}
-                active={activeService}
-                onChange={onServiceChange}
-              />
-            </YStack>
+          {locationLine ? (
+            // `.locationRow` web ≤640px: ghim 20 `text-tertiary`, chữ 16/24 `text-secondary`, khe 8.
+            <XStack ai="flex-start" gap={space.sm}>
+              <YStack pt={1}>
+                <Ionicons name="location-outline" size={18} color={colors.placeholder} />
+              </YStack>
+              <Text f={1} col={colors.textMuted} fos={BODY_TEXT}>
+                {locationLine}
+              </Text>
+            </XStack>
           ) : null}
 
-          {/*
-            Giá để PHẲNG, không bọc thẻ nền gold — web cũng vậy. Bọc thẻ thì con số to nhất
-            trang lại nằm trong một mảng màu, và mắt đọc mảng màu trước con số.
-          */}
-          <YStack gap={space.sm}>
+          {specs.length > 0 ? (
+            /* Web `ListingSpecsCard` (Figma `19771:72494`) ở ≤640px: lưới 2 × 2, hàng cách 16; vòng
+               icon 48 nền `primary-subtle` (tối: `primary-light`), icon 24 vàng; nhãn 14
+               `text-tertiary`, giá trị 16 Medium `text-secondary`. */
+            <XStack flexWrap="wrap" rowGap={space.md} pt={space.md}>
+              {specs.map((spec) => (
+                <XStack key={spec.key} w="50%" ai="center" gap={space.sm + space.xs}>
+                  <YStack
+                    w={40}
+                    h={40}
+                    br={radius.pill}
+                    ai="center"
+                    jc="center"
+                    bg={scheme === 'dark' ? colors.primaryLight : colors.primarySubtle}
+                  >
+                    <Ionicons name={spec.icon} size={20} color={colors.primary} />
+                  </YStack>
+                  <YStack f={1} minWidth={0} gap={2}>
+                    <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
+                      {spec.label}
+                    </Text>
+                    <Text col={colors.textMuted} fos={BODY_TEXT} fow={fontWeight.medium} numberOfLines={1}>
+                      {spec.value}
+                    </Text>
+                  </YStack>
+                </XStack>
+              ))}
+            </XStack>
+          ) : null}
+        </YStack>
+
+        <ListingBenefitsCard listing={listing} activeService={activeService} />
+
+        <ListingBookingCard
+          listing={listing}
+          trip={trip}
+          onChange={onTripChange}
+          openRequest={inputRequest}
+          priceSlot={
             <PriceBlock
               activeService={activeService as ServiceType}
               listing={listing}
               discount={discount}
-              displayPrice={displayPrice}
+              packageMonths={trip.packageMonths}
             />
-
-            {listing.deliveryEnabled || listing.noCollateral || listing.vatInvoiceSupported ? (
-              <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-                {listing.deliveryEnabled ? <Badge label={t('delivery')} /> : null}
-                {listing.noCollateral ? <Badge label={t('noCollateral')} /> : null}
-                {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
-              </XStack>
-            ) : null}
-          </YStack>
-        </YStack>
-
-        {/*
-          Điều kiện bảo đảm + giấy tờ phải mang theo — khách cần biết TRƯỚC khi gửi yêu cầu,
-          không phải lúc đến quầy mới biết mình thiếu cà vẹt. Chưa cấu hình thì im lặng còn hơn
-          hứa sai.
-        */}
-
-        {/*
-          HOÁ ĐƠN VAT (ADR 0059) — chỉ khi chủ xe đã công bố. `false` = "chưa công bố", không phải
-          "từ chối", nên không có câu phủ định. Câu chữ nói rõ ai xuất và cho khoản nào.
-        */}
-        {listing.vatInvoiceSupported ? (
-          <Card lift="flat" accessibilityLabel={t('vatInvoice.title')}>
-            <YStack gap={space.sm}>
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="receipt-outline" size={iconSize.md} color={colors.primaryActive} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('vatInvoice.title')}
-                </Text>
-              </XStack>
-              <YStack gap={space.xs}>
-                <BulletLine text={t('vatInvoice.body')} />
-                <BulletLine text={t('vatInvoice.disclaimer')} />
-              </YStack>
-            </YStack>
-          </Card>
-        ) : null}
-
-        {listing.collateral ? (
-          <Card lift="flat">
-            <YStack gap={space.sm}>
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="document-text-outline" size={17} color={colors.primaryActive} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('collateralTitle')}
-                </Text>
-              </XStack>
-
-              <YStack gap={space.xs}>
-                <BulletLine
-                  text={
-                    listing.collateral.mode === COLLATERAL_MODE.CASH
-                      ? t('collateralDeposit', {
-                          amount: fmt.money(listing.collateral.depositAmount),
-                        })
-                      : listing.collateral.mode === COLLATERAL_MODE.ASSET
-                        ? t('collateralAsset', {
-                            types: listing.collateral.assetTypes
-                              .map((type) =>
-                                domainLabel(
-                                  'collateralAssetType',
-                                  type,
-                                  COLLATERAL_ASSET_TYPE_LABEL[type],
-                                ),
-                              )
-                              .join(', '),
-                          })
-                        : t('collateralNone')
-                  }
-                />
-                <BulletLine
-                  text={t('collateralDocuments', {
-                    documents: requiredIdentityDocuments(activeService as ServiceType)
-                      .map((doc) =>
-                        domainLabel('customerDocumentType', doc, CUSTOMER_DOCUMENT_TYPE_LABEL[doc]),
-                      )
-                      .join(', '),
-                  })}
-                />
-              </YStack>
-            </YStack>
-          </Card>
-        ) : null}
-
-        {/*
-          HẠN MỨC QUÃNG ĐƯỜNG — công bố ở ĐÂY hoặc không bao giờ.
-
-          Phí vượt km không nằm trong báo giá lúc đặt (lúc đó chưa ai biết khách chạy bao xa),
-          nó chỉ xuất hiện lúc quyết toán. Thứ duy nhất làm nó công bằng là được nói ra từ
-          trang xe, trước khi khách bấm thuê.
-
-          Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm mà `SettlementService` dùng
-          để quyết định có đề xuất phí vượt hay không. Hai bên viết điều kiện riêng là cách để
-          một hôm nào đó thu được một khoản mà chỗ này chưa từng công bố.
-
-          Xe chưa đặt hạn mức trả `mileagePolicy = null` và khối biến mất hoàn toàn — không có
-          dòng "không giới hạn" nào phải đọc.
-        */}
-        {appliesExcessMileage(activeService as ServiceType) && listing.mileagePolicy ? (
-          <Card lift="flat">
-            <YStack gap={space.sm}>
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="speedometer-outline" size={17} color={colors.primaryActive} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {tMileage('title')}
-                </Text>
-              </XStack>
-
-              <YStack gap={space.xs}>
-                <BulletLine
-                  text={tMileage('included', {
-                    km: fmt.km(listing.mileagePolicy.includedKmPerDay),
-                    fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
-                  })}
-                />
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {tMileage('note')}
-                </Text>
-              </YStack>
-            </YStack>
-          </Card>
-        ) : null}
-
-        {/* Thủ tục · khung giờ giao nhận · phụ phí tài xế — cùng chỗ đứng với web (trước thông số). */}
-        <ListingConditionCards listing={listing} activeService={activeService as ServiceType} />
-
-        <Card lift="flat" padded={false}>
-          <YStack>
-            {specs.map((spec, index) => (
-              <XStack
-                key={spec.key}
-                ai="center"
-                gap={space.sm}
-                px={space.md}
-                py={space.sm}
-                borderTopWidth={index === 0 ? 0 : 1}
-                bc={colors.borderSubtle}
-              >
-                <Ionicons
-                  name={SPEC_ICON[spec.key] ?? 'ellipse-outline'}
-                  size={iconSize.sm}
-                  color={colors.textMuted}
-                />
-                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                  {spec.label}
-                </Text>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {spec.value}
-                </Text>
-              </XStack>
-            ))}
-          </YStack>
-        </Card>
-
-        {listing.features.length > 0 ? (
-          <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-            {listing.features.map((key) => (
-              <FeatureChip
-                key={key}
-                featureKey={key}
-                label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
-              />
-            ))}
-          </XStack>
-        ) : null}
-
-        {/*
-          Thẻ gian hàng DÙNG CHUNG với cột tóm tắt của luồng gửi yêu cầu (`VehicleSummaryCard`) —
-          một nơi giữ avatar/tên/điểm đánh giá của GIAN HÀNG, không còn hai bản lệch nhau
-          (23/09/2026, cùng đợt với web).
-
-          Ba chỉ số uy tín (ADR 0045 điều 3) nằm bên trong thẻ, ngay trên nút "Chọn thuê": đây là
-          giây người đọc quyết định có gửi yêu cầu cho một người lạ hay không, và "họ có trả lời
-          không" là câu hỏi họ đang hỏi.
-
-          Điểm đánh giá và số chuyến lấy từ ba trường CỦA GIAN HÀNG (`shopRatingAvg`,
-          `shopRatingCount`, `shopCompletedTripCount`) chứ không phải `ratingAvg`/`ratingCount`
-          kế thừa — hai cái sau chỉ đếm riêng chiếc xe đang xem.
-        */}
-        <ShopQuickInfoCard
-          shop={{
-            name: listing.shopName,
-            slug: listing.shopSlug,
-            logoUrl: listing.shopLogoUrl,
-            verified: listing.shopVerified,
-            province: listing.shopProvince,
-            bio: listing.shopBio,
-            ratingAvg: listing.shopRatingAvg,
-            ratingCount: listing.shopRatingCount,
-            completedTripCount: listing.shopCompletedTripCount,
-          }}
-          metrics={listing.shopMetrics}
+          }
         />
 
-        <Card lift="flat">
-          <YStack gap={space.xs}>
-            <SectionTitle icon="reader-outline">{t('description')}</SectionTitle>
-            <Body>{listing.description || t('descriptionEmpty')}</Body>
+        <YStack gap={space.sm}>
+          <MarketSectionTitle>{t('description')}</MarketSectionTitle>
+          {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
+          {descriptionAttributes.length > 0 ? (
+            <XStack flexWrap="wrap" columnGap={40} rowGap={space.sm}>
+              {descriptionAttributes.map((attr) => (
+                <XStack key={attr.key} ai="center" gap={space.sm}>
+                  <Ionicons
+                    name={attr.key === 'brand' ? 'car-outline' : 'color-palette-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                  <Text col={colors.textMuted} fos={BODY_TEXT}>
+                    {t.rich(`attributes.${attr.key}`, {
+                      value: attr.value,
+                      strong: (chunks) => (
+                        <Text col={colors.text} fow={fontWeight.semibold}>
+                          {chunks}
+                        </Text>
+                      ),
+                    })}
+                  </Text>
+                </XStack>
+              ))}
+            </XStack>
+          ) : null}
+          {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
+          <Text
+            col={colors.textMuted}
+            fos={BODY_TEXT}
+            textAlign="justify"
+            {...(descriptionOpen ? {} : { numberOfLines: 4 })}
+          >
+            {listing.description || t('descriptionEmpty')}
+          </Text>
+          {listing.description && listing.description.length > DESCRIPTION_CLAMP_CHARS ? (
+            <Pressable
+              onPress={() => setDescriptionOpen((v) => !v)}
+              accessibilityRole="button"
+              hitSlop={space.sm}
+            >
+              <XStack ai="center" gap={space.xs}>
+                <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
+                  {descriptionOpen ? t('descriptionToggle.less') : t('descriptionToggle.more')}
+                </Text>
+                <Ionicons
+                  name={descriptionOpen ? 'chevron-up' : 'chevron-down'}
+                  size={iconSize.sm}
+                  color={colors.primary}
+                />
+              </XStack>
+            </Pressable>
+          ) : null}
+        </YStack>
+
+        {listing.features.length > 0 ? (
+          <YStack gap={space.sm}>
+            <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
+            {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
+            <XStack flexWrap="wrap" rowGap={12}>
+              {listing.features.map((key) => (
+                <YStack key={key} style={HALF_CELL}>
+                  <FeatureItem
+                    featureKey={key}
+                    label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
+                  />
+                </YStack>
+              ))}
+            </XStack>
           </YStack>
-        </Card>
+        ) : null}
+
+        {/*
+          Vị trí xe đứng TRƯỚC chủ xe — thứ tự một cột của web develop (`ListingDetailView.module.css`
+          ≤1024px: location `order: 4`, host `order: 5`; Figma mobile `19771:71482`).
+        */}
+        {listing.pickupPoint ? (
+          <PickupPointCard listingId={listing.id} point={listing.pickupPoint} />
+        ) : null}
+
+        {/*
+          Thẻ gian hàng + ba chỉ số uy tín (ADR 0045 điều 3) — số của GIAN HÀNG (`shopRatingAvg`,
+          `shopRatingCount`, `shopCompletedTripCount`), không phải của riêng chiếc xe.
+        */}
+        <YStack gap={space.sm}>
+          <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
+          <ShopQuickInfoCard
+            shop={{
+              name: listing.shopName,
+              slug: listing.shopSlug,
+              logoUrl: listing.shopLogoUrl,
+              verified: listing.shopVerified,
+              province: listing.shopProvince,
+              bio: listing.shopBio,
+              ratingAvg: listing.shopRatingAvg,
+              ratingCount: listing.shopRatingCount,
+              completedTripCount: listing.shopCompletedTripCount,
+            }}
+            metrics={listing.shopMetrics}
+            variant="inline"
+          />
+        </YStack>
+
+        <ListingPoliciesTabs listing={listing} activeService={activeService} />
 
         <Reviews vehicleId={listing.id} />
-
-        {listing.pickupPoint ? <PickupPointCard listingId={listing.id} point={listing.pickupPoint} /> : null}
       </YStack>
-    </ScrollView>
+    </YStack>
   );
 }
 
@@ -677,61 +720,69 @@ function PriceBlock({
   activeService,
   listing,
   discount,
-  displayPrice,
+  packageMonths = null,
 }: {
   activeService: ServiceType;
   listing: PublicListingDetail;
   discount: number;
-  displayPrice: string | null | undefined;
+  packageMonths?: number | null;
 }) {
-  const t = useTranslations('Listings.detail');
-  const tCard = useTranslations('Listings.card');
+  const colors = useColors();
+  const tFlow = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
 
-  if (activeService === SERVICE_TYPE.LONG_TERM) {
-    return listing.monthlyPrice ? (
-      <PriceRow amount={fmt.money(listing.monthlyPrice)} unit={tCard('perMonthUnit')} />
-    ) : (
-      <QuoteLine text={t('longTermQuote')} />
-    );
-  }
+  /*
+   * Giá NIÊM YẾT của dịch vụ đang chọn — như web: dài hạn đọc giá gói đang chọn, có tài xế đọc
+   * giá có tài xế, tự lái đọc giá ngày. % khuyến mãi trực tiếp chỉ là của TỰ LÁI (ADR 0011).
+   * Chưa niêm yết thì không hiện dòng giá (báo giá server ở "Thành tiền" vẫn là nguồn chốt).
+   */
+  const listedPrice =
+    activeService === SERVICE_TYPE.LONG_TERM
+      ? (listing.longTermPackages?.find((pkg) => pkg.packageMonths === packageMonths)
+          ?.baseMonthlyPrice ??
+        listing.monthlyPrice ??
+        null)
+      : activeService === SERVICE_TYPE.WITH_DRIVER
+        ? (listing.withDriverDailyPrice ?? null)
+        : (listing.weekdayPrice ?? null);
+  const priceDiscount = activeService === SERVICE_TYPE.SELF_DRIVE ? discount : 0;
+  const shownPrice =
+    listedPrice && priceDiscount > 0
+      ? (applyDiscountPercent(listedPrice, priceDiscount) ?? listedPrice)
+      : listedPrice;
+  const unit =
+    activeService === SERVICE_TYPE.LONG_TERM ? tFlow('price.perMonth') : tFlow('price.perDay');
 
-  if (activeService === SERVICE_TYPE.WITH_DRIVER) {
-    return listing.withDriverDailyPrice ? (
-      <PriceRow amount={fmt.money(listing.withDriverDailyPrice)} unit={tCard('perDayUnit')} />
-    ) : (
-      <QuoteLine text={t('withDriverQuote')} />
-    );
-  }
+  if (!shownPrice) return null;
 
-  // Giá cũ, nhãn giảm và giá mới nằm CÙNG một hàng canh chân chữ — như web. Tách giá cũ lên
-  // dòng riêng làm nó đọc như một con số độc lập chứ không phải mức trước khi giảm.
   return (
-    <XStack ai="baseline" gap={space.sm} rowGap={space.sm} flexWrap="wrap">
-      {discount > 0 && listing.weekdayPrice ? (
-        <>
-          <Text col={colors.placeholder} fos={fontSize.body} textDecorationLine="line-through">
-            {fmt.money(listing.weekdayPrice)}
+    <XStack ai="center" jc="space-between" gap={space.sm}>
+      <XStack f={1} ai="baseline" gap={space.sm} rowGap={space.xs} flexWrap="wrap">
+        {priceDiscount > 0 && listedPrice ? (
+          <Text col={colors.textDisabled} fos={BODY_TEXT} textDecorationLine="line-through">
+            {fmt.moneyCompact(listedPrice, { price: true })}
           </Text>
-          <XStack bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
-            <Text col={colors.onDiscount} fos={fontSize.label} fow={fontWeight.bold}>
-              -{discount}%
-            </Text>
-          </XStack>
-        </>
+        ) : null}
+        {/* Giá niêm yết RÚT GỌN ("1.050k") như thẻ đặt xe web #222 — mọi khoản của chuyến bên dưới vẫn đủ số. */}
+        <PriceRow amount={fmt.moneyCompact(shownPrice, { price: true })} unit={unit} />
+      </XStack>
+      {priceDiscount > 0 ? (
+        // Như thẻ đặt xe web develop (`DiscountTag` pill, `--xp-color-discount`).
+        <DiscountTag percent={priceDiscount} />
       ) : null}
-      <PriceRow amount={fmt.money(displayPrice)} unit={tCard('perDayUnit')} />
     </XStack>
   );
 }
 
 function PriceRow({ amount, unit }: { amount: string; unit: string }) {
+  const colors = useColors();
   return (
     <XStack ai="baseline" gap={space.xs}>
-      <Text col={colors.price} fos={fontSize.h1} fow={fontWeight.bold}>
+      {/* `.mainPrice` web: h2 24 Semibold `primary`; đơn vị 16 `text-tertiary` (≤640px). */}
+      <Text col={colors.primary} fos={fontSize.h3} fow={fontWeight.semibold}>
         {amount}
       </Text>
-      <Text col={colors.textMuted} fos={fontSize.body}>
+      <Text col={colors.placeholder} fos={BODY_TEXT}>
         {unit}
       </Text>
     </XStack>
@@ -739,18 +790,6 @@ function PriceRow({ amount, unit }: { amount: string; unit: string }) {
 }
 
 /** Dịch vụ chưa niêm yết giá — nói rõ phải liên hệ, không trưng giá của dịch vụ khác thay. */
-function QuoteLine({ text }: { text: string }) {
-  return (
-    <XStack ai="center" gap={space.xs}>
-      <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.primaryActive} />
-      <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-        {text}
-      </Text>
-    </XStack>
-  );
-}
-
-/** Ảnh chính + thư viện, vuốt ngang có chỉ báo `1/5` — web dùng lưới thumbnail. */
 function Gallery({
   name,
   mainImageUrl,
@@ -760,72 +799,118 @@ function Gallery({
   mainImageUrl?: string | null;
   images: string[];
 }) {
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(0);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const pagerRef = useRef<ScrollView>(null);
+  const tGallery = useTranslations('Listings.detail.gallery');
+  const tStates = useTranslations('Common.states');
 
   // Ảnh chính đứng đầu và không lặp lại nếu nó cũng nằm trong thư viện.
   const all = [mainImageUrl, ...images].filter((url): url is string => Boolean(url));
   const unique = all.filter((url, index) => all.indexOf(url) === index);
-  const height = width / PHOTO_RATIO;
+  // Ảnh THỤT trong lề trang (web ≤640px `.slide`, Figma `19771:72122`): rộng = bề ngang nội dung.
+  const slideWidth = width - layout.screenX * 2;
+  const height = slideWidth / PHOTO_RATIO;
+  // Mỗi trang cuộn = một ảnh + khe giữa hai ảnh.
+  const step = slideWidth + SLIDE_GAP;
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      setActive(Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1)));
+      setActive(Math.round(event.nativeEvent.contentOffset.x / Math.max(step, 1)));
     },
-    [width],
+    [step],
+  );
+
+  const jumpTo = useCallback(
+    (index: number) => {
+      setActive(index);
+      pagerRef.current?.scrollTo({ x: index * step, animated: true });
+    },
+    [step],
   );
 
   if (unique.length === 0) {
     return (
-      <YStack w="100%" h={height} bg={colors.surfaceMuted} ai="center" jc="center">
-        <Ionicons name="car-sport-outline" size={48} color={colors.border} />
+      <YStack px={layout.screenX} py={12}>
+        <YStack h={height} br={radius.control} bg={colors.surfaceMuted} ai="center" jc="center">
+          <Ionicons name="car-sport-outline" size={48} color={colors.border} />
+        </YStack>
       </YStack>
     );
   }
 
   return (
-    <YStack>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScroll}
-      >
-        {unique.map((url) => (
-          <Image
-            key={url}
-            source={{ uri: url }}
-            style={{ width, height }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-            accessibilityLabel={name}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Lùi lên trên phần thân trang đè xuống, nếu không nó bị bo góc che mất. */}
-      {unique.length > 1 ? (
-        <XStack
-          pos="absolute"
-          bottom={space.lg}
-          right={space.md}
-          bg={colors.surface}
-          br={radius.pill}
-          px={space.sm}
-          py={space.xs}
+    // `.wrap` ≤640px: đệm 12 trên/dưới; dải ảnh nhỏ cách ảnh 8.
+    <YStack py={12} gap={space.sm}>
+      <YStack>
+        <ScrollView
+          ref={pagerRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={step}
+          decelerationRate="fast"
+          disableIntervalMomentum
+          contentContainerStyle={{ paddingHorizontal: layout.screenX, gap: SLIDE_GAP }}
+          onMomentumScrollEnd={onScroll}
         >
-          <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-            {active + 1}/{unique.length}
-          </Text>
-        </XStack>
+          {unique.map((url, index) => (
+            <Pressable
+              key={url}
+              onPress={() => setViewing(url)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
+            >
+              <Image
+                source={{ uri: url }}
+                style={{ width: slideWidth, height, borderRadius: radius.control }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={url}
+                transition={150}
+              />
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/*
+          Bộ đếm "n/N" nổi góc dưới-phải ảnh — `.counter` web ≤640px: nền đen 55% CỐ ĐỊNH (nó nằm
+          trên ảnh, không trên nền trang), chữ `text-on-dark` 12.
+        */}
+        {unique.length > 1 ? (
+          <XStack
+            pos="absolute"
+            bottom={space.sm}
+            right={layout.screenX + space.sm}
+            bg={market.photoScrim}
+            br={radius.pill}
+            px={space.sm}
+            py={2}
+          >
+            <Text col={market.onDark} fos={fontSize.bodySm}>
+              {active + 1}/{unique.length}
+            </Text>
+          </XStack>
+        ) : null}
+      </YStack>
+
+      {unique.length > 1 ? (
+        <ListingGalleryThumbs urls={unique} active={active} onSelect={jumpTo} />
       ) : null}
+
+      <PhotoViewer
+        url={viewing}
+        unavailableLabel={tStates('imageUnavailable')}
+        onClose={() => setViewing(null)}
+      />
     </YStack>
   );
 }
 
 /** Đánh giá công khai. Tự ẩn khi lỗi hoặc chưa có — không kéo cả trang xuống màn lỗi. */
 function Reviews({ vehicleId }: { vehicleId: string }) {
+  const colors = useColors();
   const t = useTranslations('Listings.reviews');
   const fmt = useAppFormat();
   const { data } = useListingReviews(vehicleId);
@@ -837,79 +922,82 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
    * 'ratingCount' of undefined" đúng giữa trang chi tiết xe.
    */
   const hasReviews = Boolean(data?.summary?.ratingCount && data.summary.ratingCount > 0);
+  const { width } = useWindowDimensions();
 
   return (
-    <Card lift="flat">
-      <YStack gap={space.md}>
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <SectionTitle icon="star-outline">{t('title')}</SectionTitle>
-          {hasReviews ? (
+    <YStack gap={space.sm}>
+      {/*
+        Figma `19771:72800`: "Đánh giá" + ★ điểm (số lượt) cùng hàng. Web không có trang "Xem tất cả"
+        cho đánh giá của MỘT xe, nên không vẽ nút dẫn vào hư không.
+      */}
+      <MarketSectionTitle
+        action={
+          hasReviews ? (
             <XStack ai="center" gap={space.xs}>
-              <Text col={colors.price} fos={fontSize.body} fow={fontWeight.bold}>
+              <Ionicons name="star" size={20} color={STAR_ART} />
+              <Text col={colors.text} fos={BODY_TEXT} fow={fontWeight.semibold}>
                 {fmt.rating(data!.summary.ratingAvg)}
               </Text>
-              <Stars value={data!.summary.ratingAvg} />
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('count', { count: data!.summary.ratingCount })}
+              <Text col={colors.placeholder} fos={BODY_TEXT}>
+                {`(${data!.summary.ratingCount})`}
               </Text>
             </XStack>
-          ) : null}
-        </XStack>
+          ) : undefined
+        }
+      >
+        {t('title')}
+      </MarketSectionTitle>
 
-        {!hasReviews ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('empty')}
-          </Text>
-        ) : (
-          <YStack gap={space.md}>
-            {data!.data.map((review, index) => (
-              <YStack
-                key={review.id}
-                gap={space.xs}
-                pt={index === 0 ? 0 : space.md}
-                borderTopWidth={index === 0 ? 0 : 1}
-                bc={colors.borderSubtle}
-              >
-                <XStack ai="center" jc="space-between" gap={space.sm}>
-                  <XStack ai="center" gap={space.xs} f={1}>
+      {!hasReviews ? (
+        <Text col={colors.textMuted} fos={BODY_TEXT}>
+          {t('empty')}
+        </Text>
+      ) : (
+        // Mỗi lần vuốt một đánh giá, trọn bề ngang nội dung, chấm phân trang bên dưới (Figma).
+        <HomeCarousel
+          accessibilityLabel={t('title')}
+          itemWidth={width - layout.screenX * 2}
+        >
+          {data!.data.map((review) => (
+            <Card key={review.id} seamless>
+              <YStack gap={12}>
+                <XStack ai="center" gap={12}>
+                  <Avatar name={review.customerName} size={32} />
+                  <YStack f={1} minWidth={0}>
                     <Text
                       col={colors.text}
-                      fos={fontSize.bodySm}
+                      fos={BODY_TEXT}
                       fow={fontWeight.semibold}
                       numberOfLines={1}
                     >
                       {review.customerName}
                     </Text>
-                    <Stars value={review.rating} />
-                  </XStack>
-                  <Text col={colors.placeholder} fos={fontSize.label}>
-                    {fmt.date(review.createdAt)}
-                  </Text>
+                    <Text col={colors.placeholder} fos={BODY_TEXT}>
+                      {fmt.date(review.createdAt)}
+                    </Text>
+                  </YStack>
+                  <Stars value={review.rating} size={20} />
                 </XStack>
                 {review.comment ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  <Text col={colors.textMuted} fos={BODY_TEXT}>
                     {review.comment}
                   </Text>
                 ) : null}
               </YStack>
-            ))}
-          </YStack>
-        )}
-      </YStack>
-    </Card>
+            </Card>
+          ))}
+        </HomeCarousel>
+      )}
+    </YStack>
   );
 }
 
 /**
- * Khối ĐIỂM NHẬN XE — địa chỉ là thông tin chính, bản đồ chỉ minh hoạ, đúng như web
- * (`ListingDetailView`).
+ * Khối VỊ TRÍ XE — bản ≤640px của web (Figma `19771:72668`): tiêu đề + "Mở bản đồ" cùng hàng, rồi
+ * địa chỉ có ghim, rồi ẢNH BẢN ĐỒ TĨNH của điểm nhận xe (`StaticMapImage` web — người dùng chốt 28/10/2026
+ * cho app có bản đồ như web). Chạm ảnh hay "Mở bản đồ" đều sang ứng dụng bản đồ của máy.
  *
- * Trước đợt này native cố ý bỏ trống phần bản đồ vì "cần một thư viện map riêng". Lý do đó đã
- * hết hiệu lực: ảnh tĩnh do API vẽ hộ (`/public/listings/:id/pickup-map`, Vietmap — ADR 0061
- * điều 1) là một tấm `<Image>`, không khoá nào trong bundle.
- *
- * Bản đồ TỰ BIẾN MẤT khi thiếu toạ độ hoặc ảnh lỗi; phần chữ và liên kết "Mở bằng Google Maps" ở
- * lại — cùng cách xử lý với `StaticMapImage` + `MapLink` bên web.
+ * Thiếu toạ độ thì không có liên kết; địa chỉ chữ vẫn ở lại.
  */
 function PickupPointCard({
   listingId,
@@ -918,120 +1006,79 @@ function PickupPointCard({
   listingId: string;
   point: NonNullable<PublicListingDetail['pickupPoint']>;
 }) {
+  const colors = useColors();
   const t = useTranslations('Listings.detail');
-  const tAddress = useTranslations('Address');
   const tStates = useTranslations('Common.states');
-
   const geo = toGeoPoint(point.latitude, point.longitude);
-  const mapUri = geo ? pickupMapUri(listingId, geo, point.address ?? '') : null;
 
   return (
-    <Card lift="flat">
-      <YStack gap={space.xs}>
-        <SectionTitle icon="navigate-outline">{t('pickupPoint.title')}</SectionTitle>
-        <Body>{[point.branchName, point.address].filter(Boolean).join(LIST_SEPARATOR)}</Body>
-        {point.provinceName ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {point.provinceName}
-          </Text>
-        ) : null}
-        {geo && mapUri ? (
-          <YStack gap={space.xs} mt={space.xs}>
-            <MapPreview
-              uri={mapUri}
-              accessibilityLabel={t('pickupPoint.mapTitle')}
-              busyLabel={tStates('loading')}
-              onOpen={() => void Linking.openURL(mapExternalUrl(geo))}
-              openLabel={t('pickupPoint.mapTitle')}
-            />
-            {/* Nhắc ra thành chữ: một tấm ảnh bản đồ không tự nói rằng nó bấm được. */}
+    <YStack gap={space.sm}>
+      <MarketSectionTitle
+        action={
+          geo ? (
             <Pressable
               accessibilityRole="link"
-              accessibilityLabel={tAddress('map.openInGoogleMaps')}
               onPress={() => void Linking.openURL(mapExternalUrl(geo))}
+              hitSlop={space.sm}
             >
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="open-outline" size={iconSize.sm} color={colors.primaryActive} />
-                <Text col={colors.primaryActive} fos={fontSize.label}>
-                  {tAddress('map.openInGoogleMaps')}
+              {/* `.openMapLink` ≤640px: icon 20 + chữ 16 Semibold `color-primary`, khe 8. */}
+              <XStack ai="center" gap={space.sm}>
+                <Ionicons name="map-outline" size={20} color={colors.primary} />
+                <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
+                  {t('location.openMap')}
                 </Text>
               </XStack>
             </Pressable>
-          </YStack>
-        ) : null}
-      </YStack>
-    </Card>
-  );
-}
-
-function SectionTitle({ icon, children }: { icon: IconName; children: string }) {
-  return (
-    <XStack ai="center" gap={space.xs}>
-      <Ionicons name={icon} size={17} color={colors.primaryActive} />
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-        {children}
-      </Text>
-    </XStack>
-  );
-}
-
-/**
- * Đoạn văn của các khối nội dung (mô tả, điểm nhận xe).
- *
- * Cùng cỡ và cùng màu với phần bình luận ở khối đánh giá — ba khối này đứng cạnh nhau, mỗi khối
- * một cỡ chữ thì trang đọc như ghép từ ba nơi khác nhau.
- */
-function Body({ children }: { children: string }) {
-  return (
-    <Text
-      col={colors.textMuted}
-      fos={fontSize.bodySm}
-      lineHeight={Math.round(fontSize.bodySm * 1.6)}
-    >
-      {children}
-    </Text>
-  );
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-      {children.toLocaleUpperCase()}
-    </Text>
+          ) : undefined
+        }
+      >
+        {t('location.title')}
+      </MarketSectionTitle>
+      <XStack ai="flex-start" gap={space.sm}>
+        <YStack pt={1}>
+                <Ionicons name="location-outline" size={18} color={colors.placeholder} />
+              </YStack>
+        <Text f={1} col={colors.textMuted} fos={BODY_TEXT}>
+          {[point.branchName, point.address, point.provinceName]
+            .filter(Boolean)
+            .join(LIST_SEPARATOR)}
+        </Text>
+      </XStack>
+      {geo ? (
+        <MapPreview
+          uri={pickupMapUri(listingId, geo, point.address)}
+          accessibilityLabel={t('location.title')}
+          busyLabel={tStates('loading')}
+          onOpen={() => void Linking.openURL(mapExternalUrl(geo))}
+          openLabel={t('location.openMap')}
+        />
+      ) : null}
+    </YStack>
   );
 }
 
 /**
- * Một dòng điều kiện. Biểu tượng nằm trong hộp cao ĐÚNG bằng một dòng chữ và canh giữa hộp đó —
- * đặt nó thẳng cạnh `Text` nhiều dòng thì nó dính lên đỉnh khối, lệch hẳn so với dòng đầu.
+ * Nhãn cạnh tên xe — `.badgeNew` / `.amenityBadge` của web: đệm 2 × 8, bo `card` (16), chữ 12
+ * Medium. "Xe mới" nền `success-bg` chữ `success`; nhãn tiện ích nền `primary-subtle` chữ
+ * `primary-hover`.
  */
-function BulletLine({ text }: { text: string }) {
-  const lineHeight = Math.round(fontSize.bodySm * 1.5);
-
-  return (
-    <XStack ai="flex-start" gap={space.xs}>
-      <YStack h={lineHeight} jc="center">
-        <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-      </YStack>
-      <Text f={1} col={colors.textMuted} fos={fontSize.bodySm} lineHeight={lineHeight}>
-        {text}
-      </Text>
-    </XStack>
-  );
-}
-
-/** Tiện ích nổi bật — viên gold nhạt viền mảnh, đúng `.amenityBadge` của web. */
-function Badge({ label }: { label: string }) {
+function Badge({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'success' }) {
+  const colors = useColors();
+  const success = tone === 'success';
   return (
     <XStack
-      bg={colors.primaryLight}
+      bg={success ? colors.successSurface : colors.primarySubtle}
       bw={1}
-      bc={colors.borderSubtle}
-      br={radius.pill}
-      px={space.md}
-      py={space.xs}
+      bc={success ? colors.successBorder : colors.primaryLight}
+      br={radius.card}
+      px={space.sm}
+      py={2}
     >
-      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+      <Text
+        col={success ? colors.success : colors.primaryHover}
+        fos={fontSize.bodySm}
+        fow={fontWeight.medium}
+      >
         {label}
       </Text>
     </XStack>

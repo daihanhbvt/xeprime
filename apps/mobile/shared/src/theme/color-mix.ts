@@ -50,3 +50,35 @@ export function mixHex(a: string, b: string, ratio: number): string {
     .map((v) => v.toString(16).padStart(2, '0'))
     .join('')}`;
 }
+
+type Rgba = readonly [number, number, number, number];
+
+function toRgba(color: string): Rgba {
+  const value = color.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(value)) return [...toRgb(value), 1];
+  const m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(value);
+  if (!m) throw new Error(`mixColor chỉ nhận '#rrggbb' hoặc 'rgb(a)(…)', nhận được '${color}'.`);
+  return [Number(m[1]), Number(m[2]), Number(m[3]), m[4] === undefined ? 1 : Number(m[4])];
+}
+
+/**
+ * `color-mix(in srgb, a <ratio>%, b)` cho cả màu CÓ ĐỘ TRONG (`rgba`) — đúng phép nội suy của CSS:
+ * alpha trộn tuyến tính, kênh màu trộn ở dạng PREMULTIPLIED rồi chia lại cho alpha kết quả.
+ *
+ * Cần cho token tối dạng `rgba(…, 0.16)` (nền trạng thái của palette tối), nơi `mixHex` từ chối.
+ * Trả `#rrggbb` khi kết quả đục hẳn, ngược lại `rgba(…)`.
+ */
+export function mixColor(a: string, b: string, ratio: number): string {
+  if (!(ratio >= 0 && ratio <= 1)) {
+    throw new Error(`mixColor nhận tỉ lệ trong [0, 1], nhận được ${ratio}.`);
+  }
+  const [ra, ga, ba, aa] = toRgba(a);
+  const [rb, gb, bb, ab] = toRgba(b);
+  const alpha = aa * ratio + ab * (1 - ratio);
+  if (alpha === 0) return 'rgba(0, 0, 0, 0)';
+  const channel = (x: number, y: number) =>
+    Math.round((x * aa * ratio + y * ab * (1 - ratio)) / alpha);
+  const rgb = [channel(ra, rb), channel(ga, gb), channel(ba, bb)];
+  if (alpha >= 1) return `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  return `rgba(${rgb.join(', ')}, ${Number(alpha.toFixed(3))})`;
+}

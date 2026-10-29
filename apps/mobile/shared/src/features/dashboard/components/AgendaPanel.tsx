@@ -7,7 +7,8 @@ import { DASHBOARD_AGENDA_DAYS, DASHBOARD_AGENDA_KIND } from '@xeprime/types';
 import { dayjs } from '@xeprime/domain';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { PartnerAgendaItem, PartnerOverviewAgenda } from '../api';
 import { groupAgenda, type AgendaGroup } from '../dashboard-model';
 import { DashboardPanel } from './DashboardPanel';
@@ -32,6 +33,7 @@ export function AgendaPanel({
   bookingHref: (id: string) => Href;
   moreHref: Href;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.agenda');
   const navigateOnce = useNavigateOnce();
   const now = generatedAt ? dayjs(generatedAt) : dayjs();
@@ -74,6 +76,7 @@ export function AgendaPanel({
 }
 
 function AgendaGroupBlock({ group, onOpen }: { group: AgendaGroup; onOpen: (id: string) => void }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.agenda');
   const fmt = useAppFormat();
   const overdue = group.kind === 'overdue';
@@ -88,7 +91,11 @@ function AgendaGroupBlock({ group, onOpen }: { group: AgendaGroup; onOpen: (id: 
   return (
     <YStack gap={space.xs} accessibilityLabel={heading}>
       <XStack ai="center" gap={space.xs}>
-        <Text col={overdue ? colors.danger : colors.text} fos={fontSize.label} fow={fontWeight.bold}>
+        <Text
+          col={overdue ? colors.danger : colors.text}
+          fos={fontSize.label}
+          fow={fontWeight.bold}
+        >
           {heading}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.label}>
@@ -116,6 +123,7 @@ function AgendaRow({
   overdue: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.agenda');
   const fmt = useAppFormat();
   const pickup = item.kind === DASHBOARD_AGENDA_KIND.PICKUP;
@@ -128,7 +136,12 @@ function AgendaRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={t('itemAria', { kind: kindLabel, vehicle, customer: item.customerName, time: when })}
+      accessibilityLabel={t('itemAria', {
+        kind: kindLabel,
+        vehicle,
+        customer: item.customerName,
+        time: when,
+      })}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
       <XStack
@@ -140,7 +153,11 @@ function AgendaRow({
         bg={overdue ? colors.dangerSurface : colors.surfaceMuted}
       >
         <YStack w={64} gap={2}>
-          <Text col={overdue ? colors.danger : colors.text} fos={fontSize.label} fow={fontWeight.bold}>
+          <Text
+            col={overdue ? colors.danger : colors.text}
+            fos={fontSize.label}
+            fow={fontWeight.bold}
+          >
             {when}
           </Text>
           <Text col={kindTone} fos={fontSize.meta} fow={fontWeight.semibold}>

@@ -1,8 +1,6 @@
-import { useRouter } from 'expo-router';
 import { XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Chip } from '@/components/ui/Chip';
-import { ROUTES } from '@/navigation/routes';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { layout } from '@/theme/layout';
 import { space } from '@/theme/tokens';
 
@@ -18,13 +16,17 @@ export type AccountPaymentsTab = (typeof ACCOUNT_PAYMENTS_TAB)[keyof typeof ACCO
  * Account 22/10/2026): "Tài khoản thanh toán" (`/account/balance`) · "Lịch sử giao dịch"
  * (`/account/payments`).
  *
- * Mỗi tab là một MÀN có sẵn, như web để mỗi tab là một route. Đổi tab bằng `replace`, không `push`:
- * hai tab là hai mặt của CÙNG một mục, nên nút lui phải về menu tài khoản chứ không lật qua lại
- * giữa hai tab.
+ * Chỉ là dải chuyển — nơi gọi quyết đổi gì. `AccountPaymentsHub` đổi THÂN màn tại chỗ (không mở
+ * màn mới, người dùng chốt 29/10/2026).
  */
-export function AccountPaymentsTabs({ value }: { value: AccountPaymentsTab }) {
+export function AccountPaymentsTabs({
+  value,
+  onChange,
+}: {
+  value: AccountPaymentsTab;
+  onChange: (next: AccountPaymentsTab) => void;
+}) {
   const t = useTranslations('AccountPayments.hub');
-  const router = useRouter();
 
   return (
     <XStack
@@ -35,24 +37,15 @@ export function AccountPaymentsTabs({ value }: { value: AccountPaymentsTab }) {
       accessibilityRole="tablist"
       accessibilityLabel={t('tabsLabel')}
     >
-      <Chip
-        label={t('tabs.balance')}
-        selected={value === ACCOUNT_PAYMENTS_TAB.BALANCE}
-        size="sm"
-        variant="segmented"
-        grow
-        onPress={() => {
-          if (value !== ACCOUNT_PAYMENTS_TAB.BALANCE) router.replace(ROUTES.account.balance());
-        }}
-      />
-      <Chip
-        label={t('tabs.history')}
-        selected={value === ACCOUNT_PAYMENTS_TAB.HISTORY}
-        size="sm"
-        variant="segmented"
-        grow
-        onPress={() => {
-          if (value !== ACCOUNT_PAYMENTS_TAB.HISTORY) router.replace(ROUTES.account.payments());
+      {/* Khuôn dải tab chung (`SegmentedTabs`, người dùng chốt 28/10/2026). */}
+      <SegmentedTabs
+        items={[
+          { key: ACCOUNT_PAYMENTS_TAB.BALANCE, label: t('tabs.balance') },
+          { key: ACCOUNT_PAYMENTS_TAB.HISTORY, label: t('tabs.history') },
+        ]}
+        value={value}
+        onChange={(next) => {
+          if (next !== value) onChange(next as AccountPaymentsTab);
         }}
       />
     </XStack>

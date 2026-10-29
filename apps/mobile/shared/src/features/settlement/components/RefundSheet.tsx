@@ -19,7 +19,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useCorrectRefund, useRecordRefund } from '../hooks/use-settlement';
 import type { BookingSettlement, RecordRefundInput } from '../api';
 
@@ -82,6 +83,7 @@ export function RefundSheet({
   settlement: BookingSettlement;
   onDone: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.settlement.refund');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

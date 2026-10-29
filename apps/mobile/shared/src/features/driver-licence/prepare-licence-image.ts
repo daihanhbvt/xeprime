@@ -110,23 +110,65 @@ export async function prepareLicenceImage(raw: RawLicenceImage): Promise<Prepare
  * Nộp một ảnh: presign theo ĐÚNG số byte sắp gửi → PUT thẳng lên kho riêng tư → xác nhận.
  * Trả lượt nộp ở `processing` — đọc ảnh chạy nền, màn hình hỏi lại overview tới khi có kết quả.
  *
- * PUT bằng `fetch` TRẦN: `uploadUrl` là host của R2, gửi kèm Bearer của XePrime tới đó là rò
- * token. Không log `uploadUrl` — nó là giấy phép ghi đã ký.
+ * PUT TRẦN (không qua api-client): `uploadUrl` là host của R2, gửi kèm Bearer của XePrime tới đó
+ * là rò token. Không log `uploadUrl` — nó là giấy phép ghi đã ký.
+ *
+ * `onProgress(0–100)`: phần trăm byte đã gửi của bước tải — web hiện `· {progress}%` cạnh bước
+ * "Tải ảnh lên" (`DriverLicenceUploader.tsx`). Chỉ là hiển thị; kết quả vẫn do server quyết.
  */
-export async function submitDriverLicence(image: PreparedLicenceImage): Promise<DriverLicence> {
+export async function submitDriverLicence(
+  image: PreparedLicenceImage,
+  onProgress?: (percent: number) => void,
+): Promise<DriverLicence> {
   const contentType = 'image/jpeg';
   // Lỗi presign để NGUYÊN `ApiClientError`: mã như `DRIVER_LICENCE_SUBMISSION_LIMIT` phải tới được
   // `useErrorMessage` để hiện đúng câu, bọc lại là mất mã.
   const ticket = await driverLicenceApi.presign({ contentType, fileSize: image.body.size });
   try {
-    const response = await fetch(ticket.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body: image.body,
-    });
-    if (!response.ok) throw new Error(`R2 PUT ${response.status}`);
+    await putWithProgress(ticket.uploadUrl, image.body, contentType, onProgress);
   } catch (error) {
     throw new ImageUploadError('upload', error);
   }
   return driverLicenceApi.complete(ticket.licenceId);
+}
+
+/** Trần một lượt PUT — ảnh đã nén ≤ trần dung lượng, 2 phút là dư cho mạng 3G chậm. */
+const PUT_TIMEOUT_MS = 120_000;
+
+/**
+ * PUT một blob lên URL ký sẵn, báo tiến độ — `XMLHttpRequest` vì `fetch` của React Native không có
+ * sự kiện tiến độ tải LÊN.
+ *
+ * Gửi ĐÚNG blob đã đo lúc presign và KHÔNG tự đặt `Content-Length`: presign ký header đó theo
+ * `body.size`, nền tảng tự điền từ chính blob — đặt tay hay gửi một bản khác là R2 trả 403
+ * (`references/native-adaptations.md` của skill mobile-feature). Header duy nhất là `Content-Type`,
+ * như bản `fetch` trước đây.
+ */
+function putWithProgress(
+  url: string,
+  body: Blob,
+  contentType: string,
+  onProgress?: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.timeout = PUT_TIMEOUT_MS;
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        }
+      };
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`R2 PUT ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error('R2 PUT network error'));
+    xhr.ontimeout = () => reject(new Error('R2 PUT timeout'));
+    xhr.onabort = () => reject(new Error('R2 PUT aborted'));
+    xhr.send(body);
+  });
 }

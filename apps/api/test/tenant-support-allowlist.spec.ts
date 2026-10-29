@@ -40,6 +40,7 @@ const SUPPORT_ALLOWLIST = [
   'BookingRequestsController.list',
   // Lịch sử gán tài xế của đơn (ADR 0063) — chỉ đọc, cùng capability xem đơn.
   'BookingsController.driverHistory',
+  'BookingsController.driverWageQuote',
   'BookingsController.getOne',
   'BookingsController.list',
   'BranchesController.get',
@@ -52,7 +53,9 @@ const SUPPORT_ALLOWLIST = [
   'CustomersController.list',
   'CustomersController.summary',
   'DriversController.assignable',
+  'DriversController.assignments',
   'DriversController.list',
+  'DriversController.wageSettings',
   'HandoverQueueController.missingOdometer',
   'InvitesController.list',
   'MaintenanceBoardController.list',

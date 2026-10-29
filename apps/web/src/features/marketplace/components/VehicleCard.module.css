@@ -373,6 +373,36 @@
   }
 }
 
+/*
+ * Điện thoại (≤640px): chế độ "danh sách" là thẻ NGANG gọn — ảnh 128 bên trái, thông tin bên phải
+ * (người dùng chốt 27/10/2026, cùng bố cục app native `VehicleCard variant="row"`). Muốn xem đủ
+ * thông số thì dùng chế độ lưới; ở đây bỏ hàng thông số và chỉ số chủ xe cho thẻ đủ thấp.
+ */
+@media (max-width: 640px) {
+  .listCard {
+    flex-direction: row;
+    height: auto;
+  }
+
+  .listMedia {
+    width: 128px;
+    min-width: 128px;
+    height: auto;
+    padding: var(--xp-space-sm);
+  }
+
+  .listBody {
+    gap: var(--xp-space-xs);
+    padding: var(--xp-space-sm) var(--xp-space-12) var(--xp-space-sm) 0;
+  }
+
+  .listSpecsRow,
+  .listMetrics,
+  .listDetailBtn {
+    display: none;
+  }
+}
+
 /* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
 .media {
   position: relative;
