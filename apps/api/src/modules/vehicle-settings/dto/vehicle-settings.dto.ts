@@ -144,7 +144,12 @@ export class VehicleServiceSettingDto {
   @ApiProperty({ enum: IDENTITY_VERIFY_METHOD_VALUES }) identityVerifyMethod!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
   @ApiProperty() requireTermsAcceptance!: boolean;
-  @ApiProperty({ enum: DRIVER_DEPOSIT_MODE_VALUES }) depositMode!: string;
+  @ApiProperty({
+    enum: DRIVER_DEPOSIT_MODE_VALUES,
+    deprecated: true,
+    description: 'NGỪNG DÙNG (29/10/2026) — tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành',
+  })
+  depositMode!: string;
   @ApiProperty({
     enum: DRIVER_DEPOSIT_MODE_VALUES,
     isArray: true,
@@ -221,8 +226,11 @@ export class PatchVehicleServiceSettingDto {
   @IsBoolean()
   requireTermsAcceptance?: boolean;
 
-  /** Chỉ nhận mã hệ thống THU được — 30%/50% bị từ chối ở đây cho tới khi nối vào vòng đời giữ chỗ. */
-  @ApiPropertyOptional({ enum: DRIVER_DEPOSIT_MODE_SUPPORTED })
+  /**
+   * NGỪNG DÙNG (29/10/2026): web đã gỡ ô cọc giữ chuyến — tiền giữ chỗ do nền tảng thu. Chỉ còn nhận
+   * `none` để app đã phát hành không vỡ; 30%/50% bị từ chối.
+   */
+  @ApiPropertyOptional({ enum: DRIVER_DEPOSIT_MODE_SUPPORTED, deprecated: true })
   @IsOptional()
   @IsIn(DRIVER_DEPOSIT_MODE_SUPPORTED)
   depositMode?: string;

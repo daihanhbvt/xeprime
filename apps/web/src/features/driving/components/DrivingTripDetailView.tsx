@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, isDriverTripAwaitingAnswer } from '@xeprime/types';
+import { driverWageLine } from '@xeprime/domain';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { drivingTripPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -33,6 +34,7 @@ import styles from './Driving.module.css';
 export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
   const t = useTranslations('Driving.detail');
   const tToast = useTranslations('Driving.toast');
+  const tWage = useTranslations('Driving.wage');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const router = useRouter();
@@ -92,6 +94,7 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
     trip.destinationLongitude,
   );
   const empty = t('emptyValue');
+  const wageLine = driverWageLine(trip.wage);
 
   return (
     <div className={styles.page}>
@@ -185,6 +188,45 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
       ) : null}
       {trip.canDrop ? (
         <DropTripDialog trip={trip} open={dropOpen} onClose={() => setDropOpen(false)} />
+      ) : null}
+
+      {/*
+       * Tiền công của CHÍNH tài xế (ADR 0075) — số hiện hành theo chặng và lịch sử sửa nếu có. Chủ
+       * xe trả trực tiếp; không có tiền nào khác của chuyến ở đây.
+       */}
+      {wageLine ? (
+        <section className={styles.section} aria-label={tWage('title')}>
+          <h2 className={styles.sectionTitle}>{tWage('title')}</h2>
+          <p className={wageLine.kind === 'none' ? styles.meta : styles.wageAmount}>
+            {tWage(`line.${wageLine.kind}`, {
+              amount: fmt.money(wageLine.amount),
+              days: trip.wage.days ?? 0,
+            })}
+          </p>
+          {wageLine.kind !== 'none' ? <p className={styles.meta}>{tWage('paidDirect')}</p> : null}
+          {trip.wage.changes.length > 0 ? (
+            <div className={styles.wageChanges}>
+              <h3 className={styles.wageChangesTitle}>{tWage('changesTitle')}</h3>
+              <ul className={styles.wageChangeList}>
+                {trip.wage.changes.map((c) => (
+                  <li key={c.id}>
+                    <span className={styles.wageChangeAmount}>
+                      {tWage('change', { old: fmt.money(c.oldAmount), new: fmt.money(c.newAmount) })}
+                    </span>
+                    <span className={styles.meta}>
+                      {c.changedByName
+                        ? tWage('changeBy', { name: c.changedByName, time: fmt.dateTime(c.changedAt) })
+                        : tWage('changeAt', { time: fmt.dateTime(c.changedAt) })}
+                    </span>
+                    {c.reason ? (
+                      <span className={styles.meta}>{tWage('reason', { reason: c.reason })}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       <section className={styles.section}>

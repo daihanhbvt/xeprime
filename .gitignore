@@ -22,6 +22,8 @@ prisma/.env
 
 # test / coverage
 coverage/
+test-results/
+playwright-report/
 .nyc_output/
 
 # logs

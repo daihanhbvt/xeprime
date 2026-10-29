@@ -1,0 +1,71 @@
+/* Thẻ tiền công tài xế mặc định — đứng trên bảng tài xế, cùng nhịp panel của khu manage. */
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-lg);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+  font-size: 18px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.value {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+/* Chưa đặt mức mặc định — nhắc bằng màu cảnh báo: gán tay phải nhập số, "Đặt ngay" không tự gán. */
+.unset {
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-medium, 500);
+}
+
+.hint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.linkAction {
+  align-self: flex-start;
+  padding-inline: 0;
+}
+
+@media (max-width: 640px) {
+  .card {
+    flex-wrap: wrap;
+  }
+}

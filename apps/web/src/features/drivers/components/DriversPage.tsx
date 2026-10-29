@@ -7,7 +7,7 @@ import {
   PlayCircleOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
-import { App, Button, Tag } from 'antd';
+import { App, Button, DatePicker, Tag } from 'antd';
 import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -30,16 +30,22 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { dayjs, nowInAppTz } from '@/lib/datetime';
 import { DRIVERS_DEFAULT_LIMIT } from '../api';
 import { useDrivers, useEndDriver, useResumeDriver, useSuspendDriver } from '../hooks/use-drivers';
 import type { Driver, DriverFilters } from '../types';
+import { DriverAssignmentsDrawer } from './DriverAssignmentsDrawer';
 import { DriverLicenceStateTag } from './DriverLicenceStateTag';
+import { DriverWageSettingsCard } from './DriverWageSettingsCard';
 import { EditDriverModal } from './EditDriverModal';
 import { InviteDriverModal } from './InviteDriverModal';
 import type { InviteDriverFormValues } from '../schema';
 import styles from './DriversPage.module.css';
 
-const MIN_TABLE_WIDTH = 1040;
+const MIN_TABLE_WIDTH = 1180;
+/** Tháng thống kê tiền công trên URL — `YYYY-MM` (giờ VN), cùng định dạng server nhận. */
+const MONTH_FORMAT = 'YYYY-MM';
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
@@ -54,6 +60,7 @@ function parseFilters(params: URLSearchParams): DriverFilters {
         ? linkStatus
         : undefined,
     driverType: (DRIVER_TYPE_VALUES as string[]).includes(driverType) ? driverType : undefined,
+    month: MONTH_PATTERN.test(params.get('month') ?? '') ? (params.get('month') as string) : undefined,
     page: page > 1 ? page : undefined,
     limit: Number(params.get('limit')) || undefined,
   };
@@ -88,6 +95,10 @@ function DriversPageInner() {
   // "Mời lại" mở cùng modal mời, điền sẵn từ dòng cũ.
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverFormValues | null>(null);
   const [editing, setEditing] = useState<Driver | null>(null);
+  // Ngăn kéo "Chuyến & tiền công" của một tài xế trong tháng đang xem (ADR 0075).
+  const [wageOf, setWageOf] = useState<Driver | null>(null);
+  const monthValue = filters.month ? dayjs(filters.month, MONTH_FORMAT) : nowInAppTz();
+  const monthLabel = fmt.monthYear(monthValue.toDate());
 
   const { data, isError, refetch, isFetching } = useDrivers(filters);
   const suspend = useSuspendDriver();
@@ -138,6 +149,23 @@ function DriversPageInner() {
     onSuccess: () => message.success(t(successKey)),
     onError: (err: unknown) => message.error(errorMessage(err)),
   });
+
+  const monthPicker = (
+    <DatePicker
+      picker="month"
+      className={styles.month}
+      value={monthValue}
+      format={(value) => fmt.monthYear(value.toDate())}
+      allowClear={false}
+      aria-label={t('wage.month.label')}
+      placeholder={t('wage.month.placeholder')}
+      /* Tháng sau chưa có chuyến nào kết thúc — một cột rỗng của tương lai không nói lên điều gì. */
+      maxDate={nowInAppTz()}
+      onChange={(value) => {
+        if (value) setFilters({ month: value.format(MONTH_FORMAT), page: undefined });
+      }}
+    />
+  );
 
   const inviteButton = canManage ? (
     <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteOpen(true)}>
@@ -208,6 +236,25 @@ function DriversPageInner() {
                 {t('drops.cooldownUntil', { time: fmt.dateTime(row.autoAssignCooldownUntil) })}
               </div>
             ) : null}
+          </div>
+        ) : (
+          tCommon('labels.emptyValue')
+        ),
+    },
+    {
+      // Thống kê tháng (ADR 0075): tổng tiền công đã ghi + số chuyến HOÀN THÀNH — bấm để xem từng chuyến.
+      title: t('columns.monthWage'),
+      key: 'monthWage',
+      width: 150,
+      render: (_, row) =>
+        row.monthCompletedTrips > 0 || Number(row.monthWageTotal) > 0 ? (
+          <div>
+            <Button type="link" className={styles.linkCell} onClick={() => setWageOf(row)}>
+              {fmt.money(row.monthWageTotal)}
+            </Button>
+            <div className={styles.meta}>
+              {t('wage.monthTrips', { count: row.monthCompletedTrips })}
+            </div>
           </div>
         ) : (
           tCommon('labels.emptyValue')
@@ -315,6 +362,8 @@ function DriversPageInner() {
     <div>
       <ManagePageHeader title={t('page.title')} />
 
+      <DriverWageSettingsCard />
+
       <FilterBar
         fields={filterFields}
         values={{
@@ -324,7 +373,12 @@ function DriversPageInner() {
         }}
         // `onChange` gửi đúng trường vừa đổi — ghi thẳng làm patch.
         onChange={(patch) => setFilters(patch as unknown as Partial<DriverFilters>)}
-        actions={inviteButton}
+        actions={
+          <div className={styles.toolbar}>
+            {monthPicker}
+            {inviteButton}
+          </div>
+        }
       />
 
       <DataTable<Driver>
@@ -358,6 +412,12 @@ function DriversPageInner() {
         }}
       />
       <EditDriverModal driver={editing} onClose={() => setEditing(null)} />
+      <DriverAssignmentsDrawer
+        driver={wageOf}
+        month={filters.month}
+        monthLabel={monthLabel}
+        onClose={() => setWageOf(null)}
+      />
     </div>
   );
 }

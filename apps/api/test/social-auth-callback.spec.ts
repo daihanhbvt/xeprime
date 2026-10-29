@@ -36,6 +36,9 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
     nativeRedirect: jest.fn(),
     webRedirect: jest.fn(),
     logFailure: jest.fn(),
+    bindBrowser: jest.fn(),
+    browserStateOf: jest.fn(() => null as string | null),
+    clearBrowserBinding: jest.fn(),
   };
   const sessions = { issue: jest.fn(), attach: jest.fn() };
   const nativeCodes = { issue: jest.fn(), consume: jest.fn() };
@@ -70,6 +73,8 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
   });
 
   it('KHÔNG 400 khi Google gắn thêm iss/scope/authuser/prompt', async () => {
+    // Trình duyệt đã mở luồng mang cookie gắn `state` (ADR 0076 điều 4).
+    social.browserStateOf.mockReturnValueOnce('st');
     social.complete.mockResolvedValue({
       ok: true,
       userId: 'U1',
@@ -92,7 +97,10 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
       provider: 'google',
       code: 'c',
       state: 'st',
+      browserState: 'st',
     });
+    // Cookie gắn trình duyệt dùng một lần.
+    expect(social.clearBrowserBinding).toHaveBeenCalledTimes(1);
   });
 
   it('KHÔNG 400 khi Facebook gắn thêm error_reason/error_description lúc người dùng huỷ', async () => {
@@ -127,6 +135,11 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
       // Không có AuthGuard ở đây nên request không mang realm của site — controller chuyển `null`.
       webRealm: null,
     });
+    // Luồng web ⇒ gắn `state` vào trình duyệt này bằng cookie (ADR 0076 điều 4).
+    expect(social.bindBrowser).toHaveBeenCalledWith(
+      expect.anything(),
+      'https://accounts.google.com/o/oauth2/v2/auth?x=1',
+    );
   });
 
   it('thiếu code/state thì redirect kèm SOCIAL_STATE_INVALID, không phải JSON lỗi', async () => {
@@ -172,6 +185,9 @@ describe('GET /auth/social/:provider/callback — nhánh app native', () => {
     nativeRedirect: jest.fn(),
     webRedirect: jest.fn(),
     logFailure: jest.fn(),
+    bindBrowser: jest.fn(),
+    browserStateOf: jest.fn(() => null as string | null),
+    clearBrowserBinding: jest.fn(),
   };
   const sessions = { issue: jest.fn(), attach: jest.fn() };
   const nativeCodes = { issue: jest.fn(), consume: jest.fn() };

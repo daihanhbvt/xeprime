@@ -38,6 +38,7 @@ import {
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { OwnerPayoutDto } from '../../../common/dto/owner-payout.dto';
 import { ExactlyOneOf } from '../../../common/validators/exactly-one-of.validator';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingDriverIncidentDto, BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
@@ -611,6 +612,16 @@ export class AssignBookingDriverDto {
   @ValidateNested()
   @Type(() => ExternalDriverInputDto)
   externalDriver?: ExternalDriverInputDto;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Tiền công của lượt gán (VND, bội 1.000đ — ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế.',
+  })
+  @IsOptional()
+  @Matches(/^\d{1,12}$/, { message: 'Tiền công không hợp lệ (số VND nguyên không âm)' })
+  @IsMoneyStep({ message: 'Tiền công phải là bội của 1.000đ' })
+  wageAmount?: string;
 }
 
 /**

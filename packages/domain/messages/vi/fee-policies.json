@@ -68,7 +68,8 @@
       "deposit": "Tiền giữ chỗ",
       "insurance": "Bảo hiểm",
       "tax": "Thuế khấu trừ",
-      "legacy": "Số của mô hình cũ"
+      "legacy": "Số của mô hình cũ",
+      "withDriver": "Chuyến có tài xế — giới hạn số"
     },
     "facts": {
       "effectiveFrom": "Hiệu lực từ",
@@ -86,11 +87,15 @@
       "tripInsurancePercent": "% bảo hiểm chuyến đi",
       "vehicleProtectionPercent": "% bảo vệ xe",
       "taxLegalBasis": "Căn cứ pháp lý",
-      "taxScope": "Áp dụng cho"
+      "taxScope": "Áp dụng cho",
+      "withDriverPrice": "Giá có tài xế/ngày",
+      "driverWage": "Tiền công tài xế/ngày",
+      "driverWageSuggested": "Tiền công/ngày gợi ý"
     },
     "perDay": "{value}/ngày",
     "off": "Chưa áp dụng",
-    "legacyHint": "Luồng tiền hiện hành không đọc các số này; chúng chỉ còn để đối chiếu đơn cũ."
+    "legacyHint": "Luồng tiền hiện hành không đọc các số này; chúng chỉ còn để đối chiếu đơn cũ.",
+    "rangePerDay": "{min} – {max}/ngày"
   },
   "form": {
     "titleCreate": "Tạo bản nháp chính sách phí",
@@ -150,7 +155,9 @@
       "ratePositive": "Nhập phí mỗi ngày lớn hơn 0",
       "partnerRequired": "Nhập tên đối tác bảo hiểm",
       "taxRateRequired": "Nhập % thuế",
-      "taxLegalBasisRequired": "Nhập căn cứ pháp lý"
+      "taxLegalBasisRequired": "Nhập căn cứ pháp lý",
+      "limitOrder": "Tối đa phải lớn hơn tối thiểu",
+      "suggestedInRange": "Mức gợi ý phải nằm trong khoảng tiền công/ngày"
     },
     "taxLegalBasis": "Căn cứ pháp lý",
     "taxLegalBasisHint": "Số hiệu văn bản làm căn cứ khấu trừ — hiện cho chủ xe và in trên sổ thuế.",
@@ -166,7 +173,15 @@
       "transport": "Nhóm vận tải"
     },
     "taxScope": "Áp dụng cho: cá nhân, hộ kinh doanh · Doanh nghiệp: không khấu trừ",
-    "taxScopeValue": "Cá nhân, hộ kinh doanh · Doanh nghiệp đã xác minh: không khấu trừ"
+    "taxScopeValue": "Cá nhân, hộ kinh doanh · Doanh nghiệp đã xác minh: không khấu trừ",
+    "sectionWithDriver": "Chuyến có tài xế — giới hạn số",
+    "withDriverLimitsHint": "Chặn số vô lý (gõ thừa/thiếu số 0), không phải điều tiết giá. Áp cho giá có tài xế/ngày của xe và tiền công tài xế/ngày gian hàng ghi nhận.",
+    "withDriverPriceMin": "Giá có tài xế/ngày — tối thiểu",
+    "withDriverPriceMax": "Giá có tài xế/ngày — tối đa",
+    "driverWageMin": "Tiền công tài xế/ngày — tối thiểu",
+    "driverWageMax": "Tiền công tài xế/ngày — tối đa",
+    "driverWageSuggested": "Tiền công/ngày gợi ý",
+    "driverWageSuggestedHint": "Chỉ là lời nhắc theo thị trường cho gian hàng chưa đặt mức chung — không tự ghi vào gian hàng hay chuyến nào."
   },
   "commissionScope": {
     "title": "Phạm vi áp dụng: Chủ xe cá nhân (Tuyến hoa hồng). Xe gói / Gian hàng: Miễn phí (H = 0).",

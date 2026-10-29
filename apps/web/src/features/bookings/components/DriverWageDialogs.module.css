@@ -1,0 +1,94 @@
+/* Tiền công tài xế (ADR 0075) — hộp gán, hộp sửa và khối hiển thị trên chi tiết đơn. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Một dòng "nhãn — số" nền nhạt: số gợi ý / số đang ghi, đọc trước khi gõ. */
+.facts {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.facts b {
+  color: var(--xp-color-text);
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+/* Khối tiền công trên chi tiết đơn / lịch sử tài xế. */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.amount {
+  font-weight: var(--xp-font-weight-medium, 500);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--xp-space-sm);
+  border-left: 2px solid var(--xp-color-border);
+}
+
+.changesTitle {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.changeList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--xp-font-size-sm);
+}
+
+.changeList li {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--xp-space-sm);
+}
+
+.changeAmount {
+  font-weight: var(--xp-font-weight-medium, 500);
+  white-space: nowrap;
+}

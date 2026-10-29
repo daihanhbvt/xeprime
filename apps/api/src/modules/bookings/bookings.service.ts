@@ -1,4 +1,8 @@
-import type { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
+import type {
+  BookingDriverHistoryItemDto,
+  DriverWageQuoteDto,
+  UpdateDriverWageDto,
+} from '../drivers/dto/driver.dto';
 import {
   BadRequestException,
   ConflictException,
@@ -723,16 +727,48 @@ export class BookingsService {
     return this.drivers.history(tenantId, id);
   }
 
+  /** Số liệu tiền công cho hộp gán tài xế (ADR 0075) — 404 khi đơn không thuộc tenant. */
+  driverWageQuote(tenantId: string, id: string): Promise<DriverWageQuoteDto> {
+    return this.drivers.wageQuote(tenantId, id);
+  }
+
+  /**
+   * Sửa tiền công của một lượt gán (ADR 0075) — luật ở `DriversService.updateWage` (writer duy
+   * nhất). Đơn đã khép vẫn sửa được trong hạn 72h: đó là lúc hai bên chốt số cuối chuyến.
+   */
+  async updateDriverWage(
+    tenantId: string,
+    id: string,
+    assignmentId: string,
+    userId: string,
+    dto: UpdateDriverWageDto,
+  ): Promise<BookingDriverHistoryItemDto[]> {
+    const exists = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) throw notFound();
+    await this.drivers.updateWage(tenantId, userId, id, assignmentId, dto);
+    return this.drivers.history(tenantId, id);
+  }
+
   /** Gán tài xế LIÊN KẾT (ADR 0063) — `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống, ADR 0067). */
   assignDriver(
     tenantId: string,
     id: string,
     userId: string,
     driverId: string | null,
+    wageAmount: string | null = null,
   ): Promise<BookingDetailDto> {
-    return this.changeDriver(tenantId, id, (tx) =>
-      this.drivers.assignWithinTx(tx, { tenantId, bookingId: id, driverId, actorUserId: userId }),
-    );
+    return this.changeDriver(tenantId, id, async (tx) => {
+      await this.drivers.assignWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        driverId,
+        actorUserId: userId,
+        wageAmount,
+      });
+    });
   }
 
   /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */

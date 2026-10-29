@@ -8,9 +8,7 @@ import {
   type QueryParams,
 } from '@/services/api-client';
 import type {
-  DriverSurchargeRule,
   PatchVehicleServiceSettingInput,
-  SaveDriverSurchargeRuleInput,
   SaveVehicleOperationSettingsInput,
   VehicleOperationSettings,
   VehicleServiceSetting,
@@ -44,23 +42,6 @@ export const patchVehicleServiceSetting = (
   body: PatchVehicleServiceSettingInput,
 ): Promise<VehicleServiceSetting> =>
   apiPatch<VehicleServiceSetting>(`/vehicles/${vehicleId}/service-settings/${serviceType}`, body);
-
-export const fetchDriverSurchargeRules = async (
-  vehicleId: string,
-): Promise<DriverSurchargeRule[]> =>
-  (await apiGet<{ items: DriverSurchargeRule[] }>(`/vehicles/${vehicleId}/driver-surcharge-rules`))
-    .items;
-
-export const saveDriverSurchargeRules = async (
-  vehicleId: string,
-  items: SaveDriverSurchargeRuleInput[],
-): Promise<DriverSurchargeRule[]> =>
-  (
-    await apiPut<{ items: DriverSurchargeRule[] }>(
-      `/vehicles/${vehicleId}/driver-surcharge-rules`,
-      { items },
-    )
-  ).items;
 
 export type VehicleTripHistoryResult = Paged<VehicleTripHistoryItem>;
 

@@ -271,6 +271,11 @@
       "confirm": "Confirm address",
       "useCurrent": "Use my current location",
       "imprecise": "Your location isn’t precise enough (about {distance} off). Please type your exact address."
+    },
+    "withDriverPrice": {
+      "title": "With-driver price",
+      "included": "Includes the driver, fuel, the driver's overnight costs and service at your destination.",
+      "excluded": "Excludes road tolls — paid directly during the trip."
     }
   },
   "reviews": {

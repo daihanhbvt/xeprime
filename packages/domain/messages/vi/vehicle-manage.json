@@ -298,7 +298,7 @@
   },
   "operationsTab": {
     "title": "Vận hành & điều kiện thuê",
-    "hint": "Khung giờ giao nhận, tự động nhận chuyến, thủ tục và phụ phí",
+    "hint": "Khung giờ giao nhận, tự động nhận chuyến và thủ tục",
     "handover": "Thời gian giao nhận",
     "selfDrive": "Tự lái",
     "withDriver": "Có tài xế",

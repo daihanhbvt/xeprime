@@ -142,6 +142,8 @@ export {
   type DriverTripBadgeTone,
 } from './driver-trip-badges';
 
+export { driverWageLine, type DriverWageLine, type DriverWageLineKind } from './driver-wage-line';
+
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
 export {

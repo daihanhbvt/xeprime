@@ -11,7 +11,6 @@ import {
   CANCELLATION_REASON_CATEGORY,
   DRIVER_ASSIGNMENT_AUDIT_ACTION,
   DRIVER_ASSIGNMENT_OUTCOME,
-  DRIVER_ASSIGNMENT_STATUS,
   DRIVER_DROP_REASON,
   DRIVER_DROP_ZONE,
   DRIVER_INCIDENT_LEVEL,
@@ -192,6 +191,8 @@ beforeAll(async () => {
       name: 'Shop rút chuyến',
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: owner,
+      // Tiền công tài xế/ngày mặc định (ADR 0075) — gán tài xế cần một số để tài xế thấy trước.
+      driverDailyWage: new Prisma.Decimal('500000'),
     },
   });
   await prisma.tenantMembership.create({

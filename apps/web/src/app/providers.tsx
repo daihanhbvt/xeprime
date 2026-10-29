@@ -9,7 +9,7 @@ import type { Locale as AntdLocale } from 'antd/lib/locale';
 import 'dayjs/locale/en';
 import 'dayjs/locale/vi';
 import { useLocale } from 'next-intl';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
@@ -17,6 +17,7 @@ import type { AppLocale } from '@/i18n/config';
 import { useZoneQueryClient } from '@/lib/query-client';
 import type { NavPreferences } from '@/lib/ui-preferences';
 import { ThemeProvider, useTheme, type ThemeMode } from '@/lib/theme';
+import { usePrefersReducedMotion } from '@/hooks/use-media-query';
 import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
 import { antdDarkTokens, antdTheme } from '@/styles/theme';
@@ -94,10 +95,16 @@ function ProvidersInner({
   const [store] = useState(() => makeStore(navPreferences));
   // MỘT QueryClient cho MỖI khu — mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
   const queryClient = useZoneQueryClient(hostZone);
+  // Tắt motion của AntD bằng token thay vì ép thời lượng animation trong CSS (xem `globals.css`).
+  const reduceMotion = usePrefersReducedMotion();
+  const antdThemeConfig = useMemo<ThemeConfig>(() => {
+    const base = ANTD_THEME[currentTheme];
+    return reduceMotion ? { ...base, token: { ...base.token, motion: false } } : base;
+  }, [currentTheme, reduceMotion]);
 
   return (
     <AntdRegistry>
-      <ConfigProvider theme={ANTD_THEME[currentTheme]} locale={ANTD_LOCALE[locale]}>
+      <ConfigProvider theme={antdThemeConfig} locale={ANTD_LOCALE[locale]}>
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
             <AntdApp>

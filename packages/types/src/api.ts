@@ -48,6 +48,11 @@ export const API_ERROR_CODE = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  /**
+   * Định danh này sai mật khẩu quá nhiều lần — tạm khoá đăng nhập (429, ADR 0076 điều 3).
+   * `details.retryAfterSeconds` cho biết còn bao lâu. Trả như nhau dù định danh có tài khoản hay không.
+   */
+  LOGIN_TEMPORARILY_LOCKED: 'LOGIN_TEMPORARILY_LOCKED',
   /*
    * Đổi mật khẩu khi ĐÃ đăng nhập (`POST /auth/password/change`).
    *
@@ -680,6 +685,27 @@ export const API_ERROR_CODE = {
   EXTERNAL_DRIVER_NOT_SUPPORTED: 'EXTERNAL_DRIVER_NOT_SUPPORTED',
   /** Nhóm `other` khi rút chuyến mà thiếu ghi chú đủ dài (ADR 0074). */
   DRIVER_DROP_NOTE_REQUIRED: 'DRIVER_DROP_NOTE_REQUIRED',
+
+  // Tiền công tài xế (ADR 0075) — XePrime chỉ ghi nhận số thoả thuận
+  /**
+   * Tiền công (mặc định/ngày của gian hàng, hoặc của một lượt gán) ngoài khoảng hợp lệ của chính
+   * sách. `details: { min, max }` (VND string) — khoảng áp cho đúng con số vừa gửi.
+   */
+  DRIVER_WAGE_OUT_OF_RANGE: 'DRIVER_WAGE_OUT_OF_RANGE',
+  /** Quá hạn sửa (`ended_at + 72h`) — tiền công của lượt gán đã khoá. `details.editableUntil`. */
+  DRIVER_WAGE_LOCKED: 'DRIVER_WAGE_LOCKED',
+  /** Lượt gán chưa từng được tài xế nhận (từ chối / quá hạn / gỡ trước khi nhận) — không có tiền công. */
+  DRIVER_WAGE_NOT_APPLICABLE: 'DRIVER_WAGE_NOT_APPLICABLE',
+  /** Gán tài xế khi gian hàng CHƯA đặt tiền công mặc định mà không gửi `wageAmount`. */
+  DRIVER_WAGE_REQUIRED: 'DRIVER_WAGE_REQUIRED',
+  /** Giá có tài xế/ngày ngoài khoảng của chính sách. `details: { field, min, max }`. */
+  WITH_DRIVER_PRICE_OUT_OF_RANGE: 'WITH_DRIVER_PRICE_OUT_OF_RANGE',
+  /** Phụ phí tài xế theo xe đã gỡ (ADR 0075 điều 7) — không cấu hình được nữa. */
+  DRIVER_SURCHARGE_RETIRED: 'DRIVER_SURCHARGE_RETIRED',
+  /** Danh mục phụ phí quyết toán đã gỡ (`waiting` · `long_distance` · `overnight`). */
+  SURCHARGE_CATEGORY_RETIRED: 'SURCHARGE_CATEGORY_RETIRED',
+  /** Đơn có tài xế không ghi phụ phí quá giờ / vượt km — khách luôn một giá (ADR 0075 điều 7). */
+  SURCHARGE_NOT_ALLOWED_WITH_DRIVER: 'SURCHARGE_NOT_ALLOWED_WITH_DRIVER',
 
   // OCR giấy tờ xe (Wave 5)
   /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */

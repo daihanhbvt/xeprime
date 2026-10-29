@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   isSingleEntrySurchargeCategory,
+  surchargeCategoryBlock,
   SURCHARGE_CATEGORY,
   SURCHARGE_CATEGORY_LABEL,
   SURCHARGE_CATEGORY_VALUES,
@@ -25,7 +26,9 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 /**
  * `Ghi nhận phát sinh` (Wave 10 §4.2) — tác vụ NÂNG CAO, không phải một bước của luồng trả xe.
  *
- * Danh mục: quá giờ · vệ sinh · hư hại/bồi thường · chờ đợi · đường dài · lưu trú qua đêm · khác.
+ * Danh mục: quá giờ · vệ sinh · hư hại/bồi thường · vượt km · khác. Chờ đợi · đường dài · lưu trú
+ * qua đêm đã GỠ (ADR 0075) — chỉ còn hiện ở khoản đã ghi trên đơn cũ; đơn có tài xế cũng không ghi
+ * quá giờ / vượt km vì giá có tài xế là giá trọn gói (`surchargeCategoryBlock`, server chặn thật).
  * **Không có nhiên liệu** — Wave 10 bỏ hẳn mức xăng khỏi bàn giao nên cũng không có phụ phí
  * thiếu xăng để ghi.
  *
@@ -45,11 +48,14 @@ const DEFAULT_CATEGORY = SURCHARGE_CATEGORY.OVERTIME;
 
 export function SurchargeDialog({
   bookingId,
+  serviceType = null,
   settlement,
   open,
   onClose,
 }: {
   bookingId: string;
+  /** Loại dịch vụ của đơn — quyết định danh mục nào còn ghi được (ADR 0075). */
+  serviceType?: string | null;
   settlement: BookingSettlement;
   open: boolean;
   onClose: () => void;
@@ -64,24 +70,32 @@ export function SurchargeDialog({
   const add = useAddSurcharge(bookingId);
   const remove = useVoidSurcharge(bookingId);
 
-  const [category, setCategory] = useState<SurchargeCategory>(DEFAULT_CATEGORY);
+  const recordedCategories = new Set(settlement.surcharges.map((row) => row.category));
+  /*
+   * Danh mục CHỈ GHI MỘT LẦN mà đơn đã có khoản còn hiệu lực thì biến mất khỏi danh sách chọn —
+   * khoản đó đang nằm ngay phía trên kèm nút gỡ, nên đường sửa đã có và rõ. Để nó ở lại rồi báo
+   * lỗi sau khi bấm là bắt người dùng đi tìm hiểu một luật nội bộ. Danh mục đã gỡ / không áp cho
+   * loại dịch vụ của đơn (ADR 0075) cũng không hiện.
+   *
+   * Chặn THẬT vẫn ở server (`SURCHARGE_CATEGORY_DUPLICATE`, `SURCHARGE_CATEGORY_RETIRED`,
+   * `SURCHARGE_NOT_ALLOWED_WITH_DRIVER`) — ẩn một lựa chọn chỉ là lịch sự.
+   */
+  const allowedCategories = SURCHARGE_CATEGORY_VALUES.filter(
+    (value) =>
+      surchargeCategoryBlock(value, serviceType ?? '') === null &&
+      !(isSingleEntrySurchargeCategory(value) && recordedCategories.has(value)),
+  );
+  const firstCategory = allowedCategories.includes(DEFAULT_CATEGORY)
+    ? DEFAULT_CATEGORY
+    : (allowedCategories[0] ?? SURCHARGE_CATEGORY.OTHER);
+  const [category, setCategory] = useState<SurchargeCategory>(firstCategory);
   const [amount, setAmount] = useState<number | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const categoryLabel = (value: SurchargeCategory) =>
     domainLabel('surchargeCategory', value, SURCHARGE_CATEGORY_LABEL[value]);
-  /*
-   * Danh mục CHỈ GHI MỘT LẦN mà đơn đã có khoản còn hiệu lực thì biến mất khỏi danh sách chọn —
-   * khoản đó đang nằm ngay phía trên kèm nút gỡ, nên đường sửa đã có và rõ. Để nó ở lại rồi báo
-   * lỗi sau khi bấm là bắt người dùng đi tìm hiểu một luật nội bộ.
-   *
-   * Chặn THẬT vẫn ở server (`SURCHARGE_CATEGORY_DUPLICATE`) — ẩn một lựa chọn chỉ là lịch sự.
-   */
-  const recordedCategories = new Set(settlement.surcharges.map((row) => row.category));
-  const categoryOptions = SURCHARGE_CATEGORY_VALUES.filter(
-    (value) => !(isSingleEntrySurchargeCategory(value) && recordedCategories.has(value)),
-  ).map((value) => ({ value, label: categoryLabel(value) }));
+  const categoryOptions = allowedCategories.map((value) => ({ value, label: categoryLabel(value) }));
 
   /** Gợi ý quá giờ do server tính từ chính sách + giờ trả thực tế — chủ xe nhận, sửa hoặc bỏ. */
   const overtime = settlement.overtime;
@@ -155,7 +169,7 @@ export function SurchargeDialog({
            * đây. Không dời con trỏ đi thì ô chọn còn trỏ vào một tuỳ chọn không còn tồn tại, và
            * AntD sẽ hiện nguyên MÃ (`excess_mileage`) thay cho một cái nhãn.
            */
-          if (isSingleEntrySurchargeCategory(category)) setCategory(DEFAULT_CATEGORY);
+          if (isSingleEntrySurchargeCategory(category)) setCategory(firstCategory);
         },
         onError: (err) => setError(errorMessage(err)),
       },

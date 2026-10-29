@@ -584,3 +584,10 @@
     flex: 1 1 0;
   }
 }
+
+/* Dòng tiền công trong thẻ chuyến (ADR 0075) — đậm vừa, không xuống dòng giữa số tiền. */
+.wage {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  white-space: nowrap;
+}

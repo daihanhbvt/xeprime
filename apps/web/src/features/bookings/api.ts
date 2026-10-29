@@ -16,9 +16,11 @@ import type {
   CheckConflictInput,
   CheckConflictResult,
   CreateBookingInput,
+  DriverWageQuote,
   TransitionInput,
   UpdateBookingInput,
   UpdateDeliveryFeeInput,
+  UpdateDriverWageInput,
 } from './types';
 
 export const BOOKINGS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -77,9 +79,24 @@ export const assignBookingDriver = (
   body: AssignBookingDriverInput,
 ): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/driver`, body);
 
-/** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */
+/** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước, kèm tiền công. */
 export const fetchBookingDriverHistory = (id: string): Promise<BookingDriverHistoryItem[]> =>
   apiGet<BookingDriverHistoryItem[]>(`/bookings/${id}/driver-history`);
+
+/** Số liệu tiền công cho hộp gán tài xế (ADR 0075) — số ngày, gợi ý, khoảng hợp lệ. */
+export const fetchDriverWageQuote = (id: string): Promise<DriverWageQuote> =>
+  apiGet<DriverWageQuote>(`/bookings/${id}/driver-wage-quote`);
+
+/** Sửa tiền công của một lượt gán (ADR 0075) — trả lịch sử tài xế của đơn đã cập nhật. */
+export const updateDriverWage = (
+  id: string,
+  assignmentId: string,
+  body: UpdateDriverWageInput,
+): Promise<BookingDriverHistoryItem[]> =>
+  apiPatch<BookingDriverHistoryItem[]>(
+    `/bookings/${id}/driver-assignments/${assignmentId}/wage`,
+    body,
+  );
 
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>

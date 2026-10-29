@@ -241,8 +241,10 @@ describe('Menu của XE, không phải menu khu tài khoản', () => {
       ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
     expect(hrefs).toContain(
-      ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+      ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION),
     );
+    // Phụ phí tài xế đã gỡ (ADR 0075) — không còn mục nào trỏ tới nó.
+    expect(hrefs.some((href) => href?.includes('surcharges'))).toBe(false);
     expect(hrefs.every((href) => href && href.startsWith('/manage/vehicles/v1/manage/'))).toBe(
       true,
     );
@@ -378,7 +380,7 @@ describe('Mục của dịch vụ đang tắt', () => {
   it('nói rõ lý do và cho bật lại thay vì hiện form chết', () => {
     nav.pathname = ownerVehicleManagePath.section(
       'v1',
-      VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
+      VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
     );
     queries.vehicle = {
       ...queries.vehicle,

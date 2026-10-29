@@ -54,8 +54,6 @@ vi.mock('../../hooks', () => ({
   },
   useVehicleOperationSettings: () => ({ data: undefined, isLoading: false, isError: false }),
   useSaveVehicleOperationSettings: () => patch,
-  useDriverSurchargeRules: () => ({ data: [], isLoading: false, isError: false }),
-  useSaveDriverSurchargeRules: () => patch,
 }));
 
 const pricing = vi.hoisted(() => ({
@@ -333,15 +331,11 @@ describe('Thủ tục cho thuê', () => {
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('có tài xế: 30%/50% hiện nhưng bị khoá kèm lý do — không lưu một % không thu được', () => {
+  it('có tài xế: không còn ô cọc giữ chuyến — tiền giữ chỗ do nền tảng thu', () => {
     renderSection(<TermsSection serviceType={SERVICE_TYPE.WITH_DRIVER} />);
 
-    const options = screen.getAllByRole('radio');
-    const disabled = options.filter((el) => el.hasAttribute('disabled'));
-    expect(disabled.length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/chưa thu được|chưa hỗ trợ|chưa dùng được/i).length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.queryByText(/cọc giữ chuyến/i)).toBeNull();
+    expect(screen.queryByText(/30%|50%/)).toBeNull();
   });
 
   it('không hứa đối chiếu VNeID tự động', () => {

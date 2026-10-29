@@ -18,7 +18,7 @@ import {
   NATIVE_REVOKE_REASON,
   NativeSessionService,
 } from '../src/modules/auth/native-session.service';
-import { SessionService } from '../src/modules/auth/session.service';
+import { SessionService, WEB_REVOKE_REASON } from '../src/modules/auth/session.service';
 import {
   REALM_PROXY_SECRET_HEADER,
   RequestRealmService,
@@ -38,6 +38,8 @@ import type { RequestContext } from '../src/common/types/request-context';
  *  - dùng lại refresh token cũ ⇒ thu hồi CẢ phiên (token family);
  *  - logout ⇒ access token còn hạn mất hiệu lực ngay;
  *  - user bị khoá ⇒ chặn dù access token chưa hết hạn;
+ *  - (ADR 0076) cookie web phải trỏ vào một hàng `web_sessions` còn sống — đăng xuất / đổi mật khẩu
+ *    giết nó ngay; cookie ký đúng mà không có hàng (phát trước ADR 0076) cũng bị từ chối;
  *  - (ADR 0053) phiên không bao giờ đi chéo realm: cookie đọc theo realm do proxy quyết, Bearer lấy
  *    realm của app đã đăng nhập và — khi đi qua `/api` của một site web — phải trùng realm của site;
  *    tài khoản lệch realm ⇒ 401 như người lạ.
@@ -73,7 +75,7 @@ const config = {
   },
 } as unknown as ConfigService;
 
-const sessions = new SessionService(config);
+const sessions = new SessionService(config, asService);
 const native = new NativeSessionService(config, asService);
 const realms = new RequestRealmService(config);
 const guard = new AuthGuard(new Reflector(), sessions, native, realms, asService);
@@ -194,7 +196,7 @@ async function expectUnauthorized(run: () => Promise<unknown>): Promise<Unauthor
 describe('AuthGuard — đường cookie của web (ADR 0002) giữ nguyên', () => {
   maybe('cookie hợp lệ đi qua guard và gắn đúng user vào request', async () => {
     const userId = await mkUser();
-    const { token, sessionId } = sessions.issue(userId);
+    const { token, sessionId } = await sessions.issue(userId);
 
     const request = mkRequest({ cookies: { [COOKIE_NAME]: token } });
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
@@ -209,12 +211,100 @@ describe('AuthGuard — đường cookie của web (ADR 0002) giữ nguyên', ()
 
   maybe('cookie của user đã bị khoá ⇒ chặn dù token còn hạn', async () => {
     const userId = await mkUser(USER_STATUS.LOCKED);
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     const err = await expectUnauthorized(() =>
       guard.canActivate(contextFor(mkRequest({ cookies: { [COOKIE_NAME]: token } }))),
     );
     expect(errorCodeOf(err)).toBe(API_ERROR_CODE.UNAUTHENTICATED);
+  });
+});
+
+describe('Phiên web thu hồi được (ADR 0076)', () => {
+  maybe('cookie của phiên đã thu hồi (đăng xuất) ⇒ 401 dù chữ ký còn hạn', async () => {
+    const userId = await mkUser();
+    const { token, sessionId } = await sessions.issue(userId);
+    await sessions.revoke(sessionId, WEB_REVOKE_REASON.LOGOUT);
+
+    const err = await expectUnauthorized(() =>
+      guard.canActivate(contextFor(mkRequest({ cookies: { [COOKIE_NAME]: token } }))),
+    );
+    expect(errorCodeOf(err)).toBe(API_ERROR_CODE.SESSION_EXPIRED);
+  });
+
+  maybe(
+    'cookie ký đúng nhưng KHÔNG có hàng web_sessions (cookie trước ADR 0076) ⇒ 401',
+    async () => {
+      const userId = await mkUser();
+      const legacy = jwt.sign({ sub: userId, sid: newId() }, SECRET, {
+        expiresIn: '7d',
+        issuer: 'xeprime-api',
+      });
+
+      const err = await expectUnauthorized(() =>
+        guard.canActivate(contextFor(mkRequest({ cookies: { [COOKIE_NAME]: legacy } }))),
+      );
+      expect(errorCodeOf(err)).toBe(API_ERROR_CODE.SESSION_EXPIRED);
+    },
+  );
+
+  maybe('sid của user KHÁC ⇒ 401 (phiên buộc vào đúng user)', async () => {
+    const owner = await mkUser();
+    const intruder = await mkUser();
+    const { sessionId } = await sessions.issue(owner);
+    const forged = jwt.sign({ sub: intruder, sid: sessionId }, SECRET, {
+      expiresIn: '7d',
+      issuer: 'xeprime-api',
+    });
+
+    await expectUnauthorized(() =>
+      guard.canActivate(contextFor(mkRequest({ cookies: { [COOKIE_NAME]: forged } }))),
+    );
+  });
+
+  maybe('revokeAllForUser giữ lại phiên được loại trừ, giết các phiên khác', async () => {
+    const userId = await mkUser();
+    const kept = await sessions.issue(userId);
+    const other = await sessions.issue(userId);
+
+    await sessions.revokeAllForUser(userId, WEB_REVOKE_REASON.PASSWORD_CHANGED, {
+      exceptSessionId: kept.sessionId,
+    });
+
+    await expect(sessions.isSessionUsable(kept.sessionId, userId)).resolves.toBe(true);
+    await expect(sessions.isSessionUsable(other.sessionId, userId)).resolves.toBe(false);
+    const row = await prisma.webSession.findUniqueOrThrow({ where: { id: other.sessionId } });
+    expect(row.revokedReason).toBe(WEB_REVOKE_REASON.PASSWORD_CHANGED);
+  });
+
+  maybe('resolveOptionalUserId bỏ qua cookie của phiên đã thu hồi', async () => {
+    const userId = await mkUser();
+    const { token, sessionId } = await sessions.issue(userId);
+    await sessions.revoke(sessionId, WEB_REVOKE_REASON.LOGOUT);
+
+    await expect(
+      resolveOptionalUserId(mkRequest({ cookies: { [COOKIE_NAME]: token } }) as never, {
+        sessions,
+        prisma: asService,
+        realms,
+        nativeSessions: native,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  maybe('NativeSessionService.revokeAllForUser giữ phiên được loại trừ', async () => {
+    const userId = await mkUser();
+    const kept = await native.issueSession(userId);
+    const other = await native.issueSession(userId);
+
+    await native.revokeAllForUser(userId, NATIVE_REVOKE_REASON.PASSWORD_CHANGED, {
+      exceptSessionId: kept.sessionId,
+    });
+
+    await expect(native.isSessionUsable(kept.sessionId, userId)).resolves.toBe(true);
+    await expect(native.isSessionUsable(other.sessionId, userId)).resolves.toBe(false);
+    // Refresh token của phiên bị giết cũng chết theo.
+    await expect(native.rotate(other.refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
 
@@ -241,7 +331,7 @@ describe('AuthGuard — Bearer access token (ADR 0017)', () => {
 
   maybe('header sai dạng ⇒ 401, KHÔNG rơi về cookie', async () => {
     const userId = await mkUser();
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     // Cookie hợp lệ có mặt, nhưng header tồn tại và sai dạng: phải từ chối, không được "cứu".
     for (const authorization of ['no-scheme-token', 'Bearer', 'Bearer ', 'Basic abc123']) {
@@ -264,7 +354,7 @@ describe('AuthGuard — Bearer access token (ADR 0017)', () => {
   maybe('cookie + Bearer cùng lúc ⇒ 401, không đoán bên nào', async () => {
     const cookieUser = await mkUser();
     const bearerUser = await mkUser();
-    const { token } = sessions.issue(cookieUser);
+    const { token } = await sessions.issue(cookieUser);
     const pair = await native.issueSession(bearerUser);
 
     const err = await expectUnauthorized(() =>
@@ -283,7 +373,7 @@ describe('AuthGuard — Bearer access token (ADR 0017)', () => {
   maybe('session JWT của WEB dùng làm Bearer ⇒ từ chối (thiếu typ + aud)', async () => {
     const userId = await mkUser();
     // Đúng chữ ký, đúng issuer, cùng secret — chỉ thiếu `typ=access` và `aud`.
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     const err = await expectUnauthorized(() =>
       guard.canActivate(contextFor(mkRequest({ authorization: `Bearer ${token}` }))),
@@ -550,7 +640,7 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
 
   maybe('cookie hợp lệ ⇒ trả userId (hành vi cũ, không đổi)', async () => {
     const userId = await mkUser();
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     await expect(
       resolveOptionalUserId(reqOf({ cookies: { [COOKIE_NAME]: token } }), {
@@ -573,7 +663,7 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
 
   maybe('mọi credential hỏng ⇒ null, KHÔNG ném (bề mặt công khai)', async () => {
     const userId = await mkUser();
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
     const pair = await native.issueSession(userId);
 
     const cases = [
@@ -627,7 +717,7 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
 describe('AuthGuard — phiên không đi chéo realm', () => {
   maybe('cookie site partner của tài khoản partner ⇒ vào được, req.realm = partner', async () => {
     const userId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
     const request = mkRequest({
       cookies: { [sessions.cookieName(ACCOUNT_REALM.PARTNER)]: token },
       realm: ACCOUNT_REALM.PARTNER,
@@ -644,7 +734,7 @@ describe('AuthGuard — phiên không đi chéo realm', () => {
 
   maybe('cookie của site khách KHÔNG được đọc ở site partner (khác tên cookie)', async () => {
     const userId = await mkUser();
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     await expectUnauthorized(() =>
       guard.canActivate(
@@ -657,7 +747,7 @@ describe('AuthGuard — phiên không đi chéo realm', () => {
     'token của tài khoản khách đặt dưới tên cookie partner ⇒ 401 (tài khoản lệch realm)',
     async () => {
       const customerId = await mkUser();
-      const { token } = sessions.issue(customerId);
+      const { token } = await sessions.issue(customerId);
 
       await expectUnauthorized(() =>
         guard.canActivate(
@@ -674,7 +764,7 @@ describe('AuthGuard — phiên không đi chéo realm', () => {
 
   maybe('header realm tự khai KHÔNG có khoá proxy ⇒ không đọc cookie nào', async () => {
     const userId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PLATFORM);
-    const { token } = sessions.issue(userId);
+    const { token } = await sessions.issue(userId);
 
     await expectUnauthorized(() =>
       guard.canActivate(

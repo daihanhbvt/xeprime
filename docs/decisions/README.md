@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 22/10/2026
+> Cập nhật: 29/10/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -16,7 +16,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | ADR | Quyết định | Trạng thái hiện hành |
 | --- | --- | --- |
 | [0001](0001-database-postgresql.md) | PostgreSQL 16 | Accepted |
-| [0002](0002-auth-session-cookie.md) | Web session bằng httpOnly cookie | Accepted; social provider được 0019 sửa; **cookie host-only theo realm + API cùng origin `/api` theo 0053** |
+| [0002](0002-auth-session-cookie.md) | Web session bằng httpOnly cookie | Accepted; social provider được 0019 sửa; **cookie host-only theo realm + API cùng origin `/api` theo 0053**; **`sid` phải trỏ vào hàng `web_sessions` còn sống (0076)** |
 | [0003](0003-styling-css-modules.md) | AntD token + CSS Modules | Accepted |
 | [0004](0004-client-state.md) | Redux; filter ở URL | Accepted |
 | [0005](0005-status-enums.md) | Status enum tập trung | Accepted; **điều `booking.status` bị 0047 ghi đè một phần; `VEHICLE_PUBLIC_STATUS_SUBMITTABLE` bị 0048 ghi đè** |
@@ -29,7 +29,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0012](0012-i18n-shared-url-cookie-locale.md) | i18n vi/en dùng chung URL và message source | Accepted |
 | [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded — điều 1–4 còn hiệu lực**; điều 5 phần lớn bị 0028/0032/0036 thay; giả định một người một tài khoản bị 0053 thay |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |
-| [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted; **phiên mang realm theo app (0053)** |
+| [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted; **phiên mang realm theo app (0053)**; **đổi/đặt lại mật khẩu thu hồi phiên (0076)** |
 | [0018](0018-map-delivery-distance.md) | Khoảng cách giao xe là ước lượng | **Partially superseded bởi 0061** (nhà cung cấp + khoá; trước đó 0037); mọi quyết định sản phẩm còn hiệu lực |
 | [0019](0019-backend-led-social-oauth.md) | Backend-led OAuth | Accepted; **định danh social unique theo realm, callback web dưới `/api` từng site (0053)**; **§8: dòng "SĐT + OTP" và "Khách vãng lai đặt xe" bị 0060 gỡ, đăng ký cần `code`** |
 | [0022](0022-sepay-customer-money.md) | Một sổ giao dịch ngân hàng cho các khoản vào | Accepted; mở rộng bởi 0028 |
@@ -80,8 +80,10 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0070](0070-auto-only-licences-and-sales-follow-ups.md) | Bằng lái khách chỉ còn tự quyết (`verified`/`rejected`; độ tin cậy thấp ⇒ xác thực, dữ liệu vô lý ⇒ từ chối chụp lại, bộ đọc lỗi ⇒ `reader_unavailable`, không bao giờ tự xác thực khi chưa đọc); gỡ hàng đợi duyệt tay + "nhờ xem lại", bằng lái xem chỉ-đọc trong hồ sơ khách thuê; tab "Cần chăm sóc" ở Đơn thuê toàn hệ thống với `sales_follow_ups` (writer `PlatformFollowUpsService`, audit) + quyền `platform.sales_followups.manage` | **Accepted; ghi đè 0057 phần chờ người duyệt** |
 | [0071](0071-customer-phone-reminder-not-gate.md) | Site khách: tài khoản chưa có SĐT đã xác minh (Google/Facebook, tài khoản cũ) được NHẮC xác minh bằng hộp đóng được ("Để sau", không nhắc lại trong phiên tab theo ID tài khoản); vẫn tìm/xem xe và đi hết các bước đặt xe; chỉ nút "Gửi yêu cầu" mở hộp (điền sẵn SĐT liên hệ), xác minh xong thì lượt gửi đi tiếp; hộp đặt xe mở thì lời nhắc chung không tự bật; site partner giữ hộp bắt buộc; server không đổi (`PHONE_NOT_VERIFIED`) | **Accepted; ghi đè 0060 điều 5 trong phạm vi realm `customer`** |
 | [0072](0072-free-cancel-from-payment.md) | Huỷ miễn phí tính từ lúc tiền giữ chỗ về ĐỦ: `T_cancel` = clamp(20% × (`pickupAt − paidAt`), 15′, 2h), kẹp giờ nhận, ghi MỘT lần trong lượt lật `paid` (`free_cancel_until` NULL tới lúc đó, CHECK `booking_holds_paid_has_free_cancel`); `T_pay` vẫn từ `acceptedAt`; trước khi trả không có huỷ miễn phí, hết hạn thanh toán là tự huỷ; API thêm `freeCancelStarted`/`freeCancelMinutes`, `freeCancelUntil` giữ giá trị (dự kiến) cho app cũ; đồng hồ web một con số `h:mm:ss` | **Accepted; ghi đè 0066 điều 3 (mốc bắt đầu + ΔT của `T_cancel`), 0064 điều 7 và 0032 điều 5 ở câu "tính xuôi từ lúc nhận chuyến"** |
+| [0075](0075-driver-wage-record.md) | Tiền công tài xế: XePrime chỉ GHI NHẬN số chủ xe và tài xế thoả thuận, không giữ hộ / không chi / không tính bồi thường; một mức tiền công/ngày mặc định của bên thuê (`tenants.driver_daily_wage`) × số ngày chụp lên lượt gán, bên thuê sửa từng chuyến tới kết thúc + 72h, không cần tài xế đồng ý, mỗi lần đổi một dòng `booking_driver_wage_changes` + báo tài xế; lượt không chạy về 0 (ghi được số thoả thuận); tài xế thấy số trước khi nhận; giới hạn số `fee_policies.with_driver_limits` (không vào snapshot phí); bỏ phụ phí tài xế (cấu hình, công bố, danh mục quyết toán) | **Accepted; bổ sung 0063 (tiền công lượt gán), 0074 (lượt rút về 0); không đổi 0064/0066/0068** |
 | [0074](0074-driver-drop-accepted-trip.md) | Tài xế đã nhận RÚT được trước bàn giao (`POST /driver/trips/:id/drop`, lý do bắt buộc): vùng theo ΔT — trong cửa sổ trả lại không phạt, ≥12h vi phạm nhẹ, 2–12h cooldown "Đặt ngay" 24h, <2h 48h; đơn KHÔNG huỷ; sự cố + hạn điều phối (120′/45′/15′) lưu trên đơn, bên thuê báo khẩn; sự cố mở + quá hạn/còn <2h ⇒ khách huỷ hoàn 100% (`driver_incident`), lượt huỷ tính cho bên thuê (`driver_unavailable`); bỏ ghi mới tài xế ngoài hệ thống (422 `EXTERNAL_DRIVER_NOT_SUPPORTED`). Voucher xin lỗi + rút tiền tự động của đặc tả để quyết định riêng | **Accepted; ghi đè 0067 điều 1 (ghi mới tài xế ngoài), mở rộng 0063 điều 6 (rút sau cửa sổ trả lại)** |
 | [0073](0073-commission-chat-after-booking.md) | Nhắn tin với chủ xe cá nhân (tuyến hoa hồng) chỉ mở khi cặp khách–chủ xe đã có ĐƠN (tiền giữ chỗ về đủ) — `chatOpenBetween`; gian hàng tuyến gói nhắn tự do. Server chặn mở hội thoại (hai phía), gửi tin (hai phía, cả thread cũ) bằng `CHAT_REQUIRES_BOOKING`; cờ `canSend` / `chatOpen` cho giao diện ẩn hẳn lối nhắn | **Accepted; ghi đè luật "mở chat sau khi gửi yêu cầu" (nhắc ở 0054 điều 4)** |
+| [0076](0076-revocable-web-sessions-login-lockout.md) | Phiên web thu hồi được: mỗi lần đăng nhập một hàng `web_sessions` (`id` = `sid`), cookie chỉ hợp lệ khi hàng còn sống (cookie cũ ⇒ đăng nhập lại một lần); đăng xuất thu hồi ở server; đổi mật khẩu giết mọi phiên web + app KHÁC, đặt lại mật khẩu giết TẤT CẢ (cùng transaction); khoá đăng nhập theo (realm, băm định danh) ở `login_throttles` — 10 lần/15′ (quản trị 5), khoá 15′, 429 `LOGIN_TEMPORARILY_LOCKED`, định danh không tồn tại khoá y hệt; OAuth web gắn trình duyệt bằng cookie `xp_oauth_state`; nối tài khoản theo email cần cả hai đầu đã xác minh | **Accepted; mở rộng 0002, 0017, 0019** |
 
 ## ADR đã gỡ khỏi repo
 

@@ -11,7 +11,7 @@ import { SocialAuthFailure } from './social-auth.error';
  * 10 phút là khoảng đủ cho người phải gõ mật khẩu Google và làm 2FA, và đủ ngắn để một `state`
  * bị nhặt được ở log proxy hay lịch sử trình duyệt sớm trở thành vô dụng.
  */
-const STATE_TTL_MS = 10 * 60 * 1000;
+export const STATE_TTL_MS = 10 * 60 * 1000;
 
 /** Bản ghi đã tiêu thụ, trả về cho chặng callback. */
 export interface ConsumedOauthState {

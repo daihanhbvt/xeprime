@@ -199,5 +199,21 @@
       "noteRequired": "Describe the problem in at least {min} characters",
       "noteTooLong": "At most {max} characters"
     }
+  },
+  "wage": {
+    "title": "Wage",
+    "line": {
+      "offer": "{amount} · {days, plural, one {# day} other {# days}}",
+      "running": "{amount}",
+      "received": "Received {amount}",
+      "agreed": "Agreed {amount}",
+      "none": "No wage for this trip"
+    },
+    "paidDirect": "Paid to you directly by the owner.",
+    "changesTitle": "Wage edit history",
+    "change": "{old} → {new}",
+    "changeBy": "{name} · {time}",
+    "changeAt": "{time}",
+    "reason": "Reason: {reason}"
   }
 }

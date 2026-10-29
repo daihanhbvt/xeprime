@@ -81,6 +81,8 @@ export function makeDriversService(
     prisma,
     overrides.audit ?? new AuditService(prisma),
     overrides.notifications ?? makeNotificationService(prisma),
+    // Giới hạn tiền công tài xế (ADR 0075) đọc từ chính sách phí hiện hành.
+    new FeePoliciesService(prisma, new AuditService(prisma)),
   );
 }
 

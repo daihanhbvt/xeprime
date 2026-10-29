@@ -11,6 +11,7 @@
     "INVALID_CREDENTIALS": "Email/số điện thoại hoặc mật khẩu không đúng.",
     "INVALID_RESET_TOKEN": "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
     "ACCOUNT_LOCKED": "Tài khoản đang bị khoá. Liên hệ hỗ trợ để mở lại.",
+    "LOGIN_TEMPORARILY_LOCKED": "Bạn đã nhập sai quá nhiều lần. Đăng nhập tạm khoá — thử lại sau ít phút, hoặc dùng \"Quên mật khẩu\".",
     "CURRENT_PASSWORD_INCORRECT": "Mật khẩu hiện tại không đúng.",
     "PASSWORD_NOT_SET": "Tài khoản chưa có mật khẩu. Hãy đặt mật khẩu lần đầu thay vì đổi.",
     "PASSWORD_UNCHANGED": "Mật khẩu mới phải khác mật khẩu hiện tại.",
@@ -208,7 +209,15 @@
     "VEHICLE_SERVICE_IN_USE": "Không bỏ được dịch vụ này vì xe còn chuyến chưa xong dùng dịch vụ đó. Hoàn tất hoặc huỷ các chuyến đó trước.",
     "DRIVER_HAS_ACCEPTED_TRIPS": "Bạn còn chuyến đã nhận chưa giao xe. Liên hệ bên thuê để họ đổi tài xế trước khi ngừng làm tài xế.",
     "EXTERNAL_DRIVER_NOT_SUPPORTED": "XePrime không còn nhận tài xế ngoài hệ thống. Mời tài xế liên kết tài khoản rồi gán vào chuyến.",
-    "DRIVER_DROP_NOTE_REQUIRED": "Vui lòng mô tả sự cố (ít nhất 10 ký tự) để bên thuê sắp xếp lại."
+    "DRIVER_DROP_NOTE_REQUIRED": "Vui lòng mô tả sự cố (ít nhất 10 ký tự) để bên thuê sắp xếp lại.",
+    "DRIVER_WAGE_OUT_OF_RANGE": "Tiền công nằm ngoài khoảng cho phép. Xem khoảng hợp lệ ngay dưới ô nhập.",
+    "DRIVER_WAGE_LOCKED": "Đã quá hạn sửa tiền công của chuyến này (72 giờ sau khi chuyến kết thúc).",
+    "DRIVER_WAGE_NOT_APPLICABLE": "Tài xế chưa từng nhận chuyến này nên lượt gán không có tiền công.",
+    "DRIVER_WAGE_REQUIRED": "Gian hàng chưa đặt tiền công tài xế mặc định. Nhập tiền công cho chuyến này.",
+    "WITH_DRIVER_PRICE_OUT_OF_RANGE": "Giá có tài xế/ngày nằm ngoài khoảng hợp lý. Kiểm tra lại số (thừa hoặc thiếu số 0).",
+    "DRIVER_SURCHARGE_RETIRED": "Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói.",
+    "SURCHARGE_CATEGORY_RETIRED": "Loại phụ phí này đã gỡ — giá có tài xế là giá trọn gói.",
+    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "Chuyến có tài xế không ghi phụ phí quá giờ hay vượt km — khách trả một giá trọn gói."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

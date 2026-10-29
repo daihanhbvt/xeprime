@@ -5,7 +5,6 @@ import {
   FileTextOutlined,
   PictureOutlined,
   SafetyOutlined,
-  TableOutlined,
   ToolOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
@@ -44,8 +43,8 @@ export type EditNavGroup = Omit<VehicleSectionNavGroup, 'items'> & {
  * Mọi khối của `develop` vẫn còn, cùng cách lưu:
  * - "Giá & chính sách" là MỘT màn, MỘT nút Lưu (`VehiclePricingWorkspace` chế độ `full`) — giá
  *   của mọi dịch vụ + nguồn chính sách + cọc · giao xe · km · quá giờ · ưu đãi.
- * - Năm khối của tab "Vận hành & điều kiện thuê" cũ (giao nhận · tối ưu × 2 · thủ tục × 2 · phụ
- *   phí) nay đứng dưới đúng dịch vụ của chúng; "Nhận chuyến & thủ tục" gom hai card (Tối ưu nhận
+ * - Các khối của tab "Vận hành & điều kiện thuê" cũ (giao nhận · tối ưu × 2 · thủ tục × 2) nay
+ *   đứng dưới đúng dịch vụ của chúng (phụ phí tài xế đã gỡ — ADR 0075); "Nhận chuyến & thủ tục" gom hai card (Tối ưu nhận
  *   chuyến, Thủ tục cho thuê), mỗi card vẫn tự lưu như cũ.
  * - KHÔNG có "Lịch sử chuyến": cổng quản lý đã có Hồ sơ 360 và màn Đơn thuê lọc theo xe.
  */
@@ -53,15 +52,12 @@ export function editNavGroups({
   t,
   enabled,
   services,
-  moneyHidden,
 }: {
   t: MenuTranslator;
   /** Mục có mặt với người này không — quyền ∧ cờ gói ∧ phiên hỗ trợ. */
   enabled: (tab: VehicleEditTab) => boolean;
   /** Dịch vụ chiếc xe đang phục vụ — nhóm của dịch vụ đã tắt vẫn hiện nhưng mờ đi. */
   services: readonly string[];
-  /** Phiên hỗ trợ không mở khu TIỀN — phụ phí có tài xế (ADR 0050 §13). */
-  moneyHidden: boolean;
 }): EditNavGroup[] {
   const item = (
     key: VehicleEditTab,
@@ -110,9 +106,6 @@ export function editNavGroups({
     ]),
     service('withDriver', 'groups.withDriver', SERVICE_TYPE.WITH_DRIVER, [
       item(VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION, 'items.bookingTerms', SafetyOutlined),
-      ...(moneyHidden
-        ? []
-        : [item(VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, 'items.surcharges', TableOutlined)]),
     ]),
     // Dài hạn không có thiết lập vận hành nào — nhóm chỉ mang công tắc (nơi gọi gắn lời nhắc).
     service('longTerm', 'groups.longTerm', SERVICE_TYPE.LONG_TERM, []),
@@ -142,6 +135,8 @@ const TAB_ALIAS: Partial<Record<VehicleEditTab, VehicleEditTab>> = {
   [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_EDIT_TAB.HANDOVER_TIME,
   [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
   [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
+  // Phụ phí tài xế đã gỡ (ADR 0075) — link cũ mở mục thủ tục của dịch vụ có tài xế.
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
 };
 
 export function resolveEditTab(tab: VehicleEditTab): VehicleEditTab {
@@ -153,13 +148,11 @@ export const OPERATIONS_TABS: readonly VehicleEditTab[] = [
   VEHICLE_EDIT_TAB.HANDOVER_TIME,
   VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
   VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-  VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES,
 ];
 
 const SERVICE_OF_TAB: Partial<Record<VehicleEditTab, ServiceType>> = {
   [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: SERVICE_TYPE.SELF_DRIVE,
   [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: SERVICE_TYPE.WITH_DRIVER,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: SERVICE_TYPE.WITH_DRIVER,
 };
 
 /** Dịch vụ mà một mục thuộc về — `null` với nhóm chung. Dịch vụ tắt thì mục thay bằng lời mời bật. */

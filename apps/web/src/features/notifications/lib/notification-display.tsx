@@ -109,6 +109,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: <CarOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: <RollbackOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED]: <DollarOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: <CheckCircleOutlined />,
   [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: <CloseCircleOutlined />,
   // Hết hạn trả lời (ADR 0066) — đồng hồ cát, cùng họ với "quá hạn phản hồi" của yêu cầu thuê.

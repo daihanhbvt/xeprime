@@ -24,15 +24,14 @@ import {
   type VehicleEditTab,
 } from '@/constants/routes';
 import {
-  SUPPORT_HIDDEN_AREA,
   supportAllowsVehicleTab,
   useSupportCan,
-  useSupportHides,
   useSupportPinnedField,
   useSupportSession,
 } from '@/features/tenant-support/support-session';
 import { getErrorMessage } from '@/services/api-client';
 import { VehiclePricingWorkspace } from '@/features/rental-policies/components/VehiclePricingWorkspace';
+import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import {
   useSaveVehiclePricing,
   useVehiclePricing,
@@ -61,7 +60,6 @@ import { VehicleSectionNav } from '@/features/vehicle-manage/components/VehicleS
 import { ImagesSection as VehicleImagesSection } from '@/features/vehicle-manage/components/sections/ImagesSection';
 import { useServiceToggle } from '@/features/vehicle-manage/hooks/use-service-toggle';
 import { BookingTermsSection } from '@/features/vehicle-manage/components/sections/BookingTermsSection';
-import { DriverSurchargesSection } from '@/features/vehicle-manage/components/sections/DriverSurchargesSection';
 import { HandoverTimeSection } from '@/features/vehicle-manage/components/sections/HandoverTimeSection';
 import {
   OPERATIONS_TABS,
@@ -166,12 +164,7 @@ export function VehicleEditWorkspace({
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const tAdvanced = useTranslations('Vehicles.form.advanced');
-  /*
-   * Phiên hỗ trợ (ADR 0050 §13): thủ tục cho thuê (pháp lý + cọc) và phụ phí có tài xế là khu
-   * TIỀN — không dựng, y như `VehicleOperationsPanel` của develop.
-   */
-  const moneyHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MONEY_TERMS);
-  // Capability RIÊNG cho khối vận hành trong phiên hỗ trợ — xem mục OPERATIONS của `contentOf`. Khu TIỀN (thủ tục, phụ phí) ẩn trong `VehicleOperationsTab`.
+  // Capability RIÊNG cho khối vận hành trong phiên hỗ trợ — xem mục OPERATIONS của `contentOf`. Khu TIỀN (thủ tục) ẩn trong `BookingTermsSection`.
   const canOperate = useSupportCan(SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE);
   const domainLabel = useDomainLabel();
   const applyApiFieldErrors = useApiFieldErrors();
@@ -441,7 +434,6 @@ export function VehicleEditWorkspace({
     [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: (
       <BookingTermsSection serviceType={SERVICE_TYPE.WITH_DRIVER} />
     ),
-    [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: <DriverSurchargesSection />,
   };
 
   const services = vehicle.serviceTypes ?? [];
@@ -454,7 +446,6 @@ export function VehicleEditWorkspace({
     t: tMenu,
     enabled: (tab) => tabEnabled(tab) && supportAllowsVehicleTab(support, tab),
     services,
-    moneyHidden,
   }).map(({ serviceType, ...group }) => {
     if (!serviceType || !canToggle) return group;
     const on = services.includes(serviceType);
@@ -778,6 +769,7 @@ function VehiclePricingTab({ vehicle, canEdit }: { vehicle: VehicleDetail; canEd
       pricing={pricing.data}
       canEdit={canEdit}
       submitting={save.isPending}
+      withDriverFooter={<WithDriverWageNote />}
       onSave={(body) =>
         save.mutate(body, {
           onSuccess: () => message.success(t('saved')),

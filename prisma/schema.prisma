@@ -62,6 +62,7 @@ model User {
   phoneVerifications           PhoneVerification[]
   emailVerifications           EmailVerification[]
   passwordResets               PasswordResetToken[]
+  webSessions                  WebSession[]
   nativeAuthSessions           NativeAuthSession[]
   nativeAuthCodes              NativeAuthCode[]
   tenantMemberships            TenantMembership[]        @relation("membership_user")
@@ -120,6 +121,7 @@ model User {
   /// Các liên kết tài xế của tài khoản KHÁCH này (ADR 0063).
   driverLinks                  Driver[]                  @relation("driver_link_account")
   driverLinksInvited           Driver[]                  @relation("driver_link_inviter")
+  driverWageChanges            BookingDriverWageChange[] @relation("driver_wage_changer")
   decidedDriverLicences        CustomerDriverLicence[]   @relation("driver_licence_decider")
   assignedSalesFollowUps       SalesFollowUp[]           @relation("sales_follow_up_assignee")
   updatedSalesFollowUps        SalesFollowUp[]           @relation("sales_follow_up_updater")
@@ -234,6 +236,12 @@ model Tenant {
   /// (`PATCH /tenants/current/vat-invoice`). KHÔNG mirror sang `public_listings` — chợ JOIN
   /// `tenants` như với `status` (ADR 0008 §3): bật/tắt là một UPDATE một dòng cho cả đội xe.
   vatInvoiceSupported Boolean   @default(false) @map("vat_invoice_supported")
+  /// Tiền công tài xế/ngày MẶC ĐỊNH của gian hàng (ADR 0075) — MỘT số cho cả gian hàng, không theo
+  /// xe hay theo tài xế. Lượt gán chụp `driver_daily_wage × số ngày` lúc gán; đổi số này không viết
+  /// lại lượt gán đã có. NULL = chưa đặt ⇒ gán tay phải nhập tiền công, "Đặt ngay" không tự gán.
+  /// Tiền công KHÔNG đi qua XePrime — đây chỉ là con số hai bên thoả thuận. CHECK > 0.
+  /// Writer: `DriversService.setWageSettings`.
+  driverDailyWage     Decimal?  @map("driver_daily_wage") @db.Decimal(14, 2)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -251,6 +259,7 @@ model Tenant {
   bookingCancellations          BookingCancellation[]
   drivers                       Driver[]
   driverAssignments             BookingDriverAssignment[]
+  driverWageChanges             BookingDriverWageChange[]
   occupancies                   VehicleOccupancy[]
   approvalTasks                 ApprovalTask[]
   adminNotes                    AdminNote[]
@@ -758,10 +767,63 @@ model NativeAuthCode {
   @@map("native_auth_codes")
 }
 
+/// Phiên đăng nhập của MỘT trình duyệt — ADR 0076 (mở rộng ADR 0002).
+///
+/// Cookie phiên vẫn là JWT ký bằng `SESSION_JWT_SECRET`, nhưng `sid` của nó phải trỏ vào một hàng
+/// CÒN SỐNG ở đây thì `AuthGuard` mới nhận. Nhờ vậy đăng xuất, đổi mật khẩu và đặt lại mật khẩu
+/// giết được phiên NGAY, không đợi 7 ngày cho token tự hết hạn.
+///
+/// Writer duy nhất: `SessionService` (phát, thu hồi). Worker chỉ XOÁ hàng đã hết hạn lâu.
+model WebSession {
+  /// = claim `sid` của cookie.
+  id     String @id @db.Char(26)
+  userId String @map("user_id") @db.Char(26)
+
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Khác null = phiên đã bị thu hồi; cookie còn hạn cũng bị từ chối ngay.
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// `logout` | `password_changed` | `password_reset` | `user_disabled` —
+  /// CHECK `web_sessions_revoked_reason_check`.
+  revokedReason String?   @map("revoked_reason") @db.VarChar(50)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Thu hồi mọi phiên còn sống của một user (đổi/đặt lại mật khẩu).
+  @@index([userId])
+  /// Worker dọn hàng hết hạn theo lô.
+  @@index([expiresAt])
+  @@map("web_sessions")
+}
+
+/// Bộ đếm đăng nhập SAI theo ĐỊNH DANH — ADR 0076.
+///
+/// Khoá theo (realm, băm của định danh đã chuẩn hoá), KHÔNG theo user: định danh không có tài khoản
+/// cũng bị đếm và khoá y hệt, nên câu trả lời "tạm khoá" không tố cáo số/email nào có tài khoản.
+/// Rate limit theo IP (`@Throttle`) hãm một máy; bảng này hãm việc dò MỘT tài khoản từ nhiều máy.
+///
+/// Writer duy nhất: `LoginThrottleService`. Worker chỉ XOÁ hàng đã nguội.
+model LoginThrottle {
+  id              String    @id @db.Char(26)
+  realm           String    @db.VarChar(20)
+  /// SHA-256 hex của định danh đã chuẩn hoá (SĐT `84…` / email chữ thường) — không lưu dạng thô.
+  identifierHash  String    @map("identifier_hash") @db.Char(64)
+  /// Số lần sai trong cửa sổ hiện tại.
+  failedCount     Int       @default(0) @map("failed_count")
+  windowStartedAt DateTime  @map("window_started_at") @db.Timestamptz(3)
+  /// Khác null và ở tương lai = đang khoá; mọi lượt đăng nhập định danh này bị từ chối tới mốc đó.
+  lockedUntil     DateTime? @map("locked_until") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([realm, identifierHash])
+  /// Worker dọn hàng đã nguội.
+  @@index([updatedAt])
+  @@map("login_throttles")
+}
+
 /// Phiên đăng nhập của MỘT thiết bị native — ADR 0017.
 ///
-/// Tên `native_*` là cố ý: web vẫn dùng session cookie không có bảng (ADR 0002), và ngày web cần
-/// phiên thu hồi được thì đó là một quyết định riêng — không phải hệ quả phụ của bảng này.
+/// Phiên của trình duyệt nằm ở `web_sessions` (ADR 0076) — hai vòng đời khác nhau, hai bảng.
 model NativeAuthSession {
   id     String @id @db.Char(26)
   userId String @map("user_id") @db.Char(26)
@@ -788,7 +850,8 @@ model NativeAuthSession {
   expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Khác null = phiên đã bị thu hồi. Access token còn hạn cũng bị AuthGuard từ chối ngay.
   revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
-  /// `logout` | `refresh_reuse` | `user_disabled` | `realm_split` — để đọc lịch sử biết vì sao phiên chết.
+  /// `logout` | `refresh_reuse` | `user_disabled` | `realm_split` | `password_changed` |
+  /// `password_reset` — để đọc lịch sử biết vì sao phiên chết.
   revokedReason String?   @map("revoked_reason") @db.VarChar(50)
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2401,18 +2464,55 @@ model BookingDriverAssignment {
   dropReasonCategory String? @map("drop_reason_category") @db.VarChar(30)
   dropReason         String? @map("drop_reason") @db.Text
   dropZone           String? @map("drop_zone") @db.VarChar(20)
+  /// Tiền công tài xế của lượt gán (ADR 0075) — con số chủ xe và tài xế thoả thuận; chủ xe trả
+  /// TRỰC TIẾP, KHÔNG đi vào bất kỳ dòng tiền nào của XePrime. Mặc định `tenants.driver_daily_wage ×
+  /// wage_days` lúc gán; chủ xe sửa được tới `ended_at + 72h` (mỗi lần đổi một dòng
+  /// `booking_driver_wage_changes`). Lượt khép mà KHÔNG hoàn thành ⇒ về 0 (chủ xe ghi được số thoả
+  /// thuận). NULL chỉ ở lượt gán trước tính năng. CHECK ≥ 0. Writer: `DriversService` +
+  /// `closeOpenDriverAssignment` (`@xeprime/prisma`).
+  wageAmount   Decimal?  @map("wage_amount") @db.Decimal(14, 2)
+  /// Số ngày tính tiền của đơn lúc gán — mẫu số của giới hạn tiền công. CHECK > 0; NULL ⇔ `wage_amount` NULL.
+  wageDays     Int?      @map("wage_days")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking     Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driver      Driver                   @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  wageChanges BookingDriverWageChange[]
 
+  /// Mục tiêu cho composite FK `(assignment_id, tenant_id)` từ `booking_driver_wage_changes`.
+  @@unique([id, tenantId])
   /// Dòng thời gian của một đơn.
   @@index([bookingId, assignedAt])
   /// "Đã qua" của tài xế: lượt hiện hành đã kết thúc, mới nhất trước.
   @@index([driverUserId, superseded, endedAt(sort: Desc)], map: "booking_driver_assignments_driver_past_idx")
+  /// Thống kê tiền công theo tài xế theo tháng ở trang Tài xế (ADR 0075).
+  @@index([tenantId, driverId, endedAt], map: "booking_driver_assignments_wage_stats_idx")
   @@map("booking_driver_assignments")
+}
+
+/// Lịch sử SỬA tiền công của một lượt gán (ADR 0075) — chỉ THÊM, không sửa/xoá. Mỗi lần chủ xe đổi
+/// `wage_amount` sang một số KHÁC ghi đúng một dòng, trong cùng transaction với lượt đổi (khoá dòng
+/// lượt gán trước). Số khởi đầu lúc gán và lần hệ thống đưa về 0 khi lượt khép KHÔNG là một lần sửa.
+/// Tài xế đọc được lịch sử của chính lượt mình. Writer duy nhất: `DriversService.updateWage`.
+model BookingDriverWageChange {
+  id           String   @id @db.Char(26)
+  tenantId     String   @map("tenant_id") @db.Char(26)
+  assignmentId String   @map("assignment_id") @db.Char(26)
+  oldAmount    Decimal  @map("old_amount") @db.Decimal(14, 2)
+  newAmount    Decimal  @map("new_amount") @db.Decimal(14, 2)
+  reason       String?  @db.VarChar(255)
+  /// Người sửa — thành viên gian hàng; giữ dòng khi tài khoản bị xoá (tên đọc qua join, có thể NULL).
+  changedBy    String?  @map("changed_by") @db.Char(26)
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignment BookingDriverAssignment @relation(fields: [assignmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
+  changer    User?                   @relation("driver_wage_changer", fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId, changedAt(sort: Desc)])
+  @@map("booking_driver_wage_changes")
 }
 
 // ---------------------------------------------------------------------------
@@ -4551,6 +4651,11 @@ model FeePolicy {
   /// `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY (thay `trip_insurance_percent`).
   tripInsuranceDailyCar           Decimal @default(0) @map("trip_insurance_daily_car") @db.Decimal(14, 2)
   tripInsuranceDailyMotorbike     Decimal @default(0) @map("trip_insurance_daily_motorbike") @db.Decimal(14, 2)
+  /// Giới hạn CHẶN SỐ VÔ LÝ của chuyến có tài xế (ADR 0075): `{ priceDaily: {min,max}, wageDaily:
+  /// {min,max} }` (VND string) — giá có tài/ngày của xe và tiền công tài xế/ngày. Không phải dòng
+  /// tiền: KHÔNG vào snapshot tính phí của đơn. NULL = mặc định nền tảng `WITH_DRIVER_LIMITS_DEFAULTS`
+  /// (bản chính sách trước tính năng). Đọc qua `parseWithDriverLimits`.
+  withDriverLimits                Json?   @map("with_driver_limits") @db.JsonB
 
   effectiveFrom DateTime? @map("effective_from") @db.Timestamptz(3)
   effectiveTo   DateTime? @map("effective_to") @db.Timestamptz(3)

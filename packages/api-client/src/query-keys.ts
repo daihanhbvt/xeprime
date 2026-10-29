@@ -151,6 +151,10 @@ export const queryKeys = {
     /** Bộ chọn gán đơn theo khung giờ (17/08) — cache riêng theo cửa sổ thời gian. */
     assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
       ['drivers', 'assignable', window] as const,
+    /** Tiền công/ngày mặc định của gian hàng + giới hạn nền tảng (ADR 0075). */
+    wageSettings: ['drivers', 'wage-settings'] as const,
+    /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — ngăn kéo tiền công (ADR 0075). */
+    assignments: (id: string, params: QueryParams) => ['drivers', 'assignments', id, params] as const,
   },
   /**
    * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) — lời mời/liên kết, huy hiệu chờ trả

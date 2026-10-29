@@ -191,3 +191,48 @@
   gap: var(--xp-space-xs);
   margin-bottom: var(--xp-space-md);
 }
+
+/* Tiền công của chính tài xế (ADR 0075) — số hiện hành nổi bật, lịch sử sửa thu nhỏ bên dưới. */
+.wageAmount {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  color: var(--xp-color-text);
+}
+
+.wageChanges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin-top: var(--xp-space-sm);
+  padding-left: var(--xp-space-sm);
+  border-left: 2px solid var(--xp-color-border);
+}
+
+.wageChangesTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-medium, 500);
+  color: var(--xp-color-text-secondary);
+}
+
+.wageChangeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wageChangeList li {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-sm);
+}
+
+.wageChangeAmount {
+  font-weight: var(--xp-font-weight-medium, 500);
+  white-space: nowrap;
+}

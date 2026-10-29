@@ -1012,7 +1012,7 @@
       "daily": "Nội thành (giá cơ bản)",
       "dailyHint": "Mức giá bắt buộc để công khai dịch vụ có tài xế.",
       "interCity": "Liên tỉnh — khứ hồi (tuỳ chọn)",
-      "interCityHint": "Bỏ trống để tạm tính theo giá nội thành; phụ phí được xác nhận khi duyệt.",
+      "interCityHint": "Bỏ trống để tạm tính theo giá nội thành; giá chốt được xác nhận khi duyệt.",
       "oneWay": "Liên tỉnh — 1 chiều (tuỳ chọn)",
       "oneWayHint": "Bỏ trống để tạm tính theo bậc gần nhất: liên tỉnh rồi đến nội thành.",
       "tipLabel": "Giải thích giá xe có tài xế",

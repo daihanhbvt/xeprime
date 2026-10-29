@@ -199,5 +199,21 @@
       "noteRequired": "Mô tả sự cố ít nhất {min} ký tự",
       "noteTooLong": "Tối đa {max} ký tự"
     }
+  },
+  "wage": {
+    "title": "Tiền công",
+    "line": {
+      "offer": "{amount} · {days, plural, other {# ngày}}",
+      "running": "{amount}",
+      "received": "Đã nhận {amount}",
+      "agreed": "Thoả thuận {amount}",
+      "none": "Không phát sinh tiền công"
+    },
+    "paidDirect": "Chủ xe trả trực tiếp cho bạn.",
+    "changesTitle": "Lịch sử sửa tiền công",
+    "change": "{old} → {new}",
+    "changeBy": "{name} · {time}",
+    "changeAt": "{time}",
+    "reason": "Lý do: {reason}"
   }
 }

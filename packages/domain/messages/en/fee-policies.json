@@ -68,7 +68,8 @@
       "deposit": "Booking hold",
       "insurance": "Insurance",
       "tax": "Withholding tax",
-      "legacy": "Legacy model figures"
+      "legacy": "Legacy model figures",
+      "withDriver": "With-driver trips — sanity limits"
     },
     "facts": {
       "effectiveFrom": "Effective from",
@@ -86,11 +87,15 @@
       "tripInsurancePercent": "Trip insurance %",
       "vehicleProtectionPercent": "Vehicle protection %",
       "taxLegalBasis": "Legal basis",
-      "taxScope": "Applies to"
+      "taxScope": "Applies to",
+      "withDriverPrice": "With-driver price per day",
+      "driverWage": "Driver wage per day",
+      "driverWageSuggested": "Suggested wage per day"
     },
     "perDay": "{value}/day",
     "off": "Not applied",
-    "legacyHint": "The current money flow does not read these figures; they are kept only to reconcile older orders."
+    "legacyHint": "The current money flow does not read these figures; they are kept only to reconcile older orders.",
+    "rangePerDay": "{min} – {max}/day"
   },
   "form": {
     "titleCreate": "Create fee policy draft",
@@ -150,7 +155,9 @@
       "ratePositive": "Enter a daily rate above 0",
       "partnerRequired": "Enter the insurance partner name",
       "taxRateRequired": "Enter the tax %",
-      "taxLegalBasisRequired": "Enter the legal basis"
+      "taxLegalBasisRequired": "Enter the legal basis",
+      "limitOrder": "The maximum must be greater than the minimum",
+      "suggestedInRange": "The suggested rate must be within the wage-per-day range"
     },
     "taxLegalBasis": "Legal basis",
     "taxLegalBasisHint": "The legal reference for the withholding — shown to owners and printed on the tax ledger.",
@@ -166,7 +173,15 @@
       "transport": "Transport group"
     },
     "taxScope": "Applies to: individuals, household businesses · Companies: not withheld",
-    "taxScopeValue": "Individuals, household businesses · Verified companies: not withheld"
+    "taxScopeValue": "Individuals, household businesses · Verified companies: not withheld",
+    "sectionWithDriver": "With-driver trips — sanity limits",
+    "withDriverLimitsHint": "Blocks unreasonable numbers (a missing or extra zero) — not price control. Applies to a vehicle's with-driver daily price and the driver wage per day shops record.",
+    "withDriverPriceMin": "With-driver price per day — minimum",
+    "withDriverPriceMax": "With-driver price per day — maximum",
+    "driverWageMin": "Driver wage per day — minimum",
+    "driverWageMax": "Driver wage per day — maximum",
+    "driverWageSuggested": "Suggested wage per day",
+    "driverWageSuggestedHint": "Only a market reminder for shops that haven't set a rate — never written into a shop or a trip."
   },
   "commissionScope": {
     "title": "Applies to: individual owners (commission track). Package vehicles / shops: exempt (H = 0).",

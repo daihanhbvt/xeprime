@@ -28,6 +28,7 @@ export * from './payment-gateway';
 export * from './ulid';
 export * from './host-metrics';
 export * from './fee-policy';
+export * from './driver-wage';
 export * from './promo-code';
 export * from './favorites';
 export * from './pricing';

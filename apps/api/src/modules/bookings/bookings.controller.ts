@@ -1,4 +1,8 @@
-import { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
+import {
+  BookingDriverHistoryItemDto,
+  DriverWageQuoteDto,
+  UpdateDriverWageDto,
+} from '../drivers/dto/driver.dto';
 import {
   Body,
   Controller,
@@ -155,7 +159,53 @@ export class BookingsController {
         message: 'XePrime không còn nhận tài xế ngoài hệ thống — gán tài xế liên kết',
       });
     }
-    return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId ?? null);
+    return this.bookings.assignDriver(
+      tenant.tenantId,
+      id,
+      user.id,
+      dto.driverId ?? null,
+      dto.wageAmount ?? null,
+    );
+  }
+
+  /** Số liệu tiền công cho hộp gán tài xế của đơn (ADR 0075) — server tính, client chỉ đọc. */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get(':id/driver-wage-quote')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({
+    summary: 'Tiền công gợi ý khi gán tài xế cho đơn: số ngày, mức mặc định × số ngày, khoảng hợp lệ',
+  })
+  @ApiOkResponse({ type: DriverWageQuoteDto })
+  driverWageQuote(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<DriverWageQuoteDto> {
+    return this.bookings.driverWageQuote(tenant.tenantId, id);
+  }
+
+  /**
+   * Sửa tiền công của MỘT lượt gán (ADR 0075). XePrime chỉ ghi nhận số hai bên thoả thuận — không
+   * chạm tiền giữ chỗ, quyết toán hay ví. Không cần tài xế đồng ý; mỗi lần đổi một dòng lịch sử.
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Patch(':id/driver-assignments/:assignmentId/wage')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary: 'Sửa tiền công tài xế của một lượt gán (có lịch sử + audit)',
+    description:
+      'Khoảng hợp lệ: chuyến chạy/đã xong `[min × N; max × N]`, chuyến đã nhận nhưng không chạy `[0; max × N]` (chính sách hiện hành). ' +
+      '422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max) · 409 `DRIVER_WAGE_LOCKED` (quá kết thúc + 72h) · 422 `DRIVER_WAGE_NOT_APPLICABLE` (lượt chưa từng được nhận). Trả lịch sử tài xế của đơn.',
+  })
+  @ApiOkResponse({ type: [BookingDriverHistoryItemDto] })
+  updateDriverWage(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body() dto: UpdateDriverWageDto,
+  ): Promise<BookingDriverHistoryItemDto[]> {
+    return this.bookings.updateDriverWage(tenant.tenantId, id, assignmentId, user.id, dto);
   }
 
   /** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */

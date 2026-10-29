@@ -130,7 +130,18 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
           : null;
       }),
     },
+    // Phiên web (ADR 0076): `SessionService.issue` ghi một hàng, `AuthGuard` tra lại nó.
+    webSession: {
+      create: jest.fn(async ({ data }: { data: { id: string } }) => {
+        webSessionIds.add(data.id);
+        return data;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: { id: string } }) =>
+        webSessionIds.has(where.id) ? { id: where.id } : null,
+      ),
+    },
   };
+  const webSessionIds = new Set<string>();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -172,8 +183,8 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
   beforeEach(() => jest.clearAllMocks());
 
   const http = () => request(app.getHttpServer());
-  const cookieOf = (userId: string, realm: AccountRealm) =>
-    `${sessions.cookieName(realm)}=${sessions.issue(userId).token}`;
+  const cookieOf = async (userId: string, realm: AccountRealm) =>
+    `${sessions.cookieName(realm)}=${(await sessions.issue(userId)).token}`;
 
   describe('Đăng ký bắt mã OTP', () => {
     const BODY = { displayName: 'Khách A', phone: '0901234567', password: 'matkhau123' };
@@ -355,7 +366,7 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const res = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
-        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send(BODY);
       expect(res.status).toBe(201);
       expect(res.body.id).toBe('R1');
@@ -371,7 +382,7 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const res = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
-        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send({
           ...BODY,
           customerEmail: 'tu-khai@example.com',
@@ -391,7 +402,7 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const edited = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
-        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send({ ...BODY, customerName: '  Người nhà  ', customerPhone: '091 234 5678' });
       expect(edited.status).toBe(201);
       expect(requests.submitPublic).toHaveBeenLastCalledWith(
@@ -402,10 +413,13 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const blank = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
-        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send({ ...BODY, customerName: '   ', customerPhone: '' });
       expect(blank.status).toBe(201);
-      const dto = (requests.submitPublic as jest.Mock).mock.lastCall?.[0] as Record<string, unknown>;
+      const dto = (requests.submitPublic as jest.Mock).mock.lastCall?.[0] as Record<
+        string,
+        unknown
+      >;
       expect(dto.customerName).toBeUndefined();
       expect(dto.customerPhone).toBeUndefined();
     });
@@ -414,7 +428,7 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const res = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
-        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send({ ...BODY, customerPhone: '12345' });
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe(API_ERROR_CODE.VALIDATION_FAILED);
@@ -425,7 +439,7 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       const res = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.PARTNER))
-        .set('Cookie', cookieOf('U_PARTNER', ACCOUNT_REALM.PARTNER))
+        .set('Cookie', await cookieOf('U_PARTNER', ACCOUNT_REALM.PARTNER))
         .send(BODY);
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe(API_ERROR_CODE.REALM_NOT_ALLOWED);

@@ -27,7 +27,7 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, RequestContext } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
-import { SessionService } from './session.service';
+import { SessionService, WEB_REVOKE_REASON } from './session.service';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -53,11 +53,10 @@ import {
  * rộng hơn nghĩa là cửa dò mật khẩu chặt nhất của hệ thống chính là cửa lỏng nhất — kẻ dò chỉ
  * việc đổi URL.
  *
- * Vì sao rate limit là lớp phòng thủ CÒN LẠI, không phải lớp phụ: `loginWithPassword` không đếm
- * số lần sai và không khoá tài khoản (`ACCOUNT_LOCKED` chỉ phản ánh `users.status` do admin đặt).
- * Nó cố ý trả cùng một lỗi cho "không có tài khoản" và "sai mật khẩu", và so bcrypt với một hash
- * giả khi không tìm thấy user để thời gian phản hồi không tố cáo điều đó — nhưng cả hai thứ đó
- * chỉ giấu *ai tồn tại*, không hãm được tốc độ đoán mật khẩu.
+ * Hai lớp hãm dò mật khẩu: rate limit theo IP ở đây, và khoá theo ĐỊNH DANH ở `LoginThrottleService`
+ * (ADR 0076 — chặn dò một tài khoản từ nhiều IP). `loginWithPassword` trả cùng một lỗi cho "không
+ * có tài khoản" và "sai mật khẩu", so bcrypt với hash giả khi không tìm thấy user, và khoá cả định
+ * danh không tồn tại — không lớp nào tố cáo *ai tồn tại*.
  *
  * `password/forgot` siết cùng mức vì mỗi request GỬI MỘT EMAIL tới địa chỉ người khác nhập vào:
  * không siết thì đây là một khẩu súng bắn thư miễn phí, dù nó luôn trả 204 và không rò rỉ gì.
@@ -88,7 +87,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<MeDto> {
     const { userId } = await this.auth.register(dto, realm);
-    this.issueSession(res, userId, realm);
+    await this.issueSession(res, userId, realm);
     return this.auth.me(userId);
   }
 
@@ -122,8 +121,8 @@ export class AuthController {
   @VerifiesCredentials()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  // 5/phút — bằng `POST /auth/mobile/login`. Xem docblock của controller: không có bộ đếm sai
-  // mật khẩu nào phía sau, nên đây là lớp duy nhất hãm tốc độ đoán.
+  // 5/phút theo IP — bằng `POST /auth/mobile/login`. Lớp thứ hai (theo ĐỊNH DANH, mọi IP) nằm ở
+  // `LoginThrottleService` (ADR 0076).
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
     summary:
@@ -136,7 +135,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<MeDto> {
     const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password, realm);
-    this.issueSession(res, userId, realm);
+    await this.issueSession(res, userId, realm);
     return this.auth.me(userId);
   }
 
@@ -160,14 +159,18 @@ export class AuthController {
   // khẩu cũ để đổi sang mật khẩu của họ và chiếm hẳn tài khoản.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set',
+    summary:
+      'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set. Mọi phiên KHÁC (web + app) bị đăng xuất',
   })
   @ApiNoContentResponse()
   async changePassword(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ChangePasswordDto,
   ): Promise<void> {
-    await this.auth.changePassword(user.id, dto.currentPassword, dto.newPassword);
+    await this.auth.changePassword(user.id, dto.currentPassword, dto.newPassword, {
+      sessionId: user.sessionId,
+      transport: user.transport,
+    });
   }
 
   @Public()
@@ -235,15 +238,37 @@ export class AuthController {
   @Public()
   @Delete('session')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Đăng xuất: xoá session cookie của site đang gọi' })
-  logout(@Req() req: RequestContext, @Res({ passthrough: true }) res: Response): void {
+  @ApiOperation({
+    summary: 'Đăng xuất: thu hồi phiên của cookie (phía server) rồi xoá cookie của site đang gọi',
+  })
+  async logout(
+    @Req() req: RequestContext,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     // Đăng xuất là của MỘT realm (ADR 0053 điều 4) — không có "đăng xuất mọi nơi". Không xác định
     // được site thì không có cookie nào của mình để xoá.
-    if (req.realm) this.sessions.clear(res, req.realm);
+    if (!req.realm) return;
+    const token = (req.cookies as Record<string, string> | undefined)?.[
+      this.sessions.cookieName(req.realm)
+    ];
+    /*
+     * Thu hồi ở SERVER trước (ADR 0076): xoá cookie trên trình duyệt này thôi thì bản cookie đã bị
+     * sao chép ở nơi khác vẫn sống đủ 7 ngày. Cookie hỏng/hết hạn ⇒ không có phiên nào để thu hồi,
+     * vẫn xoá cookie và trả 204 — đăng xuất không bao giờ thất bại.
+     */
+    if (token) {
+      try {
+        const { sid } = this.sessions.verify(token);
+        await this.sessions.revoke(sid, WEB_REVOKE_REASON.LOGOUT);
+      } catch {
+        // Cookie không còn hợp lệ — đã là "đăng xuất" theo mọi nghĩa.
+      }
+    }
+    this.sessions.clear(res, req.realm);
   }
 
-  private issueSession(res: Response, userId: string, realm: AccountRealm): void {
-    const { token } = this.sessions.issue(userId);
+  private async issueSession(res: Response, userId: string, realm: AccountRealm): Promise<void> {
+    const { token } = await this.sessions.issue(userId);
     this.sessions.attach(res, token, realm);
   }
 

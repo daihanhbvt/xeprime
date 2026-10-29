@@ -395,6 +395,7 @@
     "driver_trip_assigned": "Chuyến mới cần xác nhận",
     "driver_trip_unassigned": "Chuyến đã được gỡ khỏi bạn",
     "driver_trip_completed": "Chuyến đã hoàn thành",
+    "driver_trip_wage_changed": "Tiền công chuyến đã đổi",
     "driver_trip_accepted": "Tài xế đã nhận chuyến",
     "driver_trip_declined": "Tài xế từ chối chuyến",
     "driver_trip_response_expired": "Tài xế không phản hồi",
@@ -820,7 +821,8 @@
     "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép",
     "deposit_percent_out_of_range": "% tiền giữ chỗ của chủ xe ngoài khoảng cho phép hoặc vượt trần của chính sách",
     "deposit_percent_below_tax_percent": "% tiền giữ chỗ của chủ xe không được thấp hơn mức thuế cao nhất của bảng",
-    "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản"
+    "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản",
+    "with_driver_limits_invalid": "Giới hạn chuyến có tài xế không hợp lệ (cần 0 < tối thiểu < tối đa, bội 1.000đ)"
   },
   "bookingHoldStatus": {
     "pending": "Chờ chuyển giữ chỗ",

@@ -3,6 +3,7 @@
 > Ngày viết: 27/08/2026 · Cập nhật: 15/10/2026 · Trạng thái: đang áp dụng cho staging + production.
 > Kiến trúc: **một VPS duy nhất** (CLAUDE.md §3 — "Deploy MVP: 1 VPS").
 > Mọi file nhắc tới ở đây nằm trong `deploy/` và `docker-compose.prod.yml`.
+> Dựng production lần đầu (thứ tự, tài khoản, khoá, app lên store): [`production-launch-runbook.md`](production-launch-runbook.md).
 
 ---
 
@@ -151,14 +152,11 @@ Nguyên tắc: **tách theo MÔI TRƯỜNG bằng tên miền con, tách theo KH
 partner. Bảng ánh xạ duy nhất: `apps/web/src/zones/legacy-redirects.ts`. Tiền tố thư mục gõ thẳng
 trên host không sở hữu nó (`xeprime.vn/admin/…`, `partner.xeprime.vn/admin/…`) trả 404.
 
-**Giới hạn truy cập khu quản trị theo IP** giờ làm theo HOST — thêm vào khối `{$ADMIN_DOMAIN}` của
-`deploy/Caddyfile`, TRƯỚC `import site_api platform`:
-
-```caddyfile
-# Chỉ IP văn phòng vào được site quản trị (cả trang lẫn /api của nó).
-@blocked not client_ip 1.2.3.4 5.6.7.0/24
-respond @blocked 403
-```
+**Giới hạn truy cập khu quản trị theo IP** là một biến của GitHub Environment: đặt Variable
+`ADMIN_ALLOWED_IPS` = danh sách IP/CIDR cách nhau bằng dấu cách (vd `1.2.3.4 5.6.7.0/24`). Deploy
+ghi nó vào `.env`, compose chuyển cho Caddy, và khối `{$ADMIN_DOMAIN}` của `deploy/Caddyfile` trả
+403 cho mọi IP khác — cả trang lẫn `/api` của site quản trị. Không khai ⇒ `0.0.0.0/0 ::/0` (mọi IP,
+như trước). Site khách, site partner và host API của app không bị ảnh hưởng.
 
 > `client_ip` chứ không phải `remote_ip`: sau proxy Cloudflare, `remote_ip` là IP biên của
 > Cloudflare — nghĩa là danh sách chặn khớp với tất cả mọi người hoặc không khớp với ai. Dùng

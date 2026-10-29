@@ -399,6 +399,10 @@ export const DRIVER_ASSIGNMENT_AUDIT_ACTION = {
   MISSING_ALERTED: 'booking.driver_missing_alerted',
   /** Tài xế đã nhận rồi RÚT khỏi chuyến (ADR 0074) — kèm lý do, vùng, hạn điều phối lại. */
   DROPPED: 'booking.driver_dropped',
+  /** Bên thuê sửa tiền công của một lượt gán (ADR 0075) — cũ → mới + lý do. */
+  WAGE_UPDATED: 'booking.driver_wage_update',
+  /** Bên thuê đổi tiền công/ngày mặc định của gian hàng (ADR 0075). */
+  DEFAULT_WAGE_UPDATED: 'tenant.driver_daily_wage_update',
 } as const;
 
 const MINUTE_MS = 60_000;

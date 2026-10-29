@@ -395,6 +395,7 @@
     "driver_trip_assigned": "New trip to confirm",
     "driver_trip_unassigned": "Trip removed from you",
     "driver_trip_completed": "Trip completed",
+    "driver_trip_wage_changed": "Trip wage changed",
     "driver_trip_accepted": "Driver accepted the trip",
     "driver_trip_declined": "Driver declined the trip",
     "driver_trip_response_expired": "Driver did not respond",
@@ -820,7 +821,8 @@
     "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range",
     "deposit_percent_out_of_range": "Owner's reservation share % is out of range or above the policy cap",
     "deposit_percent_below_tax_percent": "Owner's reservation share % must not be lower than the highest tax rate in the table",
-    "free_cancel_shorter_than_payment_window": "Free-cancel window must not be shorter than the payment window"
+    "free_cancel_shorter_than_payment_window": "Free-cancel window must not be shorter than the payment window",
+    "with_driver_limits_invalid": "With-driver limits are invalid (need 0 < minimum < maximum, multiples of 1,000)"
   },
   "bookingHoldStatus": {
     "pending": "Awaiting payment",

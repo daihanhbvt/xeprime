@@ -431,7 +431,7 @@ export function BookingDetailContent({
 
       <div className={styles.layout}>
         <BookingOperationPanel bookingId={data.id} bookingStatus={data.status} />
-        <SettlementCard bookingId={data.id} canView={canView} />
+        <SettlementCard bookingId={data.id} canView={canView} serviceType={data.serviceType} />
       </div>
     </div>
   );

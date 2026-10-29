@@ -11,7 +11,10 @@ import {
 import type {
   AssignableDriver,
   Driver,
+  DriverAssignmentRow,
   DriverFilters,
+  DriverWageSettings,
+  UpdateDriverWageSettingsInput,
   InviteDriverInput,
   UpdateDriverInput,
 } from './types';
@@ -25,6 +28,7 @@ export function filtersToParams(filters: DriverFilters): QueryParams {
     q: filters.q ?? null,
     linkStatus: filters.linkStatus ?? null,
     driverType: filters.driverType ?? null,
+    month: filters.month ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? DRIVERS_DEFAULT_LIMIT,
   };
@@ -60,3 +64,25 @@ export const fetchAssignableDrivers = (window: {
     returnAt: window.returnAt,
     excludeBookingId: window.excludeBookingId ?? null,
   });
+
+/** Tiền công/ngày mặc định của gian hàng + giới hạn hợp lệ (ADR 0075). */
+export const fetchDriverWageSettings = (): Promise<DriverWageSettings> =>
+  apiGet<DriverWageSettings>('/drivers/wage-settings');
+
+/** Đặt / xoá mức mặc định — chỉ áp cho lượt gán tạo SAU lần lưu này. */
+export const updateDriverWageSettings = (
+  body: UpdateDriverWageSettingsInput,
+): Promise<DriverWageSettings> => apiPatch<DriverWageSettings>('/drivers/wage-settings', body);
+
+export const DRIVER_ASSIGNMENTS_LIMIT = 10;
+
+/** Các chuyến một tài xế đã nhận, kết thúc trong tháng — phân trang server-side. */
+export const fetchDriverAssignments = (
+  id: string,
+  params: { month?: string; page: number },
+): Promise<Paged<DriverAssignmentRow>> =>
+  fetchPage<DriverAssignmentRow>(
+    `/drivers/${id}/assignments`,
+    { month: params.month ?? null, page: params.page, limit: DRIVER_ASSIGNMENTS_LIMIT },
+    DRIVER_ASSIGNMENTS_LIMIT,
+  );

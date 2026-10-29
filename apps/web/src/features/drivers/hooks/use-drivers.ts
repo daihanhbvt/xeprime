@@ -5,14 +5,22 @@ import { queryKeys } from '@/services/query-keys';
 import {
   endDriver,
   fetchAssignableDrivers,
+  fetchDriverAssignments,
+  fetchDriverWageSettings,
   fetchDrivers,
   filtersToParams,
   inviteDriver,
   resumeDriver,
   suspendDriver,
   updateDriver,
+  updateDriverWageSettings,
 } from '../api';
-import type { DriverFilters, InviteDriverInput, UpdateDriverInput } from '../types';
+import type {
+  DriverFilters,
+  InviteDriverInput,
+  UpdateDriverInput,
+  UpdateDriverWageSettingsInput,
+} from '../types';
 
 /** Danh sách liên kết tài xế (phân trang/tìm kiếm server-side). */
 export function useDrivers(filters: DriverFilters) {
@@ -58,3 +66,39 @@ export const useUpdateDriver = () =>
 export const useSuspendDriver = () => useDriverMutation((id: string) => suspendDriver(id));
 export const useResumeDriver = () => useDriverMutation((id: string) => resumeDriver(id));
 export const useEndDriver = () => useDriverMutation((id: string) => endDriver(id));
+
+/** Tiền công/ngày mặc định của gian hàng + giới hạn (ADR 0075). */
+export function useDriverWageSettings(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.drivers.wageSettings,
+    queryFn: fetchDriverWageSettings,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Đặt / xoá mức mặc định. Làm mới cả nhánh `bookings`: gợi ý tiền công của hộp gán (khoá dưới
+ * chi tiết đơn) đọc mức này.
+ */
+export function useUpdateDriverWageSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateDriverWageSettingsInput) => updateDriverWageSettings(body),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.drivers.wageSettings, data);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+    },
+  });
+}
+
+/** Ngăn kéo "chuyến & tiền công" của một tài xế trong tháng (phân trang server-side). */
+export function useDriverAssignments(id: string | null, month: string | undefined, page: number) {
+  const params = { month: month ?? null, page };
+  return useQuery({
+    queryKey: queryKeys.drivers.assignments(id ?? '', params),
+    queryFn: () => fetchDriverAssignments(id as string, { month, page }),
+    enabled: Boolean(id),
+    placeholderData: (prev) => prev,
+  });
+}

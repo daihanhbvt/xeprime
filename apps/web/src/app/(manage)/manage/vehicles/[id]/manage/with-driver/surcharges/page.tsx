@@ -1,6 +1,12 @@
-import { DriverSurchargesSection } from '@/features/vehicle-manage/components/sections/DriverSurchargesSection';
+import { redirect } from 'next/navigation';
 
-/** Mục "Phụ phí có tài xế" — nội dung thật nằm ở component dùng chung; trang chỉ là điểm vào theo URL. */
-export default function Page() {
-  return <DriverSurchargesSection />;
+import { VEHICLE_MANAGE_SECTION, ownerVehicleManagePath } from '@/constants/routes';
+
+/**
+ * Đường dẫn CŨ — phụ phí tài xế đã gỡ (ADR 0075): giá có tài xế là giá trọn gói. Link cũ (bookmark,
+ * thông báo) mở "Nhận chuyến & thủ tục" của dịch vụ có tài xế.
+ */
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(ownerVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION));
 }

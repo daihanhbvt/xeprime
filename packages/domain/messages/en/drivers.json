@@ -27,7 +27,8 @@
     "licence": "Licence",
     "activeBookings": "Assigned trips",
     "status": "Link",
-    "drops": "Withdrawals (90 days)"
+    "drops": "Withdrawals (90 days)",
+    "monthWage": "Wages (month)"
   },
   "licence": {
     "classes": "Class {classes}",
@@ -137,5 +138,116 @@
     "count": "{count, plural, one {# time} other {# times}}",
     "critical": "{count, plural, one {# last-minute} other {# last-minute}}",
     "cooldownUntil": "No \"Instant book\" auto-assign until {time}"
+  },
+  "wage": {
+    "settings": {
+      "title": "Driver wage · shop rate",
+      "perDay": "{amount}/day",
+      "unset": "Not set",
+      "hint": "One rate for every vehicle: filled in when you assign a driver (× trip days) and editable per trip. You pay the driver directly.",
+      "unsetHint": "No shop rate yet: you must enter a wage each time you assign, and instant-book vehicles won't auto-assign a driver. The going rate is around {suggested}/day.",
+      "edit": "Edit",
+      "set": "Set shop rate",
+      "dialogTitle": "Driver wage · shop rate",
+      "field": "Wage per day",
+      "range": "From {min} to {max} per day",
+      "appliesNext": "Applies to new assignments on every vehicle — assigned trips keep their wage.",
+      "clear": "Clear shop rate",
+      "saved": "Shop rate saved",
+      "cleared": "Shop rate cleared",
+      "loadError": "Couldn't load the driver wage.",
+      "errors": {
+        "required": "Enter a wage per day",
+        "range": "The wage per day must be between {min} and {max}",
+        "step": "The wage must be a multiple of 1,000"
+      },
+      "placeholder": "Suggested {amount}",
+      "useSuggested": "Use the suggested {amount}"
+    },
+    "month": {
+      "label": "Stats month",
+      "placeholder": "Pick a month"
+    },
+    "line": {
+      "offer": "Wage {amount} · {days, plural, one {# day} other {# days}}",
+      "running": "Wage {amount}",
+      "received": "Paid {amount}",
+      "agreed": "Agreed {amount}",
+      "none": "No wage for this trip"
+    },
+    "form": {
+      "daily": "Wage per day",
+      "placeholder": "Suggested {amount}",
+      "help": "Shop rate: {current} · range {min} – {max}/day",
+      "helpNoDefault": "No shop rate yet · range {min} – {max}/day",
+      "total": "Trip total: {daily} × {days, plural, one {# day} other {# days}}",
+      "aboveRent": "The wage is higher than the trip's rent ({rent}) — double-check the amount.",
+      "rangeAgreed": "From 0 to {max}",
+      "savedWithDefault": "Saved, and the shop rate is updated for later trips",
+      "scope": {
+        "label": "Apply to",
+        "trip": "This trip only",
+        "tripHint": "The shop rate stays {current}/day.",
+        "tripNoDefault": "The shop still has no rate.",
+        "default": "This trip and later assignments",
+        "defaultHint": "Change the shop rate to {daily}/day for every vehicle. Assigned trips keep their wage."
+      },
+      "errors": {
+        "required": "Enter the wage",
+        "range": "The wage must be between {min} and {max}",
+        "step": "The wage must be a multiple of 1,000",
+        "unchanged": "The new amount is the same as the current one"
+      }
+    },
+    "assign": {
+      "title": "Assign {name}",
+      "paidDirect": "You pay the driver directly. The driver sees this amount before accepting the trip.",
+      "submit": "Assign driver",
+      "loadError": "Couldn't load the suggested wage.",
+      "retry": "Retry"
+    },
+    "edit": {
+      "action": "Edit wage",
+      "actionAgreed": "Record agreed amount",
+      "title": "Edit wage · {name}",
+      "titleAgreed": "Agreed wage · {name}",
+      "current": "Current",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. extra evening, one more day out of town…",
+      "notice": "The driver is notified and can see the edit history. No driver approval needed.",
+      "noticeAgreed": "The trip didn't run: record the amount you both agreed on (0 if none).",
+      "saved": "Wage saved",
+      "editableUntil": "Editable until {time}",
+      "fieldAgreed": "Amount you both agreed on",
+      "daysChanged": "The booking changed from {from} to {to} days — the new total uses {to} days."
+    },
+    "changes": {
+      "title": "Wage edit history",
+      "item": "{old} → {new}",
+      "by": "{name} · {time}",
+      "at": "{time}",
+      "reason": "Reason: {reason}"
+    },
+    "daysChanged": "The trip length changed ({from} → {to} days) — review the driver's wage.",
+    "drawer": {
+      "title": "Trips & wages · {name}",
+      "summary": "{trips, plural, one {# completed trip} other {# completed trips}} · {amount}",
+      "empty": "No trips ended in this month.",
+      "loadError": "Couldn't load the trips.",
+      "columns": {
+        "booking": "Booking",
+        "period": "Dates",
+        "outcome": "Outcome",
+        "wage": "Wage"
+      },
+      "total": "{count, plural, one {# trip} other {# trips}}",
+      "tableLabel": "Driver trips this month"
+    },
+    "monthTrips": "{count, plural, one {# completed trip} other {# completed trips}}",
+    "note": {
+      "set": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle: {amount}/day.",
+      "unset": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle — not set yet.",
+      "link": "Set it on the Drivers page"
+    }
   }
 }

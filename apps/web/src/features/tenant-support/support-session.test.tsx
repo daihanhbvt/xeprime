@@ -89,7 +89,7 @@ describe('mục / tab của xe theo capability', () => {
     expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.OPERATIONS)).toBe(true);
   });
 
-  it('giá, giao xe có phí, điều khoản, phụ phí: không bao giờ hiện trong phiên', () => {
+  it('giá, giao xe có phí, điều khoản: không bao giờ hiện trong phiên', () => {
     const all = sessionWith([
       SUPPORT_CAPABILITY.VEHICLE_VIEW,
       SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
@@ -99,7 +99,6 @@ describe('mục / tab của xe theo capability', () => {
     for (const section of [
       // Giá & chính sách gồm cả giao xe có phí và cọc — khu TIỀN, không mở trong phiên.
       VEHICLE_MANAGE_SECTION.PRICING,
-      VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
       VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
     ]) {
       expect(supportAllowsVehicleSection(all, section)).toBe(false);

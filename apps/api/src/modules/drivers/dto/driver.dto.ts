@@ -18,6 +18,9 @@ import {
   DRIVER_LINK_SCOPE_VALUES,
   type DriverLinkScope,
   type DriverSource,
+  DRIVER_WAGE_REASON_MAX_LENGTH,
+  DRIVER_WAGE_STAGE_VALUES,
+  type DriverWageStage,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -31,8 +34,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -40,6 +45,9 @@ const MAX_LIMIT = 100;
 export { DEFAULT_LIMIT as DRIVER_DEFAULT_LIMIT, MAX_LIMIT as DRIVER_MAX_LIMIT };
 
 const PHONE_PATTERN = /^(0|\+?84)\d{9}$/;
+/** Tiền công: VND nguyên, tối đa 12 chữ số. */
+const WAGE_PATTERN = /^\d{1,12}$/;
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Phía BÊN THUÊ (khu quản lý)
@@ -65,6 +73,13 @@ export class DriverListQueryDto {
   @IsOptional()
   @IsIn(DRIVER_TYPE_VALUES)
   driverType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công — mặc định tháng hiện tại',
+  })
+  @IsOptional()
+  @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
+  month?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -187,6 +202,16 @@ export class DriverDto {
       'Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ — null = không',
   })
   autoAssignCooldownUntil!: string | null;
+  @ApiProperty({
+    description: 'Số chuyến tài xế HOÀN THÀNH, kết thúc trong tháng được chọn (ADR 0075)',
+  })
+  monthCompletedTrips!: number;
+  @ApiProperty({
+    type: String,
+    description:
+      'Tổng tiền công (VND) các lượt kết thúc trong tháng: chuyến hoàn thành + số thoả thuận của chuyến không chạy',
+  })
+  monthWageTotal!: string;
 }
 
 export class DriverPageDto {
@@ -275,6 +300,187 @@ export class TripDriverIncidentDto {
   freeCancel!: boolean;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tiền công tài xế (ADR 0075) — XePrime chỉ GHI NHẬN, chủ xe trả trực tiếp
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Một lần chủ xe sửa tiền công. */
+export class DriverWageChangeDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ type: String, description: 'VND' }) oldAmount!: string;
+  @ApiProperty({ type: String, description: 'VND' }) newAmount!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) changedAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Người sửa (thành viên bên thuê) — null khi tài khoản không còn',
+  })
+  changedByName!: string | null;
+}
+
+/** Khoảng tiền công hợp lệ của MỘT lượt gán (VND string). */
+export class DriverWageRangeDto {
+  @ApiProperty({ type: String }) min!: string;
+  @ApiProperty({ type: String }) max!: string;
+}
+
+/**
+ * Tiền công của một lượt gán — dùng cho CẢ bên thuê và chính tài xế (không có trường nào của
+ * dòng tiền khách/chủ xe ở đây). `amount` null chỉ ở lượt gán trước tính năng.
+ */
+export class DriverWageDto {
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND — số hiện hành' })
+  amount!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Số ngày tính tiền lúc gán' })
+  days!: number | null;
+  @ApiProperty({
+    enum: DRIVER_WAGE_STAGE_VALUES,
+    description:
+      '`offer` chờ nhận · `running` đã nhận · `completed` đã xong (mặc định đã trả) · `not_run` đã nhận nhưng không chạy · `not_applicable` chưa từng nhận',
+  })
+  stage!: DriverWageStage;
+  @ApiProperty({ description: 'Bên thuê còn sửa được không (giai đoạn + hạn khoá)' })
+  editable!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mốc khoá sửa (ISO-8601) = kết thúc lượt + 72h; null khi lượt chưa kết thúc',
+  })
+  editableUntil!: string | null;
+  @ApiPropertyOptional({
+    type: DriverWageRangeDto,
+    nullable: true,
+    description:
+      'Khoảng hợp lệ khi sửa (chính sách hiện hành × số ngày) — null khi lượt không có tiền công',
+  })
+  range!: DriverWageRangeDto | null;
+  @ApiProperty({ type: [DriverWageChangeDto], description: 'Lịch sử sửa, mới nhất trước' })
+  changes!: DriverWageChangeDto[];
+}
+
+/** `GET /drivers/wage-settings` — mức mặc định của gian hàng + giới hạn nền tảng. */
+export class DriverWageSettingsDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền công/ngày mặc định (VND) — null = chưa đặt',
+  })
+  dailyWage!: string | null;
+  @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng tiền công/ngày hợp lệ' })
+  wageDaily!: DriverWageRangeDto;
+  @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng giá có tài xế/ngày hợp lệ' })
+  priceDaily!: DriverWageRangeDto;
+  @ApiProperty({
+    type: String,
+    description: 'Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc, không phải mức của gian hàng',
+  })
+  suggestedDaily!: string;
+}
+
+/**
+ * `GET /bookings/:id/driver-wage-quote` — số liệu cho hộp gán tài xế của MỘT đơn: số ngày tính
+ * tiền, tiền công gợi ý (mức mặc định × số ngày) và khoảng hợp lệ. Server tính, client chỉ đọc.
+ */
+export class DriverWageQuoteDto {
+  @ApiProperty({ description: 'Số ngày tính tiền của đơn — mẫu số của tiền công' }) days!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền công/ngày mặc định của gian hàng — null = chưa đặt',
+  })
+  dailyWage!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Gợi ý = mức mặc định × số ngày — null khi chưa đặt mức mặc định',
+  })
+  suggestedAmount!: string | null;
+  @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng hợp lệ khi gán chuyến này' })
+  range!: DriverWageRangeDto;
+  @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng tiền công/ngày hợp lệ' })
+  wageDaily!: DriverWageRangeDto;
+  @ApiProperty({
+    type: String,
+    description: 'Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc khi gian hàng chưa đặt mức chung',
+  })
+  suggestedDaily!: string;
+  @ApiProperty({ type: String, description: 'Tiền thuê của đơn (VND) — để cảnh báo tiền công cao bất thường' })
+  rentAmount!: string;
+}
+
+/** `PATCH /drivers/wage-settings`. */
+export class UpdateDriverWageSettingsDto {
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Tiền công/ngày mặc định (VND, bội 1.000đ) — null = xoá mức mặc định',
+  })
+  @ValidateIf((o: UpdateDriverWageSettingsDto) => o.dailyWage !== null)
+  @Matches(WAGE_PATTERN, { message: 'Tiền công không hợp lệ (số VND nguyên dương)' })
+  @IsMoneyStep({ message: 'Tiền công phải là bội của 1.000đ' })
+  dailyWage!: string | null;
+}
+
+/** `PATCH /bookings/:id/driver-assignments/:assignmentId/wage` — bên thuê sửa tiền công. */
+export class UpdateDriverWageDto {
+  @ApiProperty({ type: String, description: 'Tiền công mới của lượt gán (VND, bội 1.000đ)' })
+  @Matches(WAGE_PATTERN, { message: 'Tiền công không hợp lệ (số VND nguyên không âm)' })
+  @IsMoneyStep({ message: 'Tiền công phải là bội của 1.000đ' })
+  amount!: string;
+
+  @ApiPropertyOptional({ maxLength: DRIVER_WAGE_REASON_MAX_LENGTH })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DRIVER_WAGE_REASON_MAX_LENGTH)
+  reason?: string;
+}
+
+/** Truy vấn thống kê theo tháng (giờ Việt Nam). */
+export class DriverWageMonthQueryDto {
+  @ApiPropertyOptional({ description: 'Tháng YYYY-MM (giờ VN) — mặc định tháng hiện tại' })
+  @IsOptional()
+  @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
+  month?: string;
+}
+
+/** `GET /drivers/:id/assignments` — các lượt tài xế đã nhận, kết thúc trong tháng. */
+export class DriverAssignmentListQueryDto extends DriverWageMonthQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: MAX_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LIMIT)
+  limit?: number;
+}
+
+export class DriverAssignmentRowDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ description: 'ID đơn' }) bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty() pickupAt!: string;
+  @ApiProperty() returnAt!: string;
+  @ApiProperty({ enum: DRIVER_ASSIGNMENT_OUTCOME_VALUES }) outcome!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) endedAt!: string | null;
+  @ApiProperty({ enum: DRIVER_WAGE_STAGE_VALUES }) stage!: DriverWageStage;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND' })
+  wageAmount!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) wageDays!: number | null;
+}
+
+export class DriverAssignmentPageDto {
+  @ApiProperty({ type: [DriverAssignmentRowDto] }) data!: DriverAssignmentRowDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
 /** Một lượt gán trong lịch sử tài xế của đơn (khu quản lý, ADR 0063). */
 export class BookingDriverHistoryItemDto {
   @ApiProperty() id!: string;
@@ -312,6 +518,8 @@ export class BookingDriverHistoryItemDto {
       'Chỉ lượt `dropped` — vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt',
   })
   dropZone!: string | null;
+  @ApiProperty({ type: DriverWageDto, description: 'Tiền công của lượt gán (ADR 0075)' })
+  wage!: DriverWageDto;
 }
 
 export class AssignableDriversQueryDto {
@@ -512,6 +720,11 @@ export class DriverTripDto {
   @ApiProperty({ type: DriverTripVehicleDto }) vehicle!: DriverTripVehicleDto;
   @ApiProperty({ type: DriverEmployerDto }) employer!: DriverEmployerDto;
   @ApiProperty({ type: DriverTripCustomerDto }) customer!: DriverTripCustomerDto;
+  @ApiProperty({
+    type: DriverWageDto,
+    description: 'Tiền công chuyến này — chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075)',
+  })
+  wage!: DriverWageDto;
 }
 
 export class DriverTripDetailDto extends DriverTripDto {

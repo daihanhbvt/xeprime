@@ -11,7 +11,7 @@ import { App, Button, Popconfirm } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { chargedDays, driverTripBadges, telHref, toAppTz } from '@xeprime/domain';
+import { chargedDays, driverTripBadges, driverWageLine, telHref, toAppTz } from '@xeprime/domain';
 import { DRIVER_ASSIGNMENT_OUTCOME, holdRemainingMs, isDriverTripAwaitingAnswer } from '@xeprime/types';
 import { ROUTES, drivingTripPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -26,8 +26,9 @@ import styles from './DriverCenter.module.css';
 /**
  * Thẻ một chuyến nhìn từ tài xế — Figma "Vehicle Card" (`21777:56605`, `21788:58194`).
  *
- * Không có khối "Thu nhập chuyến" của bản vẽ: tài xế không thấy tiền (ADR 0063 điều 10, chủ sản
- * phẩm chốt giữ 26/10/2026). Chân thẻ theo chặng:
+ * Tiền công (ADR 0075): một dòng "Tiền công" ngay trong thẻ — tài xế thấy số TRƯỚC khi bấm Nhận, và
+ * sau chuyến thấy "Đã nhận". Chỉ tiền công của chính tài xế; không có giá thuê hay tiền của khách.
+ * Lịch sử sửa nằm ở trang chi tiết chuyến. Chân thẻ theo chặng:
  *  - chờ tôi nhận → đồng hồ hạn trả lời (ADR 0066) + Gọi khách / Từ chối / Nhận chuyến;
  *  - đã nhận, chưa giao xe → "Bạn đã xác nhận" (+ đồng hồ rút không phạt khi còn cửa sổ trả lại) +
  *    Gọi khách / Báo sự cố – Rút khỏi chuyến (ADR 0074);
@@ -38,6 +39,7 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
   const tBadge = useTranslations('Driving.tripBadge');
   const tDetail = useTranslations('Driving.detail');
   const tToast = useTranslations('Driving.toast');
+  const tWage = useTranslations('Driving.wage');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const fmt = useAppFormat();
@@ -52,6 +54,7 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
   const pending = isDriverTripAwaitingAnswer(trip);
   const callHref = trip.customer.phone ? telHref(trip.customer.phone) : null;
   const days = chargedDays(toAppTz(trip.pickupAt), toAppTz(trip.returnAt));
+  const wage = driverWageLine(trip.wage);
 
   return (
     <article className={styles.card}>
@@ -116,6 +119,16 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
             </Fact>
             {trip.pickupAddress ? <Fact label={t('pickup')}>{trip.pickupAddress}</Fact> : null}
             {trip.destination ? <Fact label={t('destination')}>{trip.destination}</Fact> : null}
+            {wage ? (
+              <Fact label={tWage('title')}>
+                <span className={wage.kind === 'none' ? styles.muted : styles.wage}>
+                  {tWage(`line.${wage.kind}`, {
+                    amount: fmt.money(wage.amount),
+                    days: trip.wage.days ?? days,
+                  })}
+                </span>
+              </Fact>
+            ) : null}
           </dl>
         </div>
       </div>
