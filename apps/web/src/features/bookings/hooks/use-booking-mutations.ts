@@ -8,6 +8,7 @@ import {
   transitionBooking,
   updateBooking,
   updateBookingDeliveryFee,
+  updateDriverWage,
 } from '../api';
 import type {
   AssignBookingDriverInput,
@@ -15,7 +16,9 @@ import type {
   TransitionInput,
   UpdateBookingInput,
   UpdateDeliveryFeeInput,
+  UpdateDriverWageInput,
 } from '../types';
+import { bookingDriverHistoryKey } from './use-booking';
 
 /**
  * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard`: tạo/đổi đơn ảnh hưởng
@@ -73,6 +76,23 @@ export function useAssignBookingDriver(id: string) {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);
       // Số "đơn đang gán" trên trang Tài xế đổi theo.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
+    },
+  });
+}
+
+/**
+ * Sửa tiền công của một lượt gán (ADR 0075). Response là lịch sử tài xế mới — ghi thẳng vào cache;
+ * thống kê tháng ở trang Tài xế đổi theo. Không động tới cache tiền của đơn: tiền công không phải
+ * một dòng tiền của đơn.
+ */
+export function useUpdateDriverWage(bookingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assignmentId, body }: { assignmentId: string; body: UpdateDriverWageInput }) =>
+      updateDriverWage(bookingId, assignmentId, body),
+    onSuccess: (history) => {
+      queryClient.setQueryData(bookingDriverHistoryKey(bookingId), history);
       void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
     },
   });

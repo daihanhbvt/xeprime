@@ -6,7 +6,6 @@ import {
   BOOKING_STATUS,
   bookingRequestRespondBy,
   DRIVER_ASSIGNMENT_AUDIT_ACTION,
-  DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_STATUS,
   DRIVER_SOURCE,
   MEMBERSHIP_STATUS,
@@ -22,7 +21,9 @@ import {
 } from '../../worker/src/jobs/driver-assignment-expiry';
 import { createValidationPipe } from '../src/bootstrap';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { BookingsController } from '../src/modules/bookings/bookings.controller';
 import { AssignBookingDriverDto } from '../src/modules/bookings/dto/booking.dto';
+import type { AuthenticatedUser, TenantContext } from '../src/common/types/request-context';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
@@ -48,14 +49,12 @@ import {
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
- * TÀI XẾ NGOÀI HỆ THỐNG trên đơn + nhắc khẩn thiếu tài xế — ADR 0067 — trên PostgreSQL THẬT.
+ * TÀI XẾ NGOÀI HỆ THỐNG (ADR 0067, ghi mới đã bỏ ở ADR 0074) + nhắc khẩn thiếu tài xế — trên
+ * PostgreSQL THẬT.
  *
- *  1. Ghi tên + SĐT tài xế ngoài: lượt gán liên kết đang chờ bị đóng `unassigned`, người đó được
- *     báo; DTO khu quản lý trả `source = external`, `accepted`, `id = null`; khách của chuyến thấy
- *     cùng tên + SĐT. Audit đã che PII.
- *  2. DTO: đúng MỘT khoá, SĐT di động VN, tên 2–120 ký tự. Service: chỉ `with_driver`, chưa giao xe.
- *  3. Gán tài xế liên kết / bỏ gán xoá tài xế ngoài (audit `driver_external_cleared`). CHECK ở DB
- *     chặn đơn mang cả hai, hay tài xế ngoài trên đơn tự lái.
+ *  1. DTO vẫn kiểm hình dạng khoá cũ; controller trả 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`.
+ *  2. Đơn CŨ mang tài xế ngoài: hai phía vẫn đọc được; gán tài xế liên kết / bỏ gán xoá nó (audit
+ *     `driver_external_cleared`). CHECK ở DB chặn đơn mang cả hai, hay tài xế ngoài trên đơn tự lái.
  *  4. Worker nhắc khẩn MỘT lần khi còn ≤ 120′ mà chưa ai phủ; bỏ qua lượt chờ, tài xế liên kết,
  *     tài xế ngoài, chuyến còn xa, chuyến đã qua giờ nhận. Không đơn nào bị huỷ.
  *
@@ -153,6 +152,15 @@ function farPickup(): Date {
 }
 
 const EXTERNAL = { name: '  Nguyễn Văn Tài  ', phone: '0912 345 678' };
+const controller = new BookingsController(bookings);
+
+/** Đơn CŨ mang tài xế ngoài hệ thống — ghi thẳng DB vì API đã bỏ đường ghi (ADR 0074 điều 4). */
+async function setLegacyExternal(bookingId: string, name: string, phone: string): Promise<void> {
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: { externalDriverName: name, externalDriverPhone: phone, driverAssignedAt: new Date() },
+  });
+}
 
 beforeAll(async () => {
   try {
@@ -191,6 +199,8 @@ beforeAll(async () => {
       name: 'Shop tài xế ngoài',
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: owner,
+      // Tiền công tài xế/ngày mặc định (ADR 0075) — gán tài xế cần một số để tài xế thấy trước.
+      driverDailyWage: new Prisma.Decimal('500000'),
     },
   });
   await prisma.tenantMembership.create({
@@ -274,122 +284,42 @@ describe('DTO PATCH /bookings/:id/driver — đúng một khoá', () => {
   });
 });
 
-describe('Ghi tài xế ngoài hệ thống', () => {
-  maybe(
-    'đóng lượt liên kết đang chờ (unassigned + báo người đó), DTO external/accepted, khách thấy, audit đã che',
-    async () => {
-      const link = await seedDriverLink(asService, { tenantId: tenant, name: 'Tài xế Liên kết' });
-      const bookingId = await seedBooking(farPickup(), { withRequest: true });
-      await bookings.assignDriver(tenant, bookingId, owner, link.driverId);
-
-      // Khách chưa thấy ai khi lượt liên kết còn CHỜ nhận — "Đang sắp xếp tài xế".
-      expect((await trips.detail(customer, bookingId)).driver).toBeNull();
-
-      const detail = await bookings.setExternalDriver(tenant, bookingId, owner, {
-        name: 'Nguyễn Văn Tài',
-        phone: '0912345678',
-      });
-      expect(detail.driver).toMatchObject({
-        source: DRIVER_SOURCE.EXTERNAL,
-        id: null,
-        name: 'Nguyễn Văn Tài',
-        phone: '0912345678',
-        assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
-        respondBy: null,
-      });
-
-      const row = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
-      expect(row.externalDriverPhone).toBe('84912345678');
-      expect(row.driverId).toBeNull();
-      expect(row.driverUserId).toBeNull();
-      expect(row.driverAssignmentStatus).toBeNull();
-      expect(row.driverRespondBy).toBeNull();
-      expect(row.driverAssignedAt).not.toBeNull();
-
-      const episode = await prisma.bookingDriverAssignment.findFirstOrThrow({
-        where: { bookingId, driverId: link.driverId },
-      });
-      expect(episode.outcome).toBe(DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED);
-      const unassignedNote = await prisma.notification.findFirst({
-        where: {
-          targetId: bookingId,
-          userId: link.userId,
-          type: NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED,
-        },
-      });
-      expect(unassignedNote).not.toBeNull();
-
-      const auditRow = await prisma.auditLog.findFirstOrThrow({
-        where: { targetId: bookingId, action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_SET },
-      });
-      const after = JSON.stringify(auditRow.afterJson);
-      expect(after).not.toContain('0912345678');
-      expect(after).not.toContain('84912345678');
-      expect(after).toContain('091****678');
-      expect(after).toContain('Nguyễn Văn T.');
-
-      // Khách của chuyến: cùng tên + SĐT, không lộ id liên kết / hạn nội bộ.
-      const renter = await trips.detail(customer, bookingId);
-      expect(renter.driver).toMatchObject({
-        source: DRIVER_SOURCE.EXTERNAL,
-        id: null,
-        name: 'Nguyễn Văn Tài',
-        phone: '0912345678',
-      });
-      // Danh sách chuyến của khách cũng đọc cùng mapper.
-      const list = await trips.list(customer, {});
-      expect(list.data.find((t) => t.bookingId === bookingId)?.driver?.name).toBe('Nguyễn Văn Tài');
-
-      // Gửi lại đúng người: không đổi gì, không audit trùng.
-      await bookings.setExternalDriver(tenant, bookingId, owner, {
-        name: 'Nguyễn Văn Tài',
-        phone: '+84912345678',
-      });
-      expect(
-        await prisma.auditLog.count({
-          where: { targetId: bookingId, action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_SET },
-        }),
-      ).toBe(1);
-    },
-  );
-
-  maybe('đơn tự lái ⇒ DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED', async () => {
-    const bookingId = await seedBooking(farPickup(), { serviceType: SERVICE_TYPE.SELF_DRIVE });
+describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơn cũ vẫn đọc/gỡ được', () => {
+  maybe('PATCH có externalDriver ⇒ 422 EXTERNAL_DRIVER_NOT_SUPPORTED, đơn không đổi', async () => {
+    const bookingId = await seedBooking(farPickup());
+    // Controller ném ĐỒNG BỘ — bọc async để `rejects` bắt được như Nest bắt.
     await expect(
-      bookings.setExternalDriver(tenant, bookingId, owner, {
-        name: 'Nguyễn Văn Tài',
-        phone: '0912345678',
-      }),
-    ).rejects.toMatchObject(code(API_ERROR_CODE.DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED));
+      (async () => controller.assignDriver(
+        { tenantId: tenant } as TenantContext,
+        { id: owner } as AuthenticatedUser,
+        bookingId,
+        await validateBody({ externalDriver: EXTERNAL }),
+      ))(),
+    ).rejects.toMatchObject(code(API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED));
+    const row = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(row.externalDriverName).toBeNull();
+    expect(row.driverAssignedAt).toBeNull();
   });
 
-  maybe(
-    'đơn đã giao xe ⇒ DRIVER_ASSIGNMENT_LOCKED; đơn đã khép ⇒ INVALID_STATUS_TRANSITION',
-    async () => {
-      const active = await seedBooking(farPickup(), { status: BOOKING_STATUS.ACTIVE });
-      await expect(
-        bookings.setExternalDriver(tenant, active, owner, { name: 'Tài', phone: '0912345678' }),
-      ).rejects.toMatchObject(code(API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED));
-      const done = await seedBooking(farPickup(), { status: BOOKING_STATUS.COMPLETED });
-      await expect(
-        bookings.setExternalDriver(tenant, done, owner, { name: 'Tài', phone: '0912345678' }),
-      ).rejects.toMatchObject(code(API_ERROR_CODE.INVALID_STATUS_TRANSITION));
-    },
-  );
+  maybe('đơn cũ mang tài xế ngoài: bên thuê + khách vẫn thấy cùng tên + SĐT', async () => {
+    const bookingId = await seedBooking(farPickup(), { withRequest: true });
+    await setLegacyExternal(bookingId, 'Nguyễn Văn Tài', '84912345678');
 
-  maybe('đơn của gian hàng khác ⇒ 404', async () => {
-    const bookingId = await seedBooking(farPickup());
-    await expect(
-      bookings.setExternalDriver(newId(), bookingId, owner, { name: 'Tài', phone: '0912345678' }),
-    ).rejects.toMatchObject({ status: 404 });
-  });
-
-  maybe('gán tài xế liên kết xoá tài xế ngoài (audit cleared); bỏ gán cũng xoá', async () => {
-    const bookingId = await seedBooking(farPickup());
-    await bookings.setExternalDriver(tenant, bookingId, owner, {
-      name: 'Tài xế Ngoài',
-      phone: '0912000111',
+    const detail = await bookings.getOne(tenant, bookingId);
+    expect(detail.driver).toMatchObject({
+      source: DRIVER_SOURCE.EXTERNAL,
+      id: null,
+      name: 'Nguyễn Văn Tài',
+      phone: '0912345678',
+      assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
     });
+    const renter = await trips.detail(customer, bookingId);
+    expect(renter.driver).toMatchObject({ source: DRIVER_SOURCE.EXTERNAL, name: 'Nguyễn Văn Tài' });
+  });
+
+  maybe('gán tài xế liên kết xoá tài xế ngoài cũ (audit cleared); bỏ gán cũng xoá', async () => {
+    const bookingId = await seedBooking(farPickup());
+    await setLegacyExternal(bookingId, 'Tài xế Ngoài', '84912000111');
 
     const link = await seedDriverLink(asService, { tenantId: tenant });
     const linked = await bookings.assignDriver(tenant, bookingId, owner, link.driverId);
@@ -407,21 +337,13 @@ describe('Ghi tài xế ngoài hệ thống', () => {
       }),
     ).toBe(1);
 
-    // Trở lại tài xế ngoài rồi bỏ gán hẳn.
-    await bookings.setExternalDriver(tenant, bookingId, owner, {
-      name: 'Tài xế Ngoài',
-      phone: '0912000111',
-    });
-    const cleared = await bookings.assignDriver(tenant, bookingId, owner, null);
+    const other = await seedBooking(farPickup());
+    await setLegacyExternal(other, 'Tài xế Ngoài', '84912000111');
+    const cleared = await bookings.assignDriver(tenant, other, owner, null);
     expect(cleared.driver).toBeNull();
-    row = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    row = await prisma.booking.findUniqueOrThrow({ where: { id: other } });
     expect(row.externalDriverName).toBeNull();
     expect(row.driverAssignedAt).toBeNull();
-    expect(
-      await prisma.auditLog.count({
-        where: { targetId: bookingId, action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_CLEARED },
-      }),
-    ).toBe(2);
   });
 
   maybe('CHECK ở DB: không mang cả hai, không trên đơn tự lái, tên/SĐT đi cùng nhau', async () => {
@@ -475,10 +397,7 @@ describe('Worker nhắc khẩn chuyến sắp nhận chưa có tài xế', () =>
       await bookings.assignDriver(tenant, pendingLinked, owner, pendingLink.driverId);
 
       const external = await seedBooking(soon());
-      await bookings.setExternalDriver(tenant, external, owner, {
-        name: 'Tài xế Ngoài',
-        phone: '0912000222',
-      });
+      await setLegacyExternal(external, 'Tài xế Ngoài', '84912000222');
 
       const far = await seedBooking(new Date(Date.now() + 5 * 60 * MIN));
       const past = await seedBooking(new Date(Date.now() - 10 * MIN));
@@ -496,7 +415,8 @@ describe('Worker nhắc khẩn chuyến sắp nhận chưa có tài xế', () =>
       }
       const toOwner = notes.find((n) => n.targetId === uncovered && n.userId === owner);
       expect(toOwner?.title).toContain('chưa có tài xế');
-      expect(toOwner?.body).toContain('tài xế ngoài hệ thống');
+      // ADR 0074 điều 4: không còn mời nhập tài xế ngoài hệ thống.
+      expect(toOwner?.body).not.toContain('ngoài hệ thống');
 
       const row = await prisma.booking.findUniqueOrThrow({ where: { id: uncovered } });
       expect(row.driverMissingAlertedAt).not.toBeNull();

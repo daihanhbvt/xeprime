@@ -115,6 +115,11 @@ export const DRIVER_ASSIGNMENT_OUTCOME = {
    * gán, đơn quay về chưa có tài xế và bên thuê được báo khẩn. Đơn của khách KHÔNG bị huỷ.
    */
   EXPIRED: 'expired',
+  /**
+   * Tài xế RÚT khỏi chuyến đã nhận, kèm lý do (ADR 0074). Đơn KHÔNG bị huỷ: quay về chưa có tài
+   * xế, bên thuê được báo khẩn kèm SLA điều phối lại. Dòng sổ mang `drop_reason_category` + vùng.
+   */
+  DROPPED: 'dropped',
 } as const;
 
 export type DriverAssignmentOutcome =
@@ -135,7 +140,184 @@ export const DRIVER_ASSIGNMENT_OUTCOME_META: Readonly<Record<DriverAssignmentOut
       label: 'Quá hạn xác nhận',
       color: STATUS_COLOR.WARNING,
     },
+    [DRIVER_ASSIGNMENT_OUTCOME.DROPPED]: {
+      label: 'Tài xế rút khỏi chuyến',
+      color: STATUS_COLOR.DANGER,
+    },
   };
+
+/** Nhóm lý do tài xế RÚT khỏi chuyến đã nhận (ADR 0074) — CHECK ở migration. */
+export const DRIVER_DROP_REASON = {
+  HEALTH_ISSUE: 'health_issue',
+  VEHICLE_ACCIDENT: 'vehicle_accident',
+  FAMILY_EMERGENCY: 'family_emergency',
+  ROUTE_BLOCKED: 'route_blocked',
+  /** Còn lại — bắt buộc kèm ghi chú `DRIVER_DROP_NOTE_LENGTH.MIN`–`MAX` ký tự. */
+  OTHER: 'other',
+} as const;
+
+export type DriverDropReason = (typeof DRIVER_DROP_REASON)[keyof typeof DRIVER_DROP_REASON];
+export const DRIVER_DROP_REASON_VALUES = Object.values(DRIVER_DROP_REASON) as DriverDropReason[];
+
+/** Nhãn tiếng Việt cho câu thông báo dựng ở server — giao diện dùng namespace `Domain`. */
+export const DRIVER_DROP_REASON_LABEL: Readonly<Record<DriverDropReason, string>> = {
+  [DRIVER_DROP_REASON.HEALTH_ISSUE]: 'Sức khoẻ',
+  [DRIVER_DROP_REASON.VEHICLE_ACCIDENT]: 'Tai nạn / sự cố phương tiện',
+  [DRIVER_DROP_REASON.FAMILY_EMERGENCY]: 'Việc gia đình khẩn cấp',
+  [DRIVER_DROP_REASON.ROUTE_BLOCKED]: 'Đường đi bị chặn / thiên tai',
+  [DRIVER_DROP_REASON.OTHER]: 'Lý do khác',
+};
+
+/** Ghi chú khi rút chuyến: tối đa `MAX` ký tự; nhóm `other` bắt buộc ít nhất `MIN` (sau khi cắt trắng). */
+export const DRIVER_DROP_NOTE_LENGTH = { MIN: 10, MAX: 500 } as const;
+
+/**
+ * Vùng của một lượt rút theo độ sát giờ nhận (ADR 0074 điều 2). `grace` = còn trong cửa sổ trả lại
+ * (`driverReleaseUntil`) — không phạt; các vùng còn lại theo `ΔT = pickupAt − droppedAt`.
+ */
+export const DRIVER_DROP_ZONE = {
+  GRACE: 'grace',
+  FAR: 'far',
+  SAME_DAY: 'same_day',
+  CRITICAL: 'critical',
+} as const;
+
+export type DriverDropZone = (typeof DRIVER_DROP_ZONE)[keyof typeof DRIVER_DROP_ZONE];
+export const DRIVER_DROP_ZONE_VALUES = Object.values(DRIVER_DROP_ZONE) as DriverDropZone[];
+
+/** Ranh giới vùng (giờ trước giờ nhận). */
+export const DRIVER_DROP_ZONE_HOURS = { FAR: 12, CRITICAL: 2 } as const;
+
+/** SLA bên thuê điều phối lại (phút) theo vùng ΔT — `grace` dùng vùng ΔT thật của nó. */
+const DRIVER_REASSIGN_SLA_MINUTES = {
+  [DRIVER_DROP_ZONE.FAR]: 120,
+  [DRIVER_DROP_ZONE.SAME_DAY]: 45,
+  [DRIVER_DROP_ZONE.CRITICAL]: 15,
+} as const;
+
+/** Cooldown "Đặt ngay" (giờ) theo vùng — `grace`/`far` không phạt. */
+const DRIVER_DROP_COOLDOWN_HOURS: Readonly<Record<DriverDropZone, number>> = {
+  [DRIVER_DROP_ZONE.GRACE]: 0,
+  [DRIVER_DROP_ZONE.FAR]: 0,
+  [DRIVER_DROP_ZONE.SAME_DAY]: 24,
+  [DRIVER_DROP_ZONE.CRITICAL]: 48,
+};
+
+/** Vùng theo ΔT thuần (không xét cửa sổ trả lại). */
+export function driverDropLeadZone(
+  droppedAt: Date,
+  pickupAt: Date,
+): Exclude<DriverDropZone, 'grace'> {
+  const leadMs = pickupAt.getTime() - droppedAt.getTime();
+  if (leadMs >= DRIVER_DROP_ZONE_HOURS.FAR * HOUR_MS) return DRIVER_DROP_ZONE.FAR;
+  if (leadMs >= DRIVER_DROP_ZONE_HOURS.CRITICAL * HOUR_MS) return DRIVER_DROP_ZONE.SAME_DAY;
+  return DRIVER_DROP_ZONE.CRITICAL;
+}
+
+/**
+ * Hệ quả của MỘT lượt rút lúc `droppedAt` (ADR 0074 điều 2) — server ghi, client chỉ dùng để báo
+ * trước mức phạt trong hộp thoại xác nhận. `releaseUntil` = mốc cửa sổ trả lại của lượt nhận đó
+ * (`driverReleaseUntil`), `null` khi không còn cửa sổ.
+ *
+ *  - `zone`          — vùng ghi vào sổ (`grace` nếu còn trong cửa sổ trả lại);
+ *  - `reassignBy`    — hạn bên thuê điều phối lại = min(droppedAt + SLA, pickupAt);
+ *  - `cooldownUntil` — tài xế bị loại khỏi tự gán "Đặt ngay" tới mốc này (`null` = không phạt).
+ */
+export function driverDropPolicy(input: {
+  droppedAt: Date;
+  pickupAt: Date;
+  releaseUntil: Date | null;
+}): { zone: DriverDropZone; reassignBy: Date; cooldownUntil: Date | null } {
+  const leadZone = driverDropLeadZone(input.droppedAt, input.pickupAt);
+  const zone =
+    input.releaseUntil && input.releaseUntil.getTime() > input.droppedAt.getTime()
+      ? DRIVER_DROP_ZONE.GRACE
+      : leadZone;
+  const reassignBy = new Date(
+    Math.max(
+      input.droppedAt.getTime(),
+      Math.min(
+        input.droppedAt.getTime() + DRIVER_REASSIGN_SLA_MINUTES[leadZone] * MINUTE_MS,
+        input.pickupAt.getTime(),
+      ),
+    ),
+  );
+  const cooldownHours = DRIVER_DROP_COOLDOWN_HOURS[zone];
+  return {
+    zone,
+    reassignBy,
+    cooldownUntil:
+      cooldownHours > 0 ? new Date(input.droppedAt.getTime() + cooldownHours * HOUR_MS) : null,
+  };
+}
+
+/** Số giờ cooldown của một vùng — câu chữ cảnh báo trước khi rút. */
+export function driverDropCooldownHours(zone: DriverDropZone): number {
+  return DRIVER_DROP_COOLDOWN_HOURS[zone];
+}
+
+/** Lượt rút bị tính là vi phạm (mọi vùng trừ `grace`) — đếm trên danh sách tài xế của bên thuê. */
+export const DRIVER_DROP_VIOLATION_ZONES: readonly DriverDropZone[] = [
+  DRIVER_DROP_ZONE.FAR,
+  DRIVER_DROP_ZONE.SAME_DAY,
+  DRIVER_DROP_ZONE.CRITICAL,
+];
+
+/** Cửa sổ đếm số lần rút trên danh sách tài xế (ngày). */
+export const DRIVER_DROP_STATS_WINDOW_DAYS = 90;
+
+/**
+ * Mức hiển thị sự cố tài xế cho KHÁCH (ADR 0074 điều 3) — không bao giờ lộ ai đã rút.
+ *
+ *  - `arranging`   — còn xa giờ nhận: "Đang sắp xếp tài xế";
+ *  - `rearranging` — sự cố trong ngày: "Đang điều phối lại tài xế";
+ *  - `urgent`      — còn dưới 2 giờ: cảnh báo "Chuyến đang gặp sự cố điều phối" + hỗ trợ.
+ */
+export const DRIVER_INCIDENT_LEVEL = {
+  ARRANGING: 'arranging',
+  REARRANGING: 'rearranging',
+  URGENT: 'urgent',
+} as const;
+
+export type DriverIncidentLevel = (typeof DRIVER_INCIDENT_LEVEL)[keyof typeof DRIVER_INCIDENT_LEVEL];
+export const DRIVER_INCIDENT_LEVEL_VALUES = Object.values(
+  DRIVER_INCIDENT_LEVEL,
+) as DriverIncidentLevel[];
+
+/**
+ * Sự cố tài xế trên một đơn: một tài xế ĐÃ NHẬN đã rút (`droppedAt`) và chưa ai nhận lại. Trả `null`
+ * khi đơn không có sự cố mở. Một phép tính cho API (DTO khách + phép kiểm huỷ hoàn 100%) — client
+ * KHÔNG tự tính, chỉ đọc kết quả server trả.
+ *
+ * `freeCancel` = khách huỷ được hoàn 100% vì lỗi phía cho thuê: đã quá hạn điều phối HOẶC còn dưới
+ * 2 giờ tới giờ nhận.
+ */
+export function driverIncidentState(
+  booking: {
+    status: string;
+    pickupAt: Date;
+    driverDroppedAt: Date | null;
+    driverReassignBy: Date | null;
+    driverAssignmentStatus: string | null;
+  },
+  now: Date = new Date(),
+): { level: DriverIncidentLevel; reassignBy: Date; freeCancel: boolean } | null {
+  if (!booking.driverDroppedAt || !booking.driverReassignBy) return null;
+  if (!isDriverReassignable(booking.status)) return null;
+  if (booking.driverAssignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED) return null;
+  const leftMs = booking.pickupAt.getTime() - now.getTime();
+  const urgent = leftMs < DRIVER_DROP_ZONE_HOURS.CRITICAL * HOUR_MS;
+  const level = urgent
+    ? DRIVER_INCIDENT_LEVEL.URGENT
+    : driverDropLeadZone(booking.driverDroppedAt, booking.pickupAt) === DRIVER_DROP_ZONE.FAR
+      ? DRIVER_INCIDENT_LEVEL.ARRANGING
+      : DRIVER_INCIDENT_LEVEL.REARRANGING;
+  return {
+    level,
+    reassignBy: booking.driverReassignBy,
+    freeCancel: urgent || now.getTime() >= booking.driverReassignBy.getTime(),
+  };
+}
 
 /**
  * Hạn tài xế trả lời một lượt gán — ADR 0066 (ghi đè "lượt chờ KHÔNG hết hạn" của ADR 0063).
@@ -215,9 +397,16 @@ export const DRIVER_ASSIGNMENT_AUDIT_ACTION = {
   EXTERNAL_CLEARED: 'booking.driver_external_cleared',
   /** Worker đã báo khẩn "chuyến sắp nhận chưa có tài xế" (ADR 0067 điều 2) — một lần mỗi đơn. */
   MISSING_ALERTED: 'booking.driver_missing_alerted',
+  /** Tài xế đã nhận rồi RÚT khỏi chuyến (ADR 0074) — kèm lý do, vùng, hạn điều phối lại. */
+  DROPPED: 'booking.driver_dropped',
+  /** Bên thuê sửa tiền công của một lượt gán (ADR 0075) — cũ → mới + lý do. */
+  WAGE_UPDATED: 'booking.driver_wage_update',
+  /** Bên thuê đổi tiền công/ngày mặc định của gian hàng (ADR 0075). */
+  DEFAULT_WAGE_UPDATED: 'tenant.driver_daily_wage_update',
 } as const;
 
 const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 
 /** Số phút tài xế có để nhận/từ chối một lượt gán lập lúc `assignedAt` cho chuyến nhận lúc `pickupAt`. */
 export function driverResponseWindowMinutes(assignedAt: Date, pickupAt: Date): number {

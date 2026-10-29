@@ -130,15 +130,16 @@ export class SocialAuthController {
 
     try {
       const native = this.social.resolveNativeContext({ client, codeChallenge, redirectUri });
-      res.redirect(
-        await this.social.begin({
-          provider: providerKey,
-          next: safeNext,
-          locale: locale ?? null,
-          webRealm: req.realm ?? null,
-          ...(native ? { native } : {}),
-        }),
-      );
+      const authorizeUrl = await this.social.begin({
+        provider: providerKey,
+        next: safeNext,
+        locale: locale ?? null,
+        webRealm: req.realm ?? null,
+        ...(native ? { native } : {}),
+      });
+      // Luồng web: gắn `state` vào CHÍNH trình duyệt này (ADR 0076 điều 4) — callback kiểm lại.
+      if (!native) this.social.bindBrowser(res, authorizeUrl);
+      res.redirect(authorizeUrl);
     } catch (error) {
       /*
        * Lỗi ở chặng NÀY luôn về web, kể cả khi app gọi.
@@ -167,8 +168,16 @@ export class SocialAuthController {
       'Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).',
   })
   @ApiParam({ name: 'provider', enum: AUTH_PROVIDER_VALUES })
-  @ApiQuery({ name: 'code', required: false, description: 'Authorization code khi người dùng đã đồng ý.' })
-  @ApiQuery({ name: 'state', required: false, description: 'Giá trị `state` đã phát ở bước bắt đầu.' })
+  @ApiQuery({
+    name: 'code',
+    required: false,
+    description: 'Authorization code khi người dùng đã đồng ý.',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'Giá trị `state` đã phát ở bước bắt đầu.',
+  })
   @ApiQuery({
     name: 'error',
     required: false,
@@ -187,6 +196,9 @@ export class SocialAuthController {
     // Trước khi tiêu thụ `state` chỉ biết site qua header proxy — callback web về `/api` của chính
     // site đó nên có; callback native (trên `api.xeprime.vn`) thì không, rơi về site khách.
     const errorRealm = fallbackRealm(req);
+    // Cookie gắn trình duyệt dùng MỘT lần, ở mọi lối ra — đọc trước, xoá ngay.
+    const browserState = this.social.browserStateOf(req);
+    if (browserState) this.social.clearBrowserBinding(res);
     // Người dùng bấm huỷ ở màn đồng ý. Không phải sự cố — đừng ghi log lỗi, và đừng nói với họ
     // rằng có gì đó hỏng.
     if (providerError) {
@@ -219,7 +231,12 @@ export class SocialAuthController {
     }
 
     try {
-      const result = await this.social.complete({ provider: providerKey, code, state });
+      const result = await this.social.complete({
+        provider: providerKey,
+        code,
+        state,
+        browserState,
+      });
 
       if (!result.ok) {
         // Hỏng thì trả lỗi về ĐÚNG nơi đã mở luồng: deep link nếu là app, web nếu là trình duyệt.
@@ -255,7 +272,7 @@ export class SocialAuthController {
       // Cùng `SessionService` với `/auth/login` và `/auth/phone/login`: một luồng đăng nhập mới
       // không được đẻ ra một loại phiên mới (ADR 0002).
       // Cookie của ĐÚNG realm đã ghi lúc bắt đầu luồng (ADR 0053), phát bởi chính site đó.
-      const { token } = this.sessions.issue(result.userId);
+      const { token } = await this.sessions.issue(result.userId);
       this.sessions.attach(res, token, result.realm);
       res.redirect(this.social.webRedirect(result.realm, result.redirectNext));
     } catch (error) {

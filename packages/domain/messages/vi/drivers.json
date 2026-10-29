@@ -26,7 +26,9 @@
     "type": "Loại",
     "licence": "Bằng lái",
     "activeBookings": "Chuyến đang gán",
-    "status": "Liên kết"
+    "status": "Liên kết",
+    "drops": "Rút chuyến (90 ngày)",
+    "monthWage": "Tiền công (tháng)"
   },
   "licence": {
     "classes": "Hạng {classes}",
@@ -97,23 +99,18 @@
     "legacyHint": "Đơn này không phải chuyến có tài xế.",
     "externalTag": "Ngoài hệ thống",
     "externalSetAt": "Ghi lúc {time}",
-    "enterExternal": "Nhập tài xế ngoài hệ thống",
-    "editExternal": "Sửa",
-    "externalSaved": "Đã lưu tài xế ngoài hệ thống",
-    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết hoặc nhập tài xế ngoài hệ thống.",
-    "externalForm": {
-      "title": "Tài xế ngoài hệ thống",
-      "hint": "Người lái không cần tài khoản XePrime. Khách sẽ thấy tên và số điện thoại này để liên hệ; hệ thống không kiểm tra lịch trùng của người này.",
-      "replaceLinked": "{name} đang được gán cho chuyến này sẽ bị gỡ và nhận thông báo.",
-      "name": "Tên tài xế",
-      "namePlaceholder": "VD: Nguyễn Văn Tài",
-      "phone": "Số điện thoại",
-      "phonePlaceholder": "VD: 0901234567",
-      "save": "Lưu tài xế",
-      "nameRequired": "Vui lòng nhập tên tài xế",
-      "nameLength": "Tên tài xế từ {min} đến {max} ký tự",
-      "phoneRequired": "Vui lòng nhập số điện thoại",
-      "phoneInvalid": "Số điện thoại di động không hợp lệ"
+    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết, hoặc huỷ chuyến nếu không bố trí được.",
+    "externalLegacy": "Tài xế ngoài hệ thống (đơn cũ) — XePrime không còn nhận cách này. Gán tài xế liên kết để thay.",
+    "incident": {
+      "titleNamed": "Tài xế {name} đã rút khỏi chuyến",
+      "titleReleased": "Tài xế đã trả lại chuyến",
+      "reason": "Lý do: {reason}",
+      "reasonWithNote": "Lý do: {reason} — “{note}”",
+      "droppedAt": "Rút lúc {time}",
+      "reassignBy": "Gán tài xế liên kết khác trước {time}",
+      "overdue": "Đã quá hạn điều phối ({time}). Khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.",
+      "urgent": "Còn dưới 2 giờ tới giờ đón — khách đang được huỷ hoàn 100% bất cứ lúc nào.",
+      "cancelForDriver": "Huỷ chuyến do thiếu tài xế"
     }
   },
   "endedBy": {
@@ -132,6 +129,125 @@
     "assignedBySystem": "Hệ thống tự gán (Đặt ngay) · {time}",
     "acceptedAt": "Tài xế nhận lúc {time}",
     "endedBy": "{name} · {time}",
-    "endedAt": "Kết thúc lúc {time}"
+    "endedAt": "Kết thúc lúc {time}",
+    "dropReason": "Lý do rút: {reason}",
+    "dropNote": "“{note}”",
+    "dropZone": "Thời điểm: {zone}"
+  },
+  "drops": {
+    "count": "{count, plural, other {# lần}}",
+    "critical": "{count, plural, other {# lần sát giờ}}",
+    "cooldownUntil": "Không tự gán \"Đặt ngay\" tới {time}"
+  },
+  "wage": {
+    "settings": {
+      "title": "Tiền công tài xế · mức chung",
+      "perDay": "{amount}/ngày",
+      "unset": "Chưa đặt",
+      "hint": "Một mức cho mọi xe: tự điền khi gán tài xế (× số ngày của chuyến), sửa được cho từng chuyến. Chủ xe trả trực tiếp cho tài xế.",
+      "unsetHint": "Chưa đặt mức chung: mỗi lần gán phải nhập tiền công, và xe “Đặt ngay” không tự gán tài xế. Mức phổ biến hiện nay khoảng {suggested}/ngày.",
+      "edit": "Sửa",
+      "set": "Đặt mức chung",
+      "dialogTitle": "Tiền công tài xế · mức chung",
+      "field": "Tiền công/ngày",
+      "range": "Từ {min} đến {max} mỗi ngày",
+      "appliesNext": "Áp cho các lượt gán từ bây giờ, mọi xe — chuyến đã gán giữ nguyên tiền công.",
+      "clear": "Xoá mức chung",
+      "saved": "Đã lưu mức chung",
+      "cleared": "Đã xoá mức chung",
+      "loadError": "Không tải được tiền công tài xế.",
+      "errors": {
+        "required": "Nhập tiền công/ngày",
+        "range": "Tiền công/ngày phải từ {min} đến {max}",
+        "step": "Tiền công phải là bội của 1.000đ"
+      },
+      "placeholder": "Gợi ý {amount}",
+      "useSuggested": "Dùng mức gợi ý {amount}"
+    },
+    "month": {
+      "label": "Tháng thống kê",
+      "placeholder": "Chọn tháng"
+    },
+    "line": {
+      "offer": "Tiền công {amount} · {days, plural, other {# ngày}}",
+      "running": "Tiền công {amount}",
+      "received": "Đã trả {amount}",
+      "agreed": "Thoả thuận {amount}",
+      "none": "Không phát sinh tiền công"
+    },
+    "form": {
+      "daily": "Tiền công/ngày",
+      "placeholder": "Gợi ý {amount}",
+      "help": "Mức chung: {current} · khoảng {min} – {max}/ngày",
+      "helpNoDefault": "Chưa có mức chung · khoảng {min} – {max}/ngày",
+      "total": "Tổng chuyến: {daily} × {days, plural, other {# ngày}}",
+      "aboveRent": "Tiền công cao hơn tiền thuê của chuyến ({rent}) — kiểm tra lại số.",
+      "rangeAgreed": "Từ 0 đến {max}",
+      "savedWithDefault": "Đã lưu và cập nhật mức chung cho các chuyến sau",
+      "scope": {
+        "label": "Áp dụng",
+        "trip": "Chỉ chuyến này",
+        "tripHint": "Mức chung vẫn là {current}/ngày.",
+        "tripNoDefault": "Gian hàng vẫn chưa có mức chung.",
+        "default": "Chuyến này và các chuyến gán sau",
+        "defaultHint": "Đổi mức chung thành {daily}/ngày cho mọi xe. Chuyến đã gán giữ nguyên."
+      },
+      "errors": {
+        "required": "Nhập tiền công",
+        "range": "Tiền công phải từ {min} đến {max}",
+        "step": "Tiền công phải là bội của 1.000đ",
+        "unchanged": "Số mới giống số đang ghi"
+      }
+    },
+    "assign": {
+      "title": "Gán {name}",
+      "paidDirect": "Chủ xe trả tiền công trực tiếp cho tài xế. Tài xế thấy số này trước khi nhận chuyến.",
+      "submit": "Gán tài xế",
+      "loadError": "Không tải được gợi ý tiền công.",
+      "retry": "Thử lại"
+    },
+    "edit": {
+      "action": "Sửa tiền công",
+      "actionAgreed": "Ghi số thoả thuận",
+      "title": "Sửa tiền công · {name}",
+      "titleAgreed": "Tiền công thoả thuận · {name}",
+      "current": "Đang ghi",
+      "reason": "Lý do",
+      "reasonPlaceholder": "Ví dụ: thêm buổi tối, đi tỉnh thêm một ngày…",
+      "notice": "Tài xế được báo số mới và xem được lịch sử sửa. Không cần tài xế đồng ý.",
+      "noticeAgreed": "Chuyến không chạy: ghi số hai bên đã thoả thuận (0 nếu không có).",
+      "saved": "Đã lưu tiền công",
+      "editableUntil": "Sửa được tới {time}",
+      "fieldAgreed": "Số tiền hai bên thoả thuận",
+      "daysChanged": "Đơn đã đổi từ {from} sang {to} ngày — tổng mới tính theo {to} ngày."
+    },
+    "changes": {
+      "title": "Lịch sử sửa tiền công",
+      "item": "{old} → {new}",
+      "by": "{name} · {time}",
+      "at": "{time}",
+      "reason": "Lý do: {reason}"
+    },
+    "daysChanged": "Số ngày của đơn đã đổi ({from} → {to} ngày) — kiểm tra lại tiền công tài xế.",
+    "drawer": {
+      "title": "Chuyến & tiền công · {name}",
+      "summary": "{trips, plural, other {# chuyến xong}} · {amount}",
+      "empty": "Không có chuyến nào kết thúc trong tháng này.",
+      "loadError": "Không tải được danh sách chuyến.",
+      "columns": {
+        "booking": "Đơn",
+        "period": "Thời gian",
+        "outcome": "Kết quả",
+        "wage": "Tiền công"
+      },
+      "total": "{count, plural, other {# chuyến}}",
+      "tableLabel": "Chuyến của tài xế trong tháng"
+    },
+    "monthTrips": "{count, plural, other {# chuyến xong}}",
+    "note": {
+      "set": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe: {amount}/ngày.",
+      "unset": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe — chưa đặt.",
+      "link": "Cấu hình ở trang Tài xế"
+    }
   }
 }

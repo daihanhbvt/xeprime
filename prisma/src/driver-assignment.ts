@@ -40,6 +40,17 @@ export const CLEARED_DRIVER_ASSIGNMENT = {
 /** Đơn còn trả lượt về bên thuê được — chưa giao xe (cùng tập đổi/gỡ tài xế được). */
 const REASSIGNABLE: string[] = [...DRIVER_REASSIGNABLE_BOOKING_STATUSES];
 
+/**
+ * Tiền công của lượt khép mà KHÔNG hoàn thành về 0 (ADR 0075): chuyến không chạy thì không phát
+ * sinh tiền công — chủ xe tự ghi số đã thoả thuận nếu có. Lượt trước tính năng (NULL) giữ NULL.
+ * Đây không phải một lần SỬA nên không ghi `booking_driver_wage_changes`.
+ */
+export function wageOnClose(
+  outcome: DriverAssignmentOutcome,
+): Prisma.BookingDriverAssignmentUncheckedUpdateManyInput {
+  return outcome === DRIVER_ASSIGNMENT_OUTCOME.COMPLETED ? {} : { wageAmount: 0 };
+}
+
 /** Khép lượt gán đang mở của một đơn trong sổ — luôn trong transaction đang đổi cột tài xế. */
 export async function closeOpenDriverAssignment(
   tx: Prisma.TransactionClient,
@@ -47,10 +58,15 @@ export async function closeOpenDriverAssignment(
   outcome: DriverAssignmentOutcome,
   endedBy: string | null,
   at: Date = new Date(),
+  extra: Prisma.BookingDriverAssignmentUncheckedUpdateManyInput = {},
 ): Promise<void> {
   await tx.bookingDriverAssignment.updateMany({
+    where: { bookingId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN, wageAmount: { not: null } },
+    data: wageOnClose(outcome),
+  });
+  await tx.bookingDriverAssignment.updateMany({
     where: { bookingId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN },
-    data: { outcome, endedAt: at, endedBy },
+    data: { ...extra, outcome, endedAt: at, endedBy },
   });
 }
 

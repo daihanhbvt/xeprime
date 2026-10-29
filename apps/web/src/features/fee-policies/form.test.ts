@@ -38,6 +38,8 @@ const schema = buildFeePolicySchema({
   taxRateRequired: 'taxRateRequired',
   taxLegalBasisRequired: 'taxLegalBasisRequired',
   partnerRequired: 'partnerRequired',
+  limitOrder: 'limitOrder',
+  suggestedInRange: 'suggestedInRange',
   blocker: (code) => `blocker:${code}`,
 });
 

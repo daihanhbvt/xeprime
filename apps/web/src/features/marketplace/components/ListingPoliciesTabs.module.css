@@ -129,14 +129,6 @@
   margin-right: 6px;
 }
 
-.surchargeList {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 /*
  * Mobile (≤640px = `--xp-bp-mobile`): đệm 16 như các thẻ khác của trang mobile, tiêu đề `18px/Semibold`
  * cách nội dung 8; thanh tab cuộn ngang trong thẻ (không đẩy trang tràn) và ẩn thanh cuộn.

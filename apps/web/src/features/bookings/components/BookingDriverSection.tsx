@@ -1,16 +1,22 @@
 'use client';
 
 import { Alert, App, Button, Popconfirm, Select, Tag } from 'antd';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY,
+  canTransitionBooking,
+  DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_STATUS_META,
+  DRIVER_INCIDENT_LEVEL,
   DRIVER_MISSING_ALERT_LEAD_MINUTES,
   DRIVER_SOURCE,
   isDriverMissingAlertDue,
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
+  type BookingStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DriverLicenceStateTag } from '@/features/drivers/components/DriverLicenceStateTag';
@@ -21,22 +27,31 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { telHref } from '@/lib/contact';
+import { useBookingDriverHistory, useDriverWageQuote } from '../hooks/use-booking';
 import { useAssignBookingDriver } from '../hooks/use-booking-mutations';
-import type { BookingDetail } from '../types';
+import type { BookingDetail, BookingDriverHistoryItem, BookingDriverIncident } from '../types';
+import { AssignDriverDialog } from './AssignDriverDialog';
 import { BookingDriverHistory } from './BookingDriverHistory';
-import { ExternalDriverDialog } from './ExternalDriverDialog';
+import { DriverWageEditDialog } from './DriverWageEditDialog';
+import { DriverWageInfo } from './DriverWageInfo';
+import { BookingStatusTransitionDialog } from './BookingStatusTransitionDialog';
 import styles from './BookingDriverSection.module.css';
 
 /**
- * Khối "Tài xế" trên chi tiết đơn (ADR 0063 · ADR 0067).
+ * Khối "Tài xế" trên chi tiết đơn (ADR 0063 · ADR 0074).
  *
  * CHỈ đơn `with_driver` mới có tài xế: đơn khác ẩn hẳn khối, trừ khi còn một tài xế gán từ trước
- * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe. Hai cách phủ một
- * chuyến, loại trừ nhau:
- *  - tài xế LIÊN KẾT: chọn ở bộ chọn, `pending` cho tới khi tài xế nhận ở site khách; bộ chọn hiện
- *    cả người BẬN (disable, nhãn "Bận" — không bao giờ nói bận ở đâu);
- *  - tài xế NGOÀI HỆ THỐNG: tên + SĐT ghi trên đơn, coi là đã nhận ngay (nhãn "Ngoài hệ thống").
- * Chưa có ai mà giờ nhận còn dưới 2 giờ ⇒ cảnh báo (worker cũng báo khẩn một lần — ADR 0067).
+ * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe. Chỉ còn tài xế LIÊN
+ * KẾT: chọn ở bộ chọn, `pending` cho tới khi tài xế nhận ở site khách; bộ chọn hiện cả người BẬN
+ * (disable, nhãn "Bận" — không bao giờ nói bận ở đâu). Đơn cũ còn mang tài xế ngoài hệ thống vẫn
+ * hiện, gỡ / thay bằng tài xế liên kết được (ADR 0074 điều 4).
+ *
+ * Tài xế ĐÃ NHẬN rồi rút ⇒ thẻ SỰ CỐ: ai rút, vì sao, hạn điều phối lại; quá hạn hoặc sát giờ thì
+ * nói rõ khách đang được huỷ hoàn 100% tính cho bên thuê, kèm lối "Huỷ chuyến do thiếu tài xế".
+ *
+ * Tiền công (ADR 0075): chọn tài xế mở hộp gán KÈM tiền công (server gợi ý mặc định × số ngày);
+ * lượt đang mở hiện số + nút sửa; mỗi lượt trong lịch sử mang số và lịch sử sửa của nó. XePrime chỉ
+ * ghi nhận — chủ xe trả trực tiếp cho tài xế, không một đồng nào của đơn đổi theo.
  */
 export function BookingDriverSection({
   booking,
@@ -46,6 +61,7 @@ export function BookingDriverSection({
   canUpdate: boolean;
 }) {
   const t = useTranslations('Drivers.booking');
+  const tWage = useTranslations('Drivers.wage');
   const { message } = App.useApp();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -53,12 +69,16 @@ export function BookingDriverSection({
   const fmt = useAppFormat();
   const now = useNow();
   const [selecting, setSelecting] = useState(false);
-  const [externalOpen, setExternalOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  // Tài xế vừa chọn ở bộ chọn — chờ nhập tiền công trong hộp gán.
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
+  const [editingWage, setEditingWage] = useState<BookingDriverHistoryItem | null>(null);
   const assign = useAssignBookingDriver(booking.id);
 
   const isWithDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const driver = booking.driver ?? null;
   const isExternal = driver?.source === DRIVER_SOURCE.EXTERNAL;
+  const incident = booking.driverIncident ?? null;
 
   // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn.
   const driversQ = useAssignableDrivers(
@@ -66,14 +86,28 @@ export function BookingDriverSection({
     selecting && isWithDriver,
   );
 
+  // Lịch sử lượt gán mang tiền công của lượt ĐANG MỞ — tải luôn cho đơn có tài xế (nhỏ, một đơn).
+  const historyQ = useBookingDriverHistory(booking.id, isWithDriver);
+  const openItem =
+    historyQ.data?.find((h) => h.outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN) ?? null;
+  // Số ngày của đơn đổi sau khi gán (đổi lịch) — server không tự tính lại tiền công, chỉ nhắc.
+  const quoteQ = useDriverWageQuote(booking.id, isWithDriver && canUpdate && openItem !== null);
+  const daysChanged =
+    openItem?.wage.days != null && quoteQ.data && quoteQ.data.days !== openItem.wage.days
+      ? { from: openItem.wage.days, to: quoteQ.data.days }
+      : null;
+
   if (!isWithDriver && !driver) return null;
   const reassignable = isDriverReassignable(booking.status);
   // Đã giao xe / đã khép ⇒ người cầm lái đã chốt: chỉ đọc (server cũng chặn — DRIVER_ASSIGNMENT_LOCKED).
   const canWrite = canUpdate && isWithDriver && reassignable;
-  // Bộ chọn tài xế liên kết đọc `/drivers/assignable` (DRIVER_VIEW) — thiếu quyền thì không bày nút,
-  // như app native. Ghi tài xế ngoài hệ thống chỉ cần quyền sửa đơn.
-  const canPickLinked = canWrite && has(PERMISSION.DRIVER_VIEW);
+  // Bộ chọn đọc `/drivers/assignable` (DRIVER_VIEW) — thiếu quyền thì không bày nút, như app native.
+  const canPick = canWrite && has(PERMISSION.DRIVER_VIEW);
+  const canCancel =
+    canUpdate && canTransitionBooking(booking.status as BookingStatus, BOOKING_STATUS.CANCELLED);
+  // Thẻ sự cố đã nói việc cần làm — không chồng thêm cảnh báo "sắp tới giờ chưa có tài xế".
   const missingSoon =
+    !incident &&
     isWithDriver &&
     reassignable &&
     isDriverMissingAlertDue(
@@ -81,7 +115,8 @@ export function BookingDriverSection({
       new Date(now),
     );
 
-  function submitLinked(driverId: string | null) {
+  /** Chỉ còn đường BỎ GÁN đi thẳng — gán ai cũng qua hộp gán kèm tiền công. */
+  function submit(driverId: string | null) {
     if (assign.isPending) return;
     assign.mutate(
       { driverId },
@@ -95,11 +130,6 @@ export function BookingDriverSection({
     );
   }
 
-  const enterExternalButton = canWrite ? (
-    <Button size="small" onClick={() => setExternalOpen(true)}>
-      {isExternal ? t('editExternal') : t('enterExternal')}
-    </Button>
-  ) : null;
   const driverTel = driver ? telHref(driver.phone) : null;
 
   return (
@@ -115,6 +145,19 @@ export function BookingDriverSection({
           {booking.pickupAddress ? ` · ${t('pickup', { address: booking.pickupAddress })}` : ''}
           {booking.destination ? ` ${t('destination', { destination: booking.destination })}` : ''}
         </p>
+      ) : null}
+
+      {incident ? (
+        <DriverIncidentAlert
+          incident={incident}
+          action={
+            canCancel ? (
+              <Button size="small" danger onClick={() => setCancelling(true)}>
+                {t('incident.cancelForDriver')}
+              </Button>
+            ) : null
+          }
+        />
       ) : null}
 
       {missingSoon ? (
@@ -157,12 +200,15 @@ export function BookingDriverSection({
                   ? errorMessage(driversQ.error)
                   : t('pickerEmpty')
             }
-            onChange={(value: string) => submitLinked(value)}
+            onChange={(value: string) => {
+              const chosen = driversQ.data?.find((d) => d.id === value);
+              if (chosen) setPicked({ id: chosen.id, name: chosen.name });
+            }}
+            value={null}
             disabled={assign.isPending}
             aria-label={t('pickerLabel')}
           />
           <div className={styles.actions}>
-            {enterExternalButton}
             <Button size="small" onClick={() => setSelecting(false)}>
               {t('close')}
             </Button>
@@ -203,16 +249,28 @@ export function BookingDriverSection({
                 {t('respondBy', { time: fmt.dateTime(driver.respondBy) })}
               </span>
             ) : null}
+            {isExternal && canWrite ? (
+              <span className={styles.meta}>{t('externalLegacy')}</span>
+            ) : null}
+            {openItem ? (
+              <DriverWageInfo
+                wage={openItem.wage}
+                canEdit={canUpdate}
+                onEdit={() => setEditingWage(openItem)}
+              />
+            ) : null}
+            {daysChanged ? (
+              <span className={styles.deadline}>{tWage('daysChanged', daysChanged)}</span>
+            ) : null}
           </div>
           {canWrite ? (
             <div className={styles.actions}>
-              {canPickLinked ? (
+              {canPick ? (
                 <Button size="small" onClick={() => setSelecting(true)}>
                   {t('change')}
                 </Button>
               ) : null}
-              {enterExternalButton}
-              <Popconfirm title={t('unassignConfirm')} onConfirm={() => submitLinked(null)}>
+              <Popconfirm title={t('unassignConfirm')} onConfirm={() => submit(null)}>
                 <Button size="small" loading={assign.isPending}>
                   {t('unassign')}
                 </Button>
@@ -224,29 +282,104 @@ export function BookingDriverSection({
         <div className={styles.row}>
           {/* Đơn có tài xế chưa phân công nghĩa là chưa chạy được — nhắc bằng màu cảnh báo. */}
           <span className={styles.missing}>{t('unassigned')}</span>
-          {canWrite ? (
+          {canPick ? (
             <div className={styles.actions}>
-              {canPickLinked ? (
-                <Button size="small" type="primary" onClick={() => setSelecting(true)}>
-                  {t('assign')}
-                </Button>
-              ) : null}
-              {enterExternalButton}
+              <Button size="small" type="primary" onClick={() => setSelecting(true)}>
+                {t('assign')}
+              </Button>
             </div>
           ) : null}
         </div>
       )}
-      {isWithDriver ? <BookingDriverHistory bookingId={booking.id} /> : null}
-
-      {canWrite ? (
-        <ExternalDriverDialog
-          open={externalOpen}
+      {isWithDriver ? (
+        <BookingDriverHistory
           bookingId={booking.id}
-          current={isExternal && driver ? { name: driver.name, phone: driver.phone } : null}
-          replacingLinkedName={driver && !isExternal ? driver.name : null}
-          onClose={() => setExternalOpen(false)}
+          canEditWage={canUpdate}
+          onEditWage={setEditingWage}
+        />
+      ) : null}
+
+      {picked ? (
+        <AssignDriverDialog
+          bookingId={booking.id}
+          driver={picked}
+          onClose={() => setPicked(null)}
+          onAssigned={() => {
+            setPicked(null);
+            setSelecting(false);
+          }}
+        />
+      ) : null}
+      {editingWage ? (
+        <DriverWageEditDialog
+          bookingId={booking.id}
+          item={editingWage}
+          onClose={() => setEditingWage(null)}
+        />
+      ) : null}
+
+      {/* Dựng có điều kiện: mỗi lần mở là một form mới, nhóm lý do chọn sẵn "thiếu tài xế". */}
+      {cancelling ? (
+        <BookingStatusTransitionDialog
+          booking={booking}
+          target={BOOKING_STATUS.CANCELLED}
+          defaultReasonCategory={CANCELLATION_REASON_CATEGORY.DRIVER_UNAVAILABLE}
+          open
+          onClose={() => setCancelling(false)}
         />
       ) : null}
     </section>
+  );
+}
+
+/**
+ * Thẻ SỰ CỐ TÀI XẾ (ADR 0074) — mọi mốc do server tính (`reassignBy`, `customerCanCancelFree`),
+ * ở đây chỉ đọc. Màu theo độ khẩn: khách đã được huỷ miễn phí ⇒ đỏ; còn trong hạn ⇒ vàng.
+ */
+function DriverIncidentAlert({
+  incident,
+  action,
+}: {
+  incident: BookingDriverIncident;
+  action: ReactNode;
+}) {
+  const t = useTranslations('Drivers.booking.incident');
+  const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+
+  const reason = incident.reasonCategory
+    ? incident.reason
+      ? t('reasonWithNote', {
+          reason: domainLabel('driverDropReason', incident.reasonCategory),
+          note: incident.reason,
+        })
+      : t('reason', { reason: domainLabel('driverDropReason', incident.reasonCategory) })
+    : null;
+  const deadline =
+    incident.level === DRIVER_INCIDENT_LEVEL.URGENT
+      ? t('urgent')
+      : incident.customerCanCancelFree
+        ? t('overdue', { time: fmt.dateTime(incident.reassignBy) })
+        : t('reassignBy', { time: fmt.dateTime(incident.reassignBy) });
+
+  return (
+    <Alert
+      className={styles.alert}
+      type={incident.customerCanCancelFree ? 'error' : 'warning'}
+      showIcon
+      title={
+        incident.driverName ? t('titleNamed', { name: incident.driverName }) : t('titleReleased')
+      }
+      description={
+        <div className={styles.stack}>
+          {reason ? <span>{reason}</span> : null}
+          <span className={styles.meta}>
+            {t('droppedAt', { time: fmt.dateTime(incident.droppedAt) })}
+          </span>
+          <span className={styles.strong}>{deadline}</span>
+        </div>
+      }
+      action={action}
+    />
   );
 }

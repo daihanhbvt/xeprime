@@ -111,7 +111,10 @@ export class VehicleSettingsController {
 
   @Get(':id/driver-surcharge-rules')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
-  @ApiOperation({ summary: 'Mức phụ phí mặc định của dịch vụ có tài xế (công bố trước với khách)' })
+  @ApiOperation({
+    summary: 'ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn trả bốn loại đều tắt',
+    deprecated: true,
+  })
   @ApiOkResponse({ type: DriverSurchargeRulesDto })
   async listSurchargeRules(
     @CurrentTenant() tenant: TenantContext,
@@ -122,7 +125,10 @@ export class VehicleSettingsController {
 
   @Put(':id/driver-surcharge-rules')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
-  @ApiOperation({ summary: 'Lưu mức phụ phí mặc định có tài xế (đủ bốn loại)' })
+  @ApiOperation({
+    summary: 'ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn 422 `DRIVER_SURCHARGE_RETIRED`',
+    deprecated: true,
+  })
   @ApiOkResponse({ type: DriverSurchargeRulesDto })
   async saveSurchargeRules(
     @CurrentTenant() tenant: TenantContext,

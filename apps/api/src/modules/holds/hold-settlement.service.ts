@@ -85,6 +85,11 @@ export class HoldSettlementService {
       to: BookingStatus;
       actorScope: AuditActorScope;
       actorUserId: string | null;
+      /**
+       * Khách huỷ vì SỰ CỐ TÀI XẾ (ADR 0074) — bên gọi đã kiểm `driverIncidentState` trong chính
+       * transaction này. Chỉ có nghĩa khi `actorScope = customer`.
+       */
+      driverFault?: boolean;
     },
   ): Promise<void> {
     const hold = await tx.bookingHold.findFirst({
@@ -109,6 +114,7 @@ export class HoldSettlementService {
       to: input.to,
       actorScope: input.actorScope,
       freeCancelUntil: hold.freeCancelUntil,
+      driverFault: input.driverFault,
     });
     if (!decision) return;
 
@@ -584,6 +590,8 @@ export class HoldSettlementService {
     bookingId: string,
     tenantId: string,
     now: Date = new Date(),
+    /** Cùng phép kiểm sự cố tài xế mà lượt huỷ thật sẽ chạy (ADR 0074). */
+    driverFault = false,
   ): Promise<CustomerCancelPreview | null> {
     const hold = await this.prisma.bookingHold.findFirst({
       where: { bookingId, tenantId, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
@@ -602,6 +610,7 @@ export class HoldSettlementService {
       actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
       freeCancelUntil: hold.freeCancelUntil,
       now,
+      driverFault,
     });
     if (!decision) return null;
 
@@ -804,6 +813,8 @@ export function decideOutcome(input: {
   actorScope: AuditActorScope;
   freeCancelUntil: Date | null;
   now?: Date;
+  /** Khách huỷ vì tài xế đã nhận rồi rút và bên thuê không bố trí lại kịp (ADR 0074 điều 3). */
+  driverFault?: boolean;
 }): { outcome: BookingHoldOutcome; refundReason: HoldRefundReason | null } | null {
   switch (input.to) {
     case BOOKING_STATUS.COMPLETED:
@@ -821,6 +832,13 @@ export function decideOutcome(input: {
       };
     case BOOKING_STATUS.CANCELLED:
       if (input.actorScope === AUDIT_ACTOR_SCOPE.CUSTOMER) {
+        // Lỗi phía cho thuê: hoàn 100% dù đã qua mốc huỷ miễn phí — không có "bẫy phạt huỷ muộn".
+        if (input.driverFault) {
+          return {
+            outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+            refundReason: HOLD_REFUND_REASON.DRIVER_INCIDENT,
+          };
+        }
         return isWithinFreeCancel(input.freeCancelUntil, input.now)
           ? {
               outcome: BOOKING_HOLD_OUTCOME.REFUNDED,

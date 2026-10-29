@@ -57,6 +57,7 @@ function preview(overrides: Partial<CustomerTripCancelPreview>): CustomerTripCan
     freeCancelUntil: '2026-08-09T05:00:00.000Z',
     freeCancelAvailable: true,
     deferred: false,
+    driverIncident: false,
     ...overrides,
   };
 }
@@ -181,5 +182,19 @@ describe('CancelTripDialog — trạng thái xem trước', () => {
     fireEvent.click(confirmButton());
     expect(screen.getByText('Vui lòng chọn lý do hủy')).toBeTruthy();
     expect(state.cancel.mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('CancelTripDialog — huỷ do sự cố tài xế (ADR 0074)', () => {
+  it('server báo driverIncident: nói rõ hoàn 100%, không kể khung huỷ muộn', () => {
+    state.preview.data = preview({
+      kind: CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND,
+      refundAmount: '300000',
+      forfeitAmount: '0',
+      driverIncident: true,
+    });
+    renderDialog();
+    expect(screen.getByText(/Huỷ do sự cố tài xế: bạn được hoàn 100%/)).toBeTruthy();
+    expect(screen.queryByText('Đã qua thời gian huỷ miễn phí')).toBeNull();
   });
 });

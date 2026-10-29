@@ -62,15 +62,17 @@ export async function resolveOptionalUser(
   if (!user) return null;
 
   /*
-   * Với Bearer còn phải hỏi phiên có bị thu hồi chưa — và cùng lượt đó lấy realm của phiên.
+   * Cả hai đường còn phải hỏi phiên có bị thu hồi chưa (Bearer: cùng lượt đó lấy realm của phiên).
    *
-   * Không có bước này thì một access token của thiết bị đã đăng xuất vẫn gắn được hành động vào
-   * tài khoản đó ở các endpoint công khai — đúng thứ `revoked_at` tồn tại để chặn.
+   * Không có bước này thì một cookie/access token của phiên đã đăng xuất vẫn gắn được hành động
+   * vào tài khoản đó ở các endpoint công khai — đúng thứ `revoked_at` tồn tại để chặn.
    */
   let realm = claim.realm;
-  if (claim.sessionId !== null) {
+  if (claim.transport === 'bearer') {
     if (!nativeSessions) return null;
     realm = await nativeSessions.usableSessionRealm(claim.sessionId, user.id);
+  } else if (!(await sessions.isSessionUsable(claim.sessionId, user.id))) {
+    return null;
   }
   // Qua một site web thì phiên phải thuộc đúng realm của site — cả Bearer (cùng luật AuthGuard).
   if (!realm || user.realm !== realm || (webRealm && realm !== webRealm)) return null;
@@ -98,8 +100,9 @@ interface OptionalClaim {
   userId: string;
   /** `null` với Bearer — realm đọc từ phiên ở bước sau. */
   realm: AccountRealm | null;
-  /** `null` với cookie: phiên web không có bảng để tra (ADR 0002). */
-  sessionId: string | null;
+  /** `web_sessions.id` (cookie) hoặc `native_auth_sessions.id` (Bearer). */
+  sessionId: string;
+  transport: 'cookie' | 'bearer';
 }
 
 function cookieClaim(
@@ -109,7 +112,8 @@ function cookieClaim(
 ): OptionalClaim | null {
   if (!token || !realm) return null;
   try {
-    return { userId: sessions.verify(token).sub, realm, sessionId: null };
+    const payload = sessions.verify(token);
+    return { userId: payload.sub, realm, sessionId: payload.sid, transport: 'cookie' };
   } catch {
     return null;
   }
@@ -124,7 +128,7 @@ function bearerClaim(
     const token = NativeSessionService.parseBearer(authHeader);
     if (!token) return null;
     const payload = nativeSessions.verifyAccessToken(token);
-    return { userId: payload.sub, realm: null, sessionId: payload.sid };
+    return { userId: payload.sub, realm: null, sessionId: payload.sid, transport: 'bearer' };
   } catch {
     return null;
   }

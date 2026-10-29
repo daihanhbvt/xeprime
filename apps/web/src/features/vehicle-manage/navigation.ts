@@ -6,7 +6,6 @@ import {
   HistoryOutlined,
   PictureOutlined,
   SafetyOutlined,
-  TableOutlined,
 } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 import type { useTranslations } from 'next-intl';
@@ -112,11 +111,6 @@ export const VEHICLE_MANAGE_NAV: readonly VehicleManageNavGroup[] = [
         section: VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
         labelKey: 'items.bookingTerms',
         icon: SafetyOutlined,
-      },
-      {
-        section: VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
-        labelKey: 'items.surcharges',
-        icon: TableOutlined,
       },
     ],
   },

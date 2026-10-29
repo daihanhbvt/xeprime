@@ -1,6 +1,16 @@
 import type { Prisma } from '@xeprime/prisma';
-import { DRIVER_ASSIGNMENT_STATUS, DRIVER_SOURCE, toLocalVnPhone } from '@xeprime/types';
-import type { BookingDriverSummaryDto } from './dto/driver.dto';
+import {
+  DRIVER_ASSIGNMENT_OUTCOME,
+  DRIVER_ASSIGNMENT_STATUS,
+  DRIVER_SOURCE,
+  driverIncidentState,
+  toLocalVnPhone,
+} from '@xeprime/types';
+import type {
+  BookingDriverIncidentDto,
+  BookingDriverSummaryDto,
+  TripDriverIncidentDto,
+} from './dto/driver.dto';
 
 /**
  * Tài xế gắn trên một đơn (ADR 0063 · ADR 0067) — MỘT phép chọn và MỘT mapper cho mọi danh sách
@@ -59,4 +69,72 @@ export function toRenterDriverSummary(b: BookingDriverRow): BookingDriverSummary
   const full = toBookingDriverSummary(b);
   if (!full || full.assignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED) return null;
   return { ...full, id: null, respondedAt: null, respondBy: null };
+}
+
+/**
+ * Cột SỰ CỐ TÀI XẾ của một đơn (ADR 0074) — tài xế đã nhận rồi rút, chưa ai nhận lại. Bản cho KHÁCH
+ * chỉ cần chừng này (không danh tính người rút).
+ */
+export const BOOKING_DRIVER_INCIDENT_SELECT = {
+  status: true,
+  pickupAt: true,
+  driverAssignmentStatus: true,
+  driverDroppedAt: true,
+  driverReassignBy: true,
+} satisfies Prisma.BookingSelect;
+
+/**
+ * Bản cho BÊN THUÊ thêm lượt rút GẦN NHẤT (ai, vì sao). Lượt rút và cột sự cố ghi CÙNG một mốc
+ * (`DriversService.dropTrip`), nên khớp `endedAt` với `driverDroppedAt` là biết lượt đó có phải
+ * nguồn của sự cố đang mở hay là một lượt cũ hơn (sự cố hiện tại đến từ "trả lại" — không lý do).
+ */
+export const BOOKING_DRIVER_INCIDENT_HOST_SELECT = {
+  ...BOOKING_DRIVER_INCIDENT_SELECT,
+  driverAssignments: {
+    where: { outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED },
+    orderBy: { endedAt: 'desc' },
+    take: 1,
+    select: {
+      endedAt: true,
+      dropReasonCategory: true,
+      dropReason: true,
+      dropZone: true,
+      driver: { select: { name: true } },
+    },
+  },
+} satisfies Prisma.BookingSelect;
+
+type IncidentRow = Prisma.BookingGetPayload<{ select: typeof BOOKING_DRIVER_INCIDENT_SELECT }>;
+type IncidentHostRow = Prisma.BookingGetPayload<{
+  select: typeof BOOKING_DRIVER_INCIDENT_HOST_SELECT;
+}>;
+
+/** Sự cố tài xế nhìn từ KHÁCH — mức hiển thị + được huỷ hoàn 100% hay chưa. */
+export function toRenterDriverIncident(
+  b: IncidentRow,
+  now: Date = new Date(),
+): TripDriverIncidentDto | null {
+  const state = driverIncidentState(b, now);
+  return state ? { level: state.level, freeCancel: state.freeCancel } : null;
+}
+
+/** Sự cố tài xế nhìn từ BÊN THUÊ — kèm hạn điều phối, người rút, lý do. */
+export function toBookingDriverIncident(
+  b: IncidentHostRow,
+  now: Date = new Date(),
+): BookingDriverIncidentDto | null {
+  const state = driverIncidentState(b, now);
+  if (!state || !b.driverDroppedAt) return null;
+  const drop = b.driverAssignments[0];
+  const sameEvent = drop?.endedAt?.getTime() === b.driverDroppedAt.getTime();
+  return {
+    droppedAt: b.driverDroppedAt.toISOString(),
+    reassignBy: state.reassignBy.toISOString(),
+    level: state.level,
+    customerCanCancelFree: state.freeCancel,
+    driverName: sameEvent ? (drop?.driver.name ?? null) : null,
+    reasonCategory: sameEvent ? (drop?.dropReasonCategory ?? null) : null,
+    reason: sameEvent ? (drop?.dropReason ?? null) : null,
+    zone: sameEvent ? (drop?.dropZone ?? null) : null,
+  };
 }

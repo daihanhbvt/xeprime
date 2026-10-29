@@ -11,14 +11,24 @@ import {
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useBookingDriverHistory } from '../hooks/use-booking';
+import type { BookingDriverHistoryItem } from '../types';
+import { DriverWageInfo } from './DriverWageInfo';
 import styles from './BookingDriverSection.module.css';
 
 /**
  * Lịch sử gán tài xế của đơn (ADR 0063) — thu gọn mặc định, mở ra mới tải. Mỗi lượt: ai được gán,
  * ai gán (hoặc hệ thống "Đặt ngay"), lúc nhận, và kết thúc ra sao. Đọc sổ
- * `booking_driver_assignments`, không suy từ audit.
+ * `booking_driver_assignments`, không suy từ audit. Mỗi lượt kèm tiền công + lịch sử sửa (ADR 0075).
  */
-export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
+export function BookingDriverHistory({
+  bookingId,
+  canEditWage = false,
+  onEditWage,
+}: {
+  bookingId: string;
+  canEditWage?: boolean;
+  onEditWage?: (item: BookingDriverHistoryItem) => void;
+}) {
   const t = useTranslations('Drivers.history');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -37,7 +47,12 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
         const outcome = h.outcome as DriverAssignmentOutcome;
         return {
           key: h.id,
-          color: outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN ? 'blue' : 'gray',
+          color:
+            outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN
+              ? 'blue'
+              : outcome === DRIVER_ASSIGNMENT_OUTCOME.DROPPED
+                ? 'red'
+                : 'gray',
           children: (
             <div className={styles.stack}>
               <span>
@@ -56,6 +71,20 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
                   {t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) })}
                 </span>
               ) : null}
+              {/* Lượt RÚT (ADR 0074): lý do + độ sát giờ — để bên thuê quyết có tạm khoá tài xế hay không. */}
+              {h.dropReasonCategory ? (
+                <span>
+                  {t('dropReason', {
+                    reason: domainLabel('driverDropReason', h.dropReasonCategory),
+                  })}
+                  {h.dropReason ? ` ${t('dropNote', { note: h.dropReason })}` : ''}
+                </span>
+              ) : null}
+              {h.dropZone ? (
+                <span className={styles.meta}>
+                  {t('dropZone', { zone: domainLabel('driverDropZone', h.dropZone) })}
+                </span>
+              ) : null}
               {h.endedAt ? (
                 <span className={styles.meta}>
                   {h.endedByName
@@ -63,6 +92,11 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
                     : t('endedAt', { time: fmt.dateTime(h.endedAt) })}
                 </span>
               ) : null}
+              <DriverWageInfo
+                wage={h.wage}
+                canEdit={canEditWage && Boolean(onEditWage)}
+                onEdit={() => onEditWage?.(h)}
+              />
             </div>
           ),
         };

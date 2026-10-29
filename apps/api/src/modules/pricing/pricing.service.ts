@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -16,6 +21,7 @@ import {
   ROUTE_TYPE,
   routeTypeLabel,
   SERVICE_TYPE,
+  withDriverPriceInRange,
   MONEY_STEP_VND,
   normalizeDeliveryTiers,
   toPublicFeeBreakdown,
@@ -584,6 +590,32 @@ export class PricingService {
    * Ném VALIDATION_FAILED với thông điệp CỤ THỂ (thiết kế State C hiển thị đích danh lỗi):
    * bậc trùng/không tăng dần, bán kính hở khoảng so với mốc cuối, mốc ưu đãi trùng.
    */
+  /**
+   * Giá có tài xế/ngày (nội thành · liên tỉnh · một chiều) phải nằm trong khoảng của chính sách
+   * hiện hành — CHẶN SỐ VÔ LÝ (gõ thừa/thiếu số 0), không phải điều tiết giá (ADR 0075). `null`
+   * (xoá giá) và trường vắng luôn qua. Giá cũ ngoài khoảng không bị đụng tới cho tới lần lưu kế.
+   */
+  async assertWithDriverPrices(input: {
+    withDriverDailyPrice?: string | null;
+    withDriverInterCityPrice?: string | null;
+    withDriverOneWayPrice?: string | null;
+  }): Promise<void> {
+    const fields = (
+      ['withDriverDailyPrice', 'withDriverInterCityPrice', 'withDriverOneWayPrice'] as const
+    ).filter((f) => input[f] != null);
+    if (fields.length === 0) return;
+    const limits = await this.feePolicies.withDriverLimits();
+    for (const field of fields) {
+      if (!withDriverPriceInRange(Number(input[field]), limits)) {
+        throw new UnprocessableEntityException({
+          code: API_ERROR_CODE.WITH_DRIVER_PRICE_OUT_OF_RANGE,
+          message: `Giá có tài xế/ngày phải từ ${Number(limits.priceDaily.min).toLocaleString('vi-VN')}đ đến ${Number(limits.priceDaily.max).toLocaleString('vi-VN')}đ`,
+          details: { field, min: limits.priceDaily.min, max: limits.priceDaily.max },
+        });
+      }
+    }
+  }
+
   validatePolicy(dto: SaveRentalPolicyDto): void {
     /*
      * Bảo đảm: ba chế độ LOẠI TRỪ nhau. CHECK ở DB là chốt chặn thật (hai request đua nhau vẫn
@@ -952,13 +984,13 @@ export class PricingService {
         driverRate = interCity ?? basePrice;
         if (!interCity) {
           estimateNote =
-            'Giá lộ trình liên tỉnh chưa niêm yết — tạm tính theo giá cơ bản, gian hàng xác nhận phụ phí khi duyệt';
+            'Giá lộ trình liên tỉnh chưa niêm yết — tạm tính theo giá cơ bản, gian hàng xác nhận giá chốt khi duyệt';
         }
       } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
         driverRate = oneWay ?? interCity ?? basePrice;
         if (!oneWay) {
           estimateNote =
-            'Giá lộ trình 1 chiều chưa niêm yết — tạm tính theo bậc gần nhất, gian hàng xác nhận phụ phí khi duyệt';
+            'Giá lộ trình 1 chiều chưa niêm yết — tạm tính theo bậc gần nhất, gian hàng xác nhận giá chốt khi duyệt';
         }
       } else {
         driverRate = basePrice;

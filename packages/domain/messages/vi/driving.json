@@ -76,7 +76,8 @@
     "accept": "Nhận chuyến",
     "decline": "Từ chối",
     "declineConfirm": "Từ chối chuyến này?",
-    "emptyValue": "—"
+    "emptyValue": "—",
+    "dropFreeUntil": "Rút không bị phạt trước {time}."
   },
   "toast": {
     "linkAccepted": "Đã đồng ý làm tài xế",
@@ -84,7 +85,8 @@
     "linkLeft": "Đã ngừng làm tài xế",
     "tripAccepted": "Đã nhận chuyến",
     "tripDeclined": "Đã từ chối chuyến",
-    "tripReleased": "Đã trả lại chuyến cho chủ xe"
+    "tripReleased": "Đã trả lại chuyến cho chủ xe",
+    "tripDropped": "Đã báo sự cố — chủ xe sẽ sắp xếp tài xế khác"
   },
   "outcome": {
     "declined": "Bạn đã từ chối",
@@ -92,7 +94,8 @@
     "cancelled": "Đơn đã huỷ",
     "no_show": "Khách không đến",
     "completed": "Hoàn thành",
-    "expired": "Quá hạn xác nhận"
+    "expired": "Quá hạn xác nhận",
+    "dropped": "Bạn đã rút khỏi chuyến"
   },
   "center": {
     "title": "Trung tâm Tài xế",
@@ -118,7 +121,7 @@
     "respondLeft": "Thời gian xác nhận còn lại: ",
     "respondExpired": "Đã hết thời gian xác nhận",
     "confirmed": "Bạn đã xác nhận chuyến đi này!",
-    "releaseLeft": "Có thể hủy chuyến trong: ",
+    "releaseLeft": "Rút không bị phạt trong: ",
     "callCustomer": "Gọi khách",
     "decline": "Từ chối",
     "accept": "Nhận chuyến",
@@ -126,7 +129,8 @@
     "releaseConfirmTitle": "Hủy chuyến đã nhận?",
     "releaseConfirmBody": "Chuyến sẽ được trả lại chủ xe để gán tài xế khác. Đơn của khách không bị huỷ.",
     "support": "Liên hệ hỗ trợ",
-    "openDetail": "Xem chi tiết chuyến {code}"
+    "openDetail": "Xem chi tiết chuyến {code}",
+    "drop": "Báo sự cố / Rút khỏi chuyến"
   },
   "tripBadge": {
     "pending": "Chờ xác nhận",
@@ -139,7 +143,8 @@
     "expired": "Hết thời gian xác nhận",
     "unassigned": "Không còn giao cho bạn",
     "cancelled": "Đơn đã huỷ",
-    "no_show": "Khách không đến"
+    "no_show": "Khách không đến",
+    "dropped": "Bạn đã báo sự cố"
   },
   "linkStatus": {
     "invited": "Chờ xác nhận",
@@ -176,5 +181,39 @@
   "respond": {
     "remaining": "Trả lời trong",
     "expired": "Đã quá hạn trả lời — chuyến được trả lại cho bên thuê"
+  },
+  "drop": {
+    "title": "Báo sự cố chuyến {code}",
+    "confirm": "Xác nhận rút khỏi chuyến",
+    "reason": "Lý do",
+    "note": "Mô tả sự cố",
+    "notePlaceholder": "Ví dụ: sốt cao, không thể lái xe an toàn",
+    "keepsBooking": "Đơn của khách KHÔNG bị huỷ. Chủ xe sẽ được báo khẩn để gán tài xế khác.",
+    "penalty": {
+      "grace": "Bạn vẫn trong thời gian được trả lại chuyến — không bị ghi vi phạm.",
+      "far": "Còn hơn 12 giờ tới giờ đón — lượt rút được ghi nhận là vi phạm nhẹ, không bị tạm ngưng nhận chuyến.",
+      "cooldown": "Lượt rút này bị ghi vi phạm và bạn sẽ không được tự động nhận chuyến \"Đặt ngay\" trong {hours} giờ."
+    },
+    "errors": {
+      "reasonRequired": "Chọn lý do",
+      "noteRequired": "Mô tả sự cố ít nhất {min} ký tự",
+      "noteTooLong": "Tối đa {max} ký tự"
+    }
+  },
+  "wage": {
+    "title": "Tiền công",
+    "line": {
+      "offer": "{amount} · {days, plural, other {# ngày}}",
+      "running": "{amount}",
+      "received": "Đã nhận {amount}",
+      "agreed": "Thoả thuận {amount}",
+      "none": "Không phát sinh tiền công"
+    },
+    "paidDirect": "Chủ xe trả trực tiếp cho bạn.",
+    "changesTitle": "Lịch sử sửa tiền công",
+    "change": "{old} → {new}",
+    "changeBy": "{name} · {time}",
+    "changeAt": "{time}",
+    "reason": "Lý do: {reason}"
   }
 }

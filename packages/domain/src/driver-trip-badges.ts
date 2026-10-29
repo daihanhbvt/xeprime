@@ -21,6 +21,7 @@ export type DriverTripBadgeKey =
   | 'inProgress'
   | 'completed'
   | 'released'
+  | 'dropped'
   | 'declined'
   | 'expired'
   | 'unassigned'
@@ -55,6 +56,9 @@ export function driverTripBadges(trip: {
       return [{ key: 'completed', tone: 'success' }];
     case DRIVER_ASSIGNMENT_OUTCOME.DECLINED:
       return [{ key: trip.respondedAt ? 'released' : 'declined', tone: 'danger' }];
+    case DRIVER_ASSIGNMENT_OUTCOME.DROPPED:
+      // Rút khỏi chuyến đã nhận vì sự cố (ADR 0074).
+      return [{ key: 'dropped', tone: 'danger' }];
     case DRIVER_ASSIGNMENT_OUTCOME.EXPIRED:
       return [{ key: 'expired', tone: 'purple' }];
     case DRIVER_ASSIGNMENT_OUTCOME.CANCELLED:

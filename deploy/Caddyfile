@@ -84,6 +84,12 @@
 {$ADMIN_DOMAIN} {
 	import common
 	import noindex
+	# Chỉ IP trong `ADMIN_ALLOWED_IPS` (IP/CIDR cách nhau bằng dấu cách) vào được site quản trị — cả
+	# trang lẫn `/api` của nó. Không khai ⇒ compose truyền `0.0.0.0/0 ::/0` (mọi IP). Đây là lớp
+	# PHỤ: chặn thật vẫn là RealmGuard + @PlatformOnly + @RequirePermissions ở backend. Xem
+	# docs/deployment.md §2.1 về `client_ip` khi có proxy (Cloudflare) đứng trước.
+	@admin_ip_blocked not client_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
+	respond @admin_ip_blocked 403
 	import site_api platform
 	handle {
 		reverse_proxy web:3000

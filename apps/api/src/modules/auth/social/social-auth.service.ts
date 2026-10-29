@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { CookieOptions, Request, Response } from 'express';
+import { timingSafeEqual } from 'node:crypto';
 import { isSafeNextPath } from '@xeprime/domain';
 import {
   API_ERROR_CODE,
@@ -17,9 +19,15 @@ import { AuthService } from '../auth.service';
 import { RequestRealmService } from '../request-realm.service';
 import { FacebookSocialProvider } from './facebook.provider';
 import { GoogleSocialProvider } from './google.provider';
-import { OauthStateService } from './oauth-state.service';
+import { OauthStateService, STATE_TTL_MS } from './oauth-state.service';
 import { SocialAuthFailure, socialErrorCode } from './social-auth.error';
 import type { SocialProvider } from './social-provider';
+
+/**
+ * Cookie gắn một luồng OAuth web với trình duyệt đã mở nó — ADR 0076 điều 4. Host-only như cookie
+ * phiên, nên mỗi site một bản; sống bằng `state` (`STATE_TTL_MS`).
+ */
+export const OAUTH_BROWSER_COOKIE = 'xp_oauth_state';
 
 /** Client nào đang đăng nhập — quyết định callback phát cookie hay phát one-time code. */
 export const SOCIAL_CLIENT = {
@@ -170,6 +178,12 @@ export class SocialAuthService {
     provider: AuthProvider;
     code: string;
     state: string;
+    /**
+     * Giá trị cookie `OAUTH_BROWSER_COOKIE` mà trình duyệt gửi kèm callback (ADR 0076 điều 4) —
+     * `null` khi không có. Luồng WEB bắt buộc nó trùng `state`; luồng native không dùng (PKCE của
+     * app đã buộc kết quả vào đúng app đã mở luồng).
+     */
+    browserState: string | null;
   }): Promise<SocialCallbackResult> {
     const provider = this.requireProvider(params.provider);
 
@@ -196,6 +210,23 @@ export class SocialAuthService {
         throw new SocialAuthFailure(
           API_ERROR_CODE.SOCIAL_STATE_INVALID,
           `state thuộc provider ${stored.provider}, callback lại là ${params.provider}`,
+        );
+      }
+
+      /*
+       * Luồng WEB: callback phải về CHÍNH trình duyệt đã bấm nút (ADR 0076 điều 4).
+       *
+       * Không có phép so này thì `state` chỉ chống giả mạo provider, không chống login CSRF: kẻ
+       * xấu tự mở luồng bằng Google của họ, dừng ở URL callback rồi gửi link đó cho nạn nhân —
+       * nạn nhân bấm là đăng nhập vào tài khoản của kẻ xấu, và bằng lái, chuyến đi họ nhập sau
+       * đó rơi vào tay kẻ kia. Cookie httpOnly đặt lúc bắt đầu chỉ có ở trình duyệt đã bắt đầu.
+       *
+       * Kiểm SAU `consume()`: link bị đem đi đâu thì `state` cũng đã cháy, không thử lại được.
+       */
+      if (native === null && !sameSecret(params.browserState, params.state)) {
+        throw new SocialAuthFailure(
+          API_ERROR_CODE.SOCIAL_STATE_INVALID,
+          'callback web không mang cookie trình duyệt khớp state (khác trình duyệt đã mở luồng)',
         );
       }
 
@@ -292,6 +323,42 @@ export class SocialAuthService {
     return url.toString();
   }
 
+  /**
+   * Gắn luồng WEB vừa mở với trình duyệt này: cookie httpOnly mang `state` (đọc từ URL màn đồng ý
+   * vừa dựng), sống bằng `state` — ADR 0076 điều 4. Luồng native không gọi hàm này.
+   *
+   * `sameSite: lax` là đủ và là bắt buộc: callback là điều hướng GET cấp cao nhất từ Google/Facebook
+   * về site, `lax` gửi cookie ở đúng loại request đó (`strict` thì không).
+   */
+  bindBrowser(res: Response, authorizeUrl: string): void {
+    const state = new URL(authorizeUrl).searchParams.get('state');
+    if (!state) return;
+    res.cookie(OAUTH_BROWSER_COOKIE, state, {
+      ...this.browserCookieOptions(),
+      maxAge: STATE_TTL_MS,
+    });
+  }
+
+  /** Giá trị cookie gắn trình duyệt trên request callback, hoặc `null`. */
+  browserStateOf(req: Pick<Request, 'cookies'>): string | null {
+    const value = (req.cookies as Record<string, string> | undefined)?.[OAUTH_BROWSER_COOKIE];
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  /** Cookie gắn trình duyệt dùng một lần — xoá ở mọi lối ra của callback. */
+  clearBrowserBinding(res: Response): void {
+    res.clearCookie(OAUTH_BROWSER_COOKIE, this.browserCookieOptions());
+  }
+
+  private browserCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.config.getOrThrow<boolean>('SESSION_COOKIE_SECURE'),
+      sameSite: 'lax',
+      path: '/',
+    };
+  }
+
   /** Ghi log lỗi ở phía server — chi tiết KHÔNG bao giờ ra tới client (ADR 0012). */
   logFailure(provider: string, error: unknown): void {
     const detail = error instanceof Error ? error.message : String(error);
@@ -324,6 +391,14 @@ export class SocialAuthService {
     }
     return provider;
   }
+}
+
+/** So hai bí mật trong thời gian hằng; thiếu một bên là không khớp. */
+function sameSecret(a: string | null, b: string): boolean {
+  if (!a) return false;
+  const left = Buffer.from(a, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 function buildProviders(config: ConfigService): ReadonlyMap<AuthProvider, SocialProvider> {

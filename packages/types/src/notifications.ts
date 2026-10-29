@@ -188,6 +188,8 @@ export const NOTIFICATION_TYPE = {
   DRIVER_TRIP_RESPONSE_EXPIRED: 'driver_trip_response_expired',
   /** Chuyến tài xế đang lái đã HOÀN THÀNH (bên thuê xác nhận trả xe) — gửi TÀI XẾ. */
   DRIVER_TRIP_COMPLETED: 'driver_trip_completed',
+  /** Bên thuê SỬA tiền công của một chuyến (ADR 0075) — gửi TÀI XẾ, kèm số cũ → số mới. */
+  DRIVER_TRIP_WAGE_CHANGED: 'driver_trip_wage_changed',
   /**
    * Chuyến có tài xế còn dưới `DRIVER_MISSING_ALERT_LEAD_MINUTES` tới giờ nhận mà chưa ai phủ
    * (ADR 0067 điều 2) — gửi BÊN THUÊ, khẩn, MỘT lần mỗi đơn. Đơn KHÔNG bị huỷ.
@@ -408,6 +410,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: {
     label: 'Chuyến đã hoàn thành',
     color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED]: {
+    label: 'Tiền công chuyến đã đổi',
+    color: STATUS_COLOR.INFO,
   },
   [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: {
     label: 'Chuyến sắp nhận chưa có tài xế',

@@ -40,7 +40,16 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
  * Phiên hỗ trợ gian hàng không mở quyết toán — cọc, phụ phí, hoàn tiền là tiền của gian hàng và
  * khách (ADR 0050 §10): thẻ không dựng và không gọi endpoint.
  */
-export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
+export function SettlementCard({
+  bookingId,
+  canView,
+  serviceType = null,
+}: {
+  bookingId: string;
+  canView: boolean;
+  /** Loại dịch vụ của đơn — hộp phụ phí bỏ danh mục không ghi được cho loại này (ADR 0075). */
+  serviceType?: string | null;
+}) {
   const tSettlement = useTranslations('Bookings.settlement');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
@@ -298,6 +307,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
       {surchargeOpen ? (
         <SurchargeDialog
           bookingId={bookingId}
+          serviceType={serviceType}
           settlement={data}
           open
           onClose={() => setSurchargeOpen(false)}

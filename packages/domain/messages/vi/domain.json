@@ -220,7 +220,8 @@
     "cancelled": "Đơn đã huỷ",
     "no_show": "Khách không đến",
     "completed": "Hoàn thành",
-    "expired": "Quá hạn xác nhận"
+    "expired": "Quá hạn xác nhận",
+    "dropped": "Tài xế rút khỏi chuyến"
   },
   "driverLicenceState": {
     "verified": "Bằng lái đã xác thực",
@@ -394,6 +395,7 @@
     "driver_trip_assigned": "Chuyến mới cần xác nhận",
     "driver_trip_unassigned": "Chuyến đã được gỡ khỏi bạn",
     "driver_trip_completed": "Chuyến đã hoàn thành",
+    "driver_trip_wage_changed": "Tiền công chuyến đã đổi",
     "driver_trip_accepted": "Tài xế đã nhận chuyến",
     "driver_trip_declined": "Tài xế từ chối chuyến",
     "driver_trip_response_expired": "Tài xế không phản hồi",
@@ -819,7 +821,8 @@
     "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép",
     "deposit_percent_out_of_range": "% tiền giữ chỗ của chủ xe ngoài khoảng cho phép hoặc vượt trần của chính sách",
     "deposit_percent_below_tax_percent": "% tiền giữ chỗ của chủ xe không được thấp hơn mức thuế cao nhất của bảng",
-    "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản"
+    "free_cancel_shorter_than_payment_window": "Cửa sổ huỷ miễn phí không được ngắn hơn cửa sổ chuyển khoản",
+    "with_driver_limits_invalid": "Giới hạn chuyến có tài xế không hợp lệ (cần 0 < tối thiểu < tối đa, bội 1.000đ)"
   },
   "bookingHoldStatus": {
     "pending": "Chờ chuyển giữ chỗ",
@@ -850,7 +853,8 @@
     "hold_expired": "Hết hạn thanh toán giữ chỗ",
     "admin_decision": "Quyết định của XePrime",
     "late_cancel": "Khách huỷ sau mốc miễn phí",
-    "no_show": "Khách không đến nhận xe"
+    "no_show": "Khách không đến nhận xe",
+    "driver_incident": "Huỷ do sự cố tài xế"
   },
   "supportCaseStatus": {
     "open": "Mới",
@@ -1014,7 +1018,8 @@
     "customer_requirements": "Khách chưa đáp ứng điều kiện thuê",
     "customer_unreachable": "Không liên hệ được với khách",
     "customer_changed_plan": "Khách đổi kế hoạch",
-    "other": "Lý do khác"
+    "other": "Lý do khác",
+    "driver_unavailable": "Không bố trí được tài xế"
   },
   "cancellationStage": {
     "awaiting_hold": "Đã nhận, chờ khách thanh toán",
@@ -1642,5 +1647,18 @@
     "delivery": "Phí giao nhận xe",
     "overtime": "Phí quá giờ",
     "extras": "Dịch vụ cộng thêm"
+  },
+  "driverDropReason": {
+    "health_issue": "Sức khoẻ",
+    "vehicle_accident": "Tai nạn / sự cố phương tiện",
+    "family_emergency": "Việc gia đình khẩn cấp",
+    "route_blocked": "Đường đi bị chặn / thiên tai",
+    "other": "Lý do khác"
+  },
+  "driverDropZone": {
+    "grace": "Trong thời gian được trả lại",
+    "far": "Còn trên 12 giờ",
+    "same_day": "Trong ngày (2–12 giờ)",
+    "critical": "Sát giờ (dưới 2 giờ)"
   }
 }

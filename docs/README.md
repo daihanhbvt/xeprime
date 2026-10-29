@@ -32,6 +32,7 @@ Tài liệu chuyên đề không tự mở rộng scope; mâu thuẫn với ngu�
 | Tài liệu | Phạm vi |
 | --- | --- |
 | [`api-docs.md`](api-docs.md) | OpenAPI, Swagger, đăng nhập theo realm và hợp đồng type client |
+| [`production-launch-runbook.md`](production-launch-runbook.md) | Trình tự lên production từ đầu: tài khoản cần đăng ký, khoá production, env, deploy lần đầu, app lên Google Play; phụ lục production tạm trên VPS staging |
 | [`deployment.md`](deployment.md) | Staging/production, ba site, CD và rollback |
 | [`backup-and-restore.md`](backup-and-restore.md) | Backup/restore PostgreSQL |
 | [`third-party-keys.md`](third-party-keys.md) | OAuth, SMS, SMTP, R2, Maps, Firebase và SePay |

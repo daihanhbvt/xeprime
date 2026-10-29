@@ -10,8 +10,11 @@ import {
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_TRIP_TAB,
+  isDriverReassignable,
   toLocalVnPhone,
   DRIVER_LINK_SCOPE,
+  DRIVER_WAGE_STAGE,
+  WITH_DRIVER_LIMITS_DEFAULTS,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import {
@@ -31,7 +34,9 @@ import {
   MyDriverLinkDto,
   MyDriverLinkListQueryDto,
   MyDriverLinkPageDto,
+  type DriverWageDto,
 } from './dto/driver.dto';
+import { toWageDto, WAGE_SELECT, type WageSource } from './drivers.service';
 
 const OCCUPYING: string[] = [...BOOKING_STATUS_OCCUPYING];
 const OPEN_LINK: string[] = [...DRIVER_LINK_OPEN_STATUSES];
@@ -75,7 +80,8 @@ type TripRow = Prisma.BookingGetPayload<{ select: ReturnType<typeof tripSelect> 
  *
  * Danh tính luôn là `userId` của phiên. Mọi truy vấn khoá `drivers.user_id` / `bookings.
  * driver_user_id` = người gọi, nên id của một chuyến không phải của mình trả 404 — không tiết lộ
- * nó có tồn tại hay không. Chuyến trả theo một DTO HẸP: không tiền, không giấy tờ khách, không
+ * nó có tồn tại hay không. Chuyến trả theo một DTO HẸP: không tiền của khách hay chủ xe (chỉ tiền
+ * công của CHÍNH tài xế — ADR 0075), không giấy tờ khách, không
  * ghi chú nội bộ; SĐT khách chỉ khi chuyến còn là của tài xế đó (đang giao hoặc đã hoàn thành).
  */
 @Injectable()
@@ -211,8 +217,21 @@ export class DriverSelfService {
           select: tripSelect(now),
         }),
       ]);
+      // Tiền công của lượt ĐANG MỞ của tôi trên từng đơn (ADR 0075) — một truy vấn cho cả trang.
+      const open = rows.length
+        ? await this.prisma.bookingDriverAssignment.findMany({
+            where: {
+              driverUserId: userId,
+              superseded: false,
+              outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN,
+              bookingId: { in: rows.map((r) => r.id) },
+            },
+            select: { ...EPISODE_SELECT, bookingId: true },
+          })
+        : [];
+      const wageOf = new Map(open.map((a) => [a.bookingId, a]));
       return {
-        data: rows.map((r) => toTrip(r, userId, null, now)),
+        data: rows.map((r) => toTrip(r, userId, null, now, wageOf.get(r.id) ?? null)),
         meta: paginationMeta(paging, total),
       };
     }
@@ -234,7 +253,7 @@ export class DriverSelfService {
       }),
     ]);
     return {
-      data: rows.map((r) => toTrip(r.booking, userId, r, now)),
+      data: rows.map((r) => toTrip(r.booking, userId, r, now, r)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -269,7 +288,7 @@ export class DriverSelfService {
       });
     }
     return {
-      ...toTrip(row, userId, episode, now),
+      ...toTrip(row, userId, episode, now, episode),
       pickupLatitude: numberOrNull(row.pickupLatitude),
       pickupLongitude: numberOrNull(row.pickupLongitude),
       destinationLatitude: numberOrNull(row.destinationLatitude),
@@ -281,6 +300,7 @@ export class DriverSelfService {
 }
 
 const EPISODE_SELECT = {
+  ...WAGE_SELECT,
   outcome: true,
   assignedAt: true,
   acceptedAt: true,
@@ -304,7 +324,13 @@ function employerOf(tenant: Parameters<typeof resolveStorefront>[0], now: Date):
  * giao cho họ, đọc cột trên đơn). Đơn không còn là của họ (bị gỡ / từ chối / đã giao người khác)
  * thì KHÔNG trả SĐT khách — họ không còn việc gì để gọi.
  */
-function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Date): DriverTripDto {
+function toTrip(
+  r: TripRow,
+  userId: string,
+  episode: EpisodeRow | null,
+  now: Date,
+  wageRow: WageSource | null,
+): DriverTripDto {
   const current = r.driverUserId === userId;
   const outcome = episode?.outcome ?? DRIVER_ASSIGNMENT_OUTCOME.OPEN;
   const contactAllowed =
@@ -334,6 +360,12 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
         : null,
     endedAt: episode?.endedAt?.toISOString() ?? null,
     releaseUntil: releaseUntilOf(r, current, outcome, now),
+    // Cùng điều kiện với `DriversService.dropTrip` (ADR 0074) — server vẫn kiểm lại khi bấm.
+    canDrop:
+      current &&
+      outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN &&
+      r.driverAssignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED &&
+      isDriverReassignable(r.status),
     pickupAt: r.pickupAt.toISOString(),
     returnAt: r.returnAt.toISOString(),
     routeType: r.routeType,
@@ -351,7 +383,27 @@ function toTrip(r: TripRow, userId: string, episode: EpisodeRow | null, now: Dat
       phone: contactAllowed && r.customerPhone ? toLocalVnPhone(r.customerPhone) : null,
       contactVisibleFrom: null,
     },
+    wage: driverSideWage(wageRow, now),
   };
+}
+
+/**
+ * Tiền công nhìn từ CHÍNH tài xế (ADR 0075): số hiện hành + lịch sử sửa. Tài xế không sửa được,
+ * nên không có khoảng hay cờ sửa. Đơn chưa có dòng sổ (dữ liệu cũ) ⇒ chưa có số.
+ */
+function driverSideWage(row: WageSource | null, now: Date): DriverWageDto {
+  if (!row) {
+    return {
+      amount: null,
+      days: null,
+      stage: DRIVER_WAGE_STAGE.OFFER,
+      editable: false,
+      editableUntil: null,
+      range: null,
+      changes: [],
+    };
+  }
+  return { ...toWageDto(row, WITH_DRIVER_LIMITS_DEFAULTS, now), editable: false, range: null };
 }
 
 /** Mốc trả lại chuyến (sửa ADR 0063 điều 6) — cùng điều kiện với `DriversService.releaseTrip`. */

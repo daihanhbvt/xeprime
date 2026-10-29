@@ -12,6 +12,7 @@ import {
   isUniqueViolation,
   markDriverMissingAlertCovered,
   newId,
+  wageOnClose,
   Prisma,
 } from '@xeprime/prisma';
 import {
@@ -19,10 +20,20 @@ import {
   driverReassignPushExpiresAt,
   driverResponseExpiredEmployerCopy,
   driverTripDeclinedEmployerCopy,
+  driverTripDroppedEmployerCopy,
+  tripDriverReassignedCustomerCopy,
 } from '@xeprime/domain';
 import {
+  driverDropPolicy,
   driverReleaseUntil,
   driverRespondByFor,
+  DRIVER_DROP_NOTE_LENGTH,
+  DRIVER_DROP_REASON,
+  DRIVER_DROP_REASON_LABEL,
+  DRIVER_DROP_STATS_WINDOW_DAYS,
+  DRIVER_DROP_VIOLATION_ZONES,
+  DRIVER_DROP_ZONE,
+  type DriverDropReason,
   ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -46,8 +57,15 @@ import {
   DRIVER_REASSIGNABLE_BOOKING_STATUSES,
   DRIVER_ASSIGNMENT_OUTCOME,
   type DriverAssignmentOutcome,
+  DRIVER_WAGE_STAGE,
+  driverWageEditable,
+  driverWageEditableUntil,
+  driverWageRange,
+  driverWageStage,
+  type DriverWageStage,
+  type WithDriverLimits,
 } from '@xeprime/types';
-import { vnDateKey } from '../../common/day-range';
+import { vnDateKey, vnMonthKey } from '../../common/day-range';
 import { fromDateOnly } from '../../common/date-only';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { maskName, maskPhone } from '../../common/mask';
@@ -55,6 +73,7 @@ import { normalizePhone } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { NotificationService } from '../notification/notification.service';
 import {
   AssignableDriverDto,
@@ -63,10 +82,17 @@ import {
   DriverDto,
   BookingDriverHistoryItemDto,
   DriverLicenceSummaryDto,
+  DriverAssignmentListQueryDto,
+  DriverAssignmentPageDto,
   DriverListQueryDto,
   DriverPageDto,
+  DriverWageDto,
+  DriverWageQuoteDto,
+  DriverWageSettingsDto,
   InviteDriverDto,
   UpdateDriverDto,
+  UpdateDriverWageDto,
+  UpdateDriverWageSettingsDto,
 } from './dto/driver.dto';
 
 type Db = Prisma.TransactionClient | PrismaService;
@@ -96,6 +122,7 @@ const LINK_SELECT = {
   respondedAt: true,
   endedAt: true,
   endedByParty: true,
+  autoAssignCooldownUntil: true,
   user: { select: { displayName: true, avatarUrl: true } },
 } satisfies Prisma.DriverSelect;
 
@@ -124,6 +151,7 @@ export class DriversService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly feePolicies: FeePoliciesService,
   ) {}
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -156,10 +184,16 @@ export class DriversService {
     const closedUserIds = rows
       .filter((r) => !OPEN_LINK.includes(r.linkStatus))
       .map((r) => r.userId);
-    const [counts, licences, reopened] = await Promise.all([
+    const [counts, licences, reopened, drops, wages] = await Promise.all([
       this.activeBookingCounts(rows.map((r) => r.id)),
       this.licenceSummaries(rows.map((r) => r.userId)),
       this.openLinkStatusByUser(tenantId, closedUserIds),
+      this.dropStats(rows.map((r) => r.id)),
+      this.monthWageStats(
+        tenantId,
+        rows.map((r) => r.id),
+        query.month,
+      ),
     ]);
     return {
       data: rows.map((r) =>
@@ -168,6 +202,8 @@ export class DriversService {
           counts.get(r.id) ?? 0,
           licences.get(r.userId),
           OPEN_LINK.includes(r.linkStatus) ? null : (reopened.get(r.userId) ?? null),
+          drops.get(r.id),
+          wages.get(r.id),
         ),
       ),
       meta: paginationMeta(paging, total),
@@ -516,6 +552,8 @@ export class DriversService {
         tenantId,
         linkStatus: DRIVER_LINK_STATUS.ACTIVE,
         ...(window.excludeUserId ? { userId: { not: window.excludeUserId } } : {}),
+        // Đang chịu cooldown sau một lượt rút sát giờ (ADR 0074 điều 2) — không tự gán.
+        OR: [{ autoAssignCooldownUntil: null }, { autoAssignCooldownUntil: { lte: new Date() } }],
       },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: { id: true, userId: true },
@@ -563,6 +601,11 @@ export class DriversService {
    *
    * Gán tài xế liên kết hay bỏ gán (`driverId: null`) đều xoá tài xế NGOÀI HỆ THỐNG đang ghi trên
    * đơn (ADR 0067 — hai cách loại trừ nhau), kèm audit `booking.driver_external_cleared`.
+   *
+   * Tiền công (ADR 0075): lượt mới mang `wageAmount` (bên thuê nhập) hoặc `tiền công/ngày mặc định
+   * × số ngày`, kiểm theo giới hạn chính sách. Gian hàng chưa đặt mức mặc định: gán TAY phải nhập
+   * số (`DRIVER_WAGE_REQUIRED`); tự gán của "Đặt ngay" thì BỎ QUA lượt gán (trả `skipped`) — đơn
+   * vẫn ra đời, bên thuê được báo để gán tay. Tài xế luôn thấy tiền công TRƯỚC khi nhận.
    */
   async assignWithinTx(
     tx: Prisma.TransactionClient,
@@ -572,10 +615,12 @@ export class DriversService {
       driverId: string | null;
       /** `null` = hệ thống (tự gán khi "Đặt ngay" nhận chuyến). */
       actorUserId: string | null;
+      /** Tiền công bên thuê nhập (VND) — vắng/null ⇒ mức mặc định × số ngày. */
+      wageAmount?: string | null;
     },
-  ): Promise<void> {
+  ): Promise<{ skipped: boolean }> {
     const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
-    if (input.driverId === booking.driverId && !booking.externalDriverName) return;
+    if (input.driverId === booking.driverId && !booking.externalDriverName) return { skipped: false };
     // Đã bàn giao (xe đang chạy) hoặc đơn đã khép ⇒ người cầm lái đã chốt, không đổi/gỡ nữa.
     if (!REASSIGNABLE.includes(booking.status)) {
       throw new ConflictException({
@@ -618,6 +663,17 @@ export class DriversService {
       link = found;
     }
 
+    // Tiền công của lượt mới — tính và kiểm TRƯỚC mọi lượt ghi (ADR 0075).
+    let wage: { amount: number; days: number } | null = null;
+    if (link) {
+      const resolved = await this.resolveAssignWage(tx, input, booking);
+      if (resolved === null) {
+        await this.notifyAutoAssignSkipped(tx, input.tenantId, booking);
+        return { skipped: true };
+      }
+      wage = resolved;
+    }
+
     const now = new Date();
     // Hạn trả lời tính MỘT lần ở đây và lưu lại (ADR 0066) — client chỉ đọc mốc để đếm ngược.
     const respondBy = link ? driverRespondByFor(now, booking.pickupAt) : null;
@@ -647,13 +703,15 @@ export class DriversService {
         input.actorUserId,
       );
     }
-    if (link) {
+    if (link && wage) {
       await openAssignment(tx, {
         tenantId: input.tenantId,
         bookingId: booking.id,
         driverId: link.id,
         driverUserId: link.userId,
         assignedBy: input.actorUserId,
+        wageAmount: new Prisma.Decimal(wage.amount),
+        wageDays: wage.days,
       });
     }
 
@@ -685,7 +743,11 @@ export class DriversService {
           targetType: 'booking',
           targetId: booking.id,
           before: { driverId: booking.driverId },
-          after: { driverId: link?.id ?? null, ...(link ? { driverName: link.name } : {}) },
+          after: {
+            driverId: link?.id ?? null,
+            ...(link ? { driverName: link.name } : {}),
+            ...(wage ? { wageAmount: String(wage.amount), wageDays: wage.days } : {}),
+          },
         },
         tx,
       );
@@ -696,12 +758,13 @@ export class DriversService {
     }
     if (link && respondBy) {
       const employer = await this.employerName(tx, input.tenantId);
+      const wageText = wage ? ` · tiền công ${formatVnd(wage.amount)}` : '';
       await this.notifications.emitToUser(
         link.userId,
         {
           type: NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED,
           title: `Bạn có chuyến mới từ ${employer} — vui lòng xác nhận`,
-          body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)} · trả lời trước ${formatVnDateTime(respondBy)}`,
+          body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)}${wageText} · trả lời trước ${formatVnDateTime(respondBy)}`,
           targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
           targetId: booking.id,
           // Rung máy sau hạn trả lời là mời tài xế nhận một chuyến đã không còn của họ.
@@ -710,92 +773,68 @@ export class DriversService {
         tx,
       );
     }
+    return { skipped: false };
   }
 
   /**
-   * Ghi / đổi tài xế NGOÀI HỆ THỐNG trên đơn (ADR 0067) — chạy TRONG transaction của bên gọi.
+   * Tiền công của một lượt gán MỚI (ADR 0075): số bên thuê nhập, hoặc mức mặc định × số ngày.
+   * Luôn trong giới hạn chuyến chạy `[min × N; max × N]` của chính sách hiện hành.
    *
-   * Không có lượt chờ: lưu là coi như đã nhận. Lượt gán LIÊN KẾT đang có (chờ hay đã nhận) bị đóng
-   * như "bỏ gán" (`unassigned`) và người đó được báo — y như đổi sang tài xế liên kết khác. Không
-   * chống trùng lịch (hệ thống không biết người này), không tạo hồ sơ dùng lại.
-   *
-   * `driver_missing_alerted_at` GIỮ NGUYÊN: đó là cột claim "đã nhắc một lần", không phải trạng
-   * thái phủ — đơn đã có người thì phép quét tự bỏ qua, gỡ lại sau đó cũng không nhắc lần hai.
+   * `null` = tự gán của hệ thống KHÔNG có số hợp lệ để mời (chưa đặt mức mặc định, hoặc mức cũ
+   * nằm ngoài giới hạn mới) — bên gọi bỏ qua lượt gán. Gán TAY thì ném lỗi cụ thể thay vì bỏ qua.
    */
-  async setExternalWithinTx(
+  private async resolveAssignWage(
     tx: Prisma.TransactionClient,
-    input: {
-      tenantId: string;
-      bookingId: string;
-      name: string;
-      phone: string;
-      actorUserId: string;
-    },
+    input: { tenantId: string; actorUserId: string | null; wageAmount?: string | null },
+    booking: { priceSnapshot: Prisma.JsonValue; pickupAt: Date; returnAt: Date },
+  ): Promise<{ amount: number; days: number } | null> {
+    const days = wageDaysOf(booking);
+    let amount: number;
+    if (input.wageAmount != null) {
+      amount = Number(input.wageAmount);
+    } else {
+      const tenant = await tx.tenant.findUnique({
+        where: { id: input.tenantId },
+        select: { driverDailyWage: true },
+      });
+      if (!tenant?.driverDailyWage) {
+        if (input.actorUserId === null) return null;
+        throw new UnprocessableEntityException({
+          code: API_ERROR_CODE.DRIVER_WAGE_REQUIRED,
+          message: 'Gian hàng chưa đặt tiền công tài xế mặc định — nhập tiền công cho chuyến này',
+        });
+      }
+      amount = Number(tenant.driverDailyWage) * days;
+    }
+    const limits = await this.feePolicies.withDriverLimits(tx);
+    const range = driverWageRange(DRIVER_WAGE_STAGE.OFFER, limits, days)!;
+    if (amount < range.min || amount > range.max) {
+      if (input.actorUserId === null) return null;
+      throw wageOutOfRange(range);
+    }
+    return { amount, days };
+  }
+
+  /**
+   * "Đặt ngay" nhận chuyến có tài xế nhưng không tự gán được vì thiếu tiền công mặc định — báo
+   * ngay bên thuê gán tay (ADR 0075 · UC-04). Nhắc khẩn sát giờ của ADR 0067 vẫn chạy như mọi đơn.
+   */
+  private async notifyAutoAssignSkipped(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    booking: { id: string; code: string },
   ): Promise<void> {
-    const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
-    if (!REASSIGNABLE.includes(booking.status)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
-        message: 'Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa',
-      });
-    }
-    if (booking.serviceType !== SERVICE_TYPE.WITH_DRIVER) {
-      throw new UnprocessableEntityException({
-        code: API_ERROR_CODE.DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED,
-        message: 'Chỉ đơn thuê có tài xế mới gán tài xế được',
-      });
-    }
-
-    const name = input.name.trim();
-    const phone = normalizePhone(input.phone);
-    // Gửi lại đúng người đang ghi ⇒ không đổi gì, không audit trùng.
-    if (booking.externalDriverName === name && booking.externalDriverPhone === phone) return;
-
-    const now = new Date();
-    await tx.booking.update({
-      where: { id: booking.id },
-      data: {
-        ...CLEARED_ASSIGNMENT,
-        externalDriverName: name,
-        externalDriverPhone: phone,
-        driverAssignedAt: now,
-      },
-    });
-    if (booking.driverId) {
-      await closeOpenAssignment(
-        tx,
-        booking.id,
-        DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
-        input.actorUserId,
-      );
-    }
-
-    await this.audit.record(
+    await this.notifications.emitToTenantMembers(
+      tenantId,
       {
-        tenantId: input.tenantId,
-        actorUserId: input.actorUserId,
-        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-        action: DRIVER_ASSIGNMENT_AUDIT_ACTION.EXTERNAL_SET,
-        targetType: AUDIT_TARGET_TYPE.BOOKING,
+        type: NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING,
+        title: `Chuyến ${booking.code} chưa được tự gán tài xế`,
+        body: 'Gian hàng chưa đặt tiền công tài xế mặc định (hoặc mức đặt ngoài giới hạn). Hãy gán tài xế và nhập tiền công cho chuyến này, rồi đặt mức mặc định ở trang Tài xế.',
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
         targetId: booking.id,
-        before: {
-          driverId: booking.driverId,
-          externalDriver: maskedExternalDriver(booking),
-        },
-        after: {
-          driverId: null,
-          externalDriver: maskedExternalDriver({
-            externalDriverName: name,
-            externalDriverPhone: phone,
-          }),
-        },
       },
       tx,
     );
-
-    if (booking.driverUserId) {
-      await this.notifyUnassigned(tx, booking, 'Chuyến đã được giao cho tài xế khác.');
-    }
   }
 
   /**
@@ -819,6 +858,7 @@ export class DriversService {
         serviceType: true,
         pickupAt: true,
         returnAt: true,
+        priceSnapshot: true,
         driverId: true,
         driverUserId: true,
         externalDriverName: true,
@@ -851,7 +891,9 @@ export class DriversService {
           status: true,
           driverAssignmentStatus: true,
           driverRespondBy: true,
+          driverDroppedAt: true,
           driver: { select: { name: true } },
+          bookingRequest: { select: { id: true, customerUserId: true } },
         },
       });
       if (!booking) {
@@ -934,6 +976,9 @@ export class DriversService {
               driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
               driverRespondedAt: now,
               driverRespondBy: null,
+              // Có người nhận lại ⇒ sự cố tài xế (nếu có) khép lại (ADR 0074 điều 3).
+              driverDroppedAt: null,
+              driverReassignBy: null,
             }
           : CLEARED_ASSIGNMENT,
       });
@@ -980,6 +1025,21 @@ export class DriversService {
             },
         tx,
       );
+      // Khách đã thấy "Đang sắp xếp lại tài xế" — báo họ khi có người mới nhận (ADR 0074). Không
+      // nêu ai đã rút; tên + SĐT người mới đọc ở trang chuyến.
+      if (accept && booking.driverDroppedAt && booking.bookingRequest?.customerUserId) {
+        await this.notifications.emitToUser(
+          booking.bookingRequest.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+            ...tripDriverReassignedCustomerCopy({ bookingCode: booking.code }),
+            tenantId: booking.tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: booking.bookingRequest.id,
+          },
+          tx,
+        );
+      }
     });
   }
 
@@ -1004,6 +1064,8 @@ export class DriversService {
         },
       });
       if (!booking) throw tripNotFound();
+      // Trả lại trong cửa sổ cũng để khách không còn ai lái: ghi sự cố như một lượt rút (ADR 0074
+      // điều 3) — chỉ không phạt tài xế.
       // Cửa sổ trả lại tính như huỷ miễn phí của khách — quá mốc thì phải nhờ bên thuê đổi người.
       if (
         !booking.driverRespondedAt ||
@@ -1021,7 +1083,15 @@ export class DriversService {
           pickupAt: { gt: now },
           deletedAt: null,
         },
-        data: CLEARED_ASSIGNMENT,
+        data: {
+          ...CLEARED_ASSIGNMENT,
+          driverDroppedAt: now,
+          driverReassignBy: driverDropPolicy({
+            droppedAt: now,
+            pickupAt: booking.pickupAt,
+            releaseUntil: null,
+          }).reassignBy,
+        },
       });
       if (claimed.count === 0) throw assignmentStateConflict();
       await closeOpenAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DECLINED, userId);
@@ -1049,6 +1119,142 @@ export class DriversService {
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
           targetId: bookingId,
           pushExpiresAt: driverReassignPushExpiresAt(now),
+        },
+        tx,
+      );
+    });
+  }
+
+  /**
+   * Tài xế RÚT khỏi chuyến đã nhận vì sự cố (ADR 0074) — bất cứ lúc nào trước bàn giao.
+   *
+   * MỘT transaction, khoá dòng đơn: bốn cột tài xế về NULL (EXCLUDE nhả người này ngay), lượt trong
+   * sổ khép `dropped` kèm lý do + vùng, ghi sự cố trên đơn (hạn điều phối lại), cooldown "Đặt ngay"
+   * trên liên kết nếu rút sát giờ, audit, báo KHẨN bên thuê. Đơn KHÔNG bị huỷ, không đồng tiền nào
+   * đổi chiều; còn trong cửa sổ trả lại thì vùng là `grace` — không phạt.
+   */
+  async dropTrip(
+    userId: string,
+    bookingId: string,
+    input: { reasonCategory: DriverDropReason; reason?: string | null },
+  ): Promise<void> {
+    const note = input.reason?.trim() || null;
+    if (
+      input.reasonCategory === DRIVER_DROP_REASON.OTHER &&
+      (!note || note.length < DRIVER_DROP_NOTE_LENGTH.MIN)
+    ) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.DRIVER_DROP_NOTE_REQUIRED,
+        message: `Mô tả sự cố ít nhất ${DRIVER_DROP_NOTE_LENGTH.MIN} ký tự`,
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Khoá trước khi đọc: lượt rút đua với bên thuê đổi người / giao xe thì xếp hàng, kẻ sau đọc
+      // đúng hiện trạng (cùng kỷ luật `lockBookingForDriverChange`).
+      await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${bookingId} AND "driver_user_id" = ${userId} FOR UPDATE`;
+      const now = new Date();
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, driverUserId: userId, deletedAt: null },
+        select: {
+          id: true,
+          code: true,
+          tenantId: true,
+          status: true,
+          pickupAt: true,
+          driverId: true,
+          driverAssignmentStatus: true,
+          driverRespondedAt: true,
+          driver: { select: { name: true } },
+        },
+      });
+      if (!booking) throw tripNotFound();
+      if (
+        booking.driverAssignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED ||
+        !REASSIGNABLE.includes(booking.status)
+      ) {
+        throw assignmentStateConflict();
+      }
+
+      const policy = driverDropPolicy({
+        droppedAt: now,
+        pickupAt: booking.pickupAt,
+        releaseUntil: booking.driverRespondedAt
+          ? driverReleaseUntil(booking.driverRespondedAt, booking.pickupAt)
+          : null,
+      });
+
+      const claimed = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          driverUserId: userId,
+          driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+          status: { in: REASSIGNABLE },
+          deletedAt: null,
+        },
+        data: {
+          ...CLEARED_ASSIGNMENT,
+          driverDroppedAt: now,
+          driverReassignBy: policy.reassignBy,
+        },
+      });
+      if (claimed.count === 0) throw assignmentStateConflict();
+      // Cùng đường khép với mọi kết cục khác — tiền công về 0 (ADR 0075), kèm ba cột lý do/vùng.
+      await closeOpenDriverAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DROPPED, userId, now, {
+        dropReasonCategory: input.reasonCategory,
+        dropReason: note,
+        dropZone: policy.zone,
+      });
+      // Cooldown chỉ KÉO DÀI, không rút ngắn một hình phạt đang chạy dài hơn.
+      if (policy.cooldownUntil && booking.driverId) {
+        await tx.driver.updateMany({
+          where: {
+            id: booking.driverId,
+            OR: [
+              { autoAssignCooldownUntil: null },
+              { autoAssignCooldownUntil: { lt: policy.cooldownUntil } },
+            ],
+          },
+          data: { autoAssignCooldownUntil: policy.cooldownUntil },
+        });
+      }
+      // Tin khẩn dưới đây đã đòi gán lại — worker không nhắc thêm "chưa có tài xế" (ADR 0067 điều 2).
+      await markDriverMissingAlertCovered(tx, bookingId, now);
+
+      await this.audit.record(
+        {
+          tenantId: booking.tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+          action: DRIVER_ASSIGNMENT_AUDIT_ACTION.DROPPED,
+          targetType: AUDIT_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          before: { driverId: booking.driverId, status: booking.status },
+          after: {
+            reasonCategory: input.reasonCategory,
+            zone: policy.zone,
+            reassignBy: policy.reassignBy.toISOString(),
+            cooldownUntil: policy.cooldownUntil?.toISOString() ?? null,
+          },
+        },
+        tx,
+      );
+      await this.notifications.emitToTenantMembers(
+        booking.tenantId,
+        {
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
+          ...driverTripDroppedEmployerCopy({
+            driverName: driverDisplayName(booking.driver?.name),
+            bookingCode: booking.code,
+            reassignByText: formatVnDateTime(policy.reassignBy),
+            reasonLabel: DRIVER_DROP_REASON_LABEL[input.reasonCategory],
+          }),
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          // Rung máy sau hạn điều phối là báo một việc đã quá giờ; hộp thư vẫn giữ tin.
+          pushExpiresAt: new Date(
+            Math.max(policy.reassignBy.getTime(), driverReassignPushExpiresAt(now).getTime()),
+          ),
         },
         tx,
       );
@@ -1134,12 +1340,18 @@ export class DriversService {
     if (claimed.count === 0) throw linkStateConflict();
 
     // Sổ lịch sử: các lượt sắp bị gỡ kết thúc là "đã gỡ" — trước khi cột tài xế trên đơn bị xoá.
+    // Chuyến không chạy ⇒ tiền công về 0 (ADR 0075), cùng luật `wageOnClose` với đường khép chung.
+    const releasing: Prisma.BookingDriverAssignmentWhereInput = {
+      driverId: link.id,
+      outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN,
+      booking: { status: { in: REASSIGNABLE }, deletedAt: null },
+    };
     await tx.bookingDriverAssignment.updateMany({
-      where: {
-        driverId: link.id,
-        outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN,
-        booking: { status: { in: REASSIGNABLE }, deletedAt: null },
-      },
+      where: { ...releasing, wageAmount: { not: null } },
+      data: wageOnClose(DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED),
+    });
+    await tx.bookingDriverAssignment.updateMany({
+      where: releasing,
       data: {
         outcome: DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
         endedAt: new Date(),
@@ -1214,20 +1426,25 @@ export class DriversService {
    * người kết thúc. Đơn thuộc tenant khác ⇒ mảng rỗng (bên gọi đã kiểm đơn tồn tại).
    */
   async history(tenantId: string, bookingId: string): Promise<BookingDriverHistoryItemDto[]> {
-    const rows = await this.prisma.bookingDriverAssignment.findMany({
-      where: { tenantId, bookingId },
-      orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }],
-      select: {
-        id: true,
-        outcome: true,
-        assignedAt: true,
-        assignedBy: true,
-        acceptedAt: true,
-        endedAt: true,
-        endedBy: true,
-        driver: { select: { id: true, name: true, phone: true } },
-      },
-    });
+    const [rows, limits] = await Promise.all([
+      this.prisma.bookingDriverAssignment.findMany({
+        where: { tenantId, bookingId },
+        orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }],
+        select: {
+          ...WAGE_SELECT,
+          id: true,
+          assignedAt: true,
+          assignedBy: true,
+          endedBy: true,
+          dropReasonCategory: true,
+          dropReason: true,
+          dropZone: true,
+          driver: { select: { id: true, name: true, phone: true } },
+        },
+      }),
+      this.feePolicies.withDriverLimits(),
+    ]);
+    const now = new Date();
     const actorIds = [
       ...new Set(rows.flatMap((r) => [r.assignedBy, r.endedBy]).filter((v): v is string => !!v)),
     ];
@@ -1249,7 +1466,323 @@ export class DriversService {
       acceptedAt: r.acceptedAt?.toISOString() ?? null,
       endedAt: r.endedAt?.toISOString() ?? null,
       endedByName: r.endedBy ? (nameOf.get(r.endedBy) ?? null) : null,
+      dropReasonCategory: r.dropReasonCategory,
+      dropReason: r.dropReason,
+      dropZone: r.dropZone,
+      wage: toWageDto(r, limits, now),
     }));
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Tiền công tài xế (ADR 0075) — XePrime chỉ GHI NHẬN, chủ xe trả trực tiếp
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /** Mức tiền công/ngày mặc định của gian hàng + giới hạn của chính sách hiện hành. */
+  async wageSettings(tenantId: string): Promise<DriverWageSettingsDto> {
+    const [tenant, limits] = await Promise.all([
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { driverDailyWage: true } }),
+      this.feePolicies.withDriverLimits(),
+    ]);
+    return {
+      dailyWage: tenant?.driverDailyWage ? tenant.driverDailyWage.toFixed(0) : null,
+      wageDaily: limits.wageDaily,
+      priceDaily: limits.priceDaily,
+      suggestedDaily: limits.wageDailySuggested,
+    };
+  }
+
+  /**
+   * Số liệu cho hộp gán tài xế của MỘT đơn (ADR 0075): số ngày tính tiền, gợi ý `mặc định × N`,
+   * khoảng hợp lệ — cùng phép tính `resolveAssignWage` dùng khi ghi, nên form không bao giờ gợi ý
+   * một con số server sẽ từ chối.
+   */
+  async wageQuote(tenantId: string, bookingId: string): Promise<DriverWageQuoteDto> {
+    const [booking, tenant, limits] = await Promise.all([
+      this.prisma.booking.findFirst({
+        where: { id: bookingId, tenantId, deletedAt: null },
+        select: { priceSnapshot: true, pickupAt: true, returnAt: true, baseAmount: true },
+      }),
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { driverDailyWage: true } }),
+      this.feePolicies.withDriverLimits(),
+    ]);
+    if (!booking) {
+      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy đơn' });
+    }
+    const days = wageDaysOf(booking);
+    const range = driverWageRange(DRIVER_WAGE_STAGE.OFFER, limits, days)!;
+    const daily = tenant?.driverDailyWage ? Number(tenant.driverDailyWage) : null;
+    return {
+      days,
+      dailyWage: daily === null ? null : String(daily),
+      suggestedAmount: daily === null ? null : String(daily * days),
+      range: { min: String(range.min), max: String(range.max) },
+      wageDaily: limits.wageDaily,
+      suggestedDaily: limits.wageDailySuggested,
+      rentAmount: booking.baseAmount.toFixed(0),
+    };
+  }
+
+  /**
+   * Đặt / xoá mức tiền công/ngày mặc định. Chỉ áp cho lượt gán tạo SAU lượt này — lượt đã có giữ
+   * số của nó (ADR 0075, INV-07).
+   */
+  async setWageSettings(
+    tenantId: string,
+    actorUserId: string,
+    dto: UpdateDriverWageSettingsDto,
+  ): Promise<DriverWageSettingsDto> {
+    const limits = await this.feePolicies.withDriverLimits();
+    const next = dto.dailyWage === null ? null : Number(dto.dailyWage);
+    if (next !== null) {
+      const min = Number(limits.wageDaily.min);
+      const max = Number(limits.wageDaily.max);
+      if (next < min || next > max) throw wageOutOfRange({ min, max });
+    }
+    await this.prisma.$transaction(async (tx) => {
+      const before = await tx.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { driverDailyWage: true },
+      });
+      const prev = before.driverDailyWage ? before.driverDailyWage.toFixed(0) : null;
+      const after = next === null ? null : String(next);
+      if (prev === after) return;
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: { driverDailyWage: next === null ? null : new Prisma.Decimal(next) },
+      });
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: DRIVER_ASSIGNMENT_AUDIT_ACTION.DEFAULT_WAGE_UPDATED,
+          targetType: AUDIT_TARGET_TYPE.TENANT,
+          targetId: tenantId,
+          before: { driverDailyWage: prev },
+          after: { driverDailyWage: after },
+        },
+        tx,
+      );
+    });
+    return this.wageSettings(tenantId);
+  }
+
+  /**
+   * Bên thuê sửa tiền công của MỘT lượt gán (ADR 0075). Không cần tài xế đồng ý; mỗi lần đổi sang
+   * một số KHÁC ghi đúng một dòng lịch sử + audit + báo tài xế, trong cùng transaction, sau khi
+   * KHOÁ dòng lượt gán — hai lần sửa đồng thời xếp hàng, không mất dòng lịch sử nào.
+   *
+   * Không chạm dòng tiền nào của đơn: báo giá, tiền giữ chỗ, quyết toán, ví giữ nguyên.
+   */
+  async updateWage(
+    tenantId: string,
+    actorUserId: string,
+    bookingId: string,
+    assignmentId: string,
+    dto: UpdateDriverWageDto,
+  ): Promise<void> {
+    const limits = await this.feePolicies.withDriverLimits();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "public"."booking_driver_assignments" WHERE "id" = ${assignmentId} AND "tenant_id" = ${tenantId} FOR UPDATE`;
+      const row = await tx.bookingDriverAssignment.findFirst({
+        where: { id: assignmentId, tenantId, bookingId },
+        select: {
+          id: true,
+          outcome: true,
+          acceptedAt: true,
+          endedAt: true,
+          wageAmount: true,
+          wageDays: true,
+          driverUserId: true,
+          booking: {
+            select: { code: true, priceSnapshot: true, pickupAt: true, returnAt: true },
+          },
+        },
+      });
+      if (!row) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy lượt gán tài xế',
+        });
+      }
+      const stage = driverWageStage(row);
+      if (stage === DRIVER_WAGE_STAGE.NOT_APPLICABLE) {
+        throw new UnprocessableEntityException({
+          code: API_ERROR_CODE.DRIVER_WAGE_NOT_APPLICABLE,
+          message: 'Tài xế chưa từng nhận chuyến này — lượt gán không có tiền công',
+        });
+      }
+      const editableUntil = driverWageEditableUntil(row.endedAt);
+      if (editableUntil && editableUntil.getTime() <= Date.now()) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.DRIVER_WAGE_LOCKED,
+          message: 'Đã quá hạn sửa tiền công của chuyến này',
+          details: { editableUntil: editableUntil.toISOString() },
+        });
+      }
+      // Số ngày chụp lại theo đơn HIỆN TẠI: bên thuê sửa theo mức/ngày × số ngày đang thấy, nên
+      // đơn đổi số ngày sau lúc gán thì lần sửa này cũng đưa mẫu số về đúng (lượt cũ chưa có số ngày cũng vậy).
+      const days = wageDaysOf(row.booking);
+      const range = driverWageRange(stage, limits, days)!;
+      const amount = Number(dto.amount);
+      if (amount < range.min || amount > range.max) throw wageOutOfRange(range);
+
+      const current = row.wageAmount ? Number(row.wageAmount) : null;
+      if (current === amount) {
+        // Số không đổi: chỉ đồng bộ mẫu số ngày — không phải một lần đổi tiền, không lịch sử/thông báo.
+        if (row.wageDays !== days) {
+          await tx.bookingDriverAssignment.update({ where: { id: row.id }, data: { wageDays: days } });
+        }
+        return;
+      }
+      const reason = dto.reason?.trim() || null;
+      await tx.bookingDriverAssignment.update({
+        where: { id: row.id },
+        data: { wageAmount: new Prisma.Decimal(amount), wageDays: days },
+      });
+      // Từ "chưa có số" (lượt cũ) lên 0 không phải một lần đổi số — CHECK cấm old = new.
+      if ((current ?? 0) !== amount) {
+        await tx.bookingDriverWageChange.create({
+          data: {
+            id: newId(),
+            tenantId,
+            assignmentId: row.id,
+            oldAmount: new Prisma.Decimal(current ?? 0),
+            newAmount: new Prisma.Decimal(amount),
+            reason,
+            changedBy: actorUserId,
+          },
+        });
+      }
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: DRIVER_ASSIGNMENT_AUDIT_ACTION.WAGE_UPDATED,
+          targetType: AUDIT_TARGET_TYPE.BOOKING,
+          targetId: bookingId,
+          before: { assignmentId: row.id, wageAmount: current === null ? null : String(current) },
+          after: { assignmentId: row.id, wageAmount: String(amount), wageDays: days, reason },
+        },
+        tx,
+      );
+      const employer = await this.employerName(tx, tenantId);
+      await this.notifications.emitToUser(
+        row.driverUserId,
+        {
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED,
+          title: `Tiền công chuyến ${row.booking.code} đã đổi`,
+          body: `${employer}: ${formatVnd(current ?? 0)} → ${formatVnd(amount)}${reason ? ` · ${reason}` : ''}`,
+          targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
+          targetId: bookingId,
+        },
+        tx,
+      );
+    });
+  }
+
+  /**
+   * Các lượt tài xế ĐÃ NHẬN, kết thúc trong tháng (giờ VN) — ngăn kéo "Tiền công theo tài xế" ở
+   * trang Tài xế. Phân trang server-side, index `booking_driver_assignments_wage_stats_idx`.
+   */
+  async assignments(
+    tenantId: string,
+    driverId: string,
+    query: DriverAssignmentListQueryDto,
+  ): Promise<DriverAssignmentPageDto> {
+    const link = await this.prisma.driver.findFirst({
+      where: { id: driverId, tenantId },
+      select: { id: true },
+    });
+    if (!link) throw linkNotFound();
+    const paging = resolvePaging(query, DRIVER_DEFAULT_LIMIT, DRIVER_MAX_LIMIT);
+    const { from, to } = vnMonthRange(query.month);
+    const where: Prisma.BookingDriverAssignmentWhereInput = {
+      tenantId,
+      driverId,
+      acceptedAt: { not: null },
+      endedAt: { gte: from, lt: to },
+    };
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.bookingDriverAssignment.count({ where }),
+      this.prisma.bookingDriverAssignment.findMany({
+        where,
+        orderBy: [{ endedAt: 'desc' }, { id: 'desc' }],
+        skip: paging.skip,
+        take: paging.take,
+        select: {
+          id: true,
+          outcome: true,
+          acceptedAt: true,
+          endedAt: true,
+          wageAmount: true,
+          wageDays: true,
+          booking: { select: { id: true, code: true, pickupAt: true, returnAt: true } },
+        },
+      }),
+    ]);
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        bookingId: r.booking.id,
+        bookingCode: r.booking.code,
+        pickupAt: r.booking.pickupAt.toISOString(),
+        returnAt: r.booking.returnAt.toISOString(),
+        outcome: r.outcome,
+        endedAt: r.endedAt?.toISOString() ?? null,
+        stage: driverWageStage(r),
+        wageAmount: r.wageAmount ? r.wageAmount.toFixed(0) : null,
+        wageDays: r.wageDays,
+      })),
+      meta: paginationMeta(paging, total),
+    };
+  }
+
+  /**
+   * Hai cột thống kê tháng của trang Tài xế — hai groupBy cho cả trang, không N+1: số chuyến
+   * HOÀN THÀNH và tổng tiền công (hoàn thành + số thoả thuận của chuyến không chạy).
+   */
+  private async monthWageStats(
+    tenantId: string,
+    driverIds: string[],
+    month: string | undefined,
+  ): Promise<Map<string, { trips: number; total: number }>> {
+    if (driverIds.length === 0) return new Map();
+    const { from, to } = vnMonthRange(month);
+    const base: Prisma.BookingDriverAssignmentWhereInput = {
+      tenantId,
+      driverId: { in: driverIds },
+      acceptedAt: { not: null },
+      endedAt: { gte: from, lt: to },
+    };
+    const [completed, others] = await Promise.all([
+      this.prisma.bookingDriverAssignment.groupBy({
+        by: ['driverId'],
+        where: { ...base, outcome: DRIVER_ASSIGNMENT_OUTCOME.COMPLETED },
+        _count: { _all: true },
+        _sum: { wageAmount: true },
+      }),
+      this.prisma.bookingDriverAssignment.groupBy({
+        by: ['driverId'],
+        where: {
+          ...base,
+          outcome: { not: DRIVER_ASSIGNMENT_OUTCOME.COMPLETED },
+          wageAmount: { gt: 0 },
+        },
+        _sum: { wageAmount: true },
+      }),
+    ]);
+    const out = new Map<string, { trips: number; total: number }>();
+    for (const r of completed) {
+      out.set(r.driverId, { trips: r._count._all, total: Number(r._sum.wageAmount ?? 0) });
+    }
+    for (const r of others) {
+      const cur = out.get(r.driverId) ?? { trips: 0, total: 0 };
+      cur.total += Number(r._sum.wageAmount ?? 0);
+      out.set(r.driverId, cur);
+    }
+    return out;
   }
 
   /**
@@ -1352,6 +1885,35 @@ export class DriversService {
     return new Map(rows.map((r) => [r.userId, r.linkStatus]));
   }
 
+  /**
+   * Số lần RÚT chuyến bị tính vi phạm trong `DRIVER_DROP_STATS_WINDOW_DAYS` ngày, theo liên kết
+   * (ADR 0074 điều 2) — một groupBy cho cả trang; index một phần `booking_driver_assignments_dropped_idx`.
+   * `critical` = rút khi còn dưới 2 giờ — cờ để bên thuê cân nhắc tạm khoá.
+   */
+  private async dropStats(
+    driverIds: string[],
+  ): Promise<Map<string, { total: number; critical: number }>> {
+    if (driverIds.length === 0) return new Map();
+    const rows = await this.prisma.bookingDriverAssignment.groupBy({
+      by: ['driverId', 'dropZone'],
+      where: {
+        driverId: { in: driverIds },
+        outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+        dropZone: { in: [...DRIVER_DROP_VIOLATION_ZONES] },
+        endedAt: { gte: new Date(Date.now() - DRIVER_DROP_STATS_WINDOW_DAYS * DAY_MS) },
+      },
+      _count: { _all: true },
+    });
+    const out = new Map<string, { total: number; critical: number }>();
+    for (const r of rows) {
+      const cur = out.get(r.driverId) ?? { total: 0, critical: 0 };
+      cur.total += r._count._all;
+      if (r.dropZone === DRIVER_DROP_ZONE.CRITICAL) cur.critical += r._count._all;
+      out.set(r.driverId, cur);
+    }
+    return out;
+  }
+
   /** Số đơn "sống" theo liên kết — một groupBy cho cả trang, không N+1. */
   private async activeBookingCounts(driverIds: string[]): Promise<Map<string, number>> {
     if (driverIds.length === 0) return new Map();
@@ -1403,6 +1965,9 @@ async function openAssignment(
     driverId: string;
     driverUserId: string;
     assignedBy: string | null;
+    /** Tiền công khởi đầu (ADR 0075) — không phải một lần sửa, không ghi lịch sử. */
+    wageAmount: Prisma.Decimal;
+    wageDays: number;
   },
 ): Promise<void> {
   await tx.bookingDriverAssignment.updateMany({
@@ -1474,6 +2039,8 @@ function toDto(
   activeBookingCount: number,
   licence: DriverLicenceSummaryDto | undefined,
   currentOpenLinkStatus: string | null = null,
+  drops: { total: number; critical: number } = { total: 0, critical: 0 },
+  wages: { trips: number; total: number } = { trips: 0, total: 0 },
 ): DriverDto {
   return {
     id: r.id,
@@ -1496,6 +2063,14 @@ function toDto(
     },
     activeBookingCount,
     currentOpenLinkStatus,
+    dropCount: drops.total,
+    criticalDropCount: drops.critical,
+    autoAssignCooldownUntil:
+      r.autoAssignCooldownUntil && r.autoAssignCooldownUntil.getTime() > Date.now()
+        ? r.autoAssignCooldownUntil.toISOString()
+        : null,
+    monthCompletedTrips: wages.trips,
+    monthWageTotal: String(wages.total),
   };
 }
 
@@ -1513,6 +2088,105 @@ function driverSearchOr(q: string): Prisma.DriverWhereInput[] {
     { name: { contains: q, mode: 'insensitive' } },
     ...(pii.phones.length > 0 ? [{ phone: { in: pii.phones.map((p) => normalizePhone(p)) } }] : []),
   ];
+}
+
+/**
+ * Số ngày tính tiền của đơn — mẫu số của tiền công (ADR 0075). Đọc `price_snapshot_json.days` (đúng
+ * con số đã tính tiền thuê); đơn tự lập không có snapshot thì cùng công thức `PricingService.chargedDays`.
+ */
+export function wageDaysOf(b: {
+  priceSnapshot: Prisma.JsonValue;
+  pickupAt: Date;
+  returnAt: Date;
+}): number {
+  const snap = b.priceSnapshot;
+  const days =
+    snap && typeof snap === 'object' && !Array.isArray(snap) ? (snap as { days?: unknown }).days : null;
+  if (typeof days === 'number' && Number.isInteger(days) && days > 0) return days;
+  return Math.max(1, Math.ceil((b.returnAt.getTime() - b.pickupAt.getTime()) / DAY_MS));
+}
+
+/** "1.500.000đ" — câu thông báo dựng ở server. */
+function formatVnd(n: number): string {
+  return `${new Intl.NumberFormat('vi-VN').format(n)}đ`;
+}
+
+function wageOutOfRange(range: { min: number; max: number }): UnprocessableEntityException {
+  return new UnprocessableEntityException({
+    code: API_ERROR_CODE.DRIVER_WAGE_OUT_OF_RANGE,
+    message: `Tiền công phải từ ${formatVnd(range.min)} đến ${formatVnd(range.max)}`,
+    details: { min: String(range.min), max: String(range.max) },
+  });
+}
+
+/** Dòng sổ lượt gán đủ để dựng `DriverWageDto` — dùng chung cho bên thuê và chính tài xế. */
+export interface WageSource {
+  outcome: string;
+  acceptedAt: Date | null;
+  endedAt: Date | null;
+  wageAmount: Prisma.Decimal | null;
+  wageDays: number | null;
+  wageChanges: {
+    id: string;
+    oldAmount: Prisma.Decimal;
+    newAmount: Prisma.Decimal;
+    reason: string | null;
+    changedAt: Date;
+    changer: { displayName: string } | null;
+  }[];
+}
+
+/** Select tối thiểu cho `toWageDto` — lịch sử sửa mới nhất trước. */
+export const WAGE_SELECT = {
+  outcome: true,
+  acceptedAt: true,
+  endedAt: true,
+  wageAmount: true,
+  wageDays: true,
+  wageChanges: {
+    orderBy: [{ changedAt: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      oldAmount: true,
+      newAmount: true,
+      reason: true,
+      changedAt: true,
+      changer: { select: { displayName: true } },
+    },
+  },
+} satisfies Prisma.BookingDriverAssignmentSelect;
+
+/** Tiền công của một lượt gán → DTO (ADR 0075). Khoảng sửa theo chính sách HIỆN HÀNH. */
+export function toWageDto(r: WageSource, limits: WithDriverLimits, now: Date = new Date()): DriverWageDto {
+  const stage: DriverWageStage = driverWageStage(r);
+  const range = r.wageDays ? driverWageRange(stage, limits, r.wageDays) : null;
+  const editableUntil = driverWageEditableUntil(r.endedAt);
+  return {
+    amount: r.wageAmount ? r.wageAmount.toFixed(0) : null,
+    days: r.wageDays,
+    stage,
+    // Lượt trước tính năng (không có số ngày) không có mẫu số để kiểm — không mở sửa.
+    editable: r.wageDays != null && driverWageEditable(r, now),
+    editableUntil: editableUntil?.toISOString() ?? null,
+    range: range ? { min: String(range.min), max: String(range.max) } : null,
+    changes: r.wageChanges.map((c) => ({
+      id: c.id,
+      oldAmount: c.oldAmount.toFixed(0),
+      newAmount: c.newAmount.toFixed(0),
+      reason: c.reason,
+      changedAt: c.changedAt.toISOString(),
+      changedByName: c.changer?.displayName ?? null,
+    })),
+  };
+}
+
+/** Khoảng `[đầu tháng; đầu tháng sau)` của tháng `YYYY-MM` theo giờ Việt Nam (UTC+7, không DST). */
+export function vnMonthRange(month: string | undefined, now: Date = new Date()): { from: Date; to: Date } {
+  const key = month ?? vnMonthKey(now);
+  const [y, m] = key.split('-').map(Number) as [number, number];
+  const from = new Date(Date.UTC(y, m - 1, 1) - 7 * 3_600_000);
+  const to = new Date(Date.UTC(y, m, 1) - 7 * 3_600_000);
+  return { from, to };
 }
 
 /** "20/10 08:00" giờ Việt Nam — câu thông báo dựng ở server, không phụ thuộc máy người nhận. */

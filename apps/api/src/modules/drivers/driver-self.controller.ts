@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { CurrentUser, Realms } from '../../common/decorators';
@@ -9,6 +9,7 @@ import { DriversService } from './drivers.service';
 import {
   DriverPendingCountsDto,
   DriverTripDetailDto,
+  DropDriverTripDto,
   DriverTripListQueryDto,
   DriverTripPageDto,
   MyDriverLinkListQueryDto,
@@ -19,8 +20,8 @@ import {
  * Tài khoản KHÁCH trong vai TÀI XẾ (ADR 0063) — chỉ realm khách, không tenant-scoped.
  *
  * Không tham số nào nhận danh tính: người lái luôn là `userId` của phiên. Không có đường đổi
- * trạng thái ĐƠN ở đây — tài xế chỉ nhận/từ chối LƯỢT GÁN của chính mình; giao nhận xe, huỷ,
- * khách không đến vẫn là việc của bên thuê.
+ * trạng thái ĐƠN ở đây — tài xế chỉ nhận/từ chối/rút LƯỢT GÁN của chính mình (ADR 0074); giao
+ * nhận xe, huỷ, khách không đến vẫn là việc của bên thuê.
  */
 @ApiTags('driver-self')
 @Controller('driver')
@@ -147,6 +148,24 @@ export class DriverSelfController {
     @Param('id') id: string,
   ): Promise<{ ok: true }> {
     await this.drivers.releaseTrip(user.id, id);
+    return { ok: true };
+  }
+
+  @Post('trips/:id/drop')
+  @ApiOperation({
+    summary: 'Báo sự cố / rút khỏi chuyến đã nhận',
+    description:
+      'ADR 0074. Chỉ chuyến của tôi đã nhận, đơn chưa giao xe (`canDrop`). Đơn KHÔNG bị huỷ: về chưa có tài xế, bên thuê được báo khẩn kèm hạn điều phối lại. ' +
+      'Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2–12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. ' +
+      '`other` thiếu ghi chú ⇒ 422 `DRIVER_DROP_NOTE_REQUIRED`; lượt không còn của tôi / chưa nhận ⇒ 409 `DRIVER_ASSIGNMENT_STATE_CONFLICT`.',
+  })
+  @ApiOkResponse({ type: OkResultDto })
+  async dropTrip(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: DropDriverTripDto,
+  ): Promise<{ ok: true }> {
+    await this.drivers.dropTrip(user.id, id, dto);
     return { ok: true };
   }
 }

@@ -93,6 +93,17 @@ verifyDepsBeforeRun: false
 # Bỏ dòng này thì phải kiểm lại `pnpm why expo-font` chỉ còn MỘT phiên bản.
 overrides:
   expo-font: 14.0.12
+  # VÁ BẢO MẬT cho dependency BẮC CẦU của API (rà soát trước production 29/10/2026) — bản mới nhất
+  # của @nestjs/platform-express 11 vẫn kéo bản còn lỗ hổng:
+  #   multer < 2.5.0       — DoS qua multipart dị dạng / upload bị huỷ (lộ trên mọi route upload)
+  #   body-parser < 2.4.0  — DoS qua body nén có byte thừa (lộ trên MỌI route nhận JSON)
+  #   proxy-addr < 2.0.8   — giả IP qua IPv6 ánh xạ IPv4 (đọc IP thật cho rate limit)
+#   fast-xml-parser < 4.5.5 — bypass mã hoá entity / DoS mở rộng entity (AWS SDK đọc XML của R2)
+  # Gỡ dòng nào thì kiểm lại `pnpm why <tên>` không còn bản cũ hơn mốc trên.
+  multer: 2.5.0
+  body-parser: 2.4.0
+  proxy-addr: 2.0.8
+  fast-xml-parser@4: 4.5.7
 
 # KHAI PEER `react`/`react-native` cho react-native-calendars.
 #

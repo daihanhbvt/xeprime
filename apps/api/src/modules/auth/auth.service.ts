@@ -49,7 +49,10 @@ import {
 import { EmailService } from '../email/email.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
+import { LoginThrottleService } from './login-throttle.service';
+import { NATIVE_REVOKE_REASON, NativeSessionService } from './native-session.service';
 import { RequestRealmService } from './request-realm.service';
+import { SessionService, WEB_REVOKE_REASON } from './session.service';
 import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
 
@@ -87,6 +90,11 @@ export class AuthService {
      * Nó không bao giờ là một cách đăng nhập: không hàm nào ở đây phát phiên vì một mã đúng.
      */
     private readonly phoneVerification: PhoneVerificationService,
+    /** Phiên web + phiên app — đổi/đặt lại mật khẩu thu hồi chúng (ADR 0076). */
+    private readonly sessions: SessionService,
+    private readonly nativeSessions: NativeSessionService,
+    /** Khoá đăng nhập theo định danh (ADR 0076 điều 3). */
+    private readonly loginThrottle: LoginThrottleService,
   ) {}
 
   /**
@@ -217,9 +225,15 @@ export class AuthService {
     }
     // Tra TRONG realm (ADR 0053): cùng số/email ở site khác là một tài khoản khác, mật khẩu khác.
     // `compactPhoneInput` bỏ dấu cách/chấm/gạch/ngoặc — cùng phép bỏ mà ô nhập ở client đã cho qua.
+    const key = isEmail ? identifier.toLowerCase() : normalizePhone(compactPhoneInput(identifier));
     const where = isEmail
-      ? { realm, email: identifier.toLowerCase(), deletedAt: null }
-      : { realm, phone: normalizePhone(compactPhoneInput(identifier)), deletedAt: null };
+      ? { realm, email: key, deletedAt: null }
+      : { realm, phone: key, deletedAt: null };
+
+    // Định danh đang bị khoá vì sai quá nhiều lần — chặn TRƯỚC bcrypt, kể cả khi lần này đúng mật
+    // khẩu (ADR 0076 điều 3). Định danh không có tài khoản cũng khoá y hệt.
+    await this.loginThrottle.assertNotLocked(realm, key);
+
     const user = await this.prisma.user.findFirst({
       where,
       select: { id: true, passwordHash: true, status: true },
@@ -229,6 +243,8 @@ export class AuthService {
     const ok = await bcrypt.compare(password, hash);
 
     if (!user || !user.passwordHash || !ok) {
+      // Chạm trần ở chính lượt này thì `recordFailure` ném `LOGIN_TEMPORARILY_LOCKED`.
+      await this.loginThrottle.recordFailure(realm, key);
       throw new UnauthorizedException({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
         message: 'Email/số điện thoại hoặc mật khẩu không đúng',
@@ -241,6 +257,7 @@ export class AuthService {
       });
     }
 
+    await this.loginThrottle.clear(realm, [key]);
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return { userId: user.id };
   }
@@ -275,11 +292,15 @@ export class AuthService {
    *  - Sai mật khẩu hiện tại → 400 `CURRENT_PASSWORD_INCORRECT`, KHÔNG phải 401: người dùng vẫn
    *    đang đăng nhập hợp lệ, web không được coi đây là phiên hỏng.
    *  - Không ghi mật khẩu hay hash vào log/exception — chỉ có mã lỗi.
+   *  - Mọi phiên KHÁC (web lẫn app) bị thu hồi trong cùng transaction; phiên đang thao tác
+   *    (`current`) được giữ (ADR 0076 điều 2). Đổi mật khẩu vì nghi bị lộ mà kẻ kia vẫn ở trong là
+   *    đổi cho có.
    */
   async changePassword(
     userId: string,
     currentPassword: string,
     newPassword: string,
+    current: { sessionId: string; transport: 'cookie' | 'bearer' },
   ): Promise<void> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -319,7 +340,39 @@ export class AuthService {
         where: { userId: user.id, usedAt: null },
         data: { usedAt: new Date() },
       });
+      await this.sessions.revokeAllForUser(user.id, WEB_REVOKE_REASON.PASSWORD_CHANGED, {
+        exceptSessionId: current.transport === 'cookie' ? current.sessionId : undefined,
+        tx,
+      });
+      await this.nativeSessions.revokeAllForUser(user.id, NATIVE_REVOKE_REASON.PASSWORD_CHANGED, {
+        exceptSessionId: current.transport === 'bearer' ? current.sessionId : undefined,
+        tx,
+      });
     });
+  }
+
+  /**
+   * Sau khi mật khẩu được ĐẶT LẠI (email hoặc OTP): giết mọi phiên web + app của tài khoản, trong
+   * transaction của lượt đổi mật khẩu. Người đặt lại mật khẩu thường là vì nghi bị chiếm — mọi
+   * phiên đang mở đều có thể là của kẻ kia (ADR 0076 điều 2).
+   */
+  private async revokeAllSessionsWithinTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<void> {
+    await this.sessions.revokeAllForUser(userId, WEB_REVOKE_REASON.PASSWORD_RESET, { tx });
+    await this.nativeSessions.revokeAllForUser(userId, NATIVE_REVOKE_REASON.PASSWORD_RESET, { tx });
+  }
+
+  /** Mật khẩu vừa đặt lại ⇒ mở khoá đăng nhập của mọi định danh của tài khoản (ADR 0076 điều 3). */
+  private async clearLoginLockout(
+    realm: AccountRealm,
+    account: { phone: string | null; email: string | null },
+  ): Promise<void> {
+    await this.loginThrottle.clear(
+      realm,
+      [account.phone, account.email].filter((value): value is string => Boolean(value)),
+    );
   }
 
   // ---- Quên / đặt lại mật khẩu ----------------------------------------------
@@ -390,7 +443,7 @@ export class AuthService {
     const tokenHash = this.hashToken(token);
     const record = await this.prisma.passwordResetToken.findFirst({
       where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { realm } },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, user: { select: { phone: true, email: true } } },
     });
     if (!record) {
       throw new BadRequestException({
@@ -407,7 +460,9 @@ export class AuthService {
         where: { userId: record.userId, usedAt: null },
         data: { usedAt: new Date() },
       });
+      await this.revokeAllSessionsWithinTx(tx, record.userId);
     });
+    await this.clearLoginLockout(realm, record.user);
   }
 
   // ---- OTP theo mục đích (ADR 0060) ------------------------------------------
@@ -488,7 +543,11 @@ export class AuthService {
         message: 'Tài khoản quản trị đặt lại mật khẩu qua email',
       });
     }
-    const verificationId = await this.phoneVerification.verifyPasswordResetOtp(rawPhone, code, realm);
+    const verificationId = await this.phoneVerification.verifyPasswordResetOtp(
+      rawPhone,
+      code,
+      realm,
+    );
 
     const account = await this.findResettableAccount(normalizePhone(rawPhone), realm);
     if (!account) {
@@ -510,17 +569,24 @@ export class AuthService {
         where: { userId: account.id, usedAt: null },
         data: { usedAt: now },
       });
+      await this.revokeAllSessionsWithinTx(tx, account.id);
     });
+    await this.clearLoginLockout(realm, account);
   }
 
   /** Tài khoản ĐANG HOẠT ĐỘNG mang SĐT đó trong realm — cùng điều kiện với quên mật khẩu qua email. */
   private findResettableAccount(
     normalizedPhone: string,
     realm: AccountRealm,
-  ): Promise<{ id: string; phoneVerifiedAt: Date | null } | null> {
+  ): Promise<{
+    id: string;
+    phone: string | null;
+    email: string | null;
+    phoneVerifiedAt: Date | null;
+  } | null> {
     return this.prisma.user.findFirst({
       where: { realm, phone: normalizedPhone, deletedAt: null, status: USER_STATUS.ACTIVE },
-      select: { id: true, phoneVerifiedAt: true },
+      select: { id: true, phone: true, email: true, phoneVerifiedAt: true },
     });
   }
 
@@ -569,16 +635,22 @@ export class AuthService {
       return { userId: existing.userId };
     }
 
-    // Email từ provider không đáng tin như nhau. Chỉ provider đã xác minh email mới được nối tự
-    // động vào tài khoản XePrime có sẵn; nếu không, kẻ khác có thể tự khai cùng email để chiếm tài khoản.
+    /*
+     * Tự nối vào tài khoản có sẵn theo email CHỈ KHI cả hai đầu cùng đã xác minh email đó:
+     *  - provider chưa xác minh ⇒ kẻ khác tự khai cùng email để vào tài khoản của nạn nhân;
+     *  - tài khoản XePrime chưa xác minh (vd tạo bằng Facebook, email chỉ là thông tin provider
+     *    đưa) ⇒ kẻ khác GIEO sẵn một tài khoản mang email nạn nhân, chờ nạn nhân đăng nhập Google
+     *    là được nối vào tài khoản kẻ đó còn giữ (pre-account hijack).
+     * Lệch một trong hai ⇒ CONFLICT, người dùng đăng nhập bằng cách đã dùng trước đó.
+     */
     const emailUser = providerEmail
       ? await this.prisma.user.findFirst({
           where: { realm, email: providerEmail, deletedAt: null },
-          select: { id: true, status: true },
+          select: { id: true, status: true, emailVerifiedAt: true },
         })
       : null;
 
-    if (emailUser && !identity.emailVerified) {
+    if (emailUser && (!identity.emailVerified || emailUser.emailVerifiedAt === null)) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
         message:
@@ -586,7 +658,7 @@ export class AuthService {
       });
     }
 
-    const linkedUser = identity.emailVerified ? emailUser : null;
+    const linkedUser = emailUser;
     if (linkedUser && linkedUser.status !== USER_STATUS.ACTIVE) {
       throw new UnauthorizedException({
         code: API_ERROR_CODE.ACCOUNT_LOCKED,

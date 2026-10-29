@@ -3,6 +3,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  LOGIN_LOCKOUT_POLICY,
   OTP_POLICY,
   PHONE_VERIFICATION_PURPOSE,
   USER_STATUS,
@@ -11,6 +12,9 @@ import {
 } from '@xeprime/types';
 import bcrypt from 'bcrypt';
 import { AuthService } from '../src/modules/auth/auth.service';
+import { LoginThrottleService } from '../src/modules/auth/login-throttle.service';
+import { NativeSessionService } from '../src/modules/auth/native-session.service';
+import { SessionService } from '../src/modules/auth/session.service';
 import { MockOtpProvider } from '../src/modules/phone-verification/otp-provider';
 import { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { normalizePhone } from '../src/common/phone';
@@ -45,6 +49,11 @@ const ENV: Record<string, unknown> = {
   OTP_MODE: 'mock',
   NODE_ENV: 'test',
   OTP_PEPPER: 'test-pepper-phone-login-1234',
+  SESSION_JWT_SECRET: 'test-session-secret-phone-login-0123456789',
+  SESSION_COOKIE_SECURE: false,
+  MOBILE_ACCESS_TTL_MINUTES: 15,
+  MOBILE_REFRESH_TTL_DAYS: 60,
+  MOBILE_JWT_AUDIENCE: 'xeprime-mobile-test',
 };
 const config = {
   get: (k: string) => ENV[k],
@@ -59,6 +68,10 @@ const phoneVerification = new PhoneVerificationService(asService, config, new Mo
 
 // Đăng ký / đăng nhập / quên mật khẩu chỉ dùng prisma + OTP — rbac/email/chính sách phí/URL site
 // không bị chạm tới.
+// Phiên + bộ đếm sai là bảng THẬT (ADR 0076): đổi/đặt lại mật khẩu thu hồi phiên, đăng nhập sai bị khoá.
+const webSessions = new SessionService(config, asService);
+const nativeSessions = new NativeSessionService(config, asService);
+const loginThrottle = new LoginThrottleService(asService);
 const auth = new AuthService(
   asService,
   null as never,
@@ -67,6 +80,9 @@ const auth = new AuthService(
   null as never,
   null as never,
   phoneVerification,
+  webSessions,
+  nativeSessions,
+  loginThrottle,
 );
 const C = ACCOUNT_REALM.CUSTOMER;
 const P = ACCOUNT_REALM.PARTNER;
@@ -134,6 +150,13 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     const phones = [...usedPhones];
+    await prisma.loginThrottle.deleteMany({
+      where: {
+        identifierHash: {
+          in: [...phones, ...usedEmails].map((v) => LoginThrottleService.hashIdentifier(v)),
+        },
+      },
+    });
     // Xoá user theo SĐT/email test → cascade user_identities + password_reset_tokens.
     await prisma.user.deleteMany({
       where: { OR: [{ phone: { in: phones } }, { email: { in: [...usedEmails] } }] },
@@ -464,21 +487,26 @@ describe('Quên mật khẩu bằng SĐT (ADR 0060)', () => {
     },
   );
 
-  maybe('mã đã xác minh quá cửa sổ 10 phút: OTP_EXPIRED (gửi lại mã), mật khẩu không đổi', async () => {
-    const phone = mkPhone();
-    await register(phone, C, 'matkhau-cu-1');
-    const code = await otpFor(phone, RESET, C);
-    await phoneVerification.verifyOtp(phone, RESET, code, C, null);
-    await prisma.phoneVerification.updateMany({
-      where: { phone: normalizePhone(phone), purpose: RESET },
-      data: { verifiedAt: new Date(Date.now() - 11 * 60_000) },
-    });
+  maybe(
+    'mã đã xác minh quá cửa sổ 10 phút: OTP_EXPIRED (gửi lại mã), mật khẩu không đổi',
+    async () => {
+      const phone = mkPhone();
+      await register(phone, C, 'matkhau-cu-1');
+      const code = await otpFor(phone, RESET, C);
+      await phoneVerification.verifyOtp(phone, RESET, code, C, null);
+      await prisma.phoneVerification.updateMany({
+        where: { phone: normalizePhone(phone), purpose: RESET },
+        data: { verifiedAt: new Date(Date.now() - 11 * 60_000) },
+      });
 
-    await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.OTP_EXPIRED },
-    });
-    expect(await auth.loginWithPassword(phone, 'matkhau-cu-1', C)).toBeDefined();
-  });
+      await expect(
+        auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.OTP_EXPIRED },
+      });
+      expect(await auth.loginWithPassword(phone, 'matkhau-cu-1', C)).toBeDefined();
+    },
+  );
 
   maybe(
     'mã ĐÃ xác minh vẫn bị đếm lần đoán sai: chạm trần thì khoá, mã đúng cũng hết dùng được',
@@ -494,11 +522,13 @@ describe('Quên mật khẩu bằng SĐT (ADR 0060)', () => {
           auth.resetPasswordWithOtp(phone, wrong, 'matkhau-moi-2', C),
         ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
       }
-      await expect(auth.resetPasswordWithOtp(phone, wrong, 'matkhau-moi-2', C)).rejects.toMatchObject(
-        { response: { code: API_ERROR_CODE.OTP_LOCKED } },
-      );
+      await expect(
+        auth.resetPasswordWithOtp(phone, wrong, 'matkhau-moi-2', C),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_LOCKED } });
 
-      await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C)).rejects.toMatchObject({
+      await expect(
+        auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C),
+      ).rejects.toMatchObject({
         response: { code: API_ERROR_CODE.OTP_INVALID },
       });
       expect(await auth.loginWithPassword(phone, 'matkhau-cu-1', C)).toBeDefined();
@@ -661,5 +691,124 @@ describe('Đặt mật khẩu lần đầu (tài khoản Google/Facebook)', () =
     await expect(auth.setPassword(id, 'khacnhau123')).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.CONFLICT },
     });
+  });
+});
+
+describe('Khoá đăng nhập theo định danh (ADR 0076)', () => {
+  const max = LOGIN_LOCKOUT_POLICY.MAX_FAILURES[C];
+
+  maybe('sai đủ trần ⇒ LOGIN_TEMPORARILY_LOCKED, kể cả khi lần sau đúng mật khẩu', async () => {
+    const phone = mkPhone();
+    await register(phone, C);
+    for (let i = 1; i < max; i++) {
+      await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
+      });
+    }
+    // Lần sai CHẠM trần trả ngay mã khoá — người dùng biết vì sao lần sau bị từ chối.
+    await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toMatchObject({
+      status: 429,
+      response: { code: API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED },
+    });
+    await expect(auth.loginWithPassword(phone, 'matkhau123', C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED },
+    });
+    // Realm khác là định danh khác — không bị khoá lây.
+    await expect(auth.loginWithPassword(phone, 'matkhau123', P)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
+    });
+  });
+
+  maybe('số KHÔNG có tài khoản bị khoá y hệt — không lộ ai có tài khoản', async () => {
+    const phone = mkPhone();
+    for (let i = 1; i < max; i++) {
+      await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
+      });
+    }
+    await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED },
+    });
+  });
+
+  maybe('hai lượt sai song song đều được đếm (upsert nguyên tử)', async () => {
+    const phone = mkPhone();
+    await Promise.allSettled([
+      auth.loginWithPassword(phone, 'saibet123', C),
+      auth.loginWithPassword(phone, 'saibet123', C),
+      auth.loginWithPassword(phone, 'saibet123', C),
+    ]);
+    const row = await prisma.loginThrottle.findUniqueOrThrow({
+      where: {
+        realm_identifierHash: {
+          realm: C,
+          identifierHash: LoginThrottleService.hashIdentifier(normalizePhone(phone)),
+        },
+      },
+    });
+    expect(row.failedCount).toBe(3);
+  });
+
+  maybe('đăng nhập đúng xoá bộ đếm', async () => {
+    const phone = mkPhone();
+    await register(phone, C);
+    await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toBeDefined();
+    await auth.loginWithPassword(phone, 'matkhau123', C);
+    expect(
+      await prisma.loginThrottle.count({
+        where: { identifierHash: LoginThrottleService.hashIdentifier(normalizePhone(phone)) },
+      }),
+    ).toBe(0);
+  });
+
+  maybe('đặt lại mật khẩu bằng OTP mở khoá và giết MỌI phiên web + app', async () => {
+    const phone = mkPhone();
+    const userId = await register(phone, C, 'matkhau-cu-1');
+    const web = await webSessions.issue(userId);
+    const app = await nativeSessions.issueSession(userId);
+    for (let i = 0; i < max; i++) {
+      await auth.loginWithPassword(phone, 'saibet123', C).catch(() => undefined);
+    }
+
+    const code = await otpFor(phone, RESET, C);
+    await auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C);
+
+    expect((await auth.loginWithPassword(phone, 'matkhau-moi-2', C)).userId).toBe(userId);
+    await expect(webSessions.isSessionUsable(web.sessionId, userId)).resolves.toBe(false);
+    await expect(nativeSessions.isSessionUsable(app.sessionId, userId)).resolves.toBe(false);
+  });
+});
+
+describe('Đổi mật khẩu thu hồi các phiên KHÁC (ADR 0076)', () => {
+  maybe('giữ phiên đang thao tác, giết phiên web/app còn lại', async () => {
+    const phone = mkPhone();
+    const userId = await register(phone, C, 'matkhau-cu-1');
+    const current = await webSessions.issue(userId);
+    const otherWeb = await webSessions.issue(userId);
+    const otherApp = await nativeSessions.issueSession(userId);
+
+    await auth.changePassword(userId, 'matkhau-cu-1', 'matkhau-moi-2', {
+      sessionId: current.sessionId,
+      transport: 'cookie',
+    });
+
+    await expect(webSessions.isSessionUsable(current.sessionId, userId)).resolves.toBe(true);
+    await expect(webSessions.isSessionUsable(otherWeb.sessionId, userId)).resolves.toBe(false);
+    await expect(nativeSessions.isSessionUsable(otherApp.sessionId, userId)).resolves.toBe(false);
+  });
+
+  maybe('đổi từ app: giữ phiên app hiện tại, giết mọi phiên web', async () => {
+    const phone = mkPhone();
+    const userId = await register(phone, C, 'matkhau-cu-1');
+    const web = await webSessions.issue(userId);
+    const app = await nativeSessions.issueSession(userId);
+
+    await auth.changePassword(userId, 'matkhau-cu-1', 'matkhau-moi-2', {
+      sessionId: app.sessionId,
+      transport: 'bearer',
+    });
+
+    await expect(nativeSessions.isSessionUsable(app.sessionId, userId)).resolves.toBe(true);
+    await expect(webSessions.isSessionUsable(web.sessionId, userId)).resolves.toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 # ADR 0067 — Tài xế ngoài hệ thống ghi trên đơn; chuyến thiếu tài xế sát giờ KHÔNG tự huỷ
 
-Ngày: 22/10/2026 · Trạng thái: **Accepted** · Ghi đè một phần: [0063](0063-linked-driver-accounts.md) (điều 2 câu "Bỏ hồ sơ không tài khoản" trong phạm vi MỘT ĐƠN; điều 13 mở rộng sang hai cột mới), [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) (điều 4, gạch "tự huỷ đơn khi sát giờ … chưa làm") · Giữ nguyên: 0045 (trách nhiệm huỷ), 0056 (liên hệ khách phía chủ xe), 0064 điều 13 (chi trả tài xế hoãn)
+Ngày: 22/10/2026 · Trạng thái: **Partially superseded** — điều 1 (ghi MỚI tài xế ngoài hệ thống) bị [0074](0074-driver-drop-accepted-trip.md) điều 4 gỡ; điều 2 còn hiệu lực · Ghi đè một phần: [0063](0063-linked-driver-accounts.md) (điều 2 câu "Bỏ hồ sơ không tài khoản" trong phạm vi MỘT ĐƠN; điều 13 mở rộng sang hai cột mới), [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) (điều 4, gạch "tự huỷ đơn khi sát giờ … chưa làm") · Giữ nguyên: 0045 (trách nhiệm huỷ), 0056 (liên hệ khách phía chủ xe), 0064 điều 13 (chi trả tài xế hoãn)
 
 ## Bối cảnh
 

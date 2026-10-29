@@ -12,6 +12,7 @@
  */
 
 import { STATUS_COLOR, type StatusMeta } from './meta';
+import { SERVICE_TYPE } from './vehicle';
 
 /** Danh mục phát sinh được phép. Cố ý KHÔNG có nhiên liệu (§8). */
 export const SURCHARGE_CATEGORY = {
@@ -66,6 +67,40 @@ export const SURCHARGE_CATEGORY_META: Readonly<Record<SurchargeCategory, StatusM
 export const SINGLE_ENTRY_SURCHARGE_CATEGORIES: readonly SurchargeCategory[] = [
   SURCHARGE_CATEGORY.EXCESS_MILEAGE,
 ];
+
+/**
+ * Danh mục ĐÃ GỠ (ADR 0075 điều 7) — phụ phí riêng của chuyến có tài xế. Không ghi MỚI; khoản đã
+ * ghi trên đơn cũ vẫn đọc và tính như trước.
+ */
+export const RETIRED_SURCHARGE_CATEGORIES: readonly SurchargeCategory[] = [
+  SURCHARGE_CATEGORY.WAITING,
+  SURCHARGE_CATEGORY.LONG_DISTANCE,
+  SURCHARGE_CATEGORY.OVERNIGHT,
+];
+
+/**
+ * Danh mục KHÔNG ghi được trên đơn CÓ TÀI XẾ — khách luôn một giá trọn gói (ADR 0075): quá giờ và
+ * vượt km là phụ phí theo thời gian/quãng đường, đúng thứ giá có tài đã gồm.
+ */
+export const WITH_DRIVER_BLOCKED_SURCHARGE_CATEGORIES: readonly SurchargeCategory[] = [
+  SURCHARGE_CATEGORY.OVERTIME,
+  SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+];
+
+/** Lý do một danh mục không ghi MỚI được trên đơn này — `null` = được. */
+export function surchargeCategoryBlock(
+  category: string,
+  serviceType: string,
+): 'retired' | 'with_driver' | null {
+  if ((RETIRED_SURCHARGE_CATEGORIES as readonly string[]).includes(category)) return 'retired';
+  if (
+    serviceType === SERVICE_TYPE.WITH_DRIVER &&
+    (WITH_DRIVER_BLOCKED_SURCHARGE_CATEGORIES as readonly string[]).includes(category)
+  ) {
+    return 'with_driver';
+  }
+  return null;
+}
 
 export function isSingleEntrySurchargeCategory(value: string): boolean {
   return (SINGLE_ENTRY_SURCHARGE_CATEGORIES as readonly string[]).includes(value);

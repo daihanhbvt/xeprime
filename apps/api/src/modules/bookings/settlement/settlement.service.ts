@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
@@ -23,6 +24,7 @@ import {
   RECEIPT_TYPE,
   SURCHARGE_CATEGORY,
   isSingleEntrySurchargeCategory,
+  surchargeCategoryBlock,
   SYSTEM_FINANCE_CATEGORY,
   type BookingStatus,
   type DepositStatus,
@@ -102,6 +104,7 @@ export class SettlementService {
     dto: SaveSurchargeDto,
   ): Promise<BookingSettlementDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
+    assertSurchargeCategoryAllowed(dto.category, booking.serviceType);
     await this.requireNoDuplicateCategory(tenantId, bookingId, dto.category);
     const id = newId();
 
@@ -165,6 +168,8 @@ export class SettlementService {
     // Đổi SANG một danh mục chỉ-một-khoản cũng phải qua cùng cửa; giữ nguyên danh mục thì không
     // — nếu không, sửa số tiền của chính khoản vượt km sẽ tự đâm vào lỗi trùng của chính nó.
     if (dto.category !== current.category) {
+      // Sửa số của một khoản CŨ thuộc danh mục đã gỡ thì được; đổi SANG danh mục bị chặn thì không.
+      assertSurchargeCategoryAllowed(dto.category, booking.serviceType);
       await this.requireNoDuplicateCategory(tenantId, bookingId, dto.category);
     }
 
@@ -991,6 +996,26 @@ function depositStatusOf(input: {
   return input.proposedRefund.greaterThan(0)
     ? DEPOSIT_STATUS.AWAITING_REFUND
     : DEPOSIT_STATUS.SETTLED;
+}
+
+/**
+ * Danh mục phụ phí còn ghi MỚI được trên đơn này không (ADR 0075 điều 7): ba danh mục riêng của
+ * chuyến có tài xế đã gỡ; đơn có tài xế không nhận quá giờ / vượt km — khách luôn một giá trọn gói.
+ */
+function assertSurchargeCategoryAllowed(category: string, serviceType: string): void {
+  const block = surchargeCategoryBlock(category, serviceType);
+  if (block === 'retired') {
+    throw new UnprocessableEntityException({
+      code: API_ERROR_CODE.SURCHARGE_CATEGORY_RETIRED,
+      message: 'Danh mục phụ phí này đã gỡ — giá có tài xế là giá trọn gói',
+    });
+  }
+  if (block === 'with_driver') {
+    throw new UnprocessableEntityException({
+      code: API_ERROR_CODE.SURCHARGE_NOT_ALLOWED_WITH_DRIVER,
+      message: 'Chuyến có tài xế không ghi phụ phí quá giờ / vượt km — khách trả một giá trọn gói',
+    });
+  }
 }
 
 /** Re-export để controller khai kiểu mà không phải import chéo DTO. */

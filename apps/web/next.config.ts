@@ -4,6 +4,9 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Không quảng cáo framework/phiên bản qua `X-Powered-By: Next.js` — chỉ giúp người dò lỗ hổng.
+  poweredByHeader: false,
+
   // Cho phép máy khác trong LAN mở dev server qua IP (Next 16 chặn origin ngoài localhost,
   // làm hỏng HMR websocket). Chỉ ảnh hưởng dev, không ảnh hưởng production build.
   allowedDevOrigins: ['192.168.1.210'],
@@ -15,6 +18,28 @@ const nextConfig: NextConfig = {
 
   // Next 16 bỏ tích hợp ESLint khỏi `next build`; lint chạy riêng qua `pnpm lint` (turbo).
   typescript: { ignoreBuildErrors: false },
+
+  /*
+   * Chống CLICKJACKING — không site lạ nào được nhúng trang XePrime vào iframe để lừa người dùng
+   * bấm "Duyệt", "Rút tiền", "Xoá" qua một lớp phủ trong suốt (rà soát trước production 29/10/2026).
+   *
+   * `frame-ancestors` là chuẩn hiện hành; `X-Frame-Options` cho trình duyệt cũ. Cả hai cho phép
+   * CÙNG ORIGIN chứ không `none`: ba site là ba origin khác nhau nên site khách vẫn không nhúng được
+   * site quản trị, còn iframe `srcDoc` xem trước mẫu thông báo (`TemplatePreviewPane`) không bị chặn.
+   * CSP ở đây CHỈ có `frame-ancestors` — không giới hạn script/style, nên không đụng tới AntD
+   * CSS-in-JS. Đặt ở Next (không ở Caddy) để máy dev và mọi môi trường cùng một luật.
+   */
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+    ];
+  },
 };
 
 /**

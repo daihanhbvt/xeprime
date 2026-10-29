@@ -89,7 +89,18 @@ describe('Đăng nhập web theo site (ADR 0053)', () => {
           : null;
       }),
     },
+    // Phiên web (ADR 0076): `SessionService.issue` ghi một hàng, `AuthGuard` tra lại nó.
+    webSession: {
+      create: jest.fn(async ({ data }: { data: { id: string } }) => {
+        webSessionIds.add(data.id);
+        return data;
+      }),
+      findFirst: jest.fn(async ({ where }: { where: { id: string } }) =>
+        webSessionIds.has(where.id) ? { id: where.id } : null,
+      ),
+    },
   };
+  const webSessionIds = new Set<string>();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({

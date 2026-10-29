@@ -10,13 +10,18 @@ export type BookingListItem = Schemas['BookingListItemDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
-export type ExternalDriverInput = Schemas['ExternalDriverInputDto'];
+export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
 /**
- * Body của `PATCH /bookings/:id/driver` — ĐÚNG MỘT khoá (server từ chối body mang cả hai). DTO sinh
- * ra để cả hai khoá tuỳ chọn; union ở đây để TypeScript bắt lỗi trước khi server phải bắt.
+ * Body của `PATCH /bookings/:id/driver` — chỉ tài xế LIÊN KẾT (`null` = bỏ gán). Khoá
+ * `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422), nên web không còn dựng được nó.
  */
-export type AssignBookingDriverInput =
-  { driverId: string | null } | { externalDriver: ExternalDriverInput };
+/** Gán/bỏ gán tài xế — `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075). */
+export type AssignBookingDriverInput = { driverId: string | null; wageAmount?: string };
+/** Tiền công của một lượt gán (ADR 0075) — XePrime chỉ ghi nhận, chủ xe trả trực tiếp. */
+export type DriverWage = Schemas['DriverWageDto'];
+/** Số liệu cho hộp gán: số ngày, gợi ý mặc định × N, khoảng hợp lệ — server tính. */
+export type DriverWageQuote = Schemas['DriverWageQuoteDto'];
+export type UpdateDriverWageInput = Schemas['UpdateDriverWageDto'];
 export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];
