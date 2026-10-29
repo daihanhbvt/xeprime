@@ -516,7 +516,8 @@
       "retry": "Try again",
       "chooseAgain": "Choose again",
       "invalid": "The trip details are not valid. Please choose again on the car page."
-    }
+    },
+    "tripNeedsFix": "These rental dates can’t be used — please adjust them and tap Rent again."
   },
   "approved": {
     "title": "Booking created",

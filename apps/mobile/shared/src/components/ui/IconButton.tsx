@@ -1,13 +1,15 @@
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { XStack } from 'tamagui';
-import { colors, radius, sizing } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { radius, sizing } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 type Tone =
   'plain' | 'surface' | 'primary' | 'danger' | 'dangerSurface' | 'accent' | 'success' | 'info';
 
-const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
+const useTone = themed<Record<Tone, { bg: string; fg: string; border: string }>>((colors) => ({
   plain: { bg: 'transparent', fg: colors.text, border: 'transparent' },
   surface: { bg: colors.surfaceMuted, fg: colors.text, border: colors.border },
   primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
@@ -43,7 +45,7 @@ const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
   success: { bg: colors.successSurface, fg: colors.success, border: colors.success },
   info: { bg: colors.infoSurface, fg: colors.info, border: colors.info },
   dangerSurface: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },
-};
+}));
 
 /**
  * Cỡ VẼ RA của biến thể gọn — bằng đúng chiều cao `Chip` cỡ `sm` (32dp).
@@ -74,6 +76,8 @@ interface IconButtonProps {
    * đổi chỉ đáng khi bề ngang thật sự không đủ.
    */
   compact?: boolean;
+  /** Vẽ bằng icon Figma (`LineIcon`) thay Ionicons — `icon` vẫn khai làm dự phòng. */
+  lineIcon?: LineIconName;
 }
 
 /** Nút chỉ có biểu tượng, luôn đủ 44pt/48dp vùng chạm dù biểu tượng nhỏ tới đâu. */
@@ -86,7 +90,10 @@ export function IconButton({
   disabled = false,
   loading = false,
   compact = false,
+  lineIcon,
 }: IconButtonProps) {
+  const colors = useColors();
+  const TONE = useTone();
   const skin = TONE[tone];
   const blocked = disabled || loading;
   const box = compact ? sizing.compactBox : sizing.touchTarget;
@@ -115,7 +122,11 @@ export function IconButton({
         {loading ? (
           <ActivityIndicator color={skin.fg} size="small" />
         ) : (
-          <Ionicons name={icon} size={size} color={disabled ? colors.textDisabled : skin.fg} />
+          lineIcon ? (
+            <LineIcon name={lineIcon} size={size} color={disabled ? colors.textDisabled : skin.fg} />
+          ) : (
+            <Ionicons name={icon} size={size} color={disabled ? colors.textDisabled : skin.fg} />
+          )
         )}
       </XStack>
     </Pressable>

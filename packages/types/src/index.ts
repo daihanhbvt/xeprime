@@ -68,3 +68,4 @@ export * from './upload';
  * Chạy `pnpm contract` để sinh lại sau khi đổi DTO backend.
  */
 export type { components, paths } from './api.generated';
+export * from './in-app-webview';

@@ -62,6 +62,17 @@ export type RequestStep = (typeof REQUEST_STEP)[keyof typeof REQUEST_STEP];
  *     `vnDateKey` mới là mốc đúng — giờ hiển thị của sản phẩm luôn là `Asia/Ho_Chi_Minh`.
  */
 export function useVehicleBusyDays(vehicleId: string, enabled: boolean): BusyDayIndex {
+  return useVehicleBusyDaysState(vehicleId, enabled).busyDays;
+}
+
+/**
+ * Như `useVehicleBusyDays` kèm cờ đang tải — luồng gửi yêu cầu truyền nó vào tấm chọn giờ
+ * (`busyLoading`, như web `RequestBookingFlow` truyền `busyDaysQ.isLoading`).
+ */
+export function useVehicleBusyDaysState(
+  vehicleId: string,
+  enabled: boolean,
+): { busyDays: BusyDayIndex; busyLoading: boolean } {
   const from = addDateKeyDays(vnDateKey(new Date()), -1);
   const to = addDateKeyDays(from, BUSY_DAYS_LOOKAHEAD);
 
@@ -72,7 +83,8 @@ export function useVehicleBusyDays(vehicleId: string, enabled: boolean): BusyDay
     staleTime: STALE_TIME.STANDARD,
   });
 
-  return useMemo(() => buildBusyDayIndex(query.data?.days), [query.data]);
+  const busyDays = useMemo(() => buildBusyDayIndex(query.data?.days), [query.data]);
+  return { busyDays, busyLoading: query.isLoading };
 }
 
 /**
@@ -87,6 +99,22 @@ export function usePublicQuote(vehicleId: string, params: PublicQuoteParams | nu
     queryFn: () => publicQuote(vehicleId, params as PublicQuoteParams),
     enabled: Boolean(vehicleId) && params !== null,
   });
+}
+
+/**
+ * Báo giá đã ÁP MÃ khuyến mãi — nguồn duy nhất cho mọi con số trong bảng giá (ADR 0046), bản
+ * native của `useQuoteWithPromo` web (#212). Thay CẢ `fees` bằng bảng phí của endpoint xem trước
+ * mã, không ghép từng số (lỗi 24/09/2026). Không có mã ⇒ báo giá gốc.
+ */
+export function useQuoteWithPromo(
+  quote: PublicQuote | null | undefined,
+  promoFees: PublicQuote['breakdown']['fees'] | null | undefined,
+): PublicQuote | null {
+  return useMemo(() => {
+    const q = quote ?? null;
+    if (!q || !promoFees) return q;
+    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
+  }, [quote, promoFees]);
 }
 
 /**

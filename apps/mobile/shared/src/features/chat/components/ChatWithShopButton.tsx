@@ -28,6 +28,7 @@ export function ChatWithShopButton({
   size,
   iconOnly = false,
   iconTone = 'primary',
+  compact = false,
   onNavigate,
 }: {
   /** Mở hội thoại VỀ MỘT XE. Loại trừ nhau với `shopSlug` — truyền đúng một trong hai. */
@@ -60,7 +61,9 @@ export function ChatWithShopButton({
    * NỔI TRÊN ẢNH — ở đó một vòng tròn vàng chọi với ảnh bìa, còn vòng tròn trắng thì đọc
    * được trên mọi bức ảnh và ghép cặp với nút quay lại ngay đối diện.
    */
-  iconTone?: 'primary' | 'surface' | 'accent';
+  iconTone?: 'primary' | 'surface' | 'accent' | 'plain';
+  /** Chỉ với `iconOnly`: ô icon thu nhỏ (`IconButton compact`) — hàng chủ xe của thẻ chuyến. */
+  compact?: boolean;
   /**
    * Gọi NGAY TRƯỚC khi rời màn. Nơi gọi nằm trong một tấm trượt phải đóng nó lại ở đây — nếu
    * không nó treo trên màn chat vừa mở.
@@ -97,11 +100,14 @@ export function ChatWithShopButton({
     return (
       <IconButton
         icon="chatbubble-ellipses"
+        // Icon tin nhắn Figma (Message 30) — dùng chung mọi nút nhắn tin chỉ-icon (28/10/2026).
+        lineIcon="chat"
         label={label ?? t('messageShop')}
         tone={iconTone}
         /* 20 là mặc định cho hình trên nền TRONG SUỐT; trên nền đặc nó tụt lại thành một
            chấm giữa vòng tròn, nên cần thêm hai điểm để cân quang học. */
-        size={22}
+        size={compact ? 18 : 22}
+        compact={compact}
         loading={start.isPending}
         onPress={() => start.mutate()}
       />

@@ -177,7 +177,8 @@ export const queryKeys = {
   /** Banner hero trang chủ — public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
   banners: {
     all: ['banners'] as const,
-    list: () => ['banners', 'public'] as const,
+    /** Banner công khai của MỘT vị trí (`hero` | `promo`) — mỗi vị trí một ô cache. */
+    list: (placement: string = 'hero') => ['banners', 'public', placement] as const,
     /** Danh sách quản trị của MỘT vị trí (`hero` | `promo`) — mặc định dải banner đầu trang. */
     admin: (placement: string = 'hero') => ['banners', 'admin', placement] as const,
   },

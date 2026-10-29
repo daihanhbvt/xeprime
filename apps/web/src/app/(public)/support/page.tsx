@@ -44,6 +44,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** Giá trị còn là chỗ trống «…» trong bó message — chưa có dữ liệu thật để công bố. */
+function isPlaceholder(value: string): boolean {
+  return value.trim().startsWith('«');
+}
+
 const CHANNELS = ['hotline', 'email', 'hours'] as const;
 const CHECKLIST = ['tripCode', 'phone', 'evidence', 'expectation'] as const;
 
@@ -93,21 +98,30 @@ export default async function SupportPage() {
           lead={t('channels.lead')}
         >
           <ul className={styles.channels}>
-            {CHANNELS.map((key) => (
-              <li key={key} className={styles.channel}>
-                <span className={styles.channelLabel}>{t(`channels.${key}.label`)}</span>
-                {/*
-                  Chỗ đáng lẽ là số điện thoại / email / khung giờ. Hiện một viên trạng thái
-                  thay vì `channels.<key>.value` — xem docblock đầu file.
-                */}
-                <span className={styles.pending}>{t('channels.pendingBadge')}</span>
-                <span className={styles.channelNote}>{t(`channels.${key}.note`)}</span>
-              </li>
-            ))}
+            {CHANNELS.map((key) => {
+              const value = t(`channels.${key}.value`);
+              return (
+                <li key={key} className={styles.channel}>
+                  <span className={styles.channelLabel}>{t(`channels.${key}.label`)}</span>
+                  {/*
+                    Kênh đã có dữ liệu thật thì hiện giá trị; còn là chỗ trống «…» thì hiện viên
+                    "Sắp công bố" — xem docblock đầu file.
+                  */}
+                  {isPlaceholder(value) ? (
+                    <span className={styles.pending}>{t('channels.pendingBadge')}</span>
+                  ) : (
+                    <span className={styles.channelLabel}>{value}</span>
+                  )}
+                  <span className={styles.channelNote}>{t(`channels.${key}.note`)}</span>
+                </li>
+              );
+            })}
           </ul>
-          <InfoNote tone="warning" className={styles.pendingNote}>
-            <p>{t('channels.pendingNote')}</p>
-          </InfoNote>
+          {CHANNELS.some((key) => isPlaceholder(t(`channels.${key}.value`))) ? (
+            <InfoNote tone="warning" className={styles.pendingNote}>
+              <p>{t('channels.pendingNote')}</p>
+            </InfoNote>
+          ) : null}
         </ContentSection>
 
         <ContentSection id="support-topics" heading={t('topics.heading')} lead={t('topics.lead')}>

@@ -1,11 +1,7 @@
 {
-  "draftBanner": {
-    "title": "Draft — not yet reviewed by counsel",
-    "body": "This document describes how the product actually works today, but it has not been reviewed by a lawyer and the operating entity details are still blank. Do not publish it to real users until both are done."
-  },
   "entity": {
     "heading": "Operating entity",
-    "body": "XePrime is operated by «enter legal entity name», business registration number «enter tax ID», registered at «enter address». Formal notices should be sent to «enter legal contact email»."
+    "body": "XePrime is operated by SOFTRENT TECHNOLOGY COMPANY LIMITED (CÔNG TY TNHH CÔNG NGHỆ SOFTRENT), business registration number 0402359663, registered at 133 Trung Luong 11, Hoa Xuan Ward, Da Nang City, Vietnam. Formal notices should be sent to admin@softrent.vn."
   },
   "meta": {
     "effectiveFrom": "Effective from {date}",
@@ -35,6 +31,8 @@
     "booking": "Sending this request means you agree to the <terms>Terms of Service</terms> and the <cancellation>Cancellation and Refund Policy</cancellation>.",
     "bookingCheck": "I have read and agree to XePrime's <terms>Terms of Service</terms>, <cancellation>Cancellation & Refund Policy</cancellation> and <privacy>Privacy Policy</privacy>.",
     "bookingCheckHost": "I have read and agree to the owner's rental terms and XePrime's <terms>Terms of Service</terms>, <cancellation>Cancellation & Refund Policy</cancellation> and <privacy>Privacy Policy</privacy>.",
+    "bookingCheckPlain": "I have read and agree to XePrime's Terms of Service, Cancellation & Refund Policy and Privacy Policy.",
+    "bookingCheckHostPlain": "I have read and agree to the owner's rental terms and XePrime's Terms of Service, Cancellation & Refund Policy and Privacy Policy.",
     "subscription": "Buying a plan means you agree to the <terms>Terms of Service</terms> and the <rules>Marketplace Operating Rules</rules>.",
     "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Service</terms>.",
     "marketAuth": "By continuing, you agree to XePrime's <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>."
@@ -112,7 +110,8 @@
         },
         "fees": {
           "heading": "8. XePrime fees",
-          "body": "XePrime charges in two ways: a per-trip service fee for owners without a subscription, and a subscription priced by VEHICLE COUNT and term for shops. This is what XePrime earns to run the marketplace, provide support and fight fraud — it is not tax and it is not insurance. Rates, terms and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards."
+          "body": "XePrime charges in two ways: a per-trip service fee for owners without a subscription, and a subscription priced by VEHICLE COUNT and term for shops. This is what XePrime earns to run the marketplace, provide support and fight fraud — it is not tax and it is not insurance. Rates, terms and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards.",
+          "bodyInApp": "XePrime charges service fees according to the published fee schedule for each way owners and shops take part. This is what XePrime earns to run the marketplace, provide support and fight fraud — it is not tax and it is not insurance. Rates and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards."
         },
         "tax": {
           "heading": "9. Tax obligations",
@@ -273,7 +272,8 @@
         },
         "fees": {
           "heading": "8. Marketplace fees",
-          "body": "The marketplace charges a per-trip service fee to owners without a subscription, or a subscription priced by VEHICLE COUNT and term to shops. The fee schedule, terms and effective dates are published in advance; any change applies only to bookings created after the new effective date. Marketplace fees are shown separately from tax obligations and from amounts payable to the owner."
+          "body": "The marketplace charges a per-trip service fee to owners without a subscription, or a subscription priced by VEHICLE COUNT and term to shops. The fee schedule, terms and effective dates are published in advance; any change applies only to bookings created after the new effective date. Marketplace fees are shown separately from tax obligations and from amounts payable to the owner.",
+          "bodyInApp": "The marketplace charges service fees according to the published fee schedule for each way owners and shops take part. The fee schedule and effective dates are published in advance; any change applies only to bookings created after the new effective date. Marketplace fees are shown separately from tax obligations and from amounts payable to the owner."
         },
         "violation": {
           "heading": "9. Handling breaches",
@@ -378,6 +378,9 @@
             "company": "Company verified by XePrime: not withheld — a company issues its own invoices and declares its own taxes.",
             "noProfile": "No seller profile yet, or a company profile not yet verified: treated as an individual and withheld. Missing information does not remove the tax obligation.",
             "track": "Being on a subscription plan or not does not decide withholding: a shop that buys a plan but is a household business is still withheld."
+          },
+          "itemsInApp": {
+            "track": "How an owner participates on the marketplace does not decide withholding: an owner registered as a household business is still withheld."
           }
         },
         "rates": {

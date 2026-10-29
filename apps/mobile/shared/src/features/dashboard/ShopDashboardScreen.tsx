@@ -16,7 +16,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -53,6 +53,7 @@ import { useChangeText, useMonthKpiCells } from './hooks/use-month-kpis';
  * kéo cả màn, và lỗi không bao giờ hoá thành số 0.
  */
 export function ShopDashboardScreen() {
+  const colors = useColors();
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -119,7 +120,10 @@ export function ShopDashboardScreen() {
       key: 'revenue',
       icon: 'cash-outline',
       label: t('stats.revenue'),
-      hint: s && prev ? [t('stats.revenueHint'), change(moneyChangePercent(s.revenue, prev.revenue))] : t('stats.revenueHint'),
+      hint:
+        s && prev
+          ? [t('stats.revenueHint'), change(moneyChangePercent(s.revenue, prev.revenue))]
+          : t('stats.revenueHint'),
       value: cellValue(money.summary.isError, s ? fmt.money(s.revenue) : undefined),
       tone: colors.primaryActive,
       surface: colors.primaryLight,
@@ -136,7 +140,9 @@ export function ShopDashboardScreen() {
       label: t('stats.available'),
       value: cellValue(
         fleet.isError,
-        fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : undefined,
+        fleet.data
+          ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}`
+          : undefined,
       ),
       ...(fleet.data
         ? {
@@ -219,8 +225,12 @@ export function ShopDashboardScreen() {
 
           {isOwner ? <WalletPanel showIncome={false} href={links.balance} /> : null}
           {/* Thông tin tài khoản & hạn mức chỉ hiện khi nền tảng bật cờ (quy định store). */}
-          {isPlanPromotionEnabled && has(PERMISSION.SUBSCRIPTION_VIEW) ? <PlanPanel href={links.subscription} /> : null}
-          {data?.market !== null ? <MarketPanel market={data?.market ?? undefined} links={links} /> : null}
+          {isPlanPromotionEnabled && has(PERMISSION.SUBSCRIPTION_VIEW) ? (
+            <PlanPanel href={links.subscription} />
+          ) : null}
+          {data?.market !== null ? (
+            <MarketPanel market={data?.market ?? undefined} links={links} />
+          ) : null}
           <ReputationPanel metrics={data?.reputation} />
 
           {money.visible ? (

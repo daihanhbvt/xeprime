@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -22,7 +22,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useUpdateVehicle, useVehicleSummary } from '../hooks/use-vehicle';
 import type { VehicleDetail } from '../api';
 import { MarketplaceVisibilityRow } from './MarketplaceVisibilityRow';
@@ -30,12 +31,13 @@ import { MarketplaceVisibilityRow } from './MarketplaceVisibilityRow';
 const MEDIA_HEIGHT = 168;
 const THUMB = 64;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   media: { width: '100%', height: MEDIA_HEIGHT, backgroundColor: colors.surfaceMuted },
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.sm },
-});
+}));
 
 function Strong({ children }: { children: ReactNode }) {
+  const colors = useColors();
   return (
     <Text col={colors.text} fow={fontWeight.semibold}>
       {children}
@@ -68,6 +70,8 @@ export function VehicleEditHeaderCard({
    */
   footer?: ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Vehicles.overview');
   const tEdit = useTranslations('Vehicles.edit.aside');
   const tLabels = useTranslations('Common.labels');

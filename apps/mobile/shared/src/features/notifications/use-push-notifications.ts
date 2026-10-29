@@ -3,7 +3,14 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'use-intl';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_META,
+  STATUS_COLOR,
+  type NotificationType,
+} from '@xeprime/types';
+import { TOAST_PRESET, type ToastPreset } from '@/components/feedback/AppToast';
 import { pushDeviceApi } from '@/api/notifications/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -60,6 +67,12 @@ export function usePushNotifications(): void {
   const gateOpen = usePushPermissionGateOpen();
 
   /** Đã đăng ký cho tài khoản nào rồi — đổi tài khoản thì đăng ký lại (server gán lại máy). */
+  // Màn đang đứng — để không toast tin nhắn của chính cuộc chat đang mở.
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
   const registeredFor = useRef<string | null>(null);
   /** Đích của thông báo mở app từ trạng thái tắt hẳn, xử lý đúng một lần. */
   const coldStartHandled = useRef(false);
@@ -206,9 +219,27 @@ export function usePushNotifications(): void {
       chatDebug.pushReceived(PUSH_TRIGGER.FOREGROUND, Boolean(title ?? body));
       chatDebug.pushRaw(PUSH_TRIGGER.FOREGROUND, message);
 
-      // Chữ của thông báo do SERVER gửi và đã địa phương hoá lúc phát; chỉ nhánh dự phòng
-      // (payload không có notification block) mới cần một câu của app.
-      toast.showInfo(body ?? title ?? t('fallback'));
+      const type = notificationTypeOf(message);
+      const url = urlOf(message);
+      const href = notificationHref(url);
+      /*
+       * Toast HAI DÒNG (tiêu đề + thân), màu theo loại tin, chạm để mở đúng màn — bản cũ chỉ hiện
+       * thân nên mất đúng phần nói chuyện gì xảy ra (người dùng báo 28/10/2026). Tin nhắn của
+       * CHÍNH cuộc chat đang mở thì không toast: nó đã hiện ngay trong khung chat.
+       */
+      const onThatChat =
+        type === NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED &&
+        typeof href === 'string' &&
+        pathnameRef.current === href;
+      if (!onThatChat) {
+        toast.showNotice({
+          // Chữ do SERVER gửi (đã địa phương hoá); chỉ nhánh không có notification block mới cần câu của app.
+          title: title ?? body ?? t('fallback'),
+          ...(title && body ? { body } : {}),
+          tone: toneOf(type),
+          ...(url ? { onPress: () => open(url, PUSH_TRIGGER.FOREGROUND) } : {}),
+        });
+      }
 
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
@@ -223,7 +254,7 @@ export function usePushNotifications(): void {
       refreshForNotification(queryClient, notificationTypeOf(message));
       chatDebug.pushInboxRefreshed();
     });
-  }, [queryClient, t, toast]);
+  }, [open, queryClient, t, toast]);
 
   // Bấm thông báo khi app đang ở nền.
   useEffect(() => {
@@ -266,4 +297,13 @@ function deviceInfo(): { platform: 'android' | 'ios'; appVersion?: string; devic
     ...(Constants.expoConfig?.version ? { appVersion: Constants.expoConfig.version } : {}),
     ...(Constants.deviceName ? { deviceName: Constants.deviceName } : {}),
   };
+}
+
+/** Màu toast theo loại thông báo — đọc màu trạng thái của `NOTIFICATION_TYPE_META` (cùng màu chip hộp thư). */
+function toneOf(type: NotificationType | null): ToastPreset {
+  const color = type ? NOTIFICATION_TYPE_META[type]?.color : null;
+  if (color === STATUS_COLOR.SUCCESS) return TOAST_PRESET.SUCCESS;
+  if (color === STATUS_COLOR.DANGER) return TOAST_PRESET.ERROR;
+  if (color === STATUS_COLOR.WAITING || color === STATUS_COLOR.WARNING) return TOAST_PRESET.WARNING;
+  return TOAST_PRESET.INFO;
 }

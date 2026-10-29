@@ -8,7 +8,8 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useUpdateVatInvoiceSetting, useVatInvoiceSetting } from '../hooks/use-shop';
 
 /**
@@ -25,6 +26,7 @@ import { useUpdateVatInvoiceSetting, useVatInvoiceSetting } from '../hooks/use-s
  * của nền tảng, nên không có nhánh `useSupportHides` như web.
  */
 export function VatInvoiceSetting({ canEdit }: { canEdit: boolean }) {
+  const colors = useColors();
   const t = useTranslations('Shop.vatInvoice');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();

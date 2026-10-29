@@ -61,7 +61,8 @@ import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import {
   useApplyVehicleDocumentOcr,
   useArchiveVehicleDocument,
@@ -211,6 +212,7 @@ export function VehicleDocumentsScreen({
    */
   customerScope?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.documents');
   const tEdit = useTranslations('Vehicles.edit');
   const router = useRouter();
@@ -595,6 +597,8 @@ function DocumentRow({
   onHistory: () => void;
   onRemove: () => Promise<boolean>;
 }) {
+  const colors = useColors();
+  const strong = useStrong();
   const t = useTranslations('Vehicles.documents');
   const tCommon = useTranslations('Common');
   const tImage = useTranslations('Common.image');
@@ -705,7 +709,7 @@ function DocumentRow({
       ? 'download'
       : null;
 
-  const tone = statusTone(TYPE_TONE[row.type]);
+  const tone = statusTone(TYPE_TONE[row.type], colors);
 
   const tile = (
     <YStack>
@@ -970,6 +974,7 @@ function AddDocumentSheet({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.documents');
   const tCommon = useTranslations('Common');
   const tImage = useTranslations('Common.image');
@@ -1076,6 +1081,7 @@ function AddDocumentSheet({
           </YStack>
           <YStack f={1}>
             <Button
+              icon="cloud-upload-outline"
               label={t('add.submit')}
               loading={saving}
               onPress={() => void handleSubmit(submit)()}
@@ -1218,6 +1224,7 @@ function DetailGrid({ items }: { items: readonly DetailField[] }) {
 
 /** Một ô nhãn/giá trị. Giá trị trống hiện chữ mờ, không để ô rỗng — đúng `DetailItem` của web. */
 function DetailItem({ item }: { item: DetailField }) {
+  const colors = useColors();
   const filled = Boolean(item.value);
 
   return (
@@ -1267,6 +1274,7 @@ function DocumentDetailSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.documents');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -1381,6 +1389,7 @@ function DocumentDetailSheet({
             </YStack>
             <YStack f={1}>
               <Button
+                icon="save-outline"
                 label={t('metadata.save')}
                 loading={save.isPending}
                 onPress={() => void handleSubmit(submit)()}
@@ -1597,6 +1606,7 @@ function DocumentHistorySheet({
   canViewFiles: boolean;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.documents.history');
   const fmt = useAppFormat();
   const toast = useAppToast();
@@ -1830,8 +1840,8 @@ function OcrReviewSheet({
  * Khai ở module scope, không phải trong thân component: viết `(chunks) => <Text>…` ngay tại chỗ
  * gọi là hai closure mới cho mỗi hàng, mỗi lần render.
  */
-const strong = (chunks: ReactNode) => (
+const useStrong = themed((colors) => (chunks: ReactNode) => (
   <Text col={colors.text} fow={fontWeight.semibold}>
     {chunks}
   </Text>
-);
+));

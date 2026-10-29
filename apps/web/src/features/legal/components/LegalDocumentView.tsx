@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
+import { isCustomerAppWebView } from '@/lib/in-app-webview';
 import { LEGAL_EFFECTIVE_FROM, LEGAL_SECTIONS, legalPath, type LegalDoc } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
-import { InfoNote } from '@/features/content-page/components/InfoNote';
 import { PageHero } from '@/features/content-page/components/PageHero';
 import { getAppFormat } from '@/i18n/server-format';
 import { LegalDocPager } from './LegalDocPager';
@@ -49,6 +49,12 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
    */
   const has = (key: string) => t.has(key as never);
   const text = (key: string) => t(key as never) as string;
+  /*
+   * WebView của app khách: khoá nào có biến thể `*InApp` (câu không nhắc gói/thuê bao — né IAP)
+   * thì dùng biến thể đó. Trình duyệt thường giữ nguyên câu gốc.
+   */
+  const inApp = await isCustomerAppWebView();
+  const pick = (key: string, inAppKey: string) => (inApp && has(inAppKey) ? text(inAppKey) : text(key));
 
   const sections = LEGAL_SECTIONS[doc]
     .filter((s) => has(`docs.${doc}.sections.${s.key}.heading`))
@@ -56,7 +62,7 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
       key: s.key,
       id: sectionId(doc, s.key),
       heading: text(`docs.${doc}.sections.${s.key}.heading`),
-      body: text(`docs.${doc}.sections.${s.key}.body`),
+      body: pick(`docs.${doc}.sections.${s.key}.body`, `docs.${doc}.sections.${s.key}.bodyInApp`),
       /*
        * Gạch đầu dòng của một điều. Thứ tự khai ở `LEGAL_SECTIONS` (code), nội dung ở bundle —
        * lý do tách làm hai nằm ở docblock `LegalSection`.
@@ -68,7 +74,10 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
         .filter((item) => has(`docs.${doc}.sections.${s.key}.items.${item}`))
         .map((item) => ({
           key: item,
-          text: text(`docs.${doc}.sections.${s.key}.items.${item}`),
+          text: pick(
+            `docs.${doc}.sections.${s.key}.items.${item}`,
+            `docs.${doc}.sections.${s.key}.itemsInApp.${item}`,
+          ),
         })),
     }));
 
@@ -102,15 +111,6 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
 
       <div className={styles.layout}>
         <article className={styles.doc}>
-          {/*
-            Băng "bản thảo" là cửa chặn cuối cùng trước khi một văn bản chưa qua luật sư lọt ra
-            ngoài. Gỡ nó là một hành động có chủ đích, không phải thứ quên mất. Nó CÓ mặt trong
-            bản in: một tờ giấy không mang cảnh báo đó là một tờ giấy trông như đã có hiệu lực.
-          */}
-          <InfoNote tone="warning" title={t('draftBanner.title')} className={styles.draft}>
-            <p>{t('draftBanner.body')}</p>
-          </InfoNote>
-
           <div className={styles.body}>
             {sections.map((section) => (
               <section key={section.key} id={section.id} className={styles.section}>

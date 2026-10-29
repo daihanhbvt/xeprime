@@ -34,7 +34,8 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   BasicStep,
   MediaStep,
@@ -49,7 +50,8 @@ import { missingPublishRequirementsForForm } from './publication';
 import { usePublicationLabels } from './hooks/use-publication-labels';
 import { useCreateVehicle } from './hooks/use-vehicle';
 import { branchLabel, vehiclesApi, type VehicleDetail } from './api';
-import { useErrorMessage } from '@/i18n/use-error-message';
+// Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
+import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để các ô bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -169,15 +171,16 @@ const WIZARD_FIELDS: ReadonlyArray<keyof VehicleFormValues> = Object.values(STEP
  * phải nói rõ điều đó — báo "lỗi tạo xe" sẽ khiến người dùng bấm lại và tạo xe thứ hai.
  */
 export function CreateVehicleScreen() {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const tPermission = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const toast = useAppToast();
-  // Đúng `CreateVehiclePage` bên web: toast + câu lỗi dịch theo MÃ (`useErrorMessage`).
+  // Đúng `CreateVehiclePage` bên web: toast + câu lỗi dịch theo MÃ, hiểu cổng hạn mức gói (ADR 0065).
   const tCreate = useTranslations('Vehicles.create');
-  const errorMessage = useErrorMessage();
+  const errorMessage = usePlanAwareErrorMessage();
   const { has, isLoading: permissionsLoading } = usePermissions();
   const { formGaps } = usePublicationLabels();
 
@@ -280,7 +283,9 @@ export function CreateVehicleScreen() {
     const missing = publishGaps();
     setPublishMissing(missing);
     if (missing.length > 0) {
-      const target = steps.findIndex((candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!]);
+      const target = steps.findIndex(
+        (candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!],
+      );
       if (target >= 0) setStep(target);
       return;
     }
@@ -519,6 +524,7 @@ function ReviewStep({
   values: VehicleFormValues;
   onEditStep: (step: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.review');
   const tUnits = useTranslations('Common.units');
   const tLabels = useTranslations('Common.labels');

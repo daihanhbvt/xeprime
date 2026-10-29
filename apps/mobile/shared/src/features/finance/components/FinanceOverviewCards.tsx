@@ -11,7 +11,8 @@ import { StatCardFooter, StatGrid, type StatCell } from '@/components/ui/StatGri
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { FinancePeriodFilters, FinanceSummary } from '../api';
 
 /**
@@ -59,6 +60,7 @@ export function FinanceOverviewCards({
   loading: boolean;
   error: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.overview.cards');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -233,6 +235,7 @@ function Layer({
   note: string;
   loading: boolean;
 }) {
+  const colors = useColors();
   /*
    * Thu gọn từng lớp một, KHÔNG phải thu cả ba cùng lúc: ba lớp trả lời ba câu hỏi khác nhau, và
    * người mở màn buổi sáng thường chỉ theo dõi một trong ba. Gấp hai lớp kia lại là kéo biểu đồ

@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { MenuOptionList } from '@/components/ui/MenuOption';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
 export interface FaqEntry {
   readonly key: string;
@@ -23,6 +24,7 @@ export interface FaqEntry {
  * hỏi thì luôn rộng bằng thẻ.
  */
 export function FaqList({ items }: { items: readonly FaqEntry[] }) {
+  const colors = useColors();
   const [open, setOpen] = useState<Readonly<Record<string, boolean>>>({});
 
   return (

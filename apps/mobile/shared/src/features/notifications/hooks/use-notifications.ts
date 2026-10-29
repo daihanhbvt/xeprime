@@ -5,8 +5,7 @@ import {
   type NotificationListResult,
 } from '@/features/notifications/api';
 import { chatDebug } from '@/lib/chat-debug';
-import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 import { useRefreshBadges } from '@/features/badges/hooks/use-badges';
 import { queryKeys } from '@/queries/query-keys';
 
@@ -24,7 +23,6 @@ import { queryKeys } from '@/queries/query-keys';
  * trang là một cache riêng và danh sách không bao giờ nối lại được.
  */
 export function useNotificationsInfinite(enabled: boolean) {
-  const { counts } = useBadgeRealtime();
   const queryClient = useQueryClient();
 
   /*
@@ -34,7 +32,7 @@ export function useNotificationsInfinite(enabled: boolean) {
    * sách. Thiếu cầu nối này thì con số trên chuông nhảy tức thì còn danh sách bên dưới
    * đứng im — đúng triệu chứng "chuông báo có việc mới, mở ra không thấy gì".
    */
-  useOnBadgeChange(counts.notificationsUnread, () => {
+  useOnBadgeSignal((counts) => counts.notificationsUnread, () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
   });
   return useInfiniteQuery({

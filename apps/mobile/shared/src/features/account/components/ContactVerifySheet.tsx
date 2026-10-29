@@ -17,7 +17,8 @@ import { TextField } from '@/components/ui/TextField';
 import { OtpCodeInput, OTP_LENGTH } from '@/features/phone-verification/components/OtpCodeInput';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CONTACT_CHANNEL, type ContactChannel } from '../api';
 import { useContactVerify } from '../hooks/use-contact-verify';
 
@@ -33,6 +34,14 @@ interface Props {
    * sẵn SĐT hiện có (chưa xác minh) của tài khoản: việc ở đây là CHỨNG MINH số đó, không phải đổi.
    */
   readonly required?: { readonly onSignOut: () => void };
+  /**
+   * Tấm NHẮC — app khách (ADR 0071, `AccountPhoneReminderProvider`). Giống tấm bắt buộc ở chỗ
+   * điền sẵn SĐT hiện có và nói rõ vì sao cần, nhưng ĐÓNG ĐƯỢC: nút phụ là "Để sau" (gọi
+   * `onClose`). `lead` là câu mở theo ngữ cảnh mở tấm (nhắc chung, hay đang gửi yêu cầu thuê).
+   */
+  readonly reminder?: { readonly lead: string };
+  /** Xác minh đúng mã xong — gọi trước `onClose` (đóng vì xác minh, không phải vì "Để sau"). */
+  readonly onVerified?: () => void;
 }
 
 /**
@@ -46,13 +55,24 @@ interface Props {
  * Ô nhập luôn RỖNG chứ không điền sẵn giá trị cũ: việc ở đây là nhập một định danh mới, và một ô
  * đã có sẵn nội dung đúng thì mời người dùng bấm "Gửi mã" cho chính cái họ đang có.
  */
-export function ContactVerifySheet({ channel, open, onClose, current, required }: Props) {
+export function ContactVerifySheet({
+  channel,
+  open,
+  onClose,
+  current,
+  required,
+  reminder,
+  onVerified,
+}: Props) {
+  const colors = useColors();
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
 
   const isPhone = channel === CONTACT_CHANNEL.PHONE;
+  /** Tấm hỏi SĐT cho CHÍNH tài khoản (bắt buộc hoặc nhắc) — không phải lượt đổi số ở màn tài khoản. */
+  const asksAccountPhone = Boolean(required || reminder);
   const flow = useContactVerify(channel);
   const [code, setCode] = useState('');
 
@@ -62,7 +82,7 @@ export function ContactVerifySheet({ channel, open, onClose, current, required }
   );
   const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
-    defaultValues: { identifier: required ? (current ?? '') : '' },
+    defaultValues: { identifier: asksAccountPhone ? (current ?? '') : '' },
   });
 
   /*
@@ -77,12 +97,15 @@ export function ContactVerifySheet({ channel, open, onClose, current, required }
   useEffect(() => {
     if (!flow.verified) return;
     toast.showSuccess(isPhone ? t('phoneUpdated') : t('emailUpdated'));
+    onVerified?.();
     onClose();
+    // `onVerified` cố ý ngoài deps (như web): chỉ lượt `verified` bật lên mới được gọi nó.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.verified, isPhone, toast, onClose, t]);
 
   const sendCode = handleSubmit((values) => flow.send(values.identifier));
 
-  const title = required
+  const title = asksAccountPhone
     ? t('requiredTitle')
     : isPhone
       ? current
@@ -106,7 +129,7 @@ export function ContactVerifySheet({ channel, open, onClose, current, required }
           />
         ) : (
           <Button
-            label={tCommon('cancel')}
+            label={reminder ? t('later') : tCommon('cancel')}
             variant="ghost"
             disabled={flow.verifying}
             onPress={onClose}
@@ -152,7 +175,9 @@ export function ContactVerifySheet({ channel, open, onClose, current, required }
           {isIdentifierStep
             ? required
               ? t('requiredLead')
-              : isPhone
+              : reminder
+                ? reminder.lead
+                : isPhone
                 ? t('phoneLead')
                 : t('emailLead')
             : t('codeSentTo')}
@@ -163,7 +188,7 @@ export function ContactVerifySheet({ channel, open, onClose, current, required }
           )}
         </Text>
 
-        {current && isIdentifierStep && !required ? (
+        {current && isIdentifierStep && !asksAccountPhone ? (
           <Text col={colors.placeholder} fos={fontSize.label}>
             {t('currentValue')}
             <Text col={colors.text} fow={fontWeight.semibold}>

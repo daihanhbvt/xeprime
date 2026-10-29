@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Toast, ToastProvider, ToastViewport, useToastState } from '@tamagui/toast';
 import type { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { XStack } from 'tamagui';
+import { Pressable, StyleSheet } from 'react-native';
+import { XStack, YStack } from 'tamagui';
 import { elevation } from '@/theme/elevation';
 import { dwell } from '@/theme/motion';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors, useFloatingBorderColor } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 
 /**
@@ -16,6 +18,8 @@ export const TOAST_PRESET = {
   SUCCESS: 'success',
   ERROR: 'error',
   INFO: 'info',
+  /** Việc GẤP cần làm (sắp hết hạn thanh toán…) — vàng cảnh báo. */
+  WARNING: 'warning',
 } as const;
 
 export type ToastPreset = (typeof TOAST_PRESET)[keyof typeof TOAST_PRESET];
@@ -33,6 +37,8 @@ declare module '@tamagui/toast' {
      * sẽ đòi `preset` ngay cấp ngoài cùng của `show()` — chỗ nó không thuộc về.
      */
     preset?: ToastPreset;
+    /** Chạm vào toast — mở đúng màn của thông báo (push khi app đang mở). */
+    onPress?: () => void;
   }
 }
 
@@ -43,7 +49,7 @@ interface PresetSkin {
 }
 
 /** Gold thương hiệu cố ý KHÔNG có mặt ở đây: nó là màu HÀNH ĐỘNG, không phải màu trạng thái. */
-const PRESET_SKIN: Readonly<Record<ToastPreset, PresetSkin>> = {
+const usePresetSkin = themed<Readonly<Record<ToastPreset, PresetSkin>>>((colors) => ({
   [TOAST_PRESET.SUCCESS]: {
     icon: 'checkmark-circle',
     accent: colors.success,
@@ -59,10 +65,17 @@ const PRESET_SKIN: Readonly<Record<ToastPreset, PresetSkin>> = {
     accent: colors.info,
     surface: colors.infoSurface,
   },
-};
+  [TOAST_PRESET.WARNING]: {
+    icon: 'time',
+    accent: colors.warning,
+    surface: colors.warningSurface,
+  },
+}));
 
 /** Vạch màu bên trái — thứ DUY NHẤT phân biệt ba preset khi liếc nhanh, nên nó có tên. */
 const ACCENT_BAR_WIDTH = 3;
+
+const styles = StyleSheet.create({ press: { width: '100%' } });
 
 /**
  * MỘT component cho cả ba preset — ba bản riêng sẽ trôi khỏi nhau ngay lần chỉnh khoảng cách đầu.
@@ -73,6 +86,9 @@ const ACCENT_BAR_WIDTH = 3;
  * cắm ở `theme/tamagui.config.ts` cho hoạt cảnh và cử chỉ vuốt.
  */
 function AppToast() {
+  const colors = useColors();
+  const floatingBorderColor = useFloatingBorderColor();
+  const PRESET_SKIN = usePresetSkin();
   const toast = useToastState();
 
   // Toast bị thư viện xử lý bằng native (burnt) thì không có gì để render — ở đây luôn `false`
@@ -80,6 +96,7 @@ function AppToast() {
   if (!toast || toast.isHandledNatively) return null;
 
   const skin = PRESET_SKIN[toast.customData?.preset ?? TOAST_PRESET.INFO];
+  const onPress = toast.customData?.onPress;
 
   return (
     <Toast
@@ -92,6 +109,13 @@ function AppToast() {
       // phần chữ tính ra bề rộng 0 — toast chỉ còn cái icon. Web không lộ vì flexbox lùi min-content.
       width="100%"
     >
+      {/* Chạm toast ⇒ mở đúng màn của thông báo (như bấm thông báo trên khay khi app ở nền). */}
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
+        accessibilityRole={onPress ? 'button' : undefined}
+        style={styles.press}
+      >
       <XStack
         width="100%"
         ai="center"
@@ -102,21 +126,48 @@ function AppToast() {
         bc={skin.accent}
         px={space.md}
         py={space.sm}
-        style={elevation.card}
+        style={
+          floatingBorderColor
+            ? [
+                elevation.card,
+                {
+                  borderTopWidth: 1,
+                  borderRightWidth: 1,
+                  borderBottomWidth: 1,
+                  borderTopColor: floatingBorderColor,
+                  borderRightColor: floatingBorderColor,
+                  borderBottomColor: floatingBorderColor,
+                },
+              ]
+            : elevation.card
+        }
       >
         <Ionicons name={skin.icon} size={iconSize.lg} color={skin.accent} />
-        <Toast.Title
-          col={colors.text}
-          fos={fontSize.body}
-          fow={fontWeight.medium}
-          f={1}
-          // Không có `flexShrink` thì một câu lỗi dài đẩy chính nó tràn khỏi khung thay vì xuống dòng.
-          flexShrink={1}
-          numberOfLines={3}
-        >
-          {toast.title}
-        </Toast.Title>
+        {/*
+          Hai dòng khi có `message` (push lúc app đang mở): TIÊU ĐỀ đậm nói chuyện gì xảy ra, THÂN
+          nói hệ quả — bản cũ chỉ hiện thân nên mất đúng phần quan trọng (người dùng báo 28/10/2026).
+          Không có `flexShrink` thì một câu dài đẩy chính nó tràn khỏi khung thay vì xuống dòng.
+        */}
+        <YStack f={1} flexShrink={1} gap={2}>
+          <Toast.Title
+            col={colors.text}
+            fos={fontSize.body}
+            fow={toast.message ? fontWeight.semibold : fontWeight.medium}
+            numberOfLines={toast.message ? 2 : 3}
+          >
+            {toast.title}
+          </Toast.Title>
+          {toast.message ? (
+            <Toast.Description col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={3}>
+              {toast.message}
+            </Toast.Description>
+          ) : null}
+        </YStack>
+        {onPress ? (
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
+        ) : null}
       </XStack>
+      </Pressable>
     </Toast>
   );
 }
@@ -140,12 +191,7 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
       {/*
  
       */}
-      <ToastViewport
-        pos="absolute"
-        top={insets.top + space.xs}
-        left={space.md}
-        right={space.md}
-      />
+      <ToastViewport pos="absolute" top={insets.top + space.xs} left={space.md} right={space.md} />
     </ToastProvider>
   );
 }

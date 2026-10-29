@@ -5,17 +5,21 @@ import { formatNumberInput, normalizeNumberInput, parseNumberInput } from '@xepr
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
 
 /** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const INPUT_STYLE = {
-  flex: 1,
-  color: colors.text,
-  fontSize: fieldFontSize.value,
-  fontFamily: FONT_FAMILY.body,
-  minHeight: sizing.touchTarget,
-  paddingVertical: 0,
-} as const;
+const useInputStyle = themed(
+  (colors) =>
+    ({
+      flex: 1,
+      color: colors.text,
+      fontSize: fieldFontSize.value,
+      fontFamily: FONT_FAMILY.body,
+      minHeight: sizing.touchTarget,
+      paddingVertical: 0,
+    }) as const,
+);
 
 export interface NumberControlBounds {
   /** Chặn dưới/chặn trên — KẸP lúc rời ô, đúng mốc `<InputNumber>` bên web kẹp. */
@@ -71,6 +75,8 @@ export function NumberControl({
   grouped?: boolean;
   percent?: boolean;
 } & NumberControlBounds) {
+  const colors = useColors();
+  const INPUT_STYLE = useInputStyle();
   const effectiveMin = min ?? (percent ? 0 : undefined);
   const effectiveMax = max ?? (percent ? 100 : undefined);
   const effectiveSuffix = suffix ?? (percent ? '%' : undefined);

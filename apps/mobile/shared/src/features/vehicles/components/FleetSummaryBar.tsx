@@ -2,7 +2,8 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useFleetSummary } from '../hooks/use-vehicles';
 
 /**
@@ -21,6 +22,7 @@ export function FleetSummaryBar({
   /** Cùng chi nhánh với danh sách bên dưới (ADR 0052 điều 3). */
   branchId?: string | undefined;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.list.summary');
   const { data, isLoading, isError } = useFleetSummary(enabled, branchId);
 
@@ -64,6 +66,7 @@ export function FleetSummaryBar({
 }
 
 function Item({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} ai="center" gap={1}>
       <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
@@ -82,5 +85,6 @@ function Item({ label, value, tone }: { label: string; value: string; tone?: str
 }
 
 function Divider() {
+  const colors = useColors();
   return <YStack w={1} bg={colors.borderSubtle} my={2} />;
 }

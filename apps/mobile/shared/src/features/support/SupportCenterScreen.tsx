@@ -29,7 +29,8 @@ import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { FaqList } from './components/FaqList';
 
 /** Khoá message trong `ManageCommon.support.quickStart`. */
@@ -138,6 +139,7 @@ export function SupportCenterScreen({
    */
   shell?: 'manage' | 'stacked';
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('ManageCommon');
   const router = useRouter();
   const { has } = usePermissions();

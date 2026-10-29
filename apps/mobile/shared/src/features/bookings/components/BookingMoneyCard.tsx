@@ -5,7 +5,9 @@ import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { OwnerPayoutTable } from './OwnerPayoutTable';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 /**
@@ -36,6 +38,7 @@ export function BookingMoneyCard({
    */
   onEditFee?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.money');
   const tActions = useTranslations('Common.actions');
   const tDetail = useTranslations('Bookings.detail');
@@ -58,7 +61,12 @@ export function BookingMoneyCard({
   const hasHoldPaymentPlan = booking.holdPaidAmount != null && booking.payAtPickupAmount != null;
 
   return (
-    <Card>
+    /*
+      Web `BookingDetailContent .panel` — khối SỐ LIỆU nền `bg-muted`, viền 1px `border-subtle`, bo
+      `border-radius`, đệm `space-md`, khe `space-sm`. Nền xám là thứ làm hai khối con `.paymentPlan`
+      (nền `bg-container`) nổi lên.
+    */
+    <Card tone="muted">
       <YStack gap={space.sm}>
         <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
           {tDetail('moneyBlock')}
@@ -150,14 +158,20 @@ export function BookingMoneyCard({
         )}
 
         {hasHoldPaymentPlan ? (
-          <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+          /*
+            Web `.paymentPlan` — nền `bg-container`, đệm sm/md, bo `radius-sm`, khe `space-sm`. Tiêu đề
+            `.paymentPlanTitle`: overline · bold · `text-secondary` · giãn chữ 0.04em · VIẾT HOA theo
+            ngôn ngữ đang chọn (`textTransform`, không ép locale `vi`).
+          */
+          <YStack gap={space.sm} py={space.sm} px={space.md} br={radius.sm} bg={colors.surface}>
             <Text
               col={colors.textMuted}
-              fos={fontSize.label}
+              fos={fontSize.meta}
               fow={fontWeight.bold}
-              letterSpacing={0.4}
+              letterSpacing={fontSize.meta * 0.04}
+              textTransform="uppercase"
             >
-              {t('holdPaymentPlan.title').toLocaleUpperCase('vi')}
+              {t('holdPaymentPlan.title')}
             </Text>
             {booking.customerTotalAmount != null ? (
               <DataRow
@@ -176,8 +190,38 @@ export function BookingMoneyCard({
               tone="price"
               strong
             />
-            <Text col={colors.placeholder} fos={fontSize.label}>
+            {/* `.paymentPlanNote` — overline · `text-tertiary`. */}
+            <Text col={colors.placeholder} fos={fontSize.meta}>
               {t('holdPaymentPlan.note')}
+            </Text>
+          </YStack>
+        ) : null}
+
+        {/*
+          Phần của CHỦ XE — bảng cộng ví (ADR 0068 điều 5), CÙNG khối với tấm duyệt yêu cầu. Số đã
+          đóng băng lúc đặt (ADR 0024), server dựng từ snapshot; đơn lập tay/đơn cũ không có thì
+          khối không hiện — như web `BookingDetailContent`.
+        */}
+        {booking.ownerPayout ? (
+          /*
+            Web `.paymentPlan` — nền `bg-container`, đệm sm/md, bo `radius-sm`, khe `space-sm`. Tiêu đề
+            `.paymentPlanTitle`: overline · bold · `text-secondary` · giãn chữ 0.04em · VIẾT HOA theo
+            ngôn ngữ đang chọn (`textTransform`, không ép locale `vi`).
+          */
+          <YStack gap={space.sm} py={space.sm} px={space.md} br={radius.sm} bg={colors.surface}>
+            <Text
+              col={colors.textMuted}
+              fos={fontSize.meta}
+              fow={fontWeight.bold}
+              letterSpacing={fontSize.meta * 0.04}
+              textTransform="uppercase"
+            >
+              {t('ownerEconomics.title')}
+            </Text>
+            <OwnerPayoutTable payout={booking.ownerPayout} label={t('ownerEconomics.title')} />
+            {/* `.paymentPlanNote` — overline · `text-tertiary`. */}
+            <Text col={colors.placeholder} fos={fontSize.meta}>
+              {t('ownerEconomics.note')}
             </Text>
           </YStack>
         ) : null}

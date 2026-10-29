@@ -810,7 +810,7 @@ describe('Đang thuê (phía khách)', () => {
     renderView();
     const steps = within(timeline()!).getAllByRole('listitem');
     expect(steps).toHaveLength(2);
-    expect(timeline()?.textContent).toContain('Đã xác nhận');
+    expect(timeline()?.textContent).toContain('Đã nhận xe');
     expect(timeline()?.textContent).toContain('Hoàn thành');
   });
 

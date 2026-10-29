@@ -6,7 +6,8 @@ import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 /** Chiều cao một dòng của ô nhiều dòng — cùng nhịp dòng 1.5 mà Tamagui dùng cho chữ trong ô. */
@@ -51,7 +52,16 @@ interface TextFieldProps<T extends FieldValues> {
    * người dùng gõ xong mới phát hiện bị cắt.
    */
   maxLength?: number;
+  /**
+   * Không vẽ nhãn phía trên ô — chỉ giữ `label` làm tên cho trình đọc màn hình. Dùng khi web để ô
+   * không nhãn nhìn thấy (`aria-label`), vd ô nhận xét của thẻ đánh giá chuyến.
+   */
+  hideLabel?: boolean;
   editable?: boolean;
+  /** Mở bàn phím ngay khi ô được dựng — vd ô vừa được mở khoá bằng nút bút (`key` mới). */
+  autoFocus?: boolean;
+  /** Phần tử ở mép phải TRONG khung ô — vd nút bút mở khoá ô liên hệ (cùng `suffix` của web). */
+  suffix?: ReactNode;
   autoCapitalize?: TextInputProps['autoCapitalize'];
   autoComplete?: TextInputProps['autoComplete'];
   keyboardType?: TextInputProps['keyboardType'];
@@ -92,12 +102,15 @@ export function TextField<T extends FieldValues>({
   multiline = false,
   rows = 4,
   maxLength,
+  hideLabel = false,
   onChangeText: onChangeTextExtra,
   onBlur: onBlurExtra,
   onFocus: onFocusExtra,
   afterControl,
+  suffix,
   ...inputProps
 }: TextFieldProps<T>) {
+  const colors = useColors();
   /*
    * `editable={false}` là cách React Native khai "chỉ đọc"; vỏ ô cần biết để đổi hình.
    *
@@ -132,13 +145,15 @@ export function TextField<T extends FieldValues>({
       minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),
-    [multiline, rows],
+    [colors, multiline, rows],
   );
   const error = fieldState.error?.message;
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+      {hideLabel ? null : (
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+      )}
 
       {/*
         `onPress` chuyển focus TƯỜNG MINH vào ô của khung này. Chạm vào đệm/icon/khoảng trống
@@ -204,6 +219,7 @@ export function TextField<T extends FieldValues>({
             />
           </Pressable>
         ) : null}
+        {suffix}
       </FieldShell>
 
       {afterControl}

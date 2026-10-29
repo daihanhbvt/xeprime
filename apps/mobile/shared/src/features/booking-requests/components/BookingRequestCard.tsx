@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -35,7 +35,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useStartBookingRequestConversation } from '../hooks/use-booking-requests';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { RespondDeadline } from './RespondDeadline';
 import type { BookingRequestItem } from '../api';
 
@@ -48,7 +49,7 @@ const AVATAR_SIZE = 32;
 /** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
 const AVATAR_STYLE = { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   /** Giữ nút đủ rộng để đọc nhãn; hàng liên hệ sẽ tự xuống dòng trên màn hình hẹp. */
   contactButton: { flexGrow: 1, flexBasis: '30%', minWidth: sizing.touchTarget + space.xl },
   thumb: {
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));
 
 /**
  * MỘT YÊU CẦU THUÊ trong hộp thư của gian hàng — bản native của `BookingRequestCard` bên web.
@@ -92,6 +93,8 @@ function BookingRequestCardImpl({
    */
   onOpenDetail: (request: BookingRequestItem) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('BookingRequests');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -141,6 +144,7 @@ function BookingRequestCardImpl({
       : undefined;
   // `telHref` chứ không ghép tay `tel:${phone}` — ghép tay hỏng im lặng với dạng `84…`/`+84…`.
   const tel = telHref(request.customerPhone);
+  const accountTel = telHref(request.customerAccountPhone);
 
   const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
     .filter(Boolean)
@@ -355,6 +359,30 @@ function BookingRequestCardImpl({
                 >
                   {request.customerPhone}
                 </Text>
+                {/*
+                  Số tài khoản ĐÃ XÁC MINH — server chỉ trả khi khách để lại số liên hệ khác nó, để
+                  người trực biết số nào chắc chắn là của khách.
+                */}
+                {request.customerAccountPhone ? (
+                  /*
+                    Bọc `Pressable` có `hitSlop` — một dòng chữ cỡ nhãn là đích chạm quá nhỏ, cùng
+                    cách màn chi tiết yêu cầu làm cho đúng số này.
+                  */
+                  <Pressable
+                    disabled={!accountTel}
+                    onPress={() => (accountTel ? void Linking.openURL(accountTel) : undefined)}
+                    hitSlop={space.md}
+                    accessibilityRole="link"
+                    accessibilityLabel={t('customer.accountPhoneAria', {
+                      phone: request.customerAccountPhone,
+                      name: request.customerName,
+                    })}
+                  >
+                    <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                      {t('customer.accountPhone', { phone: request.customerAccountPhone })}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {request.customerEmail ? (
                   <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
                     {request.customerEmail}
@@ -662,6 +690,7 @@ function BookingRequestCardImpl({
                 */}
                 {canDecide ? (
                   <Button
+                    icon="close-circle-outline"
                     label={t('actions.cancel')}
                     variant="danger"
                     size="sm"
@@ -726,15 +755,21 @@ function ContactRow({ request }: { request: BookingRequestItem }) {
 
   return (
     <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-      <ContactButton
-        label={t('message')}
+      {/*
+        Chủ xe tuyến hoa hồng chưa nhắn khách khi yêu cầu chưa thành ĐƠN (ADR 0073) — ẩn hẳn, cùng
+        luật với SĐT khách; server chặn endpoint mở hội thoại. Như web `BookingRequestCard`.
+      */}
+      {request.chatOpen ? (
+        <ContactButton
+          label={t('message')}
         accessibilityLabel={t('messageAria', { name: request.customerName })}
         icon="chatbubble-outline"
         disabled={!canMessage}
         {...(canMessage ? {} : { accessibilityHint: t('messageUnavailable') })}
         loading={startConversation.isPending}
-        onPress={message}
-      />
+          onPress={message}
+        />
+      ) : null}
 
       {/*
         Điều kiện đọc `phone` chứ không `tel`: `tel` chỉ là chuỗi dẫn xuất, nên TypeScript không
@@ -797,6 +832,8 @@ function ContactButton({
   loading?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={loading ? undefined : onPress}
@@ -860,6 +897,7 @@ function NotePanel({
   onToggle?: () => void;
   children: string;
 }) {
+  const colors = useColors();
   const danger = tone === 'danger';
 
   return (
@@ -908,6 +946,7 @@ function NotePanel({
  * co được thì nhãn dài (tiếng Anh dài hơn tiếng Việt) đẩy thứ bên phải tràn khỏi thẻ.
  */
 function ZoneTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text
       f={1}
@@ -922,6 +961,7 @@ function ZoneTitle({ children }: { children: string }) {
 }
 
 function Hint({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label}>
       {children}
@@ -930,6 +970,7 @@ function Hint({ children }: { children: string }) {
 }
 
 function Timestamp({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.placeholder} fos={fontSize.label}>
       {children}

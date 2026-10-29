@@ -16,7 +16,8 @@ import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
 import type { IconName } from '@/components/ui/Chip';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { Member } from '../api';
 
 /**
@@ -73,6 +74,7 @@ function MemberCardImpl({
   onChangeScope: (member: Member) => void;
   onRemove: (member: Member) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Members');
   const tCommon = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
@@ -110,13 +112,7 @@ function MemberCardImpl({
     {
       key: 'branchScope',
       label: scopeLabel,
-      node: (
-        <StatusBadge
-          label={scopeLabel}
-          color={STATUS_COLOR.NEUTRAL}
-          size="sm"
-        />
-      ),
+      node: <StatusBadge label={scopeLabel} color={STATUS_COLOR.NEUTRAL} size="sm" />,
     },
   ];
 

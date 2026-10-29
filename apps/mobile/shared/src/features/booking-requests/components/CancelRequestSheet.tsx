@@ -17,7 +17,8 @@ import { Chip } from '@/components/ui/Chip';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
 
 type CancelValues = { reason: string };
@@ -53,6 +54,7 @@ export function CancelRequestSheet({
   onConfirm: (input: { reasonCategory: CancellationReasonCategory; reason?: string }) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.cancel');
   const domainLabel = useDomainLabel();
 

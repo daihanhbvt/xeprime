@@ -516,7 +516,8 @@
       "retry": "Thử lại",
       "chooseAgain": "Chọn lại chuyến",
       "invalid": "Thông tin chuyến chưa hợp lệ. Vui lòng chọn lại ở trang chi tiết xe."
-    }
+    },
+    "tripNeedsFix": "Lịch thuê chưa dùng được — vui lòng chỉnh lại thời gian thuê rồi bấm Chọn thuê."
   },
   "approved": {
     "title": "Đã tạo đơn thuê",

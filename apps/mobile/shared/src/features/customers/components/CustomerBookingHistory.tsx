@@ -17,7 +17,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useCustomerBookings } from '../hooks/use-customers';
 
 const SKELETON_ROWS = 3;
@@ -36,6 +37,7 @@ export function CustomerBookingHistory({
   customerId: string;
   canViewFinance: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers.history');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

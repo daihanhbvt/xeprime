@@ -7,7 +7,8 @@ import { IconDisc } from '@/components/ui/IconDisc';
 import type { IconName } from '@/components/ui/Chip';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { PartnerOverview } from '../api';
 import type { DashboardLinks } from '../hooks/use-dashboard';
 
@@ -16,6 +17,7 @@ import type { DashboardLinks } from '../hooks/use-dashboard';
  * `answer` trong `DashboardHeader` bên web. Tông vàng khi có việc, xanh khi yên ả.
  */
 export function AnswerBanner({ answer }: { answer: { text: string; busy: boolean } | null }) {
+  const colors = useColors();
   if (!answer) return null;
   const fg = answer.busy ? colors.warning : colors.success;
   return (
@@ -59,6 +61,7 @@ export function TodayFocus({
   isError: boolean;
   links: DashboardLinks;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.focus');
   const fmt = useAppFormat();
 
@@ -75,15 +78,26 @@ export function TodayFocus({
 
   const requestMeta: TileMeta[] = [];
   if (requests && requests.pendingUrgent > 0) {
-    requestMeta.push({ key: 'urgent', text: t('requests.urgent', { count: requests.pendingUrgent }), urgent: true });
+    requestMeta.push({
+      key: 'urgent',
+      text: t('requests.urgent', { count: requests.pendingUrgent }),
+      urgent: true,
+    });
   }
   if (requests?.nextRespondBy) {
-    requestMeta.push({ key: 'next', text: t('requests.next', { time: fmt.shortDateTime(requests.nextRespondBy) }) });
+    requestMeta.push({
+      key: 'next',
+      text: t('requests.next', { time: fmt.shortDateTime(requests.nextRespondBy) }),
+    });
   }
 
   const pickupMeta: TileMeta[] = [];
   if (today && today.pickupsOverdue > 0) {
-    pickupMeta.push({ key: 'overdue', text: t('pickups.overdue', { count: today.pickupsOverdue }), urgent: true });
+    pickupMeta.push({
+      key: 'overdue',
+      text: t('pickups.overdue', { count: today.pickupsOverdue }),
+      urgent: true,
+    });
   }
   if (today && today.pickupsToday > 0) {
     pickupMeta.push({ key: 'today', text: t('pickups.today', { count: today.pickupsToday }) });
@@ -91,10 +105,17 @@ export function TodayFocus({
 
   const activeMeta: TileMeta[] = [];
   if (today && today.returnsOverdue > 0) {
-    activeMeta.push({ key: 'overdue', text: t('active.overdue', { count: today.returnsOverdue }), urgent: true });
+    activeMeta.push({
+      key: 'overdue',
+      text: t('active.overdue', { count: today.returnsOverdue }),
+      urgent: true,
+    });
   }
   if (today && today.returnsToday > 0) {
-    activeMeta.push({ key: 'today', text: t('active.returnsToday', { count: today.returnsToday }) });
+    activeMeta.push({
+      key: 'today',
+      text: t('active.returnsToday', { count: today.returnsToday }),
+    });
   }
 
   return (
@@ -175,6 +196,7 @@ function ActionTile({
   emptyText: string;
   errorText: string;
 }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
   const tone = urgent ? colors.danger : colors.primaryActive;

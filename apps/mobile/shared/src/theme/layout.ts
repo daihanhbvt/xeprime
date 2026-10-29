@@ -1,4 +1,4 @@
-import { space } from './tokens';
+import { NARROW_SCREEN, space } from './tokens';
 
 /**
  * Nhịp bố cục của MỘT màn nội dung — lề ngang, khoảng giữa các khối, phần đè lên ảnh mở đầu.
@@ -20,7 +20,10 @@ import { space } from './tokens';
  */
 export const layout = {
   /** Lề trái/phải của mọi màn nội dung. */
-  screenX: space.md,
+  // Máy hẹp (< 380dp): lề 12 thay 16 — trả lại 8dp ngang cho chữ (người dùng chốt 28/10/2026).
+  screenX: NARROW_SCREEN ? 12 : space.md,
+  /** Đệm trong của thẻ — cùng luật máy hẹp với lề màn. */
+  cardPad: NARROW_SCREEN ? 12 : space.md,
   /** Giữa các khối lớn. Cũng là lề trên khối đầu tiên và lề dưới cuối trang. */
   section: space.lg,
   /** Trong một khối: tiêu đề ↔ nội dung. */

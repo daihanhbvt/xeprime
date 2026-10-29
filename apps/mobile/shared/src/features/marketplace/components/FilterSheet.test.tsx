@@ -36,7 +36,18 @@ describe('FilterSheet', () => {
   it('hiện dòng hoá đơn VAT và áp `vatInvoice: true` khi bật', async () => {
     const onApply = jest.fn();
     const view = await render(
-      withIntl(<FilterSheet open filters={{}} onApply={onApply} onClose={jest.fn()} />),
+      withIntl(
+        <FilterSheet
+          open
+          filters={{}}
+          locationLabel=""
+          rentalLabel=""
+          onPickLocation={jest.fn()}
+          onPickRentalTime={jest.fn()}
+          onApply={onApply}
+          onClose={jest.fn()}
+        />,
+      ),
     );
 
     const row = view.getByText('Hỗ trợ xuất hoá đơn VAT (2)');

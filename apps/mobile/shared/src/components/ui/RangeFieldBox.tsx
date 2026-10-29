@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fieldFontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Ô khoảng thuê — bản native của `RentalDateTimeRangeField variant="labelled"` bên web.
@@ -37,6 +38,7 @@ export function RangeFieldBox({
   required?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.components.rentalRange');
   const filled = startValue.length > 0 && endValue.length > 0;
 
@@ -85,6 +87,7 @@ export function RangeFieldBox({
 
 /** Một đầu của khoảng: nhãn nhỏ bên trái, giá trị bên phải — nhãn dính liền giá trị của nó. */
 function Endpoint({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   const t = useTranslations('Common.components.rentalRange');
 
   return (

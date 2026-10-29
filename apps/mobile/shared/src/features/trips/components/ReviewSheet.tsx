@@ -1,17 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  API_ERROR_CODE,
-  RATING_MAX,
-  RATING_MIN,
-  RATING_SCALE,
-  REVIEW_COMMENT_MAX,
-} from '@xeprime/types';
+import { API_ERROR_CODE, RATING_MAX, RATING_MIN, REVIEW_COMMENT_MAX } from '@xeprime/types';
 import { buildReviewSchema, type ReviewFormValues } from '../review-schema';
 import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -19,10 +11,12 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, fontSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { useCreateReview, useUpdateReview } from '../hooks/use-trips';
+import { StarPicker } from './TripReviewCard';
 import type { CustomerTripDetail } from '../api';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
  * Đánh giá chuyến (BKG-16) — chỉ mở khi đơn đã `completed`, và SERVER là nơi chốt điều kiện đó.
@@ -43,8 +37,11 @@ export function ReviewSheet({
   /** `edit` = sửa đánh giá đã gửi (MỘT lần, server bật `review.canEdit`), điền sẵn bản cũ. */
   mode?: 'create' | 'edit';
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.review');
   const toast = useAppToast();
+  // Lỗi ánh xạ từ MÃ (ADR 0012) — vd `REVIEW_EDIT_LIMIT` — không hiện câu tiếng Việt của server.
+  const errorMessage = useErrorMessage();
   const createReview = useCreateReview(trip.id);
   const updateReview = useUpdateReview(trip.id);
   const editing = mode === 'edit' && trip.review !== null;
@@ -70,7 +67,8 @@ export function ReviewSheet({
     defaultValues:
       editing && trip.review
         ? { rating: trip.review.rating, comment: trip.review.comment ?? '' }
-        : { rating: RATING_MAX, comment: '' },
+        : // Chưa chọn sao — như web `TripReviewCard`: đánh giá là lựa chọn của khách, không điền sẵn 5 sao thay họ.
+          { comment: '' },
   });
 
   const submit = handleSubmit((values) => {
@@ -88,7 +86,7 @@ export function ReviewSheet({
             onClose();
           },
           onError: (error) => {
-            toast.showError(getErrorMessage(error));
+            toast.showError(errorMessage(error));
             onClose();
           },
         },
@@ -114,7 +112,7 @@ export function ReviewSheet({
             onClose();
             return;
           }
-          toast.showError(getErrorMessage(error));
+          toast.showError(errorMessage(error));
         },
       },
     );
@@ -138,10 +136,16 @@ export function ReviewSheet({
       <Controller
         control={control}
         name="rating"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <YStack gap={space.xs}>
             <FieldLabel label={t('ratingLabel')} required />
-            <StarPicker value={field.value} onChange={field.onChange} />
+            {/* Chưa chọn sao ⇒ giá trị rỗng, vẽ 0 sao; bấm Gửi khi chưa chọn thì hiện lỗi bắt buộc. */}
+            <StarPicker value={field.value ?? 0} onChange={field.onChange} />
+            {fieldState.error?.message ? (
+              <Text col={colors.danger} fos={fontSize.label}>
+                {fieldState.error.message}
+              </Text>
+            ) : null}
           </YStack>
         )}
       />
@@ -164,33 +168,4 @@ export function ReviewSheet({
   );
 }
 
-/** Chọn sao. Vùng chạm là cả ô 48dp dù ngôi sao vẽ nhỏ hơn — năm mục một hàng rất dễ trượt. */
-function StarPicker({ value, onChange }: { value: number; onChange: (next: number) => void }) {
-  const t = useTranslations('Trips.review');
-
-  return (
-    <XStack ai="center">
-      {RATING_SCALE.map((star) => (
-        <Pressable
-          key={star}
-          onPress={() => onChange(star)}
-          accessibilityRole="radio"
-          accessibilityState={{ selected: value === star }}
-          accessibilityLabel={t('starA11y', { count: star })}
-          style={{
-            width: sizing.touchTarget,
-            height: sizing.touchTarget,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons
-            name={star <= value ? 'star' : 'star-outline'}
-            size={30}
-            color={star <= value ? colors.primary : colors.border}
-          />
-        </Pressable>
-      ))}
-    </XStack>
-  );
-}
+/* `StarPicker` dùng chung với thẻ đánh giá trong chuyến (`TripReviewCard`) — một hình sao cho cả app. */

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
 import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import {
   buildResetPasswordByPhoneSchema,
@@ -21,7 +22,8 @@ import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeIn
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useAuthSchemaLabels } from './use-auth-schema-labels';
 
 const isOtpCodeComplete = (code: string): boolean => /^[0-9]{6}$/.test(code);
@@ -39,6 +41,7 @@ const isOtpCodeComplete = (code: string): boolean => /^[0-9]{6}$/.test(code);
  *  - Xong là XONG, không tự đăng nhập: người dùng đăng nhập lại bằng SĐT + mật khẩu vừa đặt.
  */
 export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const tCommon = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
@@ -239,7 +242,9 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
           <XStack jc="center">
             <Button
               label={
-                otp.cooldown > 0 ? t('otp.resendIn', { seconds: otp.cooldown }) : t('otp.resend')
+                otp.cooldown > 0
+                  ? t('market.forgot.code.resendIn', { time: formatOtpCooldown(otp.cooldown) })
+                  : t('market.forgot.code.resend')
               }
               variant="ghost"
               block={false}

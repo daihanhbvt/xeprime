@@ -9,6 +9,7 @@ import {
   HANDOVER_STATUS_META,
   SERVICE_TYPE,
   STATUS_COLOR,
+  DRIVER_SOURCE,
   type BookingStatus,
   type StatusColor,
 } from '@xeprime/types';
@@ -20,7 +21,8 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { BookingListItem } from '../api';
 
 /** Màu của mức khẩn — quá giờ là việc phải xử lý ngay, không phải một lỗi của khách. */
@@ -79,6 +81,7 @@ function BookingCardImpl({
    */
   awaitingPickup?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -257,6 +260,7 @@ function BookingCardImpl({
  * viên phải lên đường, đón khách là chuyến có tài xế, nhận tại chi nhánh là khách tự tới.
  */
 function HandoverPlaceLine({ booking }: { booking: BookingListItem }) {
+  const colors = useColors();
   const t = useTranslations('Bookings');
   const domainLabel = useDomainLabel();
 
@@ -286,9 +290,10 @@ function HandoverPlaceLine({ booking }: { booking: BookingListItem }) {
 /**
  * Tài xế của đơn (ADR 0063) — gương cột "Tài xế" của `BookingTable` bên web. Đơn không phải
  * `with_driver` (và không còn tài xế cũ) thì bỏ hẳn dòng: một dòng "—" trên thẻ là nhiễu.
- * Chưa phân công ⇒ chữ màu cảnh báo, vì đơn đó chưa chạy được.
+ * Chưa phân công ⇒ chữ màu cảnh báo, vì đơn đó chưa chạy được. Tài xế ngoài hệ thống ⇒ "Ngoài hệ thống".
  */
 function DriverLine({ booking }: { booking: BookingListItem }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.driver');
   const domainLabel = useDomainLabel();
   const driver = booking.driver ?? null;
@@ -308,11 +313,16 @@ function DriverLine({ booking }: { booking: BookingListItem }) {
       <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1} f={1}>
         {driver.name}
       </Text>
-      <StatusBadge
-        label={domainLabel('driverAssignmentStatus', driver.assignmentStatus, meta.label)}
-        color={meta.color}
-        size="sm"
-      />
+      {/* Tài xế NGOÀI HỆ THỐNG (ADR 0067) đã phủ chuyến, không có lượt chờ — nhãn riêng như web. */}
+      {driver.source === DRIVER_SOURCE.EXTERNAL ? (
+        <StatusBadge label={t('external')} color={STATUS_COLOR.NEUTRAL} size="sm" />
+      ) : (
+        <StatusBadge
+          label={domainLabel('driverAssignmentStatus', driver.assignmentStatus, meta.label)}
+          color={meta.color}
+          size="sm"
+        />
+      )}
     </FactLine>
   );
 }
@@ -348,6 +358,7 @@ function FactLine({
   icon: keyof typeof Ionicons.glyphMap;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} />

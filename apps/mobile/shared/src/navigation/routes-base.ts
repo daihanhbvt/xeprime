@@ -178,8 +178,16 @@ export const ROUTES = {
   /** Chợ xe: trang khám phá, tìm kiếm, chi tiết xe. */
   explore: {
     home: (): Href => '/explore',
+    /*
+     * Tab Tìm xe SỐNG giữa các lần mở, và `navigate` của React Navigation GỘP params mới vào params
+     * cũ. Gửi thiếu một khoá (vd. lần trước có lộ trình, lần này tự lái) là khoá cũ nằm lại và màn
+     * lọc theo nó. Nên: lượt tìm CÓ ngữ cảnh luôn gửi ĐỦ mọi khoá (vắng = '' ⇒ màn bỏ qua) + `nav`
+     * (mốc thời gian) để màn dựng lại sạch — kể cả khi bấm tìm lại đúng bộ cũ, như web đẩy URL mới.
+     */
     search: (params?: ExploreSearchParams): Href =>
-      params && Object.keys(params).length > 0 ? { pathname: '/search', params } : '/search',
+      params && Object.keys(params).length > 0
+        ? { pathname: '/search', params: { ...EMPTY_SEARCH_PARAMS, ...params, nav: String(Date.now()) } }
+        : '/search',
     listingDetail: (vehicleId: string, serviceType?: string): Href =>
       serviceType
         ? { pathname: '/listings/[id]', params: { id: vehicleId, serviceType } }
@@ -211,10 +219,7 @@ export const ROUTES = {
      * Native không có URL để mang ngữ cảnh, nên nó đi qua tham số điều hướng, đúng cách
      * `serviceType` đang đi.
      */
-    request: (
-      vehicleId: string,
-      context?: { serviceType?: string; provinceCode?: string },
-    ): Href => ({
+    request: (vehicleId: string, context?: BookingRequestPrefillParams): Href => ({
       pathname: '/listings/[id]/request',
       /*
        * `id` khai TƯỜNG MINH trong object, không gom vào một `Record<string, string>` dựng dần:
@@ -225,6 +230,23 @@ export const ROUTES = {
         id: vehicleId,
         ...(context?.serviceType ? { serviceType: context.serviceType } : {}),
         ...(context?.provinceCode ? { provinceCode: context.provinceCode } : {}),
+        ...(context?.pickupAt ? { pickupAt: context.pickupAt } : {}),
+        ...(context?.returnAt ? { returnAt: context.returnAt } : {}),
+        ...(context?.rentalMode ? { rentalMode: context.rentalMode } : {}),
+        ...(context?.routeType ? { routeType: context.routeType } : {}),
+        ...(context?.packageMonths ? { packageMonths: context.packageMonths } : {}),
+        ...(context?.pickupPreference ? { pickupPreference: context.pickupPreference } : {}),
+        ...(context?.delivery ? { delivery: context.delivery } : {}),
+        ...(context?.deliveryAddressLine
+          ? { deliveryAddressLine: context.deliveryAddressLine }
+          : {}),
+        ...(context?.deliveryPlaceId ? { deliveryPlaceId: context.deliveryPlaceId } : {}),
+        ...(context?.deliveryLat ? { deliveryLat: context.deliveryLat } : {}),
+        ...(context?.deliveryLng ? { deliveryLng: context.deliveryLng } : {}),
+        ...(context?.promoCode ? { promoCode: context.promoCode } : {}),
+        ...(context?.vehicleProtection ? { vehicleProtection: context.vehicleProtection } : {}),
+        ...(context?.personalAccident ? { personalAccident: context.personalAccident } : {}),
+        ...(context?.autoContinue ? { autoContinue: context.autoContinue } : {}),
       },
     }),
   },
@@ -236,7 +258,8 @@ export const ROUTES = {
    */
   driving: {
     links: (): Href => '/account/driving',
-    trips: (): Href => ({ pathname: '/trips', params: { [TRIPS_TAB_PARAM]: TRIPS_TAB.DRIVING } }),
+    /** "Chuyến tôi lái" nằm ở khu mặc định của Trung tâm Tài xế (web `drivingTripPath.list`). */
+    trips: (): Href => '/account/driving',
     tripDetail: (bookingId: string): Href => ({
       pathname: '/trips/driving/[id]',
       params: { id: bookingId },
@@ -270,6 +293,8 @@ export const ROUTES = {
   /** Tài khoản, đăng nhập, hồ sơ. */
   account: {
     home: (): Href => '/account',
+    /** "Quản lý tài khoản" — thông tin tài khoản + giấy tờ, tách khỏi trang menu (Figma `21860:76359`). */
+    profile: (): Href => '/account/profile',
     /**
      * Khu CHỦ XE trong tài khoản — gương của `ROUTES.ACCOUNT.*` bên web (08/09/2026).
      *
@@ -380,6 +405,8 @@ export const ROUTES = {
      * `/account/bank-accounts`.
      */
     bankAccounts: (): Href => '/account/bank-accounts',
+    /** Xe yêu thích — xe khách đã lưu để xem/đặt sau (web `ROUTES.ACCOUNT.FAVORITES`). */
+    favorites: (): Href => '/account/favorites',
     /** Yêu cầu hỗ trợ của CHÍNH người dùng — khác `/support` công khai của chợ xe. */
     support: (): Href => '/account/support',
     /** Một yêu cầu hỗ trợ — dòng thời gian, trả lời, đóng yêu cầu. */
@@ -849,6 +876,8 @@ export type BookingCreatePrefill = {
    * hàm. Thiếu nó thì bước THỜI GIAN hiện một thẻ xe rỗng và nút Tiếp tục im lặng.
    */
   vehicleName?: string;
+  /** Ảnh xe đi cùng id — xe nội bộ không có hồ sơ công khai để màn đích tự lấy (web `vehicleImageUrl`). */
+  vehicleImageUrl?: string;
   /** ISO-8601 UTC. */
   pickupAt?: string;
   /** ISO-8601 UTC. */
@@ -872,9 +901,52 @@ export type ReceiptRouteFilters = {
 };
 
 /**
+ * Chuyến khách đã cấu hình ở trang xe, mang sang luồng gửi yêu cầu — bản native của
+ * `RequestBookingPrefill` web (#205). Expo Router chỉ chuyển giá trị nguyên thuỷ nên mọi trường là
+ * chuỗi (`packageMonths` là số dạng chuỗi, `delivery` là cờ `'1'`); màn đặt xe ép kiểu lại khi đọc
+ * và CHỈ dùng chúng khi không có bản nháp đang dở.
+ */
+export type BookingRequestPrefillParams = {
+  serviceType?: string;
+  provinceCode?: string;
+  pickupAt?: string;
+  returnAt?: string;
+  rentalMode?: string;
+  routeType?: string;
+  packageMonths?: string;
+  pickupPreference?: string;
+  delivery?: string;
+  /** Địa chỉ giao xe đã xác nhận ở thẻ đặt xe (`prefill.delivery` web); tỉnh đi qua `provinceCode`. */
+  deliveryAddressLine?: string;
+  deliveryPlaceId?: string;
+  deliveryLat?: string;
+  deliveryLng?: string;
+  /** Mã khuyến mãi đang áp ở thẻ đặt xe. */
+  promoCode?: string;
+  /** `'1'` = khách tích bảo hiểm vật chất xe MIC ở thẻ đặt xe (`prefill.vehicleProtectionSelected` web). */
+  vehicleProtection?: string;
+  /** `'1'` = khách tích bảo hiểm tai nạn người ngồi trên xe MIC (`prefill.personalAccidentSelected` web). */
+  personalAccident?: string;
+  /** `'1'` = thẻ đã đủ chuyến ⇒ luồng tự chạy lượt "Tiếp tục" (`prefill.autoContinue` web). */
+  autoContinue?: string;
+};
+
+/**
  * Ngữ cảnh tìm kiếm đi qua route params. Expo Router chỉ chuyển được giá trị nguyên thuỷ, nên
  * `hourly` là cờ `'1'` chứ không phải boolean — màn `search` ép kiểu lại khi đọc.
  */
+/** Mọi khoá ngữ cảnh của tab Tìm xe ở dạng rỗng — xem `ROUTES.explore.search`. */
+const EMPTY_SEARCH_PARAMS: Required<Omit<ExploreSearchParams, 'nav'>> = {
+  vehicleType: '',
+  serviceType: '',
+  provinceCode: '',
+  routeType: '',
+  pickupAt: '',
+  returnAt: '',
+  hourly: '',
+  bodyType: '',
+};
+
 export type ExploreSearchParams = {
   vehicleType?: string;
   serviceType?: string;
@@ -883,6 +955,10 @@ export type ExploreSearchParams = {
   pickupAt?: string;
   returnAt?: string;
   hourly?: string;
+  /** Kiểu dáng — danh sách KEY nối bằng dấu phẩy, cùng dạng `?bodyType=` của web. */
+  bodyType?: string;
+  /** Mốc của MỘT lượt tìm — đổi mỗi lần để tab Tìm xe dựng lại sạch. Do `ROUTES` tự gắn. */
+  nav?: string;
 };
 
 /**

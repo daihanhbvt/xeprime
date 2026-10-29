@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 export const OTP_LENGTH = 6;
 
@@ -35,6 +36,7 @@ export function OtpCodeInput({
   autoFocus = false,
   inputRef: externalRef,
 }: OtpCodeInputProps) {
+  const colors = useColors();
   const ownRef = useRef<TextInput>(null);
   const inputRef = externalRef ?? ownRef;
   /*

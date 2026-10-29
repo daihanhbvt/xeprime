@@ -4,8 +4,8 @@
 >
 > | Thư mục | Package | Là gì |
 > | --- | --- | --- |
-> | `customer/` | `@xeprime/mobile-customer` | **XePrime** — chợ thuê xe + Owner Lite (scheme `xeprime`, `vn.xeprime.mobile`, Metro 8081) |
-> | `manage/` | `@xeprime/mobile-manage` | **XePrime Partner** — bộ quản lý gian hàng tuyến gói (scheme `xeprimepartner`, `vn.xeprime.partner` — PLACEHOLDER chờ team chốt, Metro 8082) |
+> | `customer/` | `@xeprime/mobile-customer` | **XePrime** — chợ thuê xe + Owner Lite (scheme `xeprime`, `vn.xeprime.customerapp`, Metro 8081) |
+> | `manage/` | `@xeprime/mobile-manage` | **XePrime Partner** — bộ quản lý gian hàng tuyến gói (scheme `xeprimepartner`, `vn.xeprime.partnerapp` — PLACEHOLDER chờ team chốt, Metro 8082) |
 > | `shared/` | `@xeprime/mobile-shared` | Phần dùng chung: `src/` (features, components, api, i18n, theme…), assets, plugins, scripts |
 >
 > Mỗi app là MỘT Expo project độc lập (app.json, metro, native `android/`/`ios/`, eas.json
@@ -51,8 +51,8 @@ Mỗi app là một Expo project riêng, nên mọi lệnh đều đi qua `--fil
 
 | App | Metro | Android `applicationId` | Scheme |
 | --- | --- | --- | --- |
-| XePrime (khách) | **8081** | `vn.xeprime.mobile` | `xeprime://` |
-| XePrime Partner | **8082** | `vn.xeprime.partner` | `xeprimepartner://` |
+| XePrime (khách) | **8081** | `vn.xeprime.customerapp` | `xeprime://` |
+| XePrime Partner | **8082** | `vn.xeprime.partnerapp` | `xeprimepartner://` |
 
 Hai app cài song song trên MỘT máy, nên hai Metro phải chạy cùng lúc — cứ mở hai terminal và
 chạy `start` của từng app.

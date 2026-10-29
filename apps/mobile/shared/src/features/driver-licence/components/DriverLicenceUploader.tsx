@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -10,7 +11,8 @@ import { Callout } from '@/components/ui/Callout';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { IMAGE_SOURCE, type ImageSource } from '@/lib/r2-image-upload';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useDriverLicenceImage, useSubmitDriverLicence } from '../hooks/use-driver-licence';
 import {
   PrepareImageError,
@@ -21,6 +23,13 @@ import {
 
 /** Tỉ lệ thẻ ID-1 (85,6 × 54 mm) — khung mang dáng mặt trước một tấm bằng lái. */
 const CARD_ASPECT = 85.6 / 54;
+/** `.cardIcon { font-size: 26px }` — biểu tượng máy ảnh của khung chọn ảnh. */
+const CARD_ICON = 26;
+/** `.sketchPhoto { font-size: 30px }` — hình người trong ô ảnh chân dung. */
+const SKETCH_ICON = 30;
+/** `linear-gradient(135deg, …)` của `.cardPicker` quy ra điểm đầu/cuối của expo-linear-gradient. */
+const GRADIENT_135_START = { x: 0, y: 0 };
+const GRADIENT_135_END = { x: 1, y: 1 };
 
 type StepState = 'done' | 'active' | 'todo';
 
@@ -44,6 +53,7 @@ export function DriverLicenceUploader({
   /** Tải xong (lượt nộp đã sang "đang đọc"). */
   onSubmitted?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('DriverLicence');
   const apiErrorMessage = useErrorMessage();
   const imageErrorMessage = useImageErrorMessage(apiErrorMessage);
@@ -53,6 +63,8 @@ export function DriverLicenceUploader({
   const [preparing, setPreparing] = useState(false);
   const [rejection, setRejection] = useState<PrepareImageRejection | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  /** Phần trăm byte đã gửi lên R2 — `progress` của web, hiện `· {progress}%` ở bước "Tải ảnh lên". */
+  const [progress, setProgress] = useState(0);
 
   // Máy đọc xong (lượt nộp rời `processing`): về lại trạng thái chọn ảnh cho lần sau.
   const processingId = processing?.id ?? null;
@@ -71,6 +83,7 @@ export function DriverLicenceUploader({
     if (busy) return;
     setRejection(null);
     setPickError(null);
+    setProgress(0);
     submit.reset();
     let raw;
     try {
@@ -92,11 +105,14 @@ export function DriverLicenceUploader({
     }
     setPreviewUri(prepared.uri);
     setPreparing(false);
-    submit.mutate(prepared, {
-      onSuccess: () => onSubmitted?.(),
-      // Tải hỏng: bỏ ảnh xem trước, khách chọn lại ngay ở đây (lỗi hiện bên dưới).
-      onError: () => setPreviewUri(null),
-    });
+    submit.mutate(
+      { image: prepared, onProgress: setProgress },
+      {
+        onSuccess: () => onSubmitted?.(),
+        // Tải hỏng: bỏ ảnh xem trước, khách chọn lại ngay ở đây (lỗi hiện bên dưới).
+        onError: () => setPreviewUri(null),
+      },
+    );
   }
 
   const steps: { key: 'upload' | 'read' | 'check'; state: StepState }[] = [
@@ -136,6 +152,10 @@ export function DriverLicenceUploader({
           accessibilityLabel={t('picker.tapTitle')}
           onPress={() => void pick(IMAGE_SOURCE.CAMERA)}
         >
+          {/*
+            `.card.cardPicker` web: khung dáng tấm bằng, bo `border-radius-lg`, viền 2px ĐỨT NÉT
+            `color-border-strong` (`colors.borderInput`), nền dải 135° `bg-container → bg-muted`.
+          */}
           <YStack
             w="100%"
             aspectRatio={CARD_ASPECT}
@@ -143,10 +163,16 @@ export function DriverLicenceUploader({
             bw={2}
             borderStyle="dashed"
             bc={colors.borderInput}
-            bg={colors.surface}
+            ov="hidden"
             p={space.md}
           >
-            {/* Dải tiêu đề của tấm bằng — chỉ để nhận ra dáng, không chữ. */}
+            <LinearGradient
+              colors={[colors.surface, colors.surfaceMuted]}
+              start={GRADIENT_135_START}
+              end={GRADIENT_135_END}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* `.sketchTitle`: dải tiêu đề của tấm bằng — chỉ để nhận ra dáng, không chữ. */}
             <YStack
               alignSelf="center"
               w="44%"
@@ -156,23 +182,32 @@ export function DriverLicenceUploader({
               mb={space.md}
             />
             <XStack f={1} gap={space.md} ai="center">
+              {/*
+                `.sketchPhoto`: ô ảnh chân dung — viền 1px `color-border`, bo `border-radius`, nền
+                `bg-container`, hình người 30 màu `color-border-strong`.
+              */}
               <YStack
                 w="26%"
                 aspectRatio={3 / 4}
                 br={radius.md}
                 bw={1}
                 bc={colors.border}
+                bg={colors.surface}
                 ai="center"
                 jc="center"
               >
-                <Ionicons name="person" size={iconSize.lg} color={colors.borderInput} />
+                <Ionicons name="person" size={SKETCH_ICON} color={colors.borderInput} />
               </YStack>
+              {/*
+                `.cardText` (khe 4): biểu tượng `.cardIcon` 26 `color-primary`; tiêu đề `.cardTitle`
+                semibold `color-text`; gợi ý `.cardHint` `font-size-sm` `text-tertiary`.
+              */}
               <YStack f={1} gap={space.xs}>
-                <Ionicons name="camera-outline" size={iconSize.lg} color={colors.primaryActive} />
+                <Ionicons name="camera-outline" size={CARD_ICON} color={colors.primary} />
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                   {t('picker.tapTitle')}
                 </Text>
-                <Text col={colors.textMuted} fos={fontSize.label}>
+                <Text col={colors.placeholder} fos={fontSize.label}>
                   {t('picker.hint')}
                 </Text>
               </YStack>
@@ -201,6 +236,10 @@ export function DriverLicenceUploader({
                 fow={step.state === 'active' ? fontWeight.semibold : fontWeight.regular}
               >
                 {t(`progress.steps.${step.key}`)}
+                {/* Web: `· {progress}%` cạnh bước tải, chỉ khi đang gửi và đã có byte đi. */}
+                {step.key === 'upload' && submit.isPending && progress > 0
+                  ? ` · ${progress}%`
+                  : null}
               </Text>
             </XStack>
           ))}

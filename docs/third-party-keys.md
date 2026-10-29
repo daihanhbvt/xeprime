@@ -505,8 +505,8 @@ Ba việc, chi tiết ở `docs/push-notifications.md` §2:
 
    | App | `app.json` | Package / Bundle ID |
    | --- | --- | --- |
-   | XePrime (khách) | `apps/mobile/customer/app.json` | `vn.xeprime.mobile` |
-   | XePrime Partner | `apps/mobile/manage/app.json` | `vn.xeprime.partner` |
+   | XePrime (khách) | `apps/mobile/customer/app.json` | `vn.xeprime.customerapp` |
+   | XePrime Partner | `apps/mobile/manage/app.json` | `vn.xeprime.partnerapp` |
 
 > ⚠️ File credential của app native **không nằm trong repo** và không được commit
 > (`/credentials/` nằm trong `.gitignore` của từng app). Private key

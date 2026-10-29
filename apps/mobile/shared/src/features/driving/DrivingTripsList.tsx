@@ -3,8 +3,7 @@ import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'r
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_TRIP_TAB, type DriverTripTab } from '@xeprime/types';
-import { Chip } from '@/components/ui/Chip';
-import { CountBadge } from '@/components/ui/CountBadge';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -12,12 +11,14 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import type { DriverTrip } from './api';
 import { DrivingTripCard } from './components/DrivingTripCard';
 import { useDriverPendingCounts, useDriverTrips } from './hooks';
 
 const SKELETON_ROWS = 4;
+const TABS = [DRIVER_TRIP_TAB.UPCOMING, DRIVER_TRIP_TAB.PAST] as const;
 const tripKey = (trip: DriverTrip) => trip.id;
 
 const styles = StyleSheet.create({
@@ -35,13 +36,25 @@ const styles = StyleSheet.create({
  * CUỘN VÔ HẠN thay cho bộ số trang; cắt trang vẫn ở server. Chuyến đang chờ tôi nhận nổi bật bằng
  * vạch cảnh báo và dẫn vào màn chi tiết để nhận / từ chối.
  */
-export function DrivingTripsList() {
+export function DrivingTripsList({
+  initialTab = DRIVER_TRIP_TAB.UPCOMING,
+}: {
+  /** Tab con mở đầu — từ `?tab=` của trung tâm tài xế (web `DriverCenterPage`). */
+  initialTab?: DriverTripTab;
+} = {}) {
+  const colors = useColors();
   const t = useTranslations('Driving.trips');
-  const [when, setWhen] = useState<DriverTripTab>(DRIVER_TRIP_TAB.UPCOMING);
+  const [when, setWhen] = useState<DriverTripTab>(initialTab);
+  const tCenter = useTranslations('Driving.center');
   const query = useDriverTrips(when);
+  // Số của tab kia — chỉ đọc `meta.total` của trang đầu.
+  const other = useDriverTrips(
+    when === DRIVER_TRIP_TAB.UPCOMING ? DRIVER_TRIP_TAB.PAST : DRIVER_TRIP_TAB.UPCOMING,
+  );
   const counts = useDriverPendingCounts();
-  const pendingTrips = counts.data?.trips ?? 0;
   const navigateOnce = useNavigateOnce();
+  const totalOf = (tab: DriverTripTab) =>
+    (tab === when ? query.data : other.data)?.pages[0]?.meta.total;
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
   const upcoming = when === DRIVER_TRIP_TAB.UPCOMING;
@@ -68,32 +81,28 @@ export function DrivingTripsList() {
 
   return (
     <YStack f={1}>
-      <XStack
-        px={layout.screenX}
-        py={space.sm}
-        gap={space.xs}
-        accessibilityRole="tablist"
-        accessibilityLabel={t('whenLabel')}
-      >
-        <Chip
-          label={t('upcoming')}
-          selected={upcoming}
-          size="sm"
-          onPress={() => setWhen(DRIVER_TRIP_TAB.UPCOMING)}
-          {...(pendingTrips > 0
-            ? { leading: <CountBadge count={pendingTrips} tone="danger" size="sm" /> }
-            : {})}
-          accessibilityLabel={
-            pendingTrips > 0
-              ? `${t('upcoming')} · ${t('pendingBadge', { count: pendingTrips })}`
-              : t('upcoming')
-          }
-        />
-        <Chip
-          label={t('past')}
-          selected={!upcoming}
-          size="sm"
-          onPress={() => setWhen(DRIVER_TRIP_TAB.PAST)}
+      {/*
+        Hai tab con của khu "Chuyến xe của tôi" — `SegmentTabs size="tab"` của web `DriverCenterPage`:
+        nhãn + số mục (`meta.total` của server; tab kia đọc trang 1 là đủ).
+      */}
+      <XStack px={layout.screenX} py={space.sm}>
+        <SegmentedTabs
+          items={TABS.map((tab) => {
+          const label =
+            tab === DRIVER_TRIP_TAB.UPCOMING
+              ? tCenter('tabTripsCurrent')
+              : tCenter('tabTripsEnded');
+          const count = totalOf(tab);
+            return {
+              key: tab,
+              label,
+              ...(count !== undefined
+                ? { count, accessibilityLabel: tCenter('tabLabel', { label, count }) }
+                : {}),
+            };
+          })}
+          value={when}
+          onChange={setWhen}
         />
       </XStack>
 

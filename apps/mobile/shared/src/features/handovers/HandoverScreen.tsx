@@ -39,7 +39,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { HandoverPhotoGrid } from './components/HandoverPhotoGrid';
 import { ResolveOdometerSheet } from './components/ResolveOdometerSheet';
@@ -49,7 +50,7 @@ import {
   useSaveHandoverDraft,
 } from './hooks/use-handovers';
 import type { Handover, HandoverContext, HandoverBelowPickupDetails } from './api';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 const NOTE_MAX = 2000;
 
@@ -179,11 +180,13 @@ function HandoverForm({
   onRefresh: () => void;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover');
   const tOdoError = useTranslations('Bookings.handover.odometerError');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
+  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
 
   const isPickup = type === HANDOVER_TYPE.PICKUP;
@@ -290,11 +293,12 @@ function HandoverForm({
                     entered: fmt.kmNumber(details.odometerKm),
                     pickup: fmt.kmNumber(details.pickupKm),
                   })
-                : getErrorMessage(err),
+                : errorMessage(err),
             );
             return;
           }
-          setError(getErrorMessage(err));
+          // Ánh xạ theo MÃ lỗi như web `ConfirmHandoverDialog` (ADR 0012) — không hiện câu tiếng Việt của server.
+          setError(errorMessage(err));
         },
       },
     );
@@ -352,6 +356,12 @@ function HandoverForm({
                   }
                   keyboardType="number-pad"
                 />
+
+                {/*
+                  Lời khuyên chụp ảnh + công tơ mét (ADR 0066) đứng NGOÀI vùng nâng cao, như web:
+                  ảnh vẫn tuỳ chọn, nhưng người bàn giao phải thấy lý do nên chụp mà không cần mở gì.
+                */}
+                <Notice>{t('evidenceAdvisory')}</Notice>
 
                 {/*
                   Vùng nâng cao ĐÓNG SẴN: một chuyến bình thường không cần mở. Mọi thứ trong đây
@@ -443,7 +453,7 @@ function HandoverForm({
                     {canManage ? (
                       <YStack gap={space.xs}>
                         <Text col={colors.textMuted} fos={fontSize.label}>
-                          {t('photosHint')}
+                          {t('photosOptional')}
                         </Text>
                         <HandoverPhotoGrid
                           bookingId={context.bookingId}
@@ -565,6 +575,7 @@ function AdvancedToggle({
   label: string;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   return (
     <XStack
       ai="center"
@@ -587,6 +598,7 @@ function AdvancedToggle({
 }
 
 function Notice({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" gap={space.sm} bg={colors.infoSurface} p={space.md} br={radius.md}>
       <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.info} />

@@ -3,11 +3,14 @@ import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import {
   SUPPORT_CASE_STATUS,
   SUPPORT_CASE_STATUS_META,
   SUPPORT_CASE_STATUS_VALUES,
+  SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
   canTransitionSupportCase,
+  type SupportCaseCategory,
   STATUS_COLOR,
   type SupportCaseStatus,
 } from '@xeprime/types';
@@ -28,7 +31,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   SUPPORT_SURFACE,
   type SupportCaseDetail,
@@ -59,6 +63,8 @@ export function SupportCaseDetailScreen({
   const t = useTranslations('SupportCases.detail');
   const router = useRouter();
   const query = useSupportCase(surface, caseId);
+  // Kéo để làm mới — case đang mở có thể vừa được nền tảng trả lời.
+  const pull = usePullRefresh(query.refetch);
 
   const back = () =>
     goBackOr(
@@ -95,7 +101,11 @@ export function SupportCaseDetailScreen({
   return (
     <>
       <AppHeader title={t('title')} onBack={back} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
+      >
         <SupportCaseBody row={query.data} surface={surface} />
       </Screen>
     </>
@@ -103,6 +113,7 @@ export function SupportCaseDetailScreen({
 }
 
 function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: SupportSurface }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -140,7 +151,8 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
 
           <DataRow
             label={t('openedBy')}
-            value={`${row.openedByName}${LIST_SEPARATOR}${domainLabel('supportCaseParty', row.openedByScope)}`}
+            // `null` = case do hệ thống mở (worker — ADR 0066), không có người nào bấm nút.
+            value={`${row.openedByName ?? t('openedBySystem')}${LIST_SEPARATOR}${domainLabel('supportCaseParty', row.openedByScope)}`}
           />
           {row.tenantName ? <DataRow label={t('tenant')} value={row.tenantName} /> : null}
           {row.bookingCode ? <DataRow label={t('booking')} value={row.bookingCode} /> : null}
@@ -193,6 +205,7 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
 }
 
 function TimelineEvent({ event }: { event: SupportCaseEvent }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -243,8 +256,16 @@ function ReplyBox({ row, surface }: { row: SupportCaseDetail; surface: SupportSu
   const [body, setBody] = useState('');
 
   const status = row.status as SupportCaseStatus;
+  // Case GIỮ tiền của chuyến (tranh chấp, chưa xác nhận bàn giao — ADR 0066) chỉ nền tảng đóng:
+  // server từ chối `SUPPORT_CASE_PLATFORM_RESOLVE_ONLY`, nên app không bày nút "Đã đóng", như web.
+  const platformResolveOnly = SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES.includes(
+    row.category as SupportCaseCategory,
+  );
   const targets = SUPPORT_CASE_STATUS_VALUES.filter(
-    (next) => next === SUPPORT_CASE_STATUS.CLOSED && canTransitionSupportCase(status, next),
+    (next) =>
+      next === SUPPORT_CASE_STATUS.CLOSED &&
+      !platformResolveOnly &&
+      canTransitionSupportCase(status, next),
   );
 
   return (
@@ -260,6 +281,7 @@ function ReplyBox({ row, surface }: { row: SupportCaseDetail; surface: SupportSu
       />
 
       <Button
+        icon="send-outline"
         label={t('send')}
         disabled={!body.trim()}
         loading={post.isPending}

@@ -29,6 +29,7 @@ import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOwnerActions';
+import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripPageHeader } from './TripPageHeader';
 import {
   TripColumns,
@@ -193,6 +194,9 @@ export function TripClosedView({ trip, backHref }: { trip: CustomerTripDetail; b
                   ? t('cancelledByOther')
                   : t('subtitle')
           }
+          // Đơn HOÀN THÀNH: hai mốc "Đã xác nhận → Hoàn thành" đều tích (người dùng chốt 28/10/2026).
+          // Huỷ/từ chối không đi hết đường nên không vẽ mốc nào (`customerTripTimeline`).
+          aside={completed ? <CustomerTripTimeline confirmedDone completedDone /> : undefined}
         />
       }
       lead={

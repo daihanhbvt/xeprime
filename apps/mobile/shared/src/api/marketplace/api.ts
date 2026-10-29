@@ -6,6 +6,8 @@ import {
 } from '@xeprime/api-client';
 import { SERVICE_TYPE, type components } from '@xeprime/types';
 import type {
+  BannerPlacement,
+  FeaturedReview,
   MarketplaceFilters,
   PublicBanner,
   PublicDestination,
@@ -46,11 +48,14 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     seats: filters.seats?.length ? filters.seats.join(',') : null,
     fuelType: filters.fuelType?.length ? filters.fuelType.join(',') : null,
     features: filters.features?.length ? filters.features.join(',') : null,
+    transmission: filters.transmission?.length ? filters.transmission.join(',') : null,
     hourly: filters.hourly ? '1' : null,
     delivery: filters.delivery ? '1' : null,
     noCollateral: filters.noCollateral ? '1' : null,
     discount: filters.discount ? '1' : null,
     vatInvoice: filters.vatInvoice ? '1' : null,
+    instantBook: filters.instantBook ? '1' : null,
+    minRating: filters.minRating ?? null,
     minSeats: filters.minSeats ?? null,
     priceMin: filters.priceMin ?? null,
     priceMax: filters.priceMax ?? null,
@@ -58,6 +63,12 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     returnAt: filters.returnAt ?? null,
   };
 }
+
+/** Các chiều lọc mà `GET /public/shops/:slug/listings` nhận — tab tỉnh + chip của trang gian hàng (web #222). */
+export type ShopListingFilters = Pick<
+  MarketplaceFilters,
+  'provinceCode' | 'serviceType' | 'delivery' | 'instantBook' | 'noCollateral' | 'vatInvoice'
+>;
 
 export const DEFAULT_LISTING_LIMIT = 12;
 
@@ -187,19 +198,39 @@ export const marketplaceApi = {
    */
   shopListings(
     slug: string,
-    params: { page: number; limit: number },
+    params: { page: number; limit: number; filters?: ShopListingFilters },
     signal?: AbortSignalLike,
   ): Promise<Paged<PublicListing>> {
+    const filters = params.filters ?? {};
     return getApiClient().fetchPage<PublicListing>(
       `/public/shops/${encodeURIComponent(slug)}/listings`,
-      params,
+      {
+        page: params.page,
+        limit: params.limit,
+        // Boolean đi trên dây là `1`, đúng quy ước của trang tìm kiếm (backend đọc cùng DTO).
+        provinceCode: filters.provinceCode ?? null,
+        serviceType: filters.serviceType ?? null,
+        delivery: filters.delivery ? '1' : null,
+        instantBook: filters.instantBook ? '1' : null,
+        noCollateral: filters.noCollateral ? '1' : null,
+        vatInvoice: filters.vatInvoice ? '1' : null,
+      },
       params.limit,
       signal ? { signal } : undefined,
     );
   },
 
-  banners(): Promise<PublicBanner[]> {
-    return getApiClient().get<PublicBanner[]>('/public/banners');
+  /** Banner của MỘT vị trí — dải đầu trang (`hero`) hay khuyến mãi giữa trang (`promo`). */
+  banners(placement: BannerPlacement): Promise<PublicBanner[]> {
+    return getApiClient().get<PublicBanner[]>('/public/banners', { placement });
+  },
+
+  /**
+   * "Khách hàng nói gì về XePrime" — đánh giá THẬT đã công khai, server chọn và giới hạn số lượng
+   * (trần 12). Cùng endpoint với `useFeaturedReviews` bên web.
+   */
+  featuredReviews(limit: number): Promise<FeaturedReview[]> {
+    return getApiClient().get<FeaturedReview[]>('/public/reviews/featured', { limit });
   },
 };
 
@@ -209,7 +240,15 @@ export const marketplaceApi = {
  */
 export type PublicQuoteParams =
   | { serviceType: typeof SERVICE_TYPE.LONG_TERM; packageMonths: number }
-  | { pickupAt: string; returnAt: string; serviceType?: string; routeType?: string };
+  | {
+      pickupAt: string;
+      returnAt: string;
+      serviceType?: string;
+      routeType?: string;
+      /** Bảo hiểm MIC khách tích chọn (luồng tiền v2, #213) — server tính theo ngày. */
+      vehicleProtectionSelected?: boolean;
+      personalAccidentSelected?: boolean;
+    };
 
 export type PublicQuote = components['schemas']['PublicQuoteDto'];
 

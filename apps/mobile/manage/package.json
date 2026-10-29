@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "//": [
-    "APP CHỦ XE — XePrime Partner (vn.xeprime.partner). Song sinh của customer/, cổng dev 8082.",
+    "APP CHỦ XE — XePrime Partner (vn.xeprime.partnerapp). Song sinh của customer/, cổng dev 8082.",
     "Khai lại cùng bộ thư viện với customer/ và shared/ là BẮT BUỘC, không phải trùng lặp:",
     "  • autolinking đọc FILE NÀY để biết nhúng native module nào vào chính bản cài này;",
     "  • Metro chỉ tìm thư viện ở manage/node_modules và node_modules gốc repo.",

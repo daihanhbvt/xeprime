@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack } from 'tamagui';
 import type { VehicleFeatureKey } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
  * Biểu tượng cho mọi tiện ích của `VEHICLE_FEATURE_LABEL` (14 của ô tô + 8 của xe máy).
@@ -44,8 +45,30 @@ const FEATURE_ICON: Record<VehicleFeatureKey, IconName> = {
  * Cùng nền với avatar và nút chính của app. Chữ dùng `onPrimary` (đen) chứ không phải trắng —
  * gold sáng không đỡ nổi chữ trắng.
  */
+function featureIconOf(featureKey: string): IconName {
+  return FEATURE_ICON[featureKey as VehicleFeatureKey] ?? 'checkmark-circle-outline';
+}
+
+/**
+ * Một ô của lưới "Tiện ích trên xe" ở trang chi tiết — `.featureItem` web ≤640px (Figma
+ * `19771:72667`): icon mảnh 18 + chữ 13 `text-secondary`, không nền (hạ từ 16 — người dùng chốt
+ * 27–28/10/2026: chữ trang chi tiết to hơn web). Nơi gọi xếp lưới 2 cột.
+ */
+export function FeatureItem({ featureKey, label }: { featureKey: string; label: string }) {
+  const colors = useColors();
+  return (
+    <XStack ai="center" gap={space.sm} minWidth={0}>
+      <Ionicons name={featureIconOf(featureKey)} size={18} color={colors.textMuted} />
+      <Text f={1} col={colors.textMuted} fos={13} numberOfLines={1}>
+        {label}
+      </Text>
+    </XStack>
+  );
+}
+
 export function FeatureChip({ featureKey, label }: { featureKey: string; label: string }) {
-  const icon = FEATURE_ICON[featureKey as VehicleFeatureKey] ?? 'checkmark-circle-outline';
+  const colors = useColors();
+  const icon = featureIconOf(featureKey);
 
   return (
     <XStack

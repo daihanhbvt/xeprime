@@ -30,6 +30,7 @@ export {
 export {
   CURRENCY_SUFFIX,
   subtractMoney,
+  payAtPickupAmount,
   sumMoney,
   absoluteMoney,
   isNegativeMoney,

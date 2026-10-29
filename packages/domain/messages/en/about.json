@@ -64,11 +64,13 @@
     "lead": "Two ways to join the same marketplace — pick by scale, switch later.",
     "basic": {
       "title": "Individual owner",
-      "desc": "A few vehicles, no subscription. You only pay a service fee on trips that actually happen."
+      "desc": "A few vehicles, no subscription. You only pay a service fee on trips that actually happen.",
+      "descInApp": "A few cars, listed right on the marketplace. Service fees are charged per trip that actually happens."
     },
     "shop": {
       "title": "Shop",
-      "desc": "A larger fleet on a plan priced by vehicle count and term. No XePrime percentage per trip, with the full management toolset."
+      "desc": "A larger fleet on a plan priced by vehicle count and term. No XePrime percentage per trip, with the full management toolset.",
+      "descInApp": "A larger fleet, with the full management toolkit. Participation options and fees are published by XePrime."
     },
     "action": "List your vehicle"
   },
@@ -86,10 +88,6 @@
       "title": "Reputation measured from behaviour",
       "desc": "A shop's response rate, response time and kept-trip rate come from the last 90 days of real data, not from self-reporting."
     }
-  },
-  "status": {
-    "title": "XePrime is still being finished",
-    "body": "The product is not open to real users yet. The legal documents are drafts, and the operating entity will be published before we open properly."
   },
   "next": {
     "heading": "Where to next",

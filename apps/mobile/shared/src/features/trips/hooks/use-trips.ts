@@ -8,6 +8,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import {
+  API_ERROR_CODE,
   HOLD_POLL_FALLBACK_MS,
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
@@ -16,6 +17,7 @@ import {
 } from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { useBadgeRealtimeLive } from '@/features/badges/BadgeRealtimeProvider';
+import { getErrorCode } from '@/lib/api-client';
 import { queryKeys } from '@/queries/query-keys';
 import {
   reviewsApi,
@@ -29,6 +31,7 @@ import {
   type PrivateFileTicket,
   type TripsResult,
 } from '../api';
+import type { TripListNarrow } from '@/api/trips/api';
 
 /**
  * Server data của "Chuyến của tôi" — TanStack Query (ADR 0004), key dùng chung với web.
@@ -38,7 +41,13 @@ import {
  * trang giữ được số đếm của tab — con số trên tab và danh sách vì thế luôn đến từ cùng một lần
  * đọc. Bóc `items` ra ở đây thì `counts` rơi mất và tab phải gọi API thứ hai để tự đếm.
  */
-export function useTripsInfinite(filter: string, role?: string, enabled = true) {
+export function useTripsInfinite(
+  filter: string,
+  role?: string,
+  enabled = true,
+  /** Bộ thu hẹp của tab lịch sử (tìm + khoảng ngày) — mốc ISO tuyệt đối, như web `TripListNarrow`. */
+  narrow?: TripListNarrow,
+) {
   return useInfiniteQuery({
     // KHÔNG có `page` trong khoá — page là `pageParam` của TanStack, đúng quy ước của các
     // nhánh `*Infinite` ở `queryKeys`. Có `page` trong khoá thì mỗi trang là một cache riêng
@@ -49,8 +58,11 @@ export function useTripsInfinite(filter: string, role?: string, enabled = true) 
       filter,
       limit: TRIPS_DEFAULT_LIMIT,
       ...(role ? { role } : {}),
+      ...(narrow?.q ? { q: narrow.q } : {}),
+      ...(narrow?.dateFrom ? { dateFrom: narrow.dateFrom } : {}),
+      ...(narrow?.dateTo ? { dateTo: narrow.dateTo } : {}),
     }),
-    queryFn: ({ pageParam }) => tripsApi.list(filter, pageParam, role),
+    queryFn: ({ pageParam }) => tripsApi.list(filter, pageParam, role, narrow),
     initialPageParam: 1,
     getNextPageParam: (last: TripsResult) => (last.meta.hasNext ? last.meta.page + 1 : undefined),
     /*
@@ -199,6 +211,22 @@ export function useProvideRefundAccount(id: string) {
   });
 }
 
+/**
+ * Xem trước lượt huỷ — chỉ nạp khi tấm xác nhận MỞ (`enabled`), và luôn nạp lại mỗi lần mở
+ * (`staleTime: 0`): mốc huỷ miễn phí có thể vừa trôi qua giữa hai lần mở, và con số hứa với khách
+ * phải là con số lượt bấm sẽ ghi. Khoá con của `trips.detail` nên lượt huỷ làm mới luôn nó — cùng
+ * khoá với web `useTripCancelPreview`.
+ */
+export function useTripCancelPreview(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.trips.detail(id), 'cancel-preview'],
+    queryFn: () => tripsApi.cancelPreview(id),
+    enabled: Boolean(id) && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
 export function useCancelTrip(id: string) {
   const queryClient = useQueryClient();
 
@@ -207,6 +235,44 @@ export function useCancelTrip(id: string) {
     onSuccess: (trip) => {
       queryClient.setQueryData(queryKeys.trips.detail(id), trip);
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    /*
+     * Chặng đã đổi dưới tay khách (gian hàng vừa duyệt/giao xe, hoặc duyệt xen vào ĐÚNG lúc bấm
+     * huỷ ⇒ `CONFLICT`): ngoài báo lỗi phải kéo lại trạng thái thật, để nút "Huỷ chuyến" tự biến
+     * mất thay vì mời bấm lại một việc chắc chắn hỏng.
+     */
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+      }
+    },
+  });
+}
+
+/**
+ * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1. Cùng khuôn với web `useReportTripNotReceived`:
+ * server trả về chính chuyến (đã có `openDispute`) nên ghi thẳng vào cache chi tiết. Bị từ chối vì
+ * cửa sổ vừa đóng / đơn vừa đổi trạng thái thì kéo lại chuyến thật để nút tự biến mất.
+ */
+export function useReportTripNotReceived(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => tripsApi.reportNotReceived(id),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY ||
+        code === API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED
+      ) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
+      }
     },
   });
 }

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorMessage } from '@/lib/get-error-message';
 
@@ -24,6 +25,7 @@ export function SectionError({
   /** Câu lỗi theo MÃ (mặc định) hay câu nguyên văn của server — theo màn tương ứng bên web. */
   messageFrom?: 'code' | 'backend';
 }) {
+  const colors = useColors();
   const errorMessage = useErrorMessage();
 
   return (

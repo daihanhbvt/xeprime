@@ -35,7 +35,8 @@ import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { MySubscription, SlotUsage } from '@/api/subscription/api';
 import { useMySubscription } from './hooks/use-subscription';
 
@@ -72,10 +73,7 @@ export function SubscriptionScreen({
     <>
       {header ??
         (account ? (
-          <AppHeader
-            title={t('title')}
-            onBack={() => goBackOr(router, ROUTES.account.home())}
-          />
+          <AppHeader title={t('title')} onBack={() => goBackOr(router, ROUTES.account.home())} />
         ) : (
           <ManageHeader />
         ))}
@@ -95,6 +93,7 @@ const TERM_WARNING_DAYS = 7;
  * Cửa hàng và Hồ sơ chủ xe (khối "Gói & hạn mức").
  */
 export function SubscriptionWorkspace() {
+  const colors = useColors();
   const t = useTranslations('Subscription');
   const tPlan = useTranslations('Subscription.mobilePlan');
   const tPermission = useTranslations('ManageCommon.permission');
@@ -185,6 +184,7 @@ function CurrentPlanCard({
 }: {
   plan: NonNullable<ReturnType<typeof useMySubscription>['data']>['currentPlan'];
 }) {
+  const colors = useColors();
   const t = useTranslations('Subscription');
   const isCommission = plan?.billingMode === BILLING_MODE.COMMISSION;
   const leadColor = plan ? STATUS_COLOR.SUCCESS : STATUS_COLOR.NEUTRAL;
@@ -221,6 +221,7 @@ function CurrentPlanCard({
 
 /** Trần TỔNG — một con số cho cả ô tô lẫn xe máy. `limit == null` = không giới hạn. */
 function FleetTotalRow({ used, limit }: { used: number; limit: number | null }) {
+  const colors = useColors();
   const t = useTranslations('Subscription');
   const full = limit != null && used >= limit;
 
@@ -253,6 +254,7 @@ function FleetTotalRow({ used, limit }: { used: number; limit: number | null }) 
  * đồng hồ máy chỉ để đọc.
  */
 function TermRow({ endsAt }: { endsAt: string }) {
+  const colors = useColors();
   const t = useTranslations('Subscription');
   const { tenant } = useTenantScope();
   const phase = (tenant?.billingPhase ?? null) as BillingPhase | null;
@@ -305,6 +307,7 @@ function QuotaWarning({ fleetQuota }: { fleetQuota: MySubscription['fleetQuota']
 
 /** Một dòng MỨC DÙNG theo loại xe — không có trần (ADR 0041 điều 4). */
 function UsageRow({ label, usage, icon }: { label: string; usage: SlotUsage; icon: IconName }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.sm}>
       <IconDisc icon={icon} tone={colors.info} surface={colors.infoSurface} />

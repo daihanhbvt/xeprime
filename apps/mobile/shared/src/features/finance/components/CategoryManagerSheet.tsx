@@ -26,7 +26,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { useCreateCategory, useDeleteCategory, useFinanceCategories } from '../hooks/use-finance';
 import type { CreateCategoryInput, FinanceCategory } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -62,6 +63,7 @@ const NAME_MAX = 255;
  * mục của gian hàng mà không có đường hoàn tác.
  */
 export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.categories');
   const tActions = useTranslations('Common.actions');
   const tStates = useTranslations('Common.states');

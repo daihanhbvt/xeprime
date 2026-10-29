@@ -8,6 +8,7 @@ import {
   vehicleFiltersToParams,
   vehiclesApi,
   type AssignableWindow,
+  type AssignBookingDriverInput,
   type BookingDetail,
   type BookingFilters,
   type CheckConflictInput,
@@ -93,12 +94,15 @@ export function useUpdateDeliveryFee(id: string) {
   });
 }
 
-/** Gán/bỏ gán tài xế. `driverId: null` là bỏ gán TƯỜNG MINH, không phải "bỏ trống". */
+/**
+ * Gán/bỏ gán tài xế liên kết (`driverId: null` là bỏ gán TƯỜNG MINH), hoặc ghi tài xế ngoài hệ
+ * thống (ADR 0067). Response là đơn đã cập nhật, ghi thẳng vào cache detail.
+ */
 export function useAssignDriver(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (driverId: string | null) => bookingsApi.assignDriver(id, driverId),
+    mutationFn: (body: AssignBookingDriverInput) => bookingsApi.assignDriver(id, body),
     onSuccess: (booking: BookingDetail) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), booking);
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });

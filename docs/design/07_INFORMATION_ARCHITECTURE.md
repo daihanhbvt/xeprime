@@ -257,8 +257,8 @@ Hai Expo project mỏng + một package dùng chung (ADR 0051 điều 5):
 
 | App | Project | Bundle | Realm |
 | --- | --- | --- | --- |
-| XePrime | `apps/mobile/customer` | `vn.xeprime.mobile` | customer |
-| XePrime Partner | `apps/mobile/manage` | `vn.xeprime.partner` | partner |
+| XePrime | `apps/mobile/customer` | `vn.xeprime.customerapp` | customer |
+| XePrime Partner | `apps/mobile/manage` | `vn.xeprime.partnerapp` | partner |
 
 Mã chung ở `apps/mobile/shared`. **Lệch đã biết, chưa xử lý:** app Partner hiện chỉ nhận tuyến gói,
 còn app XePrime vẫn chứa Owner Lite; theo ADR 0053 chủ xe tuyến hoa hồng thuộc realm `partner`, đội

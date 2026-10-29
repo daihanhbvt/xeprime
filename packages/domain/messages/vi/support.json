@@ -1,17 +1,16 @@
 {
   "title": "Trung tâm hỗ trợ",
   "subtitle": "Gặp sự cố trong chuyến, cần đổi lịch hay khiếu nại? Đây là các kênh liên hệ chính thức của XePrime.",
-  "draftNotice": "Các kênh liên hệ dưới đây còn là chỗ trống — điền số hotline, email và giờ trực thật trước khi mở pilot.",
   "channels": {
     "heading": "Liên hệ với chúng tôi",
     "hotline": {
       "label": "Tổng đài",
-      "value": "«điền số hotline»",
+      "value": "0352 063 205",
       "note": "Dành cho sự cố đang diễn ra trong chuyến: xe hỏng, tai nạn, không liên lạc được với bên kia."
     },
     "email": {
       "label": "Email hỗ trợ",
-      "value": "«điền email hỗ trợ»",
+      "value": "contact@softrent.vn",
       "note": "Dành cho khiếu nại, yêu cầu về dữ liệu cá nhân và các việc cần gửi kèm chứng từ."
     },
     "hours": {
@@ -19,9 +18,9 @@
       "value": "«điền khung giờ trực»",
       "note": "Ngoài giờ trực, yêu cầu vẫn được ghi nhận và xử lý vào ca kế tiếp."
     },
-    "lead": "Ba kênh dưới đây là cách XePrime tiếp nhận yêu cầu. Nội dung liên hệ cụ thể sẽ được công bố trước khi sàn mở chính thức.",
+    "lead": "Ba kênh dưới đây là cách XePrime tiếp nhận yêu cầu.",
     "pendingBadge": "Sắp công bố",
-    "pendingNote": "Chưa có số tổng đài, email và khung giờ trực chính thức. Chúng tôi để trống thay vì đăng một thông tin liên hệ không gọi được."
+    "pendingNote": "Khung giờ trực chính thức sẽ được công bố sớm. Ngoài giờ, yêu cầu vẫn được ghi nhận và xử lý ở ca kế tiếp."
   },
   "beforeContact": {
     "heading": "Gửi kèm những thông tin này để được xử lý nhanh",

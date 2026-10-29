@@ -1,6 +1,7 @@
 import { Pressable } from 'react-native';
 import { Text } from 'tamagui';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Nút CHỮ nhỏ nằm trong một dòng dữ liệu — "Sửa" cạnh phí giao nhận, "Thu cọc" cạnh cọc đã nhận.
@@ -11,6 +12,7 @@ import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
  * Gương `<Button type="link" size="small">` mà web đặt ở đúng những chỗ này.
  */
 export function InlineAction({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}

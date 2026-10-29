@@ -7,7 +7,8 @@ import { ACCOUNT_TRACK, resolveAccountTrack } from '@xeprime/types';
 import type { AccountTrackInput } from '@xeprime/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { VerifiedName } from '@/components/ui/VerifiedName';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AccountTrackBadge } from './AccountTrackBadge';
 
 /**
@@ -70,6 +71,7 @@ export function AccountIdentityHero({
   subtitle: string;
   tenant: AccountTrackInput | null | undefined;
 }) {
+  const colors = useColors();
   const t = useTranslations('Account');
 
   /*

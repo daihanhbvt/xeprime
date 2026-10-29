@@ -2,7 +2,8 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CheckMark } from '@/components/ui/CheckMark';
-import { colors, fontSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, sizing, space } from '@/theme/tokens';
 import { useLegalLinkChunks } from '../use-legal-link-chunks';
 
 /**
@@ -26,6 +27,7 @@ export function LegalConsentCheckbox({
   checked: boolean;
   onToggle: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Legal');
   const chunks = useLegalLinkChunks();
 

@@ -1,5 +1,6 @@
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { isPositiveMoney } from '@xeprime/domain';
 import {
   CUSTOMER_TRIP_FILTER,
   TENANT_ROLE,
@@ -15,7 +16,46 @@ import { useWalletSummary, useWithdrawals } from '@/features/wallet/hooks/use-wa
 import { walletScopeFor } from '@/features/wallet/wallet-scope';
 import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+
+/**
+ * Số liệu "những gì còn treo" của một tài khoản sắp xin xoá — bản native của
+ * `useAccountDeletionImpact` web. Dùng chung cho khối `AccountDeletionImpact` (app Partner) và khối
+ * "Kiểm tra điều kiện" của màn xoá tài khoản khách.
+ *
+ * Đọc ví qua `walletScopeFor`; nhân viên gian hàng không có ví (`null`) thì không gọi sổ nào.
+ * Chuyến chỉ đếm vai `renter`: chuyến gian hàng CHO THUÊ thuộc pháp nhân, không đóng theo tài
+ * khoản cá nhân.
+ */
+export function useAccountDeletionImpact() {
+  const { data: user } = useCurrentUser();
+  const scope = walletScopeFor(user);
+  const hasWallet = Boolean(user) && scope !== null;
+  const wallet = useWalletSummary(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
+  const withdrawals = useWithdrawals(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
+  const renterTrips = useTripsInfinite(CUSTOMER_TRIP_FILTER.CURRENT, TRIP_ROLE.RENTER);
+
+  const queries = [wallet, withdrawals, renterTrips];
+  const holding = (withdrawals.data ?? []).filter((row) =>
+    (WITHDRAWAL_STATUS_HOLDING_FUNDS as readonly string[]).includes(row.status as WithdrawalStatus),
+  ).length;
+  const openTrips = renterTrips.data?.pages[0]?.counts.current ?? 0;
+  // Còn nghĩa vụ tiền = còn thứ phải đối soát TRƯỚC khi đóng, không phải sau.
+  const hasMoney =
+    isPositiveMoney(wallet.data?.available) || isPositiveMoney(wallet.data?.pending) || holding > 0;
+
+  return {
+    user,
+    hasWallet,
+    wallet: wallet.data,
+    holding,
+    openTrips,
+    hasMoney,
+    loading: queries.some((q) => q.isLoading),
+    failed: queries.some((q) => q.isError),
+  };
+}
 
 /**
  * Những thứ KHÔNG tự biến mất khi gửi yêu cầu xoá tài khoản. Bản native của
@@ -36,35 +76,16 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * trang mà web có. Lý do đầy đủ nằm ở docblock của `DeleteAccountScreen`.
  */
 export function AccountDeletionImpact() {
+  const colors = useColors();
   const t = useTranslations('Account.deletionImpact');
   const fmt = useAppFormat();
-  const { data: user } = useCurrentUser();
-
-  const scope = walletScopeFor(user);
-  // Nhân viên gian hàng không có ví (`null`) — không gọi sổ nào, như web `AccountDeletionImpact`.
-  const hasWallet = Boolean(user) && scope !== null;
-  const wallet = useWalletSummary(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
-  const withdrawals = useWithdrawals(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
-  /*
-   * Vai `renter`: chuyến gian hàng CHO THUÊ không thuộc về con người này, chúng thuộc pháp nhân
-   * và không đóng theo tài khoản cá nhân.
-   */
-  const renterTrips = useTripsInfinite(CUSTOMER_TRIP_FILTER.CURRENT, TRIP_ROLE.RENTER);
+  const impact = useAccountDeletionImpact();
+  const { user, loading, failed, holding, openTrips, hasMoney } = impact;
+  const wallet = { data: impact.wallet };
 
   if (!user) return null;
 
   const isOwner = user.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-  const queries = [wallet, withdrawals, renterTrips];
-  const loading = queries.some((q) => q.isLoading);
-  const failed = queries.some((q) => q.isError);
-
-  const holding = (withdrawals.data ?? []).filter((row) =>
-    (WITHDRAWAL_STATUS_HOLDING_FUNDS as readonly string[]).includes(row.status as WithdrawalStatus),
-  ).length;
-  const openTrips = renterTrips.data?.pages[0]?.counts.current ?? 0;
-  // Còn nghĩa vụ tiền = còn thứ phải đối soát TRƯỚC khi đóng, không phải sau.
-  const hasMoney =
-    Number(wallet.data?.available ?? 0) > 0 || Number(wallet.data?.pending ?? 0) > 0 || holding > 0;
 
   return (
     <YStack gap={space.sm}>
@@ -139,6 +160,7 @@ export function AccountDeletionImpact() {
  * 360dp — không co thì nó bị cắt đúng ở phần đuôi, tức là mất luôn bậc đơn vị.
  */
 function MoneyTile({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack
       f={1}
@@ -168,6 +190,7 @@ function MoneyTile({ label, value }: { label: string; value: string }) {
 }
 
 function Bullet({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <XStack gap={space.xs} ai="flex-start">
       <Text col={colors.textMuted} fos={fontSize.bodySm}>

@@ -19,7 +19,8 @@ import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import {
   requestHandoverPhotoUrl,
   useAttachHandoverPhoto,
@@ -130,6 +131,7 @@ export function HandoverPhotoGrid({
    */
   ensureHandover?: () => Promise<void>;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover.photos');
   const toast = useAppToast();
   const permissions = usePermissions();
@@ -345,6 +347,7 @@ const PhotoSlot = memo(function PhotoSlot({
   onOpen: (slot: HandoverPhotoSlot) => void;
   onRemove: (slot: HandoverPhotoSlot) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.handover.photos');
   const domainLabel = useDomainLabel();
   const label = domainLabel('handoverPhotoSlot', slot);

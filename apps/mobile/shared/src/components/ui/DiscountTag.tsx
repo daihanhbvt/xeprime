@@ -1,5 +1,6 @@
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { badgeLineHeight } from './StatusBadge';
 
 /**
@@ -10,6 +11,7 @@ import { badgeLineHeight } from './StatusBadge';
  * giảm giá là tin vui, không phải cảnh báo.
  */
 export function DiscountTag({ percent, size = 'md' }: { percent: number; size?: 'sm' | 'md' }) {
+  const colors = useColors();
   return (
     <XStack
       bg={colors.discount}

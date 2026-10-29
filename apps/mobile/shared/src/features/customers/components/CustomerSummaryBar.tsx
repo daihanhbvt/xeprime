@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
-import { colors, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
 import { useCustomerSummary } from '../hooks/use-customers';
 
 /**
@@ -42,6 +43,7 @@ export function CustomerSummaryBar({
   enabled: boolean;
   canViewFinance: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Customers.summary');
   const fmt = useAppFormat();
   const { data, isLoading, isError } = useCustomerSummary(enabled);
@@ -98,7 +100,7 @@ export function CustomerSummaryBar({
         ...(riskCount > 0 ? { valueTone: colors.danger } : {}),
       },
     ];
-  }, [data, canViewFinance, t, fmt]);
+  }, [colors, data, canViewFinance, t, fmt]);
 
   if (!enabled || isError) return null;
 

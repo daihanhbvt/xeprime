@@ -28,7 +28,8 @@ import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import type { VehicleServiceSetting } from './api';
 import {
   usePatchVehicleServiceSetting,
@@ -104,6 +105,7 @@ function AutoAcceptForm({
   vehicleId: string;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();

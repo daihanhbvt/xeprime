@@ -13,7 +13,8 @@ import { Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { DebtItem } from '../api';
 
 /** Chiều cao thanh thu hồi — mảnh hơn `ProgressBar` (8pt) vì nó là nét phụ, không phải số liệu chính. */
@@ -65,6 +66,7 @@ function DebtCardImpl({
   onView: (debt: DebtItem) => void;
   onCollect: (debt: DebtItem) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.debts.table');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

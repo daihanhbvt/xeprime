@@ -22,7 +22,8 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatComposer } from './components/ChatComposer';
 import { MessageBubble } from './components/MessageBubble';
 import { resolveChatInbox } from './chat-inbox';
@@ -79,6 +80,8 @@ export function ChatThreadScreen({
   /** Xe vừa mở chat từ tin đăng của nó — chờ gắn vào câu nhắn ĐẦU TIÊN. Vai của `?v=` bên web. */
   pendingVehicleId?: string | null;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Chat');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
@@ -297,14 +300,23 @@ export function ChatThreadScreen({
         edges={['left', 'right', 'bottom']}
         scroll={false}
         padded={false}
-        footer={
-          <ChatComposer
-            onSend={thread.send}
-            disabled={thread.loading || Boolean(thread.error)}
-            vehicleContext={vehicleContext}
-            onClearVehicleContext={clearVehicleContext}
-          />
-        }
+        /*
+          Kênh với chủ xe cá nhân chỉ mở khi hai bên đã có đơn (ADR 0073): thread cũ chưa có đơn còn
+          đọc được nhưng KHÔNG soạn tin — server chấm `canSend` và chặn `POST …/messages`. Như web
+          `ThreadPanel`. Chưa tải xong thì vẫn hiện ô (không chớp ẩn/hiện).
+        */
+        {...(conversationQuery.data?.canSend === false
+          ? {}
+          : {
+              footer: (
+                <ChatComposer
+                  onSend={thread.send}
+                  disabled={thread.loading || Boolean(thread.error)}
+                  vehicleContext={vehicleContext}
+                  onClearVehicleContext={clearVehicleContext}
+                />
+              ),
+            })}
       >
         {thread.loading ? (
           <ScreenLoading />
@@ -370,6 +382,7 @@ export function ChatThreadScreen({
 }
 
 function DaySeparator({ day }: { day: string }) {
+  const colors = useColors();
   const t = useTranslations('Chat');
   const fmt = useAppFormat();
 
@@ -404,6 +417,8 @@ function DaySeparator({ day }: { day: string }) {
  * có gì đó ở dưới; đưa quyền quyết định cho ngón tay.
  */
 function JumpToLatest({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <YStack
       pos="absolute"
@@ -428,7 +443,7 @@ function JumpToLatest({ label, onPress }: { label: string; onPress: () => void }
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   listContent: {
     flexGrow: 1,
     paddingVertical: space.sm,
@@ -442,4 +457,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.xs,
   },
-});
+}));

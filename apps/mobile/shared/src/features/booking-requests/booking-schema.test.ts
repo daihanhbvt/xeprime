@@ -21,6 +21,9 @@ const BASE = {
   deliveryRequested: false,
   deliveryAddressLine: '',
   note: '',
+  // Liên hệ của chuyến (ADR 0063) — màn điền sẵn từ tài khoản.
+  customerName: 'Nguyễn Văn An',
+  customerPhone: '0901234567',
 };
 
 async function firstError(values: Record<string, unknown>): Promise<string | null> {
@@ -81,5 +84,24 @@ describe('buildBookingRequestSchema — khớp schema web', () => {
         destination: 'x'.repeat(501),
       }),
     ).toBe('destinationMax');
+  });
+});
+
+describe('liên hệ của chuyến (ADR 0063)', () => {
+  it('bắt buộc họ tên và SĐT', async () => {
+    await expect(schema.validate({ ...BASE, customerName: '  ' })).rejects.toThrow(
+      'customerNameRequired',
+    );
+    await expect(schema.validate({ ...BASE, customerPhone: '' })).rejects.toThrow(
+      'customerPhoneRequired',
+    );
+  });
+
+  it('SĐT sai định dạng bị từ chối; dấu cách/chấm chép từ danh bạ được bỏ', async () => {
+    await expect(schema.validate({ ...BASE, customerPhone: '12345' })).rejects.toThrow(
+      'customerPhoneFormat',
+    );
+    const ok = await schema.validate({ ...BASE, customerPhone: '0901.234 567' });
+    expect(ok.customerPhone).toBe('0901234567');
   });
 });

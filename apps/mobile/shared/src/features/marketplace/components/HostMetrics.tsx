@@ -10,7 +10,8 @@ import {
   type HostMetrics as HostMetricsShape,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/ui/InfoHint';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 interface MetricVisual {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,19 +24,22 @@ interface MetricVisual {
  * Cùng bảng với `ITEM_VISUAL` của bản web; tên icon đổi theo bộ Ionicons của app, nhưng NGHĨA
  * và tông màu phải trùng — ba ô này đứng cạnh nhau ở hai bề mặt của cùng một gian hàng.
  */
-const ITEM_VISUAL: Record<string, MetricVisual> = {
+const useItemVisual = themed<Record<string, MetricVisual>>((colors) => ({
   responseRate: { icon: 'chatbubble-ellipses-outline', color: colors.success },
   responseTime: { icon: 'time-outline', color: colors.warning },
   instant: { icon: 'time-outline', color: colors.warning },
   acceptKeep: { icon: 'trending-up-outline', color: colors.info },
-};
+}));
 
 /**
  * Ô mang khoá lạ vẫn phải vẽ được. Không khoá nào ngoài bốn cái trên tới được đây hôm nay, nhưng
  * `noUncheckedIndexedAccess` nói đúng: một phép tra bảng vẫn có thể trượt, và vỡ cả khối uy tín
  * vì một icon là cái giá sai cho một chi tiết trang trí.
  */
-const FALLBACK_VISUAL: MetricVisual = { icon: 'trending-up-outline', color: colors.info };
+const useFallbackVisual = themed<MetricVisual>((colors) => ({
+  icon: 'trending-up-outline',
+  color: colors.info,
+}));
 
 /**
  * BA CHỈ SỐ của một gian hàng — bản native, dùng chung cho trang gian hàng và trang chi tiết xe.
@@ -61,7 +65,17 @@ const FALLBACK_VISUAL: MetricVisual = { icon: 'trending-up-outline', color: colo
  * Dấu "i" giữ phần GIẢI THÍCH, không giữ thông tin bắt buộc: chữ chính đọc được mà không cần
  * chạm gì, và không có số tiền hay hành động nào nằm sau nó.
  */
-export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) {
+export function HostMetrics({
+  metrics,
+  inlineLabels = false,
+}: {
+  metrics?: HostMetricsShape | null;
+  /** Nhãn ngắn của biến thể `inline` web (`inlineLabel.*`) — thẻ gian hàng ở trang chi tiết xe. */
+  inlineLabels?: boolean;
+}) {
+  const colors = useColors();
+  const ITEM_VISUAL = useItemVisual();
+  const FALLBACK_VISUAL = useFallbackVisual();
   const t = useTranslations('Shops.metrics');
 
   /*
@@ -107,7 +121,7 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
       : {
           key: 'responseRate',
           value: t('responseRateValue', { percent: metrics.responseRatePercent }),
-          label: t('responseRate'),
+          label: inlineLabels ? t('inlineLabel.responseRate') : t('responseRate'),
           hint: t('responseRateHint', { days: HOST_METRIC_WINDOW_DAYS }),
           hintLabel: t('responseRateHintLabel'),
         },
@@ -122,7 +136,7 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
         ? {
             key: 'instant',
             value: t('instantBook'),
-            label: t('responseTime'),
+            label: inlineLabels ? t('inlineLabel.responseTime') : t('responseTime'),
             hint: t('instantBookHint'),
             hintLabel: t('instantBookHintLabel'),
           }
@@ -130,7 +144,7 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
       : {
           key: 'responseTime',
           value: t(`speed.${speed}`),
-          label: t('responseTime'),
+          label: inlineLabels ? t('inlineLabel.responseTime') : t('responseTime'),
           hint: t('responseTimeHint', { days: HOST_METRIC_WINDOW_DAYS }),
           hintLabel: t('responseTimeHintLabel'),
         },
@@ -139,13 +153,35 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
       : {
           key: 'acceptKeep',
           value: t('acceptKeepValue', { percent: metrics.acceptKeepRatePercent }),
-          label: t('acceptKeep'),
+          label: inlineLabels ? t('inlineLabel.acceptKeep') : t('acceptKeep'),
           hint: t('acceptKeepHint', { days: HOST_METRIC_WINDOW_DAYS }),
           hintLabel: t('acceptKeepHintLabel'),
         },
   ].filter((item) => item !== null);
 
   if (items.length === 0) return null;
+
+  if (inlineLabels) {
+    /*
+     * Hàng ba chỉ số của thẻ "Chủ xe" — web `variant="inline"` ở ≤640px (Figma `19771:72773`): trải
+     * hết bề ngang, mỗi ô nhãn 14 `text-tertiary` trên, giá trị 16 Medium dưới, cách nhau 8, căn
+     * giữa. Dấu "i" chỉ có ở biến thể đầy đủ — như web.
+     */
+    return (
+      <XStack jc="space-between" gap={space.sm} accessibilityLabel={t('sectionLabel')}>
+        {items.map((item) => (
+          <YStack key={item.key} ai="center" gap={space.sm} minWidth={0} flexShrink={1}>
+            <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
+              {item.label}
+            </Text>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
+              {item.value}
+            </Text>
+          </YStack>
+        ))}
+      </XStack>
+    );
+  }
 
   return (
     <XStack flexWrap="wrap" gap={space.md} rowGap={space.sm} accessibilityLabel={t('sectionLabel')}>
@@ -182,6 +218,7 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
  * mẫu cho ba con số kia.
  */
 function InstantBadge({ label }: { label: string }) {
+  const colors = useColors();
   return (
     <XStack
       alignSelf="flex-start"

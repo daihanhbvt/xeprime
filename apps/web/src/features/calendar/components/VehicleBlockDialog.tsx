@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import {
+  RENTAL_MODE,
   API_ERROR_CODE,
   VEHICLE_BLOCK_REASON,
   VEHICLE_BLOCK_REASON_VALUES,
@@ -94,7 +95,7 @@ function BlockForm({
       .startOf('day');
     return { pickupAt: dayStart, returnAt: dayStart.add(1, 'day') };
   });
-  const [mode, setMode] = useState<RentalMode>('daily');
+  const [mode, setMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   const [reason, setReason] = useState<VehicleBlockReason>(
     (editing?.reason as VehicleBlockReason | undefined) ??
       VEHICLE_BLOCK_REASON.UNPLANNED_MAINTENANCE,

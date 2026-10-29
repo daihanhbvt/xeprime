@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { useLogout } from '@/features/auth/hooks/use-auth';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * ĐĂNG XUẤT — một dòng, dùng chung cho mọi tấm trượt của khu quản lý.
@@ -40,6 +41,8 @@ export function LogoutRow({
    */
   variant?: 'row' | 'card' | 'link';
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const card = variant === 'card';
   const link = variant === 'link';
   const t = useTranslations('ManageCommon.shell');
@@ -111,7 +114,7 @@ export function LogoutRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   rowPressed: { backgroundColor: colors.dangerSurface },
   cardPressed: { opacity: 0.7 },
-});
+}));

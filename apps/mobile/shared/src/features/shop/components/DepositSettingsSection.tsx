@@ -16,7 +16,8 @@ import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { PaymentSettings } from '../api';
 import { usePaymentSettings, useUpdatePaymentSettings } from '../hooks/use-shop';
 
@@ -35,6 +36,7 @@ import { usePaymentSettings, useUpdatePaymentSettings } from '../hooks/use-shop'
  * nó đã có trạng thái đó cho chính sách thuê.
  */
 export function DepositSettingsSection() {
+  const colors = useColors();
   const t = useTranslations('Shop.paymentSettings');
   const { has } = usePermissions();
   const { tenant } = useTenantScope();
@@ -111,6 +113,7 @@ function lockReason(
  * không mời người dùng bấm một thứ chắc chắn hỏng.
  */
 function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; canEdit: boolean }) {
+  const colors = useColors();
   const t = useTranslations('Shop.paymentSettings');
   const router = useRouter();
   const { isPlanPromotionEnabled } = usePartnerAppConfig();

@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fieldFontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { CheckMark } from './CheckMark';
 import type { IconName } from './Chip';
 
@@ -60,6 +61,7 @@ function OptionShell({
   indicator: ReactNode;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
@@ -162,7 +164,6 @@ export function CheckOption({
   );
 }
 
-
 export function RadioOption({
   label,
   hint,
@@ -180,6 +181,7 @@ export function RadioOption({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <OptionShell
       label={label}

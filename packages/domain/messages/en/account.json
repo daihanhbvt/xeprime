@@ -317,7 +317,8 @@
     "loadError": "Couldn't check for an existing request.",
     "embeddedIntro": "You will see what is affected before you send it. After sending, the account keeps working until XePrime finishes, and you can withdraw the request.",
     "start": "Request account deletion",
-    "collapse": "Not now"
+    "collapse": "Not now",
+    "submitShort": "Send request"
   },
   "publicDeletion": {
     "eyebrow": "XePrime account",

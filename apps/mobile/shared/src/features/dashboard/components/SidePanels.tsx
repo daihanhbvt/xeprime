@@ -32,7 +32,8 @@ import { useWalletStatement, useWalletSummary } from '@/features/wallet/hooks/us
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { PartnerOverviewMarket } from '../api';
 import { PLAN_RENEW_WARNING_DAYS, daysUntil } from '../dashboard-model';
 import type { DashboardLinks } from '../hooks/use-dashboard';
@@ -48,6 +49,7 @@ function Body({ children }: { children: React.ReactNode }) {
 }
 
 function Note({ text, warn = false }: { text: string; warn?: boolean }) {
+  const colors = useColors();
   return (
     <Text col={warn ? colors.danger : colors.textMuted} fos={fontSize.label}>
       {text}
@@ -68,12 +70,15 @@ export function MarketPanel({
   market: PartnerOverviewMarket | undefined;
   links: DashboardLinks;
 }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.market');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
   const { has } = usePermissions();
   const canCreate = has(PERMISSION.VEHICLE_CREATE);
-  const total = market ? market.onMarket + market.inReview + market.needsRevision + market.draft : 0;
+  const total = market
+    ? market.onMarket + market.inReview + market.needsRevision + market.draft
+    : 0;
 
   const rows = market
     ? [
@@ -126,7 +131,11 @@ export function MarketPanel({
             <>
               <Note text={t('empty')} />
               {canCreate ? (
-                <Button label={t('add')} icon="add" onPress={() => navigateOnce(links.vehicleNew)} />
+                <Button
+                  label={t('add')}
+                  icon="add"
+                  onPress={() => navigateOnce(links.vehicleNew)}
+                />
               ) : null}
             </>
           ) : (
@@ -169,6 +178,7 @@ export function MarketPanel({
  * Nơi gọi chỉ dựng khối này khi có `subscription.view`.
  */
 export function PlanPanel({ href }: { href: Href }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.appPlan');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -220,7 +230,9 @@ export function PlanPanel({ href }: { href: Href }) {
                   {t('vehicles')}
                 </Text>
                 <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-                  {limit === null ? t('vehiclesUnlimited', { used }) : t('vehiclesValue', { used, limit })}
+                  {limit === null
+                    ? t('vehiclesUnlimited', { used })
+                    : t('vehiclesValue', { used, limit })}
                 </Text>
               </XStack>
               {limit !== null ? (
@@ -275,6 +287,7 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
  * hợp giao dịch — đúng con số chủ xe thấy ở trang số dư. Tuyến gói đọc tiền ở sổ thu chi.
  */
 export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: Href }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.wallet');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -305,7 +318,9 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
                   <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
                     {fmt.money(statement.data.totals.ownerIncome)}
                   </Text>
-                  <Note text={t('incomeHint', { count: statement.data.stats.completedTripCount })} />
+                  <Note
+                    text={t('incomeHint', { count: statement.data.stats.completedTripCount })}
+                  />
                 </>
               ) : statement.isError ? (
                 <Note text={t('loadError')} warn />
@@ -348,6 +363,7 @@ const THUMB = 44;
  * hành, mức dùng trần xe của Owner Lite, và lời mời mở gian hàng khi chạm trần.
  */
 export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
+  const colors = useColors();
   const t = useTranslations('Dashboard.ownerVehicles');
   const tPlan = useTranslations('Subscription.mobilePlan');
   const tDashPlan = useTranslations('Dashboard.appPlan');
@@ -355,7 +371,11 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
   const { has } = usePermissions();
   // Lối sang khối "Tài khoản & hạn mức" chỉ có khi nền tảng bật cờ — tắt thì khối đó không tồn tại.
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
-  const vehicles = useVehiclesPage({ page: 1, limit: OWNER_VEHICLE_PREVIEW, sort: VEHICLE_SORT.NEWEST });
+  const vehicles = useVehiclesPage({
+    page: 1,
+    limit: OWNER_VEHICLE_PREVIEW,
+    sort: VEHICLE_SORT.NEWEST,
+  });
   const subscription = useMySubscription(has(PERMISSION.SUBSCRIPTION_VIEW));
 
   const quota = subscription.data?.fleetQuota;
@@ -375,7 +395,9 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
       loading={vehicles.isPending}
       error={vehicles.isError && !vehicles.data}
       onRetry={() => void vehicles.refetch()}
-      action={total > 0 ? { label: t('viewAll'), onPress: () => navigateOnce(links.vehicles) } : undefined}
+      action={
+        total > 0 ? { label: t('viewAll'), onPress: () => navigateOnce(links.vehicles) } : undefined
+      }
     >
       {vehicles.data ? (
         <Body>
@@ -396,7 +418,10 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
                 {tPlan('commissionLimitReached', { limit: limit ?? 0 })}
               </Text>
               {isPlanPromotionEnabled ? (
-                <InlineAction label={tDashPlan('open')} onPress={() => navigateOnce(links.subscription)} />
+                <InlineAction
+                  label={tDashPlan('open')}
+                  onPress={() => navigateOnce(links.subscription)}
+                />
               ) : null}
             </YStack>
           ) : null}
@@ -415,6 +440,7 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
 }
 
 function OwnerVehicleRow({ vehicle, onPress }: { vehicle: VehicleListItem; onPress: () => void }) {
+  const colors = useColors();
   const domainLabel = useDomainLabel();
   const approved = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   const market = approved
@@ -467,7 +493,11 @@ function OwnerVehicleRow({ vehicle, onPress }: { vehicle: VehicleListItem; onPre
           <XStack gap={space.xs} flexWrap="wrap">
             <StatusBadge label={market.label} color={market.color} size="sm" />
             <StatusBadge
-              label={domainLabel('vehicleOperationStatus', vehicle.operationStatus, operation.label)}
+              label={domainLabel(
+                'vehicleOperationStatus',
+                vehicle.operationStatus,
+                operation.label,
+              )}
               color={operation.color}
               size="sm"
             />

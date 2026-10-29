@@ -236,8 +236,8 @@ async function expire(prisma: PrismaClient, now: Date): Promise<number> {
       if (req.customerUserId) {
         await notifyUser(tx, req.customerUserId, {
           type: NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED,
-          title: 'Gian hàng chưa phản hồi yêu cầu của bạn',
-          body: `${req.vehicle.name} · bạn có thể chọn một xe khác`,
+          title: `Yêu cầu thuê ${req.vehicle.name} đã hết hạn`,
+          body: 'Chủ xe chưa phản hồi kịp. Bạn chưa bị trừ tiền — hãy chọn xe khác hoặc gửi lại yêu cầu.',
           tenantId: req.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: req.id,

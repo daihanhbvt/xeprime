@@ -33,7 +33,7 @@ import { ROUTES } from '@/navigation/routes';
 import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { TripCard } from './components/TripCard';
 import { tripToDecisionTarget } from './decision-target';
 import { useTripsInfinite } from './hooks/use-trips';
@@ -58,6 +58,7 @@ const tripKey = (trip: CustomerTrip) => trip.id;
  *    ⇒ đọc ĐÚNG dòng hộp thư (`GET /booking-requests/:id`) rồi mở màn chi tiết yêu cầu tại chỗ.
  */
 export function OwnerTripsScreen() {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const tRequests = useTranslations('BookingRequests');
   const domainLabel = useDomainLabel();
@@ -273,12 +274,7 @@ export function OwnerTripsScreen() {
             icon="calendar-outline"
             title={history ? t('list.emptyHistoryTitle') : t('hostList.emptyCurrentTitle')}
             description={history ? t('list.emptyHistoryBody') : t('hostList.emptyCurrentBody')}
-            actionLabel={history ? t('list.viewCurrent') : t('hostList.viewVehicles')}
-            onAction={() =>
-              history
-                ? changeFilter(CUSTOMER_TRIP_FILTER.CURRENT)
-                : navigateOnce(ROUTES.manage.vehicles())
-            }
+            // Màn trống dữ liệu chỉ mô tả, không nút tìm/chuyển (người dùng chốt 27/10/2026).
           />
         ) : (
           <FlatList

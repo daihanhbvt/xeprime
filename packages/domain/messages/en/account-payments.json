@@ -59,6 +59,7 @@
       "label": "Filter by status",
       "range": "Date range",
       "rangePlaceholder": "Select a date range",
+      "rangeFrom": "From",
       "rangeTo": "End date",
       "clearRange": "Clear dates"
     },

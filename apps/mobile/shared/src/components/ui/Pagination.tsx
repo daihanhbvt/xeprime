@@ -3,7 +3,8 @@ import { memo, useMemo } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Ô trống "…" giữa hai cụm số. Là hằng chứ không phải chuỗi trần vì nó vừa là NHÃN vừa là KHOÁ
@@ -94,6 +95,7 @@ export const Pagination = memo(function Pagination({
   total: number;
   onChange: (page: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.pagination');
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -153,6 +155,7 @@ const PageSlot = memo(function PageSlot({
   active: boolean;
   onPress: (page: number) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.pagination');
 
   return (
@@ -190,6 +193,7 @@ function Arrow({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}

@@ -16,7 +16,13 @@ import {
   type SearchDraft,
 } from '@xeprime/domain';
 import { type MarketplaceFilters, type PublicDestination } from '@xeprime/types';
-import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
+import {
+  PROVINCE_CODES,
+  VEHICLE_TYPE,
+  type RouteType,
+  type ServiceType,
+  type VehicleType,
+} from '@xeprime/types';
 import type { Dayjs } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
 import { logger } from '@/lib/logger';
@@ -25,6 +31,7 @@ import { rememberProvince } from '@/lib/province-memory';
 import { deviceInitialProvinceDeps } from './initial-province.deps';
 import { resolveInitialProvince } from './initial-province';
 import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
+import { readRememberedVehicleType, rememberVehicleType } from '@/lib/vehicle-type-memory';
 import { useDestinations } from './hooks/use-marketplace-data';
 
 /**
@@ -188,6 +195,31 @@ export function SearchExperienceProvider({
   }, []);
 
   /**
+   * Loại xe khách đã TỰ CHỌN ở lượt trước → điền vào BẢN NHÁP — bản native của khối khôi phục loại
+   * xe trong `search/search-context.tsx` (web #214).
+   *
+   * **Chỉ ngoài màn KẾT QUẢ** (`initialRef` trống), cùng lý do với tỉnh ngay dưới: ở màn kết quả
+   * thẻ tìm kiếm LÀ bộ lọc, điền "Xe máy" mà ngữ cảnh không mang là nút chọn nói một đằng, danh
+   * sách một nẻo. Không bật `userEditedRef`: đây là điền sẵn, không phải thao tác.
+   */
+  useEffect(() => {
+    if (initialRef.current) return;
+
+    let alive = true;
+    void readRememberedVehicleType().then((remembered) => {
+      if (!alive || !remembered || userEditedRef.current) return;
+      setDraft((prev) => ({
+        ...prev,
+        vehicleType: remembered,
+        serviceType: resolveServiceType(remembered, prev.serviceType),
+      }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /**
    * Tỉnh/thành khách đã TỰ CHỌN ở lượt trước → điền vào BẢN NHÁP (ADR 0042 điều 6). Bản native
    * của khối khôi phục tỉnh trong `search/search-context.tsx`.
    *
@@ -251,23 +283,44 @@ export function SearchExperienceProvider({
    * đầu tiên cũng là lúc khoảng thuê mặc định bắt đầu có hiệu lực — đúng như web: chạm vào thẻ
    * là đóng dấu cả ngữ cảnh lên URL.
    */
+  /*
+   * Ngữ cảnh mới GHI ĐÈ đúng các khoá ngữ cảnh (`draftToFilterPatch` phát đủ cả bảy, khoá vắng mặt
+   * là `undefined` ⇒ gỡ), còn FACET (hãng, số chỗ, giá…) và từ khoá giữ nguyên — đúng như web, nơi
+   * nháp ghi qua `setFilters` lên URL mà không đụng tới facet của panel Bộ lọc.
+   */
   const edit = useCallback((patch: (prev: SearchDraft) => SearchDraft) => {
     userEditedRef.current = true;
     setDraft((prev) => {
       const next = patch(prev);
-      setFiltersState(applied(next));
+      setFiltersState((current) => mergeFilters(current, draftToFilterPatch(next)));
       return next;
     });
   }, []);
 
   const setVehicleType = useCallback(
-    (next: VehicleType) =>
+    (next: VehicleType) => {
+      rememberVehicleType(next);
       edit((prev) => ({
         ...prev,
         vehicleType: next,
         // Xe máy không có "có tài xế" — luật ở package dùng chung, không đoán lại ở đây.
         serviceType: resolveServiceType(next, prev.serviceType),
-      })),
+      }));
+      /*
+       * Màn kết quả: dọn facet KHÔNG thuộc loại xe mới, như web #214 — số chỗ/kiểu dáng là của ô
+       * tô, phân khúc là của xe máy. Để lại là một bộ lọc ra danh sách rỗng mà khách không thấy.
+       */
+      if (initialRef.current) {
+        setFiltersState((current) =>
+          mergeFilters(
+            current,
+            next === VEHICLE_TYPE.MOTORBIKE
+              ? { seats: undefined, bodyType: undefined }
+              : { motorbikeCategory: undefined },
+          ),
+        );
+      }
+    },
     [edit],
   );
 
@@ -356,31 +409,42 @@ export function SearchExperienceProvider({
     });
   }, []);
 
-  // Từ khoá không thuộc ngữ cảnh (nơi · thời gian · loại xe): sửa ngữ cảnh ở màn kết quả giữ nó lại,
-  // như web — mất từ khoá vì vừa đổi ngày là một lượt gõ lại vô cớ.
-  const submit = useCallback(
-    () =>
-      setFiltersState((prev) => {
-        const next = applied(draft);
-        return prev.q ? { ...next, q: prev.q } : next;
-      }),
-    [draft],
-  );
+  /*
+   * Áp bản nháp lên ngữ cảnh bằng phép MERGE — như `submit` ở trang kết quả web
+   * (`setFilters(draftToFilterPatch(draft))`): chỉ các khoá ngữ cảnh bị ghi đè, còn FACET (hãng,
+   * số chỗ, giá, sort, phân khúc, tiện ích, instantBook, minRating) và từ khoá giữ nguyên. Thay
+   * cả object là xoá sạch bộ lọc khách đã chọn mỗi lần đổi nơi/giờ.
+   *
+   * Đọc nháp qua updater chứ không qua closure: `submit()` thường được gọi ngay sau
+   * `setProvinceCode`/`setRentalRange` trong cùng một lượt xử lý, lúc closure còn giữ nháp CŨ.
+   */
+  const submit = useCallback(() => {
+    setDraft((current) => {
+      setFiltersState((prev) => mergeFilters(prev, draftToFilterPatch(current)));
+      return current;
+    });
+  }, []);
 
+  /*
+   * Vá ngữ cảnh từ bên ngoài thẻ tìm kiếm (Áp dụng của tấm Bộ lọc, viên "Nhu cầu", "Tất cả"…).
+   * Patch chạm khoá NGỮ CẢNH thì dựng lại nháp theo đúng luật "URL → nháp" của web
+   * (`search/search-context.tsx`): `draftFromFilters(next)`, giữ loại xe / khoảng thuê / lộ trình
+   * của nháp khi ngữ cảnh mới không mang chúng. Không làm vậy thì lượt `edit` kế tiếp ghi nháp
+   * cũ đè lên và âm thầm hoàn tác lựa chọn vừa áp (Xe máy → Ô tô, Dài hạn → Tự lái).
+   */
   const setFilters = useCallback((patch: Partial<MarketplaceFilters>) => {
     setFiltersState((prev) => {
-      const next: MarketplaceFilters = { ...prev };
-      for (const [key, value] of Object.entries(patch)) {
-        const empty =
-          value === undefined ||
-          value === null ||
-          value === '' ||
-          value === false ||
-          (Array.isArray(value) && value.length === 0);
-        // Bỏ hẳn key thay vì gán `undefined`: key mang `undefined` vẫn vào query key của
-        // TanStack Query, và hai lần lọc giống hệt nhau thành hai cache khác nhau.
-        if (empty) delete next[key as keyof MarketplaceFilters];
-        else Object.assign(next, { [key]: value });
+      const next = mergeFilters(prev, patch);
+      if (CONTEXT_KEYS.some((key) => key in patch)) {
+        setDraft((prevDraft) => {
+          const fromFilters = draftFromFilters(next);
+          return {
+            ...fromFilters,
+            vehicleType: next.vehicleType ? fromFilters.vehicleType : prevDraft.vehicleType,
+            rental: next.pickupAt && next.returnAt ? fromFilters.rental : prevDraft.rental,
+            routeType: next.routeType ? fromFilters.routeType : prevDraft.routeType,
+          };
+        });
       }
       return next;
     });
@@ -446,18 +510,39 @@ export function SearchExperienceProvider({
 }
 
 /**
- * Bản nháp → ngữ cảnh áp dụng. Đi qua `draftToFilterPatch` (dùng chung với web) rồi bỏ các key
- * `undefined`: một key mang `undefined` vẫn là key CÓ MẶT trong object, và nó sẽ vào query key
- * của TanStack Query — hai lần tìm giống hệt nhau lại thành hai cache khác nhau.
+ * Vá `patch` lên ngữ cảnh; giá trị rỗng (`undefined`, `null`, `''`, `false`, mảng rỗng) GỠ khoá đó.
+ *
+ * Bỏ hẳn key thay vì gán `undefined`: key mang `undefined` vẫn vào query key của TanStack Query,
+ * và hai lần lọc giống hệt nhau thành hai cache khác nhau.
  */
-function applied(draft: SearchDraft): MarketplaceFilters {
-  const patch = draftToFilterPatch(draft);
-  const result: MarketplaceFilters = {};
-
+function mergeFilters(
+  prev: MarketplaceFilters,
+  patch: Partial<MarketplaceFilters>,
+): MarketplaceFilters {
+  const next: MarketplaceFilters = { ...prev };
   for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
-    Object.assign(result, { [key]: value });
+    const empty =
+      value === undefined ||
+      value === null ||
+      value === '' ||
+      value === false ||
+      (Array.isArray(value) && value.length === 0);
+    if (empty) delete next[key as keyof MarketplaceFilters];
+    else Object.assign(next, { [key]: value });
   }
-
-  return result;
+  return next;
 }
+
+/**
+ * Bảy khoá NGỮ CẢNH (nơi · thời gian · chế độ giờ · loại xe · dịch vụ · lộ trình) — đúng tập
+ * `draftToFilterPatch` phát ra. Patch chạm một trong số này thì nháp phải dựng lại.
+ */
+const CONTEXT_KEYS: readonly (keyof MarketplaceFilters)[] = [
+  'vehicleType',
+  'serviceType',
+  'provinceCode',
+  'pickupAt',
+  'returnAt',
+  'hourly',
+  'routeType',
+];

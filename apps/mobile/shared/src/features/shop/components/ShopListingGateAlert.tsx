@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 /**
  * "Hồ sơ gian hàng chưa đủ để gửi xe duyệt" — dải lỗi có LỐI ĐI TIẾP (ADR 0040).
@@ -31,6 +32,7 @@ export function ShopListingGateAlert({
 }: {
   missing: readonly PackageShopListingRequirement[];
 }) {
+  const colors = useColors();
   const t = useTranslations('Shop.listingGate');
   const navigateOnce = useNavigateOnce();
 

@@ -35,9 +35,31 @@ export interface PromoCodeState {
  * Bất biến hook giữ: **mã đang áp phải luôn ứng với chuyến ĐANG hiển thị.** Giữ số cũ là hiện
  * một tổng tiền không tồn tại; bỏ mã im lặng là tăng tiền khách phải trả mà không nói.
  */
-export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
-  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+export function usePromoCode(
+  trip: PromoTripParams | null,
+  options: {
+    /**
+     * Gọi NGAY lúc mã đang áp đổi (áp được, bị từ chối, gỡ, bị bỏ vì chuyến đổi) — cho nơi cần
+     * mang mã đi tiếp (thẻ đặt xe ở trang xe → luồng gửi yêu cầu) mà không phải đồng bộ bằng effect.
+     */
+    onCodeChange?: (code: string | null) => void;
+  } = {},
+): PromoCodeState {
+  const [appliedCode, setAppliedCodeState] = useState<string | null>(null);
+  const onCodeChangeRef = useRef(options.onCodeChange);
+  useEffect(() => {
+    onCodeChangeRef.current = options.onCodeChange;
+  });
+  const setAppliedCode = useCallback((code: string | null) => {
+    setAppliedCodeState(code);
+    onCodeChangeRef.current?.(code);
+  }, []);
   const [applied, setApplied] = useState<PromoPreview | null>(null);
+  /**
+   * Chuyến (`promoTripKey`) mà `applied` được tính cho — như web `appliedFor`: báo giá chuyến mới
+   * có thể về TRƯỚC lượt xác minh lại mã, khi đó `applied.fees` là của chuyến CŨ.
+   */
+  const [appliedFor, setAppliedFor] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
   const [droppedCode, setDroppedCode] = useState<string | null>(null);
 
@@ -58,6 +80,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
             if (result.applicable) {
               setAppliedCode(result.code);
               setApplied(result);
+              setAppliedFor(promoTripKey(trip));
               setReason(null);
               return;
             }
@@ -77,7 +100,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
         },
       );
     },
-    [previewM, trip],
+    [previewM, setAppliedCode, trip],
   );
 
   const remove = useCallback(() => {
@@ -85,7 +108,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
     setApplied(null);
     setReason(null);
     setDroppedCode(null);
-  }, []);
+  }, [setAppliedCode]);
 
   const rejectByServer = useCallback(
     (error: unknown) => {
@@ -106,7 +129,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
       setReason(null);
       return true;
     },
-    [appliedCode],
+    [appliedCode, setAppliedCode],
   );
 
   /*
@@ -134,6 +157,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
           if (result.applicable) {
             // Số giảm có thể ĐỔI theo chuyến mới — ghi lại bằng con số vừa nhận.
             setApplied(result);
+            setAppliedFor(tripKey);
             setDroppedCode(null);
             return;
           }
@@ -156,7 +180,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
 
   return {
     appliedCode: hasTrip ? appliedCode : null,
-    applied: hasTrip ? applied : null,
+    applied: hasTrip && appliedFor === tripKey ? applied : null,
     checking: previewM.isPending,
     reason: hasTrip ? reason : null,
     droppedCode: hasTrip ? droppedCode : (appliedCode ?? droppedCode),

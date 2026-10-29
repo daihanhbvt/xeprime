@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { RATING_MAX, RATING_SCALE } from '@xeprime/types';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { market } from '@/theme/tokens';
 
 /**
  * Năm sao, tô theo điểm LÀM TRÒN — bản native của `components/data-display/Stars` bên web.
@@ -13,6 +14,7 @@ import { colors } from '@/theme/tokens';
  * Số sao lấy từ `RATING_SCALE` của `@xeprime/types` — cùng nguồn với web và với schema đánh giá.
  */
 export function Stars({ value, size = 11 }: { value: number; size?: number }) {
+  const colors = useColors();
   const tCommon = useTranslations('Common');
   const filled = Math.round(value);
 
@@ -32,7 +34,7 @@ export function Stars({ value, size = 11 }: { value: number; size?: number }) {
           key={star}
           name="star"
           size={size}
-          color={star <= filled ? colors.primaryActive : colors.border}
+          color={star <= filled ? market.star : colors.border}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />

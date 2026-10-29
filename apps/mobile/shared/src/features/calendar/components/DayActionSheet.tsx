@@ -6,7 +6,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { Holiday } from '../api';
 import type { DayCell } from '../utils/calendar-date.util';
 import { SheetActionRow } from './SheetActionRow';
@@ -51,6 +52,7 @@ export function DayActionSheet({
   onOpenBlockDialog: () => void;
   onPrice: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

@@ -18,7 +18,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { Driver } from '../api';
 import { useInviteDriver, useUpdateDriver } from '../hooks/use-drivers';
 
@@ -90,13 +91,8 @@ export function InviteDriverSheet({
   );
 }
 
-function InviteForm({
-  onDone,
-  defaults,
-}: {
-  onDone: () => void;
-  defaults: InviteDriverValues;
-}) {
+function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: InviteDriverValues }) {
+  const colors = useColors();
   const t = useTranslations('Drivers');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -187,6 +183,7 @@ export function EditDriverSheet({
 }
 
 function EditForm({ driver, onDone }: { driver: Driver; onDone: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();

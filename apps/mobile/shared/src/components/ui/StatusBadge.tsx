@@ -1,6 +1,8 @@
 import { Text, XStack } from 'tamagui';
 import { STATUS_COLOR, type StatusColor } from '@xeprime/types';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { byPalette, useColors } from '@/theme/ThemeProvider';
+import type { AppColors } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { estimateTextWidth } from './text-fit';
 
 /**
@@ -13,7 +15,7 @@ import { estimateTextWidth } from './text-fit';
  * Nhãn CHỮ không sinh ở đây — nơi gọi dịch qua `useDomainLabel()` rồi truyền vào, vì mỗi miền có
  * namespace riêng (`bookingStatus`, `customerTripStage`, `handoverStatus`…).
  */
-const TONE: Readonly<Record<StatusColor, { fg: string; bg: string }>> = {
+const toneOf = byPalette<Readonly<Record<StatusColor, { fg: string; bg: string }>>>((colors) => ({
   [STATUS_COLOR.NEUTRAL]: { fg: colors.textMuted, bg: colors.surfaceMuted },
   [STATUS_COLOR.INFO]: { fg: colors.info, bg: colors.infoSurface },
   [STATUS_COLOR.PROCESSING]: { fg: colors.info, bg: colors.infoSurface },
@@ -24,10 +26,10 @@ const TONE: Readonly<Record<StatusColor, { fg: string; bg: string }>> = {
   // Hai vai này chưa có token riêng ở native; dùng nhấn thương hiệu thay vì bịa một màu tím.
   [STATUS_COLOR.SPECIAL]: { fg: colors.primaryActive, bg: colors.primaryLight },
   [STATUS_COLOR.ACCENT]: { fg: colors.primaryActive, bg: colors.primaryLight },
-};
+}));
 
-export function statusTone(color: StatusColor): { fg: string; bg: string } {
-  return TONE[color];
+export function statusTone(color: StatusColor, colors: AppColors): { fg: string; bg: string } {
+  return toneOf(colors)[color];
 }
 
 /**
@@ -123,9 +125,7 @@ export function badgeLineHeight(size: number): number {
  * `px` ở dưới mà phép đo nằm nơi khác thì hai bên lệch nhau ngay, và không có gì báo.
  */
 export function estimateStatusBadgeWidth(label: string, size: BadgeSize = 'md'): number {
-  return (
-    2 * (PADDING_X[size] + BORDER_WIDTH) + estimateTextWidth(label, FONT_SIZE[size], true)
-  );
+  return 2 * (PADDING_X[size] + BORDER_WIDTH) + estimateTextWidth(label, FONT_SIZE[size], true);
 }
 
 export function StatusBadge({
@@ -137,7 +137,8 @@ export function StatusBadge({
   color: StatusColor;
   size?: BadgeSize;
 }) {
-  const tone = statusTone(color);
+  const colors = useColors();
+  const tone = statusTone(color, colors);
   const textSize = FONT_SIZE[size];
 
   return (

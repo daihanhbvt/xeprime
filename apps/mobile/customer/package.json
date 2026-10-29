@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "//": [
-    "APP KHÁCH — XePrime (vn.xeprime.mobile). Một trong HAI app phát hành riêng.",
+    "APP KHÁCH — XePrime (vn.xeprime.customerapp). Một trong HAI app phát hành riêng.",
     "Khai lại cùng bộ thư viện với manage/ và shared/ là BẮT BUỘC, không phải trùng lặp:",
     "  • autolinking đọc FILE NÀY để biết nhúng native module nào vào chính bản cài này;",
     "  • Metro chỉ tìm thư viện ở customer/node_modules và node_modules gốc repo.",

@@ -7,11 +7,12 @@ import { BOOKING_STATUS_META, OCCUPANCY_SOURCE_TYPE_META } from '@xeprime/types'
 import type { IconName } from '@/components/ui/Chip';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 import {
   isDashedEvent,
   LEGEND_BOOKING_STATUSES,
-  LEGEND_EXTRA_TONE,
+  legendExtraToneOf,
   LEGEND_SOURCE_TYPES,
   sourceTone,
   statusColorTone,
@@ -52,6 +53,7 @@ const SWATCH_ICON = 9;
  * trên mọi máy — nó là chú thích, không phải nội dung.
  */
 export const CalendarLegend = memo(function CalendarLegend() {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const domainLabel = useDomainLabel();
 
@@ -59,14 +61,14 @@ export const CalendarLegend = memo(function CalendarLegend() {
     ...LEGEND_BOOKING_STATUSES.map((status) => ({
       key: `status-${status}`,
       label: domainLabel('bookingStatus', status, BOOKING_STATUS_META[status].label),
-      tone: statusColorTone(BOOKING_STATUS_META[status].color),
+      tone: statusColorTone(BOOKING_STATUS_META[status].color, colors),
     })),
     ...LEGEND_SOURCE_TYPES.map((type) => {
       const icon = EVENT_ICON[type];
       return {
         key: `source-${type}`,
         label: domainLabel('occupancySourceType', type, OCCUPANCY_SOURCE_TYPE_META[type]?.label),
-        tone: sourceTone(type),
+        tone: sourceTone(type, colors),
         dashed: isDashedEvent(type),
         ...(icon ? { icon } : {}),
       };
@@ -74,13 +76,13 @@ export const CalendarLegend = memo(function CalendarLegend() {
     {
       key: 'customPrice',
       label: t('legend.customPrice'),
-      tone: LEGEND_EXTRA_TONE.customPrice,
+      tone: legendExtraToneOf(colors).customPrice,
       round: true,
     },
     {
       key: 'holiday',
       label: t('legend.holiday'),
-      tone: LEGEND_EXTRA_TONE.holiday,
+      tone: legendExtraToneOf(colors).holiday,
       icon: 'flag',
     },
   ];

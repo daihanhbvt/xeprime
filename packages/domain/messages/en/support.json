@@ -1,17 +1,16 @@
 {
   "title": "Support",
   "subtitle": "Trouble during a trip, need to reschedule, or want to raise a complaint? These are XePrime's official contact channels.",
-  "draftNotice": "The contact details below are still placeholders — fill in the real hotline, email, and staffed hours before the pilot opens.",
   "channels": {
     "heading": "Get in touch",
     "hotline": {
       "label": "Hotline",
-      "value": "«enter hotline number»",
+      "value": "+84 352 063 205",
       "note": "For incidents happening right now: breakdown, accident, or you cannot reach the other party."
     },
     "email": {
       "label": "Support email",
-      "value": "«enter support email»",
+      "value": "contact@softrent.vn",
       "note": "For complaints, personal-data requests, and anything that needs documents attached."
     },
     "hours": {
@@ -19,9 +18,9 @@
       "value": "«enter staffed hours»",
       "note": "Outside these hours your request is still logged and picked up on the next shift."
     },
-    "lead": "These three channels are how XePrime receives requests. The actual contact details will be published before the marketplace opens properly.",
+    "lead": "These three channels are how XePrime receives requests.",
     "pendingBadge": "Coming soon",
-    "pendingNote": "There is no official phone number, email or staffed-hours window yet. We leave them blank rather than publish contact details nobody answers."
+    "pendingNote": "Official staffed hours will be announced soon. Outside those hours, requests are still logged and handled in the next shift."
   },
   "beforeContact": {
     "heading": "Include these so we can help faster",

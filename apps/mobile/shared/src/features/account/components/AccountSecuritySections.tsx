@@ -4,7 +4,8 @@ import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /** Tiêu đề + lời dẫn một phần của trang — gương `SectionCard` (title/hint) bên web. */
 export function SectionHead({
@@ -16,6 +17,7 @@ export function SectionHead({
   hint?: string;
   danger?: boolean;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={2}>
       <Text col={danger ? colors.danger : colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>

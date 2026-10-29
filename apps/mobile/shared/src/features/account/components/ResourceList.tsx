@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { logger } from '@/lib/logger';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
 /** Địa chỉ THẬT của một tài liệu: web phục vụ file tĩnh, app mở chính địa chỉ đó. */
 export function ownerResourceUrl(resource: OwnerResource): string {
@@ -45,6 +46,7 @@ interface ResourceListProps {
  * thì máy báo không mở được — vẫn tốt hơn một PDF rỗng trông như tài liệu thật.
  */
 export function ResourceList({ resources, variant = 'card' }: ResourceListProps) {
+  const colors = useColors();
   const t = useTranslations('Account.resources');
 
   return (

@@ -28,6 +28,12 @@ const REQUEST_BRANCHES = [queryKeys.bookingRequests.all, ...TRIP_BRANCHES] as co
 /** Giữ chỗ đổi trạng thái ⇒ đơn được tạo hoặc ô lịch được nhả. Cùng vòng đời với yêu cầu thuê. */
 const HOLD_BRANCHES = REQUEST_BRANCHES;
 
+/**
+ * Tiền về / rời VÍ (tiền hoàn, lệnh rút admin đã chuyển hoặc bị trả lại): làm mới hai tab Quản lý
+ * thanh toán — số dư + lệnh rút () và Lịch sử giao dịch ().
+ */
+const WALLET_BRANCHES = [queryKeys.wallet.all, queryKeys.accountTransactions.all] as const;
+
 /** Xe được duyệt/từ chối đổi cả kho xe lẫn thứ đang hiện trên chợ. */
 const VEHICLE_BRANCHES = [queryKeys.vehicles.all, queryKeys.marketplace.all] as const;
 
@@ -101,8 +107,9 @@ const BY_TYPE: Record<NotificationType, readonly QueryKey[]> = {
   [NOTIFICATION_TYPE.HOLD_PAID]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_EXPIRING]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: HOLD_BRANCHES,
-  [NOTIFICATION_TYPE.HOLD_REFUNDED]: HOLD_BRANCHES,
-  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: HOLD_BRANCHES,
+  // Tiền hoàn vào ví · lệnh rút đã chuyển / bị trả lại (API gửi cùng loại `HOLD_REFUND_PAID`).
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: [...HOLD_BRANCHES, ...WALLET_BRANCHES],
+  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: [...HOLD_BRANCHES, ...WALLET_BRANCHES],
   /*
    * Mã khuyến mãi bị BỎ lúc chốt giá (ADR 0046) — làm mới nhánh giữ chỗ và nhánh chuyến: số tiền
    * khách phải chuyển vừa đổi, và cả hai màn đó đang hiện con số cũ.

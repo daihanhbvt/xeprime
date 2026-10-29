@@ -10,6 +10,7 @@ import { ConversationRow } from './ConversationRow';
  * từ con số 0.
  */
 const conversation = (over: Partial<ConversationSummary> = {}): ConversationSummary => ({
+  canSend: true,
   id: 'c1',
   vehicleId: 'v1',
   vehicleName: 'Kia Morning 2021',

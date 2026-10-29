@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
@@ -10,7 +10,8 @@ import { FieldLabel } from './Field';
 import { ImageEditBadge } from './ImageEditBadge';
 import { PhotoViewer } from './PhotoViewer';
 import { useImageUpload } from './use-image-upload';
-import { colors, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 const TILE = 96;
 
@@ -20,7 +21,7 @@ const TILE = 96;
  */
 const COVER_RATIO = 16 / 9;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   tile: {
     width: TILE,
     height: TILE,
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   coverRemove: { position: 'absolute', top: space.xs, right: space.xs, zIndex: 1 },
-});
+}));
 
 /** Trần thư viện ảnh mặc định — khớp `vehicleFormSchema.images.max(20)`; nơi gọi ghi đè được. */
 const DEFAULT_MAX = 20;
@@ -98,6 +99,8 @@ export function ImageUploadField<T extends FieldValues>({
   hint,
   removable = true,
 }: Props<T>) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Common.image');
   const tCommon = useTranslations('Common.actions');
   const tStates = useTranslations('Common.states');

@@ -5,15 +5,15 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "xeprimepartner",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "icon": "../shared/assets/images/xeprime-partner-icon.png",
     "ios": {
-      "bundleIdentifier": "vn.xeprime.partner",
+      "bundleIdentifier": "vn.xeprime.partnerapp",
       "buildNumber": "1",
       "supportsTablet": false
     },
     "android": {
-      "package": "vn.xeprime.partner",
+      "package": "vn.xeprime.partnerapp",
       "versionCode": 6,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -43,14 +43,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "XePrime Partner cần quyền truy cập thư viện ảnh để bạn chọn ảnh từ máy (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác trong ứng dụng)."
+          "photosPermission": "XePrime Partner cần truy cập thư viện ảnh để bạn tải ảnh xe, giấy tờ xe, logo và ảnh gian hàng, ảnh bàn giao xe, chứng từ thu chi và ảnh gửi trong tin nhắn với khách."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "XePrime Partner dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
-          "locationWhenInUsePermission": "XePrime Partner dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "locationAlwaysAndWhenInUsePermission": "XePrime Partner chỉ dùng vị trí khi bạn đang mở ứng dụng, để điền nhanh địa chỉ chi nhánh và điểm giao, nhận xe.",
+          "locationWhenInUsePermission": "XePrime Partner dùng vị trí của bạn để điền nhanh địa chỉ chi nhánh và điểm giao, nhận xe trên bản đồ. Bạn vẫn có thể tự nhập địa chỉ.",
           "isAndroidBackgroundLocationEnabled": false,
           "isIosBackgroundLocationEnabled": false
         }
@@ -58,7 +58,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "XePrime Partner cần quyền máy ảnh để bạn chụp ảnh ngay trong ứng dụng (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác).",
+          "cameraPermission": "XePrime Partner cần dùng máy ảnh để bạn chụp ảnh xe, giấy tờ xe và ảnh tình trạng xe khi bàn giao, nhận lại xe.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

@@ -1,10 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { Tabs, useSegments } from 'expo-router';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type TextStyle,
@@ -13,12 +22,25 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslations } from 'use-intl';
 import { AppTopBar } from '@/components/layout/AppTopBar';
+import { TabBarHideContext, TabBarInsetContext } from '@/components/layout/tab-bar-inset';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
+import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
+import { elevation } from '@/theme/elevation';
+import { Avatar } from '@/components/ui/Avatar';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+
+/** Viên vàng co/nở + đẩy mục bên cạnh. */
+// Đẩy NHẸ và CHẬM (người dùng chốt 28/10/2026): trượt êm 380ms, không lò xo nảy.
+const TAB_LAYOUT_TRANSITION = LinearTransition.duration(380).easing(Easing.inOut(Easing.cubic));
+
+/** Cỡ icon thanh tab — Figma `21860:81398`: icon 28 trong ô 44. */
+const TAB_ICON = 26;
 
 /**
  * Thanh tab dưới đáy — chỉ tồn tại khi ĐÃ đăng nhập.
@@ -43,22 +65,8 @@ import { colors, fontSize, iconSize, space } from '@/theme/tokens';
  * định mà Android suy từ metric của font không chừa đủ chỗ cho tầng dấu trên cùng. Không khai
  * thì chữ bị cắt ngang ở mép dưới thanh, ngay chỗ thanh điều hướng bắt đầu — đúng cái "bị che"
  * nhìn thấy trên máy.
- *
- * Con số này đi CẶP với `TAB_BAR_HEIGHT`: đổi một cái phải tính lại cái kia.
  */
-const TAB_LABEL_LINE_HEIGHT = 18;
-
-/**
- * Chiều cao phần NHÌN THẤY của thanh, CHƯA gồm safe area.
- *
- * Vẫn trên sàn chạm 48dp: 4 (đệm trên) + 20 (icon) + 18 (hộp dòng nhãn) + khoảng hở
- * react-navigation tự chèn giữa icon và nhãn + 4 (đệm dưới).
- *
- * 60 chứ không 56: Be Vietnam Pro có hộp dòng cao hơn Roboto ở cùng cỡ chữ, nên ngân sách cũ —
- * vốn tính cho font hệ điều hành — hụt đúng phần dấu tiếng Việt sau khi app chuyển sang dùng
- * chung font với web.
- */
-const TAB_BAR_HEIGHT = 60;
+const TAB_LABEL_LINE_HEIGHT = 22;
 
 /**
  * Trần hiện trên huy hiệu tab — cùng `overflowCount` mà `MobileTabBar` của web dùng.
@@ -68,10 +76,35 @@ const TAB_BAR_HEIGHT = 60;
 const TAB_BADGE_MAX = 9;
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row' },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  icon: { width: iconSize.lg, height: iconSize.lg, alignItems: 'center', justifyContent: 'center' },
+  // Viên NỔI (Figma `21860:81398`): khay bo tròn hết cỡ, đổ bóng, cách hai mép màn.
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 30,
+    borderWidth: 1,
+    paddingVertical: space.xs,
+    // Đệm hai bên rộng hơn dọc — các mục đã giãn đều, icon đầu/cuối không nên sát mép viên.
+    paddingHorizontal: space.md,
+  },
+  // Figma: các mục giãn ĐỀU (space-between), viên đang chọn chỉ ôm icon + nhãn — nhãn không bị "…".
+  item: { alignItems: 'center', justifyContent: 'center' },
+  itemPressed: { transform: [{ scale: 0.92 }] },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    height: 44,
+    paddingHorizontal: space.sm,
+    // Bo = nửa chiều cao, KHÔNG 999: Android vẽ góc vuông khi bán kính vượt quá nửa cạnh lúc LayoutAnimation chạy.
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  icon: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -space.xs, left: '60%' },
+  // Avatar tab = đúng ô icon 28 như các tab bên cạnh (viền 1 + ảnh 26).
+  avatar: { width: 28, height: 28, borderWidth: 1.5, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });
 
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
@@ -91,13 +124,32 @@ type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>
  * trúc nữa. Cấu hình vẫn đọc từ `screenOptions`/`options` như cũ (màu, cỡ chữ, chiều cao, mục ẩn
  * bằng `href: null` ⇒ `tabBarItemStyle.display = 'none'`), nên thanh này không giữ luật riêng nào.
  */
-function AppTabBar({ state, descriptors, navigation }: TabBarProps) {
+function AppTabBar({
+  state,
+  descriptors,
+  navigation,
+  onHeight,
+  hide,
+  height,
+}: TabBarProps & { onHeight: (height: number) => void; hide: SharedValue<number>; height: number }) {
+  const colors = useColors();
+  // Trượt xuống đúng bằng chiều cao thanh (đã gồm đệm đáy) — ra hẳn khỏi màn.
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hide.value * height }],
+  }));
   const focusedOptions = descriptors[state.routes[state.index]!.key]!.options;
   const barStyle = focusedOptions.tabBarStyle as StyleProp<ViewStyle>;
   if (StyleSheet.flatten(barStyle)?.display === 'none') return null;
 
   return (
-    <View style={[styles.bar, barStyle]} accessibilityRole="tablist">
+    <Animated.View
+      style={[barStyle, slideStyle]}
+      onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
+    >
+    <View
+      style={[styles.bar, elevation.raised, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}
+      accessibilityRole="tablist"
+    >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key]!;
         if (
@@ -117,31 +169,54 @@ function AppTabBar({ state, descriptors, navigation }: TabBarProps) {
             target: route.key,
             canPreventDefault: true,
           });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+          if (!focused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
         };
         const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
 
         return (
+          <Animated.View key={route.key} layout={TAB_LAYOUT_TRANSITION}>
           <Pressable
-            key={route.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={label}
             onPress={onPress}
             onLongPress={onLongPress}
-            style={[styles.item, options.tabBarItemStyle as StyleProp<ViewStyle>]}
+            // Nhấn: mục lún nhẹ (scale 0.92) — phản hồi chạm tức thì trước khi tab đổi.
+            style={({ pressed }) => [
+              styles.item,
+              options.tabBarItemStyle as StyleProp<ViewStyle>,
+              pressed ? styles.itemPressed : null,
+            ]}
           >
-            {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
-            <Text
-              numberOfLines={1}
-              style={[options.tabBarLabelStyle as StyleProp<TextStyle>, { color }]}
+            {/* Mục đang chọn: icon + nhãn trong viên vàng nhạt; mục khác chỉ icon (Figma). */}
+            {/*
+              Kiểu Facebook: viên vàng NỞ ra ở mục mới và ĐẨY các mục bên cạnh sang (layout transition
+              lò xo của Reanimated — chạy trên UI thread, đúng cả kiến trúc mới), nhãn mờ dần vào.
+            */}
+            <Animated.View
+              layout={TAB_LAYOUT_TRANSITION}
+              style={[styles.pill, focused ? { backgroundColor: colors.primarySubtle } : null]}
             >
-              {label}
-            </Text>
+              {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              {focused ? (
+                <Animated.Text
+                  entering={FadeIn.duration(320)}
+                  exiting={FadeOut.duration(120)}
+                  numberOfLines={1}
+                  style={[options.tabBarLabelStyle as StyleProp<TextStyle>, { color, flexShrink: 1 }]}
+                >
+                  {label}
+                </Animated.Text>
+              ) : null}
+            </Animated.View>
           </Pressable>
+          </Animated.View>
         );
       })}
     </View>
+    </Animated.View>
   );
 }
 
@@ -156,13 +231,14 @@ function TabIcon({
   color,
   badge,
 }: {
-  name: keyof typeof Ionicons.glyphMap;
+  name: LineIconName;
   color: string;
   badge?: number;
 }) {
   return (
     <View style={styles.icon}>
-      <Ionicons name={name} color={color} size={iconSize.lg} />
+      {/* Icon VẼ TỪ FIGMA (`LineIcon`, Figma `21860:81398`) — không dùng Ionicons cho thanh tab. */}
+      <LineIcon name={name} color={color} size={TAB_ICON} />
       {badge ? (
         <View style={styles.badge} pointerEvents="none">
           <CountBadge count={badge} tone="danger" size="sm" max={TAB_BADGE_MAX} />
@@ -173,9 +249,21 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const colors = useColors();
   const t = useTranslations('Navigation.public');
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
+  const segments = useSegments();
+  // Thanh logo · tin nhắn · chuông · avatar: Trang chủ VÀ Tìm xe (người dùng chốt 28/10/2026).
+  const lastSegment = segments[segments.length - 1];
+  // Màn Tìm xe KHÔNG có thanh này (người dùng chốt 29/10/2026) — thẻ tìm kiếm là đỉnh màn.
+  const onHome = lastSegment === 'explore' || segments.length <= 1;
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+  const tabBarHide = useSharedValue(0);
+  // Đổi tab ⇒ thanh hiện lại: chỉ Trang chủ được giấu nó khi cuộn.
+  useEffect(() => {
+    tabBarHide.value = withTiming(0, { duration: 200 });
+  }, [lastSegment, tabBarHide]);
 
   /** Màn của khách chưa đăng nhập: ẩn khỏi thanh tab cho tới khi có phiên. */
   const authOnly = user ? {} : { href: null };
@@ -195,19 +283,37 @@ export default function TabsLayout() {
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
-      <AppTopBar />
+      {/* Thanh logo · tin nhắn · chuông · avatar CHỈ ở trang chủ (người dùng chốt 28/10/2026). */}
+      {onHome ? <AppTopBar /> : null}
+      {/*
+        Hoàn tất lượt Xe yêu thích bị gián đoạn vì chưa đăng nhập (web gắn ở layout `(public)`).
+        Ở ĐÂY chứ không ở layout gốc: nó có thể phải mở lại màn đăng nhập, nên cần ngữ cảnh
+        navigator; và bộ tab luôn còn mount bên dưới mọi màn đẩy lên (chi tiết xe, đăng nhập).
+      */}
+      <FavoriteIntentResumer />
+      <TabBarInsetContext.Provider value={user ? tabBarHeight : 0}>
+      <TabBarHideContext.Provider value={tabBarHide}>
       <Tabs
-        tabBar={(props) => <AppTabBar {...props} />}
+        tabBar={(props) => (
+          <AppTabBar {...props} onHeight={setTabBarHeight} hide={tabBarHide} height={tabBarHeight} />
+        )}
         screenOptions={{
           headerShown: false,
           animation: 'none',
-          tabBarActiveTintColor: colors.primaryActive,
+          // Tab ẩn đứng yên (react-freeze): đổi sáng/tối chỉ vẽ lại tab đang xem, tab kia vẽ lúc quay lại.
+          freezeOnBlur: true,
+          tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: user
             ? {
-                backgroundColor: colors.surface,
-                borderTopColor: colors.borderSubtle,
-                borderTopWidth: 1,
+                // NỔI đè lên nội dung (kiểu Facebook): khung ngoài trong suốt, nội dung cuộn xuống dưới
+                // vẫn thấy qua hai bên viên. Màn cuộn chừa đuôi qua `TabBarInsetContext`.
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'transparent',
+                paddingHorizontal: space.sm,
                 /*
                  * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
                  *
@@ -219,9 +325,11 @@ export default function TabsLayout() {
                  * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
                  * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
                  */
-                height: TAB_BAR_HEIGHT + insets.bottom,
-                paddingTop: space.xs,
-                paddingBottom: insets.bottom + space.xs,
+                paddingTop: 0,
+                // Đệm đáy ĐỘNG theo máy: máy điều hướng cử chỉ có `insets.bottom` lớn, máy phím cứng /
+                // một số Android trả 0 — lấy max với sàn 16 để thanh không bao giờ chạm mép dưới, rồi cộng
+                // thêm 8 cho thanh nổi hẳn lên (người dùng chốt 28/10/2026).
+                paddingBottom: Math.max(insets.bottom, space.md) + space.sm,
               }
             : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
               { display: 'none' },
@@ -235,7 +343,7 @@ export default function TabsLayout() {
              * không đậm lên.
              */
             fontFamily: FONT_FAMILY.medium,
-            fontSize: fontSize.label,
+            fontSize: fontSize.body,
             lineHeight: TAB_LABEL_LINE_HEIGHT,
           },
           /*
@@ -250,7 +358,15 @@ export default function TabsLayout() {
           name="explore"
           options={{
             title: t('explore'),
-            tabBarIcon: ({ color }) => <TabIcon name="home-outline" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          }}
+        />
+        {/* Tìm xe là TAB (Figma `21860:81398`) — nút "Tìm xe" ở trang chủ chuyển sang đây, không mở trang mới. */}
+        <Tabs.Screen
+          name="search"
+          options={{
+            title: t('searchCars'),
+            tabBarIcon: ({ color }) => <TabIcon name="search" color={color} />,
           }}
         />
         <Tabs.Screen
@@ -259,7 +375,7 @@ export default function TabsLayout() {
             ...authOnly,
             title: t('chat'),
             tabBarIcon: ({ color }) => (
-              <TabIcon name="chatbubble-ellipses-outline" color={color} badge={chatCustomer} />
+              <TabIcon name="chat" color={color} badge={chatCustomer} />
             ),
           }}
         />
@@ -269,7 +385,7 @@ export default function TabsLayout() {
             ...authOnly,
             title: t('tripsShort'),
             tabBarIcon: ({ color }) => (
-              <TabIcon name="calendar-outline" color={color} badge={pendingDriverTrips} />
+              <TabIcon name="car" color={color} badge={pendingDriverTrips} />
             ),
           }}
         />
@@ -278,10 +394,20 @@ export default function TabsLayout() {
           options={{
             ...authOnly,
             title: t('account'),
-            tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} />,
+            // Tab tài khoản là AVATAR của chính người dùng (Figma), viền vàng khi đang chọn.
+            tabBarIcon: ({ color }) =>
+              user ? (
+                <View style={[styles.avatar, { borderColor: colors.primary, backgroundColor: colors.surface }]}>
+                  <Avatar name={user.displayName} url={user.avatarUrl ?? null} size={23} />
+                </View>
+              ) : (
+                <Ionicons name="person-outline" color={color} size={TAB_ICON} />
+              ),
           }}
         />
       </Tabs>
+      </TabBarHideContext.Provider>
+      </TabBarInsetContext.Provider>
     </SafeAreaView>
   );
 }

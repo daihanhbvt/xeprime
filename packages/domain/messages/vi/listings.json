@@ -272,6 +272,10 @@
       "useCurrent": "Lấy vị trí hiện tại",
       "imprecise": "Vị trí lấy được chưa đủ chính xác (sai số khoảng {distance}). Hãy nhập địa chỉ cụ thể."
     },
+    "sections": {
+      "features": "Tiện ích trên xe",
+      "host": "Chủ xe"
+    },
     "withDriverPrice": {
       "title": "Giá thuê có tài xế",
       "included": "Đã gồm tài xế, xăng xe, chi phí qua đêm của tài xế và phục vụ chở khách tại điểm đến.",

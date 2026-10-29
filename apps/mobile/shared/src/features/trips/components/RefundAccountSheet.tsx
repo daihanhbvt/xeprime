@@ -91,6 +91,7 @@ export function RefundAccountSheet({
           ) : null}
 
           <Button
+            icon="send-outline"
             label={t('submit')}
             size="lg"
             disabled={!account}
@@ -102,6 +103,8 @@ export function RefundAccountSheet({
 
       <BankAccountFormSheet
         scope={scope}
+        // Dáng chuẩn như `RefundAccountDialog` web: lưu xong báo bằng toast, không mở hộp chồng.
+        savedNotice={false}
         open={formOpen}
         replacing={account}
         onClose={() => setFormOpen(false)}

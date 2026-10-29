@@ -40,7 +40,8 @@
       "title": "Payment details",
       "code": "Payment code",
       "safety": "To protect your payment, only transfer using the exact details on this page."
-    }
+    },
+    "tabTransfer": "VietQR"
   },
   "order": {
     "loading": "Checking the payment status…",

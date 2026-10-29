@@ -32,7 +32,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { VehicleEditHeaderCard } from './components/VehicleEditHeaderCard';
 import { VehicleInfoSummaryCard } from './components/VehicleInfoSummaryCard';
@@ -189,6 +190,7 @@ function EditForm({
   refreshing: boolean;
   onRefetch: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.edit');
   const tAdvanced = useTranslations('Vehicles.form.advanced');
   const tActions = useTranslations('Common.actions');

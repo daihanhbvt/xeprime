@@ -38,7 +38,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
 import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
 import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
 import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
@@ -315,6 +316,7 @@ function ProfileForm({
   /** Xem docblock cùng tên ở `ShopProfileScreen`. */
   variant: 'settings' | 'profileForm';
 }) {
+  const colors = useColors();
   /** Trang Cửa hàng đầy đủ của cổng quản lý — ba khối cuối chỉ thuộc về nó. */
   const isSettings = variant === 'settings';
   const pull = usePartnerProfileRefresh();

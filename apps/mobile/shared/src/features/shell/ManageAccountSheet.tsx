@@ -3,14 +3,15 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { Href } from 'expo-router';
-import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { PreferenceRows } from '@/components/layout/PreferenceRows';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 import { LogoutRow } from './LogoutRow';
 import { useManageDrawer } from './ManageDrawerHost';
@@ -35,13 +36,13 @@ import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-a
  * chân drawer thì hoặc tràn ra ngoài, hoặc đè lên chính thẻ vừa bấm — nên native mở từ đáy, đúng
  * cử chỉ mà mọi tấm chọn khác trong app đang dùng.
  *
- * Bộ đổi NGÔN NGỮ đi kèm ở cuối: nó vốn nằm ở ngăn "Thêm", mà ngăn đó chỉ còn mỗi nó (đổi khu đã
+ * Giao diện sáng/tối + NGÔN NGỮ (`PreferenceRows`, dùng chung với tab Tài khoản app khách) đi kèm ở cuối: nó vốn nằm ở ngăn "Thêm", mà ngăn đó chỉ còn mỗi nó (đổi khu đã
  * có nút riêng trên thanh trên). Gom vào đây thì mọi thứ thuộc về CON NGƯỜI đang đăng nhập nằm
  * chung một chỗ, thay vì rải ra hai màn.
  */
 export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const colors = useColors();
   const t = useTranslations('ManageCommon.shell');
-  const tCommon = useTranslations('Common');
   const navigateOnce = useNavigateOnce();
   const drawer = useManageDrawer();
   const { data: user } = useCurrentUser();
@@ -120,13 +121,7 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
 
           <Divider />
 
-          <XStack ai="center" gap={space.sm} px={space.md} py={space.sm}>
-            <IconDot icon="language-outline" />
-            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-              {tCommon('locale.switchLabel')}
-            </Text>
-            <LocaleSwitcher />
-          </XStack>
+          <PreferenceRows />
 
           <Divider />
 
@@ -146,7 +141,9 @@ const AVATAR_SIZE = 48;
 const ICON_DOT = 32;
 
 /** Ô tròn vàng nhạt bọc biểu tượng — cùng ngôn ngữ màu của app (primary). */
-function IconDot({ icon, tone = colors.primaryActive }: { icon: IconName; tone?: string }) {
+function IconDot({ icon, tone: toneProp }: { icon: IconName; tone?: string }) {
+  const colors = useColors();
+  const tone = toneProp ?? colors.primaryActive;
   return (
     <YStack
       w={ICON_DOT}
@@ -162,13 +159,14 @@ function IconDot({ icon, tone = colors.primaryActive }: { icon: IconName; tone?:
 }
 
 function Divider() {
+  const colors = useColors();
   return <YStack h={1} bg={colors.borderSubtle} my={space.xs} />;
 }
 
 function MenuRow({
   icon,
   label,
-  tone = colors.text,
+  tone: toneProp,
   onPress,
 }: {
   icon: IconName;
@@ -176,6 +174,8 @@ function MenuRow({
   tone?: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const tone = toneProp ?? colors.text;
   return (
     <Pressable
       onPress={onPress}

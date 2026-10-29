@@ -805,8 +805,8 @@ export class BookingRequestsService {
           input.customerUserId,
           {
             type: NOTIFICATION_TYPE.PROMO_CODE_DROPPED,
-            title: 'Mã khuyến mãi không còn áp dụng được',
-            body: `${input.vehicleName} · số tiền cần thanh toán đã được cập nhật theo giá không có mã`,
+            title: `Mã khuyến mãi không còn áp dụng cho ${input.vehicleName}`,
+            body: 'Số tiền cần thanh toán đã được cập nhật theo giá không có mã.',
             tenantId: input.tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
             targetId: input.requestId,
@@ -2180,8 +2180,10 @@ export class BookingRequestsService {
           req.customerUserId,
           {
             type: NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED,
-            title: 'Yêu cầu thuê bị từ chối',
-            body: reason ? `${req.vehicle.name} · ${reason}` : req.vehicle.name,
+            title: `Yêu cầu thuê ${req.vehicle.name} không được chấp nhận`,
+            body: reason
+              ? `Lý do: ${reason}. Bạn chưa bị trừ tiền.`
+              : 'Chủ xe đã từ chối yêu cầu. Bạn chưa bị trừ tiền — hãy chọn xe khác.',
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
             targetId: id,
@@ -2347,10 +2349,10 @@ export class BookingRequestsService {
           req.customerUserId,
           {
             type: NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST,
-            title: 'Chủ xe đã huỷ chuyến của bạn',
+            title: `Chủ xe đã huỷ chuyến ${req.vehicle.name}`,
             body: dto.reason?.trim()
-              ? `${req.vehicle.name} · ${dto.reason.trim()}`
-              : `${req.vehicle.name} · toàn bộ số tiền đã chuyển được hoàn lại`,
+              ? `Lý do: ${dto.reason.trim()}. Toàn bộ số tiền bạn đã chuyển được hoàn lại.`
+              : 'Toàn bộ số tiền bạn đã chuyển được hoàn lại.',
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
             targetId: id,
@@ -2552,8 +2554,8 @@ export class BookingRequestsService {
            * là khẳng định một việc chưa xảy ra, và tệ hơn: nó làm người đọc thôi quan tâm tới
            * chiếc xe mà vài giờ sau họ lại đặt được.
            */
-          title: 'Xe vừa được khách khác nhận',
-          body: `${loser.vehicle.name} · khung giờ bạn chọn đang được tạm giữ cho một khách khác. Bạn có thể chọn xe khác hoặc đổi thời gian — nếu chỗ trống lại, XePrime sẽ báo bạn.`,
+          title: `${loser.vehicle.name} vừa được khách khác giữ chỗ`,
+          body: 'Khung giờ bạn chọn tạm hết. Chọn xe khác hoặc đổi giờ — nếu chỗ trống lại, XePrime sẽ báo bạn.',
           tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: loser.id,

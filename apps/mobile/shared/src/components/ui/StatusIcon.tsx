@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { YStack } from 'tamagui';
-import { colors, radius } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { radius } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 export const STATUS_TONE = {
@@ -11,11 +12,13 @@ export const STATUS_TONE = {
 
 export type StatusTone = (typeof STATUS_TONE)[keyof typeof STATUS_TONE];
 
-const TONE_COLORS: Readonly<Record<StatusTone, { fg: string; bg: string }>> = {
-  [STATUS_TONE.SUCCESS]: { fg: colors.success, bg: colors.successSurface },
-  [STATUS_TONE.DANGER]: { fg: colors.danger, bg: colors.dangerSurface },
-  [STATUS_TONE.WARNING]: { fg: colors.warning, bg: colors.warningSurface },
-};
+const useToneColors = themed<Readonly<Record<StatusTone, { fg: string; bg: string }>>>(
+  (colors) => ({
+    [STATUS_TONE.SUCCESS]: { fg: colors.success, bg: colors.successSurface },
+    [STATUS_TONE.DANGER]: { fg: colors.danger, bg: colors.dangerSurface },
+    [STATUS_TONE.WARNING]: { fg: colors.warning, bg: colors.warningSurface },
+  }),
+);
 
 /** Đĩa 56px + quầng 8px = 72px tổng — đúng hình học `.doneBadge` của web. */
 const CIRCLE = 56;
@@ -31,6 +34,8 @@ const GLYPH = 28;
  * glyph trắng và đĩa đặc, còn quầng lo phần "nổi khỏi nền trang".
  */
 export function StatusIcon({ icon, tone }: { icon: IconName; tone: StatusTone }) {
+  const colors = useColors();
+  const TONE_COLORS = useToneColors();
   const { fg, bg } = TONE_COLORS[tone];
 
   return (

@@ -3,11 +3,9 @@ import { useController, type Control, type Path, type PathValue } from 'react-ho
 import { provinceCenter, type GeoPoint } from '@xeprime/domain';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  ConfirmedPlaceField,
-  type AddressPinNames,
-} from '@/components/form/AddressFields';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { ConfirmedPlaceField, type AddressPinNames } from '@/components/form/AddressFields';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 import type { BookingRequestFormValues } from '../booking-schema';
 
 /**
@@ -64,6 +62,7 @@ export function RenterAddressBlock({
   vehiclePoint: GeoPoint | null;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.flow.address');
   const province = useController({ control, name: provinceCodeName });
 

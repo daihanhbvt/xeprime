@@ -14,7 +14,8 @@ import { SkeletonText } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { useBookingDriverHistory } from '../hooks/use-bookings';
 
 /**
@@ -22,6 +23,7 @@ import { useBookingDriverHistory } from '../hooks/use-bookings';
  * mở ra mới tải. Mỗi lượt: ai được gán, ai gán (hoặc hệ thống), lúc nhận, kết thúc ra sao.
  */
 export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
+  const colors = useColors();
   const t = useTranslations('Drivers.history');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -82,10 +84,15 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
                   </XStack>
                   {meta(
                     h.assignedByName
-                      ? t('assignedBy', { name: h.assignedByName, time: fmt.dateTime(h.assignedAt) })
+                      ? t('assignedBy', {
+                          name: h.assignedByName,
+                          time: fmt.dateTime(h.assignedAt),
+                        })
                       : t('assignedBySystem', { time: fmt.dateTime(h.assignedAt) }),
                   )}
-                  {h.acceptedAt ? meta(t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) })) : null}
+                  {h.acceptedAt
+                    ? meta(t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) }))
+                    : null}
                   {h.endedAt
                     ? meta(
                         h.endedByName

@@ -22,7 +22,8 @@ import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { receiptsApi } from '../api';
 import { RECEIPT_ATTACHMENTS_MAX } from '../constants';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 
 const TILE = 84;
 
@@ -58,6 +59,8 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
   name: Path<T>;
   label: string;
 }) {
+  const colors = useColors();
+  const removeStyle = useRemoveStyle();
   const t = useTranslations('Finance.receipts.form.attachments');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -193,7 +196,7 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
   );
 }
 
-const removeStyle = {
+const useRemoveStyle = themed((colors) => ({
   position: 'absolute' as const,
   top: -space.xs,
   right: -space.xs,
@@ -203,7 +206,7 @@ const removeStyle = {
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   backgroundColor: colors.danger,
-};
+}));
 
 function SourceRow({
   icon,
@@ -214,6 +217,7 @@ function SourceRow({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
       <XStack ai="center" gap={space.md} py={space.sm}>

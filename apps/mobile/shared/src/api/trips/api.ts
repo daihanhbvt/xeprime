@@ -28,6 +28,8 @@ export type CustomerTripHandoverEvidence = Schemas['CustomerTripHandoverEvidence
 export type CustomerTripHandoverEvidencePhoto = Schemas['CustomerTripHandoverEvidencePhotoDto'];
 /** Vé xem ảnh riêng tư: URL ký + hạn dùng. Dùng chung shape với kho tài liệu. */
 export type PrivateFileTicket = Schemas['SourceContractDownloadDto'];
+/** Xem trước lượt khách tự huỷ — số được hoàn / số mất do server tính (ADR 0064). */
+export type CustomerTripCancelPreview = Schemas['CustomerTripCancelPreviewDto'];
 
 export const TRIPS_DEFAULT_LIMIT = 10;
 
@@ -142,6 +144,16 @@ export const tripsApi = {
   },
 
   /**
+   * Xem trước lượt huỷ — số được hoàn vào Ví điểm / số mất, do server tính bằng đúng luật lượt
+   * huỷ thật áp (ADR 0064). Client không cộng trừ gì.
+   */
+  cancelPreview(id: string): Promise<CustomerTripCancelPreview> {
+    return getApiClient().get<CustomerTripCancelPreview>(
+      `/trips/${encodeURIComponent(id)}/cancel-preview`,
+    );
+  },
+
+  /**
    * Khách tự huỷ chuyến của mình — ĐƯỜNG GHI DUY NHẤT của khách.
    *
    * Phát sinh, hoàn cọc, đổi lịch đều thuộc luồng chủ xe. Mở thêm đường ghi cho khách là dựng
@@ -154,6 +166,16 @@ export const tripsApi = {
     return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/cancel`, {
       reasonCategory,
     });
+  },
+
+  /**
+   * Khách báo "Chưa nhận được xe" — ADR 0066, lớp 1. Server mở một tranh chấp khẩn (idempotent) và
+   * trả về chính chuyến đó với `openDispute = true`, như `cancel`.
+   */
+  reportNotReceived(id: string): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(
+      `/trips/${encodeURIComponent(id)}/report-not-received`,
+    );
   },
 
   /**

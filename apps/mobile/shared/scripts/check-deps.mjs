@@ -8,7 +8,7 @@
  *   • ở `shared`      — để `shared/node_modules` tồn tại cho Jest (155 test nằm trong `shared/src`,
  *                        và Jest chỉ biết leo cây thư mục, không đọc `nodeModulesPaths` của Metro);
  *   • ở từng app      — để Metro bundle được và để autolinking nhúng đúng native module vào
- *                        `vn.xeprime.mobile` / `vn.xeprime.partner` (mỗi app một file cài riêng).
+ *                        `vn.xeprime.customerapp` / `vn.xeprime.partnerapp` (mỗi app một file cài riêng).
  *
  * Quên một chỗ thì `typecheck` vẫn XANH mà bundle ĐỎ lúc chạy — triệu chứng là
  * `Cannot find module` ném ra từ trong lòng một file chẳng liên quan gì tới thứ vừa sửa.

@@ -6,12 +6,13 @@ import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 // Tên cookie là HỢP ĐỒNG với web server, không phải hằng của riêng app — xem `packages/types/src/locale.ts`.
-import { LOCALE_COOKIE_NAME } from '@xeprime/types';
+import { CUSTOMER_APP_WEBVIEW_UA_TOKEN, LOCALE_COOKIE_NAME, MOBILE_CLIENT_APP } from '@xeprime/types';
+import { APP_PROFILE } from '@/app-profile';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppLocale } from '@/i18n/I18nProvider';
 import { logger } from '@/lib/logger';
-import { colors } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
 
 /**
  * Ẩn phần vỏ của MARKETPLACE bên trong WebView.
@@ -68,6 +69,9 @@ export interface WebDocViewProps {
   readonly logLabel: string;
 }
 
+/** App Partner không gắn dấu — chỉ WebView của app khách mới đổi câu chữ trên web. */
+const IS_PARTNER_APP = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
+
 /**
  * Bộ đọc một trang NỘI DUNG của web, ngay trong app.
  *
@@ -98,6 +102,8 @@ export interface WebDocViewProps {
  * cùng một sửa chữa, và bản thứ hai đã bị bỏ sót đúng một vòng rà soát.
  */
 export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: WebDocViewProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const tCommon = useTranslations('Common');
   const { locale } = useAppLocale();
 
@@ -236,6 +242,8 @@ export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: We
           />
         ) : (
           <WebView
+            // App khách tự nhận diện để web dùng câu trung tính (không nhắc gói/thuê bao — né IAP).
+            {...(IS_PARTNER_APP ? {} : { applicationNameForUserAgent: CUSTOMER_APP_WEBVIEW_UA_TOKEN })}
             key={attempt}
             ref={web}
             source={source}
@@ -275,7 +283,7 @@ export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: We
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { backgroundColor: colors.background, flex: 1 },
   web: { backgroundColor: colors.background, flex: 1 },
-});
+}));

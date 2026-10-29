@@ -109,3 +109,15 @@ export const BANNER_PLACEMENT_VALUES = Object.values(BANNER_PLACEMENT) as Banner
 export function isBannerPlacement(value: unknown): value is BannerPlacement {
   return (BANNER_PLACEMENT_VALUES as readonly unknown[]).includes(value);
 }
+
+/**
+ * Tổng đài hỗ trợ của sàn, in trên trang chủ (khối "Đăng ký trở thành đối tác") theo design v2 —
+ * web và app native đọc CÙNG số này.
+ *
+ * `display` là cách viết cho người đọc; `tel` là dạng quay số quốc tế cho liên kết `tel:` — tách
+ * hai trường để không phải bóc khoảng trắng ở mỗi nơi dùng. Số là dữ liệu, không dịch.
+ */
+export const SUPPORT_HOTLINE = {
+  display: '0968 789 789',
+  tel: '+84968789789',
+} as const;

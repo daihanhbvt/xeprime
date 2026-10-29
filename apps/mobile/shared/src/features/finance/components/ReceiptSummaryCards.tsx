@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { StatCardFooter, StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { ReceiptSummary } from '../api';
 
 /**
@@ -40,6 +41,7 @@ export function ReceiptSummaryCards({
   /** Có bộ lọc nào đang bật không — đổi câu chú thích, không đổi con số. */
   filtered: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.summary');
   const fmt = useAppFormat();
   /*

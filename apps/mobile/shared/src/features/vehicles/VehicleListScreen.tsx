@@ -22,7 +22,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { withBranchReturn } from '@/features/branches/branch-link';
-import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -36,7 +39,8 @@ import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { FleetSummaryBar } from './components/FleetSummaryBar';
 import { VehicleCard } from './components/VehicleCard';
@@ -44,7 +48,6 @@ import { useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/
 import { useVehicleAlertView } from './hooks/use-vehicle-alert-view';
 import type { VehicleAlertGroup, VehicleListItem, VehicleSort } from './api';
 import { DEFAULT_VEHICLE_SORT, VEHICLE_SORT_VALUES, useVehicleSortLabel } from './vehicle-sort';
-
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -71,6 +74,7 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  * Chỉ số và cảnh báo là HAI truy vấn riêng chạy sau danh sách — xem `use-vehicles.ts`.
  */
 export function VehicleListScreen() {
+  const colors = useColors();
   const t = useTranslations('Vehicles.list');
   const sortLabel = useVehicleSortLabel();
   const tLabels = useTranslations('Common.labels');
@@ -127,7 +131,9 @@ export function VehicleListScreen() {
   const alertView = useVehicleAlertView(false);
   const alertsById = useMemo(() => {
     const map = new Map<string, VehicleAlertGroup>();
-    alerts.byId.forEach((group, id) => map.set(id, { ...group, alerts: alertView(id, group.alerts) }));
+    alerts.byId.forEach((group, id) =>
+      map.set(id, { ...group, alerts: alertView(id, group.alerts) }),
+    );
     return map;
   }, [alertView, alerts.byId]);
 
@@ -203,7 +209,17 @@ export function VehicleListScreen() {
         options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
       },
     ];
-  }, [t, tLabels, domainLabel, sortLabel, vehicleType, serviceType, operationStatus, publicStatus, sort]);
+  }, [
+    t,
+    tLabels,
+    domainLabel,
+    sortLabel,
+    vehicleType,
+    serviceType,
+    operationStatus,
+    publicStatus,
+    sort,
+  ]);
 
   const openVehicle = useCallback(
     (vehicle: VehicleListItem) =>
@@ -518,6 +534,7 @@ function ListFooter({
   retryLabel: string;
   onRetry: () => void;
 }) {
+  const colors = useColors();
   if (error) {
     return (
       <YStack py={layout.section} ai="center">

@@ -13,7 +13,8 @@ import { TextField } from '@/components/ui/TextField';
 import { type CurrentUser } from '@/features/auth/api';
 import { useLogin } from '@/features/auth/hooks/use-auth';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 interface LoginFormProps {
   /** Nhận cả hồ sơ: đích sau đăng nhập phụ thuộc `hasPassword`, và chỉ nơi gọi mới biết đi đâu. */
@@ -22,6 +23,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
@@ -47,10 +49,13 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
 
   const onSubmit = handleSubmit((values) => {
     // Định danh CHỈ là SĐT (ADR 0060); dấu cách/chấm/gạch chép từ danh bạ bỏ đi như web.
-    login.mutate({ identifier: compactPhoneInput(values.phone), password: values.password }, {
-      onSuccess,
-      onError: (error) => toast.showError(errorMessage(error)),
-    });
+    login.mutate(
+      { identifier: compactPhoneInput(values.phone), password: values.password },
+      {
+        onSuccess,
+        onError: (error) => toast.showError(errorMessage(error)),
+      },
+    );
   });
 
   return (

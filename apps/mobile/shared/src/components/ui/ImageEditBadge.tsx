@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
-import { colors, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { iconSize, radius, space } from '@/theme/tokens';
 
 /** Nền tối mờ dưới hình trắng — đủ tương phản trên cả ảnh nền sáng lẫn nền tối. */
 const SCRIM = 'rgba(0,0,0,0.45)';
@@ -36,6 +37,7 @@ export function ImageEditBadge({
   busy?: boolean;
   size?: keyof typeof SIZE;
 }) {
+  const colors = useColors();
   const skin = SIZE[size];
 
   return (

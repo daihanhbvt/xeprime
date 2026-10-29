@@ -4,17 +4,16 @@ import { usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { ACCOUNT_TRACK, resolveAccountTrack } from '@xeprime/types';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
-import { VerifiedName } from '@/components/ui/VerifiedName';
+import { AppearanceToggleRow, LocaleToggleRow } from '@/components/layout/PreferenceToggleRows';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useAccountIdentityLabel } from '../use-account-identity-label';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import {
@@ -28,6 +27,16 @@ import {
 
 /** Bề rộng vạch trạng thái ở mép trái — luôn có chỗ, chỉ đổi màu (mục không nhảy ngang khi chọn). */
 const RAIL_WIDTH = 3;
+
+/** Icon Figma cho từng mục (`LineIcon`); mục không có bản Figma giữ Ionicons của `account-nav`. */
+const NAV_LINE_ICON: Partial<Record<string, LineIconName>> = {
+  profile: 'profile',
+  trips: 'car',
+  payments: 'wallet',
+  favorites: 'heart',
+  security: 'password',
+  becomeOwner: 'work',
+};
 
 /**
  * Menu khu tài khoản — bản native của `AccountSidebar` bên web.
@@ -47,6 +56,7 @@ const RAIL_WIDTH = 3;
  * tạo bản dịch thứ hai cho cùng một từ.
  */
 export function AccountNav() {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
@@ -54,15 +64,11 @@ export function AccountNav() {
   const pathname = usePathname();
   const logout = useLogout();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const identityLabel = useAccountIdentityLabel();
 
   // Lời mời tài xế (huy hiệu) + cờ `hasLinks` — chưa từng được mời làm tài xế thì ẩn mục tài xế.
   const driverCounts = useDriverPendingCounts(Boolean(user));
   const hasDriverLinks = driverCounts.data?.hasLinks ?? false;
-  const groups = useMemo(
-    () => resolveAccountNav(user, { hasDriverLinks }),
-    [user, hasDriverLinks],
-  );
+  const groups = useMemo(() => resolveAccountNav(user, { hasDriverLinks }), [user, hasDriverLinks]);
   const badgeCount = (item: AccountNavItem): number =>
     item.badge === ACCOUNT_NAV_BADGE.DRIVER_INVITES ? (driverCounts.data?.invites ?? 0) : 0;
   const activeKey = matchAccountNavKey(pathname ?? '', flattenAccountNav(groups));
@@ -76,14 +82,11 @@ export function AccountNav() {
    *
    * Tên rơi về "Tài khoản XePrime" chứ không để trống: một dòng rỗng đọc ra như dữ liệu bị thiếu.
    */
-  const userName = user?.displayName || user?.email || tAccount('profile.accountLabel');
-  const userRole = identityLabel(user);
 
   /*
    * CHỈ chủ gian hàng tuyến gói được đeo dấu (ADR 0038) — cùng phép suy với đầu trang hồ sơ, nên
    * hai khối trên cùng một màn không bao giờ nói hai điều khác nhau về một con người.
    */
-  const isShopOwner = resolveAccountTrack(user?.tenant ?? null).track === ACCOUNT_TRACK.SHOP_OWNER;
 
   return (
     <>
@@ -122,6 +125,13 @@ export function AccountNav() {
               </Fragment>
             ))}
 
+            {/* Giao diện ☀|☾ + Ngôn ngữ VI|EN nằm NGAY trong menu (người dùng chốt 28/10/2026), không
+              còn trong "Quản lý tài khoản" — cùng hàng dùng chung với menu avatar. */}
+            <YStack px={space.xs} py={space.xs} gap={2}>
+              <AppearanceToggleRow />
+              <LocaleToggleRow />
+            </YStack>
+
             <Divider />
             <Pressable
               onPress={() => setConfirmingLogout(true)}
@@ -145,56 +155,7 @@ export function AccountNav() {
               </XStack>
             </Pressable>
 
-            {/*
-            Thẻ NGƯỜI DÙNG đóng menu lại, đúng chỗ web đặt nó (dưới "Đăng xuất" trong cột trái).
-            Nó trả lời "tôi đang đăng nhập bằng tài khoản nào, với vai gì" — câu hỏi có thật khi
-            một người vừa là khách thuê vừa là nhân viên của một gian hàng (ADR 0014).
-
-            Cố ý KHÔNG hiện email/SĐT: chúng đã nằm ở thẻ hồ sơ ngay bên dưới, và lặp lại chúng
-            trong menu chỉ làm dày thêm một khối vốn để điều hướng.
-          */}
-            {user ? (
-              <>
-                <Divider />
-                <XStack
-                  ai="center"
-                  gap={space.sm}
-                  px={space.md}
-                  py={space.sm}
-                  accessibilityLabel={tAccount('sidebar.userCard')}
-                >
-                  {/*
-                  Đúng ĐỊNH DẠNG NHẬN DIỆN chuẩn: ảnh viền gold có dấu, tên màu chữ thường, dấu
-                  thứ hai ngay sau tên.
-                */}
-                  <Avatar
-                    name={userName}
-                    url={user.avatarUrl}
-                    size={40}
-                    verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
-                  />
-                  <YStack f={1} minWidth={0} gap={2}>
-                    <VerifiedName
-                      name={userName}
-                      verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
-                      markSize={14}
-                      decorativeMark
-                    />
-                    {/*
-                    Chỉ VAI, KHÔNG nhãn tuyến.
-
-                    "Chủ gian hàng · Gói Gian hàng tiêu chuẩn" đã nằm ở đầu màn, ngay dưới tên
-                    trong khối nhận diện — nhắc lại ở chân menu là câu thứ hai nói cùng một điều,
-                    trong một khối vốn để điều hướng. Cấu hình gói hỏng vẫn lộ ra đúng chỗ của nó:
-                    `AccountTrackNotice` dựng hẳn một callout đỏ (ADR 0038 điều 11).
-                  */}
-                    <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                      {userRole}
-                    </Text>
-                  </YStack>
-                </XStack>
-              </>
-            ) : null}
+            {/* Thẻ người dùng đã lên ĐẦU trang (thẻ hồ sơ gọn, Figma `21860:83492`) — không lặp ở cuối menu. */}
           </YStack>
         </View>
       </Card>
@@ -221,6 +182,7 @@ export function AccountNav() {
 }
 
 function Divider() {
+  const colors = useColors();
   return <YStack h={1} bg={colors.borderSubtle} my={space.xs} />;
 }
 
@@ -234,6 +196,7 @@ function AccountNavRow({
   /** Việc cần làm ở mục này — 0 thì không vẽ viên. */
   badge?: number;
 }) {
+  const colors = useColors();
   const t = useTranslations('Navigation');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
@@ -268,24 +231,33 @@ function AccountNavRow({
       accessibilityLabel={label}
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
     >
+      {/* Hàng `_Account Tab` của Figma `21860:83492`: đệm 12, kẻ dưới mảnh, icon Figma 20, chữ 14 medium. */}
       <XStack
         ai="center"
         gap={space.sm}
-        minHeight={sizing.touchTarget}
-        px={space.md}
-        py={space.xs}
+        minHeight={40}
+        px={12}
+        py={space.sm}
         bg={active ? colors.surfaceSelected : 'transparent'}
-        borderLeftWidth={RAIL_WIDTH}
-        borderLeftColor={active ? colors.primary : 'transparent'}
+        borderBottomWidth={1}
+        borderBottomColor={colors.borderSubtle}
       >
-        <Ionicons
-          name={item.icon}
-          size={iconSize.md}
-          color={active ? colors.primaryActive : colors.textMuted}
-        />
+        {NAV_LINE_ICON[item.key] ? (
+          <LineIcon
+            name={NAV_LINE_ICON[item.key]!}
+            size={iconSize.md}
+            color={active ? colors.primaryActive : colors.placeholder}
+          />
+        ) : (
+          <Ionicons
+            name={item.icon}
+            size={iconSize.md}
+            color={active ? colors.primaryActive : colors.placeholder}
+          />
+        )}
         <Text
           f={1}
-          col={active ? colors.primaryActive : colors.text}
+          col={active ? colors.primaryActive : colors.textMuted}
           fos={fontSize.body}
           fow={active ? fontWeight.semibold : fontWeight.medium}
           numberOfLines={1}
@@ -293,10 +265,10 @@ function AccountNavRow({
           {label}
         </Text>
         {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
-        {/* Mục đang mở không có mũi tên: nó không dẫn đi đâu nữa. */}
-        {active ? null : (
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
-        )}
+        {/* Figma: chỉ "Trở thành chủ xe" có mũi tên — nó dẫn RA khỏi khu tài khoản. */}
+        {item.key === 'becomeOwner' ? (
+          <LineIcon name="arrow-right" size={iconSize.md} color={colors.placeholder} />
+        ) : null}
       </XStack>
     </Pressable>
   );

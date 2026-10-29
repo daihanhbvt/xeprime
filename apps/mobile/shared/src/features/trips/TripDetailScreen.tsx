@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Linking, Pressable } from 'react-native';
+import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -11,9 +11,6 @@ import {
   canHostDecideTrip,
   CUSTOMER_TRIP_STAGE,
   isCancellationParty,
-  isCancellationReasonCategory,
-  CANCELLATION_PARTY,
-  CUSTOMER_CANCELLATION_REASON_VALUES,
   CUSTOMER_TRIP_STAGE_META,
   customerTripTimeline,
   DEPOSIT_COLLECTION_MODE,
@@ -26,7 +23,7 @@ import {
   type CustomerCancellationReason,
   type CustomerTripStage,
 } from '@xeprime/types';
-import { dayjs, LIST_SEPARATOR, canShowHostChatOnTrip } from '@xeprime/domain';
+import { dayjs, LIST_SEPARATOR, canShowHostChatOnTrip, telHref } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -35,7 +32,6 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { Stars } from '@/components/ui/Stars';
-import { VerifiedName } from '@/components/ui/VerifiedName';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -50,24 +46,36 @@ import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CancelTripSheet } from './components/CancelTripSheet';
 import { ReviewSheet } from './components/ReviewSheet';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
+import { useListingSpecSummary } from '@/features/booking-requests/hooks/use-listing-spec-summary';
 import {
   TripGatewayNotice,
   useTripGateway,
 } from '@/features/payment-gateway/components/TripGatewayPay';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
+import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
 import type { BookingRequestDecisionTarget } from '@/features/booking-requests/api';
 import { TripHostDecisions } from './components/TripHostDecisions';
 import { TripTimeline } from './components/TripTimeline';
+import {
+  TripAwaitingHoldView,
+  TripConfirmedView,
+  TripPendingApprovalView,
+} from './components/TripFlowViews';
+import { TripCancelBar, TripPageHeading } from './components/TripRequestCards';
+import { TripActiveView, TripClosedView } from './components/TripOutcomeViews';
+import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
+import { hasHoldStage, TRIP_FLOW_VIEW, tripFlowView, type TripFlowView } from './trip-flow';
 import { closedNotice, stageNotice } from './stage-notice';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { TripNotReceivedReport } from './components/TripNotReceivedReport';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
 import type { CustomerTripDetail } from './api';
 
@@ -169,6 +177,7 @@ function TripDetailBody({
   refreshing: boolean;
   onRefresh: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const router = useRouter();
   const fmt = useAppFormat();
@@ -196,6 +205,7 @@ function TripDetailBody({
    * Nút trả đã chuyển sang màn thanh toán riêng (`TripPaymentScreen`, 13/10/2026).
    */
   const gateway = useTripGateway(trip.id);
+  const scrollRef = useRef<ScrollView>(null);
 
   const stage = trip.stage as CustomerTripStage;
   const meta = CUSTOMER_TRIP_STAGE_META[stage];
@@ -205,15 +215,124 @@ function TripDetailBody({
     đâu: khách dừng ở "Tổng bạn trả", chủ xe thấy thêm số THỰC NHẬN (ADR 0029 điều 1).
   */
   const isHost = trip.role === TRIP_ROLE.HOST;
+  /** Bên đã huỷ (server suy từ sổ huỷ — ADR 0045); `null` khi không rõ hoặc không phải chuyến huỷ. */
+  const closedCancelledBy =
+    stage === CUSTOMER_TRIP_STAGE.CANCELLED && isCancellationParty(trip.cancelledBy)
+      ? trip.cancelledBy
+      : null;
 
   function confirmCancel(reasonCategory: CustomerCancellationReason) {
     cancelTrip.mutate(reasonCategory, {
-      onSuccess: () => {
-        setCancelling(false);
-        toast.showSuccess(t('cancel.title'));
-      },
+      /*
+       * Như web (`cancel.mutate(reason, { onSuccess: close })`): không toast — màn tự chuyển sang
+       * chặng "Đã huỷ" là lời xác nhận. `cancel.title` ("Hủy chuyến đi") là tên hành động, đọc như
+       * một lời mời chứ không phải kết quả.
+       */
+      onSuccess: () => setCancelling(false),
       onError: (error) => toast.showError(errorMessage(error)),
     });
+  }
+
+  /*
+   * Hành trình đặt xe của KHÁCH, tới ngày nhận xe: màn design v2 riêng cho từng chặng (web PR #207,
+   * `TripDetailView` ~L193). Chủ xe và các chặng sau ngày nhận xe vẫn ở bố cục chung bên dưới.
+   */
+  const flow = tripFlowView(trip.role, stage);
+  if (flow) {
+    return (
+      <>
+        {/*
+          Figma "List - MB" (người dùng chốt 28/10/2026): nút lui + TIÊU ĐỀ trang trên một hàng ở
+          thanh trên; thân màn mở bằng "Bước n / N · …" + vạch tiến trình. Không còn đường dẫn và câu dẫn.
+        */}
+        <AppHeader
+          title={t(FLOW_TITLE_KEY[flow])}
+          onBack={() => goBackOr(router, listHref)}
+          below={<FlowJourney trip={trip} flow={flow} />}
+        />
+        <Screen
+          edges={['left', 'right', 'bottom']}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          scrollRef={scrollRef}
+          // "Huỷ chuyến" DÍNH ĐÁY khi chặng còn huỷ được (người dùng chốt 28/10/2026) — không vẽ khung
+          // đáy rỗng khi không huỷ được.
+          {...(canCustomerCancelTrip(trip.stage)
+            ? { footer: <TripCancelBar trip={trip} onCancel={() => setCancelling(true)} /> }
+            : {})}
+        >
+          <YStack gap={space.md}>
+            {/* Lượt MoMo/VNPAY mở trước đó — trạng thái là câu trả lời người vừa quay về đang tìm. */}
+            <TripGatewayNotice
+              gateway={gateway}
+              holdAwaitingPayment={
+                trip.hold ? isAwaitingPayment(trip.hold.status as BookingHoldStatus) : false
+              }
+            />
+            {flow === TRIP_FLOW_VIEW.PENDING ? (
+              <TripPendingApprovalView trip={trip} onCancel={() => setCancelling(true)} />
+            ) : flow === TRIP_FLOW_VIEW.AWAITING_HOLD ? (
+              <TripAwaitingHoldView trip={trip} onCancel={() => setCancelling(true)} />
+            ) : (
+              <TripConfirmedView
+                trip={trip}
+                onCancel={() => setCancelling(true)}
+                scrollRef={scrollRef}
+              />
+            )}
+          </YStack>
+        </Screen>
+        <CancelTripSheet
+          open={cancelling}
+          onClose={() => setCancelling(false)}
+          trip={trip}
+          onConfirm={confirmCancel}
+          loading={cancelTrip.isPending}
+        />
+      </>
+    );
+  }
+
+  /*
+   * SAU ngày nhận xe, phía KHÁCH: đang thuê / đã khép — web `TripActiveView` / `TripClosedView`
+   * (Figma `21621:68041` · `21621:67556`). Đầu trang như web: tiêu đề + câu phụ trong THÂN màn;
+   * đang thuê có dải tiến trình ở `aside`, đã khép thì không. Chủ xe vẫn ở bố cục chung bên dưới.
+   */
+  const outcome = !isHost && (stage === CUSTOMER_TRIP_STAGE.ACTIVE || closedNotice(stage) !== null);
+  if (outcome) {
+    const active = stage === CUSTOMER_TRIP_STAGE.ACTIVE;
+    const timeline = customerTripTimeline(stage);
+    return (
+      <>
+        {/* Figma: nút lui + tiêu đề trên một hàng; dưới là dải tiến trình (đang thuê / hoàn thành). */}
+        <AppHeader
+          title={
+            closedCancelledBy
+              ? t('closed.cancelledHeading')
+              : trip.code
+                ? t('detail.headingWithCode', { code: trip.code })
+                : t('detail.heading')
+          }
+          onBack={() => goBackOr(router, listHref)}
+          // Đang thuê / hoàn thành: dải "Đã nhận xe → Hoàn thành" nằm TRONG thanh trên như dải bước của
+          // các màn chuyến khác (người dùng chốt 28/10/2026). Huỷ/từ chối: không có dải.
+          {...(timeline.visible ? { below: <TripTimeline stage={stage} bare /> } : {})}
+        />
+        <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
+          <YStack gap={layout.section}>
+            {/* Quay về từ MoMo/VNPAY bằng liên kết CŨ (ADR 0058) — không có lượt nào thì im lặng. */}
+            <TripGatewayNotice
+              gateway={gateway}
+              holdAwaitingPayment={
+                trip.hold ? isAwaitingPayment(trip.hold.status as BookingHoldStatus) : false
+              }
+            />
+            {active ? <TripActiveView trip={trip} /> : <TripClosedView trip={trip} />}
+          </YStack>
+        </Screen>
+        {/* Đánh giá là FORM ngay trong thẻ (`TripReviewCard`) như web — không còn tấm trượt ở đây. */}
+      </>
+    );
   }
 
   return (
@@ -226,20 +345,24 @@ function TripDetailBody({
         đầu màn, vừa là dòng chữ ngay dưới viên nhãn trong thẻ — hai bản của cùng một câu cách nhau
         chừng 100px.
       */}
-      <AppHeader
-        title={trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')}
-        subtitle={subtitleOf(t, stage)}
-        onBack={() => goBackOr(router, listHref)}
-        badge={
-          <StatusBadge
-            label={domainLabel('customerTripStage', stage, meta.label)}
-            color={meta.color}
-            size="sm"
-          />
-        }
-      />
+      <AppHeader onBack={() => goBackOr(router, listHref)} />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
+          {/* Tiêu đề trang + câu phụ + nhãn chặng — `header` của `TripDetailView` web. */}
+          {/* Khách đang thuê / đã khép có màn riêng ở trên (`TripActiveView`/`TripClosedView`). */}
+          <TripPageHeading
+            title={
+              trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')
+            }
+            description={subtitleOf(t, stage)}
+            badge={
+              <StatusBadge
+                label={domainLabel('customerTripStage', stage, meta.label)}
+                color={meta.color}
+                size="sm"
+              />
+            }
+          />
           {/*
             Thẻ còn đúng việc của nó: vẽ chuyến đang ở chặng nào trên cả hành trình.
 
@@ -254,51 +377,40 @@ function TripDetailBody({
             </Card>
           ) : null}
 
+          <StageNotice stage={stage} rejectReason={trip.rejectReason} />
+
           {/*
-            Chuyến ĐÃ KHÉP của khách: thẻ trạng thái kết cục của web `TripClosedView` (Figma
-            `21621:68041` · `21621:67556`) — cùng câu chữ `Trips.closed.status`. Chủ xe giữ khối cũ.
+            "Chưa nhận được xe" (ADR 0066, lớp 1) — đứng ngay sau thông báo chặng như web: trong 120′
+            sau giờ nhận xe đây là việc gấp nhất khách có thể cần. Chủ xe chỉ thấy khối "đang có
+            khiếu nại" khi có — server không bao giờ bật nút cho phía họ.
           */}
-          {!isHost && closedNotice(stage) ? (
-            <ClosedStageNotice trip={trip} stage={stage} />
-          ) : (
-            <StageNotice stage={stage} rejectReason={trip.rejectReason} />
-          )}
+          <TripNotReceivedReport trip={trip} />
 
           {/*
             Chuyến ĐANG DIỄN RA — thẻ trạng thái của web `TripActiveView` (cùng khuôn với thẻ kết cục
             ở trên): nhãn chặng, "Hành trình đang diễn ra", lời dặn và giờ trả xe dự kiến — câu trả
             lời cho việc duy nhất khách mở màn này lúc đang thuê. Chủ xe giữ khối nổi bật cũ.
           */}
-          {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
-            isHost ? (
-              trip.returnAt ? (
-                <Card tone="accent">
-                  <YStack gap={space.xs}>
-                    <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-                      {t('detail.activeTitle')}
-                    </Text>
-                    <XStack ai="center" gap={space.xs} flexWrap="wrap">
-                      <Ionicons
-                        name="time-outline"
-                        size={iconSize.sm}
-                        color={colors.primaryActive}
-                      />
-                      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                        {t('detail.activeReturn')}
-                      </Text>
-                      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
-                        {fmt.rentalPoint(dayjs(trip.returnAt))}
-                      </Text>
-                    </XStack>
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {t('detail.activeNote')}
-                    </Text>
-                  </YStack>
-                </Card>
-              ) : null
-            ) : (
-              <ActiveStageNotice trip={trip} stage={stage} />
-            )
+          {stage === CUSTOMER_TRIP_STAGE.ACTIVE && isHost && trip.returnAt ? (
+            <Card tone="accent">
+              <YStack gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+                  {t('detail.activeTitle')}
+                </Text>
+                <XStack ai="center" gap={space.xs} flexWrap="wrap">
+                  <Ionicons name="time-outline" size={iconSize.sm} color={colors.primaryActive} />
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {t('detail.activeReturn')}
+                  </Text>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
+                    {fmt.rentalPoint(dayjs(trip.returnAt))}
+                  </Text>
+                </XStack>
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {t('detail.activeNote')}
+                </Text>
+              </YStack>
+            </Card>
           ) : null}
 
           <VehicleBlock trip={trip} />
@@ -350,6 +462,7 @@ function TripDetailBody({
               )}
 
               <PickupMethod trip={trip} />
+              <DriverRow trip={trip} />
             </YStack>
           </Card>
 
@@ -412,13 +525,22 @@ function TripDetailBody({
           />
 
           {/*
+            Bảo hiểm chuyến theo TỪNG sản phẩm khách đã trả (ADR 0064): chờ phát hành → đang phát
+            hành → đã cấp (thẻ GCN, nhãn THỬ NGHIỆM ở dev/staging) hoặc lỗi/đã hoàn. Rỗng ⇒ chuyến
+            không mua bảo hiểm, không vẽ gì — như web.
+          */}
+          {(trip.insuranceCoverage ?? []).length > 0 ? (
+            <Card>
+              <InsuranceCoverageList coverage={trip.insuranceCoverage ?? []} />
+            </Card>
+          ) : null}
+
+          {/*
             Chuyến ĐÃ KHÉP của khách: thẻ "Thông tin người thuê" của web `TripClosedView` — liên hệ
             khách để lại cho CHÍNH chuyến này + lời nhắn cho chủ xe. Các chặng khác giữ khối ghi chú.
           */}
-          {!isHost && (closed || stage === CUSTOMER_TRIP_STAGE.ACTIVE) ? (
-            <RenterBlock trip={trip} />
-          ) : /* Ghi chú khách gửi kèm yêu cầu — web có khối này, và nó là chữ của chính họ. */
-          trip.customerNote ? (
+          {/* Ghi chú khách gửi kèm yêu cầu — web có khối này, và nó là chữ của chính họ. */}
+          {trip.customerNote ? (
             <Card>
               <YStack gap={space.xs}>
                 <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
@@ -564,6 +686,41 @@ function TripDetailBody({
   );
 }
 
+/** Tiêu đề + câu dẫn đầu màn của từng màn design v2 — bảng literal để `t()` kiểm được khoá. */
+const FLOW_TITLE_KEY = {
+  [TRIP_FLOW_VIEW.PENDING]: 'pending.page.title',
+  [TRIP_FLOW_VIEW.AWAITING_HOLD]: 'awaitingHold.page.title',
+  [TRIP_FLOW_VIEW.CONFIRMED]: 'confirmed.page.title',
+} as const satisfies Record<TripFlowView, string>;
+
+/**
+ * Thanh "Bước n / N" của cả hành trình đặt xe — cùng tham số web truyền ở `TripPageHeader.aside`:
+ * chờ phản hồi đứng ở "Gửi yêu cầu", chờ giữ chỗ ở "Thanh toán giữ chỗ" (chặng chắc chắn có), đã
+ * xác nhận thì mọi chặng xong (`complete`) và chỉ có chặng giữ chỗ khi chuyến có khoản đó.
+ */
+function FlowJourney({ trip, flow }: { trip: CustomerTripDetail; flow: TripFlowView }) {
+  if (flow === TRIP_FLOW_VIEW.PENDING) {
+    return (
+      <BookingJourney
+        variant="inline"
+        current="request"
+        hasHoldStage={hasHoldStage(trip.estimate ?? null)}
+      />
+    );
+  }
+  if (flow === TRIP_FLOW_VIEW.AWAITING_HOLD) {
+    return <BookingJourney variant="inline" current="payment" hasHoldStage />;
+  }
+  return (
+    <BookingJourney
+      variant="inline"
+      current="confirmed"
+      hasHoldStage={trip.hold != null}
+      complete
+    />
+  );
+}
+
 /** Ảnh xe 16:9 — cùng tỉ lệ với mọi chỗ khác trong app, và đủ để nhận ra chiếc xe. */
 const VEHICLE_PHOTO_RATIO = 16 / 9;
 
@@ -577,22 +734,13 @@ const VEHICLE_PHOTO_STYLE = { width: '100%', aspectRatio: VEHICLE_PHOTO_RATIO } 
  * Biển số chỉ có SAU khi chủ xe nhận chuyến — server quyết, không phải giao diện.
  */
 function VehicleBlock({ trip }: { trip: CustomerTripDetail }) {
+  const colors = useColors();
   const t = useTranslations('Trips.detail');
   const navigateOnce = useNavigateOnce();
   const { vehicle } = trip;
 
-  /*
-   * `transmission`/`fuelType` in NGUYÊN giá trị server trả, y như web. Chúng không đi qua bảng
-   * danh mục ở đây vì web cũng không — hai client phải nói cùng một chuỗi cho cùng một chiếc xe.
-   */
-  const specs =
-    [
-      vehicle.seatCount ? t('seatCount', { count: vehicle.seatCount }) : null,
-      vehicle.transmission,
-      vehicle.fuelType,
-    ]
-      .filter(Boolean)
-      .join(LIST_SEPARATOR) || t('specsEmpty');
+  /* Nhãn, không mã thô — cùng `useListingSpecSummary` web develop dùng cho `TripDetailView`. */
+  const specs = useListingSpecSummary(vehicle).join(LIST_SEPARATOR) || t('specsEmpty');
 
   return (
     <Card padded={false}>
@@ -668,6 +816,7 @@ function ShopBlock({
    */
   highlightShop: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.detail');
   const tCard = useTranslations('Listings.card');
   const fmt = useAppFormat();
@@ -707,14 +856,15 @@ function ShopBlock({
             </Text>
           ) : null}
           {highlightShop ? (
-            <VerifiedName
-              name={shop.name}
-              verifiedLabel={verifiedLabel}
-              color={isShop ? colors.primaryActive : colors.text}
-              weight={isShop ? fontWeight.bold : fontWeight.semibold}
-              markSize={15}
-              decorativeMark
-            />
+            // Dấu xác thực chỉ ở góc avatar (khuôn khối chủ xe trang chủ) — không lặp sau tên.
+            <Text
+              col={isShop ? colors.primaryHover : colors.text}
+              fos={fontSize.body}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
+              {shop.name}
+            </Text>
           ) : (
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
               {shop.name}
@@ -747,6 +897,7 @@ function ShopBlock({
  * nhận xe: nhãn phải là câu trả lời cho "tôi lấy xe ở đâu", không phải tên một trường.
  */
 function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
+  const colors = useColors();
   const t = useTranslations('Trips.pickup');
   const tDetail = useTranslations('Trips.detail');
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -784,6 +935,56 @@ function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
 }
 
 /**
+ * Người sẽ đến đón (ADR 0067) — dòng "Tài xế" trong lịch trình, như web `TripDetailView`: tài xế
+ * liên kết đã nhận hay tài xế ngoài hệ thống, cùng một hình; chưa có ai thì "Đang sắp xếp tài xế".
+ * Ai được hiện cho ai do server quyết (`driver`). Chỉ chuyến có tài xế ĐÃ có đơn.
+ */
+function DriverRow({ trip }: { trip: CustomerTripDetail }) {
+  const colors = useColors();
+  const t = useTranslations('Trips.detail');
+  if (trip.serviceType !== SERVICE_TYPE.WITH_DRIVER || !trip.bookingId) return null;
+  const driver = trip.driver ?? null;
+  const tel = driver ? telHref(driver.phone) : null;
+
+  return (
+    <XStack ai="flex-start" gap={space.xs} pt={space.xs}>
+      <Ionicons name="person-outline" size={iconSize.sm} color={colors.textMuted} />
+      <YStack f={1} gap={2}>
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('driver')}
+        </Text>
+        {driver ? (
+          <>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {driver.name}
+            </Text>
+            {tel ? (
+              <Text
+                col={colors.textMuted}
+                fos={fontSize.label}
+                accessibilityRole="link"
+                accessibilityLabel={t('driverCall', { name: driver.name })}
+                onPress={() => void Linking.openURL(tel)}
+              >
+                {driver.phone}
+              </Text>
+            ) : (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {driver.phone}
+              </Text>
+            )}
+          </>
+        ) : (
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('driverArranging')}
+          </Text>
+        )}
+      </YStack>
+    </XStack>
+  );
+}
+
+/**
  * Hành động của khách — nơi gọi CHỈ dựng khối này khi `!isHost`, đúng như web.
  *
  * `canReview` do SERVER quyết (đơn phải `completed` và chưa có đánh giá) — client không tự suy
@@ -801,53 +1002,12 @@ function TripActions({
   onCancel: () => void;
   onReview: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.actions');
-  const tSupport = useTranslations('Trips.closed.support');
-  const navigateOnce = useNavigateOnce();
   const phone = trip.shop.phone;
+  const tel = telHref(phone);
 
   const canCancel = canCustomerCancelTrip(stage);
-
-  /*
-   * Chuyến ĐÃ KHÉP và ĐANG THUÊ — khối "Cần hỗ trợ?" của web `TripClosedView` / `TripActiveView`:
-   * nhắn chủ xe/gian hàng (kênh chat trong sàn mở cho mọi khách đã gửi yêu cầu, không theo
-   * `canContact`), gọi khi đã mở liên hệ, đánh giá khi còn được, và lối sang trung tâm hỗ trợ XePrime
-   * (nơi có hotline). Đơn đang thuê không huỷ được (ADR 0045 điều 1) nên khối này không có nút huỷ.
-   */
-  if (isCustomerTripClosed(stage) || stage === CUSTOMER_TRIP_STAGE.ACTIVE) {
-    return (
-      <Card>
-        <YStack gap={space.sm}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {tSupport('title')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {tSupport('body')}
-          </Text>
-          {trip.canReview ? (
-            <Button label={t('review')} icon="star-outline" onPress={onReview} />
-          ) : null}
-          {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) ? (
-            <ChatWithShopButton vehicleId={trip.vehicle.id} label={tSupport('chatOwner')} />
-          ) : null}
-          {trip.canContact && phone ? (
-            <Button
-              label={t('call')}
-              variant="secondary"
-              icon="call-outline"
-              onPress={() => void Linking.openURL(`tel:${phone}`)}
-            />
-          ) : null}
-          <Button
-            label={tSupport('contactXePrime')}
-            variant="secondary"
-            icon="headset-outline"
-            onPress={() => navigateOnce(ROUTES.support.home())}
-          />
-        </YStack>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -864,18 +1024,19 @@ function TripActions({
           dựng khối này.
         */}
         {/* Nhắn tin theo `canShowHostChatOnTrip` (gian hàng: mọi chặng); gọi điện vẫn theo `canContact`. */}
-        {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) && !trip.canContact ? (
+        {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) &&
+        !trip.canContact ? (
           <ChatWithShopButton vehicleId={trip.vehicle.id} label={t('contactShop')} />
         ) : null}
         {trip.canContact ? (
           <>
             <ChatWithShopButton vehicleId={trip.vehicle.id} label={t('contactShop')} />
-            {phone ? (
+            {tel ? (
               <Button
                 label={t('call')}
                 variant="secondary"
                 icon="call-outline"
-                onPress={() => void Linking.openURL(`tel:${phone}`)}
+                onPress={() => void Linking.openURL(tel)}
               />
             ) : null}
             {trip.canReview ? (
@@ -898,201 +1059,6 @@ function TripActions({
   );
 }
 
-/**
- * Thẻ trạng thái của chuyến ĐÃ KHÉP phía khách — bản native của `TripRequestStatusCard` trong
- * `TripClosedView` (web): biểu tượng + nhãn chặng + tiêu đề + lời giải thích, và "Lý do: …" của
- * chuyến bị từ chối (chữ của chủ xe, không dịch). Chuyến hoàn thành không còn gì để đánh giá thì bỏ
- * lời mời đánh giá.
- */
-function ClosedStageNotice({
-  trip,
-  stage,
-}: {
-  trip: CustomerTripDetail;
-  stage: CustomerTripStage;
-}) {
-  const t = useTranslations('Trips.closed.status');
-  const tTrips = useTranslations('Trips');
-  const domainLabel = useDomainLabel();
-  const notice = closedNotice(stage);
-  // Ai đã huỷ (web `TripClosedView`) — không rõ thì giữ tiêu đề chung.
-  const cancelledBy =
-    stage === CUSTOMER_TRIP_STAGE.CANCELLED && isCancellationParty(trip.cancelledBy)
-      ? trip.cancelledBy
-      : null;
-  // Lý do huỷ từ sổ huỷ (web `TripClosedView`): khách tự huỷ ⇒ đúng chữ khách đã chọn.
-  const recordedReason = trip.cancelReason?.category;
-  const reasonCategory =
-    cancelledBy && isCancellationReasonCategory(recordedReason) ? recordedReason : null;
-  const reasonLabel = !reasonCategory
-    ? null
-    : cancelledBy === CANCELLATION_PARTY.CUSTOMER &&
-        (CUSTOMER_CANCELLATION_REASON_VALUES as readonly string[]).includes(reasonCategory)
-      ? tTrips(`cancel.reasons.${reasonCategory as CustomerCancellationReason}`)
-      : domainLabel('cancellationReasonCategory', reasonCategory);
-  if (!notice) return null;
-
-  const skin =
-    notice.tone === 'success'
-      ? { bg: colors.successSurface, fg: colors.success, icon: 'checkmark-circle' as const }
-      : notice.tone === 'danger'
-        ? { bg: colors.dangerSurface, fg: colors.danger, icon: 'close-circle' as const }
-        : { bg: colors.warningSurface, fg: colors.warning, icon: 'alert-circle' as const };
-  const body =
-    notice.bodyKey === 'completedBody' && !trip.canReview && !trip.review
-      ? t('completedBodyNoReview')
-      : t(notice.bodyKey);
-  const meta = CUSTOMER_TRIP_STAGE_META[stage];
-
-  return (
-    <XStack
-      ai="flex-start"
-      gap={space.sm}
-      bg={skin.bg}
-      bw={1}
-      bc={skin.fg}
-      p={space.md}
-      br={radius.md}
-    >
-      <Ionicons name={skin.icon} size={iconSize.lg} color={skin.fg} />
-      <YStack f={1} gap={space.xs} ai="flex-start">
-        <StatusBadge
-          label={domainLabel('customerTripStage', stage, meta.label)}
-          color={meta.color}
-          size="sm"
-        />
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-          {cancelledBy ? tTrips(`cancelledBy.${cancelledBy}`) : t(notice.titleKey)}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {body}
-        </Text>
-        {stage === CUSTOMER_TRIP_STAGE.REJECTED && trip.rejectReason ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t.rich('reason', {
-              reason: trip.rejectReason,
-              b: (chunks) => (
-                <Text col={colors.text} fow={fontWeight.semibold}>
-                  {chunks}
-                </Text>
-              ),
-            })}
-          </Text>
-        ) : null}
-        {reasonLabel ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t.rich('reason', {
-              reason: reasonLabel,
-              b: (chunks) => (
-                <Text col={colors.text} fow={fontWeight.semibold}>
-                  {chunks}
-                </Text>
-              ),
-            })}
-          </Text>
-        ) : null}
-      </YStack>
-    </XStack>
-  );
-}
-
-/**
- * Thẻ trạng thái của chuyến ĐANG THUÊ phía khách — bản native của thẻ trạng thái trong web
- * `TripActiveView`: biểu tượng xe + nhãn chặng + "Hành trình đang diễn ra" + lời dặn, và hàng giờ trả
- * xe dự kiến nền trắng. Sắc xanh dương "đang diễn ra" (khác xanh lá "đã xong").
- */
-function ActiveStageNotice({
-  trip,
-  stage,
-}: {
-  trip: CustomerTripDetail;
-  stage: CustomerTripStage;
-}) {
-  const t = useTranslations('Trips.detail');
-  const domainLabel = useDomainLabel();
-  const fmt = useAppFormat();
-  const meta = CUSTOMER_TRIP_STAGE_META[stage];
-
-  return (
-    <XStack
-      ai="flex-start"
-      gap={space.sm}
-      bg={colors.infoSurface}
-      bw={1}
-      bc={colors.info}
-      p={space.md}
-      br={radius.md}
-    >
-      <Ionicons name="car-sport" size={iconSize.lg} color={colors.info} />
-      <YStack f={1} gap={space.xs} ai="flex-start">
-        <StatusBadge
-          label={domainLabel('customerTripStage', stage, meta.label)}
-          color={meta.color}
-          size="sm"
-        />
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-          {t('activeTitle')}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('activeNote')}
-        </Text>
-        {trip.returnAt ? (
-          <XStack
-            alignSelf="stretch"
-            ai="center"
-            gap={space.xs}
-            flexWrap="wrap"
-            bg={colors.surface}
-            br={radius.sm}
-            px={space.sm}
-            py={space.xs}
-          >
-            <Ionicons name="time-outline" size={iconSize.sm} color={colors.info} />
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('activeReturn')}
-            </Text>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
-              {fmt.rentalPoint(dayjs(trip.returnAt))}
-            </Text>
-          </XStack>
-        ) : null}
-      </YStack>
-    </XStack>
-  );
-}
-
-/**
- * "Thông tin người thuê" chỉ-đọc — bản native của `TripRequestRenterCard` (web): liên hệ khách để
- * lại cho CHÍNH chuyến này (`contact`, có thể là người nhà được thuê hộ), email tài khoản, và lời
- * nhắn cho chủ xe ("—" khi trống, như web).
- */
-function RenterBlock({ trip }: { trip: CustomerTripDetail }) {
-  const t = useTranslations('BookingRequests.flow.reviewPage.renter');
-  const tView = useTranslations('Trips.requestView');
-  const me = useCurrentUser().data ?? null;
-  const contact = trip.contact ?? null;
-  return (
-    <Card>
-      <YStack gap={space.sm}>
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-          {t('title')}
-        </Text>
-        <DataRow label={t('name')} value={contact?.name ?? me?.displayName ?? '—'} />
-        <DataRow label={t('phone')} value={contact?.phone ?? me?.phone ?? '—'} />
-        {me?.email ? <DataRow label={t('email')} value={me.email} /> : null}
-        <YStack gap={space.xs}>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {tView('noteLabel')}
-          </Text>
-          <Text col={colors.text} fos={fontSize.bodySm}>
-            {trip.customerNote?.trim() || '—'}
-          </Text>
-        </YStack>
-      </YStack>
-    </Card>
-  );
-}
-
 /** Khối giải thích cho các kết cục — chặng bình thường không có gì để nói thêm. */
 function StageNotice({
   stage,
@@ -1101,6 +1067,7 @@ function StageNotice({
   stage: CustomerTripStage;
   rejectReason?: string | null;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.notice');
 
   /* Bảng chặng → khối giải thích là hàm THUẦN (`stage-notice.ts`) để test được từng chặng. */
@@ -1173,14 +1140,10 @@ const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
   [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
   [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: 'subtitle.slot_taken',
-  /*
-    `expired` có câu RIÊNG, không dùng chung `subtitle.terminal` với `cancelled`/`rejected`.
-    Chặng này vừa tách khỏi `rejected` (07/10/2026) đúng vì gộp lại là nói sai với khách: không
-    ai từ chối họ, chỉ là hết hạn trả lời. Dồn về "đã kết thúc sớm" là lặp lại chính lỗi đó.
-  */
-  [CUSTOMER_TRIP_STAGE.EXPIRED]: 'subtitle.expired',
   [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
+  // Như web: hết hạn dùng chung câu kết thúc (khoá `subtitle.expired` có sẵn — ghi ở bảng lỗi web).
+  [CUSTOMER_TRIP_STAGE.EXPIRED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',
 } as const satisfies Record<CustomerTripStage, string>;
 

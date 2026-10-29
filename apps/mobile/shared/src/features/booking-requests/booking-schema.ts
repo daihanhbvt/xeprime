@@ -8,14 +8,20 @@ import {
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  BOOKING_REQUEST_NOTE_MAX_LENGTH,
+  compactPhoneInput,
 } from '@xeprime/types';
+import { buildRequiredPhoneSchema } from '@xeprime/validators';
 
 /** Điểm đến tối đa — `DESTINATION_MAX` của schema web. */
 export const DESTINATION_MAX = 500;
 const ADDRESS_MAX = DESTINATION_MAX;
 /** Phần "số nhà, đường" — khớp `ADDRESS_LINE_MAX_LENGTH` của `@xeprime/types` và cột DB. */
 const ADDRESS_LINE_MAX = ADDRESS_LINE_MAX_LENGTH;
-export const NOTE_MAX = 2000;
+/** Trần lời nhắn cho chủ xe — cùng hằng với `CreateBookingRequestDto.note` ở server. */
+export const NOTE_MAX = BOOKING_REQUEST_NOTE_MAX_LENGTH;
+/** Họ tên người thuê — khớp `@MaxLength(255)` của `CreateBookingRequestDto.customerName`. */
+export const CUSTOMER_NAME_MAX = 255;
 
 /** Câu lỗi đã dịch, do màn hình truyền vào — xem chú thích ở `buildBookingRequestSchema`. */
 export interface BookingRequestSchemaLabels {
@@ -36,6 +42,10 @@ export interface BookingRequestSchemaLabels {
   destinationRequired: string;
   deliveryAddressRequired: string;
   noteTooLong: string;
+  customerNameRequired: string;
+  customerNameMax: string;
+  customerPhoneRequired: string;
+  customerPhoneFormat: string;
 }
 
 /**
@@ -67,6 +77,9 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
      * có `requireTermsAcceptance`; phép chặn nằm ở lượt gửi (`submitRequest`), đúng như web.
      */
     acceptedTerms: yup.boolean().default(false),
+    /** Bảo hiểm MIC (vật chất xe / tai nạn người ngồi trên xe) — tuỳ chọn, tính theo ngày (#213). */
+    vehicleProtectionSelected: yup.boolean().default(false),
+    personalAccidentSelected: yup.boolean().default(false),
     serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required(labels.serviceRequired),
 
     /** ISO-8601. Chuỗi chứ không phải `Date`: nó đi thẳng vào body, không qua bộ chọn của AntD. */
@@ -154,14 +167,8 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
         then: (s) => s.required(labels.pickupAddressRequired),
       }),
     pickupPlaceId: yup.string().trim().nullable().default(null),
-    pickupLatitude: yup
-      .number()
-      .nullable()
-      .default(null),
-    pickupLongitude: yup
-      .number()
-      .nullable()
-      .default(null),
+    pickupLatitude: yup.number().nullable().default(null),
+    pickupLongitude: yup.number().nullable().default(null),
     pickupLocationSource: yup.string().nullable().default(null),
     /** Điểm đến bắt buộc với lộ trình LIÊN TỈNH — nội thành thì lộ trình tự do. */
     destination: yup
@@ -192,17 +199,30 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
         then: (s) => s.required(labels.deliveryAddressRequired),
       }),
     deliveryPlaceId: yup.string().trim().nullable().default(null),
-    deliveryLatitude: yup
-      .number()
-      .nullable()
-      .default(null),
-    deliveryLongitude: yup
-      .number()
-      .nullable()
-      .default(null),
+    deliveryLatitude: yup.number().nullable().default(null),
+    deliveryLongitude: yup.number().nullable().default(null),
     deliveryLocationSource: yup.string().nullable().default(null),
 
     note: yup.string().trim().max(NOTE_MAX, labels.noteTooLong).default(''),
+
+    /**
+     * LIÊN HỆ của chuyến (ADR 0063) — họ tên + SĐT chủ xe sẽ gọi, sửa ở màn Xem lại. Mặc định là của
+     * TÀI KHOẢN (màn điền khi `/auth/me` về); SĐT khác số tài khoản KHÔNG cần OTP. Danh tính (danh
+     * sách chặn, tự đặt xe, chống trùng) vẫn đọc từ tài khoản ở server. Cùng luật `schema.ts` web.
+     */
+    customerName: yup
+      .string()
+      .trim()
+      .required(labels.customerNameRequired)
+      .max(CUSTOMER_NAME_MAX, labels.customerNameMax)
+      .default(''),
+    /** Cùng luật SĐT với API (`VN_PHONE_PATTERN`); dấu cách/chấm/gạch chép từ danh bạ được bỏ qua. */
+    customerPhone: buildRequiredPhoneSchema({
+      required: labels.customerPhoneRequired,
+      invalid: labels.customerPhoneFormat,
+    })
+      .transform((value: unknown) => (typeof value === 'string' ? compactPhoneInput(value) : value))
+      .default(''),
   });
 }
 

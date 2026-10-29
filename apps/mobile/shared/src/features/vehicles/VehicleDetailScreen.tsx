@@ -55,7 +55,8 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space, type AppColors } from '@/theme/tokens';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
 import { publicStatusPresentation, todoLeadAlert, vehiclePublicationTask } from './publication';
@@ -100,9 +101,9 @@ const GALLERY_VISIBLE = 6;
 const GALLERY_COLUMNS = 3;
 
 /* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   hero: { width: '100%', height: HERO_HEIGHT, backgroundColor: colors.surfaceMuted },
-});
+}));
 
 /**
  * Hồ sơ 360 của một xe (VEH-03) + tiến trình lên chợ (VEH-12).
@@ -431,6 +432,7 @@ function VehicleDetailBody({
             {canEdit ? (
               <YStack f={1}>
                 <Button
+                  icon="create-outline"
                   label={t('editMobile')}
                   variant="primary"
                   size="sm"
@@ -498,7 +500,7 @@ function useShortRange(): (from: string, to: string) => string {
  * Một cột biểu tượng bên trái biến ba dòng chữ rời thành một dòng thời gian đọc được, và màu
  * cho biết chuyện gì đã xảy ra trước khi mắt kịp đọc chữ.
  */
-function activityIcon(status: string): { name: IconName; color: string } {
+function activityIcon(status: string, colors: AppColors): { name: IconName; color: string } {
   switch (status) {
     case BOOKING_STATUS.COMPLETED:
       return { name: 'checkmark-circle', color: colors.success };
@@ -513,6 +515,7 @@ function activityIcon(status: string): { name: IconName; color: string } {
 }
 
 function Muted({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.bodySm}>
       {children}
@@ -522,6 +525,7 @@ function Muted({ children }: { children: string }) {
 
 /** Phần `<b>` của một message rich — giá trị được nhấn, chữ dẫn quanh nó vẫn mờ. */
 function Strong({ children }: { children: ReactNode }) {
+  const colors = useColors();
   return (
     <Text col={colors.text} fow={fontWeight.semibold}>
       {children}
@@ -552,6 +556,8 @@ function ProfileCard({
   vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Vehicles.overview');
   const tPublish = useTranslations('Vehicles.publish');
   const tLabels = useTranslations('Common.labels');
@@ -703,16 +709,18 @@ const PUBLICATION_ALERT_KINDS: readonly string[] = [
 ];
 
 /** Biểu tượng theo mức nặng nhất — web `TODO_TONE_ICON`. */
-const TODO_TONE_ICON: Readonly<Record<VehicleAlertSeverity, { name: IconName; color: string }>> = {
+const useTodoToneIcon = themed<
+  Readonly<Record<VehicleAlertSeverity, { name: IconName; color: string }>>
+>((colors) => ({
   [VEHICLE_ALERT_SEVERITY.CRITICAL]: { name: 'alert-circle', color: colors.danger },
   [VEHICLE_ALERT_SEVERITY.WARNING]: { name: 'alert-circle', color: colors.warning },
   [VEHICLE_ALERT_SEVERITY.INFO]: { name: 'information-circle', color: colors.info },
-};
+}));
 /** Đã biết chắc không còn việc gì (tải xong và rỗng). Đang tải/hỏng thì KHÔNG có biểu tượng. */
-const TODO_CLEAR_ICON: { name: IconName; color: string } = {
+const useTodoClearIcon = themed<{ name: IconName; color: string }>((colors) => ({
   name: 'checkmark-circle',
   color: colors.success,
-};
+}));
 
 /**
  * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
@@ -739,6 +747,8 @@ function TodoCard({
   /** Mở từ khu tài khoản — đích "Liên hệ hỗ trợ" là hỗ trợ của khu đó. */
   customerScope: boolean;
 }) {
+  const TODO_TONE_ICON = useTodoToneIcon();
+  const TODO_CLEAR_ICON = useTodoClearIcon();
   const t = useTranslations('Vehicles.overview');
   const navigateOnce = useNavigateOnce();
   const task = vehiclePublicationTask(vehicle);
@@ -832,6 +842,7 @@ function ScheduleCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -866,7 +877,7 @@ function ScheduleCard({
                 <YStack
                   w={3}
                   br={radius.pill}
-                  bg={statusTone(metaColor(BOOKING_STATUS_META, booking.status)).fg}
+                  bg={statusTone(metaColor(BOOKING_STATUS_META, booking.status), colors).fg}
                 />
                 <YStack f={1} gap={2}>
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -960,6 +971,7 @@ function ModuleLinks({
  * tín hiệu và thành trang trí.
  */
 function StatTile({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} gap={2} p={space.sm} br={radius.sm} bg={colors.surfaceMuted}>
       <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
@@ -987,6 +999,7 @@ function PerformanceCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const stats = summary?.stats;
@@ -1168,6 +1181,7 @@ function DocumentsCard({
   summary: Vehicle360Summary | undefined;
   customerScope: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const navigateOnce = useNavigateOnce();
   const alerts = summary?.alerts ?? [];
@@ -1233,6 +1247,7 @@ const KEY_SPECS: readonly VehicleSpecKey[] = [
  * Ô áp dụng mà chưa điền thì nói thiếu (`—`), để chủ xe thấy còn phải điền gì.
  */
 function KeySpecsCard({ vehicle, onViewAll }: { vehicle: VehicleDetail; onViewAll: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const specs = useVehicleSpecItems(vehicle);
@@ -1293,6 +1308,7 @@ function KeySpecsCard({ vehicle, onViewAll }: { vehicle: VehicleDetail; onViewAl
 }
 
 function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -1347,6 +1363,7 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
  * quyền chỉ thấy HÌNH THỨC (đã nằm sẵn trên bản ghi xe), không thấy con số.
  */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -1447,6 +1464,7 @@ function MediaCard({
   canEdit: boolean;
   customerScope: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const tStates = useTranslations('Common.states');
   const navigateOnce = useNavigateOnce();
@@ -1609,6 +1627,7 @@ function ActivityCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -1626,7 +1645,7 @@ function ActivityCard({
           <Muted>{t('activity.empty')}</Muted>
         ) : (
           bookings.map((booking, index) => {
-            const icon = activityIcon(booking.status);
+            const icon = activityIcon(booking.status, colors);
             return (
               <YStack key={booking.id} gap={space.xs}>
                 {index > 0 ? <Divider /> : null}

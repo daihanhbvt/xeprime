@@ -4,7 +4,6 @@ import { LEGAL_DOC_VALUES, LEGAL_EFFECTIVE_FROM, legalPath } from '@/constants/l
 import { ROUTES } from '@/constants/routes';
 import { ContentSection } from '@/features/content-page/components/ContentSection';
 import { FeatureCard } from '@/features/content-page/components/FeatureCard';
-import { InfoNote } from '@/features/content-page/components/InfoNote';
 import { PageHero } from '@/features/content-page/components/PageHero';
 import { getAppFormat } from '@/i18n/server-format';
 import styles from './page.module.css';
@@ -51,10 +50,6 @@ export default async function LegalIndexPage() {
       />
 
       <div className={styles.page}>
-        <InfoNote tone="warning" title={t('draftBanner.title')}>
-          <p>{t('draftBanner.body')}</p>
-        </InfoNote>
-
         {/*
           Danh sách này KHÔNG dùng `LegalDocLinks`: ở đây mỗi văn bản cần cả câu tóm tắt để
           người đọc chọn đúng bản cần, còn `LegalDocLinks` là dải liên kết trần cho những chỗ

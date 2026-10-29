@@ -26,7 +26,7 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import type { Member } from './api';
 import { InviteMemberSheet } from './components/InviteMemberSheet';
 import { MemberCard } from './components/MemberCard';
@@ -58,6 +58,7 @@ const keyOf = (member: Member) => member.userId;
  * hiện lại câu đó.
  */
 export function MemberListScreen() {
+  const colors = useColors();
   const t = useTranslations('Members');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
