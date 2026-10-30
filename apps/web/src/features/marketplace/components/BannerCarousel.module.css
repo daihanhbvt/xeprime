@@ -13,13 +13,13 @@
 .carousel {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1440 / 300;
+  aspect-ratio: 1440 / 450;
   background: var(--xp-hero-backdrop);
 }
 
 @media (max-width: 1024px) {
   .carousel {
-    aspect-ratio: 1024 / 320;
+    aspect-ratio: 1024 / 450;
   }
 }
 
@@ -89,7 +89,7 @@
 
 @media (max-width: 640px) {
   .carousel {
-    aspect-ratio: 780 / 390;
+    aspect-ratio: 780 / 450;
   }
 
   .dots {

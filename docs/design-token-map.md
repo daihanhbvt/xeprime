@@ -515,8 +515,8 @@ code của màn trang chủ Figma `19695:40693`.
 | Khung chợ | `--xp-market-container-max-width` / `--xp-market-gutter` / `--xp-market-header-height` | 1200 / 120 / 68 | mọi khối trang chủ |
 | Chữ | `--xp-letter-spacing-snug` | `-0.01em` | tiêu đề khối |
 
-Banner admin (không phải token nhưng cùng hợp đồng kích thước): giữ khổ dải cũ — PC **1440×300** ·
-tablet 1024×320 · mobile 780×390 (`apps/web/src/features/banners/banner-media.ts`, ADR 0062 điều 8).
+Banner admin (không phải token nhưng cùng hợp đồng kích thước): PC **1440×450** ·
+tablet 1024×450 · mobile 780×450 (đổi 30/10/2026) (`apps/web/src/features/banners/banner-media.ts`, ADR 0062 điều 8).
 
 ## 23. Chuyển động — chợ v2 ✅ (26/10/2026)
 

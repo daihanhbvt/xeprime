@@ -8,8 +8,8 @@ import { BannerCarousel } from './BannerCarousel';
 import styles from './HomeHero.module.css';
 
 /**
- * Vùng đầu trang chủ — DẢI BANNER do admin quản lý (`/public/banners`), giữ đúng khổ cũ
- * (PC 1440×300 · tablet 1024×320 · mobile 780×390, `BANNER_SLOTS`). Quyết định 16/10/2026: khi ráp
+ * Vùng đầu trang chủ — DẢI BANNER do admin quản lý (`/public/banners`), khổ của slot
+ * (PC 1440×450 · tablet 1024×450 · mobile 780×450, `BANNER_SLOTS`). Quyết định 16/10/2026: khi ráp
  * design v2 (ADR 0062) phần banner giữ như trước, không thành nền của một hero có chữ đè lên.
  *
  * Banner tự mang thông điệp nên trang KHÔNG phủ chữ lên ảnh; h1 vẫn có cho SEO/trình đọc màn hình
