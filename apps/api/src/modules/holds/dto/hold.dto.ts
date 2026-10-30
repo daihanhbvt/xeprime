@@ -52,6 +52,12 @@ export class HoldPaymentInfoDto {
   @ApiPropertyOptional({ type: String, nullable: true }) bankCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) accountNumber!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) accountName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Từ khoá đặt trước mã trong nội dung chuyển khoản — xem PaymentInfoDto',
+  })
+  transferPrefix!: string | null;
 }
 
 /**

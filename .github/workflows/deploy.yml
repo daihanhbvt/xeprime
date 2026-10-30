@@ -279,6 +279,8 @@ jobs:
           V_SEPAY_BANK_CODE: ${{ vars.SEPAY_BANK_CODE }}
           V_SEPAY_ACCOUNT_NUMBER: ${{ vars.SEPAY_ACCOUNT_NUMBER }}
           V_SEPAY_ACCOUNT_NAME: ${{ vars.SEPAY_ACCOUNT_NAME }}
+          # Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR cho VietinBank) — tuỳ chọn.
+          V_SEPAY_TRANSFER_PREFIX: ${{ vars.SEPAY_TRANSFER_PREFIX }}
           # Cổng thanh toán MoMo/VNPAY (ADR 0058) — mặc định TẮT. Mã merchant và URL của cổng là định
           # danh/cấu hình công khai ⇒ Variable; khoá ký (access/secret/hash) là Secret.
           V_PAYMENT_GATEWAY_MODE: ${{ vars.PAYMENT_GATEWAY_MODE }}
@@ -539,6 +541,7 @@ jobs:
           kv SEPAY_BANK_CODE "${V_SEPAY_BANK_CODE:-}"
           kv SEPAY_ACCOUNT_NUMBER "${V_SEPAY_ACCOUNT_NUMBER:-}"
           kv SEPAY_ACCOUNT_NAME "${V_SEPAY_ACCOUNT_NAME:-}"
+          kv SEPAY_TRANSFER_PREFIX "${V_SEPAY_TRANSFER_PREFIX:-}"
 
           # Cổng thanh toán (ADR 0058). Mỗi cổng là nhóm bốn-biến-hoặc-không; khai lẻ thì API từ chối
           # boot. Production TỪ CHỐI boot khi PAYMENT_GATEWAY_BOOKING_HOLD=on (chưa vượt release gate).

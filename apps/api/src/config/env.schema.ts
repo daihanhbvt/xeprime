@@ -384,6 +384,31 @@ export const envSchema = z
     SEPAY_ACCOUNT_NUMBER: z.string().optional(),
     /** Tên chủ tài khoản in trên QR — người chuyển đối chiếu trước khi bấm gửi. */
     SEPAY_ACCOUNT_NAME: z.string().optional(),
+    /**
+     * Từ khoá ghép TRƯỚC mã đối soát trong nội dung chuyển khoản (QR + dòng "Nội dung chuyển
+     * khoản"), cách một dấu cách. Một số ngân hàng nối SePay bằng API Banking (VietinBank…) CHỈ
+     * đẩy sang SePay giao dịch có nội dung BẮT ĐẦU bằng `SEVQR` — kèm `TKP<VA>` khi dùng tài khoản
+     * ảo tự tạo (vd `SEVQR TKPXEP`). Thiếu nó, tiền vẫn vào tài khoản nhưng webhook không bao giờ
+     * tới. Trống = nội dung chỉ là mã.
+     *
+     * Không thuộc nhóm bốn biến: là đặc thù của ngân hàng nhận, không phải của SePay. Cấm chứa
+     * `XP` — `extractReferenceCode` tìm mã `XPG…`/`XPH…` ở BẤT KỲ đâu trong nội dung, một tiền tố
+     * mang chữ đó có thể bị đọc nhầm thành mã khi ngân hàng viết liền.
+     */
+    SEPAY_TRANSFER_PREFIX: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .regex(
+          /^[A-Z0-9]{2,16}( [A-Z0-9]{2,16}){0,2}$/,
+          'Một đến ba cụm chữ in hoa không dấu / chữ số, cách nhau một dấu cách (vd SEVQR, SEVQR TKPABC)',
+        )
+        .refine(
+          (value) => !value.includes('XP'),
+          'Không được chứa "XP" — trùng tiền tố mã đối soát',
+        )
+        .optional(),
+    ),
 
     /*
      * --- Cổng thanh toán MoMo · VNPAY (ADR 0058 — Proposed) ---

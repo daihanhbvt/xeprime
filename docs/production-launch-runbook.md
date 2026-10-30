@@ -242,8 +242,9 @@ Dùng tài khoản ở A3: `ESMS_API_KEY`, `ESMS_SECRET_KEY`, `ESMS_BRANDNAME=Xe
 | Kiểu xác thực | API Key = giá trị tự sinh, ≥ 16 ký tự (`openssl rand -hex 24`) → Secret `SEPAY_API_KEY` |
 | `SEPAY_BANK_CODE` | mã VietQR của ngân hàng, vd `VCB`, `TCB` |
 | `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | tài khoản công ty ở A6 |
+| `SEPAY_TRANSFER_PREFIX` (Variable, tuỳ chọn) | Bắt buộc khi SePay nối ngân hàng bằng **API Banking** (VietinBank…) — trang tài khoản trên my.sepay.vn ghi "nội dung phải chứa SEVQR / TKP…". Chuẩn: tạo **tài khoản ảo** ở trang đó (2–3 ký tự in hoa/số, KHÔNG bắt đầu bằng `XP`, vd `XEP`) rồi khai `SEVQR TKP` + mã đó (`SEVQR TKPXEP` — SePay đòi nội dung BẮT ĐẦU bằng `SEVQR` và có `TKPXEP`); số tài khoản nhận giữ nguyên. Không tạo VA thì khai `SEVQR`. Thiếu biến này thì tiền vào tài khoản nhưng SePay không thấy giao dịch |
 
-Bốn giá trị khai đủ hoặc để trống cả bốn.
+Bốn giá trị đầu khai đủ hoặc để trống cả bốn; `SEPAY_TRANSFER_PREFIX` đứng riêng.
 
 ### C8. Vietmap
 
