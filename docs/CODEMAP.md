@@ -267,6 +267,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Định nghĩa service production (db · redis · migrate · api · web · worker · caddy)                    | `docker-compose.prod.yml`                         |
 | Bốn image theo vai trò (web standalone · api · worker · tools) từ một lần build — kèm lý do tách     | `deploy/Dockerfile` · `deploy/docker-bake.hcl`    |
 | Chạy thử bốn image trên Postgres thật (CI gọi trước khi cho deploy)                                  | `deploy/scripts/smoke-images.sh`                  |
+| Giữ 3 bản phát hành gần nhất của một môi trường, dọn image cũ                                        | `deploy/scripts/prune-releases.sh`                |
+| Production TẠM `xeprime.vn` trên máy staging — compose, sinh env, khối Caddy, deploy (push `prodtemp`) | `deploy/prodtemp/` · `.github/workflows/deploy-prodtemp.yml` · runbook Phụ lục A |
 | Reverse proxy + TLS tự động (Let's Encrypt) — BA site web (`/api` cùng origin, gắn realm theo host + `REALM_PROXY_SECRET`) + host API của app native | `deploy/Caddyfile` |
 | Site của dự án KHÁC ở chung VPS (landing page `softrent.vn`) — mạng `xeprime-sites` + khối `*.caddy` cài từ ngoài repo | `deploy/sites/` · [`docs/deployment.md`](deployment.md) §10 |
 | Mẫu biến môi trường production — đối chiếu `apps/api/src/config/env.schema.ts`                       | `deploy/env.production.example`                   |
