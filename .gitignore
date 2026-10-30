@@ -66,3 +66,5 @@ backups/
 # Khối site của app ngoài XePrime — deploy của dự án đó cài lên VPS (docs/deployment.md §10).
 /deploy/sites/*.caddy
 /deploy/sites/*.bak
+# Bản tạm lúc deploy/prodtemp/deploy.sh thay khối site (đổi tên xong là mất; còn lại = lần trước đỏ).
+/deploy/sites/*.caddy.*

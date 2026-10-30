@@ -63,7 +63,11 @@ BASE="xeprime-$XP_ENV-$STAMP.dump"
 OUT="$DEST_DIR/$BASE"
 TMP="$OUT.tmp"
 
-COMPOSE=(docker compose -p "xeprime-$XP_ENV" -f docker-compose.prod.yml --env-file "$ENV_FILE")
+# `XP_COMPOSE_FILE` (đặt trong file env) cho môi trường KHÔNG chạy bằng docker-compose.prod.yml —
+# production tạm trên máy staging (`deploy/prodtemp/`). `--project-directory .` để đường dẫn
+# tương đối trong file compose (env_file) tính từ gốc repo, dù file nằm ở thư mục con.
+COMPOSE_FILE_PATH="${XP_COMPOSE_FILE:-docker-compose.prod.yml}"
+COMPOSE=(docker compose -p "xeprime-$XP_ENV" --project-directory . -f "$COMPOSE_FILE_PATH" --env-file "$ENV_FILE")
 
 log()  { printf '==> %s\n' "$*"; }
 warn() { printf '⚠ %s\n' "$*" >&2; }
@@ -195,7 +199,7 @@ if (( DUMP_RC == 124 )); then
   fail "pg_dump vượt quá timeout $TIMEOUT — database quá lớn hoặc máy đang nghẽn I/O."
 fi
 if (( DUMP_RC != 0 )); then
-  fail "pg_dump thất bại (mã $DUMP_RC). Kiểm tra container db: docker compose -p xeprime-$XP_ENV -f docker-compose.prod.yml ps"
+  fail "pg_dump thất bại (mã $DUMP_RC). Kiểm tra container db: docker compose -p xeprime-$XP_ENV -f $COMPOSE_FILE_PATH ps"
 fi
 
 # Một file 0 byte vẫn là "thành công" dưới `set -e`: lỗi nằm ở phía pg_dump, không ở redirect.

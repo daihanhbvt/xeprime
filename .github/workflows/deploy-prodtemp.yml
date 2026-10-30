@@ -1,0 +1,148 @@
+# Deploy PRODUCTION TẠM (xeprime.vn chạy nhờ trên máy staging — runbook Phụ lục A).
+#
+# Kích hoạt: push nhánh `prodtemp`. Nhánh này luôn nhận merge TỪ `staging` (không bao giờ commit
+# thẳng): file compose/script của bản tạm được đọc từ checkout của staging trên VPS, nên staging
+# phải có chúng trước (deploy/prodtemp/deploy.sh, đầu file).
+#
+# Vì sao không dùng deploy.yml: nó dựng `.env.<môi trường>` từ GitHub Environment và chạy
+# docker-compose.prod.yml — tức là một Caddy THỨ HAI tranh cổng 80/443 với staging trên cùng máy.
+# Bản tạm chạy compose riêng không Caddy (deploy/prodtemp/docker-compose.yml) và file env sinh MỘT
+# lần trên VPS (deploy/prodtemp/make-env.sh).
+#
+# Khi lên production thật: xoá file này, nhánh `prodtemp` và thư mục deploy/prodtemp/ (Phụ lục A.4).
+name: Deploy prodtemp
+
+on:
+  push:
+    branches: [prodtemp]
+
+# Không cắt ngang một lần deploy đang migrate (cùng lý do với deploy.yml).
+concurrency:
+  group: deploy-prodtemp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy production tạm
+    runs-on: ubuntu-latest
+    # Cùng VPS với staging ⇒ dùng lại secret SSH của Environment `staging` (VPS_HOST, VPS_SSH_KEY,
+    # VPS_KNOWN_HOSTS) và Firebase web của nó — bản tạm dùng chung project Firebase của staging.
+    environment: staging
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: img
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          REPO_LC="$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${REPO_LC}:prodtemp-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # URL ba site của production NHÚNG CỨNG vào bundle web (deployment.md §9.3) — vì thế image
+      # này không bao giờ là image của staging, và ngược lại.
+      - name: Build 4 image
+        uses: docker/bake-action@v6
+        env:
+          IMAGE: ${{ steps.img.outputs.image }}
+          CACHE: gha
+          CACHE_SCOPE: xeprime-prodtemp
+          NEXT_PUBLIC_WEB_MARKET_URL: https://xeprime.vn
+          NEXT_PUBLIC_WEB_PARTNER_URL: https://partner.xeprime.vn
+          NEXT_PUBLIC_WEB_ADMIN_URL: https://admin.xeprime.vn
+          NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
+        with:
+          source: .
+          files: deploy/docker-bake.hcl
+          load: true
+
+      # Chạy thử TRƯỚC khi đẩy: image hỏng không bao giờ lên GHCR, VPS không bao giờ thấy nó.
+      - name: Chạy thử 4 image
+        run: bash deploy/scripts/smoke-images.sh '${{ steps.img.outputs.image }}'
+
+      - name: Đẩy lên GHCR
+        run: |
+          set -euo pipefail
+          for ROLE in web api worker tools; do
+            docker push '${{ steps.img.outputs.image }}'-"$ROLE"
+          done
+
+      - name: Chuẩn bị SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_KEY:-}" ] || [ -z "${KNOWN_HOSTS:-}" ]; then
+            echo '::error::Thiếu secret VPS_SSH_KEY hoặc VPS_KNOWN_HOSTS (Environment staging).'
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # KHÔNG `git checkout` trên VPS: thư mục đó là checkout của STAGING, và deploy.yml đặt nó
+      # đúng SHA của bản staging đang chạy. Đổi nó ở đây là staging chạy image cũ với compose mới.
+      - name: Deploy lên VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER_NAME: ${{ vars.VPS_USER }}
+          PORT: ${{ vars.VPS_SSH_PORT }}
+          APP_PATH: ${{ vars.VPS_PATH }}
+          IMAGE: ${{ steps.img.outputs.image }}
+        run: |
+          set -euo pipefail
+          [ -n "${HOST:-}" ] || { echo '::error::Thiếu secret VPS_HOST.'; exit 1; }
+          A="${APP_PATH:-/opt/xeprime}"
+          ssh -i "$HOME/.ssh/id_deploy" -p "${PORT:-22}" -o BatchMode=yes "${USER_NAME:-xeprime}@$HOST" \
+            "cd '$A' && test -x deploy/prodtemp/deploy.sh || { echo 'Checkout staging trên VPS chưa có deploy/prodtemp — merge vào staging trước.' >&2; exit 1; } && ./deploy/prodtemp/deploy.sh --image '$IMAGE'"
+
+      # Từ BÊN NGOÀI: DNS, chứng chỉ TLS, khối Caddy và realm theo host — thứ healthcheck nội bộ
+      # không nhìn thấy.
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
+            https://api.xeprime.vn/health | grep -q '"status":"ok"'
+          echo 'GET https://api.xeprime.vn/health -> ok'
+          for HOST in xeprime.vn partner.xeprime.vn admin.xeprime.vn; do
+            CODE="$(curl -sS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
+              -o /dev/null -w '%{http_code}' "https://$HOST/")"
+            echo "GET https://$HOST/ -> $CODE"
+            case "$CODE" in 2*|3*) ;; *) echo "::error::$HOST trả $CODE"; exit 1 ;; esac
+            curl -fsS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
+              "https://$HOST/api/health" | grep -q '"status":"ok"' \
+              || { echo "::error::https://$HOST/api/health không về tới API"; exit 1; }
+          done
+
+      - name: Tóm tắt
+        if: always()
+        run: |
+          {
+            echo "### Production tạm"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`${{ steps.img.outputs.image }}\` |"
+            echo "| Site | https://xeprime.vn · https://partner.xeprime.vn · https://admin.xeprime.vn |"
+            echo "| API | https://api.xeprime.vn/health |"
+            echo ""
+            echo "Rollback: trên VPS chạy \`./deploy/prodtemp/deploy.sh --image <tag prodtemp-… trước đó>\`."
+          } >> "$GITHUB_STEP_SUMMARY"
