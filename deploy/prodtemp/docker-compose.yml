@@ -5,7 +5,7 @@
 #
 # Chạy bằng `deploy/prodtemp/deploy.sh`, KHÔNG gọi tay `docker compose up` — script đó giữ thứ tự
 # sao lưu → migrate → app → Caddy. Project `xeprime-prodtemp`, file env `.env.prodtemp` ở gốc repo
-# (sinh MỘT lần bằng `deploy/prodtemp/make-env.sh`).
+# (workflow sinh lại mỗi lần deploy từ GitHub Environment `prodtemp` — deploy/prodtemp/render-env.mjs).
 #
 # KHÁC docker-compose.prod.yml ở bốn điểm, đều vì ở CHUNG máy với staging:
 #   1. KHÔNG có Caddy. Caddy của staging giữ cổng 80/443 và phục vụ năm tên miền production qua

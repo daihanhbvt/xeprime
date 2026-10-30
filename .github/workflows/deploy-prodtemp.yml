@@ -4,15 +4,15 @@
 # thẳng): file compose/script của bản tạm được đọc từ checkout của staging trên VPS, nên staging
 # phải có chúng trước (deploy/prodtemp/deploy.sh, đầu file).
 #
-# Environment GitHub RIÊNG `prodtemp` — không đọc gì của `staging`, nên thêm/sửa biến ở đây không
-# chạm staging và ngược lại. Nó chỉ giữ thứ workflow cần (khai đủ ở runbook Phụ lục A.3):
-#   Secrets:   VPS_HOST · VPS_SSH_KEY (khoá RIÊNG, bị khoá lệnh — deploy/prodtemp/ssh-gate.sh)
-#              · VPS_KNOWN_HOSTS
-#   Variables: WEB_DOMAIN · PARTNER_DOMAIN · ADMIN_DOMAIN · API_DOMAIN · NEXT_PUBLIC_APP_NAME
-#              · SESSION_COOKIE_NAME · NEXT_PUBLIC_FIREBASE_{API_KEY,PROJECT_ID,AUTH_DOMAIN,APP_ID}
-#              · VPS_USER (tuỳ chọn) · VPS_SSH_PORT (tuỳ chọn)
-# Cấu hình LÚC CHẠY của app (khoá dịch vụ, database, secret phiên) nằm ở `.env.prodtemp` trên VPS
-# (deploy/prodtemp/make-env.sh) — không ở đây.
+# Environment GitHub RIÊNG `prodtemp` là NGUỒN SỰ THẬT DUY NHẤT của cấu hình bản tạm — không đọc
+# gì của `staging`, nên thêm/sửa biến ở đây không chạm staging và ngược lại:
+#   • MỌI Variable + Secret của nó thành `.env.prodtemp` trên VPS, sinh lại mỗi lần deploy
+#     (deploy/prodtemp/render-env.mjs) — sửa tay trên VPS bị ghi đè;
+#   • trừ hạ tầng deploy: VPS_HOST · VPS_SSH_KEY (khoá RIÊNG, bị khoá lệnh —
+#     deploy/prodtemp/ssh-gate.sh) · VPS_KNOWN_HOSTS · VPS_USER · VPS_SSH_PORT.
+#
+# Đổi một biến: sửa trên GitHub → Actions → lần chạy gần nhất của workflow này → Re-run all jobs.
+# Image của commit đó đã có trên GHCR nên bước build được bỏ qua — chỉ còn dựng env + deploy.
 #
 # Vì sao không dùng deploy.yml: nó dựng `.env.<môi trường>` từ GitHub Environment và chạy
 # docker-compose.prod.yml — tức là một Caddy THỨ HAI tranh cổng 80/443 với staging trên cùng máy.
@@ -68,17 +68,40 @@ jobs:
             exit 1
           fi
 
-      - id: img
+      # Dựng file env TRƯỚC khi build: một biến sai (dấu nháy đơn, thiếu mật khẩu DB) đỏ trong vài
+      # giây, không phải sau 15 phút build. Luật env đầy đủ của API chạy trên VPS bằng image thật.
+      - name: Dựng .env.prodtemp từ Environment
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          set -euo pipefail
+          umask 077
+          node deploy/prodtemp/render-env.mjs > "$RUNNER_TEMP/env.render"
+          echo "$(grep -cE '^[A-Z][A-Z0-9_]*=' "$RUNNER_TEMP/env.render") khoá"
+
+      - name: Tên image
+        id: img
         env:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           REPO_LC="$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
-          echo "image=ghcr.io/${REPO_LC}:prodtemp-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          IMAGE="ghcr.io/${REPO_LC}:prodtemp-$(git rev-parse --short=7 HEAD)"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          # Đủ bốn image của commit này trên GHCR (lần chạy lại chỉ để đổi env) ⇒ bỏ build.
+          EXISTS=true
+          for ROLE in web api worker tools; do
+            docker manifest inspect "$IMAGE-$ROLE" > /dev/null 2>&1 || EXISTS=false
+          done
+          echo "exists=$EXISTS" >> "$GITHUB_OUTPUT"
+          echo "Image $IMAGE đã có trên GHCR: $EXISTS"
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.img.outputs.exists != 'true'
 
       - uses: docker/login-action@v3
+        if: steps.img.outputs.exists != 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -87,6 +110,7 @@ jobs:
       # URL ba site của production NHÚNG CỨNG vào bundle web (deployment.md §9.3) — vì thế image
       # này không bao giờ là image của staging, và ngược lại.
       - name: Build 4 image
+        if: steps.img.outputs.exists != 'true'
         uses: docker/bake-action@v6
         env:
           IMAGE: ${{ steps.img.outputs.image }}
@@ -110,9 +134,11 @@ jobs:
 
       # Chạy thử TRƯỚC khi đẩy: image hỏng không bao giờ lên GHCR, VPS không bao giờ thấy nó.
       - name: Chạy thử 4 image
+        if: steps.img.outputs.exists != 'true'
         run: bash deploy/scripts/smoke-images.sh '${{ steps.img.outputs.image }}'
 
       - name: Đẩy lên GHCR
+        if: steps.img.outputs.exists != 'true'
         run: |
           set -euo pipefail
           for ROLE in web api worker tools; do
@@ -132,8 +158,8 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       # Khoá này bị `command=` trên VPS ép đi qua deploy/prodtemp/ssh-gate.sh: chỉ câu
-      # `deploy <tag prodtemp-…>` được nhận. KHÔNG `git checkout` trên VPS — thư mục đó là checkout
-      # của STAGING, đổi nó ở đây là staging chạy image cũ với compose mới.
+      # `deploy <tag prodtemp-…>` được nhận, file env đi theo STDIN. KHÔNG `git checkout` trên VPS
+      # — thư mục đó là checkout của STAGING, đổi nó ở đây là staging chạy image cũ với compose mới.
       - name: Deploy lên VPS
         env:
           HOST: ${{ secrets.VPS_HOST }}
@@ -143,7 +169,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/id_deploy" -p "${PORT:-22}" -o BatchMode=yes \
-            "${USER_NAME:-xeprime}@$HOST" "deploy $IMAGE"
+            "${USER_NAME:-xeprime}@$HOST" "deploy $IMAGE" < "$RUNNER_TEMP/env.render"
 
       # Từ BÊN NGOÀI: DNS, chứng chỉ TLS, khối Caddy và realm theo host — thứ healthcheck nội bộ
       # không nhìn thấy. Lần đầu Caddy còn đang xin chứng chỉ nên retry rộng tay.
@@ -165,6 +191,10 @@ jobs:
             "${C[@]}" -f "https://$HOST/api/health" | grep -q '"status":"ok"' \
               || { echo "::error::https://$HOST/api/health không về tới API"; exit 1; }
           done
+
+      - name: Dọn file env trên runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/env.render" ~/.ssh/id_deploy
 
       - name: Tóm tắt
         if: always()
