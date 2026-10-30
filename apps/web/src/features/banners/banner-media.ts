@@ -11,18 +11,19 @@ import { BANNER_PLACEMENT, type BannerPlacement } from '@xeprime/types';
  *     không bao giờ lọt vào hệ thống rồi mới vỡ ngoài trang chủ.
  *
  * Ba slot, ba tỉ lệ (không dùng chung một tỉ lệ vì mỗi dải màn hình trình bày banner khác nhau):
- *   PC 1440×300 (4.8:1) · tablet 1024×320 (3.2:1) · mobile 780×390 (2:1).
+ *   PC 1440×450 (3.2:1) · tablet 1024×450 (~2.28:1) · mobile 780×450 (~1.73:1) — cùng cao 450,
+ *   bề rộng theo dải màn hình (đổi 30/10/2026, trước là 1440×300 · 1024×320 · 780×390).
  *
  * Banner tự mang thông điệp — trang chủ KHÔNG đặt chữ nào đè lên ảnh (quyết định 16/10/2026, giữ
  * khổ dải banner cũ khi ráp design v2). Thẻ tìm kiếm desktop đè lên phần dưới ảnh PC.
- * Nên upload ảnh @2x cùng tỉ lệ (PC 2880×600…) cho màn retina — validate chỉ so TỈ LỆ.
+ * Nên upload ảnh @2x cùng tỉ lệ (PC 2880×900…) cho màn retina — validate chỉ so TỈ LỆ.
  *
  * Tên slot và mọi câu chữ nằm ở namespace `AdminBanners` — file này chỉ giữ SỐ ĐO.
  */
 export const BANNER_SLOTS = {
-  desktop: { width: 1440, height: 300 },
-  tablet: { width: 1024, height: 320 },
-  mobile: { width: 780, height: 390 },
+  desktop: { width: 1440, height: 450 },
+  tablet: { width: 1024, height: 450 },
+  mobile: { width: 780, height: 450 },
 } as const;
 
 export type BannerSlot = keyof typeof BANNER_SLOTS;
@@ -51,14 +52,14 @@ export function bannerSlotsFor(placement: BannerPlacement): BannerSlotSizes {
 }
 
 /**
- * Cỡ ảnh dạng "1440×300" để truyền vào message ICU như một CHUỖI. Truyền số thì next-intl nhóm
+ * Cỡ ảnh dạng "1440×450" để truyền vào message ICU như một CHUỖI. Truyền số thì next-intl nhóm
  * hàng nghìn theo ngôn ngữ ("1.440" / "1,440") — đúng cho tiền, sai cho số pixel.
  */
 export function formatBannerSize({ width, height }: BannerSize, scale = 1): string {
   return `${width * scale}×${height * scale}`;
 }
 
-/** Dung sai tỉ lệ ±6% — đủ cho ảnh export lệch vài pixel, vẫn chặn nhầm slot (1.7 · 2 · 3.2 · 3.24 · 4.8). */
+/** Dung sai tỉ lệ ±6% — đủ cho ảnh export lệch vài pixel, vẫn chặn nhầm dải màn hình (1.73 · 2.28 · 3.2). */
 const RATIO_TOLERANCE = 0.06;
 
 /** Vì sao một file bị chặn — component tự dịch thành câu theo ngôn ngữ đang dùng. */
