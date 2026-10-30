@@ -11,6 +11,8 @@
 #   • SePay BỎ TRỐNG: tạo tài khoản SePay mới gắn tài khoản ngân hàng KHÁC staging, rồi thêm bốn
 #     dòng SEPAY_* bằng tay (Phụ lục A). Khoá SePay của staging không bao giờ được chép sang.
 #   • MoMo/VNPAY TẮT: khoá sandbox của staging không có chỗ ở production
+#   • xoá dấu vết "STG" mà người dùng nhìn thấy: tên app, tên người gửi email, tên cookie phiên
+#   • đủ HAI scheme đăng nhập mạng xã hội của app native (khách + Partner)
 #
 # Secret sinh ra và nằm trên VPS — không đi qua máy ai, không in ra màn hình.
 #
@@ -24,6 +26,9 @@ cd "$(dirname "$0")/../.."
 SRC=.env.staging
 OUT=.env.prodtemp
 DOMAIN="${PRODTEMP_DOMAIN:-xeprime.vn}"
+# Địa chỉ gửi phải thuộc tên miền ĐÃ XÁC MINH ở nhà cung cấp SMTP (Resend: hiện mới có
+# `stg.xeprime.vn`). Đổi sang `@xeprime.vn` sau khi xác minh tên miền gốc ở Resend.
+SMTP_FROM_ADDR="${PRODTEMP_SMTP_FROM_ADDR:-no-reply@stg.xeprime.vn}"
 
 fail() { printf '✗ %s\n' "$*" >&2; exit 1; }
 
@@ -34,7 +39,7 @@ command -v openssl >/dev/null || fail 'Thiếu openssl.'
 secret() { openssl rand -hex 32; }
 
 # Khoá KHÔNG chép từ staging: hoặc được thay bên dưới, hoặc cố ý bỏ trống.
-DROP='^(WEB_DOMAIN|PARTNER_DOMAIN|ADMIN_DOMAIN|API_DOMAIN|ACME_EMAIL|APP_ENV|CORS_ORIGINS|API_PUBLIC_URL|APP_WEB_URL|WEB_PARTNER_URL|WEB_ADMIN_URL|NEXT_PUBLIC_WEB_MARKET_URL|NEXT_PUBLIC_WEB_PARTNER_URL|NEXT_PUBLIC_WEB_ADMIN_URL|POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DB|DATABASE_URL|SESSION_JWT_SECRET|REALM_PROXY_SECRET|OTP_PEPPER|OTP_MODE|OTP_BYPASS_CODE|INSURANCE_PARTNER|SEPAY_[A-Z_]+|MOMO_[A-Z_]+|VNPAY_[A-Z_]+|PAYMENT_GATEWAY_[A-Z_]+|XP_[A-Z_]+)$'
+DROP='^(WEB_DOMAIN|PARTNER_DOMAIN|ADMIN_DOMAIN|API_DOMAIN|ACME_EMAIL|APP_ENV|CORS_ORIGINS|API_PUBLIC_URL|APP_WEB_URL|WEB_PARTNER_URL|WEB_ADMIN_URL|NEXT_PUBLIC_WEB_MARKET_URL|NEXT_PUBLIC_WEB_PARTNER_URL|NEXT_PUBLIC_WEB_ADMIN_URL|POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DB|DATABASE_URL|SESSION_JWT_SECRET|REALM_PROXY_SECRET|OTP_PEPPER|OTP_MODE|OTP_BYPASS_CODE|INSURANCE_PARTNER|NEXT_PUBLIC_APP_NAME|SMTP_FROM|SESSION_COOKIE_NAME|MOBILE_AUTH_REDIRECT_URIS|SEPAY_[A-Z_]+|MOMO_[A-Z_]+|VNPAY_[A-Z_]+|PAYMENT_GATEWAY_[A-Z_]+|XP_[A-Z_]+)$'
 
 PG_PASS="$(secret)"
 
@@ -100,6 +105,14 @@ OTP_PEPPER='$(secret)'
 
 OTP_MODE='esms'
 INSURANCE_PARTNER='none'
+
+# Thứ người dùng nhìn thấy — không mang chữ STG của nguồn.
+NEXT_PUBLIC_APP_NAME='XePrime'
+SMTP_FROM='XePrime <$SMTP_FROM_ADDR>'
+SESSION_COOKIE_NAME='xp_session'
+# Hai app native: XePrime (khách) và XePrime Partner — thiếu một scheme là đăng nhập
+# Google/Facebook của app đó dừng ở trang web với SOCIAL_STATE_INVALID.
+MOBILE_AUTH_REDIRECT_URIS='xeprime://auth/callback,xeprimepartner://auth/callback'
 PAYMENT_GATEWAY_SUBSCRIPTION='off'
 PAYMENT_GATEWAY_BOOKING_HOLD='off'
 
