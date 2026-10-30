@@ -53,3 +53,6 @@ apps/mobile/*/.expo
 
 XePrime_Project_Tracking.xlsx
 ~$*
+
+# Lịch sử bản phát hành của deploy.sh trên VPS — đổi mỗi lần deploy, không được làm vỡ cache `COPY . .`.
+.deploy-releases.*

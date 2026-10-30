@@ -1,28 +1,34 @@
 # syntax=docker/dockerfile:1.7
 #
-# MỘT image cho BỐN tiến trình: api · web · worker · migrate/seed.
+# BỐN image cho BỐN vai trò, dựng từ MỘT lần build:
 #
-# Vì sao một image chứ không phải bốn:
+#   web     Next.js `standalone` — chỉ các file server cần lúc chạy (Next tự dò)
+#   api     NestJS + dependency PRODUCTION của api (`pnpm deploy --prod`)
+#   worker  tiến trình nền + dependency PRODUCTION của worker
+#   tools   Prisma CLI + tsx cho `migrate` / `seed` — chạy một lượt lúc deploy rồi thoát
 #
-#  1. Monorepo pnpm nối các package `@xeprime/*` bằng SYMLINK trong `node_modules`. Cắt nhỏ cây
-#     đó cho từng service (`pnpm deploy`, prune thủ công) là chỗ hỏng lúc 2 giờ sáng, không phải
-#     chỗ tiết kiệm. Một cây node_modules nguyên vẹn thì `node dist/main.js` chạy hoặc không
-#     chạy ngay tại chỗ build.
-#  2. `prisma migrate deploy` cần Prisma CLI — một devDependency. Tách image production "chỉ
-#     prod deps" nghĩa là phải dựng thêm một image nữa chỉ để chạy migration.
-#  3. VPS MVP là MỘT máy (CLAUDE.md §3). Bốn service dùng chung một image = một lần build, một
-#     lớp cache, một thứ để `docker image prune` dọn.
+# Vì sao tách (đổi 30/10/2026, trước đó là MỘT image ~3GB cho cả bốn): image chung chở nguyên cây
+# node_modules của workspace (~1,8GB) — trình biên dịch Next/SWC, turbo, typescript, prettier,
+# Prisma Studio, firebase-tools — vào MỌI container đang nhận request từ Internet. Tách theo vai
+# trò thì container chỉ có đúng thứ nó chạy, mỗi bản phát hành nhẹ khoảng một nửa (bốn image dùng
+# chung lớp nền, Docker lưu lớp đó MỘT lần), và Prisma CLI — công cụ ghi schema database — không
+# còn nằm trong tiến trình api.
 #
-# Đánh đổi: image ~2–3GB vì giữ cả devDependencies. Trên đĩa 50GB đó là ~5%, và đổi lại là khả
-# năng chạy migration/seed/`next start` từ đúng cây thư viện đã build ra artifact.
+# Cái giá: cây phụ thuộc của từng image là cây ĐÃ CẮT (standalone / `pnpm deploy`). Thiếu một file
+# lúc chạy chỉ lộ ra khi container khởi động — vì thế CI chạy thử cả bốn image trên một database
+# thật trước khi cho deploy (`.github/workflows/ci.yml`, job "Build image").
 #
-# Build (từ GỐC REPO):
-#   docker compose -f docker-compose.prod.yml build
+# Build (từ GỐC REPO) — định nghĩa duy nhất ở `deploy/docker-bake.hcl`:
+#   docker buildx bake -f deploy/docker-bake.hcl
 # Các giá trị `NEXT_PUBLIC_*` bị Next NHÚNG CỨNG vào bundle lúc build, nên chúng là --build-arg
 # chứ không phải biến runtime. Đổi tên miền = build lại web.
 
+# Thư mục trong `node_modules/.pnpm` chỉ Prisma CLI cần — gỡ khỏi api/worker (giải thích ở stage
+# `api-deps`). ARG dùng chung nhiều stage phải khai TRƯỚC `FROM` đầu tiên.
+ARG PRISMA_CLI_ONLY="prisma@* @prisma+studio-core@* @prisma+dev@* @prisma+config@* @prisma+engines@* @electric-sql+* effect@* typescript@*"
+
 # ---------------------------------------------------------------------------
-# base — nền chung cho mọi stage
+# base — nền chung cho mọi stage (và là lớp chung của bốn image)
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim AS base
 
@@ -37,6 +43,7 @@ ENV TZ=Asia/Ho_Chi_Minh \
     HUSKY=0 \
     CI=1
 
+# `curl` cho healthcheck của compose; `openssl` cho Prisma.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates openssl curl tzdata \
     && rm -rf /var/lib/apt/lists/* \
@@ -45,9 +52,10 @@ RUN apt-get update \
 WORKDIR /app
 
 # ---------------------------------------------------------------------------
-# deps — cài node_modules từ MANIFEST (layer này chỉ vỡ cache khi package.json/lockfile đổi)
+# manifests — lockfile + mọi package.json, KHÔNG có mã nguồn. Gốc chung của mọi lượt cài
+# (layer này chỉ vỡ cache khi package.json/lockfile đổi)
 # ---------------------------------------------------------------------------
-FROM base AS deps
+FROM base AS manifests
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 
@@ -71,6 +79,11 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/validators/package.json ./packages/validators/
 COPY prisma/package.json ./prisma/
+
+# ---------------------------------------------------------------------------
+# deps — cây ĐẦY ĐỦ (có devDependencies) để build
+# ---------------------------------------------------------------------------
+FROM manifests AS deps
 
 # `--filter "<pkg>..."` = package đó + mọi thứ nó phụ thuộc. Bốn filter này phủ hết cây build
 # và CỐ Ý bỏ ba package `@xeprime/mobile-*`: Expo + React Native là ~1GB không có việc gì trên
@@ -128,8 +141,7 @@ COPY . .
 
 # Mọi script của repo chạy qua `dotenv -e ../../.env`, nên file này phải tồn tại lúc build.
 # CHỈ chứa giá trị công khai — DATABASE_URL, secret phiên, khoá SMTP/eSMS đi vào lúc CHẠY qua
-# `env_file` của compose, và dotenv KHÔNG ghi đè biến môi trường đã có (không có cờ `-o`), nên
-# file này không thể che mất cấu hình runtime.
+# `env_file` của compose. File này ở lại trong stage builder, không đi vào image nào.
 RUN printf '%s\n' \
       "NODE_ENV=production" \
       "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" \
@@ -167,23 +179,137 @@ RUN NODE_OPTIONS=--max-old-space-size=3072 pnpm --filter @xeprime/web build
 
 RUN pnpm --filter @xeprime/worker build
 
-# Dọn thứ không dùng lúc chạy. `.next/cache` là cache build (vài trăm MB), `apps/mobile` là
-# source app native, `.turbo` là log task runner.
-RUN rm -rf apps/web/.next/cache apps/mobile .turbo
+# --- Gom đầu ra cho từng image vào /out ------------------------------------
+#
+# web: `output: 'standalone'` (apps/web/next.config.ts) dò từ GỐC REPO, nên server nằm ở
+# `standalone/apps/web/server.js`. Next CỐ Ý không chép `public/` và `.next/static/` vào đó
+# (giả định chúng đi CDN) — thiếu hai thư mục này là trang lên nhưng không có CSS/JS/logo.
+RUN mkdir -p /out \
+    && cp -a apps/web/.next/standalone /out/web \
+    && cp -a apps/web/public /out/web/apps/web/public \
+    && cp -a apps/web/.next/static /out/web/apps/web/.next/static
 
 # ---------------------------------------------------------------------------
-# runner — image cuối
+# api-deps · worker-deps · tools-deps — node_modules RIÊNG của từng vai trò
 # ---------------------------------------------------------------------------
-FROM base AS runner
+#
+# Cài lại từ CÙNG lockfile với `--frozen-lockfile`, chỉ lấy cây của đúng app đó: phiên bản thư
+# viện trong image là đúng phiên bản CI đã test. (Không dùng `pnpm deploy`: bản `--legacy` giải
+# lại toàn bộ cây từ registry, bỏ qua lockfile; bản mới bắt bật `inject-workspace-packages` cho
+# cả workspace, tức là máy dev mất symlink giữa các package.)
+#
+# `--prod` bỏ devDependencies của app, của các `@xeprime/*` nó dùng và của package gốc workspace
+# (eslint, playwright, turbo…). Store dùng chung cache mount với `deps` nên không tải lại gì.
+#
+# `prepare` của package gốc là `husky` — devDependency của gốc, không có trong các cây này, nhưng
+# pnpm vẫn chạy lifecycle của gốc và chết vì "husky: not found". Gỡ đúng script đó ở bản sao
+# package.json của stage này; lockfile không đọc `scripts` nên `--frozen-lockfile` không đổi gì.
+FROM manifests AS runtime-manifests
+RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));delete p.scripts.prepare;fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
+
+#
+# Gỡ Prisma CLI khỏi cây production: `@prisma/client` khai CLI và `typescript` là peer TUỲ CHỌN,
+# và vì workspace có CLI nên lockfile ghi chúng thành optionalDependency — `--prod` vẫn kéo vào
+# (~200MB: studio, pglite, effect, engines). Lúc chạy không gì cần chúng: client đã sinh sẵn ở
+# `prisma/generated` và nói chuyện với Postgres qua driver adapter `pg`, không qua engine. Không
+# dùng `--no-optional` được — nó bỏ luôn binary Linux của `sharp`. Mọi gói dưới đây chỉ tới được
+# qua CLI (đo bằng `pnpm why` 30/10/2026); xoá xong thì dọn symlink treo. Smoke test của CI chạy
+# api/worker thật trên cây đã gỡ. Danh sách: `PRISMA_CLI_ONLY` ở đầu file.
+
+FROM runtime-manifests AS api-deps
+ARG PRISMA_CLI_ONLY
+RUN --mount=type=cache,id=xeprime-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --store-dir /pnpm/store --network-concurrency 16 \
+      --filter "@xeprime/api..." \
+    && (cd node_modules/.pnpm && rm -rf $PRISMA_CLI_ONLY) \
+    && find /app -xtype l -delete
+
+FROM runtime-manifests AS worker-deps
+ARG PRISMA_CLI_ONLY
+RUN --mount=type=cache,id=xeprime-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --store-dir /pnpm/store --network-concurrency 16 \
+      --filter "@xeprime/worker..." \
+    && (cd node_modules/.pnpm && rm -rf $PRISMA_CLI_ONLY) \
+    && find /app -xtype l -delete
+
+# tools CÓ devDependencies: Prisma CLI và tsx là devDependency của `@xeprime/prisma`, và chính
+# chúng là lý do image này tồn tại. Không có `--prod` thì pnpm cài cả devDependencies của package
+# gốc (turbo, firebase…) — chấp nhận: image này chỉ chạy một lượt lúc deploy rồi thoát, không
+# nhận request nào; cắt nó cần đổi lockfile của máy dev.
+FROM runtime-manifests AS tools-deps
+RUN --mount=type=cache,id=xeprime-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store --network-concurrency 16 \
+      --filter "@xeprime/prisma..."
+
+# ---------------------------------------------------------------------------
+# runtime — nền của bốn image cuối
+# ---------------------------------------------------------------------------
+FROM base AS runtime
 
 ENV NODE_ENV=production
 
 # `node` là user có sẵn (uid 1000) trong image chính thức. Chạy production bằng root là thói
-# quen xấu không có lý do gì để giữ. `.next/cache` được ghi lúc chạy nên phải thuộc user này.
-COPY --from=builder --chown=node:node /app /app
-
+# quen xấu không có lý do gì để giữ.
 USER node
-WORKDIR /app
 
-# Không có CMD mặc định: mỗi service trong docker-compose.prod.yml khai lệnh của chính nó
-# (api · web · worker · migrate). Một CMD mặc định ở đây chỉ tạo ảo giác "chạy được luôn".
+# Không có CMD mặc định ở bất kỳ image nào: mỗi service trong docker-compose.prod.yml khai lệnh
+# của chính nó. Một CMD mặc định ở đây chỉ tạo ảo giác "chạy được luôn".
+
+# ---------------------------------------------------------------------------
+# web — `node apps/web/server.js`, cwd /app/apps/web
+# ---------------------------------------------------------------------------
+FROM runtime AS web
+# Server standalone nghe theo HOSTNAME. Docker đặt HOSTNAME = id container, và Next sẽ chỉ nghe
+# trên địa chỉ đó — healthcheck gọi 127.0.0.1 thì bị từ chối. Đặt cứng 0.0.0.0.
+ENV PORT=3000 \
+    HOSTNAME=0.0.0.0 \
+    NEXT_TELEMETRY_DISABLED=1
+# `.next/cache` (ảnh đã tối ưu) được ghi lúc chạy nên thư mục phải thuộc user `node`.
+COPY --from=builder --chown=node:node /out/web /app
+WORKDIR /app/apps/web
+
+# ---------------------------------------------------------------------------
+# api · worker — node_modules production + `dist` đã build của app và của các `@xeprime/*` nó
+# dùng (domain · prisma · types). Package dùng chung resolve về `dist/` (`main: ./dist/index.js`);
+# thêm một `@xeprime/*` mới vào dependency của api/worker là phải thêm dòng COPY tương ứng ở đây
+# — smoke test của CI (deploy/scripts/smoke-images.sh) bắt chỗ quên.
+# ---------------------------------------------------------------------------
+FROM runtime AS shared-dist
+COPY --from=builder --chown=node:node /app/packages/types/dist /app/packages/types/dist
+COPY --from=builder --chown=node:node /app/packages/domain/dist /app/packages/domain/dist
+# JSON i18n mà api `import` lúc chạy (`modules/email/plan-guide-email.ts`) — nằm ngoài `dist`.
+COPY --from=builder --chown=node:node /app/packages/domain/messages /app/packages/domain/messages
+COPY --from=builder --chown=node:node /app/prisma/dist /app/prisma/dist
+COPY --from=builder --chown=node:node /app/prisma/generated /app/prisma/generated
+
+# `node dist/main.js`, cwd /app/apps/api
+FROM runtime AS api
+COPY --from=api-deps --chown=node:node /app /app
+COPY --from=shared-dist /app /app
+COPY --from=builder --chown=node:node /app/apps/api/dist /app/apps/api/dist
+WORKDIR /app/apps/api
+
+# `node dist/main.js`, cwd /app/apps/worker
+FROM runtime AS worker
+COPY --from=worker-deps --chown=node:node /app /app
+COPY --from=shared-dist /app /app
+COPY --from=builder --chown=node:node /app/apps/worker/dist /app/apps/worker/dist
+WORKDIR /app/apps/worker
+
+# ---------------------------------------------------------------------------
+# tools — migrate/seed, cwd /app/prisma (cùng đường dẫn với image chung trước đây, nên lệnh
+# seed trong docs/deployment.md giữ nguyên). Seed chạy bằng tsx TỪ MÃ NGUỒN, nên cần đủ
+# schema, migration, `src`, `data` và chuỗi `extends` của tsconfig
+# (`../packages/config/tsconfig/lib.json` — thiếu là seed chết trước dòng đầu tiên).
+# ---------------------------------------------------------------------------
+FROM runtime AS tools
+COPY --from=tools-deps --chown=node:node /app /app
+COPY --from=builder --chown=node:node /app/packages/types/dist /app/packages/types/dist
+COPY --from=builder --chown=node:node /app/packages/config/tsconfig /app/packages/config/tsconfig
+COPY --from=builder --chown=node:node /app/prisma/generated /app/prisma/generated
+COPY --from=builder --chown=node:node /app/prisma/dist /app/prisma/dist
+COPY --chown=node:node prisma/schema.prisma prisma/prisma.config.ts prisma/tsconfig.json /app/prisma/
+COPY --chown=node:node prisma/migrations /app/prisma/migrations
+COPY --chown=node:node prisma/src /app/prisma/src
+COPY --chown=node:node prisma/data /app/prisma/data
+WORKDIR /app/prisma

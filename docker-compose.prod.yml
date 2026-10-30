@@ -23,12 +23,14 @@
 # `-p` > COMPOSE_PROJECT_NAME > `name:` > tên thư mục).
 name: xeprime-production
 
-# MỘT image cho cả bốn tiến trình, và HAI đường lấy nó:
-#   • không đặt XP_IMAGE → `xeprime-app:latest` do `docker compose build api` dựng TẠI CHỖ
-#   • đặt XP_IMAGE       → tag từ registry (GHCR), `deploy.sh --image <ref>` pull về
-# Neo YAML chứ không chép chuỗi bốn lần: bốn service PHẢI chạy đúng một artifact, và cách chắc
-# chắn nhất để chúng không bao giờ lệch nhau là chỉ có một chỗ viết ra giá trị đó.
-x-app-image: &app_image ${XP_IMAGE:-xeprime-app:latest}
+# BỐN image cho bốn vai trò (deploy/Dockerfile), cùng MỘT bản phát hành:
+#   `${XP_IMAGE}-tools` (migrate) · `-api` · `-web` · `-worker`
+# `XP_IMAGE` là tag GỐC của bản phát hành, và có hai nguồn:
+#   • không đặt → `xeprime-app:local`, do `deploy.sh` dựng TẠI CHỖ bằng deploy/docker-bake.hcl
+#   • đặt       → tag từ registry (GHCR), `deploy.sh --image <ref>` pull về
+# Một biến gốc + hậu tố cố định chứ không phải bốn biến: bốn service PHẢI chạy cùng một bản phát
+# hành, và cách chắc chắn nhất để chúng không lệch nhau là chỉ có một chỗ viết ra phiên bản.
+# File này KHÔNG có khối `build:` — định nghĩa build duy nhất nằm ở deploy/docker-bake.hcl.
 
 services:
   # -------------------------------------------------------------------------
@@ -107,7 +109,7 @@ services:
   # migrate — one-shot. `deploy.sh` chạy service này TRƯỚC khi api/web khởi động lại.
   # -------------------------------------------------------------------------
   migrate:
-    image: *app_image
+    image: ${XP_IMAGE:-xeprime-app:local}-tools
     # `profiles` giữ nó ngoài `docker compose up -d` — migration là một BƯỚC có thứ tự, không
     # phải một service luôn chạy.
     profiles: ['tools']
@@ -122,30 +124,7 @@ services:
   # API — NestJS (ADR 0002/0017: phát session cookie + Bearer token)
   # -------------------------------------------------------------------------
   api:
-    image: *app_image
-    # CHỈ service này khai `build`, dù cả bốn dùng chung một image. Khai bốn lần là bốn lần
-    # BuildKit dựng lại graph cho cùng một artifact; khai một lần thì `docker compose build`
-    # sinh đúng một image và ba service kia nhặt nó theo tag.
-    #
-    # Khối này KHÔNG mâu thuẫn với `XP_IMAGE`: đặt biến đó thì `deploy.sh` pull thay vì build,
-    # nên `build:` chỉ còn là đường dự phòng dựng tại chỗ khi không có registry.
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
-      args:
-        # `/api` cùng origin với site đang mở (ADR 0051 điều 4) — Caddy của từng site chuyển nó về API.
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
-        # Ba site trong một Next app: chế độ `host` + URL gốc của từng site (ADR 0051 điều 2).
-        NEXT_PUBLIC_XP_ZONE_MODE: ${NEXT_PUBLIC_XP_ZONE_MODE:-host}
-        NEXT_PUBLIC_WEB_MARKET_URL: ${NEXT_PUBLIC_WEB_MARKET_URL:?NEXT_PUBLIC_WEB_MARKET_URL chưa đặt}
-        NEXT_PUBLIC_WEB_PARTNER_URL: ${NEXT_PUBLIC_WEB_PARTNER_URL:?NEXT_PUBLIC_WEB_PARTNER_URL chưa đặt}
-        NEXT_PUBLIC_WEB_ADMIN_URL: ${NEXT_PUBLIC_WEB_ADMIN_URL:?NEXT_PUBLIC_WEB_ADMIN_URL chưa đặt}
-        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-XePrime}
-        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
-        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
-        SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
+    image: ${XP_IMAGE:-xeprime-app:local}-api
     restart: unless-stopped
     env_file: ['${XP_ENV_FILE:-.env.production}']
     working_dir: /app/apps/api
@@ -169,7 +148,7 @@ services:
   # endpoint CÔNG KHAI phía server qua mạng nội bộ (`API_INTERNAL_URL`) — không cookie, không phiên.
   # -------------------------------------------------------------------------
   web:
-    image: *app_image
+    image: ${XP_IMAGE:-xeprime-app:local}-web
     restart: unless-stopped
     # CỐ Ý không có `env_file` — khai TỪNG biến. Nạp cả `.env.production` vào đây là đem mật
     # khẩu database, SMTP và eSMS đặt vào tiến trình render nội dung do người dùng gửi lên,
@@ -186,8 +165,10 @@ services:
       # Khác `production` (staging) ⇒ robots.txt chặn toàn bộ + mọi trang `noindex`
       # (`apps/web/src/lib/seo.ts`). Thiếu thì coi như production — không âm thầm gỡ site thật.
       APP_ENV: ${APP_ENV:-production}
+    # Server `standalone` của Next (apps/web/next.config.ts) — image không có `next` CLI.
+    # PORT/HOSTNAME đặt sẵn trong image (deploy/Dockerfile, target `web`).
     working_dir: /app/apps/web
-    command: ['node_modules/.bin/next', 'start', '--port', '3000']
+    command: ['node', 'server.js']
     healthcheck:
       test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:3000/']
       interval: 30s
@@ -203,7 +184,7 @@ services:
   # scale service này).
   # -------------------------------------------------------------------------
   worker:
-    image: *app_image
+    image: ${XP_IMAGE:-xeprime-app:local}-worker
     restart: unless-stopped
     env_file: ['${XP_ENV_FILE:-.env.production}']
     working_dir: /app/apps/worker
