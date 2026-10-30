@@ -19,7 +19,9 @@ import {
   DriverAssignmentPageDto,
   DriverDto,
   DriverListQueryDto,
+  DriverOverviewDto,
   DriverPageDto,
+  DriverWageMonthQueryDto,
   DriverWageSettingsDto,
   InviteDriverDto,
   UpdateDriverDto,
@@ -96,6 +98,22 @@ export class DriversController {
     @Body() dto: UpdateDriverWageSettingsDto,
   ): Promise<DriverWageSettingsDto> {
     return this.drivers.setWageSettings(tenant.tenantId, user.id, dto);
+  }
+
+  @Get(':id/overview')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({
+    summary:
+      'Chi tiết một tài xế — tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng',
+  })
+  @ApiOkResponse({ type: DriverOverviewDto })
+  overview(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Query() query: DriverWageMonthQueryDto,
+  ): Promise<DriverOverviewDto> {
+    return this.drivers.overview(tenant.tenantId, id, query.month);
   }
 
   @Get(':id/assignments')

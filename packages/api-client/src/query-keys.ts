@@ -155,6 +155,8 @@ export const queryKeys = {
     wageSettings: ['drivers', 'wage-settings'] as const,
     /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — ngăn kéo tiền công (ADR 0075). */
     assignments: (id: string, params: QueryParams) => ['drivers', 'assignments', id, params] as const,
+    /** Ngăn chi tiết một tài xế: tiền công tháng, việc đang treo, độ tin cậy, xu hướng (ADR 0075). */
+    overview: (id: string, params: QueryParams) => ['drivers', 'overview', id, params] as const,
   },
   /**
    * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) — lời mời/liên kết, huy hiệu chờ trả

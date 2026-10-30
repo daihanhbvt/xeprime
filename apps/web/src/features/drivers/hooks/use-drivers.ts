@@ -6,6 +6,7 @@ import {
   endDriver,
   fetchAssignableDrivers,
   fetchDriverAssignments,
+  fetchDriverOverview,
   fetchDriverWageSettings,
   fetchDrivers,
   filtersToParams,
@@ -92,7 +93,17 @@ export function useUpdateDriverWageSettings() {
   });
 }
 
-/** Ngăn kéo "chuyến & tiền công" của một tài xế trong tháng (phân trang server-side). */
+/** Ngăn chi tiết một tài xế trong tháng — tải khi ngăn mở; đổi tháng giữ số cũ tới khi có số mới. */
+export function useDriverOverview(id: string | null, month: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.drivers.overview(id ?? '', { month: month ?? null }),
+    queryFn: () => fetchDriverOverview(id as string, month),
+    enabled: Boolean(id),
+    placeholderData: (prev) => (prev && prev.driver.id === id ? prev : undefined),
+  });
+}
+
+/** Tab "Chuyến & tiền công" trong ngăn chi tiết tài xế (phân trang server-side). */
 export function useDriverAssignments(id: string | null, month: string | undefined, page: number) {
   const params = { month: month ?? null, page };
   return useQuery({

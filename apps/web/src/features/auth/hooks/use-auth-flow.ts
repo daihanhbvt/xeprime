@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import {
+  API_ERROR_CODE,
   AUTH_PROVIDER_VALUES,
   compactPhoneInput,
   PHONE_VERIFICATION_PURPOSE,
@@ -12,6 +13,7 @@ import type { LoginValues, PhoneLoginValues, RegisterValues } from '@xeprime/val
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { resolveAppLocale } from '@/i18n/config';
 import { useErrorCodeMessage, useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode } from '@/services/api-client';
 import {
   checkRegistration,
   loginWithPassword,
@@ -54,6 +56,7 @@ export interface UseAuthFlowOptions {
 export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAuthFlowOptions) {
   const locale = useLocale();
   const pathname = usePathname();
+  const tAuth = useTranslations('Auth');
   const apiErrorMessage = useErrorMessage();
   const errorCodeMessage = useErrorCodeMessage();
   const [error, setError] = useState<string | null>(null);
@@ -110,11 +113,14 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
     setError(errorCodeMessage(initialErrorCode));
   }
 
-  /** Chạy một lượt cấp phiên. `true` khi phiên đã được cấp và `onAuthenticated` đã chạy xong. */
+  /**
+   * Chạy một lượt cấp phiên. `true` khi phiên đã được cấp và `onAuthenticated` đã chạy xong.
+   * `errorMessage` thay câu lỗi mặc định theo mã khi màn có định danh khác (site quản trị).
+   */
   async function run(
     key: AuthPending,
     action: () => Promise<CurrentUser>,
-    justRegistered = false,
+    { justRegistered = false, errorMessage = apiErrorMessage } = {},
   ): Promise<boolean> {
     // Chống double-submit: mọi nút đều disabled khi `busy`, và nhánh này chặn cả trường hợp
     // Enter được nhấn liên tiếp (hay ô mã tự gửi) trước khi React kịp render trạng thái disabled.
@@ -127,7 +133,7 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
       setPending(null);
       return true;
     } catch (err) {
-      setError(apiErrorMessage(err));
+      setError(errorMessage(err));
       setPending(null);
       return false;
     }
@@ -141,9 +147,18 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
     );
   }
 
-  /** Site quản trị: email HOẶC SĐT + mật khẩu (realm `platform` — ADR 0053 điều 3). */
+  /**
+   * Site quản trị: email HOẶC SĐT + mật khẩu (realm `platform` — ADR 0053 điều 3). Câu chung của
+   * `INVALID_CREDENTIALS` chỉ nói "số điện thoại" (đúng cho site khách/partner và hai app), nên
+   * riêng màn này dùng câu nhắc cả email.
+   */
   function loginWithIdentifier(values: LoginValues): Promise<boolean> {
-    return run('password', () => loginWithPassword(values.identifier, values.password));
+    return run('password', () => loginWithPassword(values.identifier, values.password), {
+      errorMessage: (err) =>
+        getErrorCode(err) === API_ERROR_CODE.INVALID_CREDENTIALS
+          ? tAuth('adminPortal.invalidCredentials')
+          : apiErrorMessage(err),
+    });
   }
 
   /**
@@ -192,7 +207,7 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
           password: registration.password,
           code: submitted,
         }),
-      true,
+      { justRegistered: true },
     );
   }
 

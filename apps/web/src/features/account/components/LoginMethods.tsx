@@ -17,7 +17,8 @@ import { ContactVerifyModal } from './ContactVerifyModal';
 import styles from './LoginMethods.module.css';
 
 /**
- * PHƯƠNG THỨC ĐĂNG NHẬP — email và số điện thoại, kèm tình trạng xác minh và lối đổi.
+ * PHƯƠNG THỨC ĐĂNG NHẬP — số điện thoại (định danh đăng nhập, ADR 0060) đứng trước, rồi email
+ * (kênh nhận thông báo), kèm tình trạng xác minh và lối đổi.
  *
  * Chỉ là DANH SÁCH, không tự vẽ khung hay tiêu đề: trang chứa nó (Tài khoản & bảo mật) đặt nó
  * trong một `SectionCard` cùng nhịp với các section khác.
@@ -41,14 +42,6 @@ export function LoginMethods({ profile }: { profile: UserProfile }) {
     <>
       <ul className={styles.rows}>
         <MethodRow
-          icon={<MailOutlined aria-hidden />}
-          label={t('profile.email')}
-          value={profile.email}
-          emptyLabel={t('noEmail')}
-          verified={profile.emailVerified}
-          onEdit={() => setEditing(CONTACT_CHANNEL.EMAIL)}
-        />
-        <MethodRow
           icon={<PhoneOutlined aria-hidden />}
           label={t('profile.phone')}
           // `UserProfileDto.phone` đã ở dạng nội địa `0…` — server đổi trước khi trả.
@@ -56,6 +49,14 @@ export function LoginMethods({ profile }: { profile: UserProfile }) {
           emptyLabel={t('noPhone')}
           verified={profile.phoneVerified}
           onEdit={() => setEditing(CONTACT_CHANNEL.PHONE)}
+        />
+        <MethodRow
+          icon={<MailOutlined aria-hidden />}
+          label={t('profile.email')}
+          value={profile.email}
+          emptyLabel={t('noEmail')}
+          verified={profile.emailVerified}
+          onEdit={() => setEditing(CONTACT_CHANNEL.EMAIL)}
         />
       </ul>
 

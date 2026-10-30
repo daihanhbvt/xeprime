@@ -40,6 +40,7 @@
   },
   "activeBookings": "{count, plural, one {# trip} other {# trips}}",
   "actions": {
+    "view": "View details",
     "invite": "Invite driver",
     "sendInvite": "Send invitation",
     "suspend": "Suspend",
@@ -229,25 +230,115 @@
       "reason": "Reason: {reason}"
     },
     "daysChanged": "The trip length changed ({from} → {to} days) — review the driver's wage.",
-    "drawer": {
-      "title": "Trips & wages · {name}",
-      "summary": "{trips, plural, one {# completed trip} other {# completed trips}} · {amount}",
-      "empty": "No trips ended in this month.",
-      "loadError": "Couldn't load the trips.",
-      "columns": {
-        "booking": "Booking",
-        "period": "Dates",
-        "outcome": "Outcome",
-        "wage": "Wage"
-      },
-      "total": "{count, plural, one {# trip} other {# trips}}",
-      "tableLabel": "Driver trips this month"
-    },
     "monthTrips": "{count, plural, one {# completed trip} other {# completed trips}}",
     "note": {
       "set": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle: {amount}/day.",
       "unset": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle — not set yet.",
       "link": "Set it on the Drivers page"
+    }
+  },
+  "detail": {
+    "ariaLabel": "Driver details: {name}",
+    "fallbackTitle": "Driver details",
+    "previous": "Previous driver",
+    "next": "Next driver",
+    "notFound": "This driver could not be found — the link may have been removed.",
+    "loadError": "Couldn't load the driver's details.",
+    "edit": "Edit details",
+    "tabs": {
+      "overview": "Overview",
+      "trips": "Trips & wages",
+      "profile": "Profile"
+    },
+    "overview": {
+      "period": "Figures for {month} · wages are recorded amounts, counted by the month a trip ended",
+      "stats": {
+        "wageTotal": "Recorded wages",
+        "completedTrips": "Completed trips",
+        "drivenDays": "{count, plural, one {# driving day} other {# driving days}}",
+        "averageDaily": "Average per driving day",
+        "shopDaily": "Shop rate {amount}/day",
+        "noShopDaily": "No shop-wide rate set",
+        "upcoming": "Upcoming trips",
+        "upcomingWage": "Expected {amount}",
+        "upcomingNone": "No accepted trips yet"
+      },
+      "wage": {
+        "title": "Wages · {month}",
+        "completed": "{count, plural, other {Completed trips (#)}}",
+        "agreed": "{count, plural, other {Trips not run, with an agreed amount (#)}}",
+        "total": "Total recorded",
+        "edited": "Trips with an edited wage",
+        "editedValue": "{count, plural, one {# trip} other {# trips}}",
+        "note": "XePrime only records the amount both sides agreed — the shop pays the driver directly."
+      },
+      "reliability": {
+        "title": "Reliability · last {days} days",
+        "acceptRate": "Acceptance rate",
+        "noSample": "Not assigned any trips yet",
+        "rate": "{rate}%",
+        "rateOf": "({accepted}/{decided} assignments)",
+        "response": "Response time (median)",
+        "underMinute": "Under 1 minute",
+        "declined": "Declined",
+        "expired": "Let expire without answering",
+        "drops": "Dropped accepted trips",
+        "dropsValue": "{count, plural, one {# time} other {# times}}{critical, plural, =0 {} other { · # close to pickup}}",
+        "pending": "Awaiting an answer",
+        "cooldown": "Excluded from \"Instant book\" until"
+      },
+      "trend": {
+        "title": "Wages over the last 6 months",
+        "description": "Total recorded wages by the month trips ended · hover to see the trip count.",
+        "money": "Wages",
+        "trips": "Completed trips",
+        "empty": "No trips ended in these 6 months."
+      }
+    },
+    "trips": {
+      "summary": "<b>{trips, plural, one {# completed trip} other {# completed trips}}</b> · total recorded <b>{amount}</b>",
+      "export": "Download statement",
+      "exported": "{count, plural, one {Downloaded a statement of # trip} other {Downloaded a statement of # trips}}",
+      "tableLabel": "Driver trips this month",
+      "loadError": "Couldn't load the trips.",
+      "empty": "No trips ended in this month.",
+      "emptyHint": "Pick another month at the top right to see its trips.",
+      "total": "{count, plural, one {# trip} other {# trips}}",
+      "columns": {
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "period": "Dates",
+        "outcome": "Outcome",
+        "wage": "Wage"
+      },
+      "csv": {
+        "booking": "Booking code",
+        "vehicle": "Vehicle",
+        "plate": "Plate",
+        "pickupAt": "Start",
+        "returnAt": "End",
+        "days": "Days",
+        "outcome": "Outcome",
+        "wage": "Wage (VND)",
+        "total": "Total",
+        "fileName": "driver-wage-statement-{month}"
+      }
+    },
+    "profile": {
+      "name": "Name",
+      "phone": "Phone number",
+      "account": "Account name",
+      "type": "Driver type",
+      "licence": "Driver's licence",
+      "status": "Link",
+      "activeBookings": "Assigned trips",
+      "invitedAt": "Invited",
+      "respondedAt": "Accepted",
+      "endedAt": "Ended",
+      "endedByDriver": "driver left",
+      "endedByEmployer": "ended by the shop",
+      "note": "Note",
+      "noNote": "No note yet"
     }
   }
 }

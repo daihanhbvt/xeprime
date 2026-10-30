@@ -313,7 +313,7 @@ describe('BookingDriverSection — tiền công tài xế (ADR 0075)', () => {
     expect(screen.queryByText('Chỉ chuyến này')).toBeNull();
   });
 
-  it('sửa tiền công khác mức chung: chọn "các chuyến sau" ⇒ đổi mức chung rồi ghi tổng × số ngày', async () => {
+  it('sửa tiền công khác mức chung: chỉ áp cho chuyến này, không có lựa chọn phạm vi', async () => {
     wageData.history = [openItem];
     wageData.quote = QUOTE;
     render(
@@ -324,16 +324,43 @@ describe('BookingDriverSection — tiền công tài xế (ADR 0075)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sửa tiền công/ }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/Tiền công\/ngày/), { target: { value: '650000' } });
-    expect(await within(dialog).findByText('Chỉ chuyến này')).toBeTruthy();
-    fireEvent.click(within(dialog).getByText('Chuyến này và các chuyến gán sau'));
+    expect(await within(dialog).findByText(/Tổng chuyến: 650\.000.*× 3 ngày/)).toBeTruthy();
+    expect(within(dialog).queryByText('Chỉ chuyến này')).toBeNull();
+    expect(within(dialog).queryByText('Chuyến này và các chuyến gán sau')).toBeNull();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
 
     await waitFor(() => expect(wageCalls.update).toHaveBeenCalledTimes(1));
-    expect(wageCalls.saveDefault).toHaveBeenCalledWith({ dailyWage: '650000' });
+    expect(wageCalls.saveDefault).not.toHaveBeenCalled();
     expect(wageCalls.update.mock.calls[0]![0]).toEqual({
       assignmentId: 'asg-1',
       body: { amount: '1950000' },
     });
+  });
+
+  it('gán với mức khác mức chung, chọn "các chuyến sau" ⇒ đổi mức chung rồi gán tổng × số ngày', async () => {
+    wageData.assignable = [
+      { id: 'drv-2', name: 'Trần Bình', phone: '0912000333', busy: false, licenceState: 'none' },
+    ];
+    wageData.quote = QUOTE;
+    mutation.mutateAsync.mockResolvedValue({});
+    render(
+      <Harness>
+        <BookingDriverSection booking={booking()} canUpdate />
+      </Harness>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gán tài xế' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Chọn tài xế cho đơn' }));
+    fireEvent.click(await screen.findByText(/Trần Bình · 0912000333/));
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/Tiền công\/ngày/), { target: { value: '650000' } });
+    expect(await within(dialog).findByText('Chỉ chuyến này')).toBeTruthy();
+    fireEvent.click(within(dialog).getByText('Chuyến này và các chuyến gán sau'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Gán tài xế' }));
+
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(wageCalls.saveDefault).toHaveBeenCalledWith({ dailyWage: '650000' });
+    expect(mutation.mutateAsync.mock.calls[0]![0]).toEqual({ driverId: 'drv-2', wageAmount: '1950000' });
   });
 
   it('số ngày của đơn đổi sau khi gán ⇒ nhắc kiểm tra lại tiền công', () => {

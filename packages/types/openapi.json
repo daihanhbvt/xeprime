@@ -3143,7 +3143,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -3349,7 +3349,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -3487,7 +3487,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -3814,7 +3814,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -3952,7 +3952,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -4090,7 +4090,7 @@
                 "example": {
                   "error": {
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                    "message": "Số điện thoại hoặc mật khẩu không đúng"
                   }
                 }
               }
@@ -22299,6 +22299,156 @@
           }
         },
         "summary": "Các chuyến tài xế đã nhận, kết thúc trong tháng — kèm tiền công (phân trang)",
+        "tags": [
+          "drivers"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/drivers/{id}/overview": {
+      "get": {
+        "operationId": "DriversController_overview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "description": "Tháng YYYY-MM (giờ VN) — mặc định tháng hiện tại",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DriverOverviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một tài xế — tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng",
         "tags": [
           "drivers"
         ],
@@ -85128,6 +85278,15 @@
           "wageDays": {
             "type": "number",
             "nullable": true
+          },
+          "vehiclePlate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Biển số xe của chuyến"
+          },
+          "vehicleName": {
+            "type": "string",
+            "description": "Tên xe của chuyến"
           }
         },
         "required": [
@@ -85137,7 +85296,8 @@
           "pickupAt",
           "returnAt",
           "outcome",
-          "stage"
+          "stage",
+          "vehicleName"
         ]
       },
       "DriverDto": {
@@ -85553,6 +85713,89 @@
           "classes"
         ]
       },
+      "DriverMonthStatsDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Tháng YYYY-MM (giờ VN)"
+          },
+          "completedTrips": {
+            "type": "number",
+            "description": "Số chuyến HOÀN THÀNH"
+          },
+          "drivenDays": {
+            "type": "number",
+            "description": "Tổng số ngày lái của các chuyến hoàn thành"
+          },
+          "completedWage": {
+            "type": "string",
+            "description": "Tiền công các chuyến hoàn thành (VND)"
+          },
+          "agreedTrips": {
+            "type": "number",
+            "description": "Số chuyến đã nhận mà không chạy, có ghi số thoả thuận > 0"
+          },
+          "agreedWage": {
+            "type": "string",
+            "description": "Số thoả thuận của các chuyến không chạy (VND)"
+          },
+          "wageTotal": {
+            "type": "string",
+            "description": "Tổng tiền công ghi nhận = hoàn thành + thoả thuận (VND)"
+          },
+          "averageDailyWage": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái"
+          },
+          "editedTrips": {
+            "type": "number",
+            "description": "Số chuyến bên thuê đã SỬA tiền công ít nhất một lần"
+          }
+        },
+        "required": [
+          "month",
+          "completedTrips",
+          "drivenDays",
+          "completedWage",
+          "agreedTrips",
+          "agreedWage",
+          "wageTotal",
+          "editedTrips"
+        ]
+      },
+      "DriverOverviewDto": {
+        "type": "object",
+        "properties": {
+          "driver": {
+            "$ref": "#/components/schemas/DriverDto"
+          },
+          "month": {
+            "$ref": "#/components/schemas/DriverMonthStatsDto"
+          },
+          "upcoming": {
+            "$ref": "#/components/schemas/DriverUpcomingDto"
+          },
+          "reliability": {
+            "$ref": "#/components/schemas/DriverReliabilityDto"
+          },
+          "trend": {
+            "description": "Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriverWageTrendPointDto"
+            }
+          }
+        },
+        "required": [
+          "driver",
+          "month",
+          "upcoming",
+          "reliability",
+          "trend"
+        ]
+      },
       "DriverPageDto": {
         "type": "object",
         "properties": {
@@ -85591,6 +85834,44 @@
           "invites",
           "trips",
           "hasLinks"
+        ]
+      },
+      "DriverReliabilityDto": {
+        "type": "object",
+        "properties": {
+          "windowDays": {
+            "type": "number"
+          },
+          "decided": {
+            "type": "number",
+            "description": "Nhận + từ chối + quá hạn"
+          },
+          "accepted": {
+            "type": "number"
+          },
+          "declined": {
+            "type": "number"
+          },
+          "expired": {
+            "type": "number"
+          },
+          "acceptRate": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tỉ lệ nhận (%, số nguyên) — null khi chưa có lượt nào để đo"
+          },
+          "medianResponseMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Trung vị thời gian trả lời (phút, gồm nhận và từ chối) — null khi chưa có"
+          }
+        },
+        "required": [
+          "windowDays",
+          "decided",
+          "accepted",
+          "declined",
+          "expired"
         ]
       },
       "DriverSurchargeRuleDto": {
@@ -85958,6 +86239,28 @@
           "name"
         ]
       },
+      "DriverUpcomingDto": {
+        "type": "object",
+        "properties": {
+          "acceptedTrips": {
+            "type": "number",
+            "description": "Chuyến tài xế đã nhận, chưa kết thúc"
+          },
+          "acceptedWage": {
+            "type": "string",
+            "description": "Tiền công dự kiến của các chuyến đó (VND)"
+          },
+          "pendingTrips": {
+            "type": "number",
+            "description": "Lượt gán đang chờ tài xế trả lời"
+          }
+        },
+        "required": [
+          "acceptedTrips",
+          "acceptedWage",
+          "pendingTrips"
+        ]
+      },
       "DriverWageChangeDto": {
         "type": "object",
         "properties": {
@@ -86148,6 +86451,28 @@
           "wageDaily",
           "priceDaily",
           "suggestedDaily"
+        ]
+      },
+      "DriverWageTrendPointDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Tháng YYYY-MM (giờ VN)"
+          },
+          "trips": {
+            "type": "number",
+            "description": "Số chuyến hoàn thành"
+          },
+          "wageTotal": {
+            "type": "string",
+            "description": "Tổng tiền công ghi nhận (VND)"
+          }
+        },
+        "required": [
+          "month",
+          "trips",
+          "wageTotal"
         ]
       },
       "DropDriverTripDto": {

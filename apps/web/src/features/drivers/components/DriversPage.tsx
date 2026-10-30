@@ -3,11 +3,12 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
-import { App, Button, DatePicker, Tag } from 'antd';
+import { App, Button, Tag } from 'antd';
 import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -30,11 +31,18 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { useOpenRecordPager } from '@/hooks/use-open-record-pager';
 import { DRIVERS_DEFAULT_LIMIT } from '../api';
 import { useDrivers, useEndDriver, useResumeDriver, useSuspendDriver } from '../hooks/use-drivers';
-import type { Driver, DriverFilters } from '../types';
-import { DriverAssignmentsDrawer } from './DriverAssignmentsDrawer';
+import {
+  DRIVER_DETAIL_TAB,
+  DRIVER_DETAIL_TABS,
+  type Driver,
+  type DriverDetailTab,
+  type DriverFilters,
+} from '../types';
+import { DriverDetailDrawer } from './DriverDetailDrawer';
+import { DRIVER_MONTH_PATTERN, DriverMonthPicker } from './DriverMonthPicker';
 import { DriverLicenceStateTag } from './DriverLicenceStateTag';
 import { DriverWageSettingsCard } from './DriverWageSettingsCard';
 import { EditDriverModal } from './EditDriverModal';
@@ -43,9 +51,6 @@ import type { InviteDriverFormValues } from '../schema';
 import styles from './DriversPage.module.css';
 
 const MIN_TABLE_WIDTH = 1180;
-/** Tháng thống kê tiền công trên URL — `YYYY-MM` (giờ VN), cùng định dạng server nhận. */
-const MONTH_FORMAT = 'YYYY-MM';
-const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
@@ -53,6 +58,7 @@ function parseFilters(params: URLSearchParams): DriverFilters {
   const linkStatus = params.get('linkStatus');
   const driverType = params.get('driverType') ?? '';
   const page = Number(params.get('page'));
+  const tab = params.get('tab');
   return {
     q: params.get('q') ?? undefined,
     linkStatus:
@@ -60,7 +66,13 @@ function parseFilters(params: URLSearchParams): DriverFilters {
         ? linkStatus
         : undefined,
     driverType: (DRIVER_TYPE_VALUES as string[]).includes(driverType) ? driverType : undefined,
-    month: MONTH_PATTERN.test(params.get('month') ?? '') ? (params.get('month') as string) : undefined,
+    month: DRIVER_MONTH_PATTERN.test(params.get('month') ?? '')
+      ? (params.get('month') as string)
+      : undefined,
+    open: params.get('open') || undefined,
+    tab: (DRIVER_DETAIL_TABS as readonly string[]).includes(tab ?? '')
+      ? (tab as DriverDetailTab)
+      : undefined,
     page: page > 1 ? page : undefined,
     limit: Number(params.get('limit')) || undefined,
   };
@@ -95,10 +107,6 @@ function DriversPageInner() {
   // "Mời lại" mở cùng modal mời, điền sẵn từ dòng cũ.
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverFormValues | null>(null);
   const [editing, setEditing] = useState<Driver | null>(null);
-  // Ngăn kéo "Chuyến & tiền công" của một tài xế trong tháng đang xem (ADR 0075).
-  const [wageOf, setWageOf] = useState<Driver | null>(null);
-  const monthValue = filters.month ? dayjs(filters.month, MONTH_FORMAT) : nowInAppTz();
-  const monthLabel = fmt.monthYear(monthValue.toDate());
 
   const { data, isError, refetch, isFetching } = useDrivers(filters);
   const suspend = useSuspendDriver();
@@ -109,6 +117,17 @@ function DriversPageInner() {
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: DRIVERS_DEFAULT_LIMIT, total: 0, hasNext: false };
+
+  // Ngăn chi tiết: tài xế + tab sống trên URL; mở/đóng chỉ đổi giao diện, giữ nguyên trang.
+  const pager = useOpenRecordPager(
+    items.map((row) => row.id),
+    filters.open,
+  );
+  const openDetail = (id: string | undefined, tab?: DriverDetailTab) => {
+    if (id) pager.remember();
+    setFilters({ open: id, tab: id ? tab : undefined }, { resetPage: false });
+  };
+  const changeMonth = (month: string) => setFilters({ month });
 
   const filterFields: FilterField[] = [
     {
@@ -150,22 +169,6 @@ function DriversPageInner() {
     onError: (err: unknown) => message.error(errorMessage(err)),
   });
 
-  const monthPicker = (
-    <DatePicker
-      picker="month"
-      className={styles.month}
-      value={monthValue}
-      format={(value) => fmt.monthYear(value.toDate())}
-      allowClear={false}
-      aria-label={t('wage.month.label')}
-      placeholder={t('wage.month.placeholder')}
-      /* Tháng sau chưa có chuyến nào kết thúc — một cột rỗng của tương lai không nói lên điều gì. */
-      maxDate={nowInAppTz()}
-      onChange={(value) => {
-        if (value) setFilters({ month: value.format(MONTH_FORMAT), page: undefined });
-      }}
-    />
-  );
 
   const inviteButton = canManage ? (
     <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteOpen(true)}>
@@ -180,7 +183,9 @@ function DriversPageInner() {
       width: 260,
       render: (_, row) => (
         <div>
-          <div className={styles.name}>{row.name}</div>
+          <Button type="link" className={styles.linkCell} onClick={() => openDetail(row.id)}>
+            {row.name}
+          </Button>
           <div className={styles.meta}>{row.phone}</div>
           {row.account.displayName && row.account.displayName !== row.name ? (
             <div className={styles.meta}>
@@ -249,7 +254,11 @@ function DriversPageInner() {
       render: (_, row) =>
         row.monthCompletedTrips > 0 || Number(row.monthWageTotal) > 0 ? (
           <div>
-            <Button type="link" className={styles.linkCell} onClick={() => setWageOf(row)}>
+            <Button
+              type="link"
+              className={styles.linkCell}
+              onClick={() => openDetail(row.id, DRIVER_DETAIL_TAB.TRIPS)}
+            >
               {fmt.money(row.monthWageTotal)}
             </Button>
             <div className={styles.meta}>
@@ -293,6 +302,12 @@ function DriversPageInner() {
       const invited = row.linkStatus === DRIVER_LINK_STATUS.INVITED;
       const closed = !open;
       return [
+        {
+          key: 'view',
+          label: t('actions.view'),
+          icon: <EyeOutlined />,
+          onClick: () => openDetail(row.id),
+        },
         {
           key: 'reinvite',
           label: t('actions.reinvite'),
@@ -375,7 +390,7 @@ function DriversPageInner() {
         onChange={(patch) => setFilters(patch as unknown as Partial<DriverFilters>)}
         actions={
           <div className={styles.toolbar}>
-            {monthPicker}
+            <DriverMonthPicker month={filters.month} onChange={changeMonth} />
             {inviteButton}
           </div>
         }
@@ -412,11 +427,17 @@ function DriversPageInner() {
         }}
       />
       <EditDriverModal driver={editing} onClose={() => setEditing(null)} />
-      <DriverAssignmentsDrawer
-        driver={wageOf}
+      <DriverDetailDrawer
+        driverId={filters.open ?? null}
         month={filters.month}
-        monthLabel={monthLabel}
-        onClose={() => setWageOf(null)}
+        tab={filters.tab}
+        previousId={pager.previousId}
+        nextId={pager.nextId}
+        onNavigate={(id) => openDetail(id, filters.tab)}
+        onTabChange={(tab) => setFilters({ tab }, { resetPage: false })}
+        onMonthChange={changeMonth}
+        onEdit={setEditing}
+        onClose={() => openDetail(undefined)}
       />
     </div>
   );

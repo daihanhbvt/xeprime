@@ -40,6 +40,7 @@
   },
   "activeBookings": "{count, plural, other {# chuyến}}",
   "actions": {
+    "view": "Xem chi tiết",
     "invite": "Mời tài xế",
     "sendInvite": "Gửi lời mời",
     "suspend": "Tạm khoá",
@@ -229,25 +230,115 @@
       "reason": "Lý do: {reason}"
     },
     "daysChanged": "Số ngày của đơn đã đổi ({from} → {to} ngày) — kiểm tra lại tiền công tài xế.",
-    "drawer": {
-      "title": "Chuyến & tiền công · {name}",
-      "summary": "{trips, plural, other {# chuyến xong}} · {amount}",
-      "empty": "Không có chuyến nào kết thúc trong tháng này.",
-      "loadError": "Không tải được danh sách chuyến.",
-      "columns": {
-        "booking": "Đơn",
-        "period": "Thời gian",
-        "outcome": "Kết quả",
-        "wage": "Tiền công"
-      },
-      "total": "{count, plural, other {# chuyến}}",
-      "tableLabel": "Chuyến của tài xế trong tháng"
-    },
     "monthTrips": "{count, plural, other {# chuyến xong}}",
     "note": {
       "set": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe: {amount}/ngày.",
       "unset": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe — chưa đặt.",
       "link": "Cấu hình ở trang Tài xế"
+    }
+  },
+  "detail": {
+    "ariaLabel": "Chi tiết tài xế {name}",
+    "fallbackTitle": "Chi tiết tài xế",
+    "previous": "Tài xế trước",
+    "next": "Tài xế sau",
+    "notFound": "Không tìm thấy tài xế này — có thể liên kết đã bị gỡ.",
+    "loadError": "Không tải được thông tin tài xế.",
+    "edit": "Sửa thông tin",
+    "tabs": {
+      "overview": "Tổng quan",
+      "trips": "Chuyến & tiền công",
+      "profile": "Hồ sơ"
+    },
+    "overview": {
+      "period": "Số liệu {month} · tiền công là số ghi nhận, tính theo tháng chuyến kết thúc",
+      "stats": {
+        "wageTotal": "Tiền công ghi nhận",
+        "completedTrips": "Chuyến hoàn thành",
+        "drivenDays": "{count, plural, other {# ngày lái}}",
+        "averageDaily": "Bình quân / ngày lái",
+        "shopDaily": "Mức chung {amount}/ngày",
+        "noShopDaily": "Gian hàng chưa đặt mức chung",
+        "upcoming": "Chuyến sắp chạy",
+        "upcomingWage": "Dự kiến {amount}",
+        "upcomingNone": "Chưa có chuyến đã nhận"
+      },
+      "wage": {
+        "title": "Tiền công · {month}",
+        "completed": "{count, plural, other {Chuyến hoàn thành (#)}}",
+        "agreed": "{count, plural, other {Chuyến không chạy có thoả thuận (#)}}",
+        "total": "Tổng ghi nhận",
+        "edited": "Chuyến đã sửa tiền công",
+        "editedValue": "{count, plural, other {# chuyến}}",
+        "note": "XePrime chỉ ghi nhận số hai bên thoả thuận — gian hàng trả trực tiếp cho tài xế."
+      },
+      "reliability": {
+        "title": "Độ tin cậy · {days} ngày gần nhất",
+        "acceptRate": "Tỉ lệ nhận chuyến",
+        "noSample": "Chưa được gán chuyến nào",
+        "rate": "{rate}%",
+        "rateOf": "({accepted}/{decided} lượt)",
+        "response": "Thời gian trả lời (trung vị)",
+        "underMinute": "Dưới 1 phút",
+        "declined": "Từ chối",
+        "expired": "Để quá hạn không trả lời",
+        "drops": "Rút chuyến đã nhận",
+        "dropsValue": "{count, plural, other {# lần}}{critical, plural, =0 {} other { · # lần sát giờ}}",
+        "pending": "Đang chờ trả lời",
+        "cooldown": "Không tự gán \"Đặt ngay\" tới"
+      },
+      "trend": {
+        "title": "Tiền công 6 tháng gần nhất",
+        "description": "Tổng tiền công ghi nhận theo tháng kết thúc chuyến · rê chuột để xem số chuyến.",
+        "money": "Tiền công",
+        "trips": "Chuyến hoàn thành",
+        "empty": "Chưa có chuyến nào kết thúc trong 6 tháng này."
+      }
+    },
+    "trips": {
+      "summary": "<b>{trips, plural, other {# chuyến hoàn thành}}</b> · tổng ghi nhận <b>{amount}</b>",
+      "export": "Tải bảng kê",
+      "exported": "{count, plural, other {Đã tải bảng kê # chuyến}}",
+      "tableLabel": "Chuyến của tài xế trong tháng",
+      "loadError": "Không tải được danh sách chuyến.",
+      "empty": "Không có chuyến nào kết thúc trong tháng này.",
+      "emptyHint": "Chọn tháng khác ở góc phải để xem chuyến của tháng đó.",
+      "total": "{count, plural, other {# chuyến}}",
+      "columns": {
+        "booking": "Đơn",
+        "vehicle": "Xe",
+        "period": "Thời gian",
+        "outcome": "Kết quả",
+        "wage": "Tiền công"
+      },
+      "csv": {
+        "booking": "Mã đơn",
+        "vehicle": "Xe",
+        "plate": "Biển số",
+        "pickupAt": "Bắt đầu",
+        "returnAt": "Kết thúc",
+        "days": "Số ngày",
+        "outcome": "Kết quả",
+        "wage": "Tiền công (VND)",
+        "total": "Tổng",
+        "fileName": "bang-ke-tien-cong-{month}"
+      }
+    },
+    "profile": {
+      "name": "Tên gọi",
+      "phone": "Số điện thoại",
+      "account": "Tên tài khoản",
+      "type": "Loại tài xế",
+      "licence": "Bằng lái",
+      "status": "Liên kết",
+      "activeBookings": "Chuyến đang gán",
+      "invitedAt": "Mời lúc",
+      "respondedAt": "Đồng ý lúc",
+      "endedAt": "Kết thúc lúc",
+      "endedByDriver": "tài xế rời đi",
+      "endedByEmployer": "gian hàng kết thúc",
+      "note": "Ghi chú",
+      "noNote": "Chưa có ghi chú"
     }
   }
 }

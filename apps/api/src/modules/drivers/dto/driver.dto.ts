@@ -474,6 +474,84 @@ export class DriverAssignmentRowDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'VND' })
   wageAmount!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) wageDays!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Biển số xe của chuyến' })
+  vehiclePlate!: string | null;
+  @ApiProperty({ description: 'Tên xe của chuyến' }) vehicleName!: string;
+}
+
+/** Số liệu tiền công của MỘT tài xế trong tháng (giờ VN) — các lượt kết thúc trong tháng. */
+export class DriverMonthStatsDto {
+  @ApiProperty({ description: 'Tháng YYYY-MM (giờ VN)' }) month!: string;
+  @ApiProperty({ description: 'Số chuyến HOÀN THÀNH' }) completedTrips!: number;
+  @ApiProperty({ description: 'Tổng số ngày lái của các chuyến hoàn thành' }) drivenDays!: number;
+  @ApiProperty({ type: String, description: 'Tiền công các chuyến hoàn thành (VND)' })
+  completedWage!: string;
+  @ApiProperty({ description: 'Số chuyến đã nhận mà không chạy, có ghi số thoả thuận > 0' })
+  agreedTrips!: number;
+  @ApiProperty({ type: String, description: 'Số thoả thuận của các chuyến không chạy (VND)' })
+  agreedWage!: string;
+  @ApiProperty({ type: String, description: 'Tổng tiền công ghi nhận = hoàn thành + thoả thuận (VND)' })
+  wageTotal!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái',
+  })
+  averageDailyWage!: string | null;
+  @ApiProperty({ description: 'Số chuyến bên thuê đã SỬA tiền công ít nhất một lần' })
+  editedTrips!: number;
+}
+
+/** Việc ĐANG treo của tài xế — không theo tháng: chuyến đã nhận chưa xong + lượt chờ trả lời. */
+export class DriverUpcomingDto {
+  @ApiProperty({ description: 'Chuyến tài xế đã nhận, chưa kết thúc' }) acceptedTrips!: number;
+  @ApiProperty({ type: String, description: 'Tiền công dự kiến của các chuyến đó (VND)' })
+  acceptedWage!: string;
+  @ApiProperty({ description: 'Lượt gán đang chờ tài xế trả lời' }) pendingTrips!: number;
+}
+
+/**
+ * Độ tin cậy khi được gán chuyến trong `windowDays` ngày gần nhất. Mẫu số là lượt tài xế CÓ nghĩa
+ * vụ trả lời và đã có kết cục: nhận · từ chối · để quá hạn. Lượt bên thuê gỡ trước khi tài xế kịp
+ * trả lời không tính — tài xế không có cơ hội quyết định.
+ */
+export class DriverReliabilityDto {
+  @ApiProperty() windowDays!: number;
+  @ApiProperty({ description: 'Nhận + từ chối + quá hạn' }) decided!: number;
+  @ApiProperty() accepted!: number;
+  @ApiProperty() declined!: number;
+  @ApiProperty() expired!: number;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Tỉ lệ nhận (%, số nguyên) — null khi chưa có lượt nào để đo',
+  })
+  acceptRate!: number | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Trung vị thời gian trả lời (phút, gồm nhận và từ chối) — null khi chưa có',
+  })
+  medianResponseMinutes!: number | null;
+}
+
+export class DriverWageTrendPointDto {
+  @ApiProperty({ description: 'Tháng YYYY-MM (giờ VN)' }) month!: string;
+  @ApiProperty({ description: 'Số chuyến hoàn thành' }) trips!: number;
+  @ApiProperty({ type: String, description: 'Tổng tiền công ghi nhận (VND)' }) wageTotal!: string;
+}
+
+/** `GET /drivers/:id/overview` — ngăn chi tiết một tài xế ở trang Tài xế (ADR 0075). */
+export class DriverOverviewDto {
+  @ApiProperty({ type: DriverDto }) driver!: DriverDto;
+  @ApiProperty({ type: DriverMonthStatsDto }) month!: DriverMonthStatsDto;
+  @ApiProperty({ type: DriverUpcomingDto }) upcoming!: DriverUpcomingDto;
+  @ApiProperty({ type: DriverReliabilityDto }) reliability!: DriverReliabilityDto;
+  @ApiProperty({
+    type: [DriverWageTrendPointDto],
+    description: 'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt',
+  })
+  trend!: DriverWageTrendPointDto[];
 }
 
 export class DriverAssignmentPageDto {
