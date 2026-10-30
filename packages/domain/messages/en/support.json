@@ -13,12 +13,7 @@
       "value": "contact@softrent.vn",
       "note": "For complaints, personal-data requests, and anything that needs documents attached."
     },
-    "hours": {
-      "label": "Staffed hours",
-      "value": "«enter staffed hours»",
-      "note": "Outside these hours your request is still logged and picked up on the next shift."
-    },
-    "lead": "These three channels are how XePrime receives requests.",
+    "lead": "These two channels are how XePrime receives requests.",
     "pendingBadge": "Coming soon",
     "pendingNote": "Official staffed hours will be announced soon. Outside those hours, requests are still logged and handled in the next shift."
   },

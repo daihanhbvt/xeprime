@@ -28,7 +28,7 @@ import type { ExploreSearchParams } from '@/navigation/routes-base';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { CustomerReviews } from './components/home/CustomerReviews';
 import { PartnerBanner } from './components/home/PartnerBanner';
-import { PromoBanners } from './components/home/PromoBanners';
+import { PromoBanners, PromoBannersSkeleton } from './components/home/PromoBanners';
 import { VehicleTypes, homeShowcaseBodyTypes } from './components/home/VehicleTypes';
 import { WhyChooseUs } from './components/home/WhyChooseUs';
 
@@ -122,7 +122,11 @@ function HomeContent() {
 
   const { catalog } = useCatalog();
   const showcaseTypes = homeShowcaseBodyTypes(catalog.body_type);
-  const { data: promoBanners, refetch: refetchPromo } = useBanners(BANNER_PLACEMENT.PROMO);
+  const {
+    data: promoBanners,
+    isLoading: promoLoading,
+    refetch: refetchPromo,
+  } = useBanners(BANNER_PLACEMENT.PROMO);
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -224,7 +228,11 @@ function HomeContent() {
             }
           />
           {/* Chưa có banner khuyến mãi nào đang hiển thị thì không dựng khối — như web. */}
-          {promoBanners && promoBanners.length > 0 ? <PromoBanners banners={promoBanners} /> : null}
+          {promoLoading ? (
+            <PromoBannersSkeleton />
+          ) : promoBanners && promoBanners.length > 0 ? (
+            <PromoBanners banners={promoBanners} />
+          ) : null}
           {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
           {showcaseTypes.length > 0 ? (
             <HomeBand>

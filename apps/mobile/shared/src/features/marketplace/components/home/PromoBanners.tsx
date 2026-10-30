@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import type { PublicBanner } from '../../api';
@@ -57,5 +58,17 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
         </YStack>
       ))}
     </HomeCarousel>
+  );
+}
+
+/**
+ * Giữ chỗ khối khuyến mãi lúc danh sách banner chưa về — cùng khung tỉ lệ ảnh mobile, nên khi
+ * banner hiện ra phần dưới trang chủ không bị đẩy xuống.
+ */
+export function PromoBannersSkeleton() {
+  return (
+    <YStack w="100%" br={CARD_RADIUS} ov="hidden">
+      <Skeleton aspectRatio={MOBILE_RATIO} />
+    </YStack>
   );
 }

@@ -13,12 +13,7 @@
       "value": "contact@softrent.vn",
       "note": "Dành cho khiếu nại, yêu cầu về dữ liệu cá nhân và các việc cần gửi kèm chứng từ."
     },
-    "hours": {
-      "label": "Giờ trực",
-      "value": "«điền khung giờ trực»",
-      "note": "Ngoài giờ trực, yêu cầu vẫn được ghi nhận và xử lý vào ca kế tiếp."
-    },
-    "lead": "Ba kênh dưới đây là cách XePrime tiếp nhận yêu cầu.",
+    "lead": "Hai kênh dưới đây là cách XePrime tiếp nhận yêu cầu.",
     "pendingBadge": "Sắp công bố",
     "pendingNote": "Khung giờ trực chính thức sẽ được công bố sớm. Ngoài giờ, yêu cầu vẫn được ghi nhận và xử lý ở ca kế tiếp."
   },
