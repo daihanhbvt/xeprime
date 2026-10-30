@@ -282,7 +282,7 @@ export {
 
 export { PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from './pickup-queue';
 
-export { buildVietQrUrl } from './vietqr';
+export { buildVietQrUrl, transferContent } from './vietqr';
 
 export {
   VIETNAM_BANKS,

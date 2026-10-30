@@ -229,13 +229,20 @@ export class BillingService {
   paymentInfo(): PaymentInfoDto {
     const bankCode = this.config.get<string>('SEPAY_BANK_CODE') ?? null;
     if (!bankCode) {
-      return { configured: false, bankCode: null, accountNumber: null, accountName: null };
+      return {
+        configured: false,
+        bankCode: null,
+        accountNumber: null,
+        accountName: null,
+        transferPrefix: null,
+      };
     }
     return {
       configured: true,
       bankCode,
       accountNumber: this.config.get<string>('SEPAY_ACCOUNT_NUMBER') ?? null,
       accountName: this.config.get<string>('SEPAY_ACCOUNT_NAME') ?? null,
+      transferPrefix: this.config.get<string>('SEPAY_TRANSFER_PREFIX') ?? null,
     };
   }
 

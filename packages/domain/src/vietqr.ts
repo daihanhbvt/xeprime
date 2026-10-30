@@ -20,6 +20,21 @@ type Schemas = components['schemas'];
  * trong `lib.es*`. Không dùng `encodeQuery` của `@xeprime/api-client` vì đây là URL của MỘT
  * DỊCH VỤ NGOÀI, không phải endpoint XePrime.
  */
+/**
+ * NỘI DUNG chuyển khoản của một khoản — thứ in vào QR và thứ khách chép tay, LUÔN cùng một chuỗi.
+ *
+ * `transferPrefix` (env `SEPAY_TRANSFER_PREFIX`, vd `SEVQR`) là từ khoá ngân hàng nhận bắt buộc có
+ * trong nội dung mới đẩy giao dịch sang SePay (VietinBank qua API Banking). Server đọc mã `XPG…`/
+ * `XPH…` ở bất kỳ vị trí nào trong nội dung, nên tiền tố không chen vào phép đối soát.
+ */
+export function transferContent(
+  info: Pick<Schemas['HoldPaymentInfoDto'], 'transferPrefix'> | null | undefined,
+  code: string,
+): string {
+  const prefix = info?.transferPrefix;
+  return prefix ? `${prefix} ${code}` : code;
+}
+
 export function buildVietQrUrl(
   info: Schemas['HoldPaymentInfoDto'],
   amount: string,
@@ -30,7 +45,7 @@ export function buildVietQrUrl(
     ['acc', info.accountNumber],
     ['bank', info.bankCode],
     ['amount', amount],
-    ['des', code],
+    ['des', transferContent(info, code)],
     // `compact`: QR + logo VietQR/NAPAS/ngân hàng, ảnh VUÔNG 540×540.
     ['template', 'compact'],
   ];

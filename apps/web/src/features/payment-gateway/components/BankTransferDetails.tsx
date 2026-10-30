@@ -5,7 +5,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { bankDisplayName, buildVietQrUrl } from '@xeprime/domain';
+import { bankDisplayName, buildVietQrUrl, transferContent } from '@xeprime/domain';
 import type { components } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { InfoHint } from '@/components/data-display/InfoHint';
@@ -54,6 +54,8 @@ export function BankTransferDetails({
   const card = layout === 'card';
 
   const qrUrl = account ? buildVietQrUrl(account, amount, code) : null;
+  // Chuỗi khách chép tay PHẢI là chuỗi in trong QR — kể cả từ khoá ngân hàng nhận đòi (SEVQR…).
+  const reference = transferContent(account, code);
   const qrSize = card ? 224 : 220;
 
   const content = (
@@ -124,8 +126,8 @@ export function BankTransferDetails({
             <InfoHint content={t('codeHint')} label={t('codeHintLabel')} />
           </dt>
           <dd>
-            <b className={styles.code}>{code}</b>
-            <CopyButton value={code} label={t('copyCode')} />
+            <b className={styles.code}>{reference}</b>
+            <CopyButton value={reference} label={t('copyCode')} />
           </dd>
         </div>
       </dl>

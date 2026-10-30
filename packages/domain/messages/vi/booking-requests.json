@@ -402,6 +402,10 @@
       "ownVehicle": {
         "title": "Đây là xe của bạn",
         "body": "Chiếc xe này thuộc chính gian hàng của bạn nên không đặt thuê được. Nếu muốn chặn lịch cho việc riêng, hãy dùng mục Lịch xe."
+      },
+      "shopNotAccepting": {
+        "title": "Gian hàng không nhận yêu cầu này",
+        "body": "Gian hàng sở hữu xe này hiện không nhận yêu cầu đặt xe từ tài khoản của bạn. Bạn vẫn đặt được xe của các gian hàng khác trên XePrime."
       }
     },
     "address": {

@@ -817,7 +817,7 @@ describe('Mức rủi ro', () => {
     });
   });
 
-  maybe('đường CÔNG KHAI chỉ nhận thông điệp trung tính — không lộ danh sách nội bộ', async () => {
+  maybe('đường CÔNG KHAI nhận mã riêng, thông điệp trung tính — không lộ danh sách nội bộ', async () => {
     await resetBook();
     const customerId = (await resolve('0901234567'))!;
     await customers.updateRisk(
@@ -832,7 +832,7 @@ describe('Mức rủi ro', () => {
       customers.assertNotBlocked(tenantId, '0901234567', 'public'),
     ).rejects.toMatchObject({
       status: 409,
-      response: { code: API_ERROR_CODE.CONFLICT },
+      response: { code: API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER },
     });
 
     const error = await customers
