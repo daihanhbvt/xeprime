@@ -757,10 +757,19 @@ export const API_ERROR_CODE = {
    * Gian hàng đã đánh dấu khách này là "từ chối phục vụ".
    *
    * Mã này chỉ tới được NGƯỜI TRONG SHOP (lập đơn tại quầy, duyệt yêu cầu). Đường công khai
-   * (khách gửi yêu cầu từ Marketplace) KHÔNG bao giờ trả mã này — nó trả `CONFLICT` kèm thông
-   * điệp trung tính, vì khách không được biết mình nằm trong danh sách nội bộ nào.
+   * (khách gửi yêu cầu từ Marketplace) KHÔNG bao giờ trả mã này — nó trả
+   * `SHOP_NOT_ACCEPTING_CUSTOMER`, vì khách không được biết mình nằm trong danh sách nội bộ nào.
    */
   CUSTOMER_BLOCKED: 'CUSTOMER_BLOCKED',
+  /**
+   * Mặt CÔNG KHAI của `CUSTOMER_BLOCKED`: gian hàng sở hữu xe không nhận yêu cầu của tài khoản
+   * khách này.
+   *
+   * Mã riêng thay vì `CONFLICT` vì `CONFLICT` được dịch thành "dữ liệu vừa đổi, tải lại" — một
+   * chỉ dẫn sai, khách tải lại bao nhiêu lần cũng vậy. Không lộ gì về người khác: SĐT được soát
+   * là số ĐÃ XÁC MINH của chính phiên (ADR 0060), và câu chữ không nhắc lý do hay danh sách.
+   */
+  SHOP_NOT_ACCEPTING_CUSTOMER: 'SHOP_NOT_ACCEPTING_CUSTOMER',
 
   // Chat (ADR 0009)
   /**
