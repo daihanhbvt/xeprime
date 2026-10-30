@@ -15653,6 +15653,8 @@ export interface components {
             bankCode?: string | null;
             accountNumber?: string | null;
             accountName?: string | null;
+            /** @description Từ khoá đặt trước mã trong nội dung chuyển khoản — xem PaymentInfoDto */
+            transferPrefix?: string | null;
         };
         HoldQueueSummaryDto: {
             count: number;
@@ -17182,6 +17184,8 @@ export interface components {
             bankCode?: string | null;
             accountNumber?: string | null;
             accountName?: string | null;
+            /** @description Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) — nội dung chuyển khoản là `<transferPrefix> <mã>`; null thì chỉ là mã. Dựng bằng `transferContent` của @xeprime/domain */
+            transferPrefix?: string | null;
         };
         PaymentOrderDto: {
             id: string;

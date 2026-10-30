@@ -112,6 +112,15 @@ Mỗi bucket → **Settings** → *CORS Policy* → dán:
 ]
 ```
 
+`AllowedOrigins` phải có **cả ba site** của môi trường (ADR 0051 — khách, partner, admin đều tải
+ảnh lên): staging là ba host staging của bạn, production là
+`["https://xeprime.vn", "https://partner.xeprime.vn", "https://admin.xeprime.vn"]`. Thiếu một host
+thì đúng site đó báo `CORS error` ở lệnh `PUT` và giao diện hiện "Upload failed with HTTP 0".
+
+Production (kể cả bản tạm `prodtemp`) dùng **bucket riêng** (`xeprime-prod-public` ·
+`xeprime-prod-private`) và **token riêng** chỉ cấp cho hai bucket đó — dùng lại bucket staging là
+trộn ảnh test vào kho thật, và một khoá lộ ở staging mở luôn production.
+
 Thêm `"http://localhost:3000"` vào `AllowedOrigins` nếu muốn test upload từ máy dev.
 
 ### 1.5 API token
@@ -666,6 +675,7 @@ duy nhất là `SepayService` (`apps/api/src/modules/sepay/`).
 | Variable | `SEPAY_BANK_CODE` | mã ngân hàng chuẩn VietQR, vd `VCB`, `TCB` | dựng ảnh VietQR của SePay (`qr.sepay.vn`) |
 | Variable | `SEPAY_ACCOUNT_NUMBER` | số tài khoản nhận | in vào QR ⇒ công khai theo bản chất |
 | Variable | `SEPAY_ACCOUNT_NAME` | tên chủ tài khoản | in trên QR để người chuyển đối chiếu |
+| Variable (tuỳ chọn) | `SEPAY_TRANSFER_PREFIX` | từ khoá đặt trước mã trong nội dung, vd `SEVQR` hoặc `SEVQR TKPXEP` (tài khoản ảo tự tạo) | **Bắt buộc với ngân hàng nối SePay bằng API Banking** (VietinBank…): ngân hàng chỉ đẩy sang SePay giao dịch có `SEVQR` hoặc mã VA `TKP…` trong nội dung — thiếu thì tiền vẫn vào tài khoản mà webhook không tới. Nội dung thành `SEVQR XPG…`; tối đa ba cụm chữ in hoa/số cách nhau một dấu cách, không chứa `XP`. Ngoài nhóm bốn biến |
 
 Trống cả bốn (mặc định, kể cả staging): `POST /sepay/webhook` trả **503 `SEPAY_NOT_CONFIGURED`** —
 fail closed, không bao giờ giả vờ đã nhận tiền — và màn thanh toán chỉ còn mã + số tiền, không có

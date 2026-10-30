@@ -465,7 +465,10 @@ export class SubscriptionPageDto {
  */
 export class PlanInvoiceLineDto {
   @ApiProperty({ enum: ['package', 'base', 'slot', 'add_slot'] }) kind!: string;
-  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'Chỉ có ở hoá đơn trước ADR 0041' })
+  @ApiPropertyOptional({
+    enum: VEHICLE_TYPE_VALUES,
+    description: 'Chỉ có ở hoá đơn trước ADR 0041',
+  })
   vehicleType?: string;
   @ApiProperty() quantity!: number;
   @ApiProperty() months!: number;
@@ -491,6 +494,14 @@ export class PaymentInfoDto {
   bankCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) accountNumber!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) accountName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) — nội dung chuyển khoản là ' +
+      '`<transferPrefix> <mã>`; null thì chỉ là mã. Dựng bằng `transferContent` của @xeprime/domain',
+  })
+  transferPrefix!: string | null;
 }
 
 export class SubscriptionInvoiceDto {
@@ -769,11 +780,15 @@ export class CurrentPlanDto {
   @ApiProperty() planId!: string;
   @ApiProperty() planCode!: string;
   @ApiProperty() planName!: string;
-  @ApiProperty({ enum: [...PLAN_VEHICLE_SCOPE_VALUES], description: 'Phạm vi loại xe của kỳ (ADR 0065)' })
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: 'Phạm vi loại xe của kỳ (ADR 0065)',
+  })
   vehicleScope!: string;
   @ApiProperty({
     enum: Object.values(BILLING_PHASE),
-    description: 'Pha của RIÊNG kỳ này theo đồng hồ server (current | grace | lapsed | unconfigured)',
+    description:
+      'Pha của RIÊNG kỳ này theo đồng hồ server (current | grace | lapsed | unconfigured)',
   })
   phase!: string;
   @ApiPropertyOptional({
