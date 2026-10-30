@@ -76799,12 +76799,12 @@
           "tabletImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh tablet (1024×320) — null thì client fallback ảnh desktop"
+            "description": "Ảnh tablet (1024×450) — null thì client fallback ảnh desktop"
           },
           "mobileImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop"
+            "description": "Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop"
           },
           "altText": {
             "type": "string"
@@ -81328,7 +81328,7 @@
           "tabletImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "URL ảnh tablet 1024×320 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop"
+            "description": "URL ảnh tablet 1024×450 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop"
           },
           "mobileImageUrl": {
             "type": "string",
@@ -99091,12 +99091,12 @@
           "tabletImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh tablet (1024×320) — null thì client fallback ảnh desktop"
+            "description": "Ảnh tablet (1024×450) — null thì client fallback ảnh desktop"
           },
           "mobileImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop"
+            "description": "Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop"
           },
           "altText": {
             "type": "string"

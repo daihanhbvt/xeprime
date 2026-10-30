@@ -1,6 +1,6 @@
 /*
- * Dải banner đầu trang chủ — khổ của slot banner (`BANNER_SLOTS`): PC 1440×300, tablet 1024×320,
- * mobile 780×390. Khối mặc định (chưa có banner) mang CÙNG tỉ lệ để trang không đổi hình dạng.
+ * Dải banner đầu trang chủ — khổ của slot banner (`BANNER_SLOTS`): PC 1440×450, tablet 1024×450,
+ * mobile 780×450. Khối mặc định (chưa có banner) mang CÙNG tỉ lệ để trang không đổi hình dạng.
  * KHÔNG đặt max-height — lý do ở BannerCarousel.module.css.
  */
 .hero {
@@ -17,7 +17,7 @@
 .fallback {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1440 / 300;
+  aspect-ratio: 1440 / 450;
   background: var(--xp-color-bg-muted);
 }
 
@@ -85,13 +85,13 @@
 
 @media (max-width: 1024px) {
   .fallback {
-    aspect-ratio: 1024 / 320;
+    aspect-ratio: 1024 / 450;
   }
 }
 
 @media (max-width: 640px) {
   .fallback {
-    aspect-ratio: 780 / 390;
+    aspect-ratio: 780 / 450;
   }
 
   .subtitle {

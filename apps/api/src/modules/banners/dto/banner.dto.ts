@@ -34,13 +34,13 @@ export class PublicBannerDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Ảnh tablet (1024×320) — null thì client fallback ảnh desktop',
+    description: 'Ảnh tablet (1024×450) — null thì client fallback ảnh desktop',
   })
   tabletImageUrl!: string | null;
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop',
+    description: 'Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop',
   })
   mobileImageUrl!: string | null;
   @ApiProperty() altText!: string;
@@ -100,7 +100,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'URL ảnh tablet 1024×320 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop',
+    description: 'URL ảnh tablet 1024×450 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop',
   })
   @IsOptional()
   @IsString()
