@@ -45,10 +45,12 @@ có một **mức gợi ý** `with_driver_limits.wageDailySuggested` (mặc đ�
 chính sách phí, nằm trong khoảng tiền công) — hiện làm lời nhắc (placeholder, câu gợi ý, nút "Dùng mức
 gợi ý" trong hộp đặt mức chung) và KHÔNG bao giờ tự ghi vào gian hàng hay lượt gán.
 
-**Hộp gán và hộp sửa nhập MỨC/NGÀY** (tự điền mức chung nếu có), thấy tổng `× số ngày`. Số khác mức
-chung thì chọn phạm vi: **chỉ chuyến này** (mức chung giữ nguyên — mặc định) hoặc **chuyến này và các
-chuyến gán sau** (đổi mức chung qua `PATCH /drivers/wage-settings`, cần `drivers.manage`; lượt gán
-đã có vẫn giữ số). Chuyến `not_run` vẫn nhập một số thoả thuận, không theo ngày, không đụng mức chung.
+**Hộp gán và hộp sửa nhập MỨC/NGÀY** (tự điền mức chung nếu có), thấy tổng `× số ngày`. Chỉ hộp
+**gán** có lựa chọn phạm vi khi số khác mức chung: **chỉ chuyến này** (mức chung giữ nguyên — mặc
+định) hoặc **chuyến này và các chuyến gán sau** (đổi mức chung qua `PATCH /drivers/wage-settings`,
+cần `drivers.manage`; lượt gán đã có vẫn giữ số). **Hộp sửa** trên một đơn đã gán luôn chỉ áp cho
+chính chuyến đó — đổi mức chung đi qua hộp gán hoặc trang Tài xế. Chuyến `not_run` vẫn nhập một số
+thoả thuận, không theo ngày, không đụng mức chung.
 
 Chưa có mức mặc định (hoặc mức cũ nằm ngoài giới hạn mới): gán tay bị chặn `DRIVER_WAGE_REQUIRED` /
 `DRIVER_WAGE_OUT_OF_RANGE`; tự gán của "Đặt ngay" **bỏ qua lượt gán** (`assignWithinTx` trả
@@ -97,9 +99,23 @@ Khách: không bao giờ (API phía khách không có trường này). Tài xế
 chuyến lái (`DriverTripDto.wage` — thấy TRƯỚC khi bấm Nhận) và trang chi tiết chuyến (kèm lịch sử
 sửa) — không có màn hình thu nhập, không gom theo bên thuê. Bên thuê: lịch sử tài xế của đơn
 (`bookings.view`); trang Tài xế có hai cột tháng (`monthCompletedTrips`, `monthWageTotal` — chuyến
-hoàn thành + số thoả thuận của chuyến không chạy, theo tháng của `ended_at` giờ VN) và ngăn kéo
-`GET /drivers/:id/assignments` phân trang. Dòng hiển thị dùng chung web/mobile: `driverWageLine`
-(`@xeprime/domain`).
+hoàn thành + số thoả thuận của chuyến không chạy, theo tháng của `ended_at` giờ VN) và **ngăn chi
+tiết tài xế** (29/10/2026, `?open=<id>&tab=` trên URL) với ba tab:
+
+- **Tổng quan** — `GET /drivers/:id/overview?month=`: tiền công tháng (hoàn thành / thoả thuận /
+  tổng / bình quân một ngày lái / số chuyến đã sửa), việc đang treo (chuyến đã nhận chưa xong +
+  tiền công dự kiến, lượt chờ trả lời), **độ tin cậy 90 ngày** (tỉ lệ nhận = nhận ÷ (nhận + từ
+  chối + quá hạn); lượt bên thuê gỡ trước khi tài xế kịp trả lời không tính; không có lượt nào ⇒
+  `null`, không phải 0%; trung vị thời gian trả lời) và xu hướng 6 tháng.
+- **Chuyến & tiền công** — `GET /drivers/:id/assignments` phân trang (kèm xe + biển số) và **bảng kê
+  CSV** dựng ở trình duyệt theo ngôn ngữ người tải (BOM UTF-8, tiền là số thô, dòng tổng) — để
+  bên thuê đối chiếu khi trả tài xế.
+- **Hồ sơ** — liên kết, trạng thái bằng lái, các mốc.
+
+Ngăn chi tiết KHÔNG so tiền thuê với tiền công ("lãi theo tài xế"): đó là báo cáo thu chi tổng hợp
+mà ADR 0027 điều 1 chỉ cho gói, trong khi tài xế mở cho cả tuyến hoa hồng. Cũng không có trạng thái
+"đã trả tài xế" — thêm nó là một quyết định riêng. Dòng hiển thị dùng chung web/mobile:
+`driverWageLine` (`@xeprime/domain`).
 
 ### 7. Bỏ phụ phí tài xế
 

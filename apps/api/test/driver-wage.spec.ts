@@ -22,7 +22,12 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { DriverSelfService } from '../src/modules/drivers/driver-self.service';
-import { DriversService, vnMonthRange, wageDaysOf } from '../src/modules/drivers/drivers.service';
+import {
+  DriversService,
+  shiftMonthKey,
+  vnMonthRange,
+  wageDaysOf,
+} from '../src/modules/drivers/drivers.service';
 import { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -608,6 +613,81 @@ describe('Mức mặc định + thống kê tháng (ADR 0075)', () => {
       }),
     ]);
     expect(drawer.meta.total).toBe(1);
+    expect(drawer.data[0]).toMatchObject({ vehicleName: 'Innova tiền công' });
+  });
+
+  maybe('ngăn chi tiết: tiền công tháng, việc đang treo, độ tin cậy, xu hướng 6 tháng', async () => {
+    const link = await seedDriverLink(asService, { tenantId: tenant, name: 'Tài xế Tổng quan' });
+    // A: hoàn thành 2 ngày (1.000.000) rồi sửa lên 1.200.000 ⇒ một chuyến "đã sửa".
+    const done = await seedBooking(2, 48);
+    await bookings.assignDriver(tenant, done, owner, link.driverId);
+    await drivers.respondToTrip(link.userId, done, true);
+    await prisma.booking.update({ where: { id: done }, data: { status: BOOKING_STATUS.COMPLETED } });
+    await prisma.$transaction((tx) =>
+      drivers.onBookingClosedWithinTx(tx, done, BOOKING_STATUS.COMPLETED),
+    );
+    await drivers.updateWage(tenant, owner, done, (await openAssignmentOf(done)).id, {
+      amount: '1200000',
+    });
+    // B: đã nhận, chưa chạy (3 ngày × 500.000) ⇒ việc đang treo.
+    const upcoming = await seedBooking(3, 200);
+    await bookings.assignDriver(tenant, upcoming, owner, link.driverId);
+    await drivers.respondToTrip(link.userId, upcoming, true);
+    // C: từ chối ⇒ vào mẫu số độ tin cậy, không vào tiền.
+    const declined = await seedBooking(1, 400);
+    await bookings.assignDriver(tenant, declined, owner, link.driverId);
+    await drivers.respondToTrip(link.userId, declined, false);
+    // D: đang chờ trả lời.
+    const pending = await seedBooking(1, 600);
+    await bookings.assignDriver(tenant, pending, owner, link.driverId);
+
+    const view = await drivers.overview(tenant, link.driverId, undefined);
+    expect(view.driver).toMatchObject({ id: link.driverId, monthCompletedTrips: 1 });
+    expect(view.driver.monthWageTotal).toBe('1200000');
+    expect(view.month).toMatchObject({
+      completedTrips: 1,
+      drivenDays: 2,
+      completedWage: '1200000',
+      agreedTrips: 0,
+      agreedWage: '0',
+      wageTotal: '1200000',
+      averageDailyWage: '600000',
+      editedTrips: 1,
+    });
+    expect(view.upcoming).toEqual({ acceptedTrips: 1, acceptedWage: '1500000', pendingTrips: 1 });
+    expect(view.reliability).toMatchObject({
+      decided: 3,
+      accepted: 2,
+      declined: 1,
+      expired: 0,
+      acceptRate: 67,
+    });
+    expect(view.reliability.medianResponseMinutes).toBe(0);
+    expect(view.trend).toHaveLength(6);
+    expect(view.trend.at(-1)).toEqual({
+      month: view.month.month,
+      trips: 1,
+      wageTotal: '1200000',
+    });
+    expect(view.trend.slice(0, 5).every((p) => p.trips === 0 && p.wageTotal === '0')).toBe(true);
+
+    // Tháng trước: không có gì, tổng ở 0 và bình quân là null chứ không phải 0.
+    const prevKey = view.trend.at(-2)!.month;
+    const prev = await drivers.overview(tenant, link.driverId, prevKey);
+    expect(prev.month).toMatchObject({ completedTrips: 0, wageTotal: '0', averageDailyWage: null });
+    expect(prev.trend.at(-1)!.month).toBe(prevKey);
+
+    await expect(drivers.overview(tenant, newId(), undefined)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});
+
+describe('shiftMonthKey — thuần', () => {
+  it('lùi qua năm và tiến qua năm', () => {
+    expect(shiftMonthKey('2026-01', -1)).toBe('2025-12');
+    expect(shiftMonthKey('2026-03', -5)).toBe('2025-10');
+    expect(shiftMonthKey('2026-12', 1)).toBe('2027-01');
   });
 });
 

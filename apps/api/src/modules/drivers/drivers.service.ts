@@ -85,6 +85,7 @@ import {
   DriverAssignmentListQueryDto,
   DriverAssignmentPageDto,
   DriverListQueryDto,
+  DriverOverviewDto,
   DriverPageDto,
   DriverWageDto,
   DriverWageQuoteDto,
@@ -108,6 +109,8 @@ const DRIVER_ASSIGNABLE_MAX = 200;
 const DRIVER_AUTO_ASSIGN_LOAD_WINDOW_DAYS = 7;
 /** Số chuyến đã nhận liệt kê trong lỗi chặn "ngừng làm tài xế" — đủ để tài xế biết gọi ai. */
 const LEAVE_BLOCKING_TRIPS_SHOWN = 20;
+/** Số tháng của biểu đồ xu hướng tiền công trong ngăn chi tiết tài xế — tính cả tháng được chọn. */
+const DRIVER_WAGE_TREND_MONTHS = 6;
 
 const LINK_SELECT = {
   id: true,
@@ -181,32 +184,179 @@ export class DriversService {
       }),
     ]);
 
+    return {
+      data: await this.listDtos(tenantId, rows, query.month),
+      meta: paginationMeta(paging, total),
+    };
+  }
+
+  /**
+   * Dựng `DriverDto` đầy đủ (số chuyến sống, bằng lái, mời lại, rút chuyến, tiền công tháng) cho
+   * một tập liên kết — mỗi phần một phép gộp cho cả tập, không N+1. Danh sách và ngăn chi tiết
+   * dùng chung, nên một tài xế hiện CÙNG con số ở hai nơi.
+   */
+  private async listDtos(
+    tenantId: string,
+    rows: LinkRow[],
+    month: string | undefined,
+  ): Promise<DriverDto[]> {
+    const ids = rows.map((r) => r.id);
     const closedUserIds = rows
       .filter((r) => !OPEN_LINK.includes(r.linkStatus))
       .map((r) => r.userId);
     const [counts, licences, reopened, drops, wages] = await Promise.all([
-      this.activeBookingCounts(rows.map((r) => r.id)),
+      this.activeBookingCounts(ids),
       this.licenceSummaries(rows.map((r) => r.userId)),
       this.openLinkStatusByUser(tenantId, closedUserIds),
-      this.dropStats(rows.map((r) => r.id)),
-      this.monthWageStats(
-        tenantId,
-        rows.map((r) => r.id),
-        query.month,
-      ),
+      this.dropStats(ids),
+      this.monthWageStats(tenantId, ids, month),
     ]);
-    return {
-      data: rows.map((r) =>
-        toDto(
-          r,
-          counts.get(r.id) ?? 0,
-          licences.get(r.userId),
-          OPEN_LINK.includes(r.linkStatus) ? null : (reopened.get(r.userId) ?? null),
-          drops.get(r.id),
-          wages.get(r.id),
-        ),
+    return rows.map((r) =>
+      toDto(
+        r,
+        counts.get(r.id) ?? 0,
+        licences.get(r.userId),
+        OPEN_LINK.includes(r.linkStatus) ? null : (reopened.get(r.userId) ?? null),
+        drops.get(r.id),
+        wages.get(r.id),
       ),
-      meta: paginationMeta(paging, total),
+    );
+  }
+
+  /**
+   * Ngăn chi tiết MỘT tài xế (ADR 0075): hồ sơ liên kết + số liệu tiền công của tháng được chọn +
+   * việc đang treo + độ tin cậy khi được gán + xu hướng các tháng gần nhất. Tiền công chỉ là số
+   * GHI NHẬN — không có dòng nào ở đây đi vào tiền của XePrime.
+   *
+   * Mọi phép đếm đọc `booking_driver_assignments` theo `(tenant_id, driver_id, …)` — index
+   * `booking_driver_assignments_wage_stats_idx` phục vụ cả ba câu theo `ended_at`.
+   */
+  async overview(
+    tenantId: string,
+    driverId: string,
+    month: string | undefined,
+    now: Date = new Date(),
+  ): Promise<DriverOverviewDto> {
+    const row = await this.prisma.driver.findFirst({
+      where: { id: driverId, tenantId },
+      select: LINK_SELECT,
+    });
+    if (!row) throw linkNotFound();
+
+    const monthKey = month ?? vnMonthKey(now);
+    const trendFrom = vnMonthRange(shiftMonthKey(monthKey, -(DRIVER_WAGE_TREND_MONTHS - 1))).from;
+    const { from, to } = vnMonthRange(monthKey);
+    const since = new Date(now.getTime() - DRIVER_DROP_STATS_WINDOW_DAYS * DAY_MS);
+    const COMPLETED = DRIVER_ASSIGNMENT_OUTCOME.COMPLETED;
+
+    const openWhere = { tenantId, driverId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN };
+    const [[driver], [stats], trendRows, [reliability], accepted, pendingTrips] = await Promise.all([
+      this.listDtos(tenantId, [row], monthKey),
+      this.prisma.$queryRaw<
+        {
+          completed_trips: number;
+          driven_days: number;
+          completed_wage: string;
+          agreed_trips: number;
+          agreed_wage: string;
+          avg_wage: string;
+          avg_days: number;
+          edited_trips: number;
+        }[]
+      >`
+        SELECT
+          COUNT(*) FILTER (WHERE a."outcome" = ${COMPLETED})::int AS completed_trips,
+          COALESCE(SUM(a."wage_days") FILTER (WHERE a."outcome" = ${COMPLETED}), 0)::int AS driven_days,
+          ROUND(COALESCE(SUM(a."wage_amount") FILTER (WHERE a."outcome" = ${COMPLETED}), 0))::text AS completed_wage,
+          COUNT(*) FILTER (WHERE a."outcome" <> ${COMPLETED} AND a."wage_amount" > 0)::int AS agreed_trips,
+          ROUND(COALESCE(SUM(a."wage_amount") FILTER (WHERE a."outcome" <> ${COMPLETED} AND a."wage_amount" > 0), 0))::text AS agreed_wage,
+          ROUND(COALESCE(SUM(a."wage_amount") FILTER (WHERE a."outcome" = ${COMPLETED} AND a."wage_days" IS NOT NULL), 0))::text AS avg_wage,
+          COALESCE(SUM(a."wage_days") FILTER (WHERE a."outcome" = ${COMPLETED} AND a."wage_amount" IS NOT NULL), 0)::int AS avg_days,
+          COUNT(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM "public"."booking_driver_wage_changes" c WHERE c."assignment_id" = a."id"
+          ))::int AS edited_trips
+        FROM "public"."booking_driver_assignments" a
+        WHERE a."tenant_id" = ${tenantId}
+          AND a."driver_id" = ${driverId}
+          AND a."accepted_at" IS NOT NULL
+          AND a."ended_at" >= ${from} AND a."ended_at" < ${to}`,
+      this.prisma.$queryRaw<{ month: string; trips: number; wage_total: string }[]>`
+        SELECT
+          to_char(a."ended_at" AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM') AS month,
+          COUNT(*) FILTER (WHERE a."outcome" = ${COMPLETED})::int AS trips,
+          ROUND(COALESCE(SUM(a."wage_amount") FILTER (
+            WHERE a."outcome" = ${COMPLETED} OR a."wage_amount" > 0
+          ), 0))::text AS wage_total
+        FROM "public"."booking_driver_assignments" a
+        WHERE a."tenant_id" = ${tenantId}
+          AND a."driver_id" = ${driverId}
+          AND a."accepted_at" IS NOT NULL
+          AND a."ended_at" >= ${trendFrom} AND a."ended_at" < ${to}
+        GROUP BY 1`,
+      this.prisma.$queryRaw<
+        { accepted: number; declined: number; expired: number; median_seconds: number | null }[]
+      >`
+        SELECT
+          COUNT(*) FILTER (WHERE a."accepted_at" IS NOT NULL)::int AS accepted,
+          COUNT(*) FILTER (WHERE a."accepted_at" IS NULL AND a."outcome" = ${DRIVER_ASSIGNMENT_OUTCOME.DECLINED})::int AS declined,
+          COUNT(*) FILTER (WHERE a."accepted_at" IS NULL AND a."outcome" = ${DRIVER_ASSIGNMENT_OUTCOME.EXPIRED})::int AS expired,
+          percentile_cont(0.5) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (COALESCE(a."accepted_at", a."ended_at") - a."assigned_at"))
+          ) FILTER (
+            WHERE a."accepted_at" IS NOT NULL OR a."outcome" = ${DRIVER_ASSIGNMENT_OUTCOME.DECLINED}
+          ) AS median_seconds
+        FROM "public"."booking_driver_assignments" a
+        WHERE a."tenant_id" = ${tenantId}
+          AND a."driver_id" = ${driverId}
+          AND a."assigned_at" >= ${since}`,
+      this.prisma.bookingDriverAssignment.aggregate({
+        where: { ...openWhere, acceptedAt: { not: null } },
+        _count: { _all: true },
+        _sum: { wageAmount: true },
+      }),
+      this.prisma.bookingDriverAssignment.count({ where: { ...openWhere, acceptedAt: null } }),
+    ]);
+
+    const byMonth = new Map(trendRows.map((r) => [r.month, r]));
+    const trend = Array.from({ length: DRIVER_WAGE_TREND_MONTHS }, (_, i) => {
+      const key = shiftMonthKey(monthKey, i - (DRIVER_WAGE_TREND_MONTHS - 1));
+      const r = byMonth.get(key);
+      return { month: key, trips: r?.trips ?? 0, wageTotal: r?.wage_total ?? '0' };
+    });
+
+    const decided = reliability!.accepted + reliability!.declined + reliability!.expired;
+    const avgDays = stats!.avg_days;
+    return {
+      driver: driver!,
+      month: {
+        month: monthKey,
+        completedTrips: stats!.completed_trips,
+        drivenDays: stats!.driven_days,
+        completedWage: stats!.completed_wage,
+        agreedTrips: stats!.agreed_trips,
+        agreedWage: stats!.agreed_wage,
+        wageTotal: String(Number(stats!.completed_wage) + Number(stats!.agreed_wage)),
+        averageDailyWage: avgDays > 0 ? String(Math.round(Number(stats!.avg_wage) / avgDays)) : null,
+        editedTrips: stats!.edited_trips,
+      },
+      upcoming: {
+        acceptedTrips: accepted._count._all,
+        acceptedWage: (accepted._sum.wageAmount ?? new Prisma.Decimal(0)).toFixed(0),
+        pendingTrips,
+      },
+      reliability: {
+        windowDays: DRIVER_DROP_STATS_WINDOW_DAYS,
+        decided,
+        accepted: reliability!.accepted,
+        declined: reliability!.declined,
+        expired: reliability!.expired,
+        acceptRate: decided > 0 ? Math.round((reliability!.accepted / decided) * 100) : null,
+        medianResponseMinutes:
+          reliability!.median_seconds == null
+            ? null
+            : Math.max(0, Math.round(Number(reliability!.median_seconds) / 60)),
+      },
+      trend,
     };
   }
 
@@ -1718,7 +1868,15 @@ export class DriversService {
           endedAt: true,
           wageAmount: true,
           wageDays: true,
-          booking: { select: { id: true, code: true, pickupAt: true, returnAt: true } },
+          booking: {
+            select: {
+              id: true,
+              code: true,
+              pickupAt: true,
+              returnAt: true,
+              vehicle: { select: { name: true, plateNumber: true } },
+            },
+          },
         },
       }),
     ]);
@@ -1734,6 +1892,8 @@ export class DriversService {
         stage: driverWageStage(r),
         wageAmount: r.wageAmount ? r.wageAmount.toFixed(0) : null,
         wageDays: r.wageDays,
+        vehiclePlate: r.booking.vehicle.plateNumber,
+        vehicleName: r.booking.vehicle.name,
       })),
       meta: paginationMeta(paging, total),
     };
@@ -2178,6 +2338,12 @@ export function toWageDto(r: WageSource, limits: WithDriverLimits, now: Date = n
       changedByName: c.changer?.displayName ?? null,
     })),
   };
+}
+
+/** Tháng `YYYY-MM` lùi/tiến `delta` tháng — `Date.UTC` tự qua năm khi tháng âm hoặc > 11. */
+export function shiftMonthKey(key: string, delta: number): string {
+  const [y, m] = key.split('-').map(Number) as [number, number];
+  return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7);
 }
 
 /** Khoảng `[đầu tháng; đầu tháng sau)` của tháng `YYYY-MM` theo giờ Việt Nam (UTC+7, không DST). */

@@ -97,7 +97,7 @@
         "label": "Email liên hệ của gian hàng",
         "placeholder": "lienhe@tencuahang.vn"
       },
-      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT/email bạn dùng để đăng nhập — đổi một bên không làm đổi bên kia.",
+      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT và email của tài khoản đăng nhập — đổi một bên không làm đổi bên kia.",
       "bio": {
         "label": "Giới thiệu",
         "placeholder": "Mô tả ngắn về gian hàng…"

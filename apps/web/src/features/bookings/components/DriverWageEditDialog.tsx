@@ -6,18 +6,11 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
-import {
-  DRIVER_WAGE_REASON_MAX_LENGTH,
-  DRIVER_WAGE_STAGE,
-  MONEY_STEP_VND,
-  PERMISSION,
-} from '@xeprime/types';
+import { DRIVER_WAGE_REASON_MAX_LENGTH, DRIVER_WAGE_STAGE, MONEY_STEP_VND } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { useUpdateDriverWageSettings } from '@/features/drivers/hooks/use-drivers';
-import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useDriverWageQuote } from '../hooks/use-booking';
@@ -37,7 +30,8 @@ import styles from './DriverWageDialogs.module.css';
  * lịch sử và báo tài xế.
  *
  *  - Chuyến đang mời / đang chạy / đã xong: nhập MỨC/NGÀY × số ngày HIỆN TẠI của đơn (server chụp
- *    lại số ngày khi ghi), kèm lựa chọn chỉ chuyến này hay đổi luôn mức chung cho các lượt gán sau.
+ *    lại số ngày khi ghi). Sửa trên một đơn chỉ áp cho CHÍNH chuyến đó — đổi mức chung cho các lượt
+ *    gán sau là việc của hộp gán và trang Tài xế, không phải của hộp sửa.
  *  - Chuyến đã nhận mà không chạy: một con số hai bên thoả thuận (0 nếu không có) — không theo ngày,
  *    không đụng mức chung.
  *
@@ -106,21 +100,16 @@ function DailyWageEditForm({
   const fmt = useAppFormat();
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
-  const { has } = usePermissions();
   const update = useUpdateDriverWage(bookingId);
-  const saveDefault = useUpdateDriverWageSettings();
-  const canSetDefault = has(PERMISSION.DRIVER_MANAGE);
   const wage = item.wage;
 
   const base = useDailyWageSchema(quote);
-  // "Không đổi gì" = cùng tổng, cùng số ngày, và không đổi mức chung.
+  // "Không đổi gì" = cùng tổng và cùng số ngày.
   const schema = useMemo(
     () =>
       base.test('changed', function (values) {
         const unchanged =
-          values.daily * quote.days === Number(wage.amount ?? -1) &&
-          quote.days === wage.days &&
-          values.scope !== WAGE_SCOPE.DEFAULT;
+          values.daily * quote.days === Number(wage.amount ?? -1) && quote.days === wage.days;
         return unchanged ? this.createError({ path: 'daily', message: tForm('errors.unchanged') }) : true;
       }),
     [base, quote.days, wage.amount, wage.days, tForm],
@@ -133,23 +122,19 @@ function DailyWageEditForm({
       reason: '',
     },
   });
-  const busy = update.isPending || saveDefault.isPending;
+  const busy = update.isPending;
 
   async function submit(values: DailyWageValues) {
     if (busy) return;
-    const daily = values.daily;
-    const amount = daily * quote.days;
-    const asDefault =
-      canSetDefault && values.scope === WAGE_SCOPE.DEFAULT && String(daily) !== quote.dailyWage;
+    const amount = values.daily * quote.days;
     const reason = values.reason.trim();
     try {
-      if (asDefault) await saveDefault.mutateAsync({ dailyWage: String(daily) });
       // Server bỏ qua khi tổng không đổi (chỉ đồng bộ số ngày) — vẫn gọi để mẫu số khớp đơn.
       await update.mutateAsync({
         assignmentId: item.id,
         body: { amount: String(amount), ...(reason ? { reason } : {}) },
       });
-      message.success(asDefault ? tForm('savedWithDefault') : t('saved'));
+      message.success(t('saved'));
       onClose();
     } catch (err) {
       message.error(errorMessage(err));
@@ -165,7 +150,7 @@ function DailyWageEditForm({
       {wage.days != null && wage.days !== quote.days ? (
         <Alert type="warning" showIcon title={t('daysChanged', { from: wage.days, to: quote.days })} />
       ) : null}
-      <DriverDailyWageFields control={control} quote={quote} canSetDefault={canSetDefault} />
+      <DriverDailyWageFields control={control} quote={quote} canSetDefault={false} />
       <TextAreaField
         control={control}
         name="reason"

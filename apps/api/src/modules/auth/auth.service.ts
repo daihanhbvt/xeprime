@@ -247,7 +247,9 @@ export class AuthService {
       await this.loginThrottle.recordFailure(realm, key);
       throw new UnauthorizedException({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
-        message: 'Email/số điện thoại hoặc mật khẩu không đúng',
+        message: realmRequiresPhoneLogin(realm)
+          ? 'Số điện thoại hoặc mật khẩu không đúng'
+          : 'Email/số điện thoại hoặc mật khẩu không đúng',
       });
     }
     if (user.status !== USER_STATUS.ACTIVE) {
