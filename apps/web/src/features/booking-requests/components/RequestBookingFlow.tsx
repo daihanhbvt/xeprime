@@ -301,7 +301,9 @@ export function RequestBookingFlow({
    * Nút đặt xe vẫn hiện như cũ. Ẩn nút không phải kiểm soát quyền (cổng thật ở backend), và ẩn
    * đi thì chủ gian hàng bấm mãi không được mà không bao giờ biết vì sao.
    */
-  const [blocked, setBlocked] = useState<'shopAccount' | 'ownVehicle' | null>(null);
+  const [blocked, setBlocked] = useState<
+    'shopAccount' | 'ownVehicle' | 'shopNotAccepting' | null
+  >(null);
   /**
    * Server vừa từ chối lượt gửi vì khách đã giữ đủ số chuyến chưa trả (`HOLD_LIMIT_REACHED`). Chỉ là
    * nguồn DỰ PHÒNG cho người chưa có phiên (không đọc được lời nhắc) — có phiên thì màn chặn đọc
@@ -973,6 +975,10 @@ export function RequestBookingFlow({
         setBlocked('ownVehicle');
         return;
       }
+      if (code === API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER) {
+        setBlocked('shopNotAccepting');
+        return;
+      }
       if (code === API_ERROR_CODE.HOLD_LIMIT_REACHED) {
         setSubmitHitHoldLimit(true);
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
@@ -1430,6 +1436,8 @@ export function RequestBookingFlow({
    *   • "Quản lý gian hàng"    — họ vào nhầm vai; đưa họ về đúng khu làm việc.
    *
    * Ca `ownVehicle` KHÔNG mời đổi tài khoản: đổi xong vẫn không phải điều họ muốn làm.
+   * Ca `shopNotAccepting` (gian hàng không nhận khách này) cũng chỉ có nút Đóng — lối đi tiếp là
+   * chọn xe của gian hàng khác; gửi lại xe này bao nhiêu lần cũng vậy.
    */
   if (blocked) {
     return (

@@ -402,6 +402,10 @@
       "ownVehicle": {
         "title": "This is your own vehicle",
         "body": "This vehicle belongs to your own shop, so you cannot book it. To reserve it for personal use, block the dates in Vehicle calendar instead."
+      },
+      "shopNotAccepting": {
+        "title": "This shop is not accepting your request",
+        "body": "The shop that owns this vehicle is not accepting booking requests from your account at the moment. You can still book vehicles from other shops on XePrime."
       }
     },
     "address": {

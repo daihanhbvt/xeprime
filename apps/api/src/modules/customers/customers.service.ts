@@ -1128,8 +1128,9 @@ function duplicatePhone(found: { id: string; fullName: string } | null): Conflic
  * Hai thông điệp cho cùng một sự thật.
  *
  * `internal`: người trong gian hàng cần biết CHÍNH XÁC chuyện gì và làm gì tiếp.
- * `public`  : khách chỉ được biết yêu cầu không nhận được — không mã riêng, không gợi ý rằng
- * có một danh sách nội bộ, không cách nào dò xem SĐT nào đang bị chặn ở gian hàng nào.
+ * `public`  : khách chỉ được biết gian hàng này không nhận yêu cầu của họ, để đi tìm xe khác —
+ * không lý do nội bộ, không gợi ý rằng có một danh sách. SĐT soát là số đã xác minh của chính
+ * phiên, nên không dò được SĐT nào đang bị chặn ở gian hàng nào.
  */
 function blockedCustomer(mode: 'internal' | 'public'): ConflictException {
   return mode === 'internal'
@@ -1139,8 +1140,8 @@ function blockedCustomer(mode: 'internal' | 'public'): ConflictException {
           'Khách đang bị đánh dấu từ chối phục vụ — chủ hoặc quản lý gian hàng cần đổi mức rủi ro trước',
       })
     : new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
+        code: API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER,
         message:
-          'Gian hàng hiện chưa thể tiếp nhận yêu cầu này. Vui lòng liên hệ gian hàng để được hỗ trợ.',
+          'Gian hàng sở hữu xe này hiện không nhận yêu cầu đặt xe từ tài khoản của bạn. Vui lòng chọn xe của gian hàng khác.',
       });
 }
