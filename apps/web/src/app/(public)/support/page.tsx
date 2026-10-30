@@ -37,10 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('subtitle'),
-    // Chừng nào kênh liên hệ còn là chỗ trống thì trang này KHÔNG được đánh chỉ mục: một trang
-    // hỗ trợ đứng trong kết quả tìm kiếm mà không liên hệ được còn tệ hơn không có trang nào.
-    // Gỡ dòng này cùng lúc với việc điền kênh liên hệ thật.
-    robots: { index: false, follow: true },
   };
 }
 
@@ -49,7 +45,7 @@ function isPlaceholder(value: string): boolean {
   return value.trim().startsWith('«');
 }
 
-const CHANNELS = ['hotline', 'email', 'hours'] as const;
+const CHANNELS = ['hotline', 'email'] as const;
 const CHECKLIST = ['tripCode', 'phone', 'evidence', 'expectation'] as const;
 
 export default async function SupportPage() {

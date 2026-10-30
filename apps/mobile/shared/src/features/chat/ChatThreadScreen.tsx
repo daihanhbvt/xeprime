@@ -19,12 +19,12 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/layout/Screen';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ScreenError } from '@/components/state/ScreenError';
-import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatComposer } from './components/ChatComposer';
+import { ChatThreadSkeleton } from './components/ChatThreadSkeleton';
 import { MessageBubble } from './components/MessageBubble';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversation } from './hooks/use-chat';
@@ -244,7 +244,7 @@ export function ChatThreadScreen({
       <>
         <AppHeader onBack={() => router.back()} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenLoading />
+          <ChatThreadSkeleton />
         </Screen>
       </>
     );
@@ -319,7 +319,7 @@ export function ChatThreadScreen({
             })}
       >
         {thread.loading ? (
-          <ScreenLoading />
+          <ChatThreadSkeleton />
         ) : thread.error ? (
           <ScreenError
             error={thread.error}
