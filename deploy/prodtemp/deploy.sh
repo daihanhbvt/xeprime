@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # Deploy PRODUCTION TẠM lên máy staging. Chạy từ GỐC REPO (/opt/xeprime), bằng user `xeprime`:
 #
-#   ./deploy/prodtemp/deploy.sh --image ghcr.io/daihanhbvt/xeprime:prodtemp-<sha>
+#   ./deploy/prodtemp/deploy.sh --image ghcr.io/daihanhbvt/xeprime:prodtemp-<sha> [--env-from <file>]
 #
-# Đường thường: push nhánh `prodtemp` → .github/workflows/deploy-prodtemp.yml build, chạy thử rồi
-# SSH vào đây gọi đúng lệnh trên. Chạy tay cũng được (rollback: truyền tag của lần trước).
+# Đường thường: push nhánh `prodtemp` → .github/workflows/deploy-prodtemp.yml build, chạy thử, dựng
+# file env từ GitHub Environment `prodtemp`, rồi SSH (khoá bị khoá lệnh — ssh-gate.sh) gọi lệnh
+# trên kèm `--env-from`. Chạy tay không có `--env-from` = giữ nguyên `.env.prodtemp` đang có
+# (rollback: truyền tag của lần trước).
+#
+# `.env.prodtemp` do workflow SINH LẠI mỗi lần deploy — sửa tay trên VPS sẽ bị ghi đè; đổi giá trị
+# ở GitHub. File mới chỉ thay file cũ SAU KHI qua bộ luật env production của chính image api sắp
+# chạy; bản trước còn lại ở `.env.prodtemp.prev`.
 #
 # Thứ tự giống deploy/scripts/deploy.sh và vì cùng lý do — sao lưu → pull → migrate → app — cộng
 # thêm bước cuối riêng của bản tạm: cài khối site vào Caddy của STAGING.
@@ -17,12 +23,17 @@ cd "$(dirname "$0")/../.."
 
 XP_ENV=prodtemp
 XP_IMAGE=''
+ENV_FROM=''
 KEEP_RELEASES=3
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --image)
       XP_IMAGE="${2:-}"
+      shift 2
+      ;;
+    --env-from)
+      ENV_FROM="${2:-}"
       shift 2
       ;;
     *) echo "Tham số không hiểu: $1" >&2; exit 1 ;;
@@ -38,12 +49,22 @@ fail() { printf '\n\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 [[ "${XP_IMAGE##*:}" == prodtemp-* ]] || fail "Chỉ nhận tag prodtemp-*, nhận được: $XP_IMAGE"
 
 ENV_FILE=".env.$XP_ENV"
-[[ -f "$ENV_FILE" ]] || fail "$ENV_FILE chưa có. Chạy một lần: ./deploy/prodtemp/make-env.sh"
-chmod 600 "$ENV_FILE"
+if [[ -n "$ENV_FROM" ]]; then
+  [[ -s "$ENV_FROM" ]] || fail "--env-from $ENV_FROM không có hoặc rỗng."
+  chmod 600 "$ENV_FROM"
+else
+  [[ -f "$ENV_FILE" ]] || fail "$ENV_FILE chưa có — deploy qua workflow (nó mang file env theo)."
+  chmod 600 "$ENV_FILE"
+fi
 
-export XP_IMAGE XP_ENV_FILE="$ENV_FILE"
-COMPOSE=(docker compose -p "xeprime-$XP_ENV" --project-directory . -f deploy/prodtemp/docker-compose.yml
-  --profile tools --env-file "$ENV_FILE")
+# Compose của một file env cho trước — nội suy (`--env-file`) và nạp vào container (`XP_ENV_FILE`)
+# phải là CÙNG một file.
+compose_with() {
+  XP_ENV_FILE="$1" docker compose -p "xeprime-$XP_ENV" --project-directory . \
+    -f deploy/prodtemp/docker-compose.yml --profile tools --env-file "$1" "${@:2}"
+}
+
+export XP_IMAGE
 
 # Caddy của staging là cửa vào duy nhất của bản tạm. Tìm theo nhãn compose, không theo tên đoán.
 CADDY="$(docker ps -q --filter label=com.docker.compose.project=xeprime-staging \
@@ -52,17 +73,35 @@ CADDY="$(docker ps -q --filter label=com.docker.compose.project=xeprime-staging 
 
 log "Production tạm · image $XP_IMAGE"
 
-# --- Sao lưu trước khi đụng vào gì ------------------------------------------
+# --- Image (GHCR public — không cần đăng nhập) -------------------------------
+# Pull TRƯỚC: bước kiểm env dưới chạy bằng chính image api sắp lên.
+log 'Pull image'
+compose_with "${ENV_FROM:-$ENV_FILE}" pull migrate prod-api prod-web worker \
+  || fail "Không pull được $XP_IMAGE-* — kiểm tra tag có tồn tại."
+
+# --- File env mới từ GitHub -------------------------------------------------
+# Kiểm bằng `validateEnv` của image api SẮP CHẠY — đúng bộ luật sẽ quyết định nó có boot hay không.
+# Sai thì DỪNG khi chưa đụng gì: file cũ, container cũ, database nguyên vẹn. Đỏ ở đây rẻ hơn nhiều
+# so với một api crash-loop sau khi migrate đã chạy.
+if [[ -n "$ENV_FROM" ]]; then
+  log 'Kiểm file env mới (bộ luật env production của image api)'
+  ( set -a; . "./$ENV_FROM" ) >/dev/null 2>&1 || fail 'File env mới không source được bằng bash.'
+  compose_with "$ENV_FROM" run --rm --no-deps -T prod-api node -e '
+    try { require("./dist/config/env.schema").validateEnv(process.env); }
+    catch (e) { console.error(e.message); process.exit(1); }' \
+    || fail 'File env mới KHÔNG hợp lệ (lỗi in ở trên) — giữ nguyên .env.prodtemp, không deploy. Sửa ở GitHub → Environments → prodtemp.'
+  [[ -f "$ENV_FILE" ]] && cp -p "$ENV_FILE" "$ENV_FILE.prev"
+  mv "$ENV_FROM" "$ENV_FILE"
+fi
+
+COMPOSE=(compose_with "$ENV_FILE")
+
+# --- Sao lưu trước khi migrate ----------------------------------------------
 if [[ -n "$("${COMPOSE[@]}" ps -q db 2>/dev/null || true)" ]]; then
   log 'Sao lưu database (trước khi migrate)'
   ./deploy/scripts/backup-db.sh --env "$XP_ENV" \
     || fail 'Sao lưu thất bại — DỪNG. Không migrate khi chưa có bản lùi.'
 fi
-
-# --- Image (GHCR public — không cần đăng nhập) -------------------------------
-log 'Pull image'
-"${COMPOSE[@]}" pull migrate prod-api prod-web worker \
-  || fail "Không pull được $XP_IMAGE-* — kiểm tra tag có tồn tại."
 
 # --- Database ---------------------------------------------------------------
 log 'PostgreSQL'
