@@ -6,7 +6,8 @@ import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { DayCell, MonthGrid, type DayMark, visibleDays } from './MonthGrid';
 import { StepSlider } from './StepSlider';
-import { colors, fieldFontSize, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Kéo theo TỪNG PHÚT, không nhảy 15 một.
@@ -101,6 +102,7 @@ export function MomentPickerSheet({
   notBefore?: Dayjs;
   notAfter?: Dayjs;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.actions');
   const tMoment = useTranslations('Common.components.moment');
 
@@ -299,6 +301,7 @@ function SummaryCard({
   value: string;
   highlighted?: boolean;
 }) {
+  const colors = useColors();
   return (
     <YStack
       f={1}

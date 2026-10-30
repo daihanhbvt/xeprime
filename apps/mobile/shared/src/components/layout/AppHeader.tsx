@@ -1,12 +1,15 @@
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { ReactNode } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { images, logoWidth } from '@/assets';
+import { images } from '@/assets';
 import { IconButton } from '@/components/ui/IconButton';
 import { APP_NAME } from '@/lib/app-name';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 const APP_HEADER_HEIGHT = 56;
 /** Nhãn cạnh tiêu đề chiếm tối đa ngần này bề ngang hàng tiêu đề — phần còn lại luôn để cho tên. */
@@ -95,6 +98,11 @@ interface AppHeaderProps {
    * thái. Màn thường KHÔNG truyền — thanh tự lo cạnh trên là mặc định đúng.
    */
   flushTop?: boolean;
+  /**
+   * Khối nằm DƯỚI hàng tiêu đề, cùng nền thanh (Figma "List - MB": "Bước n / N" + vạch tiến trình).
+   * Có nó thì thanh dùng khuôn TRANG: nút lui tròn có nền, tiêu đề to đậm (người dùng chốt 28/10/2026).
+   */
+  below?: ReactNode;
 }
 
 /**
@@ -116,7 +124,9 @@ export function AppHeader({
   tone = 'surface',
   showTitle = true,
   flushTop = false,
+  below,
 }: AppHeaderProps) {
+  const colors = useColors();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
   const overlay = variant === 'overlay';
@@ -148,7 +158,7 @@ export function AppHeader({
           label={t('back')}
           onPress={onBack}
           // Nền tròn ở biến thể nổi: mũi tên trần biến mất trên ảnh sáng.
-          tone={overlay ? 'surface' : 'plain'}
+          tone={overlay || below ? 'surface' : 'plain'}
         />
       ) : (
         (left ?? null)
@@ -180,8 +190,8 @@ export function AppHeader({
                 <Text
                   flexShrink={1}
                   col={fg}
-                  fos={fontSize.body}
-                  fow={fontWeight.semibold}
+                  fos={below ? fontSize.h4 : fontSize.body}
+                  fow={below ? fontWeight.bold : fontWeight.semibold}
                   numberOfLines={1}
                 >
                   {title}
@@ -226,6 +236,11 @@ export function AppHeader({
     return (
       <YStack bg={bg}>
         {bar}
+        {below ? (
+          <YStack px={layout.screenX} pb={space.sm}>
+            {below}
+          </YStack>
+        ) : null}
         <YStack
           h={HEADER_RULE}
           opacity={HEADER_RULE_OPACITY}
@@ -235,8 +250,22 @@ export function AppHeader({
     );
   }
 
+  /*
+    Cuộn qua ảnh (`showTitle` bật) ⇒ thanh nổi ĐẶC NỀN, phủ cả dải thanh trạng thái: thanh trong
+    suốt để nội dung trang trôi xuyên dưới nút quay lại và dưới giờ/pin (so web 21/10/2026, header
+    web dính và có nền). Còn trên ảnh thì vẫn trong suốt như cũ.
+  */
+  const solid = Boolean(showTitle && title);
   return (
-    <YStack pos="absolute" top={0} left={0} right={0} zi={10} pt={insets.top}>
+    <YStack
+      pos="absolute"
+      top={0}
+      left={0}
+      right={0}
+      zi={10}
+      pt={insets.top}
+      {...(solid ? { bg, borderBottomWidth: 1, borderColor: colors.borderSubtle } : {})}
+    >
       {bar}
     </YStack>
   );
@@ -246,7 +275,6 @@ export function AppHeader({
 const BRAND_LOGO = 24;
 
 const styles = StyleSheet.create({
-  lockup: { width: logoWidth(BRAND_LOGO), height: BRAND_LOGO },
   mark: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },
 });
 
@@ -258,6 +286,7 @@ const styles = StyleSheet.create({
  * ở đó là biểu tượng vuông cộng tên viết bằng `onPrimary`.
  */
 function BrandMark({ tone }: { tone: Tone }) {
+  const colors = useColors();
   if (tone === 'brand') {
     return (
       <XStack ai="center" gap={space.xs}>
@@ -271,12 +300,6 @@ function BrandMark({ tone }: { tone: Tone }) {
   }
 
   return (
-    <Image
-      source={images.logo}
-      style={styles.lockup}
-      resizeMode="contain"
-      accessibilityRole="image"
-      accessibilityLabel={APP_NAME}
-    />
+    <BrandLogo height={BRAND_LOGO} />
   );
 }

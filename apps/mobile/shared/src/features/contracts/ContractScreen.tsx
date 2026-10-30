@@ -14,7 +14,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useContract } from './hooks/use-contract';
 import type { ContractSnapshot } from './api';
 
@@ -89,6 +90,7 @@ function ContractBody({
   onRefresh: () => void;
   onBack: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.contract');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -274,6 +276,7 @@ function ContractBody({
 }
 
 function SectionTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
       {children.toUpperCase()}
@@ -282,6 +285,7 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function Line({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.bodySm}>
       {children}
@@ -290,6 +294,7 @@ function Line({ children }: { children: string }) {
 }
 
 function Term({ index, children }: { index: number; children: string }) {
+  const colors = useColors();
   return (
     <XStack gap={space.xs}>
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -303,6 +308,7 @@ function Term({ index, children }: { index: number; children: string }) {
 }
 
 function SignBlock({ role, hint }: { role: string; hint: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} ai="center" gap={2}>
       <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="center">

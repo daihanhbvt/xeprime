@@ -76,6 +76,8 @@ export function FeePolicyFormModal({
         taxRateRequired: t('form.validation.taxRateRequired'),
         taxLegalBasisRequired: t('form.validation.taxLegalBasisRequired'),
         partnerRequired: t('form.validation.partnerRequired'),
+        limitOrder: t('form.validation.limitOrder'),
+        suggestedInRange: t('form.validation.suggestedInRange'),
         blocker: (code) => domainLabel('feePolicyActivationBlocker', code),
       }),
     [t, domainLabel],
@@ -298,6 +300,56 @@ export function FeePolicyFormModal({
             <p className={styles.hint}>{t('form.taxScope')}</p>
           </>
         ) : null}
+
+        {/* Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075) — không phải dòng tiền. */}
+        <Divider plain>{t('form.sectionWithDriver')}</Divider>
+        <p className={styles.hint}>{t('form.withDriverLimitsHint')}</p>
+        <NumberField
+          control={control}
+          name="withDriverLimits.priceMin"
+          label={t('form.withDriverPriceMin')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+        />
+        <NumberField
+          control={control}
+          name="withDriverLimits.priceMax"
+          label={t('form.withDriverPriceMax')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+        />
+        <NumberField
+          control={control}
+          name="withDriverLimits.wageMin"
+          label={t('form.driverWageMin')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+        />
+        <NumberField
+          control={control}
+          name="withDriverLimits.wageMax"
+          label={t('form.driverWageMax')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+        />
+        <NumberField
+          control={control}
+          name="withDriverLimits.wageSuggested"
+          label={t('form.driverWageSuggested')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+          help={t('form.driverWageSuggestedHint')}
+        />
 
         {policy && policy.activationBlockers.length > 0 ? (
           <Alert

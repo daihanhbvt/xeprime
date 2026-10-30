@@ -142,30 +142,23 @@ textarea {
   transform: none !important;
 }
 
+/**
+ * Giảm chuyển động cho phần tử của dự án. KHÔNG dùng `!important`: lớp motion của AntD
+ * (`.ant-zoom-appear`…) có specificity cao hơn `*` nên giữ được thời lượng riêng. Motion của AntD
+ * tắt đúng đường qua token `motion` ở `providers.tsx` (`usePrefersReducedMotion`).
+ *
+ * `transition-duration` phải là `0s`, KHÔNG phải `0.01ms`: `transition-property` mặc định là `all`,
+ * nên một thời lượng > 0 trên `*` BẬT transition cho mọi thuộc tính của mọi phần tử — kể cả `inset`
+ * của popup AntD. `@rc-component/trigger` đặt lại vị trí rồi đo ngay, đọc trúng giá trị đầu của
+ * transition (toạ độ tạm `-1000vw/-1000vh`) và đẩy popup ra ngoài màn hình đúng một khoảng đó.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  /**
-   * Khi Windows tắt Animation effects (`prefers-reduced-motion: reduce`), `0.01ms` có thể kết thúc
-   * trước khi `CSSMotion` kịp gắn listener `animationend`, khiến các lớp `-appear`/`-enter` của
-   * AntD giữ mãi `opacity: 0; transform: scale(0)`. Cưỡng bức hiển thị ngay ở trạng thái mở.
-   */
-  [class*='ant-zoom'][class*='-appear'],
-  [class*='ant-zoom'][class*='-enter'],
-  [class*='ant-slide'][class*='-appear'],
-  [class*='ant-slide'][class*='-enter'],
-  [class*='ant-fade'][class*='-appear'],
-  [class*='ant-fade'][class*='-enter'],
-  [class*='ant-move'][class*='-appear'],
-  [class*='ant-move'][class*='-enter'] {
-    opacity: 1 !important;
-    transform: none !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0s;
   }
 }
 

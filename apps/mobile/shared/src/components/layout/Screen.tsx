@@ -1,3 +1,4 @@
+import { useTabBarInset } from './tab-bar-inset';
 import {
   useCallback,
   useEffect,
@@ -7,7 +8,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Dimensions, Keyboard, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Dimensions, Keyboard, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, {
   KeyboardState,
   runOnJS,
@@ -25,7 +26,8 @@ import {
   type KeyboardHold,
 } from './focus-reveal';
 import { layout } from '@/theme/layout';
-import { colors, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 
 /**
  * Đệm thêm dưới nội dung KHI bàn phím mở.
@@ -136,6 +138,8 @@ export function Screen({
   scrollRef,
   hideFooterWhileTyping = false,
 }: ScreenProps) {
+  const colors = useColors();
+  const styles = useStyles();
   /**
    * Chiều cao bàn phím đọc từ WINDOW INSET, không từ sự kiện `keyboardDidShow`.
    *
@@ -154,6 +158,8 @@ export function Screen({
   /** Giá trị đã đẩy sang JS lần gần nhất — chốt chặn để không gọi lại với cùng con số. */
   const lastPushed = useSharedValue(-1);
   const insets = useSafeAreaInsets();
+  // Thanh tab nổi đè lên nội dung — màn cuộn chừa đuôi bằng chiều cao của nó (0 ngoài bộ tab).
+  const tabBarInset = useTabBarInset();
   /**
    * Trừ phần safe area ĐÁY: `SafeAreaView` đã chừa sẵn dải điều hướng, còn inset của bàn phím
    * đo từ mép dưới CÙNG của cửa sổ. Không trừ thì một dải trống bằng đúng thanh điều hướng
@@ -342,7 +348,9 @@ export function Screen({
       ref={attachScroller}
       contentContainerStyle={[
         contentStyle,
-        keyboardTail > 0 ? { paddingBottom: (padded ? space.lg : 0) + keyboardTail } : null,
+        keyboardTail > 0 || tabBarInset > 0
+          ? { paddingBottom: (padded ? space.lg : 0) + Math.max(keyboardTail, tabBarInset) }
+          : null,
       ]}
       keyboardShouldPersistTaps="handled"
       // Đang giữ bàn phím cho danh sách gợi ý: kéo trang KHÔNG được làm ô mất tiêu điểm.
@@ -370,6 +378,17 @@ export function Screen({
     <View style={[contentStyle, styles.flex]}>{children}</View>
   );
 
+  /*
+   * Thanh nút DÍNH ĐÁY tự lo cạnh dưới (người dùng chốt 28/10/2026, cùng luật thanh tab): đệm đáy
+   * ĐỘNG = max(safe area, 16) + 8 — máy trả inset 0 vẫn không chạm mép, máy vuốt có khoảng riêng.
+   * SafeAreaView vẫn cộng `insets.bottom` khi màn khai cạnh dưới (giữ nguyên phép bù bàn phím đang dựa
+   * vào nó), nên thanh chỉ thêm PHẦN CÒN THIẾU tới tổng đó. Bàn phím mở thì giữ đệm thường.
+   */
+  const bottomEdge = !edges || edges.includes('bottom');
+  const footerBottom = keyboardOpen
+    ? space.md
+    : Math.max(insets.bottom, space.md) + space.sm - (bottomEdge ? insets.bottom : 0);
+
   return (
     <SafeAreaView style={styles.flex} {...(edges ? { edges } : {})}>
       {/*
@@ -391,7 +410,7 @@ export function Screen({
           <KeyboardHoldProvider value={keyboardHold}>
             {body}
             {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
-              <View style={styles.footer}>{footer}</View>
+              <View style={[styles.footer, { paddingBottom: footerBottom }]}>{footer}</View>
             ) : null}
           </KeyboardHoldProvider>
         </FocusRevealProvider>
@@ -400,7 +419,7 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: {
     backgroundColor: colors.background,
     flex: 1,
@@ -424,4 +443,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
     paddingVertical: space.md,
   },
-});
+}));

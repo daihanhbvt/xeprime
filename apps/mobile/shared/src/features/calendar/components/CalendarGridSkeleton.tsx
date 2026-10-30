@@ -1,7 +1,8 @@
 import { XStack, YStack } from 'tamagui';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { colors, radius, space } from '@/theme/tokens';
-import { CAL_SURFACE } from '../calendar-tone';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space } from '@/theme/tokens';
+import { useCalSurface } from '../calendar-tone';
 import { GRID_METRICS } from './CalendarTimeline';
 
 /** Số hàng vẽ sẵn — đủ phủ một màn cao, thừa vài hàng thì bị cắt chứ không để hở đáy. */
@@ -28,6 +29,8 @@ const DAYS = 8;
  * thật, và không bao giờ để hở một mảng trắng bên phải.
  */
 export function CalendarGridSkeleton() {
+  const CAL_SURFACE = useCalSurface();
+  const colors = useColors();
   const { headerHeight, rowHeight, summaryHeight, resourceWidth, minDayWidth } = GRID_METRICS;
 
   return (

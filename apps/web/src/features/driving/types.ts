@@ -8,6 +8,7 @@ export type DriverEmployer = Schemas['DriverEmployerDto'];
 export type DriverTrip = Schemas['DriverTripDto'];
 export type DriverTripDetail = Schemas['DriverTripDetailDto'];
 export type DriverPendingCounts = Schemas['DriverPendingCountsDto'];
+export type DropDriverTripBody = Schemas['DropDriverTripDto'];
 
 // Phạm vi liên kết dùng chung với API và app native (@xeprime/types).
 export { DRIVER_LINK_SCOPE, type DriverLinkScope } from '@xeprime/types';

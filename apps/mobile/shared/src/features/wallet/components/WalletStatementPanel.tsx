@@ -1,7 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { absoluteMoney, isNegativeMoney, isZeroMoney, nowInAppTz } from '@xeprime/domain';
+import {
+  absoluteMoney,
+  isNegativeMoney,
+  isPositiveMoney,
+  isZeroMoney,
+  nowInAppTz,
+} from '@xeprime/domain';
 import {
   ACCOUNT_TRACK,
   STATUS_COLOR,
@@ -15,15 +21,18 @@ import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import type { IconName } from '@/components/ui/Chip';
 import { Divider } from '@/components/ui/DataRow';
+import { DeductedAmount } from '@/components/ui/DeductedAmount';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { Pagination } from '@/components/ui/Pagination';
 import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   WALLET_STATEMENT_PAGE_SIZE,
   type WalletStatementFilters,
@@ -60,6 +69,7 @@ export function WalletStatementPanel({
   filters: WalletStatementFilters;
   onFiltersChange: (patch: Partial<WalletStatementFilters>) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -83,6 +93,13 @@ export function WalletStatementPanel({
   const items = data?.items ?? [];
   const stats = data?.stats;
   const totals = data?.totals;
+  /*
+   * Hoa hồng `H` do CHỦ XE chịu (ADR 0064 điều 3) — dòng chỉ hiện khi KỲ có hoa hồng (số của cả kỳ,
+   * nên lật trang không làm dòng nhảy ra nhảy vào): tuyến gói luôn `H = 0`. Như web.
+   */
+  const showCommission = isPositiveMoney(totals?.ownerCommissionTotal);
+  // Cột "Phí giao xe" — chỉ có khi kỳ có chuyến giao tận nơi, như web.
+  const showDelivery = isPositiveMoney(totals?.deliveryTotal);
 
   /** Tháng sau chưa xảy ra — trần là tháng HIỆN TẠI theo giờ VN, đúng `maxDate` của web. */
   const maxPeriod = useMemo(() => nowInAppTz().format(MONTH_PERIOD_FORMAT), []);
@@ -169,7 +186,14 @@ export function WalletStatementPanel({
         </Card>
       ) : null}
 
-      {query.isFetching ? null : items.map((trip) => <TripCard key={trip.bookingId} trip={trip} />)}
+      {query.isFetching ? null : items.map((trip) => (
+            <TripCard
+              key={trip.bookingId}
+              trip={trip}
+              showCommission={showCommission}
+              showDelivery={showDelivery}
+            />
+          ))}
 
       {(data?.total ?? 0) > 0 ? (
         <YStack gap={space.xs}>
@@ -208,6 +232,21 @@ export function WalletStatementPanel({
                 }
               />
             )}
+            {/*
+              Phí giao xe đứng RIÊNG (ADR 0068 điều 5): khách trả tận tay, chủ xe hưởng trọn, không
+              chịu phí dịch vụ hay thuế. Chỉ hiện khi kỳ có chuyến giao tận nơi — như web.
+            */}
+            {isZeroMoney(totals.deliveryTotal) ? null : (
+              <SummaryRow
+                label={t('totals.delivery')}
+                hint={t('totals.deliveryHint')}
+                value={
+                  <Text col={colors.text} fos={fontSize.bodySm}>
+                    {fmt.money(totals.deliveryTotal)}
+                  </Text>
+                }
+              />
+            )}
             {isZeroMoney(totals.subscriptionFeeTotal) ? null : (
               <SummaryRow
                 label={t('totals.appSubscriptionFee')}
@@ -218,19 +257,15 @@ export function WalletStatementPanel({
                 }
               />
             )}
+            {showCommission ? (
+              <SummaryRow
+                label={t('totals.commission')}
+                value={<DeductedAmount emphasis value={totals.ownerCommissionTotal} />}
+              />
+            ) : null}
             <SummaryRow
               label={t('totals.tax')}
-              value={
-                isZeroMoney(totals.taxTotal) ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {fmt.money('0')}
-                  </Text>
-                ) : (
-                  <Text col={colors.danger} fos={fontSize.bodySm}>
-                    {`−${fmt.money(totals.taxTotal)}`}
-                  </Text>
-                )
-              }
+              value={<DeductedAmount emphasis value={totals.taxTotal} />}
             />
           </YStack>
           <Divider />
@@ -258,7 +293,19 @@ export function WalletStatementPanel({
  * Mã chuyến đứng đầu và KHÔNG bị cắt: nó là thứ chủ xe dùng để đối chiếu với chứng từ, và một mã
  * thiếu ba ký tự cuối thì vô dụng.
  */
-function TripCard({ trip }: { trip: WalletStatementTrip }) {
+function TripCard({
+  trip,
+  showCommission,
+  showDelivery,
+}: {
+  trip: WalletStatementTrip;
+  /** Kỳ có hoa hồng — cùng cờ với dòng tổng, để mọi thẻ của một kỳ cùng một hình. */
+  showCommission: boolean;
+  /** Kỳ có chuyến giao tận nơi — cùng cờ với cột "Phí giao xe" của web. */
+  showDelivery: boolean;
+}) {
+  const [payoutOpen, setPayoutOpen] = useState(false);
+  const colors = useColors();
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -326,22 +373,57 @@ function TripCard({ trip }: { trip: WalletStatementTrip }) {
                 </Text>
               }
             />
+            {showCommission ? (
+              <Row
+                label={t('columns.commission')}
+                value={<DeductedAmount emphasis value={trip.ownerCommissionAmount} />}
+              />
+            ) : null}
             {/* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */}
             <Row
               label={t('columns.tax')}
-              value={
-                isZeroMoney(trip.taxAmount) ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {fmt.money('0')}
-                  </Text>
-                ) : (
-                  <Text col={colors.danger} fos={fontSize.bodySm}>
-                    {`−${fmt.money(trip.taxAmount)}`}
-                  </Text>
-                )
-              }
+              value={<DeductedAmount emphasis value={trip.taxAmount} />}
             />
+            {showDelivery ? (
+              <Row
+                label={t('columns.delivery')}
+                value={
+                  isZeroMoney(trip.deliveryAmount) ? (
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {tCommon('labels.emptyValue')}
+                    </Text>
+                  ) : (
+                    <Text col={colors.text} fos={fontSize.bodySm}>
+                      {fmt.money(trip.deliveryAmount)}
+                    </Text>
+                  )
+                }
+              />
+            ) : null}
           </YStack>
+
+          {/*
+            Bảng cộng ví của CHUYẾN (ADR 0068 điều 5) — hàng mở rộng của bảng web; ở đây là một
+            nút mở/gập ngay trong thẻ. Đơn cũ không có bảng phí thì không có nút.
+          */}
+          {trip.ownerPayout ? (
+            <>
+              <Button
+                label={t('payout.expand')}
+                variant="ghost"
+                size="sm"
+                block={false}
+                icon={payoutOpen ? 'chevron-up' : 'chevron-down'}
+                onPress={() => setPayoutOpen((v) => !v)}
+              />
+              {payoutOpen ? (
+                <OwnerPayoutTable
+                  payout={trip.ownerPayout}
+                  label={t('payout.label', { code: trip.code })}
+                />
+              ) : null}
+            </>
+          ) : null}
         </YStack>
       </XStack>
     </Card>
@@ -349,6 +431,7 @@ function TripCard({ trip }: { trip: WalletStatementTrip }) {
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
       <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
@@ -370,6 +453,7 @@ function SummaryRow({
   value: React.ReactNode;
   highlight?: boolean;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" jc="space-between" gap={space.sm}>
       <YStack f={1} gap={2}>
@@ -404,6 +488,7 @@ function MetricCell({
   value: string;
   label: string;
 }) {
+  const colors = useColors();
   return (
     <YStack f={1} minWidth={0} ai="center" gap={space.xs} px={space.xs}>
       <IconDisc icon={icon} tone={tone} surface={surface} size={32} />
@@ -419,6 +504,7 @@ function MetricCell({
 
 /** Kẻ dọc giữ ba chỉ số thành một dải, thay vì ba mẩu chữ rời trên nền trắng. */
 function MetricDivider() {
+  const colors = useColors();
   return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" />;
 }
 
@@ -437,6 +523,7 @@ function SignedAmount({
   prominent?: boolean;
   strong?: boolean;
 }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const size = prominent ? fontSize.h4 : fontSize.bodySm;
   const weight = prominent || strong ? fontWeight.bold : fontWeight.regular;

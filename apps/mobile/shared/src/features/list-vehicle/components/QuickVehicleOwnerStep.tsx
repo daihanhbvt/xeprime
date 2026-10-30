@@ -22,7 +22,8 @@ import { CONTACT_CHANNEL } from '@/api/account/api';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /** Giới thiệu ngắn — khớp `max(200)` của schema, hiện thành bộ đếm ký tự. */
 const BIO_MAX = 200;
@@ -78,6 +79,7 @@ export function QuickVehicleOwnerStep({
   /** Phần đầu vùng cuộn (thanh bước của wizard). */
   top?: ReactNode;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
   const { data: user } = useCurrentUser();
@@ -306,6 +308,7 @@ export function QuickVehicleOwnerStep({
  * người dùng phải cuộn qua ba đoạn quảng cáo mới tới ô đầu tiên.
  */
 function OwnerReassurance() {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.ownerProfile.aside');
   const navigateOnce = useNavigateOnce();
 

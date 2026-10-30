@@ -298,7 +298,7 @@
   },
   "operationsTab": {
     "title": "Operations & rental terms",
-    "hint": "Handover hours, instant booking, rental terms and surcharges",
+    "hint": "Handover hours, instant booking and rental terms",
     "handover": "Handover hours",
     "selfDrive": "Self-drive",
     "withDriver": "Chauffeured",

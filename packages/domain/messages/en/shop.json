@@ -97,7 +97,7 @@
         "label": "Shop contact email",
         "placeholder": "contact@yourshop.vn"
       },
-      "contactHint": "Renters see this phone and email when they book. They are separate from the phone/email you sign in with — changing one does not change the other.",
+      "contactHint": "Renters see this phone and email when they book. They are separate from the phone and email on your sign-in account — changing one does not change the other.",
       "bio": {
         "label": "About the shop",
         "placeholder": "A short description of your shop…"

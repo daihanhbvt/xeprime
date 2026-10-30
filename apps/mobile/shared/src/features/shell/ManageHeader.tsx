@@ -8,7 +8,8 @@ import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ChatBadgeButton } from '@/features/chat/components/ChatBadgeButton';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { NOTIFICATION_CONTEXT } from '@/features/notifications/notification-display';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { useManageDrawer } from './ManageDrawerHost';
 import { ManageShellNotices } from './ManageShellNotices';
 import { isCommissionOwner } from './partner-track';
@@ -76,6 +77,7 @@ export function ManageHeader() {
 
 /** Dòng phụ mặc định khi không có chi nhánh nào để hiện — cùng kiểu chữ với `subtitle` của thanh. */
 function Greeting({ text }: { text: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
       {text}

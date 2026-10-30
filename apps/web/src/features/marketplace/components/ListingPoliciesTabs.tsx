@@ -17,7 +17,6 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import { isZeroMoney } from '@/lib/money';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingPoliciesTabs.module.css';
 
@@ -89,7 +88,6 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
       ? activeTerms.requiredDocuments
       : requiredIdentityDocuments(activeService);
 
-  const surchargeLine = useDriverSurchargeLine();
 
   const collateralMode = (() => {
     const collateral = listing.collateral;
@@ -190,29 +188,21 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
             </div>
           ) : null}
 
-          {/* Phụ phí tài xế — chỉ khi khách đang xem dịch vụ CÓ TÀI XẾ */}
+          {/*
+           * Giá có tài xế là giá TRỌN GÓI (ADR 0075) — chỉ khi khách đang xem dịch vụ CÓ TÀI XẾ.
+           * Không còn phụ phí tài xế nào để công bố; khách chỉ trả thêm phí cầu đường.
+           */}
           {activeService === SERVICE_TYPE.WITH_DRIVER ? (
             <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>{t('surcharges.title')}</h3>
-              {(listing.driverSurchargeRules?.length ?? 0) > 0 ? (
-                <ul className={styles.surchargeList}>
-                  {listing.driverSurchargeRules.map((rule) => (
-                    <li key={rule.kind}>{surchargeLine(rule)}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {activeTerms?.depositMode ? (
-                <div className={styles.ruleItem}>
-                  <span className={styles.bullet} />
-                  <span>
-                    {activeTerms.depositMode === 'none'
-                      ? t('terms.driverDepositNone')
-                      : t('terms.driverDeposit', {
-                          mode: domainLabel('driverDepositMode', activeTerms.depositMode),
-                        })}
-                  </span>
-                </div>
-              ) : null}
+              <h3 className={styles.subSectionTitle}>{t('withDriverPrice.title')}</h3>
+              <div className={styles.ruleItem}>
+                <span className={styles.bullet} />
+                <span>{t('withDriverPrice.included')}</span>
+              </div>
+              <div className={styles.ruleItem}>
+                <span className={styles.bullet} />
+                <span>{t('withDriverPrice.excluded')}</span>
+              </div>
             </div>
           ) : null}
 

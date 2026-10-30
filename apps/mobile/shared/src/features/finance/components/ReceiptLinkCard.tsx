@@ -14,7 +14,8 @@ import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ReceiptBookingOption, ReceiptVehicleOption } from '../api';
 
 const THUMB = 48;
@@ -31,6 +32,7 @@ const styles = StyleSheet.create({
  * bao nhiêu — không phải một mã.
  */
 export function BookingLinkCard({ booking }: { booking: ReceiptBookingOption }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.form.link');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -75,6 +77,7 @@ export function BookingLinkCard({ booking }: { booking: ReceiptBookingOption }) 
 }
 
 export function VehicleLinkCard({ vehicle }: { vehicle: ReceiptVehicleOption }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.form.link');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

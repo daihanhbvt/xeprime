@@ -21,7 +21,8 @@ import { BranchFilterField } from '@/features/branches/components/BranchFilterFi
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { CategoryBreakdown } from './components/CategoryBreakdown';
 import { CustomerRevenueList } from './components/CustomerRevenueList';
 import { FinanceOverviewCards } from './components/FinanceOverviewCards';
@@ -59,6 +60,7 @@ const EMPTY_META = { page: FIRST_PAGE, limit: VEHICLE_PROFIT_PAGE_SIZE, total: 0
  * kéo luôn dải kia.
  */
 export function FinanceOverviewScreen() {
+  const colors = useColors();
   const t = useTranslations('Finance.overview');
   const permissions = usePermissions();
 

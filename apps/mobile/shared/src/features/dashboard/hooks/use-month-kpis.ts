@@ -3,7 +3,7 @@ import { countChangePercent } from '@xeprime/domain';
 import type { StatCell } from '@/components/ui/StatGrid';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import type { PartnerOverviewMonth } from '../api';
 import { utilizationPointChange } from '../dashboard-model';
 import type { DashboardLinks } from './use-dashboard';
@@ -40,6 +40,7 @@ export function useMonthKpiCells(
   isError: boolean,
   links: DashboardLinks,
 ): StatCell[] {
+  const colors = useColors();
   const t = useTranslations('Dashboard.kpi');
   const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -55,7 +56,9 @@ export function useMonthKpiCells(
       icon: 'document-text-outline',
       label: t('newBookings'),
       value: month ? fmt.count(month.newBookings) : missing,
-      ...(month ? { hint: change(countChangePercent(month.newBookings, month.newBookingsPrevious)) } : {}),
+      ...(month
+        ? { hint: change(countChangePercent(month.newBookings, month.newBookingsPrevious)) }
+        : {}),
       tone: colors.info,
       surface: colors.infoSurface,
       onPress: () => navigateOnce(links.allBookings),

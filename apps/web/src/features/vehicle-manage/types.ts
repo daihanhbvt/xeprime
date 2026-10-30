@@ -14,9 +14,6 @@ export type VehicleServiceSetting = Schemas['VehicleServiceSettingDto'];
 export type PatchVehicleServiceSettingInput = Schemas['PatchVehicleServiceSettingDto'];
 export type WithDriverAutoAcceptCapability = Schemas['WithDriverAutoAcceptCapabilityDto'];
 
-export type DriverSurchargeRule = Schemas['DriverSurchargeRuleDto'];
-export type SaveDriverSurchargeRuleInput = Schemas['SaveDriverSurchargeRuleDto'];
-
 export type VehicleTripHistoryItem = Schemas['VehicleTripHistoryItemDto'];
 
 /** Bộ lọc lịch sử chuyến — sống ở URL searchParams (ADR 0004). */

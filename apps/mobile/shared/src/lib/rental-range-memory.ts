@@ -8,6 +8,7 @@ import {
   type RentalMode,
 } from '@xeprime/domain';
 import { getSecureItem, SECURE_KEY, setSecureItem, deleteSecureItem } from '@/lib/secure-storage';
+import { RENTAL_MODE } from '@xeprime/types';
 
 /**
  * Khoảng thuê khách đã TỰ CHỌN, nhớ lại giữa các màn hình và giữa các lần mở app.
@@ -74,7 +75,7 @@ function parse(raw: string | null): StoredShape | null {
     return {
       pickupAt: value.pickupAt,
       returnAt: value.returnAt,
-      mode: value.mode === 'hourly' ? 'hourly' : 'daily',
+      mode: value.mode === RENTAL_MODE.HOURLY ? RENTAL_MODE.HOURLY : RENTAL_MODE.DAILY,
       savedAt: value.savedAt,
     };
   } catch {
@@ -164,7 +165,7 @@ export async function rememberedOrDefaultRentalRange(
 ): Promise<RememberedRentalRange> {
   const remembered = await readRememberedRentalRange(now);
   if (remembered) return remembered;
-  return { ...defaultRentalRange(now), mode: 'daily' };
+  return { ...defaultRentalRange(now), mode: RENTAL_MODE.DAILY };
 }
 
 /** Chỉ dành cho test — dọn tầng phiên giữa các ca. */

@@ -7,7 +7,7 @@ import {
   type DriverLicenceQualityIssue,
   type ImageUploadMimeType,
 } from '@xeprime/types';
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 import { createWorker, OEM, type Worker } from 'tesseract.js';
 import {
   DriverLicenceReaderError,
@@ -260,7 +260,7 @@ function variantOriginal(image: PreparedImage, angle: number): Promise<Buffer> {
 }
 
 /** Xám, giãn tương phản, phóng to — đọc tốt nhất chữ nhỏ và chữ màu trên nền màu. */
-function greyUpscaled(image: PreparedImage, angle: number): sharp.Sharp {
+function greyUpscaled(image: PreparedImage, angle: number): Sharp {
   const edge = Math.round(
     image.longEdge * Math.max(1, Math.min(2, UPSCALED_EDGE_PX / image.longEdge)),
   );

@@ -191,3 +191,16 @@ export type BookingListPreset = (typeof BOOKING_LIST_PRESET)[keyof typeof BOOKIN
 export const BOOKING_LIST_PRESET_VALUES = Object.values(
   BOOKING_LIST_PRESET,
 ) as BookingListPreset[];
+
+/**
+ * Cách khách chọn khoảng thuê ngắn hạn trên ô lịch: theo NGÀY hay theo GIỜ — web, app native và
+ * bản nháp đặt xe/tìm kiếm cùng đọc một bộ mã (ADR 0005: không chuỗi trần). Đây là chế độ của Ô
+ * CHỌN, không phải một dịch vụ: thuê theo giờ vẫn là tự lái; dài hạn không có ô lịch nào.
+ */
+export const RENTAL_MODE = {
+  DAILY: 'daily',
+  HOURLY: 'hourly',
+} as const;
+
+export type RentalMode = (typeof RENTAL_MODE)[keyof typeof RENTAL_MODE];
+export const RENTAL_MODE_VALUES = Object.values(RENTAL_MODE) as RentalMode[];

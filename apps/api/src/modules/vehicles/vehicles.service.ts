@@ -547,6 +547,7 @@ export class VehiclesService {
     // chặn 1) — chạm trần thì PLAN_LIMIT_REACHED; gian hàng tuyến gói chưa có gói cho loại xe này
     // thì PLAN_SCOPE_REQUIRED. Thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
     await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
+    await this.pricing.assertWithDriverPrices(dto);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -635,6 +636,7 @@ export class VehiclesService {
     /** Chi nhánh người gọi được giao — chặn ghi ra ngoài phạm vi (ADR 0052). */
     allowedBranchIds: readonly string[] | null,
   ): Promise<VehicleDetailDto> {
+    await this.pricing.assertWithDriverPrices(dto);
     await this.prisma.$transaction(async (tx) => {
       await this.applyUpdate(tx, tenantId, id, userId, dto, allowedBranchIds);
     });
@@ -927,6 +929,7 @@ export class VehiclesService {
       select: SENSITIVE_SELECT,
     });
     if (!current) throw notFound();
+    await this.pricing.assertWithDriverPrices(dto);
 
     const overriding = dto.source === POLICY_SOURCE.VEHICLE;
     if (overriding) {

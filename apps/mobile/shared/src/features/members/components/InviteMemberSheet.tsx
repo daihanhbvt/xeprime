@@ -15,7 +15,8 @@ import { useCopy } from '@/hooks/use-copy';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { CreateInviteResult } from '../api';
 import { useCreateInvite } from '../hooks/use-members';
 import { toBranchScopeInput, useBranchScopeOptions } from '../branch-scope';
@@ -73,6 +74,7 @@ const invitePhoneSchema = yup.object({
 type InvitePhoneValues = yup.InferType<typeof invitePhoneSchema>;
 
 function InviteCreated({ created, onDone }: { created: CreateInviteResult; onDone: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Members.created');
   const copy = useCopy();
 

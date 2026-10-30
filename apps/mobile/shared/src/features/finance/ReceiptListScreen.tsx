@@ -38,7 +38,8 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { CategoryManagerSheet } from './components/CategoryManagerSheet';
 import { FinancePeriodBar } from './components/FinancePeriodBar';
 import { ReceiptCard } from './components/ReceiptCard';
@@ -70,6 +71,7 @@ const keyOf = (receipt: Receipt) => receipt.id;
  * khoá của nó KHÔNG mang `page` — sang trang không làm bốn con số nháy.
  */
 export function ReceiptListScreen() {
+  const colors = useColors();
   const params = useLocalSearchParams<{
     type?: string;
     status?: string;
@@ -538,6 +540,7 @@ export function ReceiptListScreen() {
       </YStack>
     ),
     [
+      colors,
       t,
       scopeChips,
       clearScope,

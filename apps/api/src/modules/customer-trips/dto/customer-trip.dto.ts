@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
+import { BookingDriverSummaryDto, TripDriverIncidentDto } from '../../drivers/dto/driver.dto';
 import {
   CANCELLATION_PARTY_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
@@ -376,6 +376,14 @@ export class CustomerTripListItemDto {
   })
   driver!: BookingDriverSummaryDto | null;
 
+  @ApiPropertyOptional({
+    type: TripDriverIncidentDto,
+    nullable: true,
+    description:
+      'Sự cố tài xế (ADR 0074): tài xế đã nhận rồi rút, chưa ai nhận lại. Không lộ ai đã rút. `freeCancel` = khách huỷ được hoàn 100%.',
+  })
+  driverIncident!: TripDriverIncidentDto | null;
+
   /**
    * `totalAmount` là số TẠM TÍNH, chưa được đóng băng vào đơn (ADR 0024).
    *
@@ -737,4 +745,9 @@ export class CustomerTripCancelPreviewDto {
   freeCancelAvailable!: boolean;
   @ApiProperty({ description: 'Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia' })
   deferred!: boolean;
+  @ApiProperty({
+    description:
+      'true = huỷ do SỰ CỐ TÀI XẾ (ADR 0074): hoàn 100% dù đã qua mốc huỷ miễn phí, lỗi ghi cho phía cho thuê',
+  })
+  driverIncident!: boolean;
 }

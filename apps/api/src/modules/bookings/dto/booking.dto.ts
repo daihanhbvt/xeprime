@@ -38,8 +38,9 @@ import {
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { OwnerPayoutDto } from '../../../common/dto/owner-payout.dto';
 import { ExactlyOneOf } from '../../../common/validators/exactly-one-of.validator';
+import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
-import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
+import { BookingDriverIncidentDto, BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
 import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
@@ -223,6 +224,9 @@ export class BookingListItemDto {
 
 /** Chi tiết một đơn — dùng cho trang chi tiết đơn. */
 export class BookingDetailDto extends BookingListItemDto {
+  /** Sự cố tài xế đang mở (ADR 0074) — null khi không có. */
+  @ApiPropertyOptional({ type: BookingDriverIncidentDto, nullable: true })
+  driverIncident!: BookingDriverIncidentDto | null;
   /**
    * Khách trong SỔ KHÁCH của gian hàng — mở hồ sơ/giấy tờ từ màn đơn. NULL với đơn cũ không
    * khớp được khách (không có SĐT dùng được).
@@ -571,8 +575,8 @@ export class ExternalDriverInputDto {
  *
  *  - `driverId` (ADR 0063): id LIÊN KẾT tài xế (`drivers.id`); `null` là BỎ GÁN tường minh (gỡ cả
  *    tài xế liên kết lẫn tài xế ngoài hệ thống) — để không lẫn "không gửi gì" với "gỡ tài xế".
- *  - `externalDriver` (ADR 0067): tên + SĐT tài xế ngoài hệ thống; lượt gán liên kết đang có bị
- *    đóng như bỏ gán và người đó được báo.
+ *  - `externalDriver` (ADR 0067): ĐÃ BỎ ở ADR 0074 điều 4 — controller trả 422
+ *    `EXTERNAL_DRIVER_NOT_SUPPORTED`. Khoá còn trong DTO để app cũ nhận đúng mã lỗi thay vì 400.
  *
  * Luật ở `DriversService` (writer duy nhất); CHECK ở DB chặn nốt trường hợp service quên.
  */
@@ -599,13 +603,25 @@ export class AssignBookingDriverDto {
 
   @ApiPropertyOptional({
     type: ExternalDriverInputDto,
-    description: 'Tài xế ngoài hệ thống (ADR 0067). Không gửi cùng `driverId`.',
+    deprecated: true,
+    description:
+      'ĐÃ BỎ (ADR 0074 điều 4) — có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.',
   })
   @ValidateIf((o: AssignBookingDriverDto) => o.externalDriver !== undefined)
   @IsObject()
   @ValidateNested()
   @Type(() => ExternalDriverInputDto)
   externalDriver?: ExternalDriverInputDto;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Tiền công của lượt gán (VND, bội 1.000đ — ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế.',
+  })
+  @IsOptional()
+  @Matches(/^\d{1,12}$/, { message: 'Tiền công không hợp lệ (số VND nguyên không âm)' })
+  @IsMoneyStep({ message: 'Tiền công phải là bội của 1.000đ' })
+  wageAmount?: string;
 }
 
 /**

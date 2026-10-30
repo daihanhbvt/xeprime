@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Tiêu đề của MỘT TRANG trong khu quản lý, nằm TRONG nội dung — không phải trong thanh trên.
@@ -37,6 +38,7 @@ export function ManagePageTitle({
   total?: string;
   action?: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
       <YStack f={1} gap={1}>

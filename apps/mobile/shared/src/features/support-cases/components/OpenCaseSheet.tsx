@@ -4,7 +4,11 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import { SUPPORT_CASE_CATEGORY, SUPPORT_CASE_CATEGORY_VALUES } from '@xeprime/types';
+import {
+  SUPPORT_CASE_CATEGORY,
+  SUPPORT_CASE_CATEGORY_SYSTEM_ONLY,
+  SUPPORT_CASE_CATEGORY_VALUES,
+} from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -32,11 +36,17 @@ const DESCRIPTION_MAX = 5000;
  * Tư vấn gói cũng vậy: chỉ đi qua `POST /support/plan-consultation` (`PlanConsultationSheet`, có
  * cổng `isPlanPromotionEnabled`); `POST /support/cases` từ chối nó bằng
  * `SUPPORT_CASE_CATEGORY_NOT_ALLOWED`.
+ *
+ * Quyết định người dùng (27/10/2026): ẨN "Tư vấn gói" ở CẢ HAI app (khách lẫn Partner) — web vẫn bày
+ * nó trong `OpenCaseModal`. Đây là khác biệt CÓ CHỦ ĐÍCH (app Partner mua gói qua IAP, không mời
+ * tư vấn gói), không phải thiếu sót cần đồng bộ.
  */
 const OPENABLE_CATEGORIES = SUPPORT_CASE_CATEGORY_VALUES.filter(
   (value) =>
     value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION &&
-    value !== SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
+    value !== SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION &&
+    // Loại chỉ HỆ THỐNG mở (ADR 0066) — server từ chối nếu client gửi lên, nên không bày ra.
+    !SUPPORT_CASE_CATEGORY_SYSTEM_ONLY.includes(value),
 );
 
 /** Mở một yêu cầu hỗ trợ — bản native của `OpenCaseModal`. */
@@ -173,6 +183,7 @@ export function OpenCaseSheet({
 
         <YStack gap={space.sm}>
           <Button
+            icon="send-outline"
             label={t('submit')}
             loading={openCase.isPending}
             onPress={() => void onSubmit()}

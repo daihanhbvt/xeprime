@@ -10,6 +10,7 @@ export function DatePickerSheet({
   onChange,
   title,
   minDate,
+  maxDate,
 }: {
   open: boolean;
   onClose: () => void;
@@ -18,8 +19,11 @@ export function DatePickerSheet({
   onChange: (next: string) => void;
   title: string;
   minDate?: Dayjs;
+  /** Ngày muộn nhất được chọn (mặc định không trần). */
+  maxDate?: Dayjs;
 }) {
   const floor = (minDate ?? dayjs().add(1, 'day')).startOf('day');
+  const ceilingAt = maxDate ? maxDate.startOf('day').valueOf() : null;
   const selected = value ? dayjs(value) : null;
 
   /*
@@ -60,10 +64,12 @@ export function DatePickerSheet({
     const out: Record<string, DayMark> = {};
     for (const day of visibleDays(month)) {
       const key = day.format(DAY_PARAM_FORMAT);
-      out[key] = { selected: key === value, disabled: day.isBefore(floorAt, 'day') };
+      out[key] = { selected: key === value, disabled:
+          day.isBefore(floorAt, 'day') || (ceilingAt !== null && day.isAfter(ceilingAt, 'day')),
+      };
     }
     return out;
-  }, [month, value, floorAt]);
+  }, [month, value, floorAt, ceilingAt]);
 
   /** Tham chiếu phải ĐỨNG YÊN, và ô chỉ được vẽ từ đối số — xem docblock `MonthGrid`. */
   const renderDay = useCallback(

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 import { AuthModal } from './AuthModal';
+import { AuthPanel } from './AuthPanel';
 import { AuthModalProvider, AuthUrlSync, useAuthModal } from './AuthModalProvider';
 import { AUTH_CONTEXT, AUTH_MODE } from '../post-auth-destination';
 import { renderWithIntl } from '@/i18n/test-utils';
@@ -272,6 +273,38 @@ describe('AuthModal — đăng nhập chỉ bằng số điện thoại (ADR 006
 
     submitLogin('0901234567');
     expect(await screen.findByText('Hãy đăng nhập bằng số điện thoại và mật khẩu.')).toBeTruthy();
+  });
+
+  it('sai SĐT/mật khẩu → câu chỉ nói số điện thoại, không nhắc email', async () => {
+    api.login.mockRejectedValue(apiError(API_ERROR_CODE.INVALID_CREDENTIALS, 401));
+    renderModal('auth=login');
+    await heading('Đăng nhập');
+
+    submitLogin('0901234567');
+    expect(await screen.findByText('Số điện thoại hoặc mật khẩu không đúng.')).toBeTruthy();
+    expect(screen.queryByText(/email/i)).toBeNull();
+  });
+});
+
+describe('AuthPanel — site quản trị (passwordOnly)', () => {
+  it('sai định danh/mật khẩu → câu nhắc cả email, vì realm platform nhận email', async () => {
+    api.login.mockRejectedValue(apiError(API_ERROR_CODE.INVALID_CREDENTIALS, 401));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithIntl(
+      <QueryClientProvider client={queryClient}>
+        <AuthPanel mode={AUTH_MODE.LOGIN} passwordOnly onAuthenticated={vi.fn()} />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
+      target: { value: 'admin@xeprime.vn' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+    expect(
+      await screen.findByText('Email/số điện thoại hoặc mật khẩu không đúng.'),
+    ).toBeTruthy();
   });
 });
 

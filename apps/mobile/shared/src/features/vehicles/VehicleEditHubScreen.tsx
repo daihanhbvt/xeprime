@@ -1,13 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  PERMISSION,
-  VEHICLE_ALERT_KIND,
-  type VehicleAlertKind,
-} from '@xeprime/types';
+import { PERMISSION, VEHICLE_ALERT_KIND, type VehicleAlertKind } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
@@ -28,7 +24,8 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { VehicleDetail } from './api';
 import { vehicleEditNavGroups } from './edit-nav';
 import { useVehicle, useVehicleSummary } from './hooks/use-vehicle';
@@ -276,6 +273,7 @@ function EditMenu({
 
 /** Tiêu đề nhóm — chữ nhỏ in hoa, cùng kiểu các màn danh sách khác của app. */
 function SectionLabel({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text
       px={space.xs}
@@ -291,6 +289,7 @@ function SectionLabel({ children }: { children: string }) {
 
 /** Đường kẻ giữa hai dòng của một nhóm — thụt vào bằng ô biểu tượng, như danh sách hệ thống. */
 function RowDivider() {
+  const colors = useColors();
   return <YStack h={1} marginLeft={space.md + ICON_BOX + space.sm} bg={colors.borderSubtle} />;
 }
 
@@ -313,6 +312,8 @@ function HubRow({
   dimmed: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -350,6 +351,6 @@ function HubRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   pressed: { backgroundColor: colors.surfaceMuted },
-});
+}));

@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack } from 'tamagui';
-import { clockText, countdownSegment, countdownState, holdRemainingMs } from '@xeprime/types';
+import {
+  clockText,
+  countdownSegment,
+  countdownState,
+  holdRemainingMs,
+  longClockText,
+} from '@xeprime/types';
 import { useNow } from '@/hooks/use-now';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /**
  * Đồng hồ đếm ngược tới một mốc do SERVER chốt — bản native của `components/data-display/Countdown`.
@@ -42,6 +49,7 @@ export function Countdown({
     segment?: (index: number, total: number) => string;
   };
 }) {
+  const colors = useColors();
   const [done, setDone] = useState(false);
   const now = useNow(!done);
   const remaining = holdRemainingMs(deadline, new Date(now));
@@ -87,7 +95,8 @@ export function Countdown({
         /* Số nhảy mỗi giây — chữ số cùng bề rộng để dòng không co giật. */
         fontVariant={['tabular-nums']}
       >
-        {clockText(shown)}
+        {/* Có chặng ⇒ `m:ss`; đếm một mạch ⇒ cửa sổ có thể dài hơn một giờ (ADR 0066) ⇒ `h:mm:ss`. */}
+        {segment ? clockText(shown) : longClockText(shown)}
       </Text>
       {segment && segment.total > 1 && labels.segment ? (
         <Text col={colors.textMuted} fos={fontSize.label}>

@@ -37,7 +37,7 @@ describe('CustomerTripTimeline', () => {
       if (!customerTripTimeline(stage).visible) continue;
       const { unmount } = renderFor(stage);
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
-      expect(screen.getByText('Đã xác nhận')).toBeTruthy();
+      expect(screen.getByText('Đã nhận xe')).toBeTruthy();
       expect(screen.getByText('Hoàn thành')).toBeTruthy();
       // Không có mốc thứ ba nào len vào theo tiến trình vận hành.
       expect(screen.queryByText(/Đã giao/i)).toBeNull();
@@ -46,16 +46,15 @@ describe('CustomerTripTimeline', () => {
     }
   });
 
-  it('chặng Đang thuê dùng CÙNG dòng thời gian với Sẵn sàng', () => {
-    const ready = customerTripTimeline(CUSTOMER_TRIP_STAGE.READY);
-    const active = customerTripTimeline(CUSTOMER_TRIP_STAGE.ACTIVE);
-    expect(active).toEqual(ready);
+  it('mốc "Đã nhận xe" chỉ tích từ chặng Đang thuê, Sẵn sàng thì chưa', () => {
+    expect(customerTripTimeline(CUSTOMER_TRIP_STAGE.READY).confirmedDone).toBe(false);
+    expect(customerTripTimeline(CUSTOMER_TRIP_STAGE.ACTIVE).confirmedDone).toBe(true);
   });
 
   it('mốc chưa xong đọc được là chưa xong (không chỉ dựa vào màu)', () => {
     renderFor(CUSTOMER_TRIP_STAGE.ACTIVE);
     const label = screen.getByLabelText(/Tiến trình chuyến/);
-    expect(label.textContent).toContain('Đã xác nhận');
+    expect(label.textContent).toContain('Đã nhận xe');
     expect(label.textContent).toContain('chưa hoàn thành');
   });
 

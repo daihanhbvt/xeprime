@@ -65,8 +65,8 @@ Firebase project phải đăng ký **2 app Android + 2 app iOS**:
 
 | App | Thư mục | Android `package` / iOS `bundleIdentifier` | Scheme |
 | --- | --- | --- | --- |
-| XePrime (khách, realm `customer`) | `apps/mobile/customer` | `vn.xeprime.mobile` | `xeprime` |
-| XePrime Partner (realm `partner`) | `apps/mobile/manage` | `vn.xeprime.partner` | `xeprimepartner` |
+| XePrime (khách, realm `customer`) | `apps/mobile/customer` | `vn.xeprime.customerapp` | `xeprime` |
+| XePrime Partner (realm `partner`) | `apps/mobile/manage` | `vn.xeprime.partnerapp` | `xeprimepartner` |
 
 Package name / Bundle ID phải TRÙNG TỪNG KÝ TỰ với `android.package` / `ios.bundleIdentifier` trong
 `app.json` của đúng app. Sai một ký tự thì app đăng ký token thành công nhưng không nhận được gì.
@@ -74,7 +74,7 @@ Package name / Bundle ID phải TRÙNG TỪNG KÝ TỰ với `android.package` /
 ### 2.3 Android — `google-services.json`
 
 Firebase Console → **Project settings** → **Your apps** → Add app → Android, làm HAI lần
-(`vn.xeprime.mobile` và `vn.xeprime.partner`). Mỗi lần tải một `google-services.json` và đặt vào
+(`vn.xeprime.customerapp` và `vn.xeprime.partnerapp`). Mỗi lần tải một `google-services.json` và đặt vào
 thư mục của đúng app:
 
 - `apps/mobile/customer/credentials/google-services.json`
@@ -85,7 +85,7 @@ thư mục của đúng app:
 
 ### 2.4 iOS — `GoogleService-Info.plist` + khoá APNs
 
-1. Add app → iOS, HAI lần: **Bundle ID** = `vn.xeprime.mobile` và `vn.xeprime.partner`.
+1. Add app → iOS, HAI lần: **Bundle ID** = `vn.xeprime.customerapp` và `vn.xeprime.partnerapp`.
 2. Tải `GoogleService-Info.plist` của TỪNG app (file này là theo app, không gộp được) →
    `apps/mobile/customer/credentials/GoogleService-Info.plist` và
    `apps/mobile/manage/credentials/GoogleService-Info.plist`.

@@ -46,3 +46,13 @@
   color: var(--xp-color-primary);
   border-color: var(--xp-color-primary);
 }
+
+/* Sự cố tài xế (ADR 0074): lời giải thích + nút huỷ hoàn 100% dưới phần tài xế. */
+.incidentCancel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  margin-top: var(--xp-space-sm);
+}

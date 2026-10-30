@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import type { UploadMeta, UploadPresign } from '@/api/uploads/api';
 import { TypedMediaFields } from '@/features/vehicles/components/TypedMediaFields';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { QuickVehicleValues } from '../quick-schema';
 
 /**
@@ -36,6 +37,7 @@ export function QuickVehicleImagesStep({
    */
   presign: (meta: UploadMeta) => Promise<UploadPresign>;
 }) {
+  const colors = useColors();
   const t = useTranslations('ListYourVehicle.images');
 
   const media = useWatch({ control, name: 'media' }) ?? [];

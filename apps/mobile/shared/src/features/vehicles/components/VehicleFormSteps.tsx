@@ -35,7 +35,8 @@ import { TypedMediaFields } from './TypedMediaFields';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { discountedPriceVnd } from '../pricing';
 
 interface StepProps {
@@ -45,6 +46,7 @@ interface StepProps {
 
 /** Nhãn nhóm bên trong một bước — nhỏ, viết hoa, mờ. */
 function GroupTitle({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
       {children.toUpperCase()}
@@ -68,6 +70,7 @@ export function Notice({
   title: string;
   body?: string;
 }) {
+  const colors = useColors();
   const skin =
     tone === 'warning'
       ? { fg: colors.warning, bg: colors.warningSurface, icon: 'warning-outline' as const }
@@ -283,6 +286,7 @@ export function SpecsSection({
  * Cùng component với bộ lọc chợ xe (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
  */
 export function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.specs');
   const { catalog } = useCatalog();
   const items = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
@@ -319,6 +323,7 @@ export function BodyTypePicker({ control }: { control: Control<VehicleFormValues
  * là mở một đường sửa thứ hai cho cùng một dữ liệu.
  */
 export function SourceTypeSection({ control }: { control: Control<VehicleFormValues> }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form');
 
   return (
@@ -344,6 +349,7 @@ function ServiceTypesField({
   control: Control<VehicleFormValues>;
   required?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.basic');
   const domainLabel = useDomainLabel();
   const vehicleType = useWatch({ control, name: 'vehicleType' });
@@ -402,6 +408,7 @@ function ServiceTypesField({
 
 /** Bốn hình thức nguồn xe — mỗi lựa chọn kèm một câu mô tả, nên là radio chứ không phải menu. */
 function SourceTypeField({ control }: { control: Control<VehicleFormValues> }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.form.source');
   const domainLabel = useDomainLabel();
 

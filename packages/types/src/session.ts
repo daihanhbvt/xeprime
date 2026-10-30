@@ -53,3 +53,23 @@ export const OTP_POLICY = {
   MAX_SENDS_PER_HOUR: 5,
   MAX_ATTEMPTS: 5,
 } as const;
+
+/**
+ * Khoá đăng nhập theo ĐỊNH DANH (SĐT/email trong một realm) — ADR 0076 điều 3.
+ *
+ * Rate limit theo IP chỉ hãm một máy; kẻ dò mật khẩu có hàng trăm IP. Bộ đếm này đếm lần sai của
+ * MỘT định danh dù tới từ đâu: chạm trần trong cửa sổ ⇒ khoá `LOCK_MINUTES`, mọi lượt (kể cả đúng
+ * mật khẩu) bị từ chối `LOGIN_TEMPORARILY_LOCKED`. Định danh không có tài khoản bị đếm y hệt — câu
+ * trả lời không tố cáo ai có tài khoản.
+ *
+ * Site quản trị chặt hơn: tài khoản nền tảng đọc/ghi dữ liệu của mọi gian hàng.
+ */
+export const LOGIN_LOCKOUT_POLICY = {
+  WINDOW_MINUTES: 15,
+  LOCK_MINUTES: 15,
+  MAX_FAILURES: { customer: 10, partner: 10, platform: 5 },
+} as const satisfies {
+  WINDOW_MINUTES: number;
+  LOCK_MINUTES: number;
+  MAX_FAILURES: Record<AccountRealm, number>;
+};

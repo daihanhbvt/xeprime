@@ -1,4 +1,8 @@
-import type { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
+import type {
+  BookingDriverHistoryItemDto,
+  DriverWageQuoteDto,
+  UpdateDriverWageDto,
+} from '../drivers/dto/driver.dto';
 import {
   BadRequestException,
   ConflictException,
@@ -9,6 +13,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  CANCELLATION_PARTY,
   CANCELLATION_REASON_CATEGORY,
   CANCELLATION_STAGE,
   BOOKING_HANDOVER_PLACE,
@@ -49,7 +54,12 @@ import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
-import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
+import {
+  BOOKING_DRIVER_INCIDENT_HOST_SELECT,
+  BOOKING_DRIVER_SELECT,
+  toBookingDriverIncident,
+  toBookingDriverSummary,
+} from '../drivers/booking-driver-summary';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -130,6 +140,8 @@ const LIST_SELECT = {
 
 const DETAIL_SELECT = {
   ...LIST_SELECT,
+  // Sự cố tài xế (ADR 0074) — chỉ chi tiết đơn đọc lượt rút gần nhất.
+  ...BOOKING_DRIVER_INCIDENT_HOST_SELECT,
   tenantCustomerId: true,
   // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
   // cần NHẬN RA chiếc xe, không cần xem bộ ảnh. `branch` giữ lại từ LIST_SELECT: khối này
@@ -715,37 +727,48 @@ export class BookingsService {
     return this.drivers.history(tenantId, id);
   }
 
+  /** Số liệu tiền công cho hộp gán tài xế (ADR 0075) — 404 khi đơn không thuộc tenant. */
+  driverWageQuote(tenantId: string, id: string): Promise<DriverWageQuoteDto> {
+    return this.drivers.wageQuote(tenantId, id);
+  }
+
+  /**
+   * Sửa tiền công của một lượt gán (ADR 0075) — luật ở `DriversService.updateWage` (writer duy
+   * nhất). Đơn đã khép vẫn sửa được trong hạn 72h: đó là lúc hai bên chốt số cuối chuyến.
+   */
+  async updateDriverWage(
+    tenantId: string,
+    id: string,
+    assignmentId: string,
+    userId: string,
+    dto: UpdateDriverWageDto,
+  ): Promise<BookingDriverHistoryItemDto[]> {
+    const exists = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) throw notFound();
+    await this.drivers.updateWage(tenantId, userId, id, assignmentId, dto);
+    return this.drivers.history(tenantId, id);
+  }
+
   /** Gán tài xế LIÊN KẾT (ADR 0063) — `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống, ADR 0067). */
   assignDriver(
     tenantId: string,
     id: string,
     userId: string,
     driverId: string | null,
+    wageAmount: string | null = null,
   ): Promise<BookingDetailDto> {
-    return this.changeDriver(tenantId, id, (tx) =>
-      this.drivers.assignWithinTx(tx, { tenantId, bookingId: id, driverId, actorUserId: userId }),
-    );
-  }
-
-  /**
-   * Ghi tài xế NGOÀI HỆ THỐNG (ADR 0067) — tên + SĐT trên đúng đơn này; lượt gán liên kết đang có
-   * bị đóng như bỏ gán. Luật ở `DriversService.setExternalWithinTx` (writer duy nhất).
-   */
-  setExternalDriver(
-    tenantId: string,
-    id: string,
-    userId: string,
-    external: { name: string; phone: string },
-  ): Promise<BookingDetailDto> {
-    return this.changeDriver(tenantId, id, (tx) =>
-      this.drivers.setExternalWithinTx(tx, {
+    return this.changeDriver(tenantId, id, async (tx) => {
+      await this.drivers.assignWithinTx(tx, {
         tenantId,
         bookingId: id,
-        name: external.name,
-        phone: external.phone,
+        driverId,
         actorUserId: userId,
-      }),
-    );
+        wageAmount,
+      });
+    });
   }
 
   /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */
@@ -852,6 +875,12 @@ export class BookingsService {
        * hàng mới bắt buộc, và cửa đó nằm ở DTO.
        */
       reasonCategory?: CancellationReasonCategory;
+      /**
+       * KHÁCH huỷ vì sự cố tài xế (ADR 0074 điều 3) — bên gọi (`CustomerTripsService.cancel`) đã
+       * kiểm `driverIncidentState` sau khi khoá dòng đơn. Hệ quả do SERVER suy, không phải khai: lượt
+       * huỷ ghi cho phía cho thuê (`driver_unavailable`), tiền hoàn 100%.
+       */
+      driverFault?: boolean;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -933,10 +962,13 @@ export class BookingsService {
           from === BOOKING_STATUS.ACTIVE
             ? CANCELLATION_STAGE.BOOKING_ACTIVE
             : CANCELLATION_STAGE.BOOKING_BEFORE_PICKUP,
-        reasonCategory: opts.reasonCategory ?? CANCELLATION_REASON_CATEGORY.OTHER,
+        reasonCategory: opts.driverFault
+          ? CANCELLATION_REASON_CATEGORY.DRIVER_UNAVAILABLE
+          : (opts.reasonCategory ?? CANCELLATION_REASON_CATEGORY.OTHER),
         reason: opts.reason ?? null,
         actorUserId: userId,
         actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
+        ...(opts.driverFault ? { verifiedParty: CANCELLATION_PARTY.HOST } : {}),
       });
     }
 
@@ -951,6 +983,7 @@ export class BookingsService {
       to,
       actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
       actorUserId: userId,
+      driverFault: opts.driverFault,
     });
 
     /*
@@ -1025,7 +1058,7 @@ export class BookingsService {
 
       /*
        * Khách cũng phải biết chuyến của mình bắt đầu, kết thúc, hay BỊ KHÉP LẠI (Wave 11 +
-       * 25/08). `reserved → confirmed` vẫn là bút toán nội bộ, khách không có việc gì với nó.
+       * 25/08), và cả lúc gian hàng XÁC NHẬN đơn (28/10 — làm mới trang chuyến của khách realtime).
        *
        * Hai kết thúc tiêu cực được thêm vào vì chúng thay đổi kế hoạch của khách: xe vừa được
        * nhả ra cho người khác đặt, nên im lặng ở đây là để một người ra bến chờ một chiếc xe
@@ -1048,8 +1081,9 @@ export class BookingsService {
             request.customerUserId,
             {
               type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-              title: customerFacing.title,
-              body: `${updated.vehicle.name} · ${customerFacing.body}`,
+              // Tên xe đứng ở TIÊU ĐỀ (người dùng chốt 28/10/2026) — thân là câu đầy đủ, không mẩu ghép.
+              title: customerFacing.title.replace('{vehicle}', updated.vehicle.name),
+              body: customerFacing.body,
               tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
               targetId: id,
@@ -1120,25 +1154,32 @@ export class BookingsService {
  *
  * Bảng thay vì chuỗi `if`: thêm một trạng thái mới vào `BOOKING_STATUS` mà quên nghĩ tới khách
  * thì ở đây là một khoá thiếu nhìn thấy được, chứ không phải một nhánh `else` im lặng.
- * `reserved`/`confirmed` cố ý vắng mặt — chúng là bút toán nội bộ của gian hàng.
+ * `reserved` cố ý vắng mặt — bút toán nội bộ của gian hàng. `confirmed` CÓ (28/10/2026): gian hàng
+ * chốt đơn là điều khách chờ, và là tín hiệu duy nhất làm mới trang chuyến của khách realtime —
+ * web + app chỉ làm mới khi người xem nhận một thông báo (bản chiếu huy hiệu).
  */
 const CUSTOMER_FACING_TRANSITIONS: Partial<Record<BookingStatus, { title: string; body: string }>> =
   {
+    // `{vehicle}` thay bằng tên xe lúc phát.
+    [BOOKING_STATUS.CONFIRMED]: {
+      title: 'Chuyến {vehicle} đã được xác nhận',
+      body: 'Xe đã sẵn sàng theo lịch hẹn. Nhớ mang GPLX và giấy tờ khi nhận xe.',
+    },
     [BOOKING_STATUS.ACTIVE]: {
-      title: 'Hành trình của bạn đã bắt đầu',
-      body: 'chúc bạn một chuyến đi an toàn',
+      title: 'Bạn đã nhận xe {vehicle}',
+      body: 'Chúc bạn một chuyến đi an toàn. Nhớ trả xe đúng giờ hẹn.',
     },
     [BOOKING_STATUS.COMPLETED]: {
-      title: 'Chuyến đi đã hoàn thành',
-      body: 'cảm ơn bạn đã đồng hành cùng XePrime',
+      title: 'Chuyến {vehicle} đã hoàn thành',
+      body: 'Cảm ơn bạn đã đồng hành cùng XePrime! Dành 1 phút đánh giá chuyến đi nhé.',
     },
     [BOOKING_STATUS.CANCELLED]: {
-      title: 'Gian hàng đã huỷ chuyến của bạn',
-      body: 'chuyến đã bị huỷ — liên hệ gian hàng nếu bạn cần biết thêm',
+      title: 'Chuyến {vehicle} đã bị huỷ',
+      body: 'Liên hệ chủ xe nếu bạn cần biết thêm. Khoản hoàn (nếu có) theo chính sách huỷ của chuyến.',
     },
     [BOOKING_STATUS.NO_SHOW]: {
-      title: 'Chuyến của bạn đã bị đóng: khách không đến',
-      body: 'gian hàng ghi nhận bạn không tới nhận xe',
+      title: 'Chuyến {vehicle} đã đóng: không nhận xe',
+      body: 'Chủ xe ghi nhận bạn không đến nhận xe. Liên hệ hỗ trợ nếu có nhầm lẫn.',
     },
   };
 
@@ -1388,6 +1429,7 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
   const priceSnapshot = (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null;
   return {
     ...toListItem(b),
+    driverIncident: toBookingDriverIncident(b),
     tenantCustomerId: b.tenantCustomerId,
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,

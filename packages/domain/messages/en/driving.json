@@ -76,7 +76,8 @@
     "accept": "Accept trip",
     "decline": "Decline",
     "declineConfirm": "Decline this trip?",
-    "emptyValue": "—"
+    "emptyValue": "—",
+    "dropFreeUntil": "You can withdraw without penalty until {time}."
   },
   "toast": {
     "linkAccepted": "You're now a driver for them",
@@ -84,7 +85,8 @@
     "linkLeft": "You've stopped driving for them",
     "tripAccepted": "Trip accepted",
     "tripDeclined": "Trip declined",
-    "tripReleased": "Trip handed back to the owner"
+    "tripReleased": "Trip handed back to the owner",
+    "tripDropped": "Problem reported — the owner will arrange another driver"
   },
   "outcome": {
     "declined": "You declined",
@@ -92,7 +94,8 @@
     "cancelled": "Booking cancelled",
     "no_show": "Customer no-show",
     "completed": "Completed",
-    "expired": "Not confirmed in time"
+    "expired": "Not confirmed in time",
+    "dropped": "You withdrew from the trip"
   },
   "center": {
     "title": "Driver Center",
@@ -118,7 +121,7 @@
     "respondLeft": "Time left to confirm: ",
     "respondExpired": "Time to confirm has passed",
     "confirmed": "You have confirmed this trip!",
-    "releaseLeft": "You can cancel within: ",
+    "releaseLeft": "Withdraw without penalty within: ",
     "callCustomer": "Call customer",
     "decline": "Decline",
     "accept": "Take trip",
@@ -126,7 +129,8 @@
     "releaseConfirmTitle": "Cancel this accepted trip?",
     "releaseConfirmBody": "The trip goes back to the owner to assign another driver. The customer's booking is not cancelled.",
     "support": "Contact support",
-    "openDetail": "View trip {code}"
+    "openDetail": "View trip {code}",
+    "drop": "Report a problem / Withdraw"
   },
   "tripBadge": {
     "pending": "Awaiting confirmation",
@@ -139,7 +143,8 @@
     "expired": "Confirmation expired",
     "unassigned": "No longer assigned to you",
     "cancelled": "Booking cancelled",
-    "no_show": "Customer no-show"
+    "no_show": "Customer no-show",
+    "dropped": "You reported a problem"
   },
   "linkStatus": {
     "invited": "Awaiting confirmation",
@@ -159,7 +164,8 @@
     "decline": "Decline",
     "accept": "Confirm partnership",
     "leave": "Stop driving",
-    "openDetail": "View details of {name}"
+    "openDetail": "View details of {name}",
+    "acceptShort": "Confirm"
   },
   "linkDialog": {
     "title": "Partner owner details",
@@ -176,5 +182,39 @@
   "respond": {
     "remaining": "Answer within",
     "expired": "Time to answer has passed — the trip goes back to the employer"
+  },
+  "drop": {
+    "title": "Report a problem with trip {code}",
+    "confirm": "Withdraw from trip",
+    "reason": "Reason",
+    "note": "Describe the problem",
+    "notePlaceholder": "For example: high fever, unable to drive safely",
+    "keepsBooking": "The customer's booking is NOT cancelled. The owner gets an urgent alert to assign another driver.",
+    "penalty": {
+      "grace": "You are still within the free release window — no violation is recorded.",
+      "far": "Pickup is more than 12 hours away — this counts as a minor violation, with no pause on trips.",
+      "cooldown": "This withdrawal is recorded as a violation and you will not be auto-assigned \"Instant book\" trips for {hours} hours."
+    },
+    "errors": {
+      "reasonRequired": "Choose a reason",
+      "noteRequired": "Describe the problem in at least {min} characters",
+      "noteTooLong": "At most {max} characters"
+    }
+  },
+  "wage": {
+    "title": "Wage",
+    "line": {
+      "offer": "{amount} · {days, plural, one {# day} other {# days}}",
+      "running": "{amount}",
+      "received": "Received {amount}",
+      "agreed": "Agreed {amount}",
+      "none": "No wage for this trip"
+    },
+    "paidDirect": "Paid to you directly by the owner.",
+    "changesTitle": "Wage edit history",
+    "change": "{old} → {new}",
+    "changeBy": "{name} · {time}",
+    "changeAt": "{time}",
+    "reason": "Reason: {reason}"
   }
 }

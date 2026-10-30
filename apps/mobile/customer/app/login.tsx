@@ -1,6 +1,4 @@
 import { useRouter } from 'expo-router';
-import { useTranslations } from 'use-intl';
-import { useAppToast } from '@/components/feedback/use-app-toast';
 import type { CurrentUser } from '@/features/auth/api';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { LoginScreen } from '@/features/auth/LoginScreen';
@@ -9,8 +7,6 @@ import { ROUTES } from '@/navigation/routes';
 
 export default function LoginRoute() {
   const router = useRouter();
-  const t = useTranslations('Auth');
-  const toast = useAppToast();
   const enterApp = useEnterApp();
 
   /**
@@ -18,8 +14,8 @@ export default function LoginRoute() {
    * Không còn màn đặt mật khẩu sau đăng nhập: đăng nhập OTP đã gỡ (ADR 0060), mọi đường vào đều
    * vào thẳng app. Tài khoản chưa có SĐT đã xác minh gặp cổng xác minh ở khu khách.
    */
+  // Không toast "Đăng nhập thành công" (người dùng chốt 28/10/2026) — vào thẳng app đã là phản hồi.
   function finish(user: CurrentUser) {
-    toast.showSuccess(t('login.success'));
     enterApp(user);
   }
 

@@ -17,7 +17,8 @@ import {
   uploadPrivateImageToR2,
   type ImageSource,
 } from '@/lib/r2-image-upload';
-import { colors, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { vehiclesApi } from '../api';
 
 const styles = StyleSheet.create({
@@ -61,6 +62,7 @@ export function SourceContractFiles<T extends FieldValues>({
   label: string;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.components.fileList');
   const tActions = useTranslations('Common.actions');
   const tImage = useTranslations('Common.image');

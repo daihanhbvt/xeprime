@@ -38,8 +38,8 @@ export function isMobileClientApp(value: unknown): value is MobileClientApp {
  * `apps/mobile/shared/src/lib/bundle-id.test.ts` đỏ ngay khi hai nơi lệch nhau.
  */
 export const MOBILE_APP_BUNDLE_ID: Readonly<Record<MobileClientApp, string>> = {
-  [MOBILE_CLIENT_APP.CUSTOMER]: 'vn.xeprime.mobile',
-  [MOBILE_CLIENT_APP.PARTNER]: 'vn.xeprime.partner',
+  [MOBILE_CLIENT_APP.CUSTOMER]: 'vn.xeprime.customerapp',
+  [MOBILE_CLIENT_APP.PARTNER]: 'vn.xeprime.partnerapp',
 };
 
 /**

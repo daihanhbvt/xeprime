@@ -15,11 +15,17 @@ import { DriversService } from './drivers.service';
 import {
   AssignableDriversDto,
   AssignableDriversQueryDto,
+  DriverAssignmentListQueryDto,
+  DriverAssignmentPageDto,
   DriverDto,
   DriverListQueryDto,
+  DriverOverviewDto,
   DriverPageDto,
+  DriverWageMonthQueryDto,
+  DriverWageSettingsDto,
   InviteDriverDto,
   UpdateDriverDto,
+  UpdateDriverWageSettingsDto,
 } from './dto/driver.dto';
 
 /**
@@ -65,6 +71,64 @@ export class DriversController {
       excludeBookingId: query.excludeBookingId,
     });
     return { data };
+  }
+
+  /** Tiền công/ngày mặc định của gian hàng + giới hạn nền tảng (ADR 0075). */
+  @Get('wage-settings')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({ summary: 'Tiền công tài xế/ngày mặc định của gian hàng + giới hạn hợp lệ' })
+  @ApiOkResponse({ type: DriverWageSettingsDto })
+  wageSettings(@CurrentTenant() tenant: TenantContext): Promise<DriverWageSettingsDto> {
+    return this.drivers.wageSettings(tenant.tenantId);
+  }
+
+  @Patch('wage-settings')
+  @RequirePermissions(PERMISSION.DRIVER_MANAGE)
+  @ApiOperation({
+    summary: 'Đặt / xoá tiền công tài xế/ngày mặc định của gian hàng',
+    description:
+      'Chỉ áp cho lượt gán tạo SAU lượt này — lượt đã có giữ số của nó. Ngoài giới hạn chính sách ⇒ 422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max). ' +
+      'XePrime chỉ ghi nhận số thoả thuận; tiền công do chủ xe trả trực tiếp.',
+  })
+  @ApiOkResponse({ type: DriverWageSettingsDto })
+  setWageSettings(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateDriverWageSettingsDto,
+  ): Promise<DriverWageSettingsDto> {
+    return this.drivers.setWageSettings(tenant.tenantId, user.id, dto);
+  }
+
+  @Get(':id/overview')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({
+    summary:
+      'Chi tiết một tài xế — tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng',
+  })
+  @ApiOkResponse({ type: DriverOverviewDto })
+  overview(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Query() query: DriverWageMonthQueryDto,
+  ): Promise<DriverOverviewDto> {
+    return this.drivers.overview(tenant.tenantId, id, query.month);
+  }
+
+  @Get(':id/assignments')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({
+    summary: 'Các chuyến tài xế đã nhận, kết thúc trong tháng — kèm tiền công (phân trang)',
+  })
+  @ApiOkResponse({ type: DriverAssignmentPageDto })
+  assignments(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Query() query: DriverAssignmentListQueryDto,
+  ): Promise<DriverAssignmentPageDto> {
+    return this.drivers.assignments(tenant.tenantId, id, query);
   }
 
   @Post()

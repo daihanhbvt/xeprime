@@ -631,7 +631,9 @@ export class ListingRentalTermsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'DRIVER_DEPOSIT_MODE — chỉ with_driver',
+    deprecated: true,
+    description:
+      'NGỪNG DÙNG (29/10/2026) — DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị',
   })
   depositMode!: string | null;
   @ApiProperty({

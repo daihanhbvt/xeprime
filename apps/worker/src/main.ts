@@ -369,9 +369,10 @@ async function main(): Promise<void> {
     loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);
       // Chỉ log khi có việc — mỗi giờ một dòng "0/0" là nhiễu, không phải dấu hiệu sống.
-      if (purged.states || purged.nativeCodes) {
+      if (purged.states || purged.nativeCodes || purged.webSessions || purged.loginThrottles) {
         console.log(
-          `oauth: dọn ${purged.states} state + ${purged.nativeCodes} one-time code hết hạn`,
+          `đăng nhập: dọn ${purged.states} state + ${purged.nativeCodes} one-time code + ` +
+            `${purged.webSessions} phiên web hết hạn + ${purged.loginThrottles} bộ đếm sai đã nguội`,
         );
       }
     }),

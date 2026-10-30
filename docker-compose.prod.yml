@@ -245,6 +245,8 @@ services:
       ADMIN_DOMAIN: ${ADMIN_DOMAIN:?ADMIN_DOMAIN chưa đặt}
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN chưa đặt}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL chưa đặt}
+      # Tuỳ chọn — IP/CIDR được vào site quản trị (cách nhau bằng dấu cách). Không khai = mọi IP.
+      ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-0.0.0.0/0 ::/0}
       # Khoá Caddy gắn kèm header realm của `/api` (ADR 0053 điều 4) — CÙNG giá trị với API.
       REALM_PROXY_SECRET: ${REALM_PROXY_SECRET:?REALM_PROXY_SECRET chưa đặt}
     volumes:

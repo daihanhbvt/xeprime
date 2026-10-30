@@ -53,7 +53,6 @@ import type { PromoTripParams } from '@/features/promo-codes/types';
 import { readDeliveryAddress } from '@/lib/delivery-address-memory';
 import { DeliveryAddressModal, type ConfirmedDeliveryInfo } from './DeliveryAddressModal';
 import { filterQueryString, formatDateTimeParam } from '../filter-params';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingBookingCard.module.css';
 
@@ -80,10 +79,10 @@ export function ListingBookingCard({
   const tCard = useTranslations('Listings.card');
   const tFlow = useTranslations('BookingRequests.flow');
   const tPrice = useTranslations('Common.components.price');
+  const tDriverPrice = useTranslations('Listings.detail.withDriverPrice');
   const costsTitleId = useId();
   const fmt = useAppFormat();
   const dl = useDomainLabel();
-  const surchargeLine = useDriverSurchargeLine();
   const { message } = App.useApp();
   const router = useRouter();
   const pathname = usePathname();
@@ -579,17 +578,14 @@ export function ListingBookingCard({
                 </div>
               )}
 
-              {/* Quy định phụ phí tài xế nếu có */}
-              {listing.driverSurchargeRules && listing.driverSurchargeRules.length > 0 && (
-                <div className={styles.driverRulesBox}>
-                  <span className={styles.rulesTitle}>{t('driver.surchargesTitle')}</span>
-                  <ul className={styles.rulesList}>
-                    {listing.driverSurchargeRules.map((rule) => (
-                      <li key={rule.kind}>{surchargeLine(rule)}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. */}
+              <div className={styles.driverRulesBox}>
+                <span className={styles.rulesTitle}>{tDriverPrice('title')}</span>
+                <ul className={styles.rulesList}>
+                  <li>{tDriverPrice('included')}</li>
+                  <li>{tDriverPrice('excluded')}</li>
+                </ul>
+              </div>
             </div>
           ) : (
             <div className={styles.locationSection}>

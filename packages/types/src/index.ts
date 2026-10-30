@@ -28,6 +28,7 @@ export * from './payment-gateway';
 export * from './ulid';
 export * from './host-metrics';
 export * from './fee-policy';
+export * from './driver-wage';
 export * from './promo-code';
 export * from './favorites';
 export * from './pricing';
@@ -67,3 +68,4 @@ export * from './upload';
  * Chạy `pnpm contract` để sinh lại sau khi đổi DTO backend.
  */
 export type { components, paths } from './api.generated';
+export * from './in-app-webview';

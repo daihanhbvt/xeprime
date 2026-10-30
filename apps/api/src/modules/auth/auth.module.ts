@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { MobileAuthController } from './mobile-auth.controller';
 import { AuthService } from './auth.service';
+import { LoginThrottleService } from './login-throttle.service';
 import { NativeSessionService } from './native-session.service';
 import { SessionService } from './session.service';
 import { RequestRealmService } from './request-realm.service';
@@ -43,6 +44,7 @@ import { PhoneVerificationModule } from '../phone-verification/phone-verificatio
   providers: [
     AuthService,
     SessionService,
+    LoginThrottleService,
     RequestRealmService,
     NativeSessionService,
     OauthStateService,

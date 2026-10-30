@@ -8,11 +8,13 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
-import { useErrorMessage } from '@/i18n/use-error-message';
+// Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
+import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleEditPartHref } from '../workspace-links';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle';
 import {
   publicationEditTab,
@@ -25,11 +27,14 @@ import type { VehicleDetail } from '../api';
 const MISSING_PREVIEW = 2;
 
 /** Vạch mép trái theo mức độ — cùng ngôn ngữ thẻ với khu quản lý. */
-const TONE_COLOR = {
-  critical: colors.danger,
-  warning: colors.warning,
-  info: colors.info,
-} as const;
+const useToneColor = themed(
+  (colors) =>
+    ({
+      critical: colors.danger,
+      warning: colors.warning,
+      info: colors.info,
+    }) as const,
+);
 
 /**
  * MỘT việc "đưa xe lên chợ", nằm trong thẻ "Việc cần làm" ở đầu hồ sơ xe — bản native của
@@ -61,10 +66,12 @@ export function VehiclePublicationTaskItem({
    */
   customerScope?: boolean;
 }) {
+  const colors = useColors();
+  const TONE_COLOR = useToneColor();
   const t = useTranslations('Vehicles.publish.task');
   const tPublish = useTranslations('Vehicles.publish');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
+  const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
   const submit = useSubmitVehiclePublic(vehicle.id);

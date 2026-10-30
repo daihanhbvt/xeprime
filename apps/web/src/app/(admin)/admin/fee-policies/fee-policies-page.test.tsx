@@ -79,6 +79,11 @@ function policy(over: Partial<FeePolicy> = {}): FeePolicy {
     vehicleProtectionEnabled: false,
     vehicleProtectionPercent: null,
     insurancePartnerName: null,
+    withDriverLimits: {
+      priceDaily: { min: '500000', max: '5000000' },
+      wageDaily: { min: '300000', max: '2000000' },
+      wageDailySuggested: '500000',
+    },
     customerPlatformFee: { car: '50000', motorbike: '30000' },
     ownerCommissionTiers: [
       { fromDay: 1, percent: 10 },

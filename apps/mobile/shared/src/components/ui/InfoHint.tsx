@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { BottomSheet } from './BottomSheet';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Dấu "i" mở một lời giải thích BỔ SUNG — bản native của `InfoHint` bên web.
@@ -19,7 +20,15 @@ import { colors, fontSize, iconSize, space } from '@/theme/tokens';
  * KHÔNG dùng nó để giấu thông tin bắt buộc. Số tiền, hạn thanh toán và hệ quả khi hết hạn phải
  * đọc được mà không cần chạm gì.
  */
-export function InfoHint({ content, label }: { content: string; label: string }) {
+export function InfoHint({
+  content,
+  label,
+}: {
+  /** Chuỗi ⇒ một đoạn chữ; ReactNode ⇒ nơi gọi tự dựng (nhiều đoạn, kèm liên kết) như web. */
+  content: ReactNode;
+  label: string;
+}) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,19 +39,19 @@ export function InfoHint({ content, label }: { content: string; label: string })
         accessibilityLabel={label}
         hitSlop={12}
       >
-        <Ionicons
-          name="information-circle-outline"
-          size={iconSize.sm}
-          color={colors.textMuted}
-        />
+        <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textMuted} />
       </Pressable>
       {/* Chỉ dựng khi ĐÃ mở: một màn có năm dấu "i" không nên mang theo năm `Modal` ngủ đông. */}
       {open ? (
         <BottomSheet open onClose={() => setOpen(false)} title={label} scroll={false}>
-          <YStack pb={space.md}>
-            <Text col={colors.text} fos={fontSize.body}>
-              {content}
-            </Text>
+          <YStack pb={space.md} gap={space.sm}>
+            {typeof content === 'string' ? (
+              <Text col={colors.text} fos={fontSize.body}>
+                {content}
+              </Text>
+            ) : (
+              content
+            )}
           </YStack>
         </BottomSheet>
       ) : null}

@@ -2,7 +2,9 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from '@/components/ui/Button';
 import { InlineAction } from '@/components/ui/InlineAction';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
+import { formatOtpCooldown } from '../format-cooldown';
 import type { usePhoneVerify } from '../hooks/use-phone-verify';
 import { maskPhone } from '../mask';
 import { OTP_LENGTH, OtpCodeInput } from './OtpCodeInput';
@@ -36,7 +38,10 @@ export function OtpCodeStep({
   onEdit: () => void;
   editLabel: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth.otp');
+  // Đếm ngược của cổng xác minh tài khoản — cùng câu + đồng hồ "00:58" với `VerifyAccountDialog` web.
+  const tVerify = useTranslations('Auth.market.verify');
   const sent = verify.status === 'code_sent';
   const ready = code.length === OTP_LENGTH && !submitting;
 
@@ -76,7 +81,7 @@ export function OtpCodeStep({
         <InlineAction label={editLabel} onPress={submitting ? () => undefined : onEdit} />
         {verify.cooldown > 0 ? (
           <Text col={colors.placeholder} fos={fontSize.bodySm}>
-            {t('resendIn', { seconds: verify.cooldown })}
+            {tVerify('resendIn', { time: formatOtpCooldown(verify.cooldown) })}
           </Text>
         ) : (
           <InlineAction

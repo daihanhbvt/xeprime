@@ -153,6 +153,19 @@ function Body({ policy }: { policy: FeePolicy }) {
     { key: 'partner', label: t('facts.insurancePartner'), value: policy.insurancePartnerName ?? empty },
   ];
 
+  /* Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075) — không phải dòng tiền. */
+  const range = (r: { min: string; max: string }) =>
+    t('rangePerDay', { min: fmt.money(r.min), max: fmt.money(r.max) });
+  const withDriver = [
+    { key: 'priceDaily', label: t('facts.withDriverPrice'), value: range(policy.withDriverLimits.priceDaily) },
+    { key: 'wageDaily', label: t('facts.driverWage'), value: range(policy.withDriverLimits.wageDaily) },
+    {
+      key: 'wageSuggested',
+      label: t('facts.driverWageSuggested'),
+      value: perDay(policy.withDriverLimits.wageDailySuggested),
+    },
+  ];
+
   /*
    * Thuế (ADR 0068): bảng mức theo loại dịch vụ + căn cứ pháp lý. Phiên bản ≤ v8 (một mức, đã lưu
    * trữ) không có bảng — hiện đúng hai số cũ của nó để đối chiếu đơn cũ.
@@ -216,6 +229,9 @@ function Body({ policy }: { policy: FeePolicy }) {
       </Section>
       <Section title={t('sections.insurance')}>
         <WorkDrawerFacts items={insurance} />
+      </Section>
+      <Section title={t('sections.withDriver')}>
+        <WorkDrawerFacts items={withDriver} />
       </Section>
       <Section title={t('sections.tax')}>
         <WorkDrawerFacts items={tax} />

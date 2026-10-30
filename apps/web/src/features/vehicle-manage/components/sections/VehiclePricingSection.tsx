@@ -14,6 +14,7 @@ import {
   useVehiclePricing,
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
+import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -90,6 +91,7 @@ export function VehiclePricingSection() {
             shopPolicyHref={null}
             policySource="direct"
             calendarHref={vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb })}
+            withDriverFooter={<WithDriverWageNote />}
             onSave={(body) =>
               save.mutate(body, {
                 onSuccess: () => message.success(tEdit('saved')),

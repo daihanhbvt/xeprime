@@ -59,6 +59,7 @@
       "label": "Lọc theo trạng thái",
       "range": "Khoảng thời gian",
       "rangePlaceholder": "Chọn khoảng thời gian",
+      "rangeFrom": "Từ ngày",
       "rangeTo": "Đến ngày",
       "clearRange": "Xoá khoảng ngày"
     },

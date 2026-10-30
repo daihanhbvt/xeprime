@@ -16,7 +16,8 @@ import {
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { CALENDAR_SORT_VALUES, type CalendarFilters, type CalendarSort } from '../api';
 import {
   CALENDAR_DAY_OPTIONS,
@@ -123,6 +124,7 @@ export function CalendarToolbar({
    */
   onBack?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Calendar');
   const tCommon = useTranslations('Common.actions');
   const tFilters = useTranslations('Common.filters');

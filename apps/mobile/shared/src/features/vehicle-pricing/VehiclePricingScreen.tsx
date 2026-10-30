@@ -45,7 +45,8 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
   POLICY_BLOCK,
   PolicySections,
@@ -258,6 +259,7 @@ function VehiclePricingForm({
   onRefetch: () => void;
   customerScope: boolean;
 }) {
+  const colors = useColors();
   const tSection = useTranslations('VehicleManage.pricing');
   const t = useTranslations('Vehicles.pricing');
   const tSaved = useTranslations('Vehicles.edit.pricingTab');
@@ -504,6 +506,7 @@ function VehiclePricingForm({
 
           {showPolicy && !direct && overriding && canEdit ? (
             <Button
+              icon="refresh-outline"
               label={t('source.reset')}
               variant="danger"
               size="sm"
@@ -698,6 +701,7 @@ function DirectDiscount({
   setValue: UseFormSetValue<VehiclePricingFormValues>;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.pricing.discount');
   const fmt = useAppFormat();
 
@@ -821,6 +825,7 @@ const DEFAULT_DISCOUNT_PERCENT = 10;
 
 /** Con số lớn của khối xem trước: tiền nổi bật, đơn vị nhỏ đi kèm — đúng `<small>` của web. */
 function PreviewPrice({ amount, suffix }: { amount: string; suffix: string }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-end" gap={space.xs}>
       <Text col={colors.price} fos={fontSize.h3} fow={fontWeight.bold}>
@@ -835,6 +840,7 @@ function PreviewPrice({ amount, suffix }: { amount: string; suffix: string }) {
 
 /** Dòng phụ của khối xem trước — giá cuối tuần sau giảm, giá theo giờ không giảm. */
 function PreviewLine({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
     <YStack gap={2} pt={space.xs}>
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -866,6 +872,7 @@ function InheritedPolicyCard({
   /** Cùng bộ khối với form — dòng quá giờ/ưu đãi của khối ẩn không hiện (như web). */
   blocks?: readonly PolicyBlock[];
 }) {
+  const colors = useColors();
   const shows = (block: PolicyBlock) => !blocks || blocks.includes(block);
   const t = useTranslations('Vehicles.pricing.inherited');
   const fmt = useAppFormat();
@@ -1003,6 +1010,7 @@ function InheritedPolicyCard({
  * Lọc theo biển số như mọi lối "Xem lịch" khác (`vehicleSchedulePath` của web).
  */
 function CalendarPriceLink({ href }: { href: Href }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.pricing');
   const navigateOnce = useNavigateOnce();
 

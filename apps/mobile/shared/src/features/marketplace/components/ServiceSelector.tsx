@@ -4,7 +4,8 @@ import { Text, XStack } from 'tamagui';
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Mỗi dịch vụ một TÔNG riêng, đúng như `ListingServiceSelector.module.css` của web:
@@ -13,19 +14,21 @@ import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tok
  * Màu ở đây là NHẬN DIỆN loại dịch vụ, không phải trạng thái chọn — nhờ vậy khách quen mặt màu
  * và nhận ra loại dịch vụ ở mọi màn mà không cần đọc chữ.
  */
-const SERVICE_TONE: Record<ServiceType, { fg: string; bg: string; icon: IconName }> = {
-  [SERVICE_TYPE.SELF_DRIVE]: { fg: colors.info, bg: colors.infoSurface, icon: 'car-outline' },
-  [SERVICE_TYPE.WITH_DRIVER]: {
-    fg: colors.primaryActive,
-    bg: colors.primaryLight,
-    icon: 'person-outline',
-  },
-  [SERVICE_TYPE.LONG_TERM]: {
-    fg: colors.success,
-    bg: colors.successSurface,
-    icon: 'calendar-outline',
-  },
-};
+const useServiceTone = themed<Record<ServiceType, { fg: string; bg: string; icon: IconName }>>(
+  (colors) => ({
+    [SERVICE_TYPE.SELF_DRIVE]: { fg: colors.info, bg: colors.infoSurface, icon: 'car-outline' },
+    [SERVICE_TYPE.WITH_DRIVER]: {
+      fg: colors.primaryActive,
+      bg: colors.primaryLight,
+      icon: 'person-outline',
+    },
+    [SERVICE_TYPE.LONG_TERM]: {
+      fg: colors.success,
+      bg: colors.successSurface,
+      icon: 'calendar-outline',
+    },
+  }),
+);
 
 /**
  * Số dịch vụ tối đa còn xếp vừa MỘT hàng trên máy hẹp nhất.
@@ -60,6 +63,8 @@ export function ServiceSelector({
   active: string;
   onChange: (next: string) => void;
 }) {
+  const colors = useColors();
+  const SERVICE_TONE = useServiceTone();
   const domainLabel = useDomainLabel();
   const only = services.length === 1;
   const singleRow = services.length <= SINGLE_ROW_MAX;

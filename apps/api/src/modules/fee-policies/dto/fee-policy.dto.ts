@@ -59,6 +59,38 @@ export class PerVehicleTypeAmountDto {
   motorbike!: string;
 }
 
+/** Khoảng tiền (VND, bội 1.000đ) — `0 < min < max` do `withDriverLimitsValid` canh ở service. */
+export class MoneyRangeDto {
+  @ApiProperty({ example: '200000' })
+  @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
+  min!: string;
+
+  @ApiProperty({ example: '2000000' })
+  @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
+  max!: string;
+}
+
+/** Giới hạn chặn số vô lý của chuyến có tài xế — `WithDriverLimits` ở `@xeprime/types` (ADR 0075). */
+export class WithDriverLimitsDto {
+  @ApiProperty({ type: MoneyRangeDto, description: 'Giá có tài xế/ngày của xe' })
+  @ValidateNested()
+  @Type(() => MoneyRangeDto)
+  priceDaily!: MoneyRangeDto;
+
+  @ApiProperty({ type: MoneyRangeDto, description: 'Tiền công tài xế/ngày' })
+  @ValidateNested()
+  @Type(() => MoneyRangeDto)
+  wageDaily!: MoneyRangeDto;
+
+  @ApiProperty({
+    description:
+      'Tiền công/ngày GỢI Ý cho gian hàng chưa đặt mức chung — chỉ là lời nhắc, không tự ghi vào đâu; nằm trong wageDaily',
+    example: '500000',
+  })
+  @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
+  wageDailySuggested!: string;
+}
+
 /**
  * MỘT nấc hoa hồng lũy tiến — áp `percent` cho mọi ngày thuê từ `fromDay` tới ngày liền trước
  * `fromDay` của nấc kế tiếp (`OwnerCommissionTier`). Thứ tự và "bắt đầu từ ngày 1" do
@@ -326,6 +358,16 @@ export class UpsertFeePolicyDto {
   @ValidateNested()
   @Type(() => PerVehicleTypeAmountDto)
   tripInsuranceDailyAmount?: PerVehicleTypeAmountDto;
+
+  @ApiPropertyOptional({
+    type: WithDriverLimitsDto,
+    description:
+      'Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075). Vắng ⇒ giữ số của bản nháp (sửa) / mặc định nền tảng (tạo mới).',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WithDriverLimitsDto)
+  withDriverLimits?: WithDriverLimitsDto;
 }
 
 export class FeePolicyDto {
@@ -374,6 +416,11 @@ export class FeePolicyDto {
   vehicleProtectionDailyAmount!: PerVehicleTypeAmountDto;
   @ApiProperty({ type: PerVehicleTypeAmountDto })
   tripInsuranceDailyAmount!: PerVehicleTypeAmountDto;
+  @ApiProperty({
+    type: WithDriverLimitsDto,
+    description: 'Giới hạn chuyến có tài xế đang áp — bản chưa khai trả mặc định nền tảng',
+  })
+  withDriverLimits!: WithDriverLimitsDto;
   @ApiPropertyOptional({ type: String, nullable: true }) effectiveFrom!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) effectiveTo!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) activatedByName!: string | null;

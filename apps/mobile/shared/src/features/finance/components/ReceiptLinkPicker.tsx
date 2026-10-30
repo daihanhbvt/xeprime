@@ -9,7 +9,8 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { useReceiptBookingOptions, useReceiptVehicleOptions } from '../hooks/use-finance';
 import type { ReceiptBookingOption, ReceiptVehicleOption } from '../api';
 
@@ -34,6 +35,7 @@ export function BookingPickerSheet({
   selectedId: string | null;
   onSelect: (booking: ReceiptBookingOption) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.form');
   const fmt = useAppFormat();
   const [search, setSearch] = useState('');
@@ -147,6 +149,7 @@ function PickerShell({
   empty: string | null;
   children: ReactNode;
 }) {
+  const colors = useColors();
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
       <SearchInput
@@ -185,6 +188,7 @@ function Row({
   trailing?: ReactNode;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}

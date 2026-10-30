@@ -8,6 +8,7 @@ export type { CreateReviewInput, UpdateReviewInput } from '@/api/reviews/api';
 export type {
   CustomerSurcharge,
   CustomerTrip,
+  CustomerTripCancelPreview,
   CustomerTripCounts,
   CustomerTripDetail,
   CustomerTripEstimate,

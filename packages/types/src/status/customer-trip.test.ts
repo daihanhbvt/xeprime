@@ -97,14 +97,17 @@ describe('customerTripTimeline', () => {
     expect(customerTripTimeline(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL).visible).toBe(false);
   });
 
-  it('sẵn sàng và đang thuê dùng CÙNG một dòng thời gian: xác nhận xong, hoàn thành chưa', () => {
-    for (const stage of [CUSTOMER_TRIP_STAGE.READY, CUSTOMER_TRIP_STAGE.ACTIVE]) {
-      expect(customerTripTimeline(stage)).toEqual({
-        visible: true,
-        confirmedDone: true,
-        completedDone: false,
-      });
-    }
+  it('mốc đầu là "Đã nhận xe": sẵn sàng chưa tích, đang thuê đã tích, hoàn thành chưa', () => {
+    expect(customerTripTimeline(CUSTOMER_TRIP_STAGE.READY)).toEqual({
+      visible: true,
+      confirmedDone: false,
+      completedDone: false,
+    });
+    expect(customerTripTimeline(CUSTOMER_TRIP_STAGE.ACTIVE)).toEqual({
+      visible: true,
+      confirmedDone: true,
+      completedDone: false,
+    });
   });
 
   it('hoàn thành đóng cả hai mốc', () => {

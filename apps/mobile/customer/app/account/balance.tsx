@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
-import { WALLET_SCOPE } from '@/api/wallet/api';
 import { RequireSession } from '@/features/auth/RequireSession';
-import { WalletScreen } from '@/features/wallet/WalletScreen';
+import { AccountPaymentsHub } from '@/features/account-payments/AccountPaymentsHub';
+import { ACCOUNT_PAYMENTS_TAB } from '@/features/account-payments/components/AccountPaymentsTabs';
 import { BALANCE_PAYOUT_SECTION, BALANCE_SECTION_PARAM } from '@/navigation/routes-base';
 
 /**
@@ -17,8 +17,8 @@ export default function AccountBalanceRoute() {
   const params = useLocalSearchParams<{ [BALANCE_SECTION_PARAM]?: string }>();
   return (
     <RequireSession>
-      <WalletScreen
-        scope={WALLET_SCOPE.ACCOUNT}
+      <AccountPaymentsHub
+        initialTab={ACCOUNT_PAYMENTS_TAB.BALANCE}
         focusPayout={params[BALANCE_SECTION_PARAM] === BALANCE_PAYOUT_SECTION}
       />
     </RequireSession>

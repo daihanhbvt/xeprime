@@ -1,12 +1,12 @@
 'use client';
 
-import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { LockOutlined, PhoneOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { buildLoginSchema, type LoginValues } from '@xeprime/validators';
+import { buildPhoneLoginSchema, type PhoneLoginValues } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
 import { useAuthSchemaLabels } from '@/features/auth/hooks/use-auth-schema-labels';
 import styles from './PublicDeletionForm.module.css';
@@ -26,10 +26,10 @@ import styles from './PublicDeletionForm.module.css';
  * đang chờ · đã xác nhận). Đừng thêm `useMutation` vào đây mà không thêm cả một endpoint thật —
  * một mutation rỗng sẽ nói dối người đọc code sau rằng có gì đó vừa được ghi.
  *
- * ## Vì sao vẫn dùng `buildLoginSchema`
+ * ## Vì sao vẫn dùng `buildPhoneLoginSchema`
  *
- * Hai ô ở đây ĐÚNG là hai ô của màn đăng nhập — "email hoặc SĐT" cộng mật khẩu — nên luật kiểm
- * cũng phải đúng là một: `@xeprime/validators` giữ luật, `useAuthSchemaLabels()` cấp câu lỗi đã
+ * Hai ô ở đây ĐÚNG là hai ô của màn đăng nhập site khách — SỐ ĐIỆN THOẠI cộng mật khẩu (ADR 0060:
+ * site khách không nhận email làm định danh) — nên luật kiểm cũng phải đúng là một: `@xeprime/validators` giữ luật, `useAuthSchemaLabels()` cấp câu lỗi đã
  * dịch. Viết một schema thứ hai ở đây là mở đường cho hai trang từ chối cùng một chuỗi bằng hai
  * câu khác nhau.
  */
@@ -46,11 +46,11 @@ export function PublicDeletionForm() {
   const t = useTranslations('Account.publicDeletion');
   const labels = useAuthSchemaLabels();
   // Schema dựng lại khi đổi ngôn ngữ — câu lỗi nằm TRONG schema, không nằm trong component.
-  const schema = useMemo(() => buildLoginSchema(labels), [labels]);
+  const schema = useMemo(() => buildPhoneLoginSchema(labels), [labels]);
 
-  const { control, handleSubmit } = useForm<LoginValues>({
+  const { control, handleSubmit } = useForm<PhoneLoginValues>({
     resolver: yupResolver(schema),
-    defaultValues: { identifier: '', password: '' },
+    defaultValues: { phone: '', password: '' },
   });
 
   const [stage, setStage] = useState<'form' | 'pending' | 'done'>('form');
@@ -79,11 +79,12 @@ export function PublicDeletionForm() {
     <form onSubmit={handleSubmit(() => setStage('pending'))} noValidate className={styles.form}>
       <TextField
         control={control}
-        name="identifier"
-        label={t('identifier')}
-        placeholder={t('identifierPlaceholder')}
+        name="phone"
+        label={t('phone')}
+        type="tel"
+        placeholder={t('phonePlaceholder')}
         autoComplete="username"
-        prefix={<MailOutlined />}
+        prefix={<PhoneOutlined />}
         disabled={pending}
       />
 

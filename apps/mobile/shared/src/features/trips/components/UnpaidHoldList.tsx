@@ -4,14 +4,15 @@ import { useRouter } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { HOLD_COUNTDOWN_SEGMENT_MINUTES } from '@xeprime/types';
+import { HOLD_COUNTDOWN_URGENT_MINUTES } from '@xeprime/types';
 import { dayjs } from '@xeprime/domain';
 import { Button } from '@/components/ui/Button';
 import { Countdown } from '@/components/ui/Countdown';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerUnpaidHold } from '../api';
 
 const THUMB_W = 64;
@@ -42,6 +43,7 @@ export function UnpaidHoldList({
    */
   replace?: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -96,7 +98,8 @@ export function UnpaidHoldList({
               ) : null}
               <Countdown
                 deadline={item.expiresAt}
-                urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+                // Cùng ngưỡng cam với mọi đồng hồ giữ chỗ khác — trùng lượt nhắc CUỐI của worker.
+                urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
                 labels={{
                   remaining: t('hold.countdownRemaining'),
                   expired: t('hold.countdownExpired'),
@@ -114,7 +117,7 @@ export function UnpaidHoldList({
                 {fmt.money(item.remainingAmount)}
               </Text>
             </YStack>
-            <Button
+            <Button variant="gradient"
               size="sm"
               icon="card-outline"
               label={t('unpaid.pay')}

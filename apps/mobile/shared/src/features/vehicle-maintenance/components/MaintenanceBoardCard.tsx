@@ -23,7 +23,8 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { BoardAction } from './BoardActionSheets';
 import type { MaintenanceBoardItem } from '../api';
 
@@ -66,6 +67,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
   onPress: (item: MaintenanceBoardItem) => void;
   onAction: (action: BoardAction) => void;
 }) {
+  const colors = useColors();
   const tTable = useTranslations('Maintenance.table');
   const tActions = useTranslations('Maintenance.actions');
   const tLabels = useTranslations('Common.labels');

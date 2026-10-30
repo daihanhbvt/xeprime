@@ -110,6 +110,7 @@ export {
   claimDriverMissingAlert,
   driverMissingAlertWhere,
   markDriverMissingAlertCovered,
+  wageOnClose,
 } from './driver-assignment';
 
 /**

@@ -23,7 +23,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { IconName } from '@/components/ui/Chip';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel, type DomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { discountedPriceVnd } from '../pricing';
 import { useVehicleAlertBadges } from './vehicle-alert-badges';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../api';
@@ -120,6 +121,7 @@ function VehicleCardImpl({
   alertsLoading,
   alertsFailed,
 }: VehicleCardProps) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.list');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -371,6 +373,7 @@ const strong = (chunks: ReactNode) => <Strong>{chunks}</Strong>;
 
 /** Một dòng chỉ số: hình dẫn đầu + chữ, cả dòng ở bậc chữ nhỏ nhất của thẻ. */
 function Stat({ icon, tone, children }: { icon: IconName; tone?: string; children: ReactNode }) {
+  const colors = useColors();
   return (
     <XStack ai="center" gap={space.xs}>
       <Ionicons name={icon} size={iconSize.sm} color={tone ?? colors.textMuted} />
@@ -383,6 +386,7 @@ function Stat({ icon, tone, children }: { icon: IconName; tone?: string; childre
 
 /** Phần `<n>` của message: con số được nhấn, chữ dẫn quanh nó vẫn mờ — đúng vai `<b>` của web. */
 function Strong({ children, tone }: { children: ReactNode; tone?: string }) {
+  const colors = useColors();
   return (
     <Text col={tone ?? colors.text} fow={fontWeight.semibold}>
       {children}

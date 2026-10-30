@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /** Bốn tông của `<Alert>` bên web — cùng bộ, cùng thứ tự đọc. */
-const TONE = {
-  info: { fg: colors.info, bg: colors.infoSurface, icon: 'information-circle' as const },
-  warning: { fg: colors.warning, bg: colors.warningSurface, icon: 'warning' as const },
-  success: { fg: colors.success, bg: colors.successSurface, icon: 'checkmark-circle' as const },
-  danger: { fg: colors.danger, bg: colors.dangerSurface, icon: 'alert-circle' as const },
-} as const;
+const useTone = themed(
+  (colors) =>
+    ({
+      info: { fg: colors.info, bg: colors.infoSurface, icon: 'information-circle' as const },
+      warning: { fg: colors.warning, bg: colors.warningSurface, icon: 'warning' as const },
+      success: { fg: colors.success, bg: colors.successSurface, icon: 'checkmark-circle' as const },
+      danger: { fg: colors.danger, bg: colors.dangerSurface, icon: 'alert-circle' as const },
+    }) as const,
+);
 
-export type CalloutTone = keyof typeof TONE;
+export type CalloutTone = keyof ReturnType<typeof useTone>;
 
 /**
  * Khối thông báo trong luồng đọc — bản native của `<Alert showIcon>` bên web.
@@ -32,6 +36,8 @@ export function Callout({
   title?: string;
   children?: ReactNode;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const skin = TONE[tone];
   const body = typeof children === 'string' ? <CalloutBody>{children}</CalloutBody> : children;
 
@@ -64,6 +70,7 @@ export function Callout({
 
 /** Một đoạn thân của `Callout` — dùng khi khối có nhiều đoạn, hoặc xen kẽ với nội dung khác. */
 export function CalloutBody({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.textMuted} fos={fontSize.bodySm}>
       {children}

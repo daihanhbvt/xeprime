@@ -40,7 +40,8 @@
       "title": "Thông tin thanh toán",
       "code": "Mã thanh toán",
       "safety": "Để bảo vệ khoản thanh toán của bạn, chỉ chuyển tiền theo đúng thông tin trên trang này."
-    }
+    },
+    "tabTransfer": "VietQR"
   },
   "order": {
     "loading": "Đang kiểm tra trạng thái thanh toán…",

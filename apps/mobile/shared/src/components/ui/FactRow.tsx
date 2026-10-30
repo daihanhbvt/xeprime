@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 export interface FactItem {
   /** Khoá React — dùng luôn khoá message của nhãn, đừng lấy chỉ số mảng. */
@@ -67,6 +68,7 @@ export function FactRow({ items }: { items: readonly FactItem[] }) {
 }
 
 function Cell({ item }: { item: FactItem }) {
+  const colors = useColors();
   return (
     <YStack f={1} minWidth={0} gap={2}>
       {item.node ?? (
@@ -88,5 +90,6 @@ function Cell({ item }: { item: FactItem }) {
 
 /** Kẻ dọc giữa hai ô — `alignSelf: stretch` để nó cao bằng hàng, không bằng nội dung ô nào. */
 function Rule() {
+  const colors = useColors();
   return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" mx={space.sm} />;
 }

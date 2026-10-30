@@ -3,6 +3,7 @@
 > Ngày viết: 27/08/2026 · Cập nhật: 15/10/2026 · Trạng thái: đang áp dụng cho staging + production.
 > Kiến trúc: **một VPS duy nhất** (CLAUDE.md §3 — "Deploy MVP: 1 VPS").
 > Mọi file nhắc tới ở đây nằm trong `deploy/` và `docker-compose.prod.yml`.
+> Dựng production lần đầu (thứ tự, tài khoản, khoá, app lên store): [`production-launch-runbook.md`](production-launch-runbook.md).
 
 ---
 
@@ -151,14 +152,11 @@ Nguyên tắc: **tách theo MÔI TRƯỜNG bằng tên miền con, tách theo KH
 partner. Bảng ánh xạ duy nhất: `apps/web/src/zones/legacy-redirects.ts`. Tiền tố thư mục gõ thẳng
 trên host không sở hữu nó (`xeprime.vn/admin/…`, `partner.xeprime.vn/admin/…`) trả 404.
 
-**Giới hạn truy cập khu quản trị theo IP** giờ làm theo HOST — thêm vào khối `{$ADMIN_DOMAIN}` của
-`deploy/Caddyfile`, TRƯỚC `import site_api platform`:
-
-```caddyfile
-# Chỉ IP văn phòng vào được site quản trị (cả trang lẫn /api của nó).
-@blocked not client_ip 1.2.3.4 5.6.7.0/24
-respond @blocked 403
-```
+**Giới hạn truy cập khu quản trị theo IP** là một biến của GitHub Environment: đặt Variable
+`ADMIN_ALLOWED_IPS` = danh sách IP/CIDR cách nhau bằng dấu cách (vd `1.2.3.4 5.6.7.0/24`). Deploy
+ghi nó vào `.env`, compose chuyển cho Caddy, và khối `{$ADMIN_DOMAIN}` của `deploy/Caddyfile` trả
+403 cho mọi IP khác — cả trang lẫn `/api` của site quản trị. Không khai ⇒ `0.0.0.0/0 ::/0` (mọi IP,
+như trước). Site khách, site partner và host API của app không bị ảnh hưởng.
 
 > `client_ip` chứ không phải `remote_ip`: sau proxy Cloudflare, `remote_ip` là IP biên của
 > Cloudflare — nghĩa là danh sách chặn khớp với tất cả mọi người hoặc không khớp với ai. Dùng
@@ -718,14 +716,18 @@ Luồng: `resolve` → `verify` (dùng lại `ci.yml` nguyên vẹn) → `deploy
 
 **CI (`ci.yml`) chạy khi nào.** Mỗi cây mã chỉ kiểm trọn bộ MỘT lần trước khi ship — repo
 private ăn vào quỹ Actions có hạn, và một lượt trọn bộ ≈ 54 phút tính tiền (quỹ 2.000 phút của
-gói Free cạn ngày 13/10/2026, chặn luôn job deploy staging). Lý do từng dòng nằm ở đầu `ci.yml`.
+gói Free cạn ngày 13/10/2026, chặn luôn job deploy staging). Từ 29/10/2026 CI không còn chạy
+theo PR — một PR push liên tục từng ăn ~9 lượt trọn bộ trong một ngày. Lý do nằm ở đầu `ci.yml`.
 
 | Sự kiện | CI |
 | --- | --- |
-| PR vào `develop` (hay nhánh nào khác ngoài `staging`/`main`) | Chạy, trên kết quả merge. PR **nháp** thì đợi tới khi bấm *Ready for review* |
-| PR chỉ sửa `docs/`, `*.md`, `.claude/`, `apps/mobile/` | Bỏ qua — trừ `apps/mobile/shared/src/i18n/` và `package.json` của mobile, hai chỗ CI có đọc |
-| Merge vào `develop` | Không chạy lại. Muốn kiểm `develop` sau nhiều lần merge: **Actions → CI → Run workflow** |
-| PR vào `staging`/`main` | Không chạy — `verify` kiểm đúng SHA đó ngay khi merge, đỏ thì không deploy |
+| Push nhánh / mở PR / push thêm vào PR (mọi nhánh) | **Không chạy** |
+| Merge vào `develop` | Không chạy |
+| Merge vào `staging`/`main` | Chạy trọn bộ ở job `verify` của `deploy.yml`, trên đúng SHA sắp ship — đỏ thì không deploy |
+| Muốn kiểm sớm một nhánh (PR lớn, đụng tiền/migration, `develop` trước khi lên staging) | **Actions → CI → Run workflow** → chọn nhánh |
+
+Đánh đổi: lỗi có thể vào `develop` và chỉ lộ ra ở `verify` lúc lên staging. Lên staging đều đặn
+để mỗi lượt gom ít PR — đỏ thì dễ khoanh ra PR gây lỗi, sửa trên `develop` rồi merge lại.
 
 > ⚠️ **Rollback qua mốc ADR 0055** (migration `20261007120000_retire_legacy_request_statuses`).
 > Rollback chỉ đổi image, KHÔNG lùi migration. Image trước mốc đó ghi `booking_requests.status =
@@ -832,8 +834,8 @@ Ba URL site lúc build (`NEXT_PUBLIC_WEB_MARKET_URL` · `_PARTNER_URL` · `_ADMI
 `NEXT_PUBLIC_XP_ZONE_MODE=host` do workflow tự dựng từ các biến trên — không khai riêng.
 
 Ngoài ra khai **thêm một bản `NEXT_PUBLIC_*` ở cấp repository** (Settings → Secrets and
-variables → Actions → Variables). Job `build` của `ci.yml` chạy trên PR, nơi không có
-Environment nào — cùng giá trị thì layer cache khớp với lần build thật và tiết kiệm gần trọn
+variables → Actions → Variables). Job `build` của `ci.yml` không gắn Environment nào (kể cả khi
+chạy làm `verify`) — cùng giá trị thì layer cache khớp với lần build thật và tiết kiệm gần trọn
 thời gian build web. Variables của Environment đè lên Variables của repository.
 
 ### 9.2b Firestore rules được đẩy TỰ ĐỘNG, trước khi rollout app
@@ -961,8 +963,8 @@ Mobile là **hai Expo project mỏng** + một package dùng chung (ADR 0051 §5
 
 | Package | Thư mục | App | Bundle / package id | Scheme |
 | --- | --- | --- | --- | --- |
-| `@xeprime/mobile-customer` | `apps/mobile/customer` | XePrime (khách) | `vn.xeprime.mobile` | `xeprime` |
-| `@xeprime/mobile-manage` | `apps/mobile/manage` | XePrime Partner | `vn.xeprime.partner` | `xeprimepartner` |
+| `@xeprime/mobile-customer` | `apps/mobile/customer` | XePrime (khách) | `vn.xeprime.customerapp` | `xeprime` |
+| `@xeprime/mobile-manage` | `apps/mobile/manage` | XePrime Partner | `vn.xeprime.partnerapp` | `xeprimepartner` |
 | `@xeprime/mobile-shared` | `apps/mobile/shared` | mã dùng chung của hai app | — | — |
 
 Cả ba **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile` chỉ cài

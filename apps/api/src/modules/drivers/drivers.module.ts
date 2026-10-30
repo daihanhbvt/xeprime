@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 import { NotificationModule } from '../notification/notification.module';
 import { DriverSelfController } from './driver-self.controller';
 import { DriverSelfService } from './driver-self.service';
@@ -11,7 +12,7 @@ import { DriversService } from './drivers.service';
  * vehicle-settings: mọi lượt gán, gỡ, báo tài xế đi qua MỘT writer.
  */
 @Module({
-  imports: [AuditModule, NotificationModule],
+  imports: [AuditModule, NotificationModule, FeePoliciesModule],
   controllers: [DriversController, DriverSelfController],
   providers: [DriversService, DriverSelfService],
   exports: [DriversService],

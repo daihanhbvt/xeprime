@@ -8,6 +8,9 @@ import type { RequestRealmService } from '../src/modules/auth/request-realm.serv
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { VerifiedIdentity } from '../src/modules/auth/social/identity';
 import type { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
+import type { SessionService } from '../src/modules/auth/session.service';
+import type { NativeSessionService } from '../src/modules/auth/native-session.service';
+import type { LoginThrottleService } from '../src/modules/auth/login-throttle.service';
 
 /**
  * Luật NỐI TÀI KHOẢN — phần nhạy cảm nhất của đăng nhập mạng xã hội.
@@ -72,6 +75,10 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
       {} as RequestRealmService,
       // Đăng nhập mạng xã hội không đi qua OTP (ADR 0060: OTP chỉ cho đăng ký / quên mật khẩu).
       {} as PhoneVerificationService,
+      // Không đổi mật khẩu, không đăng nhập bằng mật khẩu ⇒ không chạm phiên hay bộ đếm sai.
+      {} as SessionService,
+      {} as NativeSessionService,
+      {} as LoginThrottleService,
     );
   });
 
@@ -127,14 +134,18 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
 
   it('chỉ tự nối tài khoản cùng email khi provider đã xác minh email', async () => {
     prisma.userIdentity.findUnique.mockResolvedValue(null);
-    prisma.user.findFirst.mockResolvedValue({ id: 'USER_EMAIL', status: USER_STATUS.ACTIVE });
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'USER_EMAIL',
+      status: USER_STATUS.ACTIVE,
+      emailVerifiedAt: new Date(),
+    });
 
     await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY, C)).resolves.toEqual({
       userId: 'USER_EMAIL',
     });
     expect(prisma.user.findFirst).toHaveBeenCalledWith({
       where: { realm: C, email: 'customer@example.com', deletedAt: null },
-      select: { id: true, status: true },
+      select: { id: true, status: true, emailVerifiedAt: true },
     });
     expect(prisma.user.create).not.toHaveBeenCalled();
     expect(prisma.userIdentity.create).toHaveBeenCalledWith({
@@ -149,12 +160,33 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
 
   it('chặn provider chưa xác minh tự nhận email của tài khoản có sẵn', async () => {
     prisma.userIdentity.findUnique.mockResolvedValue(null);
-    prisma.user.findFirst.mockResolvedValue({ id: 'USER_EMAIL', status: USER_STATUS.ACTIVE });
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'USER_EMAIL',
+      status: USER_STATUS.ACTIVE,
+      emailVerifiedAt: new Date(),
+    });
 
     await expect(service.upsertUserFromIdentity(FACEBOOK_IDENTITY, C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.CONFLICT },
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('KHÔNG nối Google vào tài khoản có email CHƯA xác minh (chống gieo sẵn tài khoản — ADR 0076)', async () => {
+    // Kẻ xấu tạo tài khoản bằng Facebook mang email nạn nhân (email chưa xác minh). Nạn nhân đăng
+    // nhập Google cùng email: nối vào là nạn nhân dùng chung tài khoản kẻ xấu còn giữ.
+    prisma.userIdentity.findUnique.mockResolvedValue(null);
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'USER_SEEDED',
+      status: USER_STATUS.ACTIVE,
+      emailVerifiedAt: null,
+    });
+
+    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY, C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CONFLICT },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.userIdentity.create).not.toHaveBeenCalled();
   });
 
   it('tạo tài khoản mới cho Facebook khi email chưa tồn tại', async () => {

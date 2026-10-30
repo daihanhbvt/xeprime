@@ -20,7 +20,8 @@ import type {
 import { cancelErrorKey, decisionErrorKey } from '@/features/booking-requests/decision-error';
 import { getErrorCode } from '@/lib/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { tripToDecisionTarget } from '../decision-target';
 import type { CustomerTripDetail } from '../api';
 
@@ -70,6 +71,7 @@ export function TripHostDecisions({
    */
   onApproved: (approved: BookingRequestDecisionTarget) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.host');
   const tRequests = useTranslations('BookingRequests');
   const toast = useAppToast();

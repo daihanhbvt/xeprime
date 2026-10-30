@@ -15,12 +15,16 @@ import enCommon from '@xeprime/domain/messages/en/common.json';
 import enDomain from '@xeprime/domain/messages/en/domain.json';
 import enErrors from '@xeprime/domain/messages/en/errors.json';
 import enNotifications from '@xeprime/domain/messages/en/notifications.json';
+import enHome from '@xeprime/domain/messages/en/home.json';
 import enHomeSearch from '@xeprime/domain/messages/en/home-search.json';
 import enListYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.json';
 import enListings from '@xeprime/domain/messages/en/listings.json';
 import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
 import enPromoCodes from '@xeprime/domain/messages/en/promo-codes.json';
 import enPaymentGateway from '@xeprime/domain/messages/en/payment-gateway.json';
+import enInsurance from '@xeprime/domain/messages/en/insurance.json';
+import enFavorites from '@xeprime/domain/messages/en/favorites.json';
+import enFeePolicies from '@xeprime/domain/messages/en/fee-policies.json';
 import enMobileShell from '@xeprime/domain/messages/en/mobile-shell.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
@@ -58,12 +62,16 @@ import viCommon from '@xeprime/domain/messages/vi/common.json';
 import viDomain from '@xeprime/domain/messages/vi/domain.json';
 import viErrors from '@xeprime/domain/messages/vi/errors.json';
 import viNotifications from '@xeprime/domain/messages/vi/notifications.json';
+import viHome from '@xeprime/domain/messages/vi/home.json';
 import viHomeSearch from '@xeprime/domain/messages/vi/home-search.json';
 import viListYourVehicle from '@xeprime/domain/messages/vi/list-your-vehicle.json';
 import viListings from '@xeprime/domain/messages/vi/listings.json';
 import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
 import viPromoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import viPaymentGateway from '@xeprime/domain/messages/vi/payment-gateway.json';
+import viInsurance from '@xeprime/domain/messages/vi/insurance.json';
+import viFavorites from '@xeprime/domain/messages/vi/favorites.json';
+import viFeePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
 import viMobileShell from '@xeprime/domain/messages/vi/mobile-shell.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
@@ -123,10 +131,14 @@ export const MESSAGES = {
     BookingRequests: viBookingRequests,
     Bookings: viBookings,
     Chat: viChat,
+    Home: viHome,
     HomeSearch: viHomeSearch,
     Marketplace: viMarketplace,
     PromoCodes: viPromoCodes,
     PaymentGateway: viPaymentGateway,
+    Insurance: viInsurance,
+    Favorites: viFavorites,
+    FeePolicies: viFeePolicies,
     Listings: viListings,
     ListYourVehicle: viListYourVehicle,
     ManageCommon: viManageCommon,
@@ -168,10 +180,14 @@ export const MESSAGES = {
     BookingRequests: enBookingRequests,
     Bookings: enBookings,
     Chat: enChat,
+    Home: enHome,
     HomeSearch: enHomeSearch,
     Marketplace: enMarketplace,
     PromoCodes: enPromoCodes,
     PaymentGateway: enPaymentGateway,
+    Insurance: enInsurance,
+    Favorites: enFavorites,
+    FeePolicies: enFeePolicies,
     Listings: enListings,
     ListYourVehicle: enListYourVehicle,
     ManageCommon: enManageCommon,

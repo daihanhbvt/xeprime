@@ -1,6 +1,7 @@
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 export function AuthSwitchLink({
   prompt,
@@ -13,6 +14,7 @@ export function AuthSwitchLink({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="center" gap={space.xs} flexWrap="wrap">
       <Text col={colors.textMuted} fos={fontSize.body}>

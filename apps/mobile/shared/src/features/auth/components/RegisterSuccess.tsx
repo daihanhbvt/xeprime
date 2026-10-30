@@ -6,7 +6,8 @@ import { MOBILE_CLIENT_APP } from '@xeprime/types';
 import { APP_PROFILE } from '@/app-profile';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /** Đĩa dấu tích — cùng cỡ với đĩa minh hoạ của màn hướng dẫn "Trở thành chủ xe". */
 const HERO_DISC = 132;
@@ -47,6 +48,7 @@ export function RegisterSuccess({
   onContinue: () => void;
   onOpenAccount: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth');
   const partner = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
   const ns = partner ? 'registeredPartner' : 'registered';

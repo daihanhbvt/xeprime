@@ -26,7 +26,9 @@
     "type": "Type",
     "licence": "Licence",
     "activeBookings": "Assigned trips",
-    "status": "Link"
+    "status": "Link",
+    "drops": "Withdrawals (90 days)",
+    "monthWage": "Wages (month)"
   },
   "licence": {
     "classes": "Class {classes}",
@@ -38,6 +40,7 @@
   },
   "activeBookings": "{count, plural, one {# trip} other {# trips}}",
   "actions": {
+    "view": "View details",
     "invite": "Invite driver",
     "sendInvite": "Send invitation",
     "suspend": "Suspend",
@@ -97,23 +100,18 @@
     "legacyHint": "This booking isn't a chauffeured trip.",
     "externalTag": "External",
     "externalSetAt": "Recorded {time}",
-    "enterExternal": "Enter an external driver",
-    "editExternal": "Edit",
-    "externalSaved": "External driver saved",
-    "missingSoon": "Pick-up is less than {hours} hours away and this trip still has no driver — assign a linked driver or enter an external one.",
-    "externalForm": {
-      "title": "External driver",
-      "hint": "The driver doesn't need a XePrime account. The customer will see this name and phone number to get in touch; the system doesn't check this person's schedule for overlaps.",
-      "replaceLinked": "{name}, currently assigned to this trip, will be removed and notified.",
-      "name": "Driver name",
-      "namePlaceholder": "e.g. Nguyen Van Tai",
-      "phone": "Phone number",
-      "phonePlaceholder": "e.g. 0901234567",
-      "save": "Save driver",
-      "nameRequired": "Please enter the driver's name",
-      "nameLength": "Driver name must be {min}–{max} characters",
-      "phoneRequired": "Please enter a phone number",
-      "phoneInvalid": "Invalid mobile phone number"
+    "missingSoon": "Pickup is less than {hours} hours away and the trip has no driver — assign a linked driver, or cancel the trip if you cannot arrange one.",
+    "externalLegacy": "Driver outside the platform (older booking) — XePrime no longer accepts this. Assign a linked driver instead.",
+    "incident": {
+      "titleNamed": "Driver {name} withdrew from the trip",
+      "titleReleased": "The driver handed the trip back",
+      "reason": "Reason: {reason}",
+      "reasonWithNote": "Reason: {reason} — “{note}”",
+      "droppedAt": "Withdrew at {time}",
+      "reassignBy": "Assign another linked driver before {time}",
+      "overdue": "The rearranging deadline has passed ({time}). The customer can now cancel with a 100% refund, counted against you.",
+      "urgent": "Pickup is less than 2 hours away — the customer can cancel with a 100% refund at any time.",
+      "cancelForDriver": "Cancel trip: no driver available"
     }
   },
   "endedBy": {
@@ -132,6 +130,215 @@
     "assignedBySystem": "Auto-assigned by the system (Instant book) · {time}",
     "acceptedAt": "Driver accepted at {time}",
     "endedBy": "{name} · {time}",
-    "endedAt": "Ended at {time}"
+    "endedAt": "Ended at {time}",
+    "dropReason": "Withdrawal reason: {reason}",
+    "dropNote": "“{note}”",
+    "dropZone": "Timing: {zone}"
+  },
+  "drops": {
+    "count": "{count, plural, one {# time} other {# times}}",
+    "critical": "{count, plural, one {# last-minute} other {# last-minute}}",
+    "cooldownUntil": "No \"Instant book\" auto-assign until {time}"
+  },
+  "wage": {
+    "settings": {
+      "title": "Driver wage · shop rate",
+      "perDay": "{amount}/day",
+      "unset": "Not set",
+      "hint": "One rate for every vehicle: filled in when you assign a driver (× trip days) and editable per trip. You pay the driver directly.",
+      "unsetHint": "No shop rate yet: you must enter a wage each time you assign, and instant-book vehicles won't auto-assign a driver. The going rate is around {suggested}/day.",
+      "edit": "Edit",
+      "set": "Set shop rate",
+      "dialogTitle": "Driver wage · shop rate",
+      "field": "Wage per day",
+      "range": "From {min} to {max} per day",
+      "appliesNext": "Applies to new assignments on every vehicle — assigned trips keep their wage.",
+      "clear": "Clear shop rate",
+      "saved": "Shop rate saved",
+      "cleared": "Shop rate cleared",
+      "loadError": "Couldn't load the driver wage.",
+      "errors": {
+        "required": "Enter a wage per day",
+        "range": "The wage per day must be between {min} and {max}",
+        "step": "The wage must be a multiple of 1,000"
+      },
+      "placeholder": "Suggested {amount}",
+      "useSuggested": "Use the suggested {amount}"
+    },
+    "month": {
+      "label": "Stats month",
+      "placeholder": "Pick a month"
+    },
+    "line": {
+      "offer": "Wage {amount} · {days, plural, one {# day} other {# days}}",
+      "running": "Wage {amount}",
+      "received": "Paid {amount}",
+      "agreed": "Agreed {amount}",
+      "none": "No wage for this trip"
+    },
+    "form": {
+      "daily": "Wage per day",
+      "placeholder": "Suggested {amount}",
+      "help": "Shop rate: {current} · range {min} – {max}/day",
+      "helpNoDefault": "No shop rate yet · range {min} – {max}/day",
+      "total": "Trip total: {daily} × {days, plural, one {# day} other {# days}}",
+      "aboveRent": "The wage is higher than the trip's rent ({rent}) — double-check the amount.",
+      "rangeAgreed": "From 0 to {max}",
+      "savedWithDefault": "Saved, and the shop rate is updated for later trips",
+      "scope": {
+        "label": "Apply to",
+        "trip": "This trip only",
+        "tripHint": "The shop rate stays {current}/day.",
+        "tripNoDefault": "The shop still has no rate.",
+        "default": "This trip and later assignments",
+        "defaultHint": "Change the shop rate to {daily}/day for every vehicle. Assigned trips keep their wage."
+      },
+      "errors": {
+        "required": "Enter the wage",
+        "range": "The wage must be between {min} and {max}",
+        "step": "The wage must be a multiple of 1,000",
+        "unchanged": "The new amount is the same as the current one"
+      }
+    },
+    "assign": {
+      "title": "Assign {name}",
+      "paidDirect": "You pay the driver directly. The driver sees this amount before accepting the trip.",
+      "submit": "Assign driver",
+      "loadError": "Couldn't load the suggested wage.",
+      "retry": "Retry"
+    },
+    "edit": {
+      "action": "Edit wage",
+      "actionAgreed": "Record agreed amount",
+      "title": "Edit wage · {name}",
+      "titleAgreed": "Agreed wage · {name}",
+      "current": "Current",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. extra evening, one more day out of town…",
+      "notice": "The driver is notified and can see the edit history. No driver approval needed.",
+      "noticeAgreed": "The trip didn't run: record the amount you both agreed on (0 if none).",
+      "saved": "Wage saved",
+      "editableUntil": "Editable until {time}",
+      "fieldAgreed": "Amount you both agreed on",
+      "daysChanged": "The booking changed from {from} to {to} days — the new total uses {to} days."
+    },
+    "changes": {
+      "title": "Wage edit history",
+      "item": "{old} → {new}",
+      "by": "{name} · {time}",
+      "at": "{time}",
+      "reason": "Reason: {reason}"
+    },
+    "daysChanged": "The trip length changed ({from} → {to} days) — review the driver's wage.",
+    "monthTrips": "{count, plural, one {# completed trip} other {# completed trips}}",
+    "note": {
+      "set": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle: {amount}/day.",
+      "unset": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle — not set yet.",
+      "link": "Set it on the Drivers page"
+    }
+  },
+  "detail": {
+    "ariaLabel": "Driver details: {name}",
+    "fallbackTitle": "Driver details",
+    "previous": "Previous driver",
+    "next": "Next driver",
+    "notFound": "This driver could not be found — the link may have been removed.",
+    "loadError": "Couldn't load the driver's details.",
+    "edit": "Edit details",
+    "tabs": {
+      "overview": "Overview",
+      "trips": "Trips & wages",
+      "profile": "Profile"
+    },
+    "overview": {
+      "period": "Figures for {month} · wages are recorded amounts, counted by the month a trip ended",
+      "stats": {
+        "wageTotal": "Recorded wages",
+        "completedTrips": "Completed trips",
+        "drivenDays": "{count, plural, one {# driving day} other {# driving days}}",
+        "averageDaily": "Average per driving day",
+        "shopDaily": "Shop rate {amount}/day",
+        "noShopDaily": "No shop-wide rate set",
+        "upcoming": "Upcoming trips",
+        "upcomingWage": "Expected {amount}",
+        "upcomingNone": "No accepted trips yet"
+      },
+      "wage": {
+        "title": "Wages · {month}",
+        "completed": "{count, plural, other {Completed trips (#)}}",
+        "agreed": "{count, plural, other {Trips not run, with an agreed amount (#)}}",
+        "total": "Total recorded",
+        "edited": "Trips with an edited wage",
+        "editedValue": "{count, plural, one {# trip} other {# trips}}",
+        "note": "XePrime only records the amount both sides agreed — the shop pays the driver directly."
+      },
+      "reliability": {
+        "title": "Reliability · last {days} days",
+        "acceptRate": "Acceptance rate",
+        "noSample": "Not assigned any trips yet",
+        "rate": "{rate}%",
+        "rateOf": "({accepted}/{decided} assignments)",
+        "response": "Response time (median)",
+        "underMinute": "Under 1 minute",
+        "declined": "Declined",
+        "expired": "Let expire without answering",
+        "drops": "Dropped accepted trips",
+        "dropsValue": "{count, plural, one {# time} other {# times}}{critical, plural, =0 {} other { · # close to pickup}}",
+        "pending": "Awaiting an answer",
+        "cooldown": "Excluded from \"Instant book\" until"
+      },
+      "trend": {
+        "title": "Wages over the last 6 months",
+        "description": "Total recorded wages by the month trips ended · hover to see the trip count.",
+        "money": "Wages",
+        "trips": "Completed trips",
+        "empty": "No trips ended in these 6 months."
+      }
+    },
+    "trips": {
+      "summary": "<b>{trips, plural, one {# completed trip} other {# completed trips}}</b> · total recorded <b>{amount}</b>",
+      "export": "Download statement",
+      "exported": "{count, plural, one {Downloaded a statement of # trip} other {Downloaded a statement of # trips}}",
+      "tableLabel": "Driver trips this month",
+      "loadError": "Couldn't load the trips.",
+      "empty": "No trips ended in this month.",
+      "emptyHint": "Pick another month at the top right to see its trips.",
+      "total": "{count, plural, one {# trip} other {# trips}}",
+      "columns": {
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "period": "Dates",
+        "outcome": "Outcome",
+        "wage": "Wage"
+      },
+      "csv": {
+        "booking": "Booking code",
+        "vehicle": "Vehicle",
+        "plate": "Plate",
+        "pickupAt": "Start",
+        "returnAt": "End",
+        "days": "Days",
+        "outcome": "Outcome",
+        "wage": "Wage (VND)",
+        "total": "Total",
+        "fileName": "driver-wage-statement-{month}"
+      }
+    },
+    "profile": {
+      "name": "Name",
+      "phone": "Phone number",
+      "account": "Account name",
+      "type": "Driver type",
+      "licence": "Driver's licence",
+      "status": "Link",
+      "activeBookings": "Assigned trips",
+      "invitedAt": "Invited",
+      "respondedAt": "Accepted",
+      "endedAt": "Ended",
+      "endedByDriver": "driver left",
+      "endedByEmployer": "ended by the shop",
+      "note": "Note",
+      "noNote": "No note yet"
+    }
   }
 }

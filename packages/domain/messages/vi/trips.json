@@ -23,6 +23,7 @@
     "searchPlaceholder": "Tìm kiếm chuyến đi",
     "searchLabel": "Tìm theo tên xe hoặc mã đơn",
     "rangeStart": "Chọn khoảng thời gian",
+    "rangeFrom": "Từ ngày",
     "rangeEnd": "Đến ngày",
     "rangeLabel": "Khoảng thời gian thuê",
     "narrowEmptyTitle": "Không tìm thấy chuyến nào",
@@ -104,6 +105,13 @@
     "directDeposit": {
       "title": "Cọc thoả thuận trực tiếp với gian hàng",
       "body": "Gian hàng sẽ liên hệ để thoả thuận cọc trực tiếp. XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp về tiền cọc thì XePrime không có bằng chứng để hỗ trợ bạn."
+    },
+    "driverIncident": {
+      "rearranging": "Đang điều phối lại tài xế cho chuyến của bạn",
+      "urgentTitle": "Chuyến xe đang gặp sự cố điều phối",
+      "urgentBody": "Chủ xe đang sắp xếp tài xế khác. Cần hỗ trợ ngay, gọi tổng đài <tel>{phone}</tel>.",
+      "freeCancelHint": "Chủ xe chưa bố trí kịp tài xế — bạn có thể huỷ và được hoàn 100% tiền giữ chỗ.",
+      "freeCancel": "Huỷ chuyến (hoàn 100%)"
     }
   },
   "evidence": {
@@ -150,8 +158,8 @@
   },
   "timeline": {
     "ariaDone": "Tiến trình chuyến: đã hoàn thành",
-    "ariaPending": "Tiến trình chuyến: đã xác nhận, chưa hoàn thành",
-    "confirmed": "Đã xác nhận",
+    "ariaPending": "Tiến trình chuyến: đã nhận xe, chưa hoàn thành",
+    "confirmed": "Đã nhận xe",
     "completed": "Hoàn thành",
     "srDone": " — đã xong",
     "srTodo": " — chưa hoàn thành"
@@ -201,7 +209,8 @@
       "lateBodyNoInsurance": "Tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
       "deferred": "Chuyến đang có khiếu nại chưa xử lý xong — XePrime sẽ chốt khoản này sau khi có kết luận.",
       "notAllowedTitle": "Chuyến này không huỷ được nữa",
-      "notAllowedBody": "Chuyến đã bắt đầu hoặc đã kết thúc. Nếu muốn trả xe sớm, hãy liên hệ chủ xe để bàn giao và quyết toán."
+      "notAllowedBody": "Chuyến đã bắt đầu hoặc đã kết thúc. Nếu muốn trả xe sớm, hãy liên hệ chủ xe để bàn giao và quyết toán.",
+      "driverIncident": "Huỷ do sự cố tài xế: bạn được hoàn 100% tiền giữ chỗ, không mất phí huỷ."
     },
     "leadPaid": "Bạn đã thanh toán tiền giữ chỗ cho chuyến này. Số tiền hoàn lại sẽ được tính theo <policy>Chính sách huỷ chuyến</policy>. Thao tác này không thể hoàn tác!",
     "expectedRefund": "Dự kiến hoàn lại: <gold>{amount}</gold>",
@@ -443,7 +452,8 @@
       "title": "Thanh toán thành công",
       "lead": "Hệ thống đã ghi nhận {amount} qua {channel}!",
       "leadNoChannel": "Hệ thống đã ghi nhận {amount}!"
-    }
+    },
+    "appTitle": "Chuyển khoản giữ chỗ"
   },
   "unpaid": {
     "listLabel": "Chuyến chờ thanh toán",
@@ -502,7 +512,8 @@
       "body": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Phần còn lại {amount} trả trực tiếp chủ xe khi nhận xe; cọc xe (nếu có) nộp riêng lúc nhận xe.",
       "bodyNoRest": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Cọc xe (nếu có) nộp riêng lúc nhận xe.",
       "acknowledge": "Tôi đã đọc <policy>chính sách giữ chỗ, huỷ & hoàn tiền</policy> áp dụng cho yêu cầu này.",
-      "submit": "Thanh toán giữ chỗ · {amount}"
+      "submit": "Thanh toán giữ chỗ · {amount}",
+      "submitShort": "Thanh toán {amount}"
     },
     "costs": {
       "holdTag": "Cần thanh toán"

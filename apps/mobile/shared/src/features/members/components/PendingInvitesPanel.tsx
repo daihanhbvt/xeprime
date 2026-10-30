@@ -30,7 +30,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNow } from '@/hooks/use-now';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { Invite } from '../api';
 import { useInvites, useRevokeInvite } from '../hooks/use-members';
 
@@ -97,6 +98,7 @@ function useExpiryBadge(expiresAt: string): { label: string; color: StatusColor 
  * nói trạng thái hai lần rồi, đĩa nói "đây là một lời mời, không phải một con người".
  */
 export function PendingInvitesPanel({ enabled }: { enabled: boolean }) {
+  const colors = useColors();
   const t = useTranslations('Members.invites');
   const tToast = useTranslations('Members.toast');
   const tActions = useTranslations('Common.actions');
@@ -227,6 +229,7 @@ function InviteCard({
   roleLabel: string;
   statusLabel: string;
 }) {
+  const colors = useColors();
   const t = useTranslations('Members.invites');
   const status = invite.status as InviteStatus;
   const statusMeta = INVITE_STATUS_META[status];

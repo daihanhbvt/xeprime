@@ -4,6 +4,7 @@ import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-desi
 import { Button, Radio, Segmented, Select } from 'antd';
 import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import {
+  RENTAL_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
@@ -82,7 +83,7 @@ export function SearchDialog({
   const [routeType, setRouteType] = useState<RouteType>(() =>
     isRouteType(initial.routeType) ? initial.routeType : ROUTE_TYPE.IN_CITY,
   );
-  const [mode, setMode] = useState<RentalMode>(initial.hourly ? 'hourly' : 'daily');
+  const [mode, setMode] = useState<RentalMode>(initial.hourly ? RENTAL_MODE.HOURLY : RENTAL_MODE.DAILY);
   const [range, setRange] = useState<RentalRange>(() => {
     /*
      * Thứ tự y hệt mọi bề mặt khác: URL trước, rồi lựa chọn khách đã tự chọn trước đó, cuối
@@ -120,7 +121,7 @@ export function SearchDialog({
       // gửi yêu cầu (sàn 7 ngày giữ nguyên ở đó + backend).
       pickupAt: longTerm || !range.pickupAt ? undefined : appWallClockToIso(range.pickupAt),
       returnAt: longTerm || !range.returnAt ? undefined : appWallClockToIso(range.returnAt),
-      hourly: !longTerm && mode === 'hourly' ? true : undefined,
+      hourly: !longTerm && mode === RENTAL_MODE.HOURLY ? true : undefined,
       routeType: withDriver ? routeType : undefined,
     });
   }

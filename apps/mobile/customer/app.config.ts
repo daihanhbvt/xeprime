@@ -49,6 +49,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         // Android 13+: thông báo là quyền phải XIN lúc chạy, không còn mặc định có.
         'android.permission.POST_NOTIFICATIONS',
       ],
+      /*
+       * App không ghi âm, nhưng thư viện (camera/image-picker) vẫn gộp RECORD_AUDIO vào manifest
+       * dù plugin đã tắt `recordAudioAndroid`. Chặn hẳn để Play không hỏi dữ liệu "Audio" trong
+       * Data safety. Có hiệu lực sau lần `prebuild` kế tiếp.
+       */
+      blockedPermissions: [
+        ...(config.android?.blockedPermissions ?? []),
+        'android.permission.RECORD_AUDIO',
+      ],
     },
     ios: {
       ...config.ios,
@@ -79,6 +88,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
        * chỉ khai được những khoá Expo đã định nghĩa sẵn. Xem chú thích trong file plugin.
        */
       '../shared/plugins/with-android-camera-memory',
+      // Icon + màu thông báo đẩy Android = logo app một màu (Android 8+/16 bỏ icon nhiều màu).
+      '../shared/plugins/with-android-notification-icon',
       /*
        * Hai plugin cho đường BUILD RELEASE, không liên quan tới bản debug hằng ngày:
        * ký bằng upload key thật thay debug key của template, và gỡ cờ JVM mà JDK 21 không hiểu.

@@ -4,7 +4,8 @@ import { Modal, useWindowDimensions } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { IconButton } from './IconButton';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 /** Nền của trình xem: gần đen tuyệt đối để ảnh là thứ duy nhất còn sáng trên màn. */
 const VIEWER_BACKDROP = 'rgba(0,0,0,0.92)';
@@ -35,6 +36,7 @@ export function PhotoViewer({
   unavailableLabel: string;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.actions');
   const { width, height } = useWindowDimensions();
   const [failed, setFailed] = useState(false);

@@ -229,6 +229,8 @@ jobs:
           V_ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
           V_API_DOMAIN: ${{ vars.API_DOMAIN }}
           V_ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+          # Tuỳ chọn: danh sách IP/CIDR (cách nhau bằng dấu cách) được vào site QUẢN TRỊ. Trống = mọi IP.
+          V_ADMIN_ALLOWED_IPS: ${{ vars.ADMIN_ALLOWED_IPS }}
           V_POSTGRES_USER: ${{ vars.POSTGRES_USER }}
           V_POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           V_APP_ENV: ${{ vars.APP_ENV }}
@@ -461,6 +463,7 @@ jobs:
           kv ADMIN_DOMAIN "${V_ADMIN_DOMAIN:-}"
           kv API_DOMAIN "${V_API_DOMAIN:-}"
           kv ACME_EMAIL "${V_ACME_EMAIL:-}"
+          kv ADMIN_ALLOWED_IPS "${V_ADMIN_ALLOWED_IPS:-}"
 
           kv POSTGRES_USER "$PG_USER"
           kv POSTGRES_PASSWORD "${S_POSTGRES_PASSWORD:-}"

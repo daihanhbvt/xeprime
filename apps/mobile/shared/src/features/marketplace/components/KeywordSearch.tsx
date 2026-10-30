@@ -13,7 +13,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { PublicShopSummary } from '../api';
 import { useShopSuggestions } from '../hooks/use-shop-suggestions';
 
@@ -39,13 +40,17 @@ export function KeywordSearch({
   value,
   onApply,
   onOpenShop,
+  variant = 'boxed',
 }: {
   /** Từ khoá ĐANG ÁP DỤNG. */
   value: string | undefined;
   /** `undefined` = bỏ từ khoá. */
   onApply: (q: string | undefined) => void;
   onOpenShop: (slug: string) => void;
+  /** `bare` khi nằm trong khung tìm kiếm hai dòng của trang kết quả (Figma `20043:57771`). */
+  variant?: 'boxed' | 'bare';
 }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.results.keyword');
   const appliedQ = value ?? '';
   const [text, setText] = useState(appliedQ);
@@ -101,7 +106,7 @@ export function KeywordSearch({
         onChange={handleChange}
         label={t('ariaLabel')}
         placeholder={t('placeholder')}
-        variant="boxed"
+        variant={variant}
         maxLength={SEARCH_QUERY_MAX_LENGTH}
         onSubmit={() => applyIfChanged(text)}
         onFocus={() => setFocused(true)}
@@ -184,6 +189,7 @@ function HostSuggestion({
   tokens: string[];
   onPress: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Marketplace.results.keyword');
   const meta = [
     t(host.verified ? 'shop' : 'owner'),

@@ -15,6 +15,10 @@ import {
   feePolicyActivationBlockers,
   maxTaxRatePercent,
   parseTaxRates,
+  parseWithDriverLimits,
+  WITH_DRIVER_LIMITS_DEFAULTS,
+  withDriverLimitsValid,
+  type WithDriverLimits,
   type FeePolicySnapshot,
   type FeePolicyValues,
   type OwnerCommissionTier,
@@ -55,6 +59,7 @@ const SELECT = {
   vehicleProtectionDailyMotorbike: true,
   tripInsuranceDailyCar: true,
   tripInsuranceDailyMotorbike: true,
+  withDriverLimits: true,
   effectiveFrom: true,
   effectiveTo: true,
   activatedAt: true,
@@ -111,6 +116,20 @@ export class FeePoliciesService {
     return toSnapshot(row);
   }
 
+  /**
+   * Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075) theo bản đang hiệu lực — chưa có bản
+   * nào, hoặc bản chưa khai, thì mặc định nền tảng. Không phải dòng tiền: KHÔNG nằm trong snapshot.
+   */
+  async withDriverLimits(
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<WithDriverLimits> {
+    const row = await db.feePolicy.findFirst({
+      where: { status: FEE_POLICY_STATUS.ACTIVE },
+      select: { withDriverLimits: true },
+    });
+    return parseWithDriverLimits(row?.withDriverLimits) ?? WITH_DRIVER_LIMITS_DEFAULTS;
+  }
+
   async list(): Promise<FeePolicyDto[]> {
     const rows = await this.prisma.feePolicy.findMany({
       orderBy: { version: 'desc' },
@@ -125,6 +144,7 @@ export class FeePoliciesService {
 
   async createDraft(actorUserId: string, dto: UpsertFeePolicyDto): Promise<FeePolicyDto> {
     assertDepositCoversTax(dto);
+    assertWithDriverLimits(dto);
     const row = await this.prisma.$transaction(async (tx) => {
       const last = await tx.feePolicy.aggregate({ _max: { version: true } });
       const created = await tx.feePolicy.create({
@@ -134,6 +154,7 @@ export class FeePoliciesService {
           status: FEE_POLICY_STATUS.DRAFT,
           createdBy: actorUserId,
           ...valuesData(dto, null),
+          withDriverLimits: limitsJson(dto.withDriverLimits ?? WITH_DRIVER_LIMITS_DEFAULTS),
         },
         select: SELECT,
       });
@@ -161,10 +182,15 @@ export class FeePoliciesService {
     const before = await this.load(id);
     this.assertDraft(before);
     assertDepositCoversTax(dto);
+    assertWithDriverLimits(dto);
     const row = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.feePolicy.updateMany({
         where: { id, status: FEE_POLICY_STATUS.DRAFT },
-        data: valuesData(dto, toValues(before)),
+        data: {
+          ...valuesData(dto, toValues(before)),
+          // Vắng trên dây ⇒ giữ đúng giá trị đang lưu (kể cả NULL = mặc định nền tảng).
+          ...(dto.withDriverLimits ? { withDriverLimits: limitsJson(dto.withDriverLimits) } : {}),
+        },
       });
       if (claimed.count === 0) throw notDraft(before.status);
       const after = await tx.feePolicy.findUniqueOrThrow({ where: { id }, select: SELECT });
@@ -194,7 +220,7 @@ export class FeePoliciesService {
   async activate(id: string, actorUserId: string): Promise<FeePolicyDto> {
     const draft = await this.load(id);
     this.assertDraft(draft);
-    const blockers = feePolicyActivationBlockers(toValues(draft));
+    const blockers = activationBlockersOf(draft);
     if (blockers.length > 0) {
       throw new BadRequestException({
         code: API_ERROR_CODE.FEE_POLICY_ACTIVATION_BLOCKED,
@@ -308,6 +334,40 @@ function assertDepositCoversTax(dto: UpsertFeePolicyDto): void {
   }
 }
 
+/** Giới hạn chuyến có tài xế gửi lên phải hợp lệ (`0 < min < max`, bội 1.000đ) — 400 nói rõ ô. */
+function assertWithDriverLimits(dto: UpsertFeePolicyDto): void {
+  if (!dto.withDriverLimits || withDriverLimitsValid(dto.withDriverLimits)) return;
+  throw new BadRequestException({
+    code: API_ERROR_CODE.VALIDATION_FAILED,
+    message:
+      'Giới hạn chuyến có tài xế phải có 0 < tối thiểu < tối đa, bội 1.000đ, mức gợi ý nằm trong khoảng tiền công',
+    details: [
+      { field: 'withDriverLimits', constraints: { withDriverLimits: 'with_driver_limits_invalid' } },
+    ],
+  });
+}
+
+/** Chỉ hai khoảng + mức gợi ý đi vào jsonb — không để khoá lạ lọt qua DTO thành dữ liệu chính sách. */
+function limitsJson(limits: WithDriverLimits): Prisma.InputJsonObject {
+  return {
+    priceDaily: { min: limits.priceDaily.min, max: limits.priceDaily.max },
+    wageDaily: { min: limits.wageDaily.min, max: limits.wageDaily.max },
+    wageDailySuggested: limits.wageDailySuggested,
+  };
+}
+
+/**
+ * Cổng kích hoạt = luật tiền (`feePolicyActivationBlockers`) + giới hạn chuyến có tài xế. Cột NULL
+ * là "mặc định nền tảng" (hợp lệ); có giá trị mà đọc không ra là bản nháp hỏng — chặn.
+ */
+function activationBlockersOf(row: Row): string[] {
+  const blockers = feePolicyActivationBlockers(toValues(row));
+  if (row.withDriverLimits != null && parseWithDriverLimits(row.withDriverLimits) == null) {
+    blockers.push('with_driver_limits_invalid');
+  }
+  return blockers;
+}
+
 function notDraft(status: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.FEE_POLICY_NOT_DRAFT,
@@ -391,6 +451,7 @@ function toDto(row: Row): FeePolicyDto {
     name: row.name,
     note: row.note,
     ...values,
+    withDriverLimits: parseWithDriverLimits(row.withDriverLimits) ?? WITH_DRIVER_LIMITS_DEFAULTS,
     effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
     effectiveTo: row.effectiveTo?.toISOString() ?? null,
     activatedByName: row.activator?.displayName ?? null,
@@ -398,7 +459,7 @@ function toDto(row: Row): FeePolicyDto {
     createdByName: row.creator?.displayName ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    activationBlockers: feePolicyActivationBlockers(values),
+    activationBlockers: activationBlockersOf(row),
   };
 }
 

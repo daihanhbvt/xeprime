@@ -36,7 +36,8 @@ import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-secti
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /** Xe đang trên đường lên chợ — mọi trạng thái TRỪ "đã lên chợ". */
 const IN_FLIGHT: readonly VehiclePublicStatus[] = [
@@ -82,6 +83,7 @@ export function OwnerRegistrationScreen({
    */
   shell?: 'account' | 'manage';
 } = {}) {
+  const colors = useColors();
   const t = useTranslations('Account.registration');
   const domainLabel = useDomainLabel();
   const router = useRouter();
@@ -275,7 +277,7 @@ export function OwnerRegistrationScreen({
           {!hasVehicle && !vehicles.isPending ? (
             <Callout tone="info" title={t('noVehicle.title')}>
               <CalloutBody>{t('noVehicle.body')}</CalloutBody>
-              <Button label={t('noVehicle.cta')} size="sm" onPress={addVehicle} />
+              <Button icon="add" label={t('noVehicle.cta')} size="sm" onPress={addVehicle} />
             </Callout>
           ) : null}
 
@@ -353,6 +355,7 @@ function Step({
   title: string;
   description: string;
 }) {
+  const colors = useColors();
   const done = index < current;
   const active = index === current;
   const tone = done ? colors.success : active ? colors.primary : colors.placeholder;

@@ -27,7 +27,8 @@ import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useWardOptions } from '@/features/locations/hooks/use-wards';
 import { placeMapUri } from '@/lib/map-static';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
-import { colors, fieldFontSize, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontSize, iconSize, radius, space } from '@/theme/tokens';
 
 /** Tên ba trường HÀNH CHÍNH + chi tiết — bản native của `AddressFieldNames` bên web. */
 export interface AddressFieldNames<T extends FieldValues> {
@@ -353,6 +354,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    */
   onConfirmedManually?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Address');
   const tStates = useTranslations('Common.states');
 

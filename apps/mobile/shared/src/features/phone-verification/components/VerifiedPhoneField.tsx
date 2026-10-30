@@ -9,7 +9,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
 import { OtpCodeInput } from './OtpCodeInput';
 
@@ -63,6 +64,7 @@ export function VerifiedPhoneField({
   verifyRef?: RefObject<(() => void) | null>;
   onVerified?: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Auth.otp');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -230,9 +232,7 @@ export function VerifiedPhoneField({
           />
           <XStack jc="center">
             <Button
-              label={
-                otp.cooldown > 0 ? t('resendIn', { seconds: otp.cooldown }) : t('resend')
-              }
+              label={otp.cooldown > 0 ? t('resendIn', { seconds: otp.cooldown }) : t('resend')}
               variant="ghost"
               block={false}
               loading={otp.sending}

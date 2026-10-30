@@ -1,12 +1,22 @@
 import { useToastController } from '@tamagui/toast';
 import { useMemo } from 'react';
 import { dwell } from '@/theme/motion';
-import { TOAST_PRESET } from './AppToast';
+import { TOAST_PRESET, type ToastPreset } from './AppToast';
 
 export interface AppToast {
   showSuccess: (message: string) => void;
   showError: (message: string) => void;
   showInfo: (message: string) => void;
+  /**
+   * Thông báo HAI DÒNG (tiêu đề + thân) — push tới lúc app đang mở. `onPress` mở đúng màn của
+   * thông báo; `tone` theo loại tin (tốt / gấp / xấu / thường).
+   */
+  showNotice: (notice: {
+    title: string;
+    body?: string | null;
+    tone?: ToastPreset;
+    onPress?: () => void;
+  }) => void;
 }
 
 /**
@@ -36,6 +46,13 @@ export function useAppToast(): AppToast {
         }),
       showInfo: (message: string) =>
         void toast.show(message, { customData: { preset: TOAST_PRESET.INFO } }),
+      showNotice: ({ title, body, tone = TOAST_PRESET.INFO, onPress }) =>
+        void toast.show(title, {
+          ...(body ? { message: body } : {}),
+          customData: { preset: tone, ...(onPress ? { onPress } : {}) },
+          // Tin cần làm GẤP / tin xấu đứng lâu hơn để kịp đọc hai dòng.
+          duration: tone === TOAST_PRESET.INFO || tone === TOAST_PRESET.SUCCESS ? dwell.toast : dwell.toastError,
+        }),
     }),
     [toast],
   );

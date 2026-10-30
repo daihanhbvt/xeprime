@@ -75,6 +75,34 @@ export function driverMissingEmployerCopy(input: { bookingCode: string }): {
 } {
   return {
     title: `Chuyến ${input.bookingCode} còn dưới ${DRIVER_MISSING_ALERT_LEAD_MINUTES / 60} giờ chưa có tài xế`,
-    body: 'Gán tài xế liên kết hoặc nhập tài xế ngoài hệ thống cho đơn. Chuyến của khách vẫn giữ nguyên.',
+    // ADR 0074 điều 4: không còn nhập tài xế ngoài hệ thống — chỉ gán tài xế liên kết.
+    body: 'Gán tài xế liên kết cho đơn, hoặc huỷ chuyến nếu không bố trí được. Chuyến của khách vẫn giữ nguyên.',
+  };
+}
+
+/**
+ * Tin KHẨN cho bên thuê: một tài xế ĐÃ NHẬN vừa rút khỏi chuyến (ADR 0074). `reassignByText` là hạn
+ * điều phối lại đã định dạng giờ Việt Nam ở nơi phát. Đơn KHÔNG bị huỷ.
+ */
+export function driverTripDroppedEmployerCopy(input: {
+  driverName: string;
+  bookingCode: string;
+  reassignByText: string;
+  reasonLabel: string;
+}): { title: string; body: string } {
+  return {
+    title: `🚨 KHẨN CẤP: Tài xế ${input.driverName} vừa huỷ chuyến ${input.bookingCode}!`,
+    body: `Lý do: ${input.reasonLabel}. Gán tài xế liên kết khác trước ${input.reassignByText} — quá hạn khách được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.`,
+  };
+}
+
+/** Tin cho KHÁCH: sau sự cố tài xế, chuyến đã có tài xế mới nhận (ADR 0074). Không nêu ai đã rút. */
+export function tripDriverReassignedCustomerCopy(input: { bookingCode: string }): {
+  title: string;
+  body: string;
+} {
+  return {
+    title: `Chuyến ${input.bookingCode} đã có tài xế mới`,
+    body: 'Xem tên và số điện thoại tài xế trong chi tiết chuyến.',
   };
 }

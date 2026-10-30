@@ -130,6 +130,8 @@ beforeAll(async () => {
       name: 'Shop hạn tài xế',
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: owner,
+      // Tiền công tài xế/ngày mặc định (ADR 0075) — gán tài xế cần một số để tài xế thấy trước.
+      driverDailyWage: new Prisma.Decimal('500000'),
     },
   });
   await prisma.tenantMembership.create({

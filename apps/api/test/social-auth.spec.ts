@@ -160,9 +160,52 @@ describe('OauthStateService — `state` dùng đúng một lần', () => {
     const state = new URL(url).searchParams.get('state') as string;
 
     await expect(
-      service.complete({ provider: AUTH_PROVIDER.FACEBOOK, code: 'x', state }),
+      service.complete({ provider: AUTH_PROVIDER.FACEBOOK, code: 'x', state, browserState: state }),
     ).resolves.toMatchObject({ ok: false, errorCode: API_ERROR_CODE.SOCIAL_STATE_INVALID });
   });
+
+  /**
+   * Login CSRF (ADR 0076 điều 4): kẻ xấu mở luồng bằng tài khoản Google của họ, dừng ở URL callback
+   * rồi gửi link cho nạn nhân. Trình duyệt nạn nhân không có cookie gắn `state` ⇒ từ chối TRƯỚC
+   * khi gọi Google, và `state` đã cháy nên link không dùng lại được.
+   */
+  maybe(
+    'callback web thiếu/lệch cookie trình duyệt ⇒ SOCIAL_STATE_INVALID, không gọi provider',
+    async () => {
+      const service = socialService();
+      const originalFetch = global.fetch;
+      const fetchSpy = jest.fn();
+      global.fetch = fetchSpy as unknown as typeof global.fetch;
+      try {
+        for (const browserState of [null, 'cookie-cua-trinh-duyet-khac']) {
+          const url = await service.begin({
+            provider: AUTH_PROVIDER.GOOGLE,
+            next: null,
+            locale: 'vi',
+            webRealm: C,
+          });
+          const state = new URL(url).searchParams.get('state') as string;
+
+          await expect(
+            service.complete({ provider: AUTH_PROVIDER.GOOGLE, code: 'x', state, browserState }),
+          ).resolves.toMatchObject({ ok: false, errorCode: API_ERROR_CODE.SOCIAL_STATE_INVALID });
+          // `state` đã tiêu thụ — phát lại cùng link (kể cả với cookie đúng) cũng hỏng, ngay ở
+          // `consume()` (trước khi biết `next`, nên ném chứ không trả kết quả).
+          await expect(
+            service.complete({
+              provider: AUTH_PROVIDER.GOOGLE,
+              code: 'x',
+              state,
+              browserState: state,
+            }),
+          ).rejects.toMatchObject({ code: API_ERROR_CODE.SOCIAL_STATE_INVALID });
+        }
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    },
+  );
 
   /**
    * `redirectNext` chỉ biết được SAU khi tiêu thụ `state`. Nếu để lỗi bay ra bằng exception thì
@@ -190,6 +233,7 @@ describe('OauthStateService — `state` dùng đúng một lần', () => {
           provider: AUTH_PROVIDER.GOOGLE,
           code: 'code-khong-hop-le',
           state,
+          browserState: state,
         });
 
         expect(result).toEqual({

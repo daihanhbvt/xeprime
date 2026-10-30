@@ -30,6 +30,7 @@ export {
 export {
   CURRENCY_SUFFIX,
   subtractMoney,
+  payAtPickupAmount,
   sumMoney,
   absoluteMoney,
   isNegativeMoney,
@@ -129,6 +130,8 @@ export {
   driverResponseExpiredDriverCopy,
   driverResponseExpiredEmployerCopy,
   driverTripDeclinedEmployerCopy,
+  driverTripDroppedEmployerCopy,
+  tripDriverReassignedCustomerCopy,
   type DriverTripReleasedCopyInput,
 } from './driver-trip-copy';
 
@@ -139,6 +142,8 @@ export {
   type DriverTripBadgeKey,
   type DriverTripBadgeTone,
 } from './driver-trip-badges';
+
+export { driverWageLine, type DriverWageLine, type DriverWageLineKind } from './driver-wage-line';
 
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 

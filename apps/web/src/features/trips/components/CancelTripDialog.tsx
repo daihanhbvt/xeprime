@@ -228,6 +228,19 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   const deferred = preview.deferred ? <p className={styles.note}>{t('deferred')}</p> : null;
 
   /*
+   * Huỷ do SỰ CỐ TÀI XẾ (ADR 0074): server đã chốt hoàn 100% dù qua mốc miễn phí — nói rõ vì sao,
+   * để khách không ngần ngại vì nhớ "quá giờ huỷ là mất tiền".
+   */
+  if (preview.driverIncident) {
+    return (
+      <>
+        <Alert type="success" showIcon title={t('driverIncident')} />
+        {deferred}
+      </>
+    );
+  }
+
+  /*
    * Hoàn đủ: đầu hộp đã nói "đã thanh toán" + "Dự kiến hoàn lại" — không lặp lại bằng một khung
    * nữa. Chỉ còn lời nhắc hoàn CHẬM khi server báo có, vì đầu hộp không nói điều đó.
    */

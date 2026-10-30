@@ -1,8 +1,11 @@
 import { Image } from 'expo-image';
-import { StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+import { XP_TOKENS } from '@xeprime/ui';
 import { useState, type ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius } from '@/theme/tokens';
 
 /**
  * Ảnh HỎNG (bị gỡ khỏi máy chủ, URL sai) phải rơi về ĐÚNG hình chưa-có-ảnh, chứ không phải một
@@ -10,7 +13,7 @@ import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
  * một địa chỉ khác — chỉnh NGAY TRONG lượt render (không qua `useEffect`) để không vẽ một khung
  * hình thừa mang cờ `failed` cũ trước khi effect kịp chạy.
  */
-function useImageLoadFailure(url: string | null | undefined) {
+export function useImageLoadFailure(url: string | null | undefined) {
   const [failed, setFailed] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState(url);
   if (url !== renderedUrl) {
@@ -21,24 +24,35 @@ function useImageLoadFailure(url: string | null | undefined) {
 }
 
 /**
- * Tỉ lệ khung ảnh bìa — CAO hơn một chút so với tỉ lệ đề xuất 1600×600 (2,67).
- *
- * Khung đúng 2,67 thì một tấm ảnh chụp thường (16:9, 4:3) bị `contentFit="cover"` xén mất trên
- * và dưới, mà đó lại là chỗ chứa nội dung của ảnh bìa — mái hiên, biển hiệu, hàng xe. Khung cao
- * hơn đổi phần mất đó lấy một dải hẹp hai BÊN của tấm ảnh đúng chuẩn: ảnh bìa vốn chụp rộng nên
- * mép trái/phải là chỗ rẻ nhất để cắt.
- *
- * Sàn dưới là chỗ logo: logo đè lên NỬA DƯỚI ảnh bìa, nên khung thấp hơn cỡ 1,7 thì nửa logo
- * ăn gần hết phần ảnh còn nhìn được, và ảnh bìa thành một dải màu sau lưng logo.
+ * Chiều cao ảnh bìa — đúng `.cover { height: clamp(180px, 22.8vw, 328px) }` của web `ShopHeader`.
+ * Ở bề ngang điện thoại 22,8vw < 180 nên ảnh bìa CAO 180 (mockup mobile); máy tính bảng mới cao dần.
  */
-export const SHOP_COVER_RATIO = 1.9;
+const COVER_MIN = 180;
+const COVER_MAX = 328;
+const COVER_VW = 0.228;
+
+export function useShopCoverHeight(): number {
+  const { width } = useWindowDimensions();
+  return Math.min(COVER_MAX, Math.max(COVER_MIN, Math.round(width * COVER_VW)));
+}
+
+/*
+ * Nền dự phòng khi chưa có/không tải được ảnh bìa — `--xp-hero-backdrop`
+ * (`linear-gradient(120deg, #241d12, #3a2f1a)`): nâu tối, cố định ở cả hai giao diện. Đọc hai màu
+ * từ token; góc 120° quy ra điểm đầu/cuối của `LinearGradient`.
+ */
+const HERO_BACKDROP = [...XP_TOKENS['hero-backdrop'].matchAll(/#[0-9a-f]{3,8}/gi)].map((m) => m[0]) as [
+  string,
+  string,
+];
+const HERO_START = { x: 0, y: 0.21 };
+const HERO_END = { x: 1, y: 0.79 };
 
 export const SHOP_LOGO = 72;
 /** Vòng viền cùng màu nền trang, để logo tách khỏi ảnh bìa dù ảnh sáng hay tối. */
 const LOGO_RING = 3;
 
 const styles = StyleSheet.create({
-  cover: { width: '100%', aspectRatio: SHOP_COVER_RATIO },
   logoImage: { width: '100%', height: '100%' },
 });
 
@@ -60,9 +74,17 @@ const styles = StyleSheet.create({
 export function ShopCover({ url, children }: { url?: string | null; children?: ReactNode }) {
   const { failed, onError } = useImageLoadFailure(url);
   const showImage = Boolean(url) && !failed;
+  const height = useShopCoverHeight();
 
   return (
-    <YStack style={styles.cover} bg={colors.primaryLight} ai="center" jc="center" ov="hidden">
+    /* Vùng ảnh bìa — web `.cover`: rộng hết trang, cao clamp(180, 22.8vw, 328), nền `hero-backdrop`. */
+    <YStack w="100%" h={height} ai="center" jc="center" ov="hidden">
+      <LinearGradient
+        colors={HERO_BACKDROP}
+        start={HERO_START}
+        end={HERO_END}
+        style={StyleSheet.absoluteFill}
+      />
       {showImage ? (
         <Image
           source={{ uri: url as string }}
@@ -95,6 +117,7 @@ export function ShopLogo({
   name: string;
   children?: ReactNode;
 }) {
+  const colors = useColors();
   const { failed, onError } = useImageLoadFailure(url);
   const showImage = Boolean(url) && !failed;
 

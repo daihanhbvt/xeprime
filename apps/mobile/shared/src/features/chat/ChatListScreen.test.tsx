@@ -55,6 +55,7 @@ jest.mock('@/features/badges/BadgeRealtimeProvider', () => ({
 const api = chatApi as jest.Mocked<typeof chatApi>;
 
 const conversation = (over: Partial<ConversationSummary> & { id: string }): ConversationSummary => ({
+  canSend: true,
   vehicleId: null,
   vehicleName: null,
   vehicleImageUrl: null,

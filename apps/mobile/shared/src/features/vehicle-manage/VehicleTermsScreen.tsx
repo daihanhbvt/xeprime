@@ -43,7 +43,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { Controller } from 'react-hook-form';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { VehicleServiceSetting } from './api';
 import {
   usePatchVehicleServiceSetting,
@@ -141,6 +142,7 @@ function TermsForm({
   vehicleId: string;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.terms');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();

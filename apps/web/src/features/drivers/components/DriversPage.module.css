@@ -7,3 +7,22 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-sm, 13px);
 }
+
+/* Bộ chọn tháng thống kê tiền công + nút mời — cùng hàng hành động của thanh lọc. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  align-items: center;
+}
+
+.month {
+  width: 200px;
+}
+
+/* Số liệu bấm được để mở ngăn kéo — giữ dáng chữ của ô bảng, không đệm nút. */
+.linkCell {
+  height: auto;
+  padding: 0;
+  font-weight: var(--xp-font-weight-medium, 500);
+}

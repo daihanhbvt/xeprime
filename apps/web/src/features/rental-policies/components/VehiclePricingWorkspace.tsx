@@ -51,6 +51,11 @@ interface VehiclePricingWorkspaceProps {
   /** Link "Tuỳ chỉnh giá theo lịch" — giá riêng theo ngày sống trên lịch xe, không có bảng mùa vụ. */
   calendarHref?: string;
   /**
+   * Dòng cuối thẻ giá có tài xế — trang gọi truyền vào (vd trỏ sang mức tiền công tài xế chung của
+   * gian hàng, ADR 0075). Giá ở thẻ này là tiền KHÁCH trả; tiền công tài xế không cấu hình theo xe.
+   */
+  withDriverFooter?: ReactNode;
+  /**
    * Khối chính sách nào hiện (chế độ `full`) — mặc định đủ năm. Khu tài khoản của chủ xe tuyến
    * hoa hồng không có phí quá giờ và ưu đãi (như develop); khối ẩn vẫn được gửi nguyên giá trị.
    */
@@ -127,6 +132,7 @@ export function VehiclePricingWorkspace({
   visibleServices,
   policyMode = 'full',
   calendarHref,
+  withDriverFooter,
   policyBlocks,
   shopPolicyHref = ROUTES.MANAGE.SHOP_POLICIES,
   policySource = 'switch',
@@ -490,6 +496,7 @@ export function VehiclePricingWorkspace({
                   addonAfter={t('unitPerDay')}
                 />
               </div>
+              {withDriverFooter}
               {calendarHref ? (
                 <CalendarPriceLink
                   href={calendarHref}

@@ -3,6 +3,8 @@ import {
   DEPOSIT_PERCENT_MAX,
   DEPOSIT_PERCENT_MIN,
   FEE_SCHEDULE_DEFAULTS,
+  WITH_DRIVER_LIMITS_DEFAULTS,
+  type WithDriverLimits,
   FREE_CANCEL_HOURS_MAX,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_MIN_AMOUNT,
@@ -109,6 +111,35 @@ export interface FeePolicyFormValues {
   taxLegalBasis: string;
   /** Bảng mức GTGT/TNCN theo loại dịch vụ (ADR 0068). */
   taxRates: TaxRatesFormValue;
+  /** Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075) — không phải dòng tiền. */
+  withDriverLimits: WithDriverLimitsFormValue;
+}
+
+/** Năm ô tiền của giới hạn chuyến có tài xế: giá có tài/ngày, tiền công tài xế/ngày và mức gợi ý. */
+export interface WithDriverLimitsFormValue {
+  priceMin: MoneyValue;
+  priceMax: MoneyValue;
+  wageMin: MoneyValue;
+  wageMax: MoneyValue;
+  wageSuggested: MoneyValue;
+}
+
+function limitsToForm(limits: WithDriverLimits): WithDriverLimitsFormValue {
+  return {
+    priceMin: Number(limits.priceDaily.min),
+    priceMax: Number(limits.priceDaily.max),
+    wageMin: Number(limits.wageDaily.min),
+    wageMax: Number(limits.wageDaily.max),
+    wageSuggested: Number(limits.wageDailySuggested),
+  };
+}
+
+function limitsToWire(value: WithDriverLimitsFormValue): WithDriverLimits {
+  return {
+    priceDaily: { min: String(value.priceMin ?? 0), max: String(value.priceMax ?? 0) },
+    wageDaily: { min: String(value.wageMin ?? 0), max: String(value.wageMax ?? 0) },
+    wageDailySuggested: String(value.wageSuggested ?? 0),
+  };
 }
 
 /** Thông điệp lỗi — modal truyền `t()` vào, form.ts không biết ngôn ngữ. */
@@ -123,6 +154,9 @@ export interface FeePolicyFormMessages {
   taxRateRequired: string;
   taxLegalBasisRequired: string;
   partnerRequired: string;
+  /** Tối thiểu phải nhỏ hơn tối đa (giới hạn chuyến có tài xế). */
+  limitOrder: string;
+  suggestedInRange: string;
   /** Nhãn của một mã `feePolicyActivationBlockers` — `Domain.feePolicyActivationBlocker`. */
   blocker: (code: string) => string;
 }
@@ -204,6 +238,7 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
       // Bật công tắc là có ngay bảng mức NĐ 117 + căn cứ mặc định — admin chỉ sửa khi khác.
       taxLegalBasis: TAX_LEGAL_BASIS_DEFAULT,
       taxRates: taxRatesToForm(TAX_RATES_DEFAULTS),
+      withDriverLimits: limitsToForm(WITH_DRIVER_LIMITS_DEFAULTS),
     };
   }
   return {
@@ -232,6 +267,7 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
      */
     taxLegalBasis: source.taxLegalBasis ?? (source.taxEnabled ? TAX_LEGAL_BASIS_DEFAULT : ''),
     taxRates: taxRatesToForm(parseTaxRates(source.taxRates) ?? TAX_RATES_DEFAULTS),
+    withDriverLimits: limitsToForm(source.withDriverLimits),
   };
 }
 
@@ -269,6 +305,7 @@ export function toUpsertFeePolicyBody(values: FeePolicyFormValues): UpsertFeePol
     // Tắt thuế thì không gửi bảng mức — server lưu null, không để số mồ côi.
     taxRates: values.taxEnabled ? taxRatesFromForm(values.taxRates) : null,
     taxLegalBasis: values.taxEnabled ? values.taxLegalBasis.trim() || null : null,
+    withDriverLimits: limitsToWire(values.withDriverLimits),
   };
 }
 
@@ -528,6 +565,39 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
           ),
         )
         .required() as unknown as yup.ObjectSchema<TaxRatesFormValue>,
+      withDriverLimits: yup
+        .object({
+          priceMin: money().test('positive', m.range, (v) => v == null || v > 0),
+          priceMax: money(),
+          wageMin: money().test('positive', m.range, (v) => v == null || v > 0),
+          wageMax: money(),
+          wageSuggested: money(),
+        })
+        .required() as yup.ObjectSchema<WithDriverLimitsFormValue>,
+    })
+    /* Giới hạn chuyến có tài xế: tối thiểu < tối đa — cùng luật `withDriverLimitsValid` của server. */
+    .test('with-driver-limits-order', function limitsOrder(raw) {
+      const limits = (raw as unknown as FeePolicyFormValues | undefined)?.withDriverLimits;
+      if (!limits) return true;
+      const errors = (
+        [
+          ['priceMin', 'priceMax'],
+          ['wageMin', 'wageMax'],
+        ] as const
+      )
+        .filter(([lo, hi]) => limits[lo] != null && limits[hi] != null && limits[lo]! >= limits[hi]!)
+        .map(([, hi]) => this.createError({ path: `withDriverLimits.${hi}`, message: m.limitOrder }));
+      // Mức gợi ý nằm trong khoảng tiền công — cùng `withDriverLimitsValid` của server.
+      const { wageMin, wageMax, wageSuggested } = limits;
+      if (
+        wageSuggested != null &&
+        ((wageMin != null && wageSuggested < wageMin) || (wageMax != null && wageSuggested > wageMax))
+      ) {
+        errors.push(
+          this.createError({ path: 'withDriverLimits.wageSuggested', message: m.suggestedInRange }),
+        );
+      }
+      return errors.length > 0 ? new yup.ValidationError(errors) : true;
     })
     /*
      * Bật thuế thì MỌI ô của bảng mức phải có số — kiểm ở gốc vì `.when` trong object lồng không

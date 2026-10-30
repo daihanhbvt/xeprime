@@ -58,7 +58,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   [API_ERROR_CODE.NOT_FOUND]: 'Không tìm thấy dữ liệu',
   [API_ERROR_CODE.CONFLICT]: 'Dữ liệu đã tồn tại',
   [API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT]: 'Xe đã có lịch khác trùng khoảng thời gian này',
-  [API_ERROR_CODE.INVALID_CREDENTIALS]: 'Email/số điện thoại hoặc mật khẩu không đúng',
+  [API_ERROR_CODE.INVALID_CREDENTIALS]: 'Số điện thoại hoặc mật khẩu không đúng',
   [API_ERROR_CODE.SESSION_EXPIRED]: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
   [API_ERROR_CODE.ACCOUNT_LOCKED]: 'Tài khoản đã bị khoá',
   [API_ERROR_CODE.RATE_LIMITED]: 'Vượt giới hạn số request',

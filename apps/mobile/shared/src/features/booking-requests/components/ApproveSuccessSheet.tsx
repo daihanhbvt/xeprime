@@ -8,7 +8,8 @@ import { DataRow } from '@/components/ui/DataRow';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
 
 /**
@@ -34,6 +35,7 @@ export function ApproveSuccessSheet({
   request: BookingRequestDecisionTarget;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
@@ -72,6 +74,7 @@ export function ApproveSuccessSheet({
             </YStack>
             <YStack f={1}>
               <Button
+                icon="document-text-outline"
                 label={t('approved.viewBooking')}
                 size="lg"
                 onPress={() => {

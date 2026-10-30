@@ -72,7 +72,7 @@
   min-width: 0;
 }
 
-/* `30/38 Semibold` — tên xe in hoa như bản vẽ. */
+/* `30/38 Semibold` — tên xe giữ nguyên chữ hoa/thường như dữ liệu (đã duyệt bỏ in hoa). */
 .title {
   margin: 0;
   font-size: var(--xp-font-size-h1);
@@ -80,7 +80,6 @@
   line-height: var(--xp-line-height-h1);
   color: var(--xp-color-text);
   letter-spacing: 0;
-  text-transform: uppercase;
   overflow-wrap: anywhere;
 }
 

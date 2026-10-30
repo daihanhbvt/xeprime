@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MOBILE_CLIENT_APP,
@@ -18,7 +19,8 @@ import { PrismaService } from '../../prisma/prisma.service';
  * Phiên đăng nhập của app native — ADR 0017.
  *
  * KHÔNG chạm vào `SessionService` (cookie của web): hai vòng đời khác nhau hoàn toàn, và gộp
- * chúng nghĩa là mọi thay đổi cho native đều có nguy cơ đổi hành vi đăng nhập web.
+ * chúng nghĩa là mọi thay đổi cho native đều có nguy cơ đổi hành vi đăng nhập web. Chỗ duy nhất
+ * cả hai cùng bị gọi là đổi/đặt lại mật khẩu (`AuthService`, ADR 0076).
  *
  * Ba bất biến mà mọi phương thức ở đây phải giữ:
  *  1. Refresh token THÔ không bao giờ được ghi ra DB, log, hay message lỗi — chỉ SHA-256 của nó.
@@ -44,6 +46,10 @@ export const NATIVE_REVOKE_REASON = {
   USER_DISABLED: 'user_disabled',
   /** Chỉ migration ADR 0053 ghi: phiên app thuộc tài khoản đã đổi realm khi tách dữ liệu cũ. */
   REALM_SPLIT: 'realm_split',
+  /** Đổi mật khẩu khi đã đăng nhập — mọi thiết bị KHÁC thiết bị đang thao tác (ADR 0076). */
+  PASSWORD_CHANGED: 'password_changed',
+  /** Đặt lại mật khẩu (email/OTP) — mọi thiết bị (ADR 0076). */
+  PASSWORD_RESET: 'password_reset',
 } as const;
 
 export type NativeRevokeReason = (typeof NATIVE_REVOKE_REASON)[keyof typeof NATIVE_REVOKE_REASON];
@@ -267,15 +273,45 @@ export class NativeSessionService {
     ]);
   }
 
-  /** Thu hồi MỌI phiên native của một user — cho "đăng xuất khỏi mọi thiết bị" và khi khoá tài khoản. */
-  async revokeAllForUser(userId: string, reason: NativeRevokeReason): Promise<void> {
-    const sessions = await this.prisma.nativeAuthSession.findMany({
-      where: { userId, revokedAt: null },
-      select: { id: true },
-    });
-    for (const { id } of sessions) {
-      await this.revokeSession(id, reason);
-    }
+  /**
+   * Thu hồi MỌI phiên native còn sống của một user (kèm refresh token + thiết bị đẩy của chúng) —
+   * trừ `exceptSessionId` nếu có. Dùng khi đổi/đặt lại mật khẩu (ADR 0076).
+   *
+   * Nhận `tx` để đi chung transaction với lượt đổi mật khẩu; không có thì tự mở một transaction —
+   * ba bảng đổi cùng nhau hoặc không bảng nào đổi.
+   */
+  async revokeAllForUser(
+    userId: string,
+    reason: NativeRevokeReason,
+    options: { exceptSessionId?: string | undefined; tx?: Prisma.TransactionClient } = {},
+  ): Promise<void> {
+    const run = async (db: Prisma.TransactionClient): Promise<void> => {
+      const sessions = await db.nativeAuthSession.findMany({
+        where: {
+          userId,
+          revokedAt: null,
+          ...(options.exceptSessionId ? { id: { not: options.exceptSessionId } } : {}),
+        },
+        select: { id: true },
+      });
+      if (sessions.length === 0) return;
+      const ids = sessions.map((s) => s.id);
+      const now = new Date();
+      await db.nativeAuthSession.updateMany({
+        where: { id: { in: ids }, revokedAt: null },
+        data: { revokedAt: now, revokedReason: reason },
+      });
+      await db.nativeRefreshToken.updateMany({
+        where: { sessionId: { in: ids }, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await db.pushDevice.updateMany({
+        where: { nativeAuthSessionId: { in: ids }, enabled: true },
+        data: { enabled: false, disabledAt: now },
+      });
+    };
+    if (options.tx) await run(options.tx);
+    else await this.prisma.$transaction(run);
   }
 
   /**

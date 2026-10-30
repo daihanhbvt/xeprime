@@ -402,8 +402,8 @@ export const ownerVehiclePath = {
  * Các mục của không gian "Quản lý xe" (`/vehicles/[id]/manage/<mục>`) — GIÁ TRỊ đường
  * dẫn, không phải nhãn. Menu trái, trang con và `VehicleEditWorkspace` ở `/manage` cùng đọc.
  *
- * Nhóm "có tài xế" KHÔNG có mục "Tiện ích bổ sung": mockup có nó nhưng nghiệp vụ không — phụ phí
- * mặc định đã nằm ở `WITH_DRIVER_SURCHARGES`.
+ * Nhóm "có tài xế" KHÔNG có mục phụ phí: giá có tài xế là giá TRỌN GÓI, phụ phí tài xế đã gỡ
+ * (ADR 0075). Đường dẫn cũ `with-driver/surcharges` chuyển hướng về "Nhận chuyến & thủ tục".
  *
  * Tám mục (30/09/2026) — CÙNG cấu trúc menu với màn sửa xe ở cổng quản lý, bỏ phần nâng cao.
  * Sáu đường dẫn cũ vẫn sống dưới dạng trang CHUYỂN HƯỚNG (bookmark, thông báo cũ, link trong
@@ -424,7 +424,6 @@ export const VEHICLE_MANAGE_SECTION = {
   SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
   /** "Nhận chuyến & thủ tục" của có tài xế. */
   WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
-  WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
 } as const;
 
 export type VehicleManageSection =
@@ -851,6 +850,7 @@ export const VEHICLE_EDIT_TAB = {
   SELF_DRIVE_OPTIMIZATION: 'self-drive-optimization',
   SELF_DRIVE_TERMS: 'self-drive-terms',
   WITH_DRIVER_OPTIMIZATION: 'with-driver-optimization',
+  /** BÍ DANH — phụ phí tài xế đã gỡ (ADR 0075); link cũ mở "Nhận chuyến & thủ tục". */
   WITH_DRIVER_SURCHARGES: 'with-driver-surcharges',
   WITH_DRIVER_TERMS: 'with-driver-terms',
 } as const;

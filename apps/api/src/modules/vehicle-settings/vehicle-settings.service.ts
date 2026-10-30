@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
@@ -14,9 +15,7 @@ import {
   DRIVER_DEPOSIT_MODE_SUPPORTED,
   DRIVER_SURCHARGE_KIND_SPEC,
   DRIVER_SURCHARGE_KIND_VALUES,
-  DRIVER_SURCHARGE_THRESHOLD_KIND,
   HANDOVER_WINDOW_KIND,
-  HANDOVER_WINDOW_MAX_MINUTE,
   IDENTITY_VERIFY_METHOD,
   SERVICE_TYPE,
   effectiveRequiredDocuments,
@@ -29,7 +28,6 @@ import {
   type AutoAcceptBlocker,
   type CustomerDocumentType,
   type DriverDepositMode,
-  type DriverSurchargeKind,
   type DriverSurchargeRuleSnapshot,
   type HandoverWindow,
   type HandoverWindowKind,
@@ -624,7 +622,12 @@ export class VehicleSettingsService {
     return { available: activeDrivers > 0, activeDrivers, driversFeatureEnabled: true };
   }
 
-  // ── Phụ phí mặc định có tài xế ──────────────────────────────────────────
+  // ── Phụ phí tài xế — ĐÃ GỠ (ADR 0075 điều 7) ────────────────────────────────
+  //
+  // Khách luôn thấy MỘT giá có tài xế; phí cầu đường khách trả trực tiếp, chi phí khác chủ xe và
+  // tài xế tự thương lượng. Bảng `vehicle_driver_surcharge_rules` không còn được đọc/ghi; hai
+  // endpoint giữ HÌNH DẠNG cũ để app phát hành trước đó không vỡ: đọc trả bốn loại đều tắt, lưu
+  // trả 422 `DRIVER_SURCHARGE_RETIRED`.
 
   async listSurchargeRules(tenantId: string, vehicleId: string): Promise<DriverSurchargeRuleDto[]> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
@@ -634,87 +637,33 @@ export class VehicleSettingsService {
   async saveSurchargeRules(
     tenantId: string,
     vehicleId: string,
-    userId: string,
-    dto: SaveDriverSurchargeRulesDto,
+    _userId: string,
+    _dto: SaveDriverSurchargeRulesDto,
   ): Promise<DriverSurchargeRuleDto[]> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
-    const seen = new Set<string>();
-    for (const item of dto.items) {
-      if (seen.has(item.kind)) throw invalid(`Loại phụ phí "${item.kind}" bị lặp`);
-      seen.add(item.kind);
-      const spec = DRIVER_SURCHARGE_KIND_SPEC[item.kind as DriverSurchargeKind];
-      if (spec.threshold === null && item.thresholdValue != null) {
-        throw invalid('Phụ phí lưu trú qua đêm không có ngưỡng');
-      }
-      if (
-        spec.threshold === DRIVER_SURCHARGE_THRESHOLD_KIND.MINUTE_OF_DAY &&
-        item.thresholdValue != null &&
-        item.thresholdValue > HANDOVER_WINDOW_MAX_MINUTE
-      ) {
-        throw invalid('Mốc ngoài giờ phải là một giờ trong ngày');
-      }
-      if (item.enabled && Number(item.amount) <= 0) {
-        throw invalid('Bật phụ phí thì số tiền phải lớn hơn 0');
-      }
-    }
-    const before = await this.surchargeRulesFor(this.prisma, vehicleId);
-
-    await this.prisma.$transaction(async (tx) => {
-      for (const kind of DRIVER_SURCHARGE_KIND_VALUES) {
-        const item = dto.items.find((i) => i.kind === kind);
-        const data = {
-          enabled: item?.enabled ?? false,
-          amount: new Prisma.Decimal(item?.amount ?? '0'),
-          thresholdValue: item?.thresholdValue ?? null,
-          updatedBy: userId,
-        };
-        await tx.vehicleDriverSurchargeRule.upsert({
-          where: { vehicleId_kind: { vehicleId, kind } },
-          create: { id: newId(), tenantId, vehicleId, kind, ...data },
-          update: data,
-        });
-      }
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-          action: 'vehicle.driver_surcharge_rules.update',
-          targetType: 'vehicle',
-          targetId: vehicleId,
-          before: { items: before },
-          after: { items: dto.items },
-        },
-        tx,
-      );
+    throw new UnprocessableEntityException({
+      code: API_ERROR_CODE.DRIVER_SURCHARGE_RETIRED,
+      message:
+        'Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói, phí cầu đường khách trả trực tiếp',
     });
-
-    return this.surchargeRulesFor(this.prisma, vehicleId);
   }
 
-  /** Đủ BỐN loại theo thứ tự cố định — loại chưa có dòng trả tắt/0. */
-  async surchargeRulesFor(db: Db, vehicleId: string): Promise<DriverSurchargeRuleDto[]> {
-    const rows = await db.vehicleDriverSurchargeRule.findMany({
-      where: { vehicleId },
-      select: { kind: true, enabled: true, amount: true, thresholdValue: true },
-    });
-    return DRIVER_SURCHARGE_KIND_VALUES.map((kind) => {
-      const row = rows.find((r) => r.kind === kind);
-      return {
-        kind,
-        unit: DRIVER_SURCHARGE_KIND_SPEC[kind].unit,
-        enabled: row?.enabled ?? false,
-        amount: row?.amount.toFixed(0) ?? '0',
-        thresholdValue: row?.thresholdValue ?? null,
-      };
-    });
+  /** Bốn loại theo thứ tự cố định, đều TẮT — phụ phí tài xế không còn công bố (ADR 0075). */
+  async surchargeRulesFor(_db: Db, _vehicleId: string): Promise<DriverSurchargeRuleDto[]> {
+    return DRIVER_SURCHARGE_KIND_VALUES.map((kind) => ({
+      kind,
+      unit: DRIVER_SURCHARGE_KIND_SPEC[kind].unit,
+      enabled: false,
+      amount: '0',
+      thresholdValue: null,
+    }));
   }
 
   // ── Snapshot điều kiện thuê ─────────────────────────────────────────────
 
   /**
-   * Điều kiện thuê tại THỜI ĐIỂM này, để đóng băng vào yêu cầu/đơn. Chỉ quy tắc phụ phí ĐANG BẬT
-   * của chuyến có tài xế đi vào snapshot; dịch vụ khác có mảng rỗng.
+   * Điều kiện thuê tại THỜI ĐIỂM này, để đóng băng vào yêu cầu/đơn. `surchargeRules` luôn rỗng từ
+   * ADR 0075 (phụ phí tài xế đã gỡ) — trường giữ để snapshot cũ đọc lại được.
    */
   async rentalTermsSnapshotFor(
     db: Db,
@@ -723,22 +672,13 @@ export class VehicleSettingsService {
     termsAcceptedAt: Date | null,
   ): Promise<RentalTermsSnapshot> {
     const service = serviceType as ServiceType;
-    const [setting, windows, buffer, rules] = await Promise.all([
+    const [setting, windows, buffer] = await Promise.all([
       this.serviceSettingFor(db, vehicleId, service),
       this.handoverWindowsFor(db, vehicleId),
       this.turnaroundBufferFor(db, vehicleId),
-      serviceType === SERVICE_TYPE.WITH_DRIVER
-        ? this.surchargeRulesFor(db, vehicleId)
-        : Promise.resolve([] as DriverSurchargeRuleDto[]),
     ]);
-    const surchargeRules: DriverSurchargeRuleSnapshot[] = rules
-      .filter((r) => r.enabled)
-      .map((r) => ({
-        kind: r.kind as DriverSurchargeKind,
-        unit: r.unit as DriverSurchargeRuleSnapshot['unit'],
-        amount: r.amount,
-        thresholdValue: r.thresholdValue,
-      }));
+    // Phụ phí tài xế đã gỡ (ADR 0075) — snapshot mới luôn rỗng; snapshot cũ giữ nguyên số của nó.
+    const surchargeRules: DriverSurchargeRuleSnapshot[] = [];
     return {
       serviceType: service,
       requiredDocuments: setting.effectiveRequiredDocuments,

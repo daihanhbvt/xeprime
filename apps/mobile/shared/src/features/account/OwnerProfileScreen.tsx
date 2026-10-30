@@ -31,7 +31,8 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
 import { VatInvoiceSection } from '@/features/shop/components/VatInvoiceSection';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import type { UserProfile } from './api';
 import { AccountIdentityHero } from './components/AccountIdentityHero';
 import { AccountSecuritySections, SectionHead } from './components/AccountSecuritySections';
@@ -137,6 +138,7 @@ function OwnerProfileSections({
   refreshing: boolean;
   onRefresh: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Account.ownerHub');
   const tHub = useTranslations('Account.hub');
   const tTax = useTranslations('Account.tax');

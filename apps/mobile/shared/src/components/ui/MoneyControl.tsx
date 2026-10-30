@@ -5,17 +5,21 @@ import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/dom
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
 
 /** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const INPUT_STYLE = {
-  flex: 1,
-  color: colors.text,
-  fontSize: fieldFontSize.value,
-  fontFamily: FONT_FAMILY.body,
-  minHeight: sizing.touchTarget,
-  paddingVertical: 0,
-} as const;
+const useInputStyle = themed(
+  (colors) =>
+    ({
+      flex: 1,
+      color: colors.text,
+      fontSize: fieldFontSize.value,
+      fontFamily: FONT_FAMILY.body,
+      minHeight: sizing.touchTarget,
+      paddingVertical: 0,
+    }) as const,
+);
 
 /**
  * Ô nhập TIỀN, bản KHÔNG gắn với React Hook Form.
@@ -59,6 +63,8 @@ export function MoneyControl({
   required?: boolean;
   editable?: boolean;
 }) {
+  const colors = useColors();
+  const INPUT_STYLE = useInputStyle();
   const inputRef = useRef<TextInput>(null);
   const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);

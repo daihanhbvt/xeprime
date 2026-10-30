@@ -18,16 +18,13 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import {
-  colors,
-  fieldFontSize,
-  fontSize,
-  fontWeight,
-  iconSize,
-  radius,
-  space,
-} from '@/theme/tokens';
-import { availablePromoCodes, type PromoPreview, type PromoTripParams } from '@/api/promo-codes/api';
+  availablePromoCodes,
+  type PromoPreview,
+  type PromoTripParams,
+} from '@/api/promo-codes/api';
 
 /**
  * Ô ÁP MÃ KHUYẾN MÃI của luồng đặt xe trên APP — bản native của `PromoCodeField` bên web
@@ -64,6 +61,7 @@ export function PromoCodeField({
   onApply: (code: string) => void;
   onRemove: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const fmt = useAppFormat();
   const [draft, setDraft] = useState('');
@@ -82,19 +80,19 @@ export function PromoCodeField({
   if (!trip) return null;
 
   return (
+    // Khối hành động giữa hai khối số (web `.block`): viền đứt, đã áp thì viền liền xanh. Bo 12, đệm 12.
     <YStack
-      gap={space.xs}
-      px={space.md}
-      py={space.sm}
-      br={radius.sm}
+      gap={space.sm}
+      p={12}
+      br={radius.control}
       bw={1}
-      bc={hasApplied ? colors.success : colors.borderSubtle}
+      bc={hasApplied ? colors.success : colors.border}
       bg={hasApplied ? colors.successSurface : 'transparent'}
       borderStyle={hasApplied ? 'solid' : 'dashed'}
     >
       <XStack ai="center" gap={space.xs}>
         <Ionicons name="pricetag-outline" size={iconSize.sm} color={colors.primary} />
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
           {t('field.label')}
         </Text>
         <InfoHint content={t('field.hint')} label={t('field.hintLabel')} />
@@ -106,7 +104,7 @@ export function PromoCodeField({
             hitSlop={space.sm}
             style={{ marginLeft: 'auto' }}
           >
-            <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
+            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold}>
               {t('field.browse')}
             </Text>
           </Pressable>
@@ -125,7 +123,13 @@ export function PromoCodeField({
                 {applied.code}
               </Text>
             </XStack>
-            <Text f={1} flexShrink={1} col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            <Text
+              f={1}
+              flexShrink={1}
+              col={colors.textMuted}
+              fos={fontSize.label}
+              numberOfLines={1}
+            >
               {applied.name}
             </Text>
             <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.bold}>
@@ -147,7 +151,7 @@ export function PromoCodeField({
           ) : null}
         </>
       ) : (
-        <XStack ai="center" gap={space.sm}>
+        <XStack ai="stretch" gap={space.sm}>
           <YStack f={1}>
             <FieldShell focused={focused} disabled={checking}>
               <TextInput
@@ -168,7 +172,7 @@ export function PromoCodeField({
                   flex: 1,
                   color: colors.text,
                   fontFamily: FONT_FAMILY.body,
-                  fontSize: fieldFontSize.value,
+                  fontSize: fontSize.body,
                   padding: 0,
                 }}
               />
@@ -176,8 +180,8 @@ export function PromoCodeField({
           </YStack>
           <Button
             label={t('field.apply')}
-            variant="secondary"
-            size="sm"
+            variant="primary"
+            block={false}
             loading={checking}
             disabled={normalizePromoCode(draft).length === 0}
             onPress={submitDraft}
@@ -217,12 +221,50 @@ export function PromoCodeField({
 }
 
 /**
+ * Ba dòng trạng thái của mã (đang kiểm · không áp được · bị gỡ) — bản native của
+ * `PromoStatusNote` web, dùng ở thẻ "Thành tiền" của trang chi tiết xe.
+ */
+export function PromoStatusNote({
+  checking,
+  reason,
+  hasApplied,
+  droppedCode,
+}: {
+  checking: boolean;
+  reason: string | null;
+  hasApplied: boolean;
+  droppedCode: string | null;
+}) {
+  const t = useTranslations('PromoCodes');
+  const colors = useColors();
+  return (
+    <>
+      {checking ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('field.checking')}
+        </Text>
+      ) : null}
+      {!checking && reason && !hasApplied ? (
+        <Text col={colors.danger} fos={fontSize.label} fow={fontWeight.semibold}>
+          {reasonText(t, reason)}
+        </Text>
+      ) : null}
+      {droppedCode ? (
+        <Text col={colors.warning} fos={fontSize.label} fow={fontWeight.semibold}>
+          {t('field.dropped', { code: droppedCode })}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * Tấm trượt chọn mã — gõ tay HOẶC chọn từ danh sách đã công bố.
  *
  * Chỉ dựng khi ĐÃ mở (`pickerOpen ? … : null` ở nơi gọi): một `Modal` ngủ đông trong màn đặt xe
  * là một cây DOM native nữa cho mỗi chuyến khách xem.
  */
-function PromoPickerSheet({
+export function PromoPickerSheet({
   trip,
   appliedCode,
   onClose,
@@ -233,6 +275,7 @@ function PromoPickerSheet({
   onClose: () => void;
   onApply: (code: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const fmt = useAppFormat();
   const [draft, setDraft] = useState('');
@@ -261,7 +304,7 @@ function PromoPickerSheet({
   return (
     <BottomSheet open onClose={onClose} title={t('picker.title')}>
       <YStack gap={space.md} pb={space.md}>
-        <XStack ai="center" gap={space.sm}>
+        <XStack ai="stretch" gap={space.sm}>
           <YStack f={1}>
             <FieldShell focused={focused}>
               <TextInput
@@ -281,16 +324,17 @@ function PromoPickerSheet({
                   flex: 1,
                   color: colors.text,
                   fontFamily: FONT_FAMILY.body,
-                  fontSize: fieldFontSize.value,
+                  fontSize: fontSize.body,
                   padding: 0,
                 }}
               />
             </FieldShell>
           </YStack>
+        {/* Nút cao BẰNG ô nhập, vàng chính — trước là nút phụ cỡ nhỏ lọt thỏm cạnh ô (người dùng chốt 27/10/2026). */}
           <Button
             label={t('picker.apply')}
-            variant="secondary"
-            size="sm"
+            variant="primary"
+            block={false}
             disabled={normalizePromoCode(draft).length === 0}
             onPress={submitDraft}
           />
@@ -344,6 +388,7 @@ function PickerRow({
   money: (value: string) => string;
   onApply: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('PromoCodes');
   const disabled = !promo.applicable;
 
@@ -405,6 +450,7 @@ function PickerRow({
       </YStack>
       <YStack flexShrink={0} jc="center" alignSelf="center">
         <Button
+          icon="checkmark-outline"
           label={inUse ? t('picker.applied') : t('picker.apply')}
           variant="primary"
           size="sm"

@@ -1,7 +1,7 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Alert, App, Button, Form, Radio } from 'antd';
+import { Alert, App, Button, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,12 +9,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
   CUSTOMER_DOCUMENT_TYPE,
-  DRIVER_DEPOSIT_MODE_VALUES,
   IDENTITY_VERIFY_METHOD_VALUES,
   POLICY_SOURCE,
   RENTAL_TERMS_MAX_LENGTH,
   SERVICE_TYPE,
-  isDriverDepositModeSupported,
   requiredIdentityDocuments,
   type ServiceType,
 } from '@xeprime/types';
@@ -61,10 +59,6 @@ const settingSchema = yup.object({
     .defined(),
   requireTermsAcceptance: yup.boolean().defined(),
   termsText: yup.string().max(RENTAL_TERMS_MAX_LENGTH).defined().default(''),
-  depositMode: yup
-    .string()
-    .oneOf([...DRIVER_DEPOSIT_MODE_VALUES])
-    .defined(),
 });
 type SettingValues = yup.InferType<typeof settingSchema>;
 type FormValues = PolicyFormValues & SettingValues;
@@ -76,8 +70,9 @@ type FormValues = PolicyFormValues & SettingValues;
  *    dùng chung với chính sách gian hàng); giấy tờ xuất trình (CCCD hoặc hộ chiếu — GPLX luôn
  *    bắt buộc theo luật); cách đối chiếu (thủ công, kể cả "VNeID" = soi app của khách);
  *    điều khoản + bắt khách đồng ý.
- *  - CÓ TÀI XẾ: cọc giữ chuyến là `depositMode` RIÊNG (không mượn `depositAmount` của tự lái);
- *    30%/50% hiện disabled với lý do vì hệ thống chưa thu được — không lưu một % không được dùng.
+ *  - CÓ TÀI XẾ: chỉ giấy tờ, cách đối chiếu và điều khoản. KHÔNG có ô cọc giữ chuyến (gỡ
+ *    29/10/2026): tiền giữ chỗ do nền tảng đặt và thu cho mọi đơn (ADR 0033 · 0066), nên một lựa
+ *    chọn "không cọc / 30% / 50%" của chủ xe vừa thừa vừa nói ngược với khoản khách thật sự trả.
  *
  * Mọi thứ khách thấy đều được server công bố ở trang xe và đóng băng vào yêu cầu/đơn.
  */
@@ -166,7 +161,6 @@ function TermsForm({
       identityVerifyMethod: setting.identityVerifyMethod,
       requireTermsAcceptance: setting.requireTermsAcceptance,
       termsText: setting.termsText ?? '',
-      depositMode: setting.depositMode,
     }),
     [pricing.policy, pricing.shopPolicy, setting],
   );
@@ -208,14 +202,6 @@ function TermsForm({
         identityVerifyMethod: next.identityVerifyMethod,
         requireTermsAcceptance: next.requireTermsAcceptance,
         termsText: next.termsText.trim() || null,
-        /*
-         * Chỉ gửi chế độ cọc mà hệ thống THU được (`DRIVER_DEPOSIT_MODE_SUPPORTED`). 30%/50%
-         * hiện là lựa chọn khoá ở giao diện; nếu lọt tới đây thì bỏ qua thay vì ghi một %
-         * không có luồng thu — server cũng từ chối.
-         */
-        ...(withDriver && isDriverDepositModeSupported(next.depositMode)
-          ? { depositMode: next.depositMode }
-          : {}),
       });
       /*
        * Bảo đảm là CHÍNH SÁCH — chỉ ghi khi chủ xe thật sự đổi nó; đổi thì phải ghi đè cả bộ
@@ -258,17 +244,7 @@ function TermsForm({
           title={withDriver ? t('withDriverTitle') : t('selfDriveTitle')}
           subtitle={withDriver ? t('withDriverSubtitle') : t('selfDriveSubtitle')}
         >
-          {withDriver ? (
-            <fieldset className={styles.fieldset}>
-              <legend className={styles.legend}>{t('depositTitle')}</legend>
-              <p className={styles.hint}>{t('depositNote')}</p>
-              <DepositModeField
-                control={control}
-                canEdit={canEdit}
-                unsupportedLabel={t('depositUnsupported')}
-              />
-            </fieldset>
-          ) : (
+          {withDriver ? null : (
             <>
               {!editingCollateral ? (
                 <Alert
@@ -374,35 +350,5 @@ function TermsForm({
         />
       </form>
     </Form>
-  );
-}
-
-/**
- * Cọc giữ chuyến có tài xế — radio ba mức; mức hệ thống chưa THU được thì disabled kèm lý do
- * ngay dưới nhãn. Không lưu một phần trăm không được dùng (server cũng từ chối).
- */
-function DepositModeField({
-  control,
-  canEdit,
-  unsupportedLabel,
-}: {
-  control: ReturnType<typeof useForm<FormValues>>['control'];
-  canEdit: boolean;
-  unsupportedLabel: string;
-}) {
-  const domainLabel = useDomainLabel();
-  const value = useWatch({ control, name: 'depositMode' });
-  return (
-    <Radio.Group value={value} disabled={!canEdit} className={styles.radioStack}>
-      {DRIVER_DEPOSIT_MODE_VALUES.map((mode) => {
-        const supported = isDriverDepositModeSupported(mode);
-        return (
-          <Radio key={mode} value={mode} disabled={!supported} className={styles.radio}>
-            <span className={styles.radioLabel}>{domainLabel('driverDepositMode', mode)}</span>
-            {!supported ? <span className={styles.radioNote}>{unsupportedLabel}</span> : null}
-          </Radio>
-        );
-      })}
-    </Radio.Group>
   );
 }

@@ -1,19 +1,15 @@
-import { Image, StyleSheet } from 'react-native';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { XStack, YStack } from 'tamagui';
-import { images, logoWidth } from '@/assets';
 import { HeaderActions } from './HeaderActions';
-import { APP_NAME } from '@/lib/app-name';
-import { colors, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
 import { HEADER_RULE, HEADER_RULE_OPACITY } from './AppHeader';
 
 /** Logo thanh gốc của app, lớn hơn logo header màn con (`AppHeader` dùng 24). */
 const BRAND_LOGO = 30;
 
-const styles = StyleSheet.create({
-  logo: { width: logoWidth(BRAND_LOGO), height: BRAND_LOGO },
-});
-
 export function AppTopBar() {
+  const colors = useColors();
   return (
     /*
       Cùng vạch gold đóng đáy như `AppHeader`: thanh gốc của tab và thanh của màn con là CÙNG một
@@ -33,13 +29,7 @@ export function AppTopBar() {
          * Chỉ mỗi lockup: nó đã có sẵn chữ "xe prime" trong artwork. Bản trước ghép biểu tượng
          * với hai `Text` tô màu tay — nay đặt cạnh lockup sẽ thành tên thương hiệu in hai lần.
          */}
-        <Image
-          source={images.logo}
-          style={styles.logo}
-          resizeMode="contain"
-          accessibilityRole="image"
-          accessibilityLabel={APP_NAME}
-        />
+        <BrandLogo height={BRAND_LOGO} />
 
         <HeaderActions />
       </XStack>

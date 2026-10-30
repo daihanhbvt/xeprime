@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Pressable, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,10 +8,11 @@ import { CountBadge } from '@/components/ui/CountBadge';
 import { Pagination } from '@/components/ui/Pagination';
 import { useCollapseOnScroll, type CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { activeFilterCount, ManageFilterSheet, type FilterGroup } from './ManageFilterSheet';
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   /**
    * Khối đầu trang ĐÈ lên danh sách, không nằm trong luồng layout.
    *
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
     dòng tự căn glyph theo baseline của nó, không theo tâm khung. Không có nó thì flexbox của
     khung cha làm việc căn giữa, và nó căn đúng.
   */
-});
+}));
 
 /**
  * Vỏ của một màn danh sách trong khu quản lý — gom bốn thứ mọi bảng dữ liệu ở đây đều cần: tiêu
@@ -173,7 +174,8 @@ export function ManageListShell({
     bindList: (node: unknown) => void;
   }) => ReactNode;
 }) {
-  const t = useTranslations('Common.filters');
+  const colors = useColors();
+  const styles = useStyles();
   const [filtering, setFiltering] = useState(false);
 
   /**
@@ -330,35 +332,7 @@ export function ManageListShell({
                 đây bỏ hẳn được phần đoán. Con số bộ lọc đang bật nằm trên chính nút: thiếu nó thì
                 người dùng phải mở tấm trượt mới biết vì sao danh sách ngắn bất thường.
               */}
-              <Pressable
-                onPress={openFilters}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')
-                }
-                style={({ pressed }) => [
-                  styles.filterButton,
-                  {
-                    backgroundColor: count > 0 ? colors.primaryLight : colors.surface,
-                    borderColor: count > 0 ? colors.primary : colors.borderInput,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="funnel-outline"
-                  size={iconSize.sm}
-                  color={count > 0 ? colors.primaryActive : colors.textMuted}
-                />
-                <Text
-                  col={count > 0 ? colors.primaryActive : colors.text}
-                  fos={fontSize.bodySm}
-                  fow={fontWeight.medium}
-                >
-                  {t('title')}
-                </Text>
-                {count > 0 ? <CountBadge count={count} /> : null}
-              </Pressable>
+              <ManageFilterButton count={count} onPress={openFilters} />
             </XStack>
           </XStack>
 
@@ -372,7 +346,6 @@ export function ManageListShell({
 
           {/* Dải tab là hàng CUỐI của khối đầu trang từ khi ô tìm kiếm dời vào tấm lọc. */}
           <YStack pb={space.sm}>{tabs}</YStack>
-
         </Animated.View>
       </YStack>
 
@@ -392,5 +365,40 @@ export function ManageListShell({
         onClose={closeFilters}
       />
     </>
+  );
+}
+
+/**
+ * Nút "Bộ lọc" của các danh sách — phễu + chữ + số bộ lọc đang bật, bo tròn hết cỡ, tô vàng khi đang
+ * lọc. Dùng chung cho mọi danh sách (Partner và khách) để nút lọc ở đâu cũng một kiểu.
+ */
+export function ManageFilterButton({ count, onPress }: { count: number; onPress: () => void }) {
+  const colors = useColors();
+  const styles = useStyles();
+  const t = useTranslations('Common.filters');
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')}
+      style={({ pressed }) => [
+        styles.filterButton,
+        {
+          backgroundColor: count > 0 ? colors.primaryLight : colors.surface,
+          borderColor: count > 0 ? colors.primary : colors.borderInput,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Ionicons
+        name="funnel-outline"
+        size={iconSize.sm}
+        color={count > 0 ? colors.primaryActive : colors.textMuted}
+      />
+      <Text col={count > 0 ? colors.primaryActive : colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+        {t('title')}
+      </Text>
+      {count > 0 ? <CountBadge count={count} /> : null}
+    </Pressable>
   );
 }

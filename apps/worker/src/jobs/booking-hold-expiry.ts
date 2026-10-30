@@ -230,10 +230,10 @@ async function remindDueHolds(
       const remaining = hold.amount.sub(hold.paidAmount);
       await notifyUser(tx, hold.customerUserId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRING,
-        title: `Còn ${remainingMinutes} phút để thanh toán giữ chỗ`,
+        title: `Còn ${remainingMinutes} phút để giữ ${hold.vehicle.name}`,
         body:
-          `${hold.vehicle.name} · còn ${formatMoneyVndVi(remaining.toString())} · ` +
-          `nội dung ${hold.code}`,
+          `Thanh toán ${formatMoneyVndVi(remaining.toString())} (nội dung ${hold.code}). ` +
+          'Quá hạn, xe sẽ mở lại cho khách khác.',
         tenantId: hold.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
         targetId: hold.bookingRequestId,
@@ -441,8 +441,8 @@ export async function sweepBookingHoldExpiry(
       if (hold.customerUserId) {
         await notifyUser(tx, hold.customerUserId, {
           type: NOTIFICATION_TYPE.HOLD_EXPIRED,
-          title: 'Hết hạn thanh toán giữ chỗ',
-          body: `${hold.vehicle.name} · chỗ đã được mở lại cho khách khác. Bạn có thể đặt lại.`,
+          title: `Chuyến ${hold.vehicle.name} đã huỷ vì quá hạn thanh toán`,
+          body: 'Khoản đã chuyển (nếu có) sẽ được hoàn. Bạn có thể đặt lại nếu xe còn trống.',
           tenantId: hold.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: hold.bookingRequestId,

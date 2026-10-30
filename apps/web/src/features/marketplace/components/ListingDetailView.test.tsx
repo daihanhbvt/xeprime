@@ -288,9 +288,8 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
       pickupWindows: [{ start: '08:00', end: '18:00' }],
       returnWindows: [{ start: '08:00', end: '20:00' }],
     },
-    driverSurchargeRules: [
-      { kind: 'waiting', unit: 'per_30_minutes', amount: '30000', thresholdValue: 30 },
-    ],
+    // Phụ phí tài xế đã gỡ (ADR 0075) — API luôn trả mảng rỗng.
+    driverSurchargeRules: [],
   } as unknown as PublicListingDetail;
 
   it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Đặt ngay', async () => {
@@ -319,11 +318,11 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     expect(screen.queryByText(/chuẩn bị giữa hai chuyến/i)).toBeNull();
   });
 
-  it('phụ phí tài xế chỉ hiện khi khách đang xem dịch vụ CÓ TÀI XẾ', async () => {
+  it('giá có tài xế là giá TRỌN GÓI — chỉ hiện khi xem dịch vụ CÓ TÀI XẾ, không còn phụ phí', async () => {
     const { unmount } = renderWithIntl(
       await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }),
     );
-    expect(screen.queryByText('Phụ phí có thể phát sinh')).toBeNull();
+    expect(screen.queryByText('Giá thuê có tài xế')).toBeNull();
     unmount();
 
     renderWithIntl(
@@ -333,15 +332,14 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
         serviceType: 'with_driver',
       }),
     );
-    expect(screen.getByText('Phụ phí có thể phát sinh')).toBeTruthy();
-    // Cùng một câu ở thẻ đặt xe và tab "Quy định chung" — soát trong khối điều khoản. Ngưỡng đọc
-    // theo LOẠI của nó (số phút chờ miễn phí), không in con số trần; không lặp ký hiệu tiền tệ.
+    expect(screen.queryByText('Phụ phí có thể phát sinh')).toBeNull();
+    // Cùng một câu ở thẻ đặt xe và tab "Quy định chung" — soát trong khối điều khoản.
     const policies = within(screen.getByRole('region', { name: 'Quy định thuê xe' }));
-    expect(
-      policies.getByText('Phụ phí chờ đợi: 30.000 ₫/30 phút · tính sau 30 phút chờ miễn phí'),
-    ).toBeTruthy();
+    expect(policies.getByText('Giá thuê có tài xế')).toBeTruthy();
+    expect(policies.getByText(/Chưa gồm phí cầu đường/)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Tài sản thế chấp' }));
-    expect(screen.getByText(/Không cần cọc giữ chuyến/)).toBeTruthy();
+    // Cọc giữ chuyến có tài xế đã gỡ (29/10/2026): tiền giữ chỗ do nền tảng thu, không còn câu riêng.
+    expect(screen.queryByText(/cọc giữ chuyến/i)).toBeNull();
   });
 
   it('API cũ chưa trả ba khối này: trang vẫn dựng, chỉ thiếu mục thông tin', async () => {

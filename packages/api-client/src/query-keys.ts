@@ -151,6 +151,12 @@ export const queryKeys = {
     /** Bộ chọn gán đơn theo khung giờ (17/08) — cache riêng theo cửa sổ thời gian. */
     assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
       ['drivers', 'assignable', window] as const,
+    /** Tiền công/ngày mặc định của gian hàng + giới hạn nền tảng (ADR 0075). */
+    wageSettings: ['drivers', 'wage-settings'] as const,
+    /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — ngăn kéo tiền công (ADR 0075). */
+    assignments: (id: string, params: QueryParams) => ['drivers', 'assignments', id, params] as const,
+    /** Ngăn chi tiết một tài xế: tiền công tháng, việc đang treo, độ tin cậy, xu hướng (ADR 0075). */
+    overview: (id: string, params: QueryParams) => ['drivers', 'overview', id, params] as const,
   },
   /**
    * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) — lời mời/liên kết, huy hiệu chờ trả
@@ -173,7 +179,8 @@ export const queryKeys = {
   /** Banner hero trang chủ — public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
   banners: {
     all: ['banners'] as const,
-    list: () => ['banners', 'public'] as const,
+    /** Banner công khai của MỘT vị trí (`hero` | `promo`) — mỗi vị trí một ô cache. */
+    list: (placement: string = 'hero') => ['banners', 'public', placement] as const,
     /** Danh sách quản trị của MỘT vị trí (`hero` | `promo`) — mặc định dải banner đầu trang. */
     admin: (placement: string = 'hero') => ['banners', 'admin', placement] as const,
   },

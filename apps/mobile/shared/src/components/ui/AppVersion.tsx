@@ -2,7 +2,9 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 export type AppVersionInfo = { version: string; build: string | null };
 
@@ -33,7 +35,24 @@ export function readAppVersion(
  * "Tài khoản & bảo mật" của khu quản lý. Không có số thì không hiện gì — một dòng "Phiên bản"
  * trống còn tệ hơn không có.
  */
+/** Host API production — bản trỏ vào đây là bản người dùng thật cầm. */
+const PRODUCTION_API_HOST = 'api.xeprime.vn';
+
+/**
+ * Bản production chỉ hiện "0.1.0" — số build là việc nội bộ (QA, hỗ trợ phân biệt các bản nộp),
+ * người dùng thật không cần (người dùng chốt 29/10/2026). Staging/dev vẫn hiện "0.1.0 (n)".
+ * Push vẫn gửi đủ `readAppVersion` lên server, nên hỗ trợ tra được số build từ phía máy chủ.
+ */
+function isProductionBuild(): boolean {
+  try {
+    return new URL(resolveApiBaseUrl()).host === PRODUCTION_API_HOST;
+  } catch {
+    return false;
+  }
+}
+
 export function AppVersion() {
+  const colors = useColors();
   const t = useTranslations('MobileShell.appVersion');
   const info = readAppVersion();
   if (!info) return null;
@@ -41,7 +60,7 @@ export function AppVersion() {
   return (
     <YStack ai="center" py={space.sm}>
       <Text col={colors.placeholder} fos={fontSize.bodySm} selectable>
-        {info.build
+        {info.build && !isProductionBuild()
           ? t('labelWithBuild', { version: info.version, build: info.build })
           : t('label', { version: info.version })}
       </Text>

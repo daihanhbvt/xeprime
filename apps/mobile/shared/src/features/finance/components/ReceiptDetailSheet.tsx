@@ -38,7 +38,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useApproveReceipt, useCancelReceipt, useReceiptDetail } from '../hooks/use-finance';
 
 const THUMB = 92;
@@ -73,6 +74,7 @@ export function ReceiptDetailSheet({
   receiptId: string | null;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Finance.receipts.detail');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
@@ -507,6 +509,7 @@ const LABEL_WIDTH = 108;
  * dòng bắt đầu ở một chỗ khác nhau và mắt không có mép nào để bám.
  */
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <XStack ai="flex-start" gap={space.sm} px={space.md} py={space.sm}>
       <YStack w={LABEL_WIDTH} flexShrink={0}>
@@ -523,6 +526,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 
 /** Hàng có nhãn ĐỨNG TRÊN và giá trị chiếm trọn bề ngang — cho câu dài (diễn giải). */
 function InfoBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <YStack gap={2} px={space.md} py={space.sm}>
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -545,6 +549,7 @@ function InfoBlock({ label, children }: { label: string; children: React.ReactNo
  * giá trị 14px làm hai cột lệch đường chân chữ ở mọi hàng.
  */
 function InfoText({ children }: { children: string }) {
+  const colors = useColors();
   return (
     <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
       {children}
@@ -560,6 +565,7 @@ function InfoText({ children }: { children: string }) {
  * mọi phần mềm họ dùng — mượn màu gold ở đây là bắt họ học lại một lần nữa cho đúng một chỗ.
  */
 function InfoLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
   return (
     <Text
       col={colors.link}

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Image } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { bankInitials, bankLogoUrl } from '@xeprime/domain';
-import { colors, fontSize, fontWeight } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight } from '@/theme/tokens';
 
 /**
  * Logo ngân hàng theo MÃ VietQR — bản native của `BankLogo` trên web. Mã lạ hoặc ảnh hỏng ⇒ lùi
@@ -10,6 +11,7 @@ import { colors, fontSize, fontWeight } from '@/theme/tokens';
  * hàng luôn đứng cạnh bằng chữ.
  */
 export function BankLogo({ code, size, radius }: { code: string; size: number; radius: number }) {
+  const colors = useColors();
   const [failed, setFailed] = useState(false);
   const url = bankLogoUrl(code);
 

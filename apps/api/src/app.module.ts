@@ -23,6 +23,7 @@ import { SupportRequestMiddleware } from './common/support/support-request.store
 import { SupportMaskInterceptor } from './common/support/support-mask.interceptor';
 import { TenantSupportModule } from './modules/tenant-support/tenant-support.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { REALM_PROXY_SECRET_HEADER } from './modules/auth/request-realm.service';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -90,6 +91,9 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
             'req.headers.cookie',
             'req.headers.authorization',
             'req.headers["x-api-key"]',
+            // Khoá Caddy gắn kèm header realm (`REALM_PROXY_SECRET`, ADR 0053) — có trên MỌI
+            // request web; lọt vào log là khoá nằm trong mọi bản sao log.
+            `req.headers["${REALM_PROXY_SECRET_HEADER}"]`,
             'res.headers["set-cookie"]',
             // Đăng nhập / đổi mật khẩu / OTP / đặt lại mật khẩu.
             'req.body.idToken',

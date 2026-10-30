@@ -3,7 +3,8 @@ import type { StatusColor } from '@xeprime/types';
 import { IconDisc } from '@/components/ui/IconDisc';
 import type { IconName } from '@/components/ui/Chip';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Đầu thẻ của MỘT phương thức thanh toán (VietQR, ví điện tử) — cùng một khung cho mọi thẻ để
@@ -21,6 +22,7 @@ export function PaymentMethodHeader({
   badge?: { label: string; color: StatusColor } | null;
   subtitle?: string;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.sm}>

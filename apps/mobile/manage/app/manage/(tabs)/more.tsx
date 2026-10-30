@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { ScopeSwitcherSheet } from '@/features/shell/ScopeSwitcher';
-import { colors, fontSize, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Ngăn "Thêm" của khu quản lý.
@@ -18,6 +19,7 @@ import { colors, fontSize, iconSize, space } from '@/theme/tokens';
  * trống mà người dùng tưởng là lỗi.
  */
 export default function ManageMoreRoute() {
+  const colors = useColors();
   const t = useTranslations('MobileShell.more');
   const tAccount = useTranslations('Account');
   const [switching, setSwitching] = useState(false);

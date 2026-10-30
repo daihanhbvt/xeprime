@@ -1,6 +1,6 @@
 # ADR 0063 — Tài xế là TÀI KHOẢN KHÁCH được bên thuê mời liên kết; gán chuyến chờ tài xế nhận; chống trùng lịch theo NGƯỜI
 
-Ngày: 16/10/2026 · Trạng thái: Accepted (câu "Lượt chờ KHÔNG hết hạn" bị [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) điều 4 thay; điều 2 "Bỏ hồ sơ không tài khoản" nới bởi [0067](0067-external-driver-on-booking-no-auto-cancel.md) — đơn được ghi tên + SĐT tài xế ngoài hệ thống) · Ghi đè: ADR 0032 điều 6 (gạch "Tài xế không có tài khoản/app…"
+Ngày: 16/10/2026 · Trạng thái: Accepted (điều 10 "không tiền" thay bởi [0075](0075-driver-wage-record.md) — tài xế thấy TIỀN CÔNG của chính mình, không thấy tiền nào khác; điều 6 mở rộng bởi [0074](0074-driver-drop-accepted-trip.md) — tài xế đã nhận RÚT được cả sau cửa sổ trả lại, kèm lý do + chế tài; câu "Lượt chờ KHÔNG hết hạn" bị [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) điều 4 thay; điều 2 "Bỏ hồ sơ không tài khoản" nới bởi [0067](0067-external-driver-on-booking-no-auto-cancel.md) — đơn được ghi tên + SĐT tài xế ngoài hệ thống) · Ghi đè: ADR 0032 điều 6 (gạch "Tài xế không có tài khoản/app…"
 và cụm "tài xế dạng bản ghi" ở gạch Manage), ADR 0027 điều 1 + `PLAN_FEATURE.DRIVERS` trong phạm vi
 module tài xế (không còn sau cờ gói, mở cho cả hai tuyến), ADR 0038 điều 4 trong phạm vi module tài xế
 (không còn `@SubscriptionTrackOnly`), ADR 0052 dòng "tài xế không có chi nhánh" giữ nguyên ·
@@ -78,7 +78,7 @@ không ai thấy lịch của nhau).
   `declined` (giữ `acceptedAt` — cặp này phân biệt "trả lại" với "từ chối"), bên thuê được báo khẩn,
   cột claim nhắc thiếu tài xế được đánh dấu như ADR 0067 điều 2. **Đơn KHÔNG bị huỷ**, không đồng tiền
   nào đổi chiều; tài xế vẫn không đổi trạng thái đơn, không bàn giao.
-- **Điều 10 — giữ "không tiền"**: giao diện không hiện thu nhập chuyến / doanh thu dù bản vẽ có.
+- **Điều 10 — giữ "không tiền"**: giao diện không hiện thu nhập chuyến / doanh thu dù bản vẽ có. **Thay bởi ADR 0075:** tài xế thấy tiền công của chính lượt gán (con số bên thuê ghi nhận, trả trực tiếp) — vẫn không thấy giá thuê, tiền giữ chỗ hay doanh thu.
 - **Mở rộng ADR 0054 trên bề mặt tài xế**: `GET /driver/links` trả thêm `employerContact` (họ tên chủ
   tài khoản bên thuê, email liên hệ theo `resolveStorefront`, tỉnh/thành của gian hàng) và
   `completedTripCount`. Chỉ tài xế có liên kết với chính bên đó đọc được; không vào DTO công khai.

@@ -13,7 +13,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { requestTripPhotoUrl, useTripHandoverEvidence } from '../hooks/use-trips';
 import type { CustomerTripHandoverEvidence as Evidence } from '../api';
 
@@ -29,6 +30,7 @@ const THUMB = 84;
  * — giao diện không được biến nó thành thông báo hỏng.
  */
 export function TripHandoverEvidence({ tripId, enabled }: { tripId: string; enabled: boolean }) {
+  const colors = useColors();
   const t = useTranslations('Trips.evidence');
   const query = useTripHandoverEvidence(tripId, enabled);
 
@@ -93,6 +95,7 @@ export function TripHandoverEvidence({ tripId, enabled }: { tripId: string; enab
 }
 
 function EvidenceBlock({ tripId, record }: { tripId: string; record: Evidence }) {
+  const colors = useColors();
   const t = useTranslations('Trips.evidence');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -188,6 +191,7 @@ function EvidencePhoto({
   addedLate: boolean;
   onOpen: (url: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Trips.evidence');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -250,6 +254,7 @@ function EvidencePhoto({
 
 /** Xem ảnh toàn màn. URL ký sống ngắn nên không có bước tải về, chỉ xem. */
 function PhotoViewer({ url, onClose }: { url: string | null; onClose: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Common.actions');
   const { width, height } = useWindowDimensions();
   const [failed, setFailed] = useState(false);
@@ -289,6 +294,7 @@ function PhotoViewer({ url, onClose }: { url: string | null; onClose: () => void
 }
 
 function Line({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
       <Text col={colors.textMuted} fos={fontSize.bodySm} flexShrink={0}>

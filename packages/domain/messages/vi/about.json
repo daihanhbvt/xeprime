@@ -64,11 +64,13 @@
     "lead": "Hai cách tham gia trên cùng một chợ — chọn theo quy mô, đổi được về sau.",
     "basic": {
       "title": "Chủ xe cá nhân",
-      "desc": "Vài chiếc xe, không thuê bao. Bạn chỉ trả phí dịch vụ theo chuyến thật sự phát sinh."
+      "desc": "Vài chiếc xe, không thuê bao. Bạn chỉ trả phí dịch vụ theo chuyến thật sự phát sinh.",
+      "descInApp": "Vài chiếc xe, tham gia ngay trên chợ. Phí dịch vụ tính theo chuyến thật sự phát sinh."
     },
     "shop": {
       "title": "Gian hàng",
-      "desc": "Đội xe lớn hơn, mua gói theo số xe và kỳ hạn. Không mất phần trăm cho XePrime trên mỗi chuyến, kèm bộ công cụ quản lý đầy đủ."
+      "desc": "Đội xe lớn hơn, mua gói theo số xe và kỳ hạn. Không mất phần trăm cho XePrime trên mỗi chuyến, kèm bộ công cụ quản lý đầy đủ.",
+      "descInApp": "Đội xe lớn hơn, kèm bộ công cụ quản lý đầy đủ. Hình thức tham gia và biểu phí do XePrime công bố."
     },
     "action": "Đăng xe cho thuê"
   },
@@ -86,10 +88,6 @@
       "title": "Uy tín đo bằng hành vi thật",
       "desc": "Tỉ lệ phản hồi, thời gian phản hồi và tỉ lệ giữ chuyến của gian hàng tính từ dữ liệu 90 ngày gần nhất, không phải tự khai."
     }
-  },
-  "status": {
-    "title": "XePrime đang trong giai đoạn hoàn thiện",
-    "body": "Sản phẩm chưa mở cho người dùng thật. Các văn bản pháp lý còn là bản thảo, và thông tin pháp nhân vận hành sẽ được công bố trước khi mở chính thức."
   },
   "next": {
     "heading": "Đi tiếp",

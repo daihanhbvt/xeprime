@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { CHAT_SIDE } from '@xeprime/types';
 import type { ConversationSummary } from '@/features/chat/api';
 import { memo } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Avatar } from '@/components/ui/Avatar';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 /** Ảnh đại diện to hơn sàn chạm: nó là mỏ neo thị giác của cả dòng, không phải một icon. */
@@ -35,6 +36,8 @@ export const ConversationRow = memo(function ConversationRow({
   showRole: boolean;
   onPress: (conversation: ConversationSummary) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Chat');
   const fmt = useAppFormat();
 
@@ -142,7 +145,7 @@ export const ConversationRow = memo(function ConversationRow({
               )}
 
               {/* Số tin chưa đọc nằm ở HÀNG GIỮA, thẳng cột với ngày ở trên và giờ ở dưới. */}
-              {unread ? <CountBadge count={conversation.unread} /> : null}
+              {unread ? <CountBadge count={conversation.unread} tone="danger" /> : null}
             </XStack>
           ) : null}
 
@@ -163,9 +166,9 @@ export const ConversationRow = memo(function ConversationRow({
             */}
             {conversation.lastMessageAt ? (
               <Text
-                col={unread ? colors.primaryActive : colors.textMuted}
+                col={colors.placeholder}
                 fos={fontSize.label}
-                fow={unread ? fontWeight.semibold : fontWeight.medium}
+                fow={fontWeight.medium}
               >
                 {fmt.time(conversation.lastMessageAt)}
               </Text>
@@ -177,7 +180,7 @@ export const ConversationRow = memo(function ConversationRow({
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   /*
    * Dòng chạy HẾT bề ngang như cũ — không phải thẻ rời có bo góc và lề.
    *
@@ -198,9 +201,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
     paddingVertical: space.md,
   },
-  /** Chưa đọc: nền VÀNG NHẠT cho cả thẻ — thấy ngay khi lướt, không phải đọc số ở góc. */
+  /** Chưa đọc: web chỉ đậm câu xem trước, nền vàng nhạt dành cho cuộc ĐANG CHỌN — không tô nền. */
   rowUnread: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: undefined,
   },
   /**
    * Nền lúc CHẠM — xám nhạt, không phải vàng nhạt như trước: vàng nhạt giờ mang nghĩa "chưa
@@ -209,4 +212,4 @@ const styles = StyleSheet.create({
   rowPressed: {
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));

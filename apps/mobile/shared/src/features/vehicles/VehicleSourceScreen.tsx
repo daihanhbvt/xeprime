@@ -39,7 +39,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
 import {
@@ -159,6 +160,7 @@ function SourceForm({
   refreshing: boolean;
   onRefetch: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.source');
   const tActions = useTranslations('Common.actions');
   /* Câu "bỏ thay đổi chưa lưu" là của TAB SỬA XE nói chung — ba tab hỏi cùng một câu. */
@@ -665,6 +667,7 @@ function RentedSection({ control, canEdit }: SectionProps) {
 }
 
 function PartnershipSection({ control, canEdit }: SectionProps) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.source.partnership');
   const tLabels = useTranslations('Common.labels');
 

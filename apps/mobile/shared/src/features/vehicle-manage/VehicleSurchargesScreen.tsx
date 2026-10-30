@@ -27,7 +27,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { DriverSurchargeRule } from './api';
 import { useDriverSurchargeRules, useSaveDriverSurchargeRules } from './hooks/use-vehicle-settings';
@@ -128,6 +129,7 @@ function SurchargesForm({
   vehicleId: string;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
@@ -227,6 +229,7 @@ function RuleCard({
   control: Control<FormValues>;
   canEdit: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.surcharges');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();

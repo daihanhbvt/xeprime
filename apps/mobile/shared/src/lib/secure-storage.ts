@@ -20,11 +20,21 @@ export const SECURE_KEY = {
    */
   RENTAL_RANGE: 'xp.rentalRange',
   PROVINCE_CODE: 'xp.provinceCode',
+  /** Loại xe khách TỰ CHỌN gần nhất (ô tô / xe máy) — `lib/vehicle-type-memory.ts`. Không phải bí mật. */
+  VEHICLE_TYPE: 'xp.vehicleType',
+  /** Ẩn/hiện SỐ DƯ trên viên số dư của tab Tài khoản — `wallet/balance-visibility.ts`. Không phải bí mật (web `localStorage` `xp.wallet.balance.hidden`). */
+  WALLET_BALANCE_HIDDEN: 'xp.wallet.balance.hidden',
   DELIVERY_ADDRESS: 'xp.deliveryAddress',
   /** Tỉnh SUY RA từ vị trí thiết bị — gợi ý của máy, không phải lựa chọn của người dùng. */
   GEO_PROVINCE: 'xp.geoProvince',
   /** Lượt cổng MoMo/VNPAY đang theo dõi theo chuyến — `features/payment-gateway/trip-order-memory`. */
   TRIP_PAYMENT_ORDERS: 'xp.tripPaymentOrders',
+  /** Giao diện khách chọn (Sáng · Tối) — `theme/color-scheme.ts`. Không phải bí mật. */
+  THEME_PREFERENCE: 'xp.themePreference',
+  /** Chế độ xem kết quả tìm xe (lưới · danh sách) — web `localStorage` `xp:marketplace-view-mode`. Không phải bí mật. */
+  MARKETPLACE_VIEW_MODE: 'xp.marketplaceViewMode',
+  /** Dấu tick "Checklist nhận xe" theo chuyến — ghi nhớ CÁ NHÂN, không gửi server (web `pickup-checklist-memory`). */
+  PICKUP_CHECKLIST: 'xp.pickupChecklist',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];
@@ -82,5 +92,20 @@ export async function deleteSecureItem(key: SecureKey): Promise<void> {
     await SecureStore.deleteItemAsync(key);
   } catch {
     // Xoá thứ không tồn tại không phải lỗi — đăng xuất phải luôn đi tới cùng.
+  }
+}
+
+/**
+ * Đọc ĐỒNG BỘ — chỉ dành cho số ít giá trị phải có TRƯỚC khi module khác nạp (giao diện sáng/tối
+ * chọn bảng màu ngay lúc `theme/tokens.ts` được import). Lỗi Keystore ⇒ `null`, như bản bất
+ * đồng bộ.
+ */
+export function getSecureItemSync(key: SecureKey): string | null {
+  if (blockedOnWeb(key)) return null;
+  if (isWeb) return globalThis.localStorage?.getItem(key) ?? null;
+  try {
+    return SecureStore.getItem(key);
+  } catch {
+    return null;
   }
 }

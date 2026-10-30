@@ -11,7 +11,8 @@ import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 export interface FilterOption {
   readonly value: string;
@@ -114,21 +115,23 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   open,
   groups,
   onChange,
-  searchValue,
-  searchLabel,
-  searchPlaceholder,
+  searchValue = '',
+  searchLabel = '',
+  searchPlaceholder = '',
   onSearchChange,
   onClose,
 }: {
   open: boolean;
   groups: readonly FilterGroup[];
   onChange: (groupKey: string, value: string) => void;
-  searchValue: string;
-  searchLabel: string;
-  searchPlaceholder: string;
-  onSearchChange: (next: string) => void;
+  /** Ô tìm trong tấm — bỏ cả bộ ⇒ tấm chỉ có các nhóm lọc (vd lịch sử giao dịch của khách). */
+  searchValue?: string;
+  searchLabel?: string;
+  searchPlaceholder?: string;
+  onSearchChange?: (next: string) => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.filters');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
@@ -210,7 +213,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
         if (next !== applied) onChange(key, next);
       }
     }
-    if (searchDraft !== searchValue) onSearchChange(searchDraft);
+    if (searchDraft !== searchValue) onSearchChange?.(searchDraft);
     onClose();
   };
 
@@ -292,13 +295,15 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
           Ô tìm kiếm ĐỨNG ĐẦU tấm, trước mọi chiều lọc: nó là cách thu hẹp nhanh nhất, và đặt nó
           sau ba nhóm chip thì phải cuộn mới tới.
         */}
-        <SearchInput
-          value={searchDraft}
-          onChange={setSearchDraft}
-          label={searchLabel}
-          placeholder={searchPlaceholder}
-          variant="boxed"
-        />
+        {onSearchChange ? (
+          <SearchInput
+            value={searchDraft}
+            onChange={setSearchDraft}
+            label={searchLabel}
+            placeholder={searchPlaceholder}
+            variant="boxed"
+          />
+        ) : null}
 
         {groups.map((group) =>
           group.kind === 'dateRange' ? (
@@ -332,6 +337,7 @@ const Group = memo(function Group({
   value: string;
   onSelect: (groupKey: string, value: string) => void;
 }) {
+  const colors = useColors();
   return (
     <YStack gap={space.sm}>
       {/*
@@ -381,6 +387,7 @@ const DateRangeGroup = memo(function DateRangeGroup({
   to: string;
   onSelect: (groupKey: string, value: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
@@ -441,6 +448,7 @@ const ActiveChip = memo(function ActiveChip({
   label: string;
   onRemove: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable onPress={onRemove} accessibilityRole="button" accessibilityLabel={label}>
       <XStack

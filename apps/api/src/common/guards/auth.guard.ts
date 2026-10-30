@@ -12,7 +12,8 @@ import type { RequestContext } from '../types/request-context';
  * Xác thực mọi request — hai đường vận chuyển, MỘT nguồn sự thật về quyền.
  *
  *  - **Cookie** — web (ADR 0002). Từ ADR 0053 mỗi realm một tên cookie, và guard chỉ đọc đúng
- *    cookie của realm request (realm do proxy quyết — `RequestRealmService`).
+ *    cookie của realm request (realm do proxy quyết — `RequestRealmService`). Từ ADR 0076 `sid`
+ *    của cookie phải trỏ vào một phiên còn sống ở `web_sessions`.
  *  - **`Authorization: Bearer <accessToken>`** — app native (ADR 0017). Realm là app của phiên.
  *
  * Guard này được đăng ký GLOBAL: mặc định mọi endpoint đều cần đăng nhập, muốn mở thì phải gắn
@@ -84,7 +85,7 @@ export class AuthGuard implements CanActivate {
 
     const { userId, sessionId, realm } = bearerToken
       ? await this.resolveBearer(bearerToken)
-      : this.resolveCookie(cookieToken as string, webRealm as AccountRealm);
+      : await this.resolveCookie(cookieToken as string, webRealm as AccountRealm);
 
     /*
      * Request đi qua `/api` của một SITE web thì phiên phải thuộc đúng realm của site đó.
@@ -136,11 +137,15 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private resolveCookie(
+  /**
+   * Cookie: chữ ký rồi **phiên còn sống không** (tra `web_sessions` — ADR 0076). Không có bước tra
+   * thì đăng xuất chỉ là xoá cookie trên MỘT trình duyệt, còn bản bị lấy cắp sống đủ 7 ngày.
+   */
+  private async resolveCookie(
     token: string,
     realm: AccountRealm,
-  ): { userId: string; sessionId: string; realm: AccountRealm } {
-    const payload = this.sessions.verify(token);
+  ): Promise<{ userId: string; sessionId: string; realm: AccountRealm }> {
+    const payload = await this.sessions.verifyUsable(token);
     return { userId: payload.sub, sessionId: payload.sid, realm };
   }
 

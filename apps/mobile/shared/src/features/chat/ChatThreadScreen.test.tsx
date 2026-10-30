@@ -49,6 +49,7 @@ jest.mock('@/hooks/use-app-active', () => ({
 const api = chatApi as jest.Mocked<typeof chatApi>;
 
 const conversation = (side: ChatSide): ConversationSummary => ({
+  canSend: true,
   id: 'c1',
   vehicleId: null,
   vehicleName: null,

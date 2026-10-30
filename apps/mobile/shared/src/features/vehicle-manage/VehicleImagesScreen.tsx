@@ -19,7 +19,8 @@ import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { VehicleDetail } from '@/features/vehicles/api';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 
@@ -152,13 +153,10 @@ function ImagesForm({
   }, []);
 
   function save() {
-    update.mutate(
-      { media: items.map((i) => ({ url: i.url, type: i.type })) } as never,
-      {
-        onSuccess: () => toast.showSuccess(t('saved')),
-        onError: (error) => toast.showError(errorMessage(error)),
-      },
-    );
+    update.mutate({ media: items.map((i) => ({ url: i.url, type: i.type })) } as never, {
+      onSuccess: () => toast.showSuccess(t('saved')),
+      onError: (error) => toast.showError(errorMessage(error)),
+    });
   }
 
   return (
@@ -183,6 +181,7 @@ function ImagesForm({
       {canEdit ? (
         <YStack gap={space.sm}>
           <Button
+            icon="save-outline"
             label={tActions('saveChanges')}
             disabled={!dirty || uploading > 0}
             loading={update.isPending}
@@ -234,6 +233,7 @@ function SlotCard({
   /** Báo lên màn khi ô này bắt đầu/kết thúc một lượt tải — xem `uploading` ở màn. */
   onBusyChange: (busy: boolean) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.images');
   const tActions = useTranslations('Common.actions');
   const single = isSingleVehicleImageSlot(slot);

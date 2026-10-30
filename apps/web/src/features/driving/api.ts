@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiGet, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type { DriverTripTab } from '@xeprime/types';
 import type {
+  DropDriverTripBody,
   DriverLinkScope,
   DriverPendingCounts,
   DriverTrip,
@@ -43,6 +44,6 @@ export const acceptDriverTrip = (id: string): Promise<DriverTripDetail> =>
   apiPost<DriverTripDetail>(`/driver/trips/${id}/accept`);
 export const declineDriverTrip = (id: string): Promise<unknown> =>
   apiPost<unknown>(`/driver/trips/${id}/decline`);
-/** Trả lại chuyến đã nhận — trong cửa sổ `releaseUntil` (sửa ADR 0063 điều 6). Đơn không bị huỷ. */
-export const releaseDriverTrip = (id: string): Promise<unknown> =>
-  apiPost<unknown>(`/driver/trips/${id}/release`);
+/** Báo sự cố / rút khỏi chuyến đã nhận (ADR 0074). Đơn không bị huỷ; trước `releaseUntil` không phạt. */
+export const dropDriverTrip = (id: string, body: DropDriverTripBody): Promise<unknown> =>
+  apiPost<unknown>(`/driver/trips/${id}/drop`, body);

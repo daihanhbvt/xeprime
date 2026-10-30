@@ -28,7 +28,8 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { CustomerCard } from './components/CustomerCard';
 import { CustomerFormSheet } from './components/CustomerFormSheet';
 import { CustomerSummaryBar } from './components/CustomerSummaryBar';
@@ -57,6 +58,7 @@ const keyOf = (customer: TenantCustomer) => customer.id;
  * không có URL để chia sẻ, và bộ lọc này chết theo màn (ADR 0004).
  */
 export function CustomerListScreen() {
+  const colors = useColors();
   const t = useTranslations('Customers');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();

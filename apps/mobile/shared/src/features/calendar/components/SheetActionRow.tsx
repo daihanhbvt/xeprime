@@ -4,13 +4,17 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import type { IconName } from '@/components/ui/Chip';
 import { IconDisc } from '@/components/ui/IconDisc';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { themed, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
-const TONE = {
-  neutral: { fg: colors.textMuted, bg: colors.surfaceMuted },
-  primary: { fg: colors.primaryActive, bg: colors.primaryLight },
-  danger: { fg: colors.danger, bg: colors.dangerSurface },
-} as const;
+const useTone = themed(
+  (colors) =>
+    ({
+      neutral: { fg: colors.textMuted, bg: colors.surfaceMuted },
+      primary: { fg: colors.primaryActive, bg: colors.primaryLight },
+      danger: { fg: colors.danger, bg: colors.dangerSurface },
+    }) as const,
+);
 
 /**
  * Một dòng HÀNH ĐỘNG trong tấm trượt của lịch — không phải một lựa chọn giá trị.
@@ -41,6 +45,8 @@ export function SheetActionRow({
   disabled?: boolean;
   onPress?: () => void;
 }) {
+  const colors = useColors();
+  const TONE = useTone();
   const body = (
     <XStack
       ai="center"

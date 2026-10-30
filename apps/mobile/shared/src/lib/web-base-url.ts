@@ -38,3 +38,12 @@ export function resolveWebBaseUrl(): string {
   );
   return fallback;
 }
+
+/**
+ * Ảnh do CMS/seed lưu dạng đường dẫn TƯƠNG ĐỐI vào `public/` của web (`/home/*.webp`) — web tự
+ * phân giải theo origin; app phải ghép gốc bản web, không thì expo-image nhận uri không host.
+ */
+export function webAssetUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.startsWith('/') ? `${resolveWebBaseUrl()}${url}` : url;
+}

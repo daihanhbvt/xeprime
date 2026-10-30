@@ -12,7 +12,7 @@ iOS chỉ build được trên macOS (Xcode) hoặc EAS Build trên cloud của 
 
 1. Kiểm tra trước, thiếu thì DỪNG và hướng dẫn người dùng tự làm (cần đăng nhập/đồng ý, agent không làm thay):
    - `npx eas-cli whoami` — chưa đăng nhập ⇒ người dùng tự chạy `npx eas-cli login`.
-   - Bundle ID `vn.xeprime.partner` đã đăng ký trên Apple Developer và app đã tạo trên App Store Connect.
+   - Bundle ID `vn.xeprime.partnerapp` đã đăng ký trên Apple Developer và app đã tạo trên App Store Connect.
    - `buildNumber` trong `apps/mobile/manage/app.json` (`expo.ios.buildNumber`) đã TĂNG so với bản đã upload — App Store Connect từ chối số trùng. Hỏi người dùng trước khi tăng.
 2. Chạy trong `apps/mobile/manage`:
    `npx eas-cli build --platform ios --profile production`

@@ -1,7 +1,12 @@
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, type ListRenderItemInfo } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  type ListRenderItemInfo,
+} from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -21,15 +26,13 @@ import {
 } from '@/api/account-payments/api';
 import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
 import { Chip } from '@/components/ui/Chip';
-import { FORM_DATE_FLOOR } from '@/components/ui/DateField';
-import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
+import { DateRangeField } from '@/components/ui/DateRangeField';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { ListEnd } from '@/components/ui/ListEnd';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -38,17 +41,16 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useCancelWithdrawal } from '@/features/wallet/hooks/use-wallet';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { goBackOr } from '@/navigation/go-back-or';
-import { ACCOUNT_PAYMENTS_TAB, AccountPaymentsTabs } from './components/AccountPaymentsTabs';
 import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /** "19:00:39 16/07/2026" như bản vẽ, giờ Việt Nam. */
 const ROW_TIME_FORMAT = 'HH:mm:ss DD/MM/YYYY';
-const CHIP_DAY_FORMAT = 'DD/MM/YYYY';
 
 const STATUS_TONE: Record<AccountTransactionStatus, StatusColor> = {
   [ACCOUNT_TRANSACTION_STATUS.SUCCEEDED]: STATUS_COLOR.SUCCESS,
@@ -66,15 +68,14 @@ const STATUS_TONE: Record<AccountTransactionStatus, StatusColor> = {
  *
  * Lệnh rút còn chờ duyệt có hành động "Huỷ yêu cầu" ngay trên thẻ.
  */
+/** Thân tab — header + dải tab do `AccountPaymentsHub` dựng. */
 export function AccountPaymentsScreen() {
+  const colors = useColors();
   const t = useTranslations('AccountPayments.history');
-  const tHub = useTranslations('AccountPayments.hub');
-  const router = useRouter();
 
   const [status, setStatus] = useState<AccountTransactionStatus | null>(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [picking, setPicking] = useState<'from' | 'to' | null>(null);
 
   const filterKey = { status, from: from || null, to: to || null };
   const query = useInfiniteQuery({
@@ -91,72 +92,64 @@ export function AccountPaymentsScreen() {
   });
 
   const rows = (query.data?.pages ?? []).flatMap((page) => page.data);
+  // Kéo để làm mới — vòng quay chỉ hiện khi khách kéo, không theo các lượt refetch nền.
+  const pull = usePullRefresh(query.refetch);
   const filtered = status !== null || from !== '' || to !== '';
-  const dayLabel = (value: string) => toAppTz(value).format(CHIP_DAY_FORMAT);
+  const statusChips: { value: AccountTransactionStatus | null; label: string }[] = [
+    { value: null, label: t('filters.all') },
+    ...ACCOUNT_TRANSACTION_STATUS_VALUES.map((value) => ({ value, label: t(`status.${value}`) })),
+  ];
 
   return (
     <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
-        title={tHub('title')}
-        subtitle={tHub('subtitle')}
-      />
-      <AccountPaymentsTabs value={ACCOUNT_PAYMENTS_TAB.HISTORY} />
+      {/*
+        Thanh lọc ĐỨNG YÊN dưới dải tab (người dùng chốt 29/10/2026): chip trạng thái chạm một lần là
+        lọc; dưới là ô "Từ ngày → Đến ngày" dùng chung với màn Chuyến đi (`DateRangeField`).
+      */}
+      <YStack px={space.md} pt={space.sm} gap={space.sm}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <XStack gap={space.xs}>
+            {statusChips.map((chip) => (
+              <Chip
+                key={chip.value ?? 'all'}
+                label={chip.label}
+                size="sm"
+                selected={status === chip.value}
+                onPress={() => setStatus(chip.value)}
+              />
+            ))}
+          </XStack>
+        </ScrollView>
+        <DateRangeField
+          value={{ from: from || undefined, to: to || undefined }}
+          onChange={(range) => {
+            setFrom(range.from ?? '');
+            setTo(range.to ?? '');
+          }}
+          labels={{
+            field: t('filters.range'),
+            from: t('filters.rangeFrom'),
+            to: t('filters.rangeTo'),
+            clear: t('filters.clearRange'),
+          }}
+        />
+      </YStack>
       <Screen edges={['left', 'right', 'bottom']} padded={false} scroll={false}>
         <FlatList
           data={rows}
           keyExtractor={keyOf}
+          refreshControl={
+            <RefreshControl
+              refreshing={pull.refreshing}
+              onRefresh={pull.onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           contentContainerStyle={{ padding: space.md, gap: space.sm }}
           renderItem={({ item }: ListRenderItemInfo<AccountTransaction>) => (
             <TransactionRow row={item} />
           )}
-          ListHeaderComponent={
-            <YStack gap={space.sm} pb={space.sm}>
-              <XStack flexWrap="wrap" gap={space.xs}>
-                <Chip
-                  label={t('filters.all')}
-                  selected={status === null}
-                  onPress={() => setStatus(null)}
-                />
-                {ACCOUNT_TRANSACTION_STATUS_VALUES.map((value) => (
-                  <Chip
-                    key={value}
-                    label={t(`status.${value}`)}
-                    selected={status === value}
-                    onPress={() => setStatus(value)}
-                  />
-                ))}
-              </XStack>
-              {/* "Chọn khoảng thời gian" — hai mốc chọn bằng tấm lịch, chạm chip đã chọn để đổi. */}
-              <XStack flexWrap="wrap" gap={space.xs} ai="center">
-                <Chip
-                  icon="calendar-outline"
-                  role="button"
-                  selected={from !== ''}
-                  label={from ? dayLabel(from) : t('filters.rangePlaceholder')}
-                  onPress={() => setPicking('from')}
-                />
-                <Chip
-                  icon="calendar-outline"
-                  role="button"
-                  selected={to !== ''}
-                  label={to ? dayLabel(to) : t('filters.rangeTo')}
-                  onPress={() => setPicking('to')}
-                />
-                {from || to ? (
-                  <Chip
-                    icon="close"
-                    role="button"
-                    label={t('filters.clearRange')}
-                    onPress={() => {
-                      setFrom('');
-                      setTo('');
-                    }}
-                  />
-                ) : null}
-              </XStack>
-            </YStack>
-          }
           ListEmptyComponent={
             query.isPending ? (
               <MiniRowsSkeleton rows={5} />
@@ -189,22 +182,6 @@ export function AccountPaymentsScreen() {
         />
       </Screen>
 
-      <DatePickerSheet
-        open={picking !== null}
-        onClose={() => setPicking(null)}
-        title={picking === 'to' ? t('filters.rangeTo') : t('filters.rangePlaceholder')}
-        minDate={picking === 'to' && from ? toAppTz(from) : FORM_DATE_FLOOR}
-        value={picking === 'to' ? to : from}
-        onChange={(next) => {
-          if (picking === 'to') setTo(next);
-          else {
-            setFrom(next);
-            // Mốc đầu vượt mốc cuối thì bỏ mốc cuối — khoảng ngược là khoảng rỗng.
-            if (to && next > to) setTo('');
-          }
-          setPicking(null);
-        }}
-      />
     </>
   );
 }
@@ -217,6 +194,7 @@ const keyOf = (row: AccountTransaction) => row.id;
  * mở chuyến đó; lệnh rút chờ duyệt có "Huỷ yêu cầu".
  */
 function TransactionRow({ row }: { row: AccountTransaction }) {
+  const colors = useColors();
   const t = useTranslations('AccountPayments.history');
   const fmt = useAppFormat();
   const toast = useAppToast();

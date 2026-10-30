@@ -1012,7 +1012,7 @@
       "daily": "In-city (base price)",
       "dailyHint": "Required to publish the with-driver service.",
       "interCity": "Inter-city — round trip (optional)",
-      "interCityHint": "Leave empty to estimate from the in-city price; surcharges are confirmed on approval.",
+      "interCityHint": "Leave empty to estimate from the in-city price; the final price is confirmed on approval.",
       "oneWay": "Inter-city — one way (optional)",
       "oneWayHint": "Leave empty to fall back to the nearest tier: inter-city, then in-city.",
       "tipLabel": "About with-driver prices",

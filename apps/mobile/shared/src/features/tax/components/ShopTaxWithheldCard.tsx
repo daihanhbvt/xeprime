@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isNegativeMoney, nowInAppTz } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney, nowInAppTz } from '@xeprime/domain';
 import {
   PERMISSION,
   STATUS_COLOR,
@@ -20,7 +20,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { TAX_PERIOD_FORMAT, type TaxRow } from '@/api/tax/api';
 import { useShopTaxSummary } from '../hooks/use-tax';
 
@@ -39,6 +40,7 @@ import { useShopTaxSummary } from '../hooks/use-tax';
  * bảo mật vừa buộc khối này phụ thuộc một hook không khối nào khác trên màn dùng.
  */
 export function ShopTaxWithheldCard() {
+  const colors = useColors();
   const t = useTranslations('Finance.taxWithheld');
   const fmt = useAppFormat();
   const { has } = usePermissions();
@@ -59,6 +61,36 @@ export function ShopTaxWithheldCard() {
         tone: colors.warning,
         surface: colors.warningSurface,
       },
+      // GTGT + TNCN tách riêng theo loại dịch vụ (ADR 0068) — cùng thứ tự các ô của web.
+      {
+        key: 'vat',
+        icon: 'receipt-outline',
+        label: t('stats.vat'),
+        value: fmt.money(data.totalVatAmount),
+        tone: colors.warning,
+        surface: colors.warningSurface,
+      },
+      {
+        key: 'pit',
+        icon: 'person-outline',
+        label: t('stats.pit'),
+        value: fmt.money(data.totalPitAmount),
+        tone: colors.warning,
+        surface: colors.warningSurface,
+      },
+      // Kỳ trộn dòng cũ không tách: phần còn lại của tổng, để GTGT + TNCN + phần này = tổng.
+      ...(isZeroMoney(data.totalUnsplitAmount)
+        ? []
+        : [
+            {
+              key: 'unsplit',
+              icon: 'layers-outline' as const,
+              label: t('stats.unsplit'),
+              value: fmt.money(data.totalUnsplitAmount),
+              tone: colors.textMuted,
+              surface: colors.surfaceMuted,
+            },
+          ]),
       {
         key: 'base',
         icon: 'calculator-outline',
@@ -76,7 +108,7 @@ export function ShopTaxWithheldCard() {
         surface: colors.primaryLight,
       },
     ];
-  }, [data, fmt, t]);
+  }, [colors, data, fmt, t]);
 
   if (!canView) return null;
 
@@ -138,13 +170,15 @@ export function ShopTaxWithheldCard() {
  *
  * Dòng ÂM là bút toán ĐẢO: nó phải đọc được là ÂM (màu + dấu), không chỉ là một số nhỏ hơn.
  *
- * ⚠️ Màu của dòng âm là **cảnh báo**, không phải xanh — đúng `.negative` của web. Bản trước tô
+ * ⚠️ Màu của dòng âm là **lỗi** (`colors.danger` = `--xp-color-error`), không phải xanh — đúng
+ * `TaxSplitAmount .negative` của web. Bản trước tô
  * xanh vì "thuế hoàn lại thì tốt cho chủ xe", nhưng đó là một cách đọc app tự nghĩ ra, và nó đá
  * nhau với chính app: ở sổ ví xanh nghĩa là TIỀN VÀO. Cùng một sắc nói hai điều khác nhau trên hai
  * màn tiền là cách chắc chắn để người dùng đọc sai một con số. Ở bảng kế toán, màu này chỉ có một
  * nghĩa duy nhất: con số này ÂM.
  */
 function TaxRowLine({ row }: { row: TaxRow }) {
+  const colors = useColors();
   const t = useTranslations('Finance.taxWithheld');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -162,8 +196,16 @@ function TaxRowLine({ row }: { row: TaxRow }) {
           {row.label}
         </Text>
         <Text col={colors.placeholder} fos={fontSize.label}>
-          {fmt.money(row.taxableBase)} · {t('percentOf', { percent: row.percent })}
+          {fmt.money(row.taxableBase)} ·{' '}
+          {row.vatPercent != null && row.pitPercent != null
+            ? t('ratePair', { vat: row.vatPercent, pit: row.pitPercent })
+            : t('percentOf', { percent: row.percent })}
         </Text>
+        {/* Hai sắc thuế riêng (ADR 0068); dòng một-mức cũ không bịa phép tách. */}
+        <XStack gap={space.sm} flexWrap="wrap">
+          <TaxSplitLine label={t('columns.vat')} value={row.vatAmount ?? null} fallback={t('notSplit')} />
+          <TaxSplitLine label={t('columns.pit')} value={row.pitAmount ?? null} fallback={t('notSplit')} />
+        </XStack>
       </YStack>
 
       <YStack ai="flex-end" gap={space.xs}>
@@ -184,5 +226,39 @@ function TaxRowLine({ row }: { row: TaxRow }) {
         />
       </YStack>
     </XStack>
+  );
+}
+
+/**
+ * Một sắc thuế (GTGT hoặc TNCN) của một dòng — bản native của web `TaxSplitAmount`. `null` ⇒ dòng
+ * một-mức trước ADR 0068: hiện chữ "không tách", không bịa phép tách. Âm (bút toán đảo) tô màu lỗi;
+ * dấu trừ do `fmt.money` in mới là tín hiệu mang nghĩa.
+ */
+function TaxSplitLine({
+  label,
+  value,
+  fallback,
+}: {
+  label: string;
+  value: string | null;
+  fallback: string;
+}) {
+  const colors = useColors();
+  const fmt = useAppFormat();
+  return (
+    <Text col={colors.textMuted} fos={fontSize.label}>
+      {label}:{' '}
+      {value == null ? (
+        fallback
+      ) : (
+        <Text
+          col={isNegativeMoney(value) ? colors.danger : colors.text}
+          fos={fontSize.label}
+          fow={fontWeight.medium}
+        >
+          {fmt.money(value)}
+        </Text>
+      )}
+    </Text>
   );
 }

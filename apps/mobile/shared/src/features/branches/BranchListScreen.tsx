@@ -23,7 +23,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { BRANCH_ACTION, type Branch, type BranchAction } from './api';
 import { BranchCard, type BranchCardActionState } from './components/BranchCard';
 import { BranchFormSheet } from './components/BranchFormSheet';
@@ -53,6 +53,7 @@ const keyOf = (branch: Branch) => branch.id;
  * đời. Lớp chặn thật là `@RequiresFeature` ở backend — ba route đọc/sửa cố ý không mang marker.
  */
 export function BranchListScreen() {
+  const colors = useColors();
   const t = useTranslations('Branches');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');

@@ -1,0 +1,9 @@
+/* Dòng trỏ sang mức tiền công chung, dưới giá có tài xế của xe. */
+.note {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}

@@ -8,7 +8,8 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { chatDebug } from '@/lib/chat-debug';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Cạnh dài nhất của một ảnh đính kèm — đúng `max-width/max-height: 200px` của web.
@@ -160,6 +161,7 @@ export const MessageBubble = memo(function MessageBubble({
   onRetry,
   onDiscard,
 }: MessageBubbleProps) {
+  const colors = useColors();
   const t = useTranslations('Chat');
   const fmt = useAppFormat();
 
@@ -314,11 +316,10 @@ function Attachment({
   attachment: MessageAttachment;
   onPressImage: (url: string) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Chat');
   /** Tỉ lệ ngang/dọc THẬT của ảnh — đo một lần rồi nhớ lại, xem `ratioCache`. */
-  const [ratio, setRatio] = useState<number | null>(
-    () => ratioCache.get(attachment.url) ?? null,
-  );
+  const [ratio, setRatio] = useState<number | null>(() => ratioCache.get(attachment.url) ?? null);
 
   if (attachment.fileType?.startsWith('image/')) {
     return (

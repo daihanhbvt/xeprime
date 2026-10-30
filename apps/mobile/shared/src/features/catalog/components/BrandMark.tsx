@@ -1,36 +1,58 @@
-import { Image, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { useMemo, useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { vehicleBrandKey } from '@xeprime/types';
-import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
-import { BRAND_ART } from '../brand-art';
-
-const SIZE = 18;
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius } from '@/theme/tokens';
 
 /**
- * Logo hãng xe cho chip bộ lọc — bản native của `BrandMark` bên web, cùng nét vẽ và cùng luật:
- * tra theo `vehicleBrandKey`, không có thì monogram chữ cái đầu.
- *
- * Ảnh là PNG sinh từ chính SVG của web (`scripts/sync-brand-art.mjs`) chứ không vẽ lại: web
- * vẫn là nguồn duy nhất, còn RN thì không đọc được SVG nếu không cắm `react-native-svg` —
- * native module mà Expo Go không mang.
- *
- * Hãng do shop tự nhập (ngoài danh mục) vì thế vẫn hiện tử tế thay vì một ô trống.
+ * `iconUrl` của danh mục là đường dẫn GỐC WEB (`/brands/toyota.webp`) — web đọc được vì cùng
+ * origin, điện thoại thì không có host nào để tải. Ghép với địa chỉ bản web (nơi phục vụ
+ * `public/brands`); URL tuyệt đối (admin tải logo lên R2) giữ nguyên.
  */
+function absoluteIconUrl(iconUrl: string): string {
+  if (/^https?:\/\//i.test(iconUrl)) return iconUrl;
+  return `${resolveWebBaseUrl()}${iconUrl.startsWith('/') ? '' : '/'}${iconUrl}`;
+}
+
+/** Ô logo hãng 20×20, bo `radius.sm` — đúng `.logo` / `.monogram` của web `BrandMark`. */
+const SIZE = 20;
+
 const styles = StyleSheet.create({
-  art: { width: SIZE, height: SIZE },
+  logo: { width: SIZE, height: SIZE, borderRadius: radius.sm },
 });
 
-export function BrandMark({ brand }: { brand: string }) {
-  const key = vehicleBrandKey(brand);
-  const art = key ? BRAND_ART[key] : undefined;
+/**
+ * Logo hãng xe — bản native của web `BrandMark` (#222): logo do admin khai ở danh mục
+ * (`catalog_items.icon_url`), lỗi tải hoặc chưa có thì hiện CHỮ CÁI ĐẦU trên nền vàng nhạt.
+ *
+ * Trước #222 app đọc bộ ảnh đóng gói sẵn theo khoá hãng; nay logo là DỮ LIỆU của danh mục — cùng
+ * nguồn với web, admin thay logo là cả hai nơi đổi theo.
+ */
+export function BrandMark({ label, iconUrl }: { label: string; iconUrl?: string | null }) {
+  const colors = useColors();
+  // Nhớ URL đã lỗi chứ không nhớ cờ `true`: admin thay logo thì URL mới được thử lại (như web).
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const src = useMemo(() => (iconUrl ? absoluteIconUrl(iconUrl) : null), [iconUrl]);
 
-  if (art) return <Image source={art} style={styles.art} resizeMode="contain" />;
+  if (!src || failedSrc === src) {
+    return (
+      <YStack w={SIZE} h={SIZE} br={radius.sm} bg={colors.primaryLight} ai="center" jc="center">
+        <Text col={colors.primaryStrong} fos={fontSize.bodySm} fow={fontWeight.bold}>
+          {label.trim().charAt(0).toUpperCase() || '?'}
+        </Text>
+      </YStack>
+    );
+  }
 
   return (
-    <YStack w={SIZE} h={SIZE} br={radius.pill} bg={colors.primaryLight} ai="center" jc="center">
-      <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.bold}>
-        {brand.trim().charAt(0).toUpperCase() || '?'}
-      </Text>
-    </YStack>
+    <Image
+      source={{ uri: src }}
+      style={styles.logo}
+      contentFit="contain"
+      accessible={false}
+      onError={() => setFailedSrc(src)}
+    />
   );
 }

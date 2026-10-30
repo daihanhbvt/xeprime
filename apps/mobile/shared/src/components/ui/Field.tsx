@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { colors, fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 export function FieldLabel({
   label,
@@ -23,6 +24,7 @@ export function FieldLabel({
    */
   publishRequired?: boolean;
 }) {
+  const colors = useColors();
   const tMark = useTranslations('Vehicles.completeness');
 
   /*
@@ -52,6 +54,7 @@ export function FieldMessage({
   error?: string | undefined;
   hint?: string | undefined;
 }) {
+  const colors = useColors();
   if (error) {
     return (
       <XStack ai="center" gap={space.xs}>
@@ -98,6 +101,7 @@ export function FieldShell({
   accessibilityRole?: 'button';
   accessibilityLabel?: string;
 }) {
+  const colors = useColors();
   const active = invalid ? colors.danger : colors.primary;
 
   /*
@@ -108,8 +112,9 @@ export function FieldShell({
    * lên khi được chọn. Nền trắng đẩy chữ người dùng gõ lên trước, còn ranh giới ô do VIỀN vẽ —
    * đúng cách `<Input>` của AntD làm bên web, nên hai bên cũng đọc giống nhau.
    *
-   * Viền lúc nghỉ dùng `borderInput` chứ không `border`: `border` là tông cho đường chia giữa
-   * hai khối, nhạt hơn hẳn, và một ô nhập viền bằng nó trông như chưa vẽ xong.
+   * Viền lúc nghỉ = `border` (`color-border` #e9eaeb) — đúng `colorBorder` mà theme AntD của web
+   * (`apps/web/src/styles/theme.ts`) đặt cho `<Input>`/`<Select>`; bo `radius.md` = `borderRadius`
+   * của AntD. Người dùng chốt 27/10/2026 đổi từ `borderInput` (đậm hơn) về đúng web.
    *
    * Ba trạng thái đọc được bằng MÀU VIỀN, không bằng độ dày: đổi `borderWidth` khi focus làm
    * nội dung nhảy 1px mỗi lần chạm vào ô.
@@ -121,7 +126,7 @@ export function FieldShell({
       bg={disabled ? colors.surfaceMuted : colors.surface}
       br={radius.md}
       bw={1}
-      bc={disabled ? colors.border : focused || invalid ? active : colors.borderInput}
+      bc={focused || invalid ? active : colors.border}
       px={space.sm}
       minHeight={sizing.touchTarget}
       {...(onPress ? { onPress } : {})}

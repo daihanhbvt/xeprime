@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -25,8 +25,8 @@ import {
 } from '@xeprime/types';
 import { newClientMessageId } from '@xeprime/domain';
 import type { IconName } from '@/components/ui/Chip';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import {
-  colors,
   fieldFontSize,
   fontSize,
   fontWeight,
@@ -94,6 +94,8 @@ export function ChatComposer({
   vehicleContext?: PendingVehicleContext | null;
   onClearVehicleContext?: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('Chat');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -288,11 +290,7 @@ export function ChatComposer({
               maxWidth="100%"
             >
               {a.previewUri ? (
-                <Image
-                  source={{ uri: a.previewUri }}
-                  style={styles.trayThumb}
-                  contentFit="cover"
-                />
+                <Image source={{ uri: a.previewUri }} style={styles.trayThumb} contentFit="cover" />
               ) : (
                 <Ionicons name="document-outline" size={iconSize.sm} color={colors.textMuted} />
               )}
@@ -436,6 +434,8 @@ function PickerOption({
   hint: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -465,7 +465,7 @@ function PickerOption({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   contextThumb: {
     borderRadius: radius.sm,
     height: CONTEXT_THUMB,
@@ -546,4 +546,4 @@ const styles = StyleSheet.create({
     height: TRAY_THUMB,
     width: TRAY_THUMB,
   },
-});
+}));

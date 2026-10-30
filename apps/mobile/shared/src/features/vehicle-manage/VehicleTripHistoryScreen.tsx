@@ -29,7 +29,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { VehicleManageShell } from './components/VehicleManageShell';
 import type { VehicleTripHistoryItem } from './api';
 import { useVehicleTripHistory } from './hooks/use-vehicle-settings';
@@ -127,6 +128,7 @@ function TripHistoryBody({ vehicleId }: { vehicleId: string }) {
  * không bao giờ là `0đ`. Mở chi tiết qua `/trips/[id]`: route đó nhận cả id đơn lẫn id yêu cầu.
  */
 function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
+  const colors = useColors();
   const t = useTranslations('VehicleManage.tripHistory');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();

@@ -11,6 +11,7 @@ import type { CookieOptions, Response } from 'express';
 import { validateEnv } from '../src/config/env.schema';
 import { baseEnv, productionEnv, validationError } from './helpers/env-fixture';
 import { SessionService } from '../src/modules/auth/session.service';
+import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
  * Ma trận cookie / CORS / môi trường — unit thuần, không đụng DB.
@@ -389,7 +390,8 @@ describe('SessionService: cookie gắn và xoá phải cùng thuộc tính', () 
         return values[key];
       },
     } as unknown as ConfigService;
-    return new SessionService(config);
+    // Chỉ kiểm thuộc tính cookie — không chạm `web_sessions`.
+    return new SessionService(config, {} as PrismaService);
   }
 
   const PROD_VALUES = {

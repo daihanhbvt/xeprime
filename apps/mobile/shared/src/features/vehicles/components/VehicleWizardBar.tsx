@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const CIRCLE = 28;
 /** Vạch nối giữa hai bước — mảnh như đường kẻ của `Steps`, không phải một thanh tiến độ. */
@@ -30,6 +31,7 @@ export function VehicleWizardBar({
   current: number;
   onStepChange: (index: number) => void;
 }) {
+  const colors = useColors();
   return (
     <XStack>
       {steps.map((step, index) => {
@@ -108,6 +110,7 @@ export function VehicleWizardBar({
  * ô của chúng và bốn nhãn bên dưới không còn thẳng hàng với vòng tròn của mình.
  */
 function Connector({ show, done, arrow }: { show: boolean; done: boolean; arrow?: boolean }) {
+  const colors = useColors();
   /*
    * Bước CHƯA xong dùng bậc viền ĐẬM (`borderInput` = `color-border-strong`, #d4cfc6), không
    * phải `borderSubtle` (#f5f3ef — gần như trắng).

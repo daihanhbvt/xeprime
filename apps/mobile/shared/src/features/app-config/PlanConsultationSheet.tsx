@@ -13,7 +13,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { usePartnerAppConfig } from './use-partner-app-config';
 
 /** Trần nội dung — khớp DTO phía server. */
@@ -37,6 +38,7 @@ export type PlanConsultationValues = InferType<typeof planConsultationSchema>;
  * người dùng đứng lại ở màn gói (nơi mở nó).
  */
 export function PlanConsultationSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const colors = useColors();
   const t = useTranslations('Subscription.mobilePlan.consult');
   const locale = useLocale();
   const toast = useAppToast();

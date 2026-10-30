@@ -9,7 +9,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { TextField } from '@/components/ui/TextField';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
 
 const PRESET_KEYS = [
@@ -48,6 +49,7 @@ export function RejectRequestSheet({
   onConfirm: (reason: string) => void;
   loading: boolean;
 }) {
+  const colors = useColors();
   const t = useTranslations('BookingRequests.reject');
 
   const schema = useRejectSchema();

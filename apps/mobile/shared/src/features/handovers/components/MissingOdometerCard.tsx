@@ -10,7 +10,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MissingOdometerItem } from '../api';
 
 /**
@@ -39,6 +40,7 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
    */
   onFix: (item: MissingOdometerItem) => void;
 }) {
+  const colors = useColors();
   const t = useTranslations('Bookings.missingKm');
   const fmt = useAppFormat();
   const { has } = usePermissions();

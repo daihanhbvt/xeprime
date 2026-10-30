@@ -11,8 +11,10 @@ import {
   type ListingSort,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { elevation } from '@/theme/elevation';
+import { useAppStyles } from '@/theme/styles';
+import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Bộ chọn thứ tự sắp xếp — **menu**, không phải hàng chip.
@@ -33,6 +35,9 @@ export function SortMenu({
   /** Chiếm trọn bề ngang, bo góc vuông hơn — dạng ô nhập trong tấm Bộ lọc. */
   block?: boolean;
 }) {
+  const appStyles = useAppStyles();
+  const colors = useColors();
+  const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Marketplace.results');
   const domainLabel = useDomainLabel();
   const insets = useSafeAreaInsets();
@@ -48,26 +53,39 @@ export function SortMenu({
         accessibilityRole="button"
         accessibilityLabel={t('sortAriaLabel')}
       >
+        {/*
+          Ô chọn của hàng "Sắp xếp" — Figma `19771:64258`: nền surface, viền `color-border`, bo
+          control 12, đệm 14 × 8, chữ body-lg 16 thường, mũi tên 20, rộng tối thiểu 176.
+        */}
         <XStack
           ai="center"
-          gap={space.xs}
+          gap={space.sm}
           bw={1}
           bc={colors.border}
-          bg={block ? colors.surfaceMuted : 'transparent'}
-          br={block ? radius.md : radius.pill}
-          px={space.md}
+          bg={block ? colors.surfaceMuted : colors.surface}
+          br={block ? radius.md : radius.control}
+          px={block ? space.md : 14}
+          {...(block ? {} : { minWidth: SELECT_MIN_WIDTH, style: elevation.xs })}
           minHeight={sizing.touchTarget - 8}
         >
-          {block ? null : <Ionicons name="swap-vertical-outline" size={15} color={colors.text} />}
+          {/*
+            Một dòng, không co: "Giá thấp → cao" từng gãy hai dòng vì ô chỉ rộng theo khung tối
+            thiểu. Ô tự nở theo nhãn; bản `block` mới chiếm phần còn lại của hàng.
+          */}
           <Text
-            {...(block ? { f: 1 } : {})}
+            {...(block ? { f: 1 } : { flexShrink: 0 })}
+            numberOfLines={1}
             col={colors.text}
-            fos={fontSize.bodySm}
-            fow={fontWeight.medium}
+            fos={block ? fontSize.bodySm : fontSize.bodyLg}
+            fow={block ? fontWeight.medium : fontWeight.regular}
           >
             {labelOf(current)}
           </Text>
-          <Ionicons name="chevron-down" size={iconSize.xs} color={colors.textMuted} />
+          <Ionicons
+            name="chevron-down"
+            size={block ? iconSize.xs : SELECT_CHEVRON}
+            color={colors.textMuted}
+          />
         </XStack>
       </Pressable>
 
@@ -79,6 +97,7 @@ export function SortMenu({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
+            {...floatingBorder}
             pb={insets.bottom}
           >
             <XStack px={layoutX} py={space.sm} borderBottomWidth={1} bc={colors.borderSubtle}>
@@ -132,3 +151,6 @@ export function SortMenu({
 }
 
 const layoutX = space.md;
+/** Ô chọn ở hàng "Sắp xếp" của Figma: rộng 176, mũi tên 20. */
+const SELECT_MIN_WIDTH = 176;
+const SELECT_CHEVRON = 20;

@@ -5,7 +5,8 @@ import { DetailChevron } from './DetailArrow';
 import { IconDisc } from './IconDisc';
 import type { IconName } from './Chip';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Một dòng CÀI ĐẶT dẫn sang màn khác: đĩa hình, tên việc, câu nói việc đó làm gì, mũi tên.
@@ -32,6 +33,7 @@ export function SettingRow({
   href: Href;
   danger?: boolean;
 }) {
+  const colors = useColors();
   const navigateOnce = useNavigateOnce();
   const tone = danger ? colors.danger : colors.primary;
   const surface = danger ? colors.dangerSurface : colors.primaryLight;

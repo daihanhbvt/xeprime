@@ -40,6 +40,14 @@ export function useIsTablet(): boolean {
   );
 }
 
+/**
+ * Người dùng bật "giảm chuyển động" ở hệ điều hành. Server snapshot `false` ⇒ lần render đầu
+ * giữ chuyển động, khớp HTML của server; client lật đúng ngay sau hydrate.
+ */
+export function usePrefersReducedMotion(): boolean {
+  return useMediaQuery('(prefers-reduced-motion: reduce)');
+}
+
 /** Desktop trở lên theo Figma `14:189`: >1024px. */
 export function useIsDesktop(): boolean {
   return useMediaQuery(`(min-width: ${XP_BREAKPOINTS.tablet + 1}px)`);

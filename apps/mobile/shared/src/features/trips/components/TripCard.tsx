@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, type ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   canHostCancelTrip,
   canHostDecideTrip,
-  isCustomerTripClosed,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
   isCancellationParty,
@@ -18,15 +17,15 @@ import {
   type CustomerTripStage,
   type TripRole,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, canShowHostChatOnTrip } from '@xeprime/domain';
+import {
+  canShowHostChatOnTrip,
+  isNegativeMoney,
+  subtractMoney,
+} from '@xeprime/domain';
 import { Pressable, StyleSheet } from 'react-native';
-import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { VerifiedName } from '@/components/ui/VerifiedName';
+import { HomeCardAvatar } from '@/features/marketplace/components/home/HomeCardAvatar';
 import { Card } from '@/components/ui/Card';
-import { CardAccent } from '@/components/ui/CardAccent';
-import { Divider } from '@/components/ui/DataRow';
-import { DetailArrow } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { RespondDeadline } from '@/features/booking-requests/components/RespondDeadline';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -34,14 +33,17 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTrip } from '../api';
 
 /** Ảnh vuông nhỏ bên trái — thẻ chuyến ưu tiên THỜI GIAN và trạng thái, không phải ảnh xe. */
-const THUMB = 72;
+/** Ảnh xe ngang 16:10 như Figma — đứng cạnh hai mốc nhận/trả. */
+const THUMB_W = 104;
+const THUMB_H = 64;
 
 /** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const THUMB_STYLE = { width: THUMB, height: THUMB, borderRadius: radius.md };
+const THUMB_STYLE = { width: THUMB_W, height: THUMB_H, borderRadius: radius.md };
 
 interface TripCardProps {
   trip: CustomerTrip;
@@ -62,6 +64,7 @@ interface TripCardProps {
 
 /** Tài xế của chuyến (ADR 0063): tên + trạng thái lượt gán, hoặc "chưa phân công". */
 function TripDriverLine({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const t = useTranslations('Trips.card');
   const tDriver = useTranslations('Bookings.driver');
   const domainLabel = useDomainLabel();
@@ -111,7 +114,11 @@ function TripDriverLine({ trip }: { trip: CustomerTrip }) {
  * ngược cùng hai quyết định ngay trên thẻ, vì đó là việc phải làm trước khi hết hạn. Mọi chặng
  * còn lại của cả hai phía chỉ có một lối đi tiếp là mở chi tiết.
  */
+/** Tiền 0đ dạng chuỗi — mốc chặn "Còn lại" không âm (ADR 0007). */
+const ZERO_MONEY = '0.00';
+
 function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
+  const colors = useColors();
   const t = useTranslations('Trips');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -131,6 +138,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
    * Hai chặng, hai bộ nút: còn chờ quyết ⇒ Duyệt/Từ chối; đã nhận và đang chờ khách trả tiền ⇒
    * chỉ còn một lối thoát là HUỶ (ADR 0045 điều 1).
    */
+  /* Ba cột tiền (web `CustomerTripCard`): Đã trả + Còn lại = Tổng, không âm. */
+  const paid = trip.holdPaidAmount ?? ZERO_MONEY;
+  const rawRemaining = trip.totalAmount ? subtractMoney(trip.totalAmount, paid) : ZERO_MONEY;
+  const remaining = isNegativeMoney(rawRemaining) ? ZERO_MONEY : rawRemaining;
   const stage = trip.stage as CustomerTripStage;
   const canDecide = Boolean(decisions && isHost && canHostDecideTrip(stage));
   const cancelOnly = canHostCancelTrip(stage);
@@ -143,193 +154,120 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
   const open = useCallback(() => onPress(trip), [onPress, trip]);
 
   return (
-    <Card onPress={open} accessibilityLabel={trip.vehicle.name} padded={false}>
-      <XStack>
-        {/* Vạch mép trái mang màu CHẶNG — đọc được nhịp của cả danh sách trước khi đọc chữ. */}
-        <CardAccent color={meta.color} />
-
-        <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
-          <DetailArrow label={t('card.viewDetailOf', { name: trip.vehicle.name })} onPress={open} />
-
-          <XStack gap={space.md}>
-            {trip.vehicle.imageUrl ? (
-              <Image
-                source={{ uri: trip.vehicle.imageUrl }}
-                style={THUMB_STYLE}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={150}
-              />
-            ) : (
-              <YStack
-                w={THUMB}
-                h={THUMB}
-                br={radius.md}
-                bg={colors.surfaceMuted}
-                ai="center"
-                jc="center"
-              >
-                <Ionicons name="car-outline" size={28} color={colors.placeholder} />
-              </YStack>
-            )}
-
-            <YStack f={1} gap={space.xs}>
-              {/*
-                Tên xe + trạng thái ở GÓC TRÊN PHẢI — ngôn ngữ thẻ đã chốt của app (cùng màu với vạch
-                mép trái) và đúng chỗ của nhãn chặng trên "Vehicle Card" bên web (Figma `19879:71822`).
-              */}
-              <XStack ai="flex-start" gap={space.sm}>
-                {/* Tên xe là NHÂN VẬT CHÍNH: cùng cỡ với dòng "Chủ xe" thì phải đọc mới biết đâu là xe. */}
-                <Text
-                  f={1}
-                  col={colors.text}
-                  fos={fontSize.bodyLg}
-                  fow={fontWeight.bold}
-                  numberOfLines={2}
-                >
-                  {trip.vehicle.name}
-                </Text>
-                <StatusBadge
-                  label={
-                    cancelledBy
-                      ? t(`cancelledBy.${cancelledBy}`)
-                      : domainLabel('customerTripStage', trip.stage, meta.label)
-                  }
-                  color={meta.color}
-                  size="sm"
-                />
-              </XStack>
-              {isHost ? (
-                <XStack ai="center" gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-                  {/*
-                NHÃN VAI — thứ hai người đọc cần để biết mình đang nhìn gì. Không có nó, một chủ
-                xe mở danh sách thấy chuyến của CHÍNH MÌNH ghi "Chủ xe: cửa hàng của tôi" và không
-                hiểu vì sao mình lại đi thuê xe mình.
-              */}
-                  <StatusBadge
-                    label={t(isHost ? 'card.roleHost' : 'card.roleRenter')}
-                    color={STATUS_COLOR.INFO}
-                    size="sm"
-                  />
-                  {/* Hạn trả lời chỉ có nghĩa với người PHẢI trả lời — khách nhìn nó không làm gì được. */}
-                  {/*
-                Đồng hồ hạn phản hồi CHỈ có nghĩa khi chủ xe còn phải trả lời — và điều kiện đó
-                là CHẶNG, không phải sự tồn tại của `respondBy`.
-
-                `respondBy` KHÔNG bị xoá sau khi duyệt (ADR 0044), nên hỏi mình nó là bày một
-                đồng hồ "hạn phản hồi" trên chuyến đã `ready`, đã `active`, thậm chí đã xong —
-                giục chủ xe cho một việc không còn tồn tại. Loại thêm `cancelOnly` vì ở
-                `awaiting_hold` mốc đang chạy là hạn THANH TOÁN của khách: một đồng hồ khác, của
-                người khác.
-              */}
-                  {isHost && canHostDecideTrip(stage) && !cancelOnly && trip.respondBy ? (
-                    <RespondDeadline respondBy={trip.respondBy} />
-                  ) : null}
-                </XStack>
+    <Card onPress={open} accessibilityLabel={t('card.viewDetailOf', { name: trip.vehicle.name })} pressHighlight>
+      {/*
+        Khuôn thẻ Figma "Account / Profile / Trip" (người dùng chốt 28/10/2026): ảnh trái, nhãn chặng
+        góc trên PHẢI trên mốc nhận/trả → tên xe + mã đơn → viên thông tin → chủ xe → ba cột tiền.
+      */}
+      <YStack gap={space.sm}>
+        {isHost ? (
+          <XStack ai="center" gap={space.xs} flexWrap="wrap">
+              {/* NHÃN VAI — chủ xe mở danh sách cần biết đây là chuyến của chính mình. */}
+              <StatusBadge label={t('card.roleHost')} color={STATUS_COLOR.INFO} size="sm" />
+              {/* Đồng hồ hạn phản hồi chỉ khi chủ xe còn phải trả lời (chặng, không phải `respondBy`). */}
+              {canHostDecideTrip(stage) && !cancelOnly && trip.respondBy ? (
+                <RespondDeadline respondBy={trip.respondBy} />
               ) : null}
-              {/*
-              Người ĐỐI DIỆN, đổi theo vai. Chủ xe cần tên khách thuê — đó là thứ họ dùng để gọi
-              một chuyến; khách cần tên gian hàng.
-            */}
-              {isHost ? (
-                <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                  {`${t('card.renter')}: ${trip.renter?.name ?? t('card.renterUnknown')}`}
-                </Text>
-              ) : (
-                /*
-                  Chủ xe + lối nhắn tin tròn — như thẻ web. Kênh chat trong sàn mở cho mọi khách đã
-                  gửi yêu cầu tới gian hàng, không theo `canContact`. Hiện/ẩn theo `canShowHostChatOnTrip`
-                  (gian hàng: mọi chặng; chủ xe cá nhân: chỉ khi đã có đơn) — cùng quy tắc web.
-                */
-                <XStack ai="center" gap={space.sm}>
-                  <TripHost trip={trip} />
-                  {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) ? (
-                    <ChatWithShopButton
-                      vehicleId={trip.vehicle.id}
-                      label={t('confirmed.chatOwner')}
-                      iconOnly
-                      iconTone="surface"
-                    />
-                  ) : null}
-                </XStack>
-              )}
-              {/* Chủ xe theo dõi tài xế của chuyến có tài xế ngay trên thẻ — gương cột "Tài xế" của bảng đơn. */}
-              {isHost && trip.bookingId && trip.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
-                <TripDriverLine trip={trip} />
-              ) : null}
-              {/*
-              Biển số và mã đơn — hai mẩu chỉ tồn tại SAU khi chuyến được nhận, và là thứ duy nhất
-              phân biệt hai chiếc cùng đời trong một danh sách.
-            */}
-              {trip.vehicle.plateNumber || trip.code ? (
-                <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
-                  {[trip.vehicle.plateNumber, trip.code ? `#${trip.code}` : null]
-                    .filter(Boolean)
-                    .join(LIST_SEPARATOR)}
-                </Text>
-              ) : null}
-            </YStack>
           </XStack>
+        ) : null}
 
-          <Divider />
-
-          <YStack gap={space.xs}>
+        <XStack gap={space.md} ai="center">
+          {trip.vehicle.imageUrl ? (
+            <Image
+              source={{ uri: trip.vehicle.imageUrl }}
+              style={THUMB_STYLE}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+          ) : (
+            <YStack
+              w={THUMB_W}
+              h={THUMB_H}
+              br={radius.md}
+              bg={colors.surfaceMuted}
+              ai="center"
+              jc="center"
+            >
+              <Ionicons name="car-outline" size={28} color={colors.placeholder} />
+            </YStack>
+          )}
+          <YStack f={1} minWidth={0} gap={space.xs}>
+            {/* Nhãn chặng góc trên PHẢI, ngay trên ô "Nhận xe" (người dùng chốt 28/10/2026). */}
+            <XStack jc="flex-end">
+              <StatusBadge
+                label={
+                  cancelledBy
+                    ? t(`cancelledBy.${cancelledBy}`)
+                    : domainLabel('customerTripStage', trip.stage, meta.label)
+                }
+                color={meta.color}
+                size="sm"
+              />
+            </XStack>
             <ScheduleLine trip={trip} />
-            <PickupLine trip={trip} />
           </YStack>
+        </XStack>
 
-          {/*
-            "Tổng thanh toán" HAI hàng như thẻ web (design "Chuyến của tôi"): nhãn trên, số tiền
-            dưới — to, đậm, vàng thương hiệu.
-          */}
-          <YStack
-            ai="flex-start"
-            gap={2}
-            pt={space.sm}
-            borderTopWidth={1}
-            borderColor={colors.borderSubtle}
-          >
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('card.total')}
+        <XStack ai="center" gap={space.sm}>
+          <Text f={1} col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={1}>
+            {trip.vehicle.name}
+          </Text>
+          {trip.code ? (
+            <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+              {`#${trip.code}`}
             </Text>
-            {/*
-            Chuyến chưa duyệt CHƯA có giá chốt: gian hàng báo giá lúc duyệt (ADR 0014). Hiện một
-            con số ở đây là hứa một mức giá chưa ai cam kết — nên chỗ đó là CHỮ, và chữ thì tô
-            mờ chứ không tô màu tiền: màu tiền dành cho con số thật.
-          */}
+          ) : null}
+        </XStack>
+
+        <TripInfoChips trip={trip} />
+
+        {isHost ? (
+          <YStack gap={space.xs}>
+            <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+              {`${t('card.renter')}: ${trip.renter?.name ?? t('card.renterUnknown')}`}
+            </Text>
+            {trip.bookingId && trip.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+              <TripDriverLine trip={trip} />
+            ) : null}
+          </YStack>
+        ) : (
+          // Chat hiện/ẩn theo `canShowHostChatOnTrip` — cùng quy tắc web (ADR 0073).
+          <XStack ai="center" gap={space.sm}>
+            <TripHost trip={trip} />
+            {canShowHostChatOnTrip({
+              shopKind: trip.shop.shopKind,
+              hasBooking: Boolean(trip.code),
+            }) ? (
+              <ChatWithShopButton
+                vehicleId={trip.vehicle.id}
+                label={t('confirmed.chatOwner')}
+                iconOnly
+                compact
+                iconTone="surface"
+              />
+            ) : null}
+          </XStack>
+        )}
+
+        {/* Ba cột tiền — Tổng | Đã thanh toán | Còn lại (tô vàng). Phép trừ trên CHUỖI tiền (ADR 0007). */}
+        <XStack gap={space.sm} pt={space.xs} ai="stretch">
+          <MoneyCell label={t('card.total')}>
             {trip.totalAmount ? (
-              <YStack ai="flex-start" gap={2}>
-                <Text col={colors.primary} fos={fontSize.h3} fow={fontWeight.bold}>
-                  {fmt.money(trip.totalAmount)}
-                </Text>
-                {/*
-                Tạm tính trưng ra như giá chốt là một lời hứa hệ thống không giữ (ADR 0024): giá
-                chỉ đóng băng lúc tạo đơn, và trước đó con số này còn đổi được.
-              */}
-                {/*
-                  "Đã thanh toán" — khoản giữ chỗ đã chuyển THẬT qua XePrime (`holdPaidAmount` của
-                  server), như thẻ web. Màu vàng thương hiệu; client không tự cộng trừ.
-                */}
-                {trip.holdPaidAmount ? (
-                  <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
-                    {`${t('card.paid')}: ${fmt.money(trip.holdPaidAmount)}`}
-                  </Text>
-                ) : null}
-                {trip.totalIsEstimate ? (
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {/* Chuyến đã khép thì không còn "chốt khi duyệt" nữa — con số là báo giá lúc gửi. */}
-                    {isCustomerTripClosed(trip.stage as CustomerTripStage)
-                      ? t('card.estimatedClosed')
-                      : t('card.estimated')}
-                  </Text>
-                ) : null}
-              </YStack>
+              fmt.moneyThousands(trip.totalAmount)
             ) : (
-              <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
                 {t('card.awaitingQuote')}
               </Text>
             )}
-          </YStack>
+          </MoneyCell>
+          <MoneyCell label={t('card.paid')}>
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+          </MoneyCell>
+          <MoneyCell label={t('card.remaining')} highlight>
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+          </MoneyCell>
+        </XStack>
 
           {/*
           Hai quyết định NGAY TRÊN THẺ, không bắt mở chi tiết trước: đây là việc có hạn, và với
@@ -373,8 +311,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
               </XStack>
             )
           ) : null}
-        </YStack>
-      </XStack>
+      </YStack>
     </Card>
   );
 }
@@ -382,10 +319,11 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
 /**
  * Hình thức nhận xe — thứ khách phải biết trước khi tới ngày: **tự đi lấy hay xe mang tới**.
  *
- * Cùng ba nhánh với màn chi tiết và với web: có tài xế → xe đón tận nơi; còn lại → giao tận nơi
- * hoặc nhận tại đại lý.
+ * Cùng câu với thẻ chuyến web: "Tự lái · Nhận tại đại lý" / "… · Giao tận nơi"; có tài xế thì
+ * "Có tài xế · <lộ trình>".
  */
-function PickupLine({ trip }: { trip: CustomerTrip }) {
+function TripInfoChips({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const t = useTranslations('Trips.pickup');
   const domainLabel = useDomainLabel();
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -398,14 +336,20 @@ function PickupLine({ trip }: { trip: CustomerTrip }) {
     : trip.deliveryRequested
       ? t('delivery')
       : t('agency');
-  const label = [domainLabel('serviceType', trip.serviceType), method].join(LIST_SEPARATOR);
+  // Viên thông tin (Figma): biển số (chỉ có sau khi nhận chuyến) · hình thức thuê · cách nhận xe.
+  const chips = [trip.vehicle.plateNumber, domainLabel('serviceType', trip.serviceType), method].filter(
+    (v): v is string => Boolean(v),
+  );
 
   return (
-    <XStack ai="center" gap={space.xs}>
-      <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-      <Text f={1} col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-        {label}
-      </Text>
+    <XStack gap={space.xs} flexWrap="wrap">
+      {chips.map((chip) => (
+        <YStack key={chip} px={space.sm} py={2} br={radius.sm} bw={1} bc={colors.border} bg={colors.surface}>
+          <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+            {chip}
+          </Text>
+        </YStack>
+      ))}
     </XStack>
   );
 }
@@ -418,27 +362,32 @@ function PickupLine({ trip }: { trip: CustomerTrip }) {
  * vọng đó; đoán ở đây là mỗi màn ngụ ý một mức chắc chắn khác nhau với khách.
  */
 function ScheduleLine({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const fmt = useAppFormat();
   const t = useTranslations('Trips.detail');
 
   /* Hai mốc có NHÃN "Nhận xe" / "Trả xe" như thẻ web (Figma `19879:71822`). */
   if (trip.pickupAt && trip.returnAt) {
     return (
-      <XStack gap={space.sm}>
+      <YStack gap={space.xs}>
         <SchedulePoint label={t('pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
         <SchedulePoint label={t('returnAt')} value={fmt.dateTime(trip.returnAt)} />
-      </XStack>
+      </YStack>
     );
   }
 
   if (trip.serviceType === SERVICE_TYPE.LONG_TERM) {
+    /*
+     * Yêu cầu dài hạn chưa duyệt chưa có lịch — nói GÓI + nguyện vọng như web, không bịa ngày. HAI
+     * dòng riêng (web #230 `CustomerTripCard`): gộp làm một thì chuỗi dài bị cắt "…" đúng ở khoảng
+     * ngày. Dòng nguyện vọng ("Trong 7 ngày tới: 28/10 – 03/11/2026") được xuống dòng.
+     */
+    const packageLabel = fmt.packageLabel(trip.longTermPackageMonths);
     return (
-      <XStack ai="center" gap={space.xs}>
-        <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-        <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-          {fmt.pickupWish(trip)}
-        </Text>
-      </XStack>
+      <YStack gap={space.xs}>
+        {packageLabel ? <SchedulePoint label={t('package')} value={packageLabel} /> : null}
+        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '—'} wrap />
+      </YStack>
     );
   }
 
@@ -446,18 +395,33 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
 }
 
 /** Một mốc của lịch thuê — biểu tượng lịch, nhãn nhỏ, giá trị đậm. */
-function SchedulePoint({ label, value }: { label: string; value: string }) {
+function SchedulePoint({
+  label,
+  value,
+  wrap = false,
+}: {
+  label: string;
+  value: string;
+  /** Cho giá trị dài xuống dòng thay vì cắt "…" (nguyện vọng dài hạn). */
+  wrap?: boolean;
+}) {
+  const colors = useColors();
   return (
-    <XStack f={1} ai="center" gap={space.xs} minWidth={0}>
-      <Ionicons name="calendar-outline" size={16} color={colors.primaryActive} />
-      <YStack f={1} minWidth={0}>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {label}
-        </Text>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
-          {value}
-        </Text>
-      </YStack>
+    // Figma: nhãn trái xám, giá trị phải — một hàng mỗi mốc.
+    <XStack ai="flex-start" gap={space.sm} minWidth={0}>
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {label}
+      </Text>
+      <Text
+        f={1}
+        ta="right"
+        col={colors.text}
+        fos={fontSize.bodySm}
+        fow={fontWeight.medium}
+        {...(wrap ? {} : { numberOfLines: 1 })}
+      >
+        {value}
+      </Text>
     </XStack>
   );
 }
@@ -476,17 +440,21 @@ const hostStyles = StyleSheet.create({ link: { flex: 1 } });
  * được sang mặt tiền. Chủ xe cá nhân không có mặt tiền doanh nghiệp nên không chạm được (ADR 0038).
  */
 function TripHost({ trip }: { trip: CustomerTrip }) {
+  const colors = useColors();
   const t = useTranslations('Listings.card');
   const navigateOnce = useNavigateOnce();
   const isShop = trip.shop.shopKind === STOREFRONT_KIND.SHOP;
 
   const body = (
     <XStack ai="center" gap={space.xs}>
-      <Avatar
+      {/* Cùng khối chủ xe của thẻ trang chủ (`HomeCardAvatar`): dấu xanh ở góc avatar, KHÔNG lặp sau tên. */}
+      <HomeCardAvatar
         name={trip.shop.name}
         url={trip.shop.avatarUrl ?? null}
         size={HOST_AVATAR}
-        verifiedLabel={isShop ? t('shopVerified') : undefined}
+        verified={isShop}
+        markDisc={12}
+        markIcon={9}
       />
       <YStack f={1} gap={0}>
         <Text
@@ -496,14 +464,14 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
         >
           {t(isShop ? 'shop' : 'owner')}
         </Text>
-        <VerifiedName
-          name={trip.shop.name}
-          verifiedLabel={isShop ? t('shopVerified') : undefined}
-          color={isShop ? colors.primaryActive : colors.text}
-          weight={isShop ? fontWeight.bold : fontWeight.semibold}
-          markSize={15}
-          decorativeMark
-        />
+        <Text
+          col={isShop ? colors.primaryHover : colors.text}
+          fos={fontSize.body}
+          fow={fontWeight.semibold}
+          numberOfLines={1}
+        >
+          {trip.shop.name}
+        </Text>
       </YStack>
     </XStack>
   );
@@ -518,5 +486,41 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
     >
       {body}
     </Pressable>
+  );
+}
+
+/**
+ * Một cột tiền — `MoneyCell` + `.moneyCell` web: căn giữa, nhãn `text-tertiary` cỡ label, số
+ * `color-text` body medium 22px không xuống dòng; `highlight` tô `color-primary` ("Còn lại").
+ */
+function MoneyCell({
+  label,
+  highlight = false,
+  children,
+}: {
+  label: string;
+  highlight?: boolean;
+  children: ReactNode;
+}) {
+  const colors = useColors();
+  return (
+    <YStack f={1} minWidth={0} ai="center" gap={2}>
+      <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+        {label}
+      </Text>
+      {typeof children === 'string' ? (
+        <Text
+          col={highlight ? colors.primary : colors.text}
+          fos={fontSize.body}
+          fow={fontWeight.medium}
+          lh={22}
+          numberOfLines={1}
+        >
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </YStack>
   );
 }

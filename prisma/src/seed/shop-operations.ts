@@ -13,6 +13,7 @@
  *     làm công nợ tụt giả.
  */
 import {
+  DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_STATUS,
   driverRespondByFor,
   BOOKING_REQUEST_STATUS,
@@ -48,6 +49,7 @@ import {
   longTermReturnAt,
   normalizeVnPhone,
 } from '@xeprime/types';
+import { CLEARED_DRIVER_ASSIGNMENT, wageOnClose } from '../driver-assignment';
 import type { Prisma } from '../index';
 import type { CustomerAccounts } from './accounts';
 import { dateOnlyFromToday, daysFromToday, pick, prisma, seedId } from './context';
@@ -441,18 +443,34 @@ export async function buildBookings(
    * Gỡ trước rồi gán lại nghĩa là vòng lặp luôn viết lên một lịch tài xế TRỐNG. Cùng lý do
    * `vehicle_occupancies` bị xoá-dựng-lại ở `shop.ts` — khác ở chỗ đơn thì KHÔNG xoá: lịch sử
    * thuê là dữ liệu demo có giá trị, chỉ mỗi mối nối tài xế là thứ dựng lại được.
+   *
+   * Lượt đang mở trong sổ `booking_driver_assignments` khép lại CÙNG transaction (kết cục "đã gỡ")
+   * — phép gỡ chạm cả đơn người dùng tự tạo trên gian hàng demo, và một dòng sổ còn `open` trên
+   * đơn đã trống tài xế làm lượt gán tay kế tiếp vấp `booking_driver_assignments_one_open_key`.
    */
-  await prisma.booking.updateMany({
-    where: { tenantId: deps.tenantId, driverId: { not: null } },
-    data: {
-      driverId: null,
-      driverUserId: null,
-      driverAssignmentStatus: null,
-      driverAssignedAt: null,
-      driverRespondedAt: null,
-      driverRespondBy: null,
-    },
-  });
+  const unassignedAt = new Date();
+  await prisma.$transaction([
+    prisma.bookingDriverAssignment.updateMany({
+      where: {
+        tenantId: deps.tenantId,
+        outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN,
+        wageAmount: { not: null },
+      },
+      data: wageOnClose(DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED),
+    }),
+    prisma.bookingDriverAssignment.updateMany({
+      where: { tenantId: deps.tenantId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN },
+      data: {
+        outcome: DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
+        endedAt: unassignedAt,
+        endedBy: null,
+      },
+    }),
+    prisma.booking.updateMany({
+      where: { tenantId: deps.tenantId, driverId: { not: null } },
+      data: CLEARED_DRIVER_ASSIGNMENT,
+    }),
+  ]);
 
   for (const [n, plan] of plans.entries()) {
     const code = `DH-${String(n + 1).padStart(4, '0')}`;

@@ -3,6 +3,7 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   UserAddOutlined,
@@ -27,18 +28,29 @@ import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUrlFilters } from '@/hooks/use-url-filters';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useOpenRecordPager } from '@/hooks/use-open-record-pager';
 import { DRIVERS_DEFAULT_LIMIT } from '../api';
 import { useDrivers, useEndDriver, useResumeDriver, useSuspendDriver } from '../hooks/use-drivers';
-import type { Driver, DriverFilters } from '../types';
+import {
+  DRIVER_DETAIL_TAB,
+  DRIVER_DETAIL_TABS,
+  type Driver,
+  type DriverDetailTab,
+  type DriverFilters,
+} from '../types';
+import { DriverDetailDrawer } from './DriverDetailDrawer';
+import { DRIVER_MONTH_PATTERN, DriverMonthPicker } from './DriverMonthPicker';
 import { DriverLicenceStateTag } from './DriverLicenceStateTag';
+import { DriverWageSettingsCard } from './DriverWageSettingsCard';
 import { EditDriverModal } from './EditDriverModal';
 import { InviteDriverModal } from './InviteDriverModal';
 import type { InviteDriverFormValues } from '../schema';
 import styles from './DriversPage.module.css';
 
-const MIN_TABLE_WIDTH = 1040;
+const MIN_TABLE_WIDTH = 1180;
 
 type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
@@ -46,6 +58,7 @@ function parseFilters(params: URLSearchParams): DriverFilters {
   const linkStatus = params.get('linkStatus');
   const driverType = params.get('driverType') ?? '';
   const page = Number(params.get('page'));
+  const tab = params.get('tab');
   return {
     q: params.get('q') ?? undefined,
     linkStatus:
@@ -53,6 +66,13 @@ function parseFilters(params: URLSearchParams): DriverFilters {
         ? linkStatus
         : undefined,
     driverType: (DRIVER_TYPE_VALUES as string[]).includes(driverType) ? driverType : undefined,
+    month: DRIVER_MONTH_PATTERN.test(params.get('month') ?? '')
+      ? (params.get('month') as string)
+      : undefined,
+    open: params.get('open') || undefined,
+    tab: (DRIVER_DETAIL_TABS as readonly string[]).includes(tab ?? '')
+      ? (tab as DriverDetailTab)
+      : undefined,
     page: page > 1 ? page : undefined,
     limit: Number(params.get('limit')) || undefined,
   };
@@ -78,6 +98,7 @@ function DriversPageInner() {
   const { message } = App.useApp();
   const { has } = usePermissions();
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
   // Bộ lọc + trang sống trên URL (ADR 0004).
@@ -96,6 +117,17 @@ function DriversPageInner() {
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: DRIVERS_DEFAULT_LIMIT, total: 0, hasNext: false };
+
+  // Ngăn chi tiết: tài xế + tab sống trên URL; mở/đóng chỉ đổi giao diện, giữ nguyên trang.
+  const pager = useOpenRecordPager(
+    items.map((row) => row.id),
+    filters.open,
+  );
+  const openDetail = (id: string | undefined, tab?: DriverDetailTab) => {
+    if (id) pager.remember();
+    setFilters({ open: id, tab: id ? tab : undefined }, { resetPage: false });
+  };
+  const changeMonth = (month: string) => setFilters({ month });
 
   const filterFields: FilterField[] = [
     {
@@ -137,6 +169,7 @@ function DriversPageInner() {
     onError: (err: unknown) => message.error(errorMessage(err)),
   });
 
+
   const inviteButton = canManage ? (
     <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteOpen(true)}>
       {t('actions.invite')}
@@ -150,7 +183,9 @@ function DriversPageInner() {
       width: 260,
       render: (_, row) => (
         <div>
-          <div className={styles.name}>{row.name}</div>
+          <Button type="link" className={styles.linkCell} onClick={() => openDetail(row.id)}>
+            {row.name}
+          </Button>
           <div className={styles.meta}>{row.phone}</div>
           {row.account.displayName && row.account.displayName !== row.name ? (
             <div className={styles.meta}>
@@ -179,6 +214,57 @@ function DriversPageInner() {
       render: (_, row) =>
         row.activeBookingCount > 0 ? (
           <Tag color="blue">{t('activeBookings', { count: row.activeBookingCount })}</Tag>
+        ) : (
+          tCommon('labels.emptyValue')
+        ),
+    },
+    {
+      // Số lần RÚT chuyến đã nhận trong 90 ngày (ADR 0074) — để bên thuê tự quyết tạm khoá.
+      title: t('columns.drops'),
+      key: 'drops',
+      width: 170,
+      render: (_, row) =>
+        row.dropCount > 0 || row.autoAssignCooldownUntil ? (
+          <div>
+            {row.dropCount > 0 ? (
+              <Tag color={row.criticalDropCount > 0 ? 'red' : 'orange'}>
+                {t('drops.count', { count: row.dropCount })}
+              </Tag>
+            ) : null}
+            {row.criticalDropCount > 0 ? (
+              <div className={styles.meta}>
+                {t('drops.critical', { count: row.criticalDropCount })}
+              </div>
+            ) : null}
+            {row.autoAssignCooldownUntil ? (
+              <div className={styles.meta}>
+                {t('drops.cooldownUntil', { time: fmt.dateTime(row.autoAssignCooldownUntil) })}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          tCommon('labels.emptyValue')
+        ),
+    },
+    {
+      // Thống kê tháng (ADR 0075): tổng tiền công đã ghi + số chuyến HOÀN THÀNH — bấm để xem từng chuyến.
+      title: t('columns.monthWage'),
+      key: 'monthWage',
+      width: 150,
+      render: (_, row) =>
+        row.monthCompletedTrips > 0 || Number(row.monthWageTotal) > 0 ? (
+          <div>
+            <Button
+              type="link"
+              className={styles.linkCell}
+              onClick={() => openDetail(row.id, DRIVER_DETAIL_TAB.TRIPS)}
+            >
+              {fmt.money(row.monthWageTotal)}
+            </Button>
+            <div className={styles.meta}>
+              {t('wage.monthTrips', { count: row.monthCompletedTrips })}
+            </div>
+          </div>
         ) : (
           tCommon('labels.emptyValue')
         ),
@@ -216,6 +302,12 @@ function DriversPageInner() {
       const invited = row.linkStatus === DRIVER_LINK_STATUS.INVITED;
       const closed = !open;
       return [
+        {
+          key: 'view',
+          label: t('actions.view'),
+          icon: <EyeOutlined />,
+          onClick: () => openDetail(row.id),
+        },
         {
           key: 'reinvite',
           label: t('actions.reinvite'),
@@ -285,6 +377,8 @@ function DriversPageInner() {
     <div>
       <ManagePageHeader title={t('page.title')} />
 
+      <DriverWageSettingsCard />
+
       <FilterBar
         fields={filterFields}
         values={{
@@ -294,7 +388,12 @@ function DriversPageInner() {
         }}
         // `onChange` gửi đúng trường vừa đổi — ghi thẳng làm patch.
         onChange={(patch) => setFilters(patch as unknown as Partial<DriverFilters>)}
-        actions={inviteButton}
+        actions={
+          <div className={styles.toolbar}>
+            <DriverMonthPicker month={filters.month} onChange={changeMonth} />
+            {inviteButton}
+          </div>
+        }
       />
 
       <DataTable<Driver>
@@ -328,6 +427,18 @@ function DriversPageInner() {
         }}
       />
       <EditDriverModal driver={editing} onClose={() => setEditing(null)} />
+      <DriverDetailDrawer
+        driverId={filters.open ?? null}
+        month={filters.month}
+        tab={filters.tab}
+        previousId={pager.previousId}
+        nextId={pager.nextId}
+        onNavigate={(id) => openDetail(id, filters.tab)}
+        onTabChange={(tab) => setFilters({ tab }, { resetPage: false })}
+        onMonthChange={changeMonth}
+        onEdit={setEditing}
+        onClose={() => openDetail(undefined)}
+      />
     </div>
   );
 }

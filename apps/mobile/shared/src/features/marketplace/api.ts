@@ -6,6 +6,7 @@ export { marketplaceApi, toListingQueryParams, DEFAULT_LISTING_LIMIT } from '@/a
 
 // Kiểu marketplace ở `@xeprime/types` (sinh từ OpenAPI — ADR 0007), không phải ở client HTTP.
 export type {
+  FeaturedReview,
   MarketplaceFilters,
   PublicBanner,
   PublicDestination,

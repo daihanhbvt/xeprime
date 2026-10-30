@@ -1,6 +1,7 @@
 import { ActivityIndicator } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 
 /**
  * Vòng chờ cho màn CHƯA biết trước hình dạng nội dung.
@@ -9,6 +10,7 @@ import { colors, fontSize, space } from '@/theme/tokens';
  * nguyên bố cục nên trang không nhảy khi dữ liệu về.
  */
 export function ScreenLoading({ label }: { label?: string }) {
+  const colors = useColors();
   return (
     <YStack f={1} ai="center" jc="center" gap={space.sm} p={space.lg}>
       <ActivityIndicator color={colors.primary} />

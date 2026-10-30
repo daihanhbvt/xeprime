@@ -46,7 +46,8 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { FILTER_ALL } from '@/constants/filters';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   SUPPORT_CASES_PAGE_SIZE,
   SUPPORT_SURFACE,
@@ -78,6 +79,7 @@ function caseKey(row: SupportCase): string {
 }
 
 export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases');
   const router = useRouter();
   const domainLabel = useDomainLabel();
@@ -374,9 +376,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             <ScreenMessage
               icon="chatbubbles-outline"
               title={t('page.empty')}
-              {...(filtered || !canOpen
-                ? {}
-                : { actionLabel: t('page.openButton'), onAction: () => setFormOpen(true) })}
+              // Màn trống dữ liệu chỉ mô tả, không nút mở yêu cầu (người dùng chốt 27/10/2026).
             />
           ) : (
             <YStack gap={space.sm}>
@@ -406,6 +406,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
 
 /** Một yêu cầu trong danh sách — bốn cột của web gập lại thành một thẻ chạm được. */
 function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSurface }) {
+  const colors = useColors();
   const t = useTranslations('SupportCases');
   const router = useRouter();
   const fmt = useAppFormat();

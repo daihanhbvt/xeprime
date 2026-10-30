@@ -34,7 +34,7 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING, MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
 import { BoardActionSheets, type BoardAction } from './components/BoardActionSheets';
 import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNotice';
@@ -89,6 +89,7 @@ const queueKeyOf = (item: MissingOdometerItem) => item.handoverId;
  * Vẫn chung tiêu đề, chung ô tìm kiếm, chung phân trang.
  */
 export function MaintenanceBoardScreen() {
+  const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.board');
   const tFilters = useTranslations('Maintenance.filters');
   const tMissing = useTranslations('Bookings.missingKm');

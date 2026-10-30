@@ -97,6 +97,20 @@
     "retry": "Try opening again",
     "headerTitle": "Become a host",
     "haveAccount": "Already a partner?",
-    "loginLink": "Log in"
+    "loginLink": "Log in",
+    "landing": {
+      "body": "XePrime has a separate Web/App platform for partners that helps you list cars fast, manage bookings easily and get 24/7 support.",
+      "headline": "List your car easily,\nwith dedicated support",
+      "highlight": "Built for partners",
+      "perks": {
+        "fast": "List cars fast",
+        "orders": "Manage bookings online",
+        "support": "24/7 support",
+        "revenue": "Transparent revenue tracking"
+      }
+    }
+  },
+  "currentLocation": {
+    "denied": "Location access is blocked for this app. Allow it in your device Settings, then try again."
   }
 }

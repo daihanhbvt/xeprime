@@ -127,11 +127,13 @@ $$\text{grossOnline} = \min\Big(B{+}S{+}IV{+}IP,\ \max\big(S{+}H{+}IV{+}IP{+}D_{
 
 ### 3.1. Xe có tài xế
 - Ba ô giá trên từng xe: `withDriverDailyPrice` (nội thành), `withDriverInterCityPrice` (liên tỉnh 2 chiều), `withDriverOneWayPrice` (liên tỉnh 1 chiều).
-- Phụ phí tài xế theo quy tắc (`DRIVER_SURCHARGE_KIND`): ngoài giờ, chờ đợi, quá km, lưu đêm.
+- Giá có tài xế là giá TRỌN: đã gồm tài xế, xăng, chi phí qua đêm của tài xế và phục vụ tại điểm đến; chưa gồm phí cầu đường (khách trả trực tiếp trong chuyến). Đi xa ăn cột giá liên tỉnh; chưa niêm yết thì tạm tính theo bậc gần nhất (`estimateNote`). Mỗi ô giá nằm trong `fee_policies.with_driver_limits.priceDaily` (mặc định 500.000–5.000.000đ/ngày, kiểm ở server).
+- **Không còn phụ phí tài xế** (ADR 0075 điều 7): không cấu hình theo xe, quyết toán không ghi mới chờ / đường dài / qua đêm, đơn có tài xế không ghi quá giờ / vượt km.
+- **Tiền công tài xế** (ADR 0075) là thoả thuận giữa bên thuê và tài xế, XePrime chỉ ghi nhận: mức/ngày mặc định × số ngày chụp lên lượt gán, bên thuê sửa từng chuyến (kèm lịch sử), chủ xe trả tài xế trực tiếp. Không vào $B$, hold, quyết toán, ví, thuế hay hoa hồng; khách không thấy.
 - Tiền tài xế nằm trong $B$ ⇒ chịu $H$ (tuyến hoa hồng) và $T$ như tiền thuê; $S$ vẫn cố định; phần giữ chỗ của chủ xe vẫn 15% × $B$.
 - Tài xế là tài khoản khách được bên thuê mời liên kết (ADR 0063). Tài xế có $\text{clamp}(10\% \times \Delta T, 15′, 60′)$ (với $\Delta T$ = `pickupAt` − lúc gán) để nhận/từ chối; quá hạn ⇒ worker nhả lượt gán và báo khẩn gian hàng gán người khác trong 30 phút — đơn của khách không bị huỷ (ADR 0066 điều 4).
-- **Tài xế ngoài hệ thống** (ADR 0067): bên thuê ghi tên + SĐT tài xế thuê ngoài trên đúng đơn đó — không cần tài khoản, coi là đã nhận ngay, khách thấy như tài xế liên kết. Không chống trùng lịch, không vào thống kê/thù lao tài xế.
-- **Thiếu tài xế sát giờ KHÔNG tự huỷ** (ADR 0067): còn 2 giờ mà chưa có ai (không lượt gán nào, không tài xế ngoài) ⇒ worker nhắc khẩn bên thuê một lần. Không đồng tiền nào đổi chiều; sau giờ nhận dựa vào lưới §7.4; bên thuê không phục vụ được thì tự huỷ chuyến (hoàn 100%, ghi trách nhiệm).
+- **Không còn ghi mới tài xế ngoài hệ thống** (ADR 0074 điều 4): cột cũ chỉ để đọc/gỡ trên đơn cũ.
+- **Thiếu tài xế sát giờ KHÔNG tự huỷ** (ADR 0067): còn 2 giờ mà chưa có ai được gán ⇒ worker nhắc khẩn bên thuê một lần. Không đồng tiền nào đổi chiều; sau giờ nhận dựa vào lưới §7.4; bên thuê không phục vụ được thì tự huỷ chuyến (hoàn 100%, ghi trách nhiệm).
 
 ### 3.2. Phí giao nhận xe ($G$) — theo Wave 9
 - **Không nằm trong tiền giữ chỗ.** Chủ xe chốt phí đã thoả thuận **sau khi duyệt**; khách trả **trực tiếp chủ xe lúc nhận xe**. XePrime không thu hộ, không đối soát.

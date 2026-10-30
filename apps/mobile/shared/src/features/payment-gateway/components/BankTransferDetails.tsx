@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { buildVietQrUrl } from '@xeprime/domain';
@@ -10,22 +9,23 @@ import { IconButton } from '@/components/ui/IconButton';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { makeStyles, useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 
 export type TransferAccount = components['schemas']['HoldPaymentInfoDto'];
 
-/** Ảnh QR do VietQR sinh — tỉ lệ cố định của bản `compact2`. */
+/** Ảnh QR do `qr.sepay.vn` sinh (#201, `template=compact`) — ảnh VUÔNG. */
 const QR_WIDTH = 260;
-const QR_HEIGHT = 308;
+const QR_HEIGHT = QR_WIDTH;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   qr: {
     width: QR_WIDTH,
     height: QR_HEIGHT,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-});
+}));
 
 /**
  * Chuyển khoản VietQR của MỘT khoản — bản native của `BankTransferDetails` (web, 13/10/2026).
@@ -46,6 +46,8 @@ export function BankTransferDetails({
   amount: string;
   code: string;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const t = useTranslations('PaymentGateway.checkout.transfer');
   // Hai nút chép chỉ native có (web không chép tên ngân hàng / chủ tài khoản) — dùng chữ sẵn có.
   const tHold = useTranslations('Trips.hold');
