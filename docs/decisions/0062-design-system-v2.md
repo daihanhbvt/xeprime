@@ -139,7 +139,8 @@ token nào ở nhóm này thay NGHĨA một token cũ (điều 3).
 Hai hệ quả ngoài token, cùng đợt:
 
 - **Dải banner đầu trang GIỮ khổ cũ** (quyết định 16/10/2026): banner admin vẫn là một dải tự mang
-  thông điệp — PC 1440×300 · tablet 1024×320 · mobile 780×390 (`BANNER_SLOTS`), không chữ nào đè
+  thông điệp — PC 1440×450 · tablet 1024×450 · mobile 780×450 (`BANNER_SLOTS`; đổi 30/10/2026 từ 1440×300 ·
+  1024×320 · 780×390), không chữ nào đè
   lên ảnh; tiêu đề và ba điểm nổi bật của hero trong bản vẽ KHÔNG dùng. Thẻ tìm kiếm desktop đè lên
   102px dưới cùng của dải. Chưa có banner nào (hoặc mọi ảnh đều hỏng) thì dải mặc định cùng khổ dùng
   ảnh nền + tiêu đề của bản vẽ (`/home/hero-fallback.webp`). Phương án "banner làm nền hero 1440×587"
