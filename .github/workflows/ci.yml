@@ -253,6 +253,7 @@ jobs:
   # Build image — CỔNG CHẶN, không đẩy đi đâu.
   #
   # Hai job trên chạy test/typecheck/lint; KHÔNG job nào chạy `next build` hay `nest build`.
+  # Job này build bốn image rồi CHẠY THỬ chúng (deploy/scripts/smoke-images.sh).
   # Đó là khoảng hở thật: một lỗi chỉ lộ ra lúc build (import vòng, `use client` thiếu, biến
   # NEXT_PUBLIC_* dùng ở chỗ không có) sẽ đi lọt qua CI xanh và nổ giữa lúc deploy — lúc đó
   # stack đã migrate xong và đang chờ container không bao giờ lên.
@@ -267,14 +268,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
 
-      - name: Build (không push)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: deploy/Dockerfile
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      # Bốn image (web · api · worker · tools) theo đúng định nghĩa mà deploy dùng —
+      # deploy/docker-bake.hcl. `load` để bước sau CHẠY được chúng; không đẩy đi đâu.
+      - name: Build 4 image (không push)
+        uses: docker/bake-action@v6
+        env:
+          IMAGE: xeprime-ci:gate
+          CACHE: gha
           # `NEXT_PUBLIC_*` bị Next NHÚNG CỨNG vào bundle lúc build, nên chúng là một phần của
           # định danh layer. Lấy từ repository Variables (không phải Environment — job này không gắn
           # Environment nào, kể cả khi chạy làm `verify`) để giá trị KHỚP với lần build đẩy lên
@@ -284,16 +284,24 @@ jobs:
           # file JS mà trình duyệt tải về.
           #
           # Ba site của ADR 0051: cùng phép dựng URL với deploy.yml (biến site → hoặc suy từ tên
-          # miền), mặc định là ba host staging. `NEXT_PUBLIC_API_URL` cố định `/api` cùng origin.
-          build-args: |
-            NEXT_PUBLIC_API_URL=/api
-            NEXT_PUBLIC_XP_ZONE_MODE=host
-            NEXT_PUBLIC_WEB_MARKET_URL=${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN || 'stg.xeprime.vn') }}
-            NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN || 'partner-stg.xeprime.vn') }}
-            NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN || 'admin-stg.xeprime.vn') }}
-            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
-            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
-            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
-            SESSION_COOKIE_NAME=${{ vars.SESSION_COOKIE_NAME || 'xp_session' }}
+          # miền), mặc định là ba host staging. `NEXT_PUBLIC_API_URL` mặc định `/api` (file bake).
+          NEXT_PUBLIC_WEB_MARKET_URL: ${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN || 'stg.xeprime.vn') }}
+          NEXT_PUBLIC_WEB_PARTNER_URL: ${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN || 'partner-stg.xeprime.vn') }}
+          NEXT_PUBLIC_WEB_ADMIN_URL: ${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN || 'admin-stg.xeprime.vn') }}
+          NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME || 'xp_session' }}
+        with:
+          # Context là bản checkout (có `.dockerignore`), không phải Git context mặc định của v6.
+          source: .
+          files: deploy/docker-bake.hcl
+          load: true
+
+      # Image đã CẮT (Next standalone, `pnpm deploy`) chỉ lộ file thiếu lúc khởi động — build xanh
+      # không chứng minh được gì. Chạy cả bốn trên một Postgres thật: migrate → seed → api → worker
+      # → web + asset tĩnh.
+      - name: Chạy thử 4 image
+        run: bash deploy/scripts/smoke-images.sh xeprime-ci:gate

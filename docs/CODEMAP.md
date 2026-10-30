@@ -265,7 +265,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | Hướng dẫn deploy đầu-cuối — chọn VPS · DNS · seed · sao lưu · sự cố thường gặp                       | [`docs/deployment.md`](deployment.md)             |
 | Định nghĩa service production (db · redis · migrate · api · web · worker · caddy)                    | `docker-compose.prod.yml`                         |
-| Image dùng chung cho api/web/worker/migrate — kèm lý do chỉ có MỘT image                             | `deploy/Dockerfile`                               |
+| Bốn image theo vai trò (web standalone · api · worker · tools) từ một lần build — kèm lý do tách     | `deploy/Dockerfile` · `deploy/docker-bake.hcl`    |
+| Chạy thử bốn image trên Postgres thật (CI gọi trước khi cho deploy)                                  | `deploy/scripts/smoke-images.sh`                  |
 | Reverse proxy + TLS tự động (Let's Encrypt) — BA site web (`/api` cùng origin, gắn realm theo host + `REALM_PROXY_SECRET`) + host API của app native | `deploy/Caddyfile` |
 | Site của dự án KHÁC ở chung VPS (landing page `softrent.vn`) — mạng `xeprime-sites` + khối `*.caddy` cài từ ngoài repo | `deploy/sites/` · [`docs/deployment.md`](deployment.md) §10 |
 | Mẫu biến môi trường production — đối chiếu `apps/api/src/config/env.schema.ts`                       | `deploy/env.production.example`                   |

@@ -181,41 +181,53 @@ jobs:
       #
       # `NEXT_PUBLIC_API_URL` cố định `/api` — cùng origin với site đang mở (ADR 0051 điều 4), Caddy
       # của từng site chuyển nó về API. Biến cùng tên ở GitHub Environment KHÔNG còn được đọc.
-      - name: Build & push image
+      #
+      # BỐN image mỗi bản phát hành (deploy/Dockerfile), cùng tag gốc `steps.img.outputs.image`
+      # + hậu tố `-web` · `-api` · `-worker` · `-tools` — định nghĩa ở deploy/docker-bake.hcl.
+      - name: Build & push 4 image
         if: needs.resolve.outputs.rollback != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/bake-action@v6
+        env:
+          IMAGE: ${{ steps.img.outputs.image }}
+          MOVING: ${{ steps.img.outputs.moving }}
+          CACHE: gha
+          NEXT_PUBLIC_WEB_MARKET_URL: ${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN) }}
+          NEXT_PUBLIC_WEB_PARTNER_URL: ${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
+          NEXT_PUBLIC_WEB_ADMIN_URL: ${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
+          NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
         with:
-          context: .
-          file: deploy/Dockerfile
+          # Context là bản checkout ở đúng SHA đã verify, không phải Git context mặc định của v6.
+          source: .
+          files: deploy/docker-bake.hcl
           push: true
-          tags: |
-            ${{ steps.img.outputs.image }}
-            ${{ steps.img.outputs.moving }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NEXT_PUBLIC_API_URL=/api
-            NEXT_PUBLIC_XP_ZONE_MODE=host
-            NEXT_PUBLIC_WEB_MARKET_URL=${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN) }}
-            NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
-            NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
-            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
-            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
-            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
-            SESSION_COOKIE_NAME=${{ vars.SESSION_COOKIE_NAME }}
 
       # Rollback: xác nhận tag CÓ THẬT trước khi đụng vào VPS. Không có bước này thì một tag gõ
       # nhầm chỉ lộ ra sau khi stack đã dừng để đổi container.
+      #
+      # Tag từ trước 30/10/2026 là MỘT image chung không hậu tố — vẫn rollback được: VPS checkout
+      # đúng SHA của tag đó, tức là compose/deploy.sh của thời một-image, và chúng dùng tag gốc.
       - name: Kiểm tra tag rollback tồn tại
         if: needs.resolve.outputs.rollback == 'true'
         run: |
           set -euo pipefail
           IMG='${{ steps.img.outputs.image }}'
-          docker manifest inspect "$IMG" > /dev/null \
-            || { echo "::error::Không tìm thấy image $IMG trên GHCR."; exit 1; }
-          echo "Đã xác nhận: $IMG"
+          MISSING=''
+          for ROLE in web api worker tools; do
+            docker manifest inspect "$IMG-$ROLE" > /dev/null 2>&1 || MISSING="$MISSING $ROLE"
+          done
+          if [ -z "$MISSING" ]; then
+            echo "Đã xác nhận: $IMG-{web,api,worker,tools}"
+          elif [ "$MISSING" = ' web api worker tools' ] && docker manifest inspect "$IMG" > /dev/null 2>&1; then
+            echo "Đã xác nhận: $IMG (bản một-image cũ)"
+          else
+            echo "::error::Thiếu image trên GHCR cho $IMG:$MISSING"
+            exit 1
+          fi
 
       # --- File env -------------------------------------------------------
       # Secret đi qua khối `env:` rồi mới vào script, KHÔNG nội suy `${{ secrets.X }}` thẳng vào

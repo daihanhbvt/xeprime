@@ -5,6 +5,9 @@
 #   ./deploy/scripts/deploy.sh --env staging       # staging — BUILD tại chỗ
 #   ./deploy/scripts/deploy.sh --env staging --no-pull --image ghcr.io/…/xeprime:staging-<sha>
 #
+# Một bản phát hành là BỐN image cùng tag gốc (`…:staging-<sha>-web` · `-api` · `-worker` ·
+# `-tools` — deploy/Dockerfile); `--image` nhận tag GỐC, không kèm hậu tố.
+#
 # `--image <ref>` đổi nguồn image từ "build tại chỗ" sang "pull từ registry". GitHub Actions đi
 # đường này (.github/workflows/deploy.yml): build trên runner rồi VPS chỉ pull, nên `next build`
 # không còn ăn 3,5GB RAM và 15 phút CPU của chính máy đang phục vụ người dùng. Không truyền
@@ -27,6 +30,8 @@ cd "$(dirname "$0")/../.."
 XP_ENV=production
 PULL=1
 XP_IMAGE=''
+# Số bản phát hành giữ lại trên máy để rollback không phải tải lại (bản đang chạy tính là một).
+KEEP_RELEASES=3
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,8 +54,8 @@ ENV_FILE=".env.$XP_ENV"
 # `env_file:` trong compose đọc biến này. Export chứ không truyền qua --env-file: --env-file chỉ
 # phục vụ NỘI SUY `${...}` trong file compose, nó không quyết định file nào được nạp vào container.
 export XP_ENV_FILE="$ENV_FILE"
-# `docker-compose.prod.yml` nội suy biến này qua neo `x-app-image` cho cả bốn service dùng chung
-# image (migrate/api/web/worker). Rỗng ⇒ compose rơi về `xeprime-app:latest` dựng tại chỗ.
+# `docker-compose.prod.yml` ghép biến này với hậu tố vai trò cho bốn service (migrate → `-tools`,
+# api/web/worker). Rỗng ⇒ compose rơi về `xeprime-app:local-*` dựng tại chỗ.
 export XP_IMAGE
 
 # `--profile tools` khai TƯỜNG MINH: service `migrate` nằm sau `profiles: ['tools']`. Compose
@@ -67,7 +72,7 @@ fail() { printf '\n\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 chmod 600 "$ENV_FILE"
 
 log "Môi trường: $XP_ENV  (project xeprime-$XP_ENV · $ENV_FILE)"
-log "Nguồn image: ${XP_IMAGE:-build tại chỗ (xeprime-app:latest)}"
+log "Nguồn image: ${XP_IMAGE:-build tại chỗ (xeprime-app:local)}"
 
 if [[ $PULL -eq 1 ]]; then
   log 'Kéo code mới'
@@ -91,10 +96,16 @@ if [[ -n "$XP_IMAGE" ]]; then
   "${COMPOSE[@]}" pull migrate api web worker \
     || fail "Không pull được $XP_IMAGE — kiểm tra tag có tồn tại và đã đăng nhập ghcr.io chưa."
 else
-  # Chỉ service `api` khai `build`, nhưng image sinh ra dùng chung cho cả web/worker/migrate
-  # (xem docker-compose.prod.yml).
+  # Cùng định nghĩa build với CI (deploy/docker-bake.hcl). Các `NEXT_PUBLIC_*` mà bake cần nằm
+  # trong file env — nạp nó trong một SUBSHELL để secret không rò sang các bước sau của script.
   log 'Build image (10–20 phút cho lần đầu, sau đó nhanh hơn nhiều nhờ cache)'
-  "${COMPOSE[@]}" build api
+  (
+    set -a
+    # shellcheck disable=SC1090
+    . "./$ENV_FILE"
+    set +a
+    IMAGE=xeprime-app:local MOVING='' docker buildx bake -f deploy/docker-bake.hcl --load
+  ) || fail 'Build image thất bại.'
 fi
 
 # --- Database ---------------------------------------------------------------
@@ -142,19 +153,46 @@ fi
 
 # --- Dọn image cũ -----------------------------------------------------------
 # `docker image prune -f` CHỈ xoá layer mồ côi (dangling). Khi còn build tại chỗ thì mỗi lần
-# build ghi đè `xeprime-app:latest` và bỏ lại đúng một image mồ côi — prune dọn được.
+# build ghi đè `xeprime-app:local-*` và bỏ lại image mồ côi — prune dọn được.
 #
-# Nhưng khi PULL từ GHCR thì mỗi lần deploy để lại một image CÓ TAG ĐẦY ĐỦ (~2GB), và prune
-# không bao giờ chạm tới nó. Đĩa 50GB đầy sau khoảng 15 lần deploy. Thứ hỏng ĐẦU TIÊN không
-# phải app mà là `backup-db.sh`: nó từ chối chạy khi còn dưới 2GB — tức là mất sao lưu
-# TRƯỚC khi mất dịch vụ, và đó là thứ tự tệ nhất có thể.
-log 'Dọn image cũ'
+# Nhưng khi PULL từ GHCR thì mỗi lần deploy để lại bốn image CÓ TAG ĐẦY ĐỦ, và prune không bao
+# giờ chạm tới chúng. Không dọn thì đĩa đầy dần, và thứ hỏng ĐẦU TIÊN không phải app mà là
+# `backup-db.sh`: nó từ chối chạy khi còn dưới 2GB — tức là mất sao lưu TRƯỚC khi mất dịch vụ,
+# và đó là thứ tự tệ nhất có thể.
+log "Dọn image cũ (giữ $KEEP_RELEASES bản phát hành gần nhất của $XP_ENV)"
 if [[ -n "$XP_IMAGE" ]]; then
-  # `docker images` liệt kê mới nhất trước. Giữ 3 tag gần nhất để một lần rollback vẫn còn
-  # image sẵn ở local (khỏi tải lại ~2GB), và không bao giờ đụng tag đang chạy.
-  docker images --filter "reference=${XP_IMAGE%:*}" --format '{{.Repository}}:{{.Tag}}' \
-    | grep -v ':<none>$' | tail -n +4 | { grep -vxF "$XP_IMAGE" || true; } \
+  REPO="${XP_IMAGE%:*}"
+  RELEASE="${XP_IMAGE##*:}"
+  HISTORY=".deploy-releases.$XP_ENV"
+
+  # Tag của bản phát hành mà không có hậu tố vai trò. Tag cũ (một image chung, trước 30/10/2026)
+  # không có hậu tố nên giữ nguyên — nó vẫn được tính là một bản phát hành.
+  release_of() { sed -E 's/-(web|api|worker|tools)$//'; }
+
+  # Đếm THEO LỊCH SỬ DEPLOY, không theo ngày tạo image: một bản chỉ sửa api thì web/worker/tools
+  # là đúng image cũ được gắn thêm tag mới, và "ngày tạo" của chúng là ngày của bản trước —
+  # sắp theo đó là xoá nhầm bản vừa deploy. Lần đầu chưa có file thì mồi từ image đang có.
+  if [[ ! -f "$HISTORY" ]]; then
+    docker images --filter "reference=$REPO" --format '{{.Tag}}' \
+      | grep -E "^${XP_ENV}-" | release_of | awk '!seen[$0]++' | head -n "$KEEP_RELEASES" \
+      | tac > "$HISTORY" || true
+  fi
+  echo "$RELEASE" >> "$HISTORY"
+  # N bản KHÁC NHAU gần nhất tính từ cuối: rollback về một bản cũ làm nó thành bản mới nhất.
+  KEEP="$(tac "$HISTORY" | awk 'NF && !seen[$0]++' | head -n "$KEEP_RELEASES")"
+  tac <<<"$KEEP" > "$HISTORY"
+
+  # CHỈ tag của môi trường này (`<môi trường>-…`): hai môi trường ở chung một VPS dùng chung
+  # repository image, và dọn theo repository là xoá bản rollback của môi trường kia.
+  docker images --filter "reference=$REPO" --format '{{.Tag}}' \
+    | grep -E "^${XP_ENV}-" \
+    | while read -r tag; do
+        grep -qxF "$(release_of <<<"$tag")" <<<"$KEEP" || echo "$REPO:$tag"
+      done \
     | xargs -r docker rmi >/dev/null 2>&1 || true
+else
+  # Build tại chỗ để lại cache BuildKit (vài GB). Giữ một tuần cho lần build kế tiếp nhanh.
+  docker builder prune -f --filter until=168h >/dev/null || true
 fi
 docker image prune -f >/dev/null
 
