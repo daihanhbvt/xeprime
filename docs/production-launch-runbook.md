@@ -659,6 +659,14 @@ Một lần, theo thứ tự:
      migrate node_modules/.bin/tsx ./src/seed.ts
    unset PLATFORM_ADMIN_PASSWORD
    ```
+   Seed `system` dựng sẵn 9 mã khuyến mãi MẪU đang bật và công khai (`BANMOI`, `HELLO50`, `VIP20`…
+   — để màn quản trị có đủ mọi hình dạng mã). Bản tạm có tiền thật và mã do NỀN TẢNG tài trợ, nên
+   TẮT hết ngay sau seed; admin bật lại / nhân bản mã nào cần ở `/promo-codes` của site quản trị:
+   ```bash
+   docker compose -p xeprime-prodtemp --project-directory . -f deploy/prodtemp/docker-compose.yml \
+     --env-file .env.prodtemp exec -T db psql -U xeprime -d xeprime \
+     -c "UPDATE promo_codes SET is_active = false WHERE is_active;"
+   ```
 6. Sao lưu hằng đêm (cần root, một lần): `sudo ./deploy/scripts/install-backup-timer.sh --env prodtemp`.
    `backup-db.sh`/`restore-db.sh` đọc `XP_COMPOSE_FILE` + `XP_APP_SERVICES` trong `.env.prodtemp`.
 7. SePay: tạo tài khoản MỚI gắn tài khoản ngân hàng KHÁC staging, webhook

@@ -61,12 +61,16 @@ jobs:
           NEXT_PUBLIC_WEB_MARKET_URL: https://xeprime.vn
           NEXT_PUBLIC_WEB_PARTNER_URL: https://partner.xeprime.vn
           NEXT_PUBLIC_WEB_ADMIN_URL: https://admin.xeprime.vn
-          NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
+          # Tên app và tên cookie đặt CỨNG: Variable cùng tên của Environment staging mang chữ
+          # STG (`XePrime STG`, `xp_session_stg`) — nhúng vào bundle là người dùng thật thấy nó.
+          # Khớp với `.env.prodtemp` (deploy/prodtemp/make-env.sh).
+          NEXT_PUBLIC_APP_NAME: XePrime
+          SESSION_COOKIE_NAME: xp_session
+          # Firebase: CỐ Ý dùng project của staging (runbook Phụ lục A.1) — đọc từ Environment.
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
-          SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
         with:
           source: .
           files: deploy/docker-bake.hcl
