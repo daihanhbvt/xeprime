@@ -36,7 +36,12 @@ export XP_ENV_FILE="$ENV_FILE"
 
 DB_USER="${POSTGRES_USER:-xeprime}"
 DB_NAME="${POSTGRES_DB:-xeprime}"
-COMPOSE=(docker compose -p "xeprime-$XP_ENV" -f docker-compose.prod.yml --profile tools --env-file "$ENV_FILE")
+# Production tạm trên máy staging (`deploy/prodtemp/`) khai hai biến này trong file env của nó:
+# compose riêng và tên service riêng (`prod-api`/`prod-web` — không được trùng `api`/`web` của
+# staging trên mạng mà Caddy đứng chung).
+COMPOSE_FILE_PATH="${XP_COMPOSE_FILE:-docker-compose.prod.yml}"
+read -ra APP_SERVICES <<<"${XP_APP_SERVICES:-api web worker}"
+COMPOSE=(docker compose -p "xeprime-$XP_ENV" --project-directory . -f "$COMPOSE_FILE_PATH" --profile tools --env-file "$ENV_FILE")
 
 # Tên môi trường nằm trong tên file dump (backup-db.sh đặt như vậy). Cảnh báo khi hai thứ lệch
 # nhau — khôi phục dump staging đè lên production là loại tai nạn không có nút hoàn tác.
@@ -60,8 +65,8 @@ fi
 read -rp "Ghi đè database '$DB_NAME' của môi trường '$XP_ENV' bằng $(basename "$DUMP")? Gõ 'YES': " CONFIRM
 [[ "$CONFIRM" == 'YES' ]] || { echo 'Đã huỷ.'; exit 1; }
 
-echo '==> Dừng api / web / worker'
-"${COMPOSE[@]}" stop api web worker
+echo "==> Dừng ${APP_SERVICES[*]}"
+"${COMPOSE[@]}" stop "${APP_SERVICES[@]}"
 
 echo '==> Khôi phục'
 # `--clean --if-exists` xoá object cũ trước khi tạo lại, nên không cần drop cả database (drop
@@ -75,5 +80,5 @@ echo '==> Áp migration còn thiếu (dump có thể cũ hơn code)'
 "${COMPOSE[@]}" run --rm migrate
 
 echo '==> Khởi động lại'
-"${COMPOSE[@]}" up -d api web worker
+"${COMPOSE[@]}" up -d "${APP_SERVICES[@]}"
 "${COMPOSE[@]}" ps

@@ -23,6 +23,12 @@ variable "CACHE" {
   default = ""
 }
 
+# Scope cache GHA. Bản build mang URL site KHÁC (production tạm) dùng scope riêng: chung scope thì
+# hai bản ghi đè cache của nhau ở tầng `next build`, và lần build kế tiếp của bên kia miss trọn.
+variable "CACHE_SCOPE" {
+  default = "xeprime"
+}
+
 # `NEXT_PUBLIC_*` bị Next NHÚNG CỨNG vào bundle lúc build (đọc giải thích ở deploy/Dockerfile).
 variable "NEXT_PUBLIC_API_URL" {
   default = "/api"
@@ -77,8 +83,8 @@ target "app" {
   # Cả bốn image đọc chung MỘT scope, và chỉ `web` ghi: đồ thị của bất kỳ target nào cũng chứa
   # trọn stage `builder` (phần tốn 15 phút), còn stage cuối chỉ là bước chép. Bốn target cùng ghi
   # một scope thì ghi đè lẫn nhau theo thứ tự xong trước.
-  cache-from = equal(CACHE, "gha") ? ["type=gha,scope=xeprime"] : []
-  cache-to   = equal(CACHE, "gha") && equal(role, "web") ? ["type=gha,scope=xeprime,mode=max"] : []
+  cache-from = equal(CACHE, "gha") ? ["type=gha,scope=${CACHE_SCOPE}"] : []
+  cache-to   = equal(CACHE, "gha") && equal(role, "web") ? ["type=gha,scope=${CACHE_SCOPE},mode=max"] : []
   args = {
     NEXT_PUBLIC_API_URL              = NEXT_PUBLIC_API_URL
     NEXT_PUBLIC_XP_ZONE_MODE         = NEXT_PUBLIC_XP_ZONE_MODE

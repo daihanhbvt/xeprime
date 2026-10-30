@@ -1,0 +1,143 @@
+# XePrime — PRODUCTION TẠM trên máy STAGING (docs/production-launch-runbook.md, Phụ lục A).
+#
+# Dùng NỘI BỘ để đưa app lên store trước. Khi lên production thật thì dựng lại TỪ ĐẦU trên VPS riêng
+# bằng docker-compose.prod.yml, rồi gỡ stack này (Phụ lục A.4).
+#
+# Chạy bằng `deploy/prodtemp/deploy.sh`, KHÔNG gọi tay `docker compose up` — script đó giữ thứ tự
+# sao lưu → migrate → app → Caddy. Project `xeprime-prodtemp`, file env `.env.prodtemp` ở gốc repo
+# (sinh MỘT lần bằng `deploy/prodtemp/make-env.sh`).
+#
+# KHÁC docker-compose.prod.yml ở bốn điểm, đều vì ở CHUNG máy với staging:
+#   1. KHÔNG có Caddy. Caddy của staging giữ cổng 80/443 và phục vụ năm tên miền production qua
+#      khối site `deploy/sites/xeprime-prodtemp.caddy` (cơ chế site ngoài — deployment.md §10).
+#   2. api/web đứng trên mạng `xeprime-sites` để Caddy gọi tới — nên tên service là `prod-api` /
+#      `prod-web`. Caddy đứng chung hai mạng và gọi `api:4000` / `web:3000` của staging THEO TÊN;
+#      một service tên `api` ở đây là Docker có thể trả về container của môi trường kia.
+#   3. `mem_limit` thấp hơn: máy 6GB chạy hai stack + softrent.vn.
+#   4. Database RIÊNG (volume `xeprime-prodtemp_pgdata`) — không bao giờ dùng chung với staging.
+#
+# `--project-directory .` (deploy.sh, backup-db.sh) để `env_file` tính từ GỐC REPO.
+
+name: xeprime-prodtemp
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt}
+      POSTGRES_DB: ${POSTGRES_DB:-xeprime}
+      # UTC cố ý, giống docker-compose.prod.yml (CLAUDE.md §9, ADR 0001).
+      TZ: UTC
+      PGTZ: UTC
+    # Cùng cách tinh chỉnh với docker-compose.prod.yml, thu nhỏ theo trần 768MB.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=192MB
+      - -c
+      - effective_cache_size=512MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - max_connections=60
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - timezone=UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-xeprime}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    mem_limit: 768m
+    networks: [internal]
+
+  # One-shot — deploy.sh chạy TRƯỚC khi app khởi động lại.
+  migrate:
+    image: ${XP_IMAGE:?XP_IMAGE chưa đặt — chạy qua deploy/prodtemp/deploy.sh}-tools
+    profiles: ['tools']
+    env_file: ['${XP_ENV_FILE:-.env.prodtemp}']
+    working_dir: /app/prisma
+    command: ['node_modules/.bin/prisma', 'migrate', 'deploy', '--schema', './schema.prisma']
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [internal]
+
+  prod-api:
+    image: ${XP_IMAGE:?XP_IMAGE chưa đặt}-api
+    restart: unless-stopped
+    env_file: ['${XP_ENV_FILE:-.env.prodtemp}']
+    working_dir: /app/apps/api
+    command: ['node', 'dist/main.js']
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:4000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    mem_limit: 768m
+    networks: [internal, sites]
+
+  prod-web:
+    image: ${XP_IMAGE:?XP_IMAGE chưa đặt}-web
+    restart: unless-stopped
+    # Khai TỪNG biến, không env_file — cùng lý do với docker-compose.prod.yml.
+    environment:
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
+      API_INTERNAL_URL: http://prod-api:4000
+      # `staging` ở web (KHÔNG ở api) = robots.txt chặn toàn bộ + mọi trang `noindex`
+      # (apps/web/src/lib/seo.ts): Google không index dữ liệu của bản tạm. API vẫn `production`
+      # (SMS thật, không mã OTP test). Bản production thật bỏ dòng này.
+      APP_ENV: staging
+    working_dir: /app/apps/web
+    command: ['node', 'server.js']
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:3000/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    mem_limit: 640m
+    networks: [internal, sites]
+
+  # Một instance duy nhất — đừng scale (advisory lock vẫn bảo vệ, xem docker-compose.prod.yml).
+  worker:
+    image: ${XP_IMAGE:?XP_IMAGE chưa đặt}-worker
+    restart: unless-stopped
+    env_file: ['${XP_ENV_FILE:-.env.prodtemp}']
+    working_dir: /app/apps/worker
+    command: ['node', 'dist/main.js']
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:4100/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    mem_limit: 384m
+    networks: [internal]
+
+volumes:
+  pgdata:
+
+networks:
+  internal:
+    driver: bridge
+  # Do docker-compose.prod.yml của STAGING tạo ra (tên cố định). Không có nó thì staging chưa chạy.
+  sites:
+    name: xeprime-sites
+    external: true

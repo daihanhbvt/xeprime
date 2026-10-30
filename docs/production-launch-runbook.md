@@ -593,11 +593,11 @@ thật thì dựng lại TỪ ĐẦU theo runbook trên, trên VPS mới, và b�
 
 | Hạng mục | Production tạm | Production thật |
 | --- | --- | --- |
-| Máy | VPS staging, chạy như **site ngoài** qua cơ chế [`deployment.md` §10](deployment.md#10-site-của-dự-án-khác-trên-cùng-vps) — Caddy của staging xin chứng chỉ, stack tạm không có Caddy riêng, tên service khác `web`/`api`/`db`…, `mem_limit` thấp | VPS riêng (B1) |
+| Máy | VPS staging, chạy như **site ngoài** qua cơ chế [`deployment.md` §10](deployment.md#10-site-của-dự-án-khác-trên-cùng-vps) — Caddy của staging xin chứng chỉ, stack tạm không có Caddy riêng, api/web tên `prod-api`/`prod-web`, `mem_limit` thấp | VPS riêng (B1) |
 | Domain | `xeprime.vn` · `partner.` · `admin.` · `api.xeprime.vn` (giữ nguyên khi chuyển) | như nhau |
-| Deploy | Bằng tay, file env đặt trên máy — **không** qua GitHub Environment/CD | CD (D, E1) |
-| Image | Build riêng với URL site production (`NEXT_PUBLIC_*` nhúng lúc build — không dùng image `staging-*`) | CD build |
-| `APP_ENV` | API `production` (bắt buộc: chặn mã OTP test, bắt buộc SMS thật). Riêng container web có thể đặt `staging` để mọi trang `noindex` — Google không index dữ liệu tạm | `production` |
+| Deploy | Push nhánh `prodtemp` (merge từ `staging`) → `.github/workflows/deploy-prodtemp.yml`. File env `.env.prodtemp` sinh **một lần** trên VPS, sửa tay — **không** do GitHub Environment sinh lại | CD (D, E1) |
+| Image | Build riêng với URL site production, tag `prodtemp-<sha>-*` (`NEXT_PUBLIC_*` nhúng lúc build — không dùng image `staging-*`) | CD build |
+| `APP_ENV` | API `production` (bắt buộc: chặn mã OTP test, bắt buộc SMS thật). Container web `staging` để mọi trang `noindex` — Google không index dữ liệu tạm | `production` |
 | Dữ liệu | Migrate + seed `system`, phần còn lại tạo tay | như nhau |
 | eSMS | Dùng chung tài khoản; brandname `Baotrixemay` + câu mẫu của nó cho tới khi `XePrime` được duyệt | brandname `XePrime` |
 | SePay | **Tạo mới**, webhook `https://api.xeprime.vn/sepay/webhook`, tài khoản ngân hàng khác staging | dùng tiếp — webhook theo domain |
@@ -607,21 +607,84 @@ thật thì dựng lại TỪ ĐẦU theo runbook trên, trên VPS mới, và b�
 | Bảo hiểm | `INSURANCE_PARTNER=none` | như nhau |
 | App mobile | Build trỏ `https://api.xeprime.vn`, Firebase của staging | build lại với Firebase production; bắt người dùng cập nhật |
 
-### A.2 Kiểm trước khi dựng
+### A.2 Kiểm trước khi dựng (đã kiểm 30/10/2026)
 
-- RAM thật của VPS staging (`docker stats --no-stream`, `free -m`): stack staging + `softrent.vn` +
-  stack tạm phải vừa 6 GB, không thì hạ `mem_limit` hoặc nâng RAM.
-- Đĩa còn đủ cho thêm một database + bản sao lưu của nó.
+| Mục | Kết quả |
+| --- | --- |
+| RAM | 5,9 GB; staging + `softrent.vn` dùng thật ≈ 1 GB (sau khi tách image). Stack tạm ≈ 0,8–1 GB — vừa |
+| Đĩa | 48 GB, trống 30 GB — đủ thêm một database, 3 bản phát hành `prodtemp-*` và sao lưu 14 ngày |
+| DNS | `xeprime.vn`, `www`, `partner`, `admin`, `api` → `222.255.215.242`, DNS only |
+| Khoá dịch vụ | `.env.staging` có đủ mọi khoá mà `APP_ENV=production` bắt buộc (SMTP, R2 kèm bucket riêng tư, eSMS) |
 
-File cụ thể (compose, khối Caddy, mẫu env, script deploy) sẽ ghi vào đây khi dựng.
+### A.3 Dựng
 
-### A.3 Bỏ bản tạm khi lên production thật
+Sơ đồ: Caddy của staging (giữ 80/443) phục vụ thêm năm tên miền production bằng khối
+`deploy/sites/xeprime-prodtemp.caddy`, chuyển tới stack `xeprime-prodtemp` — `prod-web` · `prod-api`
+đứng trên mạng `xeprime-sites`, `db` · `worker` chỉ ở mạng nội bộ của stack. Database và volume RIÊNG.
+
+| File | Vai trò |
+| --- | --- |
+| `deploy/prodtemp/docker-compose.yml` | Stack tạm — không Caddy, tên service không trùng staging, `mem_limit` thấp |
+| `deploy/prodtemp/make-env.sh` | Sinh `.env.prodtemp` MỘT lần từ `.env.staging` + secret mới, SePay trống, MoMo/VNPAY tắt |
+| `deploy/prodtemp/xeprime-prodtemp.caddy.tmpl` | Mẫu khối site — deploy điền tên miền + khoá realm RIÊNG của bản tạm |
+| `deploy/prodtemp/deploy.sh` | Sao lưu → pull → migrate → app (`--wait` healthcheck) → `caddy validate` → `caddy reload` → dọn image |
+| `.github/workflows/deploy-prodtemp.yml` | Push `prodtemp` → build 4 image `prodtemp-<sha>-*` → chạy thử → đẩy GHCR → SSH chạy `deploy.sh` → smoke test từ ngoài |
+
+Một lần, theo thứ tự:
+
+1. Merge PR chứa các file trên vào `develop` → `staging` (checkout trên VPS phải có `deploy/prodtemp/`
+   — workflow đọc file từ checkout của staging, không `git checkout` gì trên VPS).
+2. GitHub → Settings → Environments → **staging** → Deployment branches: thêm `prodtemp` (workflow
+   dùng lại secret SSH của staging vì cùng máy).
+3. Trên VPS, sinh file env:
+   ```bash
+   ssh xeprime@stg.xeprime.vn
+   cd /opt/xeprime && ./deploy/prodtemp/make-env.sh
+   ```
+4. Tạo nhánh `prodtemp` từ `staging` và push — workflow tự build và deploy:
+   ```bash
+   git push origin origin/staging:refs/heads/prodtemp
+   ```
+5. Seed dữ liệu nền + tài khoản admin (bạn tự gõ mật khẩu, không ai khác cần biết):
+   ```bash
+   cd /opt/xeprime
+   export XP_ENV_FILE=.env.prodtemp
+   # Tag GỐC của bản đang chạy (bỏ hậu tố `-api`); compose ghép `-tools` cho `migrate`.
+   export XP_IMAGE="$(docker ps --filter label=com.docker.compose.project=xeprime-prodtemp \
+     --filter label=com.docker.compose.service=prod-api --format '{{.Image}}' | head -1 | sed 's/-api$//')"
+   read -rsp 'Mật khẩu platform admin: ' PLATFORM_ADMIN_PASSWORD; echo
+   docker compose -p xeprime-prodtemp --project-directory . -f deploy/prodtemp/docker-compose.yml \
+     --profile tools --env-file .env.prodtemp run --rm \
+     -e SEED_MODE=system -e PLATFORM_ADMIN_PASSWORD="$PLATFORM_ADMIN_PASSWORD" \
+     migrate node_modules/.bin/tsx ./src/seed.ts
+   unset PLATFORM_ADMIN_PASSWORD
+   ```
+6. Sao lưu hằng đêm (cần root, một lần): `sudo ./deploy/scripts/install-backup-timer.sh --env prodtemp`.
+   `backup-db.sh`/`restore-db.sh` đọc `XP_COMPOSE_FILE` + `XP_APP_SERVICES` trong `.env.prodtemp`.
+7. SePay: tạo tài khoản MỚI gắn tài khoản ngân hàng KHÁC staging, webhook
+   `https://api.xeprime.vn/sepay/webhook`; điền bốn dòng `SEPAY_*` cuối `.env.prodtemp` rồi chạy lại
+   deploy (bước dưới) để API nạp.
+8. Google/Facebook: thêm vào client/app của staging các redirect URI
+   `https://xeprime.vn/api/auth/social/<provider>/callback` (và `partner.`, `admin.`) +
+   `https://api.xeprime.vn/auth/social/<provider>/callback`.
+
+Cập nhật về sau: merge `staging` → `prodtemp`. Đổi giá trị env: sửa `.env.prodtemp` trên VPS rồi chạy
+lại bản đang chạy — `./deploy/prodtemp/deploy.sh --image <tag gốc đang chạy>` (cũng là lệnh rollback,
+với tag của lần trước; `.deploy-releases.prodtemp` liệt kê 3 bản còn trên máy).
+
+### A.4 Bỏ bản tạm khi lên production thật
 
 1. Ngừng nhận tiền mới: tắt webhook SePay (và cổng nếu đã bật) trỏ vào bản tạm.
 2. Tất toán mọi khoản đang mở: giữ chỗ dở dang, yêu cầu hoàn, hàng đợi cổng, yêu cầu rút ví — hoàn
    tay cho người đã chuyển.
-3. `pg_dump` bản cuối, cất ở máy công ty (đối chiếu sao kê / báo cáo quyết toán cổng nếu cần).
-4. Gỡ khối Caddy của bản tạm (`caddy validate` → `caddy reload`), `docker compose down -v` đúng project
-   của bản tạm — **kiểm tên project hai lần**, nhầm là xoá database staging.
-5. Trỏ DNS sáu bản ghi sang VPS production thật, deploy theo E, phát hành bản app mới theo F và yêu
+3. `pg_dump` bản cuối (`./deploy/scripts/backup-db.sh --env prodtemp`), cất ở máy công ty (đối chiếu
+   sao kê / báo cáo quyết toán cổng nếu cần).
+4. Gỡ `deploy/sites/xeprime-prodtemp.caddy` (`caddy validate` → `caddy reload` trên Caddy staging),
+   rồi `docker compose -p xeprime-prodtemp --project-directory . -f deploy/prodtemp/docker-compose.yml
+   --env-file .env.prodtemp down -v` — **kiểm tên project hai lần**, nhầm là xoá database staging.
+5. `sudo systemctl disable --now xeprime-backup@prodtemp.timer`; xoá `.env.prodtemp`,
+   `.deploy-releases.prodtemp`, image `prodtemp-*`.
+6. Trong repo: xoá `deploy/prodtemp/`, `.github/workflows/deploy-prodtemp.yml`, nhánh `prodtemp`, và
+   `prodtemp` khỏi Deployment branches của Environment staging.
+7. Trỏ DNS sáu bản ghi sang VPS production thật, deploy theo E, phát hành bản app mới theo F và yêu
    cầu mọi máy cập nhật.

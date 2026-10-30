@@ -152,49 +152,15 @@ if ! healthy_all; then
 fi
 
 # --- Dọn image cũ -----------------------------------------------------------
-# `docker image prune -f` CHỈ xoá layer mồ côi (dangling). Khi còn build tại chỗ thì mỗi lần
-# build ghi đè `xeprime-app:local-*` và bỏ lại image mồ côi — prune dọn được.
-#
-# Nhưng khi PULL từ GHCR thì mỗi lần deploy để lại bốn image CÓ TAG ĐẦY ĐỦ, và prune không bao
-# giờ chạm tới chúng. Không dọn thì đĩa đầy dần, và thứ hỏng ĐẦU TIÊN không phải app mà là
-# `backup-db.sh`: nó từ chối chạy khi còn dưới 2GB — tức là mất sao lưu TRƯỚC khi mất dịch vụ,
-# và đó là thứ tự tệ nhất có thể.
+# Lý do và luật giữ bản phát hành: đầu file prune-releases.sh.
 log "Dọn image cũ (giữ $KEEP_RELEASES bản phát hành gần nhất của $XP_ENV)"
 if [[ -n "$XP_IMAGE" ]]; then
-  REPO="${XP_IMAGE%:*}"
-  RELEASE="${XP_IMAGE##*:}"
-  HISTORY=".deploy-releases.$XP_ENV"
-
-  # Tag của bản phát hành mà không có hậu tố vai trò. Tag cũ (một image chung, trước 30/10/2026)
-  # không có hậu tố nên giữ nguyên — nó vẫn được tính là một bản phát hành.
-  release_of() { sed -E 's/-(web|api|worker|tools)$//'; }
-
-  # Đếm THEO LỊCH SỬ DEPLOY, không theo ngày tạo image: một bản chỉ sửa api thì web/worker/tools
-  # là đúng image cũ được gắn thêm tag mới, và "ngày tạo" của chúng là ngày của bản trước —
-  # sắp theo đó là xoá nhầm bản vừa deploy. Lần đầu chưa có file thì mồi từ image đang có.
-  if [[ ! -f "$HISTORY" ]]; then
-    docker images --filter "reference=$REPO" --format '{{.Tag}}' \
-      | grep -E "^${XP_ENV}-" | release_of | awk '!seen[$0]++' | head -n "$KEEP_RELEASES" \
-      | tac > "$HISTORY" || true
-  fi
-  echo "$RELEASE" >> "$HISTORY"
-  # N bản KHÁC NHAU gần nhất tính từ cuối: rollback về một bản cũ làm nó thành bản mới nhất.
-  KEEP="$(tac "$HISTORY" | awk 'NF && !seen[$0]++' | head -n "$KEEP_RELEASES")"
-  tac <<<"$KEEP" > "$HISTORY"
-
-  # CHỈ tag của môi trường này (`<môi trường>-…`): hai môi trường ở chung một VPS dùng chung
-  # repository image, và dọn theo repository là xoá bản rollback của môi trường kia.
-  docker images --filter "reference=$REPO" --format '{{.Tag}}' \
-    | grep -E "^${XP_ENV}-" \
-    | while read -r tag; do
-        grep -qxF "$(release_of <<<"$tag")" <<<"$KEEP" || echo "$REPO:$tag"
-      done \
-    | xargs -r docker rmi >/dev/null 2>&1 || true
+  ./deploy/scripts/prune-releases.sh "$XP_ENV" "$XP_IMAGE" "$KEEP_RELEASES"
 else
   # Build tại chỗ để lại cache BuildKit (vài GB). Giữ một tuần cho lần build kế tiếp nhanh.
   docker builder prune -f --filter until=168h >/dev/null || true
+  docker image prune -f >/dev/null
 fi
-docker image prune -f >/dev/null
 
 # `if` chứ không phải `grep ... && fail`: dưới `set -e`, một grep KHÔNG khớp (tức là mọi thứ
 # đều khoẻ) trả exit 1 và làm script chết ngay ở dòng cuối của một lần deploy thành công.

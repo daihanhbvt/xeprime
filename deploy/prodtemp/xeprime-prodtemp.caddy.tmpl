@@ -1,0 +1,75 @@
+# MẪU khối site Caddy của PRODUCTION TẠM (deploy/prodtemp/). `deploy/prodtemp/deploy.sh` điền
+# `__…__` từ `.env.prodtemp`, ghi ra `deploy/sites/xeprime-prodtemp.caddy` (gitignore, chmod 600 —
+# file đó chứa khoá realm), chạy `caddy validate` rồi `caddy reload` trên Caddy của STAGING.
+#
+# TỰ CHỨA theo luật site ngoài (docs/deployment.md §10): không dùng snippet của deploy/Caddyfile —
+# đổi bên đó không được làm vỡ site này. Snippet ở đây mang tiền tố `pt_` vì snippet của Caddy là
+# toàn cục: trùng tên `common` của Caddyfile chính là Caddy từ chối nạp CẢ cấu hình.
+#
+# Ngữ nghĩa giống hệt deploy/Caddyfile (đọc lý do ở đó): `/api/*` cùng origin, realm GHI ĐÈ theo
+# host kèm khoá proxy (ADR 0053), host API của app native XOÁ hai header đó.
+#
+# Khoá realm là của RIÊNG bản tạm (`REALM_PROXY_SECRET` trong `.env.prodtemp`), không phải của
+# staging — biến `{$REALM_PROXY_SECRET}` trong container Caddy là của staging, nên giá trị được
+# điền thẳng vào file thay vì đọc env.
+
+(pt_common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+(pt_site_api) {
+	handle_path /api/* {
+		reverse_proxy prod-api:4000 {
+			header_up X-Xp-Realm {args[0]}
+			header_up X-Xp-Proxy-Secret __REALM_PROXY_SECRET__
+		}
+	}
+}
+
+(pt_noindex) {
+	header X-Robots-Tag "noindex, nofollow"
+}
+
+__WEB_DOMAIN__ {
+	import pt_common
+	import pt_site_api customer
+	handle {
+		reverse_proxy prod-web:3000
+	}
+}
+
+www.__WEB_DOMAIN__ {
+	redir https://__WEB_DOMAIN__{uri} permanent
+}
+
+__PARTNER_DOMAIN__ {
+	import pt_common
+	import pt_noindex
+	import pt_site_api partner
+	handle {
+		reverse_proxy prod-web:3000
+	}
+}
+
+__ADMIN_DOMAIN__ {
+	import pt_common
+	import pt_noindex
+	import pt_site_api platform
+	handle {
+		reverse_proxy prod-web:3000
+	}
+}
+
+__API_DOMAIN__ {
+	import pt_common
+	reverse_proxy prod-api:4000 {
+		header_up -X-Xp-Realm
+		header_up -X-Xp-Proxy-Secret
+	}
+}

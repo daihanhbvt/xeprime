@@ -1038,3 +1038,10 @@ VPS hay sự cố Caddy là nó cùng mất.
 | Trên VPS | mã nguồn `~/softrent` (`REVISION` ghi commit) · container `softrent-softrent-1` · khối site `/opt/xeprime/deploy/sites/softrent.caddy` |
 | DNS (Cloudflare) | `softrent.vn` và `www.softrent.vn`: A → IP staging, DNS only. `www` chuyển 301 về tên gốc |
 | Gỡ | xoá `deploy/sites/softrent.caddy` → `docker exec xeprime-staging-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile` → `docker compose -f ~/softrent/deploy/docker-compose.yml down` |
+
+### 10.2 Production tạm (`xeprime.vn`)
+
+XePrime production TẠM cũng đi đúng cơ chế này: khối `deploy/sites/xeprime-prodtemp.caddy` (sinh từ
+`deploy/prodtemp/xeprime-prodtemp.caddy.tmpl`, mang khoá realm riêng) chuyển năm tên miền production
+tới `prod-web`/`prod-api` của project `xeprime-prodtemp` trên mạng `xeprime-sites`. Dựng, cập nhật,
+gỡ: [runbook Phụ lục A](production-launch-runbook.md#phụ-lục-a--production-tạm-trên-vps-staging).
