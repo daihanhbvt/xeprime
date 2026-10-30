@@ -595,7 +595,7 @@ thật thì dựng lại TỪ ĐẦU theo runbook trên, trên VPS mới, và b�
 | --- | --- | --- |
 | Máy | VPS staging, chạy như **site ngoài** qua cơ chế [`deployment.md` §10](deployment.md#10-site-của-dự-án-khác-trên-cùng-vps) — Caddy của staging xin chứng chỉ, stack tạm không có Caddy riêng, api/web tên `prod-api`/`prod-web`, `mem_limit` thấp | VPS riêng (B1) |
 | Domain | `xeprime.vn` · `partner.` · `admin.` · `api.xeprime.vn` (giữ nguyên khi chuyển) | như nhau |
-| Deploy | Push nhánh `prodtemp` (merge từ `staging`) → `.github/workflows/deploy-prodtemp.yml`, GitHub Environment RIÊNG `prodtemp` (không đọc gì của `staging`). Cấu hình lúc chạy `.env.prodtemp` sinh **một lần** trên VPS, sửa tay — **không** do GitHub sinh lại | CD (D, E1) |
+| Deploy | Push nhánh `prodtemp` (merge từ `staging`) → `.github/workflows/deploy-prodtemp.yml`. GitHub Environment RIÊNG `prodtemp` là nguồn sự thật của MỌI biến (không đọc gì của `staging`); `.env.prodtemp` sinh lại mỗi lần deploy — như production thật | CD (D, E1) |
 | Image | Build riêng với URL site production, tag `prodtemp-<sha>-*` (`NEXT_PUBLIC_*` nhúng lúc build — không dùng image `staging-*`) | CD build |
 | `APP_ENV` | API `production` (bắt buộc: chặn mã OTP test, bắt buộc SMS thật). Container web `staging` để mọi trang `noindex` — Google không index dữ liệu tạm | `production` |
 | Dữ liệu | Migrate + seed `system`, phần còn lại tạo tay | như nhau |
@@ -625,24 +625,24 @@ Sơ đồ: Caddy của staging (giữ 80/443) phục vụ thêm năm tên miền
 | File | Vai trò |
 | --- | --- |
 | `deploy/prodtemp/docker-compose.yml` | Stack tạm — không Caddy, tên service không trùng staging, `mem_limit` thấp |
-| `deploy/prodtemp/make-env.sh` | Sinh `.env.prodtemp` MỘT lần từ `.env.staging` + secret mới, SePay trống, MoMo/VNPAY tắt |
+| `deploy/prodtemp/render-env.mjs` | Dựng `.env.prodtemp` từ MỌI Variable + Secret của Environment `prodtemp` (trừ `VPS_*`); suy `DATABASE_URL` từ `POSTGRES_*` |
 | `deploy/prodtemp/xeprime-prodtemp.caddy.tmpl` | Mẫu khối site — deploy điền tên miền + khoá realm RIÊNG của bản tạm |
-| `deploy/prodtemp/deploy.sh` | Sao lưu → pull → migrate → app (`--wait` healthcheck) → `caddy validate` → `caddy reload` → dọn image |
-| `deploy/prodtemp/ssh-gate.sh` | Lệnh bắt buộc của khoá SSH deploy bản tạm — chỉ nhận `deploy <tag prodtemp-…>` |
-| `.github/workflows/deploy-prodtemp.yml` | Push `prodtemp` → build 4 image `prodtemp-<sha>-*` → chạy thử → đẩy GHCR → SSH (khoá bị khoá lệnh) chạy `deploy.sh` → smoke test từ ngoài |
+| `deploy/prodtemp/deploy.sh` | Pull → kiểm env mới bằng `validateEnv` của image api sắp chạy → thay env → sao lưu → migrate → app (`--wait`) → `caddy validate` → `caddy reload` → dọn image |
+| `deploy/prodtemp/ssh-gate.sh` | Lệnh bắt buộc của khoá SSH deploy bản tạm — chỉ nhận `deploy <tag prodtemp-…>`, file env ở stdin |
+| `.github/workflows/deploy-prodtemp.yml` | Push `prodtemp` → dựng env → build 4 image `prodtemp-<sha>-*` (bỏ qua nếu đã có) → chạy thử → đẩy GHCR → SSH (khoá bị khoá lệnh) deploy → smoke test từ ngoài |
 
-GitHub Environment **`prodtemp`** (Settings → Environments; Deployment branches: chỉ `prodtemp`) —
-dựng 30/10/2026:
+GitHub Environment **`prodtemp`** (Settings → Environments; Deployment branches: chỉ `prodtemp`) — dựng
+30/10/2026, là NGUỒN SỰ THẬT của mọi biến. Ban đầu chép giá trị từ staging rồi thay phần phải khác
+(như bảng A.1); phân loại Secret/Variable giống Environment staging:
 
-| Loại | Tên | Giá trị |
+| Nhóm | Ở đâu | Ghi chú |
 | --- | --- | --- |
-| Secret | `VPS_HOST` | `stg.xeprime.vn` |
-| Secret | `VPS_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 stg.xeprime.vn` |
-| Secret | `VPS_SSH_KEY` | Khoá RIÊNG của bản tạm (bước 2) — không dùng chung khoá deploy của staging |
-| Variable | `WEB_DOMAIN` · `PARTNER_DOMAIN` · `ADMIN_DOMAIN` · `API_DOMAIN` | `xeprime.vn` · `partner.xeprime.vn` · `admin.xeprime.vn` · `api.xeprime.vn` |
-| Variable | `NEXT_PUBLIC_APP_NAME` · `SESSION_COOKIE_NAME` | `XePrime` · `xp_session` (cookie phải TRÙNG `.env.prodtemp`) |
-| Variable | `NEXT_PUBLIC_FIREBASE_{API_KEY,PROJECT_ID,AUTH_DOMAIN,APP_ID}` | Cấu hình web của project Firebase `xeprime-staging` (công khai) |
-| Variable | `VPS_USER` | `xeprime` |
+| Hạ tầng deploy | Secret `VPS_HOST` · `VPS_KNOWN_HOSTS` · `VPS_SSH_KEY` (khoá RIÊNG, bước 2), Variable `VPS_USER` | KHÔNG vào file env |
+| Tên miền + URL | `WEB_DOMAIN` · `PARTNER_DOMAIN` · `ADMIN_DOMAIN` · `API_DOMAIN` · `APP_WEB_URL` · `WEB_*_URL` · `NEXT_PUBLIC_WEB_*_URL` · `API_PUBLIC_URL` · `CORS_ORIGINS` | `xeprime.vn` và ba subdomain |
+| Riêng của bản tạm | Secret `POSTGRES_PASSWORD` · `SESSION_JWT_SECRET` · `REALM_PROXY_SECRET` · `OTP_PEPPER` | Sinh mới 30/10/2026. **ĐỔI `POSTGRES_PASSWORD` = database từ chối kết nối** (volume giữ mật khẩu cũ) |
+| Nhìn thấy | `NEXT_PUBLIC_APP_NAME=XePrime` · `SESSION_COOKIE_NAME=xp_session` · `SMTP_FROM=XePrime <…>` · `MOBILE_AUTH_REDIRECT_URIS` (hai scheme) | Không mang chữ STG |
+| Chặn production | `APP_ENV=production` · `OTP_MODE=esms` · `INSURANCE_PARTNER=none` · `PAYMENT_GATEWAY_*=off` | KHÔNG có `OTP_BYPASS_CODE`, `MOMO_*`, `VNPAY_*` |
+| Dùng chung giá trị staging | eSMS · SMTP · R2 · Firebase · Vietmap · Calendar · OAuth · Telegram | A.1 |
 
 Một lần, theo thứ tự:
 
@@ -658,11 +658,7 @@ Một lần, theo thứ tự:
    secret `VPS_SSH_KEY` của Environment `prodtemp`, rồi xoá file khoá riêng khỏi máy.
    Kiểm: `ssh -i ~/.ssh/xeprime_prodtemp_deploy xeprime@stg.xeprime.vn whoami` phải bị TỪ CHỐI
    ("Khoá này chỉ được chạy: deploy …") — tức là khoá không mở được shell.
-3. Trên VPS, sinh file env:
-   ```bash
-   ssh xeprime@stg.xeprime.vn
-   cd /opt/xeprime && ./deploy/prodtemp/make-env.sh
-   ```
+3. Điền Environment `prodtemp` như bảng trên.
 4. Tạo nhánh `prodtemp` từ `staging` và push — workflow tự build và deploy:
    ```bash
    git push origin origin/staging:refs/heads/prodtemp
@@ -692,15 +688,22 @@ Một lần, theo thứ tự:
 6. Sao lưu hằng đêm (cần root, một lần): `sudo ./deploy/scripts/install-backup-timer.sh --env prodtemp`.
    `backup-db.sh`/`restore-db.sh` đọc `XP_COMPOSE_FILE` + `XP_APP_SERVICES` trong `.env.prodtemp`.
 7. SePay: tạo tài khoản MỚI gắn tài khoản ngân hàng KHÁC staging, webhook
-   `https://api.xeprime.vn/sepay/webhook`; điền bốn dòng `SEPAY_*` cuối `.env.prodtemp` rồi chạy lại
-   deploy (bước dưới) để API nạp.
+   `https://api.xeprime.vn/sepay/webhook` (chứng thực API Key); thêm vào Environment `prodtemp`:
+   Secret `SEPAY_API_KEY`, Variable `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME`
+   (đủ CẢ BỐN — thiếu một là API từ chối boot), rồi chạy lại deploy (dưới).
 8. Google/Facebook: thêm vào client/app của staging các redirect URI
    `https://xeprime.vn/api/auth/social/<provider>/callback` (và `partner.`, `admin.`) +
    `https://api.xeprime.vn/auth/social/<provider>/callback`.
 
-Cập nhật về sau: merge `staging` → `prodtemp`. Đổi giá trị env: sửa `.env.prodtemp` trên VPS rồi chạy
-lại bản đang chạy — `./deploy/prodtemp/deploy.sh --image <tag gốc đang chạy>` (cũng là lệnh rollback,
-với tag của lần trước; `.deploy-releases.prodtemp` liệt kê 3 bản còn trên máy).
+Cập nhật về sau:
+
+- **Code:** merge `staging` → `prodtemp`.
+- **Biến:** sửa ở GitHub → Environments → `prodtemp`, rồi Actions → *Deploy prodtemp* → lần chạy gần
+  nhất → **Re-run all jobs**. Image của commit đó đã có nên bỏ qua build (~2 phút). Biến sai luật env
+  production thì deploy dừng TRƯỚC khi đụng gì — file env và container cũ giữ nguyên. **Không sửa
+  `.env.prodtemp` trên VPS**: lần deploy kế tiếp ghi đè (bản trước còn ở `.env.prodtemp.prev`).
+- **Rollback:** trên VPS `./deploy/prodtemp/deploy.sh --image <tag prodtemp-… trước đó>` (giữ env hiện
+  tại; `.deploy-releases.prodtemp` liệt kê 3 bản còn trên máy).
 
 ### A.4 Bỏ bản tạm khi lên production thật
 
