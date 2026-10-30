@@ -55,6 +55,8 @@ const SUPPORT_ALLOWLIST = [
   'DriversController.assignable',
   'DriversController.assignments',
   'DriversController.list',
+  // Chi tiết một tài xế (tiền công tháng, độ tin cậy, xu hướng) — chỉ đọc, cùng capability xem tài xế.
+  'DriversController.overview',
   'DriversController.wageSettings',
   'HandoverQueueController.missingOdometer',
   'InvitesController.list',
