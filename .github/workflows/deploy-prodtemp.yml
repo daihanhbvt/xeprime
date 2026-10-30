@@ -4,12 +4,21 @@
 # thẳng): file compose/script của bản tạm được đọc từ checkout của staging trên VPS, nên staging
 # phải có chúng trước (deploy/prodtemp/deploy.sh, đầu file).
 #
+# Environment GitHub RIÊNG `prodtemp` — không đọc gì của `staging`, nên thêm/sửa biến ở đây không
+# chạm staging và ngược lại. Nó chỉ giữ thứ workflow cần (khai đủ ở runbook Phụ lục A.3):
+#   Secrets:   VPS_HOST · VPS_SSH_KEY (khoá RIÊNG, bị khoá lệnh — deploy/prodtemp/ssh-gate.sh)
+#              · VPS_KNOWN_HOSTS
+#   Variables: WEB_DOMAIN · PARTNER_DOMAIN · ADMIN_DOMAIN · API_DOMAIN · NEXT_PUBLIC_APP_NAME
+#              · SESSION_COOKIE_NAME · NEXT_PUBLIC_FIREBASE_{API_KEY,PROJECT_ID,AUTH_DOMAIN,APP_ID}
+#              · VPS_USER (tuỳ chọn) · VPS_SSH_PORT (tuỳ chọn)
+# Cấu hình LÚC CHẠY của app (khoá dịch vụ, database, secret phiên) nằm ở `.env.prodtemp` trên VPS
+# (deploy/prodtemp/make-env.sh) — không ở đây.
+#
 # Vì sao không dùng deploy.yml: nó dựng `.env.<môi trường>` từ GitHub Environment và chạy
 # docker-compose.prod.yml — tức là một Caddy THỨ HAI tranh cổng 80/443 với staging trên cùng máy.
-# Bản tạm chạy compose riêng không Caddy (deploy/prodtemp/docker-compose.yml) và file env sinh MỘT
-# lần trên VPS (deploy/prodtemp/make-env.sh).
 #
-# Khi lên production thật: xoá file này, nhánh `prodtemp` và thư mục deploy/prodtemp/ (Phụ lục A.4).
+# Khi lên production thật: xoá file này, nhánh `prodtemp`, Environment `prodtemp` và thư mục
+# deploy/prodtemp/ (Phụ lục A.4).
 name: Deploy prodtemp
 
 on:
@@ -25,14 +34,39 @@ jobs:
   deploy:
     name: Deploy production tạm
     runs-on: ubuntu-latest
-    # Cùng VPS với staging ⇒ dùng lại secret SSH của Environment `staging` (VPS_HOST, VPS_SSH_KEY,
-    # VPS_KNOWN_HOSTS) và Firebase web của nó — bản tạm dùng chung project Firebase của staging.
-    environment: staging
+    environment: prodtemp
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      # Thiếu một Variable là dừng NGAY, trước 15 phút build — không phải phát hiện ở smoke test
+      # rằng web nhúng URL rỗng.
+      - name: Kiểm Environment prodtemp
+        env:
+          V_WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+          V_PARTNER_DOMAIN: ${{ vars.PARTNER_DOMAIN }}
+          V_ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
+          V_API_DOMAIN: ${{ vars.API_DOMAIN }}
+          V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          V_SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
+          V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          V_NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          S_VPS_HOST: ${{ secrets.VPS_HOST }}
+          S_VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          S_VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          MISSING=''
+          for K in $(env | grep -oE '^[VS]_[A-Z_]+' | sort); do
+            [ -n "$(printenv "$K")" ] || MISSING="$MISSING ${K#?_}"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Environment prodtemp thiếu:$MISSING (runbook Phụ lục A.3)"
+            exit 1
+          fi
 
       - id: img
         env:
@@ -58,15 +92,13 @@ jobs:
           IMAGE: ${{ steps.img.outputs.image }}
           CACHE: gha
           CACHE_SCOPE: xeprime-prodtemp
-          NEXT_PUBLIC_WEB_MARKET_URL: https://xeprime.vn
-          NEXT_PUBLIC_WEB_PARTNER_URL: https://partner.xeprime.vn
-          NEXT_PUBLIC_WEB_ADMIN_URL: https://admin.xeprime.vn
-          # Tên app và tên cookie đặt CỨNG: Variable cùng tên của Environment staging mang chữ
-          # STG (`XePrime STG`, `xp_session_stg`) — nhúng vào bundle là người dùng thật thấy nó.
-          # Khớp với `.env.prodtemp` (deploy/prodtemp/make-env.sh).
-          NEXT_PUBLIC_APP_NAME: XePrime
-          SESSION_COOKIE_NAME: xp_session
-          # Firebase: CỐ Ý dùng project của staging (runbook Phụ lục A.1) — đọc từ Environment.
+          NEXT_PUBLIC_WEB_MARKET_URL: https://${{ vars.WEB_DOMAIN }}
+          NEXT_PUBLIC_WEB_PARTNER_URL: https://${{ vars.PARTNER_DOMAIN }}
+          NEXT_PUBLIC_WEB_ADMIN_URL: https://${{ vars.ADMIN_DOMAIN }}
+          NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          # Phải TRÙNG `SESSION_COOKIE_NAME` trong `.env.prodtemp` (giá trị lúc chạy thắng — đây
+          # chỉ là đai an toàn, xem deploy/Dockerfile).
+          SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -93,47 +125,44 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          if [ -z "${SSH_KEY:-}" ] || [ -z "${KNOWN_HOSTS:-}" ]; then
-            echo '::error::Thiếu secret VPS_SSH_KEY hoặc VPS_KNOWN_HOSTS (Environment staging).'
-            exit 1
-          fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      # KHÔNG `git checkout` trên VPS: thư mục đó là checkout của STAGING, và deploy.yml đặt nó
-      # đúng SHA của bản staging đang chạy. Đổi nó ở đây là staging chạy image cũ với compose mới.
+      # Khoá này bị `command=` trên VPS ép đi qua deploy/prodtemp/ssh-gate.sh: chỉ câu
+      # `deploy <tag prodtemp-…>` được nhận. KHÔNG `git checkout` trên VPS — thư mục đó là checkout
+      # của STAGING, đổi nó ở đây là staging chạy image cũ với compose mới.
       - name: Deploy lên VPS
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USER_NAME: ${{ vars.VPS_USER }}
           PORT: ${{ vars.VPS_SSH_PORT }}
-          APP_PATH: ${{ vars.VPS_PATH }}
           IMAGE: ${{ steps.img.outputs.image }}
         run: |
           set -euo pipefail
-          [ -n "${HOST:-}" ] || { echo '::error::Thiếu secret VPS_HOST.'; exit 1; }
-          A="${APP_PATH:-/opt/xeprime}"
-          ssh -i "$HOME/.ssh/id_deploy" -p "${PORT:-22}" -o BatchMode=yes "${USER_NAME:-xeprime}@$HOST" \
-            "cd '$A' && test -x deploy/prodtemp/deploy.sh || { echo 'Checkout staging trên VPS chưa có deploy/prodtemp — merge vào staging trước.' >&2; exit 1; } && ./deploy/prodtemp/deploy.sh --image '$IMAGE'"
+          ssh -i "$HOME/.ssh/id_deploy" -p "${PORT:-22}" -o BatchMode=yes \
+            "${USER_NAME:-xeprime}@$HOST" "deploy $IMAGE"
 
       # Từ BÊN NGOÀI: DNS, chứng chỉ TLS, khối Caddy và realm theo host — thứ healthcheck nội bộ
-      # không nhìn thấy.
+      # không nhìn thấy. Lần đầu Caddy còn đang xin chứng chỉ nên retry rộng tay.
       - name: Smoke test
+        env:
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+          PARTNER_DOMAIN: ${{ vars.PARTNER_DOMAIN }}
+          ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
         run: |
           set -euo pipefail
-          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
-            https://api.xeprime.vn/health | grep -q '"status":"ok"'
-          echo 'GET https://api.xeprime.vn/health -> ok'
-          for HOST in xeprime.vn partner.xeprime.vn admin.xeprime.vn; do
-            CODE="$(curl -sS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
-              -o /dev/null -w '%{http_code}' "https://$HOST/")"
+          C=(curl -sS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20)
+          "${C[@]}" -f "https://$API_DOMAIN/health" | grep -q '"status":"ok"'
+          echo "GET https://$API_DOMAIN/health -> ok"
+          for HOST in "$WEB_DOMAIN" "$PARTNER_DOMAIN" "$ADMIN_DOMAIN"; do
+            CODE="$("${C[@]}" -o /dev/null -w '%{http_code}' "https://$HOST/")"
             echo "GET https://$HOST/ -> $CODE"
             case "$CODE" in 2*|3*) ;; *) echo "::error::$HOST trả $CODE"; exit 1 ;; esac
-            curl -fsS --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 \
-              "https://$HOST/api/health" | grep -q '"status":"ok"' \
+            "${C[@]}" -f "https://$HOST/api/health" | grep -q '"status":"ok"' \
               || { echo "::error::https://$HOST/api/health không về tới API"; exit 1; }
           done
 
@@ -145,8 +174,8 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Image | \`${{ steps.img.outputs.image }}\` |"
-            echo "| Site | https://xeprime.vn · https://partner.xeprime.vn · https://admin.xeprime.vn |"
-            echo "| API | https://api.xeprime.vn/health |"
+            echo "| Site | https://${{ vars.WEB_DOMAIN }} · https://${{ vars.PARTNER_DOMAIN }} · https://${{ vars.ADMIN_DOMAIN }} |"
+            echo "| API | https://${{ vars.API_DOMAIN }}/health |"
             echo ""
             echo "Rollback: trên VPS chạy \`./deploy/prodtemp/deploy.sh --image <tag prodtemp-… trước đó>\`."
           } >> "$GITHUB_STEP_SUMMARY"

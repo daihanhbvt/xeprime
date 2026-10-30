@@ -595,7 +595,7 @@ thật thì dựng lại TỪ ĐẦU theo runbook trên, trên VPS mới, và b�
 | --- | --- | --- |
 | Máy | VPS staging, chạy như **site ngoài** qua cơ chế [`deployment.md` §10](deployment.md#10-site-của-dự-án-khác-trên-cùng-vps) — Caddy của staging xin chứng chỉ, stack tạm không có Caddy riêng, api/web tên `prod-api`/`prod-web`, `mem_limit` thấp | VPS riêng (B1) |
 | Domain | `xeprime.vn` · `partner.` · `admin.` · `api.xeprime.vn` (giữ nguyên khi chuyển) | như nhau |
-| Deploy | Push nhánh `prodtemp` (merge từ `staging`) → `.github/workflows/deploy-prodtemp.yml`. File env `.env.prodtemp` sinh **một lần** trên VPS, sửa tay — **không** do GitHub Environment sinh lại | CD (D, E1) |
+| Deploy | Push nhánh `prodtemp` (merge từ `staging`) → `.github/workflows/deploy-prodtemp.yml`, GitHub Environment RIÊNG `prodtemp` (không đọc gì của `staging`). Cấu hình lúc chạy `.env.prodtemp` sinh **một lần** trên VPS, sửa tay — **không** do GitHub sinh lại | CD (D, E1) |
 | Image | Build riêng với URL site production, tag `prodtemp-<sha>-*` (`NEXT_PUBLIC_*` nhúng lúc build — không dùng image `staging-*`) | CD build |
 | `APP_ENV` | API `production` (bắt buộc: chặn mã OTP test, bắt buộc SMS thật). Container web `staging` để mọi trang `noindex` — Google không index dữ liệu tạm | `production` |
 | Dữ liệu | Migrate + seed `system`, phần còn lại tạo tay | như nhau |
@@ -628,14 +628,36 @@ Sơ đồ: Caddy của staging (giữ 80/443) phục vụ thêm năm tên miền
 | `deploy/prodtemp/make-env.sh` | Sinh `.env.prodtemp` MỘT lần từ `.env.staging` + secret mới, SePay trống, MoMo/VNPAY tắt |
 | `deploy/prodtemp/xeprime-prodtemp.caddy.tmpl` | Mẫu khối site — deploy điền tên miền + khoá realm RIÊNG của bản tạm |
 | `deploy/prodtemp/deploy.sh` | Sao lưu → pull → migrate → app (`--wait` healthcheck) → `caddy validate` → `caddy reload` → dọn image |
-| `.github/workflows/deploy-prodtemp.yml` | Push `prodtemp` → build 4 image `prodtemp-<sha>-*` → chạy thử → đẩy GHCR → SSH chạy `deploy.sh` → smoke test từ ngoài |
+| `deploy/prodtemp/ssh-gate.sh` | Lệnh bắt buộc của khoá SSH deploy bản tạm — chỉ nhận `deploy <tag prodtemp-…>` |
+| `.github/workflows/deploy-prodtemp.yml` | Push `prodtemp` → build 4 image `prodtemp-<sha>-*` → chạy thử → đẩy GHCR → SSH (khoá bị khoá lệnh) chạy `deploy.sh` → smoke test từ ngoài |
+
+GitHub Environment **`prodtemp`** (Settings → Environments; Deployment branches: chỉ `prodtemp`) —
+dựng 30/10/2026:
+
+| Loại | Tên | Giá trị |
+| --- | --- | --- |
+| Secret | `VPS_HOST` | `stg.xeprime.vn` |
+| Secret | `VPS_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 stg.xeprime.vn` |
+| Secret | `VPS_SSH_KEY` | Khoá RIÊNG của bản tạm (bước 2) — không dùng chung khoá deploy của staging |
+| Variable | `WEB_DOMAIN` · `PARTNER_DOMAIN` · `ADMIN_DOMAIN` · `API_DOMAIN` | `xeprime.vn` · `partner.xeprime.vn` · `admin.xeprime.vn` · `api.xeprime.vn` |
+| Variable | `NEXT_PUBLIC_APP_NAME` · `SESSION_COOKIE_NAME` | `XePrime` · `xp_session` (cookie phải TRÙNG `.env.prodtemp`) |
+| Variable | `NEXT_PUBLIC_FIREBASE_{API_KEY,PROJECT_ID,AUTH_DOMAIN,APP_ID}` | Cấu hình web của project Firebase `xeprime-staging` (công khai) |
+| Variable | `VPS_USER` | `xeprime` |
 
 Một lần, theo thứ tự:
 
 1. Merge PR chứa các file trên vào `develop` → `staging` (checkout trên VPS phải có `deploy/prodtemp/`
    — workflow đọc file từ checkout của staging, không `git checkout` gì trên VPS).
-2. GitHub → Settings → Environments → **staging** → Deployment branches: thêm `prodtemp` (workflow
-   dùng lại secret SSH của staging vì cùng máy).
+2. Khoá SSH riêng, bị khoá lệnh (máy có quyền SSH admin vào VPS, Git Bash):
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C github-actions-prodtemp -f ~/.ssh/xeprime_prodtemp_deploy
+   ssh -i ~/.ssh/xeprime_admin xeprime@stg.xeprime.vn 'cat >> ~/.ssh/authorized_keys' \
+     <<< "restrict,command=\"/opt/xeprime/deploy/prodtemp/ssh-gate.sh\" $(cat ~/.ssh/xeprime_prodtemp_deploy.pub)"
+   ```
+   Dán TOÀN BỘ nội dung `~/.ssh/xeprime_prodtemp_deploy` (khoá riêng, gồm cả dòng BEGIN/END) vào
+   secret `VPS_SSH_KEY` của Environment `prodtemp`, rồi xoá file khoá riêng khỏi máy.
+   Kiểm: `ssh -i ~/.ssh/xeprime_prodtemp_deploy xeprime@stg.xeprime.vn whoami` phải bị TỪ CHỐI
+   ("Khoá này chỉ được chạy: deploy …") — tức là khoá không mở được shell.
 3. Trên VPS, sinh file env:
    ```bash
    ssh xeprime@stg.xeprime.vn
@@ -691,8 +713,9 @@ với tag của lần trước; `.deploy-releases.prodtemp` liệt kê 3 bản c
    rồi `docker compose -p xeprime-prodtemp --project-directory . -f deploy/prodtemp/docker-compose.yml
    --env-file .env.prodtemp down -v` — **kiểm tên project hai lần**, nhầm là xoá database staging.
 5. `sudo systemctl disable --now xeprime-backup@prodtemp.timer`; xoá `.env.prodtemp`,
-   `.deploy-releases.prodtemp`, image `prodtemp-*`.
+   `.deploy-releases.prodtemp`, image `prodtemp-*`, và dòng `github-actions-prodtemp` trong
+   `~xeprime/.ssh/authorized_keys`.
 6. Trong repo: xoá `deploy/prodtemp/`, `.github/workflows/deploy-prodtemp.yml`, nhánh `prodtemp`, và
-   `prodtemp` khỏi Deployment branches của Environment staging.
+   GitHub Environment `prodtemp`.
 7. Trỏ DNS sáu bản ghi sang VPS production thật, deploy theo E, phát hành bản app mới theo F và yêu
    cầu mọi máy cập nhật.
