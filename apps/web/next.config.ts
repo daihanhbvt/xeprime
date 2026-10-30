@@ -1,8 +1,16 @@
+import path from 'node:path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  // Image `web` (deploy/Dockerfile) chỉ chở `.next/standalone`: Next tự dò đúng những file mà
+  // server cần lúc chạy, thay vì cả cây node_modules của workspace (~1,8GB, gồm trình biên dịch).
+  // Gốc dò là GỐC REPO vì `@xeprime/*` nằm ngoài `apps/web` — dò từ `apps/web` sẽ bỏ sót chúng.
+  // Chỉ đổi kết quả `next build`; `next dev` không bị ảnh hưởng.
+  output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '../..'),
 
   // Không quảng cáo framework/phiên bản qua `X-Powered-By: Next.js` — chỉ giúp người dò lỗ hổng.
   poweredByHeader: false,

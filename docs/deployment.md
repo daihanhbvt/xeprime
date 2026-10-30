@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | PostgreSQL 16 | ~600 MB – 1.2 GB | `shared_buffers=512MB` + cache |
 | API (NestJS) | ~350 – 700 MB (+~230 MB khi đang đọc ảnh bằng lái) | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối. Worker Tesseract (ADR 0057) chỉ sống khi có lượt nộp bằng lái và tự tắt sau 3 phút rảnh — vẫn nằm trong `mem_limit: 1200m` |
-| Web (Next.js `next start`) | ~300 – 600 MB | 144 `page.tsx` cho ba site (06/10/2026), SSR vỏ + AntD |
+| Web (Next.js standalone `server.js`) | ~300 – 600 MB | 144 `page.tsx` cho ba site (06/10/2026), SSR vỏ + AntD |
 | Worker | ~120 – 250 MB | vòng lặp theo đồng hồ |
 | Caddy | ~30 MB | |
 | **Tổng lúc chạy** | **~1.5 – 2.7 GB** | |
@@ -112,7 +112,11 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
                              └──────────┘
 ```
 
-- **Một image** `xeprime-app:latest` chạy cả bốn tiến trình — lý do ghi ở đầu `deploy/Dockerfile`.
+- **Bốn image cho bốn vai trò**, dựng từ MỘT lần build (`deploy/Dockerfile`, định nghĩa ở
+  `deploy/docker-bake.hcl`): `-web` (Next `standalone`), `-api` · `-worker` (dependency
+  production, `pnpm deploy --prod`), `-tools` (Prisma CLI + tsx cho migrate/seed). Cùng tag gốc
+  của bản phát hành, ví dụ `…:staging-a1b2c3d-api`. Container đang chạy không chở trình biên dịch
+  hay công cụ dev; lý do và đánh đổi ghi ở đầu `deploy/Dockerfile`.
 - **Ba site web, MỘT Next app** ([ADR 0051](decisions/0051-product-surfaces-web-zones-and-mobile-variants.md)):
   `xeprime.vn` (khách) · `partner.xeprime.vn` (gian hàng gói + chủ xe tuyến hoa hồng) ·
   `admin.xeprime.vn` (nhân sự nền tảng). `proxy.ts` rewrite theo host (`NEXT_PUBLIC_XP_ZONE_MODE=host`);
@@ -408,10 +412,11 @@ cd /opt/xeprime
 export XP_ENV_FILE=.env.production
 
 # BẮT BUỘC khi image đến từ GHCR (đường CD, §9). Thiếu nó thì compose rơi về
-# `xeprime-app:latest` — cái tag chỉ tồn tại khi build TẠI CHỖ — và báo
-# "pull access denied for xeprime-app". Lấy thẳng tag đang chạy để không gõ sai sha:
+# `xeprime-app:local-*` — tag chỉ tồn tại khi build TẠI CHỖ — và báo
+# "pull access denied for xeprime-app". Lấy thẳng tag đang chạy để không gõ sai sha; `sed` bỏ
+# hậu tố `-api` để còn tag GỐC của bản phát hành (compose tự ghép `-tools` cho `migrate`):
 export XP_IMAGE="$(docker compose -p xeprime-production -f docker-compose.prod.yml \
-  --env-file .env.production ps --format '{{.Image}}' api | head -1)"
+  --env-file .env.production ps --format '{{.Image}}' api | head -1 | sed 's/-api$//')"
 
 # `read -rs` không hiện mật khẩu ra màn hình và không để nó lại trong lịch sử shell.
 read -rsp 'Mật khẩu platform admin: ' PLATFORM_ADMIN_PASSWORD; echo
@@ -463,7 +468,7 @@ lỏng ra. Cùng cách chia mà `apps/api/src/config/env.schema.ts` đã dùng.
 cd /opt/xeprime
 export XP_ENV_FILE=.env.staging
 export XP_IMAGE="$(docker compose -p xeprime-staging -f docker-compose.prod.yml \
-  --env-file .env.staging ps --format '{{.Image}}' api | head -1)"
+  --env-file .env.staging ps --format '{{.Image}}' api | head -1 | sed 's/-api$//')"
 
 read -rsp 'Mật khẩu platform admin: ' PW_ADMIN; echo
 read -rsp 'Mật khẩu chung cho tài khoản demo: ' PW_DEMO; echo
@@ -497,7 +502,7 @@ này trên production là mất dữ liệu khách hàng.
 cd /opt/xeprime
 export XP_ENV_FILE=.env.staging
 COMPOSE=(docker compose -p xeprime-staging -f docker-compose.prod.yml --env-file .env.staging)
-export XP_IMAGE="$("${COMPOSE[@]}" ps -a --format '{{.Image}}' api | head -1)"
+export XP_IMAGE="$("${COMPOSE[@]}" ps -a --format '{{.Image}}' api | head -1 | sed 's/-api$//')"
 
 ./deploy/scripts/backup-db.sh --env staging          # 1. có bản lùi trước đã
 "${COMPOSE[@]}" stop api web worker                  # 2. không ai ghi vào giữa chừng
@@ -547,8 +552,9 @@ cd /opt/xeprime && ./deploy/scripts/deploy.sh                  # máy production
 cd /opt/xeprime && ./deploy/scripts/deploy.sh --env staging    # máy staging  — BUILD tại chỗ
 ```
 
-> Build tại chỗ ngốn ~3,5GB RAM và 10–20 phút trên E5 v4. Đường CI (§9) truyền thêm
-> `--image <ref>` và VPS chỉ `docker compose pull` — khoảng 1–2 phút.
+> Build tại chỗ (`docker buildx bake -f deploy/docker-bake.hcl`, `NEXT_PUBLIC_*` đọc từ file env)
+> ngốn ~3,5GB RAM và 10–20 phút trên E5 v4. Đường CI (§9) truyền thêm `--image <tag gốc>` và VPS
+> chỉ `docker compose pull` — khoảng 1–2 phút.
 
 Thứ tự trong script là cố định và **không được đổi**:
 
@@ -663,7 +669,7 @@ Phía Windows: **`tools/backup-pull/README.md`**.
 | API trả `REALM_NOT_ALLOWED` cho mọi request của một site | Caddy không gắn được realm: `REALM_PROXY_SECRET` của Caddy và API lệch nhau, hoặc khối site đó thiếu `import site_api <realm>` |
 | Rate limit chặn nhầm cả hệ thống | `TRUST_PROXY_HOPS` chưa đặt = 1 ⇒ mọi request mang cùng một IP |
 | Google/Facebook trả `redirect_uri_mismatch` | Thiếu redirect URI của ĐÚNG site trong console provider (mỗi site web một URI + một cho app native — §2.3) |
-| Đĩa đầy dần | Log container (đã giới hạn ở `vps-bootstrap.sh`) hoặc image cũ — `docker image prune -a` |
+| Đĩa đầy dần | `deploy.sh` giữ 3 bản phát hành gần nhất của MỖI môi trường (lịch sử ở `.deploy-releases.<env>`, xoá file đó là mồi lại từ image đang có). Còn đầy: cache BuildKit sót từ build tại chỗ — `docker builder prune -f`. Đừng `docker image prune -a`: nó xoá luôn bản rollback và image của site ngoài đang dừng |
 | `docker compose ps` trả về rỗng dù stack đang chạy | Thiếu `-p xeprime-<môi trường>` — compose đang nhìn vào một project khác (§5) |
 | Deploy xong nhưng database trống trơn | `--env` lệch với `.env.<tên>` ⇒ project khác ⇒ volume khác. Kiểm `docker volume ls` |
 | Job deploy đỏ ở bước "Thiếu giá trị bắt buộc" | Chưa khai Variable/Secret đó ở Environment tương ứng (§9.2) |
@@ -863,7 +869,10 @@ release là nguồn duy nhất, nên một lần rollback không để lại rul
 
 ### 9.3 Image mang nhãn môi trường — không dùng chéo
 
-`ghcr.io/daihanhbvt/xeprime:staging-<sha>` và `:production-<sha>`.
+`ghcr.io/daihanhbvt/xeprime:staging-<sha>` và `:production-<sha>` là tag GỐC của một bản phát
+hành; bốn image thật mang thêm hậu tố vai trò (`…-web` · `-api` · `-worker` · `-tools`). Ô
+`image_tag` khi rollback nhận tag gốc. Tag trước 30/10/2026 là một image chung không hậu tố — vẫn
+rollback được, vì VPS checkout đúng SHA đó nên chạy compose/deploy.sh của thời một-image.
 
 **Không phải để cho gọn.** Next **nhúng cứng URL của ba site (`NEXT_PUBLIC_WEB_*_URL`) vào bundle
 lúc build**, nên image build cho staging dựng mọi link khác site ("Đăng xe cho thuê", "Về trang thuê
@@ -969,8 +978,8 @@ Mobile là **hai Expo project mỏng** + một package dùng chung (ADR 0051 §5
 
 Cả ba **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile` chỉ cài
 `--filter @xeprime/{api,web,worker,prisma}...` (chỉ COPY manifest của ba package mobile để
-`--frozen-lockfile` khớp), rồi `rm -rf apps/mobile` (~1 GB Expo/RN); `.dockerignore` cũng gạt
-`apps/mobile/*/{android,ios,.expo}`.
+`--frozen-lockfile` khớp), và bốn image cuối chỉ nhận đầu ra đã cắt gọn của web/api/worker/prisma;
+`.dockerignore` cũng gạt `apps/mobile/*/{android,ios,.expo}`.
 
 App không phải thứ "deploy" — nó là file `.apk`/`.aab`/`.ipa` build qua **EAS Build** (mỗi app một
 `eas.json`, ba profile `development` · `preview` · `production`) rồi phát hành qua TestFlight /
@@ -1014,7 +1023,8 @@ Luật:
    mục chỉ thuộc user deploy (`xeprime`); trao SSH của user này cho CI của dự án khác là trao luôn
    quyền đó.
 5. Deploy của XePrime **không đụng** app ngoài: `--remove-orphans` chỉ trong project
-   `xeprime-<env>`, `docker image prune` chỉ dọn image mồ côi.
+   `xeprime-<env>`, `docker image prune` chỉ dọn image mồ côi, và bước dọn bản phát hành cũ chỉ
+   chạm tag `<env>-…` của repository XePrime.
 
 Đánh đổi đã chấp nhận: site ngoài đặt trên máy staging nên **sống theo máy staging** — dựng lại
 VPS hay sự cố Caddy là nó cùng mất.
