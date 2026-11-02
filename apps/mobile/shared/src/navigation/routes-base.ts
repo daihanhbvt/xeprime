@@ -82,8 +82,6 @@ const VEHICLE_MANAGE_SECTION_PATHNAME = {
     '/account/vehicles/[id]/manage/self-drive/optimization',
   [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]:
     '/account/vehicles/[id]/manage/with-driver/optimization',
-  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES]:
-    '/account/vehicles/[id]/manage/with-driver/surcharges',
 } as const satisfies Record<VehicleManageSection, string>;
 
 /**
@@ -613,8 +611,9 @@ export const ROUTES = {
             pathname: '/manage/vehicles/[id]/edit/with-driver-optimization',
             params: anchored,
           };
+        // Phụ phí tài xế đã gỡ (ADR 0075) — bí danh mở "Nhận chuyến & thủ tục" có tài xế.
         case VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES:
-          return { pathname: '/manage/vehicles/[id]/edit/with-driver-surcharges', params };
+          return { pathname: '/manage/vehicles/[id]/edit/with-driver-optimization', params };
         case VEHICLE_EDIT_TAB.DOCUMENTS:
           return { pathname: '/manage/vehicles/[id]/edit/documents', params };
         case VEHICLE_EDIT_TAB.MAINTENANCE:
@@ -722,6 +721,18 @@ export const ROUTES = {
 
     /** Tài xế của gian hàng (SHP-06). */
     drivers: (): Href => '/manage/drivers',
+    /**
+     * Chi tiết một tài xế (web `DriverDetailDrawer`, ADR 0075) — route THẬT, deep-link được.
+     * `month` (YYYY-MM) / `tab` mở đúng tháng thống kê / tab mà danh sách đang xem.
+     */
+    driverDetail: (driverId: string, opts?: { month?: string; tab?: string }): Href => ({
+      pathname: '/manage/drivers/[id]',
+      params: {
+        id: driverId,
+        ...(opts?.month ? { month: opts.month } : {}),
+        ...(opts?.tab ? { tab: opts.tab } : {}),
+      },
+    }),
 
     /**
      * Inbox GIAN HÀNG (`side = shop`) — cùng địa chỉ với web (`/manage/chat`).

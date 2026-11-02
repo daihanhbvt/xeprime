@@ -75,7 +75,7 @@ import {
   type CurrentPlace,
 } from '@/features/locations/components/CurrentLocationButton';
 import { RentalRangeSheet } from './RentalRangeSheet';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
+
 
 /*
  * Tab dịch vụ: THỨ TỰ và NHÃN cố định như web (`Listings.detail.booking.tabs`) — tự lái đọc là
@@ -208,7 +208,7 @@ export function ListingBookingCard({
   const fmt = useAppFormat();
   const colors = useColors();
   const domainLabel = useDomainLabel();
-  const surchargeLine = useDriverSurchargeLine();
+  const tDriverPrice = useTranslations('Listings.detail.withDriverPrice');
   // Như web: xe không khai dịch vụ nào coi như chỉ tự lái.
   const services: readonly string[] = listing.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE];
   const longTerm = trip.serviceType === SERVICE_TYPE.LONG_TERM;
@@ -433,7 +433,7 @@ export function ListingBookingCard({
   const noLongTermPackage = longTerm && packages.length === 0;
   const tPrice = useTranslations('Common.components.price');
   const feeLineSublabel = useFeeLineSublabel();
-  const surchargeRules = listing.driverSurchargeRules ?? [];
+
   const pickupAddress = listing.pickupPoint?.address || listing.shopProvince || null;
 
   const set = (patch: Partial<ListingTripDraft>) => onChange(patch);
@@ -716,16 +716,16 @@ export function ListingBookingCard({
                 onChangeText={(value) => set({ destination: value })}
               />
             ) : null}
-            {surchargeRules.length > 0 ? (
-              <YStack gap={space.xs}>
-                <Label text={t('driver.surchargesTitle')} size={fontSize.bodySm} />
-                {surchargeRules.map((rule) => (
-                  <Text key={rule.kind} col={colors.textMuted} fos={fontSize.bodySm}>
-                    {`• ${surchargeLine(rule)}`}
-                  </Text>
-                ))}
-              </YStack>
-            ) : null}
+            {/* Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. */}
+            <YStack gap={space.xs}>
+              <Label text={tDriverPrice('title')} size={fontSize.bodySm} />
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {`• ${tDriverPrice('included')}`}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {`• ${tDriverPrice('excluded')}`}
+              </Text>
+            </YStack>
           </YStack>
         ) : (
           <YStack gap={space.sm}>

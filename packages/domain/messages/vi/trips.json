@@ -1,6 +1,6 @@
 {
   "list": {
-    "heading": "Chuyến của tôi",
+    "heading": "Chuyến đi",
     "sub": "Quản lý hành trình và thông tin chuyến đi của bạn",
     "tabLabel": "{label} ({count})",
     "tabsLabel": "Nhóm chuyến đi",
@@ -407,7 +407,7 @@
   },
   "payment": {
     "back": "Chi tiết chuyến",
-    "backToTrips": "Chuyến của tôi",
+    "backToTrips": "Chuyến đi",
     "title": "Thanh toán giữ chỗ",
     "subtitle": "Chuyến thuê {vehicle}",
     "notFoundTitle": "Không tìm thấy chuyến",
@@ -466,7 +466,7 @@
     "limitBody": "Bạn chưa thể đặt thêm xe. Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc — thanh toán hoặc huỷ bớt một chuyến để tiếp tục đặt.",
     "limitBodyBooking": "Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc. Thanh toán hoặc huỷ bớt một chuyến bên dưới, rồi quay lại đặt xe này.",
     "limitTitleFallback": "Bạn đang có quá nhiều chuyến chờ thanh toán",
-    "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến của tôi, rồi quay lại đặt xe này.",
+    "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến đi, rồi quay lại đặt xe này.",
     "viewTrips": "Xem chuyến của tôi"
   },
   "requestView": {
@@ -560,7 +560,7 @@
     "vehicle": "Chi tiết xe",
     "request": "Gửi yêu cầu thuê xe",
     "account": "Tài khoản của tôi",
-    "trips": "Chuyến của tôi",
+    "trips": "Chuyến đi",
     "tripDetail": "Chi tiết chuyến"
   },
   "closed": {

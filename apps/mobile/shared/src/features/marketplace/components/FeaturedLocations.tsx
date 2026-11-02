@@ -11,6 +11,7 @@ import Svg, {
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { images } from '@/assets';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { ExploreSearchParams } from '@/navigation/routes-base';
@@ -160,7 +161,7 @@ export function FeaturedLocations({
   };
   const t = useTranslations('Home.destinations');
   const fmt = useAppFormat();
-  const { destinations } = useSearchExperience();
+  const { destinations, destinationsLoading } = useSearchExperience();
   const { width } = useWindowDimensions();
   const byCode = new Map((destinations ?? []).map((item) => [item.provinceCode, item]));
 
@@ -253,6 +254,16 @@ export function FeaturedLocations({
                           })}
                         </Text>
                       ) : null}
+                    </XStack>
+                  ) : destinationsLoading ? (
+                    // Giữ chỗ dòng số liệu khi danh mục tỉnh chưa về — chữ hiện ra không đẩy thẻ.
+                    <XStack w="100%" jc="space-between" gap={space.sm}>
+                      <YStack w="36%">
+                        <Skeleton height={14} />
+                      </YStack>
+                      <YStack w="30%">
+                        <Skeleton height={14} />
+                      </YStack>
                     </XStack>
                   ) : null}
                 </YStack>

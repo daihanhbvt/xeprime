@@ -1,13 +1,16 @@
-import { useLocalSearchParams } from 'expo-router';
-import { OWNER_STAGE } from '@xeprime/types';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { VehicleSurchargesScreen } from '@/features/vehicle-manage/VehicleSurchargesScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 
-export default function ManageOwnerLiteVehicleWithDriverSurchargesRoute() {
+/**
+ * Đường dẫn CŨ — phụ phí tài xế đã gỡ (ADR 0075): giá có tài xế là giá trọn gói. Link cũ mở
+ * "Nhận chuyến & thủ tục" của dịch vụ có tài xế (cùng chuyển hướng với trang web).
+ */
+export default function LegacyWithDriverSurchargesRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-      <VehicleSurchargesScreen vehicleId={id} />
-    </OwnerGate>
+    <Redirect
+      href={ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION)}
+    />
   );
 }

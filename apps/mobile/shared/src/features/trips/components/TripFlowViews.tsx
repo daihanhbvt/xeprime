@@ -384,7 +384,7 @@ export function HoldPaymentCard({
  * 0024). Bảng kê chỉ hiện khi server nói nó còn khớp số trên đơn (`finance.breakdown`) và chưa có
  * phát sinh; lệch thì thẻ tiền đầy đủ `TripFinanceCard`. Liên hệ mở theo `canContact` (ADR 0056).
  */
-export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
+export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) {
   const colors = useColors();
   const t = useTranslations('Trips.confirmed');
   const checklistRef = useRef<View>(null);
@@ -454,7 +454,7 @@ export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
       <TripRequestTripCard trip={trip} listing={listing} ownerAction={ownerAction} />
 
       {/* Người sẽ đến đón — chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
-      <TripDriverCard trip={trip} />
+      <TripDriverCard trip={trip} onCancel={onCancel} />
 
       <View ref={checklistRef} collapsable={false}>
         <PickupChecklist trip={trip} listing={listing} />

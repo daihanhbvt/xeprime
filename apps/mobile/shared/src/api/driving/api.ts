@@ -9,6 +9,7 @@ export type DriverEmployer = Schemas['DriverEmployerDto'];
 export type DriverTrip = Schemas['DriverTripDto'];
 export type DriverTripDetail = Schemas['DriverTripDetailDto'];
 export type DriverPendingCounts = Schemas['DriverPendingCountsDto'];
+export type DropDriverTripBody = Schemas['DropDriverTripDto'];
 
 // Phạm vi liên kết dùng chung với API và app native (@xeprime/types).
 import type { DriverLinkScope } from '@xeprime/types';
@@ -59,6 +60,7 @@ export const drivingApi = {
   acceptTrip: (id: string) =>
     getApiClient().post<DriverTripDetail>(`${one('/driver/trips', id)}/accept`),
   declineTrip: (id: string) => getApiClient().post<unknown>(`${one('/driver/trips', id)}/decline`),
-  /** Trả lại chuyến đã nhận — trong cửa sổ `releaseUntil` (sửa ADR 0063 điều 6). Đơn không bị huỷ. */
-  releaseTrip: (id: string) => getApiClient().post<unknown>(`${one('/driver/trips', id)}/release`),
+  /** Báo sự cố / rút khỏi chuyến đã nhận (ADR 0074). Đơn không bị huỷ; trước `releaseUntil` không phạt. */
+  dropTrip: (id: string, body: DropDriverTripBody) =>
+    getApiClient().post<unknown>(`${one('/driver/trips', id)}/drop`, body),
 };

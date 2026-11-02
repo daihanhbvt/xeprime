@@ -26,7 +26,8 @@ export const VEHICLE_MANAGE_SECTION = {
   SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
   /** "Nhận chuyến & thủ tục" của có tài xế. */
   WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
-  WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
+  // Không có mục phụ phí: giá có tài xế là giá TRỌN GÓI, phụ phí tài xế đã gỡ (ADR 0075). Route cũ
+  // `with-driver/surcharges` chuyển hướng về "Nhận chuyến & thủ tục".
 } as const;
 
 export type VehicleManageSection =
@@ -132,11 +133,7 @@ export const VEHICLE_MANAGE_NAV: readonly VehicleManageNavGroup[] = [
         labelKey: 'items.bookingTerms',
         icon: 'shield-checkmark-outline',
       },
-      {
-        section: VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
-        labelKey: 'items.surcharges',
-        icon: 'grid-outline',
-      },
+
     ],
   },
   /*

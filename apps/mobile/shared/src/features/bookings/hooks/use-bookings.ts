@@ -16,6 +16,7 @@ import {
   type TransitionBookingInput,
   type UpdateBookingInput,
   type UpdateDeliveryFeeInput,
+  type UpdateDriverWageInput,
 } from '../api';
 
 /**
@@ -95,8 +96,8 @@ export function useUpdateDeliveryFee(id: string) {
 }
 
 /**
- * Gán/bỏ gán tài xế liên kết (`driverId: null` là bỏ gán TƯỜNG MINH), hoặc ghi tài xế ngoài hệ
- * thống (ADR 0067). Response là đơn đã cập nhật, ghi thẳng vào cache detail.
+ * Gán/bỏ gán tài xế liên kết (`driverId: null` là bỏ gán TƯỜNG MINH — ADR 0074 điều 4: không còn
+ * tài xế ngoài hệ thống), kèm `wageAmount` tuỳ chọn (ADR 0075). Response là đơn đã cập nhật.
  */
 export function useAssignDriver(id: string) {
   const queryClient = useQueryClient();
@@ -117,9 +118,42 @@ export function useAssignDriver(id: string) {
  */
 export function useBookingDriverHistory(id: string, enabled: boolean) {
   return useQuery({
-    queryKey: [...queryKeys.bookings.detail(id), 'driver-history'] as const,
+    queryKey: bookingDriverHistoryKey(id),
     queryFn: () => bookingsApi.driverHistory(id),
     enabled,
+  });
+}
+
+/** Khoá lịch sử tài xế của đơn — dùng chung cho query và mutation sửa tiền công (như web). */
+export function bookingDriverHistoryKey(id: string) {
+  return [...queryKeys.bookings.detail(id), 'driver-history'] as const;
+}
+
+/**
+ * Số liệu tiền công cho hộp gán (ADR 0075). Khoá DƯỚI `bookings.detail(id)` để đổi lịch đơn hay
+ * đổi mức mặc định rồi làm mới chi tiết đơn cũng làm mới gợi ý.
+ */
+export function useDriverWageQuote(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.bookings.detail(id), 'driver-wage-quote'] as const,
+    queryFn: () => bookingsApi.driverWageQuote(id),
+    enabled: enabled && id.length > 0,
+  });
+}
+
+/**
+ * Sửa tiền công của một lượt gán (ADR 0075). Response là lịch sử tài xế mới — ghi thẳng vào
+ * cache; thống kê tháng ở màn Tài xế đổi theo. Tiền công không phải một dòng tiền của đơn.
+ */
+export function useUpdateDriverWage(bookingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assignmentId, body }: { assignmentId: string; body: UpdateDriverWageInput }) =>
+      bookingsApi.updateDriverWage(bookingId, assignmentId, body),
+    onSuccess: (history) => {
+      queryClient.setQueryData(bookingDriverHistoryKey(bookingId), history);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
+    },
   });
 }
 

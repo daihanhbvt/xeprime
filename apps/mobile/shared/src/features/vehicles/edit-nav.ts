@@ -104,7 +104,7 @@ export function vehicleEditNavGroups({
         'items.bookingTerms',
         'shield-checkmark-outline',
       ),
-      item(VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, 'items.surcharges', 'list-outline'),
+
     ]),
     // Dài hạn không có thiết lập vận hành nào — nhóm chỉ mang công tắc + lời nhắc giá tháng.
     service('longTerm', 'groups.longTerm', SERVICE_TYPE.LONG_TERM, []),
@@ -129,7 +129,6 @@ export function vehicleEditNavGroups({
 const SERVICE_OF_TAB: Partial<Record<VehicleEditTab, ServiceType>> = {
   [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: SERVICE_TYPE.SELF_DRIVE,
   [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: SERVICE_TYPE.WITH_DRIVER,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: SERVICE_TYPE.WITH_DRIVER,
 };
 
 export function editTabServiceType(tab: VehicleEditTab): ServiceType | null {

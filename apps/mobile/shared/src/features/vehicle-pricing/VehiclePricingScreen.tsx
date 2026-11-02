@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MoneyField } from '@/components/ui/MoneyField';
+import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
 import type { PolicyFormValues } from '@/features/rental-policies/schema';
 import { NumberField } from '@/components/ui/NumberField';
@@ -611,6 +612,8 @@ function VehiclePricingForm({
                   hint={t('withDriver.oneWayHint')}
                   editable={canEdit}
                 />
+                {/* Giá trên là tiền KHÁCH trả; tiền công tài xế là mức chung của bên thuê (ADR 0075). */}
+                <WithDriverWageNote />
                 <CalendarPriceLink href={calendarHref} />
               </YStack>
             </Card>

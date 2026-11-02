@@ -34,9 +34,8 @@ import { AssignDriverSheet } from './AssignDriverSheet';
 
 const NOTE_MAX = 2000;
 /**
- * Giá trị chọn đại diện tài xế NGOÀI HỆ THỐNG đang ghi trên đơn (ADR 0067) — không có id liên kết,
- * như `EXTERNAL_DRIVER` của web. Giữ nguyên là không gửi gì; sửa tên/SĐT làm ở khối Tài xế của
- * chi tiết đơn.
+ * Giá trị chọn đại diện tài xế NGOÀI HỆ THỐNG còn ghi trên đơn CŨ (ADR 0067) — không có id liên kết,
+ * như `EXTERNAL_DRIVER` của web. Chỉ còn để đọc/gỡ (ADR 0074 điều 4): giữ nguyên là không gửi gì.
  */
 const EXTERNAL_DRIVER = '__external__';
 

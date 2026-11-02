@@ -114,7 +114,8 @@ function AppToast() {
         onPress={onPress}
         disabled={!onPress}
         accessibilityRole={onPress ? 'button' : undefined}
-        style={styles.press}
+        // Nền ĐẶC dưới lớp màu preset: `*Surface` ở dark theme bán trong suốt, header lộ xuyên qua toast.
+        style={[styles.press, { backgroundColor: colors.surface, borderRadius: radius.md }]}
       >
       <XStack
         width="100%"

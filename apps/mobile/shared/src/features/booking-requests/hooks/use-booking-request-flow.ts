@@ -162,6 +162,8 @@ export function useDeliveryDistance(
 export const BOOKING_BLOCKED = {
   SHOP_ACCOUNT: 'shopAccount',
   OWN_VEHICLE: 'ownVehicle',
+  /** Gian hàng không nhận khách này (mặt công khai của CUSTOMER_BLOCKED) — chỉ có nút Đóng. */
+  SHOP_NOT_ACCEPTING: 'shopNotAccepting',
 } as const;
 
 export type BookingBlocked = (typeof BOOKING_BLOCKED)[keyof typeof BOOKING_BLOCKED];
@@ -281,6 +283,7 @@ export function useBookingRequestFlow(vehicleId: string) {
       const code = getErrorCode(e);
       if (code === API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK) return BOOKING_BLOCKED.SHOP_ACCOUNT;
       if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) return BOOKING_BLOCKED.OWN_VEHICLE;
+      if (code === API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER) return BOOKING_BLOCKED.SHOP_NOT_ACCEPTING;
       return null;
     },
     isLongTerm: (serviceType: string) => serviceType === SERVICE_TYPE.LONG_TERM,

@@ -8,12 +8,10 @@ import * as yup from 'yup';
 import {
   CUSTOMER_DOCUMENT_TYPE,
   COLLATERAL_MODE,
-  DRIVER_DEPOSIT_MODE_VALUES,
   IDENTITY_VERIFY_METHOD_VALUES,
   POLICY_SOURCE,
   RENTAL_TERMS_MAX_LENGTH,
   SERVICE_TYPE,
-  isDriverDepositModeSupported,
   requiredIdentityDocuments,
   type ServiceType,
 } from '@xeprime/types';
@@ -65,10 +63,6 @@ const settingSchema = yup.object({
     .defined(),
   requireTermsAcceptance: yup.boolean().defined(),
   termsText: yup.string().max(RENTAL_TERMS_MAX_LENGTH).defined().default(''),
-  depositMode: yup
-    .string()
-    .oneOf([...DRIVER_DEPOSIT_MODE_VALUES])
-    .defined(),
 });
 type SettingValues = yup.InferType<typeof settingSchema>;
 type FormValues = PolicyFormValues & SettingValues;
@@ -78,7 +72,8 @@ type FormValues = PolicyFormValues & SettingValues;
  *
  *  - TỰ LÁI: hình thức bảo đảm = `RentalPolicy.collateralMode`; giấy tờ xuất trình; cách đối
  *    chiếu; điều khoản + bắt khách đồng ý.
- *  - CÓ TÀI XẾ: cọc giữ chuyến là `depositMode` RIÊNG; mức hệ thống chưa thu được thì khoá.
+ *  - CÓ TÀI XẾ: chỉ giấy tờ, cách đối chiếu và điều khoản. KHÔNG có ô cọc giữ chuyến (web gỡ
+ *    29/10/2026): tiền giữ chỗ do nền tảng đặt và thu cho mọi đơn (ADR 0033 · 0066).
  *
  * `isManage` = đang ở cổng quản lý (web `useWorkspace().isManage`). Khu tài khoản: chủ xe không
  * có trang chính sách gian hàng, nên khối bảo đảm sửa thẳng, không banner kế thừa/nút mở khoá.
@@ -180,7 +175,6 @@ function TermsForm({
       identityVerifyMethod: setting.identityVerifyMethod,
       requireTermsAcceptance: setting.requireTermsAcceptance,
       termsText: setting.termsText ?? '',
-      depositMode: setting.depositMode,
     }),
     [pricing.policy, pricing.shopPolicy, setting],
   );
@@ -222,14 +216,6 @@ function TermsForm({
         identityVerifyMethod: next.identityVerifyMethod,
         requireTermsAcceptance: next.requireTermsAcceptance,
         termsText: next.termsText.trim() || null,
-        /*
-         * Chỉ gửi chế độ cọc mà hệ thống THU được (`DRIVER_DEPOSIT_MODE_SUPPORTED`). Mức khác là
-         * lựa chọn khoá ở giao diện; lọt tới đây thì bỏ qua thay vì ghi một % không có luồng thu —
-         * server cũng từ chối.
-         */
-        ...(withDriver && isDriverDepositModeSupported(next.depositMode)
-          ? { depositMode: next.depositMode }
-          : {}),
       });
 
       /*
@@ -263,37 +249,12 @@ function TermsForm({
     value,
     label: domainLabel('identityVerifyMethod', value),
   }));
-  const depositOptions = DRIVER_DEPOSIT_MODE_VALUES.map((mode) => ({
-    value: mode,
-    label: domainLabel('driverDepositMode', mode),
-    /* Mức hệ thống chưa THU được thì khoá kèm lý do ngay dưới nhãn — không lưu một % chết. */
-    ...(isDriverDepositModeSupported(mode)
-      ? {}
-      : { hint: t('depositUnsupported'), disabled: true }),
-  }));
 
   const saving = patch.isPending || savePricing.isPending;
 
   return (
     <YStack gap={space.md}>
-      {withDriver ? (
-        <Card>
-          <YStack gap={space.sm}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {t('depositTitle')}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('depositNote')}
-            </Text>
-            <RadioField
-              control={control}
-              name="depositMode"
-              options={depositOptions}
-              disabled={!canEdit}
-            />
-          </YStack>
-        </Card>
-      ) : (
+      {withDriver ? null : (
         <Card>
           <YStack gap={space.sm}>
             {!editingCollateral ? (

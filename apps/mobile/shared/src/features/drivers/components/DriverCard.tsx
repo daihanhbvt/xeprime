@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -15,6 +16,7 @@ import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
 import type { IconName } from '@/components/ui/Chip';
 import { IconLine } from '@/components/ui/IconLine';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -22,7 +24,7 @@ import type { Driver } from '../api';
 import { DriverLicenceDetail, DriverLicenceStateBadge } from './DriverLicenceStateBadge';
 
 /** Ý định trên một liên kết — xác nhận (tạm khoá, kết thúc/thu hồi) nằm ở MÀN, không ở thẻ. */
-export type DriverCardIntent = 'reinvite' | 'edit' | 'suspend' | 'resume' | 'end';
+export type DriverCardIntent = 'view' | 'trips' | 'reinvite' | 'edit' | 'suspend' | 'resume' | 'end';
 
 /**
  * MỘT liên kết tài xế (ADR 0063) — bản native của một hàng bảng `DriversPage` bên web.
@@ -31,6 +33,10 @@ export type DriverCardIntent = 'reinvite' | 'edit' | 'suspend' | 'resume' | 'end
  * này gán vào chuyến được hay không. Dải nhãn bên dưới: loại tài xế (trung tính), trạng thái bằng
  * lái của tài khoản, số chuyến đang gán. Thao tác đúng luật ẩn của web: sửa/kết thúc chỉ khi liên
  * kết còn mở; tạm khoá khi đang liên kết; mở khoá khi đang tạm khoá; lời mời thì "thu hồi".
+ *
+ * Thêm theo web (ADR 0074 · 0075): số lần RÚT chuyến đã nhận trong 90 ngày (+ lượt sát giờ, hạn
+ * khoá tự gán "Đặt ngay"), và thống kê THÁNG — tổng tiền công đã ghi + số chuyến hoàn thành (chạm
+ * để mở tab "Chuyến & tiền công" của chi tiết tài xế). Chạm thẻ mở chi tiết tài xế.
  */
 function DriverCardImpl({
   driver,
@@ -47,9 +53,12 @@ function DriverCardImpl({
   const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
+  const tWage = useTranslations('Drivers.wage');
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
 
   const meta = DRIVER_LINK_STATUS_META[driver.linkStatus];
+  const hasMonth = driver.monthCompletedTrips > 0 || Number(driver.monthWageTotal) > 0;
   const statusLabel = domainLabel('driverLinkStatus', driver.linkStatus, meta.label);
   const typeLabel = domainLabel('driverType', driver.driverType, driver.driverType);
   const open = DRIVER_LINK_OPEN_STATUSES.includes(driver.linkStatus);
@@ -145,6 +154,13 @@ function DriverCardImpl({
           : []),
       ]
     : [];
+  // "Xem chi tiết" luôn có (web `actions.view`) — kể cả người chỉ có quyền xem.
+  actions.unshift({
+    key: 'view',
+    label: t('actions.view'),
+    icon: icon('eye-outline'),
+    onPress: () => onIntent(driver, 'view'),
+  });
 
   const accountName =
     driver.account.displayName && driver.account.displayName !== driver.name
@@ -152,7 +168,7 @@ function DriverCardImpl({
       : null;
 
   return (
-    <Card padded={false}>
+    <Card padded={false} onPress={() => onIntent(driver, 'view')}>
       <XStack>
         <CardAccent color={meta.color} />
 
@@ -187,6 +203,48 @@ function DriverCardImpl({
             ) : null}
 
             <BadgeRows items={badges} />
+
+            {/* Lượt RÚT chuyến đã nhận trong 90 ngày (ADR 0074) — để bên thuê tự quyết tạm khoá. */}
+            {driver.dropCount > 0 || driver.autoAssignCooldownUntil ? (
+              <YStack gap={2}>
+                {driver.dropCount > 0 ? (
+                  <XStack>
+                    <StatusBadge
+                      label={t('drops.count', { count: driver.dropCount })}
+                      color={driver.criticalDropCount > 0 ? STATUS_COLOR.DANGER : STATUS_COLOR.WARNING}
+                      size="sm"
+                    />
+                  </XStack>
+                ) : null}
+                {driver.criticalDropCount > 0 ? (
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('drops.critical', { count: driver.criticalDropCount })}
+                  </Text>
+                ) : null}
+                {driver.autoAssignCooldownUntil ? (
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('drops.cooldownUntil', {
+                      time: fmt.dateTime(driver.autoAssignCooldownUntil),
+                    })}
+                  </Text>
+                ) : null}
+              </YStack>
+            ) : null}
+
+            {/* Thống kê tháng (ADR 0075) — tổng tiền công đã ghi + số chuyến hoàn thành. */}
+            {hasMonth ? (
+              <Pressable
+                onPress={() => onIntent(driver, 'trips')}
+                accessibilityRole="button"
+                accessibilityLabel={tWage('monthTrips', { count: driver.monthCompletedTrips })}
+              >
+                <IconLine icon="wallet-outline" iconTone={colors.warning} strong>
+                {`${fmt.money(driver.monthWageTotal)} · ${tWage('monthTrips', {
+                  count: driver.monthCompletedTrips,
+                })}`}
+                </IconLine>
+              </Pressable>
+            ) : null}
 
             <IconLine icon="call-outline" iconTone={colors.success} strong>
               {driver.phone}

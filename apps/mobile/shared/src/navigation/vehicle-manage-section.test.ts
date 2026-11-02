@@ -61,7 +61,6 @@ describe('VEHICLE_MANAGE_NAV', () => {
       [VEHICLE_MANAGE_SECTION.HANDOVER_TIME, 'items.handoverTime'],
       [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION, 'items.bookingTerms'],
       [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION, 'items.bookingTerms'],
-      [VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES, 'items.surcharges'],
     ]);
   });
 
@@ -76,7 +75,7 @@ describe('VEHICLE_MANAGE_NAV', () => {
     expect(sectionServiceType(VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION)).toBe(
       SERVICE_TYPE.SELF_DRIVE,
     );
-    expect(sectionServiceType(VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES)).toBe(
+    expect(sectionServiceType(VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION)).toBe(
       SERVICE_TYPE.WITH_DRIVER,
     );
   });
@@ -117,8 +116,8 @@ describePartnerOnly('ROUTES.account.vehicleManageSection (app Partner)', () => {
     expect(pathOf(VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION)).toBe(
       `${base}/self-drive/optimization`,
     );
-    expect(pathOf(VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES)).toBe(
-      `${base}/with-driver/surcharges`,
+    expect(pathOf(VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION)).toBe(
+      `${base}/with-driver/optimization`,
     );
   });
 

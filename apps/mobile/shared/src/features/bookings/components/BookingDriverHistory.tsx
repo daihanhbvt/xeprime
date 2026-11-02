@@ -17,12 +17,23 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { useBookingDriverHistory } from '../hooks/use-bookings';
+import type { BookingDriverHistoryItem } from '../api';
+import { DriverWageInfo } from './DriverWageInfo';
 
 /**
  * Lịch sử gán tài xế của đơn (ADR 0063) — gương `BookingDriverHistory` của web. Thu gọn mặc định,
- * mở ra mới tải. Mỗi lượt: ai được gán, ai gán (hoặc hệ thống), lúc nhận, kết thúc ra sao.
+ * mở ra mới tải. Mỗi lượt: ai được gán, ai gán (hoặc hệ thống), lúc nhận, lý do RÚT (ADR 0074),
+ * kết thúc ra sao, và tiền công + lịch sử sửa của lượt đó (ADR 0075).
  */
-export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
+export function BookingDriverHistory({
+  bookingId,
+  canEditWage = false,
+  onEditWage,
+}: {
+  bookingId: string;
+  canEditWage?: boolean;
+  onEditWage?: (item: BookingDriverHistoryItem) => void;
+}) {
   const colors = useColors();
   const t = useTranslations('Drivers.history');
   const fmt = useAppFormat();
@@ -93,6 +104,18 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
                   {h.acceptedAt
                     ? meta(t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) }))
                     : null}
+                  {/* Lượt RÚT (ADR 0074): lý do + độ sát giờ — để bên thuê quyết có tạm khoá tài xế. */}
+                  {h.dropReasonCategory ? (
+                    <Text col={colors.text} fos={fontSize.label}>
+                      {t('dropReason', {
+                        reason: domainLabel('driverDropReason', h.dropReasonCategory),
+                      })}
+                      {h.dropReason ? ` ${t('dropNote', { note: h.dropReason })}` : ''}
+                    </Text>
+                  ) : null}
+                  {h.dropZone
+                    ? meta(t('dropZone', { zone: domainLabel('driverDropZone', h.dropZone) }))
+                    : null}
                   {h.endedAt
                     ? meta(
                         h.endedByName
@@ -100,6 +123,11 @@ export function BookingDriverHistory({ bookingId }: { bookingId: string }) {
                           : t('endedAt', { time: fmt.dateTime(h.endedAt) }),
                       )
                     : null}
+                  <DriverWageInfo
+                    wage={h.wage}
+                    canEdit={canEditWage && Boolean(onEditWage)}
+                    onEdit={() => onEditWage?.(h)}
+                  />
                 </YStack>
               </XStack>
             );
