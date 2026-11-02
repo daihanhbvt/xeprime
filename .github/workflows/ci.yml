@@ -266,6 +266,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Runner `ubuntu-latest` chỉ còn ~14 GB trống; bốn image `load` vào docker cộng cache build vượt
+      # quá (02/11/2026: `no space left on device` lúc nạp image tools, bake báo "closed pipe"). Gỡ bộ
+      # công cụ cài sẵn mà job này không dùng — .NET, Android SDK, GHC, CodeQL, Swift, Boost (~25 GB).
+      - name: Dọn ổ đĩa runner
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/boost
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+
       - uses: docker/setup-buildx-action@v3
 
       # Bốn image (web · api · worker · tools) theo đúng định nghĩa mà deploy dùng —
