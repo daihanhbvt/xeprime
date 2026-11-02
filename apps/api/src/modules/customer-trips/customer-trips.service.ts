@@ -1476,8 +1476,16 @@ function toListItem(
      * khách — ADR 0029). Hai nguồn loại trừ nhau theo đúng thứ tự đó, nên không có chuyến
      * nào đọc ra hai con số.
      */
+    /*
+     * Gốc là TỔNG KHÁCH TRẢ (`customer_total_amount` = tiền thuê + phí sàn S + bảo hiểm — số "Tổng
+     * tiền thanh toán" ở chi tiết), không phải tiền thuê `total_amount`: thẻ lấy số này trừ
+     * `holdPaidAmount` (đã gồm S) ra "Còn lại", trừ tiền thuê là hụt đúng S so với số trả chủ xe.
+     * Đơn cũ trước ADR 0028 không có cột đó ⇒ lùi về tiền thuê.
+     */
     totalAmount: booking
-      ? booking.totalAmount.plus(surchargeTotals.get(booking.id) ?? ZERO).toFixed(2)
+      ? (booking.customerTotalAmount ?? booking.totalAmount)
+          .plus(surchargeTotals.get(booking.id) ?? ZERO)
+          .toFixed(2)
       : (customerTotalOf(estimates.get(row.id)) ?? null),
     totalIsEstimate: !booking && estimates.has(row.id),
     // Số đã chuyển THẬT (không phải số phải thu) — cùng cột với `finance.holdPaidAmount`.

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { nowInAppTz } from '@xeprime/domain';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
@@ -24,7 +25,10 @@ import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
+import { ROUTES } from '@/navigation/routes';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
@@ -34,6 +38,8 @@ import { useColors } from '@/theme/ThemeProvider';
 import type { Driver } from './api';
 import { DriverCard, type DriverCardIntent } from './components/DriverCard';
 import { EditDriverSheet, InviteDriverSheet } from './components/DriverFormSheet';
+import { DriverWageSettingsCard } from './components/DriverWageSettingsCard';
+import { DRIVER_DETAIL_TAB } from './DriverDetailScreen';
 import {
   useDriversPage,
   useEndDriver,
@@ -79,6 +85,10 @@ export function DriverListScreen() {
   const [linkStatus, setLinkStatus] = useState<string>(FILTER_ALL);
   const [driverType, setDriverType] = useState<string>(FILTER_ALL);
   const [page, setPage] = useState(FIRST_PAGE);
+  // Tháng thống kê tiền công (ADR 0075) — `YYYY-MM` giờ VN, mặc định tháng hiện tại (như web).
+  const thisMonth = nowInAppTz().format(MONTH_PERIOD_FORMAT);
+  const [month, setMonth] = useState<string>(thisMonth);
+  const navigateOnce = useNavigateOnce();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverValues | null>(null);
   const [editing, setEditing] = useState<Driver | null>(null);
@@ -92,6 +102,7 @@ export function DriverListScreen() {
       ...(trimmedSearch ? { q: trimmedSearch } : {}),
       ...(linkStatus === FILTER_ALL ? {} : { linkStatus }),
       ...(driverType === FILTER_ALL ? {} : { driverType }),
+      ...(month === thisMonth ? {} : { month }),
       page,
     },
     canView,
@@ -161,6 +172,14 @@ export function DriverListScreen() {
   const onIntent = useCallback(
     (driver: Driver, intent: DriverCardIntent) => {
       switch (intent) {
+        case 'view':
+          navigateOnce(ROUTES.manage.driverDetail(driver.id, { month }));
+          return;
+        case 'trips':
+          navigateOnce(
+            ROUTES.manage.driverDetail(driver.id, { month, tab: DRIVER_DETAIL_TAB.TRIPS }),
+          );
+          return;
         case 'reinvite':
           setReinviteFrom({
             phone: driver.phone,
@@ -184,7 +203,7 @@ export function DriverListScreen() {
           return;
       }
     },
-    [feedback, resume],
+    [feedback, resume, navigateOnce, month],
   );
 
   const pendingId = suspend.isPending
@@ -246,6 +265,20 @@ export function DriverListScreen() {
           title={t('page.title')}
           {...(meta === undefined ? {} : { total: t('page.total', { count: meta.total }) })}
           action={inviteButton}
+          summary={
+            <YStack gap={layout.inline}>
+              <DriverWageSettingsCard />
+              <MonthPeriodField
+                label={t('wage.month.label')}
+                value={month}
+                onChange={(next) => {
+                  setMonth(next);
+                  setPage(FIRST_PAGE);
+                }}
+                maxPeriod={thisMonth}
+              />
+            </YStack>
+          }
           searchValue={search}
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}

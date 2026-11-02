@@ -22,8 +22,8 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import type { PublicBanner } from '../api';
 
-/** Tỉ lệ ảnh banner mobile của backend (780×390) — cùng tỉ lệ web dùng dưới 640px. */
-const BANNER_RATIO = 780 / 390;
+/** Tỉ lệ ảnh banner mobile của backend (780×450 từ 30/10/2026, PR #253) — cùng tỉ lệ web dùng dưới 640px. */
+export const BANNER_RATIO = 780 / 450;
 
 /** Nhịp tự chuyển slide — 6s, cùng `BannerCarousel` của web. */
 const AUTO_ROTATE_MS = 6000;

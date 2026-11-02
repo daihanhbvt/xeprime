@@ -7,10 +7,8 @@ export {
   TRIP_HISTORY_PAGE_SIZE,
 } from '@/api/vehicle-settings/api';
 export type {
-  DriverSurchargeRule,
   HandoverWindow,
   PatchVehicleServiceSettingInput,
-  SaveDriverSurchargeRuleInput,
   SaveVehicleOperationSettingsInput,
   VehicleOperationSettings,
   VehicleServiceSetting,

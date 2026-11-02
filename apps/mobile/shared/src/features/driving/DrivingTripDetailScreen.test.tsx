@@ -46,6 +46,8 @@ function trip(overrides: Partial<DriverTripDetail> = {}): DriverTripDetail {
     destinationLongitude: null,
     actualPickupAt: null,
     actualReturnAt: null,
+    canDrop: false,
+    wage: { amount: null, days: null, stage: 'not_applicable', editable: false, changes: [] },
     ...overrides,
   };
 }

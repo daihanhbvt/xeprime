@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DriverTripTab } from '@xeprime/types';
 import { queryKeys } from '@/queries/query-keys';
-import { drivingApi, type DriverLinkScope } from './api';
+import { drivingApi, type DriverLinkScope, type DropDriverTripBody } from './api';
 
 /*
  * Cùng khoá `queryKeys.driving` với web — hai app gọi cùng endpoint thì `invalidateQueries` sau
@@ -50,10 +50,10 @@ export function useDriverTrip(id: string) {
 }
 
 /** Mọi thao tác tài xế đổi cả danh sách lẫn huy hiệu — làm mới cả nhánh `driving`. */
-function useDrivingMutation<TData>(fn: (id: string) => Promise<TData>) {
+function useDrivingMutation<TData, TVars = string>(fn: (vars: TVars) => Promise<TData>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fn(id),
+    mutationFn: (vars: TVars) => fn(vars),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.driving.all }),
   });
 }
@@ -63,4 +63,7 @@ export const useDeclineDriverLink = () => useDrivingMutation(drivingApi.declineL
 export const useLeaveDriverLink = () => useDrivingMutation(drivingApi.leaveLink);
 export const useAcceptDriverTrip = () => useDrivingMutation(drivingApi.acceptTrip);
 export const useDeclineDriverTrip = () => useDrivingMutation(drivingApi.declineTrip);
-export const useReleaseDriverTrip = () => useDrivingMutation(drivingApi.releaseTrip);
+export const useDropDriverTrip = () =>
+  useDrivingMutation(({ id, body }: { id: string; body: DropDriverTripBody }) =>
+    drivingApi.dropTrip(id, body),
+  );

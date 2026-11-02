@@ -62,6 +62,7 @@ export function BookingStatusSheet({
   decision,
   onConfirm,
   loading,
+  defaultReasonCategory,
 }: {
   open: boolean;
   onClose: () => void;
@@ -73,6 +74,11 @@ export function BookingStatusSheet({
    */
   onConfirm: (input: { reason: string; reasonCategory?: CancellationReasonCategory }) => void;
   loading: boolean;
+  /**
+   * Nhóm lý do chọn sẵn — lối "Huỷ chuyến do thiếu tài xế" của khối Tài xế (ADR 0074) mở tấm với
+   * `driver_unavailable`. Người huỷ vẫn đổi được; chỉ có tác dụng khi huỷ (như web).
+   */
+  defaultReasonCategory?: CancellationReasonCategory;
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.statusActions.dialog');
@@ -86,7 +92,9 @@ export function BookingStatusSheet({
    * một schema đổi hình theo điều kiện làm `useForm` mất phép suy kiểu từ resolver — đúng cái bẫy
    * mà bản web ghi lại trong `BookingStatusTransitionDialog`.
    */
-  const [category, setCategory] = useState<CancellationReasonCategory | null>(null);
+  const [category, setCategory] = useState<CancellationReasonCategory | null>(
+    defaultReasonCategory ?? null,
+  );
   const [categoryTouched, setCategoryTouched] = useState(false);
   /* "Lý do khác" thì ô chữ phải nói được điều nhóm không nói — đổi GỢI Ý, không đổi ràng buộc. */
   const needsText = category !== null && cancellationReasonNeedsText(category);

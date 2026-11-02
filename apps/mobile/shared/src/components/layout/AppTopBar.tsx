@@ -1,4 +1,7 @@
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { Pressable } from 'react-native';
+import { APP_NAME } from '@/lib/app-name';
+import { requestHomeScrollTop } from '@/features/marketplace/home-scroll-top';
 import { XStack, YStack } from 'tamagui';
 import { HeaderActions } from './HeaderActions';
 import { useColors } from '@/theme/ThemeProvider';
@@ -29,7 +32,15 @@ export function AppTopBar() {
          * Chỉ mỗi lockup: nó đã có sẵn chữ "xe prime" trong artwork. Bản trước ghép biểu tượng
          * với hai `Text` tô màu tay — nay đặt cạnh lockup sẽ thành tên thương hiệu in hai lần.
          */}
-        <BrandLogo height={BRAND_LOGO} />
+        {/* Bấm logo = lên đầu trang chủ (kiểu Facebook) — thanh này chỉ hiện ở trang chủ. */}
+        <Pressable
+          onPress={requestHomeScrollTop}
+          accessibilityRole="button"
+          accessibilityLabel={APP_NAME}
+          hitSlop={space.sm}
+        >
+          <BrandLogo height={BRAND_LOGO} />
+        </Pressable>
 
         <HeaderActions />
       </XStack>

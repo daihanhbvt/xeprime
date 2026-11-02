@@ -85,7 +85,7 @@ describe('vehicleEditPartHref — mục không có ở khu tài khoản thì nul
   });
   it('mục vận hành mới ánh xạ một-một sang mục của không gian quản lý xe', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, true)).toEqual(
-      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION),
     );
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.OPERATIONS, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),

@@ -11,7 +11,7 @@ import {
 } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
 import { REASON_MAX } from '@/lib/reason';
-import { visibleSurchargeCategories } from '../surcharge-categories';
+import { defaultSurchargeCategory, visibleSurchargeCategories } from '../surcharge-categories';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { MoneyField } from '@/components/ui/MoneyField';
@@ -79,6 +79,7 @@ export function SurchargeSheet({
   excessMileage,
   recorded,
   surchargeRules,
+  serviceType = null,
   onConfirm,
   loading,
 }: {
@@ -103,6 +104,8 @@ export function SurchargeSheet({
    * khoản trừ mà khách chưa từng biết tới.
    */
   surchargeRules: BookingSettlement['surchargeRules'];
+  /** Loại dịch vụ của đơn — quyết định danh mục nào còn ghi được (ADR 0075). */
+  serviceType?: string | null;
   onConfirm: (body: SaveSurchargeInput) => void;
   loading: boolean;
 }) {
@@ -134,7 +137,7 @@ export function SurchargeSheet({
         Ô tiền để TRỐNG, không phải một số 0 điền sẵn: 0 đọc ra như "miễn phí" và người dùng bấm
         thêm là ghi một dòng sổ rỗng. Web cũng mặc định `null`.
       */
-      category: SURCHARGE_CATEGORY.OVERTIME,
+      category: defaultSurchargeCategory(visibleSurchargeCategories(recorded, serviceType)),
       amount: null as unknown as number,
       reason: '',
     },
@@ -147,7 +150,7 @@ export function SurchargeSheet({
   const category = useWatch({ control, name: 'category' }) as SurchargeCategory;
 
   /* Luật "danh mục nào còn chọn được" — xem `visibleSurchargeCategories`. */
-  const categoryOptions = visibleSurchargeCategories(recorded);
+  const categoryOptions = visibleSurchargeCategories(recorded, serviceType);
   const canSuggestOvertime =
     category === SURCHARGE_CATEGORY.OVERTIME && overtime.available && overtime.amount != null;
   const hasMileageAmount = excessMileage.amount != null && !isZeroMoney(excessMileage.amount);

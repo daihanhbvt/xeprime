@@ -1,6 +1,6 @@
 {
   "list": {
-    "heading": "My trips",
+    "heading": "Trips",
     "sub": "Manage your journeys and trip details",
     "tabLabel": "{label} ({count})",
     "tabsLabel": "Trip groups",
@@ -407,7 +407,7 @@
   },
   "payment": {
     "back": "Trip details",
-    "backToTrips": "My trips",
+    "backToTrips": "Trips",
     "title": "Pay the booking hold",
     "subtitle": "Rental of {vehicle}",
     "notFoundTitle": "Trip not found",
@@ -560,7 +560,7 @@
     "vehicle": "Vehicle details",
     "request": "Send rental request",
     "account": "My account",
-    "trips": "My trips",
+    "trips": "Trips",
     "tripDetail": "Trip details"
   },
   "closed": {

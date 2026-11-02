@@ -243,15 +243,7 @@ export function PersonalProfileCard({
             </Text>
 
             <YStack br={radius.md} bw={1} bc={colors.borderSubtle} ov="hidden">
-              <ContactRow
-                icon="mail-outline"
-                label={t('profile.email')}
-                value={profile.email}
-                emptyLabel={t('noEmail')}
-                verified={profile.emailVerified}
-                {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) } : {})}
-              />
-              <YStack h={1} bg={colors.borderSubtle} />
+              {/* Số điện thoại (định danh đăng nhập — ADR 0060) đứng trước email, như web LoginMethods. */}
               <ContactRow
                 icon="call-outline"
                 label={t('profile.phone')}
@@ -259,6 +251,15 @@ export function PersonalProfileCard({
                 emptyLabel={t('noPhone')}
                 verified={profile.phoneVerified}
                 {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.PHONE) } : {})}
+              />
+              <YStack h={1} bg={colors.borderSubtle} />
+              <ContactRow
+                icon="mail-outline"
+                label={t('profile.email')}
+                value={profile.email}
+                emptyLabel={t('noEmail')}
+                verified={profile.emailVerified}
+                {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) } : {})}
               />
             </YStack>
 

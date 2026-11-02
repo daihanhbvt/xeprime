@@ -12,6 +12,7 @@ import { useAppStyles } from '@/theme/styles';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
+import { BANNER_RATIO } from './HomeHero';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
 
@@ -207,9 +208,9 @@ export function StickySearchBar({
  * Mốc cuộn mà thẻ tìm kiếm ở hero coi như đã khuất.
  *
  * Web dùng `IntersectionObserver` trên chính thẻ đó; native không có API tương đương nên đo bằng
- * offset cuộn. Con số là chiều cao hero (tỉ lệ 780×390 ≈ nửa bề rộng) — tính từ bề rộng màn hình
+ * offset cuộn. Con số là chiều cao hero (`BANNER_RATIO` của `HomeHero`) — tính từ bề rộng màn hình
  * để máy nhỏ và máy lớn đổi thanh ở cùng một chỗ trong bố cục.
  */
 export function stickyThreshold(screenWidth: number): number {
-  return screenWidth / (780 / 390);
+  return screenWidth / BANNER_RATIO;
 }

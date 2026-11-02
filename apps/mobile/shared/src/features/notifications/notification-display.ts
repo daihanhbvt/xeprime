@@ -113,6 +113,7 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: 'car-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: 'arrow-undo-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'checkmark-done-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED]: 'cash-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: 'close-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: 'hourglass-outline',

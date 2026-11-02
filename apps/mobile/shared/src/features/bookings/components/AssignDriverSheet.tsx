@@ -49,7 +49,8 @@ export function AssignDriverSheet({
   pending?: boolean;
   /** Người đang được CHỌN (form sửa đơn giữ lựa chọn tạm) — mặc định là tài xế đang gán. */
   selectedId?: string | null;
-  onSelect: (driverId: string) => void;
+  /** Kèm TÊN người được chọn — tấm gán tiền công (ADR 0075) ghi tên trên tiêu đề. */
+  onSelect: (driverId: string, name: string) => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.driver');
@@ -115,7 +116,7 @@ export function AssignDriverSheet({
             driver={driver}
             selected={(selectedId !== undefined ? selectedId : booking.driver?.id) === driver.id}
             disabled={pending}
-            onPress={() => onSelect(driver.id)}
+            onPress={() => onSelect(driver.id, driver.name)}
           />
         ))
       )}
