@@ -541,6 +541,11 @@
       "hint": "Turning this off does not affect existing requests or bookings.",
       "enabled": "The vehicle is live on the marketplace",
       "disabled": "The vehicle is paused on the marketplace",
+      "gate": {
+        "title": "This vehicle can't be shown on the marketplace yet",
+        "logoOnly": "Your shop needs a logo before its vehicles appear on the marketplace. Upload one in your shop profile, then turn this switch back on.",
+        "missing": "Your shop profile is missing the items below. Add them, then turn this switch back on."
+      },
       "moderationTag": {
         "draft": "Not listed",
         "pending_public_review": "Awaiting review",
@@ -836,7 +841,9 @@
       "saved": "Changes saved",
       "forbiddenTitle": "No permission to edit vehicles",
       "forbiddenBody": "You need the permission below to edit vehicle information. Contact an administrator to request it.",
-      "viewDetail": "View vehicle details"
+      "viewDetail": "View vehicle details",
+      "subtitle": "Update and manage your vehicle's specs, photos and legal records",
+      "parentCrumb": "Vehicle details"
     },
     "nav": {
       "general": "General",
@@ -1620,5 +1627,116 @@
     "interior": "Interior",
     "dashboard": "Odometer",
     "other": "Other"
+  },
+  "editor": {
+    "menu": {
+      "label": "Vehicle profile sections",
+      "groups": {
+        "profile": "Vehicle profile",
+        "rental": "Rental options",
+        "advanced": "Advanced operations"
+      },
+      "items": {
+        "information": "General information",
+        "media": "Photos",
+        "documents": "Vehicle documents",
+        "trip-history": "Trip history",
+        "services": "Services",
+        "conditions": "Conditions",
+        "handover": "Handover",
+        "maintenance": "Maintenance & mileage",
+        "source": "Source & financing"
+      },
+      "missingBadge": "{count} missing",
+      "missingImages": "{count, plural, one {# required photo angle} other {# required photo angles}} missing",
+      "documentsCount": "{count} of {total} core documents uploaded"
+    },
+    "asideLabel": "Vehicle summary and save changes",
+    "summary": {
+      "label": "Vehicle summary",
+      "openMedia": "Open the Photos section",
+      "statusSaved": "Operating status updated",
+      "changeStatus": "Operating status: {status} — click to change",
+      "operation": "Operation",
+      "review": "Review",
+      "plate": "Plate number",
+      "kind": "Vehicle type",
+      "seats": "{count} seats",
+      "perDay": "/day",
+      "perMonth": "/month",
+      "price": "Rental price",
+      "priceWithUnit": "Rental price ({unit})",
+      "odometer": "Mileage",
+      "rating": "Rating",
+      "noRating": "No ratings yet",
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "completeness": "Completeness",
+      "completenessValue": "{done} of {total} publishing requirements met",
+      "viewListing": "View listing"
+    },
+    "information": {
+      "general": "General information",
+      "bodyType": "Body type",
+      "bodyTypeHint": "Pick the right body type — customers filter by it on the marketplace.",
+      "energy": "Engine & fuel",
+      "features": "Features",
+      "advanced": "Advanced specs",
+      "advancedHint": "Dimensions, weight, power and consumption — optional.",
+      "dimensions": "Dimensions & weight",
+      "engine": "Power",
+      "consumption": "Consumption by road type",
+      "description": "Vehicle description"
+    },
+    "services": {
+      "tabsLabel": "Vehicle services",
+      "tabs": {
+        "self_drive": "Self-drive",
+        "with_driver": "With driver",
+        "long_term": "Long-term rental"
+      },
+      "on": "On",
+      "off": "Off",
+      "toggle": {
+        "self_drive": {
+          "title": "Self-drive rental",
+          "target": "self-drive customers"
+        },
+        "with_driver": {
+          "title": "With driver",
+          "target": "trips with a driver"
+        },
+        "long_term": {
+          "title": "Long-term rental",
+          "target": "long-term customers"
+        },
+        "hint": "Turn on to accept {service}. Booking conditions are in <conditions>Conditions</conditions>."
+      },
+      "offNote": "This service is off — turn it on above to set prices and accept trips for it.",
+      "price": {
+        "title": "Rental price",
+        "titlePromo": "Rental price & promotion"
+      },
+      "policy": {
+        "selfDriveTitle": "Rental procedures & terms",
+        "longTermTitle": "Long-term discounts (over 1 month)"
+      },
+      "extras": "Other"
+    },
+    "policy": {
+      "useShop": "Apply the shop's policy",
+      "useShopHint": "When on, the vehicle follows the shop's <policies>shared policy</policies>: collateral, mileage limit, overtime fee, delivery and long-term discounts.",
+      "customActive": "This vehicle uses its own policy. Turn this back on to return to the shop's policy — the vehicle's customizations will be lost.",
+      "inherited": "Following the <policies>shop policy</policies>. Turn off \"Apply the shop's policy\" at the top of this section to customize it for this vehicle.",
+      "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customize it for this vehicle, turn off the switch in <switch>Services</switch>."
+    },
+    "conditions": {
+      "selfDriveTitle": "Self-drive & long-term rental",
+      "withDriverTitle": "With driver"
+    },
+    "handover": {
+      "title": "Vehicle handover",
+      "delivery": "Door-to-door delivery",
+      "windowsTitle": "Pickup & return hours"
+    }
   }
 }

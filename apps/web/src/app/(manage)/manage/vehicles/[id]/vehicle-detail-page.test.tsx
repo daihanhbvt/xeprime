@@ -1221,7 +1221,7 @@ describe('/manage/vehicles/[id] — chủ xe tuyến hoa hồng (cùng giao di�
     isManage: false,
   };
 
-  it('không có Hiệu suất, Nguồn xe; "Chỉnh sửa" mở không gian Quản lý xe', () => {
+  it('không có Hiệu suất, Nguồn xe; "Chỉnh sửa" mở màn sửa xe dùng chung', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW);
     render(
       <WorkspaceScope value={OWNER_WORKSPACE}>
@@ -1234,6 +1234,7 @@ describe('/manage/vehicles/[id] — chủ xe tuyến hoa hồng (cùng giao di�
     expect(screen.queryByText('Hiệu suất luỹ kế')).toBeNull();
     expect(screen.queryByText('Nguồn xe & Tài chính')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Chỉnh sửa/ }));
-    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1/manage/information');
+    // Cùng màn sửa xe với tuyến gói (sổ cái §3.6 E24).
+    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1/edit');
   });
 });

@@ -47,7 +47,7 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | Tất cả đơn thuê · `/bookings` | Quản lý › Đơn thuê › Tất cả đơn thuê | **Vận hành › Quản lý đơn thuê xe** | menu | Danh sách xong (02/11). Còn trang chi tiết `/bookings/[id]` — chờ design |
 | Chờ giao xe · `/bookings/awaiting-pickup` | Quản lý › Đơn thuê › Chờ giao xe | **Ngăn "Chờ giao xe"** ở cột trái của "Quản lý đơn thuê xe" (`/bookings?preset=awaiting_pickup`); route cũ chuyển tiếp (cả trong phiên hỗ trợ); mục ẩn đã gỡ (02/11) | cột trái màn đơn; thẻ Tổng quan | — |
 | Khách hàng · `/customers` | Quản lý › Khách hàng | **Vận hành › Danh sách khách hàng** | menu | — |
-| Danh sách xe · `/vehicles` | Quản lý › Xe của tôi › Danh sách xe | **Xe & Tài xế › Danh sách xe** (huy hiệu số xe có việc chặn) | menu | Danh sách xong (03/11, §3.5). Chi tiết `/vehicles/[id]` xong (03/11, §3.6). Còn màn Chỉnh sửa (§3.6, đang làm) |
+| Danh sách xe · `/vehicles` | Quản lý › Xe của tôi › Danh sách xe | **Xe & Tài xế › Danh sách xe** (huy hiệu số xe có việc chặn) | menu | Danh sách xong (03/11, §3.5). Chi tiết `/vehicles/[id]` và Chỉnh sửa `/vehicles/[id]/edit` xong (03/11, §3.6) — cả hai tuyến |
 | Đăng nhanh xe tự lái (gian hàng) · `/vehicles/register?from=manage` | Menu phụ cạnh nút thêm xe ở Danh sách xe | **Gỡ khỏi Danh sách xe** (chốt 03/11) — màn chỉ còn "Thêm xe mới" → wizard đầy đủ. Route vẫn sống (chủ xe tuyến hoa hồng dùng `?from=account`) | URL | — |
 | Tài xế · `/drivers` | Cấu hình › Tài xế | **Xe & Tài xế › Quản lý tài xế** | menu | — |
 | Bảo dưỡng · `/maintenance` | Quản lý › Xe của tôi › Bảo dưỡng | **Xe & Tài xế › Bảo dưỡng** | menu | — |
@@ -117,7 +117,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Khách hàng | `/customers`, `/customers/[id]` | section `23777:54974` (5 frame) | **Xong** 02/11/2026 | Xem §3.4 |
 | Danh sách xe | `/vehicles` (cả hai tuyến) | section `23672:25620`: ít xe `23655:38521` · lưới `23649:29724` · danh sách `23655:36959` | **Xong** 03/11/2026 (danh sách) | Xem §3.5 |
 | Chi tiết xe | `/vehicles/[id]` (cả hai tuyến, cả modal hồ sơ xe) | section `23672:25621` | **Xong** 03/11/2026 | Xem §3.6 |
-| Chỉnh sửa xe | `/vehicles/[id]/edit` · tuyến hoa hồng `/vehicles/[id]/manage/<mục>` | section `23731:37932` (13 frame) | Đã kiểm kê + chốt 03/11; đang làm | Xem §3.6 |
+| Chỉnh sửa xe | `/vehicles/[id]/edit` (cả hai tuyến; `/vehicles/[id]/manage/<mục>` cũ chuyển hướng) | section `23731:37932` (13 frame) | **Xong** 03/11/2026 | Xem §3.6 |
 | Thông tin cửa hàng | `/shop` | chờ design | Chưa làm | Đã nhận section **Chi nhánh** (02/11). Giữ mọi section: hiển thị · chủ gian hàng · địa chỉ & pháp lý · khai thuế · chi nhánh · gói & hạn mức |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
@@ -243,7 +243,7 @@ xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `Vehi
 | 7 | Dòng "Ô tô · Tự lái · Có tài xế" ở thẻ lưới | 🟡 | **Giữ** (chốt 03/11) — design lưới chỉ vẽ "mã • biển" |
 | 8 | Số đơn "Đang chạy" | 🟡 | **Bỏ** (chốt 03/11) — chip vận hành "Đang thuê" đã nói; ô đó thành "Chuyến đã đi" |
 | 9 | Menu phụ "Đăng nhanh xe tự lái" (gian hàng) | 🟡 | **Bỏ khỏi màn này** (chốt 03/11) — xem §2.1 |
-| 10 | Nút Lịch · Chỉnh sửa · Chi tiết (nút chính vàng CUỐI) | ✅ | Tuyến hoa hồng: "Quản lý xe" thay "Chỉnh sửa" (mở `/vehicles/:id/manage`), cùng cổng `vehicles.update`. Không có Xoá |
+| 10 | Nút Lịch · Chỉnh sửa · Chi tiết (nút chính vàng CUỐI) | ✅ | Tuyến hoa hồng: "Quản lý xe" thay "Chỉnh sửa" (từ 03/11 mở màn sửa chung `/vehicles/:id/edit`), cùng cổng `vehicles.update`. Không có Xoá |
 | 11 | Huy hiệu "8" trên menu Danh sách xe | 🆕 | Số xe có việc chặn — §2.3 |
 | 12 | Hai thẻ Cẩm nang / Chứng từ của tuyến hoa hồng | 🟡 | **Bỏ** (chốt 03/11) — đã là dòng của khối Trợ giúp |
 
@@ -272,7 +272,7 @@ vẽ tuyến gói, một xe ô tô đủ ba dịch vụ. Code hiện có: Hồ s
 (`VehicleEditWorkspace` — menu trái 10 mục; tuyến hoa hồng là không gian `/vehicles/[id]/manage/*`).
 
 Người dùng duyệt 03/11/2026: mọi dòng làm theo cột "Quyết định"; bốn dòng đã hỏi ghi rõ câu trả lời.
-Thứ tự giao: trang Chi tiết trước (**xong 03/11**), rồi Chỉnh sửa (dùng lại mảnh chung).
+Thứ tự giao: trang Chi tiết trước (**xong 03/11**), rồi Chỉnh sửa (**xong 03/11**).
 
 Đã làm ở trang Chi tiết: hàng nút ở tiêu đề (`VehicleDetailActions`, modal đặt trên thẻ xe) · thẻ xe
 dùng `VehicleStatusBadges` của danh sách · khung thẻ chung `Panel` (`Vehicle360Cards`) · công tắc tự
@@ -333,6 +333,39 @@ Chính sách · Lịch thuê sắp tới · Hoạt động gần đây · Lối 
 
 Trạng thái tự dựng (design không vẽ): đang tải · lỗi · không tìm thấy · không quyền · chỉ xem (phiên
 hỗ trợ, thiếu `vehicles.update`) · dịch vụ đang tắt · xe máy · màn hẹp/điện thoại.
+
+Đã làm ở màn Chỉnh sửa (03/11/2026) — `VehicleEditWorkspace` + `features/vehicles/components/edit/`:
+
+- **Nút cột phải** "Hoàn tác · Lưu thay đổi" lưu MỌI form đang dở của mục (`edit-actions.tsx`:
+  mỗi form đăng ký, mỗi form vẫn ghi đúng endpoint của nó). Mục không có form (Giấy tờ, Bảo dưỡng,
+  Lịch sử chuyến) không có hai nút; Bảo dưỡng giữ nút "Lưu" của thẻ chu kỳ nhớt như design.
+  **Đính chính E5**: Hình ảnh KHÔNG tự lưu (xếp/tải xong mới lưu) — nó dùng nút cột phải như design vẽ.
+- **Form giá** tách logic ra `useVehiclePricingForm` và bày thành mảnh: giá + khuyến mãi + cọc/km/quá
+  giờ ở tab Tự lái · giá + ghi chú tiền công ở Có tài xế · giá tháng + gợi ý + ưu đãi ở Dài hạn · giao
+  xe ở Giao nhận. Vẫn MỘT lệnh `PUT /vehicles/:id/pricing` trọn gói; lưu trượt vì ô lỗi ở tab khác
+  thì tự mở tab đó. Tải giá lỗi chỉ chặn phần giá — công tắc dịch vụ/tự nhận vẫn dùng được.
+- **Công tắc "Áp dụng chính sách của gian hàng"** (E14) đặt đầu mục Dịch vụ xe; khối khác hiện dòng
+  nhắc kèm lối tới công tắc. Tuyến hoa hồng không có công tắc (sửa thẳng, như màn giá cũ của họ).
+- **Điều kiện** chỉ còn giấy tờ · đối chiếu · đồng ý điều khoản · điều khoản (hai khối); cọc + km
+  dời sang tab Tự lái. Xe máy không có khối Có tài xế.
+- **Tuyến hoa hồng** (E24): `workspaceVehiclePaths` trỏ chi tiết + sửa về route chung; `isCommissionPage`
+  nhận `/vehicles/<id>/edit`; `/vehicles/<id>/manage/[[...section]]` (cả bản phiên hỗ trợ) chuyển
+  hướng theo `editTabOfLegacyManageSection`. Giữ đúng bộ ô cũ của chủ xe (không tên/chi nhánh/thông
+  số nâng cao, lưu `manageInformationValuesToInput`), thẻ **Địa chỉ xe hiện tại** (sửa chi nhánh tại
+  chỗ, bản đồ tĩnh, cảnh báo chi nhánh giữ nhiều xe), điểm đánh giá + số chuyến ở thẻ tóm tắt, thành
+  viên chỉ có quyền xem vẫn mở được ở dạng chỉ-xem. Gỡ `VehicleManageWorkspace` · Header · Sidebar ·
+  `sections/*` (trừ Ảnh, Lịch sử chuyến) · `navigation.ts` · `VehicleEditHeader` · `VehicleInfoAside` ·
+  `VehiclePricingWorkspace`.
+- **Breadcrumb** "Danh sách xe › Chi tiết xe › Chỉnh sửa xe": `ManagePageHeader` nhận `parent`.
+- **Công tắc "Trên chợ" + "Xem trang xe" ở góc phải đầu trang** (người dùng chốt 03/11 — lệch design,
+  design đặt cuối thẻ tóm tắt): `VehicleEditMarketBar`. Bỏ dòng nhắc "bốn ô đã khoá" ở thẻ tóm tắt —
+  từng ô bị khoá đã tự nói điều đó. Bật lại chợ mà chạm cổng mặt tiền gian hàng tuyến gói
+  (`SHOP_LISTING_REQUIREMENTS_MISSING`, gần như luôn là thiếu logo — bước tạo gian hàng không đòi
+  logo, ADR 0040 điều 6–7) hiện HỘP THOẠI nói thiếu gì + nút "Tải logo" tới hồ sơ gian hàng, thay
+  cho toast "chưa gửi xe duyệt được" (áp cả trang chi tiết xe, cùng component).
+- Khoá chữ cũ `Vehicles.edit.*` / `VehicleManage.*` GIỮ NGUYÊN — app mobile vẫn đọc chúng.
+- Ba mục Giấy tờ · Bảo dưỡng · Nguồn gốc dùng lại component hiện có trong khung mới; bố cục bên
+  trong chưa chỉnh từng chi tiết theo design (thẻ nguồn xe dạng ô có icon, bảng giấy tờ).
 
 ## 4. Node Figma đã dùng
 

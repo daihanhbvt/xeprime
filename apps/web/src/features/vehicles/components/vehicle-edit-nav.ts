@@ -1,161 +1,128 @@
-import {
-  CarOutlined,
-  ClockCircleOutlined,
-  DollarOutlined,
-  FileTextOutlined,
-  PictureOutlined,
-  SafetyOutlined,
-  ToolOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
-import type { useTranslations } from 'next-intl';
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/routes';
-import type {
-  VehicleSectionNavGroup,
-  VehicleSectionNavItem,
-} from '@/features/vehicle-manage/components/VehicleSectionNav';
-
-/** Bộ dịch của `VehicleManage.menu` — nhãn của menu sửa xe. */
-type MenuTranslator = ReturnType<typeof useTranslations<'VehicleManage.menu'>>;
-type MenuKey = Parameters<MenuTranslator>[0];
-
-export type EditNavItem = Omit<VehicleSectionNavItem, 'key'> & { key: VehicleEditTab };
-export type EditNavGroup = Omit<VehicleSectionNavGroup, 'items'> & {
-  items: EditNavItem[];
-  /** Dịch vụ của nhóm — nhóm dịch vụ có công tắc bật/tắt trên tiêu đề; `null` = nhóm chung. */
-  serviceType: ServiceType | null;
-};
 
 /**
- * MENU TRÁI của màn sửa xe ở cổng quản lý (30/09/2026) — MƯỜI mục, sáu nhóm:
+ * MỤC của menu trái màn sửa xe (design `23731:37932`, 03/11/2026). Khác `VehicleEditTab` ở đúng một
+ * chỗ: "Dịch vụ xe" là MỘT mục mà ba giá trị `?tab=` (tự lái · có tài xế · dài hạn) cùng thuộc về.
+ */
+export const EDIT_MENU = {
+  INFORMATION: VEHICLE_EDIT_TAB.INFORMATION,
+  MEDIA: VEHICLE_EDIT_TAB.MEDIA,
+  DOCUMENTS: VEHICLE_EDIT_TAB.DOCUMENTS,
+  TRIP_HISTORY: VEHICLE_EDIT_TAB.TRIP_HISTORY,
+  SERVICES: 'services',
+  CONDITIONS: VEHICLE_EDIT_TAB.CONDITIONS,
+  HANDOVER: VEHICLE_EDIT_TAB.HANDOVER,
+  MAINTENANCE: VEHICLE_EDIT_TAB.MAINTENANCE,
+  SOURCE: VEHICLE_EDIT_TAB.SOURCE,
+} as const;
+export type EditMenuKey = (typeof EDIT_MENU)[keyof typeof EDIT_MENU];
+
+export const EDIT_MENU_GROUP = {
+  PROFILE: 'profile',
+  RENTAL: 'rental',
+  ADVANCED: 'advanced',
+} as const;
+export type EditMenuGroup = (typeof EDIT_MENU_GROUP)[keyof typeof EDIT_MENU_GROUP];
+
+/**
+ * Ba nhóm, theo design:
  *
  * | Nhóm | Mục |
  * | --- | --- |
- * | Thông tin xe | Thông tin xe & tiện ích · Hình ảnh · Giấy tờ xe |
- * | Giá & giao nhận | Giá & chính sách · Thời gian giao nhận |
- * | Cho thuê tự lái [công tắc] | Nhận chuyến & thủ tục |
- * | Cho thuê có tài xế [công tắc] | Nhận chuyến & thủ tục · Phụ phí |
- * | Cho thuê dài hạn [công tắc] | — (giá tháng nằm ở Giá & chính sách) |
- * | Nâng cao | Nguồn xe & tài chính · Bảo dưỡng & KM |
+ * | Hồ sơ xe | Thông tin chung · Hình ảnh · Giấy tờ xe · Lịch sử chuyến (chỉ chủ xe tuyến hoa hồng) |
+ * | Hình thức cho thuê | Dịch vụ xe · Điều kiện · Giao nhận |
+ * | Vận hành nâng cao | Bảo dưỡng & số KM · Nguồn gốc & tài chính xe (tuyến gói) |
  *
- * Mọi khối của `develop` vẫn còn, cùng cách lưu:
- * - "Giá & chính sách" là MỘT màn, MỘT nút Lưu (`VehiclePricingWorkspace` chế độ `full`) — giá
- *   của mọi dịch vụ + nguồn chính sách + cọc · giao xe · km · quá giờ · ưu đãi.
- * - Các khối của tab "Vận hành & điều kiện thuê" cũ (giao nhận · tối ưu × 2 · thủ tục × 2) nay
- *   đứng dưới đúng dịch vụ của chúng (phụ phí tài xế đã gỡ — ADR 0075); "Nhận chuyến & thủ tục" gom hai card (Tối ưu nhận
- *   chuyến, Thủ tục cho thuê), mỗi card vẫn tự lưu như cũ.
- * - KHÔNG có "Lịch sử chuyến": cổng quản lý đã có Hồ sơ 360 và màn Đơn thuê lọc theo xe.
+ * Mục nào có mặt với NGƯỜI NÀY do nơi gọi quyết (quyền ∧ cờ gói ∧ tuyến ∧ phiên hỗ trợ); nhóm rỗng
+ * thì không vẽ.
  */
-export function editNavGroups({
-  t,
-  enabled,
-  services,
-}: {
-  t: MenuTranslator;
-  /** Mục có mặt với người này không — quyền ∧ cờ gói ∧ phiên hỗ trợ. */
-  enabled: (tab: VehicleEditTab) => boolean;
-  /** Dịch vụ chiếc xe đang phục vụ — nhóm của dịch vụ đã tắt vẫn hiện nhưng mờ đi. */
-  services: readonly string[];
-}): EditNavGroup[] {
-  const item = (
-    key: VehicleEditTab,
-    labelKey: MenuKey,
-    icon: EditNavItem['icon'],
-  ): EditNavItem => ({ key, label: t(labelKey), icon });
-  const service = (
-    key: string,
-    labelKey: MenuKey,
-    serviceType: ServiceType,
-    items: EditNavItem[],
-  ): EditNavGroup => ({
-    key,
-    label: t(labelKey),
-    serviceType,
-    dimmed: !services.includes(serviceType),
-    items,
-  });
+export const EDIT_MENU_GROUPS: ReadonlyArray<{
+  key: EditMenuGroup;
+  items: readonly EditMenuKey[];
+}> = [
+  {
+    key: EDIT_MENU_GROUP.PROFILE,
+    items: [EDIT_MENU.INFORMATION, EDIT_MENU.MEDIA, EDIT_MENU.DOCUMENTS, EDIT_MENU.TRIP_HISTORY],
+  },
+  {
+    key: EDIT_MENU_GROUP.RENTAL,
+    items: [EDIT_MENU.SERVICES, EDIT_MENU.CONDITIONS, EDIT_MENU.HANDOVER],
+  },
+  { key: EDIT_MENU_GROUP.ADVANCED, items: [EDIT_MENU.MAINTENANCE, EDIT_MENU.SOURCE] },
+];
 
-  const groups: EditNavGroup[] = [
-    {
-      key: 'info',
-      label: t('groups.info'),
-      serviceType: null,
-      items: [
-        item(VEHICLE_EDIT_TAB.INFORMATION, 'items.information', CarOutlined),
-        item(VEHICLE_EDIT_TAB.MEDIA, 'items.images', PictureOutlined),
-        item(VEHICLE_EDIT_TAB.DOCUMENTS, 'items.documents', FileTextOutlined),
-      ],
-    },
-    {
-      /*
-       * Giá và khung giờ giao nhận áp cho CẢ chiếc xe, mọi dịch vụ — nên chúng không nằm dưới
-       * công tắc của một dịch vụ nào và không mờ đi khi một dịch vụ tắt.
-       */
-      key: 'pricingHandover',
-      label: t('groups.pricingHandover'),
-      serviceType: null,
-      items: [
-        item(VEHICLE_EDIT_TAB.PRICING, 'items.pricing', DollarOutlined),
-        item(VEHICLE_EDIT_TAB.HANDOVER_TIME, 'items.handoverTime', ClockCircleOutlined),
-      ],
-    },
-    service('selfDrive', 'groups.selfDrive', SERVICE_TYPE.SELF_DRIVE, [
-      item(VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION, 'items.bookingTerms', SafetyOutlined),
-    ]),
-    service('withDriver', 'groups.withDriver', SERVICE_TYPE.WITH_DRIVER, [
-      item(VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION, 'items.bookingTerms', SafetyOutlined),
-    ]),
-    // Dài hạn không có thiết lập vận hành nào — nhóm chỉ mang công tắc (nơi gọi gắn lời nhắc).
-    service('longTerm', 'groups.longTerm', SERVICE_TYPE.LONG_TERM, []),
-    {
-      key: 'advanced',
-      label: t('groups.advanced'),
-      serviceType: null,
-      items: [
-        item(VEHICLE_EDIT_TAB.SOURCE, 'items.source', WalletOutlined),
-        item(VEHICLE_EDIT_TAB.MAINTENANCE, 'items.maintenance', ToolOutlined),
-      ],
-    },
-  ];
+/** Ba tab của mục "Dịch vụ xe", theo thứ tự trên màn. */
+export const SERVICE_TABS: ReadonlyArray<{ tab: VehicleEditTab; service: ServiceType }> = [
+  { tab: VEHICLE_EDIT_TAB.SELF_DRIVE, service: SERVICE_TYPE.SELF_DRIVE },
+  { tab: VEHICLE_EDIT_TAB.WITH_DRIVER, service: SERVICE_TYPE.WITH_DRIVER },
+  { tab: VEHICLE_EDIT_TAB.LONG_TERM, service: SERVICE_TYPE.LONG_TERM },
+];
 
-  // Lọc theo năng lực. Nhóm rỗng giữ lại NẾU là nhóm dịch vụ — nơi gọi quyết định nó có công
-  // tắc hay không; không có công tắc thì `VehicleSectionNav` tự bỏ qua nhóm rỗng.
-  return groups
-    .map((group) => ({ ...group, items: group.items.filter((entry) => enabled(entry.key)) }))
-    .filter((group) => group.items.length > 0 || group.serviceType !== null);
+/** Dịch vụ của một tab — `null` khi tab không thuộc mục "Dịch vụ xe". */
+export function serviceOfTab(tab: VehicleEditTab): ServiceType | null {
+  return SERVICE_TABS.find((entry) => entry.tab === tab)?.service ?? null;
+}
+
+export function tabOfService(service: ServiceType): VehicleEditTab {
+  return (
+    SERVICE_TABS.find((entry) => entry.service === service)?.tab ?? VEHICLE_EDIT_TAB.SELF_DRIVE
+  );
+}
+
+/** Mục menu sáng lên khi đang đứng ở `tab`. */
+export function menuKeyOfTab(tab: VehicleEditTab): EditMenuKey {
+  return serviceOfTab(tab) ? EDIT_MENU.SERVICES : (tab as EditMenuKey);
+}
+
+/** Bấm "Dịch vụ xe" mở tab của dịch vụ ĐẦU TIÊN xe đang phục vụ — xe chưa có dịch vụ nào thì tự lái. */
+export function defaultServiceTab(services: readonly string[]): VehicleEditTab {
+  return (
+    SERVICE_TABS.find((entry) => services.includes(entry.service))?.tab ??
+    VEHICLE_EDIT_TAB.SELF_DRIVE
+  );
+}
+
+/** Tab mở khi bấm một mục menu. */
+export function tabOfMenu(key: EditMenuKey, services: readonly string[]): VehicleEditTab {
+  return key === EDIT_MENU.SERVICES ? defaultServiceTab(services) : key;
 }
 
 /**
- * Bí danh `?tab=` → mục thật. Link cũ (tab `operations` của develop, cảnh báo, Hồ sơ 360, route
- * `/optimization`) vẫn mở đúng chỗ; thủ tục thì mở mục "Nhận chuyến & thủ tục" của dịch vụ đó.
+ * Bí danh `?tab=` → mục thật, kèm dịch vụ cần cuộn tới ở mục Điều kiện. Link cũ (cảnh báo, Hồ sơ
+ * 360, email, route `/pricing` · `/optimization`, menu 30/09) vẫn mở đúng chỗ.
  */
-const TAB_ALIAS: Partial<Record<VehicleEditTab, VehicleEditTab>> = {
-  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_EDIT_TAB.HANDOVER_TIME,
-  [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-  // Phụ phí tài xế đã gỡ (ADR 0075) — link cũ mở mục thủ tục của dịch vụ có tài xế.
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-};
-
-export function resolveEditTab(tab: VehicleEditTab): VehicleEditTab {
-  return TAB_ALIAS[tab] ?? tab;
-}
-
-/** Mục dựng từ section của khu tài khoản thuộc khối VẬN HÀNH cũ — đòi `canOperate` trong phiên hỗ trợ. */
-export const OPERATIONS_TABS: readonly VehicleEditTab[] = [
-  VEHICLE_EDIT_TAB.HANDOVER_TIME,
-  VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
-  VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-];
-
-const SERVICE_OF_TAB: Partial<Record<VehicleEditTab, ServiceType>> = {
-  [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: SERVICE_TYPE.SELF_DRIVE,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: SERVICE_TYPE.WITH_DRIVER,
-};
-
-/** Dịch vụ mà một mục thuộc về — `null` với nhóm chung. Dịch vụ tắt thì mục thay bằng lời mời bật. */
-export function editTabServiceType(tab: VehicleEditTab): ServiceType | null {
-  return SERVICE_OF_TAB[tab] ?? null;
+export function resolveEditTab(
+  tab: VehicleEditTab,
+  services: readonly string[],
+): { tab: VehicleEditTab; termsOf: ServiceType | null } {
+  switch (tab) {
+    case VEHICLE_EDIT_TAB.PRICING:
+      return { tab: defaultServiceTab(services), termsOf: null };
+    case VEHICLE_EDIT_TAB.OPERATIONS:
+    case VEHICLE_EDIT_TAB.HANDOVER_TIME:
+      return { tab: VEHICLE_EDIT_TAB.HANDOVER, termsOf: null };
+    case VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION:
+      /*
+       * Hành vi của route cũ `/optimization`: xe chỉ có dịch vụ có tài xế thì mở thẳng tab đó —
+       * không thả người dùng vào tab tự lái đang tắt.
+       */
+      return {
+        tab:
+          !services.includes(SERVICE_TYPE.SELF_DRIVE) && services.includes(SERVICE_TYPE.WITH_DRIVER)
+            ? VEHICLE_EDIT_TAB.WITH_DRIVER
+            : VEHICLE_EDIT_TAB.SELF_DRIVE,
+        termsOf: null,
+      };
+    case VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION:
+    case VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES:
+      return { tab: VEHICLE_EDIT_TAB.WITH_DRIVER, termsOf: null };
+    case VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS:
+      return { tab: VEHICLE_EDIT_TAB.CONDITIONS, termsOf: SERVICE_TYPE.SELF_DRIVE };
+    case VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS:
+      return { tab: VEHICLE_EDIT_TAB.CONDITIONS, termsOf: SERVICE_TYPE.WITH_DRIVER };
+    default:
+      return { tab, termsOf: null };
+  }
 }

@@ -1,4 +1,5 @@
 import { App } from 'antd';
+import type { ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@xeprime/api-client';
@@ -34,9 +35,16 @@ vi.mock('@/hooks/use-permissions', () => ({
 }));
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const modal = vi.hoisted(() => ({ confirm: vi.fn() }));
 vi.mock('antd', async (importOriginal) =>
-  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages })),
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({
+    message: messages,
+    modal,
+  })),
 );
+
+const router = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
 
 function makeVehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
   return {
@@ -69,6 +77,8 @@ beforeEach(() => {
   toggle.isPending = false;
   messages.error.mockReset();
   messages.success.mockReset();
+  modal.confirm.mockReset();
+  router.push.mockReset();
 });
 
 afterEach(cleanup);
@@ -151,6 +161,62 @@ describe('MarketplaceVisibilitySwitch — xe đã duyệt', () => {
     // `checked` bám vào bản ghi từ cache — mutation hỏng thì cache không đổi.
     expect(theSwitch().getAttribute('aria-checked')).toBe('true');
     expect(messages.success).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Bật lại chợ chạm cổng mặt tiền gian hàng tuyến gói (ADR 0040 điều 7). Toast cũ nói "chưa gửi
+   * xe duyệt được" — sai ngữ cảnh và không có lối đi tiếp; giờ là hộp thoại dẫn tới ô logo.
+   */
+  function failWithGate(missing: string[]) {
+    toggle.mutate.mockImplementation((_v: boolean, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.(
+        new ApiClientError({
+          code: API_ERROR_CODE.SHOP_LISTING_REQUIREMENTS_MISSING,
+          message: 'x',
+          status: 409,
+          details: { missing },
+        }),
+      ),
+    );
+  }
+  const offVehicle = {
+    marketplaceEnabled: false,
+    isMarketplaceVisible: false,
+    marketplaceVisibilityReason: MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
+  };
+
+  it('bật lại mà gian hàng thiếu logo → hộp thoại nói thẳng logo, nút dẫn tới hồ sơ gian hàng', async () => {
+    failWithGate(['logo']);
+    renderSwitch(offVehicle);
+    fireEvent.click(theSwitch());
+
+    await waitFor(() => expect(modal.confirm).toHaveBeenCalledTimes(1));
+    expect(messages.error).not.toHaveBeenCalled();
+    const opts = modal.confirm.mock.calls[0]?.[0] as {
+      title: string;
+      content: unknown;
+      okText: string;
+      onOk: () => void;
+    };
+    expect(opts.title).toBe('Chưa hiển thị lại được xe trên chợ');
+    expect(String(opts.content)).toContain('logo');
+    expect(opts.okText).toBe('Tải logo');
+    opts.onOk();
+    expect(router.push).toHaveBeenCalledWith(expect.stringContaining('section=profile'));
+    expect(theSwitch().getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('thiếu nhiều mục → hộp thoại liệt kê từng mục bằng nhãn, không in mã thô', async () => {
+    failWithGate(['logo', 'address']);
+    renderSwitch(offVehicle);
+    fireEvent.click(theSwitch());
+
+    await waitFor(() => expect(modal.confirm).toHaveBeenCalledTimes(1));
+    const opts = modal.confirm.mock.calls[0]?.[0] as { content: ReactNode; okText: string };
+    render(<>{opts.content}</>);
+    expect(screen.getByText('Logo gian hàng')).toBeTruthy();
+    expect(screen.getByText('Địa chỉ')).toBeTruthy();
+    expect(opts.okText).toBe('Mở hồ sơ gian hàng');
   });
 
   it('thiếu quyền: KHÔNG vẽ công tắc, nhưng vẫn nói xe đang ở đâu', () => {

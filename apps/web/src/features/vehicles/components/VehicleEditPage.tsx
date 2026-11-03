@@ -20,6 +20,7 @@ import { getErrorCode } from '@/services/api-client';
 import { useVehicle } from '../hooks/use-vehicle';
 import { useUpdateVehicle } from '../hooks/use-vehicle-mutations';
 import type { UpdateVehicleInput } from '../types';
+import { VehicleEditMarketBar } from './edit/VehicleEditSummary';
 import { VehicleEditWorkspace } from './VehicleEditWorkspace';
 
 /**
@@ -36,7 +37,7 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
   const errorMessage = usePlanAwareErrorMessage();
   const router = useRouter();
   const { message } = App.useApp();
-  const { paths, vehicles: vehiclePaths } = useWorkspace();
+  const { paths, vehicles: vehiclePaths, isManage } = useWorkspace();
   const { has } = usePermissions();
 
   /*
@@ -44,8 +45,13 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
    * lại là về danh sách, và phiên chế độ xem đọc được nó ở dạng chỉ-xem.
    */
   const support = useSupportSession();
+  /*
+   * Tuyến hoa hồng (03/11/2026, màn sửa dùng chung hai tuyến): thành viên chỉ có quyền xem vẫn đọc
+   * được hồ sơ xe ở dạng chỉ-xem — như không gian "Quản lý xe" cũ của họ. Tuyến gói giữ màn chặn.
+   */
   const canOpen =
-    has(PERMISSION.VEHICLE_UPDATE) || (support !== null && has(PERMISSION.VEHICLE_VIEW));
+    has(PERMISSION.VEHICLE_UPDATE) ||
+    ((support !== null || !isManage) && has(PERMISSION.VEHICLE_VIEW));
   // Không gọi API khi không mở được trang: tránh một request chắc chắn bị guard backend từ chối.
   const vehicle = useVehicle(canOpen ? vehicleId : undefined);
   const update = useUpdateVehicle(vehicleId);
@@ -54,6 +60,8 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
   const branchId = useSearchParams().get('branchId');
   const backHref = support ? listHref : withBranchReturn(vehiclePaths.detail(vehicleId), branchId);
   const goBack = () => router.push(backHref);
+  // Breadcrumb "Danh sách xe › Chi tiết xe › Chỉnh sửa xe" (design) — phiên hỗ trợ quay về danh sách.
+  const parentCrumb = support ? null : { label: t('edit.page.parentCrumb'), href: backHref };
 
   async function handleSubmit(body: UpdateVehicleInput) {
     try {
@@ -90,7 +98,12 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
   if (vehicle.isLoading) {
     return (
       <PageContainer width="wide">
-        <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
+        <ManagePageHeader
+          title={t('edit.page.title')}
+          subtitle={t('edit.page.subtitle')}
+          onBack={goBack}
+          parent={parentCrumb}
+        />
         <LoadingState variant="page" label={t('detail.loading')} />
       </PageContainer>
     );
@@ -112,7 +125,13 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
 
   return (
     <PageContainer width="wide">
-      <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
+      <ManagePageHeader
+        title={t('edit.page.title')}
+        subtitle={t('edit.page.subtitle')}
+        onBack={goBack}
+        parent={parentCrumb}
+        extra={<VehicleEditMarketBar vehicle={vehicle.data} />}
+      />
       <VehicleEditWorkspace
         vehicle={vehicle.data}
         submitting={update.isPending}

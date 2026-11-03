@@ -8,7 +8,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { Alert, App, Button, Card, Col, Form, Radio, Row, Skeleton, Tag } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import {
@@ -39,6 +39,7 @@ import {
   sourceFormValuesToInput,
 } from '../source-mappers';
 import type { VehicleDetail, VehicleSource } from '../types';
+import { useEditForm } from './edit/edit-actions';
 import styles from './VehicleSourceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -232,7 +233,14 @@ function VehicleSourceForm({
     return ticket.downloadUrl;
   }
 
-  async function persist(values: VehicleSourceFormValues) {
+  /** Lời hứa của lượt lưu từ cột phải màn sửa xe — hộp xác nhận đổi hình thức trả lời nó. */
+  const pendingResolve = useRef<((ok: boolean) => void) | null>(null);
+  const settle = (ok: boolean) => {
+    pendingResolve.current?.(ok);
+    pendingResolve.current = null;
+  };
+
+  async function persist(values: VehicleSourceFormValues): Promise<boolean> {
     try {
       const next = await save.mutateAsync(sourceFormValuesToInput(values));
       reset(
@@ -242,9 +250,13 @@ function VehicleSourceForm({
       );
       setConfirmTypeChange(null);
       message.success(t('saved'));
+      settle(true);
+      return true;
     } catch (err) {
       // Giữ nguyên form để sửa/thử lại — giá trị đã nhập không được mất vì một lần lưu hỏng.
       message.error(getErrorMessage(err));
+      settle(false);
+      return false;
     }
   }
 
@@ -256,6 +268,26 @@ function VehicleSourceForm({
     }
     void persist(values);
   }
+
+  /*
+   * Nút Lưu ở cột phải màn sửa xe: validate → (đổi hình thức thì hỏi) → ghi. Ngoài màn sửa form giữ
+   * nút riêng của nó.
+   */
+  const registered = useEditForm('source', {
+    dirty: isDirty,
+    submitting: save.isPending,
+    reset: () => reset(initialValues),
+    submit: () =>
+      new Promise<boolean>((resolve) => {
+        void handleSubmit(
+          (values) => {
+            pendingResolve.current = resolve;
+            onSubmit(values);
+          },
+          () => resolve(false),
+        )();
+      }),
+  });
 
   return (
     /*
@@ -383,7 +415,7 @@ function VehicleSourceForm({
           ) : null}
         </div>
 
-        {canEdit ? (
+        {canEdit && !registered ? (
           <StickyFormActions
             submitLabel={tActions('saveChanges')}
             cancelLabel={isDirty ? t('revert') : tActions('cancel')}
@@ -398,7 +430,10 @@ function VehicleSourceForm({
           title={t('confirmType.title')}
           size="sm"
           confirmLoading={save.isPending}
-          onClose={() => setConfirmTypeChange(null)}
+          onClose={() => {
+            setConfirmTypeChange(null);
+            settle(false);
+          }}
           onOk={() => confirmTypeChange && void persist(confirmTypeChange)}
           okText={t('confirmType.ok')}
           cancelText={tActions('cancel')}

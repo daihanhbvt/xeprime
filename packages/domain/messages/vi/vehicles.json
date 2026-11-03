@@ -541,6 +541,11 @@
       "hint": "Tắt hiển thị không ảnh hưởng các yêu cầu và đơn thuê hiện có.",
       "enabled": "Xe đã hiển thị trên chợ",
       "disabled": "Đã tạm ẩn xe khỏi chợ",
+      "gate": {
+        "title": "Chưa hiển thị lại được xe trên chợ",
+        "logoOnly": "Gian hàng cần có logo thì xe mới hiện trên chợ. Tải logo lên ở hồ sơ gian hàng rồi bật lại công tắc này.",
+        "missing": "Hồ sơ gian hàng còn thiếu các mục dưới đây. Bổ sung xong thì bật lại công tắc này."
+      },
       "moderationTag": {
         "draft": "Chưa hiển thị",
         "pending_public_review": "Đang chờ duyệt",
@@ -836,7 +841,9 @@
       "saved": "Đã lưu thay đổi",
       "forbiddenTitle": "Không có quyền sửa xe",
       "forbiddenBody": "Bạn cần quyền dưới đây để chỉnh sửa thông tin xe. Liên hệ quản trị viên để được cấp quyền.",
-      "viewDetail": "Xem chi tiết xe"
+      "viewDetail": "Xem chi tiết xe",
+      "subtitle": "Cập nhật và quản lý thông số, hình ảnh cùng hồ sơ pháp lý phương tiện của bạn",
+      "parentCrumb": "Chi tiết xe"
     },
     "nav": {
       "general": "Thông tin chung",
@@ -1620,5 +1627,116 @@
     "interior": "Nội thất",
     "dashboard": "Đồng hồ ODO",
     "other": "Ảnh khác"
+  },
+  "editor": {
+    "menu": {
+      "label": "Mục hồ sơ xe",
+      "groups": {
+        "profile": "Hồ sơ xe",
+        "rental": "Hình thức cho thuê",
+        "advanced": "Vận hành nâng cao"
+      },
+      "items": {
+        "information": "Thông tin chung",
+        "media": "Hình ảnh",
+        "documents": "Giấy tờ xe",
+        "trip-history": "Lịch sử chuyến",
+        "services": "Dịch vụ xe",
+        "conditions": "Điều kiện",
+        "handover": "Giao nhận",
+        "maintenance": "Bảo dưỡng & số KM",
+        "source": "Nguồn gốc & tài chính xe"
+      },
+      "missingBadge": "{count} thiếu",
+      "missingImages": "Còn thiếu {count, plural, other {# góc ảnh}} bắt buộc",
+      "documentsCount": "Đã có {count}/{total} giấy tờ cốt lõi"
+    },
+    "asideLabel": "Tóm tắt xe và lưu thay đổi",
+    "summary": {
+      "label": "Tóm tắt xe",
+      "openMedia": "Mở mục Hình ảnh",
+      "statusSaved": "Đã cập nhật trạng thái vận hành",
+      "changeStatus": "Trạng thái vận hành: {status} — bấm để đổi",
+      "operation": "Vận hành",
+      "review": "Kiểm duyệt",
+      "plate": "Biển số",
+      "kind": "Loại xe",
+      "seats": "{count} chỗ",
+      "perDay": "/ngày",
+      "perMonth": "/tháng",
+      "price": "Giá thuê",
+      "priceWithUnit": "Giá thuê ({unit})",
+      "odometer": "Số KM",
+      "rating": "Đánh giá",
+      "noRating": "Chưa có đánh giá",
+      "trips": "{count, plural, other {# chuyến}}",
+      "completeness": "Hoàn thiện",
+      "completenessValue": "Đạt {done}/{total} điều kiện gửi duyệt",
+      "viewListing": "Xem trang xe"
+    },
+    "information": {
+      "general": "Thông tin chung",
+      "bodyType": "Kiểu dáng xe",
+      "bodyTypeHint": "Chọn đúng kiểu dáng — khách lọc xe theo mục này ngoài chợ.",
+      "energy": "Động cơ & nhiên liệu",
+      "features": "Tiện ích xe",
+      "advanced": "Thông số nâng cao",
+      "advancedHint": "Kích thước, khối lượng, công suất và mức tiêu thụ — không bắt buộc.",
+      "dimensions": "Kích thước & khối lượng",
+      "engine": "Công suất",
+      "consumption": "Mức tiêu thụ theo điều kiện đường",
+      "description": "Mô tả xe"
+    },
+    "services": {
+      "tabsLabel": "Dịch vụ của xe",
+      "tabs": {
+        "self_drive": "Thuê xe tự lái",
+        "with_driver": "Xe có tài xế",
+        "long_term": "Thuê xe dài hạn"
+      },
+      "on": "Đang bật",
+      "off": "Đang tắt",
+      "toggle": {
+        "self_drive": {
+          "title": "Cho thuê tự lái",
+          "target": "khách tự lái"
+        },
+        "with_driver": {
+          "title": "Xe có tài xế",
+          "target": "chuyến có tài xế"
+        },
+        "long_term": {
+          "title": "Thuê xe dài hạn",
+          "target": "khách thuê dài hạn"
+        },
+        "hint": "Bật để nhận {service}. Điều kiện nhận chuyến ở mục <conditions>Điều kiện</conditions>."
+      },
+      "offNote": "Dịch vụ đang tắt — bật ở trên để đặt giá và nhận chuyến cho dịch vụ này.",
+      "price": {
+        "title": "Giá thuê",
+        "titlePromo": "Giá thuê & Khuyến mãi"
+      },
+      "policy": {
+        "selfDriveTitle": "Thủ tục & Điều khoản cho thuê",
+        "longTermTitle": "Ưu đãi thuê dài hạn (trên 1 tháng)"
+      },
+      "extras": "Khác"
+    },
+    "policy": {
+      "useShop": "Áp dụng chính sách của gian hàng",
+      "useShopHint": "Khi bật, xe tự đồng bộ theo <policies>chính sách chung</policies> của gian hàng: cọc, hạn mức km, phí quá giờ, giao xe và ưu đãi dài hạn.",
+      "customActive": "Xe đang dùng chính sách riêng. Bật lại để quay về chính sách gian hàng — tuỳ chỉnh của xe sẽ mất.",
+      "inherited": "Đang theo <policies>chính sách gian hàng</policies>. Tắt \"Áp dụng chính sách của gian hàng\" ở đầu mục để sửa riêng cho xe này.",
+      "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở mục <switch>Dịch vụ xe</switch>."
+    },
+    "conditions": {
+      "selfDriveTitle": "Thuê xe tự lái & Thuê xe dài hạn",
+      "withDriverTitle": "Xe có tài xế"
+    },
+    "handover": {
+      "title": "Giao nhận xe",
+      "delivery": "Dịch vụ giao nhận xe tận nơi",
+      "windowsTitle": "Khung giờ giao & nhận xe"
+    }
   }
 }

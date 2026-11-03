@@ -1,0 +1,309 @@
+/* Nội dung các mục của màn sửa xe (design `23731:37932`). Khung + thẻ ở `VehicleEditShell.module.css`. */
+
+.stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.subheading {
+  margin: 4px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+/* ── Dịch vụ xe: dải ba tab dịch vụ ─────────────────────────────────────── */
+
+.serviceTabs {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.serviceTab {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.serviceTab:hover {
+  color: var(--xp-color-text);
+}
+
+.serviceTab:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+.serviceTabActive,
+.serviceTabActive:hover {
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 3px rgba(10, 13, 18, 0.08);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.serviceDot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-error);
+}
+
+.serviceDotOn {
+  background: var(--xp-color-success);
+}
+
+/* ── Hàng công tắc (dịch vụ · tự nhận chuyến · chính sách gian hàng) ────── */
+
+.toggleRows {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: 16px 0;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.toggleRow:first-child {
+  padding-top: 0;
+}
+
+.toggleRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.toggleText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggleTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.toggleHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.toggleHint a {
+  color: var(--xp-color-primary-active);
+  text-decoration: underline;
+}
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--xp-color-bg-layout);
+}
+
+.rulesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.rulesPolicy {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.infoButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+}
+
+.infoButton:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--xp-color-primary);
+}
+
+/* ── Giá ────────────────────────────────────────────────────────────────── */
+
+.priceRow {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.priceRow :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.inheritNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.inheritNote a {
+  color: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  text-decoration: underline;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  font-style: italic;
+  line-height: 20px;
+}
+
+@container vehicle-edit (max-width: 760px) {
+  .priceRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .serviceTabs {
+    grid-auto-flow: row;
+  }
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  text-decoration: underline;
+}
+
+.linkButton:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--xp-color-primary);
+}
+
+/* ── Giao nhận ──────────────────────────────────────────────────────────── */
+
+.windowColumns {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.windows {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.windowRow {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+}
+
+.windowRow :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.windowDash {
+  color: var(--xp-color-text-tertiary);
+}
+
+.addWindow.addWindow {
+  align-self: flex-start;
+  padding-inline: 0;
+  color: var(--xp-color-primary-active);
+}
+
+.error {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size);
+}
+
+.bufferOptions {
+  align-self: flex-start;
+}
+
+.bufferCustom {
+  max-width: 270px;
+}
+
+@container vehicle-edit (max-width: 760px) {
+  .windowColumns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Địa chỉ xe (chủ xe tuyến hoa hồng) ─────────────────────────────────── */
+
+.address {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addressLine {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+}

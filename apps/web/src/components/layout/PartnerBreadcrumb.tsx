@@ -9,7 +9,7 @@ import { LineIcon } from '@/components/icons/LineIcon';
 import { flattenLeaves, leavesOfSection, matchSelectedKey } from '@/constants/nav';
 import { useManageNavTree } from './use-manage-nav-tree';
 import { useNavLeafAccess } from './use-nav-leaf-access';
-import { usePageTitle } from './page-title-context';
+import { usePageParent, usePageTitle } from './page-title-context';
 import styles from './PartnerBreadcrumb.module.css';
 
 /**
@@ -33,6 +33,7 @@ export function PartnerBreadcrumb() {
   const { sections } = useManageNavTree();
   const { hrefOf } = useNavLeafAccess();
   const pageTitle = usePageTitle();
+  const parent = usePageParent();
 
   const leaves = flattenLeaves(sections);
   const selectedHref = matchSelectedKey(pathname, leaves);
@@ -67,6 +68,18 @@ export function PartnerBreadcrumb() {
         </span>
       ),
     },
+    ...(tail && parent
+      ? [
+          {
+            key: 'parent',
+            title: (
+              <Link href={parent.href} className={styles.link}>
+                {parent.label}
+              </Link>
+            ),
+          },
+        ]
+      : []),
     ...(tail
       ? [
           {

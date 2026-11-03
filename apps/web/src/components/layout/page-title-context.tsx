@@ -2,8 +2,16 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+/** Mắt xích CHA giữa mục menu và trang đang xem — vd "Danh sách xe › Chi tiết xe › Chỉnh sửa". */
+export interface PageParentCrumb {
+  label: string;
+  href: string;
+}
+
 const TitleContext = createContext<string | null>(null);
 const SetTitleContext = createContext<((title: string | null) => void) | null>(null);
+const ParentContext = createContext<PageParentCrumb | null>(null);
+const SetParentContext = createContext<((parent: PageParentCrumb | null) => void) | null>(null);
 
 /**
  * Tiêu đề của trang đang mở, để breadcrumb của header site partner có mắt xích cuối ("… › Yêu cầu
@@ -18,9 +26,14 @@ const SetTitleContext = createContext<((title: string | null) => void) | null>(n
  */
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [title, setTitle] = useState<string | null>(null);
+  const [parent, setParent] = useState<PageParentCrumb | null>(null);
   return (
     <SetTitleContext.Provider value={setTitle}>
-      <TitleContext.Provider value={title}>{children}</TitleContext.Provider>
+      <SetParentContext.Provider value={setParent}>
+        <TitleContext.Provider value={title}>
+          <ParentContext.Provider value={parent}>{children}</ParentContext.Provider>
+        </TitleContext.Provider>
+      </SetParentContext.Provider>
     </SetTitleContext.Provider>
   );
 }
@@ -36,4 +49,20 @@ export function useRegisterPageTitle(title: string | null): void {
     setTitle(title);
     return () => setTitle(null);
   }, [setTitle, title]);
+}
+
+export function usePageParent(): PageParentCrumb | null {
+  return useContext(ParentContext);
+}
+
+/** Trang con của một trang chi tiết (vd màn sửa của một xe) khai mắt xích cha của nó. */
+export function useRegisterPageParent(parent: PageParentCrumb | null): void {
+  const setParent = useContext(SetParentContext);
+  const label = parent?.label ?? null;
+  const href = parent?.href ?? null;
+  useEffect(() => {
+    if (!setParent) return undefined;
+    setParent(label && href ? { label, href } : null);
+    return () => setParent(null);
+  }, [setParent, label, href]);
 }

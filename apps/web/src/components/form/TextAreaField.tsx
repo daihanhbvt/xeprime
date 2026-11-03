@@ -21,6 +21,11 @@ interface TextAreaFieldProps<T extends FieldValues> {
   help?: ReactNode;
   /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
   required?: boolean;
+  /**
+   * Ẩn nhãn khi thẻ chứa ô đã mang đúng tiêu đề đó (vd thẻ "Mô tả") — nhãn vẫn là tên khả truy cập
+   * của ô (`aria-label`), chỉ không vẽ lần thứ hai.
+   */
+  hideLabel?: boolean;
 }
 
 /**
@@ -42,6 +47,7 @@ export function TextAreaField<T extends FieldValues>({
   showCount,
   help,
   required,
+  hideLabel = false,
 }: TextAreaFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const id = useId();
@@ -53,7 +59,7 @@ export function TextAreaField<T extends FieldValues>({
 
   return (
     <Form.Item
-      label={label}
+      label={hideLabel ? undefined : label}
       htmlFor={id}
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
@@ -68,6 +74,7 @@ export function TextAreaField<T extends FieldValues>({
         maxLength={maxLength}
         showCount={counted}
         placeholder={placeholder}
+        aria-label={hideLabel && typeof label === 'string' ? label : undefined}
         aria-describedby={helpText ? describedById : undefined}
         aria-invalid={fieldState.error ? true : undefined}
         status={fieldState.error ? 'error' : undefined}

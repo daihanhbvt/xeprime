@@ -159,8 +159,9 @@ describe('SupportSessionBoundary + SupportDataScope', () => {
     expect(screen.getByTestId('home').textContent).toContain(
       `/admin/tenant-support/${CONTEXT_A}`,
     );
-    expect(screen.getByTestId('detail').textContent).toContain(
-      `/admin/tenant-support/${CONTEXT_A}/vehicles/v1/manage`,
+    // Hai tuyến dùng chung trang chi tiết xe từ 03/11/2026 — trong phiên cũng vậy.
+    expect(screen.getByTestId('detail').textContent).toBe(
+      `/admin/tenant-support/${CONTEXT_A}/vehicles/v1`,
     );
   });
 
