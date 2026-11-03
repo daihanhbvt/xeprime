@@ -60,7 +60,13 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
+const settings = new VehicleSettingsService(
+  asService,
+  audit,
+  occupancy,
+  new ListingsService(asService),
+  makeDriversService(asService),
+);
 const holds = makeBookingHoldsService(asService);
 const pricing = makePricingService(asService);
 const evaluator = new PromoCodeEvaluatorService(asService);
@@ -912,7 +918,8 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
     });
     expect(hold.promoDiscountAmount.toFixed(0)).toBe('0');
     expect(hold.amount.toFixed(0)).toBe(String(GROSS_ONLINE));
-    expect(await prisma.promoRedemption.count()).toBe(0);
+    // Đếm theo yêu cầu này: database test dùng chung, lượt dùng mã của spec/dữ liệu khác không liên quan.
+    expect(await prisma.promoRedemption.count({ where: { bookingRequestId: receipt.id } })).toBe(0);
   });
 
   maybe(

@@ -26,6 +26,7 @@ import {
   makeNotificationService,
   makeTenantsService,
   makeVehiclesService,
+  wardCodeOf,
 } from './helpers/service-factory';
 import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
@@ -230,6 +231,7 @@ describe('1. Mở hồ sơ chủ xe: không sinh phiếu duyệt gian hàng', ()
       name: 'Nguyễn Văn A',
       tenantType: TENANT_TYPE.INDIVIDUAL,
       provinceCode: HCM,
+      wardCode: await wardCodeOf(asService, HCM),
       phone: '84901234567',
     });
     tenantId = shop.id;

@@ -88,6 +88,7 @@ import {
   makeTenantsService,
   makeVehiclesService,
   seedBranch,
+  wardCodeOf,
   vehicleCreator,
   makeDriversService,
 } from './helpers/service-factory';
@@ -384,7 +385,13 @@ beforeAll(async () => {
       },
       {
         provide: VehicleSettingsService,
-        useValue: new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService)),
+        useValue: new VehicleSettingsService(
+          asService,
+          audit,
+          occupancy,
+          new ListingsService(asService),
+          makeDriversService(asService),
+        ),
       },
       { provide: VehicleTripHistoryService, useValue: {} },
       { provide: BranchesService, useValue: makeBranchesService(asService) },
@@ -1328,7 +1335,7 @@ describe('Chi nhánh cơ bản', () => {
     const created = await request(server())
       .post('/branches')
       .set(inContext(id, REASON))
-      .send({ name: 'CN tạo hộ', provinceCode: '79' });
+      .send({ name: 'CN tạo hộ', provinceCode: '79', wardCode: await wardCodeOf(asService, '79') });
     expect(created.status).toBe(201);
     const audit = await lastAudit('branch.create');
     expect(audit.actorScope).toBe(AUDIT_ACTOR_SCOPE.PLATFORM);
