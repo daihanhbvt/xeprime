@@ -218,7 +218,11 @@
     "WITH_DRIVER_PRICE_OUT_OF_RANGE": "The with-driver daily price is outside the reasonable range. Check for a missing or extra zero.",
     "DRIVER_SURCHARGE_RETIRED": "Driver surcharges have been removed — the with-driver price is all-inclusive.",
     "SURCHARGE_CATEGORY_RETIRED": "This surcharge type has been removed — the with-driver price is all-inclusive.",
-    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "With-driver trips don't take overtime or excess-mileage surcharges — customers pay one all-inclusive price."
+    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "With-driver trips don't take overtime or excess-mileage surcharges — customers pay one all-inclusive price.",
+    "BOOKING_EXTENSION_NOT_ALLOWED": "Only an active long-term booking can be extended.",
+    "BOOKING_EXTENSION_PENDING": "This booking already has an extension awaiting payment.",
+    "BOOKING_EXTENSION_NOT_CANCELLABLE": "This extension can no longer be cancelled.",
+    "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced — check the vehicle's monthly price."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",

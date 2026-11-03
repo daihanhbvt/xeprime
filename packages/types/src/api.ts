@@ -452,6 +452,17 @@ export const API_ERROR_CODE = {
   /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
   HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
   /**
+   * Đơn không gia hạn được — chỉ đơn THUÊ DÀI HẠN đang thuê (`active`) mới có phụ lục (ADR 0077).
+   * `details` mang `{ status, serviceType }`.
+   */
+  BOOKING_EXTENSION_NOT_ALLOWED: 'BOOKING_EXTENSION_NOT_ALLOWED',
+  /** Đơn đã có một phụ lục đang chờ khách thanh toán — xử lý (hoặc huỷ) nó trước (ADR 0077). */
+  BOOKING_EXTENSION_PENDING: 'BOOKING_EXTENSION_PENDING',
+  /** Phụ lục không còn ở chặng huỷ được (đã hiệu lực / đã đóng). */
+  BOOKING_EXTENSION_NOT_CANCELLABLE: 'BOOKING_EXTENSION_NOT_CANCELLABLE',
+  /** Không báo giá được phần gia hạn: xe chưa có giá tháng hoặc chưa có chính sách phí hiệu lực. */
+  BOOKING_EXTENSION_UNPRICED: 'BOOKING_EXTENSION_UNPRICED',
+  /**
    * Gian hàng ở tuyến HOA HỒNG — cọc là bắt buộc và không có công tắc để tắt (ADR 0032 điều 2).
    *
    * Trả **403** cho `PATCH /shop/payment-settings`. Màn hình vẫn HIỆN công tắc ở trạng thái bật

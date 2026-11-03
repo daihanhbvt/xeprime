@@ -26,6 +26,7 @@ import {
   makeBookingHoldsService,
   makeTenantsService,
   makeVehiclesService,
+  makeBookingExtensionsService,
 } from './helpers/service-factory';
 import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
@@ -56,7 +57,7 @@ const vehicles = makeVehiclesService(asService);
 const SEPAY_API_KEY = 'test-track-key-0123456789abcdef';
 const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? SEPAY_API_KEY : undefined),
-} as unknown as ConfigService);
+} as unknown as ConfigService, makeBookingExtensionsService(asService));
 
 /** TP.HCM + một xã thuộc chính tỉnh đó — danh mục do migration nạp, không cần seed gì thêm. */
 const HCM = '79';

@@ -21,6 +21,7 @@ import { TripDriverCard } from './TripDriverCard';
 import { TripEstimateCard } from './TripEstimateCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripExtensionPanel } from './TripExtensionPanel';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOwnerActions';
 import { TripPageHeader } from './TripPageHeader';
@@ -130,6 +131,9 @@ export function TripActiveView({ trip, backHref }: { trip: CustomerTripDetail; b
 
           {/* Quay về từ MoMo/VNPAY bằng liên kết CŨ (ADR 0058) — không có tham số thì im lặng. */}
           <TripGatewayReturn tripId={trip.id} />
+
+          {/* Gia hạn chuyến dài hạn (ADR 0077) — QR của phụ lục đang chờ; không có thì im lặng. */}
+          <TripExtensionPanel tripId={trip.id} />
 
           {/* Khoản giữ chỗ: kết cục hoặc khoản hoàn — `TripHoldPanel` tự quyết vẽ gì. */}
           {trip.hold ? (

@@ -1,27 +1,13 @@
 'use client';
 
-import {
-  LockOutlined,
-  LogoutOutlined,
-  ShopOutlined,
-  UpOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { UpOutlined } from '@ant-design/icons';
 import { Avatar, Dropdown, Tooltip } from 'antd';
-import type { MenuProps } from 'antd';
-import Link from 'next/link';
-import { ROUTES } from '@/constants/routes';
-import { ZONE } from '@/zones';
-import { useZone } from '@/zones/ZoneProvider';
-import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { workspaceAvatar } from '@/features/account/workspace-avatar';
-import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { cx } from '@/lib/cx';
-import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { initialOf } from '@/lib/initials';
+import { useAccountMenuItems } from './use-account-menu';
 import styles from './ManageUserCard.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -54,26 +40,18 @@ export interface ManageUserCardProps {
  * Chỉ hiện tên và nhãn vai trò — KHÔNG hiện email hay số điện thoại. Vỏ portal nằm trên mọi
  * trang, kể cả lúc chia sẻ màn hình.
  *
- * Đăng xuất gọi `usePortalLogout` dùng chung với `Topbar` — một luồng, hai lối vào.
+ * Menu là `useAccountMenuItems` — CÙNG bộ mục với khối hồ sơ ở header site partner và avatar ở
+ * thanh trên site quản trị.
  */
 export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUserCardProps) {
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
-  const canOpenShopSettings = useShopSettingsAccess();
-  const logout = usePortalLogout();
+  const menuItems = useAccountMenuItems();
   const identityLabel = useAccountIdentityLabel();
-  const zone = useZone();
-  const isAdmin = zone === ZONE.ADMIN;
-  /*
-   * Không còn mục "Chuyến tôi đi thuê" (ADR 0053): tài khoản partner và nhân sự nền tảng là tài
-   * khoản RIÊNG, không bao giờ đứng tên một chuyến đi thuê — chuyến đi thuê thuộc tài khoản khách ở
-   * `xeprime.vn`. Lối chuyển tiếp `/manage/account/trips` cũ đã gỡ cùng lúc.
-   */
 
   if (!user) return null;
 
   const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
-  const signedInAs = user.displayName || user.email || '—';
   /*
    * Nhãn danh tính đọc TUYẾN, không đọc bảng vai — xem `useAccountIdentityLabel`.
    *
@@ -82,69 +60,6 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
    */
   const role = identityLabel(user);
   const dark = tone === 'dark';
-
-  const menuItems: MenuProps['items'] = [
-    {
-      /*
-       * Đầu menu: gian hàng, AI đang đăng nhập, và TUYẾN.
-       *
-       * Thẻ bên dưới chỉ mang tên gian hàng và vai — nó còn phải thu về cột 64px, nơi cả hai đã
-       * bị ẩn. Ba dòng ở đây là chỗ duy nhất trả lời đủ "tôi đang đứng trong gian hàng nào, bằng
-       * tài khoản nào, và gian hàng đó trả tiền theo cách nào".
-       */
-      key: 'identity',
-      label: (
-        <span className={styles.menuIdentity}>
-          <span className={styles.menuShop}>{workspaceName}</span>
-          <span className={styles.menuUser}>{t('shell.signedInAs', { name: signedInAs })}</span>
-          <AccountTrackBadge tenant={user.tenant} size="small" />
-        </span>
-      ),
-      disabled: true,
-    },
-    { type: 'divider' as const },
-    /*
-     * TÀI KHOẢN của người đang đăng nhập — MỘT mục.
-     *
-     * Site partner: "Tài khoản & bảo mật" (05/10/2026) gộp hai mục "Hồ sơ cá nhân" và "Bảo mật tài
-     * khoản" từng trỏ tới hai trang cùng hiện email/SĐT — người dùng phải đoán đổi số ở cửa nào.
-     * Site quản trị: chỉ có trang bảo mật (đổi mật khẩu) — nhân sự nền tảng không có hồ sơ công khai.
-     */
-    isAdmin
-      ? {
-          key: 'security',
-          icon: <LockOutlined aria-hidden />,
-          label: <Link href={ROUTES.ADMIN.SECURITY}>{t('shell.security')}</Link>,
-        }
-      : {
-          key: 'account',
-          icon: <UserOutlined aria-hidden />,
-          // Chủ xe tuyến hoa hồng: cùng URL là "Hồ sơ chủ xe" (`PartnerAccountRoute`) — nhãn theo.
-          label: (
-            <Link href={ROUTES.MANAGE.ACCOUNT}>
-              {isCommissionOwner(user) ? t('shell.ownerProfile') : t('shell.account')}
-            </Link>
-          ),
-        },
-    // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng tuyến gói —
-    // điều kiện dùng chung với mọi lối vào khác của trang đó (`useShopSettingsAccess`).
-    ...(canOpenShopSettings
-      ? [
-          {
-            key: 'shop',
-            icon: <ShopOutlined aria-hidden />,
-            label: <Link href={ROUTES.MANAGE.SHOP}>{t('shell.shopSettings')}</Link>,
-          },
-        ]
-      : []),
-    { type: 'divider' as const },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined aria-hidden />,
-      label: t('shell.logout'),
-      onClick: () => void logout(),
-    },
-  ];
 
   const avatar = (
     <Avatar className={styles.avatar} {...workspaceAvatar(user)}>

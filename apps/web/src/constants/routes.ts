@@ -11,6 +11,7 @@ import {
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
   isSupportContextId,
+  type BookingListPreset,
   type PlatformPartnerKind,
   type RegistrationTrack,
 } from '@xeprime/types';
@@ -235,7 +236,10 @@ export const ROUTES = {
      * LỐI ĐI CHUYỂN TIẾP tới chuyến ĐI THUÊ cũ của tài khoản này (15/09/2026) — từ ADR 0053 tài khoản
      * đối tác không đặt xe nữa; trang chỉ còn cho dữ liệu có trước đợt tách realm.
      */
-    /** Chi nhánh gian hàng — nơi xe thực sự nằm, và là vị trí công khai của xe. */
+    /**
+     * ALIAS CHUYỂN TIẾP (02/11/2026) — chi nhánh là section của trang Cửa hàng ở site partner
+     * (`shopSectionPath(SHOP_SECTION.BRANCHES)`). Phiên hỗ trợ gian hàng vẫn còn trang riêng ở route này.
+     */
     SHOP_BRANCHES: partner('/shop/branches'),
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: partner('/shop/policies'),
@@ -579,10 +583,10 @@ export function workspacePaths(workspace: Workspace): {
       bookings: ROUTES.MANAGE.BOOKINGS,
       bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
       ownerProfile: ROUTES.MANAGE.SHOP,
-      branches: ROUTES.MANAGE.SHOP_BRANCHES,
-      // Hai mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026) — chúng là section
+      // Ba mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026; chi nhánh 02/11) — chúng là section
       // của trang Cửa hàng. Trỏ vào hằng số route cũ vẫn tới nơi, nhưng qua một lần chuyển
       // hướng thừa, và mỗi lần chuyển hướng là một lần mất tham số mà người gọi vừa gắn vào.
+      branches: shopSectionPath(SHOP_SECTION.BRANCHES),
       subscription: shopSectionPath(SHOP_SECTION.PLAN),
       sellerProfile: shopSectionPath(SHOP_SECTION.TAX),
       support: ROUTES.MANAGE.SUPPORT,
@@ -874,6 +878,21 @@ export const bookingPath = {
 };
 
 /**
+ * Tham số URL của ngăn đang xem trên màn "Quản lý đơn thuê xe" — vắng = "Tất cả". Cùng tên với
+ * tham số `preset` của `GET /bookings`: URL và API nói một từ vựng (`BOOKING_LIST_PRESET`).
+ */
+export const BOOKINGS_GROUP_PARAM = 'preset';
+
+/**
+ * Một ngăn của cột trái "Quản lý đơn thuê xe" (02/11/2026): Chờ giao xe · Đang thuê · Hoàn thành ·
+ * Đã huỷ. Là tham số của CÙNG danh sách chứ không phải một route riêng — route cũ
+ * `/bookings/awaiting-pickup` chuyển tiếp về `bookingsGroupPath(AWAITING_PICKUP)`.
+ */
+export function bookingsGroupPath(group: BookingListPreset): string {
+  return `${ROUTES.MANAGE.BOOKINGS}?${BOOKINGS_GROUP_PARAM}=${group}`;
+}
+
+/**
  * Hồ sơ một khách trong SỔ KHÁCH của gian hàng (S-01) — route thật, không phải drawer.
  *
  * Cùng lý do với `bookingPath`: người ta gửi link hồ sơ khách cho nhau ("xem giúp anh khách
@@ -1033,6 +1052,11 @@ export const SHOP_SECTION = {
    * nhất của MST mà hợp đồng và báo cáo thuế đọc.
    */
   TAX: 'tax',
+  /**
+   * Chi nhánh — nơi xe thực sự nằm (02/11/2026: rời menu, về làm section ở đây theo design mới;
+   * `/shop/branches` chuyển tiếp tới section này).
+   */
+  BRANCHES: 'branches',
   /** Gói hiện hành, hạn mức chỗ, và hoá đơn thanh toán. */
   PLAN: 'plan',
 } as const;

@@ -7,7 +7,26 @@ import type { BookingListPreset, components } from '@xeprime/types';
 type Schemas = components['schemas'];
 
 export type BookingListItem = Schemas['BookingListItemDto'];
+/** Meta của trang danh sách đơn — thêm số đếm bốn ngăn của cột trái. */
+export type BookingListMeta = Schemas['BookingPageMetaDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
+/** Phụ lục gia hạn đơn dài hạn (ADR 0077) — bề mặt đối tác, có dòng phía chủ xe. */
+export type BookingExtension = Schemas['BookingExtensionDto'];
+export type BookingExtensionQuote = Schemas['BookingExtensionQuoteDto'];
+/** Trường chung của thẻ danh sách và trang chi tiết mà hộp thoại gia hạn cần. */
+export type ExtendableBooking = Pick<
+  BookingListItem,
+  | 'id'
+  | 'code'
+  | 'vehicleName'
+  | 'vehiclePlate'
+  | 'vehicleImageUrl'
+  | 'pickupAt'
+  | 'returnAt'
+  | 'actualPickupAt'
+  | 'totalAmount'
+  | 'debtAmount'
+>;
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
 export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
@@ -26,6 +45,9 @@ export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];
 export type UpdateDeliveryFeeInput = Schemas['UpdateBookingDeliveryFeeDto'];
+/** Khối "Chuẩn bị bàn giao" — việc suy tự động + dấu tay (03/11/2026). */
+export type BookingHandoverPrep = Schemas['BookingHandoverPrepDto'];
+export type SetHandoverPrepCheckInput = Schemas['SetHandoverPrepCheckDto'];
 export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 
@@ -40,10 +62,9 @@ export interface BookingFilters {
   q?: string;
   status?: string;
   /**
-   * Nhóm việc dựng sẵn — do ROUTE quyết, không nằm trong searchParams.
-   *
-   * Cố ý không đi qua `useBookingFilters`: "đang xem nhóm nào" đã được đường dẫn nói rồi, và
-   * để nó sống ở hai chỗ là mở đường cho một URL tự mâu thuẫn với chính nó.
+   * Ngăn của cột trái "Quản lý đơn thuê xe" (02/11/2026) — sống ở URL `?preset=` (cùng tên với
+   * tham số API), vắng = "Tất cả". Thay cho route riêng `/bookings/awaiting-pickup` (giờ chỉ
+   * chuyển tiếp) và cho ô lọc "Trạng thái" đã bỏ.
    */
   preset?: BookingListPreset;
   vehicleId?: string;

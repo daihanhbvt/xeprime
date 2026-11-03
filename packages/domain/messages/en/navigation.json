@@ -99,7 +99,15 @@
     "openMenu": "Open menu",
     "fullMenu": "Full menu",
     "balance": "Balance & withdrawals",
-    "security": "Account security"
+    "security": "Account security",
+    "rentalCalendar": "Rental calendar",
+    "bookingManagement": "Booking management",
+    "customerList": "Customer list",
+    "driverManagement": "Driver management",
+    "wallet": "Wallet",
+    "transactionHistory": "Transaction history",
+    "shopInfo": "Shop information",
+    "staffPermissions": "Staff & permissions"
   },
   "manageGroups": {
     "overview": "Overview",
@@ -115,7 +123,11 @@
     "platformFinance": "Money & operations",
     "platformPolicy": "Policies & plans",
     "platformSystem": "System",
-    "account": "Account"
+    "account": "Account",
+    "partnerOperations": "Operations",
+    "fleet": "Vehicles & drivers",
+    "revenue": "Revenue",
+    "help": "Help"
   },
   "platform": {
     "appConfig": "App configuration",

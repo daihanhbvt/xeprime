@@ -94,6 +94,9 @@ model User {
   sentMessages                 Message[]                 @relation("message_sender")
   tenantCustomerProfiles       TenantCustomer[]          @relation("tenant_customer_account")
   customerBookingHolds         BookingHold[]             @relation("hold_customer")
+  customerBookingExtensions    BookingExtension[]        @relation("extension_customer")
+  createdBookingExtensions     BookingExtension[]        @relation("extension_creator")
+  bookingHandoverChecks        BookingHandoverCheck[]    @relation("handover_check_actor")
   customerHoldRefunds          HoldRefund[]              @relation("refund_customer")
   paidHoldRefunds              HoldRefund[]              @relation("refund_payer")
   initiatedGatewayOrders       PaymentGatewayOrder[]     @relation("gateway_order_initiator")
@@ -298,6 +301,8 @@ model Tenant {
   tenantCustomerNotes           TenantCustomerNote[]
   tenantCustomerDocuments       TenantCustomerDocument[]
   bookingHolds                  BookingHold[]
+  bookingExtensions             BookingExtension[]
+  bookingHandoverChecks         BookingHandoverCheck[]
   holdRefunds                   HoldRefund[]
   paymentGatewayOrders          PaymentGatewayOrder[]
   bankAccounts                  BankAccount[]
@@ -1466,6 +1471,7 @@ model Vehicle {
   catalogModel           VehicleCatalogModel?           @relation(fields: [vehicleCatalogModelId], references: [id], onDelete: SetNull)
   bookings               Booking[]
   bookingHolds           BookingHold[]
+  bookingExtensions      BookingExtension[]
   bookingRequests        BookingRequest[]
   occupancies            VehicleOccupancy[]
   reviews                Review[]
@@ -2108,6 +2114,10 @@ model Booking {
   promoCode         PromoCode?                @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
   promoRedemption   PromoRedemption?
   hold              BookingHold?
+  /// Phụ lục gia hạn (ADR 0077) — chỉ đơn thuê dài hạn.
+  extensions        BookingExtension[]
+  /// Việc "Chuẩn bị bàn giao" đánh dấu TAY (03/11/2026).
+  handoverChecks    BookingHandoverCheck[]
   insurancePolicies BookingInsurancePolicy[]
   taxWithholdings   TaxWithholding[]
   supportCases      SupportCase[]
@@ -2131,6 +2141,99 @@ model Booking {
   @@index([customerPhone])
   @@index([code(ops: raw("gin_trgm_ops")), customerName(ops: raw("gin_trgm_ops"))], map: "bookings_search_trgm_idx", type: Gin)
   @@map("bookings")
+}
+
+/// PHỤ LỤC GIA HẠN một đơn thuê dài hạn đang chạy — ADR 0077.
+///
+/// Không sửa tiền của đơn gốc (ADR 0024): mỗi phụ lục là một lần "ký" mới với bảng tiền riêng,
+/// giá như một gói N tháng mới, MIỄN phí nền tảng (không `S`, không `H`), vẫn khấu trừ thuế.
+/// Khách chuyển khoản online (`online_amount`, mã `XPE…`) — phần còn lại trả thẳng chủ xe.
+/// Giờ trả của đơn chỉ dời khi phụ lục `active` (tiền về đủ). Lịch xe: dòng occupancy của ĐƠN
+/// được kéo dài tới `to_at` lúc tạo, thu lại khi hết hạn/huỷ (OccupancyService — ADR 0006).
+///
+/// Writer DUY NHẤT: `BookingExtensionsService` (API) + job hết hạn của worker. FK tổ hợp
+/// `(booking_id, tenant_id, vehicle_id)` → `bookings` và mọi CHECK nằm ở migration viết tay.
+model BookingExtension {
+  id             String  @id @db.Char(26)
+  /// Mã đối soát chuyển khoản, tiền tố `XPE` — unique TOÀN SÀN (cùng không gian XPG/XPH/XPW).
+  code           String  @unique @db.VarChar(20)
+  tenantId       String  @map("tenant_id") @db.Char(26)
+  bookingId      String  @map("booking_id") @db.Char(26)
+  vehicleId      String  @map("vehicle_id") @db.Char(26)
+  /// Tài khoản khách của đơn — ví nhận tiền hoàn khi phụ lục hết hạn/huỷ (ADR 0053 điều 8).
+  customerUserId String? @map("customer_user_id") @db.Char(26)
+  /// `@xeprime/types` → LONG_TERM_PACKAGE_MONTHS (CHECK ở migration).
+  months         Int
+  fromAt         DateTime @map("from_at") @db.Timestamptz(3)
+  toAt           DateTime @map("to_at") @db.Timestamptz(3)
+  /// `@xeprime/types` → BookingExtensionStatus.
+  status         String   @default("awaiting_payment") @db.VarChar(20)
+  /// Tuyến lúc gia hạn (ADR 0077 điều 8) — quyết có thu cọc 15% hay không.
+  billingMode    String   @map("billing_mode") @db.VarChar(20)
+
+  /// `B_ext` — tiền thuê của phụ lục (gói N tháng, đã trừ ưu đãi cam kết).
+  rentalAmount      Decimal @map("rental_amount") @db.Decimal(14, 2)
+  /// `T_ext` — thuế khấu trừ khỏi tiền chủ xe.
+  taxAmount         Decimal @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  /// `D_ext` — phần của chủ xe trong khoản online (≥ thuế).
+  depositAmount     Decimal @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  /// Khách chuyển cho XePrime qua QR.
+  onlineAmount      Decimal @default(0) @map("online_amount") @db.Decimal(14, 2)
+  /// Khách trả thẳng chủ xe — XePrime không thu hộ.
+  payAtPickupAmount Decimal @default(0) @map("pay_at_pickup_amount") @db.Decimal(14, 2)
+  paidAmount        Decimal @default(0) @map("paid_amount") @db.Decimal(14, 2)
+
+  feePolicyId   String?   @map("fee_policy_id") @db.Char(26)
+  /// Báo giá gói + bảng phí (cùng khuôn `BookingPriceSnapshot`) — đóng băng lúc tạo.
+  priceSnapshot Json      @map("price_snapshot") @db.JsonB
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(3)
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz(3)
+  activatedAt   DateTime? @map("activated_at") @db.Timestamptz(3)
+  /// Hết hạn / huỷ — lúc nhả lịch.
+  closedAt      DateTime? @map("closed_at") @db.Timestamptz(3)
+  /// Lúc ví chủ xe được ghi có `D − T` (chuyến kết thúc).
+  settledAt     DateTime? @map("settled_at") @db.Timestamptz(3)
+  paymentRemindedAt      DateTime? @map("payment_reminded_at") @db.Timestamptz(3)
+  finalPaymentRemindedAt DateTime? @map("final_payment_reminded_at") @db.Timestamptz(3)
+  createdBy     String?   @map("created_by") @db.Char(26)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking         Booking          @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  vehicle         Vehicle          @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  customer        User?            @relation("extension_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  creator         User?            @relation("extension_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+  feePolicy       FeePolicy?       @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  taxWithholdings TaxWithholding[]
+
+  @@index([bookingId, fromAt])
+  @@index([tenantId, createdAt])
+  @@index([customerUserId, status])
+  @@map("booking_extensions")
+}
+
+/// Việc "Chuẩn bị bàn giao" được người vận hành ĐÁNH DẤU TAY (03/11/2026) — khi sự thật nằm ngoài
+/// hệ thống (soi bản gốc, hợp đồng giấy…). Một hàng = một việc đang được đánh dấu; bỏ đánh dấu là
+/// xoá hàng, cả hai chiều đều có audit. Việc TIỀN không bao giờ ở đây (`HANDOVER_PREP_ITEM`).
+/// Writer DUY NHẤT: `BookingsService`. FK tổ hợp `(booking_id, tenant_id, vehicle_id)` + CHECK
+/// `item` nằm ở migration viết tay.
+model BookingHandoverCheck {
+  id              String   @id @db.Char(26)
+  tenantId        String   @map("tenant_id") @db.Char(26)
+  bookingId       String   @map("booking_id") @db.Char(26)
+  vehicleId       String   @map("vehicle_id") @db.Char(26)
+  /// `@xeprime/types` → HandoverPrepItem (CHECK ở migration).
+  item            String   @db.VarChar(20)
+  checkedByUserId String?  @map("checked_by_user_id") @db.Char(26)
+  checkedAt       DateTime @default(now()) @map("checked_at") @db.Timestamptz(3)
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  checkedBy User?   @relation("handover_check_actor", fields: [checkedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([bookingId, item])
+  @@map("booking_handover_checks")
 }
 
 /// Yêu cầu đặt xe từ Marketplace (xeprime_database_design.md §11.1).
@@ -2627,6 +2730,10 @@ model TenantCustomerDocument {
   documentType     String    @map("document_type") @db.VarChar(30)
   /// Nhãn tự đặt, chỉ có nghĩa khi documentType = other (CHECK ở migration).
   customTypeName   String?   @map("custom_type_name") @db.VarChar(160)
+  /// Họ tên in trên giấy tờ — gian hàng gõ (02/11/2026).
+  holderName       String?   @map("holder_name") @db.VarChar(160)
+  /// Số CCCD / GPLX / hộ chiếu — gian hàng gõ (02/11/2026).
+  documentNumber   String?   @map("document_number") @db.VarChar(60)
   /// tenants/{tenantId}/customers/{customerId}/documents/{id}.{ext} — server dựng, unique.
   objectKey        String    @unique @map("object_key") @db.VarChar(500)
   originalName     String    @map("original_name") @db.VarChar(255)
@@ -4669,6 +4776,7 @@ model FeePolicy {
   activator       User?            @relation("fee_policy_activator", fields: [activatedBy], references: [id], onDelete: SetNull)
   bookings        Booking[]
   holds           BookingHold[]
+  bookingExtensions BookingExtension[]
   taxWithholdings TaxWithholding[]
 
   @@index([status])
@@ -5092,6 +5200,7 @@ model InsuranceProduct {
 model TaxWithholding {
   id              String  @id @db.Char(26)
   bookingId       String  @map("booking_id") @db.Char(26)
+  bookingExtensionId String? @map("booking_extension_id") @db.Char(26)
   tenantId        String  @map("tenant_id") @db.Char(26)
   /// Hồ sơ người bán tại thời điểm phát sinh — nguồn LOẠI CHỦ THỂ khi kê khai. NULL = chưa khai
   /// hồ sơ, và tờ khai phải thấy được khoảng trống đó thay vì đoán.
@@ -5147,6 +5256,9 @@ model TaxWithholding {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   booking       Booking         @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  /// Phụ lục gia hạn mang nghĩa vụ này (ADR 0077) — NULL = nghĩa vụ của chính đơn. Mỗi phụ lục
+  /// tối đa một nghĩa vụ còn sống (`tax_withholdings_live_extension_key`, partial — viết tay).
+  bookingExtension BookingExtension? @relation(fields: [bookingExtensionId], references: [id], onDelete: Restrict)
   tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   sellerProfile SellerProfile?  @relation(fields: [sellerProfileId], references: [id], onDelete: SetNull)
   feePolicy     FeePolicy       @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)

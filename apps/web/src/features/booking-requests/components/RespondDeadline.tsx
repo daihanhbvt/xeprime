@@ -8,6 +8,7 @@ import {
   bookingRequestRemainingMs,
   longClockText,
 } from '@xeprime/types';
+import { LineIcon } from '@/components/icons/LineIcon';
 import styles from './RespondDeadline.module.css';
 
 /** Dưới mốc này thì đồng hồ chuyển sang sắc thái cảnh báo — cùng con số với lần nhắc cuối. */
@@ -42,8 +43,19 @@ export function respondDeadlineState(remainingMs: number): RespondDeadlineState 
  * hydrate đầu của client lệch nhau đúng vài giây — đó là bản chất của một đồng hồ, không phải
  * một khác biệt cần sửa.
  */
-export function RespondDeadline({ respondBy }: { respondBy: string }) {
+export function RespondDeadline({
+  respondBy,
+  variant = 'chip',
+}: {
+  respondBy: string;
+  /**
+   * `chip` — dòng nhỏ dưới nhãn trạng thái (thẻ chuyến của chủ xe). `header` — "Chờ xác nhận:
+   * 59:39" trên dải đầu thẻ yêu cầu site partner (Figma Partner-XePrime 02/11/2026).
+   */
+  variant?: 'chip' | 'header';
+}) {
   const t = useTranslations('BookingRequests.deadline');
+  const tCard = useTranslations('BookingRequests.card');
   /*
    * State là "BÂY GIỜ", không phải "còn bao lâu".
    *
@@ -69,6 +81,35 @@ export function RespondDeadline({ respondBy }: { respondBy: string }) {
   }, [respondBy]);
 
   const state = respondDeadlineState(remaining);
+
+  if (variant === 'header') {
+    return (
+      <p
+        className={
+          state === 'expired'
+            ? styles.headerExpired
+            : state === 'urgent'
+              ? styles.headerUrgent
+              : styles.header
+        }
+        role="status"
+        aria-live="polite"
+        suppressHydrationWarning
+      >
+        <LineIcon name="time-circle" className={styles.headerIcon} />
+        {state === 'expired' ? (
+          t('expired')
+        ) : (
+          <>
+            {tCard('awaitingConfirm')}{' '}
+            <span className={styles.headerClock} suppressHydrationWarning>
+              {longClockText(remaining)}
+            </span>
+          </>
+        )}
+      </p>
+    );
+  }
 
   return (
     <p

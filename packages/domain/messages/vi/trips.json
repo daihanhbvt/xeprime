@@ -649,5 +649,14 @@
     "host": "Chủ xe đã hủy chuyến",
     "platform": "XePrime đã hủy chuyến",
     "force_majeure": "Hủy do sự cố bất khả kháng"
+  },
+  "extension": {
+    "title": "Gia hạn chuyến",
+    "pendingLead": "Chủ xe gia hạn thêm {months} tháng — trả xe mới {date}. Chuyển khoản phần giữ chỗ để gia hạn có hiệu lực.",
+    "rental": "Tiền thuê phần gia hạn",
+    "online": "Chuyển qua XePrime",
+    "direct": "Trả trực tiếp chủ xe",
+    "deadline": "Hạn thanh toán {time}. Quá hạn, gia hạn tự huỷ và giờ trả xe giữ nguyên.",
+    "activated": "Đã gia hạn thêm {months} tháng — trả xe mới {date}"
   }
 }

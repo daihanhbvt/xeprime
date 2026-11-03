@@ -9,16 +9,20 @@ import {
   WarningFilled,
 } from '@ant-design/icons';
 import { App, Image, Progress, Upload } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import {
   HANDOVER_EXTERIOR_SLOTS,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_PHOTO_SLOT_LABEL,
+  HANDOVER_PHOTO_SLOT_VALUES,
   IMAGE_UPLOAD_MIME_TYPES,
   type HandoverPhotoSlot,
   type HandoverType,
 } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadToR2, validateImageFile } from '@/services/upload';
@@ -28,9 +32,10 @@ import {
   presignHandoverPhoto,
   removeHandoverPhoto,
 } from '../api';
+import { useHandoverPhotoPreviews } from '../hooks';
+import { HandoverSlotSample } from './HandoverSlotSample';
 import type { Handover, HandoverPhoto } from '../types';
 import styles from './Handover.module.css';
-import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 interface PendingUpload {
   file: File;
@@ -46,9 +51,13 @@ interface PendingUpload {
  * khi hai bên nhìn CÙNG một góc trước và sau chuyến. Tải lại một ô là THAY ảnh, không chồng
  * thêm — ràng buộc unique `(handover_id, slot)` ở DB nói đúng điều đó.
  *
- * Ảnh mới tải lên hiện preview cục bộ (blob của chính file vừa chọn) để có phản hồi ngay;
- * ảnh cũ mở bằng signed URL XIN LẠI TỪNG LẦN BẤM — không URL nào được giữ trong state
- * (cùng kỷ luật `FileListField` của Wave 4.1).
+ * Hai hình thái:
+ *  - `grid` (mặc định — hộp bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM;
+ *  - `row` (chi tiết đơn, Figma `23845:49956`): năm ô một hàng, nhãn dưới ảnh, ảnh đã có hiện
+ *    THU NHỎ bằng URL ký ngắn hạn (tự làm mới — `useHandoverPhotoPreviews`).
+ *
+ * Ảnh mới tải lên hiện preview cục bộ (blob của chính file vừa chọn) để có phản hồi ngay; mở
+ * xem toàn màn hình luôn xin một URL ký MỚI cho lần bấm đó.
  */
 export function HandoverPhotoGrid({
   bookingId,
@@ -58,6 +67,8 @@ export function HandoverPhotoGrid({
   disabled,
   onChanged,
   ensureHandover,
+  variant = 'grid',
+  highlightSlots,
 }: {
   bookingId: string;
   type: HandoverType;
@@ -70,11 +81,15 @@ export function HandoverPhotoGrid({
    *
    * Cần vì luồng nhanh Wave 10 không tạo biên bản nào cho tới lúc bấm xác nhận, trong khi
    * `POST …/photos/presign` đòi một biên bản còn sửa được (`requireActive` → 404). Tạo trễ
-   * đúng lúc khách thật sự chọn ảnh: mở vùng nâng cao ra xem rồi đóng lại thì không đẻ ra một
-   * bản nháp rỗng nào.
+   * đúng lúc khách thật sự chọn ảnh.
    */
   ensureHandover?: () => Promise<void>;
+  variant?: 'grid' | 'row';
+  /** Góc còn thiếu đang bị cảnh báo — viền đỏ nhấp nháy (bấm giao xe khi chưa đủ ảnh). */
+  highlightSlots?: ReadonlySet<string>;
 }) {
+  const t = useTranslations('Bookings.handover.photos');
+  const dl = useDomainLabel();
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { message } = App.useApp();
   const [pending, setPending] = useState<Record<string, PendingUpload>>({});
@@ -83,6 +98,12 @@ export function HandoverPhotoGrid({
   /** URL ký đang xem toàn màn hình — thay cho mở tab mới; đóng trình xem là quên luôn URL. */
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const previewsRef = useRef<Record<string, string>>({});
+  const thumbs = useHandoverPhotoPreviews(
+    bookingId,
+    type,
+    photos,
+    variant === 'row' && canViewFiles,
+  ).data;
 
   useEffect(() => {
     previewsRef.current = previews;
@@ -96,6 +117,8 @@ export function HandoverPhotoGrid({
   );
 
   const filled = new Map(photos.map((photo) => [photo.slot, photo]));
+  const slotLabel = (slot: HandoverPhotoSlot) =>
+    dl('handoverPhotoSlot', slot, HANDOVER_PHOTO_SLOT_LABEL[slot]);
 
   function setPendingFor(slot: string, value: PendingUpload | null) {
     setPending((current) => {
@@ -160,8 +183,6 @@ export function HandoverPhotoGrid({
     if (!photo?.fileId) return;
     setBusySlot(slot);
     try {
-      // URL ký sống ~2 phút, xin mới cho từng cú bấm; xem ngay trong app bằng trình xem
-      // toàn màn hình (zoom/xoay) thay vì bật tab mới.
       const ticket = await fetchHandoverPhotoUrl(bookingId, type, photo.fileId);
       setViewerUrl(ticket.downloadUrl);
     } catch (err) {
@@ -174,24 +195,25 @@ export function HandoverPhotoGrid({
   function renderSlot(slot: HandoverPhotoSlot) {
     const photo = filled.get(slot);
     const upload = pending[slot];
-    const preview = previews[slot];
-    const label = HANDOVER_PHOTO_SLOT_LABEL[slot];
+    const preview = previews[slot] ?? thumbs?.[slot] ?? null;
+    const label = slotLabel(slot);
+    const flagged = !photo && !upload && Boolean(highlightSlots?.has(slot));
 
     return (
       <div key={slot} className={styles.slot}>
         <div
-          className={[
+          className={cx(
             styles.slotBox,
-            photo ? styles.slotFilled : '',
-            upload?.status === 'error' ? styles.slotError : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
+            photo && styles.slotFilled,
+            upload?.status === 'error' && styles.slotError,
+            flagged && styles.slotFlagged,
+          )}
           data-slot={slot}
           data-state={upload?.status ?? (photo ? 'filled' : 'empty')}
+          data-flagged={flagged || undefined}
         >
           {upload?.status === 'uploading' ? (
-            <div className={styles.slotStatus} aria-label={`Đang tải ảnh ${label}`}>
+            <div className={styles.slotStatus} aria-label={t('uploadingSlot', { slot: label })}>
               <Progress type="circle" size={40} percent={upload.progress} aria-hidden />
             </div>
           ) : upload?.status === 'error' ? (
@@ -199,22 +221,21 @@ export function HandoverPhotoGrid({
               type="button"
               className={styles.slotAction}
               onClick={() => void startUpload(slot, upload.file)}
-              aria-label={`Tải lại ảnh ${label}`}
+              aria-label={t('retrySlot', { slot: label })}
             >
               <WarningFilled className={styles.slotErrorIcon} />
               <span className={styles.slotActionText}>
-                <ReloadOutlined /> Tải thất bại
+                <ReloadOutlined /> {t('uploadFailed')}
               </span>
             </button>
           ) : photo ? (
             <>
               {preview ? (
-                // Blob cục bộ của file vừa chọn — bấm vẫn phóng to xem lại được trước khi xác nhận.
-                <PreviewImage src={preview} alt={`Ảnh ${label}`} className={styles.slotImage} />
+                <PreviewImage src={preview} alt={label} className={styles.slotImage} />
               ) : (
                 <span className={styles.slotStatus}>
                   <CheckCircleFilled className={styles.slotDoneIcon} />
-                  <span className={styles.slotActionText}>Đã có ảnh</span>
+                  <span className={styles.slotActionText}>{t('hasPhoto')}</span>
                 </span>
               )}
               <div className={styles.slotOverlay}>
@@ -222,7 +243,7 @@ export function HandoverPhotoGrid({
                   <button
                     type="button"
                     className={styles.slotIconBtn}
-                    aria-label={`Xem ảnh ${label}`}
+                    aria-label={t('viewSlot', { slot: label })}
                     disabled={busySlot === slot}
                     onClick={() => void handleView(slot)}
                   >
@@ -233,7 +254,7 @@ export function HandoverPhotoGrid({
                   <button
                     type="button"
                     className={styles.slotIconBtn}
-                    aria-label={`Xoá ảnh ${label}`}
+                    aria-label={t('removeSlot', { slot: label })}
                     disabled={busySlot === slot}
                     onClick={() => void handleRemove(slot)}
                   >
@@ -244,7 +265,8 @@ export function HandoverPhotoGrid({
             </>
           ) : disabled ? (
             <span className={styles.slotStatus}>
-              <span className={styles.slotActionText}>Chưa có ảnh</span>
+              <HandoverSlotSample slot={slot} className={styles.slotSample} />
+              <span className={styles.slotActionText}>{t('noPhoto')}</span>
             </span>
           ) : (
             <Upload
@@ -255,15 +277,26 @@ export function HandoverPhotoGrid({
                 return false; // flow presign → PUT → xác minh do feature lo
               }}
             >
-              <button type="button" className={styles.slotAction} aria-label={`Tải ảnh ${label}`}>
-                <CameraOutlined />
-                <span className={styles.slotActionText}>Tải lên</span>
+              {/*
+                Cả ô là vùng bấm; hình mẫu mờ phía sau cho biết phải chụp GÓC nào, nút ở giữa nói
+                rõ đây là chỗ tải ảnh lên.
+              */}
+              <button
+                type="button"
+                className={styles.slotAction}
+                aria-label={t('uploadSlot', { slot: label })}
+              >
+                <HandoverSlotSample slot={slot} className={styles.slotSample} />
+                <span className={styles.slotUploadPill}>
+                  <CameraOutlined aria-hidden="true" />
+                  {t('upload')}
+                </span>
               </button>
             </Upload>
           )}
         </div>
         {/* Không dấu `*` ở đâu cả: ảnh hiện trạng TUỲ CHỌN hoàn toàn (design 14 §2). */}
-        <span className={styles.slotLabel}>{label}</span>
+        <span className={cx(styles.slotLabel, flagged && styles.slotLabelFlagged)}>{label}</span>
         {upload?.status === 'error' ? (
           <span className={styles.slotErrorText} role="alert">
             {upload.message}
@@ -275,13 +308,19 @@ export function HandoverPhotoGrid({
 
   return (
     <div className={styles.photoBlock}>
-      <p className={styles.photoTitle}>Ảnh hiện trạng</p>
-      <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
-      {/* Chỉ KM: Wave 10 bỏ hẳn nhiên liệu khỏi bàn giao (design 14 §8). */}
-      <p className={styles.photoTitle}>Ảnh đồng hồ KM</p>
-      <div className={cx(styles.slotGrid, styles.slotGridSingle)}>
-        {renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER)}
-      </div>
+      {variant === 'row' ? (
+        <div className={styles.slotRow}>{HANDOVER_PHOTO_SLOT_VALUES.map(renderSlot)}</div>
+      ) : (
+        <>
+          <p className={styles.photoTitle}>{t('title')}</p>
+          <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
+          {/* Chỉ KM: Wave 10 bỏ hẳn nhiên liệu khỏi bàn giao (design 14 §8). */}
+          <p className={styles.photoTitle}>{t('odometerTitle')}</p>
+          <div className={cx(styles.slotGrid, styles.slotGridSingle)}>
+            {renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER)}
+          </div>
+        </>
+      )}
 
       {/* Ảnh neo ẨN cho trình xem điều khiển bằng state — nút Xem chỉ việc đặt URL ký. */}
       {viewerUrl ? (

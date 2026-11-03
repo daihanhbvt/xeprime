@@ -3,6 +3,7 @@ import {
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FEATURE_STATE,
   PERMISSION,
+  PLAN_FEATURE,
   PLATFORM_ROLE,
   SUPPORT_WORKSPACE,
   TENANT_ROLE,
@@ -36,7 +37,7 @@ import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import { PARTNER_TRACK, isCommissionPage } from '@/features/auth/post-auth-destination';
 import { ZONE } from '@/zones';
-import { ROUTES, adminTenantSupportPath } from './routes';
+import { ROUTES, SHOP_SECTION, SHOP_SECTION_VALUES, adminTenantSupportPath } from './routes';
 
 /** Cây menu của một khu: site quản trị, hoặc site partner theo tuyến (gói · hoa hồng). */
 function navFor(isPlatform: boolean) {
@@ -118,15 +119,31 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: các khối theo hành trình chủ xe, đúng thứ tự', () => {
+  /*
+   * 02/11/2026 — menu NGANG của design Partner-XePrime: sáu mục cấp 1, đúng thứ tự design. Bản đồ
+   * cũ → mới ở `docs/design/09_PARTNER_REDESIGN.md` §2.
+   */
+  it('gian hàng: sáu khối của menu ngang, đúng thứ tự design', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
-      'business',
-      'storefront',
+      'fleet',
+      'revenue',
       'settings',
       'support',
     ]);
+    // "Tổng quan" là liên kết thẳng, các khối còn lại mở dropdown.
+    expect(SHOP_NAV.filter((section) => section.direct).map((section) => section.key)).toEqual([
+      'overview',
+    ]);
+    // Mỗi mục cấp 1 có biểu tượng riêng trên menu ngang.
+    expect(SHOP_NAV.every((section) => section.icon)).toBe(true);
+  });
+
+  it('chủ xe tuyến hoa hồng dùng CÙNG khung sáu khối — nâng gói thấy mọi thứ ở đúng chỗ cũ', () => {
+    expect(OWNER_LITE_NAV.map((section) => section.labelKey)).toEqual(
+      SHOP_NAV.map((section) => section.labelKey),
+    );
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), các khối giữa gập được', () => {
@@ -238,24 +255,54 @@ describe('nav — cấu trúc khối', () => {
     expect(hrefs).toContain(ROUTES.MANAGE.SHOP);
   });
 
-  it('khối "Gian hàng" chỉ còn MỘT mục — trang Cửa hàng gộp năm section', () => {
-    const storefront = SHOP_NAV.find((section) => section.key === 'storefront')!;
+  /** Mục VẼ thành dòng của một khối (bỏ mục `hidden`), theo thứ tự. */
+  function shownHrefs(sectionKey: string): string[] {
+    const section = SHOP_NAV.find((item) => item.key === sectionKey)!;
+    return leavesOfSection(section)
+      .filter((leaf) => leaf.hidden !== true)
+      .map((leaf) => leaf.href);
+  }
 
-    expect(leavesOfSection(storefront).map((leaf) => leaf.href)).toEqual([ROUTES.MANAGE.SHOP]);
+  it('menu ngang không còn mục cha (submenu) — mỗi khối là một dropdown phẳng', () => {
+    expect(SHOP_NAV.flatMap((section) => section.children).filter(isNavBranch)).toEqual([]);
   });
 
-  it('đúng ba mục cha (submenu): đội xe, đơn thuê, tài chính', () => {
-    const branches = SHOP_NAV.flatMap((section) => section.children)
-      .filter(isNavBranch)
-      .map((branch) => branch.key);
-    expect(branches).toEqual(['fleet', 'orders', 'finance']);
+  it('mỗi dropdown đúng các dòng của design, đúng thứ tự', () => {
+    expect(shownHrefs('operations')).toEqual([
+      ROUTES.MANAGE.CALENDAR,
+      ROUTES.MANAGE.BOOKING_REQUESTS,
+      ROUTES.MANAGE.BOOKINGS,
+      ROUTES.MANAGE.CUSTOMERS,
+    ]);
+    expect(shownHrefs('fleet')).toEqual([
+      ROUTES.MANAGE.VEHICLES,
+      ROUTES.MANAGE.DRIVERS,
+      ROUTES.MANAGE.MAINTENANCE,
+    ]);
+    expect(shownHrefs('revenue')).toEqual([
+      ROUTES.MANAGE.FINANCE,
+      ROUTES.MANAGE.BALANCE,
+      ROUTES.MANAGE.RECEIPTS,
+    ]);
+    expect(shownHrefs('settings')).toEqual([
+      ROUTES.MANAGE.SHOP,
+      ROUTES.MANAGE.SHOP_POLICIES,
+      ROUTES.MANAGE.MEMBERS,
+    ]);
+    // "Trợ giúp" có hai trang thật — dropdown hai dòng (chốt 02/11/2026).
+    expect(shownHrefs('support')).toEqual([ROUTES.MANAGE.SUPPORT, ROUTES.MANAGE.SUPPORT_CASES]);
   });
 
-  it('mọi route quan trọng vẫn có lối vào trong menu', () => {
-    // Đây là bài test quan trọng nhất của mỗi đợt sắp lại: gom nhóm, đổi tên hay gộp trang đều
-    // KHÔNG được làm mất đường vào một trang đang sống.
+  /*
+   * Bài test quan trọng nhất của mỗi đợt sắp lại: gom nhóm, đổi tên hay gộp trang đều KHÔNG được làm
+   * mất đường vào một trang đang sống. Từ menu ngang (02/11/2026) một số trang rời dòng menu — mỗi
+   * trang như vậy phải có lối vào ghi ở `docs/design/09_PARTNER_REDESIGN.md` §2, và test chốt lối đó.
+   */
+  it('mọi route quan trọng vẫn có lối vào — trên menu, hoặc ở chỗ đã ghi', () => {
+    const inTree = hrefsOf(SHOP_NAV);
     for (const href of [
       ROUTES.MANAGE.BALANCE,
+      ROUTES.MANAGE.SUPPORT,
       ROUTES.MANAGE.SUPPORT_CASES,
       ROUTES.MANAGE.ROOT,
       ROUTES.MANAGE.CALENDAR,
@@ -266,38 +313,33 @@ describe('nav — cấu trúc khối', () => {
       ROUTES.MANAGE.CUSTOMERS,
       ROUTES.MANAGE.FINANCE,
       ROUTES.MANAGE.RECEIPTS,
-      ROUTES.MANAGE.DEBTS,
       ROUTES.MANAGE.SHOP,
-      ROUTES.MANAGE.SHOP_BRANCHES,
       ROUTES.MANAGE.SHOP_POLICIES,
       ROUTES.MANAGE.MEMBERS,
       ROUTES.MANAGE.DRIVERS,
-      ROUTES.MANAGE.CHAT,
-    ]) {
-      expect(hrefsOf(SHOP_NAV)).toContain(href);
-    }
-  });
-
-  it('Trung tâm bảo dưỡng nằm DƯỚI đội xe, không còn là mục ngang cấp', () => {
-    const operations = SHOP_NAV.find((section) => section.key === 'operations')!;
-    const fleet = operations.children.filter(isNavBranch).find((node) => node.key === 'fleet')!;
-    expect(fleet.children.map((leaf) => leaf.href)).toEqual([
-      ROUTES.MANAGE.VEHICLES,
-      ROUTES.MANAGE.MAINTENANCE,
-    ]);
-  });
-
-  it('Thu chi và Công nợ nằm DƯỚI Tài chính, không còn ba mục ngang cấp', () => {
-    const business = SHOP_NAV.find((section) => section.key === 'business')!;
-    const finance = business.children.filter(isNavBranch).find((node) => node.key === 'finance')!;
-    expect(finance.children.map((leaf) => leaf.href)).toEqual([
-      // Ví điểm đứng ĐẦU nhóm Tài chính: nó là tiền THẬT của gian hàng và có hành động (rút),
-      // còn ba mục sau là sổ sách để đọc.
-      ROUTES.MANAGE.BALANCE,
-      ROUTES.MANAGE.FINANCE,
-      ROUTES.MANAGE.RECEIPTS,
+      // Mục ẨN — vẫn thuộc khối (breadcrumb, băng "hết hạn"), vào từ Tổng quan doanh thu.
       ROUTES.MANAGE.DEBTS,
-    ]);
+    ]) {
+      expect(inTree, href).toContain(href);
+    }
+    // Chi nhánh: section của "Thông tin cửa hàng"; route cũ chuyển tiếp tới đó.
+    expect(SHOP_SECTION_VALUES).toContain(SHOP_SECTION.BRANCHES);
+    expect(inTree).not.toContain(ROUTES.MANAGE.SHOP_BRANCHES);
+    // "Chờ giao xe": ngăn `?group=awaiting_pickup` của "Quản lý đơn thuê xe" (02/11/2026); route cũ
+    // chuyển tiếp tới đó nên không còn là một mục của cây.
+    expect(inTree).not.toContain(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP);
+    // Tin nhắn: icon ở header (`ChatMenu`), không còn là dòng menu.
+    expect(inTree).not.toContain(ROUTES.MANAGE.CHAT);
+  });
+
+  it('"Công nợ" là mục ẨN — có trong cây nhưng không vẽ thành dòng', () => {
+    const hidden = flattenLeaves(SHOP_NAV)
+      .filter((leaf) => leaf.hidden)
+      .map((leaf) => leaf.href);
+    expect(hidden).toEqual([ROUTES.MANAGE.DEBTS]);
+    // Công nợ giữ cờ gói của nó — băng "gói hết hạn" của AppShell vẫn tra được.
+    const debts = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.DEBTS)!;
+    expect(debts.feature).toBe(PLAN_FEATURE.DEBTS);
   });
 
   /**
@@ -308,27 +350,6 @@ describe('nav — cấu trúc khối', () => {
   it('Ví điểm KHÔNG bị gác bằng cờ tính năng — tiền của gian hàng không thuộc về gói', () => {
     const balance = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.BALANCE)!;
     expect(balance.feature).toBeUndefined();
-  });
-
-  it('Đơn đặt xe giữ nguyên route riêng, đứng dưới Đơn thuê', () => {
-    const operations = SHOP_NAV.find((section) => section.key === 'operations')!;
-    const orders = operations.children.filter(isNavBranch).find((node) => node.key === 'orders')!;
-    /*
-     * Thứ tự là NHỊP LÀM VIỆC, không phải bảng chữ cái: duyệt yêu cầu → giao xe hôm nay → tra
-     * cứu mọi đơn. "Chờ giao xe" đứng giữa vì nó là việc của hôm nay.
-     */
-    expect(orders.children.map((leaf) => leaf.href)).toEqual([
-      ROUTES.MANAGE.BOOKING_REQUESTS,
-      ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
-      ROUTES.MANAGE.BOOKINGS,
-    ]);
-  });
-
-  it('"Chờ giao xe" dùng đúng quyền của danh sách đơn — nó không mở thêm dữ liệu nào', () => {
-    const leaves = flattenLeaves(SHOP_NAV);
-    const shortcut = leaves.find((l) => l.href === ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP)!;
-    const all = leaves.find((l) => l.href === ROUTES.MANAGE.BOOKINGS)!;
-    expect(shortcut.permission).toBe(all.permission);
   });
 
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
@@ -366,11 +387,17 @@ describe('nav — cấu trúc khối', () => {
     expect(keys).not.toContain('trash');
   });
 
-  it('chỉ hai mục được phép mang huy hiệu — và đúng là hai việc phải xử lý', () => {
+  it('chỉ mục "cần xử lý" mang huy hiệu — không đếm tổng xe/tài xế (chốt 02/11/2026)', () => {
     const badged = flattenLeaves(SHOP_NAV)
       .filter((leaf) => leaf.badge)
       .map((leaf) => leaf.href);
-    expect(badged).toEqual([ROUTES.MANAGE.BOOKING_REQUESTS, ROUTES.MANAGE.CHAT]);
+    // Tin chưa đọc giờ nằm trên icon tin nhắn ở header, không còn mục menu.
+    // Lịch: lượt giao + nhận hôm nay · Yêu cầu: chờ duyệt · Đơn: chờ giao + đang thuê (02/11/2026).
+    expect(badged).toEqual([
+      ROUTES.MANAGE.CALENDAR,
+      ROUTES.MANAGE.BOOKING_REQUESTS,
+      ROUTES.MANAGE.BOOKINGS,
+    ]);
     // Nền tảng chưa có nguồn đếm nào — không gắn huy hiệu suông.
     expect(flattenLeaves(PLATFORM_NAV).some((leaf) => leaf.badge)).toBe(false);
   });
@@ -382,7 +409,7 @@ describe('nav — ranh giới site quản trị ↔ site partner', () => {
       expect(navForZone(ZONE.ADMIN, track)).toBe(PLATFORM_NAV);
     }
     const labels = flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey);
-    expect(labels).not.toContain('manage.calendar');
+    expect(labels).not.toContain('manage.rentalCalendar');
     expect(labels).not.toContain('manage.debts');
   });
 
@@ -424,7 +451,7 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
   it('shop_owner thấy tiền của mình lẫn mặt tiền gian hàng: Số dư & rút tiền + Cửa hàng', () => {
     const labels = labelsOfRole(TENANT_ROLE.SHOP_OWNER);
 
-    expect(labels).toEqual(expect.arrayContaining(['manage.balance', 'manage.shop']));
+    expect(labels).toEqual(expect.arrayContaining(['manage.wallet', 'manage.shopInfo']));
   });
 
   it('shop_manager vào được trang Cửa hàng nhưng KHÔNG thấy Số dư', () => {
@@ -436,9 +463,9 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
      * tiền" chỉ chủ gian hàng (`@ShopOwnerOnly`), "Gói & hạn mức" theo `subscription.view` và
      * CTA mua theo `subscription.purchase`.
      */
-    expect(labels).toContain('manage.shop');
+    expect(labels).toContain('manage.shopInfo');
     // Ví là NGHĨA VỤ với một người cụ thể (ADR 0038 điều 3) — quyền không mở được nó.
-    expect(labels).not.toContain('manage.balance');
+    expect(labels).not.toContain('manage.wallet');
   });
 
   /*
@@ -454,12 +481,12 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
       TENANT_ROLE.SHOP_VIEWER,
     ]) {
       expect(visibleLabels(ALL_TENANT_PERMISSIONS, false, { roleKey: role })).not.toContain(
-        'manage.balance',
+        'manage.wallet',
       );
     }
     expect(
       visibleLabels(ALL_TENANT_PERMISSIONS, false, { roleKey: TENANT_ROLE.SHOP_OWNER }),
-    ).toContain('manage.balance');
+    ).toContain('manage.wallet');
   });
 
   /*
@@ -475,23 +502,23 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 
     expect(labels).not.toContain('manage.financeOverview');
     expect(labels).not.toContain('manage.debts');
-    expect(labels).toContain('manage.balance');
+    expect(labels).toContain('manage.wallet');
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {
     const labels = labelsOfRole(TENANT_ROLE.SHOP_STAFF);
 
     expect(labels).not.toContain('manage.financeOverview');
-    expect(labels).not.toContain('manage.receipts');
+    expect(labels).not.toContain('manage.transactionHistory');
     expect(labels).not.toContain('manage.debts');
-    expect(labels).not.toContain('manage.members');
+    expect(labels).not.toContain('manage.staffPermissions');
     // Nhưng vẫn thấy phần vận hành hằng ngày.
     expect(labels).toEqual(
       expect.arrayContaining([
         'manage.dashboard',
-        'manage.calendar',
+        'manage.rentalCalendar',
         'manage.vehicleList',
-        'manage.bookings',
+        'manage.bookingManagement',
         'manage.bookingRequests',
       ]),
     );
@@ -615,26 +642,22 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     expect(matchSelectedKey('/manage/bookings', shopLeaves)).toBe('/manage/bookings');
   });
 
-  it('"Chờ giao xe" và "Tất cả đơn thuê" không bao giờ cùng sáng', () => {
-    /*
-     * Lý do lối tắt này là một ĐƯỜNG DẪN chứ không phải `?preset=…`: mục đang mở được quyết
-     * bằng pathname, nên một mục gắn query sẽ hoặc không bao giờ sáng, hoặc để "Tất cả đơn
-     * thuê" sáng thay nó. Tiền tố dài nhất thắng, và cả hai chiều đều phải đúng.
-     */
+  it('mọi trang dưới /bookings thuộc mục "Quản lý đơn thuê xe"', () => {
+    // "Chờ giao xe" là một ngăn (query) của chính màn đó từ 02/11/2026 — route cũ chỉ chuyển tiếp.
     expect(matchSelectedKey(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP, shopLeaves)).toBe(
-      ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
+      ROUTES.MANAGE.BOOKINGS,
     );
     expect(matchSelectedKey(ROUTES.MANAGE.BOOKINGS, shopLeaves)).toBe(ROUTES.MANAGE.BOOKINGS);
-    // Trang chi tiết một đơn vẫn thuộc về "Tất cả đơn thuê", không dính vào lối tắt.
     expect(matchSelectedKey('/manage/bookings/01HZZZZZZZZZZZZZZZZZZZZZZZ', shopLeaves)).toBe(
       ROUTES.MANAGE.BOOKINGS,
     );
   });
 
-  it('`/manage/shop` không nuốt `/manage/shop/branches` — tiền tố dài nhất thắng', () => {
+  it('`/manage/shop` không nuốt `/manage/shop/policies` — tiền tố dài nhất thắng', () => {
     expect(matchSelectedKey('/manage/shop', shopLeaves)).toBe('/manage/shop');
-    expect(matchSelectedKey('/manage/shop/branches', shopLeaves)).toBe('/manage/shop/branches');
     expect(matchSelectedKey('/manage/shop/policies', shopLeaves)).toBe('/manage/shop/policies');
+    // Chi nhánh là section của Thông tin cửa hàng (02/11/2026) — route cũ thuộc về trang đó.
+    expect(matchSelectedKey('/manage/shop/branches', shopLeaves)).toBe('/manage/shop');
   });
 
   it('hai danh sách đối tác sáng riêng, không kéo theo nhau', () => {
@@ -687,20 +710,21 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
 });
 
 describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha', () => {
-  it('khối chứa mục đang chọn, kể cả khi mục nằm trong một mục cha', () => {
-    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.RECEIPTS)).toBe('business');
-    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BALANCE)).toBe('business');
-    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.SHOP)).toBe('storefront');
+  it('khối chứa mục đang chọn — kể cả mục ẩn', () => {
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.RECEIPTS)).toBe('revenue');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BALANCE)).toBe('revenue');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.DEBTS)).toBe('revenue');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.SHOP)).toBe('settings');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MEMBERS)).toBe('settings');
-    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBe('operations');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBe('fleet');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BOOKINGS)).toBe('operations');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.ROOT)).toBe('overview');
   });
 
-  it('mục cha chứa mục đang chọn — mục đứng trực tiếp trong khối thì không có mục cha', () => {
-    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBe('fleet');
-    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.BOOKING_REQUESTS)).toBe('orders');
-    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.DEBTS)).toBe('finance');
-    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.CHAT)).toBeUndefined();
+  it('menu partner phẳng → không mục nào có mục cha; menu nền tảng vẫn có', () => {
+    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBeUndefined();
+    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.BOOKING_REQUESTS)).toBeUndefined();
+    expect(branchKeyOf(PLATFORM_NAV, ROUTES.ADMIN.PLANS)).toBe('platform-billing');
   });
 
   it('không có mục nào đang chọn → không bung gì', () => {
@@ -786,16 +810,22 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
     }
   });
 
-  it('menu hoa hồng có đủ việc cho thuê + tiền + hồ sơ chủ xe', () => {
+  it('menu hoa hồng có đủ việc cho thuê + tiền + hồ sơ chủ xe + tài liệu', () => {
     const hrefs = new Set(hrefsOf(commissionNav));
+    // Tin nhắn là icon ở header (02/11/2026), không còn là dòng menu — ở cả hai tuyến.
+    expect(hrefs.has(ROUTES.MANAGE.CHAT)).toBe(false);
     for (const href of [
       ROUTES.MANAGE.ROOT,
       ROUTES.MANAGE.VEHICLES,
+      ROUTES.MANAGE.DRIVERS,
       ROUTES.MANAGE.CALENDAR,
       ROUTES.MANAGE.TRIPS,
-      ROUTES.MANAGE.CHAT,
       ROUTES.MANAGE.BALANCE,
       ROUTES.MANAGE.ACCOUNT,
+      ROUTES.MANAGE.HOST_GUIDE,
+      ROUTES.MANAGE.CONTRACTS_DOCUMENTS,
+      ROUTES.MANAGE.DATA_PROTECTION,
+      ROUTES.MANAGE.SUPPORT_CASES,
     ]) {
       expect(hrefs.has(href), href).toBe(true);
     }
@@ -911,8 +941,8 @@ describe('supportNavSections — menu của phiên hỗ trợ', () => {
         'booking-requests',
         'bookings',
         'customers',
+        // Chi nhánh là section của trang Cửa hàng trong phiên cũng như ở site partner.
         'shop',
-        'shop/branches',
         'shop/policies',
         'drivers',
         'members',

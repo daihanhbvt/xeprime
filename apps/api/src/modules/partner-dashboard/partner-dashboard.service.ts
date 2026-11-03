@@ -145,6 +145,11 @@ export class PartnerDashboardService {
 
   // ── Việc trong ngày ──────────────────────────────────────────────────────────────────────
 
+  /** Khối "hôm nay" đứng riêng — huy hiệu menu (`GET /dashboard/today`), toàn phạm vi được giao. */
+  todayCounts(tenant: TenantContext, now: Date = new Date()): Promise<PartnerDashboardTodayDto> {
+    return this.today(tenant.tenantId, resolveBranchScope(undefined, tenant.allowedBranchIds), now);
+  }
+
   private async today(
     tenantId: string,
     scope: BranchScope,

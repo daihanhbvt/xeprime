@@ -20,8 +20,10 @@ import styles from './HeaderIconButton.module.css';
  */
 const OVERFLOW_COUNT = 9;
 
-export interface HeaderIconButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'children'> {
+export interface HeaderIconButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'type' | 'children'
+> {
   readonly icon: ReactNode;
   /** Tên khả truy cập — biểu tượng trần không có chữ nào để đọc. */
   readonly label: string;
@@ -31,7 +33,14 @@ export interface HeaderIconButtonProps
   readonly href?: string;
   /** Popup của chính nó đang mở — giữ nút ở trạng thái "đang bật". */
   readonly active?: boolean;
+  /**
+   * `circle` (mặc định) — chip tròn của header khu khách. `square` — ô vuông bo góc 42px của header
+   * site partner (Figma Partner-XePrime `23649:27587`: viền mảnh, bo 12px, icon 20px).
+   */
+  readonly shape?: HeaderIconButtonShape;
 }
+
+export type HeaderIconButtonShape = 'circle' | 'square';
 
 /**
  * Biểu tượng tròn ở góc phải thanh trên cùng (tin nhắn · thông báo) — MỘT hình dáng cho cả
@@ -48,8 +57,16 @@ export interface HeaderIconButtonProps
  * phải bấm được bằng Enter/Space, thứ chỉ `<button>` mới có.
  */
 export const HeaderIconButton = forwardRef<HTMLSpanElement, HeaderIconButtonProps>(
-  function HeaderIconButton({ icon, label, count = 0, href, active, className, ...rest }, ref) {
-    const chipClassName = cx(styles.chip, active && styles.chipActive, className);
+  function HeaderIconButton(
+    { icon, label, count = 0, href, active, shape = 'circle', className, ...rest },
+    ref,
+  ) {
+    const chipClassName = cx(
+      styles.chip,
+      shape === 'square' && styles.chipSquare,
+      active && styles.chipActive,
+      className,
+    );
     const content = (
       <span className={styles.glyph} aria-hidden="true">
         {icon}

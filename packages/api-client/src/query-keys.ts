@@ -270,6 +270,12 @@ export const queryKeys = {
      *  đổi luôn trạng thái đơn, invalidate một chỗ là đủ. */
     handovers: (id: string) => ['bookings', 'handovers', id] as const,
     /**
+     * URL ký để hiện ẢNH THU NHỎ của biên bản bàn giao trên chi tiết đơn (03/11/2026). Tách khỏi
+     * `handovers` vì URL ký sống ngắn và phải tự làm mới; khoá theo đúng bộ ảnh đang có.
+     */
+    handoverPhotoPreviews: (id: string, type: string, fileIds: readonly string[]) =>
+      ['bookings', 'handover-photo-previews', id, type, fileIds] as const,
+    /**
      * Quyết toán cuối chuyến (Wave 10): phát sinh + cọc đã thu + đề xuất hoàn. Nằm dưới nhánh
      * `bookings` để xác nhận trả xe (đổi trạng thái đơn) tự làm mới luôn thẻ cọc.
      */
@@ -280,6 +286,10 @@ export const queryKeys = {
      * chọn trước.
      */
     quote: (params: QueryParams) => ['bookings', 'quote', params] as const,
+    /** Phụ lục gia hạn của một đơn dài hạn (ADR 0077) — dưới nhánh `bookings` để mọi đổi đơn làm mới theo. */
+    extensions: (id: string) => ['bookings', 'extensions', id] as const,
+    extensionQuote: (id: string, months: number) =>
+      ['bookings', 'extensions', id, 'quote', months] as const,
     /**
      * URL ký để hiện ẢNH của biên bản bàn giao. Tách khỏi `handovers` vì vòng đời khác hẳn: biên
      * bản là dữ liệu ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
@@ -318,6 +328,11 @@ export const queryKeys = {
     bookings: (id: string, page: number) => ['customers', 'detail', id, 'bookings', page] as const,
     notes: (id: string, page: number) => ['customers', 'detail', id, 'notes', page] as const,
     documents: (id: string) => ['customers', 'detail', id, 'documents'] as const,
+    /** Lịch sử thuê CÓ LỌC của hồ sơ khách (02/11/2026) — khoá theo nguyên bộ tham số. */
+    bookingHistory: (id: string, params: QueryParams) =>
+      ['customers', 'detail', id, 'booking-history', params] as const,
+    /** Tab "Thu chi" của hồ sơ khách — doanh thu theo kỳ + khoản phải thu. */
+    revenue: (id: string, period: string) => ['customers', 'detail', id, 'revenue', period] as const,
     /**
      * URL ký để hiện ẢNH THU NHỎ của giấy tờ. Tách khỏi `documents` vì vòng đời khác hẳn:
      * metadata giấy tờ ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
@@ -367,6 +382,8 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     /** `GET /dashboard/overview` — khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
     overview: (params: QueryParams) => ['dashboard', 'overview', params] as const,
+    /** `GET /dashboard/today` — số trên menu site partner (đơn cần xử lý, giao/nhận hôm nay). */
+    today: ['dashboard', 'today'] as const,
   },
   platformDashboard: {
     all: ['platform-dashboard'] as const,
@@ -530,6 +547,8 @@ export const queryKeys = {
     unpaidHolds: () => ['trips', 'unpaid-holds'] as const,
     /** Biên bản bàn giao của MỘT chuyến — nhánh con của chi tiết, huỷ chuyến cũng dọn theo. */
     handoverEvidence: (id: string) => ['trips', 'detail', id, 'handover-evidence'] as const,
+    /** Phụ lục gia hạn của MỘT chuyến (ADR 0077) — nhánh con của chi tiết. */
+    extensions: (id: string) => ['trips', 'detail', id, 'extensions'] as const,
     /**
      * URL ký để hiện ẢNH THU NHỎ của biên bản. Tách khỏi `handoverEvidence` vì vòng đời khác
      * hẳn: biên bản là dữ liệu ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.

@@ -28,6 +28,7 @@ import {
   CustomerDocumentDto,
   CustomerDocumentPresignDto,
   PresignCustomerDocumentDto,
+  UpdateCustomerDocumentDto,
   VerifyCustomerDocumentDto,
 } from './dto/customer.dto';
 
@@ -42,6 +43,8 @@ const SELECT = {
   verifyMethod: true,
   verifyNote: true,
   customTypeName: true,
+  holderName: true,
+  documentNumber: true,
   originalName: true,
   mimeType: true,
   sizeBytes: true,
@@ -165,6 +168,68 @@ export class CustomerDocumentsService {
   }
 
   /**
+   * Sửa phần CHỮ của giấy tờ (02/11/2026): chủ thẻ, số giấy tờ, hạn. Ảnh không đổi — muốn thay ảnh
+   * thì tải bản mới. Số giấy tờ là dữ liệu định danh của người thứ ba ⇒ audit ghi CÓ đổi hay không,
+   * không chép giá trị vào sổ.
+   */
+  async updateInfo(
+    tenantId: string,
+    customerId: string,
+    userId: string,
+    documentId: string,
+    dto: UpdateCustomerDocumentDto,
+  ): Promise<CustomerDocumentDto> {
+    await this.customers.findOne(tenantId, customerId);
+    const before = await this.prisma.tenantCustomerDocument.findFirst({
+      where: {
+        id: documentId,
+        tenantId,
+        tenantCustomerId: customerId,
+        status: CUSTOMER_DOCUMENT_STATUS.READY,
+        deletedAt: null,
+      },
+      select: SELECT,
+    });
+    if (!before) throw documentNotFound();
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tenantCustomerDocument.update({
+        where: { id: documentId },
+        data: {
+          ...(dto.holderName !== undefined
+            ? { holderName: dto.holderName?.trim() || null }
+            : {}),
+          ...(dto.documentNumber !== undefined
+            ? { documentNumber: dto.documentNumber?.trim() || null }
+            : {}),
+          ...(dto.expiresAt !== undefined
+            ? { expiresAt: dto.expiresAt ? toDateOnly(dto.expiresAt) : null }
+            : {}),
+        },
+        select: SELECT,
+      });
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'customer_document.update',
+          targetType: 'tenant_customer_document',
+          targetId: documentId,
+          after: {
+            holderNameChanged: updated.holderName !== before.holderName,
+            documentNumberChanged: updated.documentNumber !== before.documentNumber,
+            expiresAt: fromDateOnly(updated.expiresAt),
+          },
+        },
+        tx,
+      );
+      return updated;
+    });
+    return toDto(row, await this.actorNames([row.uploadedBy, row.verifiedByUserId]));
+  }
+
+  /**
    * Bước 1: tạo bản ghi `pending` + phát URL PUT. `id` và `object_key` do SERVER sinh — tên file
    * người dùng nộp chỉ được lưu để hiển thị, không tham gia định danh (không có đường nào cho
    * `../` đi vào key).
@@ -197,6 +262,8 @@ export class CustomerDocumentsService {
         tenantCustomerId: customerId,
         documentType: dto.documentType,
         customTypeName,
+        holderName: dto.holderName?.trim() || null,
+        documentNumber: dto.documentNumber?.trim() || null,
         objectKey,
         originalName: dto.fileName,
         mimeType: dto.contentType,
@@ -409,6 +476,8 @@ function toDto(row: DocumentRow, uploaderNames: Map<string, string>): CustomerDo
     verifyMethod: row.verifyMethod,
     verifyNote: row.verifyNote,
     customTypeName: row.customTypeName,
+    holderName: row.holderName,
+    documentNumber: row.documentNumber,
     originalName: row.originalName,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,

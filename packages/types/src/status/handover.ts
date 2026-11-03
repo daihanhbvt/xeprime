@@ -188,6 +188,24 @@ export function fuelLevelDropQuarters(
   return Math.round(drop * 4);
 }
 
+// ── Chuẩn bị bàn giao — việc đánh dấu TAY được (03/11/2026) ──────────────────
+
+/**
+ * Việc trong khối "Chuẩn bị bàn giao" mà người vận hành được đánh dấu tay khi sự thật nằm NGOÀI
+ * hệ thống (soi bản gốc giấy tờ, ký hợp đồng giấy, chụp ảnh bằng máy khác, tài xế đã nhận qua điện
+ * thoại). Hai việc TIỀN (tiền thuê, cọc) cố ý không có ở đây: "đã thu" phải là một phiếu thu thật,
+ * nếu không sổ tiền và danh sách việc nói hai chuyện khác nhau.
+ */
+export const HANDOVER_PREP_ITEM = {
+  DOCUMENTS: 'documents',
+  CONTRACT: 'contract',
+  PHOTOS: 'photos',
+  DRIVER: 'driver',
+} as const;
+
+export type HandoverPrepItem = (typeof HANDOVER_PREP_ITEM)[keyof typeof HANDOVER_PREP_ITEM];
+export const HANDOVER_PREP_ITEM_VALUES = Object.values(HANDOVER_PREP_ITEM) as HandoverPrepItem[];
+
 // ── Ảnh hiện trạng ───────────────────────────────────────────────────────────
 
 /**

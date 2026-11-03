@@ -29,6 +29,7 @@ import {
   makeVehiclesService,
   seedBranch,
   vehicleCreator,
+  makeBookingExtensionsService,
 } from './helpers/service-factory';
 import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
@@ -449,7 +450,7 @@ const vehiclesService = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehiclesService, asService);
 const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? 'test-key-adr0065-0123456789' : undefined),
-} as unknown as ConfigService);
+} as unknown as ConfigService, makeBookingExtensionsService(asService));
 
 /** Gọi bộ lọc lỗi toàn cục với lỗi THẬT — đúng đường mà một request HTTP đi qua. */
 function throughFilter(error: unknown): { status: number; body: { error: { code: string } } } {

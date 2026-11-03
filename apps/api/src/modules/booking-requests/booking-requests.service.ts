@@ -16,6 +16,7 @@ import {
   AUTO_ACCEPT_BLOCKER,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
   CANCELLATION_STAGE,
   cancellationReasonNeedsText,
@@ -172,6 +173,11 @@ const SELECT = {
       code: true,
       vehicleType: true,
       mainImageUrl: true,
+      // Dòng thông số "4 chỗ · Số tự động · Điện" của thẻ yêu cầu (02/11/2026).
+      motorbikeCategory: true,
+      seatCount: true,
+      transmission: true,
+      fuelType: true,
       // Giá + khuyến mãi — CHỈ để ước TẠM TÍNH cho yêu cầu còn `pending_host_approval` chưa
       // từng có hold (`estimateFees`). `monthlyPrice` nuôi XEM TRƯỚC lượt duyệt dài hạn (giá gói
       // không phụ thuộc giờ nhận — ADR 0011); thẻ `pricing` của dài hạn vẫn để trống như cũ.
@@ -186,14 +192,23 @@ const SELECT = {
   },
   // `phone` — SĐT tài khoản, để chủ xe thấy CẢ HAI số khi liên hệ của chuyến khác nó (ADR 0063).
   customer: { select: { avatarUrl: true, phone: true } },
-  tenantCustomer: { select: { riskLevel: true } },
+  tenantCustomer: {
+    select: {
+      riskLevel: true,
+      // "Khách quen" (02/11/2026): đã có ít nhất một chuyến HOÀN THÀNH ở chính gian hàng. Đếm theo
+      // từng dòng của trang (≤ `BOOKING_REQUEST_MAX_LIMIT`), dựa index (tenant_id, tenant_customer_id).
+      _count: {
+        select: { bookings: { where: { status: BOOKING_STATUS.COMPLETED, deletedAt: null } } },
+      },
+    },
+  },
   /*
    * Tiền của yêu cầu (`resolvePricing`) — ĐÚNG một quan hệ 1-1 mỗi loại, cùng một truy vấn với
    * phần còn lại của inbox, không phải một lượt tra thêm sau khi có danh sách.
    */
   hold: { select: { amount: true, paidAmount: true, priceSnapshotJson: true, expiresAt: true } },
   booking: {
-    select: { totalAmount: true, customerTotalAmount: true, paidAmount: true },
+    select: { code: true, totalAmount: true, customerTotalAmount: true, paidAmount: true },
   },
 } satisfies Prisma.BookingRequestSelect;
 
@@ -1130,6 +1145,10 @@ export class BookingRequestsService {
                 estimate.fees?.customerTotalAmount ?? estimate.breakdown.totalAmount,
               paidAmount: null,
               remainingAmount: null,
+              // Chưa ai nhận chuyến ⇒ chưa có khoản giữ chỗ nào (ADR 0044). Số DỰ KIẾN nằm ở
+              // `approvalPreview.onlineAmount`, không giả làm một khoản đã phát hành.
+              holdAmount: null,
+              holdPaidAmount: null,
             }
           : null;
       return {
@@ -1229,6 +1248,8 @@ export class BookingRequestsService {
         remainingAmount: r.booking.customerTotalAmount
           ? subtractMoney(customerTotalAmount, paidAmount)
           : null,
+        holdAmount: r.hold ? r.hold.amount.toFixed(0) : null,
+        holdPaidAmount: r.hold ? r.hold.paidAmount.toFixed(0) : null,
       };
     }
 
@@ -1241,6 +1262,8 @@ export class BookingRequestsService {
         customerTotalAmount: snapshot.fees?.customerTotalAmount ?? rentalTotal,
         paidAmount: r.hold.paidAmount.toFixed(0),
         remainingAmount: snapshot.fees?.payAtPickupAmount ?? null,
+        holdAmount: r.hold.amount.toFixed(0),
+        holdPaidAmount: r.hold.paidAmount.toFixed(0),
       };
     }
 
@@ -2701,6 +2724,11 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     vehicleCode: r.vehicle.code,
     vehicleImageUrl: r.vehicle.mainImageUrl,
     vehicleType: r.vehicle.vehicleType,
+    motorbikeCategory: r.vehicle.motorbikeCategory,
+    seatCount: r.vehicle.seatCount,
+    transmission: r.vehicle.transmission,
+    fuelType: r.vehicle.fuelType,
+    bookingCode: r.booking?.code ?? null,
     status: r.status,
     customerName: r.customerName,
     customerPhone: showContact ? r.customerPhone : null,
@@ -2711,6 +2739,7 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     tenantCustomerId: r.tenantCustomerId,
     customerAvatarUrl: r.customer?.avatarUrl ?? null,
     customerRiskLevel: r.tenantCustomer?.riskLevel ?? null,
+    customerIsRegular: (r.tenantCustomer?._count.bookings ?? 0) > 0,
     // Có tài khoản ⇒ có phía bên kia để mở hội thoại. `customerUserId` KHÔNG ra ngoài, chỉ sự
     // thật boolean này ra — vừa đủ để bật/tắt nút "Nhắn tin".
     canMessageOnPlatform: r.customerUserId != null,

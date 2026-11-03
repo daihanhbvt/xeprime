@@ -88,6 +88,8 @@ vi.mock('../hooks', () => ({
     error: undefined,
   }),
   useTripHandoverPhotos: () => ({ data: undefined, isFetching: false }),
+  // Gia hạn (ADR 0077) có test của hộp thoại phía đối tác; chuyến ở đây chưa từng gia hạn.
+  useTripExtensions: () => ({ data: [] }),
   photoKey: (type: string, slot: string) => type + ':' + slot,
 }));
 

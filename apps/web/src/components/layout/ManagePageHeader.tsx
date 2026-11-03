@@ -3,6 +3,7 @@
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import type { ReactNode } from 'react';
+import { useRegisterPageTitle } from './page-title-context';
 import styles from './ManagePageHeader.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -41,11 +42,18 @@ export interface ManagePageHeaderProps {
 
 export function ManagePageHeader({ title, subtitle, icon, onBack, extra }: ManagePageHeaderProps) {
   const t = useTranslations('ManageCommon');
+  // Mắt xích cuối của breadcrumb ở header site partner — xem `page-title-context.tsx`.
+  useRegisterPageTitle(typeof title === 'string' ? title : null);
   return (
     <div className={styles.header}>
       <div className={styles.left}>
         {onBack ? (
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label={t('shell.back')} />
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={onBack}
+            aria-label={t('shell.back')}
+          />
         ) : null}
         {icon ? (
           <span className={styles.icon} aria-hidden="true">

@@ -1,22 +1,93 @@
 /*
- * Dải KPI: tự xuống dòng theo bề rộng, không cột nào ép cha cuộn ngang.
- * `minmax(0, 1fr)` là bắt buộc — `1fr` mặc định có min-width auto, và một nhãn dài
- * ("Cần lưu ý / từ chối phục vụ") sẽ đẩy cả lưới rộng hơn khung.
+ * Dải số liệu: MỘT thẻ, các ô chia đều bề ngang (Figma `23777:53832`). `minmax(0, 1fr)` bắt buộc —
+ * một nhãn dài ("Cần lưu ý / Từ chối phục vụ") không được đẩy lưới rộng hơn khung.
  */
-.grid {
+.strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--xp-space-sm);
-  margin-bottom: var(--xp-space-md);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
 }
 
-.grid > * {
+.item {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: 18px;
+}
+
+.neutral {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.info {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.success {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.danger {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.warning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.value {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.valueDanger {
+  color: var(--xp-color-error);
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.skeleton {
+  width: 80px !important;
+  min-width: 0 !important;
 }
 
 @media (max-width: 640px) {
-  .grid {
-    /* Hai cột ở điện thoại: bốn ô xếp dọc đẩy bộ lọc và danh sách xuống quá sâu. */
+  .strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--xp-space-12);
   }
 }

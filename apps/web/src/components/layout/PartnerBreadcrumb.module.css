@@ -1,0 +1,56 @@
+/* Dải "Search Fields" của Header Details (`23659:20986`): nền sáng, đệm dọc 8px, cùng cột 1560px. */
+.row {
+  padding: var(--xp-space-sm)
+    max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
+  border-top: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+}
+
+/* Breadcrumbs (`23659:21485`): khoảng cách 8px, chữ 14px, mũi tên 16px. */
+.crumb {
+  padding-block: 4px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.crumb :global(ol) {
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.crumb :global(.ant-breadcrumb-separator) {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+}
+
+.sectionIcon {
+  display: inline-flex;
+  color: var(--xp-color-text-tertiary);
+  font-size: 20px;
+}
+
+.separator {
+  color: var(--xp-color-text-tertiary);
+  font-size: 16px;
+}
+
+.link {
+  color: var(--xp-color-text-tertiary);
+}
+
+.link:hover {
+  color: var(--xp-color-text);
+}
+
+/* Mắt xích cuối: vàng thương hiệu, 14px/Medium. */
+.current {
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+@media (max-width: 1024px) {
+  .row {
+    padding-inline: var(--xp-space-sm);
+  }
+}

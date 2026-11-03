@@ -1,19 +1,40 @@
 'use client';
 
-import { AlertOutlined, StopOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  DollarOutlined,
+  ExclamationCircleOutlined,
+  StarOutlined,
+  TeamOutlined,
+  WalletOutlined,
+} from '@ant-design/icons';
+import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { ComponentType } from 'react';
 import { TENANT_CUSTOMER_RETURNING_MIN_RENTALS } from '@xeprime/types';
-import { StatCard } from '@/features/dashboard/components/StatCard';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
+import { isZeroMoney } from '@/lib/money';
 import type { TenantCustomerSummary } from '../types';
 import styles from './CustomerSummaryCards.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
+
+type Tone = 'neutral' | 'info' | 'success' | 'danger' | 'warning';
+
+interface Item {
+  key: string;
+  icon: ComponentType;
+  tone: Tone;
+  value: string | number;
+  label: string;
+  danger?: boolean;
+}
 
 /**
- * Dải chỉ số đầu trang sổ khách.
+ * Dải số liệu đầu "Danh sách khách hàng" — Figma Partner-XePrime `23777:53832` (02/11/2026): sáu
+ * ô trong MỘT thẻ, biểu tượng tròn + số + nhãn.
  *
- * Ô công nợ **biến mất hoàn toàn** khi thiếu `finance.view` — không render "0 ₫" hay một ô mờ,
- * vì "không được xem" và "không có nợ" là hai chuyện khác nhau và một số 0 giả sẽ được đọc như
- * sự thật. Backend cũng trả `null`/`-1` cho đúng lý do đó.
+ * Hai ô tiền **biến mất hoàn toàn** khi thiếu `finance.view` — "không được xem" khác hẳn "không có"
+ * và một số 0 giả sẽ được đọc như sự thật. Server cũng trả `null` cho đúng lý do đó.
  */
 export function CustomerSummaryCards({
   summary,
@@ -26,43 +47,79 @@ export function CustomerSummaryCards({
 }) {
   const t = useTranslations('Customers.summary');
   const fmt = useAppFormat();
-
   const riskCount = (summary?.watchlistCustomers ?? 0) + (summary?.blockedCustomers ?? 0);
+  const debt = summary?.totalDebt ?? null;
+
+  const items: Item[] = [
+    {
+      key: 'customers',
+      icon: TeamOutlined,
+      tone: 'neutral',
+      value: summary?.activeCustomers ?? 0,
+      label: t('totalCustomers'),
+    },
+    {
+      key: 'rentals',
+      icon: CheckCircleOutlined,
+      tone: 'info',
+      value: summary?.totalRentals ?? 0,
+      label: t('totalRentals'),
+    },
+    ...(canViewFinance
+      ? [
+          {
+            key: 'revenue',
+            icon: WalletOutlined,
+            tone: 'success' as const,
+            value: fmt.money(summary?.totalRevenue),
+            label: t('totalRevenue'),
+          },
+          {
+            key: 'debt',
+            icon: DollarOutlined,
+            tone: 'danger' as const,
+            value: fmt.money(debt),
+            label: t('debt', { count: summary?.debtCustomers ?? 0 }),
+            danger: debt !== null && !isZeroMoney(debt),
+          },
+        ]
+      : []),
+    {
+      key: 'returning',
+      icon: StarOutlined,
+      tone: 'warning',
+      value: summary?.returningCustomers ?? 0,
+      label: t('returning', { count: TENANT_CUSTOMER_RETURNING_MIN_RENTALS }),
+    },
+    {
+      key: 'risk',
+      icon: ExclamationCircleOutlined,
+      tone: 'danger',
+      value: riskCount,
+      label: t('risk'),
+    },
+  ];
 
   return (
-    <div className={styles.grid}>
-      <StatCard
-        label={t('active')}
-        value={summary?.activeCustomers ?? 0}
-        icon={TeamOutlined}
-        tone="blue"
-        loading={loading}
-      />
-      <StatCard
-        label={t('returning', { count: TENANT_CUSTOMER_RETURNING_MIN_RENTALS })}
-        value={summary?.returningCustomers ?? 0}
-        icon={TeamOutlined}
-        tone="green"
-        loading={loading}
-      />
-      {canViewFinance ? (
-        <StatCard
-          label={t('debt', { count: summary?.debtCustomers ?? 0 })}
-          value={fmt.money(summary?.totalDebt)}
-          icon={WalletOutlined}
-          tone="gold"
-          danger={(summary?.debtCustomers ?? 0) > 0}
-          loading={loading}
-        />
-      ) : null}
-      <StatCard
-        label={t('risk')}
-        value={riskCount}
-        icon={riskCount > 0 ? AlertOutlined : StopOutlined}
-        tone="red"
-        danger={riskCount > 0}
-        loading={loading}
-      />
-    </div>
+    <section className={styles.strip} aria-label={t('ariaLabel')}>
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.key} className={styles.item}>
+            <span className={cx(styles.icon, styles[item.tone])} aria-hidden="true">
+              <Icon />
+            </span>
+            <span className={styles.text}>
+              {loading ? (
+                <Skeleton.Input active size="small" className={styles.skeleton} />
+              ) : (
+                <b className={cx(styles.value, item.danger && styles.valueDanger)}>{item.value}</b>
+              )}
+              <span className={styles.label}>{item.label}</span>
+            </span>
+          </div>
+        );
+      })}
+    </section>
   );
 }

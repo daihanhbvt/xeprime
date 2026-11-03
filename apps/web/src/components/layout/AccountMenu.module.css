@@ -1,0 +1,22 @@
+/* Khối danh tính ở đầu menu tài khoản — `useAccountMenuItems`. */
+.identity {
+  display: flex;
+  min-width: 0;
+  max-width: 240px;
+  flex-direction: column;
+  gap: 2px;
+  /* Mục menu bị `disabled` bị AntD làm mờ; khối này là chữ để ĐỌC nên trả lại độ đậm. */
+  cursor: default;
+}
+
+.workspace {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.signedInAs {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}

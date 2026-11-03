@@ -4,6 +4,7 @@ import { CHAT_SIDE, PERMISSION } from '@xeprime/types';
 import { NAV_BADGE, type NavBadgeKey } from '@/constants/nav';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { usePendingBookingRequestCount } from '@/features/booking-requests/hooks/use-pending-booking-request-count';
+import { useTodayWorkCounts } from '@/features/dashboard/hooks/use-today-work-counts';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 
@@ -12,8 +13,10 @@ export type NavBadgeCounts = Readonly<Record<NavBadgeKey, number>>;
 /**
  * Con số trên các mục menu — CHỈ những thứ đang chờ người dùng xử lý.
  *
- * Hai nguồn, hai lý do:
+ * Ba nguồn, ba lý do:
  *  - yêu cầu đặt xe chờ duyệt: khách đang đợi câu trả lời, để lâu là mất đơn;
+ *  - việc giao/nhận xe (`useTodayWorkCounts`, 02/11/2026): đơn chờ giao + đang thuê trên "Quản lý
+ *    đơn thuê xe", lượt giao + nhận hôm nay trên "Lịch thuê xe";
  *  - tin nhắn chưa đọc: cùng bản chất, và dùng lại đúng query mà chuông ở thanh trên đã gọi
  *    (`useChatUnreadCount`) nên không phát sinh thêm request nào.
  *
@@ -34,8 +37,12 @@ export function useNavBadges(): NavBadgeCounts {
     isShopScope && has(PERMISSION.BOOKING_REQUEST_VIEW),
   );
 
+  const work = useTodayWorkCounts(isShopScope && has(PERMISSION.BOOKING_VIEW));
+
   return {
     [NAV_BADGE.BOOKING_REQUESTS_PENDING]: pendingRequests ?? 0,
     [NAV_BADGE.CHAT_UNREAD]: isShopScope ? chatUnread : 0,
+    [NAV_BADGE.BOOKINGS_NEEDS_ACTION]: work.bookingsNeedsAction,
+    [NAV_BADGE.CALENDAR_TODAY]: work.calendarToday,
   };
 }

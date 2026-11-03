@@ -1,14 +1,19 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ACCOUNT_REALM, SUPPORT_CAPABILITY } from '@xeprime/types';
+import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   Realms,
+  RequirePermissions,
   SupportAction,
   TenantScoped,
 } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
-import { PartnerDashboardOverviewDto, PartnerDashboardQueryDto } from './dto/partner-dashboard.dto';
+import {
+  PartnerDashboardOverviewDto,
+  PartnerDashboardQueryDto,
+  PartnerDashboardTodayDto,
+} from './dto/partner-dashboard.dto';
 import { PartnerDashboardService } from './partner-dashboard.service';
 
 /**
@@ -46,5 +51,21 @@ export class PartnerDashboardController {
     @Query() query: PartnerDashboardQueryDto,
   ): Promise<PartnerDashboardOverviewDto> {
     return this.dashboard.overview(tenant, query);
+  }
+
+  /**
+   * Chỉ khối "việc giao/nhận hôm nay" — nuôi SỐ trên menu site partner (02/11/2026): "Quản lý đơn
+   * thuê xe" = chờ giao + đang thuê (nhóm "CẦN XỬ LÝ" của cột trái), "Lịch thuê xe" = lượt giao +
+   * nhận hôm nay. Tách khỏi `overview` vì huy hiệu được gọi lại mỗi phút trên mọi trang, còn
+   * `overview` tính cả xu hướng, uy tín, thị trường. Đếm toàn phạm vi được giao của người gọi
+   * (huy hiệu sống ở vỏ trang, không theo ô chi nhánh của màn nào — ADR 0052 điều 7).
+   */
+  @Get('today')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({ summary: 'Việc giao/nhận xe hôm nay — số trên menu site partner' })
+  @ApiOkResponse({ type: PartnerDashboardTodayDto })
+  today(@CurrentTenant() tenant: TenantContext): Promise<PartnerDashboardTodayDto> {
+    return this.dashboard.todayCounts(tenant);
   }
 }

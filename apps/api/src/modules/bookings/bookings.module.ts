@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CancellationsModule } from '../cancellations/cancellations.module';
+import { BookingExtensionsModule } from '../booking-extensions/booking-extensions.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
@@ -59,6 +60,8 @@ import { SettlementService } from './settlement/settlement.service';
     LocationsModule,
     // Phase 8: ghi nghĩa vụ thuế khi chuyến bắt đầu. Module lá, không tạo vòng.
     TaxModule,
+    // ADR 0077: phụ lục gia hạn — module lá với Bookings (không import ngược), không tạo vòng.
+    BookingExtensionsModule,
   ],
   controllers: [
     BookingsController,

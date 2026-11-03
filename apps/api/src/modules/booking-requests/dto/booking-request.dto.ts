@@ -7,6 +7,7 @@ import {
   BOOKING_REQUEST_STATUS_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE_VALUES,
@@ -578,6 +579,22 @@ export class BookingRequestPricingDto {
     description: 'Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng',
   })
   remainingAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền giữ chỗ PHẢI chuyển của khoản đã phát hành (`booking_holds.amount`) — null khi chưa ' +
+      'ai nhận chuyến (số dự kiến ở `approvalPreview.onlineAmount`) hoặc chuyến không thu online',
+  })
+  holdAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) — "Đã giữ chỗ" chỉ khi số này đủ ' +
+      '`holdAmount` (ADR 0044). null khi không có khoản giữ chỗ',
+  })
+  holdPaidAmount!: string | null;
 }
 
 /**
@@ -691,6 +708,14 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true }) vehicleCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
   vehicleImageUrl!: string | null;
+  /** Bốn trường của dòng thông số "4 chỗ · Số tự động · Điện" — MÃ, nhãn do client dịch (ADR 0012). */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: MOTORBIKE_CATEGORY_VALUES })
+  motorbikeCategory!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) transmission!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
+  /** Mã ĐƠN đã sinh từ yêu cầu (`#DH…`) — yêu cầu không có mã riêng; null khi chưa thành đơn. */
+  @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: VEHICLE_TYPE_VALUES })
   vehicleType!: string | null;
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
@@ -737,6 +762,9 @@ export class BookingRequestDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true, enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES })
   customerRiskLevel!: string | null;
+  /** "Khách quen": đã có ít nhất một chuyến hoàn thành ở chính gian hàng này. */
+  @ApiProperty({ description: 'Khách đã có ≥ 1 chuyến hoàn thành ở gian hàng này' })
+  customerIsRegular!: boolean;
   /**
    * Khách có tài khoản trên nền tảng để nhắn tin trong ứng dụng không. `false` với khách vãng
    * lai — gian hàng chỉ liên hệ được qua điện thoại/Zalo.

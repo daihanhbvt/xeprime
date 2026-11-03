@@ -3,6 +3,7 @@ import {
   apiGet,
   apiPatch,
   apiPost,
+  apiPut,
   fetchPage,
   type Paged,
   type QueryParams,
@@ -10,13 +11,18 @@ import {
 import type {
   AssignBookingDriverInput,
   BookingDetail,
+  BookingExtension,
+  BookingExtensionQuote,
   BookingDriverHistoryItem,
   BookingFilters,
+  BookingHandoverPrep,
   BookingListItem,
+  BookingListMeta,
   CheckConflictInput,
   CheckConflictResult,
   CreateBookingInput,
   DriverWageQuote,
+  SetHandoverPrepCheckInput,
   TransitionInput,
   UpdateBookingInput,
   UpdateDeliveryFeeInput,
@@ -25,7 +31,7 @@ import type {
 
 export const BOOKINGS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export type BookingListResult = Paged<BookingListItem>;
+export type BookingListResult = Paged<BookingListItem, BookingListMeta>;
 
 /** Filter (URL) → query params gửi API. Bỏ giá trị rỗng để URL và cache key gọn. */
 export function filtersToParams(filters: BookingFilters): QueryParams {
@@ -45,7 +51,11 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
 }
 
 export const fetchBookings = (filters: BookingFilters): Promise<BookingListResult> =>
-  fetchPage<BookingListItem>('/bookings', filtersToParams(filters), BOOKINGS_DEFAULT_LIMIT);
+  fetchPage<BookingListItem, BookingListMeta>(
+    '/bookings',
+    filtersToParams(filters),
+    BOOKINGS_DEFAULT_LIMIT,
+  );
 
 export const fetchBooking = (id: string): Promise<BookingDetail> =>
   apiGet<BookingDetail>(`/bookings/${id}`);
@@ -99,5 +109,32 @@ export const updateDriverWage = (
   );
 
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
+/** Phụ lục gia hạn của một đơn, cũ trước (ADR 0077). */
+export const fetchBookingExtensions = (id: string): Promise<BookingExtension[]> =>
+  apiGet<BookingExtension[]>(`/bookings/${id}/extensions`);
+
+/** Xem trước giá + lịch trống của phụ lục N tháng — cùng hàm tính với lượt tạo. */
+export const fetchBookingExtensionQuote = (
+  id: string,
+  months: number,
+): Promise<BookingExtensionQuote> =>
+  apiGet<BookingExtensionQuote>(`/bookings/${id}/extensions/quote`, { months });
+
+export const createBookingExtension = (id: string, months: number): Promise<BookingExtension> =>
+  apiPost<BookingExtension>(`/bookings/${id}/extensions`, { months });
+
+export const cancelBookingExtension = (
+  id: string,
+  extensionId: string,
+): Promise<BookingExtension> =>
+  apiPost<BookingExtension>(`/bookings/${id}/extensions/${extensionId}/cancel`, {});
+
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>
   apiPost<CheckConflictResult>('/calendar/check-conflict', body);
+
+/** Đánh dấu / bỏ đánh dấu TAY một việc chuẩn bị bàn giao — trả về khối checklist mới. */
+export const setHandoverPrepCheck = (
+  id: string,
+  body: SetHandoverPrepCheckInput,
+): Promise<BookingHandoverPrep> =>
+  apiPut<BookingHandoverPrep>(`/bookings/${encodeURIComponent(id)}/handover-prep`, body);

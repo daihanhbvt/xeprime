@@ -29,6 +29,7 @@ import {
 } from './jobs/driver-assignment-expiry';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
+import { sweepBookingExtensionExpiry } from './jobs/booking-extension-expiry';
 import { sweepHandoverOverdue } from './jobs/handover-overdue';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
@@ -332,6 +333,11 @@ async function main(): Promise<void> {
         const reminders = result.firstReminders + result.finalReminders;
         if (result.expired || reminders) {
           console.log(`giữ chỗ: nhắc ${reminders}, hết hạn ${result.expired}`);
+        }
+        // Phụ lục gia hạn (ADR 0077) — cùng loại việc "tiền theo đồng hồ", cùng nhịp phút.
+        const ext = await sweepBookingExtensionExpiry(prisma);
+        if (ext.expired || ext.reminders) {
+          console.log(`gia hạn: nhắc ${ext.reminders}, hết hạn ${ext.expired}`);
         }
         /*
          * Chống treo đơn ở mốc bàn giao (ADR 0066, lớp 3) — cùng nhịp phút, cùng loại việc "tiền

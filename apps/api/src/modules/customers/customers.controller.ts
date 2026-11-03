@@ -20,8 +20,11 @@ import { CustomersService } from './customers.service';
 import {
   CreateCustomerNoteDto,
   CreateTenantCustomerDto,
+  CustomerBookingHistoryQueryDto,
   CustomerBookingListQueryDto,
   CustomerBookingPageDto,
+  CustomerRevenueDto,
+  CustomerRevenueQueryDto,
   CustomerNoteDto,
   CustomerNotePageDto,
   TenantCustomerDetailDto,
@@ -190,9 +193,25 @@ export class CustomersController {
   bookings(
     @CurrentTenant() tenant: TenantContext,
     @Param('id') id: string,
-    @Query() query: CustomerBookingListQueryDto,
+    @Query() query: CustomerBookingHistoryQueryDto,
   ): Promise<CustomerBookingPageDto> {
     return this.customers.bookings(tenant.tenantId, id, query, canViewFinance(tenant));
+  }
+
+  /**
+   * Tab "Thu chi" của hồ sơ khách (02/11/2026) — tiền, nên đòi `finance.view` cùng quyền xem khách
+   * và quyền xem đơn (bảng khoản phải thu liệt kê đơn).
+   */
+  @Get(':id/revenue')
+  @RequirePermissions(PERMISSION.CUSTOMER_VIEW, PERMISSION.BOOKING_VIEW, PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Doanh thu từ khách theo kỳ + khoản phải thu đang mở' })
+  @ApiOkResponse({ type: CustomerRevenueDto })
+  revenue(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Query() query: CustomerRevenueQueryDto,
+  ): Promise<CustomerRevenueDto> {
+    return this.customers.revenue(tenant.tenantId, id, query.period ?? 'month');
   }
 
   @Get(':id/notes')

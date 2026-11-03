@@ -5,7 +5,10 @@ import {
   BOOKING_LIST_PRESET_VALUES,
   BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
+  CANCELLATION_PARTY_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
+  VEHICLE_TYPE_VALUES,
   HANDOVER_STATUS_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
@@ -14,9 +17,12 @@ import {
   EXTERNAL_DRIVER_NAME_LENGTH,
   VN_PHONE_PATTERN,
   type BookingListPreset,
+  HANDOVER_PREP_ITEM_VALUES,
+  type HandoverPrepItem,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -220,6 +226,94 @@ export class BookingListItemDto {
   @ApiPropertyOptional({ type: BookingDriverSummaryDto, nullable: true })
   driver!: BookingDriverSummaryDto | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
+  /**
+   * Bốn trường của dòng thông số "4 chỗ · Số tự động · Điện" trên thẻ đơn — MÃ, nhãn do client
+   * dịch (ADR 0012). Thiếu trường nào thì client bỏ mục đó, không in "—".
+   */
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: MOTORBIKE_CATEGORY_VALUES })
+  motorbikeCategory!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) transmission!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
+  /** Ảnh đại diện tài khoản khách — null với đơn gian hàng tự lập hoặc khách chưa có ảnh. */
+  @ApiPropertyOptional({ type: String, nullable: true }) customerAvatarUrl!: string | null;
+  /**
+   * Yêu cầu đã sinh ra đơn này — đường nhắn tin với khách của đơn đi qua hội thoại của yêu cầu
+   * (`POST /booking-requests/:id/conversation`). null = đơn gian hàng tự lập.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) bookingRequestId!: string | null;
+  /**
+   * Khách có tài khoản để nhắn tin trong ứng dụng. Đơn đã có ⇒ kênh nhắn tin MỞ với cả hai tuyến
+   * (ADR 0073), nên cờ này chỉ còn nói "có phía bên kia hay không".
+   */
+  @ApiProperty() canMessageOnPlatform!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giao xe thật — ISO-8601 UTC' })
+  actualPickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Trả xe thật — ISO-8601 UTC' })
+  actualReturnAt!: string | null;
+  /** Phía chịu trách nhiệm của lượt huỷ (`booking_cancellations`, ADR 0045) — null khi đơn không bị huỷ. */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: CANCELLATION_PARTY_VALUES })
+  cancellationParty!: string | null;
+}
+
+/**
+ * "CHUẨN BỊ BÀN GIAO" (Figma Partner `23768:29928`, 02/11/2026) — từng việc trước khi giao xe, SUY
+ * từ dữ liệu đã có (không có bảng tick riêng — chốt 02/11). Server là nơi suy duy nhất: web chỉ
+ * vẽ, không tự đếm lại từ năm truy vấn khác nhau.
+ */
+/** Một việc đang được đánh dấu TAY — ai, lúc nào (03/11/2026). */
+export class BookingHandoverManualCheckDto {
+  @ApiProperty({ enum: HANDOVER_PREP_ITEM_VALUES }) item!: HandoverPrepItem;
+  @ApiProperty({ description: 'Thời điểm đánh dấu (ISO)' }) checkedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên người đánh dấu' })
+  checkedByName!: string | null;
+}
+
+/** Đánh dấu / bỏ đánh dấu tay một việc chuẩn bị bàn giao. Việc tiền không có trong danh sách. */
+export class SetHandoverPrepCheckDto {
+  @ApiProperty({ enum: HANDOVER_PREP_ITEM_VALUES })
+  @IsIn(HANDOVER_PREP_ITEM_VALUES)
+  item!: HandoverPrepItem;
+
+  @ApiProperty({ description: 'true = đánh dấu đã xong · false = bỏ đánh dấu' })
+  @IsBoolean()
+  checked!: boolean;
+}
+
+export class BookingHandoverPrepDto {
+  @ApiProperty({
+    description:
+      'Khách có CCCD/GPLX/hộ chiếu ĐÃ ĐỐI CHIẾU trong sổ khách, hoặc GPLX tài khoản đã xác thực (ADR 0057) — và còn hạn tới hết ngày cuối chuyến',
+  })
+  documentsReady!: boolean;
+  @ApiProperty({
+    description:
+      'Khách còn phải đưa TAY lúc nhận xe (VND string) = công nợ − phần D chủ xe đã có trong tiền giữ chỗ online — 0 ⇒ xong việc thu tiền thuê',
+  })
+  rentDueAmount!: string;
+  @ApiProperty({ description: 'Cọc theo đơn (VND string)' }) depositRequired!: string;
+  @ApiProperty({ description: 'Cọc đã ghi nhận thu (VND string)' }) depositReceived!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Hợp đồng còn hiệu lực' })
+  contractId!: string | null;
+  @ApiProperty({ description: 'Hợp đồng đã ký' }) contractSigned!: boolean;
+  @ApiProperty({ description: 'Số ô ảnh (khác nhau) của biên bản GIAO đang soạn/đã có' })
+  pickupPhotoCount!: number;
+  @ApiProperty({ description: 'Số ô ảnh bắt buộc' }) pickupPhotoRequired!: number;
+  @ApiPropertyOptional({
+    type: Boolean,
+    nullable: true,
+    description: 'Tài xế đã nhận chuyến — null khi đơn không có tài xế',
+  })
+  driverReady!: boolean | null;
+  @ApiProperty({
+    type: [BookingHandoverManualCheckDto],
+    description:
+      'Việc người vận hành đánh dấu TAY (sự thật nằm ngoài hệ thống). Web: việc xong = suy tự động HOẶC có dấu tay',
+  })
+  manualChecks!: BookingHandoverManualCheckDto[];
 }
 
 /** Chi tiết một đơn — dùng cho trang chi tiết đơn. */
@@ -235,8 +329,6 @@ export class BookingDetailDto extends BookingListItemDto {
    * (đối xứng `BookingRequestDetailDto`).
    */
   @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
-  /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
-  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
   /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác (CHECK DB giữ luật này). */
   @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES, type: String, nullable: true })
   routeType!: string | null;
@@ -314,16 +406,55 @@ export class BookingDetailDto extends BookingListItemDto {
       'khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí',
   })
   ownerPayout!: OwnerPayoutDto | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
+  @ApiPropertyOptional({
+    type: BookingHandoverPrepDto,
+    nullable: true,
+    description: 'Việc chuẩn bị bàn giao — chỉ có khi đơn còn chờ giao xe, null ở mọi chặng khác',
+  })
+  handoverPrep?: BookingHandoverPrepDto | null;
+
+  @ApiProperty({
+    description:
+      'Mốc ĐÃ XÁC NHẬN của thanh tiến trình: lượt gian hàng nhận yêu cầu (đơn từ chợ) hoặc lúc lập đơn (đơn tự lập)',
+  })
+  confirmedAt!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lúc tiền giữ chỗ về ĐỦ (ADR 0044) — null với đơn không qua giữ chỗ',
+  })
+  holdPaidAt!: string | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'Số chuyến ĐÃ HOÀN TẤT của khách này tại gian hàng (sổ khách) — để gắn nhãn "Khách quen"; null khi đơn không gắn hồ sơ khách. Chỉ có ở GET chi tiết',
+  })
+  customerCompletedRentals?: number | null;
 }
 
 /** Bọc phân trang cho danh sách đơn (ADR 0007 — shape phải khai báo để FE sinh đúng type). */
+/** Số đơn của một nhóm việc dưới CÙNG bộ lọc (tìm kiếm · chi nhánh · dịch vụ) với trang đang xem. */
+export class BookingPresetCountDto {
+  @ApiProperty({ enum: BOOKING_LIST_PRESET_VALUES }) preset!: string;
+  @ApiProperty() count!: number;
+}
+
+export class BookingPageMetaDto extends PaginationMetaDto {
+  /**
+   * Bốn nhóm việc của cột trái (02/11/2026) — đếm KHÔNG theo `preset`/`status` đang chọn, để cột
+   * trái nói được mỗi ngăn còn bao nhiêu khi người dùng đang đứng ở một ngăn khác.
+   */
+  @ApiProperty({ type: [BookingPresetCountDto] }) presetCounts!: BookingPresetCountDto[];
+}
+
 export class BookingPageDto {
   @ApiProperty({ type: [BookingListItemDto] }) data!: BookingListItemDto[];
-  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+  @ApiProperty({ type: BookingPageMetaDto }) meta!: BookingPageMetaDto;
 }
 
 /**

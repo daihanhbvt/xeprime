@@ -255,10 +255,10 @@
     "attention": "Có điểm cần lưu ý"
   },
   "handoverPhotoSlot": {
-    "front": "Trước",
-    "rear": "Sau",
-    "left": "Trái",
-    "right": "Phải",
+    "front": "Mặt trước",
+    "rear": "Mặt sau",
+    "left": "Bên trái",
+    "right": "Bên phải",
     "odometer": "Đồng hồ Odo"
   },
   "handoverStatus": {
@@ -977,7 +977,9 @@
     "hold_overpay": "Hoàn phần chuyển thừa",
     "withdrawal": "Rút về ngân hàng",
     "withdrawal_reversal": "Hoàn lại do rút không thành",
-    "adjustment": "Điều chỉnh"
+    "adjustment": "Điều chỉnh",
+    "extension_release": "Tiền giữ chỗ phần gia hạn",
+    "extension_refund": "Hoàn tiền gia hạn"
   },
   "withdrawalStatus": {
     "pending": "Chờ duyệt",
@@ -1100,7 +1102,9 @@
     "contact_reveal": "Xem liên hệ đầy đủ",
     "bulk_create": "Tạo hàng loạt",
     "bulk_release": "Nhả hàng loạt",
-    "attach": "Đính kèm"
+    "attach": "Đính kèm",
+    "prep_check": "Đánh dấu việc chuẩn bị",
+    "prep_uncheck": "Bỏ đánh dấu việc chuẩn bị"
   },
   "billingPhase": {
     "current": "Đang hiệu lực",
@@ -1492,6 +1496,12 @@
       "activate": "Bật mẫu email hướng dẫn gói",
       "delete": "Xoá mẫu email hướng dẫn gói",
       "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
+    },
+    "booking_extension": {
+      "create": "Tạo phụ lục gia hạn",
+      "activate": "Phụ lục gia hạn có hiệu lực",
+      "cancel": "Huỷ phụ lục gia hạn",
+      "expire": "Phụ lục gia hạn hết hạn thanh toán"
     }
   },
   "auditTargetType": {

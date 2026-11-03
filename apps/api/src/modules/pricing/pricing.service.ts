@@ -40,6 +40,7 @@ import {
   isServiceType,
   taxSellerEntityOf,
   type CustomerFeeBreakdown,
+  type FeePolicySnapshot,
   type InsuranceOfferedByKind,
   type SellerEntityType,
 } from '@xeprime/types';
@@ -229,10 +230,17 @@ export class PricingService {
        * giá hỏi đúng MỘT lần và hai con số không thể lệch nhau. Bỏ trống ⇒ tự hỏi.
        */
       insuranceOffered?: InsuranceOfferedByKind;
+      /**
+       * PHỤ LỤC GIA HẠN (ADR 0077 điều 4): miễn phí nền tảng — không phí sàn `S`, không hoa hồng
+       * `H`, không bán bảo hiểm. Mọi thứ khác (thuế, phần giữ chỗ 15%, sàn đối soát) đi qua ĐÚNG
+       * hàm phí của đơn, nên phụ lục không có bản thứ hai của công thức nào.
+       */
+      platformFeesWaived?: boolean;
     } = {},
   ): Promise<CustomerFeeBreakdown | null> {
-    const policy = await this.feePolicies.findEffective();
-    if (!policy) return null;
+    const effective = await this.feePolicies.findEffective();
+    if (!effective) return null;
+    const policy = opts.platformFeesWaived ? waivePlatformFees(effective) : effective;
     /*
      * MỘT nguồn cho cả `billingMode` lẫn "có thu cọc không" (Phase 6).
      *
@@ -274,7 +282,9 @@ export class PricingService {
        * Cổng bảo hiểm của NỀN TẢNG — có đối tác phát hành thật hay chưa. Hỏi ở đây, một chỗ, cho
        * mọi đường tính tiền (báo giá, xem trước mã, duyệt yêu cầu): không caller nào được tự quyết.
        */
-      insuranceOffered: opts.insuranceOffered ?? (await this.insuranceOffer.offeredByKind()),
+      insuranceOffered: opts.platformFeesWaived
+        ? false
+        : (opts.insuranceOffered ?? (await this.insuranceOffer.offeredByKind())),
       rentalDays,
       dayAmounts,
       quoteIsEstimate,
@@ -1653,6 +1663,20 @@ export function ceilDecimalToThousand(value: Prisma.Decimal): Prisma.Decimal {
  * `dayAmountsListed` = mảng là giá NIÊM YẾT thật từng ngày (đóng băng được vào bảng phí); `false` =
  * mảng chia đều, chỉ để làm mẫu số hoa hồng.
  */
+/**
+ * Chính sách phí với phí nền tảng TẮT — phụ lục gia hạn (ADR 0077 điều 4). Giữ nguyên id/phiên
+ * bản chính sách để snapshot vẫn trỏ đúng bản đang hiệu lực (thuế, % cọc, sàn đối soát).
+ */
+function waivePlatformFees<T extends FeePolicySnapshot>(policy: T): T {
+  return {
+    ...policy,
+    customerPlatformFee: Object.fromEntries(
+      Object.keys(policy.customerPlatformFee).map((type) => [type, '0']),
+    ) as T['customerPlatformFee'],
+    ownerCommissionTiers: [],
+  };
+}
+
 export function feeDaysOf(trip: FeeTrip): {
   rentalDays: number;
   dayAmounts: string[];

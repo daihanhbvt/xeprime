@@ -119,7 +119,7 @@ export async function upsertWorkerHoldRefund(
 }
 
 /** Ví của khách, tạo nếu chưa có. Unique `owner_user_id` phân xử khi hai lượt cùng tạo. */
-async function ensureUserWallet(
+export async function ensureUserWallet(
   tx: Prisma.TransactionClient,
   userId: string,
 ): Promise<{ id: string }> {

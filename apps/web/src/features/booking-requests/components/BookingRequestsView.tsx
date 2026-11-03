@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Pagination, Tabs } from 'antd';
+import { App, Button, Pagination } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -11,11 +11,10 @@ import { ALL_FILTER } from '@/constants/filters';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { SegmentedTabs } from '@/components/navigation/SegmentedTabs';
 import { ROUTES } from '@/constants/routes';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
@@ -45,7 +44,6 @@ import styles from './BookingRequestsView.module.css';
 export function BookingRequestsView() {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
@@ -53,7 +51,6 @@ export function BookingRequestsView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { has } = usePermissions();
-  const isMobile = useIsMobile();
   const { isManage: isManageWorkspace } = useWorkspace();
 
   /*
@@ -174,13 +171,10 @@ export function BookingRequestsView() {
   );
 
   const tabItems = BOOKING_REQUEST_TABS.map((tab) => ({
-    key: tab.value,
-    label: (
-      <span className={styles.tabLabel}>
-        {t(`tabs.${tab.labelKey}`)}
-        <span className={styles.tabCount}>{fmt.count(countFor(statusCounts, tab.status))}</span>
-      </span>
-    ),
+    value: tab.value,
+    label: t(`tabs.${tab.labelKey}`),
+    // Chưa tải xong thì không vẽ "0" giả trên tab.
+    count: meta ? countFor(statusCounts, tab.status) : undefined,
   }));
 
   const filterBar = (
@@ -226,26 +220,22 @@ export function BookingRequestsView() {
        * `statusCounts` với badge của tab "Cần xử lý" ở hàng dưới, nên chỉ là một cách đếm thứ
        * hai cho đúng một con số đã hiện. Ba tab bây giờ tự nói đủ.
        */}
-      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
+      <ManagePageHeader title={t('page.inboxTitle')} subtitle={t('page.inboxSubtitle')} />
 
-      <Tabs
-        activeKey={activeTab}
-        items={tabItems}
-        onChange={selectTab}
-        className={styles.tabs}
-        aria-label={t('tabs.ariaLabel')}
-        /*
-         * Desktop: thanh lọc đi VÀO khe phải của hàng tab thay vì chiếm thêm một hàng. Hộp thư
-         * đã có tiêu đề, hai thẻ số và sáu tab phía trên; một hàng nữa chỉ để chứa một ô tìm
-         * kiếm là đẩy thẻ yêu cầu đầu tiên xuống dưới nếp gấp.
-         *
-         * Mobile thì KHÔNG: hàng tab ở đó tự cuộn ngang, nhét thêm ô tìm kiếm vào cùng hàng là
-         * bóp cả hai. Nó xuống hàng riêng ngay dưới (xem bên dưới).
-         */
-        tabBarExtraContent={isMobile ? undefined : { right: filterBar }}
-      />
-
-      {isMobile ? filterBar : null}
+      {/*
+        Hàng công cụ theo design (Figma Partner-XePrime `23649:25560`): tab gộp bên trái, tìm kiếm
+        + chi nhánh + dịch vụ bên phải, CÙNG một hàng — hộp thư đã có tiêu đề phía trên, thêm một
+        hàng nữa chỉ để chứa ô tìm kiếm là đẩy thẻ đầu tiên xuống dưới nếp gấp. Hẹp thì xuống dòng.
+      */}
+      <div className={styles.toolbar}>
+        <SegmentedTabs
+          label={t('tabs.ariaLabel')}
+          value={activeTab}
+          items={tabItems}
+          onChange={selectTab}
+        />
+        {filterBar}
+      </div>
 
       {isFirstLoad ? <LoadingState variant="cards" rows={4} label={t('states.loading')} /> : null}
 

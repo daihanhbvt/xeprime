@@ -5,6 +5,7 @@ import { queryKeys } from '@/services/query-keys';
 import {
   assignBookingDriver,
   createBooking,
+  setHandoverPrepCheck,
   transitionBooking,
   updateBooking,
   updateBookingDeliveryFee,
@@ -12,7 +13,9 @@ import {
 } from '../api';
 import type {
   AssignBookingDriverInput,
+  BookingDetail,
   CreateBookingInput,
+  SetHandoverPrepCheckInput,
   TransitionInput,
   UpdateBookingInput,
   UpdateDeliveryFeeInput,
@@ -21,11 +24,13 @@ import type {
 import { bookingDriverHistoryKey } from './use-booking';
 
 /**
- * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard`: tạo/đổi đơn ảnh hưởng
- * cả lịch (occupancy) lẫn số liệu tổng quan, nên mọi danh sách đang mở tự tải lại.
+ * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard` + `customers`: tạo/đổi đơn
+ * ảnh hưởng cả lịch (occupancy), số liệu tổng quan lẫn sổ khách (lượt thuê, đơn hiện tại, còn nợ),
+ * nên mọi danh sách đang mở tự tải lại.
  */
 function invalidateAfterBookingChange(queryClient: ReturnType<typeof useQueryClient>): void {
   void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
 }
@@ -105,6 +110,22 @@ export function useTransitionBooking(id: string) {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);
+    },
+  });
+}
+
+/**
+ * Đánh dấu tay một việc chuẩn bị bàn giao (03/11/2026). Response là khối checklist mới — vá thẳng
+ * vào cache chi tiết đơn, không tải lại cả đơn cho một dấu tick.
+ */
+export function useSetHandoverPrepCheck(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetHandoverPrepCheckInput) => setHandoverPrepCheck(id, body),
+    onSuccess: (handoverPrep) => {
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (current) =>
+        current ? { ...current, handoverPrep } : current,
+      );
     },
   });
 }

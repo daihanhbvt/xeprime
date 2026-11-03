@@ -16,6 +16,7 @@ import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../../src/modules/bookings/bookings.service';
+import { BookingExtensionsService } from '../../src/modules/booking-extensions/booking-extensions.service';
 import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
 import { CustomersService } from '../../src/modules/customers/customers.service';
 import { DriversService } from '../../src/modules/drivers/drivers.service';
@@ -352,6 +353,25 @@ export function makeBookingsService(
     makeAddressService(prisma),
     new TaxService(prisma, audit),
     new CancellationsService(),
+    makeBookingExtensionsService(prisma, { audit, notifications }),
+  );
+}
+
+/** `BookingExtensionsService` (ADR 0077) — mọi writer thật trên Postgres thật. */
+export function makeBookingExtensionsService(
+  prisma: PrismaService,
+  overrides: { audit?: AuditService; notifications?: NotificationService } = {},
+): BookingExtensionsService {
+  const audit = overrides.audit ?? new AuditService(prisma);
+  return new BookingExtensionsService(
+    prisma,
+    new OccupancyService(prisma),
+    makePricingService(prisma),
+    new TaxService(prisma, audit),
+    new WalletService(prisma),
+    makeBillingService(prisma),
+    audit,
+    overrides.notifications ?? makeNotificationService(prisma),
   );
 }
 

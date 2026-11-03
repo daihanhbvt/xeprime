@@ -2,7 +2,8 @@
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App } from 'antd';
-import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import { NumberField } from '@/components/form/NumberField';
@@ -14,17 +15,27 @@ import { useUpdateBookingDeliveryFee } from '../hooks/use-booking-mutations';
 import styles from './UpdateDeliveryFeeModal.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
-const schema = yup.object({
-  deliveryFee: yup
-    .number()
-    .typeError('Nhập số tiền hợp lệ')
-    .min(0, 'Phí giao nhận không thể âm')
-    .max(999_999_999_999, 'Số tiền quá lớn')
-    .required('Nhập phí giao nhận'),
-  note: yup.string().trim().max(500, 'Tối đa 500 ký tự').default(''),
-});
+interface SchemaMessages {
+  invalid: string;
+  negative: string;
+  tooLarge: string;
+  required: string;
+  noteMax: string;
+}
 
-type Values = yup.InferType<typeof schema>;
+function buildSchema(m: SchemaMessages) {
+  return yup.object({
+    deliveryFee: yup
+      .number()
+      .typeError(m.invalid)
+      .min(0, m.negative)
+      .max(999_999_999_999, m.tooLarge)
+      .required(m.required),
+    note: yup.string().trim().max(500, m.noteMax).default(''),
+  });
+}
+
+type Values = yup.InferType<ReturnType<typeof buildSchema>>;
 
 interface UpdateDeliveryFeeModalProps {
   bookingId: string;
@@ -54,6 +65,20 @@ export function UpdateDeliveryFeeModal({
   onClose,
 }: UpdateDeliveryFeeModalProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Bookings.deliveryFeeModal');
+  const tFee = useTranslations('Bookings.deliveryFee');
+  const tCommon = useTranslations('Common');
+  const schema = useMemo(
+    () =>
+      buildSchema({
+        invalid: t('invalid'),
+        negative: t('negative'),
+        tooLarge: t('tooLarge'),
+        required: t('required'),
+        noteMax: t('noteMax'),
+      }),
+    [t],
+  );
 
   const { message } = App.useApp();
   const update = useUpdateBookingDeliveryFee(bookingId);
@@ -80,7 +105,7 @@ export function UpdateDeliveryFeeModal({
       },
       {
         onSuccess: () => {
-          message.success('Đã cập nhật phí giao nhận');
+          message.success(tFee('success'));
           onClose();
         },
         onError: (err) => message.error(getErrorMessage(err)),
@@ -90,11 +115,11 @@ export function UpdateDeliveryFeeModal({
 
   return (
     <ResponsiveDialog
-      title="Cập nhật phí giao nhận"
+      title={tFee('title')}
       open={open}
       onClose={onClose}
       size="sm"
-      okText="Lưu"
+      okText={tCommon('actions.save')}
       onOk={() => void handleSubmit(submit)()}
       confirmLoading={update.isPending}
     >
@@ -104,38 +129,38 @@ export function UpdateDeliveryFeeModal({
         onSubmit={(event) => void handleSubmit(submit)(event)}
       >
         <div className={styles.currentRow}>
-          <span>Phí đang áp dụng</span>
-          <b>{Number(currentFee) > 0 ? fmt.money(currentFee) : 'Miễn phí'}</b>
+          <span>{t('current')}</span>
+          <b>{Number(currentFee) > 0 ? fmt.money(currentFee) : t('free')}</b>
         </div>
 
         <NumberField
           control={control}
           name="deliveryFee"
-          label="Phí giao nhận"
+          label={tFee('title')}
           money
           min={0}
           required
-          help="Nhập 0 để trả về Miễn phí."
+          help={t('zeroHint')}
         />
 
         <TextAreaField
           control={control}
           name="note"
-          label="Ghi chú nội bộ"
-          placeholder="Lý do, mã tham chiếu…"
+          label={tFee('noteLabel')}
+          placeholder={t('notePlaceholder')}
           rows={2}
         />
 
         <Alert
           type="info"
           showIcon
-          title="Khách không cần xác nhận lại. Tổng tiền của đơn được tính lại trên máy chủ, và khách sẽ nhận thông báo là số tiền đã thay đổi."
+          title={t('info')}
         />
 
         {Number(currentFee) !== nextFee ? (
           <p className={styles.diff}>
-            {Number(currentFee) > 0 ? fmt.money(currentFee) : 'Miễn phí'} →{' '}
-            <b>{nextFee > 0 ? fmt.money(String(nextFee)) : 'Miễn phí'}</b>
+            {Number(currentFee) > 0 ? fmt.money(currentFee) : t('free')} →{' '}
+            <b>{nextFee > 0 ? fmt.money(String(nextFee)) : t('free')}</b>
           </p>
         ) : null}
       </DialogForm>

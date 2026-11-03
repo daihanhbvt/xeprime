@@ -1,17 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { withBranchParam } from '@/features/branches/branch-link';
-import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { createElement, useState } from 'react';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
-  isNavPermissionGranted,
   leavesOfSection,
   matchSelectedKey,
   sectionKeyOf,
@@ -20,15 +17,11 @@ import {
   type NavNode,
   type NavSection,
 } from '@/constants/nav';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { useFeatureStates } from '@/hooks/use-feature';
-import { usePermissions } from '@/hooks/use-permissions';
-import { FEATURE_STATE, TENANT_ROLE, isFeatureVisible } from '@xeprime/types';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleNavSection } from '@/store/slices/app.slice';
 import { NavBadge } from './NavBadge';
 import { SidebarSectionTitle } from './SidebarSectionTitle';
-import { useNavBadges, type NavBadgeCounts } from './use-nav-badges';
+import { useNavLeafAccess } from './use-nav-leaf-access';
 import styles from './ManageMenu.module.css';
 import { useManageNavTree } from './use-manage-nav-tree';
 
@@ -74,45 +67,10 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const t = useTranslations('Navigation');
   const tShell = useTranslations('ManageCommon');
   const pathname = usePathname();
-  /*
-   * Chi nhánh đang lọc đi THEO LINK sang màn kế tiếp (ADR 0052) — xem `branch-link.ts`.
-   * Đọc từ URL chứ không từ một bộ nhớ ở client: nhờ vậy đường dẫn đích đã đúng ngay từ request
-   * đầu, không có lượt hỏi "tất cả chi nhánh" thừa và không có nhấp nháy.
-   */
-  // URL đang đứng thắng; màn trung lập lấy chi nhánh lọc gần nhất từ bộ nhớ phiên (branch-memory.ts).
-  const remembered = useRememberedBranch();
-  const branchId = useSearchParams().get('branchId') ?? remembered;
   const dispatch = useAppDispatch();
   const collapsedSections = useAppSelector((s) => s.app.navSectionsCollapsed);
-  const { data: user } = useCurrentUser();
-  const { has } = usePermissions();
-  const featureStates = useFeatureStates();
-  const badges = useNavBadges();
-
-  /**
-   * MỘT vị từ "người dùng có thấy mục này không", dùng ở BA chỗ: dựng mục lá, và hai phép dồn
-   * huy hiệu (mục cha đóng, khối gập).
-   *
-   * BA trục độc lập kiểm NỐI TIẾP nhau: `permission` trả lời "anh là ai" (ADR 0027 điều 2),
-   * `ownerOnly` trả lời "anh có phải CHỦ gian hàng này không" (ADR 0038 điều 3), `feature` trả
-   * lời "gian hàng này có gì". Thiếu một trục trong phép dồn thì nhánh/khối thu gọn sẽ đếm
-   * việc-cần-xử-lý cho mục người dùng KHÔNG thấy — một con số chỉ vào hư không.
-   *
-   * Trục sở hữu đọc `roleKey`, không đọc quyền: xem docblock `NavLeaf.ownerOnly`. Nhân sự nền
-   * tảng mở Manage của một gian hàng KHÔNG phải chủ ví của gian hàng đó, nên họ cũng không thấy
-   * mục gác bằng trục này — muốn xử lý tiền thì đi qua màn quản trị có audit.
-   *
-   * Cờ tính năng vắng trong cache ⇒ coi như `enabled`: xem docblock của `useFeature` về việc vì
-   * sao mặc định phải là "cho qua".
-   */
-  const isShopOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-
-  const canSeeLeaf = (leaf: NavLeaf): boolean =>
-    isNavPermissionGranted(leaf.permission, has) &&
-    (leaf.ownerOnly !== true || isShopOwner) &&
-    (leaf.memberOnly !== true || !isShopOwner) &&
-    (leaf.feature === undefined ||
-      isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
+  // Lọc quyền/sở hữu/cờ gói, huy hiệu và link mang chi nhánh — CÙNG một nguồn với menu ngang.
+  const { canSeeLeaf, isShown, badgeCountOf, hrefOf } = useNavLeafAccess();
 
   // Cây của gian hàng trong phiên hỗ trợ, cây nền tảng/gian hàng ngoài phiên (ADR 0050 §12).
   const { sections } = useManageNavTree();
@@ -133,10 +91,6 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     if (key && !openKeys.includes(key)) setOpenKeys([...openKeys, key]);
   }
 
-  function badgeCountOf(leaf: NavLeaf): number {
-    return leaf.badge ? (badges[leaf.badge as keyof NavBadgeCounts] ?? 0) : 0;
-  }
-
   /**
    * Biểu tượng của một mục, có CHẤM BÁO khi menu thu gọn.
    *
@@ -152,7 +106,8 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   }
 
   function buildLeaf(leaf: NavLeaf): MenuItem | null {
-    if (!canSeeLeaf(leaf)) return null;
+    // Mục ẩn (`hidden`) vẫn là trang của khối nhưng không vẽ thành dòng — xem `NavLeaf.hidden`.
+    if (!isShown(leaf)) return null;
     const label = t(leaf.labelKey);
     const count = badgeCountOf(leaf);
     // Huy hiệu phải nói được thành lời: người dùng trình đọc màn hình nghe "Yêu cầu đặt xe, 3
@@ -167,7 +122,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
       title: label,
       label: (
         <Link
-          href={withBranchParam(leaf.href, branchId)}
+          href={hrefOf(leaf)}
           onClick={onNavigate}
           className={styles.link}
           // Mục đang mở phải nói ra bằng ngữ nghĩa, không chỉ bằng màu.

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BOOKING_LIST_PRESET,
   DASHBOARD_AGENDA_KIND,
   FEATURE_STATE,
   PERMISSION,
@@ -8,7 +9,7 @@ import {
   RECEIPT_TYPE,
   TENANT_ROLE,
 } from '@xeprime/types';
-import { ROUTES, bookingPath } from '@/constants/routes';
+import { ROUTES, bookingPath, bookingsGroupPath } from '@/constants/routes';
 import type { Receipt } from '@/features/finance/types';
 import type { PartnerOverview } from '../types';
 import { DashboardView } from './DashboardView';
@@ -240,12 +241,14 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
     expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKING_REQUESTS}?status=awaiting_hold`);
 
     const pickups = await tile('Chờ giao xe');
-    expect(pickups.getAttribute('href')).toBe(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP);
+    expect(pickups.getAttribute('href')).toBe(
+      bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP),
+    );
     expect(within(pickups).getByText('1 đã quá giờ')).toBeTruthy();
     expect(within(pickups).getByText('2 hẹn hôm nay')).toBeTruthy();
 
     const active = await tile('Đang cho thuê');
-    expect(active.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?status=active&sort=return_asc`);
+    expect(active.getAttribute('href')).toBe(bookingsGroupPath(BOOKING_LIST_PRESET.RENTING));
   });
 
   it('không có quyền xem yêu cầu: hai ô yêu cầu VẮNG HẲN, không vẽ thành 0', async () => {
