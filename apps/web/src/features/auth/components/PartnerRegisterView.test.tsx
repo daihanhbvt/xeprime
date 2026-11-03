@@ -73,10 +73,11 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({
-    options: [],
+    options: [{ value: '26734', label: 'Phường Bến Thành' }],
     items: [],
-    total: 0,
+    total: 1,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -94,6 +95,9 @@ const NO_SHOP = {
   displayName: 'Nguyễn Văn A',
   phone: '0901234567',
   email: 'a@xeprime.test',
+  // Tài khoản đã đủ SĐT xác minh + mật khẩu ⇒ form không gắn lại phần tài khoản (luồng Google).
+  phoneVerified: true,
+  hasPassword: true,
   tenant: null,
 };
 const COMMISSION_OWNER = {
@@ -119,6 +123,10 @@ async function pickProvince(): Promise<void> {
   fireEvent.mouseDown(screen.getByLabelText(/Tỉnh\/thành/));
   await waitFor(() => expect(screen.getByTitle('TP Hồ Chí Minh')).toBeTruthy());
   fireEvent.click(screen.getByTitle('TP Hồ Chí Minh'));
+  // ADR 0077: địa chỉ đăng ký thành chi nhánh mặc định ⇒ bắt buộc phường/xã.
+  fireEvent.mouseDown(screen.getByLabelText(/Xã\/phường/));
+  await waitFor(() => expect(screen.getByTitle('Phường Bến Thành')).toBeTruthy());
+  fireEvent.click(screen.getByTitle('Phường Bến Thành'));
 }
 
 function type(label: RegExp, value: string) {

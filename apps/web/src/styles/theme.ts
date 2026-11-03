@@ -153,6 +153,7 @@ export const XP_DARK_TOKENS = {
   'color-success-subtle': 'rgba(3, 152, 85, 0.08)',
   'color-warning-bg': 'rgba(224, 123, 38, 0.16)',
   'color-error-bg': 'rgba(217, 45, 32, 0.16)',
+  'color-error-border': 'rgba(217, 45, 32, 0.48)',
   'color-info-bg': 'rgba(37, 99, 235, 0.18)',
   'color-processing-bg': 'rgba(14, 116, 144, 0.2)',
   'color-neutral': '#d5d7da',
