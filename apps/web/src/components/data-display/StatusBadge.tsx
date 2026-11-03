@@ -38,17 +38,27 @@ export function StatusBadge<TStatus extends string>({
   );
 }
 
-/** Cùng viên có chấm, cho nhãn mà nơi gọi tự dịch (vd. "Khách không đến" trên thẻ đơn). */
+/**
+ * Cùng viên có chấm, cho nhãn mà nơi gọi tự dịch (vd. "Khách không đến" trên thẻ đơn).
+ *
+ * `compact` = biến thể KHÔNG chấm, chữ 12/18 — chip trạng thái trên thẻ xe (Figma `23655:36621`).
+ */
 export function ToneDotBadge({
   color,
+  compact = false,
   className,
   children,
 }: {
   color: StatusColor | undefined;
+  compact?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
-  return <span className={cx(styles.badge, toneClass(color), className)}>{children}</span>;
+  return (
+    <span className={cx(styles.badge, compact && styles.compact, toneClass(color), className)}>
+      {children}
+    </span>
+  );
 }
 
 function toneClass(color: StatusColor | undefined): string | undefined {

@@ -24,7 +24,7 @@ import type {
 import { bookingDriverHistoryKey } from './use-booking';
 
 /**
- * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard` + `customers`: tạo/đổi đơn
+ * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard` + `customers` + `vehicles`: tạo/đổi đơn
  * ảnh hưởng cả lịch (occupancy), số liệu tổng quan lẫn sổ khách (lượt thuê, đơn hiện tại, còn nợ),
  * nên mọi danh sách đang mở tự tải lại.
  */
@@ -33,6 +33,8 @@ function invalidateAfterBookingChange(queryClient: ReturnType<typeof useQueryCli
   void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+  // Thẻ ở Danh sách xe: trạng thái vận hành, "Chuyến đã đi", KM sau bàn giao, doanh thu theo xe.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
 }
 
 export function useCreateBooking() {

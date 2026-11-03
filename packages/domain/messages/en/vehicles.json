@@ -21,7 +21,8 @@
       "vehicleType": "Vehicle type",
       "serviceType": "Service",
       "operationStatus": "Operation",
-      "publicStatus": "Listing"
+      "publicStatus": "Listing",
+      "reviewStatus": "Status"
     },
     "sort": {
       "label": "Sort",
@@ -61,27 +62,30 @@
       "weekendPrice": "Weekend price",
       "currentOdometer": "Current odometer",
       "odometerUnknown": "Unknown",
-      "activeBookings": "In progress",
       "completedBookings": "Completed",
       "totalIncome": "Total revenue",
       "totalExpense": "Total cost",
       "profit": "Net profit",
       "statsUnavailable": "Could not load the figures",
       "alertsUnavailable": "Could not load the alerts",
-      "rowActions": "Actions for {name}"
+      "rowActions": "Actions for {name}",
+      "completedTrips": "Trips completed"
     },
     "row": {
       "odometer": "Odometer: {value}",
       "bookings": "Bookings: <n>{active}</n> active / <n>{done}</n> done",
       "income": "Revenue: <n>{value}</n>",
       "profit": "Profit: <n>{value}</n>",
-      "loss": "Loss: <n>{value}</n>"
+      "loss": "Loss: <n>{value}</n>",
+      "trips": "Trips completed: <n>{count}</n>"
     },
     "actions": {
-      "view": "View details",
       "viewShort": "View",
       "edit": "Edit",
-      "schedule": "Calendar"
+      "schedule": "Calendar",
+      "detail": "Details",
+      "editFull": "Edit",
+      "manage": "Manage vehicle"
     },
     "page": {
       "title": "Vehicles",
@@ -91,7 +95,36 @@
       "addFirstVehicle": "Add the first vehicle",
       "addVehicleQuick": "Quick self-drive listing",
       "addVehicleAdvanced": "Advanced setup",
-      "addVehicleMore": "More ways to add a vehicle"
+      "subtitle": "Keep track of your whole fleet quickly, all in one place",
+      "addNewVehicle": "Add vehicle",
+      "viewLabel": "Vehicle list display",
+      "viewGrid": "Grid view",
+      "viewList": "List view",
+      "serviceChipsLabel": "Filter by service"
+    },
+    "review": {
+      "draft": "Draft",
+      "pending_public_review": "Awaiting review",
+      "approved_public": "Approved",
+      "needs_revision": "Needs changes",
+      "rejected": "Rejected",
+      "hidden": "Hidden by platform",
+      "archived": "Retired"
+    },
+    "reviewShort": {
+      "draft": "Draft",
+      "pending_public_review": "In review",
+      "approved_public": "Approved",
+      "needs_revision": "Needs changes",
+      "rejected": "Rejected",
+      "hidden": "Hidden",
+      "archived": "Retired"
+    },
+    "operation": {
+      "available": "Ready to rent",
+      "renting": "On rent",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive"
     }
   },
   "alerts": {
@@ -575,7 +608,6 @@
     "delete": "Delete vehicle",
     "deleteConfirmTitle": "Delete \"{name}\"?",
     "deleteConfirmBody": "The vehicle will be hidden from the list and removed from the marketplace. Existing bookings and receipts are kept for reconciliation. It cannot be deleted while it still has current or future rentals.",
-    "moreActions": "More actions for {name}",
     "loadFailed": "Could not load the data.",
     "metric": "{value} {unit}",
     "todo": {
@@ -596,7 +628,9 @@
       "activeCount": "{count, plural, one {# booking} other {# bookings}}",
       "active": "In progress",
       "rating": "Rating",
-      "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}"
+      "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
+      "ratingScore": "{rating}/5",
+      "ratingCount": "{count, plural, one {# review} other {# reviews}}"
     },
     "pricing": {
       "title": "Pricing & policies",
@@ -608,7 +642,11 @@
       "publicPrice": "Marketplace price",
       "delivery": "Vehicle delivery",
       "deliveryOn": "Available",
-      "deliveryOff": "Not available"
+      "deliveryOff": "Not available",
+      "perDay": "/day",
+      "withDriver": "With driver (in town)",
+      "monthly": "Long-term rental",
+      "perMonth": "{price}/month"
     },
     "links": {
       "ariaLabel": "Quick links to this vehicle's sections",
@@ -622,7 +660,8 @@
       "calendar": "Vehicle calendar",
       "bookings": "Bookings",
       "receipts": "Vehicle receipts",
-      "title": "Vehicle sections"
+      "title": "Vehicle sections",
+      "shortcuts": "Shortcuts"
     },
     "documents": {
       "title": "Legal documents",
@@ -655,7 +694,6 @@
     "source": {
       "title": "Ownership & finance",
       "kind": "Ownership type",
-      "summary": "Summary",
       "monthlyTotal": "{amount}/month (principal + interest)",
       "monthlyRent": "{amount}/month",
       "commission": "{percent}% to the owner",
@@ -663,14 +701,24 @@
       "detailLink": "View the ownership & finance record →",
       "missing": "No detailed ownership record yet.",
       "missingLink": "Add it now →",
-      "viewLink": "View record"
+      "viewLink": "View record",
+      "bank": "Bank",
+      "monthlyPayment": "Monthly payment",
+      "owner": "Owner",
+      "rent": "Monthly rent",
+      "share": "Owner share",
+      "sharePercent": "{percent}% of revenue",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Vehicle value",
+      "addLink": "Add details"
     },
     "media": {
       "title": "Photo gallery",
       "manageLink": "Add/arrange photos",
       "cover": "Cover",
       "more": "+{count}",
-      "empty": "No photos for this vehicle yet."
+      "empty": "No photos for this vehicle yet.",
+      "addSlot": "Add {slot}"
     },
     "activity": {
       "title": "Recent activity",
@@ -683,7 +731,11 @@
     "automation": {
       "title": "Booking automation",
       "editLink": "Configure",
-      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle."
+      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle.",
+      "toggle": "Auto-accept trips",
+      "toggleFor": "Auto-accept {service} trips",
+      "toggleHint": "Save response time and convert more customers into confirmed trips.",
+      "driverRequired": "You need at least one driver available to take trips before turning this on."
     },
     "repairListing": {
       "action": "Resync public listing",
@@ -696,7 +748,8 @@
       "media": "Photos",
       "review": "Review",
       "specs": "Specifications",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "features": "Features"
     },
     "idLabel": "ID: <b>{value}</b>",
     "asideLabel": "Vehicle activity summary",
@@ -704,7 +757,18 @@
       "title": "Key specs",
       "viewAll": "View all",
       "brandModel": "Make & model",
-      "viewAllLabel": "View all specifications"
+      "viewAllLabel": "View all specifications",
+      "odometer": "Current odometer",
+      "odometerInput": "Enter reading"
+    },
+    "scheduleFull": "View schedule",
+    "deleteLabel": "Delete vehicle {name}",
+    "features": {
+      "title": "Features on this vehicle",
+      "subtitle": "Features and equipment actually fitted on the vehicle",
+      "empty": "No features listed yet.",
+      "descriptionTitle": "Description",
+      "descriptionEmpty": "No description yet."
     }
   },
   "edit": {

@@ -5,6 +5,7 @@ import { NAV_BADGE, type NavBadgeKey } from '@/constants/nav';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { usePendingBookingRequestCount } from '@/features/booking-requests/hooks/use-pending-booking-request-count';
 import { useTodayWorkCounts } from '@/features/dashboard/hooks/use-today-work-counts';
+import { useVehicleNeedsActionCount } from '@/features/vehicles/hooks/use-vehicle-needs-action-count';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 
@@ -17,6 +18,8 @@ export type NavBadgeCounts = Readonly<Record<NavBadgeKey, number>>;
  *  - yêu cầu đặt xe chờ duyệt: khách đang đợi câu trả lời, để lâu là mất đơn;
  *  - việc giao/nhận xe (`useTodayWorkCounts`, 02/11/2026): đơn chờ giao + đang thuê trên "Quản lý
  *    đơn thuê xe", lượt giao + nhận hôm nay trên "Lịch thuê xe";
+ *  - xe có việc chặn (03/11/2026): giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về khi đăng chợ,
+ *    thiếu KM trả — CÙNG phép tính với chip đỏ trên thẻ xe (`useVehicleNeedsActionCount`);
  *  - tin nhắn chưa đọc: cùng bản chất, và dùng lại đúng query mà chuông ở thanh trên đã gọi
  *    (`useChatUnreadCount`) nên không phát sinh thêm request nào.
  *
@@ -38,11 +41,15 @@ export function useNavBadges(): NavBadgeCounts {
   );
 
   const work = useTodayWorkCounts(isShopScope && has(PERMISSION.BOOKING_VIEW));
+  const vehiclesNeedsAction = useVehicleNeedsActionCount(
+    isShopScope && has(PERMISSION.VEHICLE_VIEW),
+  );
 
   return {
     [NAV_BADGE.BOOKING_REQUESTS_PENDING]: pendingRequests ?? 0,
     [NAV_BADGE.CHAT_UNREAD]: isShopScope ? chatUnread : 0,
     [NAV_BADGE.BOOKINGS_NEEDS_ACTION]: work.bookingsNeedsAction,
     [NAV_BADGE.CALENDAR_TODAY]: work.calendarToday,
+    [NAV_BADGE.VEHICLES_NEEDS_ACTION]: vehiclesNeedsAction,
   };
 }

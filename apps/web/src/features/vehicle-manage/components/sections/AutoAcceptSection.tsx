@@ -5,7 +5,7 @@ import { InfoCircleOutlined, ThunderboltFilled } from '@ant-design/icons';
 import { Alert, App, Button, Form, Popover } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import {
@@ -27,10 +27,10 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 import { usePatchVehicleServiceSetting, useVehicleServiceSettings } from '../../hooks';
+import { useAutoAcceptToggle } from '../../hooks/use-auto-accept-toggle';
 import type { VehicleServiceSetting } from '../../types';
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
-import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './AutoAcceptSection.module.css';
 
 const HOUR = 60;
@@ -137,12 +137,12 @@ function AutoAcceptForm({
   const resolver = yupResolver(schema);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const capability = setting.withDriverAutoAccept;
-  const capabilityBlocked = withDriver && capability ? !capability.available : false;
   /*
-   * Phiên hỗ trợ (ADR 0050 §13): công tắc tự nhận chuyến tự tạo cam kết với khách thay chủ xe —
-   * phiên chỉ thấy trạng thái. Điều kiện vận hành (thời lượng tối thiểu, tuyến) vẫn sửa được.
+   * Công tắc LƯU NGAY, tách khỏi form — cùng hook với thẻ "Tối ưu nhận chuyến" của Hồ sơ xe. Phiên
+   * hỗ trợ (ADR 0050 §13) chỉ thấy trạng thái; điều kiện vận hành (thời lượng, tuyến) vẫn sửa được.
    */
-  const autoAcceptLocked = useSupportHides(SUPPORT_HIDDEN_AREA.AUTO_ACCEPT);
+  const autoAccept = useAutoAcceptToggle({ vehicleId, setting, canEdit });
+  const enabled = autoAccept.enabled;
 
   const values = useMemo<FormValues>(
     () => ({
@@ -160,30 +160,6 @@ function AutoAcceptForm({
     values,
     resetOptions: { keepDirtyValues: true },
   });
-
-  /*
-   * Công tắc LƯU NGAY. Giá trị lạc quan gắn với `updatedAt` của bản đang hiển thị: khi bản mới
-   * (đã lưu) về, nó tự nhường chỗ cho dữ liệu server; lỗi thì bỏ và trả công tắc về như cũ.
-   */
-  const toggleAuto = usePatchVehicleServiceSetting(vehicleId, serviceType);
-  const [optimistic, setOptimistic] = useState<{ value: boolean; basis: string | null } | null>(
-    null,
-  );
-  const enabled =
-    optimistic && optimistic.basis === (setting.updatedAt ?? null)
-      ? optimistic.value
-      : setting.autoAcceptEnabled;
-
-  async function changeAutoAccept(next: boolean) {
-    setOptimistic({ value: next, basis: setting.updatedAt ?? null });
-    try {
-      await toggleAuto.mutateAsync({ autoAcceptEnabled: next });
-      message.success(t('autoAccept.saved'));
-    } catch (err) {
-      setOptimistic(null);
-      message.error(errorMessage(err));
-    }
-  }
 
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
@@ -247,8 +223,8 @@ function AutoAcceptForm({
 
           <SwitchRow
             checked={enabled}
-            onChange={(next) => void changeAutoAccept(next)}
-            loading={toggleAuto.isPending}
+            onChange={(next) => void autoAccept.change(next)}
+            loading={autoAccept.pending}
             label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
             description={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
             labelExtra={
@@ -272,12 +248,7 @@ function AutoAcceptForm({
                 </span>
               </Popover>
             }
-            disabled={
-              !canEdit ||
-              autoAcceptLocked ||
-              toggleAuto.isPending ||
-              (capabilityBlocked && !setting.autoAcceptEnabled)
-            }
+            disabled={autoAccept.disabled}
           />
         </SectionCard>
 

@@ -60,3 +60,13 @@
 .neutral {
   border-color: var(--xp-color-border);
 }
+
+/* Biến thể gọn — chip trạng thái trên thẻ xe (Figma `23655:36621`): không chấm, chữ 12/18. */
+.compact {
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.compact::before {
+  display: none;
+}

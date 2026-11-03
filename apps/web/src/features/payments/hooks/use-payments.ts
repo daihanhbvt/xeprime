@@ -20,6 +20,8 @@ function invalidateAfterPayment(
   void queryClient.invalidateQueries({ queryKey: queryKeys.receipts.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+  // Thu tiền sinh phiếu thu theo xe — "Tổng doanh thu" trên thẻ ở Danh sách xe đọc từ đó.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
 }
 
 export function usePaymentHistory(bookingId: string | null) {

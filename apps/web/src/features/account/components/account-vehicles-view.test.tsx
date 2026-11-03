@@ -9,36 +9,38 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 
-import { ownerVehiclePath } from '@/constants/routes';
+import {
+  ROUTES,
+  VEHICLE_REGISTRATION_SOURCE,
+  listYourVehicleRegisterPath,
+  ownerVehiclePath,
+} from '@/constants/routes';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
 import { AccountVehiclesView } from './AccountVehiclesView';
 
 /**
- * Danh sách xe trong khu tài khoản của CHỦ XE.
+ * Danh sách xe của CHỦ XE tuyến hoa hồng — cùng màn với gian hàng từ 03/11/2026
+ * (`VehiclesListView scope="owner"`), khác ở lối thêm xe, nút "Quản lý xe" và bộ lọc.
  *
- * Nút "Quản lý xe" là cửa vào duy nhất của không gian quản lý theo xe — nó phải dẫn tới
- * `/account/vehicles/:id/manage` (khu tài khoản), KHÔNG phải `/manage/vehicles/:id` (cổng gian
- * hàng): chủ xe Owner Lite không có menu cổng quản lý, đưa họ sang đó là đẩy vào một vỏ khác.
+ * "Quản lý xe" là cửa vào không gian quản lý theo xe — nó phải dẫn tới `/vehicles/:id/manage`,
+ * KHÔNG phải màn sửa của tuyến gói.
  */
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
-/**
- * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ.
- *
- * `useVehicleCapabilities` kiểm quyền ∧ cờ gói, và `useFeature` đọc `/auth/me` qua TanStack
- * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
- * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
- */
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
   useFeatureStates: () => ({}),
   usePlanEndsAt: () => null,
 }));
+vi.mock(
+  '@/features/branches/hooks/use-branch-filter',
+  () => import('@/features/branches/test-utils'),
+);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
-  usePathname: () => '/account/vehicles',
+  usePathname: () => '/vehicles',
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -51,6 +53,12 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+const support = vi.hoisted(() => ({ active: false }));
+vi.mock('@/features/tenant-support/support-session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/tenant-support/support-session')>()),
+  useSupportHides: () => support.active,
+}));
+
 const list = vi.hoisted(() => ({
   data: undefined as { items: VehicleListItem[]; meta: unknown } | undefined,
   isError: false,
@@ -58,37 +66,46 @@ const list = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({ useVehicles: () => list }));
-vi.mock('@/features/vehicles/hooks/use-vehicle-filters', () => ({
-  useVehicleFilters: () => ({ filters: {}, setFilters: vi.fn() }),
-}));
-vi.mock('@/features/vehicles/hooks/use-vehicle-options', () => ({
-  useVehicleOptions: () => ({ vehicleTypes: [], serviceTypes: [], statuses: [] }),
+vi.mock('@/features/vehicles/hooks/use-fleet-summary', () => ({
+  useFleetSummary: () => ({
+    data: { total: 1, available: 1, renting: 0, maintenance: 0, inactive: 0 },
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 /** Lưới thẻ xe là component dùng chung — ở đây chỉ cần bấm được hành động của một dòng. */
+const grid = vi.hoisted(() => ({ layout: undefined as string | undefined }));
 vi.mock('@/features/vehicles/components/VehicleCardGrid', () => ({
   VehicleCardGrid: ({
     items,
+    layout,
     rowActions,
   }: {
     items: VehicleListItem[];
-    rowActions: (row: VehicleListItem) => Array<{ key: string; label: string; onClick: () => void }>;
-  }) => (
-    <div>
-      {items.map((item) => (
-        <div key={item.id}>
-          {rowActions(item).map((action) => (
-            <button key={action.key} type="button" onClick={action.onClick}>
-              {action.label}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
-}));
-vi.mock('@/features/vehicles/components/VehicleStatusChips', () => ({
-  VehicleStatusChips: () => null,
+    layout: string;
+    rowActions: (
+      row: VehicleListItem,
+      shape: 'card' | 'row',
+    ) => Array<{ key: string; label: string; hidden?: boolean; onClick: () => void }>;
+  }) => {
+    grid.layout = layout;
+    return (
+      <div>
+        {items.map((item) => (
+          <div key={item.id}>
+            {rowActions(item, 'card')
+              .filter((action) => !action.hidden)
+              .map((action) => (
+                <button key={action.key} type="button" onClick={action.onClick}>
+                  {action.label}
+                </button>
+              ))}
+          </div>
+        ))}
+      </div>
+    );
+  },
 }));
 
 function item(): VehicleListItem {
@@ -104,10 +121,20 @@ function item(): VehicleListItem {
   } as unknown as VehicleListItem;
 }
 
+function renderView() {
+  renderWithIntl(
+    <App>
+      <AccountVehiclesView />
+    </App>,
+  );
+}
+
 beforeEach(() => {
-  permissions.granted = new Set([PERMISSION.VEHICLE_VIEW]);
-  list.data = { items: [item()], meta: { page: 1, limit: 12, total: 1, hasNext: false } };
+  permissions.granted = new Set([PERMISSION.VEHICLE_VIEW, PERMISSION.VEHICLE_UPDATE]);
+  list.data = { items: [item()], meta: { page: 1, limit: 20, total: 1, hasNext: false } };
   list.isError = false;
+  support.active = false;
+  grid.layout = undefined;
   nav.push.mockReset();
 });
 
@@ -115,24 +142,58 @@ afterEach(cleanup);
 
 describe('AccountVehiclesView', () => {
   it('"Quản lý xe" dẫn vào không gian quản lý xe của Owner Lite, KHÔNG vào màn sửa của tuyến gói', () => {
-    renderWithIntl(
-      <App>
-        <AccountVehiclesView />
-      </App>,
-    );
+    renderView();
 
     fireEvent.click(screen.getByRole('button', { name: 'Quản lý xe' }));
     expect(nav.push).toHaveBeenCalledWith(ownerVehiclePath.manage('v1'));
     expect(nav.push).not.toHaveBeenCalledWith(expect.stringContaining('/edit'));
   });
 
+  it('thứ tự nút theo design: Lịch · Quản lý xe · Chi tiết; "Chi tiết" mở Hồ sơ xe', () => {
+    renderView();
+
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.slice(-3)).toEqual(['Lịch', 'Quản lý xe', 'Chi tiết']);
+    fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(nav.push).toHaveBeenCalledWith(ownerVehiclePath.detail('v1'));
+  });
+
+  it('không có quyền sửa: còn Lịch và Chi tiết, không có "Quản lý xe"', () => {
+    permissions.granted = new Set([PERMISSION.VEHICLE_VIEW]);
+    renderView();
+
+    expect(screen.queryByRole('button', { name: 'Quản lý xe' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
+  });
+
+  it('dưới 3 xe: bố cục thẻ to (ít xe)', () => {
+    renderView();
+    expect(grid.layout).toBe('few');
+  });
+
+  it('"Thêm xe mới" mở luồng đăng xe của chủ xe; trong phiên hỗ trợ thì vắng hẳn', () => {
+    permissions.granted = new Set([PERMISSION.VEHICLE_VIEW, PERMISSION.VEHICLE_CREATE]);
+    renderView();
+    fireEvent.click(screen.getByRole('button', { name: /Thêm xe mới/ }));
+    expect(nav.push).toHaveBeenCalledWith(
+      listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
+    );
+
+    cleanup();
+    support.active = true;
+    renderView();
+    expect(screen.queryByRole('button', { name: /Thêm xe mới/ })).toBeNull();
+  });
+
+  it('không còn hai thẻ dẫn đường — Cẩm nang và Hợp đồng nằm ở menu Trợ giúp', () => {
+    renderView();
+    expect(screen.queryByRole('link', { name: /Cẩm nang/ })).toBeNull();
+    expect(document.querySelector(`a[href="${ROUTES.MANAGE.HOST_GUIDE}"]`)).toBeNull();
+  });
+
   it('thiếu quyền xem xe: chặn ở màn này, không dẫn tiếp vào không gian quản lý', () => {
     permissions.granted = new Set();
-    renderWithIntl(
-      <App>
-        <AccountVehiclesView />
-      </App>,
-    );
+    renderView();
 
     expect(screen.queryByRole('button', { name: 'Quản lý xe' })).toBeNull();
   });

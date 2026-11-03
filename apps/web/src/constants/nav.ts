@@ -70,6 +70,11 @@ export const NAV_BADGE = {
   BOOKINGS_NEEDS_ACTION: 'bookingsNeedsAction',
   /** Lượt giao + nhận xe hẹn trong hôm nay — "Lịch thuê xe" (02/11/2026). */
   CALENDAR_TODAY: 'calendarToday',
+  /**
+   * Xe có việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu
+   * KM trả xe — "Danh sách xe" (03/11/2026, `VEHICLE_ALERT_NEEDS_ACTION_KINDS`).
+   */
+  VEHICLES_NEEDS_ACTION: 'vehiclesNeedsAction',
 } as const;
 
 export type NavBadgeKey = (typeof NAV_BADGE)[keyof typeof NAV_BADGE];
@@ -289,6 +294,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         key: 'vehicles',
         labelKey: 'manage.vehicleList',
         href: ROUTES.MANAGE.VEHICLES,
+        badge: NAV_BADGE.VEHICLES_NEEDS_ACTION,
         permission: PERMISSION.VEHICLE_VIEW,
         icon: PARTNER_NAV_ICON.vehicles,
       },
@@ -804,6 +810,7 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         key: 'vehicles',
         labelKey: 'manage.vehicleList',
         href: ROUTES.MANAGE.VEHICLES,
+        badge: NAV_BADGE.VEHICLES_NEEDS_ACTION,
         permission: PERMISSION.VEHICLE_VIEW,
         icon: PARTNER_NAV_ICON.vehicles,
       },
@@ -1012,6 +1019,7 @@ const OWNER_LITE_MOBILE_TABS: readonly MobileTab[] = [
     key: 'vehicles',
     labelKey: 'manage.myVehicles',
     href: ROUTES.MANAGE.VEHICLES,
+    badge: NAV_BADGE.VEHICLES_NEEDS_ACTION,
     permission: PERMISSION.VEHICLE_VIEW,
     icon: CarOutlined,
   },

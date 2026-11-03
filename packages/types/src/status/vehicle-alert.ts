@@ -107,6 +107,19 @@ export const VEHICLE_ALERT_SEVERITY_OF: Readonly<Record<VehicleAlertKind, Vehicl
 };
 
 /**
+ * Loại việc tính vào số "cần xử lý" trên mục menu **Danh sách xe** (chốt 03/11/2026,
+ * `docs/design/09_PARTNER_REDESIGN.md` §2.3): mọi việc mức `critical` + xe bị trả về / từ chối /
+ * ẩn khi đăng chợ. Các việc `warning` khác (sắp hết hạn, thiếu KM…) là lời NHẮC, không phải việc
+ * đang chặn — đếm chúng thì mục menu sáng quanh năm và con số không còn báo được gì.
+ */
+export const VEHICLE_ALERT_NEEDS_ACTION_KINDS: readonly VehicleAlertKind[] = [
+  VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER,
+  VEHICLE_ALERT_KIND.DOCUMENT_EXPIRED,
+  VEHICLE_ALERT_KIND.MAINTENANCE_OVERDUE,
+  VEHICLE_ALERT_KIND.PUBLIC_ACTION_REQUIRED,
+];
+
+/**
  * Nhãn NGẮN cho thẻ xe trong danh sách — chỗ chỉ đủ vài chữ.
  *
  * Cố ý KHÔNG mang số liệu nhạy cảm: không số giấy tờ, không tên file, không số tiền. Nhãn dài

@@ -4,23 +4,16 @@ import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import {
-  MARKETPLACE_VISIBILITY_REASON,
-  MARKETPLACE_VISIBILITY_REASON_META,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS_META,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-} from '@xeprime/types';
+import type { VehiclePublicStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { RowActions, type RowAction } from '@/components/data-display/RowActions';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import type { RowAction } from '@/components/data-display/RowActions';
 import { vehiclePath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { absoluteMoney, isNegativeMoney, subtractMoney } from '@/lib/money';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
+import { NEEDS_OWNER_ACTION, VehicleCardActions, VehicleStatusBadges } from './VehicleCardParts';
 import styles from './VehicleListRow.module.css';
 
 interface VehicleListRowProps {
@@ -89,30 +82,18 @@ export function VehicleListRow({
           <Link href={detailHref(vehicle.id)} className={styles.name}>
             {vehicle.name}
           </Link>
-          <StatusTag
-            value={vehicle.operationStatus as VehicleOperationStatus}
-            meta={VEHICLE_OPERATION_STATUS_META}
-            group="vehicleOperationStatus"
-          />
         </div>
 
         <p className={styles.meta}>{meta}</p>
 
-        <div className={styles.statusRow}>
-          <StatusTag
-            value={vehicle.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META}
-            group="vehiclePublicStatus"
-          />
-          {/* Cùng luật với thẻ desktop — xem `VehicleManagementCard`. */}
-          {vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED ? (
-            <StatusTag
-              value={MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED}
-              meta={MARKETPLACE_VISIBILITY_REASON_META}
-              group="marketplaceVisibility"
-            />
-          ) : null}
-        </div>
+        {/* Cùng viên trạng thái gọn với thẻ lưới desktop — một luật, mọi bề mặt. */}
+        <VehicleStatusBadges vehicle={vehicle} variant="short" />
+
+        {/* Lý do bị trả về — cùng luật với thẻ desktop (`VehicleCardNotices`). */}
+        {NEEDS_OWNER_ACTION.includes(vehicle.publicStatus as VehiclePublicStatus) &&
+        vehicle.latestPublicReview?.reason ? (
+          <p className={styles.reviewReason}>{vehicle.latestPublicReview.reason}</p>
+        ) : null}
 
         {/* Cùng dữ liệu VÀ cùng ba trạng thái với thẻ desktop — chỉ khác cách xếp. */}
         {alertsLoading ? (
@@ -139,9 +120,8 @@ export function VehicleListRow({
         ) : (
           <p className={styles.metrics}>
             <span>
-              {t.rich('row.bookings', {
-                active: stats.activeBookings,
-                done: stats.completedBookings,
+              {t.rich('row.trips', {
+                count: fmt.count(stats.completedBookings),
                 n: (chunks) => <b>{chunks}</b>,
               })}
             </span>
@@ -168,13 +148,12 @@ export function VehicleListRow({
           </p>
         )}
 
+        {/* Cùng kiểu nút với thẻ desktop: viền trắng, nút chính vàng đứng cuối. */}
         <div className={styles.actions}>
-          <RowActions
+          <VehicleCardActions
             actions={actions}
-            maxInline={actions.length}
-            align="start"
-            variant="filled"
-            overflowLabel={t('card.rowActions', { name: vehicle.name })}
+            layout="row"
+            label={t('card.rowActions', { name: vehicle.name })}
           />
         </div>
       </div>

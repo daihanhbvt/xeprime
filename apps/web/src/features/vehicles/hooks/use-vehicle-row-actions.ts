@@ -9,61 +9,64 @@ interface VehicleRowActionsInput {
   row: VehicleListItem;
   canEdit: boolean;
   /**
-   * `true` = nhãn rút gọn ("Xem" thay vì "Xem chi tiết") cho hàng mobile — các nút đầy đủ chữ
-   * không vừa 232px nội dung của hàng 390px. Thẻ desktop dùng nhãn đầy đủ (Figma `236:1820`).
+   * `true` = nhãn rút gọn ("Xem" thay vì "Chi tiết") cho hàng mobile — các nút đầy đủ chữ không
+   * vừa 232px nội dung của hàng 390px.
    */
   compact?: boolean;
+  /**
+   * Nhãn của nút sửa. Gian hàng: "Chỉnh sửa" (trang sửa xe). Chủ xe tuyến hoa hồng: "Quản lý xe" —
+   * không gian riêng của xe có menu trái theo dịch vụ, cũng là chỗ họ sửa xe.
+   */
+  editKind?: 'edit' | 'manage';
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onSchedule: (row: VehicleListItem) => void;
 }
 
 /**
- * MỘT định nghĩa hành động cho cả **thẻ desktop** lẫn **hàng mobile**.
+ * MỘT định nghĩa hành động cho mọi hình thái thẻ xe (lưới, ít xe, danh sách, hàng mobile) ở cả hai
+ * tuyến. Hình thái vẽ khác nhau nhưng phải có đúng bộ hành động, đúng quyền, đúng câu chữ.
  *
- * Hai hình thái vẽ khác hẳn nhau nhưng phải có đúng bộ hành động, đúng quyền, đúng câu chữ.
- * Để hai bản là mở đường cho quyền và nhãn lệch nhau giữa hai bề mặt.
+ * Thứ tự theo design 03/11/2026: **Lịch · Chỉnh sửa · Chi tiết** — nút chính (vàng) đứng CUỐI.
  *
- * KHÔNG có "Xoá" ở danh sách (bản chỉnh Figma 11/08/2026): xoá là hành động phá huỷ, chỉ nằm
- * trong menu ⋮ của Hồ sơ 360 (`Vehicle360Overview`) — nơi có đủ ngữ cảnh và câu xác nhận đầy đủ.
- *
- * KHÔNG đọc quyền ở đây: trang truyền `canEdit` xuống, và guard backend mới là lớp chặn thật
- * (CLAUDE.md §3).
- *
- * Là HOOK vì nhãn nút phải theo ngôn ngữ người xem; phần quyết định hành động/quyền vẫn thuần.
+ * KHÔNG có "Xoá" ở danh sách: xoá là hành động phá huỷ, chỉ nằm trong menu ⋮ của Hồ sơ xe — nơi
+ * có đủ ngữ cảnh và câu xác nhận đầy đủ. KHÔNG đọc quyền ở đây: trang truyền `canEdit` xuống, và
+ * guard backend mới là lớp chặn thật (CLAUDE.md §3).
  */
 export function useVehicleRowActions(): (input: VehicleRowActionsInput) => RowAction[] {
   const t = useTranslations('Vehicles.list.actions');
 
   return useCallback(
-    ({ row, canEdit, compact = false, onView, onEdit, onSchedule }: VehicleRowActionsInput) => {
-      /*
-       * Nút CÓ CHỮ và KHÔNG icon — Figma `236:1819`: mỗi `act-*` chỉ chứa một text node.
-       * Thêm icon làm hàng nút tràn bề rộng thẻ và cắt cụt nút cuối (đo được ở Wave 3B-R1).
-       */
-      return [
-        {
-          key: 'view',
-          label: compact ? t('viewShort') : t('view'),
-          showLabel: true,
-          primary: true,
-          onClick: () => onView(row.id),
-        },
-        {
-          key: 'edit',
-          label: t('edit'),
-          showLabel: true,
-          hidden: !canEdit,
-          onClick: () => onEdit(row.id),
-        },
-        {
-          key: 'schedule',
-          label: t('schedule'),
-          showLabel: true,
-          onClick: () => onSchedule(row),
-        },
-      ];
-    },
+    ({
+      row,
+      canEdit,
+      compact = false,
+      editKind = 'edit',
+      onView,
+      onEdit,
+      onSchedule,
+    }: VehicleRowActionsInput) => [
+      {
+        key: 'schedule',
+        label: t('schedule'),
+        showLabel: true,
+        onClick: () => onSchedule(row),
+      },
+      {
+        key: 'edit',
+        label: editKind === 'manage' ? t('manage') : t('editFull'),
+        showLabel: true,
+        hidden: !canEdit,
+        onClick: () => onEdit(row.id),
+      },
+      {
+        key: 'view',
+        label: compact ? t('viewShort') : t('detail'),
+        showLabel: true,
+        primary: true,
+        onClick: () => onView(row.id),
+      },
+    ],
     [t],
   );
 }

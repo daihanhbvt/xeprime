@@ -213,6 +213,11 @@ export const queryKeys = {
     alerts: (ids: readonly string[]) => ['vehicles', 'alerts', ids] as const,
     /** Tiền tố của mọi lô cảnh báo — invalidate một phát là mọi trang đang mở đều làm mới. */
     alertsAll: () => ['vehicles', 'alerts'] as const,
+    /**
+     * Số xe có việc "cần xử lý" — huy hiệu menu Danh sách xe. Nằm DƯỚI tiền tố `alerts` để mọi
+     * chỗ đang làm mới cảnh báo (giấy tờ, bảo dưỡng, bàn giao) kéo theo con số trên menu.
+     */
+    needsActionCount: () => ['vehicles', 'alerts', 'needs-action-count'] as const,
     /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền). */
     summary: (id: string) => ['vehicles', 'summary', id] as const,
     /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) — nằm dưới nhánh vehicles để mutation xe invalidate luôn. */

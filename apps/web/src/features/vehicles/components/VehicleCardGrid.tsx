@@ -13,10 +13,19 @@ import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
 import type { VehicleListItem } from '../types';
 import { VehicleListRow } from './VehicleListRow';
 import { VehicleManagementCard } from './VehicleManagementCard';
+import { VehicleWideCard } from './VehicleWideCard';
 import styles from './VehicleCardGrid.module.css';
+
+/**
+ * Bố cục desktop (Figma Partner-XePrime 03/11/2026): `few` — thẻ ngang to hai thẻ một hàng
+ * (`23655:38521`); `grid` — lưới thẻ gọn (`23649:29724`); `list` — một xe một hàng
+ * (`23655:36959`). Trang chọn theo tổng xe + kiểu xem; ở ≤640px luôn là hàng ngang mobile.
+ */
+export type VehicleGridLayout = 'few' | 'grid' | 'list';
 
 interface VehicleCardGridProps {
   items: VehicleListItem[];
+  layout: VehicleGridLayout;
   meta: PaginationMeta;
   loading: boolean;
   error?: { onRetry: () => void } | null;
@@ -33,21 +42,21 @@ interface VehicleCardGridProps {
   detailHref?: (id: string) => string;
 }
 
-/** Một hàng lưới đầy của bố cục desktop 5 cột (bản chỉnh 11/08/2026). */
-const SKELETON_COUNT = 5;
+/** Số khung chờ theo bố cục — đúng một hàng đầy (lưới 5 cột), hai thẻ to, ba hàng danh sách. */
+const SKELETON_COUNT: Readonly<Record<VehicleGridLayout, number>> = { grid: 5, few: 2, list: 3 };
 
 /**
- * Danh sách xe của `/manage/vehicles` — hình thái DUY NHẤT của route này.
+ * Danh sách xe của `/vehicles` — dùng chung cho gian hàng và chủ xe tuyến hoa hồng.
  *
- * Figma `186:1670` bọc lưới trong một **khung có viền**, và đặt dòng "Hiển thị x-y của N xe" cùng
- * bộ phân trang vào chân khung đó thay vì thả trôi dưới trang. Mọi trạng thái (rỗng, không kết
- * quả, lỗi, đang tải) đều nằm TRONG khung này — `188:1553`/`188:1685`/`188:2158` đều vẽ vậy —
- * nên khối nội dung không nhảy kích thước khi đổi trạng thái.
+ * Design 03/11/2026 thả thẻ thẳng trên nền trang (không còn khung bao). Trạng thái rỗng / không
+ * kết quả / lỗi — design không vẽ — nằm trong một ô trắng bo 16 cùng ngôn ngữ thẻ; dòng "Hiển thị
+ * x-y của N xe" + phân trang đứng dưới danh sách, chỉ khi có dữ liệu.
  *
  * Ở ≤640px chuyển sang `VehicleListRow` theo Figma `186:2374`: hàng ngang, không phải thẻ bóp nhỏ.
  */
 export function VehicleCardGrid({
   items,
+  layout,
   meta,
   loading,
   error = null,
@@ -88,12 +97,12 @@ export function VehicleCardGrid({
     if (loading && items.length === 0) {
       return (
         <div
-          className={isMobile ? styles.list : styles.grid}
+          className={isMobile ? styles.list : styles[layout]}
           role="status"
           aria-busy="true"
           aria-label={t('loading')}
         >
-          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+          {Array.from({ length: SKELETON_COUNT[layout] }, (_, index) => (
             <div key={index} className={isMobile ? styles.skeletonRow : styles.skeletonCard}>
               <Skeleton active avatar={{ shape: 'square' }} paragraph={{ rows: 2 }} />
             </div>
@@ -181,31 +190,38 @@ export function VehicleCardGrid({
     ) : (
       <>
         {alertsBanner}
-        <ul className={styles.grid} {...listProps}>
-          {items.map((item) => (
-            <li key={item.id} className={styles.cell}>
-              <VehicleManagementCard
-                vehicle={item}
-                stats={stats.byId.get(item.id)}
-                statsLoading={stats.isLoading}
-                statsFailed={stats.isError}
-                alerts={alertsOf(item.id)}
-                {...cardAlertState}
-                actions={rowActions(item, 'card')}
-                detailHref={detailHref}
-              />
-            </li>
-          ))}
+        <ul className={styles[layout]} {...listProps}>
+          {items.map((item) => {
+            const cardProps = {
+              vehicle: item,
+              stats: stats.byId.get(item.id),
+              statsLoading: stats.isLoading,
+              statsFailed: stats.isError,
+              alerts: alertsOf(item.id),
+              ...cardAlertState,
+              actions: rowActions(item, 'card'),
+              detailHref,
+            };
+            return (
+              <li key={item.id} className={styles.cell}>
+                {layout === 'grid' ? (
+                  <VehicleManagementCard {...cardProps} />
+                ) : (
+                  <VehicleWideCard {...cardProps} layout={layout === 'few' ? 'stacked' : 'row'} />
+                )}
+              </li>
+            );
+          })}
         </ul>
       </>
     );
   }
 
   return (
-    <div className={styles.plate}>
-      <div className={styles.inner}>{renderBody()}</div>
+    <div className={styles.root}>
+      {renderBody()}
 
-      {/* Chân khung chỉ có nghĩa khi đang có dữ liệu — trang rỗng không cần "Hiển thị 0-0". */}
+      {/* Chân danh sách chỉ có nghĩa khi đang có dữ liệu — trang rỗng không cần "Hiển thị 0-0". */}
       {items.length > 0 ? (
         <div className={styles.footer}>
           <p className={styles.summary}>{t('showing', { from, to, total: meta.total })}</p>
