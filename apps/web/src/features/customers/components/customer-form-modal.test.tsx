@@ -20,6 +20,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({
     options: [],
     items: [],

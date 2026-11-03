@@ -50,6 +50,8 @@ const SHOP_AVATAR = 32;
 
 // Huy hiệu % giảm trên ảnh = `DiscountTag variant="badge"` của web: gold nhạt, chữ "N% off".
 const DISCOUNT_BADGE = gradient('gradient-gold-soft');
+/** Nhãn "Không cần xác nhận" trên ẢNH thẻ lưới = `.badge` gradient của web (`--xp-gradient-instant-badge`). */
+const INSTANT_BADGE = gradient('gradient-instant-badge');
 const INSTANT_TEXT = PALETTES.light.colors.text;
 
 /*
@@ -603,7 +605,7 @@ function VehicleCardImpl({
           {selfDrive && discount > 0 ? (
             <DiscountBadge percent={discount} />
           ) : null}
-          {instantBook ? <InstantBookBadge /> : null}
+          {instantBook ? <InstantBookBadge onImage /> : null}
         </XStack>
 
         {extraPhotos > 0 ? (
@@ -802,12 +804,28 @@ function VehicleCardImpl({
 
 /**
  * Hai nhãn của thẻ xe — MỘT kiểu cho mọi biến thể (lưới trang chủ, danh sách màn Tìm xe, trang gian
- * hàng), theo Figma List (người dùng chốt 03/11/2026): viên nền xanh dương / xanh lá nhạt, không viền,
- * chữ 12/18 medium, đệm 4/8.
+ * hàng). Theo web: "Không cần xác nhận" trên ảnh thẻ lưới là gradient, cạnh tên thẻ danh sách là viên
+ * xanh nhạt; "Xe mới" viên xanh lá nhạt, chữ 12/18 medium, đệm 4/8.
  */
-function InstantBookBadge() {
+function InstantBookBadge({ onImage = false }: { onImage?: boolean }) {
   const colors = useColors();
   const t = useTranslations('Listings.card');
+  // Như web: trên ảnh thẻ lưới là gradient xanh chữ đen; cạnh tên ở thẻ danh sách là viên xanh nhạt.
+  if (onImage) {
+    return (
+      <LinearGradient
+        colors={INSTANT_BADGE.colors}
+        locations={INSTANT_BADGE.locations}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.badge}
+      >
+        <Text col={INSTANT_TEXT} fos={fontSize.label} lh={18} fow={fontWeight.medium}>
+          {t('instantBook')}
+        </Text>
+      </LinearGradient>
+    );
+  }
   return (
     <XStack bg={colors.infoSurface} br={radius.pill} px={space.sm} py={space.xs}>
       <Text col={colors.infoStrong} fos={fontSize.label} lh={18} fow={fontWeight.medium}>

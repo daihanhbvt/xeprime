@@ -139,6 +139,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWards: () => ({ data: { items: [WARD], total: 1 } }),
   useWardOptions: () => ({
     options: [{ value: '20242', label: 'Phường Hải Châu' }],
