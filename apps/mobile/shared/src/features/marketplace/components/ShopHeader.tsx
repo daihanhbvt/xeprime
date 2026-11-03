@@ -73,8 +73,15 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
   const hasRating = shop.ratingCount > 0 && Number.isFinite(rating);
 
   // Tỉnh ĐANG có xe; chưa có xe công khai nào ⇒ rơi về tỉnh trong hồ sơ.
-  const provinces =
-    shop.serviceProvinceNames.length > 0
+  /*
+   * Chủ xe TUYẾN HOA HỒNG: cạnh tên là KHU VỰC "Phường/Xã, Tỉnh/TP" (`shop.address` server đã che
+   * về khu vực — ADR 0077), thay cho dòng "Địa chỉ" ở mục Thông tin. Gian hàng tuyến gói giữ danh
+   * sách tỉnh đang có xe; địa chỉ đủ của họ nằm ở Thông tin và ở từng thẻ chi nhánh.
+   */
+  const ownerArea = !isShop && shop.address ? shop.address : null;
+  const provinces = ownerArea
+    ? [ownerArea]
+    : shop.serviceProvinceNames.length > 0
       ? shop.serviceProvinceNames
       : shop.provinceName
         ? [shop.provinceName]
@@ -96,7 +103,11 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
   const stats = (
     [
       isShop
-        ? { key: 'branches', value: countValue(shop.branchCount), label: t('profile.stats.branches') }
+        ? {
+            key: 'branches',
+            value: countValue(shop.branchCount),
+            label: t('profile.stats.branches'),
+          }
         : null,
       { key: 'vehicles', value: countValue(shop.vehicleCount), label: t('profile.stats.vehicles') },
       {
@@ -150,8 +161,26 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             style={StyleSheet.absoluteFill}
           />
           {/* Hai vòng tròn mờ trang trí góc phải — cùng hoạ tiết màn "Trở thành chủ xe". */}
-          <YStack pos="absolute" top={-60} right={-50} w={180} h={180} br={90} bg={colors.primary} opacity={0.12} />
-          <YStack pos="absolute" top={insets.top + 30} right={90} w={60} h={60} br={30} bg={colors.primary} opacity={0.1} />
+          <YStack
+            pos="absolute"
+            top={-60}
+            right={-50}
+            w={180}
+            h={180}
+            br={90}
+            bg={colors.primary}
+            opacity={0.12}
+          />
+          <YStack
+            pos="absolute"
+            top={insets.top + 30}
+            right={90}
+            w={60}
+            h={60}
+            br={30}
+            bg={colors.primary}
+            opacity={0.1}
+          />
         </YStack>
       )}
 
@@ -197,13 +226,18 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             gap={isShop ? 20 : space.sm + space.xs}
             pb={space.md}
             borderBottomWidth={1}
-            borderBottomColor={colors.border}
+            borderBottomColor={isShop ? colors.primary : colors.border}
           >
             <XStack ai="flex-start" gap={space.sm + space.xs}>
               <ShopAvatar shop={shop} isShop={isShop} verifiedLabel={t('header.verified')} />
 
               <YStack f={1} minWidth={0} gap={isShop ? space.sm : 6}>
-                <XStack ai="center" flexWrap="wrap" columnGap={space.sm + space.xs} rowGap={space.sm}>
+                <XStack
+                  ai="center"
+                  flexWrap="wrap"
+                  columnGap={space.sm + space.xs}
+                  rowGap={space.sm}
+                >
                   <Text
                     col={colors.text}
                     fos={fontSize.h2}
@@ -293,9 +327,14 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             ) : null}
           </YStack>
 
-          {shop.bio || shop.address ? (
+          {shop.bio || (isShop && shop.address) ? (
             <YStack gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} accessibilityRole="header">
+              <Text
+                col={colors.text}
+                fos={fontSize.h4}
+                fow={fontWeight.semibold}
+                accessibilityRole="header"
+              >
                 {t('profile.aboutTitle')}
               </Text>
               {shop.bio ? (
@@ -303,7 +342,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                   {shop.bio}
                 </Text>
               ) : null}
-              {shop.address ? (
+              {isShop && shop.address ? (
                 <Text col={colors.textMuted} fos={fontSize.body} mt={shop.bio ? space.xs : 0}>
                   {t('profile.address', { address: shop.address })}
                 </Text>
@@ -331,9 +370,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                       <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
                         {stat.value}
                       </Text>
-                      {stat.star ? (
-                        <ShopStarIcon size={16} />
-                      ) : null}
+                      {stat.star ? <ShopStarIcon size={16} /> : null}
                     </XStack>
                     <XStack ai="flex-start" gap={space.xs} maxWidth="100%">
                       <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={1}>

@@ -113,10 +113,10 @@ export class BranchListQueryDto {
  * Địa chỉ là các trường PHẲNG, không phải một object lồng — xem `AddressViewDto` ở
  * `modules/locations/dto/address.dto.ts` để biết vì sao.
  *
- * `wardCode` tuỳ chọn, và từ ADR 0042 giao diện KHÔNG còn hỏi nó ở đây: một chi nhánh có ghim
- * đã xác nhận thì toạ độ định vị chính xác hơn hẳn một mã năm chữ số. Trường vẫn nhận giá trị
- * (client cũ, dữ liệu nhập tay) và vẫn bị đối chiếu với tỉnh khi có — chỉ là không màn hình nào
- * còn sinh ra nó.
+ * `wardCode` BẮT BUỘC với chi nhánh từ ADR 0077 (ghi đè ADR 0042), kể cả khi có ghim: chuỗi hiển
+ * thị và bề mặt công khai ("Phường/Xã, Tỉnh") ghép từ danh mục, không từ dữ liệu bản đồ. Validator
+ * để tuỳ chọn có chủ đích — service trả mã `WARD_REQUIRED` (giao diện dịch được) thay cho lỗi
+ * validate chung; xã khác tỉnh trả `WARD_NOT_IN_PROVINCE`.
  */
 export class CreateBranchDto {
   @ApiProperty({ example: 'Chi nhánh Đà Nẵng' })

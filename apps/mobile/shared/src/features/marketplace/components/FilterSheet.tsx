@@ -929,16 +929,22 @@ function OptionRow({
           />
         )}
         {leading}
-        <Text f={1} col={colors.textMuted} fos={fontSize.body} numberOfLines={1}>
-          {label}
-        </Text>
-        {pill ? (
-          <YStack px={6} py={2} br={radius.pill} bg={colors.background} flexShrink={0}>
-            <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
-              {pill}
-            </Text>
-          </YStack>
-        ) : null}
+        {/*
+          Viên phụ nằm DƯỚI nhãn chứ không cạnh nhãn: ô lưới chỉ rộng nửa màn, máy hẹp mà để viên
+          không co ("7 chỗ · minivan") cạnh nhãn thì nhãn bị ép còn "…" — mất luôn tên kiểu xe.
+        */}
+        <YStack f={1} gap={2}>
+          <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={2}>
+            {label}
+          </Text>
+          {pill ? (
+            <YStack px={6} py={2} br={radius.pill} bg={colors.background} als="flex-start" maxWidth="100%">
+              <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
+                {pill}
+              </Text>
+            </YStack>
+          ) : null}
+        </YStack>
       </XStack>
     </Pressable>
   );
@@ -1037,7 +1043,8 @@ function Segmented<T extends string>({
               ) : null}
               <Text
                 col={active ? colors.primaryHover : colors.textMuted}
-                fos={fontSize.body}
+                fos={fontSize.bodyLg}
+                lh={24}
                 fow={fontWeight.medium}
                 ta="center"
               >

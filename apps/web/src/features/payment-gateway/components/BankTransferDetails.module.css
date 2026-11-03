@@ -237,3 +237,33 @@
   letter-spacing: normal;
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Khổ máy (Figma mobile `21850:70434`): ô QR phủ hết bề ngang, các hàng cách 8, nhãn
+ * `12px/Regular` · giá trị `14px/Semibold` line-height 22 — bản 16px ở khổ hẹp đẩy số tài khoản
+ * xuống dòng.
+ */
+@container (max-width: 400px) {
+  .cardLayout .qrWrap,
+  .cardLayout .qrFallback {
+    width: 100%;
+  }
+
+  .cardLayout .fields {
+    gap: var(--xp-space-sm);
+  }
+
+  .cardLayout .row {
+    grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  }
+
+  .cardLayout .row dt {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+
+  .cardLayout .row dd {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+}

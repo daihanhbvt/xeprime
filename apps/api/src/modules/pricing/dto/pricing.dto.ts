@@ -1140,7 +1140,7 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: GeoPointDto,
     nullable: true,
-    description: 'Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ.',
+    description: 'Điểm giao xe đi — chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ.',
   })
   origin!: GeoPointDto | null;
 

@@ -149,7 +149,8 @@ export function TripPendingApprovalView({ trip }: FlowViewProps) {
           br={radius.control}
           bg={colors.primarySubtle}
           col={colors.warning}
-          fos={fontSize.body}
+          fos={fontSize.bodySm}
+          lh={18}
         >
           {holdStage ? t('status.guidanceHold') : t('status.guidance')}
         </Text>
@@ -312,7 +313,7 @@ export function HoldPaymentCard({
           <InfoHint content={tHold('vsDepositHint')} label={tHold('vsDepositHintLabel')} />
         </XStack>
 
-        <Text col={colors.primaryHover} fos={fontSize.h3} fow={fontWeight.semibold}>
+        <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
           {amount}
         </Text>
         <Countdown
@@ -384,7 +385,7 @@ export function HoldPaymentCard({
  * 0024). Bảng kê chỉ hiện khi server nói nó còn khớp số trên đơn (`finance.breakdown`) và chưa có
  * phát sinh; lệch thì thẻ tiền đầy đủ `TripFinanceCard`. Liên hệ mở theo `canContact` (ADR 0056).
  */
-export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
+export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) {
   const colors = useColors();
   const t = useTranslations('Trips.confirmed');
   const checklistRef = useRef<View>(null);
@@ -454,7 +455,7 @@ export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
       <TripRequestTripCard trip={trip} listing={listing} ownerAction={ownerAction} />
 
       {/* Người sẽ đến đón — chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
-      <TripDriverCard trip={trip} />
+      <TripDriverCard trip={trip} onCancel={onCancel} />
 
       <View ref={checklistRef} collapsable={false}>
         <PickupChecklist trip={trip} listing={listing} />
@@ -565,10 +566,10 @@ function PickupChecklist({
               >
               <XStack ai="flex-start" gap={space.sm}>
                 <YStack
-                  mt={2}
-                  w={18}
-                  h={18}
-                  br={radius.sm}
+                  mt={1}
+                  w={20}
+                  h={20}
+                  br={6}
                   bw={1}
                   ai="center"
                   jc="center"
@@ -578,10 +579,10 @@ function PickupChecklist({
                   {on ? <Ionicons name="checkmark" size={14} color={market.onDark} /> : null}
                 </YStack>
                 <YStack f={1} gap={2}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
                     {text.title}
                   </Text>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
+                  <Text col={colors.placeholder} fos={fontSize.label}>
                     {text.body}
                   </Text>
                 </YStack>

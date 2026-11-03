@@ -2,31 +2,61 @@ import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { SUPPORT_HOTLINE } from '@/constants/contact';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
+import type { PublicBanner } from '@/features/banners/types';
 import { CtaButton } from './CtaButton';
+import { cx } from '@/lib/cx';
 import styles from './PartnerBanner.module.css';
 
 const BENEFITS = ['income', 'support', 'customers'] as const;
 
 /**
- * "Đăng ký trở thành ĐỐI TÁC ĐỘC QUYỀN" — dải mời chủ xe của trang chủ v2 (Figma `19695:40878`,
+ * "Đăng ký trở thành ĐỐI TÁC ĐỘC QUYỀN" — dải mời chủ xe của trang chủ v2 (Figma `21965:5337`,
  * ADR 0062), thay khối `OwnerCta` cũ.
  *
  * Nút dẫn tới trang chọn cách cho thuê của SITE KHÁCH (`resolveOwnerCtaHref`) — đăng ký thật diễn
  * ra ở site partner, bằng một tài khoản riêng (ADR 0051 điều 3 · ADR 0053).
+ *
+ * ẢNH NỀN do admin cấu hình (banner vị trí `partner` — dùng banner ĐẦU TIÊN đang hiển thị, ảnh máy
+ * tính/tablet/mobile qua `<picture>`); chưa có banner nào thì dùng ảnh mặc định của bản vẽ. Chữ, nút
+ * và lớp phủ tối luôn do trang dựng.
  */
-export async function PartnerBanner() {
+export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }) {
   const t = await getTranslations('Home.partner');
 
   return (
     <section className={styles.banner} aria-labelledby="home-partner">
       <span className={styles.backdrop} aria-hidden="true">
+        {banner ? (
+          // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
+          <picture>
+            {banner.mobileImageUrl ? (
+              <source media="(max-width: 640px)" srcSet={banner.mobileImageUrl} />
+            ) : null}
+            {banner.tabletImageUrl ? (
+              <source media="(max-width: 1024px)" srcSet={banner.tabletImageUrl} />
+            ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element -- ảnh admin từ storage ngoài */}
+            <img src={banner.imageUrl} alt="" loading="lazy" className={styles.adminImage} />
+          </picture>
+        ) : (
+          <>
         <Image
           src="/home/partner-bg.webp"
           alt=""
           fill
-          sizes="102vw"
-          className={styles.backdropImage}
+          sizes="100vw"
+          className={cx(styles.backdropImage, styles.backdropDesktop)}
         />
+        {/* Mobile có vùng cắt riêng của bản vẽ MB (`19771:51743`) — thấy trọn hai xe. */}
+        <Image
+          src="/home/partner-bg-mobile.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className={cx(styles.backdropImage, styles.backdropMobile)}
+        />
+          </>
+        )}
       </span>
 
       <div className={styles.inner}>

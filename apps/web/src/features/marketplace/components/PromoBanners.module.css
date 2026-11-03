@@ -1,11 +1,11 @@
 /*
- * Banner khuyến mãi giữa trang chủ (design v2, ADR 0062) — ô 584×180 của bản vẽ, ảnh do admin
- * upload theo `PROMO_BANNER_SLOTS` (PC 1168×360 · mobile tuỳ chọn 680×400). Khung mang ĐÚNG tỉ lệ
+ * Banner khuyến mãi giữa trang chủ (design v2, ADR 0062) — ô 584×220 bo 20 (Figma `21965:5289`), ảnh do admin
+ * upload theo `PROMO_BANNER_SLOTS` (PC 1168×440 · mobile tuỳ chọn 680×280). Khung mang ĐÚNG tỉ lệ
  * slot nên ảnh đúng cỡ chỉ scale, không bị cắt; chữ nằm sẵn trong ảnh.
  */
 .link {
   display: block;
-  border-radius: var(--xp-border-radius-card);
+  border-radius: var(--xp-border-radius-banner);
 }
 
 .link:focus-visible {
@@ -17,8 +17,8 @@
   position: relative;
   display: block;
   overflow: hidden;
-  aspect-ratio: 1168 / 360;
-  border-radius: var(--xp-border-radius-card);
+  aspect-ratio: 1168 / 440;
+  border-radius: var(--xp-border-radius-banner);
   background: var(--xp-color-bg-muted);
   box-shadow: var(--xp-elevation-ambient);
 }
@@ -35,10 +35,13 @@
   transform: scale(1.02);
 }
 
-/* Mobile: banner có ảnh mobile riêng thì khung theo tỉ lệ ảnh đó; không có thì giữ khung máy tính. */
+/* Mobile (Figma MB `19771:51710`): khung CỐ ĐỊNH 340×140, ảnh `cover` — có ảnh mobile riêng hay không. */
 @media (max-width: 640px) {
-  .hasMobile {
-    aspect-ratio: 680 / 400;
+  .card {
+    width: var(--xp-promo-banner-mobile-width);
+    margin-inline: auto;
+    height: var(--xp-promo-banner-mobile-height);
+    aspect-ratio: auto;
   }
 }
 

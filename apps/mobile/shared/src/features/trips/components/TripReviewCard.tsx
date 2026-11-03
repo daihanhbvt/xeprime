@@ -71,9 +71,9 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
               </Text>
             ) : null}
           </XStack>
-          {/* `.comment`: body-lg `text-secondary`, giữ xuống dòng của khách. */}
+          {/* `.comment`: body-lg `text`, giữ xuống dòng của khách. */}
           {review.comment ? (
-            <Text col={colors.textMuted} fos={fontSize.bodyLg}>
+            <Text col={colors.text} fos={fontSize.bodyLg}>
               {review.comment}
             </Text>
           ) : null}

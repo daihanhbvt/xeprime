@@ -80,7 +80,7 @@
 .active,
 .active:hover {
   background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
 }
 
 .icon {
@@ -96,7 +96,7 @@
 .trailing {
   flex: none;
   color: var(--xp-color-text-tertiary);
-  font-size: 16px;
+  font-size: 20px;
 }
 
 /* ── Thẻ người dùng ở chân menu ───────────────────────────────────────── */

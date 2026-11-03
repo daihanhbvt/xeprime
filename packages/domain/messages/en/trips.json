@@ -1,6 +1,6 @@
 {
   "list": {
-    "heading": "My trips",
+    "heading": "Trips",
     "sub": "Manage your journeys and trip details",
     "tabLabel": "{label} ({count})",
     "tabsLabel": "Trip groups",
@@ -62,7 +62,8 @@
     "agency": "Pick up at the host",
     "driverPickup": "Driver picks you up",
     "pickupPoint": "Pick-up: {address}",
-    "destination": "Destination: {address}"
+    "destination": "Destination: {address}",
+    "exactAddressLater": "The exact address is shown once your booking is confirmed."
   },
   "detail": {
     "back": "Back to trips",
@@ -115,21 +116,28 @@
     }
   },
   "evidence": {
-    "title": "Handover records",
-    "lead": "Condition photos and odometer readings the shop recorded at pickup and at return.",
+    "title": "Handover details",
     "empty": "The shop has not confirmed any handover record for this trip yet.",
     "recordedAt": "Recorded in the system",
     "odometer": "Odometer",
     "odometerMissing": "No odometer reading recorded",
     "condition": "Vehicle condition",
-    "noPhotos": "The shop did not keep condition photos for this handover.",
     "photoAlt": "Condition photo: {slot}",
     "photoUnavailable": "Photo can't be opened",
-    "uploadedAt": "Uploaded {time}",
     "addedLate": "Added after the handover was confirmed",
     "addedLateHint": "This photo was uploaded after the shop confirmed the handover, so it was not taken at the moment of handover.",
     "disclaimer": "This record was made by the shop. If anything looks different, please contact the shop directly.",
-    "errorTitle": "Couldn't load the handover records"
+    "errorTitle": "Couldn't load the handover records",
+    "tabs": {
+      "pickup": "Before pickup",
+      "return": "After return"
+    },
+    "leads": {
+      "pickup": "Photos taken by the owner before handing the car to you.",
+      "return": "Photos taken by the owner when receiving the car back from you."
+    },
+    "occurredAt": "Handover time",
+    "slotMissing": "The owner did not photograph this angle"
   },
   "subtitle": {
     "pending_approval": "Your rental request has been sent to the host",
@@ -407,7 +415,7 @@
   },
   "payment": {
     "back": "Trip details",
-    "backToTrips": "My trips",
+    "backToTrips": "Trips",
     "title": "Pay the booking hold",
     "subtitle": "Rental of {vehicle}",
     "notFoundTitle": "Trip not found",
@@ -560,7 +568,7 @@
     "vehicle": "Vehicle details",
     "request": "Send rental request",
     "account": "My account",
-    "trips": "My trips",
+    "trips": "Trips",
     "tripDetail": "Trip details"
   },
   "closed": {

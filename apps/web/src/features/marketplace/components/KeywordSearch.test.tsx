@@ -32,6 +32,8 @@ const HOST: PublicShopSummary = {
   ratingCount: 12,
   completedTripCount: 0,
   verified: false,
+  brands: [],
+  brandCount: 0,
 };
 
 beforeEach(() => {

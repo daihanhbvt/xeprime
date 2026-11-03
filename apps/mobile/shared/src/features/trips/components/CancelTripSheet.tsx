@@ -155,14 +155,15 @@ export function CancelTripSheet({
             jc="center"
           >
             <Ionicons
-              name="alert-circle-outline"
+              name="warning-outline"
               size={FEATURED_ICON_GLYPH}
               color={colors.danger}
             />
           </YStack>
           <Text
             col={colors.text}
-            fos={fontSize.h4}
+            fos={fontSize.h3}
+            lh={28}
             fow={fontWeight.semibold}
             ta="center"
             accessibilityRole="header"
@@ -267,6 +268,19 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   ) : null;
 
   // Hoàn đủ: đầu tấm đã nói số đã trả + dự kiến hoàn — như web (#233), chỉ còn lời nhắc hoàn CHẬM.
+  /*
+   * Huỷ do SỰ CỐ TÀI XẾ (ADR 0074): server đã chốt hoàn 100% dù qua mốc miễn phí — nói rõ vì sao,
+   * để khách không ngần ngại vì nhớ "quá giờ huỷ là mất tiền" (như web).
+   */
+  if (preview.driverIncident) {
+    return (
+      <YStack gap={space.sm}>
+        <Callout tone="success" title={t('driverIncident')} />
+        {deferred}
+      </YStack>
+    );
+  }
+
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND) return deferred;
 
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL) {

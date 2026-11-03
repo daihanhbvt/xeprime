@@ -74,9 +74,11 @@ export function HomeCarousel({
   const count = items.length;
   const contentWidth = width - layout.screenX * 2;
   const cardWidth =
-    count <= 1 ? contentWidth : Math.min(itemWidth ?? homeCarouselItemWidth(width), contentWidth);
+    count <= 1
+      ? Math.min(itemWidth ?? contentWidth, contentWidth)
+      : Math.min(itemWidth ?? homeCarouselItemWidth(width), contentWidth);
   // Thẻ đang xem nằm GIỮA màn (web align: center), hai thẻ kề ló ra hai bên.
-  const sidePad = count <= 1 ? layout.screenX : (width - cardWidth) / 2;
+  const sidePad = (width - cardWidth) / 2;
   const step = cardWidth + gap;
   const [active, setActive] = useState(0);
   const scrollRef = useRef<ScrollView>(null);

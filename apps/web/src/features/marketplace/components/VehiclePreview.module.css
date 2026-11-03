@@ -13,7 +13,7 @@
   margin: calc(-1 * var(--xp-space-lg)) 0 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .grid {

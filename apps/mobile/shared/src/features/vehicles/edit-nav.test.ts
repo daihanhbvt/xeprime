@@ -22,7 +22,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       ['info', ['information', 'media', 'documents']],
       ['pricingHandover', ['pricing', 'handover-time']],
       ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization', 'with-driver-surcharges']],
+      ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
       ['advanced', ['source', 'maintenance']],
     ]);
@@ -42,7 +42,6 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       'items.handoverTime',
       'items.bookingTerms',
       'items.bookingTerms',
-      'items.surcharges',
       'items.source',
       'items.maintenance',
     ]);
@@ -62,7 +61,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       ['info', ['information', 'media']],
       ['pricingHandover', ['pricing', 'handover-time']],
       ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization', 'with-driver-surcharges']],
+      ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
     ]);
   });
@@ -83,7 +82,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
   });
 
   it('mục → dịch vụ (web editTabServiceType)', () => {
-    expect(editTabServiceType(VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES)).toBe(
+    expect(editTabServiceType(VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION)).toBe(
       SERVICE_TYPE.WITH_DRIVER,
     );
     expect(editTabServiceType(VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION)).toBe(

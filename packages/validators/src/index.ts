@@ -828,6 +828,17 @@ const contactPhoneRule = yup
   .default('')
   .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true });
 
+/**
+ * Xã/phường BẮT BUỘC — cho địa chỉ trở thành CHI NHÁNH (nơi khách tới nhận xe). ADR 0077 ghi đè
+ * ADR 0042: bề mặt công khai hiện "Phường/Xã, Tỉnh/TP" ghép từ danh mục, nên chi nhánh phải có xã
+ * kể cả khi đã có ghim. Server cũng chặn (`WARD_REQUIRED`).
+ */
+const requiredWardRule = yup
+  .string()
+  .trim()
+  .required('wardRequired')
+  .matches(WARD_CODE_PATTERN, 'wardInvalid');
+
 /*
  * Từng có một `addressShapeWithWard` ở đây — bản BẮT BUỘC chọn xã/phường, dùng cho form khai
  * địa điểm vận hành (chi nhánh, hồ sơ chủ xe).
@@ -909,7 +920,8 @@ export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
  *
  * | Trường | Luật |
  * | --- | --- |
- * | `displayName` · `password` · `confirmPassword` | bắt buộc khi `withAccount` |
+ * | `displayName` | bắt buộc khi `withAccount` |
+ * | `password` · `confirmPassword` | bắt buộc khi `withAccount` hoặc `needsPassword` (tài khoản Google/Facebook chưa có mật khẩu) |
  * | `name` | tên gian hàng (tuyến gói) — bắt buộc; tuyến hoa hồng tạo tài khoản mới thì lấy luôn họ tên, không hỏi lại |
  * | `phoneVerified` · `otpCode` | trạng thái bước xác thực SĐT — KHÔNG chặn ở schema: chưa xác thực thì bấm đăng ký mở popup OTP rồi tự gửi tiếp; server đối chiếu mã (ADR 0060) |
  * | `phone` · `email` | BẮT BUỘC ở cả hai tuyến — `email` là email LIÊN HỆ của gian hàng (chỉ vào `POST /tenants`, không gắn vào tài khoản); bắt buộc ở FORM, server để tuỳ chọn như cũ |
@@ -920,6 +932,11 @@ export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
  */
 export const partnerSignupSchema = yup.object({
   withAccount: yup.boolean().default(false),
+  /**
+   * Tài khoản ĐÃ có (vào bằng Google/Facebook) nhưng chưa có mật khẩu — form hỏi mật khẩu như
+   * luồng thường rồi `POST /auth/password/set`. Không phải ô nhập.
+   */
+  needsPassword: yup.boolean().default(false),
   registrationTrack: yup
     .string()
     .oneOf(REGISTRATION_TRACK_VALUES)
@@ -936,8 +953,8 @@ export const partnerSignupSchema = yup.object({
   password: yup
     .string()
     .default('')
-    .when('withAccount', {
-      is: true,
+    .when(['withAccount', 'needsPassword'], {
+      is: (withAccount: boolean, needsPassword: boolean) => withAccount || needsPassword,
       then: (schema) =>
         PASSWORD_RULES.reduce(
           (acc, rule) => acc.test(rule.key, rule.key, (value) => rule.test(value ?? '')),
@@ -947,8 +964,8 @@ export const partnerSignupSchema = yup.object({
   confirmPassword: yup
     .string()
     .default('')
-    .when('withAccount', {
-      is: true,
+    .when(['withAccount', 'needsPassword'], {
+      is: (withAccount: boolean, needsPassword: boolean) => withAccount || needsPassword,
       then: (schema) =>
         schema.required('confirmRequired').oneOf([yup.ref('password')], 'confirmMismatch'),
     }),
@@ -962,6 +979,7 @@ export const partnerSignupSchema = yup.object({
         : schema,
     ),
   ...addressShape,
+  wardCode: requiredWardRule,
   /*
    * Số nhà/đường BẮT BUỘC ở cả hai tuyến: tuyến gói vì cổng đăng xe đòi nó ngay sau thanh toán;
    * tuyến hoa hồng vì đó là nơi khách tới nhận xe — đúng luật `ownerProfileSchema` mà bước hồ sơ
@@ -1006,6 +1024,7 @@ export const ownerProfileSchema = yup.object({
    * `AddressField` gửi lên so với thứ schema chấp nhận.
    */
   ...addressShape,
+  wardCode: requiredWardRule,
   /*
    * Ghi đè ĐÚNG một ô: với chủ xe cá nhân, số nhà/đường là BẮT BUỘC. Đăng ký gian hàng để nó
    * tuỳ chọn vì gian hàng còn một cổng "gửi duyệt" phía sau để đòi địa chỉ đủ; ở đây thì
@@ -1032,10 +1051,13 @@ export const branchFormSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   /*
    * Chi nhánh là địa điểm vận hành thật — xe nằm ở đó, khách tới đó nhận xe, và toạ độ của nó là
-   * điểm xuất phát của mọi phép tính phí giao xe tận nơi. Thứ chốt độ chính xác ở đây là CÁI
-   * GHIM đã xác nhận, không phải mã xã (ADR 0042), nên `addressShape` giữ `wardCode` tuỳ chọn.
+   * điểm xuất phát của mọi phép tính phí giao xe tận nơi. Xã BẮT BUỘC (ADR 0077), và "số nhà,
+   * đường" cũng vậy: đổi tỉnh/xã sẽ xoá ô địa chỉ, và để trống mà lưu được thì form gửi
+   * `addressLine: undefined` ⇒ server giữ nguyên địa chỉ CŨ dưới xã mới.
    */
   ...addressShape,
+  wardCode: requiredWardRule,
+  addressLine: addressShape.addressLine.required('addressLineRequired'),
   phone: contactPhoneRule,
 });
 

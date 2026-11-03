@@ -20,9 +20,14 @@
   padding-block: var(--xp-space-80);
 }
 
-/* Khối khuyến mãi dính vào khối "Xe nổi bật" phía trên — chỉ đệm dưới (Figma: pt 0, pb 80). */
-.blockBottom {
-  padding-bottom: var(--xp-space-80);
+/*
+ * Banner khuyến mãi nằm TRONG khối `.intro` (đệm trên 80, gap 40). Desktop: lên đầu khối, cách thẻ
+ * tìm kiếm 64 (80 − 16) và cách "Xe tiêu biểu" 80 (gap 40 + 40) — Figma `21965:5288`. Mobile: giữ
+ * vị trí DOM, dưới "Xe tiêu biểu".
+ */
+.promo {
+  order: -1;
+  margin: calc(var(--xp-space-64) - var(--xp-space-80)) 0 var(--xp-space-40);
 }
 
 .intro {
@@ -41,11 +46,9 @@
   background: var(--xp-color-bg);
 }
 
-/* Bản vẽ mobile v2: khối "Loại xe" nằm trên một dải nền xám nhạt; desktop nền trắng như trang. */
-@media (max-width: 640px) {
-  .typesBand {
-    background: var(--xp-color-bg);
-  }
+/* Khối "Loại xe" nằm trên dải nền BG/gray-100 tràn hết bề ngang, ở mọi cỡ màn (Figma `21965:5272`). */
+.typesBand {
+  background: var(--xp-color-bg-muted);
 }
 
 /* Cột đánh giá 722px + banner ứng dụng chiếm phần còn lại, cách nhau 20px, cùng chiều cao. */
@@ -71,8 +74,9 @@
     padding-block: var(--xp-space-64);
   }
 
-  .blockBottom {
-    padding-bottom: var(--xp-space-64);
+  /* Tablet: khối đệm 64 — banner dính sát đỉnh khối, cách "Xe tiêu biểu" 64. */
+  .promo {
+    margin: 0 0 var(--xp-space-lg);
   }
 
   .testimonials {
@@ -92,8 +96,9 @@
     padding-block: var(--xp-space-40);
   }
 
-  .blockBottom {
-    padding-bottom: var(--xp-space-40);
+  .promo {
+    order: 0;
+    margin: 0;
   }
 
   .intro {

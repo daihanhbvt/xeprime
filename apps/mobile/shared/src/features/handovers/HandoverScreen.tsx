@@ -458,6 +458,7 @@ function HandoverForm({
                         <HandoverPhotoGrid
                           bookingId={context.bookingId}
                           type={type}
+                          vehicleType={context.vehicleType}
                           handover={handover}
                           ensureHandover={ensureHandover}
                         />

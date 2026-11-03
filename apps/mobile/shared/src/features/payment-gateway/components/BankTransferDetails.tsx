@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { buildVietQrUrl } from '@xeprime/domain';
+import { bankDisplayName, buildVietQrUrl, transferContent } from '@xeprime/domain';
 import type { components } from '@xeprime/types';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
@@ -56,6 +56,8 @@ export function BankTransferDetails({
   const [qrFailed, setQrFailed] = useState(false);
 
   const qrUrl = account ? buildVietQrUrl(account, amount, code) : null;
+  // Chuỗi khách chép tay PHẢI là chuỗi in trong QR — kể cả từ khoá ngân hàng nhận đòi (SEVQR…).
+  const reference = transferContent(account, code);
 
   return (
     <YStack gap={space.md}>
@@ -89,12 +91,12 @@ export function BankTransferDetails({
             {account.bankCode ? (
               <DataRow
                 label={t('bank')}
-                value={account.bankCode}
+                value={bankDisplayName(account.bankCode)}
                 action={
                   <IconButton
                     icon="copy-outline"
                     label={tHold('copyBank')}
-                    onPress={() => void copy(account.bankCode as string)}
+                    onPress={() => void copy(bankDisplayName(account.bankCode))}
                   />
                 }
               />
@@ -149,11 +151,11 @@ export function BankTransferDetails({
         {/* MÃ quyết định tiền khớp vào khoản nào — gõ tay sai một ký tự là một khoản treo. */}
         <DataRow
           label={t('code')}
-          value={code}
+          value={reference}
           strong
           hint={<InfoHint content={t('codeHint')} label={t('codeHintLabel')} />}
           action={
-            <IconButton icon="copy-outline" label={t('copyCode')} onPress={() => void copy(code)} />
+            <IconButton icon="copy-outline" label={t('copyCode')} onPress={() => void copy(reference)} />
           }
         />
       </YStack>

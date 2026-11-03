@@ -102,7 +102,7 @@ export function ShopQuickInfoCard({
 
   if (variant === 'inline') {
     return (
-      <div className={cx(styles.card, styles.inlineCard, className)}>
+      <div className={cx(styles.card, styles.inlineCard, !shop.verified && styles.inlineCardOwner, className)}>
         <div className={styles.inlineMainRow}>
           <div className={styles.row}>
             <div className={styles.avatarWrap}>
@@ -114,11 +114,11 @@ export function ShopQuickInfoCard({
                 )}
               </span>
               {shop.verified ? (
-                <VerifiedMark
-                  label={t('header.verified')}
-                  size={16}
-                  className={styles.verifiedBadgeInline}
-                />
+                // Cùng dấu tích xanh của thẻ xe trang chủ (`/home/card-verified.svg` trong đĩa trắng).
+                <span className={styles.verifiedBadgeInline} role="img" aria-label={t('header.verified')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh 12px */}
+                  <img src="/home/card-verified.svg" alt="" width={12} height={12} />
+                </span>
               ) : null}
             </div>
 

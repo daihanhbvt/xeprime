@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **69 ADR (0001–0076; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **70 ADR (0001–0077; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
@@ -199,6 +199,8 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Tạo đơn từ khoản tiền của một yêu cầu đã hết hạn, hay đọc cột `status` thay vì mốc `expires_at` để quyết định nhận tiền — chỗ đó có thể đã thuộc về khách khác (ADR 0044 điều 7)
 - ❌ Coi `booking_requests.awaiting_hold` là "khách chưa trả, chưa ai duyệt" — nó ĐỔI NGHĨA ở ADR 0044 thành "đã được nhận, chờ khách trả", và DB bắt buộc nó có `decided_at` (CHECK `booking_requests_awaiting_hold_decided`, ADR 0055)
 - ❌ Mở hội thoại hay cho GỬI tin giữa khách và chủ xe tuyến hoa hồng khi cặp đó chưa có ĐƠN (tiền giữ chỗ về đủ) — một luật `chatOpenBetween`, server chặn mọi đường ghi (mở từ hai phía, gửi tin cả thread cũ), giao diện ẩn hẳn theo `eligibility` / `canSend` / `chatOpen` (ADR 0073)
+- ❌ Trả số nhà/đường hay toạ độ chính xác của CHỦ XE TUYẾN HOA HỒNG ra bề mặt công khai (trang xe, ảnh bản đồ, trang chủ xe), hay quyết mức công khai địa chỉ ngoài cổng `customerSeesPickupAddress` — tuyến gói công khai đủ; tuyến hoa hồng chỉ "Phường/Xã, Tỉnh/TP" + toạ độ xấp xỉ cho tới khi có ĐƠN (ADR 0077)
+- ❌ Lưu dòng gợi ý của bản đồ vào `address_line` ở form có bộ chọn hành chính, để gợi ý đổi TỈNH người dùng đã chọn, hay tạo/sửa chi nhánh thiếu phường/xã (ADR 0077)
 - ❌ Trả SĐT/email khách cho chủ xe ngoài cổng `hostSeesCustomerContact` — tuyến hoa hồng chỉ thấy khi đã có ĐƠN, kể cả qua sổ khách (`@SubscriptionTrackOnly`) hay một DTO mới (ADR 0056)
 - ❌ Dùng lại `hold_paid` / `approved_by_host` / chặng `pending_approval_paid`, hay ghi `decided_*` ở lượt tiền về — luồng thu-trước-duyệt đã gỡ hẳn, DB từ chối hai trạng thái đó; hằng số còn trong `@xeprime/types` chỉ để mobile biên dịch, danh sách cho DTO/UI là `*_LIVE_VALUES` (ADR 0055)
 - ❌ Đóng yêu cầu thua cuộc bằng `rejected_by_host` (đổ cho chủ xe) hay `expired` (phạt tỉ lệ phản hồi) — khung giờ đã có người thì dùng `slot_taken` (ADR 0044 điều 6)

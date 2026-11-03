@@ -8,5 +8,6 @@ export type {
   DriverPendingCounts,
   DriverTrip,
   DriverTripDetail,
+  DropDriverTripBody,
   MyDriverLink,
 } from '@/api/driving/api';

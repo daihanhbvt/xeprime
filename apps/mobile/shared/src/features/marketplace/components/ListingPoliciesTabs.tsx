@@ -6,7 +6,6 @@ import {
   COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
   CUSTOMER_DOCUMENT_TYPE_LABEL,
-  DRIVER_DEPOSIT_MODE,
   HOLD_DYNAMIC_WINDOW,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
@@ -25,7 +24,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
+
 
 const TABS = ['general', 'documents', 'collateral', 'cancellation'] as const;
 type PolicyTab = (typeof TABS)[number];
@@ -33,8 +32,8 @@ type PolicyTab = (typeof TABS)[number];
 /**
  * "Quy định & Chính sách" — bản native của `ListingPoliciesTabs` bên web (#212): bốn tab Quy định
  * chung · Giấy tờ thuê xe · Tài sản thế chấp · Điều khoản huỷ, CÙNG khoá với web
- * (`Listings.detail.policies.general/documents/collateral/cancellation.*`), phụ phí tài xế qua
- * `useDriverSurchargeLine`. Cùng điều kiện hiện từng khối với web.
+ * (`Listings.detail.policies.general/documents/collateral/cancellation.*`). Dịch vụ có tài xế hiện
+ * ghi chú "giá trọn gói" (ADR 0075 — không còn phụ phí tài xế). Cùng điều kiện hiện từng khối với web.
  *
  * Hai mốc giữ chỗ đọc từ hằng số dùng chung với server như web — đây là mức TRẦN của chính sách
  * (cửa sổ thật của từng chuyến co lại khi đặt sát giờ, `holdWindowsFor`, và hiện ở màn chuyến).
@@ -51,7 +50,6 @@ export function ListingPoliciesTabs({
   const tDetail = useTranslations('Listings.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const surchargeLine = useDriverSurchargeLine();
   const [tab, setTab] = useState<PolicyTab>('general');
 
   const activeTerms =
@@ -128,10 +126,10 @@ export function ListingPoliciesTabs({
                 borderBottomColor={active ? colors.primary : 'transparent'}
               >
                 <Text
-                  col={active ? colors.primary : colors.textMuted}
+                  col={active ? colors.primary : colors.placeholder}
                   fos={fontSize.body}
                   numberOfLines={1}
-                  fow={active ? fontWeight.semibold : fontWeight.medium}
+                  fow={fontWeight.semibold}
                 >
                   {t(`tabs.${key}`)}
                 </Text>
@@ -174,19 +172,10 @@ export function ListingPoliciesTabs({
               ) : null}
 
               {activeService === SERVICE_TYPE.WITH_DRIVER ? (
-                <Sub title={tDetail('surcharges.title')}>
-                  {(listing.driverSurchargeRules ?? []).map((rule) => (
-                    <Rule key={rule.kind}>{surchargeLine(rule)}</Rule>
-                  ))}
-                  {activeTerms?.depositMode ? (
-                    <Rule>
-                      {activeTerms.depositMode === DRIVER_DEPOSIT_MODE.NONE
-                        ? tDetail('terms.driverDepositNone')
-                        : tDetail('terms.driverDeposit', {
-                            mode: domainLabel('driverDepositMode', activeTerms.depositMode),
-                          })}
-                    </Rule>
-                  ) : null}
+                // Giá có tài xế là giá TRỌN GÓI (ADR 0075) — khách chỉ trả thêm phí cầu đường.
+                <Sub title={tDetail('withDriverPrice.title')}>
+                  <Rule>{tDetail('withDriverPrice.included')}</Rule>
+                  <Rule>{tDetail('withDriverPrice.excluded')}</Rule>
                 </Sub>
               ) : null}
 

@@ -1,12 +1,16 @@
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
 
-export { driversApi, driverFiltersToParams, DRIVERS_DEFAULT_LIMIT } from '@/api/drivers/api';
+export { driversApi, driverFiltersToParams, DRIVERS_DEFAULT_LIMIT, DRIVER_ASSIGNMENTS_LIMIT } from '@/api/drivers/api';
 
 export type {
   AssignableDriver,
   AssignableWindow,
   Driver,
+  DriverAssignmentRow,
+  DriverOverview,
+  DriverWageSettings,
+  UpdateDriverWageSettingsInput,
   DriverFilters,
   DriverLicenceSummary,
   InviteDriverInput,

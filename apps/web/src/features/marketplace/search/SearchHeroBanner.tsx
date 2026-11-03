@@ -3,6 +3,7 @@
 import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from './LocationPicker';
@@ -21,6 +22,7 @@ export function SearchHeroBanner({
   appliedCount = 0,
 }: SearchHeroBannerProps) {
   const t = useTranslations('Marketplace.results');
+  const tFilters = useTranslations('Marketplace.filterPanel');
   const { filters, setFilters } = useMarketplaceFilters();
   const { draft, setRentalRange, setRentalMode } = useSearchExperience();
 
@@ -59,13 +61,13 @@ export function SearchHeroBanner({
             <span className={styles.divider} aria-hidden />
 
             <div className={styles.vehicleTypeWrap}>
-              <VehicleTypePicker />
+              <VehicleTypePicker className={styles.inlinePicker} />
             </div>
 
             <span className={styles.divider} aria-hidden />
 
             <div className={styles.locationWrap}>
-              <LocationPicker variant="chip" />
+              <LocationPicker variant="chip" className={styles.inlinePicker} />
             </div>
 
             <span className={styles.divider} aria-hidden />
@@ -78,6 +80,7 @@ export function SearchHeroBanner({
                 onModeChange={setRentalMode}
                 prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
                 compactPoint
+                className={styles.inlinePicker}
               />
             </div>
 
@@ -90,12 +93,24 @@ export function SearchHeroBanner({
               <SearchOutlined />
             </button>
           </div>
+
+          {/* Điện thoại (Figma MB 20043:57771): nút lọc vuông chỉ có icon cạnh ô tìm kiếm. */}
+          <button
+            type="button"
+            className={styles.mobileFilterBtn}
+            onClick={onOpenFilterModal}
+            aria-label={tFilters('title')}
+          >
+            <LineIcon name="filter" />
+            {appliedCount > 0 ? <span className={styles.mobileFilterBadge}>{appliedCount}</span> : null}
+          </button>
         </div>
 
         <div className={styles.pillsRow}>
           <QuickFilterPills
             onOpenFilterModal={onOpenFilterModal}
             appliedCount={appliedCount}
+            filterButtonClassName={styles.pillsFilterBtn}
           />
         </div>
       </div>

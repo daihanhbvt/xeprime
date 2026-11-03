@@ -77,6 +77,36 @@ export class WardsService {
     return { items, total };
   }
 
+  /**
+   * Đoán xã của một chuỗi địa chỉ nhà cung cấp bản đồ trả về, TRONG một tỉnh (ADR 0077).
+   *
+   * Chỉ là GỢI Ý để form hỏi "Điền Phường X?" — người dùng xác nhận, không bao giờ tự lưu. Khớp
+   * TRỌN tên đã chuẩn hoá của từng đoạn (tách theo dấu phẩy): dữ liệu bản đồ còn dùng tên đơn vị
+   * cũ, nên khớp một phần dễ ra một xã sai trông có vẻ đúng. Không khớp ⇒ `null`.
+   */
+  async matchInProvince(
+    provinceCode: string,
+    text: string | null | undefined,
+  ): Promise<string | null> {
+    if (!text) return null;
+    const names = [
+      ...new Set(
+        text
+          .split(',')
+          .map((s) => normalizeWardName(s))
+          .filter(Boolean),
+      ),
+    ];
+    if (names.length === 0) return null;
+    const hits = await this.prisma.ward.findMany({
+      where: { provinceCode, isEnabled: true, normalizedName: { in: names } },
+      select: { code: true },
+      take: 2,
+    });
+    // Hai xã cùng khớp là chuỗi mơ hồ — im lặng tốt hơn gợi ý sai.
+    return hits.length === 1 ? hits[0]!.code : null;
+  }
+
   /** Tra tên của các mã ĐÃ LƯU — màn chi tiết/danh sách cần nhãn mà không tải cả tỉnh. */
   async findByCodes(codes: string[]): Promise<WardDto[]> {
     const unique = [...new Set(codes.map((c) => c.trim()).filter(Boolean))];
@@ -129,7 +159,7 @@ export class WardsService {
     }
     if (ward.provinceCode !== provinceCode) {
       throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
+        code: API_ERROR_CODE.WARD_NOT_IN_PROVINCE,
         message: `"${ward.name}" không thuộc tỉnh/thành đã chọn`,
         details: { field: 'wardCode' },
       });

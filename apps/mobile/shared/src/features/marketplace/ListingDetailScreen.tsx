@@ -394,7 +394,8 @@ function RequestBar({
                */
               const missing = missingTripInput(trip);
               if (missing) onNeedInput(missing);
-              else navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
+              else
+                navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
             }}
           />
         </YStack>
@@ -439,13 +440,13 @@ function DetailBody({
     ratingCount: listing.ratingCount ?? 0,
     ratingAvg: listing.ratingAvg,
   });
-  // Địa chỉ THẬT của điểm nhận xe; không có thì không hiện dòng này, không dùng địa chỉ mẫu.
-  const locationLine = [
-    listing.pickupPoint?.address,
-    listing.pickupPoint?.provinceName || listing.shopProvince,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  /*
+   * `pickupPoint.address` đã là KHU VỰC "Phường/Xã, Tỉnh/TP" do server ghép từ danh mục (ADR
+   * 0077) — KHÔNG nối thêm tên tỉnh (đó là nguồn của lỗi "Hà Nội, Hà Nội"). Chỉ khi không có điểm
+   * nhận nào mới rơi về tỉnh của gian hàng.
+   */
+  const locationLine =
+    listing.pickupPoint?.address || listing.pickupPoint?.provinceName || listing.shopProvince || '';
 
   /*
    * Bốn thông số tiêu biểu của bản vẽ v2. Thông số chủ xe CHƯA khai thì bỏ ô đó — không điền giá
@@ -532,7 +533,11 @@ function DetailBody({
                   bc={colors.border}
                   bg={colors.surface}
                 >
-                  <Ionicons name="share-social-outline" size={iconSize.sm} color={colors.textMuted} />
+                  <Ionicons
+                    name="share-social-outline"
+                    size={iconSize.sm}
+                    color={colors.textMuted}
+                  />
                 </YStack>
               </Pressable>
               <FavoriteButton vehicleId={listing.id} vehicleName={listing.name} variant="action" />
@@ -572,7 +577,12 @@ function DetailBody({
                     <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
                       {spec.label}
                     </Text>
-                    <Text col={colors.textMuted} fos={BODY_TEXT} fow={fontWeight.medium} numberOfLines={1}>
+                    <Text
+                      col={colors.textMuted}
+                      fos={BODY_TEXT}
+                      fow={fontWeight.medium}
+                      numberOfLines={1}
+                    >
                       {spec.value}
                     </Text>
                   </YStack>
@@ -954,10 +964,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
         </Text>
       ) : (
         // Mỗi lần vuốt một đánh giá, trọn bề ngang nội dung, chấm phân trang bên dưới (Figma).
-        <HomeCarousel
-          accessibilityLabel={t('title')}
-          itemWidth={width - layout.screenX * 2}
-        >
+        <HomeCarousel accessibilityLabel={t('title')} itemWidth={width - layout.screenX * 2}>
           {data!.data.map((review) => (
             <Card key={review.id} seamless>
               <YStack gap={12}>
@@ -993,11 +1000,9 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
 }
 
 /**
- * Khối VỊ TRÍ XE — bản ≤640px của web (Figma `19771:72668`): tiêu đề + "Mở bản đồ" cùng hàng, rồi
- * địa chỉ có ghim, rồi ẢNH BẢN ĐỒ TĨNH của điểm nhận xe (`StaticMapImage` web — người dùng chốt 28/10/2026
- * cho app có bản đồ như web). Chạm ảnh hay "Mở bản đồ" đều sang ứng dụng bản đồ của máy.
- *
- * Thiếu toạ độ thì không có liên kết; địa chỉ chữ vẫn ở lại.
+ * Khối VỊ TRÍ XE — bản ≤640px của web (Figma `19771:72668`). Gian hàng tuyến gói: địa chỉ đủ, ảnh
+ * bản đồ và "Mở bản đồ". Chủ xe tuyến hoa hồng: chỉ KHU VỰC, ảnh xấp xỉ, kèm lời giải thích —
+ * địa chỉ chính xác ở trang chuyến khi đã có đơn (ADR 0077, `isApproximate`).
  */
 function PickupPointCard({
   listingId,
@@ -1015,13 +1020,13 @@ function PickupPointCard({
     <YStack gap={space.sm}>
       <MarketSectionTitle
         action={
-          geo ? (
+          // Chỉ khi toạ độ CHÍNH XÁC (tuyến gói, ADR 0077) — điểm xấp xỉ mà chỉ đường là chỉ sai cửa.
+          geo && !point.isApproximate ? (
             <Pressable
               accessibilityRole="link"
               onPress={() => void Linking.openURL(mapExternalUrl(geo))}
               hitSlop={space.sm}
             >
-              {/* `.openMapLink` ≤640px: icon 20 + chữ 16 Semibold `color-primary`, khe 8. */}
               <XStack ai="center" gap={space.sm}>
                 <Ionicons name="map-outline" size={20} color={colors.primary} />
                 <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
@@ -1036,21 +1041,29 @@ function PickupPointCard({
       </MarketSectionTitle>
       <XStack ai="flex-start" gap={space.sm}>
         <YStack pt={1}>
-                <Ionicons name="location-outline" size={18} color={colors.placeholder} />
-              </YStack>
+          <Ionicons name="location-outline" size={18} color={colors.placeholder} />
+        </YStack>
         <Text f={1} col={colors.textMuted} fos={BODY_TEXT}>
-          {[point.branchName, point.address, point.provinceName]
-            .filter(Boolean)
-            .join(LIST_SEPARATOR)}
+          {/* `address` đã mang tỉnh (đủ hoặc khu vực — ADR 0077) — không nối thêm tỉnh. */}
+          {[point.branchName, point.address].filter(Boolean).join(LIST_SEPARATOR)}
         </Text>
       </XStack>
+      {point.isApproximate ? (
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('location.exactAddressNote')}
+        </Text>
+      ) : null}
       {geo ? (
         <MapPreview
           uri={pickupMapUri(listingId, geo, point.address)}
           accessibilityLabel={t('location.title')}
           busyLabel={tStates('loading')}
-          onOpen={() => void Linking.openURL(mapExternalUrl(geo))}
-          openLabel={t('location.openMap')}
+          {...(point.isApproximate
+            ? {}
+            : {
+                onOpen: () => void Linking.openURL(mapExternalUrl(geo)),
+                openLabel: t('location.openMap'),
+              })}
         />
       ) : null}
     </YStack>

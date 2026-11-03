@@ -303,7 +303,7 @@ export const market = {
    */
   photoScrim: 'rgba(0, 0, 0, 0.55)',
   /** Sao đánh giá — MỘT màu cho mọi chỗ rate sao của app (web `/home/star-*.svg`, người dùng chốt 27/10/2026). */
-  star: '#FEC84B',
+  star: XP_TOKENS['color-star'],
 } as const;
 
 /** Một gradient CSS `linear-gradient(<deg>, <màu> <vị trí>%, …)` dịch sang `expo-linear-gradient`. */
@@ -355,6 +355,8 @@ export const radius = {
   control: px('border-radius-control'),
   /** `--xp-border-radius-card` (16) — thẻ/khung lớn v2. */
   card: px('border-radius-card'),
+  /** `--xp-border-radius-banner` (20) — banner khuyến mãi trang chủ. */
+  banner: px('border-radius-banner'),
   pill: px('border-radius-pill'),
 } as const;
 

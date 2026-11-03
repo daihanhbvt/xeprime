@@ -1,5 +1,6 @@
 import { draftToFilterPatch } from '@xeprime/domain';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useNavigation } from 'expo-router';
 import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated';
 import { RefreshControl, useWindowDimensions } from 'react-native';
 import { BANNER_PLACEMENT } from '@xeprime/types';
@@ -16,6 +17,9 @@ import { space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useBanners } from './hooks/use-marketplace-data';
+import { onHomeScrollTop } from './home-scroll-top';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/queries/query-keys';
 import { FeaturedHosts } from './components/FeaturedHosts';
 import { FeaturedLocations } from './components/FeaturedLocations';
 import { HomeHero } from './components/HomeHero';
@@ -28,7 +32,7 @@ import type { ExploreSearchParams } from '@/navigation/routes-base';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { CustomerReviews } from './components/home/CustomerReviews';
 import { PartnerBanner } from './components/home/PartnerBanner';
-import { PromoBanners } from './components/home/PromoBanners';
+import { PromoBanners, PromoBannersSkeleton } from './components/home/PromoBanners';
 import { VehicleTypes, homeShowcaseBodyTypes } from './components/home/VehicleTypes';
 import { WhyChooseUs } from './components/home/WhyChooseUs';
 
@@ -68,10 +72,29 @@ function HomeContent() {
   const navigateOnce = useNavigateOnce();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
   // Trang chủ là một trong hai màn CHÍNH mà người dùng hạ cánh — mở cửa xin quyền thông báo ở đây,
   // không phải ở màn nhập OTP (`push-permission-gate.ts`).
   useOpenPushPermissionGate();
+
+  /*
+   * Lên đầu trang kiểu Facebook: bấm LẠI tab Khám phá khi đang đứng ở nó, hoặc bấm logo ở thanh
+   * trên. Từ tab khác chuyển sang thì GIỮ vị trí cuộn — `tabPress` vẫn phát nhưng màn chưa focus.
+   */
+  const scrollRef = useRef<Animated.ScrollView>(null);
+  const navigation = useNavigation();
+  useEffect(() => {
+    const toTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
+    const offTab = navigation.addListener?.('tabPress' as never, () => {
+      if (navigation.isFocused()) toTop();
+    });
+    const offLogo = onHomeScrollTop(toTop);
+    return () => {
+      offTab?.();
+      offLogo();
+    };
+  }, [navigation]);
   const { data: banners, isLoading: bannersLoading, refetch: refetchBanners } = useBanners();
   const { draft, submit } = useSearchExperience();
 
@@ -122,7 +145,13 @@ function HomeContent() {
 
   const { catalog } = useCatalog();
   const showcaseTypes = homeShowcaseBodyTypes(catalog.body_type);
-  const { data: promoBanners, refetch: refetchPromo } = useBanners(BANNER_PLACEMENT.PROMO);
+  const {
+    data: promoBanners,
+    isLoading: promoLoading,
+    refetch: refetchPromo,
+  } = useBanners(BANNER_PLACEMENT.PROMO);
+  // Ảnh nền dải đối tác do admin cấu hình — banner ĐẦU TIÊN đang hiển thị, như web.
+  const { data: partnerBanners, refetch: refetchPartner } = useBanners(BANNER_PLACEMENT.PARTNER);
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -171,6 +200,7 @@ function HomeContent() {
       </YStack>
 
       <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         /*
           Kéo-làm-mới cho hai dải banner — nội dung marketing admin bật/tắt theo giờ. Các khối
@@ -186,7 +216,14 @@ function HomeContent() {
             refreshing={pulling}
             onRefresh={() => {
               setPulling(true);
-              void Promise.allSettled([refetchBanners(), refetchPromo()]).finally(() =>
+              // Cả dữ liệu CHỢ (xe gợi ý, giá, gian hàng, địa điểm, đánh giá) — chỉ làm mới banner
+              // thì chủ xe vừa đổi giá, khách kéo trang chủ vẫn thấy giá cũ.
+              void Promise.allSettled([
+                refetchBanners(),
+                refetchPromo(),
+                refetchPartner(),
+                queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all }),
+              ]).finally(() =>
                 setPulling(false),
               );
             }}
@@ -209,13 +246,12 @@ function HomeContent() {
         </YStack>
 
         {/*
-          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Tại sao chọn →
-          Xe tiêu biểu → Banner khuyến mãi → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
+          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Xe tiêu biểu →
+          Banner khuyến mãi → Lý do chọn XePrime → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
           Đánh giá. KHÔNG mang sang: khối "Tải ứng dụng" (người xem đang ở trong chính ứng dụng đó) và
           chân trang — liên kết, pháp lý, bản quyền (người dùng chốt 29/10/2026 bỏ khỏi app).
         */}
         <YStack px={layout.screenX} pt={layout.section} gap={HOME_SECTION_GAP}>
-          <WhyChooseUs />
           <VehiclePreview
             onExplore={openSearch}
             onOpenListing={(listing, serviceType) =>
@@ -223,18 +259,23 @@ function HomeContent() {
               navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
             }
           />
-          {/* Chưa có banner khuyến mãi nào đang hiển thị thì không dựng khối — như web. */}
-          {promoBanners && promoBanners.length > 0 ? <PromoBanners banners={promoBanners} /> : null}
+          {/* Dưới "Xe tiêu biểu" như web mobile (người dùng chốt 03/11/2026). Chưa có banner thì không dựng khối. */}
+          {promoLoading ? (
+            <PromoBannersSkeleton />
+          ) : promoBanners && promoBanners.length > 0 ? (
+            <PromoBanners banners={promoBanners} />
+          ) : null}
+          <WhyChooseUs />
           {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
           {showcaseTypes.length > 0 ? (
-            <HomeBand>
+            <HomeBand muted>
               <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
             </HomeBand>
           ) : null}
           <FeaturedLocations onOpenSearch={openSearchWith} />
           <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
           {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
-          <PartnerBanner />
+          <PartnerBanner banner={partnerBanners?.[0] ?? null} />
           <RentalSteps />
           <HomeBand>
             <CustomerReviews />
@@ -246,17 +287,18 @@ function HomeContent() {
 }
 
 /**
- * Dải nền `bg` tràn hết bề ngang (`.typesBand` ≤640px và `.testimonialsBand` của web) — khối
- * bên trong vẫn canh lề nội dung, đệm trên/dưới 40 như `.block` ở bề rộng điện thoại.
+ * Dải nền tràn hết bề ngang — `muted`: nền BG/gray-100 của `.typesBand` (Figma `21965:5272`); mặc
+ * định: nền `bg` của `.testimonialsBand`. Khối bên trong vẫn canh lề nội dung, đệm trên/dưới 40 như
+ * `.block` ở bề rộng điện thoại.
  */
-function HomeBand({ children }: { children: ReactNode }) {
+function HomeBand({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
   const colors = useColors();
   return (
     <YStack
       mx={-layout.screenX}
       px={layout.screenX}
       py={space.xl + space.sm}
-      bg={colors.background}
+      bg={muted ? colors.surfaceMuted : colors.background}
     >
       {children}
     </YStack>

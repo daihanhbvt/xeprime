@@ -56,6 +56,8 @@ import {
   customerTripStage,
   customerTripStatusesFor,
   handoverOccurredAt,
+  customerSeesPickupAddress,
+  hasVerifiedStorefront,
   hostSeesCustomerContact,
   isBookingRequestEngaged,
   isCustomerTripFilter,
@@ -76,6 +78,7 @@ import {
   type PromoCodeSnapshot,
   type TripRole,
 } from '@xeprime/types';
+import { branchMapTarget, publicAreaLabel } from '../../common/address-view';
 import { fromDateOnly } from '../../common/date-only';
 import { accountPhoneIfDifferent } from '../../common/phone';
 import {
@@ -114,6 +117,7 @@ import {
   CustomerTripFinanceBreakdownDto,
   CustomerTripFinanceDto,
   CustomerTripListItemDto,
+  TripPickupPointDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
   CustomerUnpaidHoldsDto,
@@ -1263,7 +1267,14 @@ const BOOKING_SELECT = {
   depositCollectionMode: true,
   vehicle: { select: { plateNumber: true } },
   review: {
-    select: { id: true, rating: true, comment: true, status: true, editedAt: true, createdAt: true },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      status: true,
+      editedAt: true,
+      createdAt: true,
+    },
   },
 } satisfies Prisma.BookingSelect;
 
@@ -1305,6 +1316,18 @@ const listSelect = (now: Date) =>
         name: true,
         plateNumber: true,
         mainImageUrl: true,
+        // Điểm nhận xe (chi nhánh giữ xe) — chính xác hay chỉ khu vực do `customerSeesPickupAddress`
+        // quyết (ADR 0077).
+        branch: {
+          select: {
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            province: { select: { name: true } },
+            ward: { select: { name: true } },
+          },
+        },
         seatCount: true,
         transmission: true,
         fuelType: true,
@@ -1465,6 +1488,15 @@ function toListItem(
     destination: booking ? booking.destination : row.destination,
     deliveryRequested: row.deliveryRequested,
     deliveryAddress: row.deliveryAddress,
+    vehiclePickupPoint: tripPickupPoint(
+      row.vehicle.branch,
+      // Chủ xe nhìn xe của chính mình: không có gì để giấu.
+      role === TRIP_ROLE.HOST ||
+        customerSeesPickupAddress({
+          engaged,
+          packageTrack: hasVerifiedStorefront(storefront.billingMode),
+        }),
+    ),
     /*
      * Tổng DỊCH VỤ mới nhất = tiền thuê (đã gồm khuyến mãi + phí giao nhận hiện hành) + phát
      * sinh còn hiệu lực. Đúng công thức `finalTotal` ở chi tiết, nên hai màn không bao giờ hiện
@@ -1476,8 +1508,16 @@ function toListItem(
      * khách — ADR 0029). Hai nguồn loại trừ nhau theo đúng thứ tự đó, nên không có chuyến
      * nào đọc ra hai con số.
      */
+    /*
+     * Gốc là TỔNG KHÁCH TRẢ (`customer_total_amount` = tiền thuê + phí sàn S + bảo hiểm — số "Tổng
+     * tiền thanh toán" ở chi tiết), không phải tiền thuê `total_amount`: thẻ lấy số này trừ
+     * `holdPaidAmount` (đã gồm S) ra "Còn lại", trừ tiền thuê là hụt đúng S so với số trả chủ xe.
+     * Đơn cũ trước ADR 0028 không có cột đó ⇒ lùi về tiền thuê.
+     */
     totalAmount: booking
-      ? booking.totalAmount.plus(surchargeTotals.get(booking.id) ?? ZERO).toFixed(2)
+      ? (booking.customerTotalAmount ?? booking.totalAmount)
+          .plus(surchargeTotals.get(booking.id) ?? ZERO)
+          .toFixed(2)
       : (customerTotalOf(estimates.get(row.id)) ?? null),
     totalIsEstimate: !booking && estimates.has(row.id),
     // Số đã chuyển THẬT (không phải số phải thu) — cùng cột với `finance.holdPaidAmount`.
@@ -1651,6 +1691,34 @@ function scopeWhere(scope: TripViewerScope, role?: TripRole): Prisma.BookingRequ
  * ADR 0028 điều 1 cho phép họ liên hệ và chốt trực tiếp — chặn ở đó là lấy đi thứ họ vừa mua.
  * Ngoại lệ này KHÔNG áp cho chiều ngược lại: khách vẫn chưa thấy SĐT gian hàng trước khi duyệt.
  */
+/**
+ * Điểm nhận xe trên trang chuyến (ADR 0077): đủ địa chỉ + toạ độ khi `exact`, ngược lại chỉ KHU
+ * VỰC "Phường/Xã, Tỉnh/TP" như trang xe công khai. `null` khi chi nhánh chưa điền địa chỉ.
+ */
+function tripPickupPoint(
+  branch: {
+    name: string | null;
+    address: string | null;
+    latitude: Prisma.Decimal | null;
+    longitude: Prisma.Decimal | null;
+    province: { name: string } | null;
+    ward: { name: string } | null;
+  } | null,
+  exact: boolean,
+): TripPickupPointDto | null {
+  if (!branch?.address?.trim()) return null;
+  const area = publicAreaLabel(branch.ward?.name, branch.province?.name);
+  const target = exact ? branchMapTarget(branch) : null;
+  return {
+    branchName: branch.name,
+    areaLabel: area,
+    address: exact ? branch.address.trim() : null,
+    latitude: target?.point.lat ?? null,
+    longitude: target?.point.lng ?? null,
+    exact,
+  };
+}
+
 function canContactOn(engaged: boolean, role: TripRole, scope: TripViewerScope): boolean {
   if (role === TRIP_ROLE.HOST) {
     return hostSeesCustomerContact({ engaged, packageTrack: scope.hostPackageTrack });
@@ -1692,6 +1760,7 @@ const EVIDENCE_SELECT = {
   occurredAt: true,
   confirmedAt: true,
   photos: { select: { slot: true, createdAt: true } },
+  vehicle: { select: { vehicleType: true } },
 } satisfies Prisma.VehicleHandoverSelect;
 
 type EvidenceRow = Prisma.VehicleHandoverGetPayload<{ select: typeof EVIDENCE_SELECT }>;
@@ -1728,6 +1797,7 @@ function toEvidence(row: EvidenceRow): CustomerTripHandoverEvidenceDto {
     // ngược nhau trên màn của khách, kể cả khi một bản ghi cũ nào đó lệch.
     odometerMissing: row.odometerKm === null,
     condition: row.condition,
+    vehicleType: row.vehicle.vehicleType,
     photos,
   };
 }

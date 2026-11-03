@@ -90,9 +90,9 @@
 }
 
 .name {
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 22px;
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text);
 }
 

@@ -13,14 +13,18 @@ export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
-export type ExternalDriverInput = Schemas['ExternalDriverInputDto'];
+export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
 /**
- * Body của `PATCH /bookings/:id/driver` — ĐÚNG MỘT khoá (server từ chối body mang cả hai), như web:
- * `driverId` (tài xế liên kết, `null` = bỏ gán — ADR 0063) hoặc `externalDriver` (ADR 0067).
+ * Body của `PATCH /bookings/:id/driver` — chỉ tài xế LIÊN KẾT (`null` = bỏ gán). Khoá
+ * `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`).
+ * `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075).
  */
-export type AssignBookingDriverInput =
-  | { driverId: string | null }
-  | { externalDriver: ExternalDriverInput };
+export type AssignBookingDriverInput = { driverId: string | null; wageAmount?: string };
+/** Tiền công của một lượt gán (ADR 0075) — XePrime chỉ ghi nhận, chủ xe trả trực tiếp. */
+export type DriverWage = Schemas['DriverWageDto'];
+/** Số liệu cho hộp gán: số ngày, gợi ý mặc định × N, khoảng hợp lệ — server tính. */
+export type DriverWageQuote = Schemas['DriverWageQuoteDto'];
+export type UpdateDriverWageInput = Schemas['UpdateDriverWageDto'];
 
 /** Khớp `BOOKING_SORT` ở backend DTO. */
 export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc';
@@ -140,7 +144,26 @@ export const bookingsApi = {
     return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/driver`, body);
   },
 
-  /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`. */
+  /** Số liệu tiền công cho hộp gán tài xế (ADR 0075) — số ngày, gợi ý, khoảng hợp lệ. */
+  driverWageQuote(id: string): Promise<DriverWageQuote> {
+    return getApiClient().get<DriverWageQuote>(
+      `/bookings/${encodeURIComponent(id)}/driver-wage-quote`,
+    );
+  },
+
+  /** Sửa tiền công của một lượt gán (ADR 0075) — trả lịch sử tài xế của đơn đã cập nhật. */
+  updateDriverWage(
+    id: string,
+    assignmentId: string,
+    body: UpdateDriverWageInput,
+  ): Promise<BookingDriverHistoryItem[]> {
+    return getApiClient().patch<BookingDriverHistoryItem[]>(
+      `/bookings/${encodeURIComponent(id)}/driver-assignments/${encodeURIComponent(assignmentId)}/wage`,
+      body,
+    );
+  },
+
+  /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`, kèm tiền công. */
   driverHistory(id: string): Promise<BookingDriverHistoryItem[]> {
     return getApiClient().get<BookingDriverHistoryItem[]>(
       `/bookings/${encodeURIComponent(id)}/driver-history`,

@@ -106,17 +106,35 @@
   width: 100%;
   height: 206px;
   border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid var(--xp-color-border);
-  box-shadow: var(--xp-elevation-sm);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-ambient);
   overflow: hidden;
-  transition: all 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
+/* Figma "Vehicle Card" active: viền vàng + nền vàng nhạt, ô thông số ngả `primary-subtle`, không bóng nặng. */
 .listCard:hover,
 .listCard:focus-within {
-  border-color: var(--xp-color-primary-accent);
-  box-shadow: var(--xp-elevation-lg);
+  border-color: var(--xp-color-primary-glow);
+  background: var(--xp-gradient-card-hover);
+}
+
+.listCard:hover .specBox,
+.listCard:focus-within .specBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px var(--xp-space-sm);
+  border-radius: 12px;
+  background: var(--xp-color-primary-subtle);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text-secondary);
+  transition: background 0.18s ease;
 }
 
 .listMedia {
@@ -124,7 +142,7 @@
   width: 280px;
   min-width: 280px;
   height: 100%;
-  padding: 10px;
+  padding: var(--xp-space-md) 0 var(--xp-space-md) var(--xp-space-md);
   box-sizing: border-box;
   flex: none;
 }
@@ -139,8 +157,8 @@
 
 .listMedia .photoCount {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
+  right: var(--xp-space-sm);
+  bottom: var(--xp-space-md);
   z-index: 2;
 }
 
@@ -149,7 +167,7 @@
   flex-direction: column;
   justify-content: space-between;
   flex: 1;
-  padding: 14px 20px;
+  padding: var(--xp-space-md);
   min-width: 0;
 }
 
@@ -178,23 +196,25 @@
 .badgeInstantBlue {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: #e0f2fe;
-  color: #0284c7;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 16px;
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
 }
 
 .badgeNewGreen {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: #dcfce7;
-  color: #16a34a;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 16px;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
 }
 
 .listPriceAndRating {
@@ -208,12 +228,12 @@
   align-items: center;
   gap: 4px;
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-secondary);
 }
 
 .starIcon {
-  color: #eab308;
+  color: var(--xp-color-star, #fec84b);
   font-size: 14px;
 }
 
@@ -233,11 +253,11 @@
   text-decoration: line-through;
 }
 
-/* Cùng thang với thẻ lưới: giá 16/24 SemiBold vàng, đơn vị 14 xám. */
+/* Figma List: giá 20/30 SemiBold vàng, đơn vị 14 xám. */
 .listCurrentPrice {
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: var(--xp-line-height-lead);
   color: var(--xp-color-primary);
 }
 
@@ -251,43 +271,40 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--xp-color-text-secondary);
-  font-size: 15px;
+  font-size: 18px;
   padding: 0;
-  transition: all 0.16s ease;
+  transition: color 0.16s ease, border-color 0.16s ease;
   z-index: 2;
 }
 
 .listFavoriteBtn:hover {
-  background: #ffffff;
-  color: #ef4444;
-  border-color: #ef4444;
-  transform: scale(1.08);
+  color: var(--xp-color-error);
+  border-color: var(--xp-color-error);
 }
 
 .listLocation {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--xp-space-sm);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-secondary);
   margin: 4px 0 0;
 }
 
 .listSpecsRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 8px 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+  margin: var(--xp-space-sm) 0;
   padding: 0;
-  flex-wrap: wrap;
   list-style: none;
 }
 
@@ -296,17 +313,17 @@
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 8px;
-  background: #fbfbfa;
-  border: 1px solid #f0f0ee;
+  border-radius: 12px;
+  background: var(--xp-color-bg);
+  transition: background 0.18s ease;
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-secondary);
 }
 
 .specBoxIcon {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--xp-color-primary-hover);
 }
 
@@ -314,8 +331,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  padding-top: 10px;
   margin-top: auto;
 }
 
@@ -338,7 +353,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
   text-decoration: none;
@@ -370,6 +385,7 @@
   .listMedia {
     width: 100%;
     height: 180px;
+    padding: var(--xp-space-md) var(--xp-space-md) 0;
   }
 }
 
@@ -385,10 +401,22 @@
   }
 
   .listMedia {
-    width: 128px;
-    min-width: 128px;
+    width: 152px;
+    min-width: 152px;
     height: auto;
     padding: var(--xp-space-sm);
+    align-self: center;
+  }
+
+  .listMedia .photoCount {
+    right: var(--xp-space-12);
+    bottom: var(--xp-space-12);
+  }
+
+  /* Ảnh luôn là chữ nhật NGANG 4:3, không giãn theo chiều cao thân thẻ. */
+  .listPhoto {
+    height: auto;
+    aspect-ratio: 4 / 3;
   }
 
   .listBody {
@@ -400,6 +428,36 @@
   .listMetrics,
   .listDetailBtn {
     display: none;
+  }
+  /* Thẻ hẹp: tên + giá xếp chồng, giá về thang thẻ lưới 16/24 để nút yêu thích không bị đẩy ra ngoài. */
+  .listTopRow {
+    flex-direction: column;
+    gap: var(--xp-space-xs);
+  }
+
+  .listTitle {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .listPriceAndRating {
+    width: 100%;
+    gap: var(--xp-space-sm);
+  }
+
+  .listPrice {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .listCurrentPrice {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .listFavoriteBtn {
+    flex: none;
   }
 }
 
@@ -574,7 +632,7 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   gap: var(--xp-space-sm);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .location img {
@@ -631,7 +689,7 @@
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
   gap: var(--xp-space-xs);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   white-space: nowrap;
 }
 
@@ -713,7 +771,7 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -738,7 +796,7 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   gap: var(--xp-space-xs);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .ratingCount {
@@ -758,13 +816,13 @@
 .oldPrice {
   color: var(--xp-color-text-disabled);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .currentPrice {
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   white-space: nowrap;
 }
 

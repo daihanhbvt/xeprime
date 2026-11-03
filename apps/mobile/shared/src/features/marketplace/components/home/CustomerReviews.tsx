@@ -120,7 +120,7 @@ function ReviewCard({
       <Svg width={20} height={20} viewBox="0 0 20 20">
         <Path d={QUOTE_PATH} fill={QUOTE_FILL} />
       </Svg>
-      <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={5}>
+      <Text col={colors.textMuted} fos={fontSize.body} lh={22} numberOfLines={5}>
         {review.comment}
       </Text>
       <XStack ai="center" gap={12} mt="auto">
@@ -138,11 +138,11 @@ function ReviewCard({
           </Text>
         </YStack>
         <YStack f={1} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={1}>
+          <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
             {review.customerName}
           </Text>
           {review.customerTripCount > 0 ? (
-            <Text col={colors.textMuted} fos={fontSize.body}>
+            <Text col={colors.textMuted} fos={fontSize.body} lh={22}>
               {t('rentedTimes', { count: review.customerTripCount })}
             </Text>
           ) : null}

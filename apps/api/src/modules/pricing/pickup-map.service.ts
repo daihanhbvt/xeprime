@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { API_ERROR_CODE } from '@xeprime/types';
-import { branchMapTarget } from '../../common/address-view';
+import { API_ERROR_CODE, customerSeesPickupAddress, hasVerifiedStorefront } from '@xeprime/types';
+import { approximatePoint, branchMapTarget, publicAreaLabel } from '../../common/address-view';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
+import {
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { GeoService } from '../geo/geo.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -23,14 +27,41 @@ export class PickupMapService {
 
   /** PNG của điểm nhận xe. 404 khi xe không trên chợ, chi nhánh chưa có điểm ghim, hoặc không vẽ được. */
   async forListing(vehicleId: string): Promise<Buffer> {
+    const now = new Date();
     const vehicle = await this.prisma.vehicle.findFirst({
       // Cùng cổng vào với báo giá công khai: chỉ xe ĐANG THẬT SỰ nằm ngoài chợ — không thì endpoint
       // này thành công cụ dò vị trí chi nhánh của những chiếc xe đã bị gỡ xuống.
       where: { id: vehicleId, ...marketplaceVehicleWhere() },
-      select: { branch: { select: { address: true, latitude: true, longitude: true } } },
+      select: {
+        tenant: { select: storefrontTenantSelect(now) },
+        branch: {
+          select: {
+            address: true,
+            latitude: true,
+            longitude: true,
+            province: { select: { name: true } },
+            ward: { select: { name: true } },
+          },
+        },
+      },
     });
+    /*
+     * Cùng cổng với trang xe (ADR 0077): gian hàng tuyến gói ghim đúng cửa với nhãn địa chỉ đủ; chủ
+     * xe tuyến hoa hồng chỉ được toạ độ xấp xỉ (~1km) và nhãn KHU VỰC — ảnh PNG mang nhãn là một
+     * kênh rò địa chỉ y như JSON.
+     */
     const target = branchMapTarget(vehicle?.branch);
-    const png = target ? await this.geo.staticMap(target.point, target.label) : null;
+    const exact =
+      vehicle != null &&
+      customerSeesPickupAddress({
+        engaged: false,
+        packageTrack: hasVerifiedStorefront(resolveStorefront(vehicle.tenant, now).billingMode),
+      });
+    const point = exact ? (target?.point ?? null) : approximatePoint(target?.point);
+    const label = exact
+      ? (target?.label ?? null)
+      : publicAreaLabel(vehicle?.branch?.ward?.name, vehicle?.branch?.province?.name);
+    const png = point && label ? await this.geo.staticMap(point, label) : null;
     if (!png) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,

@@ -1,6 +1,6 @@
 {
   "list": {
-    "heading": "Chuyến của tôi",
+    "heading": "Chuyến đi",
     "sub": "Quản lý hành trình và thông tin chuyến đi của bạn",
     "tabLabel": "{label} ({count})",
     "tabsLabel": "Nhóm chuyến đi",
@@ -62,7 +62,8 @@
     "agency": "Nhận tại đại lý",
     "driverPickup": "Xe đón tận nơi",
     "pickupPoint": "Điểm đón: {address}",
-    "destination": "Điểm đến: {address}"
+    "destination": "Điểm đến: {address}",
+    "exactAddressLater": "Địa chỉ chính xác hiển thị sau khi đặt xe thành công."
   },
   "detail": {
     "back": "Quay lại danh sách",
@@ -115,21 +116,28 @@
     }
   },
   "evidence": {
-    "title": "Biên bản bàn giao",
-    "lead": "Ảnh hiện trạng và chỉ số Odo gian hàng đã ghi nhận khi giao và khi nhận lại xe.",
+    "title": "Thông tin bàn giao",
     "empty": "Gian hàng chưa xác nhận biên bản bàn giao nào cho chuyến này.",
     "recordedAt": "Ghi nhận trên hệ thống",
     "odometer": "Chỉ số Odo",
     "odometerMissing": "Chưa ghi nhận chỉ số Odo",
     "condition": "Hiện trạng xe",
-    "noPhotos": "Gian hàng không lưu ảnh hiện trạng cho lần bàn giao này.",
     "photoAlt": "Ảnh hiện trạng: {slot}",
     "photoUnavailable": "Không mở được ảnh",
-    "uploadedAt": "Tải lên {time}",
     "addedLate": "Bổ sung sau khi xác nhận bàn giao",
     "addedLateHint": "Ảnh này được tải lên sau thời điểm gian hàng xác nhận bàn giao, nên không phải ảnh chụp tại thời điểm bàn giao.",
     "disclaimer": "Đây là biên bản do gian hàng ghi nhận. Nếu có khác biệt, hãy liên hệ trực tiếp với gian hàng.",
-    "errorTitle": "Không tải được biên bản bàn giao"
+    "errorTitle": "Không tải được biên bản bàn giao",
+    "tabs": {
+      "pickup": "Trước khi giao xe",
+      "return": "Sau khi nhận xe"
+    },
+    "leads": {
+      "pickup": "Hình ảnh được chủ xe chụp lại trước khi giao xe cho bạn!",
+      "return": "Hình ảnh được chủ xe chụp lại khi nhận lại xe từ bạn."
+    },
+    "occurredAt": "Thời điểm bàn giao",
+    "slotMissing": "Chủ xe không chụp góc này"
   },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",
@@ -407,7 +415,7 @@
   },
   "payment": {
     "back": "Chi tiết chuyến",
-    "backToTrips": "Chuyến của tôi",
+    "backToTrips": "Chuyến đi",
     "title": "Thanh toán giữ chỗ",
     "subtitle": "Chuyến thuê {vehicle}",
     "notFoundTitle": "Không tìm thấy chuyến",
@@ -466,7 +474,7 @@
     "limitBody": "Bạn chưa thể đặt thêm xe. Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc — thanh toán hoặc huỷ bớt một chuyến để tiếp tục đặt.",
     "limitBodyBooking": "Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc. Thanh toán hoặc huỷ bớt một chuyến bên dưới, rồi quay lại đặt xe này.",
     "limitTitleFallback": "Bạn đang có quá nhiều chuyến chờ thanh toán",
-    "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến của tôi, rồi quay lại đặt xe này.",
+    "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến đi, rồi quay lại đặt xe này.",
     "viewTrips": "Xem chuyến của tôi"
   },
   "requestView": {
@@ -560,7 +568,7 @@
     "vehicle": "Chi tiết xe",
     "request": "Gửi yêu cầu thuê xe",
     "account": "Tài khoản của tôi",
-    "trips": "Chuyến của tôi",
+    "trips": "Chuyến đi",
     "tripDetail": "Chi tiết chuyến"
   },
   "closed": {

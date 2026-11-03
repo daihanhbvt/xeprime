@@ -25,7 +25,7 @@
   width: min(100%, 360px);
   aspect-ratio: 85.6 / 54;
   overflow: hidden;
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-control);
 }
 
 .cardPicker {
@@ -116,6 +116,7 @@
 }
 
 .cardTitle {
+  color: var(--xp-color-primary);
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-sm);
 }

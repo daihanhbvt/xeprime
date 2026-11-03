@@ -43,7 +43,7 @@ const NAV = [
      */
     activeWhen: [ROUTES.SEARCH, '/listings', '/shops'],
   },
-  // Khách chưa đăng nhập tới đây vẫn được `AccountShell` mời đăng nhập ngay tại trang.
+  // Chỉ hiện khi đã đăng nhập (người dùng chốt 03/11/2026) — xem lọc ở `MarketHeader`.
   { key: 'trips', labelKey: 'tripsNav', href: ROUTES.TRIPS },
   // Đích thật là `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
   { key: 'about', labelKey: 'aboutXePrime', href: ROUTES.ABOUT },
@@ -98,7 +98,7 @@ export function MarketHeader() {
         </Link>
 
         <nav className={styles.nav} aria-label={t('mainNavLabel')}>
-          {NAV.map((item) => {
+          {NAV.filter((item) => item.key !== 'trips' || user).map((item) => {
             /*
              * Trước 23/09/2026 dòng này là `i === 0`, tức mục đầu luôn sáng vàng — ở trang điều
              * khoản sử dụng, thanh trên cùng vẫn khẳng định người dùng đang "Khám phá".

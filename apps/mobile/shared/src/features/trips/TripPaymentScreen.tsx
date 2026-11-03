@@ -246,7 +246,7 @@ function AwaitingHold({
 
         {/* Tab VietQR | Ví điện tử — tab ví chỉ có khi server mở ít nhất một cổng (ADR 0058). */}
         {walletAvailable ? (
-          <XStack p={4} gap={4} br={radius.control} bg={colors.surfaceMuted}>
+          <XStack p={4} gap={4} br={radius.card} bw={1} bc={colors.border} bg={colors.surfaceMuted}>
             {(['transfer', 'wallet'] as const).map((key) => {
               const active = tab === key;
               return (
@@ -258,17 +258,17 @@ function AwaitingHold({
                   accessibilityState={{ selected: active }}
                 >
                   <YStack
-                    minHeight={40}
+                    minHeight={36}
                     ai="center"
                     jc="center"
-                    br={radius.md}
+                    br={radius.control}
                     bg={active ? colors.surface : 'transparent'}
                     style={active ? elevation.xs : undefined}
                   >
                     <Text
-                      col={active ? colors.text : colors.textMuted}
+                      col={active ? colors.textMuted : colors.placeholder}
                       fos={fontSize.body}
-                      fow={active ? fontWeight.semibold : fontWeight.medium}
+                      fow={fontWeight.semibold}
                     >
                       {key === 'transfer' ? tCheckout('tabTransfer') : tCheckout('wallet.title')}
                     </Text>
@@ -387,7 +387,7 @@ function AwaitingHold({
                 {fmt.money(payAtPickup)}
               </Text>
             </XStack>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            <Text col={colors.placeholder} fos={fontSize.bodySm}>
               {t('summary.payOwnerNote')}
             </Text>
           </YStack>
@@ -398,7 +398,7 @@ function AwaitingHold({
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
             {underpaid ? t('summary.remainingLabel') : t('summary.amountLabel')}
           </Text>
-          <Text col={colors.primaryHover} fos={fontSize.lead} fow={fontWeight.semibold}>
+          <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
             {fmt.money(hold.remainingAmount)}
           </Text>
           <Countdown
@@ -413,10 +413,10 @@ function AwaitingHold({
         </YStack>
         {/* Hộp lưu ý nền vàng nhạt trong thẻ (Figma). Cùng khoá + thứ tự với web (`summary.notes.*`). */}
         <YStack gap={space.xs} p={12} br={radius.control} bg={colors.primarySubtle}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('summary.notes.auto')}
           </Text>
-          <Text col={colors.warning} fos={fontSize.bodySm}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {`• ${t('summary.notes.expires')}`}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>

@@ -11984,7 +11984,7 @@ export interface components {
              * @description Vị trí trên trang chủ
              * @enum {string}
              */
-            placement: "hero" | "promo";
+            placement: "hero" | "promo" | "partner";
             sortOrder: number;
             active: boolean;
             /** @description ISO-8601 UTC */
@@ -13431,7 +13431,7 @@ export interface components {
              * @default hero
              * @enum {string}
              */
-            placement: "hero" | "promo";
+            placement: "hero" | "promo" | "partner";
             /**
              * @description Tên nội bộ — không hiển thị công khai
              * @example Chiến dịch hè 2026
@@ -14388,6 +14388,7 @@ export interface components {
             destination?: string | null;
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
+            vehiclePickupPoint?: components["schemas"]["TripPickupPointDto"] | null;
             /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
             totalAmount?: string | null;
             canReview: boolean;
@@ -14495,6 +14496,8 @@ export interface components {
              * @enum {string|null}
              */
             condition?: "normal" | "attention" | null;
+            /** @description @xeprime/types → VehicleType */
+            vehicleType: string;
             photos: components["schemas"]["CustomerTripHandoverEvidencePhotoDto"][];
         };
         CustomerTripHandoverEvidencePhotoDto: {
@@ -14556,6 +14559,7 @@ export interface components {
             destination?: string | null;
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
+            vehiclePickupPoint?: components["schemas"]["TripPickupPointDto"] | null;
             /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
             totalAmount?: string | null;
             canReview: boolean;
@@ -14701,7 +14705,7 @@ export interface components {
             maxRadiusKm?: number | null;
             /** @description Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'. */
             fee?: string | null;
-            /** @description Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ. */
+            /** @description Điểm giao xe đi — chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ. */
             origin?: components["schemas"]["GeoPointDto"] | null;
             /** @description Địa chỉ khách nhập */
             destination?: components["schemas"]["GeoPointDto"] | null;
@@ -15546,6 +15550,8 @@ export interface components {
             vehicleId: string;
             vehicleName: string;
             plateNumber?: string | null;
+            /** @description @xeprime/types → VehicleType — quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải */
+            vehicleType: string;
             /** @description @xeprime/types → HandoverEnergyKind */
             energyKind: string;
             /** @description Giờ nhận xe theo đơn (ISO-8601 UTC) */
@@ -17274,7 +17280,7 @@ export interface components {
         PickupPointDto: {
             /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
             branchName?: string | null;
-            /** @description Địa chỉ nhận xe */
+            /** @description Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" — địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress). */
             address: string;
             /** @description Tỉnh/thành của điểm nhận */
             provinceName?: string | null;
@@ -17282,6 +17288,8 @@ export interface components {
             phone?: string | null;
             latitude?: number | null;
             longitude?: number | null;
+            /** @description true = toạ độ XẤP XỈ ~1km và address chỉ là khu vực (tuyến hoa hồng); false = chính xác (tuyến gói) */
+            isApproximate: boolean;
         };
         PlaceDetailDto: {
             placeId?: string | null;
@@ -17295,6 +17303,8 @@ export interface components {
             suggestedProvinceCode?: string | null;
             /** @description Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp — gợi ý điền sẵn ô nhập */
             suggestedAddressLine?: string | null;
+            /** @description Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) — chỉ để hỏi người dùng xác nhận, không tự lưu */
+            suggestedWardCode?: string | null;
         };
         PlaceDetailResultDto: {
             place?: components["schemas"]["PlaceDetailDto"] | null;
@@ -17303,6 +17313,8 @@ export interface components {
         };
         PlaceSearchResultDto: {
             items: components["schemas"]["PlaceSuggestionDto"][];
+            /** @description Số gợi ý đã bị LOẠI vì nhận ra là thuộc tỉnh khác tỉnh đã chọn (ADR 0077) */
+            outOfProvinceCount: number;
             /** @description Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi — giao diện rơi về nhập tay, KHÔNG hiện lỗi đỏ. */
             available: boolean;
         };
@@ -19268,11 +19280,19 @@ export interface components {
             id: string;
             name: string;
             provinceName?: string | null;
+            /** @description Địa chỉ đầy đủ của chi nhánh — CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077) */
+            address?: string | null;
             /** @description Số xe công khai đang ở chi nhánh */
             vehicleCount: number;
             /** @description Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá */
             ratingAvg?: string | null;
             ratingCount: number;
+        };
+        PublicShopBrandDto: {
+            /** @description Nhãn hiển thị của hãng (từ danh mục; hãng ngoài danh mục giữ nguyên giá trị đã lưu) */
+            label: string;
+            /** @description Logo hãng từ danh mục `vehicle_brand` — null khi hãng không có trong danh mục */
+            iconUrl?: string | null;
         };
         PublicShopDto: {
             name: string;
@@ -19343,6 +19363,10 @@ export interface components {
             completedTripCount: number;
             /** @description Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ */
             featuredVehicleImageUrl?: string | null;
+            /** @description Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng — dãy logo trên thẻ "Gian hàng nổi bật" */
+            brands: components["schemas"]["PublicShopBrandDto"][];
+            /** @description Tổng số hãng xe đang công khai — phần dư so với `brands` hiện "+N" */
+            brandCount: number;
         };
         PurchaseSubscriptionDto: {
             /** @description ID gói (ULID) */
@@ -19771,7 +19795,7 @@ export interface components {
              * @default hero
              * @enum {string}
              */
-            placement: "hero" | "promo";
+            placement: "hero" | "promo" | "partner";
             /** @description Toàn bộ id banner CỦA VỊ TRÍ ĐÓ theo thứ tự hiển thị mới */
             ids: string[];
         };
@@ -20968,6 +20992,17 @@ export interface components {
             level: "arranging" | "rearranging" | "urgent";
             /** @description true = khách huỷ ngay được hoàn 100% tiền giữ chỗ (lỗi phía cho thuê) */
             freeCancel: boolean;
+        };
+        TripPickupPointDto: {
+            branchName?: string | null;
+            /** @description "Phường/Xã, Tỉnh/TP" */
+            areaLabel?: string | null;
+            /** @description Địa chỉ đầy đủ — chỉ khi exact */
+            address?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            /** @description Đã được thấy địa chỉ chính xác chưa */
+            exact: boolean;
         };
         UnregisterPushDeviceDto: {
             /** @description Token cần tắt. Bỏ trống = mọi thiết bị của phiên này. */
@@ -51416,6 +51451,8 @@ export interface operations {
             query: {
                 /** @description Mã địa điểm lấy từ `GET /places/search` */
                 placeId: string;
+                /** @description Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó */
+                provinceCode?: string;
             };
             header?: never;
             path?: never;
@@ -51504,6 +51541,8 @@ export interface operations {
             query: {
                 /** @description Mã địa điểm lấy từ `GET /places/search` */
                 placeId: string;
+                /** @description Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó */
+                provinceCode?: string;
             };
             header?: never;
             path?: never;
@@ -51681,6 +51720,10 @@ export interface operations {
                 lat?: number;
                 /** @description Kinh độ đi kèm `lat` */
                 lng?: number;
+                /** @description Tỉnh người dùng ĐÃ CHỌN (ADR 0077): server nối tên tỉnh vào truy vấn, ưu tiên quanh tâm tỉnh và LOẠI gợi ý nhận ra được là thuộc tỉnh khác. */
+                provinceCode?: string;
+                /** @description Xã người dùng đã chọn — nối tên xã vào truy vấn. Cần đi kèm `provinceCode`. */
+                wardCode?: string;
             };
             header?: never;
             path?: never;
@@ -53898,7 +53941,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description hero = dải banner đầu trang · promo = banner khuyến mãi giữa trang */
-                placement?: "hero" | "promo";
+                placement?: "hero" | "promo" | "partner";
             };
             header?: never;
             path?: never;
@@ -76474,7 +76517,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description hero = dải banner đầu trang · promo = banner khuyến mãi giữa trang */
-                placement?: "hero" | "promo";
+                placement?: "hero" | "promo" | "partner";
             };
             header?: never;
             path?: never;

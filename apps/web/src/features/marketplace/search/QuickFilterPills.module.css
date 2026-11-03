@@ -1,22 +1,24 @@
 .container {
   display: flex;
   align-items: center;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-12);
   flex-wrap: wrap;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
+  gap: var(--xp-space-6);
+  min-height: 38px;
+  padding: var(--xp-space-sm) var(--xp-space-12);
   border-radius: 9999px;
   border: 1px solid var(--xp-color-border);
   background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-label);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.16s ease;
@@ -24,33 +26,33 @@
 }
 
 .pill:hover {
-  border-color: var(--xp-color-primary);
-  color: var(--xp-color-primary);
-  background: var(--xp-color-bg-container);
+  border-color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-secondary);
+  background: var(--xp-color-bg);
 }
 
 .pillActive {
   border-color: var(--xp-color-primary);
   background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-strong);
-  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .pillActive:hover {
-  border-color: var(--xp-color-primary-hover);
+  border-color: var(--xp-color-primary);
   background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary);
 }
 
 .pillIcon {
-  font-size: 14px;
+  font-size: 20px;
   color: var(--xp-color-text-tertiary);
   display: inline-flex;
   align-items: center;
 }
 
 .pillActive .pillIcon {
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
 }
 
 .pillArrow {
@@ -65,9 +67,10 @@
   gap: 8px;
   height: 36px;
   padding: 0 16px;
-  border-radius: 9999px;
-  border: 1px solid var(--xp-color-border-strong);
-  background: var(--xp-color-bg-container);
+  border-radius: 12px;
+  border: 1px solid var(--xp-color-text-tertiary);
+  background: var(--xp-color-bg-muted);
+  box-shadow: var(--xp-elevation-xs);
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-label);
   font-weight: var(--xp-font-weight-semibold);
@@ -107,47 +110,50 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--xp-space-sm);
   width: 100%;
-  padding: 8px 16px;
+  padding: 10px 14px;
   border: none;
   background: transparent;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-label);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
   text-align: left;
   cursor: pointer;
   transition: background 0.14s ease;
 }
 
 .menuItem:hover {
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-strong);
+  background: var(--xp-color-bg);
 }
 
 .menuItemActive {
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-strong);
-  font-weight: var(--xp-font-weight-semibold);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
 }
 
 .checkIcon {
   color: var(--xp-color-success);
-  font-size: 14px;
+  font-size: 20px;
 }
 
 .checkboxItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
+  gap: var(--xp-space-sm);
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: var(--xp-font-size-label);
-  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text-secondary);
   user-select: none;
   transition: background 0.14s ease;
 }
 
 .checkboxItem:hover {
-  background: var(--xp-color-primary-subtle);
+  background: var(--xp-color-bg);
 }
 
 .priceRangeInputs {
@@ -161,3 +167,21 @@
   flex: 1;
 }
 
+.filterIcon {
+  font-size: 20px;
+}
+
+/* Figma "_Filter Tab" bản MB: chữ 12/18, icon 16, đệm 6/8, khoảng cách 4. */
+@media (max-width: 640px) {
+  .pill {
+    gap: var(--xp-space-xs);
+    min-height: 32px;
+    padding: 6px var(--xp-space-sm);
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .pillIcon {
+    font-size: 16px;
+  }
+}

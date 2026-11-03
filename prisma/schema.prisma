@@ -1810,7 +1810,7 @@ model MarketplaceBanner {
   altText        String    @map("alt_text") @db.VarChar(255)
   /// Đường dẫn khi bấm vào — http(s) hoặc path nội bộ; NULL = banner không bấm được.
   linkUrl        String?   @map("link_url") @db.Text
-  /// @xeprime/types → BannerPlacement (hero | promo). Đặt lúc tạo, không đổi được: mỗi vị trí một
+  /// @xeprime/types → BannerPlacement (hero | promo | partner). Đặt lúc tạo, không đổi được: mỗi vị trí một
   /// bộ khổ ảnh. CHECK ở migration.
   placement      String    @default("hero") @db.VarChar(20)
   sortOrder      Int       @default(0) @map("sort_order")

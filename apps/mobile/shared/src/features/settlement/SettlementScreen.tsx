@@ -24,6 +24,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useBooking } from '@/features/bookings/hooks/use-bookings';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -125,6 +126,8 @@ function SettlementBody({
   const [refunding, setRefunding] = useState(false);
   const [takingDeposit, setTakingDeposit] = useState(false);
 
+  // Loại dịch vụ của đơn (đọc từ cache chi tiết đơn) — tấm phụ phí bỏ danh mục không ghi được (ADR 0075).
+  const serviceType = useBooking(bookingId).data?.serviceType ?? null;
   const addSurcharge = useAddSurcharge(bookingId);
   const voidSurcharge = useVoidSurcharge(bookingId);
 
@@ -382,6 +385,7 @@ function SettlementBody({
           /* Khoản ĐÃ ghi — tấm dùng để loại danh mục một-lần khỏi ô chọn. */
           recorded={settlement.surcharges}
           surchargeRules={settlement.surchargeRules}
+          serviceType={serviceType}
           loading={addSurcharge.isPending}
           onConfirm={(body) =>
             addSurcharge.mutate(body, {

@@ -15,6 +15,7 @@ export const LINE_ICON = [
   'calendar',
   'caret-up',
   'chevron-right',
+  'filter',
   'globe',
   'heart',
   'logout',

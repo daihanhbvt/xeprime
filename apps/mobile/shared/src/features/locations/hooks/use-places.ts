@@ -32,17 +32,20 @@ export function usePlaceSearch(
      * đầu tiên đã bật một giao dịch tính tiền cho thứ không ai hỏi.
      */
     except?: string;
+    /** Tỉnh/xã đã chọn (ADR 0077) — web `usePlaceSearch` cùng tham số. */
+    scope?: PlaceSearchScope | null;
   } = {},
 ) {
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const bias = options.biasPoint ?? null;
   const skipped = debounced === options.except?.trim();
+  const scope = options.scope?.provinceCode ? options.scope : null;
+  const scopeKey = scope ? `${scope.provinceCode}/${scope.wardCode ?? ''}` : '';
 
   const result = useQuery({
-    queryKey: queryKeys.places.search(debounced, bias),
-    queryFn: () => placesApi.search(debounced, bias),
-    enabled:
-      (options.enabled ?? true) && debounced.length >= PLACE_SEARCH_MIN_LENGTH && !skipped,
+    queryKey: queryKeys.places.search(debounced, bias, scopeKey),
+    queryFn: () => placesApi.search(debounced, bias, scope),
+    enabled: (options.enabled ?? true) && debounced.length >= PLACE_SEARCH_MIN_LENGTH && !skipped,
     // Gợi ý cũ 5 phút vẫn dùng được cho cùng một chuỗi — người dùng hay xoá rồi gõ lại.
     staleTime: 5 * 60_000,
     // Gợi ý hỏng thì hỏi lại cũng không giúp người đang gõ — họ đã gõ tiếp, và một 429 hỏi lại là
@@ -65,11 +68,19 @@ export function usePlaceSearch(
  * dựng thành query nghĩa là phải giữ một `selectedPlaceId` trong state chỉ để kích hoạt một lượt
  * tải, rồi phải nhớ xoá nó đi.
  */
-export function usePlaceDetail() {
-  return useMutation({ mutationFn: (placeId: string) => placesApi.detail(placeId) });
+export function usePlaceDetail(provinceCode?: string | null) {
+  return useMutation({ mutationFn: (placeId: string) => placesApi.detail(placeId, provinceCode) });
+}
+
+/** Tỉnh/xã đã chọn ở form địa chỉ — ràng buộc gợi ý (ADR 0077). */
+export interface PlaceSearchScope {
+  provinceCode: string;
+  wardCode?: string | null;
 }
 
 /** Toạ độ → địa chỉ chữ, để người dùng đọc lại "chỗ này là đâu" sau khi chọn một gợi ý. */
 export function useReverseGeocode() {
-  return useMutation({ mutationFn: (point: { lat: number; lng: number }) => placesApi.reverse(point) });
+  return useMutation({
+    mutationFn: (point: { lat: number; lng: number }) => placesApi.reverse(point),
+  });
 }

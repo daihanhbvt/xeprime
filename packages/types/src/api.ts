@@ -150,6 +150,10 @@ export const API_ERROR_CODE = {
    * `details` giữ nguyên dạng của `VALIDATION_FAILED` (`[{ field, constraints }]`).
    */
   MONEY_STEP_1000: 'MONEY_STEP_1000',
+  /** Mã xã gửi lên không thuộc tỉnh/thành đã chọn (ADR 0077). `details.field` = ô xã. */
+  WARD_NOT_IN_PROVINCE: 'WARD_NOT_IN_PROVINCE',
+  /** Địa chỉ của nơi ĐĂNG KÝ (chi nhánh) thiếu phường/xã — bắt buộc từ ADR 0077. */
+  WARD_REQUIRED: 'WARD_REQUIRED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   /** Khách đã dùng lượt chỉnh sửa đánh giá duy nhất (`reviews.edited_at` khác null). */

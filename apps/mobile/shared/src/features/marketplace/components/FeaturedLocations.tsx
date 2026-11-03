@@ -11,6 +11,7 @@ import Svg, {
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { images } from '@/assets';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { ExploreSearchParams } from '@/navigation/routes-base';
@@ -60,8 +61,16 @@ const WAVE_FRONT_ART = ['#E48D28', '#F0A53A', '#FFC74D', '#B76A18'] as const;
 function CityName({ name, width }: { name: string; width: number }) {
   const size = fontSize.h1;
   const height = Math.round(size * 1.3);
+  // Dấu chồng trên chữ HOA tiếng Việt (Ẵ, Ồ, Ế) nhô lên trên đỉnh chữ — khung SVG cắt mất nếu
+  // baseline đặt sát mép trên. Chừa thêm 30% cỡ chữ phía trên, rồi trừ lại bằng lề âm.
+  const accentPad = Math.round(size * 0.3);
   return (
-    <Svg width={width} height={height} accessibilityLabel={name}>
+    <Svg
+      width={width}
+      height={height + accentPad}
+      style={{ marginTop: -accentPad }}
+      accessibilityLabel={name}
+    >
       <Defs>
         <SvgGradient id="destCity" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor={CITY_NAME_ART[0]} />
@@ -70,7 +79,7 @@ function CityName({ name, width }: { name: string; width: number }) {
       </Defs>
       <SvgText
         x={width}
-        y={size}
+        y={size + accentPad}
         textAnchor="end"
         fontSize={size}
         fontFamily={FONT_FAMILY.bold}
@@ -160,7 +169,7 @@ export function FeaturedLocations({
   };
   const t = useTranslations('Home.destinations');
   const fmt = useAppFormat();
-  const { destinations } = useSearchExperience();
+  const { destinations, destinationsLoading } = useSearchExperience();
   const { width } = useWindowDimensions();
   const byCode = new Map((destinations ?? []).map((item) => [item.provinceCode, item]));
 
@@ -253,6 +262,16 @@ export function FeaturedLocations({
                           })}
                         </Text>
                       ) : null}
+                    </XStack>
+                  ) : destinationsLoading ? (
+                    // Giữ chỗ dòng số liệu khi danh mục tỉnh chưa về — chữ hiện ra không đẩy thẻ.
+                    <XStack w="100%" jc="space-between" gap={space.sm}>
+                      <YStack w="36%">
+                        <Skeleton height={14} />
+                      </YStack>
+                      <YStack w="30%">
+                        <Skeleton height={14} />
+                      </YStack>
                     </XStack>
                   ) : null}
                 </YStack>

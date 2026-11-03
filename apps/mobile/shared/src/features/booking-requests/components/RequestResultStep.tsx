@@ -102,7 +102,7 @@ export function RequestResultStep({
           <YStack gap={layout.block} pt={layout.section}>
             <YStack ai="center" gap={space.xs}>
               <StatusIcon icon="time" tone={STATUS_TONE.WARNING} />
-              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
+              <Text col={colors.text} fos={fontSize.h3} lh={28} fow={fontWeight.semibold} ta="center">
                 {unpaidHolds
                   ? tTrips('unpaid.limitTitle', { limit: unpaidHolds.limit })
                   : tTrips('unpaid.limitTitleFallback')}
@@ -152,7 +152,7 @@ export function RequestResultStep({
             <YStack ai="center" gap={layout.block}>
               <StatusIcon icon="alert" tone={STATUS_TONE.DANGER} />
               <YStack ai="center" gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
+                <Text col={colors.text} fos={fontSize.h3} lh={28} fow={fontWeight.semibold} ta="center">
                   {t(`blocked.${blocked}.title`)}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.body} ta="center">
@@ -184,7 +184,7 @@ export function RequestResultStep({
             <YStack ai="center" gap={layout.block}>
               <StatusIcon icon="alert" tone={STATUS_TONE.DANGER} />
               <YStack ai="center" gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
+                <Text col={colors.text} fos={fontSize.h3} lh={28} fow={fontWeight.semibold} ta="center">
                   {t('duplicate.title')}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.body} ta="center">
