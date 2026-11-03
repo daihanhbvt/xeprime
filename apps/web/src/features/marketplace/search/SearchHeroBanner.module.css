@@ -1,7 +1,7 @@
 .banner {
   position: relative;
   background: linear-gradient(135deg, #0e1014 0%, #1a1712 50%, #0e1014 100%);
-  padding: 32px 0 28px;
+  padding: var(--xp-space-lg) 0;
   overflow: hidden;
   box-shadow: inset 0 -1px 0 rgba(233, 172, 41, 0.2);
 }
@@ -40,9 +40,9 @@
 
 .title {
   color: #ffffff;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   margin: 0;
   white-space: nowrap;
 }
@@ -56,7 +56,7 @@
   border: 1px solid var(--xp-color-border);
   background: var(--xp-color-bg-container);
   border-radius: 9999px;
-  padding: 4px 6px 4px 16px;
+  padding: 4px 6px 4px var(--xp-space-12);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   flex: 1;
   max-width: 920px;
@@ -66,7 +66,7 @@
 .inputGroup {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--xp-space-12);
   flex: 1;
   min-width: 130px;
 }
@@ -104,7 +104,7 @@
 .divider {
   width: 1px;
   height: 24px;
-  background: var(--xp-color-border);
+  background: var(--xp-color-border-strong);
   margin: 0 10px;
   flex: none;
 }
@@ -166,4 +166,161 @@
 
 .calendarIcon {
   color: var(--xp-color-primary);
+}
+
+/* Nút lọc vuông + huy hiệu số bộ lọc — chỉ hiện ở điện thoại (xem khối ≤640px). */
+.mobileFilterBtn {
+  display: none;
+}
+
+/*
+ * Điện thoại — Figma MB "Search Results Header" (20043:57771): nền trắng, không tiêu đề.
+ * Một ô xám gộp: hàng 1 ô từ khoá (14/22), hàng 2 "loại xe | địa điểm | ngày giờ" (12/18 medium,
+ * vạch ngăn #d5d7da); cạnh đó là nút lọc vuông nền gray-100 viền gray-medium bo 12. Nút "Bộ lọc"
+ * của hàng viên lọc ẩn đi vì đã có nút vuông.
+ */
+@media (max-width: 640px) {
+  .banner {
+    background: var(--xp-color-bg-container);
+    box-shadow: var(--xp-elevation-xs);
+    padding: var(--xp-space-md) 0;
+  }
+
+  .banner::before {
+    display: none;
+  }
+
+  .inner {
+    gap: var(--xp-space-12);
+  }
+
+  .title {
+    display: none;
+  }
+
+  .topRow {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--xp-space-sm);
+  }
+
+  .searchBar {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: var(--xp-space-sm);
+    column-gap: 0;
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    border: none;
+    border-radius: 12px;
+    background: var(--xp-color-bg);
+    box-shadow: none;
+  }
+
+  .inputGroup {
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: var(--xp-space-6);
+  }
+
+  .searchIcon {
+    font-size: 16px;
+    color: var(--xp-color-primary);
+  }
+
+  .keywordInput {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+
+  .keywordInput::placeholder {
+    color: var(--xp-color-text-placeholder);
+  }
+
+  .inputGroup + .divider {
+    display: none;
+  }
+
+  .divider {
+    display: block;
+    height: 12px;
+    margin: 0 var(--xp-space-xs);
+    background: var(--xp-color-border-strong);
+  }
+
+  .vehicleTypeWrap,
+  .locationWrap,
+  .dateWrap {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: var(--xp-font-size-label);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-label);
+    color: var(--xp-color-text-secondary);
+  }
+
+  .dateWrap {
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .searchSubmitBtn {
+    display: none;
+  }
+
+  .mobileFilterBtn {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: var(--xp-space-sm);
+    border: 1px solid var(--xp-color-text-tertiary);
+    border-radius: 12px;
+    background: var(--xp-color-bg-muted);
+    box-shadow: var(--xp-elevation-xs);
+    color: var(--xp-color-text);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .mobileFilterBadge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9999px;
+    background: var(--xp-color-primary);
+    color: var(--xp-color-primary-contrast);
+    font-size: 11px;
+    font-weight: var(--xp-font-weight-bold);
+    line-height: 18px;
+    text-align: center;
+  }
+
+  /* Hai lớp để thắng `.filterBtn` của QuickFilterPills (thứ tự nạp hai file CSS không cố định). */
+  .pillsRow .pillsFilterBtn {
+    display: none;
+  }
+
+  /* Ba bộ chọn hàng 2 thành chữ phẳng trong ô xám, không viền/nền riêng. */
+  .searchBar .inlinePicker {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    font-size: var(--xp-font-size-label);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-label);
+    color: var(--xp-color-text-secondary);
+  }
 }

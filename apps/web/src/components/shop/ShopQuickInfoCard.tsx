@@ -102,7 +102,7 @@ export function ShopQuickInfoCard({
 
   if (variant === 'inline') {
     return (
-      <div className={cx(styles.card, styles.inlineCard, className)}>
+      <div className={cx(styles.card, styles.inlineCard, !shop.verified && styles.inlineCardOwner, className)}>
         <div className={styles.inlineMainRow}>
           <div className={styles.row}>
             <div className={styles.avatarWrap}>

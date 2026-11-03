@@ -5,8 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  HANDOVER_EXTERIOR_SLOTS,
-  HANDOVER_PHOTO_SLOT,
+  handoverPhotoSlotsFor,
   PERMISSION,
   type HandoverPhotoSlot,
   type HandoverType,
@@ -37,11 +36,6 @@ import {
 import type { Handover } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
 
-/** Bốn góc ngoại thất + đồng hồ Odo — thứ tự cố định để hai bên nhìn CÙNG một góc. */
-const SLOTS: readonly HandoverPhotoSlot[] = [
-  ...HANDOVER_EXTERIOR_SLOTS,
-  HANDOVER_PHOTO_SLOT.ODOMETER,
-];
 
 /** Ô 96×96: đủ để nhận ra góc chụp, và năm ô vẫn xuống hai hàng trên máy hẹp nhất. */
 const CELL = 96;
@@ -116,11 +110,17 @@ function describeError(error: unknown): string {
 export function HandoverPhotoGrid({
   bookingId,
   type,
+  vehicleType,
   handover,
   ensureHandover,
 }: {
   bookingId: string;
   type: HandoverType;
+  /**
+   * Loại xe của đơn — quyết bộ góc chụp (`handoverPhotoSlotsFor`): ô tô 5 góc, xe máy 3 góc
+   * (trước · sau · Odo). Thứ tự cố định để hai bên nhìn CÙNG một góc.
+   */
+  vehicleType: string;
   handover: Handover | null;
   /**
    * Tạo biên bản TRỄ, đúng lúc người dùng chọn tấm ảnh đầu tiên.
@@ -133,6 +133,7 @@ export function HandoverPhotoGrid({
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.handover.photos');
+  const SLOTS = handoverPhotoSlotsFor(vehicleType);
   const toast = useAppToast();
   const permissions = usePermissions();
 

@@ -123,7 +123,10 @@ export function BannerFormModal({
 }) {
   const placement = banner && isBannerPlacement(banner.placement) ? banner.placement : tabPlacement;
   const isPromo = placement === BANNER_PLACEMENT.PROMO;
-  // Mỗi vị trí một bộ khổ ảnh — banner khuyến mãi không có ô tablet (tablet hiện như máy tính).
+  const isPartner = placement === BANNER_PLACEMENT.PARTNER;
+  // Khổ ảnh chỉ là KHUYẾN NGHỊ ở banner khuyến mãi và ảnh nền dải đối tác; banner đầu trang thì chặn.
+  const advisorySizes = isPromo || isPartner;
+  // Mỗi vị trí một bộ khổ ảnh — cả ba vị trí đều có ô máy tính, tablet và mobile.
   const slots = bannerSlotsFor(placement);
   const t = useTranslations('AdminBanners');
   const tErrors = useTranslations('AdminBanners.form.errors');
@@ -170,27 +173,36 @@ export function BannerFormModal({
     [t],
   );
 
-  /** Một validator cho mỗi slot của vị trí — giữ nguyên tham chiếu giữa các lần render. */
+  /**
+   * Một validator cho mỗi slot của vị trí — giữ nguyên tham chiếu giữa các lần render. Banner
+   * KHUYẾN MÃI không chặn tỉ lệ: khổ chỉ là khuyến nghị theo thiết kế (người dùng chốt 03/11/2026).
+   */
   const validators = useMemo(
-    () => ({
-      desktop: bannerRatioValidator('desktop', slots.desktop, describeRatioIssue),
-      tablet: slots.tablet
-        ? bannerRatioValidator('tablet', slots.tablet, describeRatioIssue)
-        : undefined,
-      mobile: slots.mobile
-        ? bannerRatioValidator('mobile', slots.mobile, describeRatioIssue)
-        : undefined,
-    }),
-    [describeRatioIssue, slots],
+    () =>
+      advisorySizes
+        ? { desktop: undefined, tablet: undefined, mobile: undefined }
+        : {
+            desktop: bannerRatioValidator('desktop', slots.desktop, describeRatioIssue),
+            tablet: slots.tablet
+              ? bannerRatioValidator('tablet', slots.tablet, describeRatioIssue)
+              : undefined,
+            mobile: slots.mobile
+              ? bannerRatioValidator('mobile', slots.mobile, describeRatioIssue)
+              : undefined,
+          },
+    [describeRatioIssue, advisorySizes, slots],
   );
 
   const sizeHelp = (slot: BannerSlot) => {
     const size = slots[slot];
     return size
-      ? t('media.sizeHelp', {
-          size: formatBannerSize(size),
-          size2x: formatBannerSize(size, 2),
-        })
+      ? advisorySizes
+        ? // Banner khuyến mãi / dải đối tác: MỘT con số — đúng khổ của bản vẽ Figma.
+          t('media.sizeRecommended', { size: formatBannerSize(size) })
+        : t('media.sizeHelp', {
+            size: formatBannerSize(size),
+            size2x: formatBannerSize(size, 2),
+          })
       : null;
   };
 
@@ -223,7 +235,13 @@ export function BannerFormModal({
   return (
     <ResponsiveDialog
       title={
-        isEdit ? t('form.titleEdit') : isPromo ? t('form.titleCreatePromo') : t('form.titleCreate')
+        isEdit
+          ? t('form.titleEdit')
+          : isPromo
+            ? t('form.titleCreatePromo')
+            : isPartner
+              ? t('form.titleCreatePartner')
+              : t('form.titleCreate')
       }
       open={open}
       onClose={onClose}
@@ -247,7 +265,7 @@ export function BannerFormModal({
             <span className={styles.eyebrow}>
               {isEdit ? t('form.eyebrowEdit') : t('form.eyebrowCreate')}
             </span>
-            <p className={styles.introText}>{isPromo ? t('form.introPromo') : t('form.intro')}</p>
+            <p className={styles.introText}>{isPromo ? t('form.introPromo') : isPartner ? t('form.introPartner') : t('form.intro')}</p>
           </div>
           <span className={styles.responsiveBadge}>
             {t('form.sizesBadge', { count: Object.keys(slots).length })}
@@ -282,7 +300,11 @@ export function BannerFormModal({
                 {t('form.sections.media.title')}
               </h3>
               <p className={styles.sectionDescription}>
-                {isPromo ? t('form.mediaDescriptionPromo') : t('form.sections.media.description')}
+                {isPromo
+                  ? t('form.mediaDescriptionPromo')
+                  : isPartner
+                    ? t('form.mediaDescriptionPartner')
+                    : t('form.sections.media.description')}
               </p>
             </div>
           </div>
@@ -306,7 +328,11 @@ export function BannerFormModal({
                   <>
                     {sizeHelp('desktop')}
                     <span className={styles.helpNote}>
-                      {isPromo ? t('media.promoComposition') : t('media.desktopComposition')}
+                      {isPromo
+                        ? t('media.promoComposition')
+                        : isPartner
+                          ? t('media.partnerComposition')
+                          : t('media.desktopComposition')}
                     </span>
                   </>
                 }

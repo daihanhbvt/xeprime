@@ -155,14 +155,15 @@ export function CancelTripSheet({
             jc="center"
           >
             <Ionicons
-              name="alert-circle-outline"
+              name="warning-outline"
               size={FEATURED_ICON_GLYPH}
               color={colors.danger}
             />
           </YStack>
           <Text
             col={colors.text}
-            fos={fontSize.h4}
+            fos={fontSize.h3}
+            lh={28}
             fow={fontWeight.semibold}
             ta="center"
             accessibilityRole="header"

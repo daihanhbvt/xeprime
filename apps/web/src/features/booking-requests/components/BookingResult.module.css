@@ -74,7 +74,7 @@
   margin: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   text-align: left;
 }
 

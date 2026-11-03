@@ -21,6 +21,8 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 interface PlaceSearchResult {
   items: PlaceSuggestion[];
+  /** Số gợi ý server đã loại vì thuộc tỉnh khác tỉnh đã chọn (ADR 0077). */
+  outOfProvinceCount?: number;
   /** `false` = chưa cấu hình khoá bản đồ hoặc nhà cung cấp lỗi. Giao diện rơi về nhập tay. */
   available: boolean;
 }
@@ -28,6 +30,12 @@ interface PlaceSearchResult {
 interface PlaceDetailResult {
   place: PlaceDetail | null;
   available: boolean;
+}
+
+/** Tỉnh/xã đã chọn ở form địa chỉ — ràng buộc gợi ý (ADR 0077). */
+export interface PlaceSearchScope {
+  provinceCode: string;
+  wardCode?: string | null;
 }
 
 /**
@@ -52,20 +60,32 @@ export function usePlaceSearch(
     biasPoint?: { lat: number; lng: number } | null;
     enabled?: boolean;
     except?: string;
+    /**
+     * Tỉnh/xã người dùng ĐÃ CHỌN (ADR 0077): server nối tên vào truy vấn và loại gợi ý thuộc tỉnh
+     * khác. Không truyền ở luồng không có bộ chọn hành chính.
+     */
+    scope?: PlaceSearchScope | null;
   } = {},
 ) {
+  const scopeKey = options.scope?.provinceCode
+    ? `${options.scope.provinceCode}/${options.scope.wardCode ?? ''}`
+    : '';
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const bias = options.biasPoint ?? null;
   const longEnough = debounced.length >= PLACE_SEARCH_MIN_LENGTH;
   const skipped = debounced === options.except?.trim();
 
   const result = useQuery({
-    queryKey: queryKeys.places.search(debounced, bias),
+    queryKey: queryKeys.places.search(debounced, bias, scopeKey),
     queryFn: async (): Promise<PlaceSearchResult> => {
       const params = new URLSearchParams({ q: debounced });
       if (bias) {
         params.set('lat', String(bias.lat));
         params.set('lng', String(bias.lng));
+      }
+      if (options.scope?.provinceCode) {
+        params.set('provinceCode', options.scope.provinceCode);
+        if (options.scope.wardCode) params.set('wardCode', options.scope.wardCode);
       }
       const res = await apiRequest<PlaceSearchResult>(`/places/search?${params.toString()}`);
       return res.data;
@@ -101,11 +121,13 @@ export function placeMapSrc(placeId: string): string {
  * dựng nó thành query có nghĩa là phải giữ một `selectedPlaceId` trong state chỉ để kích hoạt
  * một lượt tải, rồi phải nhớ xoá nó đi.
  */
-export function usePlaceDetail() {
+export function usePlaceDetail(provinceCode?: string | null) {
   return useMutation({
     mutationFn: async (placeId: string): Promise<PlaceDetailResult> => {
+      // Có tỉnh đã chọn thì server gợi ý luôn mã xã khớp (`suggestedWardCode`, ADR 0077).
+      const province = provinceCode ? `&provinceCode=${encodeURIComponent(provinceCode)}` : '';
       const res = await apiRequest<PlaceDetailResult>(
-        `/places/detail?placeId=${encodeURIComponent(placeId)}`,
+        `/places/detail?placeId=${encodeURIComponent(placeId)}${province}`,
       );
       return res.data;
     },

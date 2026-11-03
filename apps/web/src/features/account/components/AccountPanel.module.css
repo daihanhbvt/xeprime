@@ -74,3 +74,17 @@
     flex: 1 1 100%;
   }
 }
+
+/* Màn điện thoại (Figma MB `21860:71823`): tiêu đề 14/22 SemiBold, phụ đề 12/18. */
+@media (max-width: 640px) {
+  .title,
+  .titleLg {
+    font-size: var(--xp-font-size-body);
+    line-height: 22px;
+  }
+
+  .subtitle {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}

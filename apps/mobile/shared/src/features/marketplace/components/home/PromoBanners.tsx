@@ -1,8 +1,10 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import type { PublicBanner } from '../../api';
@@ -10,13 +12,16 @@ import { HomeCarousel } from './HomeCarousel';
 import { webAssetUrl } from '@/lib/web-base-url';
 
 /**
- * Tỉ lệ khung của `PROMO_BANNER_SLOTS` bên web — ảnh mobile 680×400; banner không có ảnh mobile
- * thì hiện ảnh máy tính (1168×360) nguyên khung, như web dưới 640px.
+ * Thẻ CỐ ĐỊNH 340×140 (Figma MB `19771:51710`, token `promo-banner-mobile-*`), một thẻ mỗi lần, canh
+ * giữa — như web ≤640px. Ảnh `cover` vào khung, có ảnh mobile riêng hay không.
  */
-const MOBILE_RATIO = 680 / 400;
-const DESKTOP_RATIO = 1168 / 360;
-/** `.card` web: bo `border-radius-card`. */
-const CARD_RADIUS = toPx(XP_TOKENS['border-radius-card']);
+const PROMO_CARD = {
+  width: toPx(XP_TOKENS['promo-banner-mobile-width']),
+  height: toPx(XP_TOKENS['promo-banner-mobile-height']),
+};
+const PROMO_RATIO = PROMO_CARD.width / PROMO_CARD.height;
+/** `.card` web: bo `border-radius-banner` (20 — Figma `21965:5289`). */
+const CARD_RADIUS = toPx(XP_TOKENS['border-radius-banner']);
 
 /**
  * Banner KHUYẾN MÃI giữa trang chủ (\`placement = promo\`) — admin quản lý, chữ và giá nằm sẵn
@@ -32,16 +37,19 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
   const colors = useColors();
   const t = useTranslations('Home.promos');
   const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
+  const { width } = useWindowDimensions();
   const visible = banners.filter((banner) => !broken.has(banner.id));
   if (visible.length === 0) return null;
 
   return (
-    <HomeCarousel accessibilityLabel={t('label')}>
+    // MỘT banner mỗi lần (như web ≤640px): slide rộng trọn khung nội dung, thẻ 340×140 canh giữa —
+    // thẻ kế nằm ngoài màn, người dùng vuốt sang.
+    <HomeCarousel accessibilityLabel={t('label')} itemWidth={width - layout.screenX * 2}>
       {visible.map((banner) => (
+        <YStack key={banner.id} w="100%" ai="center">
         <YStack
-          key={banner.id}
-          w="100%"
-          aspectRatio={banner.mobileImageUrl ? MOBILE_RATIO : DESKTOP_RATIO}
+          w={PROMO_CARD.width}
+          h={PROMO_CARD.height}
           br={CARD_RADIUS}
           ov="hidden"
           bg={colors.surfaceMuted}
@@ -56,6 +64,7 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
             onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
           />
         </YStack>
+        </YStack>
       ))}
     </HomeCarousel>
   );
@@ -67,8 +76,10 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
  */
 export function PromoBannersSkeleton() {
   return (
-    <YStack w="100%" br={CARD_RADIUS} ov="hidden">
-      <Skeleton aspectRatio={MOBILE_RATIO} />
+    <YStack w="100%" ai="center">
+      <YStack w={PROMO_CARD.width} br={CARD_RADIUS} ov="hidden">
+        <Skeleton aspectRatio={PROMO_RATIO} />
+      </YStack>
     </YStack>
   );
 }

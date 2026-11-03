@@ -1,55 +1,92 @@
-/* "Tại sao lại chọn XePrime" — Figma `19695:40724` (ADR 0062). */
+/*
+ * "Lý do nên chọn XePrime" — Figma "Homepage - Updated" › Solutions Section (`21965:5232`, ADR 0062).
+ * Desktop: cột nội dung 628px | ảnh 532×488, cách 40, đệm trên/dưới 40.
+ * Mobile: bản vẽ MB (`19879:67457`) — tiêu đề canh giữa, lưới 2 × 2 canh giữa; mô tả + ảnh xếp dọc
+ * để đủ thông tin như desktop.
+ */
 .section {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
+  padding-block: var(--xp-space-40);
   gap: var(--xp-space-40);
 }
 
-/* Bốn cột chia đều, ngăn bằng vạch đứng #FAFAFA, đáy có đường kẻ cùng màu và đệm 40px. */
+.content {
+  display: flex;
+  min-width: 0;
+  max-width: 628px;
+  flex: 1 1 628px;
+  flex-direction: column;
+  gap: var(--xp-space-40);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+}
+
+/* Figma "Solution Titles" rộng 546px — tiêu đề xuống dòng đúng chỗ của bản vẽ. */
+.heading {
+  max-width: 546px;
+}
+
+.accent {
+  color: var(--xp-color-primary);
+}
+
+.description {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.lead,
+.closing {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.lead {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.closing {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Lưới 2 × 2, hàng/cột cách 20. */
 .list {
   display: grid;
-  width: 100%;
-  padding: 0 0 var(--xp-space-40);
-  border-bottom: 1px solid var(--xp-color-bg);
+  padding: 0;
   margin: 0;
-  gap: var(--xp-space-lg);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--xp-space-20);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   list-style: none;
 }
 
 .item {
-  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--xp-space-lg);
-  text-align: center;
-}
-
-/* Vạch ngăn nằm giữa hai cột (gap 24 = 12 mỗi bên) — chỉ giữa các cột, không ở mép ngoài. */
-.item + .item::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(-1 * var(--xp-space-12));
-  width: 1px;
-  background: var(--xp-color-bg);
-  content: '';
+  align-items: flex-start;
+  gap: var(--xp-space-12);
 }
 
 .iconWrap {
   display: inline-flex;
-  padding: var(--xp-space-md);
+  flex: none;
+  padding: var(--xp-space-12);
   border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-primary-subtle);
 }
 
-/* Ô icon 48px — nét vẽ đặt nguyên cỡ ở giữa. */
+/* Ô icon 32px — nét vẽ đặt nguyên cỡ ở giữa. */
 .iconBox {
   display: inline-flex;
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   align-items: center;
   justify-content: center;
 }
@@ -60,58 +97,142 @@
 
 .copy {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-6);
+  gap: var(--xp-space-2);
 }
 
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
+  font-size: var(--xp-font-size-h4);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
+  line-height: var(--xp-line-height-h4);
 }
 
 .desc {
   margin: 0;
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+/*
+ * Ảnh 532×488 bo 20; góc dưới-trái của ảnh là khoảng trong suốt (Figma "Union") — ô số nằm DƯỚI
+ * ảnh, lộ ra qua khoảng đó. Vị trí/cỡ theo % để ô số theo ảnh khi khung co lại.
+ */
+.media {
+  position: relative;
+  width: 532px;
+  max-width: 100%;
+  flex: none;
+  aspect-ratio: 532 / 488;
+}
+
+.image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.stat {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  box-sizing: border-box;
+  width: calc(173 / 532 * 100%);
+  height: calc(124 / 488 * 100%);
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--xp-space-20);
+  background: url('/home/why-stat-bg.png') center / cover no-repeat;
+  border-radius: var(--xp-border-radius-banner);
+}
+
+.statValue {
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-display);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: var(--xp-letter-spacing-display);
+  line-height: var(--xp-line-height-display);
+}
+
+.statLabel {
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
   font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body-lg);
 }
 
+/* Tablet: ảnh xuống dưới nội dung, canh giữa. */
 @media (max-width: 1024px) {
-  .list {
-    gap: var(--xp-space-xl) var(--xp-space-lg);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .section {
+    flex-direction: column;
+    align-items: center;
   }
 
-  /* Hai cột: vạch ngăn chỉ còn ở cột phải của mỗi hàng. */
-  .item + .item::before {
-    display: none;
+  .content {
+    max-width: none;
+    flex: none;
+    align-self: stretch;
   }
 
-  .item:nth-child(even)::before {
-    display: block;
+  .heading {
+    max-width: none;
   }
 }
 
+/* Mobile — Figma MB `19879:67457`: mọi thứ canh giữa, thẻ cam kết icon trên chữ, icon 30, cách 16. */
 @media (max-width: 640px) {
+  .section {
+    padding-block: var(--xp-space-xl);
+    gap: var(--xp-space-xl);
+  }
+
+  .content {
+    gap: var(--xp-space-28);
+  }
+
+  .intro {
+    text-align: center;
+  }
+
   .list {
-    gap: var(--xp-space-lg) var(--xp-space-md);
+    gap: var(--xp-space-md);
   }
 
-  .iconWrap {
-    padding: var(--xp-space-12);
+  .item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 
-  /* Thu cả ô lẫn nét theo cùng tỉ lệ — không giãn riêng từng chiều. */
   .iconBox {
-    transform: scale(0.75);
-    margin: -6px;
+    width: 30px;
+    height: 30px;
   }
 
-  .desc {
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
+  .iconBox img {
+    transform: scale(0.9375);
+  }
+
+  .statValue {
+    font-size: var(--xp-font-size-h1);
+    letter-spacing: normal;
+    line-height: var(--xp-line-height-h1);
+  }
+
+  .statLabel {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+
+  .stat {
+    padding: var(--xp-space-12);
   }
 }

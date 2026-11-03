@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HANDOVER_CONDITION, HANDOVER_PHOTO_SLOT, HANDOVER_TYPE } from '@xeprime/types';
+import { HANDOVER_CONDITION, HANDOVER_PHOTO_SLOT, HANDOVER_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import type { CustomerTripHandoverEvidence } from '../types';
@@ -49,6 +49,7 @@ const PICKUP: CustomerTripHandoverEvidence = {
   odometerKm: 45230,
   odometerMissing: false,
   condition: HANDOVER_CONDITION.NORMAL,
+  vehicleType: VEHICLE_TYPE.CAR,
   photos: [
     {
       slot: HANDOVER_PHOTO_SLOT.FRONT,

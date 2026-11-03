@@ -419,9 +419,15 @@
     line-height: var(--xp-line-height-body-lg);
   }
 
-  .fact,
-  .plate {
+  /* Figma MB `21860:76251`: biển số + dữ kiện 14/22 Medium; mã chuyến 12/18 nghiêng. */
+  .fact {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+
+  .code {
     font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
   }
 
   .money {

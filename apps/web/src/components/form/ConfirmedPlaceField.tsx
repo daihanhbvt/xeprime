@@ -18,6 +18,7 @@ import {
   placeMapSrc,
   usePlaceDetail,
   usePlaceSearch,
+  type PlaceSearchScope,
 } from '@/features/locations/hooks/use-places';
 import type { PlaceDetail } from '@/features/locations/types';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
@@ -63,6 +64,17 @@ export interface ConfirmedPlaceFieldProps<T extends FieldValues> {
    * nước và chẳng giúp được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
    */
   searchEnabled?: boolean;
+  /**
+   * Tỉnh/xã người dùng đã chọn ở bộ chọn phía trên (ADR 0077): gợi ý bị ràng buộc theo vùng đó và
+   * server gợi ý mã xã khớp. Luồng khách (không có bộ chọn hành chính) không truyền.
+   */
+  scope?: PlaceSearchScope | null;
+  /**
+   * Chỉ lưu phần "số nhà, đường" (dòng đậm của gợi ý) — dùng khi xã + tỉnh đã có bộ chọn riêng và
+   * server ghép chuỗi hiển thị từ danh mục (ADR 0077). Không bật thì lưu cả dòng gợi ý, như ô địa
+   * chỉ giao xe của khách — nơi không có bộ chọn nào khác mang phần hành chính.
+   */
+  lineOnly?: boolean;
   /** Lần dựng này đến từ một cú đổi NGỮ CẢNH (đổi tỉnh) — dọn cả toạ độ lẫn chữ. */
   clearOnMount?: boolean;
   required?: boolean;
@@ -125,6 +137,8 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   placeholder,
   anchor = null,
   searchEnabled = true,
+  scope = null,
+  lineOnly = false,
   clearOnMount = false,
   required,
   disabled,
@@ -257,8 +271,9 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      */
     enabled: !disabled && searchEnabled && !resolving,
     except: confirmedLine,
+    scope,
   });
-  const placeDetail = usePlaceDetail();
+  const placeDetail = usePlaceDetail(scope?.provinceCode);
 
   /**
    * Gợi ý địa chỉ có đang dùng được không.
@@ -312,7 +327,9 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      */
     const picked = suggestions.data?.items.find((s) => s.placeId === id);
     const pickedText = picked
-      ? [picked.primaryText, picked.secondaryText].filter(Boolean).join(', ')
+      ? lineOnly
+        ? picked.primaryText
+        : [picked.primaryText, picked.secondaryText].filter(Boolean).join(', ')
       : '';
     if (pickedText) setLine(pickedText);
 
@@ -360,7 +377,11 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     );
     // Chốt ĐÚNG dòng người dùng đã bấm. `formattedAddress` do server suy lại có thể viết khác đi
     // một chút, nên nó chỉ là bản dự phòng khi dòng gợi ý không còn trong danh sách.
-    confirm(pickedText || (place.formattedAddress ?? ''), LOCATION_SOURCE.GOOGLE_PLACE);
+    const fallbackLine = lineOnly
+      ? (place.suggestedAddressLine ?? place.formattedAddress ?? '')
+      : (place.formattedAddress ?? '');
+    if (!pickedText && fallbackLine) setLine(fallbackLine);
+    confirm(pickedText || fallbackLine, LOCATION_SOURCE.GOOGLE_PLACE);
     onPlaceResolved?.(place);
   };
 

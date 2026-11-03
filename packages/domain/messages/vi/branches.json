@@ -82,6 +82,9 @@
     "nameMin": "Tối thiểu 2 ký tự",
     "provinceRequired": "Chọn tỉnh/thành của chi nhánh",
     "provinceInvalid": "Mã tỉnh không hợp lệ",
-    "phoneInvalid": "Số điện thoại không hợp lệ"
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "wardRequired": "Chọn phường/xã",
+    "wardInvalid": "Xã/phường không hợp lệ",
+    "addressLineRequired": "Nhập số nhà, tên đường"
   }
 }

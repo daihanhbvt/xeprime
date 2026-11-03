@@ -105,7 +105,7 @@ export class AddressService {
     const wardCode = input.wardCode?.trim() || null;
     if (!wardCode && options.requireWard) {
       throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
+        code: API_ERROR_CODE.WARD_REQUIRED,
         message: 'Chọn xã/phường/đặc khu',
         details: { field: options.field ?? 'wardCode' },
       });
@@ -119,7 +119,20 @@ export class AddressService {
       formatAddress({ addressLine, wardName: ward?.name, provinceName: province.name }) ??
       province.name;
 
-    const hasClientPin = input.latitude != null && input.longitude != null;
+    const pinInProvince =
+      input.latitude != null && input.longitude != null
+        ? await this.pinMatchesProvince(
+            { lat: input.latitude, lng: input.longitude },
+            province.code,
+            requireSelectable && !options.skipGeocode,
+          )
+        : false;
+    /*
+     * Ghim nằm ở TỈNH KHÁC (ADR 0077): bỏ ghim, giữ nguyên tỉnh/xã người dùng chọn và gắn cờ cần
+     * kiểm lại. Không chặn lưu — dữ liệu bản đồ còn tên đơn vị cũ, chặn cứng sẽ chặn nhầm.
+     */
+    const hasClientPin = pinInProvince;
+    const pinDropped = input.latitude != null && input.longitude != null && !pinInProvince;
     const geocoded =
       hasClientPin || options.skipGeocode
         ? null
@@ -132,12 +145,28 @@ export class AddressService {
       wardName: ward?.name ?? null,
       addressLine,
       displayAddress,
-      placeId: input.placeId?.trim() || null,
+      placeId: hasClientPin ? input.placeId?.trim() || null : null,
       latitude: hasClientPin ? input.latitude! : (geocoded?.lat ?? null),
       longitude: hasClientPin ? input.longitude! : (geocoded?.lng ?? null),
       locationSource: resolveSource(input.locationSource, hasClientPin, Boolean(geocoded)),
-      needsReview: !ward,
+      needsReview: !ward || pinDropped,
     };
+  }
+
+  /**
+   * Ghim có nằm trong tỉnh đã chọn không. Chỉ kiểm cho địa chỉ ĐĂNG KÝ (chi nhánh, gian hàng) —
+   * địa chỉ khách khai không tốn thêm một lượt tra ngược. Bản đồ không trả lời hoặc không quy
+   * được tên tỉnh ⇒ coi là khớp: thiếu bằng chứng không phải bằng chứng sai.
+   */
+  private async pinMatchesProvince(
+    point: { lat: number; lng: number },
+    provinceCode: string,
+    verify: boolean,
+  ): Promise<boolean> {
+    if (!verify || !this.geo.enabled) return true;
+    const resolved = await this.geo.reverseGeocode(point);
+    const code = await this.provinces.resolveCode(resolved?.administrativeArea ?? null);
+    return !code || code === provinceCode;
   }
 
   /**

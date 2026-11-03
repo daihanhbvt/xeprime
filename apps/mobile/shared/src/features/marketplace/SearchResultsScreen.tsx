@@ -648,7 +648,7 @@ function Empty({
 
 /**
  * Cặp nút "Dạng thẻ · Dạng danh sách" bên phải ô Sắp xếp — `.viewModeGroup` web: khung viền
- * `border`, bo 8, đệm 2; nút đang chọn nền vàng nhạt, icon `primary-strong`.
+ * `border`, nền gray-50, bo 12, đệm 2; nút đang chọn cao 40 nền trắng viền `border-strong` (Figma List).
  */
 function ViewModeToggle({
   value,
@@ -667,10 +667,11 @@ function ViewModeToggle({
     <XStack
       p={2}
       gap={2}
-      br={8}
+      ai="center"
+      br={radius.control}
       bw={1}
       bc={colors.border}
-      bg={colors.surface}
+      bg={colors.background}
       accessibilityRole="radiogroup"
       accessibilityLabel={t('viewMode')}
     >
@@ -686,17 +687,19 @@ function ViewModeToggle({
             hitSlop={space.xs}
           >
             <YStack
-              w={36}
-              h={36}
+              w={40}
+              h={active ? 40 : 32}
               ai="center"
               jc="center"
-              br={6}
-              bg={active ? colors.primarySubtle : 'transparent'}
+              br={radius.control}
+              bw={1}
+              bc={active ? colors.borderInput : 'transparent'}
+              bg={active ? colors.surface : 'transparent'}
             >
               <Ionicons
                 name={option.icon}
-                size={iconSize.sm}
-                color={active ? colors.primaryStrong : colors.textMuted}
+                size={24}
+                color={active ? colors.text : colors.textMuted}
               />
             </YStack>
           </Pressable>

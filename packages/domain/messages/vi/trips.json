@@ -62,7 +62,8 @@
     "agency": "Nhận tại đại lý",
     "driverPickup": "Xe đón tận nơi",
     "pickupPoint": "Điểm đón: {address}",
-    "destination": "Điểm đến: {address}"
+    "destination": "Điểm đến: {address}",
+    "exactAddressLater": "Địa chỉ chính xác hiển thị sau khi đặt xe thành công."
   },
   "detail": {
     "back": "Quay lại danh sách",
@@ -115,21 +116,28 @@
     }
   },
   "evidence": {
-    "title": "Biên bản bàn giao",
-    "lead": "Ảnh hiện trạng và chỉ số Odo gian hàng đã ghi nhận khi giao và khi nhận lại xe.",
+    "title": "Thông tin bàn giao",
     "empty": "Gian hàng chưa xác nhận biên bản bàn giao nào cho chuyến này.",
     "recordedAt": "Ghi nhận trên hệ thống",
     "odometer": "Chỉ số Odo",
     "odometerMissing": "Chưa ghi nhận chỉ số Odo",
     "condition": "Hiện trạng xe",
-    "noPhotos": "Gian hàng không lưu ảnh hiện trạng cho lần bàn giao này.",
     "photoAlt": "Ảnh hiện trạng: {slot}",
     "photoUnavailable": "Không mở được ảnh",
-    "uploadedAt": "Tải lên {time}",
     "addedLate": "Bổ sung sau khi xác nhận bàn giao",
     "addedLateHint": "Ảnh này được tải lên sau thời điểm gian hàng xác nhận bàn giao, nên không phải ảnh chụp tại thời điểm bàn giao.",
     "disclaimer": "Đây là biên bản do gian hàng ghi nhận. Nếu có khác biệt, hãy liên hệ trực tiếp với gian hàng.",
-    "errorTitle": "Không tải được biên bản bàn giao"
+    "errorTitle": "Không tải được biên bản bàn giao",
+    "tabs": {
+      "pickup": "Trước khi giao xe",
+      "return": "Sau khi nhận xe"
+    },
+    "leads": {
+      "pickup": "Hình ảnh được chủ xe chụp lại trước khi giao xe cho bạn!",
+      "return": "Hình ảnh được chủ xe chụp lại khi nhận lại xe từ bạn."
+    },
+    "occurredAt": "Thời điểm bàn giao",
+    "slotMissing": "Chủ xe không chụp góc này"
   },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",

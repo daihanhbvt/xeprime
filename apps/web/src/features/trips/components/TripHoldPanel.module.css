@@ -25,8 +25,10 @@
   display: flex;
   align-items: center;
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: 13px;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 /*
@@ -61,7 +63,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--xp-space-sm);
-  font-size: 13px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-secondary);
 }
 
@@ -73,9 +76,11 @@
 
 /* Phần trả tay chủ xe — số khách sẽ cần chuẩn bị SAU, nổi hơn dòng tổng ở trên nó. */
 .summaryHighlight {
-  color: var(--xp-color-text);
-  font-size: 15px;
-  font-weight: var(--xp-font-weight-bold);
+  /* Figma: khoản trả chủ xe tô xanh success. */
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 /* Nút sang trang thanh toán — Link bọc nút `block`, nên chính Link cũng phải trải hết bề ngang. */
@@ -93,8 +98,9 @@
   gap: 6px;
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
-  line-height: var(--xp-line-height);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+
   color: var(--xp-color-text-secondary);
 }
 

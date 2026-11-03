@@ -67,6 +67,12 @@
   line-height: 22px;
 }
 
+.address {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
 .rating {
   display: inline-flex;
   flex: none;

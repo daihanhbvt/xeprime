@@ -119,8 +119,8 @@
   display: flex;
   align-items: center;
   border: 1px solid var(--xp-color-border);
-  border-radius: 8px;
-  background: var(--xp-color-bg-container);
+  border-radius: 12px;
+  background: var(--xp-color-bg);
   overflow: hidden;
   padding: 2px;
   gap: 2px;
@@ -130,15 +130,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 30px;
-  border: none;
-  border-radius: 6px;
+  width: 40px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   background: transparent;
   color: var(--xp-color-text-tertiary);
   cursor: pointer;
-  font-size: 15px;
-  transition: all 0.16s ease;
+  font-size: 24px;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 
 .viewModeBtn:hover {
@@ -147,9 +147,10 @@
 }
 
 .viewModeActive {
-  background: #fdf6ec;
-  color: var(--xp-color-primary-strong);
-  font-weight: 600;
+  height: 40px;
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
 }
 
 .toolbarLeft {
@@ -227,6 +228,7 @@
 .sortLabel {
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 /* Ô sắp xếp có viền, bo 12, cao 40 — cùng khuôn ô nhập của bộ lọc. */
@@ -234,32 +236,40 @@
   width: 176px;
 }
 
+/* Figma: viền border-strong, bo 12, chữ 16/24. */
+.sortSelect :global(.ant-select-selector) {
+  border-color: var(--xp-color-border-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--xp-elevation-xs);
+  font-size: var(--xp-font-size-body-lg);
+}
+
 /* Chip filter đang áp dụng — viền vàng, gỡ từng cái (Figma: Sedan ⊗ 5 chỗ ⊗ …). */
 .appliedRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--xp-space-12);
 }
 
 .appliedChip {
   display: inline-flex;
   align-items: center;
   padding: 2px 4px 2px 10px;
-  border: 1px solid var(--xp-color-primary-bright, var(--xp-color-primary));
+  border: 1px solid var(--xp-color-primary-bright);
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-selected);
+  background: var(--xp-color-primary-light);
   color: var(--xp-color-primary-hover);
   cursor: pointer;
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body);
+  line-height: 20px;
   gap: 2px;
 }
 
 .appliedX {
   padding: 2px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .clearAll {
@@ -269,6 +279,7 @@
   cursor: pointer;
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 /* Lưới kết quả — minmax(0,…) để tên xe dài không phá đều cột (bài học Remediation A). */
@@ -319,21 +330,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 16px 32px;
+  padding: var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border);
   text-align: center;
-  gap: 8px;
+  gap: var(--xp-space-sm);
 }
 
 .endTitle {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text);
   margin: 0;
 }
 
 .endSubtitle {
-  font-size: 14px;
-  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text-tertiary);
   margin: 0;
 }
 
@@ -371,8 +385,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 64px 16px 72px;
-  gap: 10px;
+  padding: var(--xp-space-lg);
+  gap: var(--xp-space-sm);
   text-align: center;
 }
 
@@ -388,19 +402,30 @@
   place-items: center;
 }
 
+/* Hộp rỗng của Figma: khung 160, hình nằm trong theo đúng lề của bản vẽ. */
+.stateArt {
+  display: block;
+  width: 160px;
+  height: 160px;
+  padding: 19px 27px 18px 25px;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
 .stateTitle {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
-  font-weight: var(--xp-font-weight-bold, 700);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .stateDesc {
   max-width: 440px;
-  margin: 0 0 8px;
-  color: var(--xp-color-text-secondary);
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .stateLink {

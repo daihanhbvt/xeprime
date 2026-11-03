@@ -907,7 +907,9 @@ function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
         trip.pickupAddress ? t('pickupPoint', { address: trip.pickupAddress }) : null,
         trip.destination ? t('destination', { address: trip.destination }) : null,
       ]
-    : [trip.deliveryRequested ? trip.deliveryAddress : null];
+    : trip.deliveryRequested
+      ? [trip.deliveryAddress]
+      : agencyPickupLines(trip.vehiclePickupPoint, t('exactAddressLater'));
 
   return (
     <XStack ai="flex-start" gap={space.xs} pt={space.xs}>
@@ -932,6 +934,20 @@ function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
       </YStack>
     </XStack>
   );
+}
+
+/**
+ * Tự đến nhận xe: địa chỉ chi nhánh — CHÍNH XÁC chỉ khi chuyến đã có đơn
+ * (`customerSeesPickupAddress`, ADR 0077), trước đó là khu vực + lời giải thích. Cùng luật web.
+ */
+function agencyPickupLines(
+  point: CustomerTripDetail['vehiclePickupPoint'],
+  laterNote: string,
+): (string | null)[] {
+  if (!point) return [];
+  const where = point.exact ? point.address : point.areaLabel;
+  const line = [point.branchName, where].filter(Boolean).join(LIST_SEPARATOR);
+  return point.exact ? [line] : [line, laterNote];
 }
 
 /**

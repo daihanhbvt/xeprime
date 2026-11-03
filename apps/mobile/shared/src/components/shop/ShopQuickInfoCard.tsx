@@ -312,7 +312,8 @@ function InlineShopCard({
         p={space.md}
         gap={space.md}
         bw={1}
-        bc={scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
+        // Figma "Owner Section": gian hàng viền vàng, chủ xe cá nhân viền xám.
+        bc={!shop.verified ? colors.border : scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
         br={radius.card}
         bg={colors.surface}
       >
@@ -340,7 +341,7 @@ function InlineShopCard({
             {rating != null ? (
               <XStack ai="center" gap={space.xs}>
                 <Ionicons name="star" size={20} color={market.star} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.regular}>
                   {fmt.rating(rating)}
                   {shop.ratingCount ? (
                     <Text col={colors.placeholder} fow={fontWeight.regular}>
@@ -356,7 +357,7 @@ function InlineShopCard({
               <XStack ai="center" gap={space.sm}>
                 {/* Web `TripsIcon`: biểu đồ cột viền xanh `success`. */}
                 <Ionicons name="stats-chart-outline" size={18} color={colors.success} />
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.text} fos={fontSize.body}>
                   {t('card.trips', { count: trips.display, plus: trips.approximate ? '+' : '' })}
                 </Text>
               </XStack>

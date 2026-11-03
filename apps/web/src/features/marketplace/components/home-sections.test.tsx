@@ -44,6 +44,8 @@ function shop(overrides: Partial<PublicShopSummary> = {}): PublicShopSummary {
     bio: 'Đội xe đời mới, giao tận nơi.',
     completedTripCount: 14,
     featuredVehicleImageUrl: null,
+    brands: [],
+    brandCount: 0,
     ...overrides,
   };
 }
