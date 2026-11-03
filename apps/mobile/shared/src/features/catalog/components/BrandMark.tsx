@@ -16,11 +16,11 @@ function absoluteIconUrl(iconUrl: string): string {
   return `${resolveWebBaseUrl()}${iconUrl.startsWith('/') ? '' : '/'}${iconUrl}`;
 }
 
-/** Ô logo hãng 20×20, bo `radius.sm` — đúng `.logo` / `.monogram` của web `BrandMark`. */
+/** Ô logo hãng mặc định 20×20, bo `radius.sm` — đúng `.logo` / `.monogram` của web `BrandMark`. */
 const SIZE = 20;
 
 const styles = StyleSheet.create({
-  logo: { width: SIZE, height: SIZE, borderRadius: radius.sm },
+  logo: { borderRadius: radius.sm },
 });
 
 /**
@@ -30,7 +30,16 @@ const styles = StyleSheet.create({
  * Trước #222 app đọc bộ ảnh đóng gói sẵn theo khoá hãng; nay logo là DỮ LIỆU của danh mục — cùng
  * nguồn với web, admin thay logo là cả hai nơi đổi theo.
  */
-export function BrandMark({ label, iconUrl }: { label: string; iconUrl?: string | null }) {
+/** `size`: cạnh ô logo — mặc định 20; thẻ "Gian hàng nổi bật" dùng 24 (Figma `21965:13849`). */
+export function BrandMark({
+  label,
+  iconUrl,
+  size = SIZE,
+}: {
+  label: string;
+  iconUrl?: string | null;
+  size?: number;
+}) {
   const colors = useColors();
   // Nhớ URL đã lỗi chứ không nhớ cờ `true`: admin thay logo thì URL mới được thử lại (như web).
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -38,7 +47,7 @@ export function BrandMark({ label, iconUrl }: { label: string; iconUrl?: string 
 
   if (!src || failedSrc === src) {
     return (
-      <YStack w={SIZE} h={SIZE} br={radius.sm} bg={colors.primaryLight} ai="center" jc="center">
+      <YStack w={size} h={size} br={radius.sm} bg={colors.primaryLight} ai="center" jc="center">
         <Text col={colors.primaryStrong} fos={fontSize.bodySm} fow={fontWeight.bold}>
           {label.trim().charAt(0).toUpperCase() || '?'}
         </Text>
@@ -49,7 +58,7 @@ export function BrandMark({ label, iconUrl }: { label: string; iconUrl?: string 
   return (
     <Image
       source={{ uri: src }}
-      style={styles.logo}
+      style={[styles.logo, { width: size, height: size }]}
       contentFit="contain"
       accessible={false}
       onError={() => setFailedSrc(src)}

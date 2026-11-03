@@ -74,7 +74,7 @@ export function Card({
   padded = true,
   onPress,
   accessibilityLabel,
-  radius: cornerRadius = radius.lg,
+  radius: cornerRadius = radius.card,
   seamless = false,
   borderColor: borderOverride,
   pressHighlight = false,

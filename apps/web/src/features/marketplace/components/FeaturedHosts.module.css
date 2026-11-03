@@ -46,12 +46,19 @@
   outline-offset: 2px;
 }
 
-/* ─── Đầu thẻ: avatar 48 + tên + "N xe • tỉnh". Chừa bên phải cho ảnh xe nhô lên. ─── */
+/* ─── Đầu thẻ (Figma `19626:45667`): avatar 48 + tên + "N xe • tỉnh" bên trái, dãy logo hãng bên phải. ─── */
 .head {
   display: flex;
   min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.who {
+  display: flex;
+  min-width: 0;
   align-items: center;
-  padding-inline-end: 112px;
   gap: var(--xp-space-12);
 }
 
@@ -105,9 +112,9 @@
 .name {
   overflow: hidden;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h3);
+  font-size: var(--xp-font-size-h4);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h3);
+  line-height: var(--xp-line-height-h4);
   text-overflow: ellipsis;
   transition: color 0.18s ease;
   white-space: nowrap;
@@ -124,7 +131,7 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   gap: var(--xp-space-6);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   white-space: nowrap;
 }
 
@@ -157,29 +164,47 @@
   justify-content: center;
 }
 
-/* Ảnh xe đại diện: 130 × 71, đỉnh ở −15px so với mép thẻ (Figma). */
-.vehicle {
-  position: absolute;
-  top: -15px;
-  right: 0;
-  width: 130px;
-  height: 71px;
-  border-radius: var(--xp-border-radius-chip);
-  object-fit: cover;
-  pointer-events: none;
+/* Dãy logo hãng (Figma `21965:28698`): logo 24px cách 2; ô "+N" 20px tròn nền gray-50, chữ 12/18. */
+.brands {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-2);
+}
+
+.brands .brandLogo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.brandMore {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--xp-space-2);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 /* Giới thiệu: hai dòng, giữ chỗ hai dòng kể cả khi trống để chân các thẻ thẳng hàng. */
 .bio {
   display: -webkit-box;
-  min-height: calc(2 * var(--xp-line-height-body));
+  min-height: calc(2 * var(--xp-line-height-body-relaxed));
   overflow: hidden;
   -webkit-box-orient: vertical;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   overflow-wrap: anywhere;
 }
 
@@ -203,7 +228,7 @@
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
   gap: var(--xp-space-xs) var(--xp-space-md);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .rating {
@@ -226,7 +251,7 @@
   color: var(--xp-color-primary-hover);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   white-space: nowrap;
 }
 
@@ -245,14 +270,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .head {
-    padding-inline-end: 96px;
-  }
-
-  .vehicle {
-    width: 104px;
-    height: 57px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

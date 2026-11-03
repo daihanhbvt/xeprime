@@ -294,6 +294,7 @@ export function ConfirmHandoverDialog({
                       <span className={styles.hint}>{tHandover('photosOptional')}</span>
                       <HandoverPhotoGrid
                         bookingId={context.bookingId}
+                        vehicleType={context.vehicleType}
                         type={type}
                         photos={draft?.photos ?? []}
                         canViewFiles={canViewFiles}

@@ -62,7 +62,7 @@
   margin: 0;
   padding: var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-card);
 }
 
 .balance {
@@ -74,13 +74,13 @@
 }
 
 .balanceLabel {
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
 }
 
 .balanceValue {
   margin: var(--xp-space-2) 0 0;
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-warning);
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -137,7 +137,7 @@
   align-items: flex-start;
   gap: var(--xp-space-md);
   padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-error-bg);
   color: var(--xp-color-error);
 }
@@ -150,8 +150,8 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: var(--xp-color-bg-container);
-  font-size: 22px;
+  background: color-mix(in srgb, var(--xp-color-error) 12%, var(--xp-color-bg-container));
+  font-size: 24px;
 }
 
 .processText {
@@ -221,8 +221,9 @@
 .item {
   position: relative;
   padding-left: var(--xp-space-md);
-  color: var(--xp-color-text);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
+  line-height: 22px;
 }
 
 .item::before {

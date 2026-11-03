@@ -105,7 +105,8 @@
     "hostTitle": "Chủ xe",
     "location": {
       "title": "Vị trí xe",
-      "openMap": "Mở bản đồ"
+      "openMap": "Mở bản đồ",
+      "exactAddressNote": "Địa chỉ chính xác hiển thị sau khi đặt xe thành công."
     },
     "attributes": {
       "brand": "Hãng: <strong>{value}</strong>",

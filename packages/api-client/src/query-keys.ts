@@ -139,8 +139,9 @@ export const queryKeys = {
    */
   places: {
     all: ['places'] as const,
-    search: (q: string, bias?: { lat: number; lng: number } | null) =>
-      ['places', 'search', q, bias ? `${bias.lat},${bias.lng}` : ''] as const,
+    /** `scope` = "tỉnh/xã" đã chọn (ADR 0077) — kết quả lọc theo tỉnh nên phải nằm trong khoá. */
+    search: (q: string, bias?: { lat: number; lng: number } | null, scope = '') =>
+      ['places', 'search', q, bias ? `${bias.lat},${bias.lng}` : '', scope] as const,
     detail: (placeId: string) => ['places', 'detail', placeId] as const,
     reverse: (lat: number, lng: number) => ['places', 'reverse', lat, lng] as const,
   },
@@ -154,7 +155,8 @@ export const queryKeys = {
     /** Tiền công/ngày mặc định của gian hàng + giới hạn nền tảng (ADR 0075). */
     wageSettings: ['drivers', 'wage-settings'] as const,
     /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — ngăn kéo tiền công (ADR 0075). */
-    assignments: (id: string, params: QueryParams) => ['drivers', 'assignments', id, params] as const,
+    assignments: (id: string, params: QueryParams) =>
+      ['drivers', 'assignments', id, params] as const,
     /** Ngăn chi tiết một tài xế: tiền công tháng, việc đang treo, độ tin cậy, xu hướng (ADR 0075). */
     overview: (id: string, params: QueryParams) => ['drivers', 'overview', id, params] as const,
   },

@@ -112,6 +112,7 @@ export const XP_TOKENS = {
   'color-warning-bg': '#fff7ed',
   'color-error': '#d92d20', // v2 Status/error-high · BG/destructive
   'color-error-bg': '#fef3f2', // v2 BG/destructive-low
+  'color-error-border': '#fda29b', // v2 Status/error-300 — viền nút huỷ/từ chối
   'color-info': '#2563eb', // chưa có trong v2
   'color-info-bg': '#eff6ff', // chưa có trong v2
   /*
@@ -252,6 +253,8 @@ export const XP_TOKENS = {
   'line-height-body-sm': '18px',
   'font-size-label': '12px', // v2 12px/Medium · badge, chip, tag
   'line-height-label': '18px',
+  'font-size-caption': '10px', // v2 10px/Regular · chữ nhỏ trên huy hiệu cửa hàng (banner app mobile)
+  'line-height-caption': '14px',
   // Chưa chuyển: v2 không có bậc 11px (kicker v2 là 12px/Medium = bậc `label`), nhưng app native
   // đọc bậc này làm cỡ chữ dòng meta dày đặc — 12px là bị cắt "…" trên máy 360dp. Đổi cùng dev
   // mobile (ADR 0062 điều 5); kicker web dùng `font-size-label` khi ráp màn.
@@ -326,7 +329,8 @@ export const XP_TOKENS = {
   'color-warning-subtle': '#fffaeb', // v2 Status/warning-low — nền hộp lưu ý trang thanh toán
   'color-warning-border': '#fec84b', // v2 Status/warning-300 — viền nhãn trạng thái cam
   'color-warning-strong': '#ec4a0a', // v2 Status/warning-600 — chữ nhãn trạng thái cam
-  'color-info-strong': '#1570ef', // v2 Status/info-600 — chữ nhãn trạng thái xanh dương
+  'color-info-strong': '#1570ef',
+  'color-star': '#fec84b', // sao đánh giá — một màu cho mọi chỗ chấm sao (web + app), cả hai giao diện // v2 Status/info-600 — chữ nhãn trạng thái xanh dương
   'market-footer-bg': '#060403', // nền footer chợ — đen ấm, đi cùng lớp ánh vàng phía trên
   // Nút chính v2 ("Tìm kiếm", "Trở thành chủ xe", "Đăng ký ngay"…) — ADR 0062 Q1 đã có điểm màu.
   'gradient-primary': 'linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%)',
@@ -358,11 +362,15 @@ export const XP_TOKENS = {
   'border-radius-chip': '8px',
   'border-radius-control': '12px',
   'border-radius-card': '16px',
+  'border-radius-banner': '20px', // v2 Num/20 · banner khuyến mãi trang chủ (Figma `21965:5289`)
+  'promo-banner-mobile-width': '340px', // thẻ banner khuyến mãi mobile CỐ ĐỊNH 340×140 (Figma MB `19771:51710`)
+  'promo-banner-mobile-height': '140px',
   // Bậc khoảng cách v2 chưa có tên trong thang cũ — đặt theo CON SỐ để không lẫn với tên Figma.
   'space-2': '2px',
   'space-6': '6px',
   'space-12': '12px',
   'space-20': '20px',
+  'space-28': '28px', // Figma MB `19879:67457` — tiêu đề khối ↔ nội dung
   'space-40': '40px',
   'space-48': '48px',
   'space-64': '64px',
@@ -379,11 +387,21 @@ export const XP_TOKENS = {
   'color-glass-strong': 'rgba(255, 255, 255, 0.32)',
   'color-glass-faint': 'rgba(255, 255, 255, 0.05)',
   'color-glass-gold': 'rgba(254, 237, 210, 0.2)',
+  'color-glass-light': 'rgba(255, 255, 255, 0.2)', // huy hiệu cửa hàng trên banner app (Figma `19695:40885`)
+  'color-glass-light-strong': 'rgba(255, 255, 255, 0.35)', // huy hiệu khi rê chuột
+  'color-app-banner-border': '#ffd891', // viền banner app (Figma `19786:79519`)
+  'color-app-badge-border': '#fcebaf', // viền huy hiệu cửa hàng
   // Nút tròn nổi trên ảnh xe (yêu thích) — lớp tối rất nhẹ cho icon trắng.
   'color-scrim-light': 'rgba(16, 24, 40, 0.1)',
   // Lớp phủ trái của hai banner ưu đãi: tối (chữ trắng) và sáng (chữ tối).
   'gradient-promo-dark': 'linear-gradient(to left, rgba(0, 0, 0, 0) 0%, #000000 100%)',
   'gradient-promo-light': 'linear-gradient(to left, rgba(255, 255, 255, 0) 0%, #ffffff 100%)',
+  'gradient-partner-shade': 'linear-gradient(to left, rgba(64, 64, 64, 0) 7.994%, rgba(0, 0, 0, 0.9) 100%)', // dải đối tác trang chủ (Figma `21965:5338`)
+  'space-partner-mb-y': '36px', // dải đối tác mobile — đệm trên/dưới (Figma MB `19771:51743`)
+  'font-size-partner-mb-lead': '26px', // "Đăng ký trở thành" mobile
+  'line-height-partner-mb-lead': '34px',
+  'font-size-partner-mb-accent': '27px', // "ĐỐI TÁC ĐỘC QUYỀN" mobile
+  'line-height-partner-mb-accent': '36px',
   // Lớp tối phía trên thẻ điểm đến — tên thành phố gradient vàng đọc được trên tranh minh hoạ.
   'gradient-destination-shade':
     'linear-gradient(180deg, rgb(26, 21, 14) 0%, rgba(36, 26, 15, 0) 40.385%, rgba(23, 20, 13, 0) 65.385%, rgba(34, 24, 13, 0) 100%), linear-gradient(180deg, rgb(26, 21, 14) 31.784%, rgba(50, 35, 0, 0) 100%)',

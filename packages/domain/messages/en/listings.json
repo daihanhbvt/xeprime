@@ -105,7 +105,8 @@
     "hostTitle": "Host",
     "location": {
       "title": "Vehicle location",
-      "openMap": "Open map"
+      "openMap": "Open map",
+      "exactAddressNote": "The exact address is shown once your booking is confirmed."
     },
     "attributes": {
       "brand": "Brand: <strong>{value}</strong>",

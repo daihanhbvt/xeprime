@@ -96,7 +96,7 @@ export function TripHoldPanel({
             </Text>
             <InfoHint content={t('vsDepositHint')} label={t('vsDepositHintLabel')} />
           </XStack>
-          <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
+          <Text col={colors.price} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
             {fmt.money(hold.remainingAmount)}
           </Text>
           <Countdown

@@ -7,7 +7,6 @@ import {
   ControlOutlined,
   DollarOutlined,
   DownOutlined,
-  FilterOutlined,
   StarOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
@@ -26,6 +25,7 @@ import {
 import { catalogItemAppliesTo } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { cx } from '@/lib/cx';
 import { isPriceBandSelected, priceBandsFor, quickTransmissionsFor } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
@@ -37,6 +37,8 @@ interface QuickFilterPillsProps {
   appliedCount?: number;
   className?: string;
   popupContainer?: () => HTMLElement;
+  /** Lớp bổ sung cho nút "Bộ lọc" — nơi gọi dùng để ẩn nó ở khổ có nút lọc riêng. */
+  filterButtonClassName?: string;
 }
 
 export function QuickFilterPills({
@@ -44,6 +46,7 @@ export function QuickFilterPills({
   appliedCount = 0,
   className,
   popupContainer,
+  filterButtonClassName,
 }: QuickFilterPillsProps) {
   const t = useTranslations('Marketplace.results');
   const tFilters = useTranslations('Marketplace.filterPanel');
@@ -457,9 +460,14 @@ export function QuickFilterPills({
       </Popover>
 
       {/* 9. Nút Bộ lọc (Action Button) */}
-      <button type="button" className={styles.filterBtn} onClick={onOpenFilterModal}>
-        <FilterOutlined />
+      <button
+        type="button"
+        className={cx(styles.filterBtn, filterButtonClassName)}
+        onClick={onOpenFilterModal}
+      >
         <span>{tFilters('title')}</span>
+        {/* Figma "Filter 5" (thanh trượt), đứng SAU chữ như bản vẽ — không phải phễu. */}
+        <LineIcon name="filter" className={styles.filterIcon} />
         {appliedCount > 0 ? <span className={styles.filterBadge}>{appliedCount}</span> : null}
       </button>
     </div>

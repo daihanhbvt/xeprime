@@ -117,12 +117,13 @@ export async function ListingDetailView({
     ...(colorLabel ? [{ key: 'color' as const, value: colorLabel }] : []),
   ];
 
-  const locationLine = [
-    listing.pickupPoint?.address,
-    listing.pickupPoint?.provinceName || listing.shopProvince,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  /*
+   * `pickupPoint.address` đã là KHU VỰC "Phường/Xã, Tỉnh/TP" do server ghép từ danh mục (ADR
+   * 0077) — KHÔNG nối thêm tên tỉnh (đó là nguồn của lỗi "Hà Nội, Hà Nội"). Chỉ khi không có điểm
+   * nhận nào mới rơi về tỉnh của gian hàng.
+   */
+  const locationLine =
+    listing.pickupPoint?.address || listing.pickupPoint?.provinceName || listing.shopProvince || '';
 
   const services: readonly string[] = listing.serviceTypes ?? [];
   const activeService =
@@ -245,7 +246,7 @@ export async function ListingDetailView({
               biến thể `inline` của thẻ dùng chung để nền/viền trong suốt ở PC. Ở mobile thẻ tự vẽ
               khung riêng (`ShopQuickInfoCard.module.css`) nên lớp bọc nhường lại, không viền đôi.
             */}
-            <div className={styles.hostCard}>
+            <div className={cx(styles.hostCard, !listing.shopVerified && styles.hostCardOwner)}>
               <ShopQuickInfoCard
                 shop={{
                   name: listing.shopName,
@@ -274,7 +275,8 @@ export async function ListingDetailView({
                 <h2 id="pickup-point-heading" className={styles.sectionTitle}>
                   {t('location.title')}
                 </h2>
-                {pickupGeo ? (
+                {/* Chỉ khi toạ độ CHÍNH XÁC (tuyến gói) — điểm xấp xỉ mà mở chỉ đường là chỉ sai cửa (ADR 0077). */}
+                {pickupGeo && !listing.pickupPoint.isApproximate ? (
                   <a
                     href={mapExternalUrl(pickupGeo)}
                     target="_blank"
@@ -317,14 +319,17 @@ export async function ListingDetailView({
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {[
-                  listing.pickupPoint.branchName,
-                  listing.pickupPoint.address,
-                  listing.pickupPoint.provinceName,
-                ]
+                {/*
+                  `address` đã mang tỉnh (địa chỉ đủ của tuyến gói, hoặc KHU VỰC của tuyến hoa hồng —
+                  ADR 0077) — không nối thêm `provinceName`, đó là nguồn của lỗi "Hà Nội, Hà Nội".
+                */}
+                {[listing.pickupPoint.branchName, listing.pickupPoint.address]
                   .filter(Boolean)
                   .join(LIST_SEPARATOR)}
               </p>
+              {listing.pickupPoint.isApproximate ? (
+                <p className={styles.pickupNote}>{t('location.exactAddressNote')}</p>
+              ) : null}
               {pickupGeo ? (
                 <StaticMapImage
                   src={pickupMapSrc(listing.id, pickupGeo, listing.pickupPoint.address)}

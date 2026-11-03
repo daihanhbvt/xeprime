@@ -43,9 +43,9 @@
 .tabButton {
   padding: var(--xp-space-sm) var(--xp-space-12);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-regular);
+  font-weight: var(--xp-font-weight-semibold);
   line-height: 22px;
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;

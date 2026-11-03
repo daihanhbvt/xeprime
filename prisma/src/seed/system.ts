@@ -680,6 +680,30 @@ export async function seedDemoPromoBanners(): Promise<void> {
   }
 }
 
+/**
+ * Ảnh nền dải "Đăng ký trở thành đối tác" (vị trí `partner`) — ảnh của bản vẽ Figma: máy tính
+ * `21965:5337` (1440×600), mobile MB `19771:51743` (390×448); tablet bỏ trống ⇒ dùng ảnh máy tính.
+ * Dữ liệu NỀN (ảnh không chứa chữ/ưu đãi nào) nên có cả ở production — admin thay ở tab "Dải đối tác".
+ * `update: {}`: admin sửa rồi chạy lại seed thì bản sửa phải còn.
+ */
+async function seedPartnerBanner(): Promise<void> {
+  const id = seedId('banner:partner-default');
+  await prisma.marketplaceBanner.upsert({
+    where: { id },
+    update: {},
+    create: {
+      id,
+      title: 'Ảnh nền dải đối tác (mặc định theo thiết kế)',
+      imageUrl: '/home/partner-bg.webp',
+      mobileImageUrl: '/home/partner-bg-mobile.webp',
+      altText: 'Hai mẫu xe điện đỗ trên sân thượng lúc hoàng hôn',
+      placement: BANNER_PLACEMENT.PARTNER,
+      sortOrder: 0,
+      active: true,
+    },
+  });
+}
+
 async function seedBanners(): Promise<void> {
   for (const banner of BANNERS) {
     const { key, ...fields } = banner;
@@ -918,6 +942,7 @@ export async function seedSystemData(): Promise<SystemSeedResult> {
   log(`  gói dịch vụ: ${planIds.size}`);
 
   await seedBanners();
+  await seedPartnerBanner();
   log(`  banner trang chủ: ${BANNERS.length}`);
 
   await seedPromoCodes();

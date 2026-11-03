@@ -5,8 +5,8 @@
     "subtitle": "Tìm ô tô, SUV và mô tô chỉ trong vài bước!"
   },
   "why": {
-    "kicker": "Tại sao lại chọn XePrime",
-    "title": "Không chỉ đơn thuần là dịch vụ thuê xe",
+    "kicker": "Lý do nên chọn XePrime",
+    "title": "Không chỉ là dịch vụ thuê xe, mà còn là <accent>hành trình trải nghiệm</accent> khác biệt",
     "items": {
       "price": {
         "title": "Cam kết giá tốt",
@@ -24,7 +24,12 @@
         "title": "Hỗ trợ 24/7",
         "desc": "Đội ngũ của chúng tôi luôn sẵn sàng hỗ trợ bạn mọi lúc, mọi nơi"
       }
-    }
+    },
+    "intro": "Với hệ thống xe đa dạng, thông tin minh bạch và quy trình đặt xe đơn giản, XePrime kết nối bạn với những lựa chọn phù hợp một cách nhanh chóng. Chúng tôi không ngừng cải thiện chất lượng dịch vụ, tối ưu trải nghiệm từ khâu tìm kiếm, đặt xe đến nhận xe và hoàn tất hành trình.",
+    "closing": "XePrime – Đồng hành cùng bạn trên mọi hành trình, để mỗi chuyến đi không chỉ thuận tiện mà còn trọn vẹn và an tâm hơn.",
+    "statValue": "100+",
+    "statLabel": "Xe đang cho thuê",
+    "imageAlt": "Xe SUV trắng giữa các khung ảnh hành trình gia đình"
   },
   "featured": {
     "kicker": "Xe tiêu biểu",

@@ -1,10 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { addressGeocodeQuery, isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
-import {
-  API_ERROR_CODE,
-  DELIVERY_DISTANCE_STATUS,
-  DELIVERY_MANUAL_REASON,
-} from '@xeprime/types';
+import { API_ERROR_CODE, DELIVERY_DISTANCE_STATUS, DELIVERY_MANUAL_REASON } from '@xeprime/types';
+import { approximatePoint } from '../../common/address-view';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { GeoService } from '../geo/geo.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -137,7 +134,9 @@ export class DeliveryDistanceService {
     const maxRadiusKm = policy.values.deliveryMaxRadiusKm;
     const road = await this.geo.roadDistance(origin, resolved.point, maxRadiusKm);
     const base = {
-      origin,
+      // Endpoint công khai: điểm đi là chi nhánh, nên chỉ trả XẤP XỈ (ADR 0077). Khoảng cách vẫn
+      // đo từ toạ độ thật ở trên.
+      origin: approximatePoint(origin),
       destination: resolved.point,
       formattedAddress: resolved.formattedAddress,
       maxRadiusKm,

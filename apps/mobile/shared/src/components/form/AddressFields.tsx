@@ -22,9 +22,10 @@ import {
   PLACE_SEARCH_MIN_LENGTH,
   usePlaceDetail,
   usePlaceSearch,
+  type PlaceSearchScope,
 } from '@/features/locations/hooks/use-places';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
-import { useWardOptions } from '@/features/locations/hooks/use-wards';
+import { useWardLookup, useWardOptions } from '@/features/locations/hooks/use-wards';
 import { placeMapUri } from '@/lib/map-static';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import { useColors } from '@/theme/ThemeProvider';
@@ -109,12 +110,19 @@ export function AddressFields<T extends FieldValues>({
 
   const provinces = useProvinceOptions();
   const [wardSearch, setWardSearch] = useState('');
+  // Ô xã LUÔN hiện, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042) — khớp web `AddressField`.
+  const wards = useWardOptions(provinceCode, wardSearch);
+  const wardCode = (ward.field.value as string | null) ?? '';
   /*
-   * Ô CÓ GHIM không hỏi danh mục cấp xã (ADR 0042 điều 3): bộ chọn đó không được dựng, và tải
-   * hàng trăm dòng cho một ô không tồn tại là một request cho mỗi lần mở form, mỗi người dùng.
-   * Truyền mã tỉnh rỗng là cách TẮT có sẵn của hook — nó vốn đã dừng khi chưa chọn tỉnh.
+   * Tra tên của xã ĐANG CHỌN qua `/wards/lookup`: danh sách lựa chọn tải theo ô
+   * tìm, nên có thể không chứa nó — bộ chọn khi đó hiện trơ MÃ ("20314") thay vì tên.
    */
-  const wards = useWardOptions(pin ? '' : provinceCode, wardSearch);
+  const wardLookup = useWardLookup(wardCode ? [wardCode] : []);
+  const currentWard = wardCode ? wardLookup.data?.get(wardCode) : undefined;
+  const wardOptions =
+    currentWard && !wards.options.some((o) => o.value === currentWard.code)
+      ? [{ value: currentWard.code, label: currentWard.name }, ...wards.options]
+      : wards.options;
 
   /**
    * Dựng lại phần GHIM khi tỉnh đổi, và cảnh báo lệch tỉnh của ngữ cảnh CŨ — bản native của
@@ -209,32 +217,31 @@ export function AddressFields<T extends FieldValues>({
       />
 
       {/*
-        Ranh giới là CÓ GHIM hay không, không phải "khách hay chủ xe" (ADR 0042 điều 3).
-
-        Mã xã tồn tại để định vị DƯỚI cấp tỉnh. Khi đã có một toạ độ người dùng nhìn và xác nhận,
-        nó định vị chính xác hơn hẳn một mã năm chữ số — trong khi danh mục cấp xã có 3.321 đơn vị
-        vừa đổi tên hàng loạt từ 01/07/2025, đủ để cả người khai địa chỉ của CHÍNH MÌNH cũng phải
-        dừng lại tra cứu. Không có ghim (sổ khách) thì mã xã lại là cấp định vị duy nhất còn lại,
-        nên ở đó nó ở lại.
-
-        `wardCode` KHÔNG bị gỡ khỏi hợp đồng: cột vẫn còn, DTO vẫn nhận, dữ liệu cũ vẫn đọc được.
-        Chỉ là không màn hình nào còn sinh ra nó.
+        Xã/phường LUÔN hỏi, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042): bề mặt công khai hiện
+        "Phường/Xã, Tỉnh/TP" ghép từ danh mục. Bắt buộc hay không do nơi gọi (`wardRequired`).
       */}
-      {pin ? null : (
-        <SelectField
-          control={control}
-          name={names.wardCode}
-          label={t('wardLabel')}
-          options={wards.options}
-          required={wardRequired ?? false}
-          disabled={(disabled ?? false) || !provinceCode}
-          placeholder={provinceCode ? t('wardPlaceholder') : t('wardNeedsProvince')}
-          onSearch={setWardSearch}
-          searchPlaceholder={t('wardPlaceholder')}
-          emptyText={wards.isError ? t('wardLoadError') : t('wardEmpty')}
-          {...(wards.isError ? { hint: t('wardLoadError') } : {})}
-        />
-      )}
+      <SelectField
+        control={control}
+        name={names.wardCode}
+        label={t('wardLabel')}
+        options={wardOptions}
+        required={wardRequired ?? false}
+        disabled={(disabled ?? false) || !provinceCode}
+        placeholder={provinceCode ? t('wardPlaceholder') : t('wardNeedsProvince')}
+        onSearch={setWardSearch}
+        /*
+         * Cấp CHA đổi thì cấp CON xoá: người dùng tự chọn lại xã ⇒ địa chỉ + ghim cũ thuộc xã khác,
+         * dựng lại ô địa chỉ (cùng cơ chế đổi tỉnh). Xã TỰ ĐIỀN theo địa điểm vừa chọn đi đường
+         * `ward.field.onChange`, không qua đây — địa chỉ đó chính là thứ vừa chọn, không xoá.
+         */
+        onValueChange={() => {
+          setPinResetKey((n) => n + 1);
+          setProvinceMismatch(false);
+        }}
+        searchPlaceholder={t('wardPlaceholder')}
+        emptyText={wards.isError ? t('wardLoadError') : t('wardEmpty')}
+        {...(wards.isError ? { hint: t('wardLoadError') } : {})}
+      />
 
       {pin ? (
         <>
@@ -261,15 +268,28 @@ export function AddressFields<T extends FieldValues>({
             // Chưa chọn tỉnh thì chưa hỏi bản đồ: gợi ý lúc đó rải khắp cả nước và chẳng giúp
             // được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
             searchEnabled={Boolean(provinceCode)}
+            scope={provinceCode ? { provinceCode, wardCode: wardCode || null } : null}
+            lineOnly
             required={addressLineRequired ?? false}
             disabled={disabled ?? false}
-            onConfirmedManually={() => setProvinceMismatch(false)}
-            onPlaceResolved={(place) =>
+            onConfirmedManually={() => {
+              setProvinceMismatch(false);
+            }}
+            onPlaceResolved={(place) => {
               setProvinceMismatch(
                 Boolean(place.suggestedProvinceCode) &&
                   place.suggestedProvinceCode !== provinceCode,
-              )
-            }
+              );
+              /*
+               * Tự điền lại XÃ theo địa điểm vừa chọn (ADR 0077): server khớp được đúng một xã trong
+               * tỉnh đã chọn thì địa điểm cụ thể thắng bộ chọn. Tỉnh không bao giờ tự đổi.
+               */
+              const matched = place.suggestedWardCode ?? null;
+              if (matched && matched !== wardCode) {
+                ward.field.onChange(matched as PathValue<T, Path<T>>);
+                setWardSearch('');
+              }
+            }}
           />
         </>
       ) : (
@@ -307,6 +327,8 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   pin,
   anchor = null,
   searchEnabled = true,
+  scope = null,
+  lineOnly = false,
   clearOnMount = false,
   label,
   placeholder,
@@ -331,6 +353,10 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * nước và chẳng giúp được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
    */
   searchEnabled?: boolean;
+  /** Tỉnh/xã đã chọn ở bộ chọn phía trên (ADR 0077) — ràng buộc gợi ý; luồng khách không truyền. */
+  scope?: PlaceSearchScope | null;
+  /** Chỉ lưu phần "số nhà, đường" (dòng đậm) — xã + tỉnh đã có bộ chọn riêng (ADR 0077). */
+  lineOnly?: boolean;
   /**
    * Lần dựng này đến từ một cú đổi NGỮ CẢNH (đổi tỉnh) — dọn cả ghim lẫn chữ đã có, vì cả hai mô
    * tả một địa điểm ở tỉnh CŨ. Nơi gọi tăng `key` cùng lúc để component này được REMOUNT — state
@@ -347,7 +373,10 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * Địa điểm vừa được bản đồ xác nhận. Nơi gọi quyết định làm gì với nó — form vận hành nhắc khi
    * tỉnh lệch, luồng khách lấy `suggestedProvinceCode` làm tỉnh của địa chỉ.
    */
-  onPlaceResolved?: (place: { suggestedProvinceCode?: string | null }) => void;
+  onPlaceResolved?: (place: {
+    suggestedProvinceCode?: string | null;
+    suggestedWardCode?: string | null;
+  }) => void;
   /**
    * Một địa chỉ GÕ TAY vừa được chốt (không địa điểm nào đi kèm) — nơi gọi dọn những gì nó suy từ
    * địa điểm trước đó (cảnh báo lệch tỉnh, tỉnh của địa điểm cũ). Khớp web.
@@ -482,8 +511,9 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      */
     enabled: !disabled && searchEnabled && !resolving,
     except: confirmedLine,
+    scope,
   });
-  const placeDetail = usePlaceDetail();
+  const placeDetail = usePlaceDetail(scope?.provinceCode);
 
   /*
    * Chưa hỏi lần nào thì mặc định coi bản đồ SỐNG: ô vẫn đòi xác nhận, và người dùng chưa gõ
@@ -518,7 +548,9 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      * đứng cạnh để bù vào, nên nó phải tự mang trọn địa chỉ.
      */
     const pickedText = picked
-      ? [picked.primaryText, picked.secondaryText].filter(Boolean).join(', ')
+      ? lineOnly
+        ? picked.primaryText
+        : [picked.primaryText, picked.secondaryText].filter(Boolean).join(', ')
       : '';
     if (pickedText) {
       addressLine.field.onChange(pickedText as PathValue<T, Path<T>>);
@@ -565,7 +597,13 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     longitude.field.onChange(Number(place.longitude) as PathValue<T, Path<T>>);
     locationSource.field.onChange(LOCATION_SOURCE.GOOGLE_PLACE as PathValue<T, Path<T>>);
     // Chốt ĐÚNG dòng người dùng đã bấm — chữ và ghim vừa ghi vào form cùng mô tả MỘT địa điểm.
-    confirm(pickedText || (place.formattedAddress ?? ''), LOCATION_SOURCE.GOOGLE_PLACE);
+    const fallbackLine = lineOnly
+      ? (place.suggestedAddressLine ?? place.formattedAddress ?? '')
+      : (place.formattedAddress ?? '');
+    if (!pickedText && fallbackLine) {
+      addressLine.field.onChange(fallbackLine as PathValue<T, Path<T>>);
+    }
+    confirm(pickedText || fallbackLine, LOCATION_SOURCE.GOOGLE_PLACE);
     onPlaceResolved?.(place);
   };
 

@@ -11,7 +11,7 @@ import {
 import { App, Image, Progress, Upload } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import {
-  HANDOVER_EXTERIOR_SLOTS,
+  handoverExteriorSlotsFor,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_PHOTO_SLOT_LABEL,
   IMAGE_UPLOAD_MIME_TYPES,
@@ -53,6 +53,7 @@ interface PendingUpload {
 export function HandoverPhotoGrid({
   bookingId,
   type,
+  vehicleType,
   photos,
   canViewFiles,
   disabled,
@@ -61,6 +62,8 @@ export function HandoverPhotoGrid({
 }: {
   bookingId: string;
   type: HandoverType;
+  /** Loại xe của đơn — quyết bộ góc chụp: xe máy chỉ trước · sau · Odo (`handoverExteriorSlotsFor`). */
+  vehicleType: string;
   photos: HandoverPhoto[];
   canViewFiles: boolean;
   disabled: boolean;
@@ -276,7 +279,7 @@ export function HandoverPhotoGrid({
   return (
     <div className={styles.photoBlock}>
       <p className={styles.photoTitle}>Ảnh hiện trạng</p>
-      <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
+      <div className={styles.slotGrid}>{handoverExteriorSlotsFor(vehicleType).map(renderSlot)}</div>
       {/* Chỉ KM: Wave 10 bỏ hẳn nhiên liệu khỏi bàn giao (design 14 §8). */}
       <p className={styles.photoTitle}>Ảnh đồng hồ KM</p>
       <div className={cx(styles.slotGrid, styles.slotGridSingle)}>

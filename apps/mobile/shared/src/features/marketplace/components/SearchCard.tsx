@@ -300,7 +300,7 @@ export function SearchCard({
                 Như web `LocationPicker` (`selectedLabel`): chưa chọn tỉnh = GIÁ TRỊ "Toàn quốc" (chữ
                 `text`, không phải placeholder) — tìm toàn quốc là một lựa chọn thật. Icon ở CUỐI ô.
               */}
-              <Text f={1} col={colors.text} fos={fontSize.bodyLg} numberOfLines={1}>
+              <Text f={1} col={colors.text} fos={sheet ? fontSize.body : fontSize.bodyLg} lh={sheet ? 22 : undefined} numberOfLines={1}>
                 {draft.provinceCode ? locationValue : t('location.nationwide')}
               </Text>
               <Ionicons name="location-outline" size={20} color={colors.textMuted} />

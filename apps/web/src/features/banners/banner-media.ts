@@ -34,21 +34,37 @@ interface BannerSize {
 }
 
 /**
- * Banner KHUYẾN MÃI giữa trang chủ (`placement = promo`): ô 584×180 của bản vẽ, upload @2x. Ảnh
- * mobile tuỳ chọn, khung cao hơn để chữ trong ảnh còn đọc được trên thẻ slider ~270px; bỏ trống
- * thì mobile hiện ảnh máy tính nguyên khung. Không có slot tablet: tablet hiện hai banner một hàng
- * như desktop.
+ * Banner KHUYẾN MÃI trang chủ (`placement = promo`): ô 584×220 (Figma `21965:5289`), mobile ô
+ * 340×140 (Figma MB `19771:51710`) — khổ 1x, form khuyên upload @2x. Chỉ là KHUYẾN NGHỊ: form không
+ * chặn ảnh khác tỉ lệ (người dùng chốt 03/11/2026), khung cắt `cover`. Tablet 480×180 (hai banner
+ * một hàng trên màn 1024, cùng tỉ lệ máy tính). Ảnh tablet/mobile tuỳ chọn; bỏ trống thì dùng ảnh máy
+ * tính — đủ ba khổ như banner đầu trang.
  */
 export const PROMO_BANNER_SLOTS = {
-  desktop: { width: 1168, height: 360 },
-  mobile: { width: 680, height: 400 },
+  desktop: { width: 584, height: 220 },
+  tablet: { width: 480, height: 180 },
+  mobile: { width: 340, height: 140 },
+} as const;
+
+/**
+ * ẢNH NỀN dải "Đăng ký trở thành đối tác" (`placement = partner`): PC 1440×600 (Figma `21965:5337`),
+ * tablet 1024×448, mobile 390×448 (Figma MB `19771:51743`) — khổ 1x, khuyến nghị (không chặn), khung
+ * cắt `cover`. Chữ, nút và lớp phủ tối do trang dựng đè lên — ảnh KHÔNG chứa chữ. Tablet/mobile
+ * bỏ trống thì dùng ảnh máy tính.
+ */
+export const PARTNER_BANNER_SLOTS = {
+  desktop: { width: 1440, height: 600 },
+  tablet: { width: 1024, height: 448 },
+  mobile: { width: 390, height: 448 },
 } as const;
 
 /** Bộ khổ ảnh của một vị trí — `desktop` luôn có, `tablet`/`mobile` tuỳ vị trí. */
 export type BannerSlotSizes = { desktop: BannerSize } & Partial<Record<BannerSlot, BannerSize>>;
 
 export function bannerSlotsFor(placement: BannerPlacement): BannerSlotSizes {
-  return placement === BANNER_PLACEMENT.PROMO ? PROMO_BANNER_SLOTS : BANNER_SLOTS;
+  if (placement === BANNER_PLACEMENT.PROMO) return PROMO_BANNER_SLOTS;
+  if (placement === BANNER_PLACEMENT.PARTNER) return PARTNER_BANNER_SLOTS;
+  return BANNER_SLOTS;
 }
 
 /**

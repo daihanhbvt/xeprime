@@ -1043,7 +1043,8 @@ function Segmented<T extends string>({
               ) : null}
               <Text
                 col={active ? colors.primaryHover : colors.textMuted}
-                fos={fontSize.body}
+                fos={fontSize.bodyLg}
+                lh={24}
                 fow={fontWeight.medium}
                 ta="center"
               >

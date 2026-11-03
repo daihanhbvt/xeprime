@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -8,7 +9,8 @@ const DIVIDER_WIDTH = 68;
 interface HomeSectionHeadingProps {
   /** Dòng nhỏ viết hoa phía trên ("TẠI SAO LẠI CHỌN XEPRIME"). */
   kicker: string;
-  title: string;
+  /** Chuỗi, hoặc node có định dạng (`t.rich` — cụm chữ vàng của "Lý do nên chọn XePrime"). */
+  title: ReactNode;
   /** Mặc định `true` — bản vẽ mobile v2 canh giữa và kẻ gạch vàng dưới MỌI tiêu đề khối. */
   divider?: boolean;
 }
@@ -22,12 +24,12 @@ interface HomeSectionHeadingProps {
 export function HomeSectionHeading({ kicker, title, divider = true }: HomeSectionHeadingProps) {
   const colors = useColors();
   return (
-    // `SectionHeading.module.css` ≤640px: kicker body/semibold `primary-hover`, tiêu đề h2 (24/32), cách 8.
-    <YStack ai="center" gap={space.sm} accessibilityRole="header">
-      <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
+    // Figma MB `19879:67458`: kicker 12/18 semibold `primary-hover`, tiêu đề 20/30 semibold, cách 4.
+    <YStack ai="center" gap={space.xs} accessibilityRole="header">
+      <Text col={colors.primaryHover} fos={fontSize.label} lh={18} fow={fontWeight.semibold} ta="center">
         {kicker.toLocaleUpperCase()}
       </Text>
-      <Text col={colors.text} fos={fontSize.h2} lh={32} fow={fontWeight.semibold} ta="center">
+      <Text col={colors.text} fos={fontSize.lead} lh={30} fow={fontWeight.semibold} ta="center">
         {title}
       </Text>
       {divider ? <YStack w={DIVIDER_WIDTH} h={2} bg={colors.primary} /> : null}

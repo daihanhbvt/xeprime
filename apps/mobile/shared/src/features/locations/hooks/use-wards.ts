@@ -71,3 +71,21 @@ export function useWardOptions(
     refetch: () => void query.refetch(),
   };
 }
+
+/**
+ * Tra NHÃN của vài mã xã — bản native của web `useWardLookup`. Dùng cho lời gợi ý "Điền Phường X?"
+ * của ô địa chỉ (ADR 0077), nơi danh sách đang tải có thể đã bị lọc theo ô tìm.
+ */
+export function useWardLookup(codes: readonly string[]) {
+  const unique = useMemo(
+    () => [...new Set(codes.filter((c): c is string => Boolean(c)))].sort(),
+    [codes],
+  );
+  return useQuery({
+    queryKey: queryKeys.locations.wardLookup(unique),
+    queryFn: async (): Promise<Map<string, Ward>> =>
+      new Map((await locationsApi.wardLookup(unique)).map((w) => [w.code, w])),
+    enabled: unique.length > 0,
+    staleTime: STALE_TIME.REFERENCE,
+  });
+}

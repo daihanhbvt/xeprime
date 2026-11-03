@@ -3,9 +3,7 @@
 import {
   AppstoreOutlined,
   CloseOutlined,
-  FilterOutlined,
   ReloadOutlined,
-  SearchOutlined,
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import { Button, Select, Skeleton } from 'antd';
@@ -362,9 +360,9 @@ function MarketplaceResultsContent() {
         ) : listings.length === 0 ? (
           filters.q ? (
             <div className={styles.stateBox}>
-              <div className={styles.stateIcon} aria-hidden>
-                <SearchOutlined />
-              </div>
+              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
+              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
               <h2 className={styles.stateTitle}>{t('emptyKeywordTitle', { q: filters.q })}</h2>
               <p className={styles.stateDesc}>{t('emptyKeywordDesc')}</p>
               <Button type="primary" onClick={() => setFilters({ q: undefined })}>
@@ -378,9 +376,9 @@ function MarketplaceResultsContent() {
             </div>
           ) : hasActiveQuery ? (
             <div className={styles.stateBox}>
-              <div className={styles.stateIcon} aria-hidden>
-                <FilterOutlined />
-              </div>
+              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
+              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
               <h2 className={styles.stateTitle}>{t('emptyFilteredTitle')}</h2>
               <p className={styles.stateDesc}>{t('emptyFilteredDesc')}</p>
               <Button type="primary" onClick={clearFacets}>
@@ -392,9 +390,9 @@ function MarketplaceResultsContent() {
             </div>
           ) : (
             <div className={styles.stateBox}>
-              <div className={styles.stateIcon} aria-hidden>
-                <FilterOutlined />
-              </div>
+              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
+              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
               <h2 className={styles.stateTitle}>{t('emptySystemTitle')}</h2>
               <p className={styles.stateDesc}>{t('emptySystemDesc')}</p>
             </div>

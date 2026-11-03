@@ -215,6 +215,16 @@
   .tablet1 {
     --per-view: 1.3;
   }
+
+  /*
+   * `mobileFixed` (banner khuyến mãi — Figma MB): MỘT banner mỗi lần, người dùng vuốt sang banner
+   * kế. Mỗi slide chiếm trọn khung, thẻ cố định của khối (340×140) tự canh giữa trong slide — không
+   * thẻ kề nào ló ra.
+   */
+  .mobileFixed .slide {
+    flex-basis: 100%;
+    justify-content: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

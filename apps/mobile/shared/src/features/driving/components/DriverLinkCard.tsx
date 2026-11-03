@@ -274,18 +274,18 @@ function DriverLinkSheet({
         </XStack>
 
         <Section title={t('contactSection')}>
-          <Fact label={t('representative')}>{contact.representativeName ?? empty}</Fact>
-          <Fact label={t('phone')}>{link.employer.phone ?? empty}</Fact>
-          <Fact label={t('email')}>{contact.email ?? empty}</Fact>
-          <Fact label={t('area')}>{contact.areaName ?? empty}</Fact>
+          <Fact strong label={t('representative')}>{contact.representativeName ?? empty}</Fact>
+          <Fact strong label={t('phone')}>{link.employer.phone ?? empty}</Fact>
+          <Fact strong label={t('email')}>{contact.email ?? empty}</Fact>
+          <Fact strong label={t('area')}>{contact.areaName ?? empty}</Fact>
         </Section>
 
         <YStack h={1} bg={colors.border} />
 
         <Section title={t('partnershipSection')}>
-          <Fact label={tCard('ownerKind')}>{kind}</Fact>
-          <Fact label={tCard('driverType')}>{domainLabel('driverType', link.driverType)}</Fact>
-          <Fact label={invited ? tCard('invitedAt') : tCard('joinedAt')}>
+          <Fact strong label={tCard('ownerKind')}>{kind}</Fact>
+          <Fact strong label={tCard('driverType')}>{domainLabel('driverType', link.driverType)}</Fact>
+          <Fact strong label={invited ? tCard('invitedAt') : tCard('joinedAt')}>
             {fmt.dateTime(invited ? link.invitedAt : (link.respondedAt ?? link.invitedAt))}
           </Fact>
           <XStack gap={space.md}>
@@ -316,14 +316,29 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Một dòng thông tin — `.fact` web: nhãn xám bên trái, giá trị căn phải. */
-function Fact({ label, children }: { label: string; children: string }) {
+function Fact({
+  label,
+  strong = false,
+  children,
+}: {
+  label: string;
+  /** Hồ sơ đối tác (Figma `21788:71395`): giá trị 14 Medium. */
+  strong?: boolean;
+  children: string;
+}) {
   const colors = useColors();
   return (
     <XStack jc="space-between" gap={space.md}>
       <Text col={colors.placeholder} fos={fontSize.body} flexShrink={0}>
         {label}
       </Text>
-      <Text col={colors.text} fos={fontSize.body} ta="right" flexShrink={1}>
+      <Text
+        col={colors.text}
+        fos={fontSize.body}
+        fow={strong ? fontWeight.medium : fontWeight.regular}
+        ta="right"
+        flexShrink={1}
+      >
         {children}
       </Text>
     </XStack>

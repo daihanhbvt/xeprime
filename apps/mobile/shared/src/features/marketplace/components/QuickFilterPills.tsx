@@ -204,8 +204,8 @@ export function QuickFilterPills({
                 >
                   <XStack
                     ai="center"
-                    gap={6}
-                    px={12}
+                    gap={4}
+                    px={8}
                     minHeight={PILL_HEIGHT}
                     br={radius.pill}
                     bw={1}
@@ -214,13 +214,13 @@ export function QuickFilterPills({
                   >
                     <Ionicons
                       name={pill.icon}
-                      size={iconSize.sm}
-                      color={pill.active ? colors.primaryHover : colors.placeholder}
+                      size={16}
+                      color={pill.active ? colors.primary : colors.placeholder}
                     />
                     <Text
-                      col={pill.active ? colors.primaryStrong : colors.textMuted}
-                      fos={fontSize.body}
-                      fow={pill.active ? fontWeight.semibold : fontWeight.regular}
+                      col={pill.active ? colors.primary : colors.textMuted}
+                      fos={fontSize.label}
+                      fow={fontWeight.medium} lh={18}
                     >
                       {pill.label}
                     </Text>
@@ -228,7 +228,7 @@ export function QuickFilterPills({
                     <Ionicons
                       name="chevron-down"
                       size={iconSize.xs}
-                      color={pill.active ? colors.primaryHover : colors.placeholder}
+                      color={pill.active ? colors.primary : colors.placeholder}
                     />
                   </XStack>
                 </Pressable>

@@ -126,10 +126,10 @@ export function ListingPoliciesTabs({
                 borderBottomColor={active ? colors.primary : 'transparent'}
               >
                 <Text
-                  col={active ? colors.primary : colors.textMuted}
+                  col={active ? colors.primary : colors.placeholder}
                   fos={fontSize.body}
                   numberOfLines={1}
-                  fow={active ? fontWeight.semibold : fontWeight.medium}
+                  fow={fontWeight.semibold}
                 >
                   {t(`tabs.${key}`)}
                 </Text>

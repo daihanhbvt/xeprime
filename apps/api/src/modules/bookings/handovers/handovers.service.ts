@@ -30,6 +30,7 @@ import {
   handoverEnergyKind,
   handoverOdometerSuspicion,
   canAttachHandoverPhoto,
+  isHandoverPhotoSlotFor,
   isHandoverEditable,
   isHandoverEligible,
   vehicleMaintenanceSchedule,
@@ -144,6 +145,7 @@ export class HandoversService {
       vehicleId: booking.vehicleId,
       vehicleName: booking.vehicle.name,
       plateNumber: booking.vehicle.plateNumber,
+      vehicleType: booking.vehicle.vehicleType,
       energyKind,
       bookingPickupAt: booking.pickupAt.toISOString(),
       bookingReturnAt: booking.returnAt.toISOString(),
@@ -781,6 +783,8 @@ export class HandoversService {
     userId: string,
     dto: PresignHandoverPhotoDto,
   ): Promise<SourceContractPresignDto> {
+    const booking = await this.requireBooking(tenantId, bookingId);
+    assertSlotForVehicle(booking.vehicle.vehicleType, dto.slot);
     const handover = await this.requireActive(tenantId, bookingId, type);
     if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
     // Ảnh mới cùng slot là THAY ảnh cũ nên không tính thêm; chỉ chặn khi thật sự vượt trần.
@@ -810,6 +814,7 @@ export class HandoversService {
     scope: HandoverViewScope,
   ): Promise<HandoverDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
+    assertSlotForVehicle(booking.vehicle.vehicleType, slot);
     const handover = await this.requireActive(tenantId, bookingId, type);
     if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
 
@@ -929,7 +934,7 @@ export class HandoversService {
         vehicleId: true,
         pickupAt: true,
         returnAt: true,
-        vehicle: { select: { name: true, plateNumber: true, fuelType: true } },
+        vehicle: { select: { name: true, plateNumber: true, fuelType: true, vehicleType: true } },
       },
     });
     if (!booking) {
@@ -1294,3 +1299,17 @@ function photoNotFound(): NotFoundException {
 }
 
 /** Prisma 7 làm hỏng `instanceof` — nhận diện lỗi theo mã như các module khác trong kho. */
+
+/**
+ * Góc chụp phải thuộc bộ góc của LOẠI XE (`handoverPhotoSlotsFor`): xe máy không có ảnh trái/phải.
+ * Chặn ở API chứ không chỉ ẩn ô trên giao diện — một client cũ vẫn gửi được góc đó.
+ */
+function assertSlotForVehicle(vehicleType: string, slot: string): void {
+  if (!isHandoverPhotoSlotFor(vehicleType, slot)) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Góc chụp này không áp dụng cho loại xe của đơn',
+      details: { slot, vehicleType },
+    });
+  }
+}

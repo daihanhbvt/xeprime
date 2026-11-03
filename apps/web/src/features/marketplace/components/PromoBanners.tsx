@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { BannerLink } from '@/features/banners/components/BannerLink';
 import type { PublicBanner } from '@/features/banners/types';
-import { cx } from '@/lib/cx';
 import { HomeCarousel } from './HomeCarousel';
 import styles from './PromoBanners.module.css';
 
@@ -28,13 +27,16 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
 
   return (
     <section aria-label={t('label')}>
-      <HomeCarousel ariaLabel={t('label')} perView={2} gap={32}>
+      <HomeCarousel ariaLabel={t('label')} perView={2} gap={32} mobileFixed>
         {visible.map((banner) => (
           <BannerLink key={banner.id} href={banner.linkUrl} className={styles.link}>
             {/* Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns. */}
-            <picture className={cx(styles.card, banner.mobileImageUrl && styles.hasMobile)}>
+            <picture className={styles.card}>
               {banner.mobileImageUrl ? (
                 <source media="(max-width: 640px)" srcSet={banner.mobileImageUrl} />
+              ) : null}
+              {banner.tabletImageUrl ? (
+                <source media="(max-width: 1024px)" srcSet={banner.tabletImageUrl} />
               ) : null}
               <img
                 src={banner.imageUrl}

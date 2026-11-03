@@ -55,8 +55,15 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
    * "thuê được ở đâu", và một salon bốn chi nhánh mà chỉ hiện tỉnh đăng ký là nói thiếu. Chưa có
    * xe công khai nào ⇒ rơi về tỉnh trong hồ sơ, vẫn hơn là một dòng trống.
    */
-  const provinces =
-    shop.serviceProvinceNames.length > 0
+  /*
+   * Chủ xe TUYẾN HOA HỒNG: cạnh tên là KHU VỰC "Phường/Xã, Tỉnh/TP" (`shop.address` server đã che
+   * về khu vực — ADR 0077), thay cho dòng "Địa chỉ" ở mục Thông tin. Gian hàng tuyến gói giữ danh
+   * sách tỉnh đang có xe; địa chỉ đủ của họ nằm ở Thông tin và ở từng thẻ chi nhánh.
+   */
+  const ownerArea = !isShop && shop.address ? shop.address : null;
+  const provinces = ownerArea
+    ? [ownerArea]
+    : shop.serviceProvinceNames.length > 0
       ? shop.serviceProvinceNames
       : shop.provinceName
         ? [shop.provinceName]
@@ -167,7 +174,13 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
                     aria-label={t('header.verified')}
                     title={t('header.verified')}
                   >
-                    <Image src="/home/card-verified.svg" alt="" width={17} height={16} unoptimized />
+                    <Image
+                      src="/home/card-verified.svg"
+                      alt=""
+                      width={17}
+                      height={16}
+                      unoptimized
+                    />
                   </span>
                 ) : null}
               </div>
@@ -228,14 +241,12 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
             ) : null}
           </div>
 
-          {shop.bio || shop.address ? (
+          {shop.bio || (isShop && shop.address) ? (
             <section className={styles.about}>
               <h2 className={styles.aboutTitle}>{t('profile.aboutTitle')}</h2>
               {shop.bio ? <p className={styles.bio}>{shop.bio}</p> : null}
-              {shop.address ? (
-                <p className={styles.address}>
-                  {t('profile.address', { address: shop.address })}
-                </p>
+              {isShop && shop.address ? (
+                <p className={styles.address}>{t('profile.address', { address: shop.address })}</p>
               ) : null}
             </section>
           ) : null}

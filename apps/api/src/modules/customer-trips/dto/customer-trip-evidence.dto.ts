@@ -87,6 +87,13 @@ export class CustomerTripHandoverEvidenceDto {
   })
   condition!: string | null;
 
+  /**
+   * Loại xe của chuyến — quyết bộ góc chụp hiển thị (`handoverPhotoSlotsFor`): ô tô 5 góc, xe máy
+   * 3 góc (trước · sau · Odo). Server nói, giao diện không tự đoán.
+   */
+  @ApiProperty({ description: '@xeprime/types → VehicleType' })
+  vehicleType!: string;
+
   @ApiProperty({ type: [CustomerTripHandoverEvidencePhotoDto] })
   photos!: CustomerTripHandoverEvidencePhotoDto[];
 }

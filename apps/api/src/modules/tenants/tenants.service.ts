@@ -209,10 +209,9 @@ export class TenantsService {
      * thể phải hỏi bản đồ, và giữ transaction mở trong lúc chờ Internet là cách để một sự cố
      * bên ngoài thành một hàng đợi khoá bên trong.
      *
-     * `requireWard: false` ở CẢ HAI tuyến (ADR 0042). Không màn hình nào còn hỏi xã/phường cho
-     * một địa chỉ có ghim, nên đòi nó ở đây là từ chối đúng payload mà giao diện gửi lên. Mã xã
-     * vẫn được NHẬN nếu client gửi (app bản cũ, dữ liệu nhập tay) và vẫn bị `AddressService` đối
-     * chiếu với tỉnh khi có giá trị — chỉ là không bắt buộc nữa.
+     * `requireWard: true` ở CẢ HAI tuyến (ADR 0077 ghi đè ADR 0042): địa chỉ này thành CHI NHÁNH
+     * MẶC ĐỊNH — nơi khách tới nhận xe — nên phải có phường/xã chọn từ danh mục, kể cả khi đã có
+     * ghim bản đồ. Tỉnh/xã là lựa chọn của người dùng; ghim chỉ là toạ độ.
      */
     const address = await this.address.resolve(
       {
@@ -224,7 +223,7 @@ export class TenantsService {
         longitude: dto.longitude,
         locationSource: dto.locationSource,
       },
-      { requireWard: false },
+      { requireWard: true },
     );
 
     const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;

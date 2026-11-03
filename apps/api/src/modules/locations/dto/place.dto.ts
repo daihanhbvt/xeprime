@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsLatitude, IsLongitude, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import {
+  IsLatitude,
+  IsLongitude,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { PLACE_REF_MAX_LENGTH } from '../../geo/geo-provider';
 
 const trimmed = ({ value }: { value: unknown }) =>
@@ -38,6 +46,24 @@ export class PlaceSearchQueryDto {
   @Transform(toNumber)
   @IsLongitude()
   lng?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Tỉnh người dùng ĐÃ CHỌN (ADR 0077): server nối tên tỉnh vào truy vấn, ưu tiên quanh tâm tỉnh ' +
+      'và LOẠI gợi ý nhận ra được là thuộc tỉnh khác.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @Matches(/^\d{2}$/)
+  provinceCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Xã người dùng đã chọn — nối tên xã vào truy vấn. Cần đi kèm `provinceCode`.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @Matches(/^\d{5}$/)
+  wardCode?: string;
 }
 
 export class PlaceDetailQueryDto {
@@ -48,6 +74,14 @@ export class PlaceDetailQueryDto {
   // để một query string khổng lồ không đi thẳng tới nhà cung cấp tính tiền.
   @MaxLength(PLACE_REF_MAX_LENGTH)
   placeId!: string;
+
+  @ApiPropertyOptional({
+    description: 'Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @Matches(/^\d{2}$/)
+  provinceCode?: string;
 }
 
 export class ReverseGeocodeQueryDto {
@@ -71,6 +105,10 @@ export class PlaceSuggestionDto {
 
 export class PlaceSearchResultDto {
   @ApiProperty({ type: [PlaceSuggestionDto] }) items!: PlaceSuggestionDto[];
+  @ApiProperty({
+    description: 'Số gợi ý đã bị LOẠI vì nhận ra là thuộc tỉnh khác tỉnh đã chọn (ADR 0077)',
+  })
+  outOfProvinceCount!: number;
   @ApiProperty({
     description:
       'Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi — ' +
@@ -108,6 +146,13 @@ export class PlaceDetailDto {
     description: 'Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp — gợi ý điền sẵn ô nhập',
   })
   suggestedAddressLine!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) — chỉ để hỏi người dùng xác nhận, không tự lưu',
+  })
+  suggestedWardCode!: string | null;
 }
 
 export class PlaceDetailResultDto {
