@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { HostMetrics as HostMetricsShape } from '@xeprime/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { HomeCardAvatar } from '@/features/marketplace/components/home/HomeCardAvatar';
 import { Card } from '@/components/ui/Card';
 import { VerifiedName } from '@/components/ui/VerifiedName';
 import { HostMetrics } from '@/features/marketplace/components/HostMetrics';
@@ -318,11 +319,14 @@ function InlineShopCard({
         bg={colors.surface}
       >
         <XStack ai="center" gap={12}>
-          <Avatar
+          {/* Cùng dấu tích xanh của thẻ trang chủ (`HomeCardAvatar`), không dùng dấu cam của `Avatar`. */}
+          <HomeCardAvatar
             name={shop.name}
             url={shop.logoUrl}
             size={48}
-            verifiedLabel={shop.verified ? t('header.verified') : undefined}
+            verified={shop.verified}
+            markDisc={16}
+            markIcon={12}
           />
           <YStack f={1} minWidth={0}>
             <Text col={colors.placeholder} fos={fontSize.body}>
