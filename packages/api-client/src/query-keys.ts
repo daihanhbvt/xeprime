@@ -341,7 +341,8 @@ export const queryKeys = {
     bookingHistory: (id: string, params: QueryParams) =>
       ['customers', 'detail', id, 'booking-history', params] as const,
     /** Tab "Thu chi" của hồ sơ khách — doanh thu theo kỳ + khoản phải thu. */
-    revenue: (id: string, period: string) => ['customers', 'detail', id, 'revenue', period] as const,
+    revenue: (id: string, period: string) =>
+      ['customers', 'detail', id, 'revenue', period] as const,
     /**
      * URL ký để hiện ẢNH THU NHỎ của giấy tờ. Tách khỏi `documents` vì vòng đời khác hẳn:
      * metadata giấy tờ ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
@@ -377,6 +378,8 @@ export const queryKeys = {
   debts: {
     all: ['debts'] as const,
     list: (params: QueryParams) => ['debts', 'list', params] as const,
+    /** Dải thẻ + số đếm chip — dưới `debts` nên mọi lượt thu tiền làm mới luôn cả nó. */
+    summary: (params: QueryParams) => ['debts', 'summary', params] as const,
   },
   finance: {
     all: ['finance'] as const,
@@ -606,6 +609,9 @@ export const queryKeys = {
     summary: (scope: string) => ['wallet', scope, 'summary'] as const,
     entries: (scope: string, params: QueryParams) => ['wallet', scope, 'entries', params] as const,
     withdrawals: (scope: string) => ['wallet', scope, 'withdrawals'] as const,
+    /** Biến động số dư theo kỳ — sổ ví + lệnh rút trong một danh sách (chỉ gian hàng). */
+    activity: (scope: string, params: QueryParams) =>
+      ['wallet', scope, 'activity', params] as const,
     /** Bảng tổng hợp giao dịch theo kỳ — chỉ có ở scope `shop`. */
     statement: (scope: string, params: QueryParams) =>
       ['wallet', scope, 'statement', params] as const,

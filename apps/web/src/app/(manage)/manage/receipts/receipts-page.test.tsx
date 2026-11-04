@@ -96,8 +96,8 @@ const overlays = vi.hoisted(() => ({
   formVehicleId: null as string | null,
 }));
 
-vi.mock('@/features/finance/components/ReceiptFormDrawer', () => ({
-  ReceiptFormDrawer: ({
+vi.mock('@/features/finance/components/ReceiptFormDialog', () => ({
+  ReceiptFormDialog: ({
     open,
     onClose,
     initialVehicleId,
@@ -118,9 +118,31 @@ vi.mock('@/features/finance/components/ReceiptFormDrawer', () => ({
   },
 }));
 
-vi.mock('@/features/finance/components/ReceiptDetailDrawer', () => ({
-  ReceiptDetailDrawer: ({ receiptId }: { receiptId: string | null }) =>
+vi.mock('@/features/finance/components/ReceiptDetailDialog', () => ({
+  ReceiptDetailDialog: ({ receiptId }: { receiptId: string | null }) =>
     receiptId ? <div data-testid="receipt-detail">{receiptId}</div> : null,
+}));
+
+/** Thẻ "Công nợ khách hàng" + tab Công nợ có bộ test riêng (`DebtsView.test.tsx`). */
+vi.mock('@/features/finance/hooks/use-debts', () => ({
+  useDebtSummary: () => ({
+    data: {
+      totalAmount: '7673000',
+      totalCount: 17,
+      customerCount: 9,
+      overdueAmount: '0',
+      overdueCount: 0,
+      withinTermAmount: '7673000',
+      withinTermCount: 17,
+      upcomingCount: 0,
+      unpaidCount: 0,
+    },
+    isFetching: false,
+    isError: false,
+  }),
+}));
+vi.mock('@/features/finance/components/DebtsView', () => ({
+  DebtsView: () => <div data-testid="debts-view" />,
 }));
 
 vi.mock('@/features/finance/components/CategoryManagerModal', () => ({
@@ -458,14 +480,14 @@ describe('/manage/receipts — hiển thị tiền', () => {
     expect(screen.getByText('+999.999.999.999 ₫')).toBeTruthy();
   });
 
-  it('hiện mã phiếu, danh mục, diễn giải và hình thức thanh toán', () => {
+  it('hiện mã phiếu, danh mục và hình thức — diễn giải chỉ ở hộp chi tiết (design 04/11/2026)', () => {
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();
 
     expect(screen.getByText('PT-0001')).toBeTruthy();
     expect(screen.getByText('Tiền thuê xe')).toBeTruthy();
-    expect(screen.getByText('Thu tiền đơn XP-001')).toBeTruthy();
     expect(screen.getByText('Tiền mặt')).toBeTruthy();
+    expect(screen.queryByText('Thu tiền đơn XP-001')).toBeNull();
   });
 
   it('thiếu mã phiếu / danh mục / diễn giải thì hiện gạch ngang', () => {
@@ -477,18 +499,19 @@ describe('/manage/receipts — hiển thị tiền', () => {
     });
     renderPage();
 
-    expect(within(bodyRows()[0]!).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(within(bodyRows()[0]!).getAllByText('—').length).toBeGreaterThanOrEqual(2);
   });
 });
 
 /* ------------------------------------------------------------------ quyền + hành động tiền */
 
 describe('/manage/receipts — quyền và hành động ảnh hưởng tiền', () => {
-  it('KHÔNG có quyền duyệt: hàng không có hành động nào', () => {
+  it('KHÔNG có quyền duyệt: hàng chỉ còn "Xem chi tiết", không có thao tác tiền nào', () => {
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();
 
-    expect(within(bodyRows()[0]!).queryAllByRole('button')).toHaveLength(0);
+    const buttons = within(bodyRows()[0]!).queryAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['Xem chi tiết']);
   });
 
   it('có quyền duyệt: phiếu chờ duyệt có cả Duyệt và Huỷ', () => {
@@ -509,22 +532,25 @@ describe('/manage/receipts — quyền và hành động ảnh hưởng tiền',
     expect(within(bodyRows()[0]!).getByRole('button', { name: 'Duyệt' })).toBeTruthy();
   });
 
-  it('phiếu ĐÃ duyệt thì không duyệt lại được, nhưng vẫn huỷ được', () => {
+  it('phiếu ĐÃ duyệt: trên dòng chỉ còn "Xem chi tiết" — huỷ nằm ở hộp chi tiết', () => {
     grant(PERMISSION.RECEIPT_APPROVE);
     setQuery({ data: { items: [receipt({ status: 'approved' })], meta: META } });
     renderPage();
 
     const row = bodyRows()[0]!;
     expect(within(row).queryByRole('button', { name: 'Duyệt' })).toBeNull();
-    expect(within(row).getByRole('button', { name: 'Huỷ' })).toBeTruthy();
+    expect(within(row).queryByRole('button', { name: 'Huỷ' })).toBeNull();
+    fireEvent.click(within(row).getByRole('button', { name: 'Xem chi tiết' }));
+    expect(screen.getByTestId('receipt-detail').textContent).toBe('r1');
   });
 
-  it('phiếu ĐÃ huỷ thì không còn hành động nào', () => {
+  it('phiếu ĐÃ huỷ thì không còn thao tác tiền nào, chỉ xem', () => {
     grant(PERMISSION.RECEIPT_APPROVE);
     setQuery({ data: { items: [receipt({ status: 'cancelled' })], meta: META } });
     renderPage();
 
-    expect(within(bodyRows()[0]!).queryAllByRole('button')).toHaveLength(0);
+    const buttons = within(bodyRows()[0]!).queryAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['Xem chi tiết']);
   });
 
   it('duyệt phiếu phải xác nhận trước, rồi gọi mutation với đúng id', async () => {
@@ -732,5 +758,37 @@ describe('/manage/receipts — mở form từ hồ sơ xe', () => {
     expect(overlays.formVehicleId).toBe('v-9');
     // Mở bằng nút là state cục bộ — không đẩy thêm một lần chuyển trang nào.
     expect(nav.replace).not.toHaveBeenCalled();
+  });
+});
+
+/* ------------------------------------------------------------------ hai tab (design 04/11/2026) */
+
+describe('/manage/receipts — Lịch sử giao dịch: hai tab', () => {
+  it('tiêu đề mới + thẻ "Công nợ khách hàng" bấm sang tab Công nợ', () => {
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    expect(screen.getByText('Lịch sử giao dịch')).toBeTruthy();
+    const tiles = screen.getByRole('region', { name: 'Số liệu thu chi' });
+    const link = within(tiles).getByRole('link', { name: /^Công nợ khách hàng/ });
+    expect(link.getAttribute('href')).toBe('/manage/receipts?view=debts');
+    expect(within(tiles).getByText('17 đơn còn nợ')).toBeTruthy();
+  });
+
+  it('?view=debts mở tab Công nợ thay cho sổ thu chi', () => {
+    nav.params = new URLSearchParams('view=debts');
+    renderPage();
+
+    expect(screen.getByTestId('debts-view')).toBeTruthy();
+    expect(screen.queryByText('Bảng tổng hợp giao dịch thu chi')).toBeNull();
+  });
+
+  it('bấm "Công nợ" đi tới URL sạch của tab đó, không mang bộ lọc sổ thu chi', () => {
+    nav.params = new URLSearchParams('type=expense');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByText('Công nợ'));
+    expect(nav.push).toHaveBeenCalledWith('/manage/receipts?view=debts');
   });
 });

@@ -11,6 +11,7 @@ import {
   nowInAppTz,
   rentalDurationParts,
   startOfAppDay,
+  overdueDays,
   toAppTz,
 } from './datetime';
 import { DEFAULT_PICKUP_HOURS, draftFromFilters, draftToFilterPatch } from './search-draft';
@@ -333,5 +334,23 @@ describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ củ
 describe('APP_TIME_ZONE', () => {
   it('là tên vùng IANA, không phải một offset gõ tay', () => {
     expect(APP_TIME_ZONE).toBe('Asia/Ho_Chi_Minh');
+  });
+});
+
+describe('overdueDays', () => {
+  const now = new Date('2026-11-04T05:00:00.000Z');
+
+  it('chưa tới hạn hoặc đúng hạn ⇒ 0', () => {
+    expect(overdueDays('2026-11-05T05:00:00.000Z', now)).toBe(0);
+    expect(overdueDays('2026-11-04T05:00:00.000Z', now)).toBe(0);
+  });
+
+  it('trễ vài giờ đã là 1 ngày; trễ 26 ngày đúng 26', () => {
+    expect(overdueDays('2026-11-04T03:00:00.000Z', now)).toBe(1);
+    expect(overdueDays('2026-10-09T05:00:00.000Z', now)).toBe(26);
+  });
+
+  it('hạn không đọc được ⇒ 0', () => {
+    expect(overdueDays('không-phải-ngày', now)).toBe(0);
   });
 });

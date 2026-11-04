@@ -5,10 +5,10 @@ import { PERMISSION, type Permission } from '@xeprime/types';
 
 import type { DebtItem } from '@/features/finance/types';
 
-import DebtsPage from './page';
+import { DebtsView } from './DebtsView';
 
 /**
- * `/manage/debts` — màn thu nợ.
+ * Tab "Công nợ" của Lịch sử giao dịch (`/receipts?view=debts`) — trước 04/11/2026 là màn `/debts`.
  *
  * Viết cùng đợt thêm ô tìm kiếm. Điều được khoá là **hợp đồng lọc**: từ khoá và nhóm hạn đi qua
  * URL (ADR 0004) và xuống thẳng hook (lọc chạy ở SERVER, không cắt trên trang đang mở), và câu
@@ -26,7 +26,7 @@ vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
-  usePathname: () => '/manage/debts',
+  usePathname: () => '/manage/receipts',
   useSearchParams: () => nav.params,
 }));
 
@@ -38,17 +38,24 @@ const query = vi.hoisted(() => ({
   lastFilters: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock('@/features/finance/hooks/use-debts', () => ({
+const summary = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isFetching: false,
+  isError: false,
+}));
+
+vi.mock('../hooks/use-debts', () => ({
   useDebts: (filters: Record<string, unknown>) => {
     query.lastFilters = filters;
     return query;
   },
+  useDebtSummary: () => summary,
 }));
 
 /** Hai overlay có test riêng ở feature của chúng — stub để test này chỉ nói về trang danh sách. */
-vi.mock('@/features/bookings/components/BookingDetailDialog', () => ({
-  BookingDetailDialog: ({ bookingId }: { bookingId: string }) => (
-    <div data-testid="booking-detail">{bookingId}</div>
+vi.mock('./DebtDetailDialog', () => ({
+  DebtDetailDialog: ({ bookingId }: { bookingId: string }) => (
+    <div data-testid="debt-detail">{bookingId}</div>
   ),
 }));
 
@@ -84,6 +91,7 @@ function debt(over: Partial<DebtItem> = {}): DebtItem {
     customerName: 'Nguyễn Văn An',
     customerPhone: '0901234567',
     vehicleName: 'Toyota Vios 2022',
+    plateNumber: '51A-12345',
     status: 'active',
     returnAt: '2026-08-20T03:00:00.000Z',
     totalAmount: '1000000',
@@ -110,7 +118,7 @@ function grant(...permissions: Permission[]) {
 function renderPage() {
   return render(
     <App>
-      <DebtsPage />
+      <DebtsView />
     </App>,
   );
 }
@@ -127,12 +135,23 @@ beforeEach(() => {
   query.refetch.mockReset();
   query.lastFilters = undefined;
   setQuery({ data: { items: [debt()], meta: META } });
+  summary.data = {
+    totalAmount: '700000',
+    totalCount: 17,
+    customerCount: 9,
+    overdueAmount: '500000',
+    overdueCount: 11,
+    withinTermAmount: '200000',
+    withinTermCount: 6,
+    upcomingCount: 0,
+    unpaidCount: 15,
+  };
   grant(PERMISSION.PAYMENT_RECORD, PERMISSION.BOOKING_VIEW);
 });
 
 afterEach(cleanup);
 
-describe('/manage/debts — bộ lọc ở URL', () => {
+describe('Công nợ — bộ lọc ở URL', () => {
   it('đọc `q` và `filter` từ URL rồi truyền thẳng xuống hook', () => {
     nav.params = new URLSearchParams('q=51A&filter=overdue');
     renderPage();
@@ -163,7 +182,7 @@ describe('/manage/debts — bộ lọc ở URL', () => {
 
     expect(nav.replace).toHaveBeenCalled();
     const url = lastReplacedUrl();
-    expect(url).toContain('/manage/debts');
+    expect(url).toContain('/manage/receipts');
     expect(url).not.toContain('q=');
     expect(url).not.toContain('filter=');
   });
@@ -174,7 +193,7 @@ describe('/manage/debts — bộ lọc ở URL', () => {
   });
 });
 
-describe('/manage/debts — rỗng vì chưa nợ vs rỗng vì lọc', () => {
+describe('Công nợ — rỗng vì chưa nợ vs rỗng vì lọc', () => {
   it('không lọc và rỗng: "chưa ai còn nợ"', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -194,7 +213,7 @@ describe('/manage/debts — rỗng vì chưa nợ vs rỗng vì lọc', () => {
   });
 });
 
-describe('/manage/debts — bảng', () => {
+describe('Công nợ — bảng', () => {
   it('lỗi khi chưa có dữ liệu: nút thử lại gọi refetch', () => {
     setQuery({ isError: true });
     renderPage();
@@ -215,5 +234,47 @@ describe('/manage/debts — bảng', () => {
     renderPage();
 
     expect(screen.getByPlaceholderText(/Mã đơn/)).toBeTruthy();
+  });
+});
+
+describe('Công nợ — thẻ, chip và bảng theo design', () => {
+  it('chip nhóm hạn mang số đếm của TỪNG nhóm, đọc từ dải thẻ', () => {
+    renderPage();
+    const group = screen.getByRole('radiogroup', { name: 'Nhóm theo hạn trả' });
+    expect(group.textContent).toContain('Tất cả17');
+    expect(group.textContent).toContain('Quá hạn11');
+    expect(group.textContent).toContain('Chưa thu15');
+  });
+
+  it('bấm chip "Quá hạn" ghi filter=overdue lên URL', () => {
+    renderPage();
+    fireEvent.click(screen.getByText('Quá hạn'));
+    expect(lastReplacedUrl()).toContain('filter=overdue');
+  });
+
+  it('dòng đã qua hạn trả nói "Quá N ngày"; chưa tới hạn thì không', () => {
+    setQuery({
+      data: {
+        items: [
+          debt({ bookingId: 'LATE', returnAt: new Date(Date.now() - 3 * 86_400_000 + 3_600_000).toISOString() }),
+          debt({ bookingId: 'SOON', code: 'XP-002', returnAt: new Date(Date.now() + 86_400_000).toISOString() }),
+        ],
+        meta: { ...META, total: 2 },
+      },
+    });
+    renderPage();
+    expect(screen.getAllByText('Quá 3 ngày')).toHaveLength(1);
+  });
+
+  it('thẻ tổng nói số đơn và số khách', () => {
+    renderPage();
+    expect(screen.getByText('17 đơn · 9 khách')).toBeTruthy();
+    expect(screen.getByText('11 đơn cần nhắc ngay')).toBeTruthy();
+  });
+
+  it('"Xem đơn" mở hộp công nợ của đúng đơn đó', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem đơn' }));
+    expect(screen.getByTestId('debt-detail').textContent).toBe('B1');
   });
 });

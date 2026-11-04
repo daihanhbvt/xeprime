@@ -1,0 +1,39 @@
+.groups {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Huy hiệu số đếm của chip (design: "Quá hạn  11"). */
+.count {
+  min-width: 22px;
+  padding: 0 var(--xp-space-6);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--xp-line-height-label);
+  text-align: center;
+}
+
+.filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sort {
+  width: 220px;
+}
+
+@media (max-width: 640px) {
+  .sort {
+    width: 100%;
+  }
+}

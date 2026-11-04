@@ -52,6 +52,12 @@ import { BankLogo } from './BankLogo';
  * Bề mặt khách: nhãn trên ô nhập, biểu tượng đầu ô, dòng "thay cho…" màu cảnh báo, nút của bảng
  * nút v2, và lưu xong mở hộp "Thành công" thay cho toast. Khai lại đúng tài khoản đang dùng thì
  * vẫn là toast — không có gì thành công để chúc mừng.
+ *
+ * ## Dáng `partner` (Figma Partner-XePrime `23948:96973` · `23948:97512` · `23948:98047`)
+ *
+ * Cùng bố cục với `account` (nhãn trên ô, biểu tượng đầu ô, khung cảnh báo "thay cho…"), nút
+ * chính đổi chữ theo việc — "Thêm tài khoản" / "Xác nhận" — và lưu xong là một thông báo góc màn
+ * hình có tiêu đề "Thành công!" thay cho hộp thoại.
  */
 export function BankAccountForm({
   scope,
@@ -65,14 +71,22 @@ export function BankAccountForm({
   onClose: () => void;
   /** Tài khoản đang dùng — có thì hộp thoại là "Đổi tài khoản", tài khoản mới thay cho nó. */
   replacing?: BankAccount | null;
-  appearance?: 'standard' | 'account';
+  appearance?: 'standard' | 'account' | 'partner';
 }) {
   const t = useTranslations('BankAccounts.form');
   const tCommon = useTranslations('Common');
-  const { message } = App.useApp();
+  const { message, notification } = App.useApp();
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
   const isAccount = appearance === 'account';
+  const isPartner = appearance === 'partner';
+  /** Bố cục v2 (nhãn trên ô, biểu tượng, nút của bảng nút v2) — cả khu khách lẫn site partner. */
+  const v2 = isAccount || isPartner;
+  const submitText = isPartner
+    ? replacing
+      ? tCommon('actions.confirm')
+      : t('addSubmit')
+    : t('submit');
   /** Câu của hộp "Thành công" (dáng `account`) — `null` là hộp đang đóng. */
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
 
@@ -139,6 +153,11 @@ export function BankAccountForm({
           let toast = t('created');
           if (replacing) toast = unchanged ? t('unchanged') : t('changed');
           if (isAccount && !unchanged) setSavedNotice(toast);
+          else if (isPartner && !unchanged)
+            notification.success({
+              title: t('saved.toastTitle'),
+              description: replacing ? t('saved.changedDetail') : t('saved.createdDetail'),
+            });
           else message.success(toast);
           close();
         },
@@ -153,19 +172,19 @@ export function BankAccountForm({
         title={replacing ? t('changeTitle') : t('title')}
         open={open}
         onClose={close}
-        okText={t('submit')}
+        okText={submitText}
         onOk={() => void onSubmit()}
         confirmLoading={create.isPending}
         size="sm"
-        className={cx(isAccount && styles.dialog)}
+        className={cx(v2 && styles.dialog)}
         footer={
-          isAccount ? (
+          v2 ? (
             <div className={styles.footer}>
               <CtaButton variant="neutral" onClick={close} disabled={create.isPending}>
                 {tCommon('actions.cancel')}
               </CtaButton>
               <CtaButton onClick={() => void onSubmit()} loading={create.isPending}>
-                {t('submit')}
+                {submitText}
               </CtaButton>
             </div>
           ) : undefined
@@ -173,8 +192,8 @@ export function BankAccountForm({
       >
         {replacing ? (
           <Alert
-            type={isAccount ? 'warning' : 'info'}
-            showIcon={!isAccount}
+            type={v2 ? 'warning' : 'info'}
+            showIcon={!v2}
             className={styles.replaces}
             title={t('replaces', {
               account: `${bankAccountTitle(replacing)} · ${replacing.accountNumberMasked}`,
@@ -184,8 +203,8 @@ export function BankAccountForm({
         <DialogForm
           onSubmit={onSubmit}
           labelWidth="lg"
-          labelPosition={isAccount ? 'top' : 'side'}
-          requiredMark={isAccount ? trailingRequiredMark : undefined}
+          labelPosition={v2 ? 'top' : 'side'}
+          requiredMark={v2 ? trailingRequiredMark : undefined}
         >
           <SelectField
             control={control}
@@ -197,7 +216,7 @@ export function BankAccountForm({
             // Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn.
             showSearch
             required
-            renderOption={isAccount ? renderBankOption : undefined}
+            renderOption={v2 ? renderBankOption : undefined}
           />
           {/*
           Tên người thụ hưởng đứng TRƯỚC số tài khoản: người dùng nhớ tên mình trước, và ngân
@@ -208,16 +227,16 @@ export function BankAccountForm({
             name="accountName"
             label={t('accountName')}
             help={t('accountNameHint')}
-            placeholder={isAccount ? t('accountNamePlaceholder') : undefined}
-            prefix={isAccount ? <UserOutlined aria-hidden="true" /> : undefined}
+            placeholder={v2 ? t('accountNamePlaceholder') : undefined}
+            prefix={v2 ? <UserOutlined aria-hidden="true" /> : undefined}
             required
           />
           <TextField
             control={control}
             name="accountNumber"
             label={t('accountNumber')}
-            placeholder={isAccount ? t('accountNumberPlaceholder') : undefined}
-            prefix={isAccount ? <CreditCardOutlined aria-hidden="true" /> : undefined}
+            placeholder={v2 ? t('accountNumberPlaceholder') : undefined}
+            prefix={v2 ? <CreditCardOutlined aria-hidden="true" /> : undefined}
             required
           />
           <TextField
@@ -225,7 +244,7 @@ export function BankAccountForm({
             name="label"
             label={t('label')}
             placeholder={t('labelPlaceholder')}
-            prefix={isAccount ? <TagOutlined aria-hidden="true" /> : undefined}
+            prefix={v2 ? <TagOutlined aria-hidden="true" /> : undefined}
           />
         </DialogForm>
       </ResponsiveDialog>

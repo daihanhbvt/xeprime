@@ -14,11 +14,11 @@ import { PayoutNotes } from './PayoutNotes';
 /**
  * Tab "Tài khoản thanh toán" của mục Quản lý thanh toán — design Account / Balance (Figma
  * `19879:74829`): thẻ số dư có nút "Rút về ngân hàng liên kết", rồi NGAY dưới là tài khoản nhận
- * tiền (thẻ chi tiết + khối lưu ý), sau đó các lệnh rút và sổ ví.
+ * tiền (thẻ chi tiết + khối lưu ý). Lệnh rút và sổ ví nằm ở tab "Lịch sử giao dịch".
  *
  * Trước đây "Số dư của tôi" và "Tài khoản nhận tiền" là hai trang: rút tiền và nơi tiền về là MỘT
- * việc, nên người bấm "Rút" mà chưa có tài khoản phải thấy chỗ khai trên cùng màn — cùng bố cục
- * với trang số dư của site partner (`PartnerBalanceView`), khác DÁNG (`appearance="account"`).
+ * việc, nên người bấm "Rút" mà chưa có tài khoản phải thấy chỗ khai trên cùng màn — cùng ý với
+ * trang Quản lý ví của site partner (`PartnerBalanceView`, nơi nó nằm ở cột phải).
  *
  * `?section=payout` cuộn tới khối tài khoản nhận tiền — đích của đường cũ `/account/bank-accounts`.
  * Ví của TÀI KHOẢN KHÁCH (ADR 0053 điều 8), nên scope luôn là `account`.
@@ -37,7 +37,6 @@ export function AccountBalanceView() {
   return (
     <WalletView
       scope="account"
-      appearance="account"
       payout={
         <BankAccountList
           scope="account"

@@ -5,21 +5,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CategoryManagerModal } from './CategoryManagerModal';
 
 /**
- * Test đặc tả viết TRƯỚC khi đổi vỏ overlay.
+ * Hộp "Danh mục thu/chi" — design Partner-XePrime `23845:41185` (04/11/2026).
  *
- * Hai điểm khác hẳn các dialog còn lại, phải giữ nguyên:
- *  1. Modal này **không** có `destroyOnClose` → state cục bộ (`type`, `name`) sống qua lần
- *     đóng. `ResponsiveDialog` mặc định huỷ, nên phải truyền `destroyOnClose={false}`.
- *  2. Xoá danh mục **không có bước xác nhận** — bấm là gọi mutation ngay. Đó là hành vi đang
- *     có; thêm confirm sẽ là redesign, không thuộc batch này (ghi ở backlog).
+ * Điều phải sống sót qua mọi lần sửa:
+ *  1. Mỗi dòng LƯU NGAY bằng nút ✓ của nó (chốt 04/11/2026) — không gom chờ "Xác nhận".
+ *  2. Danh mục HỆ THỐNG không có nút sửa/xoá nào (server cũng chặn).
+ *  3. Xoá phải xác nhận trước — xoá nhầm một danh mục là mất nhóm của mọi phiếu cũ.
+ *  4. Tên đang gõ ở dòng thêm mới sống qua lần đóng (`destroyOnClose={false}`).
  */
 const list = vi.hoisted(() => ({ data: [] as unknown[], isLoading: false }));
 const create = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+const update = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const remove = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
 vi.mock('../hooks/use-finance-categories', () => ({
   useFinanceCategories: () => list,
   useCreateCategory: () => create,
+  useUpdateCategory: () => update,
   useDeleteCategory: () => remove,
 }));
 
@@ -43,6 +45,7 @@ function nameInput(): HTMLInputElement {
 
 beforeEach(() => {
   create.mutate.mockReset();
+  update.mutate.mockReset();
   remove.mutate.mockReset();
   create.isPending = false;
   list.isLoading = false;
@@ -54,70 +57,62 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('CategoryManagerModal — hành vi hiện tại', () => {
-  it('tiêu đề "Danh mục thu/chi"', () => {
-    renderModal();
-    expect(screen.getByText('Danh mục thu/chi')).toBeTruthy();
-  });
-
+describe('CategoryManagerModal', () => {
   it('liệt kê danh mục kèm nhãn Thu/Chi và Hệ thống', () => {
     renderModal();
+    expect(screen.getByText('Danh mục thu/chi')).toBeTruthy();
     expect(screen.getByText('Tiền xăng')).toBeTruthy();
     expect(screen.getByText('Doanh thu thuê')).toBeTruthy();
     expect(screen.getByText('Hệ thống')).toBeTruthy();
   });
 
-  it('đang tải thì hiện "Đang tải…"', () => {
-    list.isLoading = true;
+  it('nút lưu dòng mới bị vô hiệu khi chưa nhập tên', () => {
     renderModal();
-    expect(screen.getByText('Đang tải…')).toBeTruthy();
-  });
-
-  it('nút Thêm bị vô hiệu khi chưa nhập tên', () => {
-    renderModal();
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: /Thêm/ }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Thêm' }).disabled).toBe(true);
   });
 
   it('thêm danh mục: gửi tên đã trim, báo thành công và xoá ô nhập', async () => {
+    create.mutate.mockImplementation((_body, opts) => opts.onSuccess());
     renderModal();
-    fireEvent.change(nameInput(), { target: { value: '  Phí cầu đường  ' } });
-    fireEvent.click(screen.getByRole('button', { name: /Thêm/ }));
+    fireEvent.change(nameInput(), { target: { value: '  Rửa xe  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
 
-    await waitFor(() => expect(create.mutate).toHaveBeenCalledTimes(1));
-    expect(create.mutate.mock.calls[0]![0]).toEqual({ type: 'expense', name: 'Phí cầu đường' });
-
-    create.mutate.mock.calls[0]![1].onSuccess();
+    expect(create.mutate).toHaveBeenCalledWith(
+      { type: 'expense', name: 'Rửa xe' },
+      expect.anything(),
+    );
     expect(await screen.findByText('Đã thêm danh mục')).toBeTruthy();
     expect(nameInput().value).toBe('');
   });
 
-  it('thêm lỗi thì hiện thông báo lỗi', async () => {
+  it('chỉ danh mục KHÔNG phải hệ thống mới có nút sửa/xoá', () => {
     renderModal();
-    fireEvent.change(nameInput(), { target: { value: 'Trùng' } });
-    fireEvent.click(screen.getByRole('button', { name: /Thêm/ }));
-
-    await waitFor(() => expect(create.mutate).toHaveBeenCalled());
-    create.mutate.mock.calls[0]![1].onError(new Error('Danh mục đã tồn tại'));
-    expect(await screen.findByText('Danh mục đã tồn tại')).toBeTruthy();
-  });
-
-  it('chỉ danh mục KHÔNG phải hệ thống mới có nút xoá', () => {
-    renderModal();
+    expect(screen.getAllByRole('button', { name: 'Sửa tên danh mục' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Xoá danh mục' })).toHaveLength(1);
   });
 
-  it('xoá gọi mutation NGAY, không có bước xác nhận (hành vi hiện tại)', () => {
+  it('sửa tên: lưu bằng ✓ của chính dòng đó, gửi tên đã trim', () => {
     renderModal();
-    fireEvent.click(screen.getByRole('button', { name: 'Xoá danh mục' }));
-    expect(remove.mutate).toHaveBeenCalledTimes(1);
-    expect(remove.mutate.mock.calls[0]![0]).toBe('C1');
+    fireEvent.click(screen.getByRole('button', { name: 'Sửa tên danh mục' }));
+    const input = screen.getByDisplayValue('Tiền xăng');
+    fireEvent.change(input, { target: { value: ' Xăng dầu ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu danh mục' }));
+
+    expect(update.mutate).toHaveBeenCalledWith({ id: 'C1', name: 'Xăng dầu' }, expect.anything());
   });
 
-  /** Không có `destroyOnClose`: state cục bộ phải sống qua lần đóng. */
+  it('xoá phải XÁC NHẬN trước khi gọi mutation', async () => {
+    renderModal();
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá danh mục' }));
+    expect(remove.mutate).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
+    await waitFor(() => expect(remove.mutate).toHaveBeenCalledWith('C1', expect.anything()));
+  });
+
   it('đóng rồi mở lại vẫn giữ tên đang gõ', () => {
     const { rerender } = renderModal();
-    fireEvent.change(nameInput(), { target: { value: 'Bản nháp' } });
-
+    fireEvent.change(nameInput(), { target: { value: 'Phí gửi xe' } });
     rerender(
       <App>
         <CategoryManagerModal open={false} onClose={vi.fn()} />
@@ -128,7 +123,6 @@ describe('CategoryManagerModal — hành vi hiện tại', () => {
         <CategoryManagerModal open onClose={vi.fn()} />
       </App>,
     );
-
-    expect(nameInput().value).toBe('Bản nháp');
+    expect(nameInput().value).toBe('Phí gửi xe');
   });
 });

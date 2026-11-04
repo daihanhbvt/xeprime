@@ -38,3 +38,13 @@ export interface WalletStatementFilters {
   period: string;
   page: number;
 }
+
+/**
+ * Một dòng "Biến động số dư" — `GET /shop/wallet/activity`: bút toán sổ ví HOẶC lệnh rút
+ * (`source`). Lệnh rút mang trạng thái, hạn chuyển, lý do và `cancellable`.
+ */
+export type WalletActivity = Schemas['WalletActivityDto'];
+export type WalletActivityPage = Schemas['WalletActivityPageDto'];
+
+/** Kỳ + trang của tab Biến động số dư — sống trên URL (ADR 0004). */
+export type WalletActivityFilters = WalletStatementFilters;

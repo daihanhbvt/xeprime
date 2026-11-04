@@ -104,11 +104,9 @@ describe('WalletBalancePill', () => {
 
   /** Cửa sổ ẩn danh ném ngay ở bước truy cập `localStorage`; pill vẫn phải hiện. */
   it('localStorage bị chặn: vẫn hiện số dư, chỉ mất khả năng nhớ lựa chọn', () => {
-    const getItem = vi
-      .spyOn(Storage.prototype, 'getItem')
-      .mockImplementation(() => {
-        throw new Error('blocked');
-      });
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });

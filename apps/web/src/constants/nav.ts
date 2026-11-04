@@ -349,26 +349,16 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: PARTNER_NAV_ICON.wallet,
       },
       {
+        /*
+         * "Lịch sử giao dịch" gồm hai tab: Giao dịch thu chi và Công nợ (`?view=debts`, design
+         * 04/11/2026). Công nợ không còn là mục ẩn riêng — `/debts` cũ chuyển tiếp về tab đó.
+         */
         key: 'receipts',
         labelKey: 'manage.transactionHistory',
         href: ROUTES.MANAGE.RECEIPTS,
         permission: PERMISSION.FINANCE_VIEW,
         icon: PARTNER_NAV_ICON.transactions,
         feature: PLAN_FEATURE.FINANCE,
-      },
-      {
-        /*
-         * Công nợ — ẨN khỏi menu từ design mới (02/11/2026): nó sẽ nằm TRONG một màn Doanh thu khi
-         * design tới. Tới lúc đó vào từ thẻ "Công nợ" ở Tổng quan doanh thu. Còn trong cây để trang
-         * vẫn thuộc khối Doanh thu (breadcrumb) và băng "gói hết hạn" vẫn tra được cờ của nó.
-         */
-        key: 'debts',
-        labelKey: 'manage.debts',
-        href: ROUTES.MANAGE.DEBTS,
-        permission: PERMISSION.FINANCE_VIEW,
-        icon: PARTNER_NAV_ICON.transactions,
-        feature: PLAN_FEATURE.DEBTS,
-        hidden: true,
       },
     ],
   },

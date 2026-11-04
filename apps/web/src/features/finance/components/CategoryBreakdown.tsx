@@ -27,7 +27,10 @@ interface CategoryBreakdownProps {
 }
 
 /**
- * Cơ cấu doanh thu (hoặc chi phí) theo danh mục — thanh ngang, không phải bánh tròn.
+ * Cơ cấu doanh thu (hoặc chi phí) theo danh mục — thanh ngang, không phải bánh tròn. Bố cục theo
+ * design Partner-XePrime (`23813:37042`): "Tên · n phiếu  x%" bên trái, số tiền bên phải, thanh 8px
+ * ngay dưới. Mỗi dòng vẫn là LIÊN KẾT ra sổ đã lọc đúng danh mục đó — design không vẽ nhưng code
+ * có từ trước, nên giữ (chỉ lộ ra khi rê chuột).
  *
  * Vì sao thanh ngang: gian hàng có 18 danh mục hệ thống cộng danh mục riêng. Bánh tròn quá 5 lát
  * là không đọc được, còn thanh ngang xếp giảm dần đọc được ở mọi số lượng, mang được cả số tiền
@@ -87,7 +90,12 @@ export function CategoryBreakdown({
                   to: filters.to,
                 })}
               >
-                <span className={styles.name}>{labelOf(item)}</span>
+                <span className={styles.label}>
+                  <span className={styles.name}>
+                    {t('row', { name: labelOf(item), count: item.count })}
+                  </span>
+                  <span className={styles.share}>{t('share', { percent: item.sharePercent })}</span>
+                </span>
                 <span className={styles.amount}>{fmt.money(item.amount)}</span>
               </Link>
               {/* Chiều dài thanh chỉ biết lúc chạy → CSS custom property (ngoại lệ ADR 0003). */}
@@ -97,9 +105,6 @@ export function CategoryBreakdown({
               >
                 <div className={tone === 'revenue' ? styles.barRevenue : styles.barCost} />
               </div>
-              <span className={styles.meta}>
-                {t('share', { percent: item.sharePercent })} · {t('count', { count: item.count })}
-              </span>
             </li>
           ))}
         </ol>

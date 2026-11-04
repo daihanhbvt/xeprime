@@ -21096,6 +21096,32 @@
             }
           },
           {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reserved",
+                "confirmed",
+                "active",
+                "completed",
+                "cancelled",
+                "no_show"
+              ]
+            }
+          },
+          {
             "name": "filter",
             "required": false,
             "in": "query",
@@ -21111,12 +21137,17 @@
             }
           },
           {
-            "name": "branchId",
+            "name": "sort",
             "required": false,
             "in": "query",
-            "description": "Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại",
             "schema": {
-              "type": "string"
+              "default": "overdue",
+              "type": "string",
+              "enum": [
+                "overdue",
+                "debt",
+                "newest"
+              ]
             }
           },
           {
@@ -21234,6 +21265,158 @@
           }
         },
         "summary": "Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)",
+        "tags": [
+          "finance-overview"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/debts/summary": {
+      "get": {
+        "operationId": "FinanceOverviewController_debtSummary",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reserved",
+                "confirmed",
+                "active",
+                "completed",
+                "cancelled",
+                "no_show"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DebtSummaryDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) — cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở",
         "tags": [
           "finance-overview"
         ],
@@ -61995,6 +62178,154 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query."
       }
     },
+    "/shop/wallet/activity": {
+      "get": {
+        "description": "Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại — lệnh rút đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.",
+        "operationId": "ShopWalletController_activity",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Kỳ `YYYY-MM` theo giờ Việt Nam. Bỏ trống = kỳ hiện tại.",
+            "schema": {
+              "example": "2026-10",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WalletActivityPageDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NO_TENANT_SCOPE",
+                    "message": "Tài khoản không thuộc gian hàng nào"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Biến động số dư của gian hàng trong một kỳ",
+        "tags": [
+          "wallet"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/shop/wallet/entries": {
       "get": {
         "operationId": "ShopWalletController_entries",
@@ -86223,6 +86554,16 @@
           "fullName": {
             "type": "string"
           },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT dạng hiển thị (`0…`) · null = người xem thiếu `customer.view`"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh tài khoản nền tảng của khách · null = chưa liên kết / không có ảnh / thiếu `customer.view`"
+          },
           "trips": {
             "type": "number",
             "description": "Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ"
@@ -87524,6 +87865,10 @@
           "vehicleName": {
             "type": "string"
           },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -87584,6 +87929,56 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "DebtSummaryDto": {
+        "type": "object",
+        "properties": {
+          "totalAmount": {
+            "type": "string",
+            "description": "Tổng còn nợ, string"
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Số đơn còn nợ"
+          },
+          "customerCount": {
+            "type": "number",
+            "description": "Số khách còn nợ (đếm theo hồ sơ khách, không có thì theo SĐT)"
+          },
+          "overdueAmount": {
+            "type": "string",
+            "description": "Còn nợ của các đơn đã qua hạn trả, string"
+          },
+          "overdueCount": {
+            "type": "number"
+          },
+          "withinTermAmount": {
+            "type": "string",
+            "description": "Còn nợ của các đơn chưa tới hạn trả, string"
+          },
+          "withinTermCount": {
+            "type": "number"
+          },
+          "upcomingCount": {
+            "type": "number",
+            "description": "Số đơn có hạn trả trong `DEBT_UPCOMING_DAYS` ngày tới"
+          },
+          "unpaidCount": {
+            "type": "number",
+            "description": "Số đơn chưa thu đồng nào"
+          }
+        },
+        "required": [
+          "totalAmount",
+          "totalCount",
+          "customerCount",
+          "overdueAmount",
+          "overdueCount",
+          "withinTermAmount",
+          "withinTermCount",
+          "upcomingCount",
+          "unpaidCount"
         ]
       },
       "DefaultBranchDto": {
@@ -111970,6 +112365,11 @@
             "type": "string",
             "nullable": true
           },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện của xe"
+          },
           "trips": {
             "type": "number",
             "description": "Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ"
@@ -112812,6 +113212,158 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "WalletActivityDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "entry",
+              "withdrawal"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hold_forfeit",
+              "hold_release",
+              "hold_refund",
+              "hold_overpay",
+              "extension_release",
+              "extension_refund",
+              "withdrawal",
+              "withdrawal_reversal",
+              "adjustment"
+            ],
+            "nullable": true,
+            "description": "Loại bút toán — chỉ dòng sổ"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã lệnh rút (XPW…) hoặc mã chuyến của bút toán"
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "string",
+            "description": "Dương = vào ví, âm = ra khỏi ví (VND string)"
+          },
+          "balanceAfter": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số dư khả dụng sau bút toán — null ở dòng lệnh rút"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "cancellable": {
+            "type": "boolean",
+            "description": "Chủ ví tự huỷ được — chỉ lệnh rút còn chờ duyệt"
+          },
+          "withdrawal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WalletActivityWithdrawalDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "amount",
+          "occurredAt",
+          "cancellable"
+        ]
+      },
+      "WalletActivityPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletActivityDto"
+            }
+          },
+          "period": {
+            "type": "string",
+            "example": "2026-10"
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "period",
+          "total",
+          "page",
+          "limit",
+          "hasNext"
+        ]
+      },
+      "WalletActivityWithdrawalDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "paid",
+              "rejected",
+              "cancelled",
+              "reversed"
+            ]
+          },
+          "bankCode": {
+            "type": "string"
+          },
+          "accountNumberMasked": {
+            "type": "string",
+            "description": "Số tài khoản đã che — PII"
+          },
+          "dueBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn cam kết chuyển"
+          },
+          "paidAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "rejectReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "reverseReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "bankCode",
+          "accountNumberMasked"
         ]
       },
       "WalletDriftDto": {

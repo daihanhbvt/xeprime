@@ -347,6 +347,58 @@ export function moneyToVietnameseWords(value: MoneyString | null | undefined): s
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+const EN_ONES = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+  'nineteen',
+];
+const EN_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const EN_SCALES = ['', ' thousand', ' million', ' billion', ' trillion', ' quadrillion'];
+
+/** Một nhóm 3 chữ số tiếng Anh: "three hundred forty-five". */
+function readTripleEn(value: number): string {
+  const hundred = Math.floor(value / 100);
+  const rest = value % 100;
+  const parts: string[] = [];
+  if (hundred > 0) parts.push(`${EN_ONES[hundred]} hundred`);
+  if (rest > 0 && rest < 20) parts.push(EN_ONES[rest]!);
+  else if (rest >= 20) {
+    const unit = rest % 10;
+    parts.push(unit ? `${EN_TENS[Math.floor(rest / 10)]}-${EN_ONES[unit]}` : EN_TENS[rest / 10]!);
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Số tiền đọc bằng chữ TIẾNG ANH — "15950000" → "Fifteen million nine hundred fifty thousand
+ * dong". Bản đối xứng của `moneyToVietnameseWords` cho giao diện `en` (ADR 0012: tiền luôn VND,
+ * chỉ chữ đổi theo ngôn ngữ). Cùng hợp đồng: hàm thuần trên chuỗi, bỏ phần lẻ, rác ⇒ chuỗi rỗng.
+ */
+export function moneyToEnglishWords(value: MoneyString | null | undefined): string {
+  if (value == null || value === '') return '';
+  if (!MONEY_SHAPE.test(value.trim())) return '';
+  const digits = wholeUnits(value).replace(/^-/, '');
+  if (!/^\d+$/.test(digits)) return '';
+  if (/^0+$/.test(digits)) return 'Zero dong';
+
+  const triples: number[] = [];
+  for (let end = digits.length; end > 0; end -= 3) {
+    triples.unshift(Number(digits.slice(Math.max(0, end - 3), end)));
+  }
+  if (triples.length > EN_SCALES.length) return '';
+
+  const spoken = triples
+    .map((triple, index) =>
+      triple === 0 ? '' : `${readTripleEn(triple)}${EN_SCALES[triples.length - 1 - index] ?? ''}`,
+    )
+    .filter(Boolean)
+    .join(' ');
+
+  const negative = wholeUnits(value).startsWith('-') ? 'Minus ' : '';
+  const text = `${negative}${spoken} dong`.replace(/\s+/g, ' ').trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /**
  * Format số tiền ĐANG NHẬP theo quy ước Việt Nam: `1000000` → `1.000.000`.
  *

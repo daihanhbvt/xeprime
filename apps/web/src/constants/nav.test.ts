@@ -317,11 +317,11 @@ describe('nav — cấu trúc khối', () => {
       ROUTES.MANAGE.SHOP_POLICIES,
       ROUTES.MANAGE.MEMBERS,
       ROUTES.MANAGE.DRIVERS,
-      // Mục ẨN — vẫn thuộc khối (breadcrumb, băng "hết hạn"), vào từ Tổng quan doanh thu.
-      ROUTES.MANAGE.DEBTS,
     ]) {
       expect(inTree, href).toContain(href);
     }
+    // Công nợ: tab `?view=debts` của "Lịch sử giao dịch" (04/11/2026); route cũ chuyển tiếp tới đó.
+    expect(inTree).not.toContain(ROUTES.MANAGE.DEBTS);
     // Chi nhánh: section của "Thông tin cửa hàng"; route cũ chuyển tiếp tới đó.
     expect(SHOP_SECTION_VALUES).toContain(SHOP_SECTION.BRANCHES);
     expect(inTree).not.toContain(ROUTES.MANAGE.SHOP_BRANCHES);
@@ -332,14 +332,13 @@ describe('nav — cấu trúc khối', () => {
     expect(inTree).not.toContain(ROUTES.MANAGE.CHAT);
   });
 
-  it('"Công nợ" là mục ẨN — có trong cây nhưng không vẽ thành dòng', () => {
-    const hidden = flattenLeaves(SHOP_NAV)
-      .filter((leaf) => leaf.hidden)
-      .map((leaf) => leaf.href);
-    expect(hidden).toEqual([ROUTES.MANAGE.DEBTS]);
-    // Công nợ giữ cờ gói của nó — băng "gói hết hạn" của AppShell vẫn tra được.
-    const debts = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.DEBTS)!;
-    expect(debts.feature).toBe(PLAN_FEATURE.DEBTS);
+  it('không còn mục ẨN nào — Công nợ đã về tab của "Lịch sử giao dịch" (04/11/2026)', () => {
+    const leaves = flattenLeaves(SHOP_NAV);
+    expect(leaves.filter((leaf) => leaf.hidden)).toEqual([]);
+    expect(leaves.map((leaf) => leaf.href)).not.toContain(ROUTES.MANAGE.DEBTS);
+    // Tab Công nợ tự gác bằng cờ gói của nó; mục menu chứa nó vẫn là cờ FINANCE.
+    const receipts = leaves.find((leaf) => leaf.href === ROUTES.MANAGE.RECEIPTS)!;
+    expect(receipts.feature).toBe(PLAN_FEATURE.FINANCE);
   });
 
   /**
@@ -712,10 +711,9 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
 });
 
 describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha', () => {
-  it('khối chứa mục đang chọn — kể cả mục ẩn', () => {
+  it('khối chứa mục đang chọn', () => {
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.RECEIPTS)).toBe('revenue');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BALANCE)).toBe('revenue');
-    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.DEBTS)).toBe('revenue');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.SHOP)).toBe('settings');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MEMBERS)).toBe('settings');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBe('fleet');

@@ -1,19 +1,24 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+}
+
 .state {
   display: block;
   margin: var(--xp-space-xl) auto;
 }
 
-/* Kỳ xem nhanh nằm ngay trên thanh lọc; cuộn ngang trên điện thoại thay vì xuống dòng lẻ. */
+/* Kỳ xem nhanh bên trái hàng lọc; cuộn ngang trên điện thoại thay vì xuống dòng lẻ. */
 .periods {
-  margin-bottom: var(--xp-space-sm);
+  max-width: 100%;
   overflow-x: auto;
+  padding-bottom: 2px;
   -webkit-overflow-scrolling: touch;
 }
 
-/*
- * Dòng nói ra số khoản chi CHUNG bị bỏ lại khi lọc chi nhánh (ADR 0051 điều 3).
- * Nằm giữa thanh lọc và bảng vì nó giải thích chính con số của bảng ngay bên dưới.
- */
-.unassignedNote {
-  margin-bottom: var(--xp-space-sm);
+/* Thanh lọc chiếm phần còn lại của hàng, ô tìm kiếm giãn như design `23813:58308`. */
+.filters {
+  flex: 1 1 520px;
+  min-width: 0;
 }

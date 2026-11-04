@@ -356,8 +356,11 @@ export function HandoverPrepCard() {
   );
 }
 
-/** Nhắn tin (hội thoại của yêu cầu gốc) · gọi · Zalo — cùng bộ nút với thẻ yêu cầu/thẻ đơn. */
-function ContactButtons() {
+/**
+ * Nhắn tin (hội thoại của yêu cầu gốc) · gọi · Zalo — cùng bộ nút với thẻ yêu cầu/thẻ đơn.
+ * `labeled` cho hộp Công nợ (design `23872:60767` vẽ ba nút có chữ).
+ */
+export function ContactButtons({ variant = 'icon' }: { variant?: 'labeled' | 'icon' } = {}) {
   const { booking } = useBookingDetailActions();
   const { has } = usePermissions();
   const router = useRouter();
@@ -370,7 +373,7 @@ function ContactButtons() {
 
   return (
     <CustomerContactButtons
-      variant="icon"
+      variant={variant}
       name={booking.customerName}
       phone={booking.customerPhone}
       onMessage={

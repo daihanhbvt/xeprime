@@ -2,7 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_STATUS_VALUES,
   CUSTOMER_REVENUE_SORT_VALUES,
+  DEBT_FILTER,
+  DEBT_FILTER_VALUES,
+  DEBT_SORT_VALUES,
   DEFAULT_CUSTOMER_REVENUE_SORT,
+  DEFAULT_DEBT_SORT,
   DEFAULT_VEHICLE_PROFIT_SORT,
   FINANCE_CATEGORY_TYPE_VALUES,
   FINANCE_GRANULARITY,
@@ -330,23 +334,43 @@ export class ReceiptPageDto {
 
 // --- Công nợ + dashboard ---------------------------------------------------
 
-export const DEBT_FILTER = ['all', 'overdue', 'upcoming', 'unpaid'] as const;
-
-export class DebtListQueryDto {
+/**
+ * Phạm vi chung của mọi bề mặt công nợ: ô tìm kiếm, chi nhánh, trạng thái đơn.
+ *
+ * Tách khỏi `DebtListQueryDto` vì dải thẻ tổng (`/debts/summary`) đọc ĐÚNG ba tham số này nhưng
+ * KHÔNG đọc nhóm hạn (`filter`) hay phân trang: số đếm trên chip "Quá hạn · Sắp đến hạn · Chưa
+ * thu" phải là số của TỪNG nhóm dưới cùng một phạm vi, không phải của nhóm đang mở.
+ */
+export class DebtScopeQueryDto {
   @ApiPropertyOptional({ description: 'Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   q?: string;
 
-  @ApiPropertyOptional({ enum: DEBT_FILTER, default: 'all' })
-  @IsOptional()
-  @IsIn(DEBT_FILTER)
-  filter?: string;
-
   /** Chi nhánh của XE trong đơn nợ — ADR 0052. Không dòng nào không thuộc chi nhánh nào. */
   @BranchIdQuery()
   branchId?: string;
+
+  @ApiPropertyOptional({
+    enum: BOOKING_STATUS_VALUES,
+    description: 'Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ',
+  })
+  @IsOptional()
+  @IsIn(BOOKING_STATUS_VALUES)
+  status?: string;
+}
+
+export class DebtListQueryDto extends DebtScopeQueryDto {
+  @ApiPropertyOptional({ enum: DEBT_FILTER_VALUES, default: DEBT_FILTER.ALL })
+  @IsOptional()
+  @IsIn(DEBT_FILTER_VALUES)
+  filter?: string;
+
+  @ApiPropertyOptional({ enum: DEBT_SORT_VALUES, default: DEFAULT_DEBT_SORT })
+  @IsOptional()
+  @IsIn(DEBT_SORT_VALUES)
+  sort?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -370,6 +394,7 @@ export class DebtItemDto {
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
   @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
 
   /**
    * Trạng thái đơn — thứ phân biệt "chưa tới ngày thu" với "đã chạy xong mà chưa trả tiền".
@@ -396,6 +421,29 @@ export class DebtItemDto {
 export class DebtPageDto {
   @ApiProperty({ type: [DebtItemDto] }) data!: DebtItemDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+/**
+ * Dải thẻ + số đếm chip của màn Công nợ, dưới CÙNG phạm vi với danh sách (tìm kiếm · chi nhánh ·
+ * trạng thái đơn) nhưng KHÔNG theo nhóm hạn đang mở — xem `DebtScopeQueryDto`.
+ *
+ * Mọi số đều TẠI THỜI ĐIỂM NÀY, tính động từ `bookings` bằng đúng công thức của danh sách
+ * (`common/booking-money.ts`), nên "Tổng công nợ" luôn bằng tổng cột "Còn nợ" khi không lọc nhóm.
+ * Trong hạn = tổng − quá hạn: hai phần không chồng nhau, cộng lại đủ tổng.
+ */
+export class DebtSummaryDto {
+  @ApiProperty({ description: 'Tổng còn nợ, string' }) totalAmount!: string;
+  @ApiProperty({ description: 'Số đơn còn nợ' }) totalCount!: number;
+  @ApiProperty({ description: 'Số khách còn nợ (đếm theo hồ sơ khách, không có thì theo SĐT)' })
+  customerCount!: number;
+  @ApiProperty({ description: 'Còn nợ của các đơn đã qua hạn trả, string' }) overdueAmount!: string;
+  @ApiProperty() overdueCount!: number;
+  @ApiProperty({ description: 'Còn nợ của các đơn chưa tới hạn trả, string' })
+  withinTermAmount!: string;
+  @ApiProperty() withinTermCount!: number;
+  @ApiProperty({ description: 'Số đơn có hạn trả trong `DEBT_UPCOMING_DAYS` ngày tới' })
+  upcomingCount!: number;
+  @ApiProperty({ description: 'Số đơn chưa thu đồng nào' }) unpaidCount!: number;
 }
 
 export class FinanceSummaryQueryDto {
@@ -675,6 +723,8 @@ export class VehicleProfitItemDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
+  mainImageUrl!: string | null;
   @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
   trips!: number;
   @ApiProperty({ description: 'Doanh thu gắn xe trong kỳ (đã loại cọc), string' }) revenue!: string;
@@ -736,6 +786,18 @@ export class CustomerRevenueQueryDto {
 export class CustomerRevenueItemDto {
   @ApiProperty() tenantCustomerId!: string;
   @ApiProperty() fullName!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT dạng hiển thị (`0…`) · null = người xem thiếu `customer.view`',
+  })
+  phone!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ảnh tài khoản nền tảng của khách · null = chưa liên kết / không có ảnh / thiếu `customer.view`',
+  })
+  avatarUrl!: string | null;
   @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
   trips!: number;
   @ApiProperty({

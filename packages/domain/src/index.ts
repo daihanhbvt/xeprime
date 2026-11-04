@@ -51,6 +51,7 @@ export {
   NUMBER_GROUP_SEPARATOR,
   NUMBER_DECIMAL_SEPARATOR,
   VI_MONEY_SEPARATORS,
+  moneyToEnglishWords,
   moneyToVietnameseWords,
   type CompactMoneyParts,
   type MoneyCompactUnit,
@@ -58,6 +59,7 @@ export {
 } from './money';
 
 export {
+  overdueDays,
   APP_TIME_ZONE,
   chargedDays,
   TIME_FORMAT,

@@ -75,3 +75,122 @@
   border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg-muted);
 }
+
+/* ─── Biến thể `tile` (design Partner-XePrime "Summary Metrics") ─────────────────────────── */
+
+.tile {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-color: transparent;
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: 0 0 4px rgba(10, 13, 18, 0.04);
+}
+
+.tile.link:hover,
+.tile.link:focus-visible {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.tileBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.tile .label {
+  margin-bottom: 0;
+  font-weight: var(--xp-font-weight-medium);
+  letter-spacing: 0;
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-secondary);
+}
+
+.tile .value {
+  overflow-wrap: normal;
+  white-space: nowrap;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.tile .hint {
+  margin-top: 0;
+  white-space: nowrap;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.tile .skeleton {
+  height: 28px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.labelRow .label {
+  margin-bottom: 0;
+}
+
+/* Dấu ⓘ đứng sát nhãn nhưng nhỏ hơn chữ một bậc — không được nặng hơn chính con số. */
+.info {
+  display: inline-flex;
+  font-size: var(--xp-font-size-label);
+  color: var(--xp-color-text-tertiary);
+}
+
+.arrow {
+  flex: none;
+  font-size: 18px;
+  color: var(--xp-color-info-strong);
+}
+
+/* Thẻ vừa bấm được vừa có ⓘ: liên kết phủ kín thẻ, dấu ⓘ nổi lên trên để vẫn bấm riêng được. */
+.covered {
+  position: relative;
+}
+
+.covered:hover,
+.covered:focus-within {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
+}
+
+.tile.covered:hover,
+.tile.covered:focus-within {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.cover {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.cover:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.covered .info {
+  position: relative;
+  z-index: 1;
+}
+
+/* Điện thoại: hai thẻ một hàng không đủ chỗ cho dòng phụ dài ("Vào … · Ra …") — cho ngắt dòng. */
+@media (max-width: 640px) {
+  .tile .hint {
+    white-space: normal;
+  }
+}

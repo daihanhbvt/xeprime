@@ -1,0 +1,49 @@
+/* Chú giải đặt ngoài vùng vẽ (`RevenueTrendLegend`) — chấm tròn cho cột, vạch ngang cho đường. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  white-space: nowrap;
+}
+
+.swatchRevenue,
+.swatchCost {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.swatchRevenue {
+  background: var(--xp-color-viz-revenue);
+}
+
+.swatchCost {
+  background: var(--xp-color-viz-cost);
+}
+
+.swatchProfit {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--xp-color-viz-profit);
+}
+
+/* Tên đơn vị dọc trục Y ("Đơn vị: triệu đồng") — chữ phụ, không nặng hơn nhãn vạch. */
+.axisUnit {
+  fill: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  text-anchor: middle;
+}

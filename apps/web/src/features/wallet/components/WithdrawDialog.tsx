@@ -197,7 +197,7 @@ export function WithdrawDialog({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         replacing={account}
-        appearance={isAccount ? 'account' : 'standard'}
+        appearance={isAccount ? 'account' : 'partner'}
       />
     </>
   );

@@ -9,7 +9,7 @@ import { renderWithIntl } from '@/i18n/test-utils';
 
 import type { ReceiptVehicleOption } from '../types';
 
-import { ReceiptFormDrawer } from './ReceiptFormDrawer';
+import { ReceiptFormDialog } from './ReceiptFormDialog';
 
 /**
  * Form tạo phiếu thu/chi — phần **phiếu này gắn vào đâu**.
@@ -87,10 +87,10 @@ function vehicle(over: Partial<ReceiptVehicleOption> = {}): ReceiptVehicleOption
   };
 }
 
-function renderDrawer(initialVehicleId?: string | null) {
+function renderForm(initialVehicleId?: string | null) {
   return renderWithIntl(
     <App>
-      <ReceiptFormDrawer open onClose={vi.fn()} initialVehicleId={initialVehicleId} />
+      <ReceiptFormDialog open onClose={vi.fn()} initialVehicleId={initialVehicleId} />
     </App>,
   );
 }
@@ -100,9 +100,14 @@ function renderDrawer(initialVehicleId?: string | null) {
  * gộp dễ vỡ. Đi theo `value` — chính là mã nghiệp vụ đi trong form (`RECEIPT_LINK_MODE`).
  */
 function radios(): HTMLInputElement[] {
+  // Chỉ radio của ba thẻ liên kết — ô "Phiếu thu | Phiếu chi" (Segmented) cũng dựng bằng radio.
+  const modes: readonly string[] = Object.values(RECEIPT_LINK_MODE);
   return screen
     .getAllByRole('radio')
-    .filter((input): input is HTMLInputElement => input instanceof HTMLInputElement);
+    .filter(
+      (input): input is HTMLInputElement =>
+        input instanceof HTMLInputElement && modes.includes(input.value),
+    );
 }
 
 function pickMode(mode: ReceiptLinkMode) {
@@ -122,7 +127,7 @@ function fillAndSubmit(amount = '250000') {
   fireEvent.change(screen.getByRole('textbox', { name: /Diễn giải/ }), {
     target: { value: 'Rửa xe' },
   });
-  fireEvent.click(screen.getByRole('button', { name: /Tạo khoản/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Tạo phiếu/ }));
 }
 
 function submittedBody(): Record<string, unknown> {
@@ -137,9 +142,9 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
+describe('ReceiptFormDialog — chọn cái gì để gắn', () => {
   it('mặc định KHÔNG gắn gì: gửi lên không có đơn lẫn xe', async () => {
-    renderDrawer();
+    renderForm();
 
     expect(checkedMode()).toBe(RECEIPT_LINK_MODE.NONE);
     fillAndSubmit();
@@ -152,7 +157,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('mở từ hồ sơ xe: vào thẳng chế độ "Xe", xe đã chọn sẵn và đọc lại được', () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     expect(checkedMode()).toBe(RECEIPT_LINK_MODE.VEHICLE);
     // Xin server đích danh xe đang chọn — đó là thứ giữ cho ô chọn hiện tên xe chứ không phải id.
@@ -165,7 +170,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('gắn xe: gửi lên có vehicleId, KHÔNG có bookingId', async () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
     fillAndSubmit();
 
     await waitFor(() => expect(hooks.createMutate).toHaveBeenCalledTimes(1));
@@ -174,7 +179,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('đổi sang "Không gắn" thì xe đã chọn KHÔNG lén đi theo', async () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
     pickMode(RECEIPT_LINK_MODE.NONE);
     fillAndSubmit();
 
@@ -183,7 +188,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('chọn chế độ "Đơn thuê" mà chưa chọn đơn thì không gửi đi', async () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
     pickMode(RECEIPT_LINK_MODE.BOOKING);
     fillAndSubmit();
 
@@ -192,7 +197,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('chọn chế độ "Xe" mà chưa chọn xe thì không gửi đi', async () => {
-    renderDrawer();
+    renderForm();
     pickMode(RECEIPT_LINK_MODE.VEHICLE);
     fillAndSubmit();
 
@@ -201,7 +206,7 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 
   it('chỉ hỏi danh sách xe khi đang ở chế độ gắn xe', () => {
-    renderDrawer();
+    renderForm();
     expect(hooks.vehicleArgs).toMatchObject({ enabled: false });
 
     pickMode(RECEIPT_LINK_MODE.VEHICLE);
@@ -209,37 +214,37 @@ describe('ReceiptFormDrawer — chọn cái gì để gắn', () => {
   });
 });
 
-describe('ReceiptFormDrawer — phần điền và nút gửi', () => {
+describe('ReceiptFormDialog — phần điền và nút gửi', () => {
   /*
    * Diễn giải BẮT BUỘC là ràng buộc của phiếu NHẬP TAY, không phải của DTO (backend vẫn nhận
    * null cho phiếu tự động). Một dòng sổ "500.000 · Tiền mặt · chi" không nói được nó là xăng
    * hay phí gửi xe, và ba tháng sau không ai đối chiếu được nữa.
    */
   it('thiếu diễn giải thì không gửi đi', async () => {
-    renderDrawer();
+    renderForm();
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '250000' } });
-    fireEvent.click(screen.getByRole('button', { name: /Tạo khoản/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Tạo phiếu/ }));
 
     expect(await screen.findByText('Nhập diễn giải / lý do')).toBeTruthy();
     expect(hooks.createMutate).not.toHaveBeenCalled();
   });
 
   it('nhãn nút nói rõ đang tạo khoản THU hay khoản CHI', () => {
-    renderDrawer();
+    renderForm();
     // Mặc định là phiếu chi — nút phải nói đúng thứ sắp xảy ra, không phải "Lưu" chung chung.
-    expect(screen.getByRole('button', { name: 'Tạo khoản chi' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tạo phiếu chi' })).toBeTruthy();
   });
 
   it('số tiền đọc thành chữ ngay dưới ô nhập', () => {
-    renderDrawer();
+    renderForm();
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2340000' } });
 
     expect(screen.getByText(/Hai triệu ba trăm bốn mươi nghìn/i)).toBeTruthy();
   });
 
   it('"Tạo và tiếp tục nhập mới": giữ form mở và GIỮ ngữ cảnh xe vừa dùng', async () => {
-    renderDrawer('v-9');
-    fireEvent.click(screen.getByRole('checkbox', { name: /tiếp tục nhập mới/i }));
+    renderForm('v-9');
+    fireEvent.click(screen.getByRole('checkbox', { name: /giữ form để nhập tiếp/i }));
     fillAndSubmit();
 
     await waitFor(() => expect(hooks.createMutate).toHaveBeenCalledTimes(1));
@@ -250,7 +255,7 @@ describe('ReceiptFormDrawer — phần điền và nút gửi', () => {
   });
 });
 
-describe('ReceiptFormDrawer — bố cục', () => {
+describe('ReceiptFormDialog — bố cục', () => {
   /*
    * NHÃN NẰM TRÊN Ô NHẬP.
    *
@@ -259,7 +264,7 @@ describe('ReceiptFormDrawer — bố cục', () => {
    * dòng. Không typecheck nào bắt được — nó chỉ lộ ra trên màn hình, nên khoá bằng test.
    */
   it('mọi trường xếp dọc: nhãn trên ô nhập, không có dấu hai chấm', () => {
-    renderDrawer();
+    renderForm();
 
     const items = document.querySelectorAll('.ant-form-item');
     expect(items.length).toBeGreaterThan(0);
@@ -271,7 +276,7 @@ describe('ReceiptFormDrawer — bố cục', () => {
   });
 
   it('chứng từ: ẢNH hiện ra chính nó, PDF mới rơi về icon + tên', () => {
-    renderDrawer();
+    renderForm();
 
     // Chưa nộp gì thì chỉ có ô "Thêm tệp", và điều kiện nhận tệp là MỘT dòng gọn.
     expect(screen.getByRole('button', { name: 'Thêm tệp' })).toBeTruthy();
@@ -294,7 +299,7 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
       isFetching: false,
       isError: false,
     };
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     expect(screen.getByText('Đang thuê')).toBeTruthy();
     expect(screen.getByText('Trần Thị Bình')).toBeTruthy();
@@ -302,7 +307,7 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
   });
 
   it('xe đang rảnh: KHÔNG bịa ra dòng khách/còn nợ rỗng', () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     // Nhãn "Khách"/"Còn nợ" không được dựng ra chút nào — dấu hai chấm là của CSS, nên tìm
     // theo 'Khách:' sẽ luôn null và khẳng định đó vô nghĩa.
@@ -313,7 +318,7 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
   });
 
   it('mở hồ sơ xe ở tab mới — form đang điền dở không bị bỏ lại', () => {
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     const link = screen.getByRole('link', { name: /Xem chi tiết/ });
     expect(link.getAttribute('href')).toBe('/manage/vehicles/v-9');
@@ -321,18 +326,18 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
   });
 });
 
-describe('ReceiptFormDrawer — trạng thái của ô chọn xe', () => {
+describe('ReceiptFormDialog — trạng thái của ô chọn xe', () => {
   it('xe đang chọn không còn thuộc gian hàng: nói ngay tại form', () => {
     // Server có `includeId` mà vẫn không trả xe đó về ⇒ nó đã bị xoá hoặc đã chuyển đi.
     hooks.vehicles = { data: [], isFetching: false, isError: false };
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     expect(screen.getByText(/không còn trong gian hàng/i)).toBeTruthy();
   });
 
   it('không tìm thấy xe nào khớp: nói rõ là rỗng, không phải đang tải', () => {
     hooks.vehicles = { data: [], isFetching: false, isError: false };
-    renderDrawer();
+    renderForm();
     pickMode(RECEIPT_LINK_MODE.VEHICLE);
 
     expect(screen.getByText('Không tìm thấy xe nào khớp.')).toBeTruthy();
@@ -340,7 +345,7 @@ describe('ReceiptFormDrawer — trạng thái của ô chọn xe', () => {
 
   it('tải danh sách xe hỏng: báo lỗi kèm lối thử lại, không im lặng', () => {
     hooks.vehicles = { data: undefined, isFetching: false, isError: true };
-    renderDrawer();
+    renderForm();
     pickMode(RECEIPT_LINK_MODE.VEHICLE);
 
     expect(screen.getByText(/Không tải được danh sách xe/)).toBeTruthy();
@@ -350,7 +355,7 @@ describe('ReceiptFormDrawer — trạng thái của ô chọn xe', () => {
 
   it('đang tải thì chưa kết luận xe đã biến mất', () => {
     hooks.vehicles = { data: undefined, isFetching: true, isError: false };
-    renderDrawer('v-9');
+    renderForm('v-9');
 
     expect(screen.queryByText(/không còn trong gian hàng/i)).toBeNull();
   });

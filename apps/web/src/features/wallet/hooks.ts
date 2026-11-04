@@ -1,18 +1,27 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
+import { WALLET_STATUS } from '@xeprime/types';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { queryKeys } from '@/services/query-keys';
 import {
   cancelWithdrawal,
   createWithdrawal,
-  fetchWalletEntries,
+  fetchWalletActivity,
   fetchWalletStatement,
   fetchWalletSummary,
   fetchWithdrawals,
-  walletEntriesParams,
+  walletActivityParams,
   walletStatementParams,
 } from './api';
-import type { CreateWithdrawalInput, WalletScope, WalletStatementFilters } from './types';
+import type {
+  CreateWithdrawalInput,
+  WalletActivityFilters,
+  WalletScope,
+  WalletStatementFilters,
+} from './types';
 
 /**
  * `enabled: false` khi tài khoản này KHÔNG có ví (nhân viên gian hàng — `walletScopeFor` trả
@@ -23,21 +32,6 @@ export function useWalletSummary(scope: WalletScope, options: { enabled?: boolea
     queryKey: queryKeys.wallet.summary(scope),
     queryFn: () => fetchWalletSummary(scope),
     enabled: options.enabled ?? true,
-  });
-}
-
-export function useWalletEntries(
-  scope: WalletScope,
-  page: number,
-  options: { enabled?: boolean } = {},
-) {
-  const params = walletEntriesParams(page);
-  return useQuery({
-    queryKey: queryKeys.wallet.entries(scope, params),
-    queryFn: () => fetchWalletEntries(scope, params),
-    enabled: options.enabled ?? true,
-    // Giữ trang cũ trong lúc tải trang mới — sổ tiền nhấp nháy trắng mỗi lần lật là khó đọc.
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -100,4 +94,37 @@ export function useWalletStatement(filters: WalletStatementFilters, enabled: boo
     enabled,
     placeholderData: keepPreviousData,
   });
+}
+
+export function useWalletActivity(filters: WalletActivityFilters, enabled: boolean) {
+  const params = walletActivityParams(filters);
+  return useQuery({
+    queryKey: queryKeys.wallet.activity('shop', params),
+    queryFn: () => fetchWalletActivity(params),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Rút được hay chưa, và vì sao chưa — quy tắc sống ở MỘT nơi cho cả hai trang số dư (khu khách,
+ * trang Quản lý ví của partner).
+ *
+ * Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá: ẩn nó đi thì người dùng không biết chức năng
+ * tồn tại, còn dòng gợi ý nói rõ vì sao chưa bấm được. Ví đóng băng thì thẻ số dư đã có cảnh báo
+ * riêng — `hint` để trống, không nói hai lần. So trên CHUỖI tiền, không qua `Number` (ADR 0007).
+ */
+export function useWithdrawGate(scope: WalletScope): { canWithdraw: boolean; hint: string | null } {
+  const t = useTranslations('Wallet');
+  const fmt = useAppFormat();
+  const { data: balance } = useWalletSummary(scope);
+  const canWithdraw =
+    balance !== undefined &&
+    balance.status !== WALLET_STATUS.FROZEN &&
+    !isNegativeMoney(subtractMoney(balance.available, balance.minWithdrawAmount));
+  const hint =
+    balance && !canWithdraw && balance.status !== WALLET_STATUS.FROZEN
+      ? t('withdraw.belowMinimum', { min: fmt.money(balance.minWithdrawAmount) })
+      : null;
+  return { canWithdraw, hint };
 }

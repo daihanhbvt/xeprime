@@ -63,6 +63,26 @@ describe('RowActions — chạy hành động', () => {
     expect(screen.getByRole('button', { name: 'Xoá' }).className).toContain('toneDanger');
   });
 
+  it('variant standard: hành động chính là nút primary đặc, hành động khác là nút viền', () => {
+    render(
+      <RowActions
+        variant="standard"
+        maxInline={2}
+        actions={[
+          action({ key: 'view', label: 'Xem đơn', primary: false }),
+          action({ key: 'collect', label: 'Thu tiền', primary: true }),
+        ]}
+      />,
+    );
+
+    const view = screen.getByRole('button', { name: 'Xem đơn' });
+    const collect = screen.getByRole('button', { name: 'Thu tiền' });
+    expect(view.className).toContain('ant-btn-default');
+    expect(view.className).not.toContain('toneNeutral');
+    expect(collect.className).toContain('ant-btn-primary');
+    expect(collect.className).not.toContain('tonePrimary');
+  });
+
   it('bấm gọi onClick đúng một lần', () => {
     const onClick = vi.fn();
     render(<RowActions actions={[action({ onClick })]} />);

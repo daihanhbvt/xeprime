@@ -19,6 +19,13 @@
     "total": "Total XePrime owes you",
     "frozen": "This wallet is on hold. Contact support to find out why."
   },
+  "summary": {
+    "availableInfoLabel": "What your available balance includes",
+    "availableInfo": "The online booking hold of your finished trips (after platform fees and withheld tax), plus compensation when a renter cancels late. What renters pay you directly at pickup does not go through here.",
+    "inTransit": "{amount} on its way to your bank",
+    "inTransitInfoLabel": "What money in transit means",
+    "inTransitInfo": "Money from withdrawals you have requested that XePrime has yet to transfer. It is already set aside from your available balance; if a withdrawal is rejected or cancelled, the money returns to your balance."
+  },
   "loadError": "Could not load your balance.",
   "entries": {
     "title": "Transaction history",
@@ -172,5 +179,46 @@
     "hide": "Hide balance",
     "show": "Show balance",
     "prefix": "Balance:"
+  },
+  "manage": {
+    "title": "Wallet",
+    "subtitle": "Track what XePrime settles to you after each trip and manage your withdrawals to your bank account"
+  },
+  "tabs": {
+    "label": "Choose a view",
+    "statement": "Transaction summary",
+    "activity": "Balance activity"
+  },
+  "aside": {
+    "label": "Balance and payout account"
+  },
+  "month": {
+    "title": "Summary for {month}",
+    "value": "Month {month}",
+    "balanceChange": "Balance change"
+  },
+  "taxNote": {
+    "body": "XePrime withholds 5% VAT + 2% PIT (self-drive, long-term) or 3% + 1.5% (with driver) on the rental under Decree 117/2025/ND-CP.",
+    "detail": "Details"
+  },
+  "activity": {
+    "title": "Balance activity",
+    "loadError": "Could not load your balance activity.",
+    "totalLabel": "{count, plural, one {# transaction} other {# transactions}}",
+    "empty": {
+      "title": "No activity this month",
+      "body": "Pick another month — trip payouts, compensation and your withdrawals will show up here."
+    },
+    "columns": {
+      "code": "Transaction code",
+      "kind": "Type",
+      "occurredAt": "Time",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "balanceAfter": "Bal: {amount}",
+    "posted": "Completed",
+    "withdrawalKind": "Withdrawal to linked account"
   }
 }

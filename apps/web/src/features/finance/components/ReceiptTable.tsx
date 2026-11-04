@@ -1,6 +1,5 @@
 'use client';
 
-import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -41,8 +40,8 @@ interface ReceiptTableProps {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Suy từ tổng bề rộng cột (P25) — 9 cột, một cột tiền và ba cột nhãn. */
-const MIN_TABLE_WIDTH = 1320;
+/** Tám cột dữ liệu + thao tác theo design `23813:58308` (bỏ cột Diễn giải, chốt 04/11/2026). */
+const MIN_TABLE_WIDTH = 1240;
 
 export function ReceiptTable({
   items,
@@ -67,7 +66,8 @@ export function ReceiptTable({
     {
       title: t('columns.receipt'),
       key: 'receipt',
-      width: 160,
+      // Mã phiếu "PT-20261103-E8Z9FZ2K" phải nằm trên MỘT dòng như design.
+      width: 220,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.receiptNo ?? tCommon('labels.emptyValue')}</div>
@@ -104,24 +104,16 @@ export function ReceiptTable({
     },
     {
       // Không có cột này thì "đối tượng" của một dòng sổ là ba id 26 ký tự — sổ có số nhưng
-      // không trả lời được tiền của ai, xe nào.
-      title: t('columns.subject'),
+      // không trả lời được tiền của ai, xe nào. Diễn giải không còn cột riêng (design): đọc ở hộp
+      // chi tiết, và ô tìm kiếm vẫn tìm theo nó.
+      title: t('columns.customer'),
       key: 'subject',
       width: 220,
       render: (_, row) => <SubjectCell row={row} />,
     },
     {
-      title: t('columns.description'),
-      key: 'description',
-      width: 220,
-      render: (_, row) => (
-        <span className={styles.desc}>{row.description ?? tCommon('labels.emptyValue')}</span>
-      ),
-    },
-    {
       title: t('columns.amount'),
       key: 'amount',
-      align: 'right',
       width: 150,
       render: (_, row) => <ReceiptAmount type={row.type} amount={row.amount} />,
     },
@@ -143,36 +135,48 @@ export function ReceiptTable({
         />
       ),
     },
-    // Toàn bộ cột hành động biến mất khi thiếu `finance.receipt.approve` — quyền do trang truyền
-    // xuống, `RowActions` chỉ ẩn/hiện. Cả hai hành động đều đụng tiền nên đều phải xác nhận.
+    /*
+     * Thao tác theo design: phiếu CHỜ DUYỆT mang "Hủy" + "Duyệt" ngay trên dòng; mọi phiếu khác là
+     * "Xem chi tiết". Huỷ một phiếu tay ĐÃ duyệt vẫn làm được — ở chân hộp chi tiết (chốt
+     * 04/11/2026), vì đó là thao tác hiếm và nặng hơn, nên đáng một bước mở phiếu ra đọc trước.
+     * Cả hai thao tác đụng tiền đều phải xác nhận; quyền do trang truyền xuống.
+     */
     actionColumn<Receipt>(
-      (row) => [
-        {
-          key: 'approve',
-          label: tCommon('actions.approve'),
-          icon: <CheckOutlined />,
-          hidden:
-            !canApprove ||
-            !(
-              row.status === RECEIPT_STATUS.PENDING_APPROVAL || row.status === RECEIPT_STATUS.DRAFT
-            ),
-          confirm: { title: t('actions.approveConfirm'), okText: tCommon('actions.approve') },
-          onClick: () => onApprove(row.id),
-        },
-        {
-          key: 'cancel',
-          label: t('actions.cancel'),
-          icon: <StopOutlined />,
-          danger: true,
-          // Phiếu tự động huỷ ở nghiệp vụ gốc — backend đã chặn (RECEIPT_SOURCE_LOCKED); ẩn nút
-          // ở đây để người dùng không bấm vào một hành động chắc chắn thất bại.
-          hidden:
-            !canApprove || row.status === RECEIPT_STATUS.CANCELLED || isAutoReceipt(row.source),
-          confirm: { title: t('actions.cancelConfirm'), okText: t('actions.cancelOk') },
-          onClick: () => onCancel(row.id),
-        },
-      ],
-      { width: 220, maxInline: 2 },
+      (row) => {
+        const pending =
+          row.status === RECEIPT_STATUS.PENDING_APPROVAL || row.status === RECEIPT_STATUS.DRAFT;
+        const actionable = canApprove && pending;
+        return [
+          {
+            key: 'cancel',
+            label: t('actions.cancelShort'),
+            showLabel: true,
+            primary: false,
+            // Phiếu tự động huỷ ở nghiệp vụ gốc — backend đã chặn (RECEIPT_SOURCE_LOCKED).
+            hidden: !actionable || isAutoReceipt(row.source),
+            confirm: { title: t('actions.cancelConfirm'), okText: t('actions.cancelOk') },
+            onClick: () => onCancel(row.id),
+          },
+          {
+            key: 'approve',
+            label: tCommon('actions.approve'),
+            showLabel: true,
+            primary: true,
+            hidden: !actionable,
+            confirm: { title: t('actions.approveConfirm'), okText: tCommon('actions.approve') },
+            onClick: () => onApprove(row.id),
+          },
+          {
+            key: 'view',
+            label: t('actions.view'),
+            showLabel: true,
+            primary: false,
+            hidden: actionable,
+            onClick: () => onOpen(row.id),
+          },
+        ];
+      },
+      { width: 200, maxInline: 2, title: t('columns.actions'), variant: 'standard' },
     ),
   ];
 

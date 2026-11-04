@@ -1,34 +1,105 @@
-.addRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.list {
+/* Bảng danh mục (design `23845:41185`): khung bo 12, hàng đầu xám, cột thao tác bên phải. */
+.table {
   display: flex;
   flex-direction: column;
-  max-height: 360px;
+  max-height: 420px;
   overflow-y: auto;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
 }
 
-.item {
-  display: flex;
+.headRow,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 88px;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-12) var(--xp-space-md);
+}
+
+.headRow {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.row {
+  min-height: 72px;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.nameCell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.system {
+  flex: none;
+  padding: 0 var(--xp-space-6);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+}
+
+.actionsHead {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.confirm {
+  color: var(--xp-color-success);
+}
+
+.typeSelect {
+  width: 100%;
+}
+
+.loading,
+.empty {
+  padding: var(--xp-space-md);
 }
 
 .empty {
-  padding: 16px;
-  text-align: center;
+  margin: 0;
   color: var(--xp-color-text-tertiary);
+  text-align: center;
 }
 
-/*
- * Ô chọn Thu/Chi: đủ rộng cho nhãn dài nhất mà không ăn hết chỗ của ô tên danh mục bên cạnh.
- * Trước đây là `style={{ width: 110 }}` (CLAUDE.md §5 cấm inline style).
- */
-.typeSelect {
-  width: 110px;
+.addLink {
+  margin-top: var(--xp-space-12);
+  padding-inline: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .headRow,
+  .row {
+    grid-template-columns: minmax(0, 1fr) 96px 72px;
+    padding-inline: var(--xp-space-12);
+  }
 }

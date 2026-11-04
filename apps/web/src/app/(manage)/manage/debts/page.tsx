@@ -1,157 +1,23 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { RECEIPTS_VIEW_PARAM, receiptsPath } from '@/constants/routes';
 
-import { Spin } from 'antd';
-import { useTranslations } from 'next-intl';
-import { Suspense, useMemo, useState } from 'react';
-import { PERMISSION } from '@xeprime/types';
-import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
-import { ALL_FILTER } from '@/constants/filters';
-import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
-import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { usePermissions } from '@/hooks/use-permissions';
-import { RECEIPTS_DEFAULT_LIMIT } from '@/features/finance/constants';
-import { BookingDetailDialog } from '@/features/bookings/components/BookingDetailDialog';
-import { DebtTable } from '@/features/finance/components/DebtTable';
-import {
-  clearedDebtFilters,
-  hasDebtFilters,
-  useDebtFilters,
-} from '@/features/finance/hooks/use-debt-filters';
-import { useDebts } from '@/features/finance/hooks/use-debts';
-import type { DebtFilters, DebtItem } from '@/features/finance/types';
-import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
-import styles from './debts-page.module.css';
-
-export default function DebtsPage() {
-  return (
-    <Suspense fallback={<Spin size="large" className={styles.state} />}>
-      <DebtsView />
-    </Suspense>
-  );
-}
-
-function DebtsView() {
-  const t = useTranslations('Finance.debts');
-  const tCommon = useTranslations('Common');
-  const { has } = usePermissions();
-  const { filters, setFilters } = useDebtFilters();
-  const branch = useBranchFilter({
-    value: filters.branchId,
-    onChange: (branchId) => setFilters({ branchId }),
-  });
-  const { data, isError, refetch, isFetching } = useDebts(filters);
-  const [collect, setCollect] = useState<DebtItem | null>(null);
-  const [detailBookingId, setDetailBookingId] = useState<string | null>(null);
-
-  const canRecord = has(PERMISSION.PAYMENT_RECORD);
-  const canViewBooking = has(PERMISSION.BOOKING_VIEW);
-
-  /**
-   * Ô tìm kiếm + nhóm hạn trên CÙNG một hàng, qua `FilterBar` dùng chung.
-   *
-   * Người thu nợ tới màn này với một cái tên, một số điện thoại hoặc một biển số trong đầu —
-   * trước đây chỉ có bốn nút nhóm, nên tìm một đơn cụ thể là việc lật trang cho tới khi thấy.
-   * Lọc chạy ở SERVER (cùng chỗ với phân trang), không phải cắt trên trang đang mở.
-   *
-   * "Tất cả" là từ vựng chung, ba nhãn còn lại thuộc về màn công nợ (skill i18n: không chép
-   * chuỗi dùng chung vào bundle của tính năng).
-   */
-  const fields = useMemo<readonly FilterField[]>(
-    () => [
-      {
-        kind: 'search',
-        key: 'q',
-        label: t('filters.searchLabel'),
-        placeholder: t('filters.searchPlaceholder'),
-      },
-      ...(branch.field ? [branch.field] : []),
-      {
-        kind: 'segmented',
-        key: 'filter',
-        label: t('filters.groupLabel'),
-        options: [
-          { value: 'all', label: tCommon('labels.all') },
-          { value: 'overdue', label: t('filters.overdue') },
-          { value: 'upcoming', label: t('filters.upcoming') },
-          { value: 'unpaid', label: t('filters.unpaid') },
-        ],
-      },
-    ],
-    [t, tCommon, branch.field],
-  );
-
-  const items = data?.items ?? [];
-  const meta = data?.meta ?? { page: 1, limit: RECEIPTS_DEFAULT_LIMIT, total: 0, hasNext: false };
-  const filtered = hasDebtFilters(filters);
-
-  return (
-    <div>
-      <ManagePageHeader title={t('page.title')} />
-
-      <FilterBar
-        fields={fields}
-        values={
-          {
-            q: filters.q,
-            filter: filters.filter ?? 'all',
-            branchId: filters.branchId ?? ALL_FILTER,
-          } satisfies FilterValues
-        }
-        onChange={(patch) =>
-          setFilters(
-            ('branchId' in patch
-              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
-              : patch) as Partial<DebtFilters>,
-          )
-        }
-        onClear={
-          filtered
-            ? () => {
-                setFilters(clearedDebtFilters());
-              }
-            : undefined
-        }
-        // Hình thái gọn: ô tìm kiếm 240px đứng cạnh nhóm hạn thay vì đẩy nhóm sang mép phải.
-        compactFields
-      />
-
-      <DebtTable
-        items={items}
-        meta={meta}
-        loading={isFetching}
-        canRecord={canRecord}
-        canView={canViewBooking}
-        error={isError && !data ? { onRetry: () => void refetch() } : null}
-        // Rỗng vì CHƯA CÓ NỢ là tin vui; rỗng vì lọc quá tay là chuyện khác hẳn — bảng đã tách
-        // hai câu chữ đó sẵn, trước đây trang không nói cho nó biết mình đang lọc.
-        filtered={filtered}
-        onClearFilters={() => setFilters(clearedDebtFilters())}
-        onView={(row) => setDetailBookingId(row.bookingId)}
-        onCollect={setCollect}
-        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-      />
-
-      {/*
-        Xem đơn mở CHÍNH modal chi tiết của feature bookings (cùng nội dung, cùng mutation,
-        cùng quyền với trang `/manage/bookings/[id]`) — không dựng bản chi tiết thứ hai, và
-        người thu nợ không rời danh sách đang lọc để rồi phải lọc lại.
-      */}
-      {detailBookingId ? (
-        <BookingDetailDialog
-          bookingId={detailBookingId}
-          open
-          onClose={() => setDetailBookingId(null)}
-        />
-      ) : null}
-
-      {collect ? (
-        <RecordPaymentModal
-          bookingId={collect.bookingId}
-          debtAmount={collect.debtAmount}
-          open={Boolean(collect)}
-          onClose={() => setCollect(null)}
-        />
-      ) : null}
-    </div>
-  );
+/**
+ * Công nợ từ 04/11/2026 là tab "Công nợ" của màn "Lịch sử giao dịch" (design Partner-XePrime,
+ * `/receipts?view=debts`) — route cũ chỉ còn chuyển tiếp, để link trong thông báo, email và
+ * bookmark không chết (sổ cái `docs/design/09_PARTNER_REDESIGN.md` §3.11).
+ *
+ * Mang theo mọi tham số lọc của link cũ (từ khoá, nhóm hạn, chi nhánh, trang).
+ */
+export default async function DebtsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (key === RECEIPTS_VIEW_PARAM || value === undefined) continue;
+    const first = Array.isArray(value) ? value[0] : value;
+    if (first) params[key] = first;
+  }
+  redirect(receiptsPath.debts(params));
 }

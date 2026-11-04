@@ -906,13 +906,38 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-10', 10)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({
       tenantCustomerId: customerId,
       fullName: 'Khách Vip',
       trips: 1,
       revenue: '3500000',
+    });
+  });
+
+  maybe('SĐT khách chỉ đi ra khi người xem có quyền xem khách hàng', async () => {
+    await resetMoney();
+    const customerId = await seedCustomer('Khách Có Số');
+    await seedReceipt({
+      type: RECEIPT_TYPE.INCOME,
+      amount: '1000000',
+      tenantCustomerId: customerId,
+      occurredAt: new Date(vnAt('2027-03-11', 9)),
+    });
+    const phone = (await prisma.tenantCustomer.findUniqueOrThrow({ where: { id: customerId } }))
+      .phone;
+
+    const withContact = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
+    expect(withContact.data[0]).toMatchObject({ tenantCustomerId: customerId, phone });
+
+    // Chỉ có `finance.view`: vẫn thấy tiền của khách, không thấy liên hệ.
+    const moneyOnly = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, false);
+    expect(moneyOnly.data[0]).toMatchObject({
+      tenantCustomerId: customerId,
+      revenue: '1000000',
+      phone: null,
+      avatarUrl: null,
     });
   });
 
@@ -932,7 +957,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-13', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     const summary = await overview.summary(tenantId, { from: FROM, to: TO }, null);
 
     expect(res.data).toHaveLength(1);
@@ -959,7 +984,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     expect(res.data[0]!.revenue).toBe('800000');
   });
 
@@ -972,7 +997,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       tenantCustomerId: customerId,
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({ trips: 1, revenue: '0' });
   });
@@ -994,7 +1019,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const table = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const table = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     const scoped = await overview.summary(
       tenantId,
       { from: FROM, to: TO, tenantCustomerId: a },
@@ -1033,6 +1058,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       tenantId,
       { from: FROM, to: TO, sort: 'trips', limit: 1 },
       null,
+      true,
     );
     expect(page.data.map((r) => r.tenantCustomerId)).toEqual([a]);
     expect(page.meta).toMatchObject({ total: 2, hasNext: true });
@@ -1063,7 +1089,7 @@ describe('Báo cáo tài chính — tỷ trọng theo khách', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     expect(res.data.find((r) => r.tenantCustomerId === a)?.sharePercent).toBe(50);
     expect(res.data.find((r) => r.tenantCustomerId === b)?.sharePercent).toBe(30);
   });
@@ -1077,7 +1103,7 @@ describe('Báo cáo tài chính — tỷ trọng theo khách', () => {
       tenantCustomerId: customerId,
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null, true);
     expect(res.data[0]!.sharePercent).toBeNull();
   });
 });
