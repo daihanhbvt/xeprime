@@ -190,6 +190,45 @@ export const CUSTOMER_REVENUE_SORT_VALUES = Object.values(
 ) as CustomerRevenueSort[];
 export const DEFAULT_CUSTOMER_REVENUE_SORT: CustomerRevenueSort = CUSTOMER_REVENUE_SORT.REVENUE;
 
+/**
+ * Nhóm hạn của màn Công nợ — giá trị đi trong query string (`?filter=`), web và api phải hiểu
+ * giống nhau. `all` là trạng thái nghỉ (không ghi lên URL).
+ *
+ * - `overdue` — đã qua hạn trả xe mà còn nợ, BẤT KỂ đơn đã hoàn thành hay chưa: một chuyến đã
+ *   trả xe mà chưa trả đủ tiền là khoản nợ quá hạn rõ nhất.
+ * - `upcoming` — hạn trả rơi vào `DEBT_UPCOMING_DAYS` ngày tới.
+ * - `unpaid` — chưa thu đồng nào trên đơn.
+ */
+export const DEBT_FILTER = {
+  ALL: 'all',
+  OVERDUE: 'overdue',
+  UPCOMING: 'upcoming',
+  UNPAID: 'unpaid',
+} as const;
+
+export type DebtFilter = (typeof DEBT_FILTER)[keyof typeof DEBT_FILTER];
+export const DEBT_FILTER_VALUES = Object.values(DEBT_FILTER) as DebtFilter[];
+
+/** Cửa sổ "sắp đến hạn" của công nợ, tính bằng ngày từ lúc xem. */
+export const DEBT_UPCOMING_DAYS = 3;
+
+/**
+ * Cách sắp xếp danh sách công nợ.
+ *
+ * - `overdue` (mặc định) — hạn trả sớm nhất trước: khoản trễ lâu nhất đứng đầu, đúng thứ tự đi đòi.
+ * - `debt` — còn nợ nhiều nhất trước.
+ * - `newest` — đơn tạo gần nhất trước.
+ */
+export const DEBT_SORT = {
+  OVERDUE: 'overdue',
+  DEBT: 'debt',
+  NEWEST: 'newest',
+} as const;
+
+export type DebtSort = (typeof DEBT_SORT)[keyof typeof DEBT_SORT];
+export const DEBT_SORT_VALUES = Object.values(DEBT_SORT) as DebtSort[];
+export const DEFAULT_DEBT_SORT: DebtSort = DEBT_SORT.OVERDUE;
+
 /** Hình thức thanh toán. */
 export const PAYMENT_METHOD = {
   CASH: 'cash',

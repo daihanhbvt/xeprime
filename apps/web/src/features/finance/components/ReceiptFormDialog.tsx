@@ -1,11 +1,11 @@
 'use client';
 
 import { CarOutlined, FileTextOutlined, TagOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Form } from 'antd';
+import { Alert, App, Button, Form, Segmented } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { CheckboxField } from '@/components/form/CheckboxField';
 import { ChoiceCardsField } from '@/components/form/ChoiceCardsField';
 import { NumberField } from '@/components/form/NumberField';
@@ -14,10 +14,10 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
-import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { dayjs, DAY_PARAM_FORMAT } from '@/lib/datetime';
-import { moneyToVietnameseWords } from '@/lib/money';
 import { vehicleLabel } from '@/lib/vehicle-label';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { PAYMENT_METHOD } from '@xeprime/types';
@@ -33,7 +33,7 @@ import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import type { CreateReceiptInput } from '../types';
 import { ReceiptAttachmentsField } from './ReceiptAttachmentsField';
 import { BookingLinkCard, VehicleLinkCard } from './ReceiptLinkCard';
-import styles from './ReceiptFormDrawer.module.css';
+import styles from './ReceiptFormDialog.module.css';
 
 /** Cùng nhịp với `FilterBar` — người dùng gõ xong một từ rồi mới bắn truy vấn. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -48,7 +48,7 @@ const LINK_MODE_ICON = {
   [RECEIPT_LINK_MODE.VEHICLE]: <CarOutlined />,
 } as const;
 
-interface ReceiptFormDrawerProps {
+interface ReceiptFormDialogProps {
   open: boolean;
   onClose: () => void;
   /**
@@ -82,7 +82,9 @@ const DEFAULTS = (initialVehicleId?: string | null): ReceiptFormValues => ({
 });
 
 /**
- * Drawer tạo phiếu thu/chi (chờ duyệt).
+ * Hộp tạo phiếu thu/chi (chờ duyệt) — design Partner-XePrime `23845:43494` (phiếu thu) ·
+ * `23857:58087` (phiếu chi): "Phiếu thu | Phiếu chi" trên cùng, ba thẻ "Liên kết với", lưới hai
+ * cột, chứng từ, chân hộp "Tạo và giữ form để nhập tiếp" + Hủy + Tạo phiếu.
  *
  * Câu hỏi ĐẦU TIÊN của form là **khoản này gắn vào đâu** (`RECEIPT_LINK_MODE`), vì nó quyết định
  * mọi ô còn lại. Ba lối vào ứng với ba loại khoản có thật trong sổ: tiền của một chuyến (chọn
@@ -92,8 +94,9 @@ const DEFAULTS = (initialVehicleId?: string | null): ReceiptFormValues => ({
  * Chọn xong, đối tượng được đọc lại bằng một THẺ có ảnh + trạng thái + bối cảnh (`ReceiptLinkCard`)
  * chứ không phải một dòng chữ: đây là bước cuối trước khi tiền được ghi vào một chiếc xe cụ thể.
  */
-export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFormDrawerProps) {
+export function ReceiptFormDialog({ open, onClose, initialVehicleId }: ReceiptFormDialogProps) {
   const { message } = App.useApp();
+  const fmt = useAppFormat();
   const t = useTranslations('Finance.receipts.form');
   const errorMessage = useErrorMessage();
   const options = useFinanceOptions();
@@ -301,26 +304,70 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
     icon: LINK_MODE_ICON[value],
   }));
 
+  const typeOptions = [
+    { value: RECEIPT_TYPE.INCOME, label: t('typeIncome') },
+    { value: RECEIPT_TYPE.EXPENSE, label: t('typeExpense') },
+  ];
+
   return (
-    // Form drawer: nút gửi phải nằm TRONG <form> nên không dùng footer của DetailDrawer.
-    <DetailDrawer title={t('title')} size="lg" open={open} onClose={handleClose}>
+    <ResponsiveDialog
+      title={t('title')}
+      open={open}
+      onClose={handleClose}
+      size="lg"
+      mobileMode="fullscreen"
+      footer={
+        <div className={styles.actions}>
+          {/*
+            Ngoài `<form>` nhưng vẫn là ô của RHF: `control` không cần nằm trong thẻ form. Cần
+            ngữ cảnh `Form` dọc riêng — chân hộp nằm ngoài `<Form>` của thân hộp.
+          */}
+          <Form component={false} layout="vertical" colon={false}>
+            <CheckboxField control={control} name="keepOpen">
+              {t('keepOpen')}
+            </CheckboxField>
+          </Form>
+          <div className={styles.buttons}>
+            <Button size="large" onClick={handleClose}>
+              {t('cancel')}
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              loading={create.isPending}
+              onClick={() => void submit()}
+            >
+              {t(`submit.${type}`)}
+            </Button>
+          </div>
+        </div>
+      }
+    >
       {/*
         `<Form component={false}>` chỉ CẤP NGỮ CẢNH bố cục cho `Form.Item` — nhãn nằm TRÊN ô nhập,
         dấu bắt buộc đặt SAU nhãn; form thật vẫn là thẻ `<form>` của React Hook Form bên dưới.
-        Thiếu ngữ cảnh này, `Form.Item` rơi về layout NGANG mặc định của AntD: nhãn nằm bên trái
-        kèm dấu hai chấm, ăn mất một phần ba bề ngang và đẩy ba thẻ "Khoản này là" xuống hai dòng.
       */}
       <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
         <form onSubmit={submit} noValidate>
           <div className={styles.grid}>
-            <DateTimeField control={control} name="occurredAt" label={t('occurredAt')} dateOnly />
-            <SelectField
-              control={control}
-              name="type"
-              label={t('type')}
-              options={options.receiptType}
-              required
-            />
+            {/* Loại phiếu là câu hỏi đầu tiên của design — đổi loại là đổi cả bộ danh mục bên dưới. */}
+            <div className={styles.wide}>
+              <Controller
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <Segmented
+                    block
+                    size="large"
+                    className={styles.typeSwitch}
+                    options={typeOptions}
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    aria-label={t('type')}
+                  />
+                )}
+              />
+            </div>
 
             <div className={styles.wide}>
               <ChoiceCardsField
@@ -328,16 +375,24 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                 name="linkMode"
                 label={t('linkMode.label')}
                 options={linkModeOptions}
-                required
               />
             </div>
 
+            <div>
+              <NumberField control={control} name="amount" label={t('amount')} money min={0} required />
+              {/* Số tiền bằng chữ NGAY DƯỚI ô nhập — chỗ duy nhất bắt được lỗi thừa một số 0. */}
+              <div className={styles.words} aria-live="polite">
+                {amount != null ? fmt.moneyWords(String(amount)) : null}
+              </div>
+            </div>
+            <DateTimeField control={control} name="occurredAt" label={t('occurredAt')} dateOnly />
+
             {linkingBooking ? (
-              <div className={styles.wide}>
+              <div>
                 <SelectField
                   control={control}
                   name="bookingId"
-                  label={t('link.label')}
+                  label={t('bookingField')}
                   options={bookingOptions}
                   placeholder={t('bookingPlaceholder')}
                   required
@@ -354,16 +409,15 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                 {bookingsError ? (
                   <Alert type="warning" showIcon title={t('bookingError')} />
                 ) : null}
-                {selectedBooking ? <BookingLinkCard booking={selectedBooking} /> : null}
               </div>
             ) : null}
 
             {linkingVehicle ? (
-              <div className={styles.wide}>
+              <div>
                 <SelectField
                   control={control}
                   name="vehicleId"
-                  label={t('link.label')}
+                  label={t('vehicleField')}
                   options={vehicleOptions}
                   placeholder={t('vehiclePlaceholder')}
                   required
@@ -381,18 +435,14 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                   <Alert type="warning" showIcon title={t('vehicleError')} />
                 ) : null}
                 {vehicleMissing ? <Alert type="error" showIcon title={t('vehicleGone')} /> : null}
-                {selectedVehicle ? <VehicleLinkCard vehicle={selectedVehicle} /> : null}
               </div>
             ) : null}
 
             {/*
-              Chi nhánh CHỈ hỏi ở chế độ "Không gắn", và lúc đó là BẮT BUỘC — ADR 0052.
+              Chi nhánh CHỈ hỏi ở chế độ "Khoản chung", và lúc đó là BẮT BUỘC — ADR 0052.
 
               Gắn xe hay gắn đơn thì chi nhánh suy TỪ XE, không hỏi lại: hai nguồn cho cùng một
               câu hỏi là cách chắc chắn để hai báo cáo nói hai số khác nhau.
-
-              Gian hàng chỉ có MỘT chi nhánh thì ẩn ô và tự điền (hiệu ứng bên dưới): hỏi một câu
-              chỉ có một đáp án là bắt người dùng trả giá cho một lựa chọn không tồn tại.
             */}
             {!linkingBooking && !linkingVehicle ? (
               branchOptions.length === 0 && !branches.isLoading ? (
@@ -429,6 +479,19 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
               showSearch
               loading={loadingCategories}
             />
+
+            {/* Thẻ đọc lại đối tượng đã chọn — bước cuối trước khi tiền ghi vào một chiếc xe cụ thể. */}
+            {linkingBooking && selectedBooking ? (
+              <div className={styles.wide}>
+                <BookingLinkCard booking={selectedBooking} />
+              </div>
+            ) : null}
+            {linkingVehicle && selectedVehicle ? (
+              <div className={styles.wide}>
+                <VehicleLinkCard vehicle={selectedVehicle} />
+              </div>
+            ) : null}
+
             <SelectField
               control={control}
               name="paymentMethod"
@@ -436,14 +499,6 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
               options={options.paymentMethod}
               required
             />
-
-            <div>
-              <NumberField control={control} name="amount" label={t('amount')} money min={0} />
-              {/* Số tiền bằng chữ nằm NGAY DƯỚI ô nhập — chỗ duy nhất bắt được lỗi thừa một số 0. */}
-              <div className={styles.words} aria-live="polite">
-                {amount != null ? moneyToVietnameseWords(String(amount)) : null}
-              </div>
-            </div>
             <TextField
               control={control}
               name="referenceCode"
@@ -456,8 +511,9 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                 control={control}
                 name="description"
                 label={t('description')}
+                placeholder={t('descriptionPlaceholder')}
                 required
-                rows={3}
+                rows={2}
                 maxLength={DESCRIPTION_MAX}
               />
             </div>
@@ -470,20 +526,8 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
               />
             </div>
           </div>
-
-          <div className={styles.actions}>
-            <CheckboxField control={control} name="keepOpen">
-              {t('keepOpen')}
-            </CheckboxField>
-            <div className={styles.buttons}>
-              <Button onClick={handleClose}>{t('cancel')}</Button>
-              <Button type="primary" htmlType="submit" loading={create.isPending}>
-                {t(`submit.${type}`)}
-              </Button>
-            </div>
-          </div>
         </form>
       </Form>
-    </DetailDrawer>
+    </ResponsiveDialog>
   );
 }

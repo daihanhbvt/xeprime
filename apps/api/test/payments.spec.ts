@@ -1,7 +1,8 @@
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { Prisma, createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_STATUS,
   MEMBERSHIP_STATUS,
   PAYMENT_KIND,
   PAYMENT_METHOD,
@@ -277,6 +278,70 @@ describe('Payments — thu tiền đơn (S2)', () => {
     // `tenantId` khác → cùng từ khoá nhưng không được thấy đơn của shop bên kia.
     const theirs = await overview.debts(newId(), { q: mine.code, limit: 100 }, null);
     expect(theirs.data).toHaveLength(0);
+  });
+
+  maybe('công nợ: đơn ĐÃ HOÀN THÀNH mà qua hạn vẫn là nợ quá hạn; chip khớp danh sách', async () => {
+    const done = await makeBooking('800000');
+    await payments.recordForBooking(tenantId, ownerId, done.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    // Chuyến đã trả xe từ tuần trước mà còn nợ 500k — khoản phải đòi rõ nhất.
+    await prisma.booking.update({
+      where: { id: done.id },
+      data: {
+        status: BOOKING_STATUS.COMPLETED,
+        pickupAt: new Date(Date.now() - 9 * 86_400_000),
+        returnAt: new Date(Date.now() - 7 * 86_400_000),
+      },
+    });
+
+    const overdue = await overview.debts(tenantId, { filter: 'overdue', limit: 100 }, null);
+    expect(overdue.data.map((d) => d.bookingId)).toContain(done.id);
+
+    // Số trên chip/thẻ là số của TỪNG nhóm dưới cùng phạm vi — và mở nhóm ra phải đúng bấy nhiêu dòng.
+    const summary = await overview.debtSummary(tenantId, {}, null);
+    const all = await overview.debts(tenantId, { limit: 100 }, null);
+    const upcoming = await overview.debts(tenantId, { filter: 'upcoming', limit: 100 }, null);
+    const unpaid = await overview.debts(tenantId, { filter: 'unpaid', limit: 100 }, null);
+    expect(summary.totalCount).toBe(all.meta.total);
+    expect(summary.overdueCount).toBe(overdue.meta.total);
+    expect(summary.upcomingCount).toBe(upcoming.meta.total);
+    expect(summary.unpaidCount).toBe(unpaid.meta.total);
+    expect(summary.overdueCount + summary.withinTermCount).toBe(summary.totalCount);
+
+    // Tổng tiền của thẻ = tổng cột "Còn nợ" (Decimal, không qua float).
+    const sumOf = (rows: { debtAmount: string }[]) =>
+      rows.reduce((acc, r) => acc.plus(r.debtAmount), new Prisma.Decimal(0)).toString();
+    expect(summary.totalAmount).toBe(sumOf(all.data));
+    expect(summary.overdueAmount).toBe(sumOf(overdue.data));
+  });
+
+  maybe('công nợ: lọc trạng thái đơn và sắp xếp nợ nhiều nhất', async () => {
+    const small = await makeBooking('200000');
+    const big = await makeBooking('9000000');
+
+    const byStatus = await overview.debts(
+      tenantId,
+      { status: BOOKING_STATUS.COMPLETED, limit: 100 },
+      null,
+    );
+    expect(byStatus.data.every((d) => d.status === BOOKING_STATUS.COMPLETED)).toBe(true);
+    expect(byStatus.data.map((d) => d.bookingId)).not.toContain(small.id);
+
+    const byDebt = await overview.debts(tenantId, { sort: 'debt', limit: 100 }, null);
+    const order = byDebt.data.map((d) => d.bookingId);
+    expect(order.indexOf(big.id)).toBeLessThan(order.indexOf(small.id));
+    const amounts = byDebt.data.map((d) => new Prisma.Decimal(d.debtAmount));
+    for (let i = 1; i < amounts.length; i += 1) {
+      expect(amounts[i - 1]!.greaterThanOrEqualTo(amounts[i]!)).toBe(true);
+    }
+    expect(byDebt.data.find((d) => d.bookingId === big.id)?.plateNumber).not.toBeUndefined();
+  });
+
+  maybe('công nợ: tổng hợp KHÔNG vượt ra khỏi gian hàng của mình', async () => {
+    const theirs = await overview.debtSummary(newId(), {}, null);
+    expect(theirs).toMatchObject({ totalAmount: '0', totalCount: 0, customerCount: 0 });
   });
 
   maybe('dashboard summary: cân đối = tổng thu − tổng chi', async () => {

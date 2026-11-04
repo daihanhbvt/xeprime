@@ -49,6 +49,21 @@
 }
 
 /*
+ * `variant="standard"` (design v2): màu và trạng thái hover/disabled/loading là của `Button`
+ * mặc định/`primary` AntD — CSS chỉ chốt khuôn nút cho đều nhau trong ô bảng.
+ */
+.standard {
+  gap: var(--xp-space-sm);
+}
+
+.standard :global(.ant-btn) {
+  min-height: 32px;
+  padding-inline: 12px;
+  border-radius: var(--xp-border-radius);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
  * Chỉ chỉnh MÀU CHỮ; nền vẫn để AntD lo (kể cả hover/disabled/loading).
  *
  * Hai chỗ AntD lệch khỏi Figma:

@@ -10,7 +10,7 @@ import { PermissionState, type PermissionStateProps } from '@/components/feedbac
 import { useIsMobile } from '@/hooks/use-media-query';
 import type { PaginationMeta } from '@xeprime/types';
 
-import type { RowAction } from './RowActions';
+import type { RowAction, RowActionsVariant } from './RowActions';
 import { RowActions } from './RowActions';
 import styles from './DataTable.module.css';
 import { useLocale, useTranslations } from 'next-intl';
@@ -435,7 +435,13 @@ function ActionsColumnTitle() {
 
 export function actionColumn<T>(
   getActions: (row: T) => RowAction[],
-  options: { width?: number; title?: ReactNode; maxInline?: number } = {},
+  options: {
+    width?: number;
+    title?: ReactNode;
+    maxInline?: number;
+    /** Mặc định `'filled'`; bảng đã ráp theo design v2 dùng `'standard'` (xem `RowActions`). */
+    variant?: RowActionsVariant;
+  } = {},
 ): DataTableColumn<T> {
   return {
     key: 'actions',
@@ -445,7 +451,11 @@ export function actionColumn<T>(
     width: options.width ?? 160,
     className: styles.actionsCell,
     render: (_, row) => (
-      <RowActions actions={getActions(row)} maxInline={options.maxInline ?? 1} variant="filled" />
+      <RowActions
+        actions={getActions(row)}
+        maxInline={options.maxInline ?? 1}
+        variant={options.variant ?? 'filled'}
+      />
     ),
   };
 }

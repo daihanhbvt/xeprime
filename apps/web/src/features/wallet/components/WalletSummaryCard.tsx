@@ -1,10 +1,12 @@
 'use client';
 
-import { ArrowRightOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { ArrowRightOutlined, CheckCircleFilled, ClockCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { isZeroMoney } from '@xeprime/domain';
 import { SELLER_PROFILE_STATUS } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { useSellerProfile } from '@/features/seller-profile/hooks/use-seller-profile';
 import { cx } from '@/lib/cx';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -36,9 +38,15 @@ import styles from './WalletSummaryCard.module.css';
  *
  * ## Hai hình thái, MỘT nguồn dữ liệu
  *
- * `variant="hero"` là thẻ mở đầu màn ví: con số khả dụng lớn hết cỡ, căn giữa, kèm huy hiệu
- * xác minh — nó là câu trả lời duy nhất mà người ta mở màn này để đọc. `variant="compact"` là
- * thẻ nằm lẫn giữa các khối khác trong hồ sơ.
+ * `variant="hero"` là thẻ số dư ở cột phải trang Quản lý ví của site partner (Figma `23948:94510`,
+ * 04/11/2026): nền gold loang, MỘT con số "Rút được ngay" căn giữa, nút Rút trải ngang thẻ, và dòng
+ * vì-sao-chưa-rút-được dưới nút. Hai ô
+ * "Đang chờ chuyển" / "Tổng XePrime phải trả" của bản trước bị đọc nhầm (chủ xe hỏi "rút được
+ * ngay có phải tổng tiền?"): ô tổng chỉ là phép cộng của hai ô kia, còn ô chờ luôn hiện `0 ₫`.
+ * Nay phần đang rút chỉ hiện khi KHÁC 0, thành một câu nói rõ tiền đang đi đâu. `compact` / `panel`
+ * (khách, mobile) giữ ba con số — chúng có design và test riêng.
+ *
+ * `variant="compact"` là thẻ nằm lẫn giữa các khối khác trong hồ sơ.
  *
  * `variant="panel"` là thẻ mở đầu tab "Tài khoản thanh toán" của khu tài khoản khách (Figma
  * `19879:74829`): con số khả dụng bên trái, nút rút (`action`) bên phải cùng hàng, hai con số phụ
@@ -60,9 +68,9 @@ export function WalletSummaryCard({
   scope: WalletScope;
   variant?: 'compact' | 'hero' | 'panel';
   onWithdraw?: () => void;
-  /** `panel`: nút hành động đứng cùng hàng con số khả dụng. */
+  /** `panel` · `hero`: nút hành động đứng cùng hàng con số khả dụng. */
   action?: ReactNode;
-  /** `panel`: dòng gợi ý cuối thẻ (vì sao chưa rút được). */
+  /** `panel` · `hero`: dòng gợi ý vì sao chưa rút được. */
   hint?: ReactNode;
   /** Màn ví đầy đủ — hiện một liên kết thay cho nút Rút khi thẻ đứng ngoài màn đó. */
   href?: string;
@@ -74,7 +82,6 @@ export function WalletSummaryCard({
   if (isPending) return <Skeleton active paragraph={{ rows: 2 }} />;
   if (isError) return <Alert type="error" showIcon title={t('loadError')} />;
 
-  const hero = variant === 'hero';
   const frozen = data.status === 'frozen';
   const canWithdraw = !frozen && Number(data.available) >= Number(data.minWithdrawAmount);
   const title = t(`title.${scope === 'shop' ? 'tenant' : 'user'}`);
@@ -106,30 +113,56 @@ export function WalletSummaryCard({
     );
   }
 
+  if (variant === 'hero') {
+    const inTransit = !isZeroMoney(data.pending);
+    return (
+      <section className={styles.hero} aria-label={title}>
+        {/* Tiêu đề trang ngay phía trên đã nói cùng câu — `<h2>` chỉ giữ bậc heading cho trình đọc. */}
+        <h2 className={styles.srOnly}>{title}</h2>
+        {frozen ? <Alert type="warning" showIcon title={t('balance.frozen')} /> : null}
+        <div className={styles.heroMain}>
+          <p className={styles.heroLabel}>
+            {t('balance.available')}
+            {scope === 'shop' ? (
+              <InfoHint
+                label={t('summary.availableInfoLabel')}
+                content={t('summary.availableInfo')}
+              />
+            ) : null}
+          </p>
+          <p className={styles.heroBig}>{fmt.money(data.available)}</p>
+          {scope === 'shop' ? <VerifiedBadge /> : null}
+        </div>
+        {inTransit ? (
+          <p className={styles.heroTransit}>
+            <ClockCircleOutlined aria-hidden="true" />
+            <span>{t('summary.inTransit', { amount: fmt.money(data.pending) })}</span>
+            <InfoHint
+              label={t('summary.inTransitInfoLabel')}
+              content={t('summary.inTransitInfo')}
+            />
+          </p>
+        ) : null}
+        {action ? <div className={styles.heroAction}>{action}</div> : null}
+        {hint ? <p className={styles.heroHint}>{hint}</p> : null}
+      </section>
+    );
+  }
+
   return (
-    <section className={cx(styles.card, hero && styles.hero)} aria-label={title}>
-      {/*
-        Ở hình thái hero KHÔNG dựng header: tiêu đề trang ngay phía trên đã nói cùng một câu, và
-        nút Rút chuyển xuống cuối màn (`WalletView`) — đọc số dư trước rồi mới quyết rút là thứ
-        tự tự nhiên, còn một nút đứng cạnh con số lớn thì cạnh tranh với chính con số đó. `<h2>`
-        vẫn còn, chỉ ẩn khỏi mắt, để bậc heading của màn không bị cắt đứt.
-      */}
-      {hero ? (
-        <h2 className={cx(styles.title, styles.srOnly)}>{title}</h2>
-      ) : (
-        <header className={styles.head}>
-          <h2 className={styles.title}>{title}</h2>
-          {onWithdraw ? (
-            <Button type="primary" disabled={!canWithdraw} onClick={onWithdraw}>
-              {t('withdraw.action')}
-            </Button>
-          ) : href ? (
-            <Link href={href} className={styles.openLink}>
-              {t('openLedger')} <ArrowRightOutlined aria-hidden="true" />
-            </Link>
-          ) : null}
-        </header>
-      )}
+    <section className={styles.card} aria-label={title}>
+      <header className={styles.head}>
+        <h2 className={styles.title}>{title}</h2>
+        {onWithdraw ? (
+          <Button type="primary" disabled={!canWithdraw} onClick={onWithdraw}>
+            {t('withdraw.action')}
+          </Button>
+        ) : href ? (
+          <Link href={href} className={styles.openLink}>
+            {t('openLedger')} <ArrowRightOutlined aria-hidden="true" />
+          </Link>
+        ) : null}
+      </header>
 
       {frozen ? <Alert type="warning" showIcon title={t('balance.frozen')} /> : null}
 
@@ -147,8 +180,6 @@ export function WalletSummaryCard({
           <dd>{fmt.money(data.total)}</dd>
         </div>
       </dl>
-
-      {hero && scope === 'shop' ? <VerifiedBadge /> : null}
     </section>
   );
 }

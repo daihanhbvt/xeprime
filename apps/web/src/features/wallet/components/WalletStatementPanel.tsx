@@ -3,7 +3,7 @@
 import { Alert, Button, DatePicker, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { ACCOUNT_TRACK, WALLET_STATEMENT_UNIT, resolveAccountTrack } from '@xeprime/types';
+import { WALLET_STATEMENT_UNIT } from '@xeprime/types';
 import {
   DataTable,
   type DataTableColumn,
@@ -11,14 +11,15 @@ import {
 } from '@/components/data-display/DataTable';
 import { DeductedAmount } from '@/components/data-display/DeductedAmount';
 import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { FinanceBoard } from '@/features/finance/components/FinanceBoard';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
-import { absoluteMoney, isNegativeMoney, isPositiveMoney, isZeroMoney } from '@/lib/money';
+import { isPositiveMoney, isZeroMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { WALLET_STATEMENT_PAGE_SIZE } from '../api';
 import { useWalletStatement } from '../hooks';
 import type { WalletStatementFilters, WalletStatementTrip } from '../types';
+import { SignedAmount } from './SignedAmount';
 import styles from './WalletStatementPanel.module.css';
 
 /** Kỳ là `YYYY-MM` — DatePicker chế độ tháng dùng đúng định dạng đó (như sổ thuế). */
@@ -71,7 +72,8 @@ export type StatementVariant = 'full' | 'compact';
  * ## Vì sao "thay đổi số dư" nhỏ hơn "doanh thu"
  *
  * Khách chỉ trả `D + S + H + IV + IP` online; phần tiền thuê `R − D − H` họ đưa TAY cho chủ xe
- * lúc nhận xe và XePrime không thu hộ. Bảng vì thế có một dòng riêng cho phần trả tay — thiếu nó,
+ * lúc nhận xe và XePrime không thu hộ. Thẻ tổng hợp tháng (`WalletMonthSummary`, cột phải của
+ * trang) vì thế có một dòng riêng cho phần trả tay — thiếu nó,
  * chủ xe đọc hai con số lệch nhau rồi tin rằng nền tảng đang giữ tiền của mình. Phí giao xe `G`
  * cũng trả tay nhưng đứng ở dòng riêng: nó không phải tiền thuê (ADR 0068 điều 5).
  *
@@ -93,24 +95,6 @@ export function WalletStatementPanel({
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const { data: user } = useCurrentUser();
-
-  /*
-   * Dòng thu nhập gọi người đọc bằng ĐÚNG tên của họ.
-   *
-   * Cùng một bảng phục vụ hai người: chủ gian hàng tuyến gói ở `/manage`, và chủ xe cá nhân
-   * tuyến hoa hồng ở `/account`. Gọi một chủ xe có đúng một chiếc xe là "chủ gian hàng" ngay
-   * trên dòng nói về thu nhập của chính họ là sai về con người.
-   *
-   * Suy từ TUYẾN (`resolveAccountTrack`, dùng chung với nhãn tài khoản và app native), KHÔNG từ
-   * `variant`: `variant` là quyết định BỐ CỤC ("khung có hẹp không"), còn đây là câu hỏi
-   * "người đang đọc là ai". Buộc hai thứ vào nhau thì ngày ai đó dùng `compact` trong `/manage`
-   * là ngày chủ gian hàng bị gọi thành chủ xe.
-   *
-   * Mọi tuyến còn lại (chưa cấu hình, nhân viên gian hàng) rơi về nhãn chung "Thu nhập" — không
-   * đoán, vì đoán sai ở đây là gọi sai tên người ngay trên dòng tiền của họ.
-   */
-  const incomeLabelKey = ownerIncomeKeyFor(user?.tenant);
 
   const query = useWalletStatement(filters, true);
   const data = query.data;
@@ -249,29 +233,20 @@ export function WalletStatementPanel({
   );
 
   const stats = data?.stats;
-  const totals = data?.totals;
 
   return (
-    <section className={styles.panel} aria-label={t('title')}>
-      <header className={styles.head}>
-        <h2 className={styles.title}>{t('title')}</h2>
-        <DatePicker
-          className={styles.period}
-          picker="month"
-          value={dayjs(filters.period, PERIOD_FORMAT)}
-          allowClear={false}
-          aria-label={t('period')}
-          /* Tháng sau chưa xảy ra — một bảng rỗng của tương lai không nói lên điều gì. */
-          maxDate={nowInAppTz()}
-          onChange={(value) => {
-            if (value) onFiltersChange({ period: value.format(PERIOD_FORMAT), page: 1 });
-          }}
+    <FinanceBoard
+      className={styles.panel}
+      title={t('title')}
+      actions={
+        <PeriodPicker
+          period={filters.period}
+          onChange={(period) => onFiltersChange({ period, page: 1 })}
         />
-      </header>
-
+      }
+    >
       {query.isError && !data ? (
         <Alert
-          className={styles.alert}
           type="error"
           showIcon
           title={t('loadError')}
@@ -283,11 +258,7 @@ export function WalletStatementPanel({
         />
       ) : null}
 
-      {query.isPending && !data ? (
-        <div className={styles.body}>
-          <Skeleton active paragraph={{ rows: 5 }} />
-        </div>
-      ) : null}
+      {query.isPending && !data ? <Skeleton active paragraph={{ rows: 5 }} /> : null}
 
       {stats ? (
         <dl className={styles.stats}>
@@ -350,124 +321,40 @@ export function WalletStatementPanel({
           totalLabel: (total) => t('totalLabel', { count: total }),
         }}
       />
-
-      {totals ? (
-        <dl className={styles.totals}>
-          <SummaryRow
-            label={t('totals.balanceChange')}
-            value={<SignedAmount value={totals.balanceChangeTotal} />}
-          />
-          {/*
-            Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
-            `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe — dòng này khi đó là cả doanh thu,
-            và giấu nó đi sẽ khiến "thu nhập" trông như từ trên trời rơi xuống.
-          */}
-          {!isZeroMoney(totals.payAtPickupTotal) ? (
-            <SummaryRow
-              label={t('totals.payAtPickup')}
-              hint={t('totals.payAtPickupHint')}
-              value={<span className={styles.number}>{fmt.money(totals.payAtPickupTotal)}</span>}
-            />
-          ) : null}
-          {/*
-            Phí giao xe đứng RIÊNG (ADR 0068 điều 5): khách trả tận tay, chủ xe hưởng trọn, không
-            chịu phí dịch vụ hay thuế — nên nó không nằm trong doanh thu, thu nhập hay dòng trả
-            trực tiếp ở trên. Chỉ hiện khi kỳ có chuyến giao tận nơi.
-          */}
-          {!isZeroMoney(totals.deliveryTotal) ? (
-            <SummaryRow
-              label={t('totals.delivery')}
-              hint={t('totals.deliveryHint')}
-              value={<span className={styles.number}>{fmt.money(totals.deliveryTotal)}</span>}
-            />
-          ) : null}
-          {!isZeroMoney(totals.subscriptionFeeTotal) ? (
-            <SummaryRow
-              label={t('totals.subscriptionFee')}
-              value={
-                <span className={styles.negative}>−{fmt.money(totals.subscriptionFeeTotal)}</span>
-              }
-            />
-          ) : null}
-          {showCommission ? (
-            <SummaryRow
-              label={t('totals.commission')}
-              value={<DeductedAmount emphasis value={totals.ownerCommissionTotal} />}
-            />
-          ) : null}
-          <SummaryRow
-            label={t('totals.tax')}
-            value={<DeductedAmount emphasis value={totals.taxTotal} />}
-          />
-          <SummaryRow
-            highlight
-            label={t(`totals.${incomeLabelKey}`)}
-            hint={t('totals.ownerIncomeHint')}
-            value={<span className={styles.incomeValue}>{fmt.money(totals.ownerIncome)}</span>}
-          />
-        </dl>
-      ) : null}
-    </section>
+    </FinanceBoard>
   );
 }
 
 /**
- * Khoá nhãn dòng thu nhập theo TUYẾN của người đang đọc.
+ * Ô chọn KỲ của trang Quản lý ví — dùng chung hai tab (bảng tổng hợp, biến động số dư), vì hai tab
+ * cùng đọc một tham số `period` trên URL.
  *
- * Hàm THUẦN và nhận đúng phần dữ liệu nó cần, nên test được mà không dựng React — cùng khuôn
- * với `walletScopeFor`.
+ * Nhãn "Tháng 10/2026" như design; ô chỉ chọn trên bảng tháng (`inputReadOnly`) — nhãn đó không gõ
+ * ngược lại được thành một ngày. Tháng sau chưa xảy ra nên không chọn được: một bảng rỗng của tương
+ * lai không nói lên điều gì.
  */
-export function ownerIncomeKeyFor(
-  tenant: Parameters<typeof resolveAccountTrack>[0],
-): 'ownerIncome' | 'ownerIncomeCommission' | 'ownerIncomeGeneric' {
-  const { track } = resolveAccountTrack(tenant);
-  if (track === ACCOUNT_TRACK.SHOP_OWNER) return 'ownerIncome';
-  if (track === ACCOUNT_TRACK.COMMISSION_OWNER) return 'ownerIncomeCommission';
-  return 'ownerIncomeGeneric';
-}
-
-/**
- * Một dòng cộng dồn.
- *
- * `<dt>`/`<dd>` chứ không phải hai `<span>`: đây là cặp nhãn–giá trị, và trình đọc màn hình
- * đọc được cặp đó thay vì một hàng chữ rời rạc.
- */
-function SummaryRow({
-  label,
-  hint,
-  value,
-  highlight,
+export function PeriodPicker({
+  period,
+  onChange,
 }: {
-  label: string;
-  hint?: string;
-  value: React.ReactNode;
-  highlight?: boolean;
+  period: string;
+  onChange: (period: string) => void;
 }) {
+  const t = useTranslations('Wallet');
   return (
-    <div className={highlight ? `${styles.totalRow} ${styles.totalHighlight}` : styles.totalRow}>
-      <dt className={styles.totalLabel}>
-        {label}
-        {hint ? <span className={styles.totalHint}>{hint}</span> : null}
-      </dt>
-      <dd className={styles.totalValue}>{value}</dd>
-    </div>
-  );
-}
-
-/**
- * Số tiền có DẤU.
- *
- * Dấu đứng trước và có màu riêng: trên một sổ tiền, hướng dòng tiền là thứ mắt phải bắt được
- * trước giá trị. Dùng cả dấu lẫn màu để không phụ thuộc khả năng phân biệt màu.
- */
-function SignedAmount({ value }: { value: string }) {
-  const fmt = useAppFormat();
-  if (isZeroMoney(value)) return <span className={styles.muted}>{fmt.money('0')}</span>;
-  const positive = !isNegativeMoney(value);
-  return (
-    <span className={positive ? styles.positive : styles.negative}>
-      {positive ? '+' : '−'}
-      {fmt.money(absoluteMoney(value))}
-    </span>
+    <DatePicker
+      className={styles.period}
+      picker="month"
+      size="large"
+      inputReadOnly
+      format={(value) => t('month.value', { month: value.format('MM/YYYY') })}
+      value={dayjs(period, PERIOD_FORMAT)}
+      allowClear={false}
+      aria-label={t('statement.period')}
+      maxDate={nowInAppTz()}
+      onChange={(value) => {
+        if (value) onChange(value.format(PERIOD_FORMAT));
+      }}
+    />
   );
 }

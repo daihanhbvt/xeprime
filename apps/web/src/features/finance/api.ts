@@ -14,6 +14,7 @@ import type {
   CustomerRevenue,
   DebtFilters,
   DebtItem,
+  DebtSummary,
   FinanceCategory,
   FinanceSummary,
   Receipt,
@@ -118,11 +119,20 @@ export const deleteCategory = (id: string): Promise<void> =>
 
 export type DebtListResult = Paged<DebtItem>;
 
-export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+/** Phạm vi chung của danh sách và dải thẻ: tìm kiếm · chi nhánh · trạng thái đơn. */
+export function debtScopeToParams(filters: DebtFilters): QueryParams {
   return {
     q: filters.q ?? null,
-    filter: filters.filter ?? null,
     branchId: filters.branchId ?? null,
+    status: filters.status ?? null,
+  };
+}
+
+export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+  return {
+    ...debtScopeToParams(filters),
+    filter: filters.filter ?? null,
+    sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
   };
@@ -130,6 +140,13 @@ export function debtFiltersToParams(filters: DebtFilters): QueryParams {
 
 export const fetchDebts = (filters: DebtFilters): Promise<DebtListResult> =>
   fetchPage<DebtItem>('/debts', debtFiltersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
+
+/**
+ * Dải thẻ + số đếm chip — cùng phạm vi với danh sách nhưng KHÔNG mang nhóm hạn: chip "Quá hạn"
+ * phải nói số của nhóm đó kể cả khi người dùng đang mở nhóm "Chưa thu".
+ */
+export const fetchDebtSummary = (filters: DebtFilters): Promise<DebtSummary> =>
+  apiGet<DebtSummary>('/debts/summary', debtScopeToParams(filters));
 
 export const fetchFinanceSummary = (
   filters: FinancePeriodFilters,

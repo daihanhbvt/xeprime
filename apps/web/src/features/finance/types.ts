@@ -14,6 +14,7 @@ export type ReceiptVehicleOption = Schemas['ReceiptVehicleOptionDto'];
 export type FinanceCategory = Schemas['FinanceCategoryDto'];
 export type CreateCategoryInput = Schemas['CreateCategoryDto'];
 export type DebtItem = Schemas['DebtItemDto'];
+export type DebtSummary = Schemas['DebtSummaryDto'];
 export type FinanceSummary = Schemas['FinanceSummaryDto'];
 
 /** Filter công nợ ở URL searchParams (ADR 0004). */
@@ -22,7 +23,12 @@ export interface DebtFilters {
   branchId?: string;
   /** Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số — lọc ở SERVER, không cắt ở client. */
   q?: string;
+  /** Nhóm hạn — `DEBT_FILTER`. */
   filter?: string;
+  /** Trạng thái đơn — `BOOKING_STATUS`. */
+  status?: string;
+  /** `DEBT_SORT`; trống = trễ nhất trước. */
+  sort?: string;
   page?: number;
   limit?: number;
 }

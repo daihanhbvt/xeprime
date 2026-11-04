@@ -981,7 +981,24 @@ export const adminAuditPath = {
  * sẽ mở ra một sổ cộng cả tiền cọc lẫn phiếu chưa duyệt, tức thẻ nói một số và danh sách nó dẫn
  * tới nói số khác. Dựng chuỗi ở một chỗ để không màn nào tự ghép query rồi lệch tên tham số.
  */
+/**
+ * Hai tab của màn "Lịch sử giao dịch" (design Partner-XePrime 04/11/2026): sổ Thu-Chi (mặc định,
+ * không ghi lên URL) và Công nợ (`?view=debts`). MỘT route — `/debts` cũ chuyển tiếp về đây.
+ */
+export const RECEIPTS_VIEW_PARAM = 'view';
+export const RECEIPTS_VIEW = {
+  LEDGER: 'ledger',
+  DEBTS: 'debts',
+} as const;
+export type ReceiptsView = (typeof RECEIPTS_VIEW)[keyof typeof RECEIPTS_VIEW];
+
 export const receiptsPath = {
+  /** Tab Công nợ, kèm tham số lọc của nó nếu có (từ khoá, nhóm hạn, chi nhánh…). */
+  debts: (params: Record<string, string | undefined> = {}): string => {
+    const query = new URLSearchParams({ [RECEIPTS_VIEW_PARAM]: RECEIPTS_VIEW.DEBTS });
+    for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
+    return `${ROUTES.MANAGE.RECEIPTS}?${query.toString()}`;
+  },
   filtered: (params: {
     bookingId?: string;
     vehicleId?: string;
@@ -1151,6 +1168,17 @@ export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
  * `?section=payout` chỉ để CUỘN tới khối đó — đích của hai đường cũ và của link chia sẻ.
  */
 export const BALANCE_PAYOUT_SECTION = 'payout';
+
+/**
+ * Hai tab của trang Quản lý ví (`/balance`, design `23813:39558` · `23813:55449`). Tab mặc định
+ * (bảng tổng hợp) không mang tham số — đường dẫn cũ `/balance` vẫn mở đúng chỗ như trước.
+ */
+export const BALANCE_TAB_PARAM = 'tab';
+export const BALANCE_TAB = {
+  STATEMENT: 'statement',
+  ACTIVITY: 'activity',
+} as const;
+export type BalanceTab = (typeof BALANCE_TAB)[keyof typeof BALANCE_TAB];
 
 /** Id DOM của khối "Tài khoản nhận tiền" trên trang số dư — đích cuộn của `?section=payout`. */
 export const BALANCE_PAYOUT_DOM_ID = 'balance-payout';

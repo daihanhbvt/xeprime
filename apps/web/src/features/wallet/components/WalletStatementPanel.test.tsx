@@ -11,12 +11,11 @@ import { WalletStatementPanel } from './WalletStatementPanel';
  *
  *  1. KHÔNG có cột "phí sàn" — phí dịch vụ do KHÁCH trả thêm, không trừ vào doanh thu gian hàng
  *     (ADR 0032 điều 2). Một cột như thế là bịa ra khoản khấu trừ không tồn tại.
- *  2. Phần khách TRẢ TAY lúc nhận xe hiện thành dòng riêng — thiếu nó, chủ xe đọc "thay đổi số
- *     dư" nhỏ hơn "doanh thu" rồi tin rằng XePrime đang giữ tiền của mình.
+ *  2. (Các dòng cộng dồn của kỳ đã sang `WalletMonthSummary` — test ở file của nó.)
  *  3. Đơn dài hạn hiện đơn giá THÁNG, không phải giá ngày suy ra từ chia 30 (ADR 0011).
  *  4. Chưa ai đánh giá / chưa yêu cầu nào tới hạn ⇒ dấu gạch, KHÔNG phải "0 sao" hay "0%".
  *  5. Hoa hồng `H` (tuyến hoa hồng — ADR 0064 điều 3) CHỦ XE chịu thật: kỳ có hoa hồng thì có
- *     cột riêng và dòng tổng riêng, hiện như một khoản trừ.
+ *     cột riêng, hiện như một khoản trừ.
  */
 const query = vi.hoisted(() => ({
   data: undefined as WalletStatement | undefined,
@@ -145,32 +144,6 @@ describe('WalletStatementPanel', () => {
    * Ca quan trọng nhất: hai con số lệch nhau phải có lời giải thích ngay cạnh, không để người
    * đọc tự suy ra rằng tiền của mình bị giữ.
    */
-  it('phần khách trả tay lúc nhận xe hiện thành dòng riêng, có ghi chú không qua XePrime', () => {
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-
-    expect(screen.getByText('Khách thanh toán trực tiếp khi nhận xe')).toBeTruthy();
-    expect(screen.getByText(/không đi qua XePrime/)).toBeTruthy();
-  });
-
-  it('không có phần trả tay ⇒ giấu dòng đó thay vì hiện 0đ', () => {
-    query.data = statement({
-      totals: { ...statement().totals, payAtPickupTotal: '0' },
-    });
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-
-    expect(screen.queryByText('Khách thanh toán trực tiếp khi nhận xe')).toBeNull();
-  });
-
-  it('tuyến hoa hồng không có hoá đơn gói ⇒ không hiện dòng phí gói', () => {
-    query.data = statement({
-      totals: { ...statement().totals, subscriptionFeeTotal: '0' },
-    });
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-
-    expect(screen.queryByText('Phí quản lý & vận hành gói nền tảng')).toBeNull();
-    expect(screen.getByText('Thu nhập chủ gian hàng')).toBeTruthy();
-  });
-
   it('đơn dài hạn hiện ĐƠN GIÁ THÁNG, không phải giá ngày chia từ gói', () => {
     query.data = statement({
       items: [
@@ -251,44 +224,7 @@ describe('WalletStatementPanel', () => {
     expect(screen.queryByText(/2026/)).toBeNull();
   });
 
-  /**
-   * Cùng một bảng phục vụ hai người. Gọi một chủ xe có đúng một chiếc xe là "chủ gian hàng"
-   * ngay trên dòng nói về thu nhập của chính họ là sai về con người — nhãn đi theo TUYẾN.
-   */
-  it('tuyến gói: dòng thu nhập gọi là chủ GIAN HÀNG', () => {
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-
-    expect(screen.getByText('Thu nhập chủ gian hàng')).toBeTruthy();
-  });
-
-  it('tuyến hoa hồng: dòng thu nhập gọi là chủ XE', () => {
-    session.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
-    renderWithIntl(
-      <WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} variant="compact" />,
-    );
-
-    expect(screen.getByText('Thu nhập chủ xe')).toBeTruthy();
-    expect(screen.queryByText('Thu nhập chủ gian hàng')).toBeNull();
-  });
-
-  /** Nhãn đi theo TUYẾN, không theo bố cục — `compact` trong /manage vẫn là chủ gian hàng. */
-  it('hình thái compact KHÔNG tự đổi cách gọi người đọc', () => {
-    renderWithIntl(
-      <WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} variant="compact" />,
-    );
-
-    expect(screen.getByText('Thu nhập chủ gian hàng')).toBeTruthy();
-  });
-
-  /** Tuyến chưa xác định: backend đang từ chối ghi tiền của họ — không đoán tên gọi. */
-  it('chưa xác định tuyến ⇒ nhãn chung, không đoán', () => {
-    session.tenant = null;
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-
-    expect(screen.getByText('Thu nhập')).toBeTruthy();
-  });
-
-  it('kỳ có hoa hồng ⇒ cột "Phí dịch vụ – Chủ xe" + dòng tổng, hiện như khoản TRỪ', () => {
+  it('kỳ có hoa hồng ⇒ cột "Phí dịch vụ – Chủ xe", hiện như khoản TRỪ', () => {
     session.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
     query.data = statement({
       items: [trip({ ownerCommissionAmount: '140000', taxAmount: '200000' })],
@@ -305,32 +241,13 @@ describe('WalletStatementPanel', () => {
     );
 
     expect(screen.getAllByText('Phí dịch vụ – Chủ xe').length).toBeGreaterThan(0);
-    expect(screen.getByText('Tổng phí dịch vụ – Chủ xe')).toBeTruthy();
-    // Một lần ở ô của chuyến (bảng + thẻ mobile) và một lần ở dòng tổng.
-    expect(screen.getAllByText(/^−140\.000\s*₫$/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/^−140\.000\s*₫$/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('kỳ không có hoa hồng (tuyến gói) ⇒ không có cột toàn số 0', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
     expect(screen.queryByText('Phí dịch vụ – Chủ xe')).toBeNull();
-    expect(screen.queryByText('Tổng phí dịch vụ – Chủ xe')).toBeNull();
-  });
-
-  /**
-   * Phí giao xe đứng RIÊNG (ADR 0068 điều 5): không phải tiền thuê, không chịu phí dịch vụ hay
-   * thuế. Kỳ không có chuyến giao tận nơi thì không có dòng 0đ.
-   */
-  it('kỳ có phí giao xe ⇒ dòng riêng kèm ghi chú; không có ⇒ giấu', () => {
-    query.data = statement({ totals: { ...statement().totals, deliveryTotal: '100000' } });
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-    expect(screen.getByText('Phí giao xe khách trả trực tiếp')).toBeTruthy();
-    expect(screen.getByText(/không tính phí dịch vụ và thuế/)).toBeTruthy();
-    cleanup();
-
-    query.data = statement();
-    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
-    expect(screen.queryByText('Phí giao xe khách trả trực tiếp')).toBeNull();
   });
 
   /**
@@ -372,8 +289,7 @@ describe('WalletStatementPanel', () => {
     });
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
     expect(screen.getAllByText('Phí giao xe').length).toBeGreaterThan(0);
-    // Một lần ở ô của chuyến, một lần ở dòng tổng.
-    expect(screen.getAllByText(money('100.000')).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(money('100.000')).length).toBeGreaterThanOrEqual(1);
     cleanup();
 
     query.data = statement();

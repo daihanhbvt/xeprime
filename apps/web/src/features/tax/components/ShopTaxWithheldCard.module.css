@@ -11,6 +11,14 @@
   box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
 }
 
+/* Trong hộp thoại: cùng nhịp khối, không khung — hộp thoại đã là khung. */
+.embedded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
 .header {
   display: flex;
   flex-wrap: wrap;

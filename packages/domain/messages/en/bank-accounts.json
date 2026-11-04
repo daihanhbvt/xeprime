@@ -50,8 +50,12 @@
     "accountNamePlaceholder": "Exactly as registered with your bank",
     "accountNumberPlaceholder": "Bank account number",
     "saved": {
-      "title": "Success"
-    }
+      "title": "Success",
+      "toastTitle": "Success!",
+      "changedDetail": "Your payout account has been updated. Future payouts will go to your new account.",
+      "createdDetail": "Payout account added. Your withdrawals will be sent to this account."
+    },
+    "addSubmit": "Add account"
   },
   "refund": {
     "title": "Refund destination",
@@ -60,5 +64,6 @@
     "useNew": "Use a different account",
     "submit": "Confirm account",
     "saved": "Account saved. XePrime will transfer within the committed time."
-  }
+  },
+  "emptyHint": "Add a bank account to receive payouts from your rentals and withdrawals"
 }

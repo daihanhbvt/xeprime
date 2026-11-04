@@ -310,9 +310,9 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
     expect(statLink('Cọc đang giữ').getAttribute('href')).toContain('sourceGroup=held_funds');
   });
 
-  it('thẻ Khách còn nợ dẫn sang màn Công nợ, không phải sổ Thu-Chi', () => {
+  it('thẻ Khách còn nợ dẫn sang tab Công nợ của Lịch sử giao dịch', () => {
     render(<FinancePage />);
-    expect(statLink('Khách còn nợ').getAttribute('href')).toBe('/manage/debts');
+    expect(statLink('Khách còn nợ').getAttribute('href')).toBe('/manage/receipts?view=debts');
   });
 });
 

@@ -19,6 +19,13 @@
     "total": "Tổng XePrime phải trả",
     "frozen": "Ví đang tạm khoá. Liên hệ hỗ trợ để biết lý do."
   },
+  "summary": {
+    "availableInfoLabel": "Số dư khả dụng gồm những gì",
+    "availableInfo": "Phần tiền giữ chỗ khách trả online của các chuyến đã kết thúc (sau khi trừ phí nền tảng và thuế khấu trừ), cộng tiền bồi thường khi khách huỷ muộn. Phần khách trả trực tiếp cho bạn lúc nhận xe không đi qua đây.",
+    "inTransit": "{amount} đang được chuyển về ngân hàng",
+    "inTransitInfoLabel": "Tiền đang chuyển là gì",
+    "inTransitInfo": "Tiền của các lệnh rút bạn đã gửi, đang chờ XePrime chuyển khoản. Nó đã được tách khỏi số dư khả dụng; lệnh bị từ chối hoặc bị huỷ thì tiền quay lại số dư."
+  },
   "loadError": "Không tải được số dư.",
   "entries": {
     "title": "Lịch sử giao dịch",
@@ -172,5 +179,46 @@
     "hide": "Ẩn số dư",
     "show": "Hiện số dư",
     "prefix": "Số dư:"
+  },
+  "manage": {
+    "title": "Quản lý ví",
+    "subtitle": "Theo dõi khoản tiền XePrime đối soát sau mỗi chuyến đi và quản lý các yêu cầu rút tiền về tài khoản ngân hàng"
+  },
+  "tabs": {
+    "label": "Chọn bảng",
+    "statement": "Tổng hợp giao dịch",
+    "activity": "Biến động số dư"
+  },
+  "aside": {
+    "label": "Số dư và tài khoản nhận tiền"
+  },
+  "month": {
+    "title": "Tổng hợp tháng {month}",
+    "value": "Tháng {month}",
+    "balanceChange": "Thay đổi số dư"
+  },
+  "taxNote": {
+    "body": "XePrime khấu trừ GTGT 5% + TNCN 2% (tự lái, dài hạn) hoặc 3% + 1,5% (có tài xế) trên tiền thuê theo NĐ 117/2025/NĐ-CP.",
+    "detail": "Chi tiết"
+  },
+  "activity": {
+    "title": "Biến động số dư",
+    "loadError": "Không tải được biến động số dư.",
+    "totalLabel": "{count, plural, other {# giao dịch}}",
+    "empty": {
+      "title": "Tháng này chưa có biến động nào",
+      "body": "Chọn tháng khác — tiền chuyến, bồi thường và các lệnh rút của bạn sẽ hiện ở đây."
+    },
+    "columns": {
+      "code": "Mã giao dịch",
+      "kind": "Loại giao dịch",
+      "occurredAt": "Thời gian giao dịch",
+      "amount": "Số tiền",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "balanceAfter": "SD: {amount}",
+    "posted": "Thành công",
+    "withdrawalKind": "Rút về tài khoản liên kết"
   }
 }

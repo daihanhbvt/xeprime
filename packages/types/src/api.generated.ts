@@ -3337,6 +3337,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/debts/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) — cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["FinanceOverviewController_debtSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/driver/links": {
         parameters: {
             query?: never;
@@ -9666,6 +9692,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shop/wallet/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Biến động số dư của gian hàng trong một kỳ
+         * @description Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại — lệnh rút đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         */
+        get: operations["ShopWalletController_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shop/wallet/entries": {
         parameters: {
             query?: never;
@@ -15166,6 +15218,7 @@ export interface components {
             customerName: string;
             customerPhone?: string | null;
             vehicleName: string;
+            plateNumber?: string | null;
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @description ISO-8601 UTC */
@@ -15181,6 +15234,24 @@ export interface components {
         DebtPageDto: {
             data: components["schemas"]["DebtItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        DebtSummaryDto: {
+            /** @description Tổng còn nợ, string */
+            totalAmount: string;
+            /** @description Số đơn còn nợ */
+            totalCount: number;
+            /** @description Số khách còn nợ (đếm theo hồ sơ khách, không có thì theo SĐT) */
+            customerCount: number;
+            /** @description Còn nợ của các đơn đã qua hạn trả, string */
+            overdueAmount: string;
+            overdueCount: number;
+            /** @description Còn nợ của các đơn chưa tới hạn trả, string */
+            withinTermAmount: string;
+            withinTermCount: number;
+            /** @description Số đơn có hạn trả trong `DEBT_UPCOMING_DAYS` ngày tới */
+            upcomingCount: number;
+            /** @description Số đơn chưa thu đồng nào */
+            unpaidCount: number;
         };
         DefaultBranchDto: {
             id: string;
@@ -23032,6 +23103,48 @@ export interface components {
         VoidSurchargeDto: {
             /** @description Lý do gỡ — bắt buộc */
             reason: string;
+        };
+        WalletActivityDto: {
+            id: string;
+            /** @enum {string} */
+            source: "entry" | "withdrawal";
+            /**
+             * @description Loại bút toán — chỉ dòng sổ
+             * @enum {string|null}
+             */
+            kind?: "hold_forfeit" | "hold_release" | "hold_refund" | "hold_overpay" | "extension_release" | "extension_refund" | "withdrawal" | "withdrawal_reversal" | "adjustment" | null;
+            /** @description Mã lệnh rút (XPW…) hoặc mã chuyến của bút toán */
+            code?: string | null;
+            bookingId?: string | null;
+            /** @description Dương = vào ví, âm = ra khỏi ví (VND string) */
+            amount: string;
+            /** @description Số dư khả dụng sau bút toán — null ở dòng lệnh rút */
+            balanceAfter?: string | null;
+            occurredAt: string;
+            /** @description Chủ ví tự huỷ được — chỉ lệnh rút còn chờ duyệt */
+            cancellable: boolean;
+            withdrawal?: components["schemas"]["WalletActivityWithdrawalDto"] | null;
+        };
+        WalletActivityPageDto: {
+            items: components["schemas"]["WalletActivityDto"][];
+            /** @example 2026-10 */
+            period: string;
+            total: number;
+            page: number;
+            limit: number;
+            hasNext: boolean;
+        };
+        WalletActivityWithdrawalDto: {
+            /** @enum {string} */
+            status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
+            bankCode: string;
+            /** @description Số tài khoản đã che — PII */
+            accountNumberMasked: string;
+            /** @description Hạn cam kết chuyển */
+            dueBy?: string | null;
+            paidAt?: string | null;
+            rejectReason?: string | null;
+            reverseReason?: string | null;
         };
         WalletDriftDto: {
             /** @description Số ví có Σ bút toán ≠ balance + pending */
@@ -44681,9 +44794,12 @@ export interface operations {
             query?: {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
-                filter?: "all" | "overdue" | "upcoming" | "unpaid";
                 /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
+                /** @description Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ */
+                status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+                filter?: "all" | "overdue" | "upcoming" | "unpaid";
+                sort?: "overdue" | "debt" | "newest";
                 page?: number;
                 limit?: number;
             };
@@ -44700,6 +44816,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DebtPageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_debtSummary: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
+                q?: string;
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+                /** @description Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ */
+                status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DebtSummaryDto"];
+                    };
                 };
             };
             /**
@@ -84464,6 +84714,138 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["WalletSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ShopWalletController_activity: {
+        parameters: {
+            query?: {
+                /** @description Kỳ `YYYY-MM` theo giờ Việt Nam. Bỏ trống = kỳ hiện tại. */
+                period?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WalletActivityPageDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**

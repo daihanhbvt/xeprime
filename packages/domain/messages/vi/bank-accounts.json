@@ -50,8 +50,12 @@
     "accountNamePlaceholder": "Nhập đúng họ tên đăng ký ở ngân hàng",
     "accountNumberPlaceholder": "Số tài khoản ngân hàng",
     "saved": {
-      "title": "Thành công"
-    }
+      "title": "Thành công",
+      "toastTitle": "Thành công!",
+      "changedDetail": "Cập nhật tài khoản nhận tiền thành công! Các khoản thanh toán tiếp theo sẽ được chuyển vào tài khoản mới của bạn.",
+      "createdDetail": "Đã thêm tài khoản nhận tiền. Các lệnh rút của bạn sẽ được chuyển vào tài khoản này."
+    },
+    "addSubmit": "Thêm tài khoản"
   },
   "refund": {
     "title": "Tài khoản nhận tiền hoàn",
@@ -60,5 +64,6 @@
     "useNew": "Khai tài khoản khác",
     "submit": "Xác nhận tài khoản nhận",
     "saved": "Đã ghi nhận tài khoản. XePrime sẽ chuyển trong thời gian cam kết."
-  }
+  },
+  "emptyHint": "Vui lòng thêm tài khoản ngân hàng để nhận thanh toán từ các đơn thuê xe & rút tiền"
 }

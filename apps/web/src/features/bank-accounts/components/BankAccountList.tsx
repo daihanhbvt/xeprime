@@ -38,6 +38,11 @@ import styles from './BankAccountList.module.css';
  * `19879:74829`): đầu thẻ chữ 18px gạch chân, nút của bảng nút v2 (`CtaButton`), thẻ tài khoản hình
  * `detail`, hộp thoại khai tài khoản dáng v2, và `footer` (khối lưu ý) dưới thẻ. Site partner giữ
  * dáng `standard`.
+ *
+ * `appearance="partner"` là khối ở cột phải trang Quản lý ví (Figma Partner-XePrime `23813:39558`
+ * · `23813:55449`): tiêu đề 18px không mô tả, "Đổi tài khoản" là chữ-nút gold cạnh tiêu đề, thẻ
+ * tài khoản hình `compact`, và khi chưa có tài khoản là một ô trống căn giữa kèm nút "Thêm tài
+ * khoản". Hộp thoại khai tài khoản dùng dáng `partner`.
  */
 export function BankAccountList({
   scope,
@@ -53,7 +58,7 @@ export function BankAccountList({
   className?: string;
   title?: string;
   subtitle?: string;
-  appearance?: 'standard' | 'account';
+  appearance?: 'standard' | 'account' | 'partner';
   /** Nội dung dưới thẻ tài khoản (khối lưu ý) — chỉ hiện khi đã biết có/không có tài khoản. */
   footer?: ReactNode;
 }) {
@@ -64,6 +69,7 @@ export function BankAccountList({
   const account = currentBankAccount(data);
   const settled = !isPending && !isError;
   const isAccount = appearance === 'account';
+  const isPartner = appearance === 'partner';
   const openForm = () => setFormOpen(true);
 
   const headingId = id ? `${id}-title` : undefined;
@@ -71,7 +77,12 @@ export function BankAccountList({
   return (
     <section
       id={id}
-      className={cx(styles.panel, isAccount && styles.account, className)}
+      className={cx(
+        styles.panel,
+        isAccount && styles.account,
+        isPartner && styles.partner,
+        className,
+      )}
       aria-labelledby={headingId}
       aria-label={headingId ? undefined : t('title')}
       // Đích của `?section=` khi panel này được nhúng — xem `SectionCard`.
@@ -82,9 +93,22 @@ export function BankAccountList({
           <h2 className={styles.title} id={headingId}>
             {title ?? t('title')}
           </h2>
-          <p className={styles.subtitle}>{subtitle ?? t('subtitle')}</p>
+          {isPartner && !subtitle ? null : (
+            <p className={styles.subtitle}>{subtitle ?? t('subtitle')}</p>
+          )}
         </div>
-        {!settled ? null : isAccount ? (
+        {!settled ? null : isPartner ? (
+          account ? (
+            <Button
+              type="link"
+              className={styles.linkAction}
+              icon={<SwapOutlined />}
+              onClick={openForm}
+            >
+              {t('actions.change')}
+            </Button>
+          ) : null
+        ) : isAccount ? (
           account ? (
             <CtaButton variant="neutral" onClick={openForm}>
               {t('actions.change')}
@@ -108,11 +132,31 @@ export function BankAccountList({
       {isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
       {isError ? <Alert type="error" showIcon title={t('loadError')} /> : null}
       {settled && !account ? (
-        <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        isPartner ? (
+          <Empty
+            className={styles.empty}
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <>
+                <span className={styles.emptyTitle}>{t('emptyTitle')}</span>
+                <span className={styles.emptyHint}>{t('emptyHint')}</span>
+              </>
+            }
+          >
+            <Button icon={<PlusOutlined />} onClick={openForm}>
+              {t('actions.add')}
+            </Button>
+          </Empty>
+        ) : (
+          <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        )
       ) : null}
 
       {account ? (
-        <BankAccountCard account={account} variant={isAccount ? 'detail' : 'row'} />
+        <BankAccountCard
+          account={account}
+          variant={isAccount ? 'detail' : isPartner ? 'compact' : 'row'}
+        />
       ) : null}
 
       {settled && footer ? footer : null}

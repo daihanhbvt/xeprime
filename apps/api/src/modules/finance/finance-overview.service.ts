@@ -3,8 +3,10 @@ import { resolveBranchIdList } from '../../common/dto/branch-scope';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  BOOKING_STATUS,
   CUSTOMER_REVENUE_SORT,
+  DEBT_FILTER,
+  DEBT_SORT,
+  DEBT_UPCOMING_DAYS,
   FINANCE_GRANULARITY,
   FINANCE_MAX_BUCKETS,
   PAYMENT_KIND,
@@ -40,6 +42,8 @@ import {
   CustomerRevenueQueryDto,
   DebtItemDto,
   DebtListQueryDto,
+  DebtScopeQueryDto,
+  DebtSummaryDto,
   FinanceCategoryBreakdownDto,
   FinanceCategoryBreakdownQueryDto,
   FinanceSeriesDto,
@@ -59,12 +63,25 @@ interface DebtRow {
   customer_name: string;
   customer_phone: string | null;
   vehicle_name: string;
+  plate_number: string | null;
   status: string;
   return_at: Date;
   total_amount: string;
   paid_amount: string;
   surcharge_total: string;
   debt_amount: string;
+}
+
+interface DebtSummaryRow {
+  total_amount: string;
+  total_count: bigint;
+  customer_count: bigint;
+  overdue_amount: string;
+  overdue_count: bigint;
+  within_amount: string;
+  within_count: bigint;
+  upcoming_count: bigint;
+  unpaid_count: bigint;
 }
 
 interface MoneyRow {
@@ -151,9 +168,9 @@ export class FinanceOverviewService {
   ): Promise<{ data: DebtItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const now = new Date();
-    const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const filterSql = debtFilterSql(query.filter, now, soon);
+    const filterSql = debtFilterSql(query.filter, now, upcomingBoundOf(now));
     const searchSql = debtSearchSql(query.q);
+    const statusSql = debtStatusSql(query.status);
     const branchSql = debtBranchSql(resolveBranchIdList(query.branchId, allowedBranchIds));
 
     // `phải thu` / `đã thu` / `còn nợ` đến từ `common/booking-money.ts` — cùng công thức với
@@ -161,7 +178,7 @@ export class FinanceOverviewService {
     // có phụ phí quá giờ chưa thu vẫn báo hết nợ và không ai đi đòi.
     const rows = await this.prisma.$queryRaw<DebtRow[]>(Prisma.sql`
       SELECT b.id AS booking_id, b.code, b.customer_name, b.customer_phone,
-             v.name AS vehicle_name, b.status, b.return_at,
+             v.name AS vehicle_name, v.plate_number, b.status, b.return_at,
              trim_scale(${SQL_AMOUNT_DUE})::text AS total_amount,
              trim_scale(${SQL_COLLECTED})::text AS paid_amount,
              trim_scale(sur.total)::text AS surcharge_total,
@@ -172,8 +189,9 @@ export class FinanceOverviewService {
         AND ${SQL_HAS_DEBT}
         ${filterSql}
         ${searchSql}
+        ${statusSql}
         ${branchSql}
-      ORDER BY b.return_at ASC
+      ORDER BY ${debtSortSql(query.sort)}
       LIMIT ${paging.take} OFFSET ${paging.skip}
     `);
 
@@ -187,6 +205,7 @@ export class FinanceOverviewService {
         AND ${SQL_HAS_DEBT}
         ${filterSql}
         ${searchSql}
+        ${statusSql}
         ${branchSql}
     `);
     const total = Number(countRes[0]?.count ?? 0);
@@ -198,6 +217,7 @@ export class FinanceOverviewService {
         customerName: r.customer_name,
         customerPhone: r.customer_phone,
         vehicleName: r.vehicle_name,
+        plateNumber: r.plate_number,
         status: r.status,
         returnAt: r.return_at.toISOString(),
         totalAmount: r.total_amount,
@@ -206,6 +226,67 @@ export class FinanceOverviewService {
         debtAmount: r.debt_amount,
       })),
       meta: paginationMeta(paging, total),
+    };
+  }
+
+  /**
+   * Dải thẻ + số đếm chip của màn Công nợ — xem docblock `DebtSummaryDto`.
+   *
+   * MỘT câu với `FILTER (WHERE …)` trên cùng FROM/WHERE với danh sách (trừ nhóm hạn): hai câu
+   * riêng là hai chỗ để điều kiện trôi khỏi nhau, và thẻ "Quá hạn: 11 đơn" sẽ mở ra một danh
+   * sách 12 dòng. Các vị từ nhóm hạn dùng CHÍNH `debtGroupSql` mà danh sách dùng.
+   */
+  async debtSummary(
+    tenantId: string,
+    query: DebtScopeQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<DebtSummaryDto> {
+    const now = new Date();
+    const soon = upcomingBoundOf(now);
+    // Ba nhóm dưới đây luôn có vị từ; `FALSE` chỉ để kiểu không còn `null`.
+    const group = (filter: string) => debtGroupSql(filter, now, soon) ?? Prisma.sql`FALSE`;
+    const overdue = group(DEBT_FILTER.OVERDUE);
+    const upcoming = group(DEBT_FILTER.UPCOMING);
+    const unpaid = group(DEBT_FILTER.UNPAID);
+
+    const rows = await this.prisma.$queryRaw<DebtSummaryRow[]>(Prisma.sql`
+      WITH debts AS (
+        SELECT b.id, COALESCE(b.tenant_customer_id, b.customer_phone, b.id) AS customer_key,
+               ${SQL_DEBT} AS debt,
+               (${overdue}) AS is_overdue,
+               (${upcoming}) AS is_upcoming,
+               (${unpaid}) AS is_unpaid
+        FROM bookings b JOIN vehicles v ON v.id = b.vehicle_id
+        ${BOOKING_MONEY_JOINS}
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+          AND ${SQL_HAS_DEBT}
+          ${debtSearchSql(query.q)}
+          ${debtStatusSql(query.status)}
+          ${debtBranchSql(resolveBranchIdList(query.branchId, allowedBranchIds))}
+      )
+      SELECT trim_scale(COALESCE(SUM(debt), 0))::text AS total_amount,
+             COUNT(*)::bigint AS total_count,
+             COUNT(DISTINCT customer_key)::bigint AS customer_count,
+             trim_scale(COALESCE(SUM(debt) FILTER (WHERE is_overdue), 0))::text AS overdue_amount,
+             COUNT(*) FILTER (WHERE is_overdue)::bigint AS overdue_count,
+             trim_scale(COALESCE(SUM(debt) FILTER (WHERE NOT is_overdue), 0))::text AS within_amount,
+             COUNT(*) FILTER (WHERE NOT is_overdue)::bigint AS within_count,
+             COUNT(*) FILTER (WHERE is_upcoming)::bigint AS upcoming_count,
+             COUNT(*) FILTER (WHERE is_unpaid)::bigint AS unpaid_count
+      FROM debts
+    `);
+    const r = rows[0];
+    return {
+      totalAmount: r?.total_amount ?? '0',
+      totalCount: Number(r?.total_count ?? 0),
+      customerCount: Number(r?.customer_count ?? 0),
+      overdueAmount: r?.overdue_amount ?? '0',
+      overdueCount: Number(r?.overdue_count ?? 0),
+      withinTermAmount: r?.within_amount ?? '0',
+      withinTermCount: Number(r?.within_count ?? 0),
+      upcomingCount: Number(r?.upcoming_count ?? 0),
+      unpaidCount: Number(r?.unpaid_count ?? 0),
     };
   }
 
@@ -760,19 +841,58 @@ function debtSearchSql(q: string | undefined): Prisma.Sql {
   )`;
 }
 
-/** Lọc công nợ theo hạn trả. */
-function debtFilterSql(filter: string | undefined, now: Date, soon: Date): Prisma.Sql {
+/** Mốc cuối của cửa sổ "sắp đến hạn" tính từ `now`. */
+function upcomingBoundOf(now: Date): Date {
+  return new Date(now.getTime() + DEBT_UPCOMING_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Vị từ của một nhóm hạn — biểu thức boolean TRẦN, dùng chung cho danh sách (`AND …`) và cho
+ * số đếm chip ở `debtSummary` (`FILTER (WHERE …)`), để chip "Quá hạn 11" luôn mở ra 11 dòng.
+ *
+ * "Quá hạn" = đã qua hạn trả xe, BẤT KỂ trạng thái (từ 04/11/2026 — trước đó loại đơn đã hoàn
+ * thành): đây là màn đi đòi tiền, và một chuyến đã trả xe xong mà chưa trả đủ tiền chính là khoản
+ * nợ quá hạn rõ nhất. Đơn huỷ đã nằm ngoài `SQL_DEBT_SCOPE`.
+ */
+function debtGroupSql(filter: string | undefined, now: Date, soon: Date): Prisma.Sql | null {
   switch (filter) {
-    case 'overdue':
-      return Prisma.sql`AND b.return_at < ${now} AND b.status NOT IN (${BOOKING_STATUS.COMPLETED}, ${BOOKING_STATUS.CANCELLED})`;
-    case 'upcoming':
-      return Prisma.sql`AND b.return_at >= ${now} AND b.return_at <= ${soon}`;
-    case 'unpaid':
+    case DEBT_FILTER.OVERDUE:
+      return Prisma.sql`b.return_at < ${now}`;
+    case DEBT_FILTER.UPCOMING:
+      return Prisma.sql`b.return_at >= ${now} AND b.return_at <= ${soon}`;
+    case DEBT_FILTER.UNPAID:
       // "Chưa thu đồng nào" tính trên ĐÃ THU đầy đủ, không chỉ `paid_amount`: một đơn đã nhận
       // 200k quá giờ bằng phiếu tay thì không còn là chưa thu gì.
-      return Prisma.sql`AND ${SQL_COLLECTED} = 0`;
+      return Prisma.sql`${SQL_COLLECTED} = 0`;
     default:
-      return Prisma.empty;
+      return null;
+  }
+}
+
+/** Lọc công nợ theo nhóm hạn. */
+function debtFilterSql(filter: string | undefined, now: Date, soon: Date): Prisma.Sql {
+  const group = debtGroupSql(filter, now, soon);
+  return group ? Prisma.sql`AND ${group}` : Prisma.empty;
+}
+
+/** Lọc theo trạng thái đơn — giá trị đã qua `@IsIn(BOOKING_STATUS_VALUES)` ở DTO. */
+function debtStatusSql(status: string | undefined): Prisma.Sql {
+  return status ? Prisma.sql`AND b.status = ${status}` : Prisma.empty;
+}
+
+/**
+ * Thứ tự danh sách công nợ. Cột sắp xếp KHÔNG đi bằng bind param được (Postgres không nhận tên
+ * cột làm tham số), nên ánh xạ từ union đã validate sang một mảnh SQL cố định — client không bao
+ * giờ chạm tới chuỗi SQL. Mọi nhánh kết thúc bằng `b.id` để phân trang ổn định khi trùng khoá.
+ */
+function debtSortSql(sort: string | undefined): Prisma.Sql {
+  switch (sort) {
+    case DEBT_SORT.DEBT:
+      return Prisma.sql`${SQL_DEBT} DESC, b.return_at ASC, b.id ASC`;
+    case DEBT_SORT.NEWEST:
+      return Prisma.sql`b.created_at DESC, b.id DESC`;
+    default:
+      return Prisma.sql`b.return_at ASC, b.id ASC`;
   }
 }
 

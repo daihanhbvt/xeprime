@@ -12,6 +12,8 @@ import {
   CustomerRevenueQueryDto,
   DebtListQueryDto,
   DebtPageDto,
+  DebtScopeQueryDto,
+  DebtSummaryDto,
   FinanceCategoryBreakdownDto,
   FinanceCategoryBreakdownQueryDto,
   FinanceSeriesDto,
@@ -47,6 +49,22 @@ export class FinanceOverviewController {
     @Query() query: DebtListQueryDto,
   ): Promise<DebtPageDto> {
     return this.overview.debts(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<DebtPageDto>;
+  }
+
+  @Get('debts/summary')
+  @RequiresFeature(PLAN_FEATURE.DEBTS)
+  @RequirePermissions(PERMISSION.FINANCE_VIEW)
+  @ApiOperation({
+    summary:
+      'Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) — ' +
+      'cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở',
+  })
+  @ApiOkResponse({ type: DebtSummaryDto })
+  debtSummary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: DebtScopeQueryDto,
+  ): Promise<DebtSummaryDto> {
+    return this.overview.debtSummary(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Get('finance/summary')

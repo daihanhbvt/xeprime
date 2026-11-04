@@ -169,7 +169,7 @@ Không phải dòng menu nhưng vẫn có lối vào (chi tiết ở `09` §2.1)
 
 - **Chờ giao xe / Đang thuê / Hoàn thành / Đã hủy** — các ngăn ở cột trái của "Quản lý đơn thuê xe"
   (`/bookings?preset=`, 02/11/2026); `/bookings/awaiting-pickup` chuyển tiếp về ngăn Chờ giao xe.
-- **Công nợ** (`/debts`) — mục ẩn, vào từ Tổng quan doanh thu; sẽ thành khối trong màn Doanh thu khi có design.
+- **Công nợ** — tab "Công nợ" của Lịch sử giao dịch (`/receipts?view=debts`, 04/11/2026); `/debts` cũ chuyển tiếp về đó.
 - **Chi nhánh** — section của Thông tin cửa hàng; `/shop/branches` chuyển tiếp.
 - **Tin nhắn** (`/chat`) và **Thông báo** — hai icon ở header.
 

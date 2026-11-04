@@ -7,6 +7,8 @@ import {
   compactMoneyParts,
   formatMoneyVnd,
   moneyInThousands,
+  moneyToEnglishWords,
+  moneyToVietnameseWords,
   wholeUnits,
   type MoneySeparators,
 } from '@/lib/money';
@@ -39,6 +41,11 @@ export interface AppFormat {
   moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
   /** Tính bằng nghìn: `1.350 K` (vi) · `1,350 K` (en). Dưới 1.000đ rơi về `money`. */
   moneyThousands: (value: MoneyString | null | undefined) => string;
+  /**
+   * Số tiền đọc bằng chữ theo NGÔN NGỮ giao diện: "Ba triệu đồng" (vi) · "Three million dong"
+   * (en). Rỗng/rác ⇒ chuỗi rỗng — chỗ gọi tự bỏ dòng.
+   */
+  moneyWords: (value: MoneyString | null | undefined) => string;
   /** `1.200.000 ₫/ngày` · `1,200,000 ₫/day`. `null` ⇒ "Miễn phí"/"Free". */
   pricePerDay: (value: MoneyString | null | undefined) => string;
   pricePerHour: (value: MoneyString | null | undefined) => string;
@@ -315,6 +322,8 @@ export function createAppFormat(
       const thousands = moneyInThousands(value, separators);
       return thousands ? t('units.thousands', { value: thousands }) : money(value);
     },
+    moneyWords: (value) =>
+      locale === 'en' ? moneyToEnglishWords(value) : moneyToVietnameseWords(value),
     pricePerDay: (value) => priceWithSuffix(value, 'perDay'),
     pricePerHour: (value) => priceWithSuffix(value, 'perHour'),
     pricePerMonth: (value) => priceWithSuffix(value, 'perMonth'),

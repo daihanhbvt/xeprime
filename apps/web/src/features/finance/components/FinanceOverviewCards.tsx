@@ -4,7 +4,7 @@ import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import { RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
 import { MoneyStat } from '@/components/data-display/MoneyStat';
-import { ROUTES, receiptsPath } from '@/constants/routes';
+import { receiptsPath } from '@/constants/routes';
 import { isNegativeMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { FinanceOverviewFilters, FinanceSummary } from '../types';
@@ -130,7 +130,7 @@ export function FinanceOverviewCards({
         value={data ? fmt.money(data.totalDebt) : null}
         loading={showSkeleton}
         hint={data ? t('bookings', { count: data.debtBookings }) : undefined}
-        href={ROUTES.MANAGE.DEBTS}
+        href={receiptsPath.debts()}
       />
     </section>
   );

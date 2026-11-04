@@ -30,15 +30,26 @@ const MIN_TABLE_WIDTH = 960;
  *
  * Thuộc bộ CƠ BẢN (ADR 0027 điều 1): không gác theo gói. Gói hết hạn cũng không được lấy đi
  * quyền biết mình bị trừ bao nhiêu (điều 3).
+ *
+ * `embedded`: thẻ nằm TRONG hộp thoại "Chi tiết" của trang Quản lý ví (04/11/2026) — bỏ khung
+ * thẻ và tiêu đề (hộp thoại đã có), tránh thẻ lồng thẻ. `initialPeriod` mở đúng tháng người dùng
+ * đang xem ở trang đó.
  */
-export function ShopTaxWithheldCard() {
+export function ShopTaxWithheldCard({
+  embedded = false,
+  initialPeriod,
+}: {
+  embedded?: boolean;
+  /** Kỳ `YYYY-MM` mở đầu — mặc định tháng hiện tại. */
+  initialPeriod?: string;
+} = {}) {
   const t = useTranslations('Finance.taxWithheld');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const { has } = usePermissions();
   const isMobile = useIsMobile();
 
-  const [period, setPeriod] = useState(() => nowInAppTz().format(PERIOD_FORMAT));
+  const [period, setPeriod] = useState(() => initialPeriod ?? nowInAppTz().format(PERIOD_FORMAT));
   const canView = has(PERMISSION.FINANCE_VIEW);
   /*
    * Chỉ gác theo QUYỀN, không gác theo gian hàng đang chọn: `GET /shop/tax/*` lấy `tenant_id` từ
@@ -76,12 +87,16 @@ export function ShopTaxWithheldCard() {
     {
       key: 'vat',
       title: t('columns.vat'),
-      render: (_v, row) => <TaxSplitAmount value={row.vatAmount ?? null} fallback={t('notSplit')} />,
+      render: (_v, row) => (
+        <TaxSplitAmount value={row.vatAmount ?? null} fallback={t('notSplit')} />
+      ),
     },
     {
       key: 'pit',
       title: t('columns.pit'),
-      render: (_v, row) => <TaxSplitAmount value={row.pitAmount ?? null} fallback={t('notSplit')} />,
+      render: (_v, row) => (
+        <TaxSplitAmount value={row.pitAmount ?? null} fallback={t('notSplit')} />
+      ),
     },
     { key: 'label', title: t('columns.label'), render: (_v, row) => row.label },
     {
@@ -105,11 +120,17 @@ export function ShopTaxWithheldCard() {
   if (!canView) return null;
 
   return (
-    <section className={styles.card} aria-labelledby="xp-tax-withheld">
+    <section
+      className={embedded ? styles.embedded : styles.card}
+      aria-labelledby={embedded ? undefined : 'xp-tax-withheld'}
+      aria-label={embedded ? t('title') : undefined}
+    >
       <div className={styles.header}>
-        <h2 id="xp-tax-withheld" className={styles.title}>
-          {t('title')}
-        </h2>
+        {embedded ? null : (
+          <h2 id="xp-tax-withheld" className={styles.title}>
+            {t('title')}
+          </h2>
+        )}
         <DatePicker
           className={styles.period}
           picker="month"
