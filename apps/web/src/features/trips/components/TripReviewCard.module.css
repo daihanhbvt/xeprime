@@ -64,11 +64,6 @@
   align-self: flex-start;
 }
 
-.hint {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
 
 .actions {
   display: flex;

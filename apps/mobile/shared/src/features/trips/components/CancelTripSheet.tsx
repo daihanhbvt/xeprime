@@ -351,7 +351,7 @@ function FactRow({
         {label}
       </Text>
       <Text
-        col={total ? colors.primaryHover : (valueColor ?? colors.text)}
+        col={total ? colors.brandText : (valueColor ?? colors.text)}
         fos={total ? fontSize.bodyLg : fontSize.body}
         fow={total ? fontWeight.semibold : fontWeight.medium}
       >

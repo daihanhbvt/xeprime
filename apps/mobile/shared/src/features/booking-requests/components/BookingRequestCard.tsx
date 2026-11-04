@@ -232,7 +232,7 @@ function BookingRequestCardImpl({
               <XStack ai="flex-start" gap={space.sm}>
                 <Text
                   f={1}
-                  col={canViewVehicle ? colors.primaryActive : colors.text}
+                  col={canViewVehicle ? colors.accentText : colors.text}
                   fos={fontSize.bodyLg}
                   fow={fontWeight.bold}
                   numberOfLines={2}
@@ -327,7 +327,7 @@ function BookingRequestCardImpl({
                   ai="center"
                   jc="center"
                 >
-                  <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.bold}>
+                  <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.bold}>
                     {request.customerName.trim().charAt(0).toUpperCase() || '?'}
                   </Text>
                 </YStack>
@@ -335,7 +335,7 @@ function BookingRequestCardImpl({
               <YStack f={1} gap={1}>
                 {/* Tên khách mở hồ sơ trong sổ khách — đúng link `customerPath.detail` bên web. */}
                 <Text
-                  col={customerLinkable ? colors.primaryActive : colors.text}
+                  col={customerLinkable ? colors.accentText : colors.text}
                   fos={fontSize.body}
                   fow={fontWeight.semibold}
                   numberOfLines={1}
@@ -347,7 +347,7 @@ function BookingRequestCardImpl({
                 </Text>
                 {/* Số điện thoại là liên kết `tel:` như web — chạm là gọi. */}
                 <Text
-                  col={colors.primaryActive}
+                  col={colors.accentText}
                   fos={fontSize.bodySm}
                   numberOfLines={1}
                   {...(tel
@@ -454,7 +454,7 @@ function BookingRequestCardImpl({
               >
                 <Text
                   flexShrink={1}
-                  col={colors.primaryActive}
+                  col={colors.accentText}
                   fos={fontSize.bodySm}
                   fow={fontWeight.semibold}
                   numberOfLines={1}
@@ -465,7 +465,7 @@ function BookingRequestCardImpl({
                   */}
                   {t('trace.viewBooking')}
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.primaryActive} />
+                <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.accentText} />
               </XStack>
             </YStack>
           </Pressable>
@@ -857,9 +857,9 @@ function ContactButton({
         bc={colors.primary}
         minHeight={sizing.touchTarget}
       >
-        <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} />
+        <Ionicons name={icon} size={iconSize.sm} color={colors.accentText} />
         <Text
-          col={colors.primaryActive}
+          col={colors.accentText}
           fos={fontSize.label}
           fow={fontWeight.semibold}
           numberOfLines={1}
@@ -923,7 +923,7 @@ function NotePanel({
         {toggleLabel && onToggle ? (
           <XStack>
             <Text
-              col={colors.primaryActive}
+              col={colors.accentText}
               fos={fontSize.label}
               fow={fontWeight.semibold}
               accessibilityRole="button"

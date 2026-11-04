@@ -200,7 +200,7 @@ export function SupportCenterScreen({
                   <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
                     <IconDisc
                       icon={item.icon}
-                      tone={colors.primaryActive}
+                      tone={colors.accentText}
                       surface={colors.primaryLight}
                     />
                     <YStack f={1} gap={2}>
@@ -246,7 +246,7 @@ export function SupportCenterScreen({
               <Ionicons
                 name="help-buoy-outline"
                 size={fontSize.h4}
-                color={colors.primaryActive}
+                color={colors.accentText}
                 accessibilityElementsHidden
                 importantForAccessibility="no"
               />

@@ -18,7 +18,7 @@ const useServiceTone = themed<Record<ServiceType, { fg: string; bg: string; icon
   (colors) => ({
     [SERVICE_TYPE.SELF_DRIVE]: { fg: colors.info, bg: colors.infoSurface, icon: 'car-outline' },
     [SERVICE_TYPE.WITH_DRIVER]: {
-      fg: colors.primaryActive,
+      fg: colors.accentText,
       bg: colors.primaryLight,
       icon: 'person-outline',
     },

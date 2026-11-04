@@ -340,15 +340,15 @@ export async function ListingDetailView({
             </section>
           ) : null}
 
+          {/* Đánh giá xe — Figma 21621:62130: ngay sau Vị trí xe, trước Thông tin thêm */}
+          <section className={cx(styles.sectionCard, styles.reviewsSection)}>
+            <ListingReviews vehicleId={listing.id} />
+          </section>
+
           {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
           <div className={styles.policiesSection}>
             <ListingPoliciesTabs listing={listing} activeService={activeService} />
           </div>
-
-          {/* Đánh giá xe */}
-          <section className={cx(styles.sectionCard, styles.reviewsSection)}>
-            <ListingReviews vehicleId={listing.id} />
-          </section>
         </div>
 
         {/* CỘT PHẢI (440px sticky) — một cột thì đứng ngay sau tên + thông số */}

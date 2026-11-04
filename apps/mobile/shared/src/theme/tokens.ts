@@ -59,12 +59,12 @@ const DARK_TOKENS: Partial<Record<XpTokenName, string>> = {
   'color-success-border': 'rgba(108, 233, 166, 0.45)',
   'color-warning-subtle': 'rgba(247, 144, 9, 0.1)',
   'color-text': '#ffffff',
-  'color-text-secondary': '#d5d7da',
-  'color-text-tertiary': '#a4a7ae',
-  'color-text-placeholder': '#717680',
+  'color-text-secondary': '#fafafa',
+  'color-text-tertiary': '#e9eaeb',
+  'color-text-placeholder': '#a4a7ae',
   'color-text-disabled': 'rgba(255, 255, 255, 0.25)',
   'color-text-inverse': '#0e0f12',
-  'color-border': '#333741',
+  'color-border': '#414651',
   'color-border-strong': '#414651',
   'color-border-subtle': '#1f242f',
 };
@@ -166,6 +166,20 @@ function buildColors(scheme: ColorScheme) {
     primaryGlow: r('color-primary-glow'),
     /** `--xp-color-primary-border` — viền vàng nhạt của thẻ hoá đơn chuyến (luồng đặt xe v2). */
     primaryBorder: r('color-primary-border'),
+    /**
+     * Chữ/biểu tượng NHẤN thương hiệu (link, tab đang chọn, số tiền nhấn). Sáng: gold đậm `primary-active`
+     * cho đủ tương phản trên nền trắng; tối: gold chính `primary` — gold đậm trên
+     * nền tối thành màu bùn (Figma "Homepage - Dark Mode" 19879:66136).
+     */
+    accentText: scheme === 'dark' ? r('color-primary') : r('color-primary-active'),
+    /** Như `accentText`, bản sáng là `primary-strong` (chữ avatar, nhãn trên nền gold nhạt). */
+    accentStrongText: scheme === 'dark' ? r('color-primary') : r('color-primary-strong'),
+    /** Tên gian hàng: sáng `primary-hover`, tối vàng chuẩn `primary` (người dùng chốt 04/11/2026). */
+    shopName: scheme === 'dark' ? r('color-primary') : r('color-primary-hover'),
+    /** Chữ mô tả/thân bài: sáng `text-secondary` (= textMuted), tối `text-on-dark-muted` #d5d7da. */
+    /** Chữ gold nhấn mức vừa (link, số tiền, tab đang chọn): sáng `primary-hover`, tối `primary`. */
+    brandText: scheme === 'dark' ? r('color-primary') : r('color-primary-hover'),
+    textBody: scheme === 'dark' ? r('color-text-on-dark-muted') : r('color-text-secondary'),
     surfaceElevated: r('color-bg-elevated'),
     surfaceSelected: r('color-bg-selected'),
     /** Lớp phủ sau modal/sheet. */

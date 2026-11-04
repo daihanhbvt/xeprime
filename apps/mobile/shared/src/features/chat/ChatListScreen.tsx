@@ -99,7 +99,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
       <RefreshControl
         refreshing={isRefetching}
         onRefresh={() => void refetch()}
-        tintColor={colors.primaryActive}
+        tintColor={colors.accentText}
       />
     ),
     [colors, isRefetching, refetch],

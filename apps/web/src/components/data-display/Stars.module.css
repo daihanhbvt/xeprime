@@ -1,37 +1,27 @@
+/* Dãy sao — Figma "Rating": khe 4 ở cỡ thẻ đánh giá, 8 ở cỡ đánh giá chuyến (xl). */
 .stars {
   display: inline-flex;
-  gap: 1px;
-  font-size: 15px;
-  line-height: 1;
-  letter-spacing: 1px;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  vertical-align: middle;
 }
 
-.stars.sm {
-  font-size: 12.5px;
-}
-
-/* Thẻ đánh giá v2 (Figma `20058:71283`): sao 20px, khe 4. */
-.stars.lg {
+.lg {
   gap: var(--xp-space-xs);
-  font-size: 20px;
 }
 
-/* Khối đánh giá chuyến đi — Figma `21621:68524`: sao 28px, cách nhau 8px. */
-.stars.xl {
+.xl {
   gap: var(--xp-space-sm);
-  font-size: 28px;
-  letter-spacing: 0;
 }
 
-/*
- * MỘT sắc vàng cho mọi ngôi sao trong sản phẩm — cùng token với sao ở thẻ xe, thẻ gian hàng và
- * khối gian hàng nổi bật. Trước 23/09/2026 chỗ này dùng `--xp-gold-deep` (nâu hơn), nên dãy sao
- * ở khối đánh giá lệch tông với ngôi sao ngay phía trên nó trên cùng một trang.
- */
-.on {
-  color: var(--xp-color-primary);
+.star,
+.single {
+  display: block;
+  flex: none;
 }
 
-.off {
-  color: var(--xp-color-border);
+.single {
+  display: inline-block;
+  vertical-align: middle;
 }

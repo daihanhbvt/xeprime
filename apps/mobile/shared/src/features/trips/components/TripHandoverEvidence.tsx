@@ -347,7 +347,7 @@ function EvidencePhoto({
         ) : thumbFailed ? (
           <Ionicons name="image-outline" size={iconSize.lg} color={colors.textMuted} />
         ) : (
-          <ActivityIndicator size="small" color={colors.primaryActive} />
+          <ActivityIndicator size="small" color={colors.accentText} />
         )}
         {loading ? (
           <YStack

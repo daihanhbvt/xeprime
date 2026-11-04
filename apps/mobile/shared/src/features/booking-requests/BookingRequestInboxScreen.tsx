@@ -519,7 +519,7 @@ export function BookingRequestInboxScreen() {
                   <RefreshControl
                     refreshing={query.isRefetching}
                     onRefresh={() => void query.refetch()}
-                    tintColor={colors.primaryActive}
+                    tintColor={colors.accentText}
                     progressViewOffset={headerHeight}
                   />
                 }

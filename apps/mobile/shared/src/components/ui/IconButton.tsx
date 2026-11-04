@@ -41,7 +41,7 @@ const useTone = themed<Record<Tone, { bg: string; fg: string; border: string }>>
     hành động chính, và chúng tranh chỗ với chính cái tiêu đề. Một ô nhạt đứng cạnh một ô đặc
     thì ngược lại — cùng họ màu, khác trọng lượng, đọc ngay ra cái nào là việc chính.
   */
-  accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primaryActive },
+  accent: { bg: colors.primaryLight, fg: colors.accentText, border: colors.accentText },
   success: { bg: colors.successSurface, fg: colors.success, border: colors.success },
   info: { bg: colors.infoSurface, fg: colors.info, border: colors.info },
   dangerSurface: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },

@@ -276,3 +276,32 @@
     flex: 1 1 0;
   }
 }
+
+/*
+ * Figma dark (`19879:66137`, hộp tìm kiếm): mục ĐANG CHỌN vàng sáng `primary` (chữ + icon + viền),
+ * mục chưa chọn xám mờ — vàng đậm `primary-strong`/`primary-active` của giao diện sáng chìm trên nền tối.
+ */
+:global([data-theme='dark']) .listTabs .tabActive,
+:global([data-theme='dark']) .listTabs .tabActive:hover {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .listSegment .tab {
+  color: var(--xp-color-text-placeholder);
+}
+
+:global([data-theme='dark']) .listSegment .tab:hover {
+  color: var(--xp-color-text);
+}
+
+:global([data-theme='dark']) .listSegment .tabActive,
+:global([data-theme='dark']) .listSegment .tabActive:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-container);
+  box-shadow: none;
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .listSegment .tab:not(.tabActive) .icon {
+  color: var(--xp-color-text-placeholder);
+}

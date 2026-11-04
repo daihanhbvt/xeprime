@@ -110,3 +110,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Figma dark (`19879:66286`): thẻ đánh giá nổi trên nền tối bằng nền elevated, chữ nhận xét sáng hơn. */
+:global([data-theme='dark']) .card {
+  background: var(--xp-color-bg-elevated);
+}
+
+/* Figma dark: nội dung nhận xét xám sáng. */
+:global([data-theme='dark']) .comment {
+  color: var(--xp-color-text-on-dark-muted);
+}

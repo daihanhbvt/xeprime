@@ -15,7 +15,6 @@ import { ROUTES } from '@/navigation/routes';
 import { roundedCount } from '@/lib/rounded-count';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, market, radius, space } from '@/theme/tokens';
-import { shopHighlightOf } from './shop-highlight';
 
 export interface ShopQuickInfoCardShop {
   name: string;
@@ -85,19 +84,7 @@ export function ShopQuickInfoCard({
   const hasTrips = typeof shop.completedTripCount === 'number';
   const trips = hasTrips ? roundedCount(shop.completedTripCount as number) : null;
 
-  /*
-   * Dòng ghi chú LUÔN có ở biến thể đầy đủ — nội dung đổi theo số liệu thật của từng gian hàng
-   * (`shopHighlightOf`). Để trống chỗ này với gian hàng chưa nổi bật làm thẻ trông như thiếu
-   * mất một phần, mà mọi gian hàng đều có ít nhất một điều đúng để nói.
-   */
-  const highlight = compact
-    ? null
-    : shopHighlightOf({
-        metrics,
-        ratingAvg,
-        ratingCount: shop.ratingCount,
-        completedTripCount: shop.completedTripCount,
-      });
+  // Dòng ghi chú "Chủ xe được khách đánh giá…" đã GỠ theo yêu cầu người dùng (04/11/2026).
 
   if (variant === 'inline') {
     return (
@@ -106,14 +93,7 @@ export function ShopQuickInfoCard({
         metrics={metrics}
         rating={hasRating ? (ratingAvg as number) : null}
         trips={trips}
-        highlightText={
-          highlight
-            ? t(`card.highlight.${highlight.key}`, {
-                rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-                count: highlight.count,
-              })
-            : null
-        }
+        highlightText={null}
         onOpen={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
       />
     );
@@ -168,7 +148,7 @@ export function ShopQuickInfoCard({
             </XStack>
           ) : null}
           {variant === 'full' && shop.bio ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            <Text col={colors.textBody} fos={fontSize.bodySm}>
               {shop.bio}
             </Text>
           ) : null}
@@ -216,7 +196,7 @@ export function ShopQuickInfoCard({
         {compact ? (
           <XStack ai="center" gap={4}>
             {openLabel ? (
-              <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+              <Text col={colors.accentText} fos={fontSize.label} fow={fontWeight.medium}>
                 {openLabel}
               </Text>
             ) : null}
@@ -230,17 +210,6 @@ export function ShopQuickInfoCard({
         <HostMetrics metrics={metrics} />
       )}
 
-      {highlight ? (
-        <XStack ai="flex-start" gap={space.xs}>
-          <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
-          <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-            {t(`card.highlight.${highlight.key}`, {
-              rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-              count: highlight.count,
-            })}
-          </Text>
-        </XStack>
-      ) : null}
 
       {!compact && actions ? <YStack gap={space.xs}>{actions}</YStack> : null}
     </YStack>

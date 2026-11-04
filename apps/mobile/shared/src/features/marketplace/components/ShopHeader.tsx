@@ -338,7 +338,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                 {t('profile.aboutTitle')}
               </Text>
               {shop.bio ? (
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.textBody} fos={fontSize.body}>
                   {shop.bio}
                 </Text>
               ) : null}
@@ -455,7 +455,7 @@ function ShopAvatar({
             onError={onError}
           />
         ) : (
-          <Text col={colors.primaryStrong} fos={fontSize.h2} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={fontSize.h2} fow={fontWeight.semibold}>
             {shop.name.trim().charAt(0).toLocaleUpperCase() || '?'}
           </Text>
         )}

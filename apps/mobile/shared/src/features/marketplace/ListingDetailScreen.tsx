@@ -72,6 +72,7 @@ import {
   type TripInputRequest,
 } from './components/ListingBookingCard';
 import { ListingPoliciesTabs } from './components/ListingPoliciesTabs';
+import { NewVehicleBadge } from './components/NewVehicleBadge';
 
 /**
  * Dịch vụ mở sẵn khi vào trang: ngữ cảnh mang từ danh sách sang nếu xe phục vụ được → ưu tiên
@@ -511,7 +512,7 @@ function DetailBody({
               <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold}>
                 {listing.name}
               </Text>
-              {isNewVehicle ? <Badge tone="success" label={tCard('newVehicle')} /> : null}
+              {isNewVehicle ? <NewVehicleBadge /> : null}
               {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
             </XStack>
             {/* Vùng Chia sẻ & Yêu thích — cụm `.actionIcons` của `ListingHeaderActions` web ≤640px: gap space-12. */}
@@ -637,7 +638,7 @@ function DetailBody({
           ) : null}
           {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
           <Text
-            col={colors.textMuted}
+            col={colors.textBody}
             fos={BODY_TEXT}
             textAlign="justify"
             {...(descriptionOpen ? {} : { numberOfLines: 4 })}
@@ -712,9 +713,10 @@ function DetailBody({
           />
         </YStack>
 
-        <ListingPoliciesTabs listing={listing} activeService={activeService} />
-
+        {/* Figma `21636:82908`: Đánh giá đứng TRƯỚC Thông tin thêm (tabs điều khoản/huỷ/phí). */}
         <Reviews vehicleId={listing.id} />
+
+        <ListingPoliciesTabs listing={listing} activeService={activeService} />
       </YStack>
     </YStack>
   );
@@ -986,7 +988,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
                   <Stars value={review.rating} size={20} />
                 </XStack>
                 {review.comment ? (
-                  <Text col={colors.textMuted} fos={BODY_TEXT}>
+                  <Text col={colors.textBody} fos={BODY_TEXT}>
                     {review.comment}
                   </Text>
                 ) : null}
@@ -1088,7 +1090,7 @@ function Badge({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'suc
       py={2}
     >
       <Text
-        col={success ? colors.success : colors.primaryHover}
+        col={success ? colors.success : colors.brandText}
         fos={fontSize.bodySm}
         fow={fontWeight.medium}
       >

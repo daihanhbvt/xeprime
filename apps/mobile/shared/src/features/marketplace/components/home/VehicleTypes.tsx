@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, useWindowDimensions } from 'react-native';
+import { CardHighlightContext, HighlightZoom } from '@/components/ui/HighlightZoom';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
@@ -47,7 +49,6 @@ interface VehicleTypesProps {
  * Lưới 2 × 2 theo bản vẽ Figma mobile (người dùng chốt thay băng chuyền của web). "Xem tất cả" canh giữa dưới, sang tìm kiếm ô tô.
  */
 export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
-  const colors = useColors();
   const t = useTranslations('Home.types');
   const { width } = useWindowDimensions();
   const tileWidth = Math.floor((width - layout.screenX * 2 - GRID_GAP) / 2);
@@ -57,33 +58,12 @@ export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
       <HomeSectionHeading kicker={t('kicker')} title={t('title')} />
       <XStack flexWrap="wrap" gap={GRID_GAP} accessibilityLabel={t('title')}>
         {items.map((item) => (
-          <Pressable
+          <VehicleTypeTile
             key={item.key}
+            item={item}
+            width={tileWidth}
             onPress={() => onOpenSearch(typeSearchParams(item))}
-            accessibilityRole="link"
-            accessibilityLabel={item.label}
-            style={({ pressed }) => ({ width: tileWidth, opacity: pressed ? 0.7 : 1 })}
-          >
-            <YStack w="100%" aspectRatio={MEDIA_RATIO} ov="hidden">
-              <Image
-                source={{ uri: webAssetUrl(item.showcaseImageUrl) }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="contain"
-                cachePolicy="memory-disk"
-                transition={150}
-              />
-            </YStack>
-            <YStack ai="center" gap={space.xs} pt={space.sm}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center" numberOfLines={1}>
-                {item.label}
-              </Text>
-              {item.showcaseExamples ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center" numberOfLines={1}>
-                  {item.showcaseExamples}
-                </Text>
-              ) : null}
-            </YStack>
-          </Pressable>
+          />
         ))}
       </XStack>
       <OutlineAction
@@ -91,5 +71,60 @@ export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
         onPress={() => onOpenSearch({ vehicleType: VEHICLE_TYPE.CAR })}
       />
     </YStack>
+  );
+}
+
+/** Một ô loại xe — trạng thái nhấn = hover của web: ảnh phóng nhẹ + tên vàng, không nền/viền. */
+function VehicleTypeTile({
+  item,
+  width,
+  onPress,
+}: {
+  item: CatalogItem;
+  width: number;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      accessibilityRole="link"
+      accessibilityLabel={item.label}
+      style={{ width }}
+    >
+      <YStack w="100%" aspectRatio={MEDIA_RATIO} ov="hidden">
+        {/* = web `.card:hover .image { scale(1.08) }`: nhấn thì ảnh xe to lên nhẹ, không nền/viền. */}
+        <CardHighlightContext.Provider value={pressed}>
+          <HighlightZoom scale={1.08}>
+            <Image
+              source={{ uri: webAssetUrl(item.showcaseImageUrl) }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+          </HighlightZoom>
+        </CardHighlightContext.Provider>
+      </YStack>
+      <YStack ai="center" gap={space.xs} pt={space.sm}>
+        <Text
+          col={pressed ? colors.primary : colors.text}
+          fos={fontSize.body}
+          fow={fontWeight.semibold}
+          ta="center"
+          numberOfLines={1}
+        >
+          {item.label}
+        </Text>
+        {item.showcaseExamples ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center" numberOfLines={1}>
+            {item.showcaseExamples}
+          </Text>
+        ) : null}
+      </YStack>
+    </Pressable>
   );
 }

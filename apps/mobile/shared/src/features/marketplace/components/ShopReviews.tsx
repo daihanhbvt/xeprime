@@ -136,7 +136,7 @@ function ReviewCard({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <Text col={colors.primaryStrong} fos={fontSize.body} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={fontSize.body} fow={fontWeight.semibold}>
             {initialOf(review.customerName)}
           </Text>
         </YStack>
@@ -157,7 +157,7 @@ function ReviewCard({
       {/* `.comment` web: body `text-secondary`, line-height 22, cắt 4 dòng. */}
       {review.comment ? (
         <Text
-          col={colors.textMuted}
+          col={colors.textBody}
           fos={fontSize.body}
           lineHeight={BODY_LINE}
           numberOfLines={COMMENT_LINES}
@@ -173,7 +173,7 @@ function ReviewCard({
         accessibilityLabel={vehicleLabel}
         style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
       >
-        <Text col={colors.primaryHover} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
+        <Text col={colors.brandText} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
           {vehicleLabel}
         </Text>
       </Pressable>

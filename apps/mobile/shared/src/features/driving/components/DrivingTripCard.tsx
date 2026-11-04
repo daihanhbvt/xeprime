@@ -261,7 +261,7 @@ function DrivingTripCardImpl({
                     : {})}
                 />
                 <Text
-                  col={colors.primaryHover}
+                  col={colors.shopName}
                   fos={fontSize.body}
                   fow={fontWeight.medium}
                   flexShrink={1}

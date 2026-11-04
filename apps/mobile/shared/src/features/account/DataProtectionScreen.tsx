@@ -57,7 +57,7 @@ export function DataProtectionScreen({
               <XStack ai="center" gap={space.sm}>
                 <YStack f={1} minWidth={0} gap={space.xs}>
                   <Text
-                    col={colors.primaryActive}
+                    col={colors.accentText}
                     fos={fontSize.meta}
                     fow={fontWeight.semibold}
                     letterSpacing={0.8}
@@ -72,7 +72,7 @@ export function DataProtectionScreen({
                   <Ionicons
                     name="shield-checkmark"
                     size={iconSize.lg}
-                    color={colors.primaryActive}
+                    color={colors.accentText}
                   />
                 </YStack>
               </XStack>

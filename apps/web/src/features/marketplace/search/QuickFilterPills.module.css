@@ -185,3 +185,9 @@
     font-size: 16px;
   }
 }
+
+/* ── Giao diện tối (Figma "Homepage - Dark Mode") — chữ/icon vàng đậm của bản sáng chìm trên nền
+   tối; đổi sang gold chính `--xp-color-primary`. */
+:global([data-theme='dark']) .filterBtn:hover {
+  color: var(--xp-color-primary);
+}

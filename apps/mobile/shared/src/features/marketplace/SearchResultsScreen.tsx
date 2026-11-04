@@ -20,6 +20,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
+import { Reveal, useListReveal } from '@/components/motion/Reveal';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -208,11 +209,21 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
     void setSecureItem(SECURE_KEY.MARKETPLACE_VIEW_MODE, next);
   };
 
+  /*
+   * Thẻ đầu tiên so le khi kết quả về (và khi đổi bộ lọc). Thẻ cuộn tới / trang kế / kéo làm mới
+   * hiện ngay — `useListReveal`.
+   */
+  const shouldReveal = useListReveal(
+    !results.isInitialLoading && !results.initialError && results.listings.length > 0,
+    JSON.stringify(filters),
+  );
   const renderItem = useCallback(
-    ({ item }: { item: PublicListing }) => (
-      <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
+    ({ item, index }: { item: PublicListing; index: number }) => (
+      <Reveal index={index} disabled={!shouldReveal(index)}>
+        <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
+      </Reveal>
     ),
-    [openListing, viewMode],
+    [openListing, viewMode, shouldReveal],
   );
 
   const tabBarInset = useTabBarInset();
@@ -351,15 +362,15 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
                 px={space.sm}
                 minHeight={28}
               >
-                <Text col={colors.primaryStrong} fos={fontSize.body}>
+                <Text col={colors.accentStrongText} fos={fontSize.body}>
                   {chip.label}
                 </Text>
-                <Ionicons name="close" size={iconSize.xs} color={colors.primaryStrong} />
+                <Ionicons name="close" size={iconSize.xs} color={colors.accentStrongText} />
               </XStack>
             </Pressable>
           ))}
           <Pressable onPress={clearFacets} accessibilityRole="button" hitSlop={space.xs}>
-            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.medium}>
+            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.medium}>
               {t('clearAll')}
             </Text>
           </Pressable>
@@ -387,13 +398,15 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
       ))}
     </YStack>
   ) : (
-    <Empty
-      keyword={filters.q}
-      onClearKeyword={() => setFilters({ q: undefined })}
-      filtered={filterCount > 0}
-      onClear={clearFacets}
-      onChangeContext={() => setLocationOpen(true)}
-    />
+    <Reveal variant="fade">
+      <Empty
+        keyword={filters.q}
+        onClearKeyword={() => setFilters({ q: undefined })}
+        filtered={filterCount > 0}
+        onClear={clearFacets}
+        onChangeContext={() => setLocationOpen(true)}
+      />
+    </Reveal>
   );
   const showList = !results.initialError && !results.isInitialLoading;
 
@@ -607,7 +620,7 @@ function Empty({
         />
         {filtered ? (
           <Pressable onPress={onClear} accessibilityRole="button" hitSlop={space.sm}>
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {tFilters('clear')}
             </Text>
           </Pressable>
@@ -638,7 +651,7 @@ function Empty({
         onAction={onClear}
       />
       <Pressable onPress={onChangeContext} accessibilityRole="button" hitSlop={space.sm}>
-        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {t('changeTimeOrPlace')}
         </Text>
       </Pressable>

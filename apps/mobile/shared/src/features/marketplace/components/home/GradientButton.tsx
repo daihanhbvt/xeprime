@@ -4,7 +4,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import type { IconName } from '@/components/ui/Chip';
 import { elevation } from '@/theme/elevation';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
   buttonHeight,
   buttonHitSlop,
@@ -90,6 +90,9 @@ export function OutlineAction({
   fullWidth?: boolean;
 }) {
   const colors = useColors();
+  // Figma dark (`19879:66181`): nền than #232323, viền xám #717680, chữ gold chính — khớp
+  // `CtaButton .outline` tối bên web. Chưa có token tối cho hai màu này.
+  const dark = useAppScheme().scheme === 'dark';
   return (
     <Pressable
       onPress={onPress}
@@ -107,10 +110,10 @@ export function OutlineAction({
         px={space.md}
         br={radius.control}
         bw={1}
-        bc={colors.primaryLight}
-        bg={colors.surface}
+        bc={dark ? '#717680' : colors.primaryLight}
+        bg={dark ? '#232323' : colors.surface}
       >
-        <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.semibold}>
+        <Text col={dark ? colors.primary : colors.primaryActive} fos={fontSize.body} fow={fontWeight.semibold}>
           {label}
         </Text>
       </XStack>

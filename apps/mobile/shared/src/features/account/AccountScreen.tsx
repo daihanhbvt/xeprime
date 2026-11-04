@@ -3,6 +3,7 @@ import { Text, YStack } from 'tamagui';
 import { Screen } from '@/components/layout/Screen';
 import { AppVersion } from '@/components/ui/AppVersion';
 import { Card } from '@/components/ui/Card';
+import { Reveal } from '@/components/motion/Reveal';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -102,11 +103,15 @@ function AccountBody({
     <Screen edges={['left', 'right']} refreshing={refreshing} onRefresh={refetch}>
       {/* Nhịp khép (người dùng chốt 28/10/2026): khe 12 giữa các khối. */}
       <YStack gap={12}>
-        <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} accessibilityRole="header">
-          {t('title')}
-        </Text>
+        <Reveal variant="fade">
+          <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} accessibilityRole="header">
+            {t('title')}
+          </Text>
+        </Reveal>
 
-        <AccountHubCard />
+        <Reveal index={1}>
+          <AccountHubCard />
+        </Reveal>
 
         {/* Cảnh báo cấu hình gói đứng NGAY TRƯỚC menu (ADR 0038 điều 11). */}
         <AccountTrackNotice />
@@ -117,6 +122,7 @@ function AccountBody({
 
         {/* Xoá tài khoản: thẻ riêng tông đỏ cuối màn (ADR 0038 điều 9), không lẫn vào menu. */}
         {showsDeleteAccountCard(user) ? (
+          <Reveal index={8}>
           <Card padded={false}>
             <YStack px={space.md} py={space.xs}>
               <SettingRow
@@ -128,6 +134,7 @@ function AccountBody({
               />
             </YStack>
           </Card>
+          </Reveal>
         ) : null}
 
         <AppVersion />

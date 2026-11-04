@@ -28,6 +28,7 @@ import { SearchCard } from './components/SearchCard';
 import { StickySearchBar, stickyThreshold } from './components/StickySearchBar';
 import { VehiclePreview } from './components/VehiclePreview';
 import { ROUTES } from '@/navigation/routes';
+import { Reveal } from '@/components/motion/Reveal';
 import type { ExploreSearchParams } from '@/navigation/routes-base';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { CustomerReviews } from './components/home/CustomerReviews';
@@ -235,51 +236,74 @@ function HomeContent() {
         onScroll={onScroll}
         scrollEventThrottle={scrollThrottle.frame}
       >
-        <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+        {/* Các khối hiện lần lượt lúc mở trang (một lần — kéo làm mới không chạy lại). */}
+        <Reveal variant="fade">
+          <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+        </Reveal>
 
         {/*
           Web: thẻ tìm kiếm nằm ngay dưới banner, không đè lên ảnh (`HomeHero.module.css`).
           Lề hai bên = `.cardOuter { padding: 0 space-12 }` của `SearchCard` web ở ≤640px.
         */}
-        <YStack px={SEARCH_CARD_GUTTER}>
-          <SearchCard onSearch={openSearch} />
-        </YStack>
+        <Reveal index={1}>
+          <YStack px={SEARCH_CARD_GUTTER}>
+            <SearchCard onSearch={openSearch} />
+          </YStack>
+        </Reveal>
 
         {/*
-          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Xe tiêu biểu →
-          Banner khuyến mãi → Lý do chọn XePrime → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
+          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Banner khuyến mãi →
+          Xe tiêu biểu → Lý do chọn XePrime → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
           Đánh giá. KHÔNG mang sang: khối "Tải ứng dụng" (người xem đang ở trong chính ứng dụng đó) và
           chân trang — liên kết, pháp lý, bản quyền (người dùng chốt 29/10/2026 bỏ khỏi app).
         */}
         <YStack px={layout.screenX} pt={layout.section} gap={HOME_SECTION_GAP}>
-          <VehiclePreview
-            onExplore={openSearch}
-            onOpenListing={(listing, serviceType) =>
-              // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
-              navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
-            }
-          />
-          {/* Dưới "Xe tiêu biểu" như web mobile (người dùng chốt 03/11/2026). Chưa có banner thì không dựng khối. */}
+          {/* TRÊN "Xe tiêu biểu" như web (người dùng chốt 04/11/2026). Chưa có banner thì không dựng khối. */}
           {promoLoading ? (
             <PromoBannersSkeleton />
           ) : promoBanners && promoBanners.length > 0 ? (
-            <PromoBanners banners={promoBanners} />
+            <Reveal variant="fade">
+              <PromoBanners banners={promoBanners} />
+            </Reveal>
           ) : null}
-          <WhyChooseUs />
+          <Reveal index={2}>
+            <VehiclePreview
+              onExplore={openSearch}
+              onOpenListing={(listing, serviceType) =>
+                // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
+                navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
+              }
+            />
+          </Reveal>
+          <Reveal index={3}>
+            <WhyChooseUs />
+          </Reveal>
           {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
           {showcaseTypes.length > 0 ? (
-            <HomeBand muted>
-              <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
-            </HomeBand>
+            <Reveal index={4}>
+              <HomeBand muted>
+                <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
+              </HomeBand>
+            </Reveal>
           ) : null}
-          <FeaturedLocations onOpenSearch={openSearchWith} />
-          <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
+          <Reveal index={5}>
+            <FeaturedLocations onOpenSearch={openSearchWith} />
+          </Reveal>
+          <Reveal index={6}>
+            <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
+          </Reveal>
           {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
-          <PartnerBanner banner={partnerBanners?.[0] ?? null} />
-          <RentalSteps />
-          <HomeBand>
-            <CustomerReviews />
-          </HomeBand>
+          <Reveal index={7}>
+            <PartnerBanner banner={partnerBanners?.[0] ?? null} />
+          </Reveal>
+          <Reveal index={8}>
+            <RentalSteps />
+          </Reveal>
+          <Reveal index={8}>
+            <HomeBand>
+              <CustomerReviews />
+            </HomeBand>
+          </Reveal>
         </YStack>
       </Animated.ScrollView>
     </YStack>

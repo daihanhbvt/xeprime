@@ -263,3 +263,9 @@
     width: 100%;
   }
 }
+
+/* ─── Giao diện tối (Figma `21965:6765`): ô nhập nổi một bậc trên nền panel. ── */
+:global([data-theme='dark']) .locationField,
+:global([data-theme='dark']) .box {
+  background: var(--xp-color-bg-elevated) !important;
+}

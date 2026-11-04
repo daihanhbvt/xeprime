@@ -9,8 +9,7 @@ import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { PALETTES, fontSize, fontWeight, space } from '@/theme/tokens';
 import { useFeaturedShops } from '../hooks/use-marketplace-data';
 import type { PublicShopSummary } from '../api';
 import { BrandMark } from '../../catalog/components/BrandMark';
@@ -81,8 +80,13 @@ function HostCard({
   active: boolean;
   onPress?: () => void;
 }) {
-  const colors = useColors();
-  const { scheme } = useAppScheme();
+  // Figma dark (`19879:66136`): thẻ gian hàng VẪN là thẻ sáng (nền trắng, chữ tối) trên nền tối.
+  const colors = PALETTES.light.colors;
+  const dark = false;
+  // Figma dark: viền thẻ #414651, tên gian hàng vàng nhạt, mô tả xám sáng.
+  const restBorder = dark ? colors.border : colors.surface;
+  const nameColor = dark ? colors.primary : colors.text;
+  const mutedColor = dark ? XP_TOKENS['color-text-on-dark-muted'] : colors.textMuted;
   const t = useTranslations('Home.owners');
   // Cùng một cách viết điểm "4,9 (12)" với thẻ xe — một câu, một bản dịch.
   const tCard = useTranslations('Listings.card');
@@ -104,9 +108,10 @@ function HostCard({
       br={CARD_RADIUS}
       bw={1}
       // Web: viền cùng màu nền thẻ — chỉ có bóng; khi nổi thì viền vàng chung.
-      bc={highlighted ? highlightBorder : colors.surface}
+      bc={highlighted ? highlightBorder : restBorder}
       bg={colors.surface}
-      style={scheme === 'dark' ? undefined : elevation.card}
+      // Thẻ luôn sáng (kể cả giao diện tối) nên luôn mang bóng thẻ.
+      style={elevation.card}
     >
       {highlighted ? <CardHighlightOverlay radius={CARD_RADIUS} /> : null}
 
@@ -121,7 +126,7 @@ function HostCard({
           markIcon={10}
         />
         <YStack f={1} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.h4} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
+          <Text col={nameColor} fos={fontSize.h4} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
             {shop.name}
           </Text>
           <XStack ai="center" gap={6}>
@@ -147,7 +152,7 @@ function HostCard({
 
       {/* Giới thiệu: hai dòng, giữ chỗ hai dòng kể cả khi trống để chân các thẻ thẳng hàng. */}
       <Text
-        col={colors.textMuted}
+        col={mutedColor}
         fos={fontSize.body}
         lh={bodyLine}
         minHeight={bodyLine * 2}
@@ -162,7 +167,7 @@ function HostCard({
         gap={12}
         pt={12}
         borderTopWidth={1}
-        borderTopColor={colors.background}
+        borderTopColor={dark ? colors.border : colors.background}
         mt="auto"
       >
         {/* Máy hẹp: điểm + lượt thuê XUỐNG DÒNG thay vì bị "Xem gian hàng" đè lên (người dùng báo 29/10/2026). */}
@@ -227,7 +232,7 @@ function HostCard({
 
 /** Dãy logo hãng — bản native của `BrandLogos` web; hãng chưa có logo hiện chữ cái đầu (`BrandMark`). */
 function BrandLogos({ brands, total }: { brands: PublicShopSummary['brands']; total: number }) {
-  const colors = useColors();
+  const colors = PALETTES.light.colors;
   const rest = total - brands.length;
   if (brands.length === 0) return null;
   return (

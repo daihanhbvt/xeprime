@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, type ListRenderItemInfo } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, RefreshControl, type ListRenderItemInfo } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -16,6 +17,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { Reveal, listLayoutTransition, useListReveal } from '@/components/motion/Reveal';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useDomainLabel } from '@/i18n/domain';
@@ -94,9 +96,6 @@ function FavoriteTabs({
 }
 
 const keyOf = (vehicle: FavoriteVehicle) => vehicle.id;
-const renderItem = ({ item }: ListRenderItemInfo<FavoriteVehicle>) => (
-  <FavoriteVehicleCard vehicle={item} />
-);
 
 function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
   const colors = useColors();
@@ -109,6 +108,17 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
    * vào `isRefetching` là vòng quay tự bật ở đầu danh sách dù không ai chạm vào.
    */
   const pull = usePullRefresh(list.refresh);
+
+  // Thẻ đầu so le khi danh sách về; bỏ thích thì các thẻ còn lại trượt khép lại (`itemLayoutAnimation`).
+  const shouldReveal = useListReveal(!list.isInitialLoading && list.items.length > 0);
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<FavoriteVehicle>) => (
+      <Reveal index={index} disabled={!shouldReveal(index)}>
+        <FavoriteVehicleCard vehicle={item} />
+      </Reveal>
+    ),
+    [shouldReveal],
+  );
 
   if (list.isInitialLoading) {
     return (
@@ -125,10 +135,11 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
   }
 
   return (
-    <FlatList
+    <Animated.FlatList
       data={list.items}
       keyExtractor={keyOf}
       renderItem={renderItem}
+      itemLayoutAnimation={listLayoutTransition}
       onEndReached={() => {
         // Đang lỗi tải thêm thì đợi khách bấm "Thử lại" — không tự gọi lại liên tục.
         if (!list.appendError) list.fetchNextPage();
@@ -173,7 +184,7 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
             {/* App cuộn tới cuối là tự tải trang sau (người dùng chốt 28/10/2026) — không có nút "Xem thêm" như web. */}
             {list.isFetchingNextPage ? (
               <YStack ai="center" py={space.sm}>
-                <ActivityIndicator color={colors.primaryActive} />
+                <ActivityIndicator color={colors.accentText} />
               </YStack>
             ) : null}
           </YStack>

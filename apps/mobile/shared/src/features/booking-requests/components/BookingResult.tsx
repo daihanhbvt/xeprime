@@ -175,7 +175,7 @@ export function BookingResultTotal({
         ) : null}
       </YStack>
       <Text
-        col={colors.primaryHover}
+        col={colors.brandText}
         fos={variant === 'sent' ? fontSize.h3 : fontSize.h1}
         fow={fontWeight.semibold}
         numberOfLines={1}

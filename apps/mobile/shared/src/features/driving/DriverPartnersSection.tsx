@@ -177,7 +177,7 @@ export function DriverPartnersSection({
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={() => void refetch()}
-                tintColor={colors.primaryActive}
+                tintColor={colors.accentText}
               />
             }
             ListFooterComponent={isFetchingNextPage ? ActionCardSkeleton : null}

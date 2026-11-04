@@ -13,28 +13,7 @@
   min-width: 0;
   flex-direction: column;
   border-radius: var(--xp-border-radius-card);
-  /* Viền vẽ bằng bóng (không chiếm chỗ) để thẻ không xê dịch 1px khi viền hiện ra. */
-  box-shadow: 0 0 0 1px transparent;
   color: inherit;
-  transition:
-    transform var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
-    box-shadow var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
-    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
-}
-
-/* Rê chuột (≈ `.single-category-item:hover` của trang mẫu): nền ngả vàng, viền vàng + bóng sâu. */
-.card:hover {
-  background: var(--xp-color-primary-subtle);
-  box-shadow:
-    0 0 0 1px var(--xp-color-primary-border),
-    var(--xp-elevation-lg);
-}
-
-/* Nhấc thẻ chỉ ở thiết bị có chuột thật — trên màn cảm ứng `:hover` dính lại sau cú chạm. */
-@media (hover: hover) {
-  .card:hover {
-    transform: translateY(var(--xp-motion-lift-hover));
-  }
 }
 
 .card:focus-visible {
@@ -60,8 +39,9 @@
   transition: transform var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
 }
 
+/* Rê chuột: KHÔNG nền/viền/bóng/nhấc thẻ (người dùng chốt 04/11/2026) — chỉ ảnh xe to lên nhẹ. */
 .card:hover .image {
-  transform: scale(var(--xp-motion-scale-media-hover));
+  transform: scale(1.08);
 }
 
 .details {
@@ -130,11 +110,6 @@
 }
 
 /* ── Giao diện tối (Dark Mode - Figma `19879:66213`) ──────────────────────── */
-
-:global([data-theme="dark"]) .card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
 
 :global([data-theme="dark"]) .name {
   color: #ffffff;

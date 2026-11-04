@@ -21,7 +21,7 @@ export function InlineAction({ label, onPress }: { label: string; onPress: () =>
       hitSlop={space.sm}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
-      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+      <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
         {label}
       </Text>
     </Pressable>

@@ -65,6 +65,9 @@
   --xp-color-success: #039855;
   --xp-color-success-bg: #ecfdf3;
   --xp-color-success-subtle: #f6fef9;
+  /* Nhãn "Xe mới" — giống nhau ở cả hai giao diện (Figma 19625:43854), không khai ở khối tối. */
+  --xp-color-badge-new-bg: #ecfdf3;
+  --xp-color-badge-new-text: #039855;
   /* Cặp warning chưa đổi: v2 đã đọc chưa có bậc chữ/nền cảnh báo (ADR 0062 điều 5). */
   --xp-color-warning: #e07b26;
   --xp-color-warning-bg: #fff7ed;
@@ -516,15 +519,28 @@
 
   /* Chữ sáng trên nền tối */
   --xp-color-text: #ffffff;
-  --xp-color-text-secondary: #d5d7da;
-  --xp-color-text-tertiary: #a4a7ae;
-  --xp-color-text-placeholder: #717680;
+  --xp-color-text-secondary: #fafafa;
+  --xp-color-text-tertiary: #e9eaeb;
+  --xp-color-text-placeholder: #a4a7ae;
   --xp-color-text-disabled: rgba(255, 255, 255, 0.25);
   --xp-color-text-inverse: #0e0f12;
 
   /* Viền trên nền tối */
-  --xp-color-border: #333741;
+  --xp-color-border: #414651;
   --xp-color-border-strong: #414651;
+
+  /*
+   * Nền thẻ khi hover — bản sáng có lớp nền TRẮNG nên chữ trắng của giao diện tối chìm mất
+   * (thẻ danh sách xe, thẻ chuyến, thẻ yêu thích…). Figma dark `19879:66185`: vàng trầm mờ trên #0e0f12.
+   */
+  --xp-gradient-card-hover:
+    linear-gradient(170.58deg, rgba(56, 41, 17, 0.2) 24.208%, rgba(36, 30, 11, 0.2) 88.612%),
+    linear-gradient(90deg, #0e0f12 0%, #0e0f12 100%);
+  --xp-gradient-card-highlight: linear-gradient(
+    170.58deg,
+    rgba(56, 41, 17, 0.2) 24.208%,
+    rgba(36, 30, 11, 0.2) 88.612%
+  );
   --xp-color-border-subtle: #1f242f;
 
   /* Đổ bóng trên nền tối */

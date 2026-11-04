@@ -448,3 +448,21 @@
     line-height: var(--xp-line-height-body);
   }
 }
+
+/* ── Giao diện tối (Figma "Homepage - Dark Mode") — chữ/icon vàng đậm của bản sáng chìm trên nền
+   tối; đổi sang gold chính `--xp-color-primary`. */
+:global([data-theme='dark']) .avatarFallback {
+  color: var(--xp-color-primary);
+}
+
+/* Lớp phủ trắng 80% của vân lụa biến thẻ thành mảng sáng dưới chữ trắng — bản tối phủ bằng chính
+   màu bề mặt (không có token rgba của bg-container nên dùng color-mix). */
+:global([data-theme='dark']) .cardShop {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--xp-color-bg-container) 90%, transparent),
+      color-mix(in srgb, var(--xp-color-bg-container) 90%, transparent)
+    ),
+    url('/shops/card-texture.webp') center top / cover no-repeat,
+    var(--xp-color-bg-container);
+}

@@ -25,6 +25,7 @@
   },
   "card": {
     "trips": "{count, plural, other {#{plus} chuyến}}",
+    "rentedTimes": "Đã cho thuê {count, plural, other {#{plus} lần}}",
     "highlight": {
       "topRated": "Chủ xe {rating} sao có thời gian phản hồi nhanh chóng, tỉ lệ đồng ý cao & dịch vụ nhận được nhiều đánh giá tốt từ khách hàng.",
       "reliable": "Chủ xe phản hồi nhanh và giữ đúng cam kết với hầu hết yêu cầu đã nhận.",

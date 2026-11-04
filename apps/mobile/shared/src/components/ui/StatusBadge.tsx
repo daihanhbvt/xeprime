@@ -24,8 +24,8 @@ const toneOf = byPalette<Readonly<Record<StatusColor, { fg: string; bg: string }
   [STATUS_COLOR.WARNING]: { fg: colors.warning, bg: colors.warningSurface },
   [STATUS_COLOR.DANGER]: { fg: colors.danger, bg: colors.dangerSurface },
   // Hai vai này chưa có token riêng ở native; dùng nhấn thương hiệu thay vì bịa một màu tím.
-  [STATUS_COLOR.SPECIAL]: { fg: colors.primaryActive, bg: colors.primaryLight },
-  [STATUS_COLOR.ACCENT]: { fg: colors.primaryActive, bg: colors.primaryLight },
+  [STATUS_COLOR.SPECIAL]: { fg: colors.accentText, bg: colors.primaryLight },
+  [STATUS_COLOR.ACCENT]: { fg: colors.accentText, bg: colors.primaryLight },
 }));
 
 export function statusTone(color: StatusColor, colors: AppColors): { fg: string; bg: string } {

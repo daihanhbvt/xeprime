@@ -447,7 +447,7 @@ function ProfileAvatarPicker({
               accessibilityLabel={tUpload('alt')}
             />
           ) : (
-            <Text col={colors.primaryActive} fos={fontSize.h2} fow={fontWeight.bold}>
+            <Text col={colors.accentText} fos={fontSize.h2} fow={fontWeight.bold}>
               {initial}
             </Text>
           )}
@@ -459,7 +459,7 @@ function ProfileAvatarPicker({
           {upload.busy ? (
             <>
               <YStack style={StyleSheet.absoluteFill} bg={colors.surface} opacity={0.8} />
-              <ActivityIndicator color={colors.primaryActive} />
+              <ActivityIndicator color={colors.accentText} />
             </>
           ) : null}
         </YStack>

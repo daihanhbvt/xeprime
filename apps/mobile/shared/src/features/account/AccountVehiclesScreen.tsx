@@ -419,7 +419,7 @@ export function AccountVehiclesScreen({
                   <RefreshControl
                     refreshing={query.isRefreshing}
                     onRefresh={query.retry}
-                    tintColor={colors.primaryActive}
+                    tintColor={colors.accentText}
                     progressViewOffset={headerHeight}
                   />
                 }

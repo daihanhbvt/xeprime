@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Reveal } from '@/components/motion/Reveal';
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
 import { Linking } from 'react-native';
@@ -69,8 +70,9 @@ const COLUMN_GAP = toPx(XP_TOKENS['space-20']);
 /** `.status { gap: space-12 }` và `.statusHead { gap: space-12 }`. */
 const SPACE_12 = toPx(XP_TOKENS['space-12']);
 /** `.statusBadge` / `.statusIcon` ≤640px: 48×48, biểu tượng 30px. */
-const STATUS_ART = 48;
-const STATUS_ICON = 30;
+// Khối kết cục gọn (04/11/2026): ảnh 36 thay 48, đệm dọc 12 — trước đó header + khối này chiếm ~30% màn.
+const STATUS_ART = 28;
+const STATUS_ICON = 18;
 
 type OutcomeVariant = 'active' | 'completed' | 'failed' | 'notice';
 
@@ -130,7 +132,15 @@ function OutcomeStatusCard({
   const colors = useColors();
   const skin = useOutcomeSkin()[variant];
   return (
-    <YStack gap={SPACE_12} p={layout.cardPad} br={radius.card} bw={1} bc={skin.border} bg={skin.bg}>
+    <YStack
+      gap={space.xs}
+      px={layout.cardPad}
+      py={space.sm}
+      br={radius.card}
+      bw={1}
+      bc={skin.border}
+      bg={skin.bg}
+    >
       <XStack ai="center" gap={SPACE_12}>
         {image != null ? (
           <Image
@@ -153,7 +163,7 @@ function OutcomeStatusCard({
           </YStack>
         )}
         {/* `.statusCopy`: nhãn chặng + tiêu đề, khe `space-sm`. */}
-        <YStack f={1} minWidth={0} gap={space.sm} ai="flex-start">
+        <YStack f={1} minWidth={0} gap={2} ai="flex-start">
           {/* `.status .pill`: nhãn chặng 12px/Medium. */}
           <TripRequestPill tone={tone} size="label">
             {tag}
@@ -358,11 +368,13 @@ function TripMainGroup({ trip }: { trip: CustomerTripDetail }) {
   const listing = useListing(trip.vehicle.id).data ?? null;
   return (
     <>
+      <Reveal index={1}>
       <TripRequestTripCard
         trip={trip}
         listing={listing}
         ownerAction={<TripOwnerActions trip={trip} />}
       />
+      </Reveal>
       {/* Người lái của chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
       <TripDriverCard trip={trip} />
       <TripActualJourney trip={trip} />
@@ -395,6 +407,7 @@ export function TripActiveView({ trip }: OutcomeViewProps) {
   return (
     <YStack gap={COLUMN_GAP}>
       {/* lead */}
+      <Reveal index={0}>
       <OutcomeStatusCard
         variant="active"
         icon="car-sport"
@@ -431,6 +444,7 @@ export function TripActiveView({ trip }: OutcomeViewProps) {
           </XStack>
         ) : null}
       </OutcomeStatusCard>
+      </Reveal>
 
       {/* priority */}
       <TripNotReceivedReport trip={trip} />
@@ -447,8 +461,12 @@ export function TripActiveView({ trip }: OutcomeViewProps) {
       <TripMainGroup trip={trip} />
 
       {/* aside */}
-      <TripMoney trip={trip} closed={false} completed={false} />
-      <TripSupportCard />
+      <Reveal index={2}>
+        <TripMoney trip={trip} closed={false} completed={false} />
+      </Reveal>
+      <Reveal index={3}>
+        <TripSupportCard />
+      </Reveal>
     </YStack>
   );
 }
@@ -515,6 +533,7 @@ export function TripClosedView({ trip }: OutcomeViewProps) {
   return (
     <YStack gap={COLUMN_GAP}>
       {/* lead */}
+      <Reveal index={0}>
       <OutcomeStatusCard
         variant={variant}
         {...(image != null ? { image } : { icon: 'alert-circle' as const })}
@@ -537,6 +556,7 @@ export function TripClosedView({ trip }: OutcomeViewProps) {
           : null}
         {reasonLabel ? reasonLine(reasonLabel) : null}
       </OutcomeStatusCard>
+      </Reveal>
 
       {/* priority */}
       {completed ? <TripReviewCard trip={trip} /> : null}
@@ -548,8 +568,12 @@ export function TripClosedView({ trip }: OutcomeViewProps) {
       <TripMainGroup trip={trip} />
 
       {/* aside */}
-      <TripMoney trip={trip} closed completed={completed} />
-      <TripSupportCard />
+      <Reveal index={2}>
+        <TripMoney trip={trip} closed completed={completed} />
+      </Reveal>
+      <Reveal index={3}>
+        <TripSupportCard />
+      </Reveal>
     </YStack>
   );
 }

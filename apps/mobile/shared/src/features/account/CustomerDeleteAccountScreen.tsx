@@ -258,7 +258,7 @@ function Conditions() {
                   </Text>
                   <Text
                     mt={2}
-                    col={colors.primaryHover}
+                    col={colors.brandText}
                     fos={fontSize.bodyLg}
                     fow={fontWeight.semibold}
                   >
@@ -281,7 +281,7 @@ function Conditions() {
                 </Text>
                 <Text
                   mt={2}
-                  col={colors.primaryHover}
+                  col={colors.brandText}
                   fos={fontSize.bodyLg}
                   fow={fontWeight.semibold}
                 >

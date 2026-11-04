@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { Reveal } from '@/components/motion/Reveal';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useTranslations } from 'use-intl';
@@ -66,10 +67,13 @@ export function AccountProfileScreen() {
           scrollRef={scrollRef}
         >
           <YStack gap={space.lg}>
-            <AccountProfileCard
-              profile={profile.data}
-              editable={!tenantUsesManagePortal(user?.tenant ?? null)}
-            />
+            {/* Chỉ `entering` lúc mount, style không đổi theo state — ô nhập bên trong giữ focus bình thường. */}
+            <Reveal>
+              <AccountProfileCard
+                profile={profile.data}
+                editable={!tenantUsesManagePortal(user?.tenant ?? null)}
+              />
+            </Reveal>
             <ShopEntryCard />
             {/* Bằng lái là của TÀI KHOẢN KHÁCH (ADR 0057) — app khách luôn hiện khối này. */}
             <AccountDocumentsSection onLayout={onDocumentsLayout} />

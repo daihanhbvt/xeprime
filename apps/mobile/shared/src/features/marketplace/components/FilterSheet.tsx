@@ -727,10 +727,10 @@ export function FilterSheet({
                     br={radius.pill}
                     bg={colors.primaryLight}
                   >
-                    <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.medium}>
+                    <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.medium}>
                       {chip.label}
                     </Text>
-                    <Ionicons name="close" size={10} color={colors.primaryHover} />
+                    <Ionicons name="close" size={10} color={colors.brandText} />
                   </XStack>
                 </Pressable>
               ))}
@@ -1038,11 +1038,11 @@ function Segmented<T extends string>({
                 <Ionicons
                   name={item.icon}
                   size={20}
-                  color={active ? colors.primaryHover : colors.textMuted}
+                  color={active ? colors.brandText : colors.textMuted}
                 />
               ) : null}
               <Text
-                col={active ? colors.primaryHover : colors.textMuted}
+                col={active ? colors.brandText : colors.textMuted}
                 fos={fontSize.bodyLg}
                 lh={24}
                 fow={fontWeight.medium}

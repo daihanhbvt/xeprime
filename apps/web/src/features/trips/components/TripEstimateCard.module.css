@@ -31,3 +31,7 @@
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .netValue { color: var(--xp-color-primary); }

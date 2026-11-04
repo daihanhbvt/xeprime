@@ -67,13 +67,13 @@ const useVariant = themed<Record<Variant, { bg: string; fg: string; border: stri
     secondary: { bg: colors.surface, fg: colors.text, border: colors.borderInput },
     /** = `CtaButton variant="neutral"` web: nền `bg-container`, viền `border-strong`, chữ `text-secondary`. */
     neutral: { bg: colors.surface, fg: colors.textMuted, border: colors.borderInput },
-    ghost: { bg: 'transparent', fg: colors.primaryActive, border: 'transparent' },
+    ghost: { bg: 'transparent', fg: colors.accentText, border: 'transparent' },
     /** Dáng `ghost` (không nền, không viền) nhưng mang màu nguy hiểm — lối phụ mà hệ quả thì nặng. */
     ghostDanger: { bg: 'transparent', fg: colors.danger, border: 'transparent' },
     danger: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },
     /** = AntD `<Button danger>` (kiểu mặc định): nền thẻ, viền + chữ đỏ — đứng được trên nền tông lỗi. */
     dangerOutline: { bg: colors.surface, fg: colors.danger, border: colors.danger },
-    accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primary },
+    accent: { bg: colors.primaryLight, fg: colors.accentText, border: colors.primary },
   }),
 );
 

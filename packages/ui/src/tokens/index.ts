@@ -104,6 +104,9 @@ export const XP_TOKENS = {
   // success/warning/error (CLAUDE.md §5, quy tắc Wave 1A §8).
   'color-success': '#039855', // v2 Status/success-high
   'color-success-bg': '#ecfdf3', // v2 Status/success-low
+  // Nhãn "Xe mới" — Figma giữ nền success-low + chữ success-high ở CẢ hai giao diện, nên không có bản tối.
+  'color-badge-new-bg': '#ecfdf3',
+  'color-badge-new-text': '#039855',
   'color-success-subtle': '#f6fef9', // v2 Status/success-25 — vành ngoài icon thành công (popup đặt lại mật khẩu)
   // Ba frame v2 đã đọc chỉ có warning-300/500 (chấm, icon), chưa có bậc chữ/nền như success và
   // error. `#f79009` làm chữ trên nền nhạt chỉ đạt ~2.2:1 nên không lấy — giữ cặp cũ tới khi đọc

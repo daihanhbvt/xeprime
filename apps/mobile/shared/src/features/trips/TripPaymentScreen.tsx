@@ -327,7 +327,7 @@ function AwaitingHold({
             accessibilityRole="link"
             hitSlop={space.sm}
           >
-            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold}>
+            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold}>
               {t('summary.viewDetail')}
             </Text>
           </Pressable>

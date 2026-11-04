@@ -210,7 +210,7 @@ function HostSuggestion({
                 <Text
                   key={index}
                   fow={part.match ? fontWeight.bold : fontWeight.regular}
-                  col={part.match ? colors.primaryActive : colors.text}
+                  col={part.match ? colors.accentText : colors.text}
                 >
                   {part.text}
                 </Text>

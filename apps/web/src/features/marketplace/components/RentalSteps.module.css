@@ -149,3 +149,12 @@
     row-gap: var(--xp-space-xl);
   }
 }
+
+/* Figma dark (`19879:66279`): tên bước vàng, mô tả xám sáng. */
+:global([data-theme='dark']) .stepTitle {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .desc {
+  color: var(--xp-color-text-on-dark-muted);
+}

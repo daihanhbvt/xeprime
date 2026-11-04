@@ -71,7 +71,8 @@
   padding: var(--xp-space-xs) var(--xp-space-6);
   border-radius: var(--xp-border-radius-chip);
   background: var(--xp-gradient-instant-badge);
-  color: var(--xp-color-text);
+  /* Nền gradient xanh nhạt KHÔNG đổi theo theme ⇒ chữ luôn tối, kể cả giao diện tối. */
+  color: var(--xp-color-primary-contrast);
   font-size: var(--xp-font-size-label);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-label);
@@ -177,10 +178,13 @@
 
 .newBadge {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  /* Figma "_Badge" Xe mới (19625:43854): nền success-low, chữ success-high 12/18 medium, đệm 2/8, bo 16 — cả hai giao diện. */
   padding: var(--xp-space-2) var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
+  border-radius: 16px;
+  background: var(--xp-color-badge-new-bg);
+  color: var(--xp-color-badge-new-text);
   font-size: var(--xp-font-size-label);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-label);
@@ -536,4 +540,40 @@
   .actions > * {
     flex: 1;
   }
+}
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .card { border-color: var(--xp-color-border); box-shadow: none; }
+/* Viết riêng: quy tắc tối ở trên mạnh hơn .card:hover. */
+:global([data-theme='dark']) .card:hover,
+:global([data-theme='dark']) .card:focus-within { border-color: var(--xp-color-primary-hover); box-shadow: none; }
+:global([data-theme='dark']) .serviceChip,
+:global([data-theme='dark']) .shopAvatar { color: var(--xp-color-primary); }
+
+/*
+ * Hover ở giao diện tối — CÙNG ngôn ngữ thẻ xe trang chủ (Figma `19879:66185`): viền vàng,
+ * nền vàng trầm mờ (token `gradient-card-hover` bản tối), tên và số tiền vàng chuẩn `primary`.
+ * Viết riêng vì `[data-theme=dark] .card` mạnh hơn `.card:hover` và đè mất viền vàng.
+ */
+:global([data-theme='dark']) .card:hover,
+:global([data-theme='dark']) .card:focus-within {
+  border-color: var(--xp-color-primary-hover);
+  background: var(--xp-gradient-card-hover);
+  box-shadow: var(--xp-elevation-lg);
+}
+:global([data-theme='dark']) .card:hover .titleLink,
+:global([data-theme='dark']) .card:focus-within .titleLink {
+  color: var(--xp-color-primary);
+}
+
+/* Tên gian hàng vàng chuẩn `primary` như thẻ xe trang chủ (Figma dark `19879:66183`). */
+:global([data-theme='dark']) .shopNameShop {
+  color: var(--xp-color-primary);
+}
+
+/* Tối: gradient xanh nhạt gốc trông bạc màu trên nền tối — đậm sắc hơn + bóng nhẹ (giống thẻ xe). */
+:global([data-theme='dark']) .badgeInstant {
+  background: linear-gradient(90deg, #53b1fd 0%, #a4dded 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }

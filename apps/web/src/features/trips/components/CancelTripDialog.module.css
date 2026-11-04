@@ -164,3 +164,8 @@
 .note {
   margin: 0;
 }
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+/* Vòng icon pha với trắng thành vành sáng trên nền tối — pha với nền thẻ. */
+:global([data-theme='dark']) .featuredIcon { border-color: color-mix(in srgb, var(--xp-color-error-bg) 40%, var(--xp-color-bg-container)); }

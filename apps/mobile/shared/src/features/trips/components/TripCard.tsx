@@ -465,7 +465,7 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
           {t(isShop ? 'shop' : 'owner')}
         </Text>
         <Text
-          col={isShop ? colors.primaryHover : colors.textMuted}
+          col={isShop ? colors.shopName : colors.textMuted}
           fos={fontSize.body}
           fow={isShop ? fontWeight.semibold : fontWeight.medium}
           numberOfLines={1}
