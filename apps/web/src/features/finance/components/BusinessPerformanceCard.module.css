@@ -1,0 +1,49 @@
+/* Thẻ "Nhóm thông tin" của design `23813:37081`: nền trắng, viền mảnh, bo 16, đệm 20. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  color: var(--xp-color-text);
+}
+
+/* Ô sắp xếp rộng 269px như design — đủ cho "Sắp xếp: Lợi nhuận cao nhất" không bị cắt. */
+.sort {
+  width: 269px;
+  max-width: 100%;
+}
+
+/* Tab gạch chân dính sát bảng: bỏ khoảng đệm dưới mặc định của AntD, khoảng cách do `.card` lo. */
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .sort {
+    width: 100%;
+  }
+}

@@ -86223,6 +86223,16 @@
           "fullName": {
             "type": "string"
           },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT dạng hiển thị (`0…`) · null = người xem thiếu `customer.view`"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh tài khoản nền tảng của khách · null = chưa liên kết / không có ảnh / thiếu `customer.view`"
+          },
           "trips": {
             "type": "number",
             "description": "Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ"
@@ -111969,6 +111979,11 @@
           "plateNumber": {
             "type": "string",
             "nullable": true
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện của xe"
           },
           "trips": {
             "type": "number",

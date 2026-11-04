@@ -14787,6 +14787,10 @@ export interface components {
         CustomerRevenueItemDto: {
             tenantCustomerId: string;
             fullName: string;
+            /** @description SĐT dạng hiển thị (`0…`) · null = người xem thiếu `customer.view` */
+            phone?: string | null;
+            /** @description Ảnh tài khoản nền tảng của khách · null = chưa liên kết / không có ảnh / thiếu `customer.view` */
+            avatarUrl?: string | null;
             /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ */
             trips: number;
             /** @description Tiền THẬT đã thu của khách này trong kỳ (phiếu đã duyệt, đã loại tiền cọc). KHÁC "tổng giá trị thuê" ở sổ khách — con số đó tính trên giá trị đơn đã chốt, kể cả phần chưa thu. */
@@ -22778,6 +22782,8 @@ export interface components {
             vehicleId: string;
             vehicleName: string;
             plateNumber?: string | null;
+            /** @description Ảnh đại diện của xe */
+            mainImageUrl?: string | null;
             /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ */
             trips: number;
             /** @description Doanh thu gắn xe trong kỳ (đã loại cọc), string */

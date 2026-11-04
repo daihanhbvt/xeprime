@@ -1,25 +1,28 @@
+/* Thẻ "Nhóm thông tin" của design: nền trắng, viền mảnh, bo 16, đệm 20. */
 .block {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
   min-width: 0;
-  padding: var(--xp-space-md);
+  padding: var(--xp-space-20);
   background: var(--xp-color-bg-container);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
 }
 
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-h4);
-  font-weight: 600;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text);
 }
 
 .rows {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -28,16 +31,18 @@
 .row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-sm);
   min-width: 0;
 }
 
 .link {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-sm);
   color: inherit;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .link:hover .name,
@@ -45,48 +50,54 @@
   text-decoration: underline;
 }
 
+.label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
 .name {
   min-width: 0;
   overflow: hidden;
-  font-size: var(--xp-font-size-body);
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--xp-color-text-secondary);
+}
+
+.share {
+  flex: none;
+  font-weight: var(--xp-font-weight-medium);
+  font-variant-numeric: tabular-nums;
   color: var(--xp-color-text);
 }
 
 .amount {
   flex: none;
-  font-size: var(--xp-font-size-body);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--xp-color-text);
+  color: var(--xp-color-text-secondary);
 }
 
 .track {
   height: 8px;
   border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
+  background: var(--xp-color-info-bg);
   overflow: hidden;
 }
 
-/* Thanh bo 4px ở ĐẦU DỮ LIỆU, chân vuông vì nó neo vào mốc 0 bên trái. */
 .barRevenue,
 .barCost {
   width: var(--xp-bar-width);
   height: 100%;
   min-width: 2px;
-  border-radius: 0 var(--xp-border-radius-sm) var(--xp-border-radius-sm) 0;
+  border-radius: var(--xp-border-radius-sm);
 }
 
+/* Màu thanh theo design: thu xanh dương, chi tím — chỉ nói chiều tiền, không nói tốt/xấu. */
 .barRevenue {
-  background: var(--xp-color-viz-revenue);
+  background: var(--xp-color-info-strong);
 }
 
 .barCost {
-  background: var(--xp-color-viz-cost);
-}
-
-.meta {
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-color-text-tertiary);
+  background: var(--xp-color-viz-2);
 }

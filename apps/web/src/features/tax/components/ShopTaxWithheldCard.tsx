@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, DatePicker, Empty, Skeleton, Statistic } from 'antd';
+import { Alert, Button, DatePicker, Empty, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PERMISSION, TAX_WITHHOLDING_STATUS_META } from '@xeprime/types';
@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from '@/components/data-display/DataT
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
 import { isZeroMoney } from '@/lib/money';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useShopTaxSummary } from '../hooks/use-tax';
@@ -17,7 +18,7 @@ import { TaxAmount, TaxSplitAmount } from './TaxSplitAmount';
 import styles from './ShopTaxWithheldCard.module.css';
 
 const PERIOD_FORMAT = 'YYYY-MM';
-const MIN_TABLE_WIDTH = 900;
+const MIN_TABLE_WIDTH = 960;
 
 /**
  * "Thuế đã khấu trừ trong kỳ" — bề mặt của CHỦ XE (Phase 8, ADR 0032 điều 3).
@@ -35,6 +36,7 @@ export function ShopTaxWithheldCard() {
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const { has } = usePermissions();
+  const isMobile = useIsMobile();
 
   const [period, setPeriod] = useState(() => nowInAppTz().format(PERIOD_FORMAT));
   const canView = has(PERMISSION.FINANCE_VIEW);
@@ -46,11 +48,21 @@ export function ShopTaxWithheldCard() {
   const { data, isLoading, isError, refetch } = useShopTaxSummary(period, canView);
 
   const columns: DataTableColumn<TaxRow>[] = [
-    { key: 'booking', title: t('columns.booking'), render: (row) => row.bookingCode },
+    {
+      key: 'index',
+      title: t('columns.index'),
+      width: 72,
+      align: 'center',
+      // Thẻ mobile lấy cột đầu làm tiêu đề — một con số "1" không phải tiêu đề, mã chuyến mới là.
+      hidden: isMobile,
+      // Bảng của một tháng không phân trang — STT đếm thẳng trên toàn danh sách.
+      render: (_v, _row, index) => index + 1,
+    },
+    { key: 'booking', title: t('columns.booking'), render: (_v, row) => row.bookingCode },
     {
       key: 'base',
       title: t('columns.base'),
-      render: (row) => (
+      render: (_v, row) => (
         <div>
           <p className={styles.value}>{fmt.money(row.taxableBase)}</p>
           <p className={styles.muted}>
@@ -64,23 +76,23 @@ export function ShopTaxWithheldCard() {
     {
       key: 'vat',
       title: t('columns.vat'),
-      render: (row) => <TaxSplitAmount value={row.vatAmount} fallback={t('notSplit')} />,
+      render: (_v, row) => <TaxSplitAmount value={row.vatAmount ?? null} fallback={t('notSplit')} />,
     },
     {
       key: 'pit',
       title: t('columns.pit'),
-      render: (row) => <TaxSplitAmount value={row.pitAmount} fallback={t('notSplit')} />,
+      render: (_v, row) => <TaxSplitAmount value={row.pitAmount ?? null} fallback={t('notSplit')} />,
     },
-    { key: 'label', title: t('columns.label'), render: (row) => row.label },
+    { key: 'label', title: t('columns.label'), render: (_v, row) => row.label },
     {
       key: 'amount',
       title: t('columns.amount'),
-      render: (row) => <TaxAmount value={row.amount} />,
+      render: (_v, row) => <TaxAmount value={row.amount} />,
     },
     {
       key: 'status',
       title: t('columns.status'),
-      render: (row) => (
+      render: (_v, row) => (
         <StatusTag
           value={row.status}
           meta={TAX_WITHHOLDING_STATUS_META}
@@ -93,13 +105,18 @@ export function ShopTaxWithheldCard() {
   if (!canView) return null;
 
   return (
-    <Card
-      className={styles.card}
-      title={t('title')}
-      extra={
+    <section className={styles.card} aria-labelledby="xp-tax-withheld">
+      <div className={styles.header}>
+        <h2 id="xp-tax-withheld" className={styles.title}>
+          {t('title')}
+        </h2>
         <DatePicker
+          className={styles.period}
           picker="month"
-          size="small"
+          size="large"
+          // Ô chỉ để chọn trên bảng tháng: nhãn "Tháng 10/2026" không gõ ngược lại được thành ngày.
+          inputReadOnly
+          format={(value) => t('monthValue', { month: value.format('MM/YYYY') })}
           value={dayjs(period, PERIOD_FORMAT)}
           allowClear={false}
           aria-label={t('period')}
@@ -107,13 +124,7 @@ export function ShopTaxWithheldCard() {
             if (value) setPeriod(value.format(PERIOD_FORMAT));
           }}
         />
-      }
-    >
-      {/*
-        Câu giải thích đứng TRƯỚC con số. Thuế là khoản duy nhất trên màn này làm chủ xe nhận ít
-        hơn cọc, nên "vì sao" quan trọng hơn "bao nhiêu".
-      */}
-      <Alert className={styles.note} type="info" showIcon title={t('explainer')} />
+      </div>
 
       {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : null}
 
@@ -135,17 +146,17 @@ export function ShopTaxWithheldCard() {
           <Empty description={t('empty')} />
         ) : (
           <>
-            <div className={styles.stats}>
-              <Statistic title={t('stats.total')} value={fmt.money(data.totalAmount)} />
-              <Statistic title={t('stats.vat')} value={fmt.money(data.totalVatAmount)} />
-              <Statistic title={t('stats.pit')} value={fmt.money(data.totalPitAmount)} />
+            <dl className={styles.stats}>
+              <Stat label={t('stats.total')} value={fmt.money(data.totalAmount)} />
+              <Stat label={t('stats.vat')} value={fmt.money(data.totalVatAmount)} />
+              <Stat label={t('stats.pit')} value={fmt.money(data.totalPitAmount)} />
               {/* Kỳ trộn dòng cũ không tách: phần còn lại của tổng, để GTGT + TNCN + phần này = tổng. */}
               {isZeroMoney(data.totalUnsplitAmount) ? null : (
-                <Statistic title={t('stats.unsplit')} value={fmt.money(data.totalUnsplitAmount)} />
+                <Stat label={t('stats.unsplit')} value={fmt.money(data.totalUnsplitAmount)} />
               )}
-              <Statistic title={t('stats.base')} value={fmt.money(data.totalTaxableBase)} />
-              <Statistic title={t('stats.trips')} value={data.rows} />
-            </div>
+              <Stat label={t('stats.base')} value={fmt.money(data.totalTaxableBase)} />
+              <Stat label={t('stats.trips')} value={fmt.count(data.rows)} />
+            </dl>
 
             <DataTable<TaxRow>
               label={t('title')}
@@ -158,6 +169,22 @@ export function ShopTaxWithheldCard() {
           </>
         )
       ) : null}
-    </Card>
+
+      {/*
+        Câu giải thích căn cứ pháp lý đứng CUỐI thẻ (design `23813:39548`): nó là phần đọc thêm
+        cho người muốn biết vì sao, còn con số đã đứng trên. Luôn hiện — kể cả kỳ chưa có chuyến
+        nào bị khấu trừ, vì đó là lúc người ta hỏi "rồi sẽ bị trừ bao nhiêu".
+      */}
+      <p className={styles.note}>{t('explainer')}</p>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={styles.stat}>
+      <dt className={styles.statLabel}>{label}</dt>
+      <dd className={styles.statValue}>{value}</dd>
+    </div>
   );
 }

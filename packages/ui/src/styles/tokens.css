@@ -99,9 +99,10 @@
   --xp-color-viz-3: #b45309;
   --xp-color-viz-4: #0369a1;
   --xp-color-viz-5: #9d174d;
-  --xp-color-viz-revenue: var(--xp-color-viz-1);
-  --xp-color-viz-cost: var(--xp-color-viz-3);
-  --xp-color-viz-profit: var(--xp-color-viz-2);
+  /* Ba vai tài chính theo design Partner-XePrime (04/11/2026, `23813:32331`) — xem XP_TOKENS. */
+  --xp-color-viz-revenue: #3e5be6;
+  --xp-color-viz-cost: #e5484d;
+  --xp-color-viz-profit: #039855;
   --xp-color-viz-grid: #e9eaeb;
   --xp-color-viz-axis: #a4a7ae;
 

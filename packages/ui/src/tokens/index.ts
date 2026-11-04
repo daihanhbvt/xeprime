@@ -176,14 +176,19 @@ export const XP_TOKENS = {
   'color-viz-4': '#0369a1',
   'color-viz-5': '#9d174d',
   /**
-   * Ba VAI của biểu đồ tài chính, trỏ về dải trên.
+   * Ba VAI của biểu đồ tài chính.
    *
    * Component không gọi thẳng `viz-1`: "doanh thu" là một khái niệm nghiệp vụ, và nếu ba màn
    * cùng tự chọn số thứ tự thì doanh thu sẽ đổi màu giữa các màn. Ánh xạ ở đây một lần.
+   *
+   * Từ 04/11/2026 ba vai lấy màu của design Partner-XePrime (biểu đồ "Dòng tiền & Lợi nhuận",
+   * `23813:32331`): doanh thu xanh dương, chi phí đỏ, lợi nhuận xanh lá — không còn trỏ về dải
+   * định danh ở trên. Ba màu này luôn đi kèm chú giải chữ ngay trên biểu đồ, nên màu không phải
+   * tín hiệu duy nhất cho người mù màu đỏ–lục.
    */
-  'color-viz-revenue': 'var(--xp-color-viz-1)',
-  'color-viz-cost': 'var(--xp-color-viz-3)',
-  'color-viz-profit': 'var(--xp-color-viz-2)',
+  'color-viz-revenue': '#3e5be6',
+  'color-viz-cost': '#e5484d',
+  'color-viz-profit': '#039855',
   /**
    * Lưới và trục của biểu đồ — phải LÙI lại phía sau dữ liệu, không cạnh tranh với nó. Theo dải
    * xám v2 ở cùng độ sáng với bộ cũ (Gray/200, Gray/400), không lấy chữ phụ đậm hơn.

@@ -51,10 +51,10 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | Đăng nhanh xe tự lái (gian hàng) · `/vehicles/register?from=manage` | Menu phụ cạnh nút thêm xe ở Danh sách xe | **Gỡ khỏi Danh sách xe** (chốt 03/11) — màn chỉ còn "Thêm xe mới" → wizard đầy đủ. Route vẫn sống (chủ xe tuyến hoa hồng dùng `?from=account`) | URL | — |
 | Tài xế · `/drivers` | Cấu hình › Tài xế | **Xe & Tài xế › Quản lý tài xế** | menu | — (ráp xong 04/11, §3.7) |
 | Bảo dưỡng · `/maintenance` | Quản lý › Xe của tôi › Bảo dưỡng | **Xe & Tài xế › Bảo dưỡng** | menu | — (ráp xong 04/11, §3.8) |
-| Doanh thu · `/finance` | Kinh doanh › Tài chính › Tổng quan doanh thu | **Doanh thu › Tổng quan doanh thu** | menu | — |
+| Doanh thu · `/finance` | Kinh doanh › Tài chính › Tổng quan doanh thu | **Doanh thu › Tổng quan doanh thu** | menu | — (ráp xong 04/11, §3.9) |
 | Số dư & rút tiền · `/balance` (chỉ CHỦ) | Kinh doanh › Tài chính › Số dư & rút tiền | **Doanh thu › Quản lý ví** | menu | — |
 | Thu chi · `/receipts` | Kinh doanh › Tài chính › Giao dịch thu chi | **Doanh thu › Lịch sử giao dịch** | menu | — |
-| Công nợ · `/debts` | Kinh doanh › Tài chính › Công nợ | Mục **ẨN** của khối Doanh thu; sẽ nằm TRONG một màn Doanh thu theo design mới | thẻ "Công nợ" trên Tổng quan doanh thu; URL; breadcrumb | Chờ design. Khi ráp: đặt đúng chỗ design, gỡ mục ẩn |
+| Công nợ · `/debts` | Kinh doanh › Tài chính › Công nợ | Mục **ẨN** của khối Doanh thu; design (`23874:63125`) đặt nó thành nút chuyển **"Công nợ"** cạnh "Giao dịch thu chi" trong màn **Lịch sử giao dịch** | thẻ "Khách còn nợ" trên Tổng quan doanh thu; URL; breadcrumb | Chốt 04/11: **gộp về MỘT URL** `/receipts?view=debts`; `/debts` chuyển hướng sang đó (giữ nguyên tham số lọc); thẻ "Khách còn nợ" trỏ thẳng URL mới; gỡ mục ẩn. Làm cùng đợt ráp Lịch sử giao dịch |
 | Trò chuyện · `/chat` | Kinh doanh › Trò chuyện | **Icon tin nhắn** ở header (popup + "xem tất cả"; số tin chưa đọc trên icon) | header | — |
 | Cửa hàng · `/shop` | Gian hàng › Cửa hàng | **Cấu hình › Thông tin cửa hàng** | menu | — |
 | Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Section "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | section của trang Cửa hàng | Khi ráp màn Thông tin cửa hàng: bảng chi nhánh đang hẹp trong cột trang (phải cuộn ngang mới thấy Số xe/Trạng thái) |
@@ -113,7 +113,9 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Khung chung: header, menu, breadcrumb | — | `23649:27690`, `23661:22492`, `23661:27362`, `23649:11528` | **Xong** 02/11/2026 | Xem §2 |
 | Yêu cầu đặt xe | `/booking-requests` | Request `23649:25560` (cập nhật 02/11: chip dịch vụ, đồng hồ, nút Từ chối) | **Xong** 02/11/2026 | Xem §3.1 |
 | Quản lý đơn thuê xe | `/bookings` (+ `/bookings/awaiting-pickup`) | All Request `23790:45293` (ô "Tất cả", nhóm theo trạng thái) · All Request - Done `23797:49689` (một trạng thái, phân trang). Chi tiết đơn: section `23777:53056` | **Xong** 02/11/2026 (danh sách + chi tiết) | Xem §3.2, §3.3 |
-| Một màn Doanh thu (chưa rõ màn nào) | `/finance` hoặc `/receipts` | chờ design | Chưa làm | Nhận **Công nợ** (`/debts`); gỡ mục ẩn `debts`; giữ thao tác thu nợ |
+| Tổng quan doanh thu | `/finance` | section `23857:58927`: Theo xe `23813:30723` · Theo khách `23813:38107` | **Xong** 04/11/2026 | Xem §3.9 |
+| Quản lý ví | `/balance` (chỉ CHỦ, cả hai tuyến) | section `23857:58927`: `23813:39558` (bảng tổng hợp giao dịch, dòng mở rộng) · `23813:55449` (biến động số dư) | Chưa làm | Đánh giá sơ bộ ở §3.10 |
+| Lịch sử giao dịch (+ Công nợ) | `/receipts`, `/receipts?view=debts` (`/debts` chuyển hướng) | Thu chi `23857:58928` (danh sách `23813:58308` + 4 hộp) · Công nợ `23874:63125` (danh sách `23857:58932` + 2 hộp) | Chưa làm | Nhận **Công nợ** (chốt 04/11: một URL); gỡ mục ẩn `debts`; giữ thao tác thu nợ. Đánh giá sơ bộ ở §3.10 |
 | Khách hàng | `/customers`, `/customers/[id]` | section `23777:54974` (5 frame) | **Xong** 02/11/2026 | Xem §3.4 |
 | Danh sách xe | `/vehicles` (cả hai tuyến) | section `23672:25620`: ít xe `23655:38521` · lưới `23649:29724` · danh sách `23655:36959` | **Xong** 03/11/2026 (danh sách) | Xem §3.5 |
 | Chi tiết xe | `/vehicles/[id]` (cả hai tuyến, cả modal hồ sơ xe) | section `23672:25621` | **Xong** 03/11/2026 | Xem §3.6 |
@@ -226,6 +228,7 @@ Design: Users List `23777:53057` · Details Overview `23777:54975` · History `2
 | 6 | Lịch sử thuê: tìm · trạng thái · thời gian + xem nhanh đơn dưới bảng | 🆕 | Bộ lọc ở server |
 | 7 | Thu chi: biểu đồ doanh thu Tuần/Tháng/Quý/Năm · khoản phải thu · bảng chi tiết phải thu · "Xem sổ Thu/Chi" | 🆕 | API tổng hợp mới; danh sách phiếu thu cũ giữ dưới |
 | 8 | Giấy tờ: thẻ theo loại (CCCD, GPLX, Hộ chiếu, Khác) · Chủ thẻ · Số · Thời hạn · Trạng thái · Xoá / Xác nhận đối chiếu / Thay / Tải lên | 🆕 | Migration thêm "chủ thẻ" + "số giấy tờ". 03/11: tải lên là MỘT cú bấm — bấm/kéo ảnh vào ô ảnh của thẻ (AntD `Upload.Dragger`) là tải ngay đúng loại, không hộp nhập thông tin; chủ thẻ/số/hạn điền sau qua "Sửa thông tin"; "Thay" mang theo chủ thẻ + số, bỏ thời hạn |
+| 9 | Nền/khung (rà lại 04/11) | ✅ | Bảng danh sách trong khung trắng viền `--xp-color-border` bo 12, hàng trắng không zebra (`DataTable framed striped={false}`), phân trang ngoài khung. Chi tiết: dải số liệu không viền + `--xp-elevation-ambient`; thẻ Tổng quan bo 16 + bóng tản; thẻ hồ sơ viền `--xp-color-border`; khối lịch nhận/trả, ô soạn và từng ghi chú nền `--xp-color-bg` (gray-50) bo 10, không viền |
 
 ### 3.5 Danh sách xe — kiểm kê và quyết định (03/11/2026)
 
@@ -433,6 +436,61 @@ mốc / chưa đặt chu kỳ; rỗng / không kết quả / lỗi / không quy�
 "Hiển thị x-y của N xe" + phân trang; 1280–1440 vẫn một hàng (thu khoảng cách cột, ảnh 112×64),
 ≤1180 xếp ba tầng, điện thoại một cột. Huy hiệu menu "Bảo dưỡng" vẫn **chưa làm** (§2.3).
 
+### 3.9 Tổng quan doanh thu — kiểm kê và quyết định (04/11/2026)
+
+Code: `app/(manage)/manage/finance/page.tsx` + `features/finance/components/*` (sửa tại chỗ). Thẻ số
+dùng biến thể `tile` mới của `MoneyStat` (`components/data-display`) — sổ Thu-Chi sẽ dùng lại khi
+ráp. Biểu đồ vẫn là `RevenueTrendChart` (recharts đã có, không thêm thư viện).
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề + dòng phụ; sáu kỳ xem nhanh (Hôm nay … Năm nay); chi nhánh; khoảng ngày | ✅ | Theo design. Kỳ và chi nhánh vẫn trên URL |
+| 2 | Sáu thẻ một hàng: Doanh thu · Chi phí · Lợi nhuận · Dòng tiền ròng (gồm cọc) · Cọc đang giữ · Khách còn nợ | ✅ | Thay ba khối "Kết quả kinh doanh / Dòng tiền quỹ / Tại thời điểm này". Tiền vào/ra gộp thành dòng phụ "Vào … · Ra …" của Dòng tiền ròng. Số phiếu dưới Doanh thu/Chi phí cộng từ cơ cấu theo danh mục (cùng bộ lọc đã loại cọc); chưa về thì chỉ "Đã trừ cọc" |
+| 3 | Thẻ bấm được ra sổ đã lọc (Doanh thu, Chi phí, Tiền vào/ra) | 🟡 | **Giữ liên kết + mũi tên** (chốt 04/11): Doanh thu, Chi phí, Dòng tiền ròng (mọi phiếu đã duyệt trong kỳ), Cọc đang giữ, Khách còn nợ. Lợi nhuận không bấm (không có tập phiếu riêng) |
+| 4 | Ba dòng ghi chú dưới các khối cũ | 🟡 | Vào dấu ⓘ cạnh nhãn (luật "note thừa bỏ, note cần vào icon"): "lãi tiền mặt theo sổ, chưa trừ khấu hao…" ở Doanh thu, "gồm cọc thu và hoàn" ở Dòng tiền ròng; "không phụ thuộc kỳ" thành chữ "· hiện tại" trên thẻ Cọc. Thẻ vừa bấm được vừa có ⓘ dùng liên kết phủ thẻ (nút không lồng trong `<a>`) |
+| 5 | Biểu đồ "Dòng tiền & Lợi nhuận theo thời gian", Ngày/Tuần/Tháng, trục "Đơn vị: triệu đồng" | ✅ | Theo design: cột gradient, trục Y ghi số triệu. Cột tuần ghi khoảng ngày (cắt theo hai đầu kỳ). Màu vai đổi theo design ở `@xeprime/ui`: doanh thu xanh dương · chi phí đỏ · lợi nhuận xanh lá — áp chung mọi biểu đồ tài chính (dashboard, khối tiền hồ sơ xe/khách, app native) |
+| 6 | Chú giải màu biểu đồ | 🟡 | **Giữ, gọn** (chốt 04/11): ba chấm màu cạnh nút độ mịn (`RevenueTrendLegend`) |
+| 7 | Cơ cấu doanh thu / Cơ cấu chi phí: "Tên · n phiếu  x%" + số tiền + thanh 8px | ✅ | Theo design (thu xanh dương, chi tím như design). Mỗi dòng vẫn là liên kết ra sổ đã lọc đúng danh mục (giữ, chỉ lộ khi rê chuột) |
+| 8 | "Hiệu suất kinh doanh": MỘT thẻ, tab Theo xe / Theo khách, "Sắp xếp: …", STT, phân trang | ✅ | Tab trên URL (`?perf=customers`); sắp xếp/trang mỗi tab giữ tham số riêng; chỉ tab đang mở gọi API. Ô sắp xếp đổi theo tab (khách: Doanh thu · Nhiều chuyến — không có "Lợi nhuận" vì bảng khách không có chi phí). **Sửa lỗi cũ**: ô số dòng không có tác dụng (`limit` bị ghim cứng) — nay đọc `limit`/`customerLimit` từ URL |
+| 9 | Ảnh xe (tab Theo xe); ảnh + SĐT khách (tab Theo khách) | 🆕 | **Làm** (chốt 04/11): `GET /finance/by-vehicle` trả `mainImageUrl`; `GET /finance/by-customer` trả `phone` + `avatarUrl` **chỉ khi người xem có `customer.view`** (chỉ có `finance.view` thì `null`, dòng phụ vắng hẳn). Route chỉ mở cho tuyến gói nên không vướng ADR 0056. Khách không có ảnh ⇒ chữ cái đầu |
+| 10 | Chú thích "Chi phí chung chưa gắn xe" / "Chưa gắn khách nào" | 🟡 | **Giữ** (chốt 04/11): một dòng chữ xám dưới bảng, chỉ khi khác 0 |
+| 11 | Bấm dòng xe → hồ sơ xe; tên khách → hồ sơ khách (khi có `customer.view`); thẻ mobile của hai bảng | 🟡 | Giữ nguyên (không đổi hình) |
+| 12 | Thuế đã khấu trừ: chọn tháng · dải sáu số · bảng (STT, Mã chuyến, …) · ô giải thích xanh ở cuối | ✅ | Theo design; ô giải thích chuyển từ đầu xuống cuối thẻ, luôn hiện. Thẻ này dùng chung với trang Ví (`PartnerBalanceView`) nên đổi hình ở cả hai. **Sửa lỗi cũ**: các cột viết `render: (row)` làm thẻ mobile của `DataTable` sập (`undefined.bookingCode`) trên điện thoại |
+
+Tự dựng: đang tải (khung chờ trong từng thẻ/khối), lỗi (cảnh báo + thử lại), kỳ không có số liệu
+(trạng thái rỗng trong biểu đồ/cơ cấu/bảng), thiếu `finance.view` (thay toàn màn), ≤1280px ba thẻ
+một hàng, điện thoại hai thẻ một hàng (dòng phụ được xuống dòng), bảng thành thẻ.
+
+Còn lệch design có chủ ý: phân trang là `DataTable` chuẩn (AntD) như màn Khách hàng; ảnh xe vuông
+(`EntityIdentity` của xe), design vẽ tròn.
+
+Khoá mobile: app native dùng chung namespace `Finance.overview` — khoá cũ (`cards.business.*`,
+`chart.description`) giữ nguyên, khoá mới của web nằm ở `overview.tiles`/`overview.performance`.
+
+### 3.10 Quản lý ví · Lịch sử giao dịch · Công nợ — đánh giá sơ bộ (04/11/2026, chưa code)
+
+Đọc từ ảnh chụp design, để chốt kế hoạch; kiểm kê đầy đủ làm khi ráp từng màn.
+
+- **Quản lý ví** (`/balance`): hai tab "Tổng hợp giao dịch" (bảng theo chuyến có dòng mở rộng:
+  tiền thuê · giữ chỗ XePrime đã thu · thuế khấu trừ · thu nhập chủ xe (A) · khách trả trực tiếp (B) ·
+  số tiền cộng ví) và "Biến động số dư" (sổ ví hiện có). Cột phải: "Rút được ngay" + Đang chờ + Tổng
+  XePrime phải trả + nút "Rút về ngân hàng" · tài khoản nhận tiền + "Đổi tài khoản" · tổng hợp tháng ·
+  ô ghi chú thuế. Cần soát: dải "4,8 đánh giá / 5 chuyến / 82% phản hồi" là chỉ số uy tín
+  (`HostMetricsService`, ADR 0045 — `null` khi dưới ngưỡng mẫu); "Thiếu khấu trừ" có vẻ là thuế;
+  bảng theo chuyến có thể cần API mới; thẻ "Thuế đã khấu trừ" hiện ở trang ví có còn chỗ không.
+- **Lịch sử giao dịch** (`/receipts`): bốn thẻ (Tổng thu · Tổng chi · Cân đối · Công nợ khách hàng),
+  nút chuyển "Giao dịch thu chi | Công nợ", kỳ nhanh + tìm + Loại + Chi nhánh + "Bộ lọc", nút
+  "Danh mục" + "Tạo phiếu", bảng có cột Nguồn (chip) và thao tác Duyệt/Huỷ/Xem chi tiết; bốn hộp: chi
+  tiết phiếu, quản lý danh mục, tạo phiếu thu, tạo phiếu chi. Phần lớn đã có (`ReceiptTable`,
+  `ReceiptFormDrawer`, `CategoryManagerModal`, `ReceiptDetailDrawer`) — chủ yếu đổi hình, drawer
+  thành hộp giữa theo design.
+- **Công nợ** (`/receipts?view=debts`): bốn thẻ (Tổng công nợ · Nợ quá hạn · Trong hạn · Chưa thanh
+  toán), chip Tất cả/Quá hạn/Sắp đến hạn/Chưa thu có số đếm, tìm + chi nhánh + trạng thái đơn + "Sắp
+  xếp: Trễ nhất", bảng (khách + SĐT, đơn, trạng thái đơn, xe, hạn trả "Quá N ngày", còn nợ + thanh đã
+  trả), "Xem đơn" + "Thu tiền"; hai hộp: chi tiết công nợ đơn, thu tiền đơn. Cần soát: số đếm theo chip
+  và sắp xếp có thể cần API; SĐT khách theo cổng ADR 0056; "Thu tiền" dùng lại hộp thu tiền đơn đã ráp
+  (`23777:52010`).
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -457,6 +515,9 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |
 | `23733:41941` | Section Danh sách bảo dưỡng: frame `23754:28662`, hàng xe `23754:29574` |
 | `I23661:27390;23649:28221` | Icon xe của dòng "Danh sách xe" — xuất qua instance cha trả nhầm icon tài liệu |
+| `23857:58927` | Section Doanh thu / Tài chính: Tổng quan doanh thu theo xe `23813:30723` (page header `23813:30726`, sáu thẻ `23813:32225`, biểu đồ `23813:32266`, cơ cấu `23813:37042`, hiệu suất `23813:37081`, thuế `23813:38909`) · theo khách `23813:38107` (bảng `23813:38176`) · Quản lý ví `23813:39558` · `23813:55449` |
+| `23857:58928` | Section Lịch sử giao dịch / Thu Chi: danh sách `23813:58308` · chi tiết phiếu `23845:39621` · danh mục `23845:41048` · tạo phiếu thu `23845:42715` · tạo phiếu chi `23857:57950` |
+| `23874:63125` | Section Lịch sử giao dịch / Công nợ: danh sách `23857:58932` · chi tiết công nợ đơn `23872:60137` · thu tiền đơn `23872:61964` |
 
 Icon menu: tải từ các node trên, chuẩn hoá về khung 24px (cấp 1, dòng dropdown), 20px (nút header),
 12px (+/−), 16px (mũi tên) ở `apps/web/public/icons/menu/`, vẽ qua `LineIcon`. Mục chưa có icon trong

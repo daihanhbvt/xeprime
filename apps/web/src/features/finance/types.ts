@@ -99,6 +99,8 @@ export interface FinancePeriodFilters {
  * bảng này nhảy luôn cả bảng kia.
  */
 export interface FinanceOverviewFilters extends FinancePeriodFilters {
+  /** Tab của khối "Hiệu suất kinh doanh" — `FINANCE_PERFORMANCE_VIEW`; trống = theo xe. */
+  perf?: string;
   sort?: string;
   page?: number;
   limit?: number;

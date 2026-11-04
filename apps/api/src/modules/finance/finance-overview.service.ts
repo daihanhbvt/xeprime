@@ -95,6 +95,8 @@ interface CategoryRow {
 interface CustomerRevenueRow {
   tenant_customer_id: string;
   full_name: string;
+  phone: string;
+  avatar_url: string | null;
   trips: bigint;
   revenue: string;
   share_percent: number | null;
@@ -105,6 +107,7 @@ interface VehicleProfitRow {
   vehicle_id: string;
   vehicle_name: string;
   plate_number: string | null;
+  main_image_url: string | null;
   trips: bigint;
   revenue: string;
   cost: string;
@@ -523,7 +526,7 @@ export class FinanceOverviewService {
           SELECT vehicle_id FROM money UNION SELECT vehicle_id FROM trips
         ),
         joined AS (
-          SELECT v.id AS vehicle_id, v.name AS vehicle_name, v.plate_number,
+          SELECT v.id AS vehicle_id, v.name AS vehicle_name, v.plate_number, v.main_image_url,
                  COALESCE(t.trips, 0) AS trips,
                  COALESCE(m.revenue, 0) AS revenue,
                  COALESCE(m.cost, 0) AS cost,
@@ -535,7 +538,7 @@ export class FinanceOverviewService {
           LEFT JOIN money m ON m.vehicle_id = i.vehicle_id
           LEFT JOIN trips t ON t.vehicle_id = i.vehicle_id
         )
-        SELECT vehicle_id, vehicle_name, plate_number, trips,
+        SELECT vehicle_id, vehicle_name, plate_number, main_image_url, trips,
                trim_scale(revenue)::text AS revenue,
                trim_scale(cost)::text AS cost,
                trim_scale(profit)::text AS profit,
@@ -550,6 +553,7 @@ export class FinanceOverviewService {
         vehicleId: r.vehicle_id,
         vehicleName: r.vehicle_name,
         plateNumber: r.plate_number,
+        mainImageUrl: r.main_image_url,
         trips: Number(r.trips),
         revenue: r.revenue,
         cost: r.cost,
@@ -576,12 +580,19 @@ export class FinanceOverviewService {
    *
    * Phiếu thu không gắn khách nào (thu tay không liên kết đơn) KHÔNG lọt vào đây — chúng nằm ở
    * `summary.unassignedRevenue` để phần chênh với thẻ "Doanh thu" luôn có chỗ giải thích.
+   *
+   * SĐT + ảnh của khách chỉ đi ra khi người gọi có quyền xem KHÁCH HÀNG: `finance.view` là quyền
+   * xem tiền, không phải quyền xem danh bạ — giao sổ tiền cho kế toán không kèm theo lộ liên hệ
+   * của mọi khách. Cổng tuyến của ADR 0056 không cần ở đây: route chỉ mở cho tuyến gói
+   * (`@SubscriptionTrackOnly`), và tuyến gói luôn thấy liên hệ khách của mình.
    */
   async byCustomer(
     tenantId: string,
     query: CustomerRevenueQueryDto,
     /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
     allowedBranchIds: readonly string[] | null,
+    /** Người gọi có `customer.view` — đọc từ membership ở controller, không từ client. */
+    canViewContact: boolean,
   ): Promise<{ data: CustomerRevenueItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const fromAt = dayStartOf(query.from);
@@ -628,17 +639,18 @@ export class FinanceOverviewService {
           ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
       ),
       joined AS (
-        SELECT c.id AS tenant_customer_id, c.full_name,
+        SELECT c.id AS tenant_customer_id, c.full_name, c.phone, u.avatar_url,
                COALESCE(t.trips, 0) AS trips,
                COALESCE(m.revenue, 0) AS revenue
         FROM ids i
         -- Điều kiện tenant lặp lại có chủ đích: id khách đoán được của gian hàng khác sẽ rơi ra
         -- ngoài ngay cả khi một CTE phía trên lỡ sót điều kiện tenant.
         JOIN tenant_customers c ON c.id = i.tenant_customer_id AND c.tenant_id = ${tenantId}
+        LEFT JOIN users u ON u.id = c.customer_user_id
         LEFT JOIN money m ON m.tenant_customer_id = i.tenant_customer_id
         LEFT JOIN trips t ON t.tenant_customer_id = i.tenant_customer_id
       )
-      SELECT j.tenant_customer_id, j.full_name, j.trips,
+      SELECT j.tenant_customer_id, j.full_name, j.phone, j.avatar_url, j.trips,
              trim_scale(j.revenue)::text AS revenue,
              -- Phép chia chạy trên NUMERIC của Postgres, không đi qua float của JS (ADR 0007).
              CASE WHEN p.revenue = 0 THEN NULL
@@ -653,6 +665,8 @@ export class FinanceOverviewService {
       data: rows.map((r) => ({
         tenantCustomerId: r.tenant_customer_id,
         fullName: r.full_name,
+        phone: canViewContact ? r.phone : null,
+        avatarUrl: canViewContact ? r.avatar_url : null,
         trips: Number(r.trips),
         revenue: r.revenue,
         sharePercent: r.share_percent,

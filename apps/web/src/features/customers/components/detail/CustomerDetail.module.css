@@ -57,9 +57,10 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--xp-space-md);
   padding: var(--xp-space-md) var(--xp-space-lg);
-  border: 1px solid var(--xp-color-border-subtle);
+  /* Figma `23788:39111`: không viền, đổ bóng tản quanh khung. */
   border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-ambient);
 }
 
 .kpi {
@@ -128,6 +129,13 @@
   background: var(--xp-color-bg-container);
 }
 
+/* Thẻ của tab Tổng quan (Figma `23790:40668`): bo 16 + bóng tản thay cho bo 10 + bóng đổ của
+ * `SectionCard`. Hai lớp để thắng `.card` của SectionCard bất kể thứ tự nạp CSS. */
+.tabStack .sectionCard {
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-ambient);
+}
+
 /* ── Thẻ hồ sơ ───────────────────────────────────────────────────────────── */
 
 .profileCard {
@@ -135,7 +143,7 @@
   flex-direction: column;
   gap: var(--xp-space-md);
   padding: var(--xp-space-lg);
-  border: 1px solid var(--xp-color-border-subtle);
+  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
 }

@@ -118,6 +118,11 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: CustomerRevenueQueryDto,
   ): Promise<CustomerRevenuePageDto> {
-    return this.overview.byCustomer(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<CustomerRevenuePageDto>;
+    return this.overview.byCustomer(
+      tenant.tenantId,
+      query,
+      tenant.allowedBranchIds,
+      tenant.permissions.includes(PERMISSION.CUSTOMER_VIEW),
+    ) as Promise<CustomerRevenuePageDto>;
   }
 }

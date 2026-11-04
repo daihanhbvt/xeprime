@@ -10,8 +10,8 @@ import FinancePage from './page';
  * `/manage/finance` — Tổng quan doanh thu.
  *
  * Ba thứ phải sống sót qua mọi lần sửa, vì chúng là lý do màn này đáng tin:
- *  1. **Ba lớp tiền tách rời** — "Lợi nhuận" (của một kỳ) không được đứng lẫn với "Cọc đang giữ"
- *     (tại thời điểm này), và cọc phải nằm ngoài doanh thu (ADR 0013 §3).
+ *  1. **Hai đơn vị thời gian nói bằng chữ** — "Cọc đang giữ" / "Khách còn nợ" là số TẠI LÚC NÀY và
+ *     dòng phụ nói "hiện tại"; cọc phải nằm ngoài doanh thu (ADR 0013 §3).
  *  2. **Drill-down khớp thẻ** — mỗi đường dẫn ra sổ phải mang `sourceGroup` + `status=approved`,
  *     nếu không thẻ nói một số và danh sách nó dẫn tới nói số khác.
  *  3. **Chi phí chung không gắn xe không bốc hơi** — bảng theo xe phải nói ra phần chênh.
@@ -85,6 +85,7 @@ vi.mock('@/features/finance/hooks/use-finance-overview', () => ({
 /** Biểu đồ có test riêng cho ranh giới chuỗi→số; ở đây nó chỉ cần chứng minh mình được dựng. */
 vi.mock('@/components/chart/RevenueTrendChart', () => ({
   RevenueTrendChart: ({ title }: { title: string }) => <figure aria-label={title} />,
+  RevenueTrendLegend: () => null,
 }));
 
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -155,6 +156,8 @@ function customer(over: Partial<CustomerRevenue> = {}): CustomerRevenue {
   return {
     tenantCustomerId: 'c1',
     fullName: 'Nguyễn Văn A',
+    phone: null,
+    avatarUrl: null,
     trips: 8,
     revenue: '32400000',
     sharePercent: 39.3,
@@ -167,6 +170,7 @@ function vehicle(over: Partial<VehicleProfit> = {}): VehicleProfit {
     vehicleId: 'v1',
     vehicleName: 'Vios',
     plateNumber: '51A-12345',
+    mainImageUrl: null,
     trips: 12,
     revenue: '18400000',
     cost: '2100000',
@@ -206,31 +210,55 @@ function lastReplacedUrl(): string {
   return calls.length ? (calls[calls.length - 1]![0] as string) : '';
 }
 
-/** Thẻ tiền là một liên kết có nhãn ở trong — tìm theo nhãn rồi leo lên thẻ `<a>` gần nhất. */
+/**
+ * Thẻ tiền là một liên kết. Thẻ có dấu ⓘ dùng liên kết phủ thẻ mang đúng tên nhãn; thẻ không có ⓘ
+ * bọc cả thẻ trong `<a>`, nên tên bắt đầu bằng nhãn.
+ */
 function statLink(label: string): HTMLAnchorElement {
-  const el = screen.getByText(label).closest('a');
-  if (!el) throw new Error(`Thẻ "${label}" không phải một liên kết`);
-  return el as HTMLAnchorElement;
+  const tiles = screen.getByRole('region', { name: 'Số liệu tài chính của kỳ' });
+  return within(tiles).getByRole('link', { name: new RegExp(`^${label}`) }) as HTMLAnchorElement;
 }
 
-describe('/manage/finance — ba lớp tiền', () => {
-  it('doanh thu KHÔNG gồm cọc, còn dòng tiền quỹ thì có', () => {
+describe('/manage/finance — sáu thẻ số', () => {
+  it('doanh thu KHÔNG gồm cọc, còn dòng tiền ròng thì có (vào · ra)', () => {
     render(<FinancePage />);
 
-    const business = screen.getByRole('region', { name: 'Kết quả kinh doanh' });
-    expect(within(business).getByText('82.500.000 ₫')).toBeTruthy();
-
-    const cash = screen.getByRole('region', { name: 'Dòng tiền quỹ' });
-    expect(within(cash).getByText('96.500.000 ₫')).toBeTruthy();
+    const tiles = screen.getByRole('region', { name: 'Số liệu tài chính của kỳ' });
+    expect(within(tiles).getByText('82.500.000 ₫')).toBeTruthy();
+    expect(within(tiles).getByText('72.400.000 ₫')).toBeTruthy();
+    expect(within(tiles).getByText('Vào 96.500.000 ₫ · Ra 24.100.000 ₫')).toBeTruthy();
   });
 
-  it('cọc đang giữ và công nợ nằm ở lớp "tại thời điểm này", tách khỏi số liệu kỳ', () => {
+  it('cọc đang giữ và công nợ nói rõ là số TẠI LÚC NÀY', () => {
     render(<FinancePage />);
 
-    const now = screen.getByRole('region', { name: 'Tại thời điểm này' });
-    expect(within(now).getByText('14.000.000 ₫')).toBeTruthy();
-    expect(within(now).getByText('37.025.000 ₫')).toBeTruthy();
-    expect(within(now).getByText('Hai số này không phụ thuộc kỳ đã chọn.')).toBeTruthy();
+    const tiles = screen.getByRole('region', { name: 'Số liệu tài chính của kỳ' });
+    expect(within(tiles).getByText('14.000.000 ₫')).toBeTruthy();
+    expect(within(tiles).getByText('7 đơn · hiện tại')).toBeTruthy();
+    expect(within(tiles).getByText('37.025.000 ₫')).toBeTruthy();
+    expect(within(tiles).getByText('16 đơn')).toBeTruthy();
+  });
+
+  it('số phiếu dưới Doanh thu / Chi phí cộng từ cơ cấu theo danh mục', () => {
+    categoryQuery.data = {
+      total: '82500000',
+      items: [
+        { categoryId: 'a', name: 'Thanh toán đơn', systemKey: null, amount: '80000000', count: 4, sharePercent: 97 },
+        { categoryId: 'b', name: 'Thu khác', systemKey: null, amount: '2500000', count: 1, sharePercent: 3 },
+      ],
+    };
+    render(<FinancePage />);
+
+    // Cùng một mock cho cả hai chiều tiền ⇒ cả hai thẻ đều ra 5 phiếu.
+    expect(screen.getAllByText('5 phiếu · đã trừ cọc')).toHaveLength(2);
+  });
+
+  it('cơ cấu chưa về ⇒ dòng phụ chỉ nói "đã trừ cọc", không bịa ra 0 phiếu', () => {
+    categoryQuery.data = undefined;
+    render(<FinancePage />);
+
+    expect(screen.getAllByText('Đã trừ cọc')).toHaveLength(2);
+    expect(screen.queryByText(/0 phiếu/)).toBeFalsy();
   });
 
   it('chưa có doanh thu ⇒ nói "chưa có để tính biên", KHÔNG hiện 0%', () => {
@@ -252,8 +280,7 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
     nav.params = new URLSearchParams('from=2026-08-01&to=2026-08-31');
     render(<FinancePage />);
 
-    const business = screen.getByRole('region', { name: 'Kết quả kinh doanh' });
-    const href = within(business).getByText('Doanh thu').closest('a')?.getAttribute('href') ?? '';
+    const href = statLink('Doanh thu').getAttribute('href') ?? '';
     expect(href).toContain('/manage/receipts');
     expect(href).toContain('type=income');
     // Thiếu hai tham số này là thẻ nói 82,5tr còn sổ cộng ra 96,5tr.
@@ -263,12 +290,19 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
     expect(href).toContain('to=2026-08-31');
   });
 
-  it('thẻ Tiền vào KHÔNG lọc nhóm nguồn — nó cố ý gồm cả cọc', () => {
+  it('thẻ Dòng tiền ròng KHÔNG lọc nhóm nguồn hay chiều tiền — nó cố ý gồm cả cọc', () => {
     render(<FinancePage />);
 
-    const href = statLink('Tiền vào').getAttribute('href') ?? '';
-    expect(href).toContain('type=income');
+    const href = statLink('Dòng tiền ròng').getAttribute('href') ?? '';
+    expect(href).toContain('status=approved');
     expect(href).not.toContain('sourceGroup');
+    expect(href).not.toContain('type=');
+  });
+
+  it('Lợi nhuận là hiệu của hai thẻ trước — không có tập phiếu riêng nên không bấm được', () => {
+    render(<FinancePage />);
+    const tiles = screen.getByRole('region', { name: 'Số liệu tài chính của kỳ' });
+    expect(within(tiles).queryByRole('link', { name: /^Lợi nhuận/ })).toBeFalsy();
   });
 
   it('thẻ Cọc đang giữ dẫn tới đúng nhóm tiền giữ hộ', () => {
@@ -333,13 +367,13 @@ describe('/manage/finance — quyền', () => {
     render(<FinancePage />);
 
     expect(screen.getByText('Không có quyền xem số liệu tài chính')).toBeTruthy();
-    expect(screen.queryByText('Kết quả kinh doanh')).toBeFalsy();
+    expect(screen.queryByText('Hiệu suất kinh doanh')).toBeFalsy();
     expect(screen.queryByRole('region', { name: 'Hiệu quả theo xe' })).toBeFalsy();
   });
 });
 
 describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', () => {
-  it('thẻ thuế đứng cùng sổ tài chính, và nói VÌ SAO trước khi nói bao nhiêu', () => {
+  it('thẻ thuế đứng cùng sổ tài chính, và luôn kèm câu giải thích VÌ SAO', () => {
     render(<FinancePage />);
 
     expect(screen.getByText('Thuế đã khấu trừ')).toBeTruthy();
@@ -361,7 +395,31 @@ describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', ()
   });
 });
 
+describe('/manage/finance — hiệu suất kinh doanh: hai tab', () => {
+  it('mặc định mở tab Theo xe; bấm Theo khách ghi perf=customers lên URL', () => {
+    render(<FinancePage />);
+
+    expect(screen.getByRole('region', { name: 'Hiệu quả theo xe' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Doanh thu theo khách' })).toBeFalsy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Theo khách' }));
+    expect(lastReplacedUrl()).toContain('perf=customers');
+  });
+
+  it('ô sắp xếp đổi theo tab — tab khách không có "Lợi nhuận cao nhất"', () => {
+    nav.params = new URLSearchParams('perf=customers');
+    render(<FinancePage />);
+
+    expect(screen.getByText('Sắp xếp: Doanh thu cao nhất')).toBeTruthy();
+    expect(screen.queryByText('Sắp xếp: Lợi nhuận cao nhất')).toBeFalsy();
+  });
+});
+
 describe('/manage/finance — doanh thu theo khách', () => {
+  beforeEach(() => {
+    nav.params = new URLSearchParams('perf=customers');
+  });
+
   it('dựng bảng khách với doanh thu và tỷ trọng', () => {
     render(<FinancePage />);
 
@@ -369,6 +427,22 @@ describe('/manage/finance — doanh thu theo khách', () => {
     expect(within(table).getByText('Nguyễn Văn A')).toBeTruthy();
     expect(within(table).getByText('32.400.000 ₫')).toBeTruthy();
     expect(within(table).getByText(/39[.,]3%/)).toBeTruthy();
+  });
+
+  it('SĐT hiện khi server trả về; server để trống (thiếu customer.view) thì vắng hẳn', () => {
+    customerQuery.data = {
+      items: [
+        customer({ phone: '0952345678' }),
+        customer({ tenantCustomerId: 'c2', fullName: 'Trần Thị B', phone: null }),
+      ],
+      meta: { page: 1, limit: 10, total: 2, hasNext: false },
+    };
+    render(<FinancePage />);
+
+    const table = screen.getByRole('region', { name: 'Doanh thu theo khách' });
+    expect(within(table).getByText('0952345678')).toBeTruthy();
+    expect(within(table).getByText('Trần Thị B')).toBeTruthy();
+    expect(within(table).queryByText('—')).toBeFalsy();
   });
 
   it('doanh thu chưa gắn khách được nói ra, không lặng lẽ biến mất', () => {
@@ -399,7 +473,7 @@ describe('/manage/finance — doanh thu theo khách', () => {
    * bảng khách sẽ kéo luôn bảng xe sang trang, và ngược lại.
    */
   it('bảng khách mang tham số phân trang riêng, không đụng bảng xe', () => {
-    nav.params = new URLSearchParams('page=3&customerPage=2');
+    nav.params = new URLSearchParams('perf=customers&page=3&customerPage=2');
     render(<FinancePage />);
 
     const vehicleFilters = vehicleQuery.lastFilters as { page?: number; customerPage?: number };

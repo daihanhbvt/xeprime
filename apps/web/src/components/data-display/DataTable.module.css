@@ -78,6 +78,32 @@
   box-shadow: inset 3px 0 0 var(--xp-color-primary);
 }
 
+/* ---------------------------------------------------------------- khung (`framed`)
+ *
+ * Khung trắng viền `--xp-color-border` bo 12 quanh `.ant-table` (không phải wrapper — phân trang
+ * nằm ngoài khung như Figma `23777:53061`). `overflow: hidden` làm việc bo góc, nên ô tiêu đề bỏ
+ * bo riêng của AntD (selector của AntD nặng hơn mọi selector module hợp lý ⇒ `!important`);
+ * thanh cuộn ngang nằm ở `.ant-table-content` bên trong nên không bị cắt. Đường kẻ hàng dùng
+ * cùng màu viền khung; hàng cuối bỏ kẻ để không chồng lên viền dưới. */
+.framed :global(.ant-table) {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.framed :global(.ant-table-thead) > tr > th {
+  border-radius: 0 !important;
+}
+
+.tableRoot.framed :global(.ant-table-thead) > tr > th,
+.tableRoot.framed :global(.ant-table-tbody) > tr > td {
+  border-bottom-color: var(--xp-color-border);
+}
+
+.tableRoot.framed :global(.ant-table-tbody) > tr:last-child > td {
+  border-bottom: 0;
+}
+
 /* Padding trái tách cột hành động khỏi cột dữ liệu cuối (R5: 16px). */
 .actionsCell {
   padding-left: var(--xp-space-md) !important;

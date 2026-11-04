@@ -1,22 +1,74 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-20);
+}
+
+/*
+ * Kỳ xem nhanh bên trái, chi nhánh + khoảng ngày bên phải (design "Page Header" `23813:30726`).
+ * Hẹp quá thì hai cụm xuống hai hàng thay vì chen nhau.
+ */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  margin-top: calc(var(--xp-space-xs) * -1);
 }
 
 .periods {
   /* Sáu kỳ không đứng vừa màn hình hẹp — cho cuộn ngang thay vì xuống dòng lởm chởm. */
+  max-width: 100%;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+.filters {
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
+/* Khung biểu đồ theo thẻ "Nhóm thông tin" của design: bo 16, đệm 20, tiêu đề 18. */
+.card {
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-20);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
+}
+
+.card figcaption {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
+.chartActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-md);
 }
 
 .breakdowns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--xp-space-md);
+  align-items: start;
+  gap: var(--xp-space-20);
 }
 
 .state {
   display: block;
   margin: var(--xp-space-xl) auto;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .filters {
+    width: 100%;
+    margin-left: 0;
+  }
 }

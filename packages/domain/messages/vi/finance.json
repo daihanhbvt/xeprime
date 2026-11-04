@@ -247,7 +247,7 @@
   "overview": {
     "page": {
       "title": "Tổng quan doanh thu",
-      "subtitle": "Kỳ này lãi hay lỗ, tiền đang cầm bao nhiêu, và xe nào đang làm ra tiền."
+      "subtitle": "Nắm bắt kết quả lãi/lỗ theo kỳ, dòng tiền sẵn sàng và danh sách các dòng xe mang lại doanh thu cao nhất"
     },
     "periods": {
       "label": "Kỳ xem nhanh",
@@ -293,9 +293,28 @@
         "note": "Hai số này không phụ thuộc kỳ đã chọn."
       }
     },
+    "tiles": {
+      "label": "Số liệu tài chính của kỳ",
+      "revenue": "Doanh thu",
+      "cost": "Chi phí",
+      "profit": "Lợi nhuận",
+      "netCash": "Dòng tiền ròng (gồm cọc)",
+      "depositHeld": "Cọc đang giữ",
+      "debt": "Khách còn nợ",
+      "receipts": "{count, plural, other {# phiếu}} · đã trừ cọc",
+      "exDeposit": "Đã trừ cọc",
+      "margin": "Biên {value}%",
+      "marginUnknown": "Chưa có doanh thu để tính biên",
+      "cashFlow": "Vào {in} · Ra {out}",
+      "bookingsNow": "{count, plural, other {# đơn}} · hiện tại",
+      "bookings": "{count, plural, other {# đơn}}",
+      "businessInfoLabel": "Giải thích về doanh thu và chi phí",
+      "businessNote": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ — chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
+      "cashInfoLabel": "Giải thích về dòng tiền ròng",
+      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn — đây là số tiền thực sự đi qua tay trong kỳ."
+    },
     "chart": {
-      "title": "Thu · chi · lợi nhuận theo thời gian",
-      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "title": "Dòng tiền & Lợi nhuận theo thời gian",
       "revenue": "Doanh thu",
       "cost": "Chi phí",
       "profit": "Lợi nhuận",
@@ -308,11 +327,15 @@
         "week": "Tuần",
         "month": "Tháng"
       },
-      "tapHint": "Chạm vào một mốc trên biểu đồ để xem số của mốc đó."
+      "tapHint": "Chạm vào một mốc trên biểu đồ để xem số của mốc đó.",
+      "yAxisUnit": "Đơn vị: triệu đồng",
+      "legend": "Chú giải biểu đồ",
+      "weekRange": "{from} – {to}",
+      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc."
     },
     "categories": {
-      "incomeTitle": "Doanh thu theo danh mục",
-      "expenseTitle": "Chi phí theo danh mục",
+      "incomeTitle": "Cơ cấu doanh thu",
+      "expenseTitle": "Cơ cấu chi phí",
       "share": "{percent}%",
       "count": "{count, plural, other {# phiếu}}",
       "uncategorized": "Chưa phân loại",
@@ -325,7 +348,8 @@
         "deposit_refund": "Hoàn cọc",
         "maintenance": "Bảo dưỡng/Thay nhớt",
         "repair": "Sửa chữa sự cố"
-      }
+      },
+      "row": "{name} · {count, plural, other {# phiếu}}"
     },
     "vehicles": {
       "title": "Hiệu quả theo xe",
@@ -342,7 +366,8 @@
         "revenue": "Doanh thu",
         "cost": "Chi phí",
         "profit": "Lợi nhuận",
-        "margin": "Biên"
+        "margin": "Biên",
+        "index": "STT"
       },
       "sort": {
         "label": "Sắp xếp",
@@ -362,16 +387,26 @@
       "empty": "Kỳ này chưa có khách nào phát sinh",
       "emptyHint": "Khách có chuyến hoặc có phiếu thu trong kỳ sẽ hiện ở đây.",
       "columns": {
-        "customer": "Khách",
+        "customer": "Khách hàng",
         "trips": "Chuyến",
         "revenue": "Doanh thu",
-        "share": "Tỷ trọng"
+        "share": "Tỷ trọng",
+        "index": "STT"
       },
       "sort": {
         "label": "Sắp xếp",
         "revenue": "Doanh thu cao nhất",
         "trips": "Nhiều chuyến nhất"
       }
+    },
+    "performance": {
+      "title": "Hiệu suất kinh doanh",
+      "tabs": {
+        "label": "Xem hiệu suất theo",
+        "vehicles": "Theo xe",
+        "customers": "Theo khách"
+      },
+      "sortValue": "Sắp xếp: {label}"
     }
   },
   "entity": {
@@ -430,15 +465,17 @@
       "unsplit": "Dòng cũ chưa tách GTGT/TNCN"
     },
     "columns": {
-      "booking": "Chuyến",
+      "booking": "Mã chuyến",
       "base": "Giá trị chịu thuế",
       "label": "Loại thuế",
       "amount": "Đã khấu trừ",
       "status": "Trạng thái",
       "vat": "GTGT",
-      "pit": "TNCN"
+      "pit": "TNCN",
+      "index": "STT"
     },
     "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
-    "notSplit": "Dòng cũ — không tách"
+    "notSplit": "Dòng cũ — không tách",
+    "monthValue": "Tháng {month}"
   }
 }

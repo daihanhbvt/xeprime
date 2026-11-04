@@ -100,6 +100,12 @@ export interface DataTableProps<T> {
    */
   striped?: boolean;
   /**
+   * Bảng nằm trong khung trắng viền nhạt bo 12, đường kẻ hàng cùng màu viền (bảng của site
+   * partner theo Figma — vd danh sách khách `23777:53061`). Thường đi cùng `striped={false}`.
+   * Phân trang nằm NGOÀI khung. Chế độ thẻ mobile không đổi.
+   */
+  framed?: boolean;
+  /**
    * Chi tiết của MỘT dòng mở ngay dưới dòng đó (sao kê ví: bảng cộng ví của chuyến). Desktop dùng
    * hàng mở rộng của AntD; thẻ mobile dùng `<details>` cuối thẻ với nhãn `label`. Không phải panel
    * chi tiết — thứ cần đọc kỹ rồi quyết định vẫn là `DetailDrawer`.
@@ -240,6 +246,7 @@ export function DataTable<T>({
   renderCard,
   loadingLabel,
   striped = true,
+  framed = false,
   expandable,
 }: DataTableProps<T>) {
   const tCommon = useTranslations('Common');
@@ -347,7 +354,11 @@ export function DataTable<T>({
 
   return (
     // `region` + nhãn: AntD không chuyển `aria-label` xuống thẻ `<table>`, nên đặt ở vùng bao.
-    <div className={styles.tableRoot} role="region" aria-label={label}>
+    <div
+      className={framed ? `${styles.tableRoot} ${styles.framed}` : styles.tableRoot}
+      role="region"
+      aria-label={label}
+    >
       <Table<T>
         rowKey={rowKey}
         columns={columns}

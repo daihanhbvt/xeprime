@@ -112,8 +112,9 @@
   gap: var(--xp-space-md);
   margin: var(--xp-space-md) 0 0;
   padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-bg-muted);
+  /* Figma `23790:40882`: nền gray-50, bo 10. */
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg);
 }
 
 .previewFacts dt {

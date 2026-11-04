@@ -675,6 +675,8 @@ export class VehicleProfitItemDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
+  mainImageUrl!: string | null;
   @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
   trips!: number;
   @ApiProperty({ description: 'Doanh thu gắn xe trong kỳ (đã loại cọc), string' }) revenue!: string;
@@ -736,6 +738,18 @@ export class CustomerRevenueQueryDto {
 export class CustomerRevenueItemDto {
   @ApiProperty() tenantCustomerId!: string;
   @ApiProperty() fullName!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT dạng hiển thị (`0…`) · null = người xem thiếu `customer.view`',
+  })
+  phone!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ảnh tài khoản nền tảng của khách · null = chưa liên kết / không có ảnh / thiếu `customer.view`',
+  })
+  avatarUrl!: string | null;
   @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
   trips!: number;
   @ApiProperty({

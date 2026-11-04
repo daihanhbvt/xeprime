@@ -247,7 +247,7 @@
   "overview": {
     "page": {
       "title": "Revenue overview",
-      "subtitle": "Whether this period made money, how much cash you are holding, and which vehicles earn it."
+      "subtitle": "See profit or loss for the period, the cash you have on hand, and which vehicles bring in the most revenue"
     },
     "periods": {
       "label": "Quick period",
@@ -293,9 +293,28 @@
         "note": "These two figures do not depend on the selected period."
       }
     },
+    "tiles": {
+      "label": "Financial figures for the period",
+      "revenue": "Revenue",
+      "cost": "Costs",
+      "profit": "Profit",
+      "netCash": "Net cash flow (incl. deposits)",
+      "depositHeld": "Deposits held",
+      "debt": "Customers owe",
+      "receipts": "{count, plural, one {# voucher} other {# vouchers}} · excl. deposits",
+      "exDeposit": "Excl. deposits",
+      "margin": "{value}% margin",
+      "marginUnknown": "No revenue yet to compute a margin",
+      "cashFlow": "In {in} · Out {out}",
+      "bookingsNow": "{count, plural, one {# booking} other {# bookings}} · right now",
+      "bookings": "{count, plural, one {# booking} other {# bookings}}",
+      "businessInfoLabel": "About revenue and costs",
+      "businessNote": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments.",
+      "cashInfoLabel": "About net cash flow",
+      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included — this is the money that actually changed hands this period."
+    },
     "chart": {
-      "title": "Income · costs · profit over time",
-      "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "title": "Cash flow & profit over time",
       "revenue": "Revenue",
       "cost": "Costs",
       "profit": "Profit",
@@ -308,11 +327,15 @@
         "week": "Weekly",
         "month": "Monthly"
       },
-      "tapHint": "Tap a point on the chart to see it in detail."
+      "tapHint": "Tap a point on the chart to see it in detail.",
+      "yAxisUnit": "Unit: million VND",
+      "legend": "Chart legend",
+      "weekRange": "{from} – {to}",
+      "description": "Bars are revenue and costs, the line is profit. Deposits excluded."
     },
     "categories": {
-      "incomeTitle": "Revenue by category",
-      "expenseTitle": "Costs by category",
+      "incomeTitle": "Revenue breakdown",
+      "expenseTitle": "Cost breakdown",
       "share": "{percent}%",
       "count": "{count, plural, one {# voucher} other {# vouchers}}",
       "uncategorized": "Uncategorised",
@@ -325,7 +348,8 @@
         "deposit_refund": "Deposit refund",
         "maintenance": "Servicing / oil change",
         "repair": "Incident repair"
-      }
+      },
+      "row": "{name} · {count, plural, one {# voucher} other {# vouchers}}"
     },
     "vehicles": {
       "title": "Performance by vehicle",
@@ -342,7 +366,8 @@
         "revenue": "Revenue",
         "cost": "Costs",
         "profit": "Profit",
-        "margin": "Margin"
+        "margin": "Margin",
+        "index": "#"
       },
       "sort": {
         "label": "Sort by",
@@ -365,13 +390,23 @@
         "customer": "Customer",
         "trips": "Trips",
         "revenue": "Revenue",
-        "share": "Share"
+        "share": "Share",
+        "index": "#"
       },
       "sort": {
         "label": "Sort by",
         "revenue": "Highest revenue",
         "trips": "Most trips"
       }
+    },
+    "performance": {
+      "title": "Business performance",
+      "tabs": {
+        "label": "View performance by",
+        "vehicles": "By vehicle",
+        "customers": "By customer"
+      },
+      "sortValue": "Sort: {label}"
     }
   },
   "entity": {
@@ -430,15 +465,17 @@
       "unsplit": "Legacy rows (VAT/PIT not split)"
     },
     "columns": {
-      "booking": "Trip",
+      "booking": "Trip code",
       "base": "Taxable value",
       "label": "Tax type",
       "amount": "Withheld",
       "status": "Status",
       "vat": "VAT",
-      "pit": "PIT"
+      "pit": "PIT",
+      "index": "#"
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
-    "notSplit": "Legacy row — not split"
+    "notSplit": "Legacy row — not split",
+    "monthValue": "{month}"
   }
 }
