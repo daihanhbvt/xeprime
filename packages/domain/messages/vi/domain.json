@@ -1256,7 +1256,8 @@
       "view_image": "Mở ảnh bằng lái"
     },
     "customer_document": {
-      "verify": "Đối chiếu giấy tờ khách"
+      "verify": "Đối chiếu giấy tờ khách",
+      "update": "Sửa thông tin giấy tờ khách"
     },
     "driver": {
       "create": "Thêm tài xế",

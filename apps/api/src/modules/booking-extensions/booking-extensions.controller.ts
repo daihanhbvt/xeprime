@@ -31,8 +31,8 @@ import {
 export class BookingExtensionsController {
   constructor(private readonly extensions: BookingExtensionsService) {}
 
-  @Get()
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get()
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
   @ApiOperation({ summary: 'Các phụ lục gia hạn của một đơn (cũ trước)' })
   @ApiOkResponse({ type: [BookingExtensionDto] })
@@ -43,8 +43,8 @@ export class BookingExtensionsController {
     return this.extensions.listForBooking(tenant.tenantId, id);
   }
 
-  @Get('quote')
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get('quote')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
     summary: 'Xem trước giá + lịch trống của một phụ lục gia hạn N tháng (miễn phí nền tảng)',
@@ -58,8 +58,8 @@ export class BookingExtensionsController {
     return this.extensions.quote(tenant.tenantId, id, query.months);
   }
 
-  @Post()
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post()
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
     summary:
@@ -75,8 +75,8 @@ export class BookingExtensionsController {
     return this.extensions.create(tenant.tenantId, id, dto.months, user.id);
   }
 
-  @Post(':extensionId/cancel')
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':extensionId/cancel')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
     summary: 'Huỷ phụ lục còn chờ thanh toán — nhả phần lịch kéo thêm, hoàn phần khách đã chuyển',

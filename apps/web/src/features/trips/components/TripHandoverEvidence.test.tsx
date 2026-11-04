@@ -190,7 +190,7 @@ describe('Ảnh thu nhỏ', () => {
   it('có vé ký thì dựng ảnh THẬT, không phải một cái nút hứa hẹn', () => {
     mount();
     openPanel();
-    const img = screen.getByAltText('Ảnh hiện trạng: Trước') as HTMLImageElement;
+    const img = screen.getByAltText('Ảnh hiện trạng: Mặt trước') as HTMLImageElement;
     expect(img.getAttribute('src')).toBe('https://r2/a.jpg');
   });
 
@@ -200,7 +200,7 @@ describe('Ảnh thu nhỏ', () => {
     openPanel();
     expect(screen.getByText('Không mở được ảnh')).toBeTruthy();
     // Vẫn phải thấy góc chụp đó TỒN TẠI — khác hẳn "không có ảnh hiện trạng".
-    expect(screen.getByText('Trước')).toBeTruthy();
+    expect(screen.getByText('Mặt trước')).toBeTruthy();
     expect(
       screen.queryByText('Gian hàng không lưu ảnh hiện trạng cho lần bàn giao này.'),
     ).toBeNull();

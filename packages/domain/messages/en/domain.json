@@ -1256,7 +1256,8 @@
       "view_image": "Open driving licence photo"
     },
     "customer_document": {
-      "verify": "Verify customer document"
+      "verify": "Verify customer document",
+      "update": "Edit customer document details"
     },
     "driver": {
       "create": "Add driver",
