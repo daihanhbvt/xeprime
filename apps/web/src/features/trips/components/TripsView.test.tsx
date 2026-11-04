@@ -128,9 +128,9 @@ describe('Danh sách chuyến', () => {
     expect(screen.getByRole('tab', { name: 'Lịch sử chuyến (1)' })).toBeTruthy();
   });
 
-  it('tiêu đề trang là h1 của thẻ "Chuyến của tôi"', () => {
+  it('tiêu đề trang là h1 của thẻ "Chuyến đi"', () => {
     renderView();
-    expect(screen.getByRole('heading', { level: 1, name: 'Chuyến của tôi' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Chuyến đi' })).toBeTruthy();
   });
 
   it('thẻ chuyến hiện tổng tiền và cách nhận xe', () => {
