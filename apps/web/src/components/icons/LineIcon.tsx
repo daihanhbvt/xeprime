@@ -34,6 +34,7 @@ export const LINE_ICON = [
   'dollar-circle',
   'dollar-square',
   'faq',
+  'filter',
   'folder',
   'globe',
   'heart',

@@ -17,7 +17,7 @@
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
   border-radius: var(--xp-border-radius-card);
-  box-shadow: 0 0 4px rgba(10, 13, 18, 0.04);
+  box-shadow: var(--xp-elevation-ambient);
   overflow: hidden;
 }
 
@@ -204,28 +204,28 @@
 
 .toggleBtnActive {
   background: var(--xp-color-bg-container);
-  border-color: var(--xp-color-primary, #e9ac29);
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  border-color: var(--xp-color-primary);
+  box-shadow: inset 0 0 0 1px var(--xp-color-primary-muted);
 }
 
 .toggleLabel {
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--bk-line-height-14);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
 }
 
 .toggleSub {
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-style: italic;
-  line-height: var(--xp-line-height-body-sm);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-success);
 }
 
 .toggleSubDanger {
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-style: italic;
-  line-height: var(--xp-line-height-body-sm);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-error);
 }
 
@@ -342,9 +342,9 @@
 .extraSection {
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
-  border-radius: 16px;
-  padding: 16px 20px;
-  box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+  border-radius: var(--xp-border-radius-card);
+  padding: var(--xp-space-md);
+  box-shadow: var(--xp-elevation-ambient);
 }
 
 .extraTitleWrapper {
@@ -363,9 +363,10 @@
 
 .extraTitle {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  color: var(--xp-color-text);
 }
 
 /* Thẻ Thành tiền */

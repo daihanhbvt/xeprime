@@ -120,6 +120,11 @@ export class HandoverContextDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({
+    description:
+      '@xeprime/types → VehicleType — quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải',
+  })
+  vehicleType!: string;
   @ApiProperty({ description: '@xeprime/types → HandoverEnergyKind' }) energyKind!: string;
 
   /**

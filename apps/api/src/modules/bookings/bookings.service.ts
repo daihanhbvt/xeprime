@@ -29,7 +29,7 @@ import {
   DRIVER_LICENCE_STATUS,
   FEE_LINE,
   HANDOVER_ELIGIBLE_BOOKING_STATUS,
-  HANDOVER_PHOTO_SLOT_VALUES,
+  handoverPhotoSlotsFor,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   isNoShowGracePassed,
@@ -427,6 +427,8 @@ export class BookingsService {
     const lastTripDay = new Date(
       `${licenceTripLastDayKey({ returnAt: new Date(detail.returnAt) })}T00:00:00Z`,
     );
+    // Bộ góc bắt buộc theo LOẠI XE — xe máy không có trái/phải (`handoverPhotoSlotsFor`).
+    const requiredSlots = handoverPhotoSlotsFor(detail.vehicleType);
     const [verifiedDoc, verifiedLicence, deposits, contract, photos, checks] = await Promise.all([
       detail.tenantCustomerId
         ? this.prisma.tenantCustomerDocument.findFirst({
@@ -474,8 +476,8 @@ export class BookingsService {
       this.prisma.vehicleHandoverPhoto.findMany({
         where: {
           tenantId,
-          // Chỉ năm ô bắt buộc — ảnh thêm ngoài khuôn không bù cho một góc còn thiếu.
-          slot: { in: HANDOVER_PHOTO_SLOT_VALUES },
+          // Chỉ các ô bắt buộc — ảnh thêm ngoài khuôn không bù cho một góc còn thiếu.
+          slot: { in: [...requiredSlots] },
           handover: {
             bookingId: detail.id,
             type: HANDOVER_TYPE.PICKUP,
@@ -512,7 +514,7 @@ export class BookingsService {
       contractSigned:
         contract !== null &&
         (contract.status === CONTRACT_STATUS.SIGNED || contract.signedAt !== null),      pickupPhotoCount: photos.length,
-      pickupPhotoRequired: HANDOVER_PHOTO_SLOT_VALUES.length,
+      pickupPhotoRequired: requiredSlots.length,
       driverReady: withDriver
         ? detail.driver?.assignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED
         : null,

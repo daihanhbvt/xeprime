@@ -20,6 +20,7 @@ import { DataTable, actionColumn, type DataTableColumn } from '@/components/data
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import {
   BANNER_SLOTS,
+  PARTNER_BANNER_SLOTS,
   PROMO_BANNER_SLOTS,
   formatBannerSize,
 } from '@/features/banners/banner-media';
@@ -46,7 +47,7 @@ const PLACEMENT_PARAM = 'placement';
 
 /**
  * Quản lý banner trang chủ — nơi DUY NHẤT tạo/sửa banner công khai, cho cả HAI vị trí: dải banner
- * đầu trang và banner khuyến mãi giữa trang (`placement`). Mỗi tab một danh sách, một thứ tự và
+ * đầu trang, banner khuyến mãi và ảnh nền dải đối tác (`placement`). Mỗi tab một danh sách, một thứ tự và
  * một trần hiển thị riêng; vị trí của banner đặt lúc tạo theo tab đang mở.
  *
  * Trang chủ lấy toàn bộ banner "đang hiển thị" theo thứ tự; cột "Trạng thái" phân biệt
@@ -65,6 +66,7 @@ export default function AdminBannersPage() {
   });
   const placement = filters.placement;
   const isPromo = placement === BANNER_PLACEMENT.PROMO;
+  const isPartner = placement === BANNER_PLACEMENT.PARTNER;
 
   const { message } = App.useApp();
   const { data, isError, refetch, isFetching } = useAdminBanners(placement);
@@ -227,6 +229,7 @@ export default function AdminBannersPage() {
         items={[
           { key: BANNER_PLACEMENT.HERO, label: t('tabs.hero') },
           { key: BANNER_PLACEMENT.PROMO, label: t('tabs.promo') },
+          { key: BANNER_PLACEMENT.PARTNER, label: t('tabs.partner') },
         ]}
       />
       {isPromo ? (
@@ -235,11 +238,20 @@ export default function AdminBannersPage() {
             {t('page.promoHint', {
               max: MAX_CONCURRENT_VISIBLE_BANNERS,
               desktop: formatBannerSize(PROMO_BANNER_SLOTS.desktop),
+              tablet: formatBannerSize(PROMO_BANNER_SLOTS.tablet),
               mobile: formatBannerSize(PROMO_BANNER_SLOTS.mobile),
             })}
           </p>
           <p className={styles.hint}>{t('page.promoComposition')}</p>
         </>
+      ) : isPartner ? (
+        <p className={styles.hint}>
+          {t('page.partnerHint', {
+            desktop: formatBannerSize(PARTNER_BANNER_SLOTS.desktop),
+            tablet: formatBannerSize(PARTNER_BANNER_SLOTS.tablet),
+            mobile: formatBannerSize(PARTNER_BANNER_SLOTS.mobile),
+          })}
+        </p>
       ) : (
         <>
           <p className={styles.hint}>
@@ -268,7 +280,11 @@ export default function AdminBannersPage() {
           isError && !data ? { title: t('page.loadError'), onRetry: () => void refetch() } : null
         }
         empty={{
-          title: isPromo ? t('page.emptyPromo') : t('page.empty'),
+          title: isPromo
+            ? t('page.emptyPromo')
+            : isPartner
+              ? t('page.emptyPartner')
+              : t('page.empty'),
           action: createButton,
         }}
       />

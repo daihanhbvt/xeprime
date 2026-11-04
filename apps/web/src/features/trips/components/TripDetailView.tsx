@@ -232,7 +232,7 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
         ].filter((line): line is string => line !== null)
       : data.deliveryRequested && data.deliveryAddress
         ? [data.deliveryAddress]
-        : [];
+        : agencyPickupLines(data.vehiclePickupPoint, t);
   const driverTel = data.driver ? telHref(data.driver.phone) : null;
 
   /*
@@ -791,3 +791,17 @@ const SUBTITLE_KEY = {
   // `as const` giữ kiểu LITERAL cho từng khoá (chú thích kiểu tường minh sẽ nới nó thành
   // `string` và `t()` mất bảo chứng); `satisfies` vẫn bắt lỗi nếu thiếu một chặng.
 } as const satisfies Record<CustomerTripStage, string>;
+
+/**
+ * Tự đến nhận xe: địa chỉ chi nhánh. Server chỉ trả địa chỉ CHÍNH XÁC khi chuyến đã có đơn
+ * (`customerSeesPickupAddress`, ADR 0077); trước đó là khu vực + lời giải thích.
+ */
+function agencyPickupLines(
+  point: CustomerTripDetail['vehiclePickupPoint'],
+  t: (key: 'pickup.exactAddressLater') => string,
+): string[] {
+  if (!point) return [];
+  const where = point.exact ? point.address : point.areaLabel;
+  const line = [point.branchName, where].filter(Boolean).join(LIST_SEPARATOR);
+  return point.exact ? [line] : [line, t('pickup.exactAddressLater')].filter(Boolean);
+}

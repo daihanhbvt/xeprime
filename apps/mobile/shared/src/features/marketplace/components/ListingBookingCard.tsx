@@ -1329,14 +1329,13 @@ function DeliveryToggle({
         bw={1}
         bc={active ? colors.primary : 'transparent'}
         bg={active ? colors.surface : 'transparent'}
-        style={active ? elevation.xs : undefined}
       >
         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
           {label}
         </Text>
         <Text
           col={subTone === 'danger' ? colors.danger : colors.success}
-          fos={fontSize.bodySm}
+          fos={fontSize.body}
           fontStyle="italic"
           ta="center"
         >

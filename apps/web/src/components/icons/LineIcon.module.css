@@ -34,6 +34,10 @@
   mask-image: url('/icons/menu/chevron-right.svg');
 }
 
+.filter {
+  mask-image: url('/icons/menu/filter.svg');
+}
+
 .globe {
   mask-image: url('/icons/menu/globe.svg');
 }

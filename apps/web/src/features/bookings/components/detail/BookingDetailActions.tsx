@@ -176,6 +176,7 @@ export function BookingDetailActionsProvider({
         : [];
     const slots = missingPhotoSlots(
       type === HANDOVER_TYPE.PICKUP ? handover?.pickup?.photos : handover?.return?.photos,
+      booking.vehicleType,
     );
     if (prep.length === 0 && slots.length === 0) {
       setAlert(null);

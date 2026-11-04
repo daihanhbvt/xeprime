@@ -1,15 +1,8 @@
-import {
-  Controller,
-  Get,
-  Header,
-  NotFoundException,
-  Query,
-  StreamableFile,
-} from '@nestjs/common';
+import { Controller, Get, Header, NotFoundException, Query, StreamableFile } from '@nestjs/common';
 import { ACCOUNT_REALM_VALUES, API_ERROR_CODE } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { guessAddressLine } from '@xeprime/domain';
+import { guessAddressLine, provinceCenter } from '@xeprime/domain';
 import { Public, Realms } from '../../common/decorators';
 import { PRIVATE_STATIC_MAP_CACHE_CONTROL } from '../../common/http-cache';
 import { storablePlaceId } from '../geo/geo-provider';
@@ -22,6 +15,7 @@ import {
   ReverseGeocodeQueryDto,
 } from './dto/place.dto';
 import { ProvincesService } from './provinces.service';
+import { WardsService } from './wards.service';
 
 /**
  * Tìm địa điểm / tra địa chỉ ngược cho ô nhập ĐỊA CHỈ — proxy qua backend.
@@ -46,6 +40,7 @@ export class PlacesController {
   constructor(
     private readonly geo: GeoService,
     private readonly provinces: ProvincesService,
+    private readonly wards: WardsService,
   ) {}
 
   /**
@@ -62,9 +57,50 @@ export class PlacesController {
   @ApiOperation({ summary: 'Gợi ý địa điểm theo chữ đang gõ (giới hạn trong Việt Nam)' })
   @ApiOkResponse({ type: PlaceSearchResultDto })
   async search(@Query() query: PlaceSearchQueryDto): Promise<PlaceSearchResultDto> {
-    const bias = query.lat != null && query.lng != null ? { lat: query.lat, lng: query.lng } : null;
-    const items = await this.geo.searchPlaces(query.q, bias);
-    return items ? { items, available: true } : { items: [], available: false };
+    const scope = await this.searchScope(query.provinceCode, query.wardCode);
+    const bias =
+      query.lat != null && query.lng != null
+        ? { lat: query.lat, lng: query.lng }
+        : provinceCenter(scope?.provinceCode);
+    /*
+     * Thử truy vấn CÓ ràng buộc trước; rỗng thì hỏi lại đúng chữ người dùng gõ. Autocomplete khớp
+     * theo TỪ, và tên xã mới (sau 01/07/2025) có thể chưa có trong dữ liệu bản đồ — một từ thừa là
+     * đủ làm rỗng cả danh sách. Lượt hỏi lại chỉ tốn khi lượt đầu không ra gì.
+     */
+    const scoped = scopedQuery(query.q, scope);
+    let items = await this.geo.searchPlaces(scoped, bias);
+    if (items && items.length === 0 && scoped !== query.q) {
+      items = await this.geo.searchPlaces(query.q, bias);
+    }
+    if (!items) return { items: [], available: false, outOfProvinceCount: 0 };
+    if (!scope) return { items, available: true, outOfProvinceCount: 0 };
+
+    /*
+     * Loại gợi ý NHẬN RA ĐƯỢC là thuộc tỉnh khác (ADR 0077). Tỉnh của một gợi ý đọc từ đoạn CUỐI
+     * dòng phụ qua bảng bí danh — bảng đó có cả tên trước sáp nhập, nên "Bình Dương" vẫn ra mã
+     * TP.HCM. Không quy được thì GIỮ: một gợi ý không rõ tỉnh không phải bằng chứng nó sai tỉnh.
+     */
+    const codes = await Promise.all(
+      items.map((it) => this.provinces.resolveCode(lastSegment(it.secondaryText))),
+    );
+    const kept = items.filter((_, i) => !codes[i] || codes[i] === scope.provinceCode);
+    return { items: kept, available: true, outOfProvinceCount: items.length - kept.length };
+  }
+
+  /** Tên tỉnh/xã đã chọn để ràng buộc truy vấn; mã sai hoặc xã khác tỉnh ⇒ bỏ phần đó. */
+  private async searchScope(
+    provinceCode: string | undefined,
+    wardCode: string | undefined,
+  ): Promise<SearchScope | null> {
+    if (!provinceCode) return null;
+    const province = await this.provinces.assertExists(provinceCode).catch(() => null);
+    if (!province) return null;
+    const [ward] = wardCode ? await this.wards.findByCodes([wardCode]) : [];
+    return {
+      provinceCode: province.code,
+      provinceName: province.name,
+      wardName: ward && ward.provinceCode === province.code ? ward.name : null,
+    };
   }
 
   /** Một gợi ý đã chọn → toạ độ + gợi ý tỉnh + gợi ý phần "số nhà, đường". */
@@ -80,6 +116,10 @@ export class PlacesController {
      * bảo khách "chọn lại" lúc đó là một vòng lặp. Giao diện chốt dòng đã chọn như địa chỉ gõ tay.
      */
     const res = await this.geo.placeDetailsOutcome(query.placeId);
+    const wardHint = (text: string | null) =>
+      query.provinceCode
+        ? this.wards.matchInProvince(query.provinceCode, text)
+        : Promise.resolve(null);
     if (res.outcome === 'unavailable') return { place: null, available: false };
     if (res.outcome === 'not_found') return { place: null, available: true };
     const { detail } = res;
@@ -101,6 +141,7 @@ export class PlacesController {
          */
         suggestedProvinceCode: await this.provinces.resolveCode(detail.administrativeArea),
         suggestedAddressLine: guessAddressLine(detail.formattedAddress) || null,
+        suggestedWardCode: await wardHint(detail.formattedAddress),
       },
     };
   }
@@ -160,9 +201,40 @@ export class PlacesController {
          * Tỉnh của điểm này, quy qua bảng bí danh như ở `detail` — chỉ là GỢI Ý. App native dùng
          * nó để đoán tỉnh từ vị trí thiết bị. Không quy được thì `null`.
          */
-        suggestedProvinceCode: await this.provinces.resolveCode(resolved.administrativeArea ?? null),
+        suggestedProvinceCode: await this.provinces.resolveCode(
+          resolved.administrativeArea ?? null,
+        ),
         suggestedAddressLine: guessAddressLine(resolved.formattedAddress) || null,
+        suggestedWardCode: null,
       },
     };
   }
+}
+
+interface SearchScope {
+  provinceCode: string;
+  provinceName: string;
+  wardName: string | null;
+}
+
+/**
+ * Truy vấn kèm tên xã + tỉnh đã chọn: "41 Đinh Văn Chấp" ở Cẩm Lệ, Đà Nẵng thành
+ * "41 Đinh Văn Chấp, Cẩm Lệ, Đà Nẵng" (ADR 0077). Người dùng tự gõ tên tỉnh rồi thì không nối lại.
+ */
+function scopedQuery(q: string, scope: SearchScope | null): string {
+  if (!scope) return q;
+  const lower = q.toLocaleLowerCase('vi');
+  const parts = [scope.wardName, scope.provinceName].filter(
+    (p): p is string => Boolean(p) && !lower.includes(p!.toLocaleLowerCase('vi')),
+  );
+  return parts.length > 0 ? [q, ...parts].join(', ') : q;
+}
+
+function lastSegment(text: string | null): string | null {
+  const seg = text
+    ?.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .pop();
+  return seg ?? null;
 }

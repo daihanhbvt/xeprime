@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HANDOVER_CONDITION, HANDOVER_PHOTO_SLOT, HANDOVER_TYPE } from '@xeprime/types';
+import { HANDOVER_CONDITION, HANDOVER_PHOTO_SLOT, HANDOVER_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import type { CustomerTripHandoverEvidence } from '../types';
@@ -49,6 +49,7 @@ const PICKUP: CustomerTripHandoverEvidence = {
   odometerKm: 45230,
   odometerMissing: false,
   condition: HANDOVER_CONDITION.NORMAL,
+  vehicleType: VEHICLE_TYPE.CAR,
   photos: [
     {
       slot: HANDOVER_PHOTO_SLOT.FRONT,
@@ -72,9 +73,9 @@ beforeEach(() => {
 
 const mount = (enabled = true) => render(<TripHandoverEvidence tripId="RQ1" enabled={enabled} />);
 
-/** Mở panel — đúng thao tác của người dùng, không chọc vào state. */
+/** Khối "Thông tin bàn giao" (Figma 22036:80113) luôn mở sẵn — không còn bước bấm mở. */
 function openPanel() {
-  fireEvent.click(screen.getByText('Biên bản bàn giao'));
+  expect(screen.getByText('Thông tin bàn giao')).toBeTruthy();
 }
 
 describe('Thu gọn sẵn', () => {
@@ -83,16 +84,13 @@ describe('Thu gọn sẵn', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('mặc định đóng: thấy tiêu đề, chưa thấy nội dung, và chưa nạp gì', () => {
+  it('mở sẵn: thấy tiêu đề và hai tab giao / nhận xe', () => {
     mount();
-    expect(screen.getByText('Biên bản bàn giao')).toBeTruthy();
-    expect(screen.queryByText('45.230 km')).toBeNull();
-    // Khoá chi phí: cả hai truy vấn đều nhận `enabled` false khi khối còn đóng.
-    expect(evidenceQ.calls.every((enabled) => enabled === false)).toBe(true);
-    expect(photosQ.calls.every((enabled) => enabled === false)).toBe(true);
+    expect(screen.getByText('Thông tin bàn giao')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Trước khi giao xe' })).toBeTruthy();
   });
 
-  it('mở ra mới nạp dữ liệu và ảnh', () => {
+  it('có mốc bàn giao thì nạp dữ liệu và ảnh ngay', () => {
     mount();
     openPanel();
     expect(evidenceQ.calls.at(-1)).toBe(true);
@@ -182,9 +180,9 @@ describe('Nói đúng sự thật của bản ghi', () => {
     evidenceQ.data = [{ ...PICKUP, photos: [] }];
     mount();
     openPanel();
-    expect(
-      screen.getByText('Gian hàng không lưu ảnh hiện trạng cho lần bàn giao này.'),
-    ).toBeTruthy();
+    // Figma 22036:80113: lưới ô cố định, ô không có ảnh hiện chỗ trống "không chụp góc này".
+    expect(screen.getAllByTitle('Chủ xe không chụp góc này').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('img', { name: /Ảnh hiện trạng/ })).toBeNull();
   });
 });
 

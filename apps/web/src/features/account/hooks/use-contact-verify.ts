@@ -106,6 +106,9 @@ export function useContactVerify(channel: ContactChannel) {
     error: send.error ?? verify.error,
     send: (identifier: string) => send.mutate(identifier),
     verify: (code: string) => verify.mutate(code),
+    /** Bản chờ kết quả — cho form tự dựng popup mã (đăng ký đối tác bằng Google/Facebook). */
+    sendAsync: (identifier: string) => send.mutateAsync(identifier),
+    verifyAsync: (code: string) => verify.mutateAsync(code),
     reset,
     editIdentifier,
   };

@@ -1,4 +1,5 @@
 import { useTranslations } from 'use-intl';
+import { usePathname } from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -14,6 +15,9 @@ import { ContactVerifySheet } from '@/features/account/components/ContactVerifyS
 import { useCurrentUser, useLogout } from './hooks/use-auth';
 
 const noop = () => undefined;
+
+/** Hai route của app Partner dựng `PartnerSignupScreen` — xem `manage/app/register.tsx`. */
+const REGISTER_PATHS = new Set(['/register', '/manage/register']);
 
 /**
  * HOÀN THIỆN HỒ SƠ ở APP PARTNER — tài khoản đối tác phải có SĐT ĐÃ XÁC MINH (ADR 0060 điều 5).
@@ -37,8 +41,19 @@ const noop = () => undefined;
 export function AccountPhoneGate() {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
+  const pathname = usePathname();
 
-  const needsPhone = user != null && user.realm !== ACCOUNT_REALM.PLATFORM && !user.phoneVerified;
+  /*
+   * Màn ĐĂNG KÝ (`/register`, `/manage/register`) không bật tấm: chọn tuyến xem trước thoải mái,
+   * form đăng ký tự hỏi SĐT ở ô "Xác thực" như luồng thường (`PartnerSignupScreen` — nhánh tài
+   * khoản mạng xã hội). Server vẫn là chốt: chưa có SĐT xác minh thì không mở được gian hàng.
+   */
+  const onRegisterScreen = REGISTER_PATHS.has(pathname);
+  const needsPhone =
+    user != null &&
+    user.realm !== ACCOUNT_REALM.PLATFORM &&
+    !user.phoneVerified &&
+    !onRegisterScreen;
   if (!needsPhone) return null;
 
   return (

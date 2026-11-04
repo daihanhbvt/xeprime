@@ -70,6 +70,7 @@
   --xp-color-warning-bg: #fff7ed;
   --xp-color-error: #d92d20;
   --xp-color-error-bg: #fef3f2;
+  --xp-color-error-border: #fda29b;
   --xp-color-info: #2563eb;
   --xp-color-info-bg: #eff6ff;
   /* Bậc "đang chạy" (STATUS_COLOR.PROCESSING) — lý do chọn màu ở XP_TOKENS. */
@@ -172,6 +173,8 @@
   --xp-line-height-body-sm: 18px;
   --xp-font-size-label: 12px;
   --xp-line-height-label: 18px;
+  --xp-font-size-caption: 10px;
+  --xp-line-height-caption: 14px;
   /* Chưa chuyển (v2 không có 11px): native đọc bậc này cho dòng meta — đổi cùng dev mobile. */
   --xp-font-size-overline: 11px;
   --xp-line-height-overline: 16px;
@@ -224,15 +227,15 @@
   --xp-color-success-border: #6ce9a6;
   --xp-color-warning-border: #fec84b;
   /* Thẻ đơn/yêu cầu site partner (Figma Partner-XePrime, 02/11/2026): viền nhãn dịch vụ "Tự lái",
-     nút Zalo (`Status/information-300`) và nút "Từ chối" (`Status/error-300`). */
+     nút Zalo (`Status/information-300`); viền nút "Từ chối" (`Status/error-300`) khai cùng nhóm lỗi ở trên. */
   --xp-color-info-border: #84caff;
-  --xp-color-error-border: #fda29b;
   /* Viên "Thuê xe dài hạn" (`Status/pink-*`, Partner-XePrime 02/11/2026). */
   --xp-color-pink: #dd2590;
   --xp-color-pink-bg: #fdf2fa;
   --xp-color-pink-border: #faa7e0;
   --xp-color-warning-strong: #ec4a0a;
   --xp-color-info-strong: #1570ef;
+  --xp-color-star: #fec84b;
   --xp-color-warning-subtle: #fffaeb;
   --xp-market-footer-bg: #060403;
   --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
@@ -262,10 +265,14 @@
   --xp-border-radius-chip: 8px;
   --xp-border-radius-control: 12px;
   --xp-border-radius-card: 16px;
+  --xp-border-radius-banner: 20px;
+  --xp-promo-banner-mobile-width: 340px;
+  --xp-promo-banner-mobile-height: 140px;
   --xp-space-2: 2px;
   --xp-space-6: 6px;
   --xp-space-12: 12px;
   --xp-space-20: 20px;
+  --xp-space-28: 28px;
   --xp-space-40: 40px;
   --xp-space-48: 48px;
   --xp-space-64: 64px;
@@ -282,9 +289,19 @@
   --xp-color-glass-strong: rgba(255, 255, 255, 0.32);
   --xp-color-glass-faint: rgba(255, 255, 255, 0.05);
   --xp-color-glass-gold: rgba(254, 237, 210, 0.2);
+  --xp-color-glass-light: rgba(255, 255, 255, 0.2);
+  --xp-color-glass-light-strong: rgba(255, 255, 255, 0.35);
+  --xp-color-app-banner-border: #ffd891;
+  --xp-color-app-badge-border: #fcebaf;
   --xp-color-scrim-light: rgba(16, 24, 40, 0.1);
   --xp-gradient-promo-dark: linear-gradient(to left, rgba(0, 0, 0, 0) 0%, #000000 100%);
   --xp-gradient-promo-light: linear-gradient(to left, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+  --xp-gradient-partner-shade: linear-gradient(to left, rgba(64, 64, 64, 0) 7.994%, rgba(0, 0, 0, 0.9) 100%);
+  --xp-space-partner-mb-y: 36px;
+  --xp-font-size-partner-mb-lead: 26px;
+  --xp-line-height-partner-mb-lead: 34px;
+  --xp-font-size-partner-mb-accent: 27px;
+  --xp-line-height-partner-mb-accent: 36px;
   --xp-gradient-destination-shade:
     linear-gradient(
       180deg,

@@ -47,11 +47,12 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Trang chủ Marketplace — design v2 (Figma `19695:40693`, ADR 0062).
  *
- * Thứ tự khối: dải banner admin (khổ cũ, giữ nguyên khi ráp design) → thẻ tìm kiếm đè mép dưới dải banner → Vì sao chọn
- * XePrime + Xe nổi bật → hai banner khuyến mãi → Loại xe → Địa điểm + Gian hàng nổi bật → dải
+ * Thứ tự khối (Figma "Homepage - Updated" `21965:5169`): dải banner admin (khổ cũ, giữ nguyên khi ráp design) → thẻ
+ * tìm kiếm đè mép dưới dải banner → hai banner khuyến mãi (mobile: dưới Xe nổi bật) → Xe nổi bật + Vì sao chọn
+ * XePrime → Loại xe → Địa điểm + Gian hàng nổi bật → dải
  * đối tác (tràn ngang) → Các bước thuê xe → Đánh giá + banner ứng dụng (nền xám nhạt). Mỗi khối
- * đệm trên/dưới 80px; khối khuyến mãi (banner admin, vị trí `promo`) dính vào khối trên nên chỉ đệm
- * dưới, và không có banner khuyến mãi nào thì khối không tồn tại.
+ * đệm trên/dưới 80px; khối khuyến mãi (banner admin, vị trí `promo`) cách thẻ tìm kiếm 64, và
+ * không có banner khuyến mãi nào thì khối không tồn tại.
  *
  * Page là Server Component: banner fetch server-side (cache 60s) nên slide đầu có trong HTML —
  * LCP không chờ client island. Mỗi khu còn lại là island độc lập tự lo skeleton/lỗi của mình —
@@ -65,9 +66,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * `missing-suspense-with-csr-bailout` và `next build` fail — không phải cảnh báo, là lỗi build.
  */
 export default async function MarketplacePage() {
-  const [banners, promoBanners, catalog] = await Promise.all([
+  const [banners, promoBanners, partnerBanners, catalog] = await Promise.all([
     fetchBannersServer(BANNER_PLACEMENT.HERO),
     fetchBannersServer(BANNER_PLACEMENT.PROMO),
+    fetchBannersServer(BANNER_PLACEMENT.PARTNER),
     fetchCatalogServer(resolveAppLocale(await getLocale())),
   ]);
   const showcaseTypes = homeShowcaseBodyTypes(catalog[CATALOG_TYPE.BODY_TYPE]);
@@ -91,18 +93,22 @@ export default async function MarketplacePage() {
       {/* Các island client tự dựng khung chờ của mình ngay khi gắn vào; fallback của Suspense chỉ
           tồn tại trong HTML tĩnh nên để rỗng là đúng, không phải bỏ sót. */}
       <div className={cx(styles.container, styles.block, styles.intro)}>
-        <WhyChooseUs />
         <Suspense fallback={null}>
           <VehiclePreview />
         </Suspense>
+        {/*
+          Banner khuyến mãi do admin quản lý — chưa có banner nào đang hiển thị thì không dựng khối.
+          DOM đặt nó DƯỚI "Xe tiêu biểu" (vị trí mobile, người dùng chốt 03/11/2026); desktop/tablet
+          kéo nó lên đầu khối bằng `order` — ngay dưới thẻ tìm kiếm như Figma `21965:5288`. Một
+          carousel duy nhất, không dựng hai bản.
+        */}
+        {promoBanners.length > 0 ? (
+          <Reveal className={styles.promo}>
+            <PromoBanners banners={promoBanners} />
+          </Reveal>
+        ) : null}
+        <WhyChooseUs />
       </div>
-
-      {/* Banner khuyến mãi do admin quản lý — chưa có banner nào đang hiển thị thì không dựng khối. */}
-      {promoBanners.length > 0 ? (
-        <Reveal className={cx(styles.container, styles.blockBottom)}>
-          <PromoBanners banners={promoBanners} />
-        </Reveal>
-      ) : null}
 
       {/* Kiểu dáng bật "Hiện ở trang chủ" trong Danh mục lọc — chưa có mục nào thì không dựng khối. */}
       {showcaseTypes.length > 0 ? (
@@ -119,7 +125,7 @@ export default async function MarketplacePage() {
       </div>
 
       <Reveal>
-        <PartnerBanner />
+        <PartnerBanner banner={partnerBanners[0] ?? null} />
       </Reveal>
 
       <div className={cx(styles.container, styles.block)}>

@@ -82,6 +82,9 @@
     "nameMin": "At least 2 characters",
     "provinceRequired": "Select the branch's province",
     "provinceInvalid": "Invalid province code",
-    "phoneInvalid": "Invalid phone number"
+    "phoneInvalid": "Invalid phone number",
+    "wardRequired": "Choose a ward",
+    "wardInvalid": "Invalid ward",
+    "addressLineRequired": "Enter the house number and street"
   }
 }

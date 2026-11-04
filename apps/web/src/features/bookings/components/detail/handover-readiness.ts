@@ -1,6 +1,6 @@
 import {
-  HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_PREP_ITEM,
+  handoverPhotoSlotsFor,
   type HandoverPhotoSlot,
   type HandoverPrepItem,
 } from '@xeprime/types';
@@ -67,10 +67,14 @@ export function prepRowStates(
   ];
 }
 
-/** Góc ảnh bắt buộc còn trống của một biên bản (chưa có biên bản = trống cả năm). */
+/**
+ * Góc ảnh bắt buộc còn trống của một biên bản (chưa có biên bản = trống cả bộ). Bộ góc theo LOẠI
+ * XE (`handoverPhotoSlotsFor`): xe máy không có trái/phải, nên không bao giờ bị báo thiếu hai góc đó.
+ */
 export function missingPhotoSlots(
   photos: readonly { slot: string }[] | undefined,
+  vehicleType: string | null | undefined,
 ): HandoverPhotoSlot[] {
   const filled = new Set((photos ?? []).map((photo) => photo.slot));
-  return HANDOVER_PHOTO_SLOT_VALUES.filter((slot) => !filled.has(slot));
+  return handoverPhotoSlotsFor(vehicleType).filter((slot) => !filled.has(slot));
 }

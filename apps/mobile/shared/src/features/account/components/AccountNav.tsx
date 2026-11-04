@@ -245,21 +245,21 @@ function AccountNavRow({
         {NAV_LINE_ICON[item.key] ? (
           <LineIcon
             name={NAV_LINE_ICON[item.key]!}
-            size={iconSize.md}
-            color={active ? colors.primaryActive : colors.placeholder}
+            size={iconSize.lg}
+            color={active ? colors.primary : colors.placeholder}
           />
         ) : (
           <Ionicons
             name={item.icon}
-            size={iconSize.md}
-            color={active ? colors.primaryActive : colors.placeholder}
+            size={iconSize.lg}
+            color={active ? colors.primary : colors.placeholder}
           />
         )}
         <Text
           f={1}
-          col={active ? colors.primaryActive : colors.textMuted}
+          col={active ? colors.primary : colors.textMuted}
           fos={fontSize.body}
-          fow={active ? fontWeight.semibold : fontWeight.medium}
+          fow={fontWeight.medium}
           numberOfLines={1}
         >
           {label}
@@ -267,7 +267,7 @@ function AccountNavRow({
         {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
         {/* Figma: chỉ "Trở thành chủ xe" có mũi tên — nó dẫn RA khỏi khu tài khoản. */}
         {item.key === 'becomeOwner' ? (
-          <LineIcon name="arrow-right" size={iconSize.md} color={colors.placeholder} />
+          <LineIcon name="arrow-right" size={iconSize.lg} color={colors.placeholder} />
         ) : null}
       </XStack>
     </Pressable>

@@ -5,23 +5,24 @@ import { Linking, Text as NativeText, Pressable, StyleSheet } from 'react-native
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SUPPORT_HOTLINE } from '@xeprime/types';
-import { XP_TOKENS } from '@xeprime/ui';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { images, logoWidth } from '@/assets';
+import { webAssetUrl } from '@/lib/web-base-url';
+import type { PublicBanner } from '../../api';
 import { layout } from '@/theme/layout';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { fontSize, fontWeight, gradients, market, space } from '@/theme/tokens';
 
 const BENEFITS = ['income', 'support', 'customers'] as const;
-/** Logo rộng 220 ở ≤1024px (`.logo` web). */
-const LOGO_WIDTH = 220;
+/** Logo rộng 164 (Figma MB `22059:15628`). */
+const LOGO_WIDTH = 164;
 const logoRatio = logoWidth(1000) / 1000;
 /*
  * Khối này luôn là TRANH TỐI ở cả hai chế độ (như web), nên màu đọc thẳng token theme-độc-lập
  * (`XP_TOKENS` / `market`), không qua `useColors()`.
  */
-/** Ô kính vàng 24px của dấu tích (`.check`: `glass-strong` / `glass-gold`), tích `primary`. */
+/** Ô kính vàng 24px của dấu tích (`.check`: nền `glass-gold`, bo 12, không viền — Figma `21965:5348`), tích `primary`. */
 const CHECK = 24;
-const GLASS_STRONG = XP_TOKENS['color-glass-strong'];
 const GLASS_GOLD = XP_TOKENS['color-glass-gold'];
 const CHECK_COLOR = XP_TOKENS['color-primary'];
 /** Điểm đầu của `gradient-text-gold` (= `primary-accent`) — RN không tô gradient lên chữ xuống dòng. */
@@ -53,28 +54,48 @@ const styles = StyleSheet.create({
  * (ADR 0051 điều 3 · ADR 0053). Hiện cho MỌI người như web: realm khách không có khu làm việc.
  */
 /** `onRegister` vắng ⇒ không có nút "Đăng ký ngay" (app khách bỏ nút này — người dùng chốt 29/10/2026). */
-export function PartnerBanner({ onRegister }: { onRegister?: () => void } = {}) {
+export function PartnerBanner({
+  onRegister,
+  banner,
+}: {
+  onRegister?: () => void;
+  /** Ảnh nền do admin cấu hình (vị trí `partner`) — vắng thì dùng ảnh mặc định của bản vẽ MB. */
+  banner?: PublicBanner | null;
+} = {}) {
   const t = useTranslations('Home.partner');
 
   /*
    * Web ≤1024px: dải TRÀN hết bề ngang (không bo góc), đệm 40/16, các khối cách 24, thứ tự
-   * logo → tiêu đề → quyền lợi → nút → trợ giúp (`PartnerBanner.module.css`).
+   * logo → tiêu đề → nút → quyền lợi → trợ giúp (Figma MB) (`PartnerBanner.module.css`).
    */
   return (
     <YStack
       mx={-layout.screenX}
       ov="hidden"
       bg={market.inverse}
-      px={layout.screenX}
-      py={space.xl + space.sm}
-      gap={space.lg}
+      // Figma MB: đệm hai bên 24 (lề màn 16 + 8).
+      px={layout.screenX + space.sm}
+      py={toPx(XP_TOKENS['space-partner-mb-y'])}
+      gap={space.md}
       ai="flex-start"
     >
       <Image
-        source={images.homePartnerBackdrop}
+        source={
+          banner
+            ? { uri: webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl) }
+            : images.homePartnerBackdrop
+        }
         style={styles.backdrop}
         contentFit="cover"
         accessibilityElementsHidden
+      />
+      {/* `gradient-partner-shade` (Figma `21965:5338`): đen 90% ở mép trái nhạt dần tới 8% mép phải. */}
+      <LinearGradient
+        colors={['rgba(0, 0, 0, 0.9)', 'rgba(64, 64, 64, 0)']}
+        locations={[0, 0.92006]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.backdrop}
       />
 
       <Image
@@ -85,12 +106,24 @@ export function PartnerBanner({ onRegister }: { onRegister?: () => void } = {}) 
       />
 
       {/* Tiêu đề h1: phần dẫn màu chữ-trên-nền-tối, phần nhấn vàng in hoa đậm (`gradient-text-gold`). */}
-      <Text fos={fontSize.h1} fow={fontWeight.semibold} accessibilityRole="header">
-        <Text col={market.onDark}>{t('titleLead')} </Text>
-        <Text col={TITLE_ACCENT} fow={fontWeight.bold}>
+      <YStack gap={space.xs} accessibilityRole="header">
+        <Text
+          col={market.onDark}
+          fos={toPx(XP_TOKENS['font-size-partner-mb-lead'])}
+          lh={toPx(XP_TOKENS['line-height-partner-mb-lead'])}
+          fow={fontWeight.semibold}
+        >
+          {t('titleLead')}
+        </Text>
+        <Text
+          col={TITLE_ACCENT}
+          fos={toPx(XP_TOKENS['font-size-partner-mb-accent'])}
+          lh={toPx(XP_TOKENS['line-height-partner-mb-accent'])}
+          fow={fontWeight.bold}
+        >
           {t('titleAccent').toLocaleUpperCase()}
         </Text>
-      </Text>
+      </YStack>
 
       <YStack gap={space.md} accessibilityLabel={t('benefitsLabel')}>
         {BENEFITS.map((key) => (
@@ -99,15 +132,13 @@ export function PartnerBanner({ onRegister }: { onRegister?: () => void } = {}) 
               w={CHECK}
               h={CHECK}
               br={CHECK / 2}
-              bw={1}
-              bc={GLASS_STRONG}
               bg={GLASS_GOLD}
               ai="center"
               jc="center"
             >
               <Ionicons name="checkmark" size={14} color={CHECK_COLOR} />
             </YStack>
-            <Text col={market.onDark} fos={fontSize.bodyLg} fow={fontWeight.medium}>
+            <Text col={market.onDark} fos={fontSize.body} lh={22} fow={fontWeight.medium}>
               {t(`benefits.${key}`)}
             </Text>
           </XStack>
@@ -135,7 +166,7 @@ export function PartnerBanner({ onRegister }: { onRegister?: () => void } = {}) 
       ) : null}
 
       <NativeText
-        style={{ color: market.onDarkMuted, fontSize: fontSize.body, fontFamily: FONT_FAMILY.body }}
+        style={{ color: market.onDark, fontSize: fontSize.bodySm, lineHeight: 18, fontFamily: FONT_FAMILY.body }}
       >
         {t.rich('help', {
           phone: SUPPORT_HOTLINE.display,

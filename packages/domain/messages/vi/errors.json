@@ -29,6 +29,8 @@
     "BANNER_VISIBLE_LIMIT_EXCEEDED": "Đã đủ số banner được hiển thị cùng lúc. Tắt hoặc dời lịch một banner khác trước.",
     "VALIDATION_FAILED": "Dữ liệu chưa hợp lệ. Kiểm tra lại các ô đã nhập.",
     "MONEY_STEP_1000": "Giá phải là bội số 1.000đ",
+    "WARD_NOT_IN_PROVINCE": "Phường/xã đã chọn không thuộc tỉnh/thành này. Chọn lại phường/xã.",
+    "WARD_REQUIRED": "Chọn phường/xã cho địa chỉ.",
     "NOT_FOUND": "Không tìm thấy dữ liệu.",
     "CONFLICT": "Dữ liệu vừa thay đổi ở nơi khác. Tải lại rồi thử lại.",
     "REVIEW_EDIT_LIMIT": "Bạn đã dùng lượt chỉnh sửa đánh giá duy nhất.",

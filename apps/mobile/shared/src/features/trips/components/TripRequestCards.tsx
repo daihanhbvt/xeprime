@@ -289,7 +289,7 @@ export function TripRequestStatusCard({
     <YStack
       gap={space.md}
       p={layout.cardPad}
-      br={radius.lg}
+      br={radius.card}
       bw={1}
       // = web `.statusConfirmed`: viền LIỀN `success-accent`, nền `success-subtle`.
       bc={confirmed ? colors.successAccent : colors.border}
@@ -309,7 +309,8 @@ export function TripRequestStatusCard({
           </TripRequestPill>
           <Text
             col={colors.text}
-            fos={fontSize.bodyLg}
+            fos={fontSize.body}
+            lh={22}
             fow={fontWeight.semibold}
             accessibilityRole="header"
           >
@@ -432,24 +433,23 @@ function ScheduleRow({
   return (
     <XStack ai={place ? 'flex-start' : 'center'} gap={place ? space.sm : space.md}>
       <YStack
-        w={32}
-        h={32}
+        w={36}
+        h={36}
         br={radius.pill}
         ai="center"
         jc="center"
-        bw={1}
-        bc={colors.primaryMuted}
         bg={colors.surfaceSelected}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Ionicons name={icon} size={iconSize.sm} color={colors.primary} />
+        <Ionicons name={icon} size={iconSize.lg} color={colors.primary} />
       </YStack>
       {/* Cỡ chữ như thẻ chuyến của màn đặt xe (người dùng chốt 28/10/2026): nhãn 12, giá trị 14. */}
-      <YStack f={1} gap={2}>
+      <YStack f={1} gap={0}>
         <Text
           col={place ? colors.text : colors.placeholder}
           fos={fontSize.bodySm}
+          lh={18}
           fow={place ? fontWeight.semibold : fontWeight.regular}
         >
           {label}

@@ -28,7 +28,7 @@ import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { fetchCurrentUser, registerWithPassword } from '@/services/auth.service';
+import { fetchCurrentUser, registerWithPassword, setPassword } from '@/services/auth.service';
 import { queryKeys } from '@/services/query-keys';
 import { registerShop } from '../api';
 import { PartnerAccountFields } from './PartnerAccountFields';
@@ -68,6 +68,10 @@ interface PartnerSignupFormProps {
  *    chính mã đó trong lượt đăng ký (ADR 0060) nên gọi API thẳng cũng không lách được.
  * 2. `POST /tenants` kèm `registrationTrack`.
  *
+ * Có phiên nhưng chưa có SĐT xác minh (vào bằng Google/Facebook) ⇒ cùng phần tài khoản, trừ họ
+ * tên: mã OTP gắn số vào tài khoản đang đăng nhập (`/users/me/phone/*`), bước 1 thành
+ * `POST /auth/password/set` nếu tài khoản chưa có mật khẩu.
+ *
  * Bước 1 xong mà bước 2 hỏng: phiên ĐÃ có, nên lần render sau `withAccount = false` — phần tài
  * khoản biến mất, giá trị đã gõ còn nguyên, bấm lại chỉ chạy bước 2. Không bao giờ tạo tài khoản
  * thứ hai; một tài khoản đối tác đã có gian hàng thì server trả 409 (ADR 0053).
@@ -86,6 +90,20 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
   /** Chưa có phiên ⇒ form tạo luôn tài khoản. Đây là DỮ LIỆU của schema (`.when`). */
   const withAccount = !user;
 
+  /*
+   * Có phiên nhưng tài khoản CHƯA có SĐT xác minh (vào bằng Google/Facebook): form hỏi SĐT ở ô
+   * "Xác thực" + mật khẩu y như luồng thường, chỉ khác là không tạo tài khoản mới mà gắn vào tài
+   * khoản đang đăng nhập. CHỐT theo ID tài khoản: xác minh xong `/auth/me` làm mới thành
+   * `phoneVerified = true`, và phần tài khoản không được biến mất giữa lúc người dùng đang điền.
+   * (Điều chỉnh state lúc render — mẫu "lưu giá trị trước đó" của React, không cần effect.)
+   */
+  const [attachFor, setAttachFor] = useState<string | null>(null);
+  if (user && !user.phoneVerified && attachFor !== user.id) setAttachFor(user.id);
+  const attachToAccount = user != null && attachFor === user.id;
+  /** Đã `POST /auth/password/set` trong lượt trước (rồi `POST /tenants` hỏng) — không đặt lại. */
+  const [passwordSet, setPasswordSet] = useState(false);
+  const needsPassword = attachToAccount && !user.hasPassword && !passwordSet;
+
   const resolver = useValidationResolver<PartnerSignupValues>(
     partnerSignupSchema,
     'ShopOnboarding.validation',
@@ -95,6 +113,7 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
     resolver,
     defaultValues: {
       withAccount,
+      needsPassword,
       registrationTrack: track,
       displayName: '',
       password: '',
@@ -123,11 +142,12 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
    */
   useEffect(() => {
     setValue('withAccount', withAccount);
+    setValue('needsPassword', needsPassword);
     if (!user) return;
     if (!getValues('name').trim()) setValue('name', user.displayName ?? '');
     if (!getValues('phone').trim() && user.phone) setValue('phone', user.phone);
     if (!getValues('email').trim() && user.email) setValue('email', user.email);
-  }, [withAccount, user, setValue, getValues]);
+  }, [withAccount, needsPassword, user, setValue, getValues]);
 
   const submit = async (values: PartnerSignupValues) => {
     if (busy.current) return;
@@ -135,7 +155,7 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
      * Tạo tài khoản mà SĐT CHƯA xác thực: không chặn nút — mở popup nhập mã (gửi mã như nút
      * "Xác thực"). Nhập đúng mã thì `PartnerAccountFields` gọi `continueSubmit` và form tự gửi tiếp.
      */
-    if (values.withAccount && !values.phoneVerified) {
+    if ((values.withAccount || attachToAccount) && !values.phoneVerified) {
       verifyRef.current?.();
       return;
     }
@@ -151,6 +171,11 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
           code: values.otpCode,
         });
         await refreshAfterAuth(created);
+      } else if (values.needsPassword) {
+        // SĐT đã gắn vào tài khoản lúc xác thực (`/users/me/phone/verify`); còn mật khẩu.
+        await setPassword(values.password);
+        setPasswordSet(true);
+        setValue('needsPassword', false);
       }
       // Tuyến hoa hồng tạo tài khoản mới: họ tên CHÍNH LÀ tên hồ sơ chủ xe — không hỏi lại.
       const name = (values.name.trim() || values.displayName.trim()).trim();
@@ -205,7 +230,8 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
       placeholder={t('signup.fields.phone.placeholder')}
       autoComplete="tel"
       prefix={<PhoneOutlined />}
-      help={t('signup.fields.phone.help')}
+      // Chỉ hiện khi tài khoản đã có SĐT xác minh: ô này là SĐT LIÊN HỆ gian hàng, không phải số đăng nhập.
+      help={t('form.fields.phone.shopHelp')}
       required
     />
   );
@@ -268,7 +294,7 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
         <form className={styles.form} onSubmit={onSubmit} noValidate>
           {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
-          {withAccount ? (
+          {withAccount || attachToAccount ? (
             <>
               <h3 className={styles.sectionTitle}>{t('signup.accountSection')}</h3>
               <div className={styles.grid}>
@@ -276,6 +302,8 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
                   control={control}
                   verifyRef={verifyRef}
                   onVerified={continueSubmit}
+                  attachToAccount={attachToAccount}
+                  askPassword={withAccount || needsPassword}
                 />
               </div>
             </>
@@ -314,7 +342,7 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
               provinceRequired
               prefillRememberedProvince
             />
-            {withAccount ? null : contactFields}
+            {withAccount || attachToAccount ? null : contactFields}
           </div>
 
           <p className={styles.privacy}>

@@ -107,6 +107,7 @@ export function HandoverSupplementDialog({
             {current ? (
               <HandoverPhotoGrid
                 bookingId={context.bookingId}
+                vehicleType={context.vehicleType}
                 type={current.type}
                 photos={shown?.photos ?? []}
                 canViewFiles={canViewFiles}

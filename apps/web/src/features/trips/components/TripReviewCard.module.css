@@ -32,7 +32,7 @@
 
 .comment {
   margin: 0;
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
   line-height: var(--xp-line-height-body-lg);
   overflow-wrap: anywhere;

@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { HostMetrics as HostMetricsShape } from '@xeprime/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { HomeCardAvatar } from '@/features/marketplace/components/home/HomeCardAvatar';
 import { Card } from '@/components/ui/Card';
 import { VerifiedName } from '@/components/ui/VerifiedName';
 import { HostMetrics } from '@/features/marketplace/components/HostMetrics';
@@ -312,16 +313,20 @@ function InlineShopCard({
         p={space.md}
         gap={space.md}
         bw={1}
-        bc={scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
+        // Figma "Owner Section": gian hàng viền vàng, chủ xe cá nhân viền xám.
+        bc={!shop.verified ? colors.border : scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
         br={radius.card}
         bg={colors.surface}
       >
         <XStack ai="center" gap={12}>
-          <Avatar
+          {/* Cùng dấu tích xanh của thẻ trang chủ (`HomeCardAvatar`), không dùng dấu cam của `Avatar`. */}
+          <HomeCardAvatar
             name={shop.name}
             url={shop.logoUrl}
             size={48}
-            verifiedLabel={shop.verified ? t('header.verified') : undefined}
+            verified={shop.verified}
+            markDisc={16}
+            markIcon={12}
           />
           <YStack f={1} minWidth={0}>
             <Text col={colors.placeholder} fos={fontSize.body}>
@@ -340,7 +345,7 @@ function InlineShopCard({
             {rating != null ? (
               <XStack ai="center" gap={space.xs}>
                 <Ionicons name="star" size={20} color={market.star} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.regular}>
                   {fmt.rating(rating)}
                   {shop.ratingCount ? (
                     <Text col={colors.placeholder} fow={fontWeight.regular}>
@@ -356,7 +361,7 @@ function InlineShopCard({
               <XStack ai="center" gap={space.sm}>
                 {/* Web `TripsIcon`: biểu đồ cột viền xanh `success`. */}
                 <Ionicons name="stats-chart-outline" size={18} color={colors.success} />
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.text} fos={fontSize.body}>
                   {t('card.trips', { count: trips.display, plus: trips.approximate ? '+' : '' })}
                 </Text>
               </XStack>

@@ -5,6 +5,7 @@ import {
   APPROVAL_TARGET_TYPE,
   BOOKING_STATUS,
   BRANCH_STATUS,
+  CATALOG_TYPE,
   DOCUMENT_STATUS,
   SELLER_ENTITY_TYPE,
   SELLER_PROFILE_STATUS,
@@ -21,6 +22,7 @@ import {
   hasVehicleServiceSettings,
   STOREFRONT_KIND,
   hasVerifiedStorefront,
+  customerSeesPickupAddress,
   provinceRegionPeers,
   storefrontAllowsPublicChat,
   type PaginationMeta,
@@ -50,17 +52,21 @@ import type {
   PublicShopDto,
   RecommendedListingQueryDto,
   RecommendedListingsDto,
+  PublicShopBrandDto,
   PublicShopListQueryDto,
   PublicShopSummaryDto,
   ShopListingQueryDto,
   ShopTrustDto,
 } from './dto/public-listing.dto';
-import { branchMapTarget } from '../../common/address-view';
+import { approximatePoint, branchMapTarget, publicAreaLabel } from '../../common/address-view';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
 import { searchTokens } from '@xeprime/domain';
 import { hostsMatchingAllTokens, resolveKeyword } from './keyword-match';
 import { completedTripsByVehicle, listingCardSelect, toListingCard } from './listing-card';
+
+/** Số logo hãng tối đa trên thẻ gian hàng (Figma: 3 logo + "+N"). */
+const SHOP_CARD_BRAND_LIMIT = 3;
 import {
   buildListingWhere,
   buildListingWhereSql,
@@ -720,9 +726,10 @@ export class PublicListingsService {
     ]);
 
     const tenantIds = rows.map((t) => t.id);
-    const [tripsByTenant, coverByTenant] = await Promise.all([
+    const [tripsByTenant, coverByTenant, brandsByTenant] = await Promise.all([
       this.completedTripsByTenant(tenantIds),
       this.featuredVehicleImageByTenant(tenantIds, visibleListing),
+      this.brandsByTenant(tenantIds, visibleListing),
     ]);
 
     return {
@@ -741,6 +748,8 @@ export class PublicListingsService {
           bio: t.profile?.bio?.trim() || null,
           completedTripCount: tripsByTenant.get(t.id) ?? 0,
           featuredVehicleImageUrl: coverByTenant.get(t.id) ?? null,
+          brands: brandsByTenant.get(t.id)?.top ?? [],
+          brandCount: brandsByTenant.get(t.id)?.count ?? 0,
         };
       }),
       meta: paginationMeta(paging, total),
@@ -785,6 +794,61 @@ export class PublicListingsService {
   }
 
   /**
+   * Hãng xe của MỖI gian hàng trên một trang — dãy logo trên thẻ "Gian hàng nổi bật" (Figma
+   * `21965:28698`). Hai phép gộp cho cả trang, không N+1: đếm xe công khai theo (gian hàng, hãng),
+   * rồi tra logo trong danh mục `vehicle_brand` theo KHOÁ hoặc NHÃN (`public_listings.brand` mang
+   * cả hai kiểu); hãng nhập lẻ không có trong danh mục vẫn được đếm, chỉ là `iconUrl = null`.
+   * Trả tối đa `SHOP_CARD_BRAND_LIMIT` hãng nhiều xe nhất + tổng số hãng cho nhãn "+N".
+   */
+  private async brandsByTenant(
+    tenantIds: string[],
+    visibleListing: Prisma.PublicListingWhereInput,
+  ): Promise<Map<string, { top: PublicShopBrandDto[]; count: number }>> {
+    if (tenantIds.length === 0) return new Map();
+    const groups = await this.prisma.publicListing.groupBy({
+      by: ['tenantId', 'brand'],
+      where: { ...visibleListing, tenantId: { in: tenantIds }, brand: { not: null } },
+      _count: { _all: true },
+    });
+    const labels = [...new Set(groups.map((g) => g.brand).filter((b): b is string => b != null))];
+    const catalog = labels.length
+      ? await this.prisma.catalogItem.findMany({
+          // Cột `brand` ghi KHOÁ danh mục ở xe mới (`hyundai`) và NHÃN ở dữ liệu cũ (`Hyundai`) — tra cả hai.
+          where: {
+            type: CATALOG_TYPE.VEHICLE_BRAND,
+            OR: [{ key: { in: labels } }, { label: { in: labels } }],
+          },
+          select: { key: true, label: true, iconUrl: true },
+        })
+      : [];
+    const catalogByBrand = new Map<string, { label: string; iconUrl: string | null }>();
+    for (const c of catalog) {
+      catalogByBrand.set(c.key, c);
+      catalogByBrand.set(c.label, c);
+    }
+
+    const byTenant = new Map<string, { label: string; count: number }[]>();
+    for (const g of groups) {
+      if (g.brand == null) continue;
+      const list = byTenant.get(g.tenantId) ?? [];
+      list.push({ label: g.brand, count: g._count._all });
+      byTenant.set(g.tenantId, list);
+    }
+    const result = new Map<string, { top: PublicShopBrandDto[]; count: number }>();
+    for (const [tenantId, list] of byTenant) {
+      list.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'vi'));
+      result.set(tenantId, {
+        top: list.slice(0, SHOP_CARD_BRAND_LIMIT).map((b) => {
+          const item = catalogByBrand.get(b.label);
+          return { label: item?.label ?? b.label, iconUrl: item?.iconUrl ?? null };
+        }),
+        count: list.length,
+      });
+    }
+    return result;
+  }
+
+  /**
    * Hồ sơ công khai của một gian hàng theo slug — chỉ shop đang `active`. 404 nếu không có/đã
    * khoá. Không lộ dữ liệu nội bộ (id, email, mã số thuế…), chỉ thứ marketplace cần.
    */
@@ -812,6 +876,7 @@ export class PublicListingsService {
             coverUrl: true,
             bio: true,
             address: true,
+            wardName: true,
           },
         },
       },
@@ -823,8 +888,16 @@ export class PublicListingsService {
       });
     }
 
-    const [stats, trust] = await Promise.all([this.shopStats(t.id), this.shopTrust(t.id, now)]);
     const storefront = resolveStorefront(t, now);
+    // Gian hàng tuyến gói công khai địa chỉ (ADR 0077) — kể cả từng chi nhánh.
+    const exactAddress = customerSeesPickupAddress({
+      engaged: false,
+      packageTrack: hasVerifiedStorefront(storefront.billingMode),
+    });
+    const [stats, trust] = await Promise.all([
+      this.shopStats(t.id, exactAddress),
+      this.shopTrust(t.id, now),
+    ]);
 
     return {
       name: storefront.name,
@@ -836,7 +909,12 @@ export class PublicListingsService {
       logoUrl: storefront.avatarUrl,
       coverUrl: t.profile?.coverUrl ?? null,
       bio: t.profile?.bio ?? null,
-      address: t.profile?.address ?? null,
+      // Tuyến gói: địa chỉ đủ; tuyến hoa hồng: chỉ KHU VỰC (`customerSeesPickupAddress`, ADR 0077).
+      address: !t.profile?.address?.trim()
+        ? null
+        : exactAddress
+          ? t.profile.address.trim()
+          : publicAreaLabel(t.profile.wardName, t.profile.provinceName),
       joinedAt: t.createdAt as unknown as string,
       // Decimal → string do ResponseInterceptor lo (ADR 0007).
       ratingAvg: t.ratingAvg as unknown as string,
@@ -950,6 +1028,8 @@ export class PublicListingsService {
    */
   private async shopStats(
     tenantId: string,
+    /** Có trả địa chỉ đầy đủ của từng chi nhánh không — `customerSeesPickupAddress` (ADR 0077). */
+    exactAddress: boolean,
   ): Promise<
     Pick<
       PublicShopDto,
@@ -1052,7 +1132,12 @@ export class PublicListingsService {
       branchStats.size > 0
         ? await this.prisma.tenantBranch.findMany({
             where: { tenantId, id: { in: [...branchStats.keys()] } },
-            select: { id: true, name: true, province: { select: { name: true } } },
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              province: { select: { name: true } },
+            },
           })
         : [];
 
@@ -1077,6 +1162,7 @@ export class PublicListingsService {
             id: branch.id,
             name: branch.name,
             provinceName: branch.province?.name ?? null,
+            address: exactAddress ? branch.address?.trim() || null : null,
             vehicleCount: stats.vehicleCount,
             ratingAvg:
               stats.ratingCount > 0 ? (stats.ratingWeighted / stats.ratingCount).toFixed(2) : null,
@@ -1084,7 +1170,14 @@ export class PublicListingsService {
           };
         })
         .sort(byVehicleCountThenName),
-      vehicleFilterCounts: { withDriver, longTerm, delivery, instantBook, noCollateral, vatInvoice },
+      vehicleFilterCounts: {
+        withDriver,
+        longTerm,
+        delivery,
+        instantBook,
+        noCollateral,
+        vatInvoice,
+      },
       deliveryAvailable: delivery > 0,
     };
   }
@@ -1153,9 +1246,10 @@ export class PublicListingsService {
         id: true,
         tenantId: true,
         name: true,
-        // `name`/`address`/`phone`: chi nhánh giữ xe CHÍNH LÀ chỗ khách tới nhận khi tự lấy xe.
-        // Toạ độ để trang xe ghim được điểm nhận lên bản đồ — cùng mức công khai với địa chỉ
-        // vốn đã hiện ở đó, không mở thêm gì về quyền riêng tư.
+        // Chi nhánh giữ xe là chỗ khách tới nhận — nhưng trang CÔNG KHAI chỉ được nói KHU VỰC
+        // (xã + tỉnh) và một toạ độ xấp xỉ; số nhà, đường, toạ độ chính xác chỉ mở cho khách đã
+        // có ĐƠN (ADR 0077, `customerSeesPickupAddress`). `address` chỉ còn để biết chi nhánh
+        // ĐÃ điền địa chỉ hay chưa — không bao giờ đi ra response.
         branch: {
           select: {
             name: true,
@@ -1202,7 +1296,15 @@ export class PublicListingsService {
             ...storefrontTenantSelect(now),
             slug: true,
             // `address`: dự phòng cho điểm nhận xe khi chi nhánh chưa điền địa chỉ.
-            profile: { select: { provinceName: true, logoUrl: true, bio: true, address: true } },
+            profile: {
+              select: {
+                provinceName: true,
+                wardName: true,
+                logoUrl: true,
+                bio: true,
+                address: true,
+              },
+            },
             // Điểm đánh giá CỦA GIAN HÀNG — cột sẵn có, cùng nguồn `PublicShopDto` dùng cho trang
             // gian hàng (không phải một truy vấn tổng hợp mới).
             ratingAvg: true,
@@ -1294,13 +1396,29 @@ export class PublicListingsService {
      */
     const storefront = resolveStorefront(v.tenant, now);
 
-    const pickupAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const fromBranch = Boolean(v.branch?.address?.trim());
+    /*
+     * Gian hàng TUYẾN GÓI (tích xanh) công khai địa chỉ cửa hàng; chủ xe tuyến hoa hồng chỉ lộ
+     * KHU VỰC cho tới khi khách có ĐƠN — `customerSeesPickupAddress` (ADR 0077).
+     */
+    const exactAddress = customerSeesPickupAddress({
+      engaged: false,
+      packageTrack: hasVerifiedStorefront(storefront.billingMode),
+    });
+    const fullAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const pickupArea = fromBranch
+      ? publicAreaLabel(v.branch?.ward?.name, v.branch?.province?.name)
+      : v.tenant.profile?.address?.trim()
+        ? publicAreaLabel(v.tenant.profile.wardName, v.tenant.profile.provinceName)
+        : null;
     const pickupMapTarget = branchMapTarget(v.branch);
-    const pickupPoint = pickupAddress
+    const approxPoint = approximatePoint(pickupMapTarget?.point);
+    const pickupPoint = (exactAddress ? fullAddress : pickupArea)
       ? {
           // Tên chi nhánh chỉ có nghĩa khi địa chỉ ĐẾN TỪ chi nhánh đó.
-          branchName: v.branch?.address?.trim() ? (v.branch.name ?? null) : null,
-          address: pickupAddress,
+          branchName: fromBranch ? (v.branch!.name ?? null) : null,
+          // Địa chỉ đủ (tuyến gói) hoặc chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" (tuyến hoa hồng).
+          address: (exactAddress ? fullAddress : pickupArea)!,
           provinceName: v.branch?.province?.name ?? v.tenant.profile?.provinceName ?? null,
           /*
            * SĐT điểm nhận chỉ của GIAN HÀNG (số tổng đài chi nhánh). Chủ xe cá nhân: số của họ là
@@ -1313,8 +1431,10 @@ export class PublicListingsService {
            * `/public/listings/:id/pickup-map` (`branchMapTarget`). Địa chỉ rơi về hồ sơ gian hàng
            * mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ.
            */
-          latitude: pickupMapTarget?.point.lat ?? null,
-          longitude: pickupMapTarget?.point.lng ?? null,
+          // Tuyến hoa hồng: toạ độ XẤP XỈ (~1km) — đủ để vẽ khu vực, không đủ để tìm tới cửa.
+          latitude: (exactAddress ? pickupMapTarget?.point : approxPoint)?.lat ?? null,
+          longitude: (exactAddress ? pickupMapTarget?.point : approxPoint)?.lng ?? null,
+          isApproximate: !exactAddress,
         }
       : null;
 

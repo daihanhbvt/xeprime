@@ -29,6 +29,8 @@
     "BANNER_VISIBLE_LIMIT_EXCEEDED": "Too many banners would show at the same time. Turn off or reschedule another banner first.",
     "VALIDATION_FAILED": "Some details aren't valid. Please review the form.",
     "MONEY_STEP_1000": "Prices must be a multiple of 1,000 VND",
+    "WARD_NOT_IN_PROVINCE": "The selected ward does not belong to this province. Please choose the ward again.",
+    "WARD_REQUIRED": "Please choose a ward for this address.",
     "NOT_FOUND": "We couldn't find that.",
     "CONFLICT": "This changed somewhere else. Reload and try again.",
     "REVIEW_EDIT_LIMIT": "You have already used your one review edit.",

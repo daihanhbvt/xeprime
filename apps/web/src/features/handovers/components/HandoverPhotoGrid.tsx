@@ -12,10 +12,10 @@ import { App, Image, Progress, Upload } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import {
-  HANDOVER_EXTERIOR_SLOTS,
+  handoverExteriorSlotsFor,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_PHOTO_SLOT_LABEL,
-  HANDOVER_PHOTO_SLOT_VALUES,
+  handoverPhotoSlotsFor,
   IMAGE_UPLOAD_MIME_TYPES,
   type HandoverPhotoSlot,
   type HandoverType,
@@ -53,8 +53,9 @@ interface PendingUpload {
  *
  * Hai hình thái:
  *  - `grid` (mặc định — hộp bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM;
- *  - `row` (chi tiết đơn, Figma `23845:49956`): năm ô một hàng, nhãn dưới ảnh, ảnh đã có hiện
- *    THU NHỎ bằng URL ký ngắn hạn (tự làm mới — `useHandoverPhotoPreviews`).
+ *  - `row` (chi tiết đơn, Figma `23845:49956`): mọi góc của loại xe trên một hàng (ô tô 5, xe máy
+ *    3 — `handoverPhotoSlotsFor`), nhãn dưới ảnh, ảnh đã có hiện THU NHỎ bằng URL ký ngắn hạn (tự
+ *    làm mới — `useHandoverPhotoPreviews`).
  *
  * Ảnh mới tải lên hiện preview cục bộ (blob của chính file vừa chọn) để có phản hồi ngay; mở
  * xem toàn màn hình luôn xin một URL ký MỚI cho lần bấm đó.
@@ -62,6 +63,7 @@ interface PendingUpload {
 export function HandoverPhotoGrid({
   bookingId,
   type,
+  vehicleType,
   photos,
   canViewFiles,
   disabled,
@@ -72,6 +74,8 @@ export function HandoverPhotoGrid({
 }: {
   bookingId: string;
   type: HandoverType;
+  /** Loại xe của đơn — quyết bộ góc chụp: xe máy chỉ trước · sau · Odo (`handoverExteriorSlotsFor`). */
+  vehicleType: string;
   photos: HandoverPhoto[];
   canViewFiles: boolean;
   disabled: boolean;
@@ -309,11 +313,13 @@ export function HandoverPhotoGrid({
   return (
     <div className={styles.photoBlock}>
       {variant === 'row' ? (
-        <div className={styles.slotRow}>{HANDOVER_PHOTO_SLOT_VALUES.map(renderSlot)}</div>
+        <div className={styles.slotRow}>{handoverPhotoSlotsFor(vehicleType).map(renderSlot)}</div>
       ) : (
         <>
           <p className={styles.photoTitle}>{t('title')}</p>
-          <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
+          <div className={styles.slotGrid}>
+            {handoverExteriorSlotsFor(vehicleType).map(renderSlot)}
+          </div>
           {/* Chỉ KM: Wave 10 bỏ hẳn nhiên liệu khỏi bàn giao (design 14 §8). */}
           <p className={styles.photoTitle}>{t('odometerTitle')}</p>
           <div className={cx(styles.slotGrid, styles.slotGridSingle)}>

@@ -19,7 +19,8 @@ import homeHeroFallback from '../assets/images/home/hero-fallback.webp';
 import homeDestCities from '../assets/images/home/dest-cities.webp';
 import homeDestBg from '../assets/images/home/dest-bg.webp';
 import homeStepsSprite from '../assets/images/home/steps-sprite.webp';
-import homePartnerBackdrop from '../assets/images/home/partner-bg.webp';
+// Vùng cắt riêng của bản vẽ MB (`19771:51743`) — web dùng cùng ảnh ở ≤640px.
+import homePartnerBackdrop from '../assets/images/home/partner-bg-mobile.webp';
 // Huy hiệu thẻ trạng thái của các màn chuyến — CHÉP NGUYÊN apps/web/public/booking/request-sent.webp.
 import bookingRequestSent from '../assets/images/booking/request-sent.webp';
 import bookingRequestSentEnvelope from '../assets/images/booking/request-sent-envelope.webp';

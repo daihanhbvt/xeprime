@@ -87,6 +87,7 @@
 }
 
 .cardShop .summary {
+  border-bottom-color: var(--xp-color-primary);
   gap: var(--xp-space-20);
 }
 
@@ -165,8 +166,8 @@
 .name {
   margin: 0;
   font-family: var(--xp-font-family-display);
-  font-size: 28px;
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: 24px;
+  font-weight: var(--xp-font-weight-regular);
   line-height: 36px;
   color: var(--xp-color-text);
   /* Tên là dữ liệu người dùng nhập — không có trần độ dài nào ép nó xuống dòng đẹp. */

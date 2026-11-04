@@ -13,12 +13,9 @@ import {
 import { provinceCenter } from '@xeprime/domain';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
-import {
-  ConfirmedPlaceField,
-  type AddressPinNames,
-} from '@/components/form/ConfirmedPlaceField';
+import { ConfirmedPlaceField, type AddressPinNames } from '@/components/form/ConfirmedPlaceField';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
-import { useWardOptions } from '@/features/locations/hooks/use-wards';
+import { useWardLookup, useWardOptions } from '@/features/locations/hooks/use-wards';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import styles from './AddressField.module.css';
 
@@ -101,9 +98,14 @@ interface AddressFieldProps<T extends FieldValues> {
  *    mục là bịa ra một danh mục không tồn tại — nhưng gõ tự do thì để lại một địa chỉ không có
  *    toạ độ, và mọi phép tính quãng đường phía sau đo từ toạ độ.
  *
- * Phần hành chính và phần toạ độ là HAI ĐƯỜNG ĐỘC LẬP: chọn một gợi ý KHÔNG tự đổi tỉnh đã chọn —
- * nó chỉ hiện một lời nhắc nếu hai bên không khớp, và người dùng là người chốt. Lý do nằm ở dữ
- * liệu: nhà cung cấp bản đồ còn dùng tên đơn vị hành chính TRƯỚC sắp xếp 01/07/2025.
+ * Phần hành chính và phần toạ độ là HAI ĐƯỜNG ĐỘC LẬP: chọn một gợi ý KHÔNG tự đổi tỉnh/xã đã
+ * chọn — nó chỉ hiện lời nhắc nếu tỉnh lệch, hoặc HỎI "điền xã này?" khi chưa chọn xã. Người dùng
+ * là người chốt (ADR 0077). Lý do nằm ở dữ liệu: nhà cung cấp bản đồ còn dùng tên đơn vị hành
+ * chính TRƯỚC sắp xếp 01/07/2025.
+ *
+ * Ô xã LUÔN hiện, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042): chuỗi hiển thị và bề mặt công khai
+ * ("Phường/Xã, Tỉnh/TP") ghép từ danh mục, không từ dữ liệu bản đồ. Gợi ý số nhà/đường bị ràng
+ * buộc theo tỉnh + xã đã chọn, và ô chỉ lưu phần "số nhà, đường".
  *
  * **Ô này là của CHỦ XE khai địa chỉ vận hành.** Khách thuê xe dùng `RenterAddressBlock` — cùng ô
  * địa chỉ, nhưng không có hai bộ chọn hành chính, vì họ không biết mình sẽ nhận xe ở phường nào.
@@ -130,12 +132,19 @@ export function AddressField<T extends FieldValues>({
 
   const provinces = useProvinceOptions();
   const [wardSearch, setWardSearch] = useState('');
+  const wards = useWardOptions(provinceCode, wardSearch);
+  const wardCode = (ward.field.value as string | null) ?? '';
+
   /*
-   * Ô có GHIM thì không hỏi danh mục cấp xã: bộ chọn đó không được dựng (xem phần render), và
-   * tải 168 dòng cho một ô không tồn tại là một request cho mỗi lần mở form, mỗi người dùng.
-   * Truyền mã tỉnh rỗng là cách TẮT có sẵn của hook — nó đã dừng khi chưa chọn tỉnh.
+   * Tra tên của xã ĐANG CHỌN qua `/wards/lookup`: danh sách lựa chọn tải theo ô
+   * tìm, nên có thể không chứa nó — bộ chọn khi đó hiện trơ MÃ ("20314") thay vì tên.
    */
-  const wards = useWardOptions(pin ? '' : provinceCode, wardSearch);
+  const wardLookup = useWardLookup(wardCode ? [wardCode] : []);
+  const currentWard = wardCode ? wardLookup.data?.get(wardCode) : undefined;
+  const wardOptions =
+    currentWard && !wards.options.some((o) => o.value === currentWard.code)
+      ? [{ value: currentWard.code, label: currentWard.name }, ...wards.options]
+      : wards.options;
 
   /**
    * Người dùng vừa đổi tỉnh ⇒ mã xã cũ chắc chắn sai, và cái ghim cũ nằm ở tỉnh khác.
@@ -259,37 +268,39 @@ export function AddressField<T extends FieldValues>({
       />
 
       {/*
-        Xã/phường CHỈ hỏi khi ô này KHÔNG lưu toạ độ (ADR 0042).
-
-        Có ghim thì mã xã là một câu hỏi thừa và đắt: toạ độ đã xác nhận định vị chính xác hơn
-        hẳn một mã năm chữ số, trong khi danh mục cấp xã có 3.321 đơn vị vừa đổi tên hàng loạt từ
-        01/07/2025 — đủ để một người đang khai địa chỉ của chính mình cũng phải dừng lại tra cứu.
-
-        Không ghim (sổ khách) thì ngược lại: mã xã là cấp định vị DUY NHẤT dưới tỉnh, nên nó ở
-        lại. Đó cũng là lý do `wardCode` vẫn nằm trong `AddressFieldNames` chứ không bị gỡ.
+        Xã/phường LUÔN hỏi, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042): nó là thứ bề mặt công
+        khai hiện ("Phường/Xã, Tỉnh/TP") và là một nửa chuỗi hiển thị server ghép. Ghim chỉ là toạ
+        độ. Bắt buộc hay không do nơi gọi quyết (`wardRequired`) — chi nhánh bắt buộc.
       */}
-      {pin ? null : (
-        <SelectField
-          control={control}
-          name={names.wardCode}
-          label={t('wardLabel')}
-          required={wardRequired}
-          showSearch
-          options={wards.options}
-          loading={wards.isLoading}
-          disabled={disabled || !provinceCode}
-          placeholder={t('wardPlaceholder')}
-          onSearch={setWardSearch}
-          notFoundContent={wards.isLoading ? <Spin size="small" /> : t('wardEmpty')}
-          /*
-           * Chỉ nói khi có chuyện: chưa chọn tỉnh, hoặc danh mục lỗi. Đếm số đơn vị của tỉnh là
-           * một con số người đang điền địa chỉ không dùng vào việc gì.
-           */
-          help={
-            !provinceCode ? t('wardNeedsProvince') : wards.isError ? t('wardLoadError') : undefined
-          }
-        />
-      )}
+      <SelectField
+        control={control}
+        name={names.wardCode}
+        label={t('wardLabel')}
+        required={wardRequired}
+        showSearch
+        options={wardOptions}
+        loading={wards.isLoading}
+        disabled={disabled || !provinceCode}
+        placeholder={t('wardPlaceholder')}
+        onSearch={setWardSearch}
+        /*
+         * Cấp CHA đổi thì cấp CON xoá: người dùng tự chọn lại xã ⇒ địa chỉ + ghim cũ thuộc xã khác,
+         * dựng lại ô địa chỉ (cùng cơ chế đổi tỉnh). Xã TỰ ĐIỀN theo địa điểm vừa chọn đi đường
+         * `ward.field.onChange`, không qua đây — địa chỉ đó chính là thứ vừa chọn, không xoá.
+         */
+        onAfterChange={() => {
+          setPinResetKey((n) => n + 1);
+          setProvinceMismatch(false);
+        }}
+        notFoundContent={wards.isLoading ? <Spin size="small" /> : t('wardEmpty')}
+        /*
+         * Chỉ nói khi có chuyện: chưa chọn tỉnh, hoặc danh mục lỗi. Đếm số đơn vị của tỉnh là
+         * một con số người đang điền địa chỉ không dùng vào việc gì.
+         */
+        help={
+          !provinceCode ? t('wardNeedsProvince') : wards.isError ? t('wardLoadError') : undefined
+        }
+      />
 
       {pin ? (
         <>
@@ -325,16 +336,29 @@ export function AddressField<T extends FieldValues>({
             // Chưa chọn tỉnh thì chưa hỏi bản đồ: gợi ý lúc đó rải khắp cả nước và chẳng giúp
             // được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
             searchEnabled={Boolean(provinceCode)}
+            scope={provinceCode ? { provinceCode, wardCode: wardCode || null } : null}
+            lineOnly
             required={required}
             disabled={disabled}
-            onPlaceResolved={(place) =>
+            onPlaceResolved={(place) => {
               setProvinceMismatch(
                 Boolean(place.suggestedProvinceCode) &&
                   place.suggestedProvinceCode !== provinceCode,
-              )
-            }
+              );
+              /*
+               * Tự điền lại XÃ theo địa điểm vừa chọn (ADR 0077): server khớp được đúng một xã trong
+               * tỉnh đã chọn thì địa điểm cụ thể thắng bộ chọn. Tỉnh không bao giờ tự đổi.
+               */
+              const matched = place.suggestedWardCode ?? null;
+              if (matched && matched !== wardCode) {
+                ward.field.onChange(matched as PathValue<T, Path<T>>);
+                setWardSearch('');
+              }
+            }}
             // Lời nhắc lệch tỉnh nói về địa điểm vừa bị thay bằng một địa chỉ gõ tay — gỡ đi.
-            onConfirmedManually={() => setProvinceMismatch(false)}
+            onConfirmedManually={() => {
+              setProvinceMismatch(false);
+            }}
           />
         </>
       ) : (
@@ -350,4 +374,3 @@ export function AddressField<T extends FieldValues>({
     </section>
   );
 }
-

@@ -947,7 +947,7 @@ describe('Hoàn thành', () => {
   it('nói rõ chuyến đã hoàn tất, trên khung của khu tài khoản', () => {
     renderView();
     expect(screen.getByRole('heading', { name: 'Chuyến đi đã hoàn tất' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Chuyến của tôi' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Chuyến đi' }).getAttribute('href')).toBe(
       '/trips',
     );
   });

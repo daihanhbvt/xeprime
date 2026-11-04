@@ -528,6 +528,7 @@ export function HandoverPhotosCard() {
           <HandoverPhotoGrid
             key={tab}
             variant="row"
+            vehicleType={booking.vehicleType}
             bookingId={booking.id}
             type={tab}
             photos={current?.photos ?? []}

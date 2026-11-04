@@ -140,8 +140,12 @@
   }
 }
 
+/* Mobile: vẫn lưới 2 × 2 như app (`RentalSteps` native — mỗi ô 47%, cột cách 6%); hàng cách `space-xl`. */
 @media (max-width: 640px) {
   .steps {
-    grid-template-columns: minmax(0, 240px);
+    width: 100%;
+    column-gap: 6%;
+    grid-template-columns: repeat(2, minmax(0, 47%));
+    row-gap: var(--xp-space-xl);
   }
 }

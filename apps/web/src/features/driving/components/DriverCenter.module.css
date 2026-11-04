@@ -397,7 +397,7 @@
 
 /* Nút viền đỏ (Figma: viền #fda29b, chữ #d92d20). */
 .dangerOutline:global(.ant-btn) {
-  border-color: var(--xp-color-error);
+  border-color: var(--xp-color-error-border);
   color: var(--xp-color-error);
 }
 
@@ -524,9 +524,9 @@
 
 .statValue {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h4, 20px);
+  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 30px;
+  line-height: var(--xp-line-height-lead);
   font-variant-numeric: tabular-nums;
 }
 

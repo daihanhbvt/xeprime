@@ -81,7 +81,7 @@
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 /* Khung lịch nền xám (`BG/gray-50`) — mốc nhận/trả + nơi nhận xe. */
@@ -160,7 +160,7 @@
   color: var(--xp-color-text-secondary);
   overflow-wrap: anywhere;
   font-size: var(--xp-font-size-body);
-  line-height: 22px;
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .divider {

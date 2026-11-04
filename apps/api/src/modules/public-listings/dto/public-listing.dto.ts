@@ -584,7 +584,12 @@ export class PickupPointDto {
   })
   branchName!: string | null;
 
-  @ApiProperty({ description: 'Địa chỉ nhận xe' }) address!: string;
+  @ApiProperty({
+    description:
+      'Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" ' +
+      '— địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress).',
+  })
+  address!: string;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành của điểm nhận' })
   provinceName!: string | null;
@@ -593,14 +598,20 @@ export class PickupPointDto {
   phone!: string | null;
 
   /**
-   * Toạ độ điểm nhận, để trang xe ghim lên bản đồ. Null khi chi nhánh chưa có toạ độ hoặc khi
-   * địa chỉ rơi về hồ sơ gian hàng — không ghim bừa một điểm khác với dòng địa chỉ hiển thị.
+   * Toạ độ XẤP XỈ (làm tròn ~1km) của khu vực nhận xe — vẽ vòng khu vực, không ghim cửa (ADR 0077).
+   * Null khi chi nhánh chưa có toạ độ hoặc khi địa chỉ rơi về hồ sơ gian hàng.
    */
   @ApiPropertyOptional({ type: Number, nullable: true })
   latitude!: number | null;
 
   @ApiPropertyOptional({ type: Number, nullable: true })
   longitude!: number | null;
+
+  @ApiProperty({
+    description:
+      'true = toạ độ XẤP XỈ ~1km và address chỉ là khu vực (tuyến hoa hồng); false = chính xác (tuyến gói)',
+  })
+  isApproximate!: boolean;
 }
 
 /** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
@@ -934,6 +945,13 @@ export class PublicShopBranchDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Địa chỉ đầy đủ của chi nhánh — CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077)',
+  })
+  address!: string | null;
   @ApiProperty({ description: 'Số xe công khai đang ở chi nhánh' }) vehicleCount!: number;
   @ApiPropertyOptional({
     type: String,
@@ -1192,6 +1210,33 @@ export class PublicShopSummaryDto {
     description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ',
   })
   featuredVehicleImageUrl!: string | null;
+
+  @ApiProperty({
+    type: () => [PublicShopBrandDto],
+    description:
+      'Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng — dãy logo trên thẻ "Gian hàng nổi bật"',
+  })
+  brands!: PublicShopBrandDto[];
+
+  @ApiProperty({
+    description: 'Tổng số hãng xe đang công khai — phần dư so với `brands` hiện "+N"',
+  })
+  brandCount!: number;
+}
+
+export class PublicShopBrandDto {
+  @ApiProperty({
+    description:
+      'Nhãn hiển thị của hãng (từ danh mục; hãng ngoài danh mục giữ nguyên giá trị đã lưu)',
+  })
+  label!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Logo hãng từ danh mục `vehicle_brand` — null khi hãng không có trong danh mục',
+  })
+  iconUrl!: string | null;
 }
 
 export class PublicShopPageDto {

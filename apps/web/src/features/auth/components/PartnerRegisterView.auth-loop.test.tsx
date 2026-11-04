@@ -31,6 +31,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({ options: [], isLoading: false, isError: false, error: null, refetch: vi.fn() }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({ options: [], items: [], total: 0, isLoading: false, isError: false, refetch: vi.fn() }),
 }));
 vi.mock('@/features/locations/hooks/use-places', () => ({

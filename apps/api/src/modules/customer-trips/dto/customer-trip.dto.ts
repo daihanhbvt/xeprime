@@ -325,6 +325,26 @@ export class CancelCustomerTripDto {
   reasonCategory?: string;
 }
 
+/**
+ * Điểm nhận xe (chi nhánh giữ xe) trên trang chuyến — ADR 0077. Khách thấy địa chỉ chính xác chỉ
+ * khi chuyến đã có ĐƠN (`customerSeesPickupAddress`); trước đó `address`/toạ độ là `null` và
+ * `exact = false`, giao diện hiện `areaLabel` kèm lời giải thích.
+ */
+export class TripPickupPointDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) branchName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: '"Phường/Xã, Tỉnh/TP"' })
+  areaLabel!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ đầy đủ — chỉ khi exact',
+  })
+  address!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) latitude!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) longitude!: number | null;
+  @ApiProperty({ description: 'Đã được thấy địa chỉ chính xác chưa' }) exact!: boolean;
+}
+
 export class CustomerTripListItemDto {
   /** Định danh chuyến = id YÊU CẦU thuê — tồn tại từ lúc gửi, trước cả khi có đơn. */
   @ApiProperty() id!: string;
@@ -455,6 +475,8 @@ export class CustomerTripListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
   @ApiProperty() deliveryRequested!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) deliveryAddress!: string | null;
+  @ApiPropertyOptional({ type: TripPickupPointDto, nullable: true })
+  vehiclePickupPoint!: TripPickupPointDto | null;
 
   /**
    * **Tổng dịch vụ MỚI NHẤT khách phải trả** = tiền thuê (đã gồm khuyến mãi + phí giao nhận
