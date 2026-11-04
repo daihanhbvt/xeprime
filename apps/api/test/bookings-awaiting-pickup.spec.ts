@@ -6,8 +6,12 @@ import {
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  CUSTOMER_DOCUMENT_STATUS,
+  CUSTOMER_DOCUMENT_TYPE,
+  HANDOVER_PREP_ITEM,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
+  IDENTITY_VERIFY_METHOD,
   MEMBERSHIP_STATUS,
   SERVICE_TYPE,
   TENANT_ROLE,
@@ -230,6 +234,8 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (!dbAvailable) return;
+  await prisma.tenantCustomerDocument.deleteMany({ where: { tenantId } });
+  await prisma.bookingHandoverCheck.deleteMany({ where: { tenantId } });
   await prisma.vehicleHandover.deleteMany({ where: { tenantId } });
   await prisma.holdRefund.deleteMany({ where: { tenantId } });
   await prisma.bookingCancellation.deleteMany({ where: { tenantId } });
@@ -542,4 +548,221 @@ describe('Chờ giao xe — nơi xe đổi tay', () => {
     expect(row!.handoverPlaceKind).toBe(BOOKING_HANDOVER_PLACE.BRANCH);
     expect(row!.handoverPlace).toBe('Chi nhánh Quận 1');
   });
+});
+
+/**
+ * Ba nhóm còn lại của cột trái "Quản lý đơn thuê xe" (02/11/2026) và số đếm của cả bốn nhóm.
+ *
+ * Khoá hai điều: bốn nhóm KHÔNG chồng nhau và phủ kín (cộng lại đúng bằng "Tất cả"), và số đếm
+ * KHÔNG phụ thuộc nhóm đang chọn nhưng CÓ theo tìm kiếm/chi nhánh/dịch vụ.
+ */
+describe('Cột trái — bốn nhóm việc và số đếm', () => {
+  maybe('mỗi đơn rơi vào đúng một nhóm; khách không đến nằm cùng nhóm huỷ', async () => {
+    const waiting = await createDirect(0, { dayOffset: 2 });
+    const renting = await createDirect(1, { dayOffset: 3 });
+    await markActive(renting.id);
+    const done = await createDirect(2, { dayOffset: 4 });
+    const cancelled = await createDirect(3, { dayOffset: 5 });
+    const noShow = await createDirect(4, { dayOffset: 6 });
+    await prisma.booking.update({
+      where: { id: done.id },
+      data: {
+        status: BOOKING_STATUS.COMPLETED,
+        actualPickupAt: new Date(),
+        actualReturnAt: new Date(),
+      },
+    });
+    await prisma.booking.update({
+      where: { id: cancelled.id },
+      data: { status: BOOKING_STATUS.CANCELLED },
+    });
+    await prisma.booking.update({
+      where: { id: noShow.id },
+      data: { status: BOOKING_STATUS.NO_SHOW },
+    });
+
+    expect(await idsOf({ preset: BOOKING_LIST_PRESET.AWAITING_PICKUP })).toEqual([waiting.id]);
+    expect(await idsOf({ preset: BOOKING_LIST_PRESET.RENTING })).toEqual([renting.id]);
+    expect(await idsOf({ preset: BOOKING_LIST_PRESET.COMPLETED })).toEqual([done.id]);
+    expect((await idsOf({ preset: BOOKING_LIST_PRESET.CANCELLED })).sort()).toEqual(
+      [cancelled.id, noShow.id].sort(),
+    );
+
+    const page = await bookings.list(tenantId, { preset: BOOKING_LIST_PRESET.RENTING }, null);
+    const counts = Object.fromEntries(page.meta.presetCounts.map((c) => [c.preset, c.count]));
+    // Đứng ở ngăn "Đang thuê" vẫn thấy đủ bốn con số — số đếm không theo nhóm đang chọn.
+    expect(counts).toEqual({
+      [BOOKING_LIST_PRESET.AWAITING_PICKUP]: 1,
+      [BOOKING_LIST_PRESET.RENTING]: 1,
+      [BOOKING_LIST_PRESET.COMPLETED]: 1,
+      [BOOKING_LIST_PRESET.CANCELLED]: 2,
+    });
+    const all = await bookings.list(tenantId, {}, null);
+    expect(page.meta.presetCounts.reduce((sum, c) => sum + c.count, 0)).toBe(all.meta.total);
+  });
+
+  maybe('số đếm đi theo tìm kiếm của trang', async () => {
+    await createDirect(0, { dayOffset: 2, customerName: 'Trần Thị Bé' });
+    await createDirect(1, { dayOffset: 3, customerName: 'Lê Văn Cường' });
+
+    const page = await bookings.list(tenantId, { q: 'Cường' }, null);
+    const awaiting = page.meta.presetCounts.find(
+      (c) => c.preset === BOOKING_LIST_PRESET.AWAITING_PICKUP,
+    );
+    expect(awaiting?.count).toBe(1);
+  });
+
+  maybe('thẻ đơn mang ảnh/thông số xe và đường nhắn tin của yêu cầu gốc', async () => {
+    const direct = await createDirect(0, { dayOffset: 2 });
+    const viaRequest = await createViaHoldPayment(1);
+
+    const rows = (await bookings.list(tenantId, {}, null)).data;
+    const directRow = rows.find((b) => b.id === direct.id)!;
+    const requestRow = rows.find((b) => b.id === viaRequest)!;
+    expect(directRow.vehicleType).toBe(VEHICLE_TYPE.CAR);
+    // Đơn gian hàng tự lập không có tài khoản khách ⇒ không có ai để nhắn.
+    expect(directRow.bookingRequestId).toBeNull();
+    expect(directRow.canMessageOnPlatform).toBe(false);
+    expect(requestRow.bookingRequestId).not.toBeNull();
+    expect(requestRow.canMessageOnPlatform).toBe(true);
+    expect(requestRow.cancellationParty).toBeNull();
+  });
+});
+
+describe('Chi tiết đơn — chuẩn bị bàn giao (02/11/2026)', () => {
+  maybe('đơn chờ giao: việc suy từ dữ liệu thật; đơn đã giao thì không còn khối này', async () => {
+    const created = await createDirect(0);
+    const detail = await bookings.getOne(tenantId, created.id);
+    expect(detail.handoverPrep).toMatchObject({
+      documentsReady: false,
+      rentDueAmount: '1500000',
+      depositReceived: '0',
+      contractId: null,
+      contractSigned: false,
+      pickupPhotoCount: 0,
+      pickupPhotoRequired: 5,
+      // Tự lái — không có việc gán tài xế.
+      driverReady: null,
+    });
+
+    await markActive(created.id);
+    expect((await bookings.getOne(tenantId, created.id)).handoverPrep).toBeNull();
+  });
+
+  maybe(
+    'giấy tờ đã đối chiếu nhưng HẾT HẠN trước ngày cuối chuyến thì chưa tính là xong',
+    async () => {
+      const created = await createDirect(0, { dayOffset: 5 });
+      const detail = await bookings.getOne(tenantId, created.id);
+      expect(detail.tenantCustomerId).not.toBeNull();
+      const docId = newId();
+      await prisma.tenantCustomerDocument.create({
+        data: {
+          id: docId,
+          tenantId,
+          tenantCustomerId: detail.tenantCustomerId!,
+          documentType: CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
+          objectKey: `test/prep/${docId}.jpg`,
+          originalName: 'cccd.jpg',
+          mimeType: 'image/jpeg',
+          sizeBytes: 10,
+          status: CUSTOMER_DOCUMENT_STATUS.READY,
+          // Hết hạn ngay hôm nay — trước ngày trả xe.
+          expiresAt: new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z'),
+          verifiedAt: new Date(),
+          verifiedByUserId: ownerId,
+          verifyMethod: IDENTITY_VERIFY_METHOD.IN_PERSON,
+        },
+      });
+      expect((await bookings.getOne(tenantId, created.id)).handoverPrep?.documentsReady).toBe(
+        false,
+      );
+
+      await prisma.tenantCustomerDocument.update({
+        where: { id: docId },
+        data: { expiresAt: null },
+      });
+      expect((await bookings.getOne(tenantId, created.id)).handoverPrep?.documentsReady).toBe(true);
+    },
+  );
+});
+
+describe('Chi tiết đơn — đánh dấu tay việc chuẩn bị bàn giao (03/11/2026)', () => {
+  maybe('đánh dấu / bỏ dấu: idempotent, ghi người đánh dấu và audit mỗi lần ĐỔI', async () => {
+    const created = await createDirect(0);
+    const check = (checked: boolean) =>
+      bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
+        item: HANDOVER_PREP_ITEM.CONTRACT,
+        checked,
+      });
+
+    const first = await check(true);
+    expect(first.manualChecks).toHaveLength(1);
+    expect(first.manualChecks[0]).toMatchObject({ item: HANDOVER_PREP_ITEM.CONTRACT });
+    expect(first.manualChecks[0]!.checkedByName).toBeTruthy();
+    // Bấm lần hai (hai tab, mạng chập chờn) — vẫn MỘT dấu, không thêm audit.
+    expect((await check(true)).manualChecks).toHaveLength(1);
+    expect((await check(false)).manualChecks).toHaveLength(0);
+    expect((await check(false)).manualChecks).toHaveLength(0);
+
+    const actions = (
+      await prisma.auditLog.findMany({
+        where: { tenantId, targetId: created.id, action: { startsWith: 'booking.prep_' } },
+        orderBy: { createdAt: 'asc' },
+        select: { action: true },
+      })
+    ).map((a) => a.action);
+    expect(actions).toEqual(['booking.prep_check', 'booking.prep_uncheck']);
+  });
+
+  maybe('từ chối khi đơn đã giao, và việc tài xế ở đơn tự lái', async () => {
+    const created = await createDirect(0);
+    await expect(
+      bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
+        item: HANDOVER_PREP_ITEM.DRIVER,
+        checked: true,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'HANDOVER_NOT_ELIGIBLE' } });
+
+    await markActive(created.id);
+    await expect(
+      bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
+        item: HANDOVER_PREP_ITEM.PHOTOS,
+        checked: true,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'HANDOVER_NOT_ELIGIBLE' } });
+  });
+});
+
+describe('Chi tiết đơn — tiền thu tay lúc nhận xe (03/11/2026)', () => {
+  maybe('đơn qua giữ chỗ: không đòi lại phần D chủ xe đã có trong khoản online', async () => {
+    const bookingId = await createViaHoldPayment(1);
+    const detail = await bookings.getOne(tenantId, bookingId);
+    const row = await prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      select: { priceSnapshot: true },
+    });
+    const d = (row.priceSnapshot as { fees?: { depositAmount?: string } }).fees?.depositAmount;
+    expect(d).toBeTruthy();
+    expect(new Prisma.Decimal(d!).gt(0)).toBe(true);
+    const expected = Prisma.Decimal.max(0, new Prisma.Decimal(detail.debtAmount).minus(d!));
+    expect(detail.handoverPrep?.rentDueAmount).toBe(expected.toFixed(0));
+
+    // Mốc của thanh tiến trình: xác nhận = lượt nhận yêu cầu, tiền giữ chỗ về ⇒ có `holdPaidAt`.
+    expect(detail.holdPaidAt).not.toBeNull();
+    expect(new Date(detail.confirmedAt).getTime()).toBeLessThanOrEqual(
+      new Date(detail.holdPaidAt!).getTime(),
+    );
+  });
+
+  maybe(
+    'đơn tự lập: xác nhận = lúc lập đơn, không có mốc giữ chỗ; có số chuyến đã xong của khách',
+    async () => {
+      const created = await createDirect(0);
+      const detail = await bookings.getOne(tenantId, created.id);
+      expect(detail.holdPaidAt).toBeNull();
+      expect(detail.confirmedAt).toBe(new Date(detail.createdAt).toISOString());
+      expect(detail.customerCompletedRentals).toBe(0);
+    },
+  );
 });

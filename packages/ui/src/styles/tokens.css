@@ -226,6 +226,13 @@
   --xp-color-success-accent: #12b76a;
   --xp-color-success-border: #6ce9a6;
   --xp-color-warning-border: #fec84b;
+  /* Thẻ đơn/yêu cầu site partner (Figma Partner-XePrime, 02/11/2026): viền nhãn dịch vụ "Tự lái",
+     nút Zalo (`Status/information-300`); viền nút "Từ chối" (`Status/error-300`) khai cùng nhóm lỗi ở trên. */
+  --xp-color-info-border: #84caff;
+  /* Viên "Thuê xe dài hạn" (`Status/pink-*`, Partner-XePrime 02/11/2026). */
+  --xp-color-pink: #dd2590;
+  --xp-color-pink-bg: #fdf2fa;
+  --xp-color-pink-border: #faa7e0;
   --xp-color-warning-strong: #ec4a0a;
   --xp-color-info-strong: #1570ef;
   --xp-color-star: #fec84b;
@@ -372,6 +379,12 @@
   /* Màn quản trị NHIỀU CỘT (menu mục + nội dung + cột xem nhanh). Rộng hơn trang form một cột:
      ở 1280px ba cột đó bóp lẫn nhau, còn màn 1920 bỏ trống hơn 300px mỗi bên. */
   --xp-shell-workspace-max-width: 1680px;
+  /* Khung site partner menu ngang (Figma Partner-XePrime Header `23649:27690`): 1920 − 2 × 180.
+     Header và vùng nội dung canh trên cùng một cột. */
+  --xp-shell-partner-max-width: 1560px;
+  /* Thanh header site partner: đệm 16 + nút 42 + đệm 16. Phần dính (sticky) của các màn canh theo
+     `--xp-shell-header-offset`, khung partner đặt nó bằng số này (site quản trị: topbar 56px). */
+  --xp-shell-partner-header-height: 74px;
 
   /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;
@@ -477,7 +490,6 @@
   --xp-color-success-subtle: rgba(3, 152, 85, 0.08);
   --xp-color-warning-bg: rgba(224, 123, 38, 0.16);
   --xp-color-error-bg: rgba(217, 45, 32, 0.16);
-  --xp-color-error-border: rgba(217, 45, 32, 0.48);
   --xp-color-info-bg: rgba(37, 99, 235, 0.18);
   --xp-color-processing-bg: rgba(14, 116, 144, 0.2);
   --xp-color-neutral: #d5d7da;
@@ -493,6 +505,11 @@
   --xp-color-primary-border: #946e1f;
   --xp-color-success-border: rgba(108, 233, 166, 0.45);
   --xp-color-warning-border: rgba(254, 200, 75, 0.45);
+  --xp-color-info-border: rgba(132, 202, 255, 0.45);
+  --xp-color-error-border: rgba(253, 162, 155, 0.45);
+  --xp-color-pink: #f670c7;
+  --xp-color-pink-bg: rgba(221, 37, 144, 0.12);
+  --xp-color-pink-border: rgba(250, 167, 224, 0.45);
   --xp-color-warning-strong: #fb6514;
   --xp-color-info-strong: #53b1fd;
   --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);

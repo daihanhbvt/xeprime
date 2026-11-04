@@ -74,10 +74,6 @@
   white-space: nowrap;
 }
 
-.statusRow {
-  display: flex;
-}
-
 /* Chỉ số gộp một dòng; cho phép xuống dòng khi tên/tiền dài bất thường. */
 .metrics {
   display: flex;
@@ -118,4 +114,15 @@
   display: flex;
   padding-top: 6px;
   border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+/* Lý do người duyệt trả xe về — cùng luật với thẻ desktop, tối đa hai dòng. */
+.reviewReason {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }

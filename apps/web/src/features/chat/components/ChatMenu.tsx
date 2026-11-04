@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { nowInAppTz, toAppTz } from '@xeprime/domain';
 import type { ChatInbox, ChatSide } from '@xeprime/types';
-import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
+import { HeaderIconButton, type HeaderIconButtonShape } from '@/components/layout/HeaderIconButton';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
@@ -41,9 +41,12 @@ const CONVERSATION_PARAM = 'c';
 export function ChatMenu({
   side,
   icon = <MessageOutlined />,
+  shape,
 }: {
   side: ChatSide;
   icon?: ReactNode;
+  /** Hình dạng nút trên thanh trên — xem `HeaderIconButton.shape`. */
+  shape?: HeaderIconButtonShape;
 }) {
   const t = useTranslations('Chat');
   const badge = useChatBadge(side);
@@ -54,6 +57,7 @@ export function ChatMenu({
     return (
       <HeaderIconButton
         icon={icon}
+        shape={shape}
         label={t('inboxTitle')}
         count={badge.count}
         href={badge.href}
@@ -79,6 +83,7 @@ export function ChatMenu({
     >
       <HeaderIconButton
         icon={icon}
+        shape={shape}
         label={t('inboxTitle')}
         count={badge.count}
         active={open}

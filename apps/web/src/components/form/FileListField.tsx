@@ -1,19 +1,22 @@
 'use client';
 
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
   FilePdfOutlined,
   FileImageOutlined,
+  PlusOutlined,
   ReloadOutlined,
-  UploadOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { App, Button, Form, Progress, Upload } from 'antd';
+import { App, Button, Form, Progress, Tooltip, Upload } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { DOCUMENT_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
+import { formatFileSize } from '@/lib/file-size';
 import { validateDocumentFile } from '@/services/upload';
 import styles from './FileListField.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
@@ -33,7 +36,8 @@ export interface UploadedFileItem {
 interface FileListFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: ReactNode;
+  /** Bỏ trống khi tiêu đề thẻ đã nói đây là tài liệu gì (design "Hợp đồng"). */
+  label?: ReactNode;
   /**
    * Toàn bộ flow upload (presign → PUT → hoàn tất xác minh) do FEATURE cung cấp — component
    * chỉ quản danh sách/tiến độ/thử lại. Trả về metadata của file đã `ready`.
@@ -57,7 +61,9 @@ interface PendingFileUpload {
 
 /**
  * Danh sách TÀI LIỆU RIÊNG TƯ (PDF/ảnh) nối RHF ↔ upload có xác minh — dùng cho hợp đồng
- * nguồn xe. Cùng kỷ luật với `ImageGalleryField`: upload song song append qua ref, file hỏng
+ * nguồn xe. Mỗi tệp là một ô có viền (design "Nguồn gốc & tài chính xe"): icon loại tệp, tên,
+ * dung lượng + dấu đã tải xong, hai nút biểu tượng tải về / gỡ; nút tải lên và gợi ý định dạng
+ * nằm dưới danh sách. Cùng kỷ luật với `ImageGalleryField`: upload song song append qua ref, file hỏng
  * không kéo theo file đã xong (partial failure), lỗi có thử lại. Tải về xin URL mới mỗi lần
  * bấm — không giữ URL trong state/DB.
  */
@@ -71,6 +77,8 @@ export function FileListField<T extends FieldValues>({
   help,
   disabled = false,
 }: FileListFieldProps<T>) {
+  const t = useTranslations('Common.components.fileList');
+  const tActions = useTranslations('Common.actions');
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
@@ -131,7 +139,7 @@ export function FileListField<T extends FieldValues>({
 
   function handleSelect(file: File): false {
     if (itemsRef.current.length + pendingRef.current.length >= max) {
-      message.warning(`Tối đa ${max} tệp`);
+      message.warning(t('maxReached', { count: max }));
       return false;
     }
     const invalid = validateDocumentFile(file);
@@ -161,7 +169,7 @@ export function FileListField<T extends FieldValues>({
     <Form.Item
       label={label}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message ?? help ?? 'PDF, JPG, PNG — tối đa 10MB mỗi tệp'}
+      help={fieldState.error?.message}
       className={styles.item}
     >
       <div className={styles.list}>
@@ -172,11 +180,11 @@ export function FileListField<T extends FieldValues>({
               <span className={styles.fileIcon} aria-hidden="true">
                 <WarningOutlined />
               </span>
-              <span className={styles.fileName} title={item.name}>
-                {item.name}
-              </span>
-              <span className={styles.legacyNote}>
-                Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư
+              <span className={styles.fileBody}>
+                <span className={styles.fileName} title={item.name}>
+                  {item.name}
+                </span>
+                <span className={styles.legacyNote}>{t('legacyNote')}</span>
               </span>
             </div>
           ) : (
@@ -188,28 +196,40 @@ export function FileListField<T extends FieldValues>({
                   <FileImageOutlined />
                 )}
               </span>
-              <span className={styles.fileName} title={item.name}>
-                {item.name}
+              <span className={styles.fileBody}>
+                <span className={styles.fileName} title={item.name}>
+                  {item.name}
+                </span>
+                <span className={styles.fileMeta}>
+                  {item.size ? <span>{formatFileSize(item.size)}</span> : null}
+                  <span className={styles.fileReady}>
+                    <CheckCircleOutlined aria-hidden="true" /> 100%
+                  </span>
+                </span>
               </span>
-              <Button
-                size="small"
-                type="link"
-                icon={<DownloadOutlined />}
-                loading={downloadingId === item.id}
-                onClick={() => void handleDownload(item)}
-              >
-                Tải xuống
-              </Button>
-              {disabled ? null : (
-                <button
-                  type="button"
-                  className={styles.removeBtn}
-                  aria-label={`Xoá tệp ${item.name}`}
-                  onClick={() => commit(items.filter((candidate) => candidate.id !== item.id))}
-                >
-                  <DeleteOutlined />
-                </button>
-              )}
+              <span className={styles.fileActions}>
+                <Tooltip title={tActions('download')}>
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<DownloadOutlined />}
+                    aria-label={t('downloadFile', { name: item.name })}
+                    loading={downloadingId === item.id}
+                    onClick={() => void handleDownload(item)}
+                  />
+                </Tooltip>
+                {disabled ? null : (
+                  <Tooltip title={tActions('remove')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      aria-label={t('removeFile', { name: item.name })}
+                      onClick={() => commit(items.filter((candidate) => candidate.id !== item.id))}
+                    />
+                  </Tooltip>
+                )}
+              </span>
             </div>
           ),
         )}
@@ -217,34 +237,45 @@ export function FileListField<T extends FieldValues>({
         {pending.map((item) =>
           item.status === 'error' ? (
             <div key={item.id} className={`${styles.row} ${styles.failedRow}`} role="alert">
-              <span className={styles.fileName} title={item.message}>
-                {item.file.name} — {item.message}
+              <span className={styles.fileBody}>
+                <span className={styles.fileName} title={item.message}>
+                  {item.file.name}
+                </span>
+                <span className={styles.failedNote}>{item.message}</span>
               </span>
-              <button
-                type="button"
-                className={styles.retryBtn}
-                aria-label={`Thử lại ${item.file.name}`}
-                onClick={() => startUpload(item.file, item.id)}
-              >
-                <ReloadOutlined /> Thử lại
-              </button>
-              <button
-                type="button"
-                className={styles.removeBtn}
-                aria-label={`Bỏ ${item.file.name}`}
-                onClick={() =>
-                  commitPending(
-                    pendingRef.current.filter((candidate) => candidate.id !== item.id),
-                  )
-                }
-              >
-                <DeleteOutlined />
-              </button>
+              <span className={styles.fileActions}>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<ReloadOutlined />}
+                  aria-label={t('retryFile', { name: item.file.name })}
+                  onClick={() => startUpload(item.file, item.id)}
+                >
+                  {tActions('retry')}
+                </Button>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  aria-label={t('dropFile', { name: item.file.name })}
+                  onClick={() =>
+                    commitPending(
+                      pendingRef.current.filter((candidate) => candidate.id !== item.id),
+                    )
+                  }
+                />
+              </span>
             </div>
           ) : (
-            <div key={item.id} className={styles.row} aria-label={`Đang tải ${item.file.name}`}>
-              <span className={styles.fileName}>{item.file.name}</span>
-              <Progress className={styles.progress} percent={item.progress} size="small" />
+            <div
+              key={item.id}
+              className={styles.row}
+              aria-label={t('uploadingFile', { name: item.file.name })}
+            >
+              <span className={styles.fileBody}>
+                <span className={styles.fileName}>{item.file.name}</span>
+                <Progress className={styles.progress} percent={item.progress} size="small" />
+              </span>
             </div>
           ),
         )}
@@ -256,9 +287,10 @@ export function FileListField<T extends FieldValues>({
             multiple
             beforeUpload={handleSelect}
           >
-            <Button icon={<UploadOutlined />}>Tải lên tài liệu</Button>
+            <Button icon={<PlusOutlined />}>{t('upload')}</Button>
           </Upload>
         ) : null}
+        {disabled ? null : <p className={styles.hint}>{help ?? t('hint')}</p>}
       </div>
     </Form.Item>
   );

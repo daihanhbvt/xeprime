@@ -9,6 +9,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { licenceTripLastDayKey } from '@xeprime/domain';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -18,17 +19,25 @@ import {
   CANCELLATION_STAGE,
   BOOKING_HANDOVER_PLACE,
   BOOKING_LIST_PRESET,
+  BOOKING_LIST_PRESET_VALUES,
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
+  CONTRACT_STATUS,
+  CUSTOMER_DOCUMENT_TYPE,
+  DRIVER_ASSIGNMENT_STATUS,
+  DRIVER_LICENCE_STATUS,
   FEE_LINE,
   HANDOVER_ELIGIBLE_BOOKING_STATUS,
+  handoverPhotoSlotsFor,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   isNoShowGracePassed,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PAYMENT_KIND,
+  PAYMENT_STATUS,
   PRICE_ROW,
   canTransitionBooking,
   isBookingFinal,
@@ -45,7 +54,8 @@ import {
   type RentalTermsSnapshot,
   type BookingListPreset,
   type BookingStatus,
-  type PaginationMeta,
+  HANDOVER_PREP_ITEM,
+  type HandoverPrepItem,
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
@@ -68,6 +78,7 @@ import { CustomersService } from '../customers/customers.service';
 import { InsuranceService } from '../insurance/insurance.service';
 import { TaxService } from '../tax/tax.service';
 import { CancellationsService } from '../cancellations/cancellations.service';
+import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
 import { AddressService } from '../locations/address.service';
 import { DriversService, driverBusy, isDriverScheduleConflict } from '../drivers/drivers.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -76,14 +87,34 @@ import {
   BOOKING_DEFAULT_LIMIT,
   BOOKING_MAX_LIMIT,
   BookingDetailDto,
+  BookingHandoverPrepDto,
+  SetHandoverPrepCheckDto,
   BookingListItemDto,
   BookingListQueryDto,
+  BookingPageMetaDto,
   CreateBookingDto,
   TransitionBookingDto,
   UpdateBookingDto,
 } from './dto/booking.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
+
+/**
+ * Chiếc xe trên thẻ đơn — đủ để NHẬN RA nó: ảnh đại diện (một cột, không join gallery), dòng thông
+ * số "4 chỗ · Số tự động · Điện" và chi nhánh (nơi giao xe, xem `handoverPlaceOf`). Danh sách và
+ * chi tiết dùng chung một khối, nên chi tiết không bao giờ thiếu một trường mà `toListItem` đọc.
+ */
+const VEHICLE_CARD_SELECT = {
+  name: true,
+  plateNumber: true,
+  mainImageUrl: true,
+  vehicleType: true,
+  motorbikeCategory: true,
+  seatCount: true,
+  transmission: true,
+  fuelType: true,
+  branch: { select: { name: true } },
+} satisfies Prisma.VehicleSelect;
 
 const LIST_SELECT = {
   id: true,
@@ -108,9 +139,12 @@ const LIST_SELECT = {
   // Hai cột hành trình có mặt ở DANH SÁCH vì "nơi giao xe" suy từ chúng (xem `handoverPlaceOf`).
   routeType: true,
   pickupAddress: true,
-  vehicle: {
-    select: { name: true, plateNumber: true, branch: { select: { name: true } } },
-  },
+  vehicle: { select: VEHICLE_CARD_SELECT },
+  // Mốc đổi tay THẬT — thẻ danh sách nói "đã trả đúng hạn / trễ" từ `actualReturnAt` (02/11/2026).
+  actualPickupAt: true,
+  actualReturnAt: true,
+  // Kết cục huỷ (ADR 0045) — thẻ nói "Khách đã huỷ" / "Gian hàng huỷ" thay vì một chữ "Đã huỷ" chung.
+  cancellation: { select: { responsibleParty: true, reasonCategory: true } },
   ...BOOKING_DRIVER_SELECT,
   /*
    * Biên bản GIAO XE còn hiệu lực. `take: 1` là chính xác chứ không phải phỏng đoán: partial
@@ -129,11 +163,16 @@ const LIST_SELECT = {
    */
   bookingRequest: {
     select: {
+      // Đường nhắn tin của đơn đi qua hội thoại của YÊU CẦU đã sinh ra nó (`POST /booking-requests/:id/conversation`).
+      id: true,
+      customerUserId: true,
       deliveryRequested: true,
       deliveryAddress: true,
       deliveryAddressLine: true,
+      // Mốc "Đã xác nhận" của thanh tiến trình chi tiết đơn (lượt gian hàng nhận yêu cầu).
+      decidedAt: true,
       // SĐT tài khoản của khách — hiện cạnh SĐT liên hệ của đơn khi hai số khác nhau (ADR 0063).
-      customer: { select: { phone: true } },
+      customer: { select: { phone: true, avatarUrl: true } },
     },
   },
 } satisfies Prisma.BookingSelect;
@@ -146,21 +185,14 @@ const DETAIL_SELECT = {
   // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
   // cần NHẬN RA chiếc xe, không cần xem bộ ảnh. `branch` giữ lại từ LIST_SELECT: khối này
   // GHI ĐÈ `vehicle` của bản spread, bỏ quên nó là `toListItem` mất nơi giao xe.
-  vehicle: {
-    select: {
-      name: true,
-      plateNumber: true,
-      mainImageUrl: true,
-      branch: { select: { name: true } },
-    },
-  },
+  vehicle: { select: VEHICLE_CARD_SELECT },
   baseAmount: true,
   deliveryFee: true,
   discountAmount: true,
   priceSnapshot: true,
   // Một đơn chỉ có tối đa một khoản giữ chỗ. Đọc số THỰC THU để màn chi tiết không diễn giải
   // `fees.holdAmount` (số phải thu trong snapshot) thành số khách đã chuyển.
-  hold: { select: { paidAmount: true } },
+  hold: { select: { paidAmount: true, paidAt: true } },
   // `routeType` + `pickupAddress` đã nằm trong LIST_SELECT ở trên; phần còn lại của địa chỉ đón
   // chỉ chi tiết mới cần (dựng `AddressView` có ghim toạ độ).
   pickupAddressLine: true,
@@ -173,8 +205,6 @@ const DETAIL_SELECT = {
   destinationPlaceId: true,
   destinationLatitude: true,
   destinationLongitude: true,
-  actualPickupAt: true,
-  actualReturnAt: true,
   note: true,
   updatedAt: true,
 } satisfies Prisma.BookingSelect;
@@ -236,6 +266,8 @@ export class BookingsService {
     private readonly tax: TaxService,
     /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
     private readonly cancellations: CancellationsService,
+    /** Phụ lục gia hạn (ADR 0077): đóng phụ lục còn chờ + quyết toán phụ lục khi đơn kết thúc. */
+    private readonly extensions: BookingExtensionsService,
   ) {}
 
   async list(
@@ -243,13 +275,17 @@ export class BookingsService {
     query: BookingListQueryDto,
     /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
     allowedBranchIds: readonly string[] | null,
-  ): Promise<{ data: BookingListItemDto[]; meta: PaginationMeta }> {
+  ): Promise<{ data: BookingListItemDto[]; meta: BookingPageMetaDto }> {
     const paging = resolvePaging(query, BOOKING_DEFAULT_LIMIT, BOOKING_MAX_LIMIT);
 
-    const where: Prisma.BookingWhereInput = {
+    /*
+     * Phạm vi CHUNG của trang và của bốn số đếm nhóm việc: tenant, chi nhánh, dịch vụ, tìm kiếm,
+     * khoảng ngày. Trạng thái và nhóm việc đang chọn KHÔNG nằm ở đây — cột trái phải nói được mỗi
+     * ngăn còn bao nhiêu khi người dùng đang đứng ở ngăn khác.
+     */
+    const scope: Prisma.BookingWhereInput = {
       tenantId,
       deletedAt: null,
-      ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       // Lọc qua quan hệ xe → chi nhánh; `tenantId` vẫn là ranh giới thật.
@@ -263,13 +299,18 @@ export class BookingsService {
           }
         : {}),
       ...(query.q ? { OR: searchOr(query.q) } : {}),
+    };
+
+    const where: Prisma.BookingWhereInput = {
+      ...scope,
+      ...(query.status ? { status: query.status } : {}),
       // Nhóm việc đi qua `AND` chứ không trộn vào cùng một object: nó cũng nói về `status`, và
       // một phép spread sẽ âm thầm ghi đè `query.status` mà khách chọn.
       ...(query.preset ? { AND: [presetWhere(query.preset)] } : {}),
     };
 
-    // Đếm và lấy trang trong một transaction: total khớp data cùng thời điểm.
-    const [total, rows] = await this.prisma.$transaction([
+    // Đếm, lấy trang và đếm bốn nhóm việc trong MỘT transaction: mọi con số cùng một thời điểm.
+    const [total, rows, ...groupTotals] = await this.prisma.$transaction([
       this.prisma.booking.count({ where }),
       this.prisma.booking.findMany({
         where,
@@ -278,11 +319,20 @@ export class BookingsService {
         take: paging.take,
         select: LIST_SELECT,
       }),
+      ...BOOKING_LIST_PRESET_VALUES.map((preset) =>
+        this.prisma.booking.count({ where: { AND: [scope, presetWhere(preset)] } }),
+      ),
     ]);
 
     return {
       data: await this.withMoney(rows.map(toListItem)),
-      meta: paginationMeta(paging, total),
+      meta: {
+        ...paginationMeta(paging, total),
+        presetCounts: BOOKING_LIST_PRESET_VALUES.map((preset, index) => ({
+          preset,
+          count: groupTotals[index] ?? 0,
+        })),
+      },
     };
   }
 
@@ -333,7 +383,220 @@ export class BookingsService {
       select: DETAIL_SELECT,
     });
     if (!row) throw notFound();
-    return this.withMoneyOne(toDetail(row));
+    const detail = await this.withMoneyOne(toDetail(row));
+    const snapshot = row.priceSnapshot as unknown as BookingPriceSnapshot | null;
+    const [handoverPrep, customerCompletedRentals] = await Promise.all([
+      this.handoverPrepOf(tenantId, detail, snapshot),
+      detail.tenantCustomerId
+        ? this.prisma.booking.count({
+            where: {
+              tenantId,
+              tenantCustomerId: detail.tenantCustomerId,
+              status: BOOKING_STATUS.COMPLETED,
+              deletedAt: null,
+            },
+          })
+        : null,
+    ]);
+    return { ...detail, handoverPrep, customerCompletedRentals };
+  }
+
+  /**
+   * Việc CHUẨN BỊ BÀN GIAO của một đơn còn chờ giao (02/11/2026) — mỗi việc suy từ đúng nguồn của
+   * nó, không có cờ tick riêng nào có thể lệch khỏi sự thật. Đơn đã giao/khép ⇒ `null`.
+   */
+  private async handoverPrepOf(
+    tenantId: string,
+    detail: BookingDetailDto,
+    snapshot: BookingPriceSnapshot | null,
+  ): Promise<BookingHandoverPrepDto | null> {
+    const awaiting =
+      (detail.status === BOOKING_STATUS.RESERVED || detail.status === BOOKING_STATUS.CONFIRMED) &&
+      !detail.actualPickupAt;
+    if (!awaiting) return null;
+
+    const customerUserId = (
+      await this.prisma.bookingRequest.findUnique({
+        where: { bookingId: detail.id },
+        select: { customerUserId: true },
+      })
+    )?.customerUserId;
+    // Giấy đã đối chiếu mà HẾT HẠN trước ngày cuối chuyến không dùng để giao xe được — cùng mốc
+    // với cổng bằng lái lúc đặt (`licenceTripLastDayKey`, ADR 0057). Cột `@db.Date` so theo nửa
+    // đêm UTC của ngày đó.
+    const lastTripDay = new Date(
+      `${licenceTripLastDayKey({ returnAt: new Date(detail.returnAt) })}T00:00:00Z`,
+    );
+    // Bộ góc bắt buộc theo LOẠI XE — xe máy không có trái/phải (`handoverPhotoSlotsFor`).
+    const requiredSlots = handoverPhotoSlotsFor(detail.vehicleType);
+    const [verifiedDoc, verifiedLicence, deposits, contract, photos, checks] = await Promise.all([
+      detail.tenantCustomerId
+        ? this.prisma.tenantCustomerDocument.findFirst({
+            where: {
+              tenantId,
+              tenantCustomerId: detail.tenantCustomerId,
+              deletedAt: null,
+              verifiedAt: { not: null },
+              documentType: {
+                in: [
+                  CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
+                  CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE,
+                  CUSTOMER_DOCUMENT_TYPE.PASSPORT,
+                ],
+              },
+              OR: [{ expiresAt: null }, { expiresAt: { gte: lastTripDay } }],
+            },
+            select: { id: true },
+          })
+        : null,
+      customerUserId
+        ? this.prisma.customerDriverLicence.findFirst({
+            where: {
+              userId: customerUserId,
+              status: DRIVER_LICENCE_STATUS.VERIFIED,
+              OR: [{ noExpiry: true }, { expiresOn: null }, { expiresOn: { gte: lastTripDay } }],
+            },
+            select: { id: true },
+          })
+        : null,
+      this.prisma.payment.aggregate({
+        where: {
+          tenantId,
+          bookingId: detail.id,
+          kind: PAYMENT_KIND.DEPOSIT,
+          status: PAYMENT_STATUS.SUCCEEDED,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.contract.findFirst({
+        where: { tenantId, bookingId: detail.id, status: { not: CONTRACT_STATUS.VOID } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, status: true, signedAt: true },
+      }),
+      this.prisma.vehicleHandoverPhoto.findMany({
+        where: {
+          tenantId,
+          // Chỉ các ô bắt buộc — ảnh thêm ngoài khuôn không bù cho một góc còn thiếu.
+          slot: { in: [...requiredSlots] },
+          handover: {
+            bookingId: detail.id,
+            type: HANDOVER_TYPE.PICKUP,
+            status: { not: HANDOVER_STATUS.CANCELED },
+          },
+        },
+        distinct: ['slot'],
+        select: { slot: true },
+      }),
+      this.prisma.bookingHandoverCheck.findMany({
+        where: { tenantId, bookingId: detail.id },
+        orderBy: { checkedAt: 'asc' },
+        select: { item: true, checkedAt: true, checkedBy: { select: { displayName: true } } },
+      }),
+    ]);
+    const withDriver = detail.serviceType === SERVICE_TYPE.WITH_DRIVER;
+
+    return {
+      documentsReady: verifiedDoc !== null || verifiedLicence !== null,
+      /*
+       * Phần khách đưa TAY lúc nhận xe. Đơn đi qua giữ chỗ: `D` (phần của chủ xe trong khoản online)
+       * đã nằm ở XePrime và vào ví chủ xe khi chuyến xong — công nợ của đơn vẫn tính nó (sổ chung
+       * với /debts), nhưng đòi khách lần nữa ở quầy là sai. Đơn lập tay: `D` = 0.
+       */
+      rentDueAmount: Prisma.Decimal.max(
+        0,
+        new Prisma.Decimal(detail.debtAmount).minus(
+          detail.holdPaidAmount != null ? (snapshot?.fees?.depositAmount ?? 0) : 0,
+        ),
+      ).toFixed(0),
+      depositRequired: detail.depositAmount,
+      depositReceived: (deposits._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
+      contractId: contract?.id ?? null,
+      contractSigned:
+        contract !== null &&
+        (contract.status === CONTRACT_STATUS.SIGNED || contract.signedAt !== null),      pickupPhotoCount: photos.length,
+      pickupPhotoRequired: requiredSlots.length,
+      driverReady: withDriver
+        ? detail.driver?.assignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED
+        : null,
+      manualChecks: checks
+        // Đơn đổi sang tự lái sau khi đã đánh dấu tài xế — dấu cũ không còn việc để gắn vào.
+        .filter((c) => withDriver || c.item !== HANDOVER_PREP_ITEM.DRIVER)
+        .map((c) => ({
+          item: c.item as HandoverPrepItem,
+          checkedAt: c.checkedAt.toISOString(),
+          checkedByName: c.checkedBy?.displayName ?? null,
+        })),
+    };
+  }
+
+  /**
+   * Đánh dấu / bỏ đánh dấu TAY một việc chuẩn bị bàn giao (03/11/2026). Chỉ khi đơn còn chờ giao;
+   * việc tài xế chỉ có ở đơn có tài. Idempotent: đánh dấu hai lần vẫn một hàng (unique DB), bỏ
+   * dấu một việc chưa đánh dấu là không làm gì — và không ghi audit cho lượt không đổi gì.
+   */
+  async setHandoverPrepCheck(
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: SetHandoverPrepCheckDto,
+  ): Promise<BookingHandoverPrepDto> {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, vehicleId: true, status: true, actualPickupAt: true, serviceType: true },
+    });
+    if (!booking) throw notFound();
+    const awaiting =
+      (booking.status === BOOKING_STATUS.RESERVED || booking.status === BOOKING_STATUS.CONFIRMED) &&
+      !booking.actualPickupAt;
+    const applicable =
+      dto.item !== HANDOVER_PREP_ITEM.DRIVER || booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
+    if (!awaiting || !applicable) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HANDOVER_NOT_ELIGIBLE,
+        message: 'Đơn không còn ở chặng chuẩn bị bàn giao, hoặc việc này không áp dụng cho đơn',
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      let changed: boolean;
+      if (dto.checked) {
+        const created = await tx.bookingHandoverCheck.createMany({
+          data: [
+            {
+              id: newId(),
+              tenantId,
+              bookingId: booking.id,
+              vehicleId: booking.vehicleId,
+              item: dto.item,
+              checkedByUserId: userId,
+            },
+          ],
+          skipDuplicates: true,
+        });
+        changed = created.count > 0;
+      } else {
+        const removed = await tx.bookingHandoverCheck.deleteMany({
+          where: { tenantId, bookingId: booking.id, item: dto.item },
+        });
+        changed = removed.count > 0;
+      }
+      if (!changed) return;
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: dto.checked ? 'booking.prep_check' : 'booking.prep_uncheck',
+          targetType: 'booking',
+          targetId: booking.id,
+          after: { item: dto.item },
+        },
+        tx,
+      );
+    });
+
+    const detail = await this.getOne(tenantId, id);
+    return detail.handoverPrep!;
   }
 
   /**
@@ -925,6 +1188,8 @@ export class BookingsService {
     // Trạng thái đích không còn chiếm lịch → nhả occupancy để xe trống cho đơn khác.
     if (!occupiesSchedule(to)) {
       await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
+      // Cùng transaction: phụ lục còn chờ tiền đóng + hoàn, phụ lục đã hiệu lực ghi có ví chủ xe.
+      await this.extensions.onBookingClosedWithinTx(tx, id, to);
     }
 
     // Đơn huỷ / khách không đến / hoàn thành → báo tài xế đang mang chuyến (ADR 0063). Cột tài xế giữ làm
@@ -1265,9 +1530,19 @@ function orderByOf(
        * định nằm ở server để client nào cũng nhận đúng thứ tự đó mà không phải tự nhớ.
        * Khách chọn cách sắp xếp khác thì ba nhánh trên vẫn thắng.
        */
-      return preset === BOOKING_LIST_PRESET.AWAITING_PICKUP
-        ? { pickupAt: 'asc' }
-        : { createdAt: 'desc' };
+      switch (preset) {
+        case BOOKING_LIST_PRESET.AWAITING_PICKUP:
+          return { pickupAt: 'asc' };
+        // Xe đang ngoài đường: chiếc sắp phải về trước đứng đầu — đó là việc kế tiếp của ca trực.
+        case BOOKING_LIST_PRESET.RENTING:
+          return { returnAt: 'asc' };
+        // Hai ngăn đã kết thúc đọc như lịch sử: chuyến gần nhất trước.
+        case BOOKING_LIST_PRESET.COMPLETED:
+        case BOOKING_LIST_PRESET.CANCELLED:
+          return { pickupAt: 'desc' };
+        default:
+          return { createdAt: 'desc' };
+      }
   }
 }
 
@@ -1300,6 +1575,13 @@ export function presetWhere(preset: BookingListPreset): Prisma.BookingWhereInput
         actualPickupAt: null,
         handovers: { none: { type: HANDOVER_TYPE.PICKUP, status: HANDOVER_STATUS.CONFIRMED } },
       };
+    case BOOKING_LIST_PRESET.RENTING:
+      return { status: BOOKING_STATUS.ACTIVE };
+    case BOOKING_LIST_PRESET.COMPLETED:
+      return { status: BOOKING_STATUS.COMPLETED };
+    // Khách không đến là một kiểu kết thúc KHÔNG thành chuyến — cùng ngăn với huỷ (chốt 02/11/2026).
+    case BOOKING_LIST_PRESET.CANCELLED:
+      return { status: { in: [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW] } };
     default:
       return {};
   }
@@ -1419,6 +1701,18 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     depositAmount: b.depositAmount as unknown as string,
     driver: toBookingDriverSummary(b),
     createdAt: b.createdAt as unknown as string,
+    vehicleImageUrl: b.vehicle.mainImageUrl,
+    vehicleType: b.vehicle.vehicleType,
+    motorbikeCategory: b.vehicle.motorbikeCategory,
+    seatCount: b.vehicle.seatCount,
+    transmission: b.vehicle.transmission,
+    fuelType: b.vehicle.fuelType,
+    customerAvatarUrl: b.bookingRequest?.customer?.avatarUrl ?? null,
+    bookingRequestId: b.bookingRequest?.id ?? null,
+    canMessageOnPlatform: b.bookingRequest?.customerUserId != null,
+    actualPickupAt: b.actualPickupAt as unknown as string | null,
+    actualReturnAt: b.actualReturnAt as unknown as string | null,
+    cancellationParty: b.cancellation?.responsibleParty ?? null,
     pickupHandoverStatus: b.handovers[0]?.status ?? null,
     ...handoverPlaceOf(b),
   };
@@ -1437,6 +1731,8 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     priceSnapshot,
     customerTotalAmount: b.customerTotalAmount as unknown as string | null,
     holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
+    holdPaidAt: b.hold?.paidAt?.toISOString() ?? null,
+    confirmedAt: (b.bookingRequest?.decidedAt ?? b.createdAt).toISOString(),
     payAtPickupAmount: internalSnapshot?.fees?.payAtPickupAmount ?? null,
     // Kinh tế của CHỦ XE đã đóng băng trong snapshot (ADR 0024) — DTO nội bộ gian hàng (ADR 0064).
     ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
@@ -1456,9 +1752,6 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     }),
     destination: b.destination,
     destinationPin: pinOf(b.destinationLatitude, b.destinationLongitude, b.destinationPlaceId),
-    vehicleImageUrl: b.vehicle.mainImageUrl,
-    actualPickupAt: b.actualPickupAt as unknown as string | null,
-    actualReturnAt: b.actualReturnAt as unknown as string | null,
     note: b.note,
     updatedAt: b.updatedAt as unknown as string,
   };

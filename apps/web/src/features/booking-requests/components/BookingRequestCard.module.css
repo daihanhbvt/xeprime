@@ -1,109 +1,220 @@
 /*
- * Thẻ một yêu cầu thuê — bố cục theo mẫu 19/09.
+ * Thẻ một yêu cầu thuê — Figma Partner-XePrime "Vehicle Card" của màn Request (`23649:25607`,
+ * 02/11/2026): bo 16, viền xám, bóng 8px rất nhạt; DẢI ĐẦU nền `gray-25` cao ~48 (đệm 6/20); THÂN
+ * đệm 20, bốn vùng cách 20 (xe · khách có kẻ dọc hai bên · ô Yêu cầu thuê · ô Chi tiết thanh toán).
  *
- * Thân thẻ là NĂM vùng (xe · khách · lịch trình · tiền · trạng thái) rồi một CHÂN THẺ ngăn bằng
- * đường kẻ: trái là liên hệ, phải là quyết định. Tiền tách khỏi lịch trình thành cột RIÊNG
- * (trước đó nhét chung, đọc dọc dài) — hai loại thông tin khác nhau ("khi nào" và "bao nhiêu")
- * xứng đáng hai cột ngang hàng. MOBILE-FIRST: mặc định hai cột hẹp, hai `@container (min-width:
- * …)` mở dần ra. Không có nhánh JS nào theo breakpoint nên không có pha nhấp nháy khi hydrate.
- *
- * `@container`, KHÔNG `@media`: thẻ này nhúng vào một cột NỘI DUNG cạnh sidebar quản lý, chiều
- * rộng thật của nó KHÔNG bằng khổ máy (đúng kỷ luật `TripHoldPanel.module.css`). `@media` theo
- * khổ máy từng làm 5 vùng bật ra ở một viewport "đủ rộng" trong khi cột thật còn hẹp hơn nhiều —
- * bảng tiền bị bóp chữ xuống dòng lung tung dù màn hình không hề nhỏ (phản hồi 19/09/2026).
- *
- * MÀU NHẤN LÀ GOLD, không phải xanh. Bản vẽ dùng xanh cho link/nút/badge, nhưng màu chính của
- * XePrime là gold (`--xp-color-primary`) — dùng `--xp-color-link` ở đây sẽ đẻ ra một màu nhấn
- * thứ hai chỉ sống trên đúng màn này. Chữ gold lấy bậc `--xp-color-primary-active` (bậc đậm
- * nhất trong thang) đúng như `RowActions`/`FileListField` đang làm; `--xp-color-primary` chỉ
- * dùng cho NỀN và VIỀN, nơi độ tương phản không phụ thuộc vào nó.
+ * `@container`, KHÔNG `@media`: chiều rộng thật của thẻ là chiều rộng cột nội dung, không phải khổ
+ * máy (bài học 19/09/2026 — `@media` từng bung bốn vùng ở viewport "đủ rộng" trong khi cột thật
+ * còn hẹp). MOBILE-FIRST: mặc định một cột, hai mốc container mở dần ra.
  */
 .card {
   min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+  box-shadow: 0 0 8px 0 rgba(10, 13, 18, 0.04);
   container-type: inline-size;
 }
 
-.card:hover {
-  border-color: var(--xp-color-border-strong);
-  box-shadow: var(--xp-shadow-raised);
+.card[aria-busy='true'] {
+  opacity: 0.85;
 }
 
-/* ── Thân thẻ ───────────────────────────────────────────────────────────── */
+/* ── Dải đầu ─────────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  min-height: 48px;
+  padding: var(--xp-space-6) 20px;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-layout);
+}
+
+.headMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.code {
+  white-space: nowrap;
+}
+
+/* Chấm 6px giữa các mốc — Figma "_Dot". Vẽ bằng CSS, không phải ảnh. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  white-space: nowrap;
+}
+
+.stamp::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-border-strong);
+}
+
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}
+
+.buttonIcon {
+  font-size: 20px;
+}
+
+.rejectButton.rejectButton,
+.confirmButton.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  height: 36px;
+  padding: var(--xp-space-sm) 14px;
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  box-shadow: none;
+}
+
+.rejectButton.rejectButton {
+  border: 1px solid var(--xp-color-error-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-error);
+}
+
+.rejectButton.rejectButton:hover:not(:disabled) {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.confirmButton.confirmButton {
+  border: 0;
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.confirmButton.confirmButton:hover:not(:disabled) {
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(1.04);
+}
+
+/* Câu trạng thái dưới dải đầu (quá hạn phản hồi · đang chờ khách trả). */
+.notice {
+  margin: 0;
+  padding: var(--xp-space-sm) 20px;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+/* ── Thân bốn vùng ───────────────────────────────────────────────────────── */
 
 .body {
   display: grid;
-  min-width: 0;
-  padding: var(--xp-space-md);
-  column-gap: var(--xp-space-md);
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    'vehicle  vehicle'
-    'customer state'
-    'request  request'
-    'payment  payment'
-    'stamps   stamps';
-  row-gap: var(--xp-space-md);
+    'vehicle'
+    'customer'
+    'request'
+    'payment';
+  gap: 20px;
+  padding: 20px;
 }
-
-.body > * {
-  min-width: 0;
-}
-
-/* ── Xe ─────────────────────────────────────────────────────────────────── */
 
 .vehicle {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--xp-space-sm);
   grid-area: vehicle;
+  display: flex;
+  gap: var(--xp-space-md);
+  min-width: 0;
 }
 
-/* Tỉ lệ CỐ ĐỊNH 4:3 + `object-fit: cover`: ảnh nguồn dọc hay ngang thì hàng vẫn thẳng hàng. */
-.thumb {
+.vehicleMedia {
   display: flex;
-  overflow: hidden;
-  width: 76px;
   flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--xp-border-radius-sm);
-  aspect-ratio: 4 / 3;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.thumb {
+  display: block;
+  overflow: hidden;
+  width: 160px;
+  aspect-ratio: 260 / 146;
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-muted);
 }
 
 .thumbImage {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
 .thumbFallback {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-h4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--xp-color-text-placeholder);
+  font-size: 32px;
+}
+
+.scheduleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.scheduleLink:hover {
+  color: var(--xp-color-primary-hover);
 }
 
 .vehicleText {
   display: flex;
-  min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-xs);
+  align-items: flex-start;
+  gap: var(--xp-space-6);
+  min-width: 0;
 }
 
 .vehicleName,
 .vehicleNamePlain {
   overflow: hidden;
+  max-width: 100%;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: 18px;
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: 28px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -112,594 +223,317 @@
   color: var(--xp-color-primary-active);
 }
 
-.vehicleName:focus-visible,
-.customerLink:focus-visible,
-.customerPhone:focus-visible,
-.bookingLink:focus-visible {
+.specs {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-sm);
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-/* Biển số + hai chip dịch vụ nằm CÙNG một dòng, đúng như mẫu. */
-.vehicleLine {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-xs);
-}
-
-.vehicleMeta {
-  overflow: hidden;
+  background: var(--xp-color-bg-layout);
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  text-overflow: ellipsis;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
   white-space: nowrap;
 }
-
-/* Chip trung tính, nhỏ — chúng mô tả xe, không phải trạng thái, nên không mang màu nghiệp vụ. */
-.chip {
-  margin-inline-end: 0 !important;
-  border-color: var(--xp-color-border) !important;
-  background: var(--xp-color-bg-muted) !important;
-  color: var(--xp-color-text-secondary) !important;
-  font-size: var(--xp-font-size-body-sm) !important;
-}
-
-/* "Xem lịch xe": hành động phụ của vùng xe — nhỏ, gold, không tranh chỗ với tên xe. */
-.scheduleLink {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  color: var(--xp-color-primary-active);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-  gap: var(--xp-space-xs);
-}
-
-.scheduleLink:hover {
-  color: var(--xp-color-primary);
-  text-decoration: underline;
-}
-
-.scheduleLink:focus-visible {
-  border-radius: var(--xp-border-radius-sm);
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-/* ── Khách · yêu cầu thuê ───────────────────────────────────────────────── */
 
 .customer {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
   grid-area: customer;
-}
-
-/*
- * Vùng "Yêu cầu thuê" — nội dung CHÍNH của thẻ, nên nó là khối duy nhất có nền riêng và viền:
- * mắt phải rơi vào đây ngay sau tên xe. Ba vùng còn lại giữ nền trắng để không tranh chỗ.
- */
-.request {
   display: flex;
-  position: relative;
-  min-width: 0;
   flex-direction: column;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  gap: var(--xp-space-xs);
-  grid-area: request;
-}
-
-/*
- * Biến thể BẤM ĐƯỢC (yêu cầu đã thành đơn): thêm hẳn tín hiệu tương tác — con trỏ, viền và nền
- * đổi khi rê chuột, kèm dòng gợi ý "Xem chi tiết đơn thuê ›" ở góc. Một vùng bấm được mà trông
- * y hệt vùng tĩnh thì không ai bấm.
- */
-.requestOpenable {
-  composes: request;
-  border-color: color-mix(in srgb, var(--xp-color-primary) 28%, var(--xp-color-border));
-  cursor: pointer;
-}
-
-.requestOpenable:hover {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
-}
-
-.requestHead {
-  display: flex;
-  align-items: baseline;
   justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-.requestCue {
-  display: inline-flex;
-  align-items: center;
-  color: var(--xp-color-primary-active);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-  gap: var(--xp-space-xs);
-  white-space: nowrap;
-}
-
-/*
- * Nút phủ kín vùng: vùng bấm là CẢ khối, nhưng DOM chỉ có đúng một phần tử tương tác nên không
- * có nút lồng trong nút và trình đọc màn hình chỉ nghe một hành động.
- *
- * Nội dung được đặt `pointer-events: none` để cú bấm rơi xuống nút bên dưới. Đánh đổi có ý
- * thức: chữ trong vùng này KHÔNG bôi đen được nữa. Chấp nhận vì vùng này không có gì cần chép
- * tay (SĐT và biển số nằm ở vùng khác, vẫn chọn/chép bình thường), còn đổi lại là một vùng bấm
- * đủ lớn thay vì một dòng chữ nhỏ ở góc.
- */
-.requestHitArea {
-  position: absolute;
-  border: 0;
-  border-radius: inherit;
-  background: none;
-  cursor: pointer;
-  inset: 0;
-}
-
-.requestHitArea:focus-visible {
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-.requestOpenable > .requestHead,
-.requestOpenable > .facts,
-.requestOpenable > .hint {
-  position: relative;
-  pointer-events: none;
-}
-
-/*
- * Vùng "Tiền" — CÙNG kiểu hộp với `.request` (viền + nền `--xp-color-bg-muted`) để hai vùng
- * đọc thành MỘT cặp ngang hàng, không phải một vùng chính-một vùng phụ. Không bấm được: đây là
- * bảng kê, chi tiết yêu cầu vẫn mở từ vùng lịch trình bên cạnh.
- */
-.payment {
-  display: flex;
+  gap: var(--xp-space-md);
   min-width: 0;
+}
+
+.customerTop {
+  display: flex;
   flex-direction: column;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  gap: var(--xp-space-xs);
-  grid-area: payment;
+  gap: var(--xp-space-sm);
+  min-width: 0;
 }
 
-.srOnly {
-  position: absolute;
-  overflow: hidden;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  margin: -1px;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* Tiêu đề vùng: nhỏ, in hoa — đủ để mắt tìm ra vùng, không tranh chỗ với nội dung. */
-.zoneTitle {
+.zoneLabel {
   margin: 0;
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-overline);
-  font-weight: var(--xp-font-weight-semibold);
-  letter-spacing: 0.06em;
-  line-height: var(--xp-line-height-overline);
-  text-transform: uppercase;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 20px;
 }
 
 .customerLink {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
+  color: inherit;
 }
 
 .customerLink:hover {
   color: var(--xp-color-primary-active);
 }
 
-/* SĐT là hành động (bấm để gọi) nên nó mang màu nhấn — GOLD, không phải xanh. */
 .customerPhone {
-  color: var(--xp-color-primary-active);
+  color: inherit;
+}
+
+/* Hai ô "Yêu cầu thuê" / "Chi tiết thanh toán": nền gray-25, viền, bo 16, đệm 16. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+}
+
+.panel:nth-of-type(1) {
+  grid-area: request;
+}
+
+.panel:nth-of-type(2) {
+  grid-area: payment;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.detailLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.detailLink:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.estimateTag {
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+/* Nhãn dài ("Tiền giữ chỗ (khách chưa trả):") xuống dòng thay vì đẩy con số ra ngoài ô. */
+.factLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--xp-color-text-tertiary);
+}
+
+.factValue,
+.factValueEnd {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-medium);
 }
 
-.customerPhone:hover {
+.factValueEnd {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Dòng "còn phải thu" của popup chi tiết — vàng thương hiệu, 16/600 (design `23807:66304`). */
+.factValueEmphasis {
+  composes: factValueEnd;
   color: var(--xp-color-primary);
-  text-decoration: underline;
-}
-
-.accountPhone {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-.email {
-  overflow: hidden;
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  text-overflow: ellipsis;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .hint {
   margin: 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  line-height: 18px;
 }
 
-/* ── Dòng nhãn — giá trị ────────────────────────────────────────────────── */
-
-.facts {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  margin: 0;
-  gap: var(--xp-space-xs);
-}
-
-/*
- * Mobile: nhãn trái, giá trị PHẢI (đúng mẫu — mắt quét cột giá trị thẳng đứng ở màn hẹp).
- * Desktop: nhãn thành một cột cố định rồi giá trị bám sát ngay sau.
- */
-.fact {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-}
-
-.factLabel {
-  flex: none;
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body);
-}
-
-/* Dấu hai chấm là DẤU CÂU, không phải chữ — cả vi lẫn en dùng đúng ký tự này. */
-.factLabel::after {
-  content: ':';
-}
-
-.factValue,
-.factValueStrong {
-  min-width: 0;
-  margin: 0;
-  color: var(--xp-color-text);
-  text-align: end;
-  /* Địa chỉ giao và điểm đến là chuỗi dài không có dấu cách — cho phép ngắt giữa từ. */
-  overflow-wrap: anywhere;
-}
-
-/* Mốc nhận/trả là thứ mắt phải chạm tới đầu tiên trong vùng lịch. */
-.factValueStrong {
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.handover {
-  display: inline-flex;
-  align-items: center;
-  color: var(--xp-color-text-secondary);
-  gap: var(--xp-space-xs);
-}
-
-/* "Tạm tính" cạnh số tiền — chưa duyệt thì số này còn đổi (ADR 0024). */
-.pricingEstimateTag {
-  padding: 1px 6px;
-  border-radius: var(--xp-border-radius-pill);
-  margin-inline-start: var(--xp-space-xs);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-overline);
-  font-weight: var(--xp-font-weight-semibold);
-  vertical-align: middle;
-}
-
-/* ── Trạng thái · dấu vết xử lý ─────────────────────────────────────────── */
-
-.state {
-  display: flex;
-  /* Chip trạng thái + đồng hồ đếm ngược xếp dọc, cùng canh phải với phần còn lại của cột. */
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--xp-space-xs);
-  grid-area: state;
-}
-
-.stamps {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  grid-area: stamps;
-}
-
-.timestamp {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-/* ── Ngữ cảnh thêm: lộ trình · địa chỉ giao · ghi chú · lý do từ chối ───── */
+/* ── Dải thông tin thêm ──────────────────────────────────────────────────── */
 
 .extras {
   display: flex;
-  flex-direction: column;
-  padding: 0 var(--xp-space-md) var(--xp-space-md);
-  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+  gap: var(--xp-space-12) var(--xp-space-lg);
+  padding: var(--xp-space-12) 20px;
+  border-top: 1px solid var(--xp-color-border);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
 }
 
-/* Cảnh báo rủi ro là VĂN BẢN, không phải tooltip: phải đọc được trước khi tay chạm nút Duyệt. */
-.risk {
-  display: flex;
-  align-items: flex-start;
-  padding: var(--xp-space-xs) var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-sm);
+.extras > * {
+  min-width: 0;
+}
+
+.extraLine {
   margin: 0;
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.extraFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-lg);
+  margin: 0;
+}
+
+.extraFacts .fact {
+  justify-content: flex-start;
+}
+
+.chip {
+  margin: 0;
+}
+
+.risk {
+  margin: 0;
+  color: var(--xp-color-error);
   font-weight: var(--xp-font-weight-medium);
-  gap: var(--xp-space-xs);
-  line-height: var(--xp-line-height-body-sm);
 }
 
-.note,
-.rejectReason {
-  padding: var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-}
-
-.rejectReason {
-  border-left: 3px solid var(--xp-color-error);
-  background: var(--xp-color-error-bg);
+.note {
+  flex: 1 1 320px;
 }
 
 .noteLabel {
-  margin: 0 0 var(--xp-space-xs);
+  margin: 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-sm);
+  line-height: 18px;
 }
 
-/* Hai dòng mặc định — đủ để đọc ý chính; phần còn lại mở bằng nút, không giấu sau tooltip. */
-.noteBody {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  -webkit-box-orient: vertical;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
-  -webkit-line-clamp: 2;
-  line-height: var(--xp-line-height-body);
-  overflow-wrap: anywhere;
-}
-
+.noteBody,
 .noteBodyFull {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.noteToggle {
-  height: auto !important;
-  padding: 0 !important;
-  color: var(--xp-color-primary-active) !important;
+.noteBody {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-/* ── Chân thẻ ───────────────────────────────────────────────────────────── */
-
-.footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-top: 1px solid var(--xp-color-border-subtle);
-  gap: var(--xp-space-sm);
+.noteToggle.noteToggle {
+  height: auto;
+  padding: 0;
+  color: var(--xp-color-primary-active);
 }
 
-/*
- * Mobile: liên hệ chia đều cả hàng, quyết định chiếm trọn hàng dưới. Mỗi nút cao tối thiểu
- * 44px (WCAG 2.5.5) và nhãn không bị cắt vì `flex: 1` chia đều chứ không nén theo nội dung.
- *
- * Cụm QUYẾT ĐỊNH là `RowActions variant="filled"` — nó tự lo tông màu, vùng chạm 44px và việc
- * chặn sự kiện nổi bọt, nên ở đây chỉ còn việc cho nó chiếm trọn hàng ở màn hẹp.
- */
-.contact,
-.decision {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 100%;
-  gap: var(--xp-space-sm);
-}
+/* ── Mốc container ───────────────────────────────────────────────────────── */
 
-.decision {
-  justify-content: flex-end;
-}
-
-.contactSlot,
-.contact > .contactButton,
-.contact > .zaloButton {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.contact :global(.ant-btn) {
-  width: 100%;
-  min-height: var(--xp-touch-target-min);
-}
-
-@container (max-width: 640px) {
-  /* `RowActions` render một `div` gốc — cho nó trải hết hàng rồi chia đôi hai nút bên trong. */
-  .decision > * {
-    width: 100%;
-  }
-
-  .decision :global(.ant-btn) {
-    flex: 1 1 0;
-  }
-}
-
-/*
- * Nút Zalo: nền gold nhạt + chữ gold, thay cho xanh trong bản vẽ. Không cài thêm bộ icon chỉ
- * để có một logo — chữ đã là nhãn rõ ràng và `aria-label` mang đủ ngữ cảnh.
- */
-.zaloButton {
-  border: 1px solid transparent !important;
-  background: var(--xp-color-primary-light) !important;
-  color: var(--xp-color-primary-active) !important;
-  font-weight: var(--xp-font-weight-semibold) !important;
-}
-
-.zaloButton:hover {
-  border-color: var(--xp-color-primary) !important;
-  color: var(--xp-color-primary-active) !important;
-}
-
-.bookingLink {
-  display: inline-flex;
-  height: auto !important;
-  align-items: center;
-  padding: 0 !important;
-  color: var(--xp-color-primary-active) !important;
-  font-size: var(--xp-font-size-body) !important;
-  font-weight: var(--xp-font-weight-semibold) !important;
-  gap: var(--xp-space-xs);
-}
-
-.bookingLink:hover {
-  color: var(--xp-color-primary) !important;
-}
-
-/* ── Tablet trở lên: nút trở về bề rộng theo nội dung, chân thẻ thành một hàng ── */
-
-@container (min-width: 641px) {
+/* Vừa (tablet / cột hẹp): xe + khách một hàng, hai ô tiền/lịch một hàng. */
+@container (min-width: 720px) {
   .body {
-    padding: var(--xp-space-md) var(--xp-space-lg);
-  }
-
-  .contact,
-  .decision {
-    flex: 0 0 auto;
-  }
-
-  .contactSlot,
-  .contact > .contactButton,
-  .contact > .zaloButton {
-    flex: 0 0 auto;
-  }
-
-  .contact :global(.ant-btn) {
-    width: auto;
-    /* Cùng chiều cao với nút của `RowActions variant="filled"` để hai cụm thẳng hàng. */
-    min-height: 34px;
-  }
-
-  .footer {
-    padding: var(--xp-space-sm) var(--xp-space-lg);
-  }
-}
-
-/* ── Đủ rộng: năm vùng của một hàng hộp thư ───────────────────────────────
-   Ngưỡng theo BỀ RỘNG CỦA CHÍNH THẺ (container), không phải khổ máy — xem docblock đầu file. */
-
-@container (min-width: 1025px) {
-  .body {
-    align-items: start;
-    column-gap: var(--xp-space-lg);
-    grid-template-columns:
-      minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1fr)
-      minmax(150px, 0.75fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
-      'vehicle customer request payment state'
-      'vehicle customer request payment stamps';
-    grid-template-rows: auto 1fr;
-    row-gap: var(--xp-space-xs);
+      'vehicle customer'
+      'request payment';
   }
 
-  .vehicle {
-    align-items: flex-start;
+  .customer {
+    padding-left: 20px;
+    border-left: 1px solid var(--xp-color-border);
+  }
+}
+
+/* Rộng (desktop): đúng một hàng bốn vùng như design. */
+@container (min-width: 1280px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) minmax(300px, 337px) minmax(
+        260px,
+        278px
+      );
+    grid-template-areas: 'vehicle customer request payment';
+  }
+
+  .customer {
+    padding-right: 20px;
+    border-right: 1px solid var(--xp-color-border);
   }
 
   .thumb {
-    width: 88px;
-  }
-
-  /* Nhãn thành một cột canh đều; giá trị bám ngay sau thay vì bị đẩy sang mép phải. */
-  .fact {
-    justify-content: flex-start;
-  }
-
-  .factLabel {
-    width: 84px;
-  }
-
-  .factValue,
-  .factValueStrong {
-    text-align: start;
-  }
-
-  .state {
-    justify-content: flex-end;
-  }
-
-  .stamps {
-    align-items: flex-end;
-    text-align: end;
+    width: 260px;
   }
 }
 
-/*
- * Câu thay cho hàng nút quyết định khi yêu cầu đã quá hạn phản hồi. Trung tính, không đỏ:
- * không ai làm sai điều gì — chỉ là hết giờ, và việc cần làm bây giờ nằm ngoài màn hình này.
- */
-.expiredHint {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  text-align: right;
-}
+/* Rất hẹp (điện thoại): ảnh xe nhỏ lại, nút quyết định trải hết chiều ngang. */
+@container (max-width: 480px) {
+  .thumb {
+    width: 112px;
+  }
 
-/*
- * Chặng "đã nhận, chờ khách trả tiền": một câu tình trạng + lối thoát HUỶ.
- *
- * Xếp dọc và canh phải để khớp đúng vị trí mà hàng nút quyết định vẫn đứng ở các thẻ khác —
- * mắt người trực quét cả cột phải của hộp thư, và một cụm nhảy sang trái ở đúng chặng này sẽ
- * đọc như một thẻ bị vỡ bố cục.
- */
-.awaitingHold {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
+  .vehicleName,
+  .vehicleNamePlain {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: 24px;
+  }
 
-/* Nút link đã có padding ngang của AntD — bỏ đi để nó thẳng mép phải với câu ở trên. */
-.cancelButton {
-  padding-inline: 0;
+  .headActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .rejectButton.rejectButton,
+  .confirmButton.confirmButton {
+    flex: 1;
+    height: 44px;
+    justify-content: center;
+  }
 }

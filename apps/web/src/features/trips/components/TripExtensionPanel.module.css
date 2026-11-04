@@ -1,0 +1,29 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.facts dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}

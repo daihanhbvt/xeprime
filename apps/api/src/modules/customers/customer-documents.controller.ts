@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
@@ -14,6 +14,7 @@ import {
   CustomerDocumentPresignDto,
   PresignCustomerDocumentDto,
   VerifyCustomerDocumentDto,
+  UpdateCustomerDocumentDto,
 } from './dto/customer.dto';
 
 /**
@@ -105,6 +106,20 @@ export class CustomerDocumentsController {
     @Body() dto: VerifyCustomerDocumentDto,
   ): Promise<CustomerDocumentDto> {
     return this.documents.verify(tenant.tenantId, id, user.id, documentId, dto);
+  }
+
+  @Patch(':documentId')
+  @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
+  @ApiOperation({ summary: 'Sửa chủ thẻ / số giấy tờ / hạn của một giấy tờ đã tải (có audit)' })
+  @ApiOkResponse({ type: CustomerDocumentDto })
+  async updateInfo(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @Body() dto: UpdateCustomerDocumentDto,
+  ): Promise<CustomerDocumentDto> {
+    return this.documents.updateInfo(tenant.tenantId, id, user.id, documentId, dto);
   }
 
   @Delete(':documentId')

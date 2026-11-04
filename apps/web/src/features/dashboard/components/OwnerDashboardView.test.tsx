@@ -69,7 +69,16 @@ vi.mock('next/navigation', () => ({
 function makeOverview(): PartnerOverview {
   return {
     generatedAt: new Date().toISOString(),
-    today: { awaitingPickup: 1, pickupsToday: 1, pickupsOverdue: 0, active: 0, returnsToday: 0, returnsOverdue: 0 },
+    today: {
+      awaitingPickup: 1,
+      pickupsToday: 1,
+      pickupsOverdue: 0,
+      pickupsDue: 1,
+      active: 0,
+      returnsToday: 0,
+      returnsOverdue: 0,
+      returnsDue: 0,
+    },
     requests: { pending: 1, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
     agenda: { items: [], hasMore: false },
     month: {

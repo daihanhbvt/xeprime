@@ -63,3 +63,12 @@ export class VehicleAlertsDto {
 export class VehicleAlertsListDto {
   @ApiProperty({ type: [VehicleAlertsDto] }) data!: VehicleAlertsDto[];
 }
+
+/** Số xe đang có việc "cần xử lý" — huy hiệu mục menu Danh sách xe. */
+export class VehicleNeedsActionCountDto {
+  @ApiProperty({
+    description:
+      'Số xe có ít nhất một việc thuộc VEHICLE_ALERT_NEEDS_ACTION_KINDS, trong phạm vi chi nhánh của người gọi',
+  })
+  count!: number;
+}

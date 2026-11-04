@@ -12,11 +12,13 @@ import type { BookingFilters } from '../types';
  * Chi nhánh lọc qua quan hệ XE của đơn ở backend; giá trị đến từ ô "Chi nhánh" của trang, tức
  * từ URL (ADR 0052).
  */
-export function useBookings(filters: BookingFilters) {
+export function useBookings(filters: BookingFilters, options: { enabled?: boolean } = {}) {
   const params = filtersToParams(filters);
   return useQuery({
     queryKey: queryKeys.bookings.list(params),
     queryFn: () => fetchBookings(filters),
     placeholderData: keepPreviousData,
+    // Màn "Quản lý đơn thuê xe" giữ cả truy vấn của ô "Tất cả" lẫn của một ngăn, chỉ bật cái đang xem.
+    enabled: options.enabled ?? true,
   });
 }

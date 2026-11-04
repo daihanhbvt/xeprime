@@ -17,6 +17,8 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>): void {
   void queryClient.invalidateQueries({ queryKey: queryKeys.receipts.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+  // Tổng doanh thu / chi phí / lợi nhuận trên thẻ ở Danh sách xe là tổng PHIẾU đã duyệt theo xe.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
 }
 
 export function useCreateReceipt() {

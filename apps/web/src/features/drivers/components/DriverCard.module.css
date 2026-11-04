@@ -1,0 +1,325 @@
+/*
+ * Thẻ tài xế — Figma Partner-XePrime `23737:43826`: nền trắng, viền nhạt, bo 16, đệm 16, các khối
+ * cách nhau 16. Thẻ chiếm trọn ô lưới và hàng nút dồn đáy, nên thẻ cạnh nhau thẳng một đường nút.
+ */
+.card {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgb(10 13 18 / 4%);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+}
+
+/* Ảnh + tên + SĐT là MỘT nút mở ngăn chi tiết — vùng bấm rộng, không phải chữ link nhỏ. */
+.identity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  gap: var(--xp-space-12);
+  text-align: left;
+}
+
+.identity:hover .name {
+  color: var(--xp-color-primary-hover);
+}
+
+.identity:focus-visible {
+  border-radius: var(--xp-border-radius);
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.avatar {
+  flex: none;
+  border: 1px solid var(--xp-color-border-subtle);
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.contact {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-sm);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.separator {
+  color: var(--xp-color-text-disabled);
+}
+
+.account {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+/* Hình thức hợp tác — viên xám không viền, chữ 12/500. */
+.typeChip {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* Viên trạng thái trên thẻ: cùng `StatusBadge`, cỡ chữ 12/18 và bo tròn như design thẻ. */
+.statusChip {
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.meta {
+  margin: calc(var(--xp-space-md) * -1 + var(--xp-space-xs)) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ─── Khối bằng lái — nền xám bo 12, đệm 12/16 ─────────────────────────── */
+.licence {
+  display: flex;
+  min-height: 139px;
+  flex-direction: column;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg);
+  gap: var(--xp-space-sm);
+}
+
+.licenceHead {
+  display: flex;
+  align-items: center;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-12);
+}
+
+.licenceTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+}
+
+.licenceState {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-6);
+  line-height: 20px;
+}
+
+.licenceOk {
+  color: var(--xp-color-success);
+}
+
+.licenceWarn {
+  color: var(--xp-color-warning-strong);
+}
+
+.checkIcon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  font-size: 12px;
+}
+
+.licenceClass {
+  margin-left: auto;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.licenceRows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.licenceRows > div,
+.fact {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-12);
+  line-height: 20px;
+}
+
+.licenceRows dt,
+.fact dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+}
+
+.licenceRows dd,
+.fact dd {
+  overflow: hidden;
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Họ tên in trên bằng giữ CHỮ HOA như trên giấy tờ — đối chiếu bằng mắt dễ hơn. */
+.holder {
+  text-transform: uppercase;
+}
+
+.licenceNote {
+  margin: 0;
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.licenceEmpty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.licenceEmptyIcon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-tertiary);
+  font-size: 22px;
+}
+
+.licenceEmptyText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-xs);
+  line-height: 20px;
+}
+
+.licenceEmptyText b {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ─── Dòng số liệu dưới khối bằng lái ──────────────────────────────────── */
+.facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.factLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-hover);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.factLink:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.none {
+  color: var(--xp-color-text-disabled);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.drops {
+  display: flex;
+  align-items: flex-start;
+  margin: calc(var(--xp-space-sm) * -1) 0 0;
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-6);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.dropsCritical {
+  color: var(--xp-color-error);
+}
+
+/* Hàng nút: gạch ngang trên, dồn đáy thẻ, dồn phải như design. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  margin-top: auto;
+  gap: var(--xp-space-12);
+}

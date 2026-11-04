@@ -1,7 +1,9 @@
-/* Ghi chú + lỗi đầu form mời tài xế — đọc trước khi gõ SĐT. */
-.hints {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin-bottom: var(--xp-space-lg);
+/* Lỗi gửi lời mời — đầu form, đọc trước khi sửa lại SĐT. */
+.error {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Khối "Lưu ý" cuối form mời (Figma `23737:45751`): điều kiện tài khoản của tài xế. */
+.hint {
+  margin-top: var(--xp-space-xs);
 }

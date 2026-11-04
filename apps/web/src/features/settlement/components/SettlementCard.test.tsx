@@ -105,7 +105,6 @@ describe('SettlementCard — trạng thái cọc', () => {
     // Chưa xong chuyến thì chưa mời hoàn tiền, và cũng không hiện dòng đề xuất hoàn.
     expect(screen.queryByText('Đề xuất hoàn lại')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Đánh dấu đã hoàn cọc' })).toBeNull();
-    expect(screen.getByText(/Đang giữ tiền cọc của khách/)).toBeTruthy();
   });
 
   it('xong chuyến, còn tiền để trả: mở việc hoàn cọc', () => {
@@ -149,8 +148,9 @@ describe('SettlementCard — trạng thái cọc', () => {
       depositStatus: DEPOSIT_STATUS.NOT_RECEIVED,
     };
     renderCard();
-    // Xuất hiện hai chỗ: nhãn trạng thái ở góc thẻ và giá trị của dòng `Cọc đã nhận`.
-    expect(screen.getAllByText('Chưa ghi nhận đã thu cọc').length).toBeGreaterThan(0);
+    // Dòng `Cọc đã nhận` nói thẳng — không có số 0 mập mờ, không cần nhãn trạng thái thứ hai.
+    expect(screen.getByText('Chưa ghi nhận')).toBeTruthy();
+    expect(screen.queryByText('0 ₫')).toBeNull();
     expect(screen.queryByText('Đề xuất hoàn lại')).toBeNull();
   });
 });

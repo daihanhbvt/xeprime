@@ -45,6 +45,7 @@ import {
   makeBookingHoldsService,
   makeBookingsService,
   makeBookingRequestsService,
+  makeBookingExtensionsService,
 } from './helpers/service-factory';
 import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
@@ -80,7 +81,7 @@ const settlement = new HoldSettlementService(
 );
 const sepay = new SepayService(asService, makeBillingService(asService), holds, {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? 'test-key-0123456789abcdef' : undefined),
-} as unknown as ConfigService);
+} as unknown as ConfigService, makeBookingExtensionsService(asService));
 
 /**
  * Đường DUYỆT/HUỶ của gian hàng — cần cho các ca ADR 0055 ở cuối file. Spec này không đi qua

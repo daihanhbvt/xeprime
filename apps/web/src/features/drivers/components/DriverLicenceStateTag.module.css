@@ -1,0 +1,5 @@
+/* Dòng phụ dưới tag bằng lái (tab Hồ sơ của ngăn chi tiết tài xế). */
+.meta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}

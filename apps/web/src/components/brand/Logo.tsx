@@ -15,7 +15,8 @@ import styles from './Logo.module.css';
  * Đổi logo về sau: thay file trong `public/brand/` (và bộ icon ở `src/app/`), chỉnh `RATIO` nếu
  * tỉ lệ khác — mọi nơi dùng `<Logo/>` không phải sửa.
  */
-type LogoSize = 'sm' | 'md' | 'lg';
+/** `header` = 40px — Brand Logo của header site partner (Figma Partner-XePrime `23649:27575`). */
+type LogoSize = 'sm' | 'md' | 'header' | 'lg';
 type LogoVariant = 'full' | 'mark';
 
 interface LogoProps {
@@ -35,6 +36,7 @@ const RATIO: Record<LogoVariant, number> = {
 const HEIGHT: Record<LogoSize, Record<LogoVariant, number>> = {
   sm: { full: 30, mark: 30 },
   md: { full: 38, mark: 38 },
+  header: { full: 40, mark: 40 },
   lg: { full: 54, mark: 60 },
 };
 

@@ -44,8 +44,14 @@ import styles from './BranchesView.module.css';
  *
  * Dùng `DataTable` chung: bảng ở desktop, thẻ ở ≤640px, và toàn bộ trạng thái (đang tải / rỗng /
  * lỗi / thiếu quyền / lọc không ra) đã nằm trong component đó — không dựng lại ở đây.
+ *
+ * Hai cách đặt (`variant`):
+ *  - `page` — màn riêng, có tiêu đề trang. Còn dùng ở phiên hỗ trợ gian hàng (ADR 0050).
+ *  - `section` — một section của "Thông tin cửa hàng" ở site partner (menu mới 02/11/2026,
+ *    `docs/design/09_PARTNER_REDESIGN.md` §2): tiêu đề do `SectionCard` của trang đó lo, nút "Thêm
+ *    chi nhánh" về đứng đầu thanh công cụ.
  */
-export function BranchesView() {
+export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section' }) {
   const t = useTranslations('Branches');
   const tc = useTranslations('Common');
   const tAddr = useTranslations('Address');
@@ -225,30 +231,29 @@ export function BranchesView() {
         ]),
   ];
 
+  /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh hiện có được,
+     không mở thêm chi nhánh mới. Server chặn ở POST /branches. */
+  const addButton = hideWrites ? null : (
+    <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
+      {(locked) => (
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={openCreate}
+          disabled={!canManage || locked}
+        >
+          {t('page.add')}
+        </Button>
+      )}
+    </FeatureWriteTooltip>
+  );
+  const isSection = variant === 'section';
+
   return (
     <div className={styles.page}>
-      <ManagePageHeader
-        title={t('page.title')}
-        subtitle={t('page.subtitle')}
-        extra={
-          hideWrites ? null : (
-            /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh
-             hiện có được, không mở thêm chi nhánh mới. Server chặn ở POST /branches. */
-            <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
-              {(locked) => (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={openCreate}
-                  disabled={!canManage || locked}
-                >
-                  {t('page.add')}
-                </Button>
-              )}
-            </FeatureWriteTooltip>
-          )
-        }
-      />
+      {isSection ? null : (
+        <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={addButton} />
+      )}
 
       {needsReview > 0 ? (
         <Alert
@@ -285,6 +290,7 @@ export function BranchesView() {
           >
             {t('toolbar.activeOnly')}
           </Button>
+          {isSection ? addButton : null}
         </div>
       </div>
 

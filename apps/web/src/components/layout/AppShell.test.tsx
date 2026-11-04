@@ -55,6 +55,9 @@ vi.mock('@/services/auth.service', () => ({ destroySession: vi.fn(async () => un
 vi.mock('./Sidebar', () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
 vi.mock('./Topbar', () => ({ Topbar: () => <div data-testid="topbar" /> }));
 vi.mock('./MobileNav', () => ({ MobileNav: () => <div data-testid="mobile-nav" /> }));
+// Site partner dựng header menu ngang (ShellFrame layout=topnav) thay cho sidebar + topbar.
+vi.mock('./PartnerHeader', () => ({ PartnerHeader: () => <div data-testid="partner-header" /> }));
+vi.mock('./PartnerBreadcrumb', () => ({ PartnerBreadcrumb: () => null }));
 
 const CUSTOMER = { displayName: 'Khách A', tenant: null, platformRole: null };
 /**
@@ -138,7 +141,7 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = CUSTOMER;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('page')).toBeNull();
     expect(screen.queryByText('Tên gian hàng')).toBeNull();
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
@@ -148,13 +151,13 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
    * Bước đầu của tuyến hoa hồng: wizard đăng xe nhanh mở được khi CHƯA có gian hàng, và tự dựng khung
    * tập trung của nó — không sidebar, để sidebar không bật lên giữa chừng khi gian hàng vừa mở.
    */
-  it('wizard đăng xe nhanh: vào được khi chưa có gian hàng, không dựng sidebar', () => {
+  it('wizard đăng xe nhanh: vào được khi chưa có gian hàng, không dựng khung', () => {
     state.user = CUSTOMER;
     nav.pathname = '/manage/vehicles/register';
     renderShell();
 
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
@@ -166,7 +169,7 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = ADMIN;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
   });
 
@@ -174,7 +177,7 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
   });
 });
@@ -196,7 +199,7 @@ describe('AppShell — route thoát khỏi khung portal', () => {
 
     expect(screen.getByTestId('page')).toBeTruthy();
     expect(screen.queryByText('Bạn chưa có gian hàng')).toBeNull();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
   });
 });
 
@@ -217,7 +220,7 @@ describe('AppShell — phiên hỏng', () => {
     state.isLoading = true;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('page')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
@@ -228,22 +231,23 @@ describe('AppShell — các vùng của khung', () => {
     state.user = OWNER;
   });
 
-  it('dựng đủ sidebar · topbar · vùng nội dung <main> · điều hướng mobile', () => {
+  it('dựng đủ header menu ngang · vùng nội dung <main> · điều hướng mobile — KHÔNG sidebar/topbar', () => {
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
-    expect(screen.getByTestId('topbar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('topbar')).toBeNull();
     expect(screen.getByTestId('mobile-nav')).toBeTruthy();
     expect(screen.getByRole('main')).toBeTruthy();
   });
 
-  it('children nằm TRONG <main>, không nằm cạnh sidebar', () => {
+  it('children nằm TRONG <main>, không nằm cạnh header', () => {
     renderShell();
 
     expect(screen.getByRole('main').contains(screen.getByTestId('page'))).toBe(true);
   });
 
-  it('cả sidebar lẫn điều hướng mobile đều luôn mount — chọn hiện cái nào là việc của CSS', () => {
+  it('cả header lẫn điều hướng mobile đều luôn mount — chọn hiện cái nào là việc của CSS', () => {
     // Hiện trạng: `AppShell` KHÔNG gọi `useIsMobile`/`useIsTablet`. Không có nhánh JS nào theo
     // breakpoint; `Sidebar` và thanh tab của `MobileNav` loại trừ nhau bằng `@media` trong
     // `.module.css`. Wave 1D đổi ranh 992→1024 là đổi ở đó — nếu chuyển sang nhánh JS thì
@@ -251,7 +255,7 @@ describe('AppShell — các vùng của khung', () => {
     const matchMedia = vi.spyOn(window, 'matchMedia');
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('mobile-nav')).toBeTruthy();
     expect(matchMedia).not.toHaveBeenCalled();
   });
@@ -262,7 +266,7 @@ describe('AppShell — các vùng của khung', () => {
 
     expect(screen.getByText('Hồ sơ đang chờ nền tảng duyệt')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
   });
 
   it('gian hàng đang hoạt động: KHÔNG có dải trạng thái nào', () => {
@@ -346,7 +350,7 @@ describe('AppShell — dải trạng thái gian hàng', () => {
     state.user = CUSTOMER;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('topbar')).toBeNull();
     expect(screen.queryByTestId('mobile-nav')).toBeNull();
     expect(screen.queryByRole('main')).toBeNull();
@@ -358,7 +362,7 @@ describe('AppShell — ranh giới quyền giữ nguyên', () => {
     state.user = DUAL;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
   });
 
@@ -574,7 +578,7 @@ describe('AppShell — cổng tuyến', () => {
     state.user = COMMISSION_OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
     expect(nav.replace).not.toHaveBeenCalled();
   });
@@ -603,7 +607,7 @@ describe('AppShell — cổng tuyến', () => {
     state.user = OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
@@ -623,7 +627,7 @@ describe('AppShell — cổng tuyến', () => {
     nav.pathname = '/manage/onboarding';
     renderShell();
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 });

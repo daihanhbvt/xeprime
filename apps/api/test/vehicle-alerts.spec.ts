@@ -13,6 +13,7 @@ import {
   VEHICLE_ALERT_PRIORITY,
   VEHICLE_ALERT_SEVERITY,
   VEHICLE_DOCUMENT_TYPE,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   type VehicleAlertKind,
@@ -81,7 +82,6 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(
   asService,
-  occupancy,
   odometer,
   files,
   audit,
@@ -901,5 +901,50 @@ describe('Cảnh báo không rò dữ liệu nhạy cảm', () => {
       expect(Object.values(VEHICLE_ALERT_SEVERITY)).toContain(alert.severity);
       expect(VEHICLE_ALERT_PRIORITY[alert.kind as VehicleAlertKind]).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('Số xe cần xử lý (huy hiệu menu Danh sách xe)', () => {
+  maybe('chỉ đếm xe có việc chặn; lời nhắc không tính; một xe nhiều việc vẫn là MỘT', async () => {
+    const before = await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE);
+
+    // Chỉ có lời nhắc (chưa có KM — mức warning) ⇒ không tăng.
+    await createVehicle();
+    expect(await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE)).toBe(before);
+
+    // Bị trả về khi đăng chợ ⇒ +1.
+    const returned = await createVehicle();
+    await prisma.vehicle.update({
+      where: { id: returned.id },
+      data: { publicStatus: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION },
+    });
+    expect(await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE)).toBe(before + 1);
+
+    // Cùng xe đó thêm quá hạn bảo dưỡng ⇒ vẫn chỉ +1 (đếm XE, không đếm việc).
+    await setKm(returned.id, 50_300);
+    const profile = await maintenance.getProfile(tenantId, returned.id);
+    await maintenance.saveProfile(tenantId, returned.id, ownerId, {
+      oilChangeIntervalKm: 5_000,
+      lastServiceKm: 45_000,
+      expectedRowVersion: profile.rowVersion,
+    });
+    expect(await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE)).toBe(before + 1);
+  });
+
+  maybe('phạm vi chi nhánh theo người gọi; xe của gian hàng khác không lọt vào', async () => {
+    // Người bị giới hạn ở một chi nhánh không tồn tại ⇒ không thấy xe nào.
+    expect(await alerts.needsActionCount(tenantId, [newId()], OPERATIONS_SCOPE)).toBe(0);
+
+    const before = await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE);
+    const foreign = await createVehicleWithBranch(otherTenantId, otherOwnerId, {
+      code: `W8-X-${Date.now().toString(36)}`,
+      name: 'Xe shop khác',
+      vehicleType: VEHICLE_TYPE.CAR,
+    });
+    await prisma.vehicle.update({
+      where: { id: foreign.id },
+      data: { publicStatus: VEHICLE_PUBLIC_STATUS.REJECTED },
+    });
+    expect(await alerts.needsActionCount(tenantId, null, OPERATIONS_SCOPE)).toBe(before);
   });
 });

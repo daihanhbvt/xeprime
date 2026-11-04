@@ -99,7 +99,15 @@
     "openMenu": "Mở menu",
     "fullMenu": "Menu đầy đủ",
     "balance": "Số dư & rút tiền",
-    "security": "Bảo mật tài khoản"
+    "security": "Bảo mật tài khoản",
+    "rentalCalendar": "Lịch thuê xe",
+    "bookingManagement": "Quản lý đơn thuê xe",
+    "customerList": "Danh sách khách hàng",
+    "driverManagement": "Quản lý tài xế",
+    "wallet": "Quản lý ví",
+    "transactionHistory": "Lịch sử giao dịch",
+    "shopInfo": "Thông tin cửa hàng",
+    "staffPermissions": "Nhân viên & Phân quyền"
   },
   "manageGroups": {
     "overview": "Tổng quan",
@@ -115,7 +123,11 @@
     "platformFinance": "Tiền & vận hành",
     "platformPolicy": "Chính sách & gói",
     "platformSystem": "Hệ thống",
-    "account": "Tài khoản"
+    "account": "Tài khoản",
+    "partnerOperations": "Vận hành",
+    "fleet": "Xe & Tài xế",
+    "revenue": "Doanh thu",
+    "help": "Trợ giúp"
   },
   "platform": {
     "appConfig": "Cấu hình ứng dụng",

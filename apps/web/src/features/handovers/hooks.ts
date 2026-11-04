@@ -3,7 +3,9 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryParams } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
-import { fetchHandoverContext, fetchMissingOdometerQueue } from './api';
+import type { HandoverType } from '@xeprime/types';
+import { fetchHandoverContext, fetchHandoverPhotoUrl, fetchMissingOdometerQueue } from './api';
+import type { HandoverPhoto } from './types';
 
 /**
  * Ngữ cảnh bàn giao của một đơn. `enabled` tắt khi thiếu `handovers.view` — không gọi API
@@ -42,6 +44,8 @@ export function useInvalidateHandovers(bookingId: string, vehicleId?: string) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.handovers(bookingId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(bookingId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+    // Hồ sơ khách hiện chặng của đơn hiện tại — giao/nhận xe lật chặng đó.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
     // Nhánh `vehicles` gồm danh sách + stats + alerts + summary + cụm bảo dưỡng của từng xe.
@@ -52,4 +56,38 @@ export function useInvalidateHandovers(bookingId: string, vehicleId?: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.summary(vehicleId) });
     }
   };
+}
+
+/**
+ * URL ký cho ẢNH THU NHỎ của một biên bản (chi tiết đơn, 03/11/2026) — chỉ khi người xem có
+ * `handovers.file_view`. URL sống ngắn nên tự làm mới trước khi hết hạn; một ảnh hỏng không kéo
+ * cả hàng về lỗi — ô đó rơi về trạng thái "Đã có ảnh".
+ */
+export function useHandoverPhotoPreviews(
+  bookingId: string,
+  type: HandoverType,
+  photos: readonly HandoverPhoto[],
+  enabled: boolean,
+) {
+  const withFile = photos.filter((photo) => photo.fileId);
+  const ids = withFile.map((photo) => photo.fileId as string);
+  return useQuery({
+    queryKey: queryKeys.bookings.handoverPhotoPreviews(bookingId, type, ids),
+    queryFn: async () => {
+      const entries = await Promise.all(
+        withFile.map(async (photo) => {
+          try {
+            const ticket = await fetchHandoverPhotoUrl(bookingId, type, photo.fileId as string);
+            return [photo.slot, ticket.downloadUrl] as const;
+          } catch {
+            return [photo.slot, null] as const;
+          }
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, string | null>;
+    },
+    enabled: enabled && ids.length > 0,
+    staleTime: 90_000,
+    refetchInterval: 90_000,
+  });
 }

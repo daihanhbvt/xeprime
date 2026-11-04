@@ -1181,3 +1181,125 @@ describe('Hợp đồng quyền của endpoint', () => {
     ]);
   });
 });
+
+describe('Hồ sơ khách theo design 02/11/2026', () => {
+  maybe('đơn hiện tại ưu tiên đơn ĐANG THUÊ; khoản phải thu chỉ ra đơn còn nợ, cũ trước', async () => {
+    await resetBook();
+    const customerId = (await resolve('0901234567'))!;
+    const upcoming = await seedBooking({
+      tenantCustomerId: customerId,
+      status: BOOKING_STATUS.RESERVED,
+      total: '700000',
+      paid: '0',
+    });
+    const renting = await seedBooking({
+      tenantCustomerId: customerId,
+      status: BOOKING_STATUS.ACTIVE,
+      total: '300000',
+      paid: '100000',
+    });
+    await seedBooking({ tenantCustomerId: customerId, total: '500000', paid: '500000' });
+
+    const detail = await customers.detail(tenantId, customerId, FULL_SCOPE);
+    expect(detail.currentBooking?.id).toBe(renting);
+    expect(detail.receivable?.count).toBe(2);
+    expect(detail.receivable?.oldest?.id).toBe(upcoming);
+    expect(detail.receivable?.oldest?.debtAmount).toBe('700000');
+
+    // Thiếu quyền tiền ⇒ không có khối phải thu (null, không phải số 0).
+    const masked = await customers.detail(tenantId, customerId, NO_FINANCE);
+    expect(masked.receivable).toBeNull();
+    expect(masked.currentBooking?.totalAmount).toBeNull();
+  });
+
+  maybe('lịch sử thuê lọc ở server theo mã/tên xe, trạng thái và khoảng ngày nhận', async () => {
+    await resetBook();
+    const customerId = (await resolve('0901234567'))!;
+    await seedBooking({ tenantCustomerId: customerId, status: BOOKING_STATUS.COMPLETED });
+    const cancelled = await seedBooking({
+      tenantCustomerId: customerId,
+      status: BOOKING_STATUS.CANCELLED,
+      pickupAt: new Date('2027-12-15T03:00:00.000Z'),
+    });
+
+    const byStatus = await customers.bookings(
+      tenantId,
+      customerId,
+      { status: BOOKING_STATUS.CANCELLED },
+      true,
+    );
+    expect(byStatus.data.map((b) => b.id)).toEqual([cancelled]);
+
+    const byDay = await customers.bookings(
+      tenantId,
+      customerId,
+      { from: '2027-12-15', to: '2027-12-15' },
+      true,
+    );
+    expect(byDay.data.map((b) => b.id)).toEqual([cancelled]);
+
+    const code = (await prisma.booking.findUniqueOrThrow({ where: { id: cancelled } })).code;
+    const byCode = await customers.bookings(tenantId, customerId, { q: code.toLowerCase() }, true);
+    expect(byCode.data.map((b) => b.id)).toEqual([cancelled]);
+  });
+
+  maybe('doanh thu theo kỳ: cột theo ngày nhận, loại đơn huỷ; kỳ tháng chia 6 cột', async () => {
+    await resetBook();
+    const customerId = (await resolve('0901234567'))!;
+    const now = new Date();
+    await seedBooking({ tenantCustomerId: customerId, total: '1620000', pickupAt: now });
+    await seedBooking({
+      tenantCustomerId: customerId,
+      status: BOOKING_STATUS.CANCELLED,
+      total: '9000000',
+      pickupAt: now,
+    });
+
+    const month = await customers.revenue(tenantId, customerId, 'month', now);
+    expect(month.buckets).toHaveLength(6);
+    expect(month.periodRevenue).toBe('1620000');
+    expect(month.buckets.reduce((sum, b) => sum + Number(b.amount), 0)).toBe(1620000);
+    expect(month.receivableCount).toBe(1);
+    expect(month.receivables[0]?.debtAmount).toBe('1620000');
+
+    expect((await customers.revenue(tenantId, customerId, 'week', now)).buckets).toHaveLength(7);
+    expect((await customers.revenue(tenantId, customerId, 'year', now)).buckets).toHaveLength(12);
+  });
+
+  maybe('giấy tờ mang chủ thẻ + số; sửa phần chữ có audit nhưng không chép số vào sổ', async () => {
+    await resetBook();
+    const customerId = (await resolve('0901234567'))!;
+    const ticket = await documents.presign(tenantId, customerId, ownerId, {
+      documentType: 'citizen_id',
+      fileName: 'cccd.pdf',
+      contentType: 'application/pdf',
+      fileSize: 4,
+      holderName: 'Trần Quốc Bảo',
+      documentNumber: '018510238437',
+    });
+    await documents.complete(tenantId, customerId, ownerId, ticket.documentId);
+    const updated = await documents.updateInfo(tenantId, customerId, ownerId, ticket.documentId, {
+      documentNumber: '018510238438',
+    });
+    expect(updated.holderName).toBe('Trần Quốc Bảo');
+    expect(updated.documentNumber).toBe('018510238438');
+
+    const log = await prisma.auditLog.findFirst({
+      where: { tenantId, action: 'customer_document.update', targetId: ticket.documentId },
+    });
+    expect(log).toBeTruthy();
+    expect(JSON.stringify(log!.afterJson)).not.toContain('018510238438');
+  });
+
+  maybe('tổng của danh sách: lượt thuê hoàn tất + doanh thu; doanh thu null khi thiếu quyền tiền', async () => {
+    await resetBook();
+    const customerId = (await resolve('0901234567'))!;
+    await seedBooking({ tenantCustomerId: customerId, total: '1000000', paid: '1000000' });
+    await seedBooking({ tenantCustomerId: customerId, total: '500000', paid: '0' });
+
+    const full = await customers.summary(tenantId, true);
+    expect(full.totalRentals).toBe(2);
+    expect(full.totalRevenue).toBe('1500000');
+    expect((await customers.summary(tenantId, false)).totalRevenue).toBeNull();
+  });
+});

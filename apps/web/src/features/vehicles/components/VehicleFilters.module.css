@@ -1,8 +1,7 @@
 /*
- * Chỉ còn MỘT khai báo: bố cục, xuống dòng và hình thái bottom-sheet ở mobile đều thuộc
- * `FilterBar` dùng chung. Trước Pilot Wave 2, file này dựng lại toàn bộ hàng lọc (flex-wrap,
- * bề rộng ô tìm kiếm, breakpoint 576px riêng) — tức là một bản sao của FilterBar.
+ * Chỉ còn khai báo riêng của Fleet: bố cục, xuống dòng và hình thái bottom-sheet ở mobile đều
+ * thuộc `FilterBar` dùng chung. Ô sắp xếp rộng 200 như các ô chọn (Figma `23649:30744`).
  */
 .sort {
-  min-width: 170px;
+  width: 200px;
 }

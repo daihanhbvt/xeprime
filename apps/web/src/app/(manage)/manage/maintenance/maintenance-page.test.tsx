@@ -102,6 +102,7 @@ vi.mock('@/features/vehicle-maintenance/hooks', async (importOriginal) => {
     useMaintenanceRecords: () => ({ data: [], isLoading: false, isError: false }),
     useOdometerHistory: () => ({ data: undefined, isLoading: true, isError: false }),
     useInvalidateMaintenance: () => vi.fn(),
+    useInvalidateMaintenanceFor: () => vi.fn(),
   };
 });
 
@@ -219,32 +220,51 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
     );
   });
 
-  it('desktop: bảng có cột thao tác dính phải và bề rộng tối thiểu để cuộn ngang', () => {
+  it('mỗi xe một hàng (Figma 23754:29574): Odo, mốc tiếp theo, chu kỳ, ô lịch — không còn bảng', () => {
     const view = renderPage();
-    expect(screen.getByRole('region', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
-
-    // Cột giữ bề rộng sàn (1120px) và vùng bảng tự cuộn ngang — KHÔNG nén cột cho vừa.
-    const table = view.container.querySelector('table') as HTMLTableElement;
-    expect(table).toBeTruthy();
-    expect(Number.parseInt(table.style.width, 10)).toBeGreaterThanOrEqual(1000);
-    const scrollArea = view.container.querySelector('.ant-table-content') as HTMLElement;
-    expect(scrollArea.style.overflowX).toBe('auto');
-    // Cột thao tác cố định bên phải, nếu không cuộn ngang là mất nút.
-    // AntD 6 dùng thuật ngữ logical: `fix-end`.
-    expect(view.container.querySelector('.ant-table-cell-fix-end')).toBeTruthy();
-    // Vùng cuộn nằm TRONG khung bảng, không đẩy tràn ngang ra cấp trang.
-    expect(view.container.querySelector('[class*="tableRoot"]')).toBeTruthy();
-  });
-
-  it('desktop: KM và ngày canh phải, quá hạn nói rõ vượt bao nhiêu', () => {
-    renderPage();
-    expect(screen.getByText('45.230 km')).toBeTruthy();
+    expect(view.container.querySelector('table')).toBeNull();
+    const list = screen.getByRole('list', { name: 'Danh sách xe cần bảo dưỡng' });
+    expect(list.querySelectorAll('li')).toHaveLength(1);
+    expect(screen.getByText('Toyota Vios 2024')).toBeTruthy();
+    // Số và đơn vị là hai cỡ chữ (20/600 + 16/500) — hai nút chữ riêng.
+    expect(screen.getByText('45.230').textContent).toBe('45.230 km');
     // Nói rõ vượt bao nhiêu, không chỉ gắn nhãn đỏ.
     expect(screen.getByText('Quá hạn 230 km')).toBeTruthy();
     expect(screen.getAllByText('Quá hạn').length).toBeGreaterThan(0);
+    expect(screen.getByText('100% chu kỳ 5.000 km')).toBeTruthy();
+    // Quá hạn mà chưa có lịch: ô lịch nhắc gấp + nút chính "Lên lịch ngay".
+    expect(screen.getByText('Cần cập nhật ngay')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Lên lịch ngay' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cập nhật ODO' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Thao tác cho Toyota Vios 2024' })).toBeTruthy();
+    expect(screen.getByText('Hiển thị 1-20 của 26 xe')).toBeTruthy();
   });
 
-  it('xe thiếu KM: gắn nhãn riêng thay vì hiện 0 km, và mốc tiếp theo là "—"', () => {
+  it('xe đã có phiếu đang mở: ô lịch hiện ngày + hạng mục, nút là "Sửa lịch"', () => {
+    queries.board.data = {
+      items: [
+        item({
+          dueStatus: 'due_soon',
+          remainingKm: 321,
+          activeRecord: {
+            id: 'record-1',
+            status: 'scheduled',
+            type: 'periodic_service',
+            plannedStartAt: '2026-10-29T02:00:00.000Z',
+            rowVersion: 1,
+          } as MaintenanceBoardItem['activeRecord'],
+        }),
+      ],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderPage();
+    expect(screen.getByText('Đã lên lịch | 29/10/2026')).toBeTruthy();
+    expect(screen.getByText('Bảo dưỡng định kỳ')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sửa lịch' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Lên lịch/ })).toBeNull();
+  });
+
+  it('xe thiếu KM: nói thẳng "Chưa có số KM" thay vì hiện 0 km, và chưa có mốc tiếp theo', () => {
     queries.board.data = {
       items: [
         item({
@@ -258,29 +278,20 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
     };
     renderPage();
-    expect(screen.getByText('Thiếu KM')).toBeTruthy();
+    expect(screen.getByText('Chưa có số KM')).toBeTruthy();
     expect(screen.getAllByText('Chưa đủ dữ liệu').length).toBeGreaterThan(0);
-    // Chưa biết số thì để trống/nói thẳng, KHÔNG dựng "0 km" (docs §9).
+    // Chưa biết số thì nói thẳng, KHÔNG dựng "0 km" (docs §9).
     expect(screen.queryByText('0 km')).toBeNull();
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getByText('Chưa có mốc tiếp theo')).toBeTruthy();
+    expect(screen.getByText('Cập nhật ODO để theo dõi chu kỳ')).toBeTruthy();
   });
 
-  it('mobile: đổi sang thẻ gọn, KHÔNG render bảng desktop', () => {
-    layout.mobile = true;
-    const view = renderPage();
-    expect(view.container.querySelector('table')).toBeNull();
-    expect(screen.getByRole('list', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
-    expect(screen.getByText('Toyota Vios 2024')).toBeTruthy();
-    // Hành động trên thẻ dùng RowActions chung; mobile vẫn giữ vùng chạm 44px.
-    expect(screen.getAllByRole('button', { name: 'Chi tiết' }).length).toBeGreaterThan(0);
-  });
-
-  it('thiếu quyền quản lý: thẻ mobile vẫn xem được chi tiết nhưng không có nút sửa/hoàn tất', () => {
-    layout.mobile = true;
+  it('thiếu quyền quản lý: vẫn mở được menu xem chi tiết nhưng không có nút lên/sửa lịch', () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_MAINTENANCE_VIEW]);
     renderPage();
-    expect(screen.getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Thao tác cho Toyota Vios 2024' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Lên lịch|Sửa lịch|Hoàn tất/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cập nhật ODO' })).toBeNull();
   });
 
   it('không có kết quả sau khi lọc: gợi ý xoá bộ lọc thay vì màn rỗng chung', () => {
@@ -288,7 +299,7 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
     queries.board.data = { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } };
     renderPage();
     expect(screen.getByText('Không có xe nào khớp bộ lọc')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xóa bộ lọc' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Xo[aá] bộ lọc/ }).length).toBeGreaterThan(0);
   });
 
   it('lỗi tải lần đầu: hiện lỗi có nút thử lại', () => {
@@ -335,7 +346,7 @@ describe('/manage/maintenance — nhóm việc "Thiếu KM trả" theo quyền (
     expect(screen.queryByRole('list', { name: 'Việc thiếu KM trả' })).toBeNull();
     // Bảng đội xe vẫn chạy với nhóm "Tất cả".
     expect(queries.lastFilters).toMatchObject({ filter: 'all' });
-    expect(screen.getByRole('region', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
   });
 
   it('có quyền + filter hàng đợi: đổi sang bảng biên bản, không gọi bảng đội xe', () => {

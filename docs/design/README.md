@@ -16,6 +16,7 @@
 | --- | --- |
 | [`01_BRAND_GUIDE.md`](01_BRAND_GUIDE.md) | Thương hiệu: insight, tông, logo, màu, chữ, ảnh, giọng nói và từ vựng chốt |
 | [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md) | **Guideline UX/UI duy nhất**: tám nguyên tắc, khuôn trang, năm trạng thái, responsive/mobile, lỗi, form, định dạng, quyền, a11y, ràng buộc kỹ thuật và checklist duyệt màn |
+| [`09_PARTNER_REDESIGN.md`](09_PARTNER_REDESIGN.md) | **Đợt chuẩn hoá site partner theo design Partner-XePrime** (từ 02/11/2026): luật làm việc, bản đồ menu cũ → mới, tính năng nào dời về màn nào, sổ theo màn, node Figma, rà soát cuối. Đọc trước khi ráp bất kỳ màn partner nào |
 
 Liên quan ngoài thư mục này:
 
@@ -23,7 +24,8 @@ Liên quan ngoài thư mục này:
 - [`../completion-roadmap.md`](../completion-roadmap.md) — đang ở đâu, release gate, việc tiếp theo.
 - [`../design-token-map.md`](../design-token-map.md) — bảng token và ánh xạ AntD.
 - [`../qa-accounts.md`](../qa-accounts.md) — giới thiệu nhanh, đường dẫn staging từng site và tài khoản demo (không chứa mật khẩu).
-- Kỹ sư frontend: skill `.claude/skills/frontend-feature` và `.claude/skills/i18n`.
+- Kỹ sư frontend: skill `.claude/skills/frontend-feature` và `.claude/skills/i18n`; ráp lại một màn có sẵn
+  theo Figma: `.claude/skills/figma-redesign`.
 
 Tài liệu chuyên đề không tự mở rộng scope. Mâu thuẫn với Product Vision, roadmap hoặc ADR mới hơn thì
 nguồn đó thắng. Release gate pháp lý/thanh toán/bảo hiểm vẫn phải hoàn tất trước khi bật logic tiền thật.

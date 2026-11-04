@@ -3,6 +3,11 @@
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import type { ReactNode } from 'react';
+import {
+  useRegisterPageParent,
+  useRegisterPageTitle,
+  type PageParentCrumb,
+} from './page-title-context';
 import styles from './ManagePageHeader.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -36,16 +41,33 @@ export interface ManagePageHeaderProps {
    */
   icon?: ReactNode;
   onBack?: () => void;
+  /** Mắt xích cha trên breadcrumb của header (trang con của một trang chi tiết). */
+  parent?: PageParentCrumb | null;
   extra?: ReactNode;
 }
 
-export function ManagePageHeader({ title, subtitle, icon, onBack, extra }: ManagePageHeaderProps) {
+export function ManagePageHeader({
+  title,
+  subtitle,
+  icon,
+  onBack,
+  extra,
+  parent = null,
+}: ManagePageHeaderProps) {
   const t = useTranslations('ManageCommon');
+  // Mắt xích cuối của breadcrumb ở header site partner — xem `page-title-context.tsx`.
+  useRegisterPageTitle(typeof title === 'string' ? title : null);
+  useRegisterPageParent(parent);
   return (
     <div className={styles.header}>
       <div className={styles.left}>
         {onBack ? (
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label={t('shell.back')} />
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={onBack}
+            aria-label={t('shell.back')}
+          />
         ) : null}
         {icon ? (
           <span className={styles.icon} aria-hidden="true">

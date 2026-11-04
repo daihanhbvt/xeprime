@@ -25,6 +25,11 @@ const nav = vi.hoisted(() => ({
  * 360 bên trong hỏi cờ gói qua `useFeature` → `/auth/me`. Test này mock `use-permissions` nên
  * không dựng `QueryClientProvider`; thiếu mock ở đây thì modal chết vì hạ tầng.
  */
+// Dòng thông số xe đọc nhãn nhiên liệu từ danh mục API — test dùng bản cố định.
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
+
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
   useFeatureStates: () => ({}),
@@ -229,9 +234,9 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab,
     expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_TAB_NEEDS_ACTION);
   });
 
-  it('chọn tab "Đã đóng" ⇒ ghi `status=closed` vào URL', () => {
+  it('chọn tab "Đã kết thúc" (tab gộp `closed`) ⇒ ghi `status=closed` vào URL', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Đã đóng/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Đã kết thúc/ }));
     expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=closed', {
       scroll: false,
     });
@@ -260,7 +265,7 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab,
   it('đổi trạng thái ⇒ về trang 1 (tham số `page` bị xoá khỏi URL)', () => {
     nav.params = new URLSearchParams('status=pending_host_approval&page=4');
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Đã đóng/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Đã kết thúc/ }));
     expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=closed', {
       scroll: false,
     });
@@ -276,7 +281,7 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab,
     ).toBeTruthy();
     // Đã đóng = rejected(3) + cancelled_by_customer(2) + expired(1) + hold_expired(2) +
     // slot_taken(1) + cancelled_by_host(1) = 10 — sáu trạng thái, một tab, số cộng dồn thật.
-    expect(within(screen.getByRole('tab', { name: /Đã đóng/ })).getByText('10')).toBeTruthy();
+    expect(within(screen.getByRole('tab', { name: /Đã kết thúc/ })).getByText('10')).toBeTruthy();
   });
 
   /**
@@ -350,12 +355,11 @@ describe('/manage/booking-requests — tìm kiếm và lọc dịch vụ', () =>
 });
 
 describe('/manage/booking-requests — vùng xe và khách', () => {
-  it('xe: ảnh, tên, mã + biển số, loại xe và dịch vụ', () => {
+  it('xe: ảnh, tên, mã + biển số; dịch vụ là viên ở dải đầu thẻ (design 02/11/2026)', () => {
     renderPage();
     const card = cardFor('Kia Carnival 2025');
     expect(within(card).getByText('XE-001 · 51A-123.45')).toBeTruthy();
-    expect(within(card).getByText('Ô tô')).toBeTruthy();
-    expect(within(card).getByText('Tự lái')).toBeTruthy();
+    expect(within(card.querySelector('header')!).getByText('Tự lái')).toBeTruthy();
     expect(card.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/kia.jpg');
   });
 
@@ -394,7 +398,7 @@ describe('/manage/booking-requests — vùng xe và khách', () => {
     setRows([request({ tenantCustomerId: null })]);
     renderPage();
     expect(screen.queryByRole('link', { name: 'Nguyễn Văn An' })).toBeNull();
-    expect(screen.getByText('Chưa có hồ sơ trong sổ khách')).toBeTruthy();
+    expect(screen.getByText(/Chưa có hồ sơ trong sổ khách/)).toBeTruthy();
   });
 
   it('mức rủi ro: `normal` KHÔNG hiện, `blocked` hiện rõ thành chữ', () => {
@@ -426,8 +430,8 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
     setRows([request({ pricing: null })]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
-    expect(within(card).queryByText('Khách trả')).toBeNull();
-    expect(within(card).queryByText('Tiền thuê')).toBeNull();
+    expect(within(card).queryByText('Khách trả:')).toBeNull();
+    expect(within(card).queryByText('Tiền thuê:')).toBeNull();
   });
 
   it('không có phụ phí (khách trả = tiền thuê) ⇒ chỉ MỘT dòng, không lặp số', () => {
@@ -444,12 +448,16 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
     ]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
-    expect(within(card).queryByText('Khách trả')).toBeNull();
-    expect(within(card).getByText('Tiền thuê')).toBeTruthy();
+    expect(within(card).queryByText('Khách trả:')).toBeNull();
+    expect(within(card).getByText('Tiền thuê:')).toBeTruthy();
     expect(within(card).getByText('600.000 ₫')).toBeTruthy();
   });
 
-  it('tạm tính (chưa duyệt) ⇒ nhãn "Tạm tính", không có dòng đã giữ chỗ/trả tay', () => {
+  /*
+   * ADR 0044 + chốt 02/11/2026: chưa ai nhận chuyến thì chưa thu đồng nào — KHÔNG được nói "Đã
+   * giữ chỗ". Có bản xem trước lượt duyệt thì hiện số DỰ KIẾN, nhãn nói rõ là dự kiến.
+   */
+  it('tạm tính (chưa duyệt) ⇒ nhãn "Tạm tính", không có dòng "Đã giữ chỗ"', () => {
     setRows([
       request({
         pricing: {
@@ -465,8 +473,30 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
     const card = cardFor('Kia Carnival 2025');
     expect(within(card).getByText('Tạm tính')).toBeTruthy();
     expect(within(card).getByText('672.200 ₫')).toBeTruthy();
-    expect(within(card).queryByText('Đã giữ chỗ')).toBeNull();
-    expect(within(card).queryByText('Trả chủ xe khi nhận xe')).toBeNull();
+    expect(within(card).queryByText('Đã giữ chỗ:')).toBeNull();
+    expect(within(card).queryByText('Trả chủ xe khi nhận xe:')).toBeNull();
+  });
+
+  it('chờ khách trả: tiền giữ chỗ là số PHẢI chuyển, chưa phải "Đã giữ chỗ"', () => {
+    setRows([
+      request({
+        status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+        pricing: {
+          isEstimate: false,
+          rentalTotal: '810000',
+          customerTotalAmount: '907200',
+          paidAmount: '0',
+          remainingAmount: '648000',
+          holdAmount: '259200',
+          holdPaidAmount: '0',
+        },
+      }),
+    ]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).getByText('Tiền giữ chỗ (chờ khách trả):')).toBeTruthy();
+    expect(within(card).getByText('259.200 ₫')).toBeTruthy();
+    expect(within(card).queryByText('Đã giữ chỗ:')).toBeNull();
   });
 
   it('đã cọc ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận', () => {
@@ -480,11 +510,14 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
           customerTotalAmount: '907200',
           paidAmount: '259200',
           remainingAmount: '648000',
+          holdAmount: '259200',
+          holdPaidAmount: '259200',
         },
       }),
     ]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
+    expect(within(card).getByText('Đã giữ chỗ:')).toBeTruthy();
     expect(within(card).getByText('810.000 ₫')).toBeTruthy();
     expect(within(card).getByText('907.200 ₫')).toBeTruthy();
     expect(within(card).getByText('259.200 ₫')).toBeTruthy();
@@ -629,7 +662,7 @@ describe('/manage/booking-requests — lịch, lộ trình, giao nhận, ghi ch�
 
   it('không giao tận nơi: vẫn nói rõ khách tự đến nhận (im lặng bị đọc nhầm)', () => {
     renderPage();
-    expect(within(cardFor('Kia Carnival 2025')).getByText('Khách tự đến nhận')).toBeTruthy();
+    expect(within(cardFor('Kia Carnival 2025')).getByText('Khách tự nhận xe')).toBeTruthy();
   });
 
   it('ghi chú của khách hiện thành văn bản và mở rộng được', () => {
@@ -648,7 +681,7 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
   it('yêu cầu chờ duyệt + đủ quyền ⇒ có cả Duyệt và Từ chối', () => {
     renderPage();
     const card = cardFor('Kia Carnival 2025');
-    expect(within(card).getByRole('button', { name: /Duyệt/ })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: /Xác nhận yêu cầu/ })).toBeTruthy();
     expect(within(card).getByRole('button', { name: /Từ chối/ })).toBeTruthy();
   });
 
@@ -656,7 +689,7 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
     permissions.granted.delete(PERMISSION.BOOKING_REQUEST_APPROVE);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
-    expect(within(card).queryByRole('button', { name: /Duyệt/ })).toBeNull();
+    expect(within(card).queryByRole('button', { name: /Xác nhận yêu cầu/ })).toBeNull();
     expect(within(card).queryByRole('button', { name: /Từ chối/ })).toBeNull();
     // Liên hệ vẫn còn: người trực không có quyền duyệt vẫn phải gọi được cho khách.
     expect(within(card).getByRole('button', { name: /Nhắn tin cho/ })).toBeTruthy();
@@ -677,7 +710,7 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
 
   it('duyệt dịch vụ theo ngày: hỏi xác nhận có xe + lịch trước khi tạo đơn', async () => {
     renderPage();
-    fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Duyệt/ }));
+    fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Xác nhận yêu cầu/ }));
 
     const dialog = await screen.findByRole('dialog');
     // ADR 0047: nội dung sửa lại cho đúng — duyệt không LUÔN tạo đơn thuê ngay (chỉ đúng khi
@@ -705,7 +738,7 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
       }),
     ]);
     renderPage();
-    fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Duyệt/ }));
+    fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Xác nhận yêu cầu/ }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Duyệt và giữ xe — thuê dài hạn')).toBeTruthy();
@@ -882,10 +915,9 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
       }),
     ]);
     renderPage();
-    expect(screen.getByText(/Xử lý lúc/)).toBeTruthy();
+    expect(screen.getByText(/Đã xử lý lúc/)).toBeTruthy();
 
-    // Tên CHÍNH XÁC: vùng "Yêu cầu thuê" cũng bấm được nhưng tên nó có kèm tên xe.
-    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết đơn thuê' }));
+    fireEvent.click(screen.getByRole('button', { name: /Xem chi tiết đơn thuê của/ }));
     expect(screen.getByTestId('booking-detail-dialog').textContent).toBe('bk-1');
     // Điều hướng là thứ KHÔNG được xảy ra: người trực đang quét cả hộp thư.
     expect(nav.push).not.toHaveBeenCalled();
@@ -912,7 +944,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
     );
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Chi tiết yêu cầu thuê')).toBeTruthy();
+    expect(within(dialog).getByText('Chi tiết yêu cầu thuê xe')).toBeTruthy();
     // Trong hộp thoại ghi chú hiện ĐỦ, không cắt hai dòng như ở thẻ.
     expect(within(dialog).getByText('Ghi chú rất dài của khách cần đọc đủ')).toBeTruthy();
     // Không có đơn nên KHÔNG mở nhầm chi tiết đơn.
@@ -928,7 +960,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
     );
 
     const detail = screen.getByRole('dialog');
-    fireEvent.click(within(detail).getByRole('button', { name: /Duyệt/ }));
+    fireEvent.click(within(detail).getByRole('button', { name: /Xác nhận yêu cầu/ }));
 
     // Chi tiết đóng lại, nhường chỗ cho hộp xác nhận duyệt.
     const confirm = await screen.findByRole('dialog');
@@ -949,7 +981,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
     fireEvent.click(screen.getByRole('button', { name: /Xem chi tiết đơn thuê của/ }));
     // …và bấm vào vùng yêu cầu KHÔNG mở được chi tiết đơn.
     expect(screen.queryByTestId('booking-detail-dialog')).toBeNull();
-    expect(screen.getByText('Chi tiết yêu cầu thuê')).toBeTruthy();
+    expect(screen.getByText('Chi tiết yêu cầu thuê xe')).toBeTruthy();
   });
 });
 
@@ -1026,30 +1058,49 @@ describe('/manage/booking-requests — thứ tự đọc trên điện thoại',
    * nên khẳng định thứ tự DOM chính là khẳng định thứ tự người dùng đọc trên điện thoại —
    * và nó không phụ thuộc vào việc jsdom có tính được layout hay không.
    */
-  it('thân thẻ → ngữ cảnh thêm → chân thẻ; trong thân: xe → khách → trạng thái → lịch', () => {
+  it('dải đầu → thân → thông tin thêm; trong thân: xe → khách → yêu cầu thuê → thanh toán', () => {
     setRows([request({ note: 'Giao trước 8h nhé' })]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
 
-    // Ba tầng của thẻ, đúng thứ tự.
-    const sections = Array.from(card.children).map((el) => el.textContent ?? '');
-    expect(sections[0]).toContain('Kia Carnival 2025');
-    expect(sections[1]).toContain('Giao trước 8h nhé');
-    expect(sections[2]).toContain('Zalo');
-
-    // Trong THÂN thẻ: xe → khách → trạng thái → lịch thuê → mốc thời gian.
-    const body = card.firstElementChild as HTMLElement;
+    // Ba tầng của thẻ (Figma `23649:25607` + dải thông tin thêm chốt 02/11/2026), đúng thứ tự.
+    const sections = Array.from(card.children);
+    const head = sections[0] as HTMLElement;
+    expect(head.tagName).toBe('HEADER');
+    // Dải đầu: dấu vết trước, quyết định sau.
+    expect(head.textContent).toMatch(/Gửi lúc.*Chờ xác nhận.*Từ chối.*Xác nhận yêu cầu/);
+    const body = sections[1] as HTMLElement;
     const blocks = Array.from(body.children).map((el) => el.textContent ?? '');
     expect(blocks[0]).toContain('Kia Carnival 2025');
     expect(blocks[1]).toContain('Nguyễn Văn An');
-    expect(blocks[2]).toContain('Chờ chủ shop duyệt');
-    expect(blocks[3]).toContain('Nhận xe');
-    expect(blocks[4]).toContain('Khách gửi');
+    expect(blocks[1]).toContain('Zalo');
+    expect(blocks[2]).toContain('Nhận xe lúc');
+    expect(sections.at(-1)?.textContent).toContain('Giao trước 8h nhé');
+  });
+});
 
-    // Trong CHÂN thẻ: liên hệ trước, quyết định sau.
-    const footer = card.lastElementChild as HTMLElement;
-    const actions = Array.from(footer.children).map((el) => el.textContent ?? '');
-    expect(actions[0]).toContain('Nhắn tin');
-    expect(actions[1]).toContain('Duyệt');
+describe('/manage/booking-requests — khách quen & popup chi tiết (design 02/11/2026)', () => {
+  it('khách đã có chuyến hoàn thành ⇒ viên "Khách quen" trên thẻ; khách mới thì không', () => {
+    setRows([request({ customerIsRegular: true })]);
+    renderPage();
+    expect(within(cardFor('Kia Carnival 2025')).getByText('Khách quen')).toBeTruthy();
+
+    cleanup();
+    setRows([request({ customerIsRegular: false })]);
+    renderPage();
+    expect(within(cardFor('Kia Carnival 2025')).queryByText('Khách quen')).toBeNull();
+  });
+
+  it('popup: "Xem hồ sơ" mở hồ sơ khách — danh tính người đặt KHÔNG sửa được (ADR 0060)', () => {
+    renderPage();
+    fireEvent.click(
+      within(cardFor('Kia Carnival 2025')).getByRole('button', {
+        name: /Xem chi tiết đơn thuê của/,
+      }),
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByText('Chỉnh sửa')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xem hồ sơ khách' }));
+    expect(screen.getByTestId('customer-detail-dialog').textContent).toBe('cus-1');
   });
 });

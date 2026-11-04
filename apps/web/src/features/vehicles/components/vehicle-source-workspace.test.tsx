@@ -156,7 +156,7 @@ describe('VehicleSourceWorkspace — Wave 4 tab Nguồn xe & tài chính', () =>
     expect(
       screen.getByText('Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư'),
     ).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Xoá tệp old-public.pdf' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gỡ tệp old-public.pdf' })).toBeNull();
   });
 
   it('bấm Tải xuống: xin signed URL mới qua API rồi mở, không lưu vào form', async () => {
@@ -207,6 +207,23 @@ describe('VehicleSourceWorkspace — Wave 4 tab Nguồn xe & tài chính', () =>
     expect(payload.contractFileIds).toEqual(['01JEXAMPLEFILEID0000000000']);
     expect(payload).not.toHaveProperty('contractFiles');
     expect(JSON.stringify(payload)).not.toMatch(/https?:/);
+  });
+
+  it('hình thức đang áp dụng có nhãn riêng; chọn hình thức khác thì báo chưa lưu và cho giữ nguyên', () => {
+    renderTab();
+    const financed = screen.getByRole('radio', { name: /Trả góp/ });
+    expect(financed.closest('label')?.textContent).toContain('Đang áp dụng');
+    expect(screen.queryByRole('status')).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Thuê lại/ }));
+    const notice = screen.getByRole('status');
+    expect(notice.textContent).toContain('Đổi từ Trả góp sang Thuê lại');
+    // Nhãn "Đang áp dụng" KHÔNG đi theo lựa chọn — nó luôn chỉ bản đã lưu.
+    expect(financed.closest('label')?.textContent).toContain('Đang áp dụng');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Giữ Trả góp' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    expect((financed as HTMLInputElement).checked).toBe(true);
   });
 
   it('đổi hình thức nguồn: bắt xác nhận trước khi lưu, huỷ thì không gọi API', async () => {

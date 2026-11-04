@@ -16,6 +16,29 @@
   gap: var(--xp-space-md);
 }
 
+/*
+ * Bố cục PHẲNG (`PolicyFlatLayout`, màn sửa xe): khối là một phần của thẻ nơi gọi dựng — không viền,
+ * không nền, không đệm; vạch kẻ giữa các khối do nơi gọi đặt.
+ */
+.card.flat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  gap: 12px;
+}
+
+.cardTitle.flatTitle {
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Công thức / bản xem trước nằm trong icon ⓘ, xuống dòng dưới lời giải thích. */
+.tipPreview {
+  display: block;
+  margin-top: 8px;
+}
+
 .cardHeader {
   display: flex;
   min-width: 0;

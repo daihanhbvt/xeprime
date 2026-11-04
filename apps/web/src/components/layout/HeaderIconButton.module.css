@@ -34,6 +34,21 @@
   outline-offset: 2px;
 }
 
+/*
+ * Ô vuông bo góc của header site partner (Figma Partner-XePrime `23649:27587`): 10px đệm quanh icon
+ * 20px + viền 1px = 42px, bo 12px, không đổ bóng — bóng thuộc về cả thanh header.
+ */
+.chipSquare {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--xp-border-radius-control);
+  box-shadow: none;
+}
+
+.chipSquare .glyph {
+  font-size: 20px;
+}
+
 /* Popup của chính nút đang mở — người dùng phải thấy được cái gì đang mở cái gì. */
 .chipActive,
 .chip[aria-expanded='true'] {

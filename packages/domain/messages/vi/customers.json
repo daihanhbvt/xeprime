@@ -3,7 +3,9 @@
     "title": "Khách hàng",
     "subtitle": "Sổ khách của gian hàng: lịch sử thuê, công nợ, ghi chú và giấy tờ — chỉ gian hàng của bạn nhìn thấy.",
     "add": "Thêm khách hàng",
-    "totalLabel": "{count, plural, other {# khách}}"
+    "totalLabel": "{count, plural, other {# khách}}",
+    "listTitle": "Danh sách khách hàng",
+    "listSubtitle": "Quản lý hồ sơ, thông tin liên hệ và lịch sử các lượt đặt xe của khách hàng tại gian hàng của bạn"
   },
   "permission": {
     "title": "Bạn chưa có quyền xem sổ khách",
@@ -18,7 +20,10 @@
     "debt": "Còn nợ · {count, plural, other {# khách}}",
     "debtShort": "Còn nợ · {count, plural, other {# khách}}",
     "risk": "Cần lưu ý / từ chối phục vụ",
-    "riskShort": "Lưu ý / từ chối"
+    "riskShort": "Lưu ý / từ chối",
+    "totalCustomers": "Tổng khách hàng",
+    "totalRentals": "Tổng số lần thuê",
+    "totalRevenue": "Tổng doanh thu"
   },
   "filters": {
     "search": "Tìm khách hàng",
@@ -40,7 +45,8 @@
     "emptyBody": "Khách sẽ tự vào sổ khi bạn lập đơn thuê hoặc nhận yêu cầu từ Marketplace. Bạn cũng có thể thêm tay ngay bây giờ.",
     "noResultsTitle": "Không có khách nào khớp bộ lọc",
     "noResultsBody": "Thử bỏ bớt điều kiện lọc hoặc tìm bằng số điện thoại.",
-    "clearFilters": "Xoá bộ lọc"
+    "clearFilters": "Xoá bộ lọc",
+    "emptyAutoBody": "Khách tự vào sổ khi đặt xe trên XePrime hoặc khi bạn lập đơn thuê cho khách."
   },
   "card": {
     "identity": "Khách hàng",
@@ -55,7 +61,9 @@
     "debt": "Còn nợ",
     "status": "Trạng thái",
     "actions": "Thao tác",
-    "open": "Xem hồ sơ"
+    "open": "Xem hồ sơ",
+    "index": "STT",
+    "unclassified": "Chưa phân loại"
   },
   "detail": {
     "title": "Hồ sơ khách hàng",
@@ -222,5 +230,128 @@
     "reasonMax": "Lý do tối đa 1000 ký tự",
     "noteBodyRequired": "Nhập nội dung ghi chú",
     "noteBodyMax": "Ghi chú tối đa 2000 ký tự"
+  },
+  "profile": {
+    "more": "Thao tác khác",
+    "phoneCopy": "Sao chép số điện thoại",
+    "profileTitle": "Hồ sơ khách hàng",
+    "label": "Nhãn khách hàng",
+    "lastRental": "Lần thuê gần nhất",
+    "since": "Vào sổ từ",
+    "debtBanner": {
+      "title": "Còn nợ {amount}",
+      "body": "Đơn {code} chưa thu đủ tiền · Đã thu {paid}",
+      "bodyMore": "Đơn {code} và {count, plural, other {# đơn khác}} chưa thu đủ · Đã thu {paid}",
+      "collect": "Thu tiền"
+    },
+    "current": {
+      "title": "Đơn thuê hiện tại",
+      "count": "{count, plural, other {# đơn đang chạy / sắp tới}}",
+      "empty": "Khách không có đơn nào đang chạy hoặc sắp tới.",
+      "pickup": "Nhận xe",
+      "return": "Trả xe",
+      "total": "Tổng giá trị thuê",
+      "next": "Bước tiếp theo:",
+      "nextAwaiting": "Chuẩn bị bàn giao xe và theo dõi thanh toán.",
+      "nextRenting": "Theo dõi chuyến đi và nhận xe khi khách trả.",
+      "viewBooking": "Xem chi tiết đơn"
+    },
+    "timeline": {
+      "title": "Tiến trình đơn thuê",
+      "awaiting": "Chờ giao xe",
+      "awaitingBody": "Nhận xe dự kiến lúc {time}",
+      "renting": "Đang thuê",
+      "rentingBody": "Đã giao xe lúc {time}",
+      "unpaid": "Chưa ghi nhận đủ thanh toán",
+      "unpaidBody": "Còn phải thu <b>{amount}</b> cho đơn thuê này.",
+      "paid": "Đã thu đủ thanh toán",
+      "paidBody": "Không còn khoản phải thu của đơn này.",
+      "returnPlan": "Lịch trả xe dự kiến",
+      "returnPlanBody": "{time} · Chuyến chưa hoàn tất."
+    },
+    "notes": {
+      "title": "Ghi chú vận hành",
+      "internal": "Nội bộ"
+    },
+    "history": {
+      "title": "Lịch sử thuê",
+      "searchPlaceholder": "Tìm theo mã đơn, tên xe hoặc biển số…",
+      "status": "Trạng thái",
+      "statusAll": "Tất cả trạng thái",
+      "time": "Thời gian nhận xe",
+      "colBooking": "Đơn thuê",
+      "colVehicle": "Xe",
+      "colTime": "Thời gian thuê",
+      "colService": "Dịch vụ",
+      "colStatus": "Trạng thái",
+      "colTotal": "Tổng tiền",
+      "colActions": "Thao tác",
+      "pickupAt": "Nhận:",
+      "returnAt": "Trả:",
+      "preview": "Xem nhanh đơn {code}",
+      "previewTitle": "Chi tiết đơn {code}",
+      "previewHint": "Đang mở từ danh sách",
+      "duration": "Thời lượng theo lịch",
+      "paid": "Đã thu",
+      "remaining": "Còn phải thu",
+      "emptyTitle": "Khách chưa có đơn nào khớp",
+      "emptyBody": "Bỏ bớt bộ lọc để xem toàn bộ lịch sử thuê.",
+      "errorTitle": "Không tải được lịch sử thuê",
+      "totalLabel": "{count, plural, other {# đơn}}"
+    },
+    "finance": {
+      "title": "Doanh thu từ khách",
+      "period": {
+        "week": "Tuần này",
+        "month": "Tháng này",
+        "quarter": "Quý này",
+        "year": "Năm nay"
+      },
+      "receivable": "Khoản phải thu · {count, plural, other {# đơn chưa thu}}",
+      "collected": "Thực thu trong kỳ",
+      "completed": "Chuyến hoàn tất",
+      "collect": "Thu tiền",
+      "chartTitle": "Giá trị đơn theo ngày nhận xe",
+      "chartMoney": "Giá trị đơn",
+      "chartCount": "Số đơn",
+      "chartEmpty": "Không có đơn nào trong kỳ này",
+      "receivablesTitle": "Chi tiết khoản phải thu",
+      "ledgerLink": "Xem sổ Thu/Chi",
+      "colContent": "Nội dung",
+      "colPaid": "Đã thu",
+      "colDebt": "Còn nợ",
+      "unpaid": "Chưa thu đủ",
+      "receivablesEmpty": "Khách không còn khoản phải thu nào.",
+      "errorTitle": "Không tải được số liệu thu chi",
+      "receiptsTitle": "Phiếu thu đã ghi"
+    },
+    "docs": {
+      "title": "Quản lý giấy tờ khách hàng",
+      "upload": "Tải lên giấy tờ",
+      "holder": "Chủ thẻ",
+      "number": "Số giấy tờ",
+      "numberOf": {
+        "citizen_id": "Số CCCD/CMND",
+        "driver_licence": "Số GPLX",
+        "passport": "Số hộ chiếu",
+        "other": "Số giấy tờ"
+      },
+      "expiry": "Thời hạn",
+      "noExpiry": "Không có",
+      "status": "Trạng thái",
+      "notUploaded": "Chưa tải lên",
+      "notVerified": "Chưa đối chiếu",
+      "verified": "Đã đối chiếu",
+      "remove": "Xoá",
+      "verify": "Xác nhận đã đối chiếu",
+      "replace": "Thay giấy tờ",
+      "editInfo": "Sửa thông tin",
+      "dialogEdit": "Sửa thông tin giấy tờ",
+      "save": "Lưu",
+      "saved": "Đã lưu thông tin giấy tờ",
+      "replaced": "Đã thay giấy tờ",
+      "dropHint": "Bấm hoặc kéo ảnh giấy tờ vào đây",
+      "uploading": "Đang tải lên…"
+    }
   }
 }

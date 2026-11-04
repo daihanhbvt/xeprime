@@ -657,5 +657,14 @@
     "host": "The owner cancelled this trip",
     "platform": "XePrime cancelled this trip",
     "force_majeure": "Cancelled due to force majeure"
+  },
+  "extension": {
+    "title": "Trip extension",
+    "pendingLead": "The owner extended your trip by {months, plural, one {# month} other {# months}} — new return {date}. Transfer the reservation amount to make it take effect.",
+    "rental": "Extension rental",
+    "online": "Pay via XePrime",
+    "direct": "Pay the owner directly",
+    "deadline": "Pay by {time}. After that the extension is cancelled and the return time stays.",
+    "activated": "Extended by {months, plural, one {# month} other {# months}} — new return {date}"
   }
 }

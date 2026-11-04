@@ -1,0 +1,22 @@
+/*
+ * Màn Danh sách xe — Figma Partner-XePrime `23649:30744` (page header): tiêu đề + dòng phụ, hàng
+ * lọc cách 16, danh sách cách hàng lọc 20 (khoảng cách dưới của `FilterBar` + `.page` gap).
+ */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+/* Nhãn chữ của nút chuyển kiểu xem — chỉ cho trình đọc màn hình, mắt thấy biểu tượng. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

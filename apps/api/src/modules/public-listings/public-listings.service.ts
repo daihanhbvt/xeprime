@@ -1334,7 +1334,6 @@ export class PublicListingsService {
       completedTripCount,
       shopCompletedTripCount,
       policy,
-      handover,
       surchargeRules,
       rentalTerms,
       shopMetrics,
@@ -1349,7 +1348,6 @@ export class PublicListingsService {
         where: { tenantId: v.tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
       }),
       this.pricing.effectivePolicy(v.tenantId, v.id),
-      this.settings.handoverWindowsFor(this.prisma, v.id),
       // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
       v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
         ? this.settings.surchargeRulesFor(this.prisma, v.id)
@@ -1507,7 +1505,8 @@ export class PublicListingsService {
           }
         : null,
       rentalTerms,
-      handover: { pickupWindows: handover.pickup, returnWindows: handover.return },
+      // Khung giờ giao/nhận đã gỡ (ADR 0078): xe nhận/trả mọi giờ — giữ hình dạng cho app cũ.
+      handover: { pickupWindows: [], returnWindows: [] },
       driverSurchargeRules: surchargeRules
         .filter((r) => r.enabled)
         .map((r) => ({

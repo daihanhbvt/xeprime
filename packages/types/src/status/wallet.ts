@@ -71,6 +71,13 @@ export const WALLET_ENTRY_KIND = {
    * chống cộng đôi mới không chặn nhầm dòng thứ hai (ADR 0033 điều 6).
    */
   HOLD_OVERPAY: 'hold_overpay',
+  /**
+   * + Phần của chủ xe trong khoản online của một PHỤ LỤC GIA HẠN (`D_ext − T_ext`), ghi có khi
+   * chuyến kết thúc (ADR 0077). Tách khỏi `HOLD_RELEASE`: nguồn là phụ lục, không phải khoản giữ chỗ.
+   */
+  EXTENSION_RELEASE: 'extension_release',
+  /** + Hoàn phần khách đã chuyển cho một phụ lục hết hạn / bị huỷ (ADR 0077). */
+  EXTENSION_REFUND: 'extension_refund',
   /** − Đã chi theo một yêu cầu rút. */
   WITHDRAWAL: 'withdrawal',
   /** + Đảo một dòng rút bị từ chối hoặc chuyển hụt. */
@@ -91,6 +98,8 @@ export const WALLET_ENTRY_KIND_LABEL: Readonly<Record<WalletEntryKind, string>> 
   [WALLET_ENTRY_KIND.HOLD_RELEASE]: 'Tiền giữ chỗ của chuyến',
   [WALLET_ENTRY_KIND.HOLD_REFUND]: 'Hoàn tiền giữ chỗ',
   [WALLET_ENTRY_KIND.HOLD_OVERPAY]: 'Hoàn phần chuyển thừa',
+  [WALLET_ENTRY_KIND.EXTENSION_RELEASE]: 'Tiền giữ chỗ phần gia hạn',
+  [WALLET_ENTRY_KIND.EXTENSION_REFUND]: 'Hoàn tiền gia hạn',
   [WALLET_ENTRY_KIND.WITHDRAWAL]: 'Rút về ngân hàng',
   [WALLET_ENTRY_KIND.WITHDRAWAL_REVERSAL]: 'Hoàn lại do rút không thành',
   [WALLET_ENTRY_KIND.ADJUSTMENT]: 'Điều chỉnh',
@@ -112,6 +121,8 @@ export const WALLET_ENTRY_SOURCE = {
   BOOKING_HOLD: 'booking_hold',
   WITHDRAWAL_REQUEST: 'withdrawal_request',
   MANUAL: 'manual',
+  /** Phụ lục gia hạn — ADR 0077. */
+  BOOKING_EXTENSION: 'booking_extension',
 } as const;
 
 export type WalletEntrySource = (typeof WALLET_ENTRY_SOURCE)[keyof typeof WALLET_ENTRY_SOURCE];

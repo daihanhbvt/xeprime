@@ -1,7 +1,7 @@
 {
   "page": {
-    "title": "Trung tâm quản lý bảo dưỡng",
-    "subtitle": "Theo dõi tình trạng hoạt động, lịch trình bảo dưỡng & sửa chữa định kỳ toàn bộ đội xe của bạn.",
+    "title": "Danh sách bảo dưỡng",
+    "subtitle": "Theo dõi tình trạng vận hành, thiết lập lịch bảo dưỡng định kỳ và quản lý chi phí sửa chữa toàn bộ đội xe của bạn.",
     "loading": "Đang tải trung tâm bảo dưỡng…"
   },
   "filters": {
@@ -16,16 +16,18 @@
     "sortRemainingAsc": "Gần đến hạn trước",
     "sortRemainingDesc": "Còn nhiều KM trước",
     "sortNameAsc": "Tên xe A→Z",
-    "sortUpdatedDesc": "Cập nhật gần nhất"
+    "sortUpdatedDesc": "Cập nhật gần nhất",
+    "sortValue": "Sắp xếp: {label}"
   },
   "actions": {
-    "detail": "Chi tiết",
+    "detail": "Xem chi tiết xe",
     "updateOdometer": "Cập nhật ODO",
     "editSchedule": "Sửa lịch",
     "schedule": "Lên lịch",
     "complete": "Hoàn tất",
     "cancelSchedule": "Hủy lịch",
-    "cancelScheduleConfirm": "Hủy lịch bảo dưỡng này? Khoảng thời gian sẽ được giải phóng cho đơn thuê."
+    "cancelScheduleConfirm": "Hủy lịch bảo dưỡng này? Lịch sẽ chuyển vào lịch sử với trạng thái Đã hủy.",
+    "scheduleNow": "Lên lịch ngay"
   },
   "dialog": {
     "loading": "Đang tải…",
@@ -37,7 +39,6 @@
     "canceled": "Đã hủy lịch bảo dưỡng",
     "updated": "Đã cập nhật phiếu bảo dưỡng",
     "created": "Đã tạo lịch bảo dưỡng",
-    "scheduleConflict": "Khoảng thời gian này đã có lịch khác — hãy chọn thời điểm khác.",
     "staleRecord": "Phiếu vừa được người khác cập nhật — đóng hộp thoại và tải lại trang.",
     "odometerTooLow": "Số KM nhập vào thấp hơn KM hiện tại của xe — kiểm tra lại chỉ số."
   },
@@ -67,18 +68,15 @@
   "record": {
     "titleComplete": "Hoàn tất bảo dưỡng",
     "titleEdit": "Chỉnh sửa bảo dưỡng",
-    "titleCreate": "Thêm bảo dưỡng",
+    "titleCreate": "Thêm lịch bảo dưỡng sắp tới",
     "okComplete": "Lưu bảo dưỡng",
     "okEdit": "Lưu thay đổi",
     "okCreate": "Tạo lịch",
-    "conflictAlert": "Xe đã có lịch khác trùng khoảng thời gian này",
     "type": "Loại bảo dưỡng",
     "customType": "Tên hạng mục",
     "customTypePlaceholder": "VD: Cân chỉnh thước lái",
     "title": "Mô tả ngắn",
     "titlePlaceholder": "VD: Bảo dưỡng mốc 45.000 km",
-    "plannedStart": "Bắt đầu dự kiến",
-    "plannedEnd": "Kết thúc dự kiến",
     "provider": "Garage / Đơn vị thực hiện",
     "providerPlaceholder": "VD: Toyota Đông Sài Gòn",
     "odometer": "Odo bảo dưỡng",
@@ -87,12 +85,13 @@
     "receipt": "Mã phiếu chi / chứng từ",
     "receiptPlaceholder": "VD: CT-40092",
     "notes": "Ghi chú",
-    "completeHint": "Hoàn tất sẽ giải phóng lịch xe và cập nhật KM hiện tại (nếu nhập). Riêng thay nhớt sẽ dời mốc bảo dưỡng tiếp theo.",
-    "scheduleHoldNote": "Nhập đủ cặp thời gian thì lịch sẽ giữ chỗ thật trên lịch xe — khoảng đó không nhận đơn thuê được nữa.",
+    "completeHint": "Hoàn tất sẽ cập nhật KM hiện tại (nếu nhập). Riêng thay nhớt sẽ dời mốc bảo dưỡng tiếp theo.",
     "odometerHelp": "Bỏ trống nếu ghi nhận hồi tố, không muốn đổi KM hiện tại.",
     "attachments": "Phiếu này có {count, plural, other {# chứng từ}} đính kèm.",
-    "endAfterStart": "Thời điểm kết thúc phải sau thời điểm bắt đầu",
-    "endRequired": "Nhập thời điểm kết thúc để giữ lịch xe"
+    "plannedDate": "Ngày dự kiến",
+    "completedDate": "Ngày hoàn tất",
+    "costShort": "Chi phí",
+    "notesValue": "Ghi chú: {value}"
   },
   "odometer": {
     "updated": "Đã cập nhật số KM",
@@ -156,13 +155,13 @@
     "upcomingCard": "Lịch bảo dưỡng sắp tới",
     "recordsLoadError": "Không tải được danh sách bảo dưỡng",
     "boardLink": "Xem trung tâm bảo dưỡng",
-    "historyCard": "Lịch sử bảo dưỡng & Sửa chữa",
     "historyEmpty": "Chưa có lần bảo dưỡng nào được ghi nhận.",
     "nextMilestone": "Mốc bảo dưỡng tiếp theo:",
     "dueSoonThreshold": "Ngưỡng cảnh báo “sắp đến hạn” của gian hàng: còn {value}.",
-    "addRecord": "Thêm bảo dưỡng",
     "upcomingEmpty": "Chưa có lịch bảo dưỡng nào sắp tới.",
-    "attachments": "{count, plural, other {# chứng từ}}"
+    "attachments": "{count, plural, other {# chứng từ}}",
+    "recordHistoryLink": "Xem lịch sử bảo dưỡng",
+    "addSchedule": "Thêm lịch bảo dưỡng"
   },
   "validation": {
     "odometerTypeError": "Số KM phải là số",
@@ -183,5 +182,33 @@
     "costTypeError": "Vui lòng nhập số",
     "costInteger": "Số tiền phải là số nguyên",
     "costMin": "Số tiền không được âm"
+  },
+  "recordHistory": {
+    "title": "Lịch sử bảo dưỡng",
+    "total": "{count, plural, other {# lần bảo dưỡng}}"
+  },
+  "board": {
+    "listLabel": "Danh sách xe cần bảo dưỡng",
+    "loading": "Đang tải danh sách bảo dưỡng",
+    "showing": "Hiển thị {from}-{to} của {total, plural, other {# xe}}",
+    "more": "Thao tác cho {name}",
+    "lastService": "Bảo dưỡng gần nhất: <b>{date}</b>",
+    "noLastService": "Chưa có lần bảo dưỡng nào",
+    "odometer": "Odo hiện tại",
+    "kmUnit": "km",
+    "missingOdometer": "Chưa có số KM",
+    "nextDue": "Mốc tiếp theo: <b>{km}</b>",
+    "noNextDue": "Chưa có mốc tiếp theo",
+    "cycle": "{percent}% chu kỳ {interval}",
+    "noCycle": "Chưa đặt chu kỳ thay nhớt",
+    "needsOdometer": "Cập nhật ODO để theo dõi chu kỳ",
+    "noSchedule": "Chưa có lịch",
+    "needNow": "Cần cập nhật ngay",
+    "needSoon": "Cần cập nhật",
+    "notYet": "Chưa cần cập nhật bây giờ",
+    "scheduledOn": "Đã lên lịch | {date}",
+    "scheduled": "Đã lên lịch",
+    "inProgressSince": "Đang bảo dưỡng | từ {date}",
+    "inProgress": "Đang bảo dưỡng"
   }
 }

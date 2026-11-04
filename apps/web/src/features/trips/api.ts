@@ -15,6 +15,7 @@ import type {
   CustomerUnpaidHolds,
   PrivateFileTicket,
   ProvideRefundAccountInput,
+  CustomerTripExtension,
 } from './types';
 
 export const TRIPS_DEFAULT_LIMIT = 10;
@@ -104,6 +105,14 @@ export async function fetchTrips(
  */
 export function fetchUnpaidHolds(): Promise<CustomerUnpaidHolds> {
   return apiGet<CustomerUnpaidHolds>('/trips/unpaid-holds');
+}
+
+/**
+ * Phụ lục gia hạn của chuyến (ADR 0077) — mã XPE… + tài khoản nhận để quét QR. Mảng rỗng là câu
+ * trả lời bình thường (chuyến chưa từng gia hạn).
+ */
+export function fetchTripExtensions(id: string): Promise<CustomerTripExtension[]> {
+  return apiGet<CustomerTripExtension[]>(`/trips/${id}/extensions`);
 }
 
 export function fetchTrip(id: string): Promise<CustomerTripDetail> {

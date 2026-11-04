@@ -2,7 +2,10 @@ import { SUPPORT_WORKSPACE } from '@xeprime/types';
 import { SupportWorkspaceGate } from '@/features/tenant-support/components/SupportWorkspaceGate';
 import { VehicleEditPage } from '@/features/vehicles/components/VehicleEditPage';
 
-/** Hồ sơ xe của gian hàng TUYẾN GÓI trong phiên — cùng trang với `/manage/vehicles/[id]/edit`. */
+/**
+ * Màn sửa xe trong phiên — cùng trang với `/manage/vehicles/[id]/edit`, cho CẢ hai tuyến từ 03/11/2026
+ * (không gian "Quản lý xe" cũ của Owner Lite chuyển hướng tới đây).
+ */
 export default async function SupportVehicleEditPage({
   params,
 }: {
@@ -10,7 +13,7 @@ export default async function SupportVehicleEditPage({
 }) {
   const { id: vehicleId } = await params;
   return (
-    <SupportWorkspaceGate workspace={SUPPORT_WORKSPACE.MANAGE}>
+    <SupportWorkspaceGate workspace={[SUPPORT_WORKSPACE.MANAGE, SUPPORT_WORKSPACE.OWNER_LITE]}>
       <VehicleEditPage vehicleId={vehicleId} />
     </SupportWorkspaceGate>
   );

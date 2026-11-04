@@ -69,10 +69,9 @@ const MAX_KM = 500;
 /**
  * Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm`; mốc "từ" suy từ bậc liền trước.
  *
- * Hai dạng LOẠI TRỪ nhau (ADR 0064 — `DeliveryTier` ở `@xeprime/types`): trọn gói (`fee`) hoặc
- * theo km (`perKm`). Gửi đúng MỘT trong hai; bậc cũ chỉ có `fee` vẫn hợp lệ nguyên trạng.
- * "Đúng một" và "`perKm` > 0" kiểm ở `PricingService.validatePolicy` — class-validator không mô tả
- * được quan hệ giữa hai trường bằng một câu lỗi người đọc được.
+ * Mỗi bậc là MỘT phí trọn gói (`fee`). Dạng theo km (`perKm`, ADR 0064) đã gỡ ở ADR 0078: trường
+ * còn trong DTO chỉ để app cũ gửi lên nhận được câu lỗi rõ ràng từ `PricingService.validatePolicy`
+ * thay vì một lỗi "trường lạ".
  */
 export class DeliveryTierDto {
   @ApiProperty({
@@ -87,7 +86,7 @@ export class DeliveryTierDto {
   @ApiPropertyOptional({
     type: String,
     description:
-      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí. Bỏ trống khi bậc tính theo km",
+      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí",
     example: '30000',
   })
   @ValidateIf((o: DeliveryTierDto) => o.perKm == null)
@@ -98,10 +97,8 @@ export class DeliveryTierDto {
 
   @ApiPropertyOptional({
     type: String,
-    description:
-      'Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, ' +
-      'đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói',
-    example: '10000',
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0078) — gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói',
   })
   @IsOptional()
   @IsString()

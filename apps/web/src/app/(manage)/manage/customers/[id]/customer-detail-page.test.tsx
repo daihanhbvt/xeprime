@@ -82,12 +82,18 @@ vi.mock('@/features/customers/api', async (importOriginal) => {
   };
 });
 
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ isVisible: true, canWrite: true, state: 'enabled' }),
+}));
 vi.mock('@/features/customers/hooks/use-customers', () => ({
   useCustomer: (id: string | null) => {
     queries.detailId = id;
     return queries.detail;
   },
   useCustomerBookings: () => queries.bookings,
+  useCustomerBookingHistory: () => queries.bookings,
+  useCustomerRevenue: () => ({ data: undefined, isLoading: false, isFetching: false, isError: false }),
+  useUpdateCustomerDocument: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCustomerNotes: () => queries.notes,
   useCustomerDocuments: () => queries.documents,
   useSetCustomerArchived: () => ({ mutate: queries.setArchived, isPending: false }),
@@ -127,6 +133,8 @@ function detail(overrides: Partial<TenantCustomerDetail> = {}): TenantCustomerDe
     paidAmount: '10750000',
     debtAmount: '2000000',
     recentBookings: [],
+    currentBooking: null,
+    receivable: null,
     ...overrides,
   } as TenantCustomerDetail;
 }
@@ -211,7 +219,7 @@ afterEach(cleanup);
 describe('/manage/customers/[id] — hồ sơ khách', () => {
   it('hiện danh tính, SĐT bấm gọi được và liên kết tài khoản', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Nguyễn Văn An' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /Nguyễn Văn An/ })).toBeTruthy();
     const tel = screen.getAllByRole('link', { name: '0901234567' })[0]!;
     expect(tel.getAttribute('href')).toBe('tel:0901234567');
     expect(screen.getByText('Đã liên kết')).toBeTruthy();
@@ -264,7 +272,8 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     renderPage();
     expect(screen.getByText('Tổng giá trị thuê')).toBeTruthy();
     expect(screen.getByText('Đã thu')).toBeTruthy();
-    expect(screen.getByText('Còn nợ')).toBeTruthy();
+    // "Còn nợ" là ô số liệu VÀ là nhãn khách (đang nợ) — cả hai cùng hiện.
+    expect(screen.getAllByText('Còn nợ').length).toBeGreaterThan(0);
   });
 
   it('thiếu `finance.view`: ẩn HẲN thẻ tiền, không hiện số 0 giả', () => {
@@ -281,8 +290,8 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     permissions.granted = new Set([PERMISSION.CUSTOMER_VIEW]);
     renderPage();
     expect(screen.queryByRole('button', { name: /Sửa hồ sơ/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Mức rủi ro/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Lưu trữ/ })).toBeNull();
+    // Mức rủi ro + Lưu trữ nằm trong menu "…" — thiếu quyền thì cả nút menu cũng không có.
+    expect(screen.queryByRole('button', { name: 'Thao tác khác' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
   });
 
@@ -320,22 +329,25 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     );
   });
 
-  it('hồ sơ lưu trữ: báo rõ và đổi hành động thành khôi phục', () => {
+  it('hồ sơ lưu trữ: báo rõ và đổi hành động thành khôi phục', async () => {
     queries.detail.data = detail({ archivedAt: '2027-08-10T02:00:00.000Z' });
     renderPage();
     expect(screen.getByText('Hồ sơ đang lưu trữ')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Khôi phục/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác khác' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Khôi phục/ }));
     expect(queries.setArchived).toHaveBeenCalledWith(
       { id: 'cus-1', archived: false },
       expect.anything(),
     );
   });
 
-  it('lịch sử thuê: có link tới chi tiết đơn khi đủ quyền', async () => {
+  it('lịch sử thuê: xem nhanh một đơn và có link tới chi tiết đơn khi đủ quyền', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Lịch sử thuê' }));
-    await waitFor(() => expect(screen.getByText('Toyota Vios 2024')).toBeTruthy());
-    const link = screen.getAllByRole('link', { name: 'DH0001' })[0]!;
+    await waitFor(() => expect(screen.getAllByText('Toyota Vios 2024').length).toBeGreaterThan(0));
+    // Truy vấn theo nhãn/chữ: tra role trên cả trang AntD lớn chậm tới hàng chục giây ở jsdom.
+    fireEvent.click(screen.getAllByLabelText('Xem nhanh đơn DH0001')[0]!);
+    const link = (await screen.findByText(/Xem chi tiết đơn/)).closest('a')!;
     expect(link.getAttribute('href')).toBe('/manage/bookings/bk-1');
   });
 
@@ -345,9 +357,9 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     expect(screen.queryByRole('tab', { name: 'Lịch sử thuê' })).toBeNull();
   });
 
-  it('ghi chú nội bộ: nói rõ khách không đọc được, và gửi được ghi chú mới', async () => {
+  it('ghi chú vận hành (tab Tổng quan): nói rõ khách không đọc được, và gửi được ghi chú mới', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Ghi chú nội bộ' }));
+    expect(screen.getByText('Ghi chú vận hành')).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/khách không bao giờ nhìn thấy/i)).toBeTruthy());
 
     fireEvent.change(screen.getByLabelText('Nội dung'), {
@@ -365,7 +377,6 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
   it('ghi chú: thiếu `customers.manage` thì chỉ đọc, không có ô soạn', async () => {
     permissions.granted = new Set([PERMISSION.CUSTOMER_VIEW]);
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Ghi chú nội bộ' }));
     await waitFor(() => expect(screen.getByText('Chưa có ghi chú nào về khách này')).toBeTruthy());
     expect(screen.queryByRole('button', { name: 'Thêm ghi chú' })).toBeNull();
   });
@@ -389,7 +400,6 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ' }));
 
-    // Tên tệp là mốc duy nhất — nhãn loại giấy tờ còn xuất hiện trong ô chọn của khối tải lên.
     await waitFor(() => expect(screen.getByText(/cccd.pdf/)).toBeTruthy());
     expect(screen.queryByRole('button', { name: /Mở tệp/ })).toBeNull();
     // Thiếu quyền xem tệp thì KHÔNG có ảnh nào được nạp — ô chỉ còn icon loại tệp.
@@ -464,26 +474,28 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     openSpy.mockRestore();
   });
 
-  it('giấy tờ: tải lên hỏng thì báo lỗi và VẪN chọn lại tệp được', async () => {
+  it('giấy tờ: chọn ảnh ở ô trống là tải NGAY đúng loại của thẻ; hỏng thì báo lỗi và chọn lại được', async () => {
     queries.upload.mockRejectedValue(new Error('Tải tệp lên thất bại'));
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ' }));
-    await waitFor(() => expect(screen.getByLabelText('Loại giấy tờ')).toBeTruthy());
+    await screen.findAllByText('Bấm hoặc kéo ảnh giấy tờ vào đây');
 
-    const fileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(fileInput(), {
-      target: { files: [new File(['x'], 'cccd.pdf', { type: 'application/pdf' })] },
-    });
+    // Ô ảnh của thẻ đầu (CCCD) — không có hộp nhập thông tin nào chen giữa.
+    const dropzoneInput = () =>
+      document.querySelector('.ant-upload-drag input[type="file"]') as HTMLInputElement;
+    const pick = () =>
+      fireEvent.change(dropzoneInput(), {
+        target: { files: [new File(['x'], 'cccd.jpg', { type: 'image/jpeg' })] },
+      });
 
+    pick();
     await waitFor(() => expect(screen.getByText('Tải tệp lên thất bại')).toBeTruthy());
     expect(queries.upload).toHaveBeenCalledTimes(1);
+    expect(queries.upload.mock.calls[0]![0].input.documentType).toBe('citizen_id');
+    expect(screen.queryByRole('dialog')).toBeNull();
 
-    // Thử lại: nút tải lên vẫn ở đó và gọi lại được, không cần tải lại trang.
-    // Ô chọn tệp được rc-upload thay mới sau mỗi lần chọn — phải tra lại, không giữ tham chiếu cũ.
     queries.upload.mockResolvedValue({});
-    fireEvent.change(fileInput(), {
-      target: { files: [new File(['y'], 'cccd-lai.pdf', { type: 'application/pdf' })] },
-    });
+    pick();
     await waitFor(() => expect(queries.upload).toHaveBeenCalledTimes(2));
   });
 });

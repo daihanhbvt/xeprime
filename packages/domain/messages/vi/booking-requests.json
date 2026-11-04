@@ -3,7 +3,9 @@
     "title": "Yêu cầu thuê xe",
     "subtitle": "Hộp thư yêu cầu của gian hàng: xem khách hỏi xe nào, lịch ra sao, rồi duyệt hoặc từ chối ngay tại đây.",
     "listLabel": "Danh sách yêu cầu thuê",
-    "totalLabel": "{count, plural, other {# yêu cầu}}"
+    "totalLabel": "{count, plural, other {# yêu cầu}}",
+    "inboxTitle": "Yêu cầu đặt xe",
+    "inboxSubtitle": "Theo dõi chi tiết thông tin và lịch trình khách hàng muốn thuê. Phê duyệt hoặc từ chối yêu cầu ngay tại đây."
   },
   "tabs": {
     "ariaLabel": "Lọc yêu cầu theo trạng thái",
@@ -14,7 +16,8 @@
     "rejected": "Đã từ chối",
     "cancelled": "Khách đã huỷ",
     "expired": "Quá hạn",
-    "all": "Tất cả"
+    "all": "Tất cả",
+    "ended": "Đã kết thúc"
   },
   "filters": {
     "searchLabel": "Tìm yêu cầu",
@@ -100,7 +103,14 @@
     "phone": "Số điện thoại",
     "createdAt": "Khách gửi lúc",
     "decidedAt": "Xử lý lúc",
-    "accountPhone": "SĐT tài khoản"
+    "accountPhone": "SĐT tài khoản",
+    "dialogTitle": "Chi tiết yêu cầu thuê xe",
+    "service": "Hình thức",
+    "viewProfile": "Xem hồ sơ",
+    "regular": "Khách quen",
+    "paymentHeading": "Thanh toán",
+    "moreHeading": "Ghi chú & dấu vết",
+    "email": "Email"
   },
   "actions": {
     "approve": "Duyệt & giữ xe",
@@ -699,5 +709,35 @@
       "openBooking": "Mở chi tiết đơn",
       "close": "Đóng"
     }
+  },
+  "card": {
+    "confirm": "Xác nhận yêu cầu",
+    "bookingCode": "#{code}",
+    "sentAt": "Gửi lúc: {value}",
+    "decidedAt": "Đã xử lý lúc: {value}",
+    "awaitingConfirm": "Chờ xác nhận:",
+    "payDeadline": "Hạn khách thanh toán: {value}",
+    "customer": "Khách hàng",
+    "requestHeading": "Yêu cầu thuê",
+    "viewDetail": "Xem chi tiết đơn",
+    "pickupAt": "Nhận xe lúc:",
+    "returnAt": "Trả xe lúc:",
+    "duration": "Thời gian thuê:",
+    "handover": "Hình thức nhận xe:",
+    "handoverSelf": "Khách tự nhận xe",
+    "handoverDelivery": "Giao xe tận nơi",
+    "package": "Gói thuê:",
+    "pickupWish": "Nguyện vọng nhận xe:",
+    "paymentHeading": "Chi tiết thanh toán",
+    "rentalTotal": "Tiền thuê:",
+    "customerTotal": "Khách trả:",
+    "holdExpected": "Tiền giữ chỗ (dự kiến):",
+    "holdAwaiting": "Tiền giữ chỗ (chờ khách trả):",
+    "holdPaid": "Đã giữ chỗ:",
+    "payAtPickup": "Trả chủ xe khi nhận xe:",
+    "payAtPickupExpected": "Trả chủ xe khi nhận xe (dự kiến):",
+    "estimate": "Tạm tính",
+    "extrasLabel": "Thông tin thêm của yêu cầu",
+    "holdUnpaid": "Tiền giữ chỗ (khách chưa trả):"
   }
 }

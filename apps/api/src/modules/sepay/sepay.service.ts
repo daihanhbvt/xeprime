@@ -19,6 +19,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
+import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
 import type { SepayWebhookResultDto } from './dto/sepay.dto';
 
 /**
@@ -56,6 +57,8 @@ export class SepayService {
     private readonly billing: BillingService,
     private readonly holds: BookingHoldsService,
     config: ConfigService,
+    /** `XPE…` — phụ lục gia hạn (ADR 0077). */
+    private readonly extensions: BookingExtensionsService,
   ) {
     const key = config.get<string>('SEPAY_API_KEY');
     /*
@@ -299,6 +302,41 @@ export class SepayService {
           await this.markMatched(db, tx.providerTxId, {
             type: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
             refId: applied.holdId,
+            overpaid: applied.outcome === 'already_paid',
+          });
+          return { matched: true, note: applied.outcome };
+      }
+    }
+
+    // `XPE…` — khoản online của một PHỤ LỤC GIA HẠN (ADR 0077). Đủ tiền ⇒ phụ lục hiệu lực và
+    // giờ trả của đơn dời ngay trong transaction này; tiền muộn không bao giờ kéo lịch lại.
+    if (target === BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION) {
+      const applied = await this.extensions.applyBankPaymentWithinTx(db, {
+        code: referenceCode,
+        amount: tx.amount,
+        providerTxId: tx.providerTxId,
+      });
+      switch (applied.outcome) {
+        case 'not_found':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Không tìm thấy phụ lục gia hạn mang mã ${referenceCode}`,
+          );
+          return { matched: false, note: 'extension_not_found' };
+        case 'closed':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Tiền về khi phụ lục gia hạn ${referenceCode} không còn nhận tiền (${applied.status}) — cần đối soát tay: hoàn khách`,
+          );
+          return { matched: false, note: `extension_${applied.status}` };
+        case 'partial':
+        case 'already_paid':
+        case 'activated':
+          await this.markMatched(db, tx.providerTxId, {
+            type: BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
+            refId: applied.extensionId,
             overpaid: applied.outcome === 'already_paid',
           });
           return { matched: true, note: applied.outcome };

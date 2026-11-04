@@ -5,7 +5,7 @@ import { Button, Empty, Popover, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
-import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
+import { HeaderIconButton, type HeaderIconButtonShape } from '@/components/layout/HeaderIconButton';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { useNotifications } from '../hooks/use-notifications';
@@ -30,9 +30,12 @@ import { useAppFormat } from '@/i18n/use-app-format';
 export function NotificationBell({
   context,
   icon = <BellOutlined />,
+  shape,
 }: {
   context: NotificationContext;
   icon?: ReactNode;
+  /** Hình dạng nút trên thanh trên — xem `HeaderIconButton.shape`. */
+  shape?: HeaderIconButtonShape;
 }) {
   const t = useTranslations('Notifications');
   const fmt = useAppFormat();
@@ -119,6 +122,7 @@ export function NotificationBell({
     >
       <HeaderIconButton
         icon={icon}
+        shape={shape}
         label={t('title')}
         count={unreadCount}
         active={open}

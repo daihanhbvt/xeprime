@@ -18,6 +18,7 @@ import {
   TENANT_CUSTOMER_RISK_LEVEL,
   TENANT_CUSTOMER_SORT,
   TENANT_CUSTOMER_SOURCE,
+  RECEIPT_TYPE,
   requiresRiskReason,
   type PaginationMeta,
   type TenantCustomerRelationship,
@@ -26,10 +27,18 @@ import {
 } from '@xeprime/types';
 import {
   BOOKING_MONEY_JOINS,
+  bookingMoney,
+  loadBookingMoneySides,
   SQL_AMOUNT_DUE,
   SQL_COLLECTED,
   SQL_DEBT,
+  SQL_DEBT_SCOPE,
+  SQL_HAS_DEBT,
+  type BookingMoneySides,
 } from '../../common/booking-money';
+import { dayRangeFilter } from '../../common/day-range';
+import { businessWhere } from '../../common/finance-period';
+import { revenueBuckets } from './customer-revenue-buckets';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { resolvePaging, paginationMeta } from '../../common/pagination';
@@ -45,9 +54,12 @@ import {
   CUSTOMER_MAX_LIMIT,
   CreateCustomerNoteDto,
   CreateTenantCustomerDto,
+  CustomerBookingHistoryQueryDto,
   CustomerBookingItemDto,
   CustomerBookingListQueryDto,
   CustomerNoteDto,
+  CustomerRevenueDto,
+  type CustomerRevenuePeriod,
   TenantCustomerDetailDto,
   TenantCustomerListItemDto,
   TenantCustomerListQueryDto,
@@ -60,6 +72,9 @@ import {
 const RECENT_BOOKINGS_LIMIT = 5;
 
 /** Đơn còn "sống" — khách đang giữ chỗ hoặc đang cầm xe. */
+/** Bảng "Chi tiết khoản phải thu" ở tab Thu chi — trần số đơn nợ trả về một lượt. */
+const CUSTOMER_RECEIVABLE_LIMIT = 50;
+
 const ACTIVE_BOOKING_STATUSES: readonly string[] = [
   BOOKING_STATUS.RESERVED,
   BOOKING_STATUS.CONFIRMED,
@@ -193,6 +208,8 @@ export class CustomersService {
         archived_customers: bigint;
         debt_customers: bigint;
         total_debt: string;
+        total_rentals: bigint;
+        total_revenue: string;
       }[]
     >(Prisma.sql`
       ${statsCte(tenantId)}
@@ -210,7 +227,9 @@ export class CustomersService {
         )::bigint AS blocked_customers,
         COUNT(*) FILTER (WHERE c.archived_at IS NOT NULL)::bigint AS archived_customers,
         COUNT(*) FILTER (WHERE COALESCE(s.debt_amount, 0) > 0)::bigint AS debt_customers,
-        trim_scale(COALESCE(SUM(COALESCE(s.debt_amount, 0)), 0))::text AS total_debt
+        trim_scale(COALESCE(SUM(COALESCE(s.debt_amount, 0)), 0))::text AS total_debt,
+        COALESCE(SUM(COALESCE(s.completed_rental_count, 0)), 0)::bigint AS total_rentals,
+        trim_scale(COALESCE(SUM(COALESCE(s.total_booking_amount, 0)), 0))::text AS total_revenue
       FROM tenant_customers c
       LEFT JOIN customer_stats s ON s.tenant_customer_id = c.id
       WHERE c.tenant_id = ${tenantId} AND c.deleted_at IS NULL
@@ -227,6 +246,8 @@ export class CustomersService {
       // "không ai nợ gì" — đó là thông tin SAI, khác hẳn thông tin bị giấu.
       totalDebt: canViewFinance ? (row?.total_debt ?? '0') : null,
       debtCustomers: canViewFinance ? Number(row?.debt_customers ?? 0) : null,
+      totalRentals: Number(row?.total_rentals ?? 0),
+      totalRevenue: canViewFinance ? (row?.total_revenue ?? '0') : null,
     };
   }
 
@@ -312,6 +333,16 @@ export class CustomersService {
     const recentBookings = scope.canViewBookings
       ? await this.recentBookings(tenantId, id, scope.canViewFinance)
       : [];
+    const currentBooking = scope.canViewBookings
+      ? await this.currentBooking(tenantId, id, scope.canViewFinance)
+      : null;
+    const receivable =
+      scope.canViewBookings && scope.canViewFinance
+        ? await this.debtBookingIds(tenantId, id, 1).then(async (debt) => ({
+            count: debt.count,
+            oldest: (await this.bookingItemsByIds(tenantId, debt.ids, true))[0] ?? null,
+          }))
+        : null;
 
     return {
       id: customer.id,
@@ -335,6 +366,8 @@ export class CustomersService {
       updatedAt: customer.updatedAt.toISOString(),
       ...toStats(stats, scope.canViewFinance),
       recentBookings,
+      currentBooking,
+      receivable,
     };
   }
 
@@ -504,12 +537,29 @@ export class CustomersService {
   async bookings(
     tenantId: string,
     id: string,
-    query: CustomerBookingListQueryDto,
+    query: CustomerBookingHistoryQueryDto,
     canViewFinance: boolean,
   ): Promise<{ data: CustomerBookingItemDto[]; meta: PaginationMeta }> {
     await this.findOne(tenantId, id);
     const paging = resolvePaging(query, CUSTOMER_HISTORY_DEFAULT_LIMIT, CUSTOMER_HISTORY_MAX_LIMIT);
-    const where: Prisma.BookingWhereInput = { tenantId, tenantCustomerId: id, deletedAt: null };
+    const q = query.q?.trim();
+    const pickupAt = dayRangeFilter(query.from, query.to);
+    const where: Prisma.BookingWhereInput = {
+      tenantId,
+      tenantCustomerId: id,
+      deletedAt: null,
+      ...(query.status ? { status: query.status } : {}),
+      ...(pickupAt ? { pickupAt } : {}),
+      ...(q
+        ? {
+            OR: [
+              { code: { contains: q, mode: 'insensitive' } },
+              { vehicle: { name: { contains: q, mode: 'insensitive' } } },
+              { vehicle: { plateNumber: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.booking.count({ where }),
@@ -523,7 +573,7 @@ export class CustomersService {
     ]);
 
     return {
-      data: rows.map((row) => toBookingItem(row, canViewFinance)),
+      data: await this.toBookingItems(rows, canViewFinance),
       meta: paginationMeta(paging, total),
     };
   }
@@ -870,7 +920,176 @@ export class CustomersService {
       take: RECENT_BOOKINGS_LIMIT,
       select: BOOKING_SELECT,
     });
-    return rows.map((row) => toBookingItem(row, canViewFinance));
+    return this.toBookingItems(rows, canViewFinance);
+  }
+
+  /**
+   * Dòng lịch sử thuê kèm ba con số tiền theo CÔNG THỨC CHUNG (`bookingMoney` — phụ phí vào phải
+   * thu, phiếu tay vào đã thu). Bản cũ tự trừ `total − paid`, lệch với chi tiết đơn đúng ở các đơn
+   * có phụ phí.
+   */
+  private async toBookingItems(
+    rows: BookingRow[],
+    canViewFinance: boolean,
+  ): Promise<CustomerBookingItemDto[]> {
+    const sides = canViewFinance
+      ? await loadBookingMoneySides(
+          this.prisma,
+          rows.map((r) => r.id),
+        )
+      : new Map<string, BookingMoneySides>();
+    return rows.map((row) => toBookingItem(row, canViewFinance, sides.get(row.id)));
+  }
+
+  /** Đơn đang chạy, hoặc đơn sắp nhận gần nhất — thẻ "Đơn thuê hiện tại". */
+  private async currentBooking(
+    tenantId: string,
+    id: string,
+    canViewFinance: boolean,
+  ): Promise<CustomerBookingItemDto | null> {
+    const base = { tenantId, tenantCustomerId: id, deletedAt: null };
+    const row =
+      (await this.prisma.booking.findFirst({
+        where: { ...base, status: BOOKING_STATUS.ACTIVE },
+        orderBy: { returnAt: 'asc' },
+        select: BOOKING_SELECT,
+      })) ??
+      (await this.prisma.booking.findFirst({
+        where: {
+          ...base,
+          status: { in: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED] },
+        },
+        orderBy: { pickupAt: 'asc' },
+        select: BOOKING_SELECT,
+      }));
+    if (!row) return null;
+    return (await this.toBookingItems([row], canViewFinance))[0] ?? null;
+  }
+
+  /** Các đơn còn nợ của khách, cũ trước — CÙNG vị từ với /manage/debts. */
+  private async debtBookingIds(
+    tenantId: string,
+    id: string,
+    limit: number,
+  ): Promise<{ ids: string[]; count: number; amount: string }> {
+    const rows = await this.prisma.$queryRaw<
+      { id: string; total_count: bigint; total_debt: string }[]
+    >(Prisma.sql`
+      SELECT b.id,
+             COUNT(*) OVER ()::bigint AS total_count,
+             trim_scale(SUM(${SQL_DEBT}) OVER ())::text AS total_debt
+      FROM bookings b
+      ${BOOKING_MONEY_JOINS}
+      WHERE b.tenant_id = ${tenantId}
+        AND b.tenant_customer_id = ${id}
+        AND ${SQL_DEBT_SCOPE}
+        AND ${SQL_HAS_DEBT}
+      ORDER BY b.pickup_at ASC, b.id ASC
+      LIMIT ${limit}
+    `);
+    return {
+      ids: rows.map((r) => r.id),
+      count: Number(rows[0]?.total_count ?? 0),
+      amount: rows[0]?.total_debt ?? '0',
+    };
+  }
+
+  private async bookingItemsByIds(
+    tenantId: string,
+    ids: string[],
+    canViewFinance: boolean,
+  ): Promise<CustomerBookingItemDto[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.booking.findMany({
+      where: { tenantId, id: { in: ids } },
+      select: BOOKING_SELECT,
+    });
+    const order = new Map(ids.map((bid, i) => [bid, i]));
+    rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    return this.toBookingItems(rows, canViewFinance);
+  }
+
+  /**
+   * Tab "Thu chi" của hồ sơ khách (Figma `23797:55706`, 02/11/2026).
+   *
+   *  - Cột biểu đồ = GIÁ TRỊ ĐƠN (phải thu, không tính đơn huỷ) theo ngày nhận xe — "khách này mang
+   *    lại bao nhiêu việc", không phụ thuộc đã thu chưa.
+   *  - "Thực thu trong kỳ" = phiếu thu KINH DOANH đã duyệt của khách (`businessWhere` — cọc là tiền
+   *    giữ hộ, không phải doanh thu, ADR 0013 §3). Một định nghĩa với màn Doanh thu.
+   *  - Khoản phải thu = mọi kỳ, cùng vị từ /manage/debts.
+   */
+  async revenue(
+    tenantId: string,
+    id: string,
+    period: CustomerRevenuePeriod,
+    now: Date = new Date(),
+  ): Promise<CustomerRevenueDto> {
+    await this.findOne(tenantId, id);
+    const buckets = revenueBuckets(period, now);
+    const from = buckets[0]!.from;
+    const to = buckets[buckets.length - 1]!.to;
+
+    const [booked, collected, completed, debt] = await Promise.all([
+      this.prisma.$queryRaw<{ pickup_at: Date; amount: string }[]>(Prisma.sql`
+        SELECT b.pickup_at, (${SQL_AMOUNT_DUE})::text AS amount
+        FROM bookings b
+        ${BOOKING_MONEY_JOINS}
+        WHERE b.tenant_id = ${tenantId}
+          AND b.tenant_customer_id = ${id}
+          AND b.deleted_at IS NULL
+          AND b.status <> ${BOOKING_STATUS.CANCELLED}
+          AND b.pickup_at >= ${from} AND b.pickup_at < ${to}
+      `),
+      this.prisma.receipt.aggregate({
+        where: {
+          ...businessWhere(tenantId, undefined, undefined),
+          tenantCustomerId: id,
+          type: RECEIPT_TYPE.INCOME,
+          occurredAt: { gte: from, lt: to },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.booking.count({
+        where: {
+          tenantId,
+          tenantCustomerId: id,
+          deletedAt: null,
+          status: BOOKING_STATUS.COMPLETED,
+          actualReturnAt: { gte: from, lt: to },
+        },
+      }),
+      this.debtBookingIds(tenantId, id, CUSTOMER_RECEIVABLE_LIMIT),
+    ]);
+
+    const sums = buckets.map(() => new Prisma.Decimal(0));
+    const counts = buckets.map(() => 0);
+    let periodRevenue = new Prisma.Decimal(0);
+    for (const row of booked) {
+      const at = row.pickup_at.getTime();
+      const index = buckets.findIndex((b) => at >= b.from.getTime() && at < b.to.getTime());
+      if (index < 0) continue;
+      sums[index] = sums[index]!.plus(row.amount);
+      counts[index] = counts[index]! + 1;
+      periodRevenue = periodRevenue.plus(row.amount);
+    }
+
+    return {
+      period,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      buckets: buckets.map((b, i) => ({
+        from: b.from.toISOString(),
+        to: b.to.toISOString(),
+        amount: sums[i]!.toFixed(0),
+        count: counts[i]!,
+      })),
+      periodRevenue: periodRevenue.toFixed(0),
+      collectedInPeriod: (collected._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
+      completedInPeriod: completed,
+      receivableAmount: new Prisma.Decimal(debt.amount).toFixed(0),
+      receivableCount: debt.count,
+      receivables: await this.bookingItemsByIds(tenantId, debt.ids, true),
+    };
   }
 }
 
@@ -1048,13 +1267,22 @@ const BOOKING_SELECT = {
   returnAt: true,
   totalAmount: true,
   paidAmount: true,
-  vehicle: { select: { name: true, plateNumber: true } },
+  vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
   ...BOOKING_DRIVER_SELECT,
 } satisfies Prisma.BookingSelect;
 
 type BookingRow = Prisma.BookingGetPayload<{ select: typeof BOOKING_SELECT }>;
 
-function toBookingItem(row: BookingRow, canViewFinance: boolean): CustomerBookingItemDto {
+function toBookingItem(
+  row: BookingRow,
+  canViewFinance: boolean,
+  sides?: BookingMoneySides,
+): CustomerBookingItemDto {
+  const money = bookingMoney({
+    totalAmount: row.totalAmount,
+    paidAmount: row.paidAmount,
+    ...(sides ?? {}),
+  });
   return {
     id: row.id,
     code: row.code,
@@ -1062,13 +1290,12 @@ function toBookingItem(row: BookingRow, canViewFinance: boolean): CustomerBookin
     serviceType: row.serviceType,
     vehicleName: row.vehicle.name,
     vehiclePlate: row.vehicle.plateNumber,
+    vehicleImageUrl: row.vehicle.mainImageUrl,
     pickupAt: row.pickupAt.toISOString(),
     returnAt: row.returnAt.toISOString(),
-    totalAmount: canViewFinance ? row.totalAmount.toString() : null,
-    paidAmount: canViewFinance ? row.paidAmount.toString() : null,
-    debtAmount: canViewFinance
-      ? Prisma.Decimal.max(0, row.totalAmount.minus(row.paidAmount)).toString()
-      : null,
+    totalAmount: canViewFinance ? money.amountDue.toString() : null,
+    paidAmount: canViewFinance ? money.collectedAmount.toString() : null,
+    debtAmount: canViewFinance ? money.debtAmount.toString() : null,
     driver: toBookingDriverSummary(row),
   };
 }

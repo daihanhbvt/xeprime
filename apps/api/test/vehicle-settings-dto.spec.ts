@@ -61,6 +61,11 @@ describe('SaveVehicleOperationSettingsDto — khung giờ và thời gian chết
     ).toEqual({});
   });
 
+  // Khung giờ đã gỡ (ADR 0078): client mới chỉ gửi thời gian chết.
+  it('không gửi khung giờ cũng hợp lệ — hai trường chỉ còn cho app cũ', () => {
+    expect(errorsOf(SaveVehicleOperationSettingsDto, { turnaroundBufferMinutes: 30 })).toEqual({});
+  });
+
   it('giờ sai định dạng bị chặn ngay ở DTO, không xuống tới CHECK của Postgres', () => {
     for (const bad of ['6:00', '25:00', '06:60', '0600', '06:00:00', '']) {
       const errors = errorsOf(SaveVehicleOperationSettingsDto, {

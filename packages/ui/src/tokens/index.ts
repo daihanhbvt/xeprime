@@ -328,6 +328,10 @@ export const XP_TOKENS = {
   'color-success-border': '#6ce9a6', // v2 Status/success-300 — viền nhãn trạng thái xanh
   'color-warning-subtle': '#fffaeb', // v2 Status/warning-low — nền hộp lưu ý trang thanh toán
   'color-warning-border': '#fec84b', // v2 Status/warning-300 — viền nhãn trạng thái cam
+  'color-info-border': '#84caff', // v2 Status/information-300 — viền nhãn "Tự lái", nút Zalo (partner)
+  'color-pink': '#dd2590', // v2 Status/pink-high — chữ viên "Thuê xe dài hạn" (partner)
+  'color-pink-bg': '#fdf2fa', // v2 Status/pink-low — nền viên "Thuê xe dài hạn"
+  'color-pink-border': '#faa7e0', // v2 Status/pink-300 — viền viên "Thuê xe dài hạn"
   'color-warning-strong': '#ec4a0a', // v2 Status/warning-600 — chữ nhãn trạng thái cam
   'color-info-strong': '#1570ef',
   'color-star': '#fec84b', // sao đánh giá — một màu cho mọi chỗ chấm sao (web + app), cả hai giao diện // v2 Status/info-600 — chữ nhãn trạng thái xanh dương
@@ -490,6 +494,12 @@ export const XP_TOKENS = {
   // Bề rộng tối đa của không gian làm việc trọn bề ngang (sửa xe, quản lý xe) — rộng hơn
   // `container-max-width` vì các màn đó có menu trái + nội dung + cột xem nhanh.
   'shell-workspace-max-width': '1680px',
+  // Khung site partner menu ngang (Figma Partner-XePrime Header `23649:27690`): 1920 − 2 × 180.
+  // Header và vùng nội dung canh trên cùng một cột.
+  'shell-partner-max-width': '1560px',
+  // Thanh header site partner: đệm 16 + nút 42 + đệm 16. Phần dính (sticky) của các màn canh theo
+  // `--xp-shell-header-offset`, khung partner đặt nó bằng số này (site quản trị: topbar 56px).
+  'shell-partner-header-height': '74px',
   'shell-sidebar-width': '232px', // 14:1424 (Foundations sở hữu giá trị; 47:5 = 240 lệch nhịp)
   'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
   'shell-bottom-nav-height': '64px', // 14:1641

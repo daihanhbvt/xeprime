@@ -1,0 +1,539 @@
+/*
+ * Khung màn sửa xe — design `23731:37932` (frame 1920: menu 300 · nội dung · cột phải 320, cách 24).
+ *
+ * Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container vehicle-edit`), không đo viewport: cùng màn
+ * chạy dưới khung partner, khung phiên hỗ trợ của site quản trị và khung tài khoản chủ xe — mỗi
+ * khung chừa một bề ngang khác.
+ */
+.workspace {
+  container: vehicle-edit / inline-size;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  align-items: start;
+  gap: 24px;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-areas: 'nav main aside';
+}
+
+.nav {
+  position: sticky;
+  top: var(--xp-space-md);
+  min-width: 0;
+  grid-area: nav;
+}
+
+.main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  grid-area: main;
+}
+
+.aside {
+  position: sticky;
+  top: var(--xp-space-md);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 24px;
+  grid-area: aside;
+}
+
+/* ── Thẻ trắng của mọi khối nội dung ─────────────────────────────────────── */
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.cardHead {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.cardHeadText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.cardSubtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.cardExtra {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* ── Menu trái ──────────────────────────────────────────────────────────── */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.menuGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menuGroupLabel {
+  margin: 0;
+  padding: 8px 12px 4px;
+  color: var(--xp-color-text-tertiary);
+  font-size: 12px;
+  font-weight: var(--xp-font-weight-medium);
+  letter-spacing: 0.02em;
+  line-height: 18px;
+  text-transform: uppercase;
+}
+
+.menuList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menuItem {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  appearance: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-align: start;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.menuItem:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.menuItem:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+.menuItemActive,
+.menuItemActive:hover {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+.menuIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+}
+
+.menuItemActive .menuIcon {
+  color: var(--xp-color-primary-active);
+}
+
+.menuLabel {
+  min-width: 0;
+  flex: 1;
+}
+
+.menuBadge {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text);
+  font-size: 12px;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+.menuItemActive .menuBadge {
+  background: var(--xp-color-bg-container);
+}
+
+.menuBadgeWarn {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+/* ── Cột phải ───────────────────────────────────────────────────────────── */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.summaryMedia {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  border-radius: 10px;
+  aspect-ratio: 296 / 188;
+  background: var(--xp-color-neutral-bg);
+}
+
+.summaryImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.summaryImageFallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: var(--xp-color-text-placeholder);
+  font-size: 40px;
+}
+
+.summaryMediaButton {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.summaryMediaButton:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+.summaryBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 8px 8px;
+}
+
+.summaryNameRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryName {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.summaryRow {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.summaryRow dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+}
+
+.summaryRow dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+.summaryMuted {
+  color: var(--xp-color-text-placeholder) !important;
+  font-weight: var(--xp-font-weight-regular) !important;
+}
+
+.statusTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+}
+
+.statusTrigger:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.statusOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusCheck {
+  color: var(--xp-color-primary-active);
+}
+
+.completeness {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.completenessLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+}
+
+.completenessValue {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.completenessBar {
+  overflow: hidden;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--xp-color-neutral-bg);
+}
+
+.completenessFill {
+  width: var(--completeness);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--xp-color-info);
+}
+
+/* Góc phải đầu trang: "Trên chợ · trạng thái · công tắc" trong một ô viền, rồi "Xem trang xe". */
+.marketBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.marketSwitch {
+  min-height: 40px;
+  padding: 6px 12px 6px 16px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 10px;
+  background: var(--xp-color-bg-container);
+  display: flex;
+  align-items: center;
+}
+
+.marketBar :global(.ant-btn) {
+  height: 40px;
+}
+
+.actions {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.actions :global(.ant-btn) {
+  height: 40px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Hẹp dần: đổi bề ngang cột trước, rồi mới xếp chồng ────────────────── */
+
+@container vehicle-edit (max-width: 1360px) {
+  .layout {
+    grid-template-columns: 248px minmax(0, 1fr) 288px;
+    gap: 20px;
+  }
+}
+
+/*
+ * Dưới ~1180px ba cột không còn chỗ cho form: thẻ tóm tắt lên đầu, menu thành dải cuộn ngang, hai
+ * nút lưu bám đáy màn hình — vẫn đủ mọi thứ, chỉ đổi chỗ.
+ */
+@container vehicle-edit (max-width: 1180px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'aside'
+      'nav'
+      'main';
+    gap: 16px;
+  }
+
+  .nav,
+  .aside {
+    position: static;
+  }
+
+  .menu {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 6px;
+    scrollbar-width: none;
+  }
+
+  .menuGroup {
+    flex-direction: row;
+    flex: none;
+  }
+
+  .menuGroupLabel {
+    display: none;
+  }
+
+  .menuList {
+    flex-direction: row;
+  }
+
+  .menuItem {
+    width: auto;
+    min-height: 40px;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+
+  .summary {
+    display: grid;
+    align-items: start;
+    gap: 16px;
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .summaryBody {
+    padding: 0;
+  }
+
+  .actions {
+    position: fixed;
+    z-index: 10;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--xp-color-border);
+    background: var(--xp-color-bg-container);
+    box-shadow: 0 -4px 12px rgba(10, 13, 18, 0.06);
+  }
+
+  /* Chừa chỗ cho thanh nút bám đáy — khối cuối không bị che. */
+  .main {
+    padding-bottom: 72px;
+  }
+}
+
+@container vehicle-edit (max-width: 600px) {
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    padding: 16px;
+  }
+}
+
+.sourceBadge {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/*
+ * Từ 1024px trở xuống khung partner có thanh tab cố định ở đáy (`MobileNav`) — thanh nút lưu đứng
+ * ngay trên nó, không bị che. Ranh chính tắc 1024px (`--xp-bp-tablet`), cùng ranh của `AppShell`.
+ */
+@media (max-width: 1024px) {
+  .actions {
+    bottom: calc(var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 12px;
+  }
+
+  .main {
+    padding-bottom: 88px;
+  }
+}

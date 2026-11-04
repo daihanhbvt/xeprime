@@ -57,7 +57,7 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
-vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
+vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({ counts: {}, urgent: {} }) }));
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),
@@ -128,14 +128,13 @@ describe('Sidebar — trạng thái mở rộng', () => {
   it('mục menu là link có nhãn đọc được', () => {
     renderSidebar();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
   });
 
-  it('mục nằm trong một mục cha vẫn tới được: bấm mở "Xe của tôi"', () => {
+  it('mục đứng thẳng trong khối của nó — menu partner không còn mục cha phải bấm mở', () => {
     renderSidebar();
 
-    fireEvent.click(within(menuRegion()).getByText('Xe của tôi'));
-
+    expect(within(menuRegion()).getByText('Xe & Tài xế')).toBeTruthy();
     expect(within(menuRegion()).getByRole('link', { name: 'Danh sách xe' })).toBeTruthy();
   });
 });
@@ -185,7 +184,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
   it('mọi mục menu GIỮ tên truy cập được', () => {
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
     expect(within(menuRegion()).getByRole('link', { name: 'Tổng quan' })).toBeTruthy();
   });
 
@@ -194,7 +193,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
     renderCollapsed();
 
     expect(
-      within(menuRegion()).getByRole('link', { name: 'Lịch thuê' }).getAttribute('aria-current'),
+      within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' }).getAttribute('aria-current'),
     ).toBe('page');
   });
 
@@ -202,8 +201,8 @@ describe('Sidebar — trạng thái thu gọn', () => {
     grant(PERMISSION.CALENDAR_VIEW);
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
-    expect(within(menuRegion()).queryByRole('link', { name: 'Cửa hàng' })).toBeNull();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
+    expect(within(menuRegion()).queryByRole('link', { name: 'Thông tin cửa hàng' })).toBeNull();
   });
 
   it('tên gian hàng bị ẩn (không đủ chỗ), KHÔNG để lại chữ bị cắt dở', () => {

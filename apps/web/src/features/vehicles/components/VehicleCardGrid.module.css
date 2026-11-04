@@ -1,51 +1,42 @@
 /*
- * Khung danh sách xe — Figma `186:1670` `grid-outer-container`.
- *
- * Lưới, các trạng thái và chân phân trang đều sống trong MỘT khung có viền; đó là lý do khối
- * nội dung giữ nguyên bề ngoài khi chuyển giữa "có dữ liệu", "đang tải" và "rỗng".
+ * Danh sách xe — Figma Partner-XePrime 03/11/2026. Thẻ đặt thẳng trên nền trang, cách nhau 20
+ * (lưới, ít xe) hoặc 12 (danh sách). Không còn khung bao chung.
  */
-.plate {
-  overflow: hidden;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
+.root {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
 }
 
-/* Padding 20px của `grid-inner` (`186:1671`). */
-.inner {
-  padding: var(--xp-space-lg);
-  background: var(--xp-color-bg-container);
-}
-
-/*
- * Dải báo "không tải được cảnh báo" (Wave 8.1) — đứng TRÊN lưới, gọn một dòng, không đẩy
- * lưới xuống đáng kể. Danh sách xe vẫn dùng được khi cảnh báo hỏng.
- */
 .alertsBanner {
   margin-bottom: var(--xp-space-md);
 }
 
-/*
- * Lưới thẻ — bản chỉnh Figma 11/08/2026: desktop **5 cột** thẻ gọn (~207px ở khung 1116px của
- * màn 1440), tablet giữ 2 cột thẻ rộng như bản `236:1777`.
- *
- * Sàn track là số LỚN HƠN giữa hai đại lượng:
- *  - `--card-min` — dưới mức này khối nhãn–số của thẻ vỡ chữ, nên màn hẹp phải bớt cột;
- *  - một-phần-`--card-max-cols` bề rộng khung — trên màn rộng, đây mới là số lớn hơn, và nó
- *    chặn cột thừa xuất hiện. Thẻ nở ra thay vì lưới thêm cột.
- *
- * `align-items: start` vì Figma để thẻ cao tự nhiên, không kéo bằng nhau.
- */
-.grid {
-  --card-gap: 20px;
-  --card-min: 280px;
-  --card-max-cols: 3;
-
+.grid,
+.few,
+.list {
   display: grid;
   padding: 0;
   margin: 0;
-  align-items: start;
+  list-style: none;
+}
+
+/* Thẻ trong một hàng cao bằng nhau — hàng nút của các thẻ cạnh nhau thẳng một đường. */
+.grid,
+.few {
+  align-items: stretch;
+}
+
+/*
+ * Lưới gọn — `23649:29724`: 5 thẻ 296 ở khung 1560 (cách 20). Track co theo khung với sàn 270px
+ * (dưới mức đó hàng ba nút cắt chữ "Chi tiết"), nên màn 1366 tự về 4 cột thay vì bóp thẻ.
+ */
+.grid {
+  --card-gap: 20px;
+  --card-min: 270px;
+  --card-max-cols: 5;
+
   gap: var(--card-gap);
   grid-template-columns: repeat(
     auto-fill,
@@ -57,26 +48,23 @@
       1fr
     )
   );
-  list-style: none;
+}
+
+/* Ít xe — `23655:38521`: hai thẻ 770 một hàng, cách 20; khung hẹp thì một thẻ một hàng. */
+.few {
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+}
+
+/* Danh sách — `23655:36959`: một xe một hàng, cách 12. */
+.list {
+  gap: var(--xp-space-12);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /*
- * Desktop (sidebar đầy đủ): 5 thẻ một hàng. Sàn 200px vì (1116 − 4×20) / 5 ≈ 207px — đặt cao
- * hơn là hàng 5 không bao giờ đạt được; thẻ đã co chữ/nhãn để sống được ở bề rộng này.
- * Dưới 1025px quay về sàn 280px của khối trên: tablet 2 cột thẻ rộng, không nhồi 3 cột hẹp.
- */
-@media (min-width: 1025px) {
-  .grid {
-    --card-min: 200px;
-    --card-max-cols: 5;
-  }
-}
-
-/*
- * `<li>` là ô lưới, thẻ bên trong phải chiếm trọn ô.
- *
- * Thiếu `flex: 1` thì thẻ là flex item cỡ theo nội dung: đo được chênh 6px giữa thẻ có ảnh và
- * thẻ dùng ảnh dự phòng, tức các cột không còn bằng nhau dù `grid-template-columns` đã chia đều.
+ * `<li>` là ô lưới, thẻ bên trong phải chiếm trọn ô — thiếu `flex: 1` thì thẻ cỡ theo nội dung và
+ * các cột không còn bằng nhau dù track đã chia đều.
  */
 .cell {
   display: flex;
@@ -88,36 +76,47 @@
   flex: 1;
 }
 
-/* ─── Mobile: danh sách hàng ngang (Figma `186:2407`) ─────────────────────── */
+/* ─── Mobile: hàng ngang trong một ô trắng (Figma `186:2407`) ─────────────── */
 
-.list {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
+@media (max-width: 640px) {
+  .list {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius-card);
+    background: var(--xp-color-bg-container);
+  }
 
-.list > li:last-child > * {
-  border-bottom: none;
+  .list > li:last-child > * {
+    border-bottom: none;
+  }
 }
 
 /* ─── Trạng thái ──────────────────────────────────────────────────────────── */
 
-/*
- * Figma `188:1553` canh trạng thái vào giữa một vùng cao ~780px. Dùng `min-height` thay vì chiều
- * cao cố định: nội dung dài hơn (danh sách quyền còn thiếu) vẫn nở ra được.
- */
+/* Rỗng / không kết quả / lỗi: ô trắng bo 16 cùng ngôn ngữ thẻ, nội dung canh giữa. */
 .state {
   display: flex;
   min-height: 420px;
   align-items: center;
   justify-content: center;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
 }
 
 .skeletonCard {
   min-height: 300px;
-  padding: var(--xp-space-sm);
+  padding: var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.few > .skeletonCard,
+.list > .skeletonCard {
+  min-height: 180px;
 }
 
 .skeletonRow {
@@ -125,32 +124,25 @@
   border-bottom: 1px solid var(--xp-color-border-secondary);
 }
 
-/* ─── Chân khung ──────────────────────────────────────────────────────────── */
+/* ─── Chân danh sách ──────────────────────────────────────────────────────── */
 
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--xp-space-md) var(--xp-space-lg);
-  border-top: 1px solid var(--xp-color-border-secondary);
   gap: var(--xp-space-md);
 }
 
 .summary {
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
 }
 
 @media (max-width: 640px) {
-  /* Hàng tự có padding riêng — khung không thêm lề, đúng như Figma vẽ tràn viền. */
-  .inner {
-    padding: 0;
-  }
-
   .state {
     min-height: 320px;
-    padding: var(--xp-space-lg);
   }
 
   /* Đếm số trước, phân trang sau, cả hai vào giữa (Figma `186:2539`). */

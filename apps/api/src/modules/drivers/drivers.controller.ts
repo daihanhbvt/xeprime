@@ -18,9 +18,11 @@ import {
   DriverAssignmentListQueryDto,
   DriverAssignmentPageDto,
   DriverDto,
+  DriverListFilterDto,
   DriverListQueryDto,
   DriverOverviewDto,
   DriverPageDto,
+  DriverSummaryDto,
   DriverWageMonthQueryDto,
   DriverWageSettingsDto,
   InviteDriverDto,
@@ -52,6 +54,20 @@ export class DriversController {
     @Query() query: DriverListQueryDto,
   ): Promise<DriverPageDto> {
     return this.drivers.list(tenant.tenantId, query);
+  }
+
+  @Get('summary')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({
+    summary: 'Số đếm theo trạng thái liên kết + số cần đối chiếu bằng lái (đã áp bộ lọc chung)',
+  })
+  @ApiOkResponse({ type: DriverSummaryDto })
+  summary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: DriverListFilterDto,
+  ): Promise<DriverSummaryDto> {
+    return this.drivers.summary(tenant.tenantId, query);
   }
 
   @Get('assignable')

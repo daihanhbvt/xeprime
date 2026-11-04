@@ -1,0 +1,14 @@
+/*
+ * Màn Danh sách bảo dưỡng — Figma Partner-XePrime `23733:41941`: tiêu đề + dòng phụ, hàng lọc cao
+ * 40 với "Sắp xếp: …" cuối hàng, dải chip việc-cần-làm, rồi danh sách; các khối cách nhau 20.
+ */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sort {
+  width: 270px;
+}

@@ -71,6 +71,11 @@ interface SelectFieldProps<T extends FieldValues> {
    * trước tên). Lọc khi gõ vẫn chạy trên `label` chữ, nên phần vẽ thêm không làm hỏng tìm kiếm.
    */
   renderOption?: (option: SelectFieldOption) => ReactNode;
+  /**
+   * Ẩn nhãn khi ô đứng trong một hàng đã tự nói nó là gì (khung giờ "05:00 – 12:00") — nhãn vẫn là
+   * tên khả truy cập của ô (`aria-label`), chỉ không vẽ ra.
+   */
+  hideLabel?: boolean;
 }
 
 /**
@@ -95,6 +100,7 @@ export function SelectField<T extends FieldValues>({
   onAfterChange,
   notFoundContent,
   renderOption,
+  hideLabel = false,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -105,7 +111,7 @@ export function SelectField<T extends FieldValues>({
 
   return (
     <Form.Item
-      label={label}
+      label={hideLabel ? undefined : label}
       htmlFor={selectId}
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
@@ -114,6 +120,7 @@ export function SelectField<T extends FieldValues>({
     >
       <Select
         id={selectId}
+        aria-label={hideLabel && typeof label === 'string' ? label : undefined}
         aria-describedby={helpText ? describedById : undefined}
         mode={mode}
         // `''` là "chưa chọn" của form (giá trị mặc định) — đưa về `undefined` để AntD hiện

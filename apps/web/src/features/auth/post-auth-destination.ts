@@ -184,13 +184,13 @@ function matchesPage(pathname: string, page: { href: string; exact?: true }): bo
 export function isCommissionPage(path: string): boolean {
   const pathname = pathOnly(path);
   if (COMMISSION_PAGES.some((page) => matchesPage(pathname, page))) return true;
-  // `/vehicles/<id>` (chi tiết, MỘT URL hai tuyến) và `/vehicles/<id>/manage/...` (Owner Lite) —
-  // KHÔNG `/vehicles/<id>/edit` (màn sửa đầy đủ của tuyến gói) hay `/vehicles/new`.
+  // `/vehicles/<id>` (chi tiết) và `/vehicles/<id>/edit` (màn sửa) — MỘT URL hai tuyến từ 03/11/2026;
+  // `/vehicles/<id>/manage/...` (Owner Lite cũ) còn để chuyển hướng. KHÔNG `/vehicles/new`.
   const vehicles = `${ROUTES.MANAGE.VEHICLES}/`;
   if (!pathname.startsWith(vehicles)) return false;
   const rest = pathname.slice(vehicles.length);
   if (/^[^/]+$/.test(rest)) return rest !== 'new';
-  return /^[^/]+\/manage(\/.*)?$/.test(rest);
+  return /^[^/]+\/(edit|manage(\/.*)?)$/.test(rest);
 }
 
 /**

@@ -4,6 +4,7 @@ import { DownOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { cx } from '@/lib/cx';
 import { NavBadge } from './NavBadge';
+import { needsActionLabel } from './needs-action-label';
 import styles from './SidebarSectionTitle.module.css';
 
 export interface SidebarSectionTitleProps {
@@ -13,6 +14,8 @@ export interface SidebarSectionTitleProps {
   pinned?: boolean;
   /** Việc cần xử lý đang bị giấu bên trong khối đã gập. */
   badgeCount?: number;
+  /** Trong số việc bị giấu có việc trễ / sắp trễ — huy hiệu đỏ. */
+  badgeUrgent?: boolean;
   onToggle: () => void;
 }
 
@@ -32,6 +35,7 @@ export function SidebarSectionTitle({
   expanded,
   pinned = false,
   badgeCount = 0,
+  badgeUrgent = false,
   onToggle,
 }: SidebarSectionTitleProps) {
   const t = useTranslations('ManageCommon');
@@ -44,7 +48,7 @@ export function SidebarSectionTitle({
     ? t('shell.collapseSection', { name: label })
     : t('shell.expandSection', { name: label });
   const accessibleName =
-    badgeCount > 0 ? `${action}, ${t('shell.needsAction', { count: badgeCount })}` : action;
+    badgeCount > 0 ? `${action}, ${needsActionLabel(t, badgeCount, badgeUrgent)}` : action;
 
   return (
     <button
@@ -55,7 +59,7 @@ export function SidebarSectionTitle({
       onClick={onToggle}
     >
       <span className={styles.text}>{label}</span>
-      <NavBadge count={badgeCount} />
+      <NavBadge count={badgeCount} urgent={badgeUrgent} />
       <DownOutlined className={cx(styles.chevron, !expanded && styles.chevronClosed)} aria-hidden />
     </button>
   );

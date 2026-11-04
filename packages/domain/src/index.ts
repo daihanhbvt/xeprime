@@ -281,6 +281,7 @@ export {
 } from './odometer';
 
 export { PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from './pickup-queue';
+export { isLateReturn, rentalProgress, type RentalProgress } from './rental-progress';
 
 export { buildVietQrUrl, transferContent } from './vietqr';
 

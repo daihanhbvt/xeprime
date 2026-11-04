@@ -23,6 +23,9 @@ import {
   updateCustomerRisk,
   uploadCustomerDocument,
   type UploadCustomerDocumentInput,
+  fetchCustomerBookingHistory,
+  fetchCustomerRevenue,
+  updateCustomerDocument,
 } from '../api';
 import type {
   CreateCustomerNoteInput,
@@ -32,6 +35,9 @@ import type {
   CustomerFilters,
   UpdateCustomerRiskInput,
   UpdateTenantCustomerInput,
+  CustomerBookingHistoryFilters,
+  CustomerRevenuePeriod,
+  UpdateCustomerDocumentInput,
 } from '../types';
 
 /**
@@ -67,6 +73,30 @@ export function useCustomerBookings(id: string | null, page: number, enabled = t
   return useQuery({
     queryKey: queryKeys.customers.bookings(id ?? '', page),
     queryFn: () => fetchCustomerBookings(id as string, page),
+    placeholderData: (prev) => prev,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+/** Lịch sử thuê có lọc (tab "Lịch sử thuê"). Giữ trang cũ trong lúc tải trang mới. */
+export function useCustomerBookingHistory(
+  id: string | null,
+  filters: CustomerBookingHistoryFilters,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.customers.bookingHistory(id ?? '', { ...filters }),
+    queryFn: () => fetchCustomerBookingHistory(id as string, filters),
+    placeholderData: (prev) => prev,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+/** Tab "Thu chi" — doanh thu theo kỳ + khoản phải thu (cần finance.view ở server). */
+export function useCustomerRevenue(id: string | null, period: CustomerRevenuePeriod, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.customers.revenue(id ?? '', period),
+    queryFn: () => fetchCustomerRevenue(id as string, period),
     placeholderData: (prev) => prev,
     enabled: Boolean(id) && enabled,
   });
@@ -176,6 +206,22 @@ export function useVerifyCustomerDocument() {
       documentId: string;
       input: VerifyCustomerDocumentInput;
     }) => verifyCustomerDocument(id, documentId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCustomerDocument() {
+  const invalidate = useInvalidateCustomers();
+  return useMutation({
+    mutationFn: ({
+      id,
+      documentId,
+      input,
+    }: {
+      id: string;
+      documentId: string;
+      input: UpdateCustomerDocumentInput;
+    }) => updateCustomerDocument(id, documentId, input),
     onSuccess: invalidate,
   });
 }

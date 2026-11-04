@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { PERMISSION } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { customerPath } from '@/constants/routes';
@@ -29,6 +30,7 @@ export function BookingCustomerDocumentsDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('Bookings.documentsDialog');
   const { has } = usePermissions();
 
   return (
@@ -40,9 +42,9 @@ export function BookingCustomerDocumentsDialog({
       footer={null}
       title={
         <span className={styles.titleRow}>
-          <span>Giấy tờ của {customerName}</span>
+          <span>{t('title', { name: customerName })}</span>
           <Link href={customerPath.detail(customerId)} className={styles.pageLink}>
-            Mở hồ sơ khách
+            {t('openProfile')}
           </Link>
         </span>
       }

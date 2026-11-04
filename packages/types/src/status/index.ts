@@ -22,6 +22,7 @@ export * from './vehicle-maintenance';
 export * from './vehicle-settings';
 export * from './booking';
 export * from './booking-request';
+export * from './booking-extension';
 export * from './customer-trip';
 export * from './cancellation';
 export * from './tenant-customer';
