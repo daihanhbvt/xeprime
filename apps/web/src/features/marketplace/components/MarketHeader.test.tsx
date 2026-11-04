@@ -189,7 +189,9 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
 
     // "Tài khoản của tôi" đã gộp vào thẻ danh tính (Figma 26/10/2026) — không còn dòng riêng.
     expect(screen.queryByRole('link', { name: /Tài khoản của tôi/ })).toBeNull();
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+    // Thanh menu chính cũng có mục "Chuyến đi" — chỉ soát trong menu tài khoản.
+    const menu = screen.getByRole('dialog', { name: 'Menu tài khoản' });
+    expect(within(menu).getByRole('link', { name: /Chuyến đi/ }).getAttribute('href')).toBe(
       '/trips',
     );
     expect(screen.getByRole('link', { name: /Xe yêu thích/ }).getAttribute('href')).toBe(

@@ -47,6 +47,15 @@ class CountingOtpProvider extends MockOtpProvider {
 const provider = new CountingOtpProvider();
 const service = new PhoneVerificationService(asService, config, provider);
 
+/*
+ * Công tắc "tắt gửi SMS" là MỘT dòng toàn hệ thống (`platform_app_configs.partner`) mà admin bật/tắt
+ * trên database dev. Spec này kiểm luồng gửi mã THẬT, nên chốt công tắc ở BẬT thay vì đọc trạng
+ * thái ai đó để lại trên máy; describe nào kiểm nhánh tắt tự spy đè lên.
+ */
+beforeEach(() => {
+  jest.spyOn(service, 'isSmsDisabled').mockResolvedValue(false);
+});
+
 /** Hàng mã MỚI NHẤT của một số — để khẳng định trạng thái sau verify. */
 async function latestRow(phone: string) {
   return prisma.phoneVerification.findFirst({
@@ -313,9 +322,7 @@ describe('Công tắc gửi SMS OTP (admin — chỉ dev/staging)', () => {
     await expect(off.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.OTP_INVALID },
     });
-    await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toEqual(
-      expect.any(String),
-    );
+    await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toEqual(expect.any(String));
   });
 
   maybe('BẬT: gửi qua nhà mạng như thường', async () => {
