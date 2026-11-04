@@ -20,6 +20,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleNavSection } from '@/store/slices/app.slice';
 import { NavBadge } from './NavBadge';
+import { needsActionLabel } from './needs-action-label';
 import { SidebarSectionTitle } from './SidebarSectionTitle';
 import { useNavLeafAccess } from './use-nav-leaf-access';
 import styles from './ManageMenu.module.css';
@@ -30,6 +31,8 @@ type MenuItem = NonNullable<MenuProps['items']>[number];
 /** Tiền tố key để một khối và một mục cha không bao giờ đụng key với nhau hay với một href. */
 const SECTION_PREFIX = 'section:';
 const BRANCH_PREFIX = 'branch:';
+/** Huy hiệu dồn của một nhóm đang mở — số đã hiện trên từng mục con, không dồn lên nữa. */
+const NO_BADGE = { count: 0, urgent: false } as const;
 
 export interface UseManageNavOptions {
   /** Gọi sau khi người dùng chọn một mục — Drawer mobile dùng để tự đóng. */
@@ -70,7 +73,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const dispatch = useAppDispatch();
   const collapsedSections = useAppSelector((s) => s.app.navSectionsCollapsed);
   // Lọc quyền/sở hữu/cờ gói, huy hiệu và link mang chi nhánh — CÙNG một nguồn với menu ngang.
-  const { canSeeLeaf, isShown, badgeCountOf, hrefOf } = useNavLeafAccess();
+  const { isShown, badgeCountOf, badgeUrgentOf, badgeTotalOf, hrefOf } = useNavLeafAccess();
 
   // Cây của gian hàng trong phiên hỗ trợ, cây nền tảng/gian hàng ngoài phiên (ADR 0050 §12).
   const { sections } = useManageNavTree();
@@ -110,10 +113,11 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     if (!isShown(leaf)) return null;
     const label = t(leaf.labelKey);
     const count = badgeCountOf(leaf);
+    const urgent = badgeUrgentOf(leaf);
     // Huy hiệu phải nói được thành lời: người dùng trình đọc màn hình nghe "Yêu cầu đặt xe, 3
     // việc cần xử lý" chứ không phải một con số trôi nổi cạnh tên mục.
     const accessibleName =
-      count > 0 ? `${label}, ${tShell('shell.needsAction', { count })}` : label;
+      count > 0 ? `${label}, ${needsActionLabel(tShell, count, urgent)}` : label;
     return {
       key: leaf.href,
       icon: iconOf(leaf, count),
@@ -132,7 +136,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
           aria-label={accessibleName}
         >
           <span className={styles.linkText}>{label}</span>
-          <NavBadge count={count} />
+          <NavBadge count={count} urgent={urgent} />
         </Link>
       ),
     };
@@ -149,13 +153,11 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     // Huy hiệu của mục con dồn lên mục cha KHI mục cha đang đóng — nếu không, việc cần xử lý
     // nằm khuất sau một submenu và không ai thấy.
     const isOpen = collapsed ? false : openKeys.includes(key);
-    const hiddenCount = isOpen
-      ? 0
-      : branch.children.filter(canSeeLeaf).reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
+    const hidden = isOpen ? NO_BADGE : badgeTotalOf(branch.children);
 
     return {
       key,
-      icon: iconOf(branch, hiddenCount),
+      icon: iconOf(branch, hidden.count),
       title: label,
       // Thu gọn thì AntD mở mục con thành bảng thả nổi, render qua portal NGOÀI cây của
       // `ManageMenu` — không gắn class ở đây thì bảng đó rơi về giao diện nền sáng mặc định.
@@ -163,7 +165,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
       label: (
         <span className={styles.link}>
           <span className={styles.linkText}>{label}</span>
-          <NavBadge count={hiddenCount} />
+          <NavBadge count={hidden.count} urgent={hidden.urgent} />
         </span>
       ),
       children,
@@ -189,11 +191,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
       !collapsedSections.includes(section.key);
 
     // Việc phải xử lý bị giấu bên trong một khối đã gập vẫn phải nhìn thấy được ở nhãn khối.
-    const hiddenCount = expanded
-      ? 0
-      : leavesOfSection(section)
-          .filter(canSeeLeaf)
-          .reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
+    const hidden = expanded ? NO_BADGE : badgeTotalOf(leavesOfSection(section));
 
     return {
       key: `${SECTION_PREFIX}${section.key}`,
@@ -203,7 +201,8 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
           label={t(section.labelKey)}
           expanded={expanded}
           pinned={section.pinned}
-          badgeCount={hiddenCount}
+          badgeCount={hidden.count}
+          badgeUrgent={hidden.urgent}
           onToggle={() => dispatch(toggleNavSection(section.key))}
         />
       ),

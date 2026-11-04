@@ -294,7 +294,6 @@ model Tenant {
   vehicleBlocks                 VehicleBlock[]
   vehicleDailyPrices            VehicleDailyPrice[]
   vehicleOperationSettings      VehicleOperationSetting[]
-  vehicleHandoverWindows        VehicleHandoverWindow[]
   vehicleServiceSettings        VehicleServiceSetting[]
   vehicleDriverSurchargeRules   VehicleDriverSurchargeRule[]
   tenantCustomers               TenantCustomer[]
@@ -1501,7 +1500,6 @@ model Vehicle {
   /// Quan hệ 1-n về mặt Prisma dù `vehicle_id` đã UNIQUE: 1-1 với FK tổ hợp đòi thêm một unique
   /// (vehicle_id, tenant_id) thừa ở DB. Service đọc bằng `findUnique({ vehicleId })`.
   operationSettings      VehicleOperationSetting[]
-  handoverWindows        VehicleHandoverWindow[]
   serviceSettings        VehicleServiceSetting[]
   driverSurchargeRules   VehicleDriverSurchargeRule[]
   approvalSubjects       ApprovalVehicleSubject[]
@@ -1550,7 +1548,7 @@ model VehicleImage {
 }
 
 // ---------------------------------------------------------------------------
-// Thiết lập VẬN HÀNH theo xe (08/09/2026) — khung giờ giao nhận, thời gian chết, tự động nhận
+// Thiết lập VẬN HÀNH theo xe (08/09/2026) — thời gian chết (khung giờ giao nhận gỡ ở ADR 0078), tự động nhận
 // chuyến, giấy tờ/điều khoản theo dịch vụ, phụ phí mặc định có tài xế.
 //
 // Writer DUY NHẤT của cả bốn bảng: `VehicleSettingsService` (apps/api). Không có dòng = mặc định
@@ -1558,7 +1556,7 @@ model VehicleImage {
 // /manage cùng đọc/ghi qua một API.
 // ---------------------------------------------------------------------------
 
-/// Thời gian chết giữa hai chuyến của MỘT xe. Khung giờ giao nhận ở `vehicle_handover_windows`.
+/// Thời gian chết giữa hai chuyến của MỘT xe. (Khung giờ giao nhận đã gỡ — ADR 0078.)
 model VehicleOperationSetting {
   id                      String   @id @db.Char(26)
   tenantId                String   @map("tenant_id") @db.Char(26)
@@ -1576,30 +1574,6 @@ model VehicleOperationSetting {
 
   @@index([tenantId])
   @@map("vehicle_operation_settings")
-}
-
-/// Một khung giờ giao (pickup) hoặc nhận lại (return) trong ngày, giờ Việt Nam.
-///
-/// Chồng lấn giữa hai khung cùng loại của cùng xe bị chặn bằng
-/// `EXCLUDE USING gist (vehicle_id WITH =, kind WITH =, int4range(start_minute, end_minute) WITH &&)`
-/// viết tay ở migration — Prisma không mô tả được. Không có khung nào = nhận mọi giờ.
-model VehicleHandoverWindow {
-  id          String   @id @db.Char(26)
-  tenantId    String   @map("tenant_id") @db.Char(26)
-  vehicleId   String   @map("vehicle_id") @db.Char(26)
-  /// @xeprime/types → HandoverWindowKind (pickup | return) — CHECK ở migration.
-  kind        String   @db.VarChar(20)
-  /// Phút kể từ 00:00 giờ Việt Nam. CHECK: 0 ≤ start < end ≤ 1440 — không qua nửa đêm trong một dòng.
-  startMinute Int      @map("start_minute")
-  endMinute   Int      @map("end_minute")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([vehicleId, kind, startMinute])
-  @@index([tenantId])
-  @@map("vehicle_handover_windows")
 }
 
 /// Thiết lập theo (xe, dịch vụ) — CHỈ self_drive | with_driver (CHECK). Thuê dài hạn luôn do gian

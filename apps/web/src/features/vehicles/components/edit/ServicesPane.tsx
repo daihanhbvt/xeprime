@@ -25,11 +25,7 @@ import { ROUTES, VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/route
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
-import {
-  POLICY_BLOCK,
-  PolicySections,
-  type PolicyBlock,
-} from '@/features/rental-policies/components/PolicySections';
+import { POLICY_BLOCK, PolicySections } from '@/features/rental-policies/components/PolicySections';
 import {
   CalendarPriceLink,
   DirectDiscountEditor,
@@ -41,7 +37,6 @@ import type { VehiclePricing } from '@/features/rental-policies/types';
 import {
   SUPPORT_HIDDEN_AREA,
   supportAllowsVehicleTab,
-  useAvailableHref,
   useSupportCan,
   useSupportHides,
   useSupportSession,
@@ -61,39 +56,22 @@ import { cx } from '@/lib/cx';
 import { vehicleSchedulePath } from '../../calendar-link';
 import type { VehicleDetail } from '../../types';
 import { SERVICE_TABS, serviceOfTab } from '../vehicle-edit-nav';
-import { EditCard } from './EditCard';
+import { EditCard, EditToggleRow as ToggleRow } from './EditCard';
 import { useEditForm } from './edit-actions';
 import { InheritedPolicyNote, PricingForm } from './PricingForm';
 import styles from './EditPanes.module.css';
 
 const HOUR = 60;
 
-/** Khối chính sách của tab Tự lái — chủ xe tuyến hoa hồng không có phí quá giờ (như develop). */
-const SELF_DRIVE_BLOCKS: readonly PolicyBlock[] = [
-  POLICY_BLOCK.COLLATERAL,
-  POLICY_BLOCK.MILEAGE,
-  POLICY_BLOCK.OVERTIME,
-];
-const OWNER_SELF_DRIVE_BLOCKS: readonly PolicyBlock[] = [
-  POLICY_BLOCK.COLLATERAL,
-  POLICY_BLOCK.MILEAGE,
-];
-
-/** Ô của form giá thuộc tab nào — lưu trượt vì một ô lỗi ở tab khác thì mở tab đó ra. */
+/**
+ * Ô của form giá thuộc tab nào — lưu trượt vì một ô lỗi ở tab khác thì mở tab đó ra. Ô không có ở
+ * đây thuộc mục "Chính sách thuê" (cùng một lệnh lưu trọn gói) — lúc đó chỉ nhắc mở mục kia.
+ */
 const FIELD_TAB: Readonly<Record<string, VehicleEditTab>> = {
   weekdayPrice: VEHICLE_EDIT_TAB.SELF_DRIVE,
   weekendPrice: VEHICLE_EDIT_TAB.SELF_DRIVE,
   hourlyPrice: VEHICLE_EDIT_TAB.SELF_DRIVE,
   discountPercent: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  collateralMode: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  depositAmount: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  collateralAssetTypes: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  mileageLimitEnabled: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  includedDistanceKmPerDay: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  excessDistanceFeePerKm: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  overtimeFeePerHour: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  overtimeGraceMinutes: VEHICLE_EDIT_TAB.SELF_DRIVE,
-  overtimeRoundingMinutes: VEHICLE_EDIT_TAB.SELF_DRIVE,
   withDriverDailyPrice: VEHICLE_EDIT_TAB.WITH_DRIVER,
   withDriverInterCityPrice: VEHICLE_EDIT_TAB.WITH_DRIVER,
   withDriverOneWayPrice: VEHICLE_EDIT_TAB.WITH_DRIVER,
@@ -107,25 +85,28 @@ interface ServicesPaneProps {
   tab: VehicleEditTab;
   canUpdate: boolean;
   onTab: (tab: VehicleEditTab) => void;
-  /** Mở mục Điều kiện — `undefined` khi người này không tới được mục đó. */
-  onOpenConditions?: () => void;
+  /** Mở mục Chính sách thuê — `undefined` khi người này không tới được mục đó. */
+  onOpenPolicy?: () => void;
 }
 
 /**
- * Mục "Dịch vụ xe" (design `23713:21048` tự lái · `23716:27912` có tài xế · `23716:29056` dài hạn).
+ * Mục "Dịch vụ & giá" (design `23713:21048` tự lái · `23716:27912` có tài xế · `23716:29056` dài
+ * hạn).
  *
  * Mỗi tab: công tắc dịch vụ (lưu ngay, cùng hook với menu cũ) · "Tự động đồng ý nhận chuyến" (lưu
- * ngay) · giá của dịch vụ đó · chính sách của nó. Giá + chính sách là MỘT form cho cả ba tab (đổi tab
- * không mất gì đang gõ) và lưu bằng nút ở cột phải, cùng lần với thiết lập riêng của có tài xế.
+ * ngay) · giá + khuyến mãi của dịch vụ đó. Giá là MỘT form cho cả ba tab (đổi tab không mất gì đang
+ * gõ) và lưu bằng nút ở cột phải, cùng lần với thiết lập riêng của có tài xế.
  *
  * Lệch design có chủ đích (sổ cái §3.6): khuyến mãi chỉ ở Tự lái và chỉ theo % (ADR 0011); không
- * có phụ phí tài xế (ADR 0075); "Áp dụng chính sách của gian hàng" là MỘT công tắc cho cả xe, đặt ở
- * đầu mục; nhãn giá giữ "Giá ngày thường" (design ghi "Giá thị trường").
+ * có phụ phí tài xế (ADR 0075); cọc · km · quá giờ · giao xe áp cho CẢ XE nên ở mục "Chính sách
+ * thuê" cùng công tắc chính sách gian hàng (03/11/2026); nhãn giá giữ "Giá ngày thường".
  *
  * Phiên hỗ trợ (ADR 0050 §13): không có công tắc dịch vụ, không có giá/chính sách (khu tiền) — chỉ
  * tự nhận chuyến và thiết lập vận hành của có tài xế, theo capability của phiên.
  */
 export function ServicesPane(props: ServicesPaneProps) {
+  const t = useTranslations('Vehicles.editor.services');
+  const { message } = App.useApp();
   const support = useSupportSession();
   const pricingAllowed = supportAllowsVehicleTab(support, VEHICLE_EDIT_TAB.PRICING);
 
@@ -135,7 +116,11 @@ export function ServicesPane(props: ServicesPaneProps) {
       vehicle={props.vehicle}
       onInvalid={(fields) => {
         const target = fields.map((field) => FIELD_TAB[field]).find(Boolean);
-        if (target && target !== props.tab) props.onTab(target);
+        if (target) {
+          if (target !== props.tab) props.onTab(target);
+        } else if (fields.length > 0) {
+          message.warning(t('policyInvalid'));
+        }
       }}
     >
       {(priced, pricingState) => (
@@ -150,7 +135,7 @@ function ServicesBody({
   tab,
   canUpdate,
   onTab,
-  onOpenConditions,
+  onOpenPolicy,
   priced,
   pricingState,
 }: ServicesPaneProps & {
@@ -201,8 +186,6 @@ function ServicesBody({
   return (
     <Form component={false} layout="vertical" colon={false} disabled={disabled}>
       <div className={styles.stack}>
-        {api && isManage ? <PolicySourceCard api={api} canEdit={canUpdate} /> : null}
-
         <div className={styles.serviceTabs} role="tablist" aria-label={t('tabsLabel')}>
           {visibleTabs.map((entry) => {
             const on = services.includes(entry.service);
@@ -234,8 +217,8 @@ function ServicesBody({
               hint={t.rich('toggle.hint', {
                 service: t(`toggle.${service}.target`),
                 conditions: (chunks) =>
-                  onOpenConditions ? (
-                    <button type="button" className={styles.linkButton} onClick={onOpenConditions}>
+                  onOpenPolicy ? (
+                    <button type="button" className={styles.linkButton} onClick={onOpenPolicy}>
                       {chunks}
                     </button>
                   ) : (
@@ -304,15 +287,6 @@ function ServicesBody({
                     label={tPricing('calendarLink')}
                   />
                 </EditCard>
-                <EditCard title={t('policy.selfDriveTitle')}>
-                  {!policyEditable ? <InheritedPolicyNote /> : null}
-                  <PolicySections
-                    control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
-                    numbered={false}
-                    blocks={isManage ? SELF_DRIVE_BLOCKS : OWNER_SELF_DRIVE_BLOCKS}
-                    disabled={disabled || !policyEditable}
-                  />
-                </EditCard>
               </>
             ) : null}
 
@@ -355,7 +329,7 @@ function ServicesBody({
                 </EditCard>
                 {isManage ? (
                   <EditCard title={t('policy.longTermTitle')}>
-                    {!policyEditable ? <InheritedPolicyNote /> : null}
+                    {!policyEditable ? <InheritedPolicyNote onOpenSwitch={onOpenPolicy} /> : null}
                     <PolicySections
                       control={
                         control as unknown as Parameters<typeof PolicySections>[0]['control']
@@ -389,29 +363,6 @@ function ServicesBody({
       </div>
       {toggle.dialog}
     </Form>
-  );
-}
-
-function ToggleRow({
-  title,
-  hint,
-  control,
-  children,
-}: {
-  title: ReactNode;
-  hint?: ReactNode;
-  control: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <div className={styles.toggleRow}>
-      <div className={styles.toggleText}>
-        <h3 className={styles.toggleTitle}>{title}</h3>
-        {hint ? <p className={styles.toggleHint}>{hint}</p> : null}
-        {children}
-      </div>
-      {control}
-    </div>
   );
 }
 
@@ -486,37 +437,6 @@ function PriceField({
       addonAfter={perHour ? t('unitPerHour') : perMonth ? t('unitPerMonth') : t('unitPerDay')}
       required={required}
     />
-  );
-}
-
-/**
- * "Áp dụng chính sách của gian hàng" — MỘT công tắc cho cả xe (cọc · km · quá giờ · giao xe · ưu đãi
- * dài hạn), vì dữ liệu chỉ có một nguồn chính sách cho mỗi xe. Bật lại khi đang dùng chính sách riêng
- * thì hỏi trước: tuỳ chỉnh sẽ mất.
- */
-function PolicySourceCard({ api, canEdit }: { api: VehiclePricingFormApi; canEdit: boolean }) {
-  const t = useTranslations('Vehicles.editor.policy');
-  const available = useAvailableHref();
-  const shopPolicies = available(ROUTES.MANAGE.SHOP_POLICIES);
-  return (
-    <EditCard>
-      <ToggleRow
-        title={t('useShop')}
-        hint={t.rich('useShopHint', {
-          policies: (chunks) => (shopPolicies ? <Link href={shopPolicies}>{chunks}</Link> : chunks),
-        })}
-        control={
-          <Switch
-            aria-label={t('useShop')}
-            checked={!api.editMode}
-            disabled={!canEdit || api.submitting}
-            onChange={api.setUseShopPolicy}
-          />
-        }
-      >
-        {api.editMode ? <p className={styles.toggleHint}>{t('customActive')}</p> : null}
-      </ToggleRow>
-    </EditCard>
   );
 }
 
@@ -600,7 +520,6 @@ function AutoAcceptRow({
         <div className={styles.rules}>
           <ul className={styles.rulesList}>
             <li>{t('rules.schedule')}</li>
-            <li>{t('rules.window')}</li>
             <li>{t('rules.quote')}</li>
             <li>{t('rules.longTerm')}</li>
             {withDriver ? <li>{t('rules.driver')}</li> : null}

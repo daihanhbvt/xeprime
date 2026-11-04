@@ -3259,6 +3259,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yêu cầu đặt xe chờ duyệt và sắp hết hạn — số trên menu site partner
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PartnerDashboardController_requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dashboard/today": {
         parameters: {
             query?: never;
@@ -15174,13 +15200,13 @@ export interface components {
             /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
             toKm: number;
             /**
-             * @description Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí. Bỏ trống khi bậc tính theo km
+             * @description Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí
              * @example 30000
              */
             fee?: string;
             /**
-             * @description Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói
-             * @example 10000
+             * @deprecated
+             * @description ĐÃ GỠ (ADR 0078) — gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói
              */
             perKm?: string;
         };
@@ -16346,7 +16372,15 @@ export interface components {
             amenities: components["schemas"]["AmenityFacetsDto"];
         };
         ListingHandoverDto: {
+            /**
+             * @deprecated
+             * @description Luôn rỗng (ADR 0078)
+             */
             pickupWindows: components["schemas"]["ListingHandoverWindowDto"][];
+            /**
+             * @deprecated
+             * @description Luôn rỗng (ADR 0078)
+             */
             returnWindows: components["schemas"]["ListingHandoverWindowDto"][];
         };
         ListingHandoverWindowDto: {
@@ -16493,9 +16527,12 @@ export interface components {
             title?: string | null;
             /** @enum {string} */
             status: "scheduled" | "in_progress" | "completed" | "canceled";
-            /** @description ISO */
+            /** @description ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079) */
             plannedStartAt?: string | null;
-            /** @description ISO */
+            /**
+             * @deprecated
+             * @description Không còn ghi (ADR 0079) — chỉ phiếu cũ đã đóng còn giá trị lịch sử
+             */
             plannedEndAt?: string | null;
             /** @description ISO */
             completedAt?: string | null;
@@ -17262,12 +17299,16 @@ export interface components {
             pickupsToday: number;
             /** @description Trong `awaitingPickup`: đã QUÁ giờ hẹn giao mà xe chưa rời bãi (mọi ngày). */
             pickupsOverdue: number;
+            /** @description Trong `awaitingPickup`: ĐẾN HẠN giao — hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`). */
+            pickupsDue: number;
             /** @description Đơn đang thuê (`status = active`) — xe đang ở với khách. */
             active: number;
             /** @description Trong `active`: hẹn trả trong HÔM NAY (ngày lịch VN). */
             returnsToday: number;
             /** @description Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày). */
             returnsOverdue: number;
+            /** @description Trong `active`: ĐẾN HẠN trả — hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn đếm một lần. */
+            returnsDue: number;
         };
         PartnerDashboardTrendPointDto: {
             /** @description Tháng lịch `YYYY-MM` giờ VN. */
@@ -20438,9 +20479,12 @@ export interface components {
             /** @description Chỉ cho loại `other` */
             customTypeName?: string | null;
             title?: string | null;
-            /** @description ISO — mốc bắt đầu dự kiến */
+            /** @description ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079) */
             plannedStartAt?: string | null;
-            /** @description ISO — mốc kết thúc dự kiến */
+            /**
+             * @deprecated
+             * @description Bị bỏ qua (ADR 0079)
+             */
             plannedEndAt?: string | null;
             odometerKm?: number | null;
             providerName?: string | null;
@@ -20528,8 +20572,16 @@ export interface components {
         };
         SaveVehicleOperationSettingsDto: {
             turnaroundBufferMinutes: number;
-            pickupWindows: components["schemas"]["HandoverWindowDto"][];
-            returnWindows: components["schemas"]["HandoverWindowDto"][];
+            /**
+             * @deprecated
+             * @description Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối
+             */
+            pickupWindows?: components["schemas"]["HandoverWindowDto"][];
+            /**
+             * @deprecated
+             * @description Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối
+             */
+            returnWindows?: components["schemas"]["HandoverWindowDto"][];
         };
         SaveVehiclePricingDto: {
             /**
@@ -22586,9 +22638,15 @@ export interface components {
         VehicleOperationSettingsDto: {
             /** @description Phút chuẩn bị giữa hai chuyến — áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), không tính lại occupancy đã có */
             turnaroundBufferMinutes: number;
-            /** @description Rỗng = giao mọi giờ */
+            /**
+             * @deprecated
+             * @description Luôn rỗng (ADR 0078)
+             */
             pickupWindows: components["schemas"]["HandoverWindowDto"][];
-            /** @description Rỗng = nhận lại mọi giờ */
+            /**
+             * @deprecated
+             * @description Luôn rỗng (ADR 0078)
+             */
             returnWindows: components["schemas"]["HandoverWindowDto"][];
             /** @description ISO — null khi chưa lưu lần nào */
             updatedAt?: string | null;
@@ -44259,6 +44317,112 @@ export interface operations {
                      *       "error": {
                      *         "code": "NO_TENANT_SCOPE",
                      *         "message": "Tài khoản không thuộc gian hàng nào"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PartnerDashboardController_requests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PartnerDashboardRequestsDto"];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
                      *       }
                      *     }
                      */

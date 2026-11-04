@@ -57,19 +57,23 @@ export type NavLabelKey = Parameters<ReturnType<typeof useTranslations<'Navigati
 /**
  * Con số "cần bạn xử lý" gắn trên một mục menu.
  *
- * Chỉ có hai — và cố ý chỉ có hai. Huy hiệu là lời kêu gọi hành động chứ không phải thống kê:
- * đếm số xe hay số khách lên sidebar thì mục nào cũng sáng và không mục nào còn nghĩa gì.
+ * Huy hiệu là lời kêu gọi hành động chứ không phải thống kê: đếm số xe, số khách hay mọi đơn
+ * đang thuê lên menu thì mục nào cũng sáng và không mục nào còn nghĩa gì. Một việc chỉ được đếm
+ * ở MỘT mục — khối menu cộng số của các mục con, đếm trùng là thổi phồng con số trên nhãn khối.
  * Nguồn số nằm ở `useNavBadges`; ở đây chỉ khai báo mục nào ĐƯỢC PHÉP mang huy hiệu.
  */
 export const NAV_BADGE = {
-  /** Yêu cầu đặt xe đang chờ gian hàng duyệt. */
+  /** Yêu cầu đặt xe đang chờ gian hàng duyệt — đỏ khi có yêu cầu sắp hết hạn trả lời. */
   BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
   /** Tin nhắn chưa đọc. */
   CHAT_UNREAD: 'chatUnread',
-  /** Đơn chờ giao xe + đang thuê — nhóm "CẦN XỬ LÝ" của "Quản lý đơn thuê xe" (02/11/2026). */
-  BOOKINGS_NEEDS_ACTION: 'bookingsNeedsAction',
-  /** Lượt giao + nhận xe hẹn trong hôm nay — "Lịch thuê xe" (02/11/2026). */
-  CALENDAR_TODAY: 'calendarToday',
+  /**
+   * Lượt giao + trả xe ĐẾN HẠN: hẹn tới hết hôm nay, gồm cả lượt đã quá giờ — đỏ khi có lượt quá
+   * giờ (04/11/2026, thay "chờ giao + đang thuê" của 02/11: một chuyến dài hạn đang chạy hay một
+   * lượt giao tuần sau không phải việc hôm nay). Gian hàng gắn ở "Quản lý đơn thuê xe"; chủ xe
+   * tuyến hoa hồng không có bảng đơn nên gắn ở "Lịch xe".
+   */
+  HANDOVERS_DUE: 'handoversDue',
   /**
    * Xe có việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu
    * KM trả xe — "Danh sách xe" (03/11/2026, `VEHICLE_ALERT_NEEDS_ACTION_KINDS`).
@@ -255,7 +259,6 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: PARTNER_NAV_ICON.calendar,
-        badge: NAV_BADGE.CALENDAR_TODAY,
       },
       {
         // Yêu cầu khách gửi lên, CHƯA phải đơn thuê: thực thể riêng, quyền riêng, luồng duyệt riêng.
@@ -272,7 +275,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.BOOKINGS,
         permission: PERMISSION.BOOKING_VIEW,
         icon: PARTNER_NAV_ICON.bookings,
-        badge: NAV_BADGE.BOOKINGS_NEEDS_ACTION,
+        badge: NAV_BADGE.HANDOVERS_DUE,
       },
       {
         key: 'customers',
@@ -763,7 +766,7 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: PARTNER_NAV_ICON.calendar,
-        badge: NAV_BADGE.CALENDAR_TODAY,
+        badge: NAV_BADGE.HANDOVERS_DUE,
       },
       {
         /*

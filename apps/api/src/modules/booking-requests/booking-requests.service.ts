@@ -518,9 +518,6 @@ export class BookingRequestsService {
       vehicle.id,
       serviceType as ServiceType,
     );
-    if (pickupAt) {
-      await this.settings.assertHandoverWindows(this.prisma, vehicle.id, pickupAt, returnAt);
-    }
     this.settings.assertServiceConstraints(setting, {
       pickupAt,
       returnAt,
@@ -977,9 +974,8 @@ export class BookingRequestsService {
     try {
       const req = await this.loadPending(tenantId, id);
       if (req.serviceType === SERVICE_TYPE.LONG_TERM) return null;
-      const [setting, windows, policy] = await Promise.all([
+      const [setting, policy] = await Promise.all([
         this.settings.serviceSettingFor(this.prisma, req.vehicleId, req.serviceType as ServiceType),
-        this.settings.handoverWindowsFor(this.prisma, req.vehicleId),
         this.pricing.effectivePolicy(tenantId, req.vehicleId),
       ]);
       const schedule = this.resolveApprovalSchedule(req, {});
@@ -1002,7 +998,7 @@ export class BookingRequestsService {
         schedule,
       );
       const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
-      const blocker = this.settings.evaluateAutoAccept(setting, windows, {
+      const blocker = this.settings.evaluateAutoAccept(setting, {
         serviceType: req.serviceType,
         pickupAt: schedule.pickupAt,
         returnAt: schedule.returnAt,
@@ -1665,18 +1661,7 @@ export class BookingRequestsService {
      * Dài hạn tính theo GÓI tháng lịch — không đi qua máy giá ngày, không đụng giá riêng theo
      * ngày và không ăn khuyến mãi trực tiếp của tự lái (ADR 0011). Khách xem giá gói nào ở
      * marketplace thì duyệt ra đúng con số đó, vì cùng một hàm tính.
-     *
-     * Dài hạn: giờ nhận do gian hàng vừa chốt phải rơi vào khung giờ giao xe của chính chiếc xe
-     * (08/09/2026) — khách không có lịch để kiểm lúc gửi, nên kiểm ở đây.
      */
-    if (req.serviceType === SERVICE_TYPE.LONG_TERM) {
-      await this.settings.assertHandoverWindows(
-        this.prisma,
-        req.vehicleId,
-        schedule.pickupAt,
-        null,
-      );
-    }
     const breakdown =
       req.serviceType === SERVICE_TYPE.LONG_TERM
         ? this.pricing.buildLongTermPackageQuote({

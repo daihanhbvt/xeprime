@@ -45,7 +45,10 @@ const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 /** `HH:mm`, giờ Việt Nam; `24:00` = hết ngày. */
 const TIME_PATTERN = /^([01]\d|2[0-4]):([0-5]\d)$/;
 
-// ── Khung giờ giao nhận + thời gian chết ─────────────────────────────────────
+// ── Thời gian chết (+ khung giờ giao nhận ĐÃ GỠ — ADR 0078) ─────────────────
+//
+// Xe nhận/trả mọi giờ. `pickupWindows`/`returnWindows` giữ HÌNH DẠNG cũ để app phát hành trước đó
+// không vỡ: đọc luôn rỗng, gửi lên thì được nhận rồi bỏ qua.
 
 export class HandoverWindowDto {
   @ApiProperty({ example: '06:00', description: 'HH:mm giờ Việt Nam' })
@@ -59,7 +62,7 @@ export class HandoverWindowDto {
   end!: string;
 }
 
-/** GET /vehicles/:id/operation-settings — không có dòng nào thì trả mặc định (buffer 0, mọi giờ). */
+/** GET /vehicles/:id/operation-settings — không có dòng nào thì trả mặc định (buffer 0). */
 export class VehicleOperationSettingsDto {
   @ApiProperty({
     description:
@@ -68,10 +71,10 @@ export class VehicleOperationSettingsDto {
   })
   turnaroundBufferMinutes!: number;
 
-  @ApiProperty({ type: [HandoverWindowDto], description: 'Rỗng = giao mọi giờ' })
+  @ApiProperty({ type: [HandoverWindowDto], deprecated: true, description: 'Luôn rỗng (ADR 0078)' })
   pickupWindows!: HandoverWindowDto[];
 
-  @ApiProperty({ type: [HandoverWindowDto], description: 'Rỗng = nhận lại mọi giờ' })
+  @ApiProperty({ type: [HandoverWindowDto], deprecated: true, description: 'Luôn rỗng (ADR 0078)' })
   returnWindows!: HandoverWindowDto[];
 
   @ApiPropertyOptional({
@@ -82,7 +85,7 @@ export class VehicleOperationSettingsDto {
   updatedAt!: string | null;
 }
 
-/** PUT /vehicles/:id/operation-settings — thay TOÀN BỘ ba phần (màn hình gửi đúng thứ nó hiện). */
+/** PUT /vehicles/:id/operation-settings — thời gian chết giữa hai chuyến. */
 export class SaveVehicleOperationSettingsDto {
   @ApiProperty({ minimum: 0, maximum: TURNAROUND_BUFFER_MAX_MINUTES })
   @IsInt()
@@ -90,19 +93,29 @@ export class SaveVehicleOperationSettingsDto {
   @Max(TURNAROUND_BUFFER_MAX_MINUTES)
   turnaroundBufferMinutes!: number;
 
-  @ApiProperty({ type: [HandoverWindowDto] })
+  @ApiPropertyOptional({
+    type: [HandoverWindowDto],
+    deprecated: true,
+    description: 'Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối',
+  })
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(HANDOVER_WINDOW_MAX_PER_KIND)
   @ValidateNested({ each: true })
   @Type(() => HandoverWindowDto)
-  pickupWindows!: HandoverWindowDto[];
+  pickupWindows?: HandoverWindowDto[];
 
-  @ApiProperty({ type: [HandoverWindowDto] })
+  @ApiPropertyOptional({
+    type: [HandoverWindowDto],
+    deprecated: true,
+    description: 'Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối',
+  })
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(HANDOVER_WINDOW_MAX_PER_KIND)
   @ValidateNested({ each: true })
   @Type(() => HandoverWindowDto)
-  returnWindows!: HandoverWindowDto[];
+  returnWindows?: HandoverWindowDto[];
 }
 
 // ── Thiết lập theo dịch vụ ───────────────────────────────────────────────────

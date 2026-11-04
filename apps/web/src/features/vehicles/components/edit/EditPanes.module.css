@@ -234,50 +234,7 @@
   outline: 2px solid var(--xp-color-primary);
 }
 
-/* ── Giao nhận ──────────────────────────────────────────────────────────── */
-
-.windowColumns {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.windows {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.windowRow {
-  display: grid;
-  align-items: center;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-}
-
-.windowRow :global(.ant-form-item) {
-  margin-bottom: 0;
-}
-
-.windowDash {
-  color: var(--xp-color-text-tertiary);
-}
-
-.addWindow.addWindow {
-  align-self: flex-start;
-  padding-inline: 0;
-  color: var(--xp-color-primary-active);
-}
-
-.error {
-  margin: 0;
-  color: var(--xp-color-error);
-  font-size: var(--xp-font-size);
-}
+/* ── Thời gian chuẩn bị xe ──────────────────────────────────────────────── */
 
 .bufferOptions {
   align-self: flex-start;
@@ -285,12 +242,6 @@
 
 .bufferCustom {
   max-width: 270px;
-}
-
-@container vehicle-edit (max-width: 760px) {
-  .windowColumns {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* ── Địa chỉ xe (chủ xe tuyến hoa hồng) ─────────────────────────────────── */
@@ -306,4 +257,57 @@
   color: var(--xp-color-text);
   font-size: var(--xp-font-size);
   font-weight: var(--xp-font-weight-medium);
+}
+
+/* ── Chính sách thuê: hàng cách nhau bằng vạch kẻ trong MỘT thẻ (design `23731:37932`) ───── */
+
+.policyRows {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+/*
+ * Lớp lặp để thắng `.card.flat` của khối chính sách dùng chung (cùng độ ưu tiên 0,2,0 — thứ tự nạp
+ * hai CSS Module không bảo đảm): khối phẳng bỏ viền của chính nó, vạch kẻ ở đây vẫn phải còn.
+ */
+.policyRows.policyRows.policyRows > * + * {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+/* Hàng công tắc tự kẻ vạch dưới khi đứng giữa một danh sách hàng — ở đây vạch do `.policyRows` đặt. */
+.policyRows > .toggleRow {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.titleWithTip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.termsGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*
+ * Lựa chọn xếp DỌC như design. `RadioGroupField vertical` đặt flex-column bằng CSS Module, nhưng
+ * AntD chèn style của `.ant-radio-group` sau nó và đè lại — ghim ở phạm vi màn này.
+ */
+.termsGroup :global(.ant-radio-group),
+.policyRows :global(.ant-radio-group) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.termsGroup .subheading {
+  margin-bottom: 8px;
 }

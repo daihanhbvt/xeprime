@@ -8,7 +8,7 @@ import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useNavBadges, type NavBadgeCounts } from './use-nav-badges';
+import { useNavBadges } from './use-nav-badges';
 
 export interface NavLeafAccess {
   /** Người dùng có quyền thấy trang này không — kể cả khi nó là mục ẩn (`hidden`). */
@@ -17,6 +17,13 @@ export interface NavLeafAccess {
   isShown: (leaf: NavLeaf) => boolean;
   /** Số "cần xử lý" của mục; 0 khi mục không mang huy hiệu. */
   badgeCountOf: (leaf: NavLeaf) => number;
+  /** Việc của mục đã trễ / sắp trễ — huy hiệu đỏ thay vì cam. Luôn `false` khi số là 0. */
+  badgeUrgentOf: (leaf: NavLeaf) => boolean;
+  /**
+   * Huy hiệu DỒN của một nhóm mục (khối menu, mục cha đang đóng): tổng số, khẩn khi BẤT KỲ mục
+   * nào khẩn. Chỉ tính mục người dùng thấy được — số chỉ vào mục khuất là chỉ vào hư không.
+   */
+  badgeTotalOf: (leaves: readonly NavLeaf[]) => { count: number; urgent: boolean };
   /** Đường dẫn của mục, mang theo chi nhánh đang lọc (ADR 0052). */
   hrefOf: (leaf: NavLeaf) => string;
 }
@@ -53,10 +60,23 @@ export function useNavLeafAccess(): NavLeafAccess {
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 
+  const badgeCountOf = (leaf: NavLeaf): number =>
+    leaf.badge ? (badges.counts[leaf.badge] ?? 0) : 0;
+  const badgeUrgentOf = (leaf: NavLeaf): boolean =>
+    Boolean(leaf.badge && badges.urgent[leaf.badge]) && badgeCountOf(leaf) > 0;
+
   return {
     canSeeLeaf,
     isShown: (leaf) => leaf.hidden !== true && canSeeLeaf(leaf),
-    badgeCountOf: (leaf) => (leaf.badge ? (badges[leaf.badge as keyof NavBadgeCounts] ?? 0) : 0),
+    badgeCountOf,
+    badgeUrgentOf,
+    badgeTotalOf: (leaves) => {
+      const visible = leaves.filter(canSeeLeaf);
+      return {
+        count: visible.reduce((sum, leaf) => sum + badgeCountOf(leaf), 0),
+        urgent: visible.some(badgeUrgentOf),
+      };
+    },
     hrefOf: (leaf) => withBranchParam(leaf.href, branchId),
   };
 }

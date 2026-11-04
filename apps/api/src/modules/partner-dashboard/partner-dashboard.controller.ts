@@ -12,6 +12,7 @@ import type { TenantContext } from '../../common/types/request-context';
 import {
   PartnerDashboardOverviewDto,
   PartnerDashboardQueryDto,
+  PartnerDashboardRequestsDto,
   PartnerDashboardTodayDto,
 } from './dto/partner-dashboard.dto';
 import { PartnerDashboardService } from './partner-dashboard.service';
@@ -54,11 +55,11 @@ export class PartnerDashboardController {
   }
 
   /**
-   * Chỉ khối "việc giao/nhận hôm nay" — nuôi SỐ trên menu site partner (02/11/2026): "Quản lý đơn
-   * thuê xe" = chờ giao + đang thuê (nhóm "CẦN XỬ LÝ" của cột trái), "Lịch thuê xe" = lượt giao +
-   * nhận hôm nay. Tách khỏi `overview` vì huy hiệu được gọi lại mỗi phút trên mọi trang, còn
-   * `overview` tính cả xu hướng, uy tín, thị trường. Đếm toàn phạm vi được giao của người gọi
-   * (huy hiệu sống ở vỏ trang, không theo ô chi nhánh của màn nào — ADR 0052 điều 7).
+   * Chỉ khối "việc giao/nhận hôm nay" — nuôi SỐ trên menu site partner (04/11/2026): "Quản lý đơn
+   * thuê xe" = lượt giao + trả ĐẾN HẠN (hôm nay hoặc đã quá giờ), đỏ khi có lượt quá giờ. Tách
+   * khỏi `overview` vì huy hiệu được gọi lại mỗi phút trên mọi trang, còn `overview` tính cả xu
+   * hướng, uy tín, thị trường. Đếm toàn phạm vi được giao của người gọi (huy hiệu sống ở vỏ trang,
+   * không theo ô chi nhánh của màn nào — ADR 0052 điều 7).
    */
   @Get('today')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
@@ -67,5 +68,19 @@ export class PartnerDashboardController {
   @ApiOkResponse({ type: PartnerDashboardTodayDto })
   today(@CurrentTenant() tenant: TenantContext): Promise<PartnerDashboardTodayDto> {
     return this.dashboard.todayCounts(tenant);
+  }
+
+  /**
+   * Chỉ khối "yêu cầu" — nuôi số trên mục "Yêu cầu đặt xe" của menu: số chờ duyệt, đỏ khi có
+   * yêu cầu sắp hết hạn trả lời (`pendingUrgent`). Gác bằng quyền của CHÍNH dữ liệu yêu cầu, không
+   * mượn `bookings.view` của `today`.
+   */
+  @Get('requests')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW)
+  @ApiOperation({ summary: 'Yêu cầu đặt xe chờ duyệt và sắp hết hạn — số trên menu site partner' })
+  @ApiOkResponse({ type: PartnerDashboardRequestsDto })
+  requests(@CurrentTenant() tenant: TenantContext): Promise<PartnerDashboardRequestsDto> {
+    return this.dashboard.requestCounts(tenant);
   }
 }

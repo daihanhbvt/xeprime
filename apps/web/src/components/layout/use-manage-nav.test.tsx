@@ -47,7 +47,11 @@ vi.mock('@/zones/ZoneProvider', () => ({
   useZone: () => zone.value,
 }));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-const badges = vi.hoisted(() => ({ bookingRequestsPending: 0, chatUnread: 0 }));
+const badges = vi.hoisted(() => ({
+  bookingRequestsPending: 0,
+  bookingRequestsUrgent: false,
+  chatUnread: 0,
+}));
 /** Trạng thái cờ năng lực (ADR 0027) — trục THỨ HAI, độc lập với `perms`. */
 const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
@@ -77,8 +81,11 @@ vi.mock('@/hooks/use-feature', () => ({
 // THỊ con số ra sao, nên chặn ở đúng ranh giới đó thay vì dựng QueryClient giả.
 vi.mock('./use-nav-badges', () => ({
   useNavBadges: () => ({
-    [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsPending,
-    [NAV_BADGE.CHAT_UNREAD]: badges.chatUnread,
+    counts: {
+      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsPending,
+      [NAV_BADGE.CHAT_UNREAD]: badges.chatUnread,
+    },
+    urgent: { [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsUrgent },
   }),
 }));
 
@@ -132,6 +139,7 @@ beforeEach(() => {
   user.platformRole = null;
   user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE };
   badges.bookingRequestsPending = 0;
+  badges.bookingRequestsUrgent = false;
   badges.chatUnread = 0;
   // Mặc định RỖNG = chưa biết cờ nào ⇒ mọi mục hiện. Đó chính là hành vi phải giữ cho cache
   // `/auth/me` cũ: không khoá ai vì thiếu dữ liệu.
@@ -371,6 +379,39 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
     expect(requests.getAttribute('aria-label')).toBe('Yêu cầu đặt xe, 2 việc cần xử lý');
     expect(requests.textContent).toContain('2');
+  });
+
+  it('có việc gấp → huy hiệu đỏ, và "gấp" được nói thành lời chứ không chỉ bằng màu', () => {
+    badges.bookingRequestsPending = 2;
+    badges.bookingRequestsUrgent = true;
+    renderMenu();
+
+    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    expect(requests.getAttribute('aria-label')).toBe(
+      'Yêu cầu đặt xe, 2 việc cần xử lý, có việc gấp',
+    );
+    expect(requests.querySelector('[class*="urgent"]')).toBeTruthy();
+  });
+
+  it('không gấp → huy hiệu cam, không mang lớp đỏ', () => {
+    badges.bookingRequestsPending = 2;
+    renderMenu();
+
+    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    expect(requests.querySelector('[class*="badge"]')).toBeTruthy();
+    expect(requests.querySelector('[class*="urgent"]')).toBeNull();
+  });
+
+  it('khối đang GẬP chứa việc gấp → nhãn khối cũng đỏ', () => {
+    badges.bookingRequestsPending = 3;
+    badges.bookingRequestsUrgent = true;
+    renderMenu();
+
+    fireEvent.click(sectionToggle('Vận hành'));
+
+    const toggle = screen.getByRole('button', { name: /nhóm Vận hành/ });
+    expect(toggle.getAttribute('aria-label')).toContain('có việc gấp');
+    expect(toggle.querySelector('[class*="urgent"]')).toBeTruthy();
   });
 
   it('không có việc gì chờ → KHÔNG dựng huy hiệu rỗng', () => {

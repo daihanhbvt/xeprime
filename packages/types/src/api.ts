@@ -220,8 +220,8 @@ export const API_ERROR_CODE = {
   /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
   DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
   /**
-   * Giờ nhận/trả nằm ngoài khung giờ giao nhận chủ xe đã đặt cho xe (08/09/2026). Server kiểm
-   * khi khách gửi yêu cầu và khi gian hàng chốt giờ nhận dài hạn — FE chỉ là preview.
+   * @deprecated ADR 0078 — khung giờ giao nhận đã gỡ, server không còn ném mã này. Giữ để app
+   * phát hành trước đó vẫn ánh xạ được.
    */
   HANDOVER_WINDOW_VIOLATION: 'HANDOVER_WINDOW_VIOLATION',
   /** Chủ xe bắt buộc khách đồng ý điều khoản trước khi gửi yêu cầu mà payload chưa tích. */

@@ -6,6 +6,7 @@
     "expandSection": "Mở nhóm {name}",
     "collapseSection": "Thu gọn nhóm {name}",
     "needsAction": "{count, plural, other {# việc cần xử lý}}",
+    "needsActionUrgent": "{count, plural, other {# việc cần xử lý, có việc gấp}}",
     "accountMenu": "Menu tài khoản",
     "shopSettings": "Cài đặt gian hàng",
     "back": "Quay lại",

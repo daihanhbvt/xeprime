@@ -3,8 +3,8 @@
 import { App, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useEffect, useId, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
@@ -13,7 +13,6 @@ import {
   RENTAL_TERMS_MAX_LENGTH,
   SERVICE_TYPE,
   isVehicleServiceTypeAllowed,
-  requiredIdentityDocuments,
   type ServiceType,
 } from '@xeprime/types';
 
@@ -23,6 +22,7 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { RENTAL_TERMS_ANCHOR, ROUTES } from '@/constants/routes';
+import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { useAvailableHref } from '@/features/tenant-support/support-session';
 import {
   usePatchVehicleServiceSetting,
@@ -62,16 +62,15 @@ export function termsAnchorOf(service: ServiceType): string {
 }
 
 /**
- * Mục "Điều kiện" (design `23721:30416`): giấy tờ khách phải xuất trình · cách đối chiếu · bắt khách
- * đồng ý điều khoản · nội dung điều khoản — một khối cho "Tự lái & Dài hạn" (thiết lập của tự lái),
- * một khối cho "Có tài xế". Mỗi khối ghi thiết lập dịch vụ của nó (`PATCH
- * /vehicles/:id/service-settings/:service`); cả hai lưu bằng nút ở cột phải.
+ * Giấy tờ & điều khoản của mục "Chính sách thuê" (design "Điều kiện" `23721:30416`): giấy tờ khách
+ * phải xuất trình · cách đối chiếu · bắt khách đồng ý điều khoản · nội dung điều khoản — một khối cho
+ * "Tự lái & Dài hạn" (thiết lập của tự lái), một khối cho "Có tài xế". Mỗi khối ghi thiết lập dịch
+ * vụ của nó (`PATCH /vehicles/:id/service-settings/:service`); cả hai lưu bằng nút ở cột phải.
  *
- * Điều khoản không có bản của gian hàng, nên không có công tắc "Áp dụng chính sách của gian hàng"
- * như design vẽ (sổ cái §3.6 E14). Cọc và hạn mức km — trước đây cũng ở màn này — nay ở tab Tự lái
- * của mục "Dịch vụ xe", cạnh giá.
+ * Điều khoản không có bản của gian hàng, nên công tắc "Áp dụng chính sách của gian hàng" ở đầu mục
+ * KHÔNG áp cho hai khối này (sổ cái §3.6 E14).
  */
-export function ConditionsPane({
+export function TermsCards({
   vehicle,
   canEdit,
   scrollTo,
@@ -90,7 +89,7 @@ export function ConditionsPane({
     document.getElementById(termsAnchorOf(scrollTo))?.scrollIntoView({ block: 'start' });
   }, [scrollTo, settings.data]);
 
-  if (settings.isLoading) return <LoadingState variant="page" />;
+  if (settings.isLoading) return <LoadingState variant="inline" />;
   if (settings.isError || !settings.data) {
     return (
       <EmptyState
@@ -163,15 +162,6 @@ function TermsCard({
     resolver: yupResolver(schema),
     values,
   });
-  const identityDocument = useWatch({ control, name: 'identityDocument' });
-
-  // Giấy tờ THẬT SỰ phải xuất trình — luật pháp cộng GPLX cho tự lái, chủ xe chỉ chọn CCCD/hộ chiếu.
-  const legalDocs = requiredIdentityDocuments(service);
-  const effectiveDocs = (
-    identityDocument === DOC_PRESET.PASSPORT
-      ? [DOC_PRESET.PASSPORT, ...legalDocs.filter((d) => d !== CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID)]
-      : legalDocs
-  ).map((d) => domainLabel('customerDocumentType', d));
 
   function submit(): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
@@ -216,6 +206,8 @@ function TermsCard({
       label: withDriver ? t('docPresetDriver.passport') : t('docPreset.passport'),
     },
   ];
+  const docsHeadingId = useId();
+  const verifyHeadingId = useId();
   const verifyOptions = IDENTITY_VERIFY_METHOD_VALUES.map((value) => ({
     value,
     label: domainLabel('identityVerifyMethod', value),
@@ -227,47 +219,67 @@ function TermsCard({
         id={termsAnchorOf(service)}
         title={withDriver ? tEditor('withDriverTitle') : tEditor('selfDriveTitle')}
       >
-        <div>
-          <h3 className={styles.subheading}>{t('documentsTitle')}</h3>
-          <p className={styles.toggleHint}>
-            {withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}
-          </p>
-          <RadioGroupField
+        {/*
+          Bố cục design: giấy tờ + cách đối chiếu là MỘT nhóm (tiêu đề đậm, lựa chọn xếp dọc), rồi
+          hàng "khách phải đồng ý", rồi điều khoản — cách nhau bằng vạch kẻ. Lời giải thích của nhóm
+          giấy tờ nằm trong icon ⓘ; nhãn từng lựa chọn đã kể đủ giấy tờ nên không lặp dòng liệt kê.
+        */}
+        <div className={styles.policyRows}>
+          <div className={styles.termsGroup}>
+            <div>
+              <h3 id={docsHeadingId} className={`${styles.subheading} ${styles.titleWithTip}`}>
+                {t('documentsTitle')}
+                <PolicyInfoTip label={t('documentsTitle')}>
+                  {withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}
+                </PolicyInfoTip>
+              </h3>
+              <RadioGroupField
+                control={control}
+                name="identityDocument"
+                options={docOptions}
+                labelledBy={docsHeadingId}
+              />
+            </div>
+            <div>
+              <h3 id={verifyHeadingId} className={styles.subheading}>
+                {t('verifyTitle')}
+              </h3>
+              <RadioGroupField
+                control={control}
+                name="identityVerifyMethod"
+                options={verifyOptions}
+                labelledBy={verifyHeadingId}
+                help={<em>{t('verifyHint')}</em>}
+              />
+            </div>
+          </div>
+          <SwitchField
             control={control}
-            name="identityDocument"
-            options={docOptions}
-            vertical
+            name="requireTermsAcceptance"
+            label={withDriver ? t('requireAcceptanceDriver') : t('requireAcceptance')}
+            description={t('requireAcceptanceHint')}
           />
-          <p className={styles.toggleHint}>{effectiveDocs.join(' · ')}</p>
+          <div>
+            <h3 className={styles.subheading}>
+              {withDriver ? t('termsTitleDriver') : t('termsTitle')}
+            </h3>
+            <p className={styles.toggleHint}>{t('termsHint')}</p>
+            <TextAreaField
+              control={control}
+              name="termsText"
+              label={withDriver ? t('termsTitleDriver') : t('termsTitle')}
+              hideLabel
+              placeholder={t('termsPlaceholder')}
+              maxLength={RENTAL_TERMS_MAX_LENGTH}
+              rows={5}
+            />
+            {withDriver && contractsHref ? (
+              <p className={styles.toggleHint}>
+                <Link href={contractsHref}>{t('contractTemplate')}</Link>
+              </p>
+            ) : null}
+          </div>
         </div>
-        <RadioGroupField
-          control={control}
-          name="identityVerifyMethod"
-          label={t('verifyTitle')}
-          options={verifyOptions}
-          vertical
-          help={t('verifyHint')}
-        />
-        <SwitchField
-          control={control}
-          name="requireTermsAcceptance"
-          label={withDriver ? t('requireAcceptanceDriver') : t('requireAcceptance')}
-          description={t('requireAcceptanceHint')}
-        />
-        {withDriver && contractsHref ? (
-          <p className={styles.toggleHint}>
-            <Link href={contractsHref}>{t('contractTemplate')}</Link>
-          </p>
-        ) : null}
-        <TextAreaField
-          control={control}
-          name="termsText"
-          label={withDriver ? t('termsTitleDriver') : t('termsTitle')}
-          placeholder={t('termsPlaceholder')}
-          maxLength={RENTAL_TERMS_MAX_LENGTH}
-          rows={5}
-          help={t('termsHint')}
-        />
       </EditCard>
     </Form>
   );

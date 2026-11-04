@@ -65,7 +65,10 @@
   color: var(--xp-color-primary);
 }
 
-/* `_Badge` `23661:27584`: nền xám nhạt, viền xám, bo tròn, chữ 12px/Medium. */
+/*
+ * Khuôn `_Badge` `23661:27584` (bo tròn, viền, chữ 12px) tô màu cảnh báo — cùng bộ token với
+ * `StatusBadge` `.warning` / `.danger`, nên huy hiệu menu và chip trạng thái nói cùng một ngôn ngữ màu.
+ */
 .count {
   display: inline-flex;
   flex: none;
@@ -73,13 +76,20 @@
   justify-content: center;
   min-width: 22px;
   padding: 2px 6px;
-  border: 1px solid var(--xp-color-border-strong);
+  border: 1px solid var(--xp-color-warning-border);
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg);
-  color: var(--xp-color-text-secondary);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
   font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
+  font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.countUrgent {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
 }
 
 /*

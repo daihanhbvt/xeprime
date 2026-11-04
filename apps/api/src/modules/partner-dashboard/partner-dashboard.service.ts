@@ -150,6 +150,18 @@ export class PartnerDashboardService {
     return this.today(tenant.tenantId, resolveBranchScope(undefined, tenant.allowedBranchIds), now);
   }
 
+  /**
+   * Khối "yêu cầu" đứng riêng — huy hiệu menu (`GET /dashboard/requests`): số chờ duyệt và số KHẨN
+   * (sắp hết hạn trả lời) để huy hiệu chuyển màu đỏ. Toàn phạm vi được giao, như `todayCounts`.
+   */
+  requestCounts(
+    tenant: TenantContext,
+    now: Date = new Date(),
+  ): Promise<PartnerDashboardRequestsDto> {
+    const scope = resolveBranchScope(undefined, tenant.allowedBranchIds);
+    return this.requests(tenant.tenantId, scope, now);
+  }
+
   private async today(
     tenantId: string,
     scope: BranchScope,
@@ -159,23 +171,35 @@ export class PartnerDashboardService {
     const awaiting = awaitingPickupWhere(tenantId, scope);
     const active = activeWhere(tenantId, scope);
 
-    const [awaitingPickup, pickupsToday, pickupsOverdue, activeCount, returnsToday, returnsOverdue] =
-      await Promise.all([
-        this.prisma.booking.count({ where: awaiting }),
-        this.prisma.booking.count({ where: { ...awaiting, pickupAt: day } }),
-        this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lt: now } } }),
-        this.prisma.booking.count({ where: active }),
-        this.prisma.booking.count({ where: { ...active, returnAt: day } }),
-        this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
-      ]);
+    const [
+      awaitingPickup,
+      pickupsToday,
+      pickupsOverdue,
+      pickupsDue,
+      activeCount,
+      returnsToday,
+      returnsOverdue,
+      returnsDue,
+    ] = await Promise.all([
+      this.prisma.booking.count({ where: awaiting }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: day } }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lt: now } } }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lte: day.lte } } }),
+      this.prisma.booking.count({ where: active }),
+      this.prisma.booking.count({ where: { ...active, returnAt: day } }),
+      this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
+      this.prisma.booking.count({ where: { ...active, returnAt: { lte: day.lte } } }),
+    ]);
 
     return {
       awaitingPickup,
       pickupsToday,
       pickupsOverdue,
+      pickupsDue,
       active: activeCount,
       returnsToday,
       returnsOverdue,
+      returnsDue,
     };
   }
 

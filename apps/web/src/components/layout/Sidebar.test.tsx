@@ -57,7 +57,7 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
-vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
+vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({ counts: {}, urgent: {} }) }));
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),

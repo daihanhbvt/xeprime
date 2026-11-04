@@ -20882,6 +20882,106 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query."
       }
     },
+    "/dashboard/requests": {
+      "get": {
+        "operationId": "PartnerDashboardController_requests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PartnerDashboardRequestsDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Yêu cầu đặt xe chờ duyệt và sắp hết hạn — số trên menu site partner",
+        "tags": [
+          "partner-dashboard"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/dashboard/today": {
       "get": {
         "operationId": "PartnerDashboardController_today",
@@ -87388,13 +87488,13 @@
           },
           "fee": {
             "type": "string",
-            "description": "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí. Bỏ trống khi bậc tính theo km",
+            "description": "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí",
             "example": "30000"
           },
           "perKm": {
             "type": "string",
-            "description": "Đơn giá MỖI KM (VND chuỗi, bội 1.000đ, > 0) — phí = đơn giá × khoảng cách một chiều, đúng tới đồng (ADR 0069). Bỏ trống khi bậc tính trọn gói",
-            "example": "10000"
+            "deprecated": true,
+            "description": "ĐÃ GỠ (ADR 0078) — gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói"
           }
         },
         "required": [
@@ -91120,12 +91220,16 @@
         "type": "object",
         "properties": {
           "pickupWindows": {
+            "deprecated": true,
+            "description": "Luôn rỗng (ADR 0078)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ListingHandoverWindowDto"
             }
           },
           "returnWindows": {
+            "deprecated": true,
+            "description": "Luôn rỗng (ADR 0078)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ListingHandoverWindowDto"
@@ -91603,12 +91707,13 @@
           "plannedStartAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO"
+            "description": "ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)"
           },
           "plannedEndAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO"
+            "deprecated": true,
+            "description": "Không còn ghi (ADR 0079) — chỉ phiếu cũ đã đóng còn giá trị lịch sử"
           },
           "completedAt": {
             "type": "string",
@@ -94183,6 +94288,10 @@
             "type": "number",
             "description": "Trong `awaitingPickup`: đã QUÁ giờ hẹn giao mà xe chưa rời bãi (mọi ngày)."
           },
+          "pickupsDue": {
+            "type": "number",
+            "description": "Trong `awaitingPickup`: ĐẾN HẠN giao — hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`)."
+          },
           "active": {
             "type": "number",
             "description": "Đơn đang thuê (`status = active`) — xe đang ở với khách."
@@ -94194,15 +94303,21 @@
           "returnsOverdue": {
             "type": "number",
             "description": "Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày)."
+          },
+          "returnsDue": {
+            "type": "number",
+            "description": "Trong `active`: ĐẾN HẠN trả — hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn đếm một lần."
           }
         },
         "required": [
           "awaitingPickup",
           "pickupsToday",
           "pickupsOverdue",
+          "pickupsDue",
           "active",
           "returnsToday",
-          "returnsOverdue"
+          "returnsOverdue",
+          "returnsDue"
         ]
       },
       "PartnerDashboardTrendPointDto": {
@@ -104447,12 +104562,13 @@
           "plannedStartAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO — mốc bắt đầu dự kiến"
+            "description": "ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)"
           },
           "plannedEndAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO — mốc kết thúc dự kiến"
+            "deprecated": true,
+            "description": "Bị bỏ qua (ADR 0079)"
           },
           "odometerKm": {
             "type": "number",
@@ -104728,12 +104844,16 @@
             "maximum": 1440
           },
           "pickupWindows": {
+            "deprecated": true,
+            "description": "Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HandoverWindowDto"
             }
           },
           "returnWindows": {
+            "deprecated": true,
+            "description": "Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HandoverWindowDto"
@@ -104741,9 +104861,7 @@
           }
         },
         "required": [
-          "turnaroundBufferMinutes",
-          "pickupWindows",
-          "returnWindows"
+          "turnaroundBufferMinutes"
         ]
       },
       "SaveVehiclePricingDto": {
@@ -111253,14 +111371,16 @@
             "description": "Phút chuẩn bị giữa hai chuyến — áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), không tính lại occupancy đã có"
           },
           "pickupWindows": {
-            "description": "Rỗng = giao mọi giờ",
+            "deprecated": true,
+            "description": "Luôn rỗng (ADR 0078)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HandoverWindowDto"
             }
           },
           "returnWindows": {
-            "description": "Rỗng = nhận lại mọi giờ",
+            "deprecated": true,
+            "description": "Luôn rỗng (ADR 0078)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HandoverWindowDto"

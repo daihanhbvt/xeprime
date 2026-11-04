@@ -950,7 +950,8 @@
       "monthlyInterestPlaceholder": "e.g. 3,187,500",
       "endDate": "Contract end date (if known)",
       "interestMethod": "Interest calculation method",
-      "monthlyTotal": "Total due each month (principal + interest): {amount}"
+      "monthlyTotal": "Total due each month (principal + interest): {amount}",
+      "monthlyTotalRich": "Total due each month (principal + interest): <b>{amount}</b>"
     },
     "rented": {
       "ownerTitle": "Owner information (lessor)",
@@ -983,7 +984,8 @@
       "shopShare": "The shop keeps: <b>{percent}</b>",
       "startDate": "Contract effective date",
       "endDate": "Contract end date",
-      "formula": "Formula: shared revenue = rent after discount. Excludes refundable deposits, delivery fees, overtime fees, damage penalties and other amounts collected on behalf of others."
+      "formula": "Formula: shared revenue = rent after discount. Excludes refundable deposits, delivery fees, overtime fees, damage penalties and other amounts collected on behalf of others.",
+      "formulaTip": "How shared revenue is calculated"
     },
     "validation": {
       "sourceTypeRequired": "Select the vehicle source type",
@@ -1010,7 +1012,10 @@
       "moneyTypeError": "Please enter a number",
       "moneyInteger": "The amount must be a whole number",
       "moneyMin": "The amount cannot be negative"
-    }
+    },
+    "typeCurrent": "Current",
+    "typeChange": "Changing from <b>{from}</b> to <b>{to}</b> — not saved yet. Press “Save changes” to apply.",
+    "typeKeep": "Keep {label}"
   },
   "pricing": {
     "title": "Pricing & policy",
@@ -1641,9 +1646,8 @@
         "media": "Photos",
         "documents": "Vehicle documents",
         "trip-history": "Trip history",
-        "services": "Services",
-        "conditions": "Conditions",
-        "handover": "Handover",
+        "services": "Services & prices",
+        "policy": "Rental policy",
         "maintenance": "Maintenance & mileage",
         "source": "Source & financing"
       },
@@ -1709,7 +1713,7 @@
           "title": "Long-term rental",
           "target": "long-term customers"
         },
-        "hint": "Turn on to accept {service}. Booking conditions are in <conditions>Conditions</conditions>."
+        "hint": "Turn on to accept {service}. Deposit, delivery and terms are in <conditions>Rental policy</conditions>."
       },
       "offNote": "This service is off — turn it on above to set prices and accept trips for it.",
       "price": {
@@ -1717,26 +1721,24 @@
         "titlePromo": "Rental price & promotion"
       },
       "policy": {
-        "selfDriveTitle": "Rental procedures & terms",
         "longTermTitle": "Long-term discounts (over 1 month)"
       },
-      "extras": "Other"
+      "extras": "Other",
+      "policyInvalid": "Some fields in Rental policy are invalid — open that section, fix them, then save again."
     },
     "policy": {
       "useShop": "Apply the shop's policy",
-      "useShopHint": "When on, the vehicle follows the shop's <policies>shared policy</policies>: collateral, mileage limit, overtime fee, delivery and long-term discounts.",
-      "customActive": "This vehicle uses its own policy. Turn this back on to return to the shop's policy — the vehicle's customizations will be lost.",
+      "useShopHint": "When on, the vehicle follows the shop's <policies>general policy</policies>: delivery, deposit, mileage limit, overtime fee and long-term offers.",
       "inherited": "Following the <policies>shop policy</policies>. Turn off \"Apply the shop's policy\" at the top of this section to customize it for this vehicle.",
-      "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customize it for this vehicle, turn off the switch in <switch>Services</switch>."
+      "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customise this vehicle, turn off the switch at the top of <switch>Rental policy</switch>.",
+      "deliveryTitle": "Doorstep delivery",
+      "rulesTitle": "Delivery, deposit & extra fees",
+      "pricesInvalid": "Some prices in Services & prices are invalid (for example, the weekday price is missing) — open that section, fix them, then save again.",
+      "bufferTipLabel": "Which bookings the preparation time applies to"
     },
     "conditions": {
       "selfDriveTitle": "Self-drive & long-term rental",
       "withDriverTitle": "With driver"
-    },
-    "handover": {
-      "title": "Vehicle handover",
-      "delivery": "Door-to-door delivery",
-      "windowsTitle": "Pickup & return hours"
     }
   }
 }

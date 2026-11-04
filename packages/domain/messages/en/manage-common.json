@@ -6,6 +6,7 @@
     "expandSection": "Expand the {name} group",
     "collapseSection": "Collapse the {name} group",
     "needsAction": "{count, plural, one {# item needs action} other {# items need action}}",
+    "needsActionUrgent": "{count, plural, one {# urgent item needs action} other {# items need action, some urgent}}",
     "accountMenu": "Account menu",
     "shopSettings": "Shop settings",
     "back": "Back",

@@ -82,7 +82,6 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(
   asService,
-  occupancy,
   odometer,
   files,
   audit,

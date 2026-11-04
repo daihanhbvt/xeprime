@@ -655,24 +655,17 @@ export class PricingService {
         throw invalid('Bật giao nhận thì phải nhập bán kính hỗ trợ tối đa');
       }
       /*
-       * Mỗi bậc đúng MỘT dạng (ADR 0064): trọn gói (`fee`) hoặc theo km (`perKm`). Có cả hai thì
-       * không ai biết dạng nào thắng; bậc theo km 0đ/km là "miễn phí" viết kiểu khó đọc — miễn phí
-       * thì dùng bậc trọn gói `fee = '0'`, đúng dạng mà vùng miễn phí đầu được nhận diện.
+       * Mỗi bậc là MỘT phí trọn gói (`fee`, '0' = miễn phí). Phí theo km (`perKm`) đã gỡ ở
+       * ADR 0078 — app cũ còn gửi thì từ chối bằng câu nói rõ, không âm thầm bỏ bậc.
        */
       for (const tier of dto.deliveryTiers) {
-        const hasFee = tier.fee != null && tier.fee !== '';
-        const hasPerKm = tier.perKm != null && tier.perKm !== '';
-        if (hasFee === hasPerKm) {
+        if (tier.perKm != null && tier.perKm !== '') {
           throw invalid(
-            hasFee
-              ? `Bậc ${formatKm(tier.toKm)} km chỉ được chọn MỘT cách tính: trọn gói hoặc theo km`
-              : `Bậc ${formatKm(tier.toKm)} km chưa có phí giao nhận`,
+            `Phí giao xe theo km đã ngừng áp dụng — bậc ${formatKm(tier.toKm)} km cần một phí trọn gói`,
           );
         }
-        if (hasPerKm && !(Number(tier.perKm) > 0)) {
-          throw invalid(
-            `Đơn giá theo km của bậc ${formatKm(tier.toKm)} km phải lớn hơn 0 — miễn phí thì chọn trọn gói 0đ`,
-          );
+        if (tier.fee == null || tier.fee === '') {
+          throw invalid(`Bậc ${formatKm(tier.toKm)} km chưa có phí giao nhận`);
         }
       }
       for (let i = 1; i < dto.deliveryTiers.length; i++) {

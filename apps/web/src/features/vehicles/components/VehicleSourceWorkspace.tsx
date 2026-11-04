@@ -1,19 +1,12 @@
 'use client';
 
-import {
-  BankOutlined,
-  HomeOutlined,
-  InfoCircleOutlined,
-  KeyOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
-import { Alert, App, Button, Card, Col, Form, Radio, Row, Skeleton, Tag } from 'antd';
+import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Col, Form, Radio, Row, Skeleton } from 'antd';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
-  STATUS_COLOR,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_VALUES,
@@ -28,6 +21,7 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadToR2 } from '@/services/upload';
@@ -39,6 +33,7 @@ import {
   sourceFormValuesToInput,
 } from '../source-mappers';
 import type { VehicleDetail, VehicleSource } from '../types';
+import { EditCard } from './edit/EditCard';
 import { useEditForm } from './edit/edit-actions';
 import styles from './VehicleSourceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -53,32 +48,20 @@ const SOURCE_ICON: Record<VehicleSourceType, React.ReactNode> = {
 };
 
 /**
- * Hai bảng chữ theo hình thức nguồn xe: gợi ý trên thẻ chọn, và nhãn dải trạng thái đầu tab
- * (thiết kế: "Đang vay nợ" / "Xe của bạn"…).
+ * Gợi ý dưới tên từng hình thức trên thẻ chọn.
  *
  * Dựng lúc CHẠY trong một hook, không phải hằng module scope: hằng module scope tính một lần
  * cho cả tiến trình và sẽ đóng băng ngôn ngữ của request đầu tiên (ADR 0012). Liệt kê cả bốn
  * nhánh tường minh nên thêm một hình thức mới là lỗi biên dịch, không phải ô chữ trống.
  */
-function useSourceCopy(): {
-  cardHint: Record<VehicleSourceType, string>;
-  statusTag: Record<VehicleSourceType, string>;
-} {
+function useSourceCardHints(): Record<VehicleSourceType, string> {
   const t = useTranslations('Vehicles.source');
 
   return {
-    cardHint: {
-      [VEHICLE_SOURCE_TYPE.OWNED]: t('cardHint.owned'),
-      [VEHICLE_SOURCE_TYPE.FINANCED]: t('cardHint.financed'),
-      [VEHICLE_SOURCE_TYPE.RENTED]: t('cardHint.rented'),
-      [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('cardHint.partnership'),
-    },
-    statusTag: {
-      [VEHICLE_SOURCE_TYPE.OWNED]: t('banner.owned'),
-      [VEHICLE_SOURCE_TYPE.FINANCED]: t('banner.financed'),
-      [VEHICLE_SOURCE_TYPE.RENTED]: t('banner.rented'),
-      [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('banner.partnership'),
-    },
+    [VEHICLE_SOURCE_TYPE.OWNED]: t('cardHint.owned'),
+    [VEHICLE_SOURCE_TYPE.FINANCED]: t('cardHint.financed'),
+    [VEHICLE_SOURCE_TYPE.RENTED]: t('cardHint.rented'),
+    [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('cardHint.partnership'),
   };
 }
 
@@ -154,7 +137,7 @@ function VehicleSourceForm({
   const t = useTranslations('Vehicles.source');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
-  const { cardHint, statusTag } = useSourceCopy();
+  const cardHint = useSourceCardHints();
   const { message } = App.useApp();
   const save = useSaveVehicleSource(vehicle.id);
   const initialValues = useMemo(
@@ -172,6 +155,7 @@ function VehicleSourceForm({
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isDirty, errors },
   } = useForm<VehicleSourceFormValues>({
     resolver,
@@ -304,23 +288,6 @@ function VehicleSourceForm({
         }}
       >
         <div className={styles.stack}>
-          {/* Dải trạng thái đầu tab — nói ngay xe đang ở hình thức nào. */}
-          <div className={styles.statusBanner}>
-            <span className={styles.statusIcon} aria-hidden="true">
-              {SOURCE_ICON[savedType]}
-            </span>
-            <div className={styles.statusCopy}>
-              <strong>
-                {t('banner.kind', { label: domainLabel('vehicleSourceType', savedType) })}{' '}
-                <Tag className={styles.statusTag} color={STATUS_COLOR.WAITING}>
-                  {statusTag[savedType]}
-                </Tag>
-              </strong>
-              <small>{cardHint[savedType]}</small>
-            </div>
-            <InfoCircleOutlined className={styles.statusInfo} aria-hidden="true" />
-          </div>
-
           {!canEdit ? <Alert type="info" showIcon title={t('readOnly')} /> : null}
 
           {errorCount > 0 ? (
@@ -336,7 +303,12 @@ function VehicleSourceForm({
             />
           ) : null}
 
-          <Card title={t('typeCard')} className={styles.card}>
+          {/*
+           * Hình thức ĐANG ÁP DỤNG (bản đã lưu) mang nhãn riêng; thẻ sáng vàng chỉ là lựa chọn
+           * trong form. Hai thứ lệch nhau thì nói thẳng là chưa lưu, kèm lối giữ nguyên — trước đây
+           * dải đầu trang và thẻ đang chọn cùng "sáng" ở hai hình thức khác nhau.
+           */}
+          <EditCard title={t('typeCard')}>
             <Controller
               control={control}
               name="sourceType"
@@ -346,20 +318,49 @@ function VehicleSourceForm({
                   onChange={(event) => field.onChange(event.target.value)}
                   className={styles.typeGrid}
                   disabled={!canEdit}
+                  aria-label={t('typeCard')}
                 >
                   {VEHICLE_SOURCE_TYPE_VALUES.map((value) => (
                     <Radio key={value} value={value} className={styles.typeOption}>
-                      <span className={styles.typeHead}>
-                        <span aria-hidden="true">{SOURCE_ICON[value]}</span>
-                        <strong>{domainLabel('vehicleSourceType', value)}</strong>
+                      <span className={styles.typeBody}>
+                        <span className={styles.typeIcon} aria-hidden="true">
+                          {SOURCE_ICON[value]}
+                        </span>
+                        <span className={styles.typeText}>
+                          <span className={styles.typeTitle}>
+                            {domainLabel('vehicleSourceType', value)}
+                            {value === savedType ? (
+                              <span className={styles.currentTag}>{t('typeCurrent')}</span>
+                            ) : null}
+                          </span>
+                          <small>{cardHint[value]}</small>
+                        </span>
                       </span>
-                      <small>{cardHint[value]}</small>
                     </Radio>
                   ))}
                 </Radio.Group>
               )}
             />
-          </Card>
+            {sourceType !== savedType ? (
+              <div className={styles.typeChange} role="status">
+                <span>
+                  {t.rich('typeChange', {
+                    from: domainLabel('vehicleSourceType', savedType),
+                    to: domainLabel('vehicleSourceType', sourceType),
+                    b: (chunks) => <strong>{chunks}</strong>,
+                  })}
+                </span>
+                <Button
+                  type="link"
+                  size="small"
+                  className={styles.typeKeep}
+                  onClick={() => setValue('sourceType', savedType, { shouldDirty: true })}
+                >
+                  {t('typeKeep', { label: domainLabel('vehicleSourceType', savedType) })}
+                </Button>
+              </div>
+            ) : null}
+          </EditCard>
 
           {sourceType === VEHICLE_SOURCE_TYPE.OWNED ? (
             <OwnedSection control={control} disabled={!canEdit} />
@@ -379,26 +380,25 @@ function VehicleSourceForm({
           ) : null}
 
           {sourceType !== VEHICLE_SOURCE_TYPE.OWNED || canEdit ? (
-            <Card
+            <EditCard
               title={
                 sourceType === VEHICLE_SOURCE_TYPE.OWNED
                   ? t('contract.titleOptional')
                   : t('contract.title')
               }
-              className={styles.card}
+              subtitle={
+                sourceType === VEHICLE_SOURCE_TYPE.FINANCED
+                  ? t('contract.fileFinanced')
+                  : sourceType === VEHICLE_SOURCE_TYPE.RENTED
+                    ? t('contract.fileRented')
+                    : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
+                      ? t('contract.filePartnership')
+                      : t('contract.fileOwned')
+              }
             >
               <FileListField
                 control={control}
                 name="contractFiles"
-                label={
-                  sourceType === VEHICLE_SOURCE_TYPE.FINANCED
-                    ? t('contract.fileFinanced')
-                    : sourceType === VEHICLE_SOURCE_TYPE.RENTED
-                      ? t('contract.fileRented')
-                      : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
-                        ? t('contract.filePartnership')
-                        : t('contract.fileOwned')
-                }
                 upload={uploadContract}
                 getDownloadUrl={contractDownloadUrl}
                 disabled={!canEdit}
@@ -407,11 +407,12 @@ function VehicleSourceForm({
                 control={control}
                 name="notes"
                 label={t('contract.notes')}
+                hideLabel
                 placeholder={t('contract.notesPlaceholder')}
                 rows={3}
                 maxLength={4000}
               />
-            </Card>
+            </EditCard>
           ) : null}
         </div>
 
@@ -464,7 +465,7 @@ function OwnedSection({ control, disabled }: SectionProps) {
   const t = useTranslations('Vehicles.source.owned');
 
   return (
-    <Card title={t('title')} className={styles.card}>
+    <EditCard title={t('title')}>
       <Row gutter={16}>
         <Col xs={24} sm={12}>
           <DateTimeField control={control} name="purchaseDate" label={t('purchaseDate')} dateOnly />
@@ -489,7 +490,7 @@ function OwnedSection({ control, disabled }: SectionProps) {
           />
         </Col>
       </Row>
-    </Card>
+    </EditCard>
   );
 }
 
@@ -502,8 +503,9 @@ function FinancedSection({
   const fmt = useAppFormat();
 
   return (
-    <Card title={t('title')} className={styles.card}>
-      <Row gutter={16}>
+    <EditCard title={t('title')}>
+      {/* Nhãn dài xuống dòng ở cột hẹp — canh đáy để các ô nhập trên một hàng vẫn thẳng nhau. */}
+      <Row gutter={16} align="bottom">
         <Col xs={24} sm={12}>
           <TextField
             control={control}
@@ -566,7 +568,7 @@ function FinancedSection({
             placeholder={t('paymentDayPlaceholder')}
           />
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <NumberField
             control={control}
             name="monthlyPrincipal"
@@ -576,7 +578,7 @@ function FinancedSection({
             placeholder={t('monthlyPrincipalPlaceholder')}
           />
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <NumberField
             control={control}
             name="monthlyInterest"
@@ -586,22 +588,22 @@ function FinancedSection({
             placeholder={t('monthlyInterestPlaceholder')}
           />
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24}>
           <InterestMethodField control={control} disabled={disabled} />
         </Col>
       </Row>
       {monthlyTotal != null ? (
-        <Alert
-          type="info"
-          showIcon
-          className={styles.totalPreview}
-          title={t('monthlyTotal', { amount: fmt.money(String(monthlyTotal)) })}
-        />
+        <p className={styles.totalLine}>
+          {t.rich('monthlyTotalRich', {
+            amount: fmt.money(String(monthlyTotal)),
+            b: (chunks) => <strong>{chunks}</strong>,
+          })}
+        </p>
       ) : null}
-    </Card>
+    </EditCard>
   );
 }
 
@@ -614,10 +616,10 @@ function InterestMethodField({ control, disabled }: SectionProps) {
       control={control}
       name="interestMethod"
       render={({ field }) => (
-        <div className={styles.methodBlock}>
-          <div className={styles.methodLabel} id="vehicle-source-interest-method">
+        <div className={styles.methodRow}>
+          <span className={styles.methodLabel} id="vehicle-source-interest-method">
             {t('interestMethod')}
-          </div>
+          </span>
           <Radio.Group
             aria-labelledby="vehicle-source-interest-method"
             value={field.value ?? null}
@@ -641,7 +643,7 @@ function RentedSection({ control, disabled }: SectionProps) {
 
   return (
     <>
-      <Card title={t('ownerTitle')} className={styles.card}>
+      <EditCard title={t('ownerTitle')}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <TextField
@@ -673,8 +675,8 @@ function RentedSection({ control, disabled }: SectionProps) {
             />
           </Col>
         </Row>
-      </Card>
-      <Card title={t('contractTitle')} className={styles.card}>
+      </EditCard>
+      <EditCard title={t('contractTitle')}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
@@ -705,7 +707,7 @@ function RentedSection({ control, disabled }: SectionProps) {
             <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
           </Col>
         </Row>
-      </Card>
+      </EditCard>
     </>
   );
 }
@@ -720,7 +722,7 @@ function PartnershipSection({
 
   return (
     <>
-      <Card title={t('ownerTitle')} className={styles.card}>
+      <EditCard title={t('ownerTitle')}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <TextField
@@ -752,8 +754,20 @@ function PartnershipSection({
             />
           </Col>
         </Row>
-      </Card>
-      <Card title={t('termsTitle')} className={styles.card}>
+      </EditCard>
+      {/*
+        Cơ sở chia doanh thu (chốt ở wave 4): CHỈ tiền thuê sau giảm giá. Cọc hoàn lại, phí giao
+        nhận, phí quá giờ, phạt/bồi thường đều đứng ngoài — khớp quy tắc giảm giá chỉ áp lên tiền
+        thuê cơ bản của rental_policies. Công thức là giải thích nên vào icon ⓘ cạnh tiêu đề.
+      */}
+      <EditCard
+        title={
+          <span className={styles.titleWithTip}>
+            {t('termsTitle')}
+            <PolicyInfoTip label={t('formulaTip')}>{t('formula')}</PolicyInfoTip>
+          </span>
+        }
+      >
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
@@ -781,13 +795,7 @@ function PartnershipSection({
             <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
           </Col>
         </Row>
-        {/*
-          Cơ sở chia doanh thu (chốt ở wave 4): CHỈ tiền thuê sau giảm giá. Cọc hoàn lại,
-          phí giao nhận, phí quá giờ, phạt/bồi thường đều đứng ngoài — khớp quy tắc giảm giá
-          chỉ áp lên tiền thuê cơ bản của rental_policies.
-        */}
-        <Alert type="info" showIcon className={styles.totalPreview} title={t('formula')} />
-      </Card>
+      </EditCard>
     </>
   );
 }

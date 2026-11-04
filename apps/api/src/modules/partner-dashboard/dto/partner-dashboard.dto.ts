@@ -40,6 +40,13 @@ export class PartnerDashboardTodayDto {
   })
   pickupsOverdue!: number;
 
+  @ApiProperty({
+    description:
+      'Trong `awaitingPickup`: ĐẾN HẠN giao — hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ ' +
+      'từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`).',
+  })
+  pickupsDue!: number;
+
   @ApiProperty({ description: 'Đơn đang thuê (`status = active`) — xe đang ở với khách.' })
   active!: number;
 
@@ -48,6 +55,13 @@ export class PartnerDashboardTodayDto {
 
   @ApiProperty({ description: 'Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày).' })
   returnsOverdue!: number;
+
+  @ApiProperty({
+    description:
+      'Trong `active`: ĐẾN HẠN trả — hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn ' +
+      'đếm một lần.',
+  })
+  returnsDue!: number;
 }
 
 /** Hộp thư yêu cầu — cùng phép đếm với hàng đợi vận hành chuyến của nền tảng. */

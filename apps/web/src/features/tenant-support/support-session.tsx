@@ -198,10 +198,12 @@ const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapab
   [VEHICLE_EDIT_TAB.OPERATIONS]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   /*
-   * Menu 03/11/2026: "Giao nhận" và hai tab dịch vụ có thiết lập vận hành (tự nhận chuyến, thiết lập
-   * có tài xế) mang ĐÚNG capability của các mục cũ. Giá, giao xe có phí và "Điều kiện" (điều khoản)
-   * vẫn là khu TIỀN — các mục đó tự giấu phần tiền, còn "Điều kiện" và tab Dài hạn không có mặt.
+   * Menu 03/11/2026: "Chính sách thuê" (thời gian chuẩn bị xe) và hai tab dịch vụ có thiết lập vận
+   * hành (tự nhận chuyến, thiết lập có tài xế) mang ĐÚNG capability của các mục cũ. Giá, chính sách
+   * có tiền (cọc, giao xe có phí…) và điều khoản vẫn là khu TIỀN — mục tự giấu chúng (điều khoản
+   * hỏi `CONDITIONS`, không có trong bảng này); tab Dài hạn không có mặt.
    */
+  [VEHICLE_EDIT_TAB.POLICY]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.HANDOVER]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.SELF_DRIVE]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.WITH_DRIVER]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,

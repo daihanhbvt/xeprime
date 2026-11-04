@@ -174,9 +174,18 @@ export class MaintenanceRecordDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customTypeName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) title!: string | null;
   @ApiProperty({ enum: MAINTENANCE_STATUS_VALUES }) status!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)',
+  })
   plannedStartAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Không còn ghi (ADR 0079) — chỉ phiếu cũ đã đóng còn giá trị lịch sử',
+  })
   plannedEndAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   completedAt!: string | null;
@@ -219,12 +228,22 @@ export class SaveMaintenanceRecordDto {
   @MaxLength(255)
   title?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc bắt đầu dự kiến' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedStartAt?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc kết thúc dự kiến' })
+  /** App cũ còn gửi; server bỏ qua (ADR 0079). Vẫn soát dạng để lệnh sai không lọt qua im lặng. */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Bị bỏ qua (ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedEndAt?: string | null;

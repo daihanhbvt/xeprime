@@ -387,17 +387,17 @@ describe('nav — cấu trúc khối', () => {
     expect(keys).not.toContain('trash');
   });
 
-  it('chỉ mục "cần xử lý" mang huy hiệu — không đếm tổng xe/tài xế (chốt 02/11/2026)', () => {
+  it('chỉ mục "cần xử lý" mang huy hiệu — không đếm tổng xe/tài xế (chốt 04/11/2026)', () => {
     const badged = flattenLeaves(SHOP_NAV)
       .filter((leaf) => leaf.badge)
       .map((leaf) => [leaf.href, leaf.badge]);
     // Tin chưa đọc giờ nằm trên icon tin nhắn ở header, không còn mục menu.
-    // Lịch: lượt giao + nhận hôm nay · Yêu cầu: chờ duyệt · Đơn: chờ giao + đang thuê (02/11/2026).
+    // Yêu cầu: chờ duyệt · Đơn: lượt giao/trả ĐẾN HẠN (04/11/2026). Lịch KHÔNG mang số nữa: lượt
+    // giao/nhận hôm nay đã nằm trong số của Đơn, khối "Vận hành" sẽ đếm trùng.
     // Danh sách xe: số XE CÓ VIỆC CHẶN, không phải tổng xe (03/11/2026).
     expect(badged).toEqual([
-      [ROUTES.MANAGE.CALENDAR, NAV_BADGE.CALENDAR_TODAY],
       [ROUTES.MANAGE.BOOKING_REQUESTS, NAV_BADGE.BOOKING_REQUESTS_PENDING],
-      [ROUTES.MANAGE.BOOKINGS, NAV_BADGE.BOOKINGS_NEEDS_ACTION],
+      [ROUTES.MANAGE.BOOKINGS, NAV_BADGE.HANDOVERS_DUE],
       [ROUTES.MANAGE.VEHICLES, NAV_BADGE.VEHICLES_NEEDS_ACTION],
     ]);
     // Nền tảng chưa có nguồn đếm nào — không gắn huy hiệu suông.

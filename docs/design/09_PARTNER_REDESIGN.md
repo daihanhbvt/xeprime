@@ -98,8 +98,8 @@ Danh sách xe của tuyến này dùng CHUNG màn với gian hàng từ 03/11/20
 | Icon bánh răng | Mở **Tài khoản & bảo mật** của NGƯỜI đăng nhập (`/account`; chủ xe tuyến hoa hồng: "Hồ sơ chủ xe"). "Cấu hình" trên menu là cài đặt của CỬA HÀNG. Điện thoại: ẩn icon, vào qua menu hồ sơ |
 | Khối hồ sơ | Bố cục design (ảnh tròn + chấm trực tuyến · tên người · mũi tên), nhưng **dòng 2 là "Gian hàng · Vai"** thay cho email: không lộ liên hệ khi chia sẻ màn hình, và đăng nhập site partner là SĐT. Chủ xe cá nhân chỉ hiện vai |
 | Menu hồ sơ | `useAccountMenuItems` — một bộ cho header, drawer mobile và topbar site quản trị: danh tính · Tài khoản & bảo mật · Cài đặt gian hàng (tuyến gói) · Ngôn ngữ · Đăng xuất |
-| Số đếm trên menu | **Chỉ số "cần xử lý"**: Yêu cầu đặt xe (chờ duyệt) · **Quản lý đơn thuê xe** = Chờ giao xe + Đang thuê · **Lịch thuê xe** = lượt giao + nhận hôm nay (chốt 02/11; nguồn `GET /dashboard/today`) · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
-| Số trên mục cấp 1 | Khi dropdown ĐÓNG, tổng số "cần xử lý" của khối hiện cạnh nhãn khối (cùng kiểu huy hiệu design) — để yêu cầu đang chờ không bị khuất. Design không vẽ chi tiết này; bỏ được nếu người dùng muốn |
+| Số đếm trên menu | **Chỉ số "cần xử lý"** — việc ĐẾN HẠN, không phải thống kê (chốt lại 04/11, thay bản 02/11): **Yêu cầu đặt xe** = chờ duyệt, đỏ khi có yêu cầu sắp hết hạn trả lời (`GET /dashboard/requests`, `pendingUrgent`) · **Quản lý đơn thuê xe** = lượt giao + trả hẹn tới hết hôm nay, gồm cả lượt quá giờ, mỗi đơn một lần (`pickupsDue + returnsDue` của `GET /dashboard/today`), đỏ khi có lượt quá giờ — KHÔNG còn đếm mọi đơn chờ giao / đang thuê · **Lịch thuê xe** của gian hàng KHÔNG mang số (trùng với Đơn ⇒ khối "Vận hành" đếm đôi); chủ xe tuyến hoa hồng không có bảng đơn nên số giao/trả đến hạn gắn ở Lịch xe · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
+| Số trên mục cấp 1 | Khi dropdown ĐÓNG, tổng số "cần xử lý" của khối hiện cạnh nhãn khối (khuôn `_Badge` của design) — để yêu cầu đang chờ không bị khuất. Màu CẢNH BÁO thay xám của design (04/11, người dùng chốt): cam = chờ xử lý, đỏ = có mục trễ / sắp trễ; tên truy cập được nói thêm "có việc gấp" để màu không là tín hiệu duy nhất. Áp chung cho huy hiệu sidebar/drawer/tab bar (`NavBadge`) |
 | Breadcrumb | Dải dưới header (biến thể Details) chỉ ở **trang con** của một mục (`/vehicles/:id`…) và ở **trang của mục ẩn**: biểu tượng khối › mục menu › `<h1>` của trang |
 | Màn hẹp | ≤1536: ẩn chữ khối hồ sơ · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
 | Mục cấp 1 đang chứa trang hiện tại | Design không tô (biến thể Details để "Vận hành" ở trạng thái thường) — làm theo design; vị trí trang nói bằng dòng sáng trong dropdown và breadcrumb |
@@ -325,10 +325,11 @@ Chính sách · Lịch thuê sắp tới · Hoạt động gần đây · Lối 
 | E17 | Bán kính giao xe · bảng phí giao theo km | 🟡 | Dưới công tắc giao tận nơi |
 | E18 | Hình ảnh: ô theo góc · ảnh bìa · xoá · thay · tải lên | ✅ | Theo design (section tự lưu như nay) |
 | E19 | Giấy tờ: danh sách · hạn · trạng thái · Xem · Thay file · ⋮ · ghi chú OCR · Thêm loại giấy tờ | ✅ | Theo design |
-| E20 | Bảo dưỡng: KM hiện tại + điều chỉnh tay (lý do) · chu kỳ thay nhớt · lịch sắp tới · lịch sử (hộp) | ✅ | Theo design |
+| E20 | Bảo dưỡng: KM hiện tại + điều chỉnh tay (lý do) · chu kỳ thay nhớt · lịch sắp tới · lịch sử (hộp) | ✅ | Theo design (04/11): lịch sắp tới là ô có viền (tên · ngày dự kiến · Odo · garage · chi phí · mã phiếu chi · ghi chú) + thùng rác/bút; "Xem lịch sử bảo dưỡng" mở hộp danh sách phiếu đã hoàn tất/đã huỷ; "Thêm lịch bảo dưỡng" cuối thẻ. **Chỉ MỘT "Ngày dự kiến"** (bỏ kết thúc dự kiến) và **không giữ chỗ lịch xe** — người dùng chốt 04/11, ADR 0079. "Hoàn tất" (ghi KM, dời mốc nhớt) không có trong design → giữ dạng nút chữ cạnh hai biểu tượng |
 | E21 | Thùng rác cạnh từng lần điều chỉnh KM | ⚠️ | Không xoá: sổ KM là nhật ký có kiểm toán (sửa bằng một lần điều chỉnh mới). Bỏ biểu tượng |
-| E22 | Thùng rác cạnh lịch bảo dưỡng | 🟡 | Là "Huỷ lịch" (đã có), bản ghi vào lịch sử với nhãn "Đã huỷ" |
+| E22 | Thùng rác cạnh lịch bảo dưỡng | ✅ | Là "Huỷ lịch" (hỏi lại trước), bản ghi vào lịch sử với nhãn "Đã huỷ" |
 | E23 | Nguồn gốc & tài chính: 4 hình thức · khoản vay · hợp đồng · ghi chú | ✅ | Hình thức thứ 4 design ghi "Cọc tiền" → dùng nhãn đúng "Hợp tác chia doanh thu"; ô hiện theo hình thức (thuê lại: chủ xe + tiền thuê; hợp tác: % chia) |
+| E23b | Nguồn gốc & tài chính — bố cục (04/11) | ✅ | Theo design `23730:32702`: bốn thẻ hình thức 2×2, icon tròn bên trái, không chấm radio; các khối thông tin + "Hợp đồng" cùng khuôn thẻ của màn sửa xe (ô tệp có icon · dung lượng · tải về/gỡ dạng biểu tượng). **Bỏ dải vàng "Hình thức sở hữu xe: …" đầu trang** (người dùng chê: dải nói hình thức đã lưu, thẻ sáng lại là thẻ vừa bấm → không biết xe đang thuộc gì): hình thức ĐÃ LƯU mang nhãn "Đang áp dụng" ngay trên thẻ của nó; chọn thẻ khác thì hiện dòng "Đổi từ X sang Y — chưa lưu" + nút "Giữ X". Nút "Cập nhật" trong thẻ hình thức của design KHÔNG làm: trùng nút "Lưu thay đổi" cột phải (E5). Công thức chia doanh thu vào ⓘ cạnh tiêu đề điều khoản |
 | E24 | Tuyến hoa hồng | 🟡 | **Cùng giao diện** (chốt 03/11): chi tiết + chỉnh sửa dùng chung; URL `/vehicles/[id]/manage/<mục>` cũ chuyển hướng. Chủ xe không có nhóm Vận hành nâng cao, tab Tài chính, Nguồn xe, Hiệu suất (như nay); "Lịch sử chuyến" là mục riêng của chủ xe |
 
 Trạng thái tự dựng (design không vẽ): đang tải · lỗi · không tìm thấy · không quyền · chỉ xem (phiên
@@ -340,14 +341,25 @@ hỗ trợ, thiếu `vehicles.update`) · dịch vụ đang tắt · xe máy · 
   mỗi form đăng ký, mỗi form vẫn ghi đúng endpoint của nó). Mục không có form (Giấy tờ, Bảo dưỡng,
   Lịch sử chuyến) không có hai nút; Bảo dưỡng giữ nút "Lưu" của thẻ chu kỳ nhớt như design.
   **Đính chính E5**: Hình ảnh KHÔNG tự lưu (xếp/tải xong mới lưu) — nó dùng nút cột phải như design vẽ.
-- **Form giá** tách logic ra `useVehiclePricingForm` và bày thành mảnh: giá + khuyến mãi + cọc/km/quá
-  giờ ở tab Tự lái · giá + ghi chú tiền công ở Có tài xế · giá tháng + gợi ý + ưu đãi ở Dài hạn · giao
-  xe ở Giao nhận. Vẫn MỘT lệnh `PUT /vehicles/:id/pricing` trọn gói; lưu trượt vì ô lỗi ở tab khác
-  thì tự mở tab đó. Tải giá lỗi chỉ chặn phần giá — công tắc dịch vụ/tự nhận vẫn dùng được.
-- **Công tắc "Áp dụng chính sách của gian hàng"** (E14) đặt đầu mục Dịch vụ xe; khối khác hiện dòng
-  nhắc kèm lối tới công tắc. Tuyến hoa hồng không có công tắc (sửa thẳng, như màn giá cũ của họ).
-- **Điều kiện** chỉ còn giấy tờ · đối chiếu · đồng ý điều khoản · điều khoản (hai khối); cọc + km
-  dời sang tab Tự lái. Xe máy không có khối Có tài xế.
+- **Nhóm "Hình thức cho thuê" có HAI mục thay ba của design** (người dùng chốt 03/11 — lệch design):
+  - **Dịch vụ & giá** (`?tab=self-drive|with-driver|long-term`): công tắc dịch vụ · tự nhận chuyến ·
+    giá + khuyến mãi theo từng dịch vụ (ưu đãi dài hạn ở tab Dài hạn).
+  - **Chính sách thuê** (`?tab=policy`, gộp "Điều kiện" + "Giao nhận"): mọi thứ áp cho CẢ XE. Một thẻ
+    phẳng (hàng cách vạch như design) chứa công tắc "Áp dụng chính sách của gian hàng" (E14 — MỘT
+    công tắc cho cả bộ chính sách, đặt ngay trên phần giao xe) · giao xe tận nơi · cọc · hạn mức km ·
+    quá giờ; rồi thời gian chuẩn bị xe; rồi giấy tờ & điều khoản (hai khối, xe máy không có khối Có
+    tài xế — điều khoản không có bản của gian hàng nên công tắc không áp).
+  - `?tab=conditions|handover|operations|handover-time|*-terms` và `/manage/<mục>` cũ đều về
+    "Chính sách thuê". Tuyến hoa hồng không có công tắc (sửa thẳng).
+- **Form giá** tách logic ra `useVehiclePricingForm`; vẫn MỘT lệnh `PUT /vehicles/:id/pricing` trọn
+  gói chia ra hai mục. Lưu trượt vì ô lỗi ở tab khác cùng mục thì tự mở tab đó; ô lỗi ở mục KIA thì
+  nhắc mở mục kia. Tải giá lỗi chỉ chặn phần giá — công tắc dịch vụ/tự nhận vẫn dùng được.
+- **Bố cục phẳng của khối chính sách** (`PolicyFlatLayout`): không thẻ lồng thẻ; dòng nhắc trùng với
+  công tắc/lựa chọn ngay cạnh bị bỏ ("Không thu cọc…", "Không giới hạn quãng đường…", "Đang theo
+  chính sách gian hàng" ở từng khối, "Áp cho mọi dịch vụ"); công thức quá giờ/vượt km, tóm tắt bậc
+  giao xe và phạm vi thời gian chuẩn bị đi vào icon ⓘ. Trang chính sách gian hàng giữ bố cục thẻ.
+- **Gỡ (ADR 0078)**: khung giờ giao/nhận xe (cả hệ thống — xe nhận/trả mọi giờ) và phí giao xe
+  theo km (mỗi bậc một phí trọn gói; bậc theo km cũ quy đổi `perKm × toKm`).
 - **Tuyến hoa hồng** (E24): `workspaceVehiclePaths` trỏ chi tiết + sửa về route chung; `isCommissionPage`
   nhận `/vehicles/<id>/edit`; `/vehicles/<id>/manage/[[...section]]` (cả bản phiên hỗ trợ) chuyển
   hướng theo `editTabOfLegacyManageSection`. Giữ đúng bộ ô cũ của chủ xe (không tên/chi nhánh/thông
@@ -365,7 +377,8 @@ hỗ trợ, thiếu `vehicles.update`) · dịch vụ đang tắt · xe máy · 
   cho toast "chưa gửi xe duyệt được" (áp cả trang chi tiết xe, cùng component).
 - Khoá chữ cũ `Vehicles.edit.*` / `VehicleManage.*` GIỮ NGUYÊN — app mobile vẫn đọc chúng.
 - Ba mục Giấy tờ · Bảo dưỡng · Nguồn gốc dùng lại component hiện có trong khung mới; bố cục bên
-  trong chưa chỉnh từng chi tiết theo design (thẻ nguồn xe dạng ô có icon, bảng giấy tờ).
+  trong chưa chỉnh từng chi tiết theo design (thẻ nguồn xe dạng ô có icon, bảng giấy tờ). Riêng thẻ
+  "Lịch bảo dưỡng sắp tới" + hộp lịch sử bảo dưỡng đã theo design (04/11, xem E20).
 
 ## 4. Node Figma đã dùng
 

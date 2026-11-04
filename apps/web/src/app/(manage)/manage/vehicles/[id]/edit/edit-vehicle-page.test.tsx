@@ -316,7 +316,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
 
   /**
    * Menu trái ba nhóm (03/11/2026). Không khối nào của bản 30/09 biến mất: giá + tự nhận chuyến
-   * nằm trong "Dịch vụ xe", thủ tục ở "Điều kiện", giao xe + khung giờ ở "Giao nhận".
+   * nằm trong "Dịch vụ & giá"; cọc, giao xe, thời gian chuẩn bị xe và điều khoản ở "Chính sách thuê".
    */
   it('menu trái ba nhóm, mục là nút có aria-current; số đếm giấy tờ x/3', () => {
     renderPage();
@@ -332,9 +332,8 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
       'Thông tin chung',
       'Hình ảnh',
       'Giấy tờ xe',
-      'Dịch vụ xe',
-      'Điều kiện',
-      'Giao nhận',
+      'Dịch vụ & giá',
+      'Chính sách thuê',
       'Bảo dưỡng & số KM',
       'Nguồn gốc & tài chính xe',
     ]);
@@ -364,13 +363,16 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
   });
 
   it.each([
-    ['pricing', 'Dịch vụ xe'],
-    ['self-drive-optimization', 'Dịch vụ xe'],
-    ['with-driver-surcharges', 'Dịch vụ xe'],
-    ['operations', 'Giao nhận'],
-    ['handover-time', 'Giao nhận'],
-    ['self-drive-terms', 'Điều kiện'],
-    ['with-driver-terms', 'Điều kiện'],
+    ['pricing', 'Dịch vụ & giá'],
+    ['self-drive-optimization', 'Dịch vụ & giá'],
+    ['with-driver-surcharges', 'Dịch vụ & giá'],
+    // Hai mục của menu sáng 03/11 gộp thành "Chính sách thuê" — link cũ tới chúng vẫn mở đúng chỗ.
+    ['conditions', 'Chính sách thuê'],
+    ['handover', 'Chính sách thuê'],
+    ['operations', 'Chính sách thuê'],
+    ['handover-time', 'Chính sách thuê'],
+    ['self-drive-terms', 'Chính sách thuê'],
+    ['with-driver-terms', 'Chính sách thuê'],
   ])('link cũ ?tab=%s mở đúng mục "%s"', (tab, label) => {
     url.search = `tab=${tab}`;
     renderPage();
@@ -380,7 +382,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
     );
   });
 
-  it('?tab=with-driver-surcharges mở tab Có tài xế của mục Dịch vụ xe', () => {
+  it('?tab=with-driver-surcharges mở tab Có tài xế của mục Dịch vụ & giá', () => {
     url.search = 'tab=with-driver-surcharges';
     renderPage();
     expect(screen.getByRole('tab', { name: /Xe có tài xế/ }).getAttribute('aria-selected')).toBe(
@@ -388,9 +390,9 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
     );
   });
 
-  it('Dịch vụ xe: giá nhúng thẳng trong tab dịch vụ — lỗi tải giá chỉ chặn phần giá', async () => {
+  it('Dịch vụ & giá: giá nhúng thẳng trong tab dịch vụ — lỗi tải giá chỉ chặn phần giá', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Dịch vụ xe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dịch vụ & giá' }));
     expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Cho thuê tự lái' })).toBeTruthy();
   });
@@ -598,9 +600,8 @@ describe('/vehicles/[id]/edit — chủ xe tuyến hoa hồng', () => {
       'Hình ảnh',
       'Giấy tờ xe',
       'Lịch sử chuyến',
-      'Dịch vụ xe',
-      'Điều kiện',
-      'Giao nhận',
+      'Dịch vụ & giá',
+      'Chính sách thuê',
     ]);
     expect(screen.queryByLabelText(/Tên xe/)).toBeNull();
     expect(screen.queryByLabelText(/Chi nhánh giữ xe/)).toBeNull();

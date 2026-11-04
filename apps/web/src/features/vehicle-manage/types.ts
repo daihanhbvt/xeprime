@@ -8,7 +8,6 @@ type Schemas = components['schemas'];
 
 export type VehicleOperationSettings = Schemas['VehicleOperationSettingsDto'];
 export type SaveVehicleOperationSettingsInput = Schemas['SaveVehicleOperationSettingsDto'];
-export type HandoverWindow = Schemas['HandoverWindowDto'];
 
 export type VehicleServiceSetting = Schemas['VehicleServiceSettingDto'];
 export type PatchVehicleServiceSettingInput = Schemas['PatchVehicleServiceSettingDto'];

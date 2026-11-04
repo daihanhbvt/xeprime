@@ -78,19 +78,32 @@
   margin-top: var(--xp-space-sm);
 }
 
-/* ── Phiếu bảo dưỡng ── */
-.recordRow {
+/* ── Phiếu bảo dưỡng (ô có viền như design) ── */
+.cardLink.cardLink {
+  padding-inline: 0;
+  color: var(--xp-color-primary);
+}
+
+.cardLink.cardLink:hover {
+  color: var(--xp-color-primary-hover);
+  background: transparent;
+}
+
+.recordList,
+.historyRecords {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: var(--xp-space-sm);
 }
 
-.recordBody {
+.recordItem {
   display: flex;
   min-width: 0;
-  flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
 }
 
 .recordHead {
@@ -100,30 +113,60 @@
   gap: var(--xp-space-xs);
 }
 
-.recordMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.recordCost {
+.recordTitle {
+  min-width: 0;
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-medium);
-}
-
-.recordNotes {
-  margin: 2px 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
 }
 
 .recordActions {
   display: flex;
   flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.completeLink.completeLink {
+  color: var(--xp-color-primary);
+}
+
+/* Cột theo độ dài nội dung như design; hết chỗ thì xuống hàng gọn, không bẻ nhãn. */
+.recordFacts {
+  display: flex;
   flex-wrap: wrap;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-sm) var(--xp-space-xl);
+  margin: 0;
+}
+
+.recordFact {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.recordFact dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.recordFact dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.recordNotes {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.addRecord {
+  align-self: flex-start;
+  margin-top: var(--xp-space-md);
 }
 
 .emptyText {
@@ -173,10 +216,6 @@
   min-width: 0;
   flex-direction: column;
   gap: var(--xp-space-sm);
-}
-
-.conflictAlert {
-  margin-bottom: var(--xp-space-xs);
 }
 
 .attachmentNote {
@@ -235,16 +274,13 @@
     font-size: var(--xp-font-size-heading-md);
   }
 
-  .recordRow {
-    flex-wrap: wrap;
-  }
-
-  .recordActions {
-    width: 100%;
-  }
-
   /* Touch target tối thiểu 44px trên mobile (docs §12.7). */
-  .recordActions :global(.ant-btn) {
+  .recordActions :global(.ant-btn),
+  .addRecord {
     min-height: 44px;
+  }
+
+  .recordActions :global(.ant-btn-icon-only) {
+    min-width: 44px;
   }
 }

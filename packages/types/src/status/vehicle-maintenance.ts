@@ -133,7 +133,10 @@ export const MAINTENANCE_STATUS_TRANSITIONS: Readonly<
   [MAINTENANCE_STATUS.CANCELED]: [],
 };
 
-/** Trạng thái chiếm lịch: chỉ lịch còn hiệu lực mới giữ chỗ trên `vehicle_occupancies`. */
+/**
+ * Trạng thái của phiếu còn MỞ (chưa xong, chưa huỷ). Tên giữ từ thời phiếu còn giữ chỗ trên
+ * `vehicle_occupancies` — từ ADR 0079 phiếu không giữ chỗ lịch xe nữa.
+ */
 export const MAINTENANCE_STATUS_HOLDING_SCHEDULE: readonly MaintenanceStatus[] = [
   MAINTENANCE_STATUS.SCHEDULED,
   MAINTENANCE_STATUS.IN_PROGRESS,

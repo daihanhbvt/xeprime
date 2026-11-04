@@ -33,10 +33,9 @@ import { decorativeIcon } from '@/lib/decorative-icon';
 
 import { useVehicleCapabilities } from '../hooks/use-vehicle-capabilities';
 import type { UpdateVehicleInput, VehicleDetail } from '../types';
-import { ConditionsPane } from './edit/ConditionsPane';
 import { EditActionsProvider, useEditActions } from './edit/edit-actions';
-import { HandoverPane } from './edit/HandoverPane';
 import { InformationPane } from './edit/InformationPane';
+import { PolicyPane } from './edit/PolicyPane';
 import { ServicesPane } from './edit/ServicesPane';
 import { VehicleEditMenu, type EditMenuBadge } from './edit/VehicleEditMenu';
 import { VehicleEditSummary } from './edit/VehicleEditSummary';
@@ -68,7 +67,8 @@ function parseTab(value: string | null): VehicleEditTab {
 
 /**
  * Màn sửa xe (design `23731:37932`, 03/11/2026) — menu trái ba nhóm · nội dung mục · cột phải
- * (thẻ tóm tắt + "Hoàn tác · Lưu thay đổi" của mục đang mở).
+ * (thẻ tóm tắt + "Hoàn tác · Lưu thay đổi" của mục đang mở). Nhóm "Hình thức cho thuê" có HAI mục
+ * thay cho ba của design: "Dịch vụ & giá" (theo từng dịch vụ) và "Chính sách thuê" (áp cho cả xe).
  *
  * MỘT màn cho cả hai tuyến (sổ cái §3.6 E24): chủ xe tuyến hoa hồng có thêm "Lịch sử chuyến",
  * không có nhóm "Vận hành nâng cao" (năng lực của gói), sửa chính sách thẳng thay vì qua công tắc
@@ -192,12 +192,12 @@ function Workspace({ vehicle, errorMessage, onSave }: VehicleEditWorkspaceProps)
   const openMedia = tabEnabled(VEHICLE_EDIT_TAB.MEDIA)
     ? () => requestTab(VEHICLE_EDIT_TAB.MEDIA)
     : undefined;
-  const openConditions = tabEnabled(VEHICLE_EDIT_TAB.CONDITIONS)
-    ? () => requestTab(VEHICLE_EDIT_TAB.CONDITIONS)
+  const openPolicy = tabEnabled(VEHICLE_EDIT_TAB.POLICY)
+    ? () => requestTab(VEHICLE_EDIT_TAB.POLICY)
     : undefined;
   /*
-   * Khối vận hành (giao nhận, tự nhận chuyến, thiết lập có tài xế) trong phiên hỗ trợ còn đòi
-   * capability riêng `VEHICLE_OPERATIONS_UPDATE` — đúng phép nhân của khối vận hành cũ.
+   * Khối vận hành (thời gian chuẩn bị xe, tự nhận chuyến, thiết lập có tài xế) trong phiên hỗ trợ
+   * còn đòi capability riêng `VEHICLE_OPERATIONS_UPDATE` — đúng phép nhân của khối vận hành cũ.
    */
   const canEditOperations = canUpdate && canOperate;
   const managed = { vehicle, canEdit: canUpdate };
@@ -229,20 +229,17 @@ function Workspace({ vehicle, errorMessage, onSave }: VehicleEditWorkspaceProps)
           tab={activeTab}
           canUpdate={canUpdate}
           onTab={requestTab}
-          onOpenConditions={openConditions}
+          onOpenPolicy={openPolicy}
         />
       );
       break;
-    case EDIT_MENU.CONDITIONS:
-      content = <ConditionsPane vehicle={vehicle} canEdit={canUpdate} scrollTo={initial.termsOf} />;
-      break;
-    case EDIT_MENU.HANDOVER:
+    case EDIT_MENU.POLICY:
       content = (
-        <HandoverPane
+        <PolicyPane
           vehicle={vehicle}
-          canEdit={canEditOperations}
-          canEditPricing={canUpdate}
-          onOpenServices={() => requestTab(tabOfMenu(EDIT_MENU.SERVICES, services))}
+          canUpdate={canUpdate}
+          canEditOperations={canEditOperations}
+          scrollTo={initial.termsOf}
         />
       );
       break;

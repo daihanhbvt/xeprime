@@ -4,7 +4,7 @@ import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/routes';
 
 /**
  * MỤC của menu trái màn sửa xe (design `23731:37932`, 03/11/2026). Khác `VehicleEditTab` ở đúng một
- * chỗ: "Dịch vụ xe" là MỘT mục mà ba giá trị `?tab=` (tự lái · có tài xế · dài hạn) cùng thuộc về.
+ * chỗ: "Dịch vụ & giá" là MỘT mục mà ba giá trị `?tab=` (tự lái · có tài xế · dài hạn) cùng thuộc về.
  */
 export const EDIT_MENU = {
   INFORMATION: VEHICLE_EDIT_TAB.INFORMATION,
@@ -12,8 +12,7 @@ export const EDIT_MENU = {
   DOCUMENTS: VEHICLE_EDIT_TAB.DOCUMENTS,
   TRIP_HISTORY: VEHICLE_EDIT_TAB.TRIP_HISTORY,
   SERVICES: 'services',
-  CONDITIONS: VEHICLE_EDIT_TAB.CONDITIONS,
-  HANDOVER: VEHICLE_EDIT_TAB.HANDOVER,
+  POLICY: VEHICLE_EDIT_TAB.POLICY,
   MAINTENANCE: VEHICLE_EDIT_TAB.MAINTENANCE,
   SOURCE: VEHICLE_EDIT_TAB.SOURCE,
 } as const;
@@ -32,7 +31,7 @@ export type EditMenuGroup = (typeof EDIT_MENU_GROUP)[keyof typeof EDIT_MENU_GROU
  * | Nhóm | Mục |
  * | --- | --- |
  * | Hồ sơ xe | Thông tin chung · Hình ảnh · Giấy tờ xe · Lịch sử chuyến (chỉ chủ xe tuyến hoa hồng) |
- * | Hình thức cho thuê | Dịch vụ xe · Điều kiện · Giao nhận |
+ * | Hình thức cho thuê | Dịch vụ & giá · Chính sách thuê |
  * | Vận hành nâng cao | Bảo dưỡng & số KM · Nguồn gốc & tài chính xe (tuyến gói) |
  *
  * Mục nào có mặt với NGƯỜI NÀY do nơi gọi quyết (quyền ∧ cờ gói ∧ tuyến ∧ phiên hỗ trợ); nhóm rỗng
@@ -48,7 +47,7 @@ export const EDIT_MENU_GROUPS: ReadonlyArray<{
   },
   {
     key: EDIT_MENU_GROUP.RENTAL,
-    items: [EDIT_MENU.SERVICES, EDIT_MENU.CONDITIONS, EDIT_MENU.HANDOVER],
+    items: [EDIT_MENU.SERVICES, EDIT_MENU.POLICY],
   },
   { key: EDIT_MENU_GROUP.ADVANCED, items: [EDIT_MENU.MAINTENANCE, EDIT_MENU.SOURCE] },
 ];
@@ -90,8 +89,8 @@ export function tabOfMenu(key: EditMenuKey, services: readonly string[]): Vehicl
 }
 
 /**
- * Bí danh `?tab=` → mục thật, kèm dịch vụ cần cuộn tới ở mục Điều kiện. Link cũ (cảnh báo, Hồ sơ
- * 360, email, route `/pricing` · `/optimization`, menu 30/09) vẫn mở đúng chỗ.
+ * Bí danh `?tab=` → mục thật, kèm dịch vụ cần cuộn tới ở khối điều khoản của mục Chính sách thuê.
+ * Link cũ (cảnh báo, Hồ sơ 360, email, route `/pricing` · `/optimization`, menu trước) vẫn mở đúng chỗ.
  */
 export function resolveEditTab(
   tab: VehicleEditTab,
@@ -100,9 +99,15 @@ export function resolveEditTab(
   switch (tab) {
     case VEHICLE_EDIT_TAB.PRICING:
       return { tab: defaultServiceTab(services), termsOf: null };
+    /*
+     * Gộp 03/11/2026 (sổ cái §3.6): "Điều kiện" và "Giao nhận" của menu trước nay là MỘT mục
+     * "Chính sách thuê" — giá dịch vụ ở mục kia, mọi thứ áp cho CẢ XE ở mục này.
+     */
+    case VEHICLE_EDIT_TAB.CONDITIONS:
+    case VEHICLE_EDIT_TAB.HANDOVER:
     case VEHICLE_EDIT_TAB.OPERATIONS:
     case VEHICLE_EDIT_TAB.HANDOVER_TIME:
-      return { tab: VEHICLE_EDIT_TAB.HANDOVER, termsOf: null };
+      return { tab: VEHICLE_EDIT_TAB.POLICY, termsOf: null };
     case VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION:
       /*
        * Hành vi của route cũ `/optimization`: xe chỉ có dịch vụ có tài xế thì mở thẳng tab đó —
@@ -119,9 +124,9 @@ export function resolveEditTab(
     case VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES:
       return { tab: VEHICLE_EDIT_TAB.WITH_DRIVER, termsOf: null };
     case VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS:
-      return { tab: VEHICLE_EDIT_TAB.CONDITIONS, termsOf: SERVICE_TYPE.SELF_DRIVE };
+      return { tab: VEHICLE_EDIT_TAB.POLICY, termsOf: SERVICE_TYPE.SELF_DRIVE };
     case VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS:
-      return { tab: VEHICLE_EDIT_TAB.CONDITIONS, termsOf: SERVICE_TYPE.WITH_DRIVER };
+      return { tab: VEHICLE_EDIT_TAB.POLICY, termsOf: SERVICE_TYPE.WITH_DRIVER };
     default:
       return { tab, termsOf: null };
   }

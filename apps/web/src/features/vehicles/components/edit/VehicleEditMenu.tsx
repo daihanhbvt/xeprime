@@ -5,10 +5,9 @@ import {
   CarOutlined,
   FileTextOutlined,
   HistoryOutlined,
-  InfoCircleOutlined,
   PictureOutlined,
+  SafetyCertificateOutlined,
   SettingOutlined,
-  SwapOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
@@ -25,8 +24,7 @@ const ICON: Readonly<Record<EditMenuKey, ComponentType>> = {
   [EDIT_MENU.DOCUMENTS]: FileTextOutlined,
   [EDIT_MENU.TRIP_HISTORY]: HistoryOutlined,
   [EDIT_MENU.SERVICES]: AppstoreOutlined,
-  [EDIT_MENU.CONDITIONS]: InfoCircleOutlined,
-  [EDIT_MENU.HANDOVER]: SwapOutlined,
+  [EDIT_MENU.POLICY]: SafetyCertificateOutlined,
   [EDIT_MENU.MAINTENANCE]: SettingOutlined,
   [EDIT_MENU.SOURCE]: WalletOutlined,
 };

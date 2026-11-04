@@ -61,7 +61,7 @@ vi.mock('@/hooks/use-feature', () => ({
 // Huy hiệu lấy từ hai query thật (chat + yêu cầu đặt xe) — chặn ở ranh giới đó, test này lo
 // điều hướng chứ không lo con số.
 vi.mock('./use-nav-badges', () => ({
-  useNavBadges: () => ({ bookingRequestsPending: 0, chatUnread: 0 }),
+  useNavBadges: () => ({ counts: { bookingRequestsPending: 0, chatUnread: 0 }, urgent: {} }),
 }));
 
 // Thẻ người dùng gọi `destroySession`/router riêng — không thuộc phạm vi test điều hướng.

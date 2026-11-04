@@ -2,6 +2,7 @@ import { useId, type ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
 
+import panes from './EditPanes.module.css';
 import styles from './VehicleEditShell.module.css';
 
 /**
@@ -48,5 +49,29 @@ export function EditCard({
       ) : null}
       {children}
     </section>
+  );
+}
+
+/** Hàng "tiêu đề + mô tả · công tắc" trong thẻ — công tắc dịch vụ, tự nhận chuyến, chính sách gian hàng. */
+export function EditToggleRow({
+  title,
+  hint,
+  control,
+  children,
+}: {
+  title: ReactNode;
+  hint?: ReactNode;
+  control: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={panes.toggleRow}>
+      <div className={panes.toggleText}>
+        <h3 className={panes.toggleTitle}>{title}</h3>
+        {hint ? <p className={panes.toggleHint}>{hint}</p> : null}
+        {children}
+      </div>
+      {control}
+    </div>
   );
 }

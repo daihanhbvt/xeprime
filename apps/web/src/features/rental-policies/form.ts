@@ -1,9 +1,4 @@
-import {
-  COLLATERAL_MODE,
-  DELIVERY_TIER_FEE_MODE,
-  isPerKmDeliveryTier,
-  type LongTermPackageMonths,
-} from '@xeprime/types';
+import { COLLATERAL_MODE, isPerKmDeliveryTier, type LongTermPackageMonths } from '@xeprime/types';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -46,19 +41,14 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
     deliveryEnabled: policy.deliveryEnabled,
     deliveryMaxRadiusKm: policy.deliveryMaxRadiusKm ?? null,
     /*
-     * Bậc trọn gói hoặc theo km (ADR 0064): radio `feeMode` là trường của FORM, suy từ việc bậc
-     * mang `perKm` hay `fee`; ô của dạng kia để trống để chuyển qua lại không mang số cũ theo.
+     * Mỗi bậc MỘT phí trọn gói — phí theo km đã gỡ (ADR 0078) và migration đã đổi mọi bậc theo km
+     * thành trọn gói. Một bậc theo km còn sót (dữ liệu lạ) hiện ô phí TRỐNG để chủ xe tự nhập,
+     * không đoán ra một con số.
      */
-    deliveryTiers: policy.deliveryTiers.map((t) =>
-      isPerKmDeliveryTier(t)
-        ? {
-            toKm: t.toKm,
-            feeMode: DELIVERY_TIER_FEE_MODE.PER_KM,
-            fee: null,
-            perKm: toNumber(t.perKm),
-          }
-        : { toKm: t.toKm, feeMode: DELIVERY_TIER_FEE_MODE.FLAT, fee: toNumber(t.fee), perKm: null },
-    ),
+    deliveryTiers: policy.deliveryTiers.map((t) => ({
+      toKm: t.toKm,
+      fee: isPerKmDeliveryTier(t) ? null : toNumber(t.fee),
+    })),
     /*
      * Công tắc suy ra từ DỮ LIỆU, không lưu riêng: API chỉ biết "cả hai null = không giới hạn".
      * Đủ một trong hai là đang có hạn mức — bật công tắc để chủ xe thấy ngay ô còn thiếu, thay
@@ -94,12 +84,10 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       values.collateralMode === COLLATERAL_MODE.CASH ? toMoneyString(values.depositAmount) : '0',
     deliveryEnabled: values.deliveryEnabled,
     deliveryMaxRadiusKm: values.deliveryEnabled ? (values.deliveryMaxRadiusKm ?? null) : null,
-    // Đúng MỘT dạng mỗi bậc — server từ chối bậc mang cả `fee` lẫn `perKm`.
-    deliveryTiers: (values.deliveryTiers ?? []).map((t) =>
-      t.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM
-        ? { toKm: t.toKm ?? 0, perKm: toMoneyString(t.perKm) }
-        : { toKm: t.toKm ?? 0, fee: toMoneyString(t.fee) },
-    ),
+    deliveryTiers: (values.deliveryTiers ?? []).map((t) => ({
+      toKm: t.toKm ?? 0,
+      fee: toMoneyString(t.fee),
+    })),
     /*
      * Tắt công tắc ⇒ gửi CẢ HAI về null, không giữ lại số cũ. Gửi nửa cặp là thứ
      * `PricingService.validatePolicy` và CHECK ở DB từ chối, và giữ lại số cũ là để một hạn mức

@@ -127,9 +127,11 @@ function makeOverview(over: Partial<PartnerOverview> = {}): PartnerOverview {
       awaitingPickup: 4,
       pickupsToday: 2,
       pickupsOverdue: 1,
+      pickupsDue: 2,
       active: 3,
       returnsToday: 0,
       returnsOverdue: 0,
+      returnsDue: 0,
     },
     requests: { pending: 3, pendingUrgent: 1, nextRespondBy: inHours(0.25), awaitingPayment: 2 },
     agenda: {
@@ -262,7 +264,16 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
 
   it('không có việc gì: câu "yên ả" nói rõ ra, ô nói một câu thay vì số 0 to', async () => {
     state.overview = makeOverview({
-      today: { awaitingPickup: 0, pickupsToday: 0, pickupsOverdue: 0, active: 0, returnsToday: 0, returnsOverdue: 0 },
+      today: {
+        awaitingPickup: 0,
+        pickupsToday: 0,
+        pickupsOverdue: 0,
+        pickupsDue: 0,
+        active: 0,
+        returnsToday: 0,
+        returnsOverdue: 0,
+        returnsDue: 0,
+      },
       requests: { pending: 0, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
       agenda: { items: [], hasMore: false },
     });

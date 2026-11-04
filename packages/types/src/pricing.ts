@@ -127,9 +127,10 @@ export const COLLATERAL_ASSET_TYPE_LABEL: Readonly<Record<CollateralAssetType, s
  *
  *  - **Trọn gói** `{ toKm, fee }` — một số tiền cho cả bậc, `'0'` = miễn phí. Đây là dạng DUY NHẤT
  *    trước 21/10/2026, nên mọi dòng `delivery_tiers_json` cũ vẫn đọc đúng mà không cần migration.
- *  - **Theo km** `{ toKm, perKm }` — `phí = perKm × khoảng cách`, làm tròn tới bước giá 1.000đ
- *    (`deliveryTierFee` ở `@xeprime/domain`). Dùng cho bậc xa, nơi một con số trọn gói hoặc lỗ ở
- *    đầu xa hoặc đắt ở đầu gần.
+ *  - **Theo km** `{ toKm, perKm }` — `phí = perKm × khoảng cách` (`deliveryTierFee` ở
+ *    `@xeprime/domain`). **ĐÃ GỠ ở ADR 0078 (03/11/2026)**: migration đổi mọi bậc theo km trên
+ *    chính sách đang dùng thành trọn gói, server từ chối bậc mới mang `perKm`. Dạng này chỉ còn
+ *    trong snapshot đã đóng băng (phiếu duyệt xe, báo giá cũ) — bên đọc vẫn phải hiểu nó.
  *
  * `fee`/`perKm` đều là VND string bội 1.000đ (ADR 0007). Union có `?: undefined` ở nhánh kia để
  * `tier.fee`/`tier.perKm` đọc được mà không phải thu hẹp kiểu trước.
@@ -151,8 +152,10 @@ export interface DeliveryPerKmTier {
 }
 
 /**
- * Cách tính phí của MỘT bậc — trường của FORM (radio Trọn gói / Theo km), không đi lên dây: trên
- * dây dạng bậc suy từ việc nó mang `fee` hay `perKm`.
+ * Cách tính phí của MỘT bậc — trường của FORM, không đi lên dây.
+ *
+ * @deprecated ADR 0078 — phí theo km đã gỡ, mỗi bậc chỉ còn trọn gói; server từ chối `perKm`.
+ * Giữ cho app Partner bản cũ biên dịch được.
  */
 export const DELIVERY_TIER_FEE_MODE = {
   FLAT: 'flat',

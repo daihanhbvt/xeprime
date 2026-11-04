@@ -950,7 +950,8 @@
       "monthlyInterestPlaceholder": "VD: 3.187.500",
       "endDate": "Ngày kết thúc hợp đồng (nếu biết)",
       "interestMethod": "Phương pháp tính lãi",
-      "monthlyTotal": "Tổng phải đóng mỗi tháng (gốc + lãi): {amount}"
+      "monthlyTotal": "Tổng phải đóng mỗi tháng (gốc + lãi): {amount}",
+      "monthlyTotalRich": "Tổng phải đóng mỗi tháng (gốc + lãi): <b>{amount}</b>"
     },
     "rented": {
       "ownerTitle": "Thông tin chủ xe (Bên cho thuê)",
@@ -983,7 +984,8 @@
       "shopShare": "Phần giữ lại của gian hàng: <b>{percent}</b>",
       "startDate": "Ngày hợp đồng bắt đầu có hiệu lực",
       "endDate": "Ngày kết thúc hợp đồng",
-      "formula": "Công thức tính: Doanh thu được chia = tiền thuê sau giảm giá. Không bao gồm: tiền cọc hoàn lại, phí giao nhận, phí quá giờ, phạt/phí bồi thường hư hỏng và các khoản thu hộ khác."
+      "formula": "Công thức tính: Doanh thu được chia = tiền thuê sau giảm giá. Không bao gồm: tiền cọc hoàn lại, phí giao nhận, phí quá giờ, phạt/phí bồi thường hư hỏng và các khoản thu hộ khác.",
+      "formulaTip": "Cách tính doanh thu được chia"
     },
     "validation": {
       "sourceTypeRequired": "Chọn hình thức nguồn xe",
@@ -1010,7 +1012,10 @@
       "moneyTypeError": "Vui lòng nhập số",
       "moneyInteger": "Số tiền phải là số nguyên",
       "moneyMin": "Số tiền không được âm"
-    }
+    },
+    "typeCurrent": "Đang áp dụng",
+    "typeChange": "Đổi từ <b>{from}</b> sang <b>{to}</b> — chưa lưu. Bấm “Lưu thay đổi” để áp dụng.",
+    "typeKeep": "Giữ {label}"
   },
   "pricing": {
     "title": "Giá & chính sách",
@@ -1641,9 +1646,8 @@
         "media": "Hình ảnh",
         "documents": "Giấy tờ xe",
         "trip-history": "Lịch sử chuyến",
-        "services": "Dịch vụ xe",
-        "conditions": "Điều kiện",
-        "handover": "Giao nhận",
+        "services": "Dịch vụ & giá",
+        "policy": "Chính sách thuê",
         "maintenance": "Bảo dưỡng & số KM",
         "source": "Nguồn gốc & tài chính xe"
       },
@@ -1709,7 +1713,7 @@
           "title": "Thuê xe dài hạn",
           "target": "khách thuê dài hạn"
         },
-        "hint": "Bật để nhận {service}. Điều kiện nhận chuyến ở mục <conditions>Điều kiện</conditions>."
+        "hint": "Bật để nhận {service}. Cọc, giao xe và điều khoản ở mục <conditions>Chính sách thuê</conditions>."
       },
       "offNote": "Dịch vụ đang tắt — bật ở trên để đặt giá và nhận chuyến cho dịch vụ này.",
       "price": {
@@ -1717,26 +1721,24 @@
         "titlePromo": "Giá thuê & Khuyến mãi"
       },
       "policy": {
-        "selfDriveTitle": "Thủ tục & Điều khoản cho thuê",
         "longTermTitle": "Ưu đãi thuê dài hạn (trên 1 tháng)"
       },
-      "extras": "Khác"
+      "extras": "Khác",
+      "policyInvalid": "Mục Chính sách thuê còn ô chưa hợp lệ — mở mục đó để sửa rồi lưu lại."
     },
     "policy": {
       "useShop": "Áp dụng chính sách của gian hàng",
-      "useShopHint": "Khi bật, xe tự đồng bộ theo <policies>chính sách chung</policies> của gian hàng: cọc, hạn mức km, phí quá giờ, giao xe và ưu đãi dài hạn.",
-      "customActive": "Xe đang dùng chính sách riêng. Bật lại để quay về chính sách gian hàng — tuỳ chỉnh của xe sẽ mất.",
+      "useShopHint": "Khi bật, xe tự đồng bộ theo <policies>chính sách chung</policies> của gian hàng: giao xe, cọc, hạn mức km, phí quá giờ và ưu đãi dài hạn.",
       "inherited": "Đang theo <policies>chính sách gian hàng</policies>. Tắt \"Áp dụng chính sách của gian hàng\" ở đầu mục để sửa riêng cho xe này.",
-      "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở mục <switch>Dịch vụ xe</switch>."
+      "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở đầu mục <switch>Chính sách thuê</switch>.",
+      "deliveryTitle": "Giao xe tận nơi",
+      "rulesTitle": "Giao xe, cọc & phụ phí",
+      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ (ví dụ chưa có giá ngày thường) — mở mục đó để sửa rồi lưu lại.",
+      "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào"
     },
     "conditions": {
       "selfDriveTitle": "Thuê xe tự lái & Thuê xe dài hạn",
       "withDriverTitle": "Xe có tài xế"
-    },
-    "handover": {
-      "title": "Giao nhận xe",
-      "delivery": "Dịch vụ giao nhận xe tận nơi",
-      "windowsTitle": "Khung giờ giao & nhận xe"
     }
   }
 }

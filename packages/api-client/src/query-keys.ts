@@ -387,8 +387,10 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     /** `GET /dashboard/overview` — khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
     overview: (params: QueryParams) => ['dashboard', 'overview', params] as const,
-    /** `GET /dashboard/today` — số trên menu site partner (đơn cần xử lý, giao/nhận hôm nay). */
+    /** `GET /dashboard/today` — số trên menu site partner (lượt giao/trả đến hạn, quá giờ). */
     today: ['dashboard', 'today'] as const,
+    /** `GET /dashboard/requests` — số trên menu site partner (yêu cầu chờ duyệt, sắp hết hạn). */
+    requests: ['dashboard', 'requests'] as const,
   },
   platformDashboard: {
     all: ['platform-dashboard'] as const,

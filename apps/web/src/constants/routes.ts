@@ -824,7 +824,7 @@ export const VEHICLE_EDIT_TAB = {
    * ── Mục của menu trái (design `23731:37932`, 03/11/2026) ─────────────────────
    *
    * Hồ sơ xe: Thông tin chung · Hình ảnh · Giấy tờ (· Lịch sử chuyến — chỉ chủ xe tuyến hoa hồng).
-   * Hình thức cho thuê: Dịch vụ xe (ba tab — mỗi tab một giá trị riêng) · Điều kiện · Giao nhận.
+   * Hình thức cho thuê: Dịch vụ & giá (ba tab — mỗi tab một giá trị riêng) · Chính sách thuê.
    * Vận hành nâng cao: Bảo dưỡng & KM · Nguồn gốc & tài chính.
    */
   INFORMATION: 'information',
@@ -833,14 +833,15 @@ export const VEHICLE_EDIT_TAB = {
   DOCUMENTS: 'documents',
   /** Lịch sử chuyến của xe — chỉ ở tuyến hoa hồng (gian hàng có màn Đơn thuê lọc theo xe). */
   TRIP_HISTORY: 'trip-history',
-  /** Ba tab của mục "Dịch vụ xe": công tắc dịch vụ · tự nhận chuyến · giá · chính sách của dịch vụ. */
+  /** Ba tab của mục "Dịch vụ & giá": công tắc dịch vụ · tự nhận chuyến · giá · khuyến mãi. */
   SELF_DRIVE: 'self-drive',
   WITH_DRIVER: 'with-driver',
   LONG_TERM: 'long-term',
-  /** Điều kiện thuê: giấy tờ khách · cách đối chiếu · điều khoản — của cả hai nhóm dịch vụ. */
-  CONDITIONS: 'conditions',
-  /** Giao nhận: giao xe tận nơi · khung giờ giao/nhận · thời gian chết giữa hai chuyến. */
-  HANDOVER: 'handover',
+  /**
+   * "Chính sách thuê" (03/11/2026): công tắc chính sách gian hàng · giao xe tận nơi · cọc · km ·
+   * quá giờ · thời gian chuẩn bị xe · giấy tờ & điều khoản của hai nhóm dịch vụ.
+   */
+  POLICY: 'policy',
   MAINTENANCE: 'maintenance',
   SOURCE: 'source',
 
@@ -850,12 +851,15 @@ export const VEHICLE_EDIT_TAB = {
    * `resolveEditTab` quy chúng về mục thật. Giá trị TRÙNG TÊN với mục của `VEHICLE_MANAGE_SECTION`
    * (dấu `-` thay cho `/`) để đường dẫn cũ của tuyến hoa hồng chuyển hướng một-một.
    */
-  /** "Giá & chính sách" — nay chia vào ba tab dịch vụ (giao xe ở mục Giao nhận). */
+  /** "Giá & chính sách" — nay chia vào ba tab dịch vụ + Chính sách thuê. */
   PRICING: 'pricing',
-  /** "Vận hành & điều kiện thuê" của develop và "Thời gian giao nhận" (30/09) → Giao nhận. */
+  /** "Điều kiện" và "Giao nhận" của menu sáng 03/11/2026 → Chính sách thuê. */
+  CONDITIONS: 'conditions',
+  HANDOVER: 'handover',
+  /** "Vận hành & điều kiện thuê" của develop và "Thời gian giao nhận" (30/09) → Chính sách thuê. */
   OPERATIONS: 'operations',
   HANDOVER_TIME: 'handover-time',
-  /** "Nhận chuyến & thủ tục" (30/09) → tab dịch vụ đó; phần thủ tục → Điều kiện. */
+  /** "Nhận chuyến & thủ tục" (30/09) → tab dịch vụ đó; phần thủ tục → Chính sách thuê. */
   SELF_DRIVE_OPTIMIZATION: 'self-drive-optimization',
   SELF_DRIVE_TERMS: 'self-drive-terms',
   WITH_DRIVER_OPTIMIZATION: 'with-driver-optimization',
@@ -882,12 +886,12 @@ const LEGACY_MANAGE_SECTION_TAB: Readonly<Record<string, VehicleEditTab>> = {
   documents: VEHICLE_EDIT_TAB.DOCUMENTS,
   'trip-history': VEHICLE_EDIT_TAB.TRIP_HISTORY,
   pricing: VEHICLE_EDIT_TAB.PRICING,
-  'handover-time': VEHICLE_EDIT_TAB.HANDOVER,
+  'handover-time': VEHICLE_EDIT_TAB.POLICY,
   'self-drive/optimization': VEHICLE_EDIT_TAB.SELF_DRIVE,
   'self-drive/pricing': VEHICLE_EDIT_TAB.SELF_DRIVE,
   'self-drive/terms': VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS,
-  'self-drive/delivery': VEHICLE_EDIT_TAB.HANDOVER,
-  'self-drive/handover-time': VEHICLE_EDIT_TAB.HANDOVER,
+  'self-drive/delivery': VEHICLE_EDIT_TAB.POLICY,
+  'self-drive/handover-time': VEHICLE_EDIT_TAB.POLICY,
   'with-driver/optimization': VEHICLE_EDIT_TAB.WITH_DRIVER,
   'with-driver/pricing': VEHICLE_EDIT_TAB.WITH_DRIVER,
   'with-driver/surcharges': VEHICLE_EDIT_TAB.WITH_DRIVER,

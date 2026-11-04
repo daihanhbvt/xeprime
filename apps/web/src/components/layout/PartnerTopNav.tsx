@@ -16,6 +16,7 @@ import {
 } from '@/constants/nav';
 import { cx } from '@/lib/cx';
 import { useManageNavTree } from './use-manage-nav-tree';
+import { needsActionLabel } from './needs-action-label';
 import { useNavLeafAccess, type NavLeafAccess } from './use-nav-leaf-access';
 import styles from './PartnerTopNav.module.css';
 
@@ -97,13 +98,15 @@ function TopNavGroup({
   /*
    * Việc "cần xử lý" trong khối phải nhìn thấy được khi dropdown ĐÓNG — nếu không, yêu cầu đặt xe
    * đang chờ nằm khuất sau "Vận hành" và không ai thấy. Con số GIỮ NGUYÊN khi mở dropdown: gỡ nó
-   * lúc mở làm nút co lại và cả hàng menu bên phải nhảy theo mỗi lần rê chuột.
+   * lúc mở làm nút co lại và cả hàng menu bên phải nhảy theo mỗi lần rê chuột. Đỏ khi BẤT KỲ mục
+   * nào trong khối có việc trễ / sắp trễ.
    */
-  const pending = leaves.reduce((sum, leaf) => sum + access.badgeCountOf(leaf), 0);
+  const pending = access.badgeTotalOf(leaves);
 
   const items: MenuProps['items'] = leaves.map((leaf) => {
     const itemLabel = t(leaf.labelKey);
     const count = access.badgeCountOf(leaf);
+    const urgent = access.badgeUrgentOf(leaf);
     return {
       key: leaf.href,
       icon: createElement(leaf.icon, { className: styles.menuIcon }),
@@ -113,13 +116,13 @@ function TopNavGroup({
           aria-current={leaf.href === selectedKey ? 'page' : undefined}
           // Số đi kèm phải nói được thành lời: "Yêu cầu đặt xe, 3 việc cần xử lý".
           aria-label={
-            count > 0 ? `${itemLabel}, ${tShell('shell.needsAction', { count })}` : undefined
+            count > 0 ? `${itemLabel}, ${needsActionLabel(tShell, count, urgent)}` : undefined
           }
         >
           {itemLabel}
         </Link>
       ),
-      extra: count > 0 ? <CountBadge count={count} /> : undefined,
+      extra: count > 0 ? <CountBadge count={count} urgent={urgent} /> : undefined,
     };
   });
 
@@ -143,12 +146,14 @@ function TopNavGroup({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={
-          pending > 0 ? `${label}, ${tShell('shell.needsAction', { count: pending })}` : undefined
+          pending.count > 0
+            ? `${label}, ${needsActionLabel(tShell, pending.count, pending.urgent)}`
+            : undefined
         }
       >
         <SectionIcon section={section} />
         <span className={styles.label}>{label}</span>
-        {pending > 0 ? <CountBadge count={pending} /> : null}
+        {pending.count > 0 ? <CountBadge count={pending.count} urgent={pending.urgent} /> : null}
         <LineIcon name={open ? 'minus' : 'plus'} className={styles.toggle} />
       </button>
     </Dropdown>
@@ -158,10 +163,14 @@ function TopNavGroup({
 /** Trên ngưỡng này con số chính xác không còn đổi hành vi ai cả. */
 const COUNT_OVERFLOW_AT = 99;
 
-/** Huy hiệu số của design (`_Badge` `23661:27584`): nền xám nhạt, viền xám, chữ 12px. */
-function CountBadge({ count }: { count: number }) {
+/**
+ * Huy hiệu số theo khuôn `_Badge` `23661:27584` của design (viên bo tròn, viền, chữ 12px) nhưng
+ * tô màu CẢNH BÁO (04/11/2026): bản xám của design chìm hẳn, không ai nhận ra có việc đang chờ.
+ * Cam = chờ xử lý, đỏ = có việc trễ / sắp trễ — cùng bộ màu với `StatusBadge` warning/danger.
+ */
+function CountBadge({ count, urgent }: { count: number; urgent: boolean }) {
   return (
-    <span className={styles.count} aria-hidden="true">
+    <span className={cx(styles.count, urgent && styles.countUrgent)} aria-hidden="true">
       {count > COUNT_OVERFLOW_AT ? `${COUNT_OVERFLOW_AT}+` : count}
     </span>
   );

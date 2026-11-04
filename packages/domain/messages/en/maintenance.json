@@ -25,7 +25,7 @@
     "schedule": "Schedule",
     "complete": "Complete",
     "cancelSchedule": "Cancel schedule",
-    "cancelScheduleConfirm": "Cancel this maintenance slot? The time window is released back for bookings."
+    "cancelScheduleConfirm": "Cancel this maintenance schedule? It moves to the history as Cancelled."
   },
   "dialog": {
     "loading": "Loading…",
@@ -37,7 +37,6 @@
     "canceled": "Maintenance schedule canceled",
     "updated": "Maintenance record updated",
     "created": "Maintenance scheduled",
-    "scheduleConflict": "That time window already has another booking — pick a different slot.",
     "staleRecord": "Someone else just updated this record — close the dialog and reload.",
     "odometerTooLow": "The odometer you entered is below the vehicle's current reading — check the number."
   },
@@ -67,18 +66,15 @@
   "record": {
     "titleComplete": "Complete maintenance",
     "titleEdit": "Edit maintenance",
-    "titleCreate": "Add maintenance",
+    "titleCreate": "Add upcoming maintenance",
     "okComplete": "Save maintenance",
     "okEdit": "Save changes",
     "okCreate": "Create schedule",
-    "conflictAlert": "This vehicle already has another booking overlapping that window",
     "type": "Service type",
     "customType": "Item name",
     "customTypePlaceholder": "e.g. Wheel alignment",
     "title": "Short description",
     "titlePlaceholder": "e.g. 45,000 km service",
-    "plannedStart": "Planned start",
-    "plannedEnd": "Planned end",
     "provider": "Garage / service provider",
     "providerPlaceholder": "e.g. Toyota East Saigon",
     "odometer": "Service odometer",
@@ -87,12 +83,13 @@
     "receipt": "Receipt / voucher number",
     "receiptPlaceholder": "e.g. CT-40092",
     "notes": "Notes",
-    "completeHint": "Completing releases the vehicle slot and updates the current odometer (if entered). An oil change also moves the next service milestone.",
-    "scheduleHoldNote": "Fill both times and the slot is actually held on the vehicle calendar — that window stops accepting bookings.",
+    "completeHint": "Completing updates the current odometer (if entered). Oil changes also move the next service milestone.",
     "odometerHelp": "Leave blank for a backdated record when you don't want to change the current odometer.",
     "attachments": "This record has {count, plural, one {# attachment} other {# attachments}}.",
-    "endAfterStart": "The end time must be after the start time",
-    "endRequired": "Enter an end time to hold the vehicle slot"
+    "plannedDate": "Expected date",
+    "completedDate": "Completed on",
+    "costShort": "Cost",
+    "notesValue": "Notes: {value}"
   },
   "odometer": {
     "updated": "Odometer updated",
@@ -156,13 +153,13 @@
     "upcomingCard": "Upcoming maintenance",
     "recordsLoadError": "Couldn't load the maintenance list",
     "boardLink": "Open the maintenance centre",
-    "historyCard": "Maintenance & repair history",
     "historyEmpty": "No maintenance recorded yet.",
     "nextMilestone": "Next service milestone:",
     "dueSoonThreshold": "Your shop’s “due soon” threshold: {value} remaining.",
-    "addRecord": "Add maintenance",
     "upcomingEmpty": "No upcoming maintenance scheduled.",
-    "attachments": "{count, plural, one {# attachment} other {# attachments}}"
+    "attachments": "{count, plural, one {# attachment} other {# attachments}}",
+    "recordHistoryLink": "View maintenance history",
+    "addSchedule": "Add maintenance schedule"
   },
   "validation": {
     "odometerTypeError": "Odometer reading must be a number",
@@ -183,5 +180,9 @@
     "costTypeError": "Please enter a number",
     "costInteger": "The amount must be a whole number",
     "costMin": "The amount cannot be negative"
+  },
+  "recordHistory": {
+    "title": "Maintenance history",
+    "total": "{count, plural, one {# record} other {# records}}"
   }
 }

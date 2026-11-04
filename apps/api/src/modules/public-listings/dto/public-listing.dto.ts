@@ -648,10 +648,23 @@ export class ListingHandoverWindowDto {
   @ApiProperty({ example: '22:00' }) end!: string;
 }
 
-/** Khung giờ giao/nhận của xe — rỗng = mọi giờ. Server vẫn kiểm lại lúc gửi yêu cầu. */
+/**
+ * Khung giờ giao/nhận — ĐÃ GỠ (ADR 0078), xe nhận/trả mọi giờ. Hai mảng luôn rỗng; giữ trường để
+ * app phát hành trước đó không vỡ.
+ */
 export class ListingHandoverDto {
-  @ApiProperty({ type: [ListingHandoverWindowDto] }) pickupWindows!: ListingHandoverWindowDto[];
-  @ApiProperty({ type: [ListingHandoverWindowDto] }) returnWindows!: ListingHandoverWindowDto[];
+  @ApiProperty({
+    type: [ListingHandoverWindowDto],
+    deprecated: true,
+    description: 'Luôn rỗng (ADR 0078)',
+  })
+  pickupWindows!: ListingHandoverWindowDto[];
+  @ApiProperty({
+    type: [ListingHandoverWindowDto],
+    deprecated: true,
+    description: 'Luôn rỗng (ADR 0078)',
+  })
+  returnWindows!: ListingHandoverWindowDto[];
 }
 
 /** Một khoản phụ phí MẶC ĐỊNH đang bật của chuyến có tài xế — công bố trước, ghi nhận sau. */
