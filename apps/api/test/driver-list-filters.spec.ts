@@ -227,11 +227,14 @@ describe('Danh sách tài xế — bộ lọc', () => {
     );
   });
 
-  maybe('"Cần đối chiếu": chưa có bằng, bằng hết hạn, tên lệch — không gồm tên chỉ khác dấu', async () => {
-    expect(await listIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER })).toEqual(
-      [ids.mismatch, ids.invited, ids.suspended].sort(),
-    );
-  });
+  maybe(
+    '"Cần đối chiếu": chưa có bằng, bằng hết hạn, tên lệch — không gồm tên chỉ khác dấu',
+    async () => {
+      expect(await listIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER })).toEqual(
+        [ids.mismatch, ids.invited, ids.suspended].sort(),
+      );
+    },
+  );
 
   maybe('`closed` = đã từ chối + đã kết thúc', async () => {
     expect(await listIds({ linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED })).toEqual(
@@ -243,8 +246,11 @@ describe('Danh sách tài xế — bộ lọc', () => {
     const byName = (await drivers.list(tenant, { sort: DRIVER_LIST_SORT.NAME_ASC })).data.map(
       (d) => d.name,
     );
-    // Collation của DB so theo mã ký tự (cùng thứ tự với mọi danh sách sắp theo tên khác).
-    expect(byName).toEqual([...byName].sort());
+    // Thứ tự là của COLLATION DB, không phải mã ký tự: `postgres:16` ở CI dùng `en_US.utf8` nên
+    // "Tài" đứng trước "Trần", còn `Array.sort()` của JS thì ngược lại. Để DB tự sắp làm mốc.
+    const expected = await prisma.$queryRaw<{ n: string }[]>`
+      SELECT n FROM unnest(${byName}::text[]) AS n ORDER BY n`;
+    expect(byName).toEqual(expected.map((r) => r.n));
     const newest = (await drivers.list(tenant, { sort: DRIVER_LIST_SORT.NEWEST })).data.map(
       (d) => d.invitedAt,
     );

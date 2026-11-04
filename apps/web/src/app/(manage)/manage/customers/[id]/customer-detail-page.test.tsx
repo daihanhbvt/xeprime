@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSION, TENANT_CUSTOMER_NOTE_TYPE, TENANT_CUSTOMER_RISK_LEVEL } from '@xeprime/types';
 import CustomerDetailPage from './page';
@@ -92,7 +92,12 @@ vi.mock('@/features/customers/hooks/use-customers', () => ({
   },
   useCustomerBookings: () => queries.bookings,
   useCustomerBookingHistory: () => queries.bookings,
-  useCustomerRevenue: () => ({ data: undefined, isLoading: false, isFetching: false, isError: false }),
+  useCustomerRevenue: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  }),
   useUpdateCustomerDocument: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCustomerNotes: () => queries.notes,
   useCustomerDocuments: () => queries.documents,
@@ -428,15 +433,15 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ' }));
 
-    // Ảnh thật trong danh sách — không phải icon giữ chỗ.
-    await waitFor(() =>
-      expect(screen.getByRole('img', { name: 'cccd-mat-truoc.jpg' })).toBeTruthy(),
-    );
-    const img = screen.getByRole('img', { name: 'cccd-mat-truoc.jpg' });
+    // Ảnh thật trong danh sách — không phải icon giữ chỗ. Chờ bằng `alt` chứ không bằng
+    // `getByRole(..., { name })`: câu đó tính accessible name trên cả cây AntD (~0,5s/lần ở máy
+    // dev, gấp nhiều lần trên CI) và `waitFor` chạy lại nó ở mỗi vòng poll — đủ chạm `testTimeout`.
+    const img = await screen.findByAltText('cccd-mat-truoc.jpg');
     expect(img.getAttribute('src')).toBe('https://r2.test/signed.jpg');
 
     // Ảnh đã bấm-là-phóng-to bằng trình xem chung, nên KHÔNG kèm nút mở tab.
-    expect(screen.queryByRole('button', { name: /Mở tệp/ })).toBeNull();
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).queryByRole('button', { name: /Mở tệp/ })).toBeNull();
   });
   it('giấy tờ PDF: vẫn mở bằng tab mới với URL ký xin ngay lúc bấm', async () => {
     queries.documents.data = [
@@ -461,9 +466,11 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
 
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /Mở tệp/ })).toBeTruthy());
+    // Chờ bằng truy vấn chữ (rẻ), rồi mới hỏi role MỘT lần trong tab đang mở — cùng lý do ở test ảnh.
+    await screen.findByText(/passport\.pdf/);
+    const openButton = within(screen.getByRole('tabpanel')).getByRole('button', { name: /Mở tệp/ });
 
-    fireEvent.click(screen.getByRole('button', { name: /Mở tệp/ }));
+    fireEvent.click(openButton);
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
         'https://r2.test/signed.pdf',
