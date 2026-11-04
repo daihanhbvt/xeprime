@@ -37,6 +37,7 @@ const wards = vi.hoisted(() => ({
   isError: false,
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: (provinceCode: string | null | undefined) => {
     const items = wards.byProvince[provinceCode ?? ''] ?? [];
     return {
@@ -153,10 +154,11 @@ describe('AddressField — hai cấp hành chính', () => {
    * đơn vị vừa đổi tên hàng loạt từ 01/07/2025 — đủ để một người đang khai địa chỉ của CHÍNH MÌNH
    * cũng phải dừng lại tra cứu.
    */
-  it('ô có ghim: KHÔNG có bộ chọn xã/phường', () => {
+  // ADR 0077 ghi đè ADR 0042: ô xã LUÔN hiện, kể cả khi có ghim.
+  it('ô có ghim: VẪN có bộ chọn xã/phường (ADR 0077)', () => {
     render(<Harness />);
 
-    expect(screen.queryByLabelText(/Xã\/phường/)).toBeNull();
+    expect(screen.getByLabelText(/Xã\/phường/)).toBeTruthy();
     expect(screen.getByLabelText(/Tỉnh\/thành/)).toBeTruthy();
   });
 

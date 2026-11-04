@@ -117,7 +117,7 @@ describe('WardsService', () => {
     // `00004` là Phường Ba Đình của Hà Nội; gắn nó vào TP.HCM là đúng loại sai mà FK tổ hợp
     // `(ward_code, province_code)` chặn ở DB — lớp này chỉ lo cho thông báo gọi được tên đơn vị.
     await expect(wards.assertSelectable('00004', '79')).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+      response: { code: API_ERROR_CODE.WARD_NOT_IN_PROVINCE },
     });
   });
 
@@ -151,7 +151,7 @@ describe('AddressService', () => {
   maybe('`requireWard` chặn hẳn ở những luồng đòi địa chỉ đủ', async () => {
     await expect(
       address.resolve({ provinceCode: '01' }, { requireWard: true, skipGeocode: true }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WARD_REQUIRED } });
   });
 
   maybe('client tự khai "đã ghim" mà không gửi toạ độ thì KHÔNG được tin', async () => {

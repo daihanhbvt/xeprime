@@ -18,6 +18,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBranchesService,
   makeTenantsService,
+  wardCodeOf,
   makeVehiclesService,
   vehicleCreator,
 } from './helpers/service-factory';
@@ -49,6 +50,8 @@ let defaultBranchId: string;
 /** Hai tỉnh chính thức có sẵn sau migration — spec không phải dựng dữ liệu tham chiếu. */
 const HCM = '79';
 const DANANG = '48';
+/** Xã thật của từng tỉnh — ADR 0077 bắt chi nhánh có xã/phường thuộc đúng tỉnh. */
+const WARD: Record<string, string> = {};
 
 beforeAll(async () => {
   try {
@@ -59,6 +62,9 @@ beforeAll(async () => {
     console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
     return;
   }
+
+  WARD[HCM] = await wardCodeOf(asService, HCM);
+  WARD[DANANG] = await wardCodeOf(asService, DANANG);
 
   ownerId = newId();
   tenantId = newId();
@@ -109,6 +115,7 @@ beforeAll(async () => {
   const created = await branches.create(tenantId, ownerId, {
     name: 'Chi nhánh gốc',
     provinceCode: HCM,
+    wardCode: WARD[HCM],
   });
   defaultBranchId = created.id;
 });
@@ -149,6 +156,7 @@ describe('Tạo & bất biến mặc định', () => {
     const second = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh Đà Nẵng',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     expect(second.isDefault).toBe(false);
     expect(second.code).toBe('CN02');
@@ -159,6 +167,7 @@ describe('Tạo & bất biến mặc định', () => {
     const rogue = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh lậu',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     await expect(
       prisma.tenantBranch.update({ where: { id: rogue.id }, data: { isDefault: true } }),
@@ -199,6 +208,7 @@ describe('Cô lập giữa các gian hàng', () => {
     const foreign = await branches.create(otherTenantId, ownerId, {
       name: 'Chi nhánh shop khác',
       provinceCode: HCM,
+      wardCode: WARD[HCM],
     });
     await expect(
       vehicles.create(
@@ -228,6 +238,7 @@ describe('Vòng đời chi nhánh', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh sắp đóng',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     await branches.deactivate(tenantId, b.id, ownerId);
 
@@ -258,6 +269,7 @@ describe('Vòng đời chi nhánh', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh có xe',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     const v = await vehicles.create(
       tenantId,
@@ -309,6 +321,7 @@ describe('Vòng đời chi nhánh', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh khoá FK',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     const v = await vehicles.create(
       tenantId,
@@ -332,6 +345,7 @@ describe('Vòng đời chi nhánh', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh Đà Nẵng',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     await branches.setDefault(tenantId, b.id, ownerId);
 
@@ -357,6 +371,7 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
     const danang = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh Đà Nẵng',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     const v = await createVehicle(tenantId, ownerId, {
       name: 'Xe Đà Nẵng',
@@ -379,7 +394,10 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
     expect(listing?.provinceName).toBe('Đà Nẵng');
 
     // Đổi tỉnh của chi nhánh → mọi snapshot trong đó đổi theo NGAY, không đợi sửa từng xe.
-    await branches.update(tenantId, danang.id, ownerId, { provinceCode: HCM });
+    await branches.update(tenantId, danang.id, ownerId, {
+      provinceCode: HCM,
+      wardCode: WARD[HCM],
+    });
     const after = await prisma.publicListing.findUnique({
       where: { vehicleId: v.id },
       select: { provinceCode: true, provinceName: true },
@@ -419,6 +437,7 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh audit',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     const v = await createVehicle(tenantId, ownerId, {
       name: 'Xe audit',
@@ -454,6 +473,7 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
       const shop = await tenants.registerShop(userId, {
         name: 'Gian hàng có gói',
         provinceCode: DANANG,
+        wardCode: WARD[DANANG],
       });
 
       const now = new Date();
@@ -505,6 +525,7 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
     const shop = await tenants.registerShop(userId, {
       name: 'Gian hàng mới',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
       address: '12 Bạch Đằng',
     });
 
@@ -517,10 +538,13 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
     expect(rows[0]?.isDefault).toBe(true);
     /*
      * `address` là chuỗi HIỂN THỊ do server ghép từ (số nhà, đường) + xã/phường + tỉnh — ADR 0035
-     * điều 3. Đăng ký này không khai xã/phường nên chuỗi chỉ có hai mảnh; phần người dùng gõ nằm
-     * nguyên ở `address_line`.
+     * điều 3 (xã/phường bắt buộc từ ADR 0077); phần người dùng gõ nằm nguyên ở `address_line`.
      */
-    expect(rows[0]?.address).toBe('12 Bạch Đằng, Đà Nẵng');
+    const ward = await prisma.ward.findUniqueOrThrow({
+      where: { code: WARD[DANANG] },
+      select: { name: true },
+    });
+    expect(rows[0]?.address).toBe(`12 Bạch Đằng, ${ward.name}, Đà Nẵng`);
     expect(rows[0]?.addressLine).toBe('12 Bạch Đằng');
 
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: shop.id } });
@@ -558,6 +582,7 @@ describe('Bộ lọc chi nhánh ở danh sách xe', () => {
     const b = await branches.create(tenantId, ownerId, {
       name: 'Chi nhánh lọc',
       provinceCode: DANANG,
+      wardCode: WARD[DANANG],
     });
     const inBranch = await vehicles.create(
       tenantId,
@@ -584,6 +609,7 @@ describe('Bộ lọc chi nhánh ở danh sách xe', () => {
     const foreign = await branches.create(otherTenantId, ownerId, {
       name: 'Chi nhánh ngoài',
       provinceCode: HCM,
+      wardCode: WARD[HCM],
     });
     const leaked = await vehicles.list(tenantId, { branchId: foreign.id, limit: 50 }, null);
     expect(leaked.data).toHaveLength(0);
@@ -659,25 +685,20 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
     });
 
     /*
-     * Bổ sung TỈNH là đủ để xe lên chợ — cổng đó chỉ hỏi "chi nhánh ở tỉnh nào".
-     *
-     * Nhưng cờ rà soát vẫn BẬT: từ ADR 0035 điều 7 nó có nghĩa rộng hơn — "địa chỉ chưa khớp
-     * danh mục hành chính hiện hành", mà mô hình hai cấp đòi cả xã/phường. Hai thứ khác nhau và
-     * test này khoá đúng sự khác nhau đó.
+     * Sửa địa chỉ chi nhánh cũ là lúc BUỘC bổ sung xã/phường (ADR 0077): chỉ gửi tỉnh bị từ chối,
+     * chi nhánh không đổi gì.
      */
-    const withProvince = await branches.update(tenantId, legacyId, ownerId, { provinceCode: HCM });
-    expect(withProvince.needsLocationReview).toBe(true);
-    await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).resolves.toBeTruthy();
+    await expect(
+      branches.update(tenantId, legacyId, ownerId, { provinceCode: HCM }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WARD_REQUIRED } });
 
-    // Khai nốt xã/phường → địa chỉ khớp danh mục hiện hành, cờ tắt.
-    const hcmWard = await prisma.ward.findFirst({
-      where: { provinceCode: HCM },
-      select: { code: true },
-    });
+    // Khai đủ tỉnh + xã/phường → địa chỉ khớp danh mục hiện hành, cờ tắt, xe lên chợ được.
     const fixed = await branches.update(tenantId, legacyId, ownerId, {
-      wardCode: hcmWard!.code,
+      provinceCode: HCM,
+      wardCode: WARD[HCM],
     });
     expect(fixed.needsLocationReview).toBe(false);
+    await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).resolves.toBeTruthy();
 
     const tasks = await prisma.approvalTask.findMany({
       where: { targetId: v.id },

@@ -67,7 +67,7 @@ describe('AccountSidebar — tài khoản khách', () => {
 
     expect(screen.getByText('Quản lý tài khoản')).toBeTruthy();
     expect(screen.getByText('Quản lý thanh toán')).toBeTruthy();
-    expect(screen.getByText('Chuyến của tôi')).toBeTruthy();
+    expect(screen.getByText('Chuyến đi')).toBeTruthy();
     // Đổi mật khẩu + yêu cầu xoá tài khoản là MỘT mục (design Account / Security).
     expect(screen.getByText('Bảo mật tài khoản')).toBeTruthy();
     expect(screen.queryByText('Đổi mật khẩu')).toBeNull();
@@ -112,7 +112,7 @@ describe('AccountSidebar — hành vi chung', () => {
   it('mục đã dựng là liên kết thật', () => {
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /Chuyến đi/ }).getAttribute('href')).toBe(
       '/trips',
     );
   });
@@ -121,7 +121,7 @@ describe('AccountSidebar — hành vi chung', () => {
     pathname.value = '/trips';
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('link', { name: /Chuyến đi/ }).getAttribute('aria-current')).toBe(
       'page',
     );
     expect(

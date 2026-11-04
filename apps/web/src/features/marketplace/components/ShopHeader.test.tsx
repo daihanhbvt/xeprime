@@ -159,7 +159,8 @@ describe('ShopHeader — giới thiệu và số liệu', () => {
     await renderHeader(shop({ bio: 'Ba xe khu trung tâm.', address: '35 Lê Thánh Tôn' }));
     expect(screen.getByText('Thông tin')).toBeTruthy();
     expect(screen.getByText('Ba xe khu trung tâm.')).toBeTruthy();
-    expect(screen.getByText('Địa chỉ: 35 Lê Thánh Tôn')).toBeTruthy();
+    // Địa chỉ nằm ở hàng thông tin dưới tên (Figma), không lặp lại trong khối "Thông tin".
+    expect(screen.getByText('35 Lê Thánh Tôn')).toBeTruthy();
 
     cleanup();
     await renderHeader(shop({}));

@@ -521,6 +521,29 @@ export async function seedProvince(
   return code;
 }
 
+const wardCodeCache = new Map<string, string>();
+
+/**
+ * Mã một xã/phường THẬT của tỉnh (xã đầu tiên trong danh mục migration đã nạp).
+ *
+ * Từ ADR 0077, mọi địa chỉ thành CHI NHÁNH (đăng ký gian hàng, tạo/sửa chi nhánh, dời tỉnh ở hồ
+ * sơ) đòi `wardCode` thuộc đúng tỉnh — spec đi qua các đường đó lấy mã ở đây thay vì gõ tay.
+ */
+export async function wardCodeOf(
+  prisma: Pick<PrismaService, 'ward'>,
+  provinceCode: string,
+): Promise<string> {
+  const cached = wardCodeCache.get(provinceCode);
+  if (cached) return cached;
+  const ward = await prisma.ward.findFirstOrThrow({
+    where: { provinceCode },
+    orderBy: { code: 'asc' },
+    select: { code: true },
+  });
+  wardCodeCache.set(provinceCode, ward.code);
+  return ward.code;
+}
+
 export async function seedBranch(
   prisma: PrismaService,
   input: {

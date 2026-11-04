@@ -66,6 +66,15 @@ const config = {
 
 const phoneVerification = new PhoneVerificationService(asService, config, new MockOtpProvider());
 
+/*
+ * Công tắc "tắt gửi SMS" là MỘT dòng toàn hệ thống (`platform_app_configs.partner`) mà admin bật/tắt
+ * trên database dev. Spec này kiểm luồng gửi mã THẬT, nên chốt công tắc ở BẬT thay vì đọc trạng
+ * thái ai đó để lại trên máy; describe nào kiểm nhánh tắt tự spy đè lên.
+ */
+beforeEach(() => {
+  jest.spyOn(phoneVerification, 'isSmsDisabled').mockResolvedValue(false);
+});
+
 // Đăng ký / đăng nhập / quên mật khẩu chỉ dùng prisma + OTP — rbac/email/chính sách phí/URL site
 // không bị chạm tới.
 // Phiên + bộ đếm sai là bảng THẬT (ADR 0076): đổi/đặt lại mật khẩu thu hồi phiên, đăng nhập sai bị khoá.

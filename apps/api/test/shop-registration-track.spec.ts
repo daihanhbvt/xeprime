@@ -268,11 +268,27 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('1. Tuyến HOA HỒNG — hành vi cũ giữ nguyên từng điểm', () => {
   let tenantId: string;
 
+  /*
+   * ADR 0077 (ghi đè ADR 0042): địa chỉ đăng ký thành CHI NHÁNH MẶC ĐỊNH — nơi khách tới nhận
+   * xe — nên xã/phường bắt buộc ở CẢ HAI tuyến. Thiếu xã ⇒ từ chối, không để lại tenant nào.
+   */
+  maybe('thiếu xã/phường ⇒ WARD_REQUIRED, không mở gian hàng nửa vời', async () => {
+    await expect(
+      tenants.registerShop(commissionOwnerId, {
+        name: 'Nguyễn Văn A',
+        tenantType: TENANT_TYPE.INDIVIDUAL,
+        provinceCode: HCM,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WARD_REQUIRED } });
+    expect(await prisma.tenant.count({ where: { ownerUserId: commissionOwnerId } })).toBe(0);
+  });
+
   maybe('đăng ký không khai tuyến ⇒ commission, có gói hoa hồng mặc định ngay', async () => {
     const shop = await tenants.registerShop(commissionOwnerId, {
       name: 'Nguyễn Văn A',
       tenantType: TENANT_TYPE.INDIVIDUAL,
       provinceCode: HCM,
+      wardCode: hcmWard,
       // KHÔNG gửi `registrationTrack` — client cũ (app native) phải chạy y như trước.
     });
     tenantId = shop.id;
@@ -295,20 +311,26 @@ describe('1. Tuyến HOA HỒNG — hành vi cũ giữ nguyên từng điểm', 
   });
 
   /*
-   * Xã/phường và địa chỉ chi tiết KHÔNG bắt buộc ở tuyến này — người mở hồ sơ chủ xe thường
-   * chưa có địa chỉ chính xác, và chặn ở đây là chặn luôn việc họ bắt đầu. Chi nhánh sinh ra
-   * mang cờ chờ bổ sung, và đó là xử lý đúng chứ không phải nhân nhượng.
+   * Địa chỉ CHI TIẾT (số nhà, đường) vẫn KHÔNG bắt buộc ở tuyến này — người mở hồ sơ chủ xe
+   * thường chưa có địa chỉ chính xác. Xã/phường thì bắt buộc (ADR 0077), nên chi nhánh đã khớp
+   * danh mục hai cấp và không mang cờ chờ bổ sung.
    */
   maybe(
-    'thiếu xã/phường và địa chỉ chi tiết: vẫn mở được, chi nhánh mang cờ chờ bổ sung',
+    'thiếu địa chỉ chi tiết: vẫn mở được, chi nhánh có xã/phường và không cần rà soát',
     async () => {
       const branch = await prisma.tenantBranch.findFirstOrThrow({
         where: { tenantId, isDefault: true },
-        select: { wardCode: true, needsLocationReview: true, provinceCode: true },
+        select: {
+          wardCode: true,
+          addressLine: true,
+          needsLocationReview: true,
+          provinceCode: true,
+        },
       });
       expect(branch.provinceCode).toBe(HCM);
-      expect(branch.wardCode).toBeNull();
-      expect(branch.needsLocationReview).toBe(true);
+      expect(branch.wardCode).toBe(hcmWard);
+      expect(branch.addressLine).toBeNull();
+      expect(branch.needsLocationReview).toBe(false);
     },
   );
 
@@ -378,7 +400,7 @@ describe('2. Tuyến GÓI — ý định lưu bền vững, KHÔNG thành Owner 
         phone: '0901234567',
         registrationTrack: REGISTRATION_TRACK.PACKAGE,
       }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WARD_NOT_IN_PROVINCE } });
     expect(await prisma.tenant.count({ where: { ownerUserId: packageOwnerId } })).toBe(0);
   });
 
