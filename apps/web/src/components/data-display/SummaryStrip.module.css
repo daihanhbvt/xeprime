@@ -1,6 +1,6 @@
 /*
- * Dải số liệu: MỘT thẻ, các ô chia đều bề ngang (Figma `23777:53832`). `minmax(0, 1fr)` bắt buộc —
- * một nhãn dài ("Cần lưu ý / Từ chối phục vụ") không được đẩy lưới rộng hơn khung.
+ * Dải số liệu: MỘT thẻ, các ô chia đều bề ngang (Figma "Vehicle Summary"). `minmax(0, 1fr)` bắt
+ * buộc — một nhãn dài ("Cần lưu ý / Từ chối phục vụ") không được đẩy lưới rộng hơn khung.
  */
 .strip {
   display: grid;
@@ -17,6 +17,40 @@
   min-width: 0;
   align-items: center;
   gap: var(--xp-space-12);
+}
+
+/* Ô bấm được: bỏ dáng nút trình duyệt, giữ bố cục ô; vùng bấm rộng hơn chữ một nhịp. */
+.selectable {
+  padding: var(--xp-space-6) var(--xp-space-sm);
+  margin: calc(var(--xp-space-6) * -1) calc(var(--xp-space-sm) * -1);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.selectable:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.selectable:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.active {
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-primary-light);
+}
+
+.active:hover {
+  background: var(--xp-color-primary-light);
 }
 
 .icon {
@@ -55,6 +89,11 @@
   color: var(--xp-color-warning-strong);
 }
 
+.purple {
+  background: var(--xp-color-processing-bg);
+  color: var(--xp-color-processing);
+}
+
 .text {
   display: flex;
   min-width: 0;
@@ -65,6 +104,7 @@
   overflow: hidden;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
   font-weight: var(--xp-font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;

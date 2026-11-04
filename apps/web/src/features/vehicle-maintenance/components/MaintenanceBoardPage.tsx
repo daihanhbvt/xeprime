@@ -1,14 +1,17 @@
 'use client';
 
-import { App } from 'antd';
+import { App, Select } from 'antd';
 import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   MAINTENANCE_BOARD_FILTER,
   MAINTENANCE_BOARD_QUEUE_FILTERS,
+  MAINTENANCE_BOARD_SORT,
+  MAINTENANCE_BOARD_SORT_VALUES,
   MAINTENANCE_TYPE_VALUES,
   PERMISSION,
   type MaintenanceBoardFilter,
+  type MaintenanceBoardSort,
 } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
@@ -20,9 +23,10 @@ import { useMissingOdometerQueue } from '@/features/handovers/hooks';
 import { useInvalidateVehicleSurfaces } from '@/features/vehicles/hooks/use-vehicle-alerts';
 import { MAINTENANCE_DEFAULT_LIMIT } from '@/features/vehicle-maintenance/api';
 import { MaintenanceBoardTabs } from '@/features/vehicle-maintenance/components/MaintenanceBoardTabs';
-import { MaintenanceBoardTable } from '@/features/vehicle-maintenance/components/MaintenanceBoardTable';
+import { MaintenanceBoardList } from '@/features/vehicle-maintenance/components/MaintenanceBoardList';
 import { MaintenanceBoardDialogs } from '@/features/vehicle-maintenance/components/MaintenanceBoardDialogs';
 import {
+  useInvalidateMaintenanceFor,
   useMaintenanceBoard,
   useMaintenanceBoardFilters,
   useMaintenanceBoardSummary,
@@ -31,8 +35,15 @@ import type { MaintenanceBoardItem } from '@/features/vehicle-maintenance/types'
 import { usePermissions } from '@/hooks/use-permissions';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode } from '@/services/api-client';
+import { cancelMaintenanceRecord } from '@/features/vehicle-maintenance/api';
+import styles from './MaintenanceBoardPage.module.css';
 
-/** Đưa mọi bộ lọc về mặc định — `'all'`/`undefined` bị `useUrlFilters` xoá khỏi URL. */
+/**
+ * Đưa mọi bộ lọc về mặc định — `'all'`/`undefined` bị `useUrlFilters` xoá khỏi URL. Sắp xếp
+ * KHÔNG nằm ở đây: nó đổi thứ tự chứ không lọc (cùng luật với Danh sách xe).
+ */
 const CLEARED = {
   filter: 'all',
   q: undefined,
@@ -40,8 +51,10 @@ const CLEARED = {
   type: 'all',
   from: undefined,
   to: undefined,
-  sort: 'remaining_asc',
 } as const;
+
+const SORT_VALUES = MAINTENANCE_BOARD_SORT_VALUES;
+type BoardSort = MaintenanceBoardSort;
 
 export function MaintenanceBoardPage() {
   const t = useTranslations('Maintenance');
@@ -53,16 +66,20 @@ export function MaintenanceBoardPage() {
 }
 
 /**
- * Trung tâm bảo dưỡng toàn đội xe (Wave 6) — docs/design/12 §9.2.
+ * Danh sách bảo dưỡng toàn đội xe — Figma Partner-XePrime `23733:41941` (04/11/2026).
  *
- * Ưu tiên VIỆC CẦN LÀM: dải tab quá hạn / sắp đến hạn / đang bảo dưỡng / thiếu dữ liệu KM
- * đứng trước bảng. Lọc, sắp xếp và phân trang chạy ở server và sống trên URL (ADR 0004) nên
- * một view lọc chia sẻ được và sống sót qua reload.
+ * Ưu tiên VIỆC CẦN LÀM: dải chip quá hạn / sắp đến hạn / đang bảo dưỡng / thiếu dữ liệu KM
+ * đứng ngay dưới hàng lọc, trên danh sách (giữ theo chốt 04/11 — design không vẽ). Lọc, sắp
+ * xếp và phân trang chạy ở server và sống trên URL (ADR 0004) nên một view lọc chia sẻ được và
+ * sống sót qua reload.
  */
 function MaintenanceView() {
   const t = useTranslations('Maintenance');
   const domainLabel = useDomainLabel();
-  const { message } = App.useApp();
+  const tCommon = useTranslations('Common');
+  const { message, modal } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const invalidateMaintenance = useInvalidateMaintenanceFor();
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   /*
@@ -126,12 +143,12 @@ function MaintenanceView() {
     })),
   ];
 
-  const sortOptions = [
-    { value: 'remaining_asc', label: t('filters.sortRemainingAsc') },
-    { value: 'remaining_desc', label: t('filters.sortRemainingDesc') },
-    { value: 'name_asc', label: t('filters.sortNameAsc') },
-    { value: 'updated_desc', label: t('filters.sortUpdatedDesc') },
-  ];
+  const sortLabel: Readonly<Record<BoardSort, string>> = {
+    [MAINTENANCE_BOARD_SORT.REMAINING_ASC]: t('filters.sortRemainingAsc'),
+    [MAINTENANCE_BOARD_SORT.REMAINING_DESC]: t('filters.sortRemainingDesc'),
+    [MAINTENANCE_BOARD_SORT.NAME_ASC]: t('filters.sortNameAsc'),
+    [MAINTENANCE_BOARD_SORT.UPDATED_DESC]: t('filters.sortUpdatedDesc'),
+  };
 
   const filterFields: FilterField[] = [
     {
@@ -143,8 +160,52 @@ function MaintenanceView() {
     ...(branch.field ? [branch.field] : []),
     { kind: 'select', key: 'type', label: t('filters.type'), options: typeOptions },
     { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.schedule') },
-    { kind: 'select', key: 'sort', label: t('filters.sort'), options: sortOptions },
   ];
+
+  /*
+   * "Sắp xếp: Gần đến hạn" cuối hàng (design) — KHÔNG phải một ô lọc: nó không lọc dữ liệu, nên
+   * không vào huy hiệu đếm bộ lọc của mobile và "Xoá bộ lọc" giữ nguyên nó (như Danh sách xe).
+   */
+  const sortSelect = (
+    <Select<BoardSort>
+      className={styles.sort}
+      size="large"
+      aria-label={t('filters.sort')}
+      labelRender={(item) => t('filters.sortValue', { label: String(item.label) })}
+      value={
+        (SORT_VALUES as readonly string[]).includes(filters.sort)
+          ? (filters.sort as BoardSort)
+          : MAINTENANCE_BOARD_SORT.REMAINING_ASC
+      }
+      options={SORT_VALUES.map((value) => ({ value, label: sortLabel[value] }))}
+      onChange={(sort) => setFilters({ sort })}
+    />
+  );
+
+  /** "Hủy lịch" — hỏi lại rồi huỷ phiếu đang mở; phiếu ở lại lịch sử với nhãn "Đã hủy" (sổ E22). */
+  function confirmCancel(row: MaintenanceBoardItem) {
+    const record = row.activeRecord;
+    if (!record) return;
+    modal.confirm({
+      title: t('actions.cancelScheduleConfirm'),
+      okText: t('actions.cancelSchedule'),
+      okButtonProps: { danger: true },
+      cancelText: tCommon('actions.close'),
+      onOk: async () => {
+        try {
+          await cancelMaintenanceRecord(row.vehicleId, record.id, record.rowVersion);
+          message.success(t('toast.canceled'));
+        } catch (err) {
+          message.error(
+            getErrorCode(err) === 'CONFLICT' ? t('toast.staleRecord') : errorMessage(err),
+          );
+        } finally {
+          // Thành công hay xung đột phiên bản: số trên dòng đều đã cũ.
+          invalidateMaintenance(row.vehicleId);
+        }
+      },
+    });
+  }
 
   /**
    * Hàng đợi "Thiếu KM trả" chỉ có tìm kiếm VÀ chi nhánh: hạng mục/lịch dự kiến/sắp xếp theo KM
@@ -179,21 +240,8 @@ function MaintenanceView() {
   );
 
   return (
-    <>
-      <ManagePageHeader
-        title={t('page.title')}
-        subtitle={t('page.subtitle')}
-      />
-
-      {canView ? (
-        <MaintenanceBoardTabs
-          active={activeFilter}
-          summary={summary.data}
-          loading={summary.isLoading}
-          canViewHandovers={canViewHandovers}
-          onChange={(filter) => setFilters({ filter })}
-        />
-      ) : null}
+    <div className={styles.page}>
+      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
 
       <FilterBar
         fields={isQueue ? queueFilterFields : filterFields}
@@ -206,22 +254,26 @@ function MaintenanceView() {
                 type: filters.type,
                 from: filters.from,
                 to: filters.to,
-                sort: filters.sort,
               }
         }
         onChange={(patch) => {
           setFilters(patch as Partial<typeof filters>);
         }}
-        onClear={
-          hasFilters
-            ? () => {
-                setFilters(CLEARED);
-              }
-            : undefined
-        }
+        onClear={hasFilters ? () => setFilters(CLEARED) : undefined}
         showActiveChips
-        compactFields
+        // Hàng đợi "Thiếu KM trả" sắp theo biên bản — ô sắp xếp KM còn lại vô nghĩa ở đó.
+        actions={isQueue ? undefined : sortSelect}
       />
+
+      {canView ? (
+        <MaintenanceBoardTabs
+          active={activeFilter}
+          summary={summary.data}
+          loading={summary.isLoading}
+          canViewHandovers={canViewHandovers}
+          onChange={(filter) => setFilters({ filter })}
+        />
+      ) : null}
 
       {/*
        * Nhóm việc "Thiếu KM trả" có DÒNG LÀ BIÊN BẢN, không phải xe — nên đổi hẳn bảng thay vì
@@ -241,25 +293,25 @@ function MaintenanceView() {
           }}
         />
       ) : (
-      <MaintenanceBoardTable
-        items={items}
-        meta={meta}
-        loading={board.isFetching && items.length === 0}
-        // Chỉ thay bảng bằng màn lỗi khi KHÔNG còn dữ liệu cũ để đọc.
-        error={board.isError && !board.data ? { onRetry: () => void board.refetch() } : null}
-        filtered={hasFilters}
-        permissionDenied={!canView}
-        canManage={canManage}
-        canCorrectOdometer={canCorrectOdometer}
-        actions={{
-          onSchedule: (row) => setDialog({ kind: 'schedule', row }),
-          onComplete: (row) => setDialog({ kind: 'complete', row }),
-          onCancel: (row) => setDialog({ kind: 'schedule', row }),
-          onCorrectOdometer: (row) => setDialog({ kind: 'odometer', row }),
-        }}
-        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        onClearFilters={() => setFilters(CLEARED)}
-      />
+        <MaintenanceBoardList
+          items={items}
+          meta={meta}
+          loading={board.isFetching && items.length === 0}
+          // Chỉ thay danh sách bằng màn lỗi khi KHÔNG còn dữ liệu cũ để đọc.
+          error={board.isError && !board.data ? { onRetry: () => void board.refetch() } : null}
+          filtered={hasFilters}
+          permissionDenied={!canView}
+          canManage={canManage}
+          canCorrectOdometer={canCorrectOdometer}
+          actions={{
+            onSchedule: (row) => setDialog({ kind: 'schedule', row }),
+            onComplete: (row) => setDialog({ kind: 'complete', row }),
+            onCancel: confirmCancel,
+            onCorrectOdometer: (row) => setDialog({ kind: 'odometer', row }),
+          }}
+          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+          onClearFilters={() => setFilters(CLEARED)}
+        />
       )}
 
       <MaintenanceBoardDialogs
@@ -272,6 +324,6 @@ function MaintenanceView() {
           message.success(t('toast.saved'));
         }}
       />
-    </>
+    </div>
   );
 }

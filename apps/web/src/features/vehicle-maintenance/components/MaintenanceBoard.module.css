@@ -1,44 +1,58 @@
-/* ── Dải tab việc-cần-làm ── */
+/* ── Dải chip việc-cần-làm (giữ theo chốt 04/11 — design không vẽ) ── */
 .summaryTabs {
   display: flex;
   overflow-x: auto;
   min-width: 0;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-sm);
   padding-bottom: 2px;
   /* Một hàng ngang, cuộn khi tràn — KHÔNG wrap (docs §4.2/§12.7). */
   flex-wrap: nowrap;
   scroll-snap-type: x proximity;
 }
 
+/* Chip cao 36, bo tròn, viền xám — cùng dáng ô lọc của hàng phía trên. */
 .summaryTab {
   display: inline-flex;
-  min-height: 44px;
+  height: 36px;
   flex: none;
   align-items: center;
-  gap: var(--xp-space-xs);
-  padding: var(--xp-space-xs) var(--xp-space-sm);
+  padding: 0 var(--xp-space-12);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-md);
+  border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-bg-container);
   color: var(--xp-color-text-secondary);
   cursor: pointer;
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-6);
   scroll-snap-align: start;
   white-space: nowrap;
 }
 
+.summaryTab:hover {
+  border-color: var(--xp-color-primary-border);
+}
+
+.summaryTab:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
 .summaryTabActive {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-bg);
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-primary-light);
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
 }
 
 .summaryCount {
+  min-width: 20px;
   padding-inline: 6px;
-  border-radius: 999px;
-  background: var(--xp-color-fill-secondary);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-label);
   font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
 }
 
 .summaryDot {
@@ -64,53 +78,17 @@
   background: var(--xp-color-text-tertiary);
 }
 
-/* ── Ô trong bảng ── */
-.vehicleLink {
-  color: inherit;
+/* Skeleton CAO ĐÚNG bằng hàng chip thật — nội dung bên dưới không nhảy khi số về. */
+.tabsSkeleton {
+  height: 36px;
 }
 
-.numeric {
-  font-variant-numeric: tabular-nums;
-}
-
-.muted {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.dueCell {
-  display: flex;
+.tabsSkeleton :global(.ant-skeleton-input) {
+  height: 36px;
   min-width: 0;
-  flex-direction: column;
-  gap: 2px;
 }
 
-.dueText {
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.overdue {
-  color: var(--xp-color-error);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.activeCell {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.clearButton {
-  border: none;
-  background: none;
-  color: var(--xp-color-primary);
-  cursor: pointer;
-  font: inherit;
-}
-
-/* ── Thẻ trên Hồ sơ 360 ── */
+/* ── Thẻ trên Hồ sơ 360 (`VehicleMaintenanceCard`) ── */
 .overviewCard {
   border-color: var(--xp-color-border);
 }
@@ -119,75 +97,353 @@
   margin-bottom: var(--xp-space-sm);
 }
 
-/* ── Thẻ mobile ── */
-.card {
+/* ── Danh sách — Figma `23733:41941`: một xe một hàng, cách nhau 12 ── */
+.root {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.list {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-12);
+  list-style: none;
+}
+
+.skeletonRow,
+.state {
+  padding: 20px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: 20px;
+  background: var(--xp-color-bg-container);
+}
+
+/*
+ * Một hàng (`23754:29574`): nền trắng, viền nhạt, bo 20, đệm 20 (trái 0 — vạch màu sát mép),
+ * các cột cách 40. Sắc của hàng là biến `--tone*`, đặt bởi lớp `tone*` bên dưới.
+ */
+.row {
+  --row-gap: 40px;
+  --tone: var(--xp-color-text-tertiary);
+  --tone-bg: var(--xp-color-bg);
+  --tone-border: var(--xp-color-border);
+
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  padding: 20px 20px 20px 0;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: 20px;
+  background: var(--xp-color-bg-container);
+  column-gap: var(--row-gap);
+  grid-template-areas: 'indicator vehicle odometer cycle schedule actions';
+  grid-template-columns: 4px minmax(280px, 410px) 180px minmax(180px, 1fr) 200px auto;
+  row-gap: var(--xp-space-md);
+}
+
+.toneDanger {
+  --tone: var(--xp-color-error);
+  --tone-bg: var(--xp-color-error-bg);
+  --tone-border: var(--xp-color-error-border);
+}
+
+.toneWarning {
+  --tone: var(--xp-color-warning);
+  --tone-bg: var(--xp-color-warning-bg);
+  --tone-border: var(--xp-color-warning-border);
+}
+
+.toneInfo {
+  --tone: var(--xp-color-info);
+  --tone-bg: var(--xp-color-info-bg);
+  --tone-border: var(--xp-color-info-border);
+}
+
+.toneNeutral {
+  --tone: var(--xp-color-text-tertiary);
+}
+
+.indicator {
+  width: 4px;
+  height: 100%;
+  min-height: 80px;
+  border-radius: 0 var(--xp-border-radius-pill) var(--xp-border-radius-pill) 0;
+  background: var(--tone);
+  grid-area: indicator;
+}
+
+/* Cột xe: ảnh 142×80 bo 12 + tên, biển số, lần bảo dưỡng gần nhất. Vạch màu cách ảnh 20. */
+.vehicle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  margin-left: calc(20px - var(--row-gap));
+  gap: var(--xp-space-12);
+  grid-area: vehicle;
+}
+
+.media {
+  display: inline-flex;
+  overflow: hidden;
+  width: 142px;
+  height: 80px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: 28px;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-6);
+}
+
+.name {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.subtle {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.medium {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Cột Odo: nhãn trên, số 20/600 + đơn vị 16/500 xám, mốc tiếp theo dưới. */
+.odometer {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: var(--xp-space-xs);
-  padding: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-inline-start: 3px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-bg-container);
+  grid-area: odometer;
 }
 
-.cardOverdue {
-  border-inline-start-color: var(--xp-color-error);
+.label {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  white-space: nowrap;
 }
 
-.cardHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--xp-space-xs);
-}
-
-.cardTitle {
+.km {
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-strong);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
 }
 
-.cardSub,
-.cardBody {
+.kmUnit {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.missing {
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
+}
+
+/* Cột chu kỳ: viên trạng thái + KM còn lại, thanh 8px, "% chu kỳ". */
+.cycle {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  grid-area: cycle;
+}
+
+.cycleHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.dueBadge {
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.remaining {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.track {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--xp-color-bg-muted);
+}
+
+.fill {
+  display: block;
+  width: var(--cycle-percent, 0%);
+  height: 100%;
+  border-radius: 4px;
+  background: var(--tone);
+}
+
+/* Ô lịch 200px: chưa có lịch = viền đứt; quá hạn thì tô đỏ; đã có phiếu = nền xanh nhạt. */
+.schedule {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-lg);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-xs);
+  grid-area: schedule;
+  line-height: 20px;
+}
+
+.schedule b {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.scheduleEmpty {
+  border: 1px dashed var(--xp-color-border);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+}
+
+.scheduleUrgent {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.scheduleBooked {
+  border: 1px solid transparent;
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+  grid-area: actions;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.showing {
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
 
-.cardActions {
-  display: flex;
-  gap: var(--xp-space-xs);
-}
+/* Màn 1280–1440: vẫn MỘT hàng — thu khoảng cách cột và ảnh thay vì xếp tầng. */
+@media (max-width: 1440px) {
+  .row {
+    --row-gap: 24px;
 
-.cardButton,
-.cardButtonPrimary {
-  min-height: 44px; /* touch target tối thiểu (docs §12.7) */
-  flex: 1;
-  padding-inline: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-text);
-  cursor: pointer;
-  font: inherit;
-}
+    grid-template-columns: 4px minmax(220px, 1fr) 150px minmax(150px, 1fr) 190px auto;
+  }
 
-.cardButtonPrimary {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary);
-  color: var(--xp-color-text-light-solid);
+  .media {
+    width: 112px;
+    height: 64px;
+  }
 }
 
 /*
- * Skeleton phải CAO ĐÚNG bằng hàng tab thật, nếu không nội dung bên dưới nhảy một nhịp khi
- * dữ liệu về. Trước đây là `style={{ height: 44 }}` (CLAUDE.md §5 cấm inline style).
+ * Khung hẹp hơn một hàng đủ năm cột: xe + Odo ở trên, chu kỳ + ô lịch ở giữa, nút dưới cùng —
+ * không cuộn ngang, không thu chữ.
  */
-.tabsSkeleton {
-  height: 44px;
+@media (max-width: 1180px) {
+  .row {
+    grid-template-areas:
+      'indicator vehicle odometer'
+      'indicator cycle schedule'
+      'indicator actions actions';
+    grid-template-columns: 4px minmax(0, 1fr) minmax(160px, 220px);
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
 }
 
-.tabsSkeleton :global(.ant-skeleton-input) {
-  height: 44px;
-  min-width: 0;
+@media (max-width: 640px) {
+  .row {
+    padding-block: var(--xp-space-md);
+    grid-template-areas:
+      'indicator vehicle'
+      'indicator odometer'
+      'indicator cycle'
+      'indicator schedule'
+      'indicator actions';
+    grid-template-columns: 4px minmax(0, 1fr);
+    --row-gap: var(--xp-space-md);
+  }
+
+  .media {
+    width: 96px;
+    height: 56px;
+  }
 }

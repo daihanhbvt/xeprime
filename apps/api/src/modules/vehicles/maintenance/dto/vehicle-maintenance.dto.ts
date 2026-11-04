@@ -3,6 +3,9 @@ import {
   DOCUMENT_UPLOAD_MAX_BYTES,
   DOCUMENT_UPLOAD_MIME_TYPES,
   MAINTENANCE_BOARD_FILTER_VALUES,
+  MAINTENANCE_BOARD_SORT,
+  MAINTENANCE_BOARD_SORT_VALUES,
+  type MaintenanceBoardSort,
   MAINTENANCE_STATUS_VALUES,
   MAINTENANCE_TYPE_VALUES,
   ODOMETER_CORRECTION_REASON_VALUES,
@@ -456,11 +459,12 @@ export class MaintenanceBoardQueryDto {
   to?: string;
 
   @ApiPropertyOptional({
-    description: 'remaining_asc | remaining_desc | name_asc | updated_desc',
+    enum: MAINTENANCE_BOARD_SORT_VALUES,
+    default: MAINTENANCE_BOARD_SORT.REMAINING_ASC,
   })
   @IsOptional()
-  @IsIn(['remaining_asc', 'remaining_desc', 'name_asc', 'updated_desc'])
-  sort?: 'remaining_asc' | 'remaining_desc' | 'name_asc' | 'updated_desc';
+  @IsIn(MAINTENANCE_BOARD_SORT_VALUES)
+  sort?: MaintenanceBoardSort;
 
   @ApiPropertyOptional({ minimum: 1 })
   @IsOptional()

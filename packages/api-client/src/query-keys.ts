@@ -149,6 +149,8 @@ export const queryKeys = {
   drivers: {
     all: ['drivers'] as const,
     list: (params: QueryParams) => ['drivers', 'list', params] as const,
+    /** Dải số đếm đầu màn Tài xế (04/11/2026) — theo bộ lọc chung đang áp. */
+    summary: (params: QueryParams) => ['drivers', 'summary', params] as const,
     /** Bộ chọn gán đơn theo khung giờ (17/08) — cache riêng theo cửa sổ thời gian. */
     assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
       ['drivers', 'assignable', window] as const,

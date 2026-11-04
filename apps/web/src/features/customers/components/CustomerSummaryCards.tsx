@@ -8,26 +8,12 @@ import {
   TeamOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { ComponentType } from 'react';
 import { TENANT_CUSTOMER_RETURNING_MIN_RENTALS } from '@xeprime/types';
+import { SummaryStrip, type SummaryStripItem } from '@/components/data-display/SummaryStrip';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { cx } from '@/lib/cx';
 import { isZeroMoney } from '@/lib/money';
 import type { TenantCustomerSummary } from '../types';
-import styles from './CustomerSummaryCards.module.css';
-
-type Tone = 'neutral' | 'info' | 'success' | 'danger' | 'warning';
-
-interface Item {
-  key: string;
-  icon: ComponentType;
-  tone: Tone;
-  value: string | number;
-  label: string;
-  danger?: boolean;
-}
 
 /**
  * Dải số liệu đầu "Danh sách khách hàng" — Figma Partner-XePrime `23777:53832` (02/11/2026): sáu
@@ -50,7 +36,7 @@ export function CustomerSummaryCards({
   const riskCount = (summary?.watchlistCustomers ?? 0) + (summary?.blockedCustomers ?? 0);
   const debt = summary?.totalDebt ?? null;
 
-  const items: Item[] = [
+  const items: SummaryStripItem[] = [
     {
       key: 'customers',
       icon: TeamOutlined,
@@ -100,26 +86,5 @@ export function CustomerSummaryCards({
     },
   ];
 
-  return (
-    <section className={styles.strip} aria-label={t('ariaLabel')}>
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <div key={item.key} className={styles.item}>
-            <span className={cx(styles.icon, styles[item.tone])} aria-hidden="true">
-              <Icon />
-            </span>
-            <span className={styles.text}>
-              {loading ? (
-                <Skeleton.Input active size="small" className={styles.skeleton} />
-              ) : (
-                <b className={cx(styles.value, item.danger && styles.valueDanger)}>{item.value}</b>
-              )}
-              <span className={styles.label}>{item.label}</span>
-            </span>
-          </div>
-        );
-      })}
-    </section>
-  );
+  return <SummaryStrip items={items} loading={loading} ariaLabel={t('ariaLabel')} />;
 }

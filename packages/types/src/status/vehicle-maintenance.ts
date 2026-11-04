@@ -322,6 +322,20 @@ export const MAINTENANCE_BOARD_FILTER = {
   MISSING_RETURN_KM: 'missing_return_km',
 } as const;
 
+/** Sắp xếp danh sách bảo dưỡng — `remaining_asc` (gần đến hạn trước) là mặc định. */
+export const MAINTENANCE_BOARD_SORT = {
+  REMAINING_ASC: 'remaining_asc',
+  REMAINING_DESC: 'remaining_desc',
+  NAME_ASC: 'name_asc',
+  UPDATED_DESC: 'updated_desc',
+} as const;
+
+export type MaintenanceBoardSort =
+  (typeof MAINTENANCE_BOARD_SORT)[keyof typeof MAINTENANCE_BOARD_SORT];
+export const MAINTENANCE_BOARD_SORT_VALUES = Object.values(
+  MAINTENANCE_BOARD_SORT,
+) as MaintenanceBoardSort[];
+
 export type MaintenanceBoardFilter =
   (typeof MAINTENANCE_BOARD_FILTER)[keyof typeof MAINTENANCE_BOARD_FILTER];
 export const MAINTENANCE_BOARD_FILTER_VALUES = Object.values(

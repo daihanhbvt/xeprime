@@ -19,6 +19,8 @@ export type UpdateDriverWageSettingsInput = Schemas['UpdateDriverWageSettingsDto
 export type DriverAssignmentRow = Schemas['DriverAssignmentRowDto'];
 /** Ngăn chi tiết một tài xế: hồ sơ + tiền công tháng + việc đang treo + độ tin cậy + xu hướng. */
 export type DriverOverview = Schemas['DriverOverviewDto'];
+/** Dải số đếm đầu màn Tài xế — đã áp bộ lọc chung. */
+export type DriverSummary = Schemas['DriverSummaryDto'];
 
 /** Tab của ngăn chi tiết tài xế — sống trên URL cùng `open`. */
 export const DRIVER_DETAIL_TAB = {
@@ -31,9 +33,18 @@ export const DRIVER_DETAIL_TABS: readonly DriverDetailTab[] = Object.values(DRIV
 
 export interface DriverFilters {
   q?: string;
-  /** Bỏ trống = các liên kết còn mở (mời · đang liên kết · tạm khoá) — mặc định của server. */
+  /**
+   * Bỏ trống = các liên kết còn mở (mời · đang liên kết · tạm khoá) — mặc định của server;
+   * `any` = mọi trạng thái; `closed` = đã từ chối + đã kết thúc.
+   */
   linkStatus?: string;
+  /** `needed` = chỉ liên kết cần đối chiếu bằng lái (`DRIVER_LICENCE_CHECK_FILTER`). */
+  licenceCheck?: string;
   driverType?: string;
+  /** `DRIVER_OPERATION_FILTER` — đang có chuyến / rảnh. */
+  operation?: string;
+  /** `DRIVER_LIST_SORT` — bỏ trống = mới nhất (mặc định của màn, khác mặc định server). */
+  sort?: string;
   /** Tháng `YYYY-MM` (giờ VN) của hai cột thống kê tiền công — bỏ trống = tháng hiện tại. */
   month?: string;
   /** Tài xế đang mở ở ngăn chi tiết (id liên kết) — chỉ đổi giao diện, không lọc danh sách. */

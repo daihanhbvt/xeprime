@@ -57,6 +57,8 @@ const SUPPORT_ALLOWLIST = [
   'DriversController.list',
   // Chi tiết một tài xế (tiền công tháng, độ tin cậy, xu hướng) — chỉ đọc, cùng capability xem tài xế.
   'DriversController.overview',
+  // Dải số đếm đầu màn Tài xế (04/11/2026) — cùng dữ liệu với danh sách, cùng capability.
+  'DriversController.summary',
   'DriversController.wageSettings',
   'HandoverQueueController.missingOdometer',
   'InvitesController.list',
@@ -64,6 +66,12 @@ const SUPPORT_ALLOWLIST = [
   'MaintenanceBoardController.summary',
   'MembersController.list',
   'PartnerDashboardController.overview',
+  // Huy hiệu menu site partner (02–04/11/2026): cùng dữ liệu với Tổng quan / danh sách, cùng
+  // capability đọc (`booking.view` · `booking_request.view` · `vehicle.view`) — vỏ trang trong
+  // phiên hỗ trợ gọi chúng mỗi phút, chặn là menu của người hỗ trợ đỏ 403 ở mọi trang.
+  'PartnerDashboardController.requests',
+  'PartnerDashboardController.today',
+  'VehiclesController.needsActionCount',
   'ShopPoliciesController.get',
   // Một hoá đơn theo id — cùng dữ liệu với danh sách, cùng `subscription_status.view` (ADR 0050).
   'SubscriptionController.invoice',

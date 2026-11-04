@@ -7,9 +7,11 @@ import {
   fetchAssignableDrivers,
   fetchDriverAssignments,
   fetchDriverOverview,
+  fetchDriverSummary,
   fetchDriverWageSettings,
   fetchDrivers,
   filtersToParams,
+  sharedFilterParams,
   inviteDriver,
   resumeDriver,
   suspendDriver,
@@ -28,6 +30,16 @@ export function useDrivers(filters: DriverFilters) {
   return useQuery({
     queryKey: queryKeys.drivers.list(filtersToParams(filters)),
     queryFn: () => fetchDrivers(filters),
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Dải số đếm đầu màn Tài xế — theo bộ lọc chung (tìm kiếm, hình thức, vận hành). */
+export function useDriverSummary(filters: DriverFilters) {
+  const params = sharedFilterParams(filters);
+  return useQuery({
+    queryKey: queryKeys.drivers.summary(params),
+    queryFn: () => fetchDriverSummary(filters),
     placeholderData: (prev) => prev,
   });
 }

@@ -1,3 +1,4 @@
+import { DRIVER_LIST_SORT } from '@xeprime/types';
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import {
   apiDelete,
@@ -14,6 +15,7 @@ import type {
   DriverAssignmentRow,
   DriverFilters,
   DriverOverview,
+  DriverSummary,
   DriverWageSettings,
   UpdateDriverWageSettingsInput,
   InviteDriverInput,
@@ -24,11 +26,21 @@ export const DRIVERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
 export type DriverListResult = Paged<Driver>;
 
-export function filtersToParams(filters: DriverFilters): QueryParams {
+/** Bộ lọc chung của danh sách VÀ dải số đếm — trạng thái liên kết đi riêng ở `filtersToParams`. */
+export function sharedFilterParams(filters: DriverFilters): QueryParams {
   return {
     q: filters.q ?? null,
-    linkStatus: filters.linkStatus ?? null,
     driverType: filters.driverType ?? null,
+    operation: filters.operation ?? null,
+  };
+}
+
+export function filtersToParams(filters: DriverFilters): QueryParams {
+  return {
+    ...sharedFilterParams(filters),
+    linkStatus: filters.linkStatus ?? null,
+    licenceCheck: filters.licenceCheck ?? null,
+    sort: filters.sort ?? DRIVER_LIST_SORT.NEWEST,
     month: filters.month ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? DRIVERS_DEFAULT_LIMIT,
@@ -37,6 +49,10 @@ export function filtersToParams(filters: DriverFilters): QueryParams {
 
 export const fetchDrivers = (filters: DriverFilters): Promise<DriverListResult> =>
   fetchPage<Driver>('/drivers', filtersToParams(filters), DRIVERS_DEFAULT_LIMIT);
+
+/** Dải số đếm đầu màn — mỗi ô bằng tổng danh sách khi bấm vào nó. */
+export const fetchDriverSummary = (filters: DriverFilters): Promise<DriverSummary> =>
+  apiGet<DriverSummary>('/drivers/summary', sharedFilterParams(filters));
 
 /** Mời một TÀI KHOẢN KHÁCH đã xác minh SĐT làm tài xế (ADR 0063). */
 export const inviteDriver = (body: InviteDriverInput): Promise<Driver> =>

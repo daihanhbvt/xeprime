@@ -3795,6 +3795,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/drivers/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Số đếm theo trạng thái liên kết + số cần đối chiếu bằng lái (đã áp bộ lọc chung)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["DriversController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/drivers/wage-settings": {
         parameters: {
             query?: never;
@@ -15274,6 +15300,23 @@ export interface components {
             /** @description Tên xe của chuyến */
             vehicleName: string;
         };
+        DriverCurrentTripDto: {
+            /** @description ID đơn */
+            bookingId: string;
+            bookingCode: string;
+            /** @enum {string} */
+            bookingStatus: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            pickupAt: string;
+            returnAt: string;
+            /** @description Tên xe của chuyến */
+            vehicleName: string;
+            vehiclePlate?: string | null;
+            /**
+             * @description Tài xế đã nhận (accepted) hay còn chờ trả lời (pending)
+             * @enum {string|null}
+             */
+            assignmentStatus?: "pending" | "accepted" | null;
+        };
         DriverDto: {
             id: string;
             name: string;
@@ -15412,6 +15455,8 @@ export interface components {
             driver: components["schemas"]["DriverDto"];
             month: components["schemas"]["DriverMonthStatsDto"];
             upcoming: components["schemas"]["DriverUpcomingDto"];
+            /** @description Các đơn đang gán, sớm nhất trước — tối đa 20; tổng nằm ở driver.activeBookingCount */
+            current: components["schemas"]["DriverCurrentTripDto"][];
             reliability: components["schemas"]["DriverReliabilityDto"];
             /** @description Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt */
             trend: components["schemas"]["DriverWageTrendPointDto"][];
@@ -15439,6 +15484,17 @@ export interface components {
             acceptRate?: number | null;
             /** @description Trung vị thời gian trả lời (phút, gồm nhận và từ chối) — null khi chưa có */
             medianResponseMinutes?: number | null;
+        };
+        DriverSummaryDto: {
+            /** @description Liên kết còn mở (chờ · đang · tạm khoá) */
+            open: number;
+            active: number;
+            invited: number;
+            suspended: number;
+            /** @description Đã từ chối + đã kết thúc */
+            closed: number;
+            /** @description Liên kết còn mở cần đối chiếu bằng lái */
+            licenceCheck: number;
         };
         DriverSurchargeRuleDto: {
             /** @enum {string} */
@@ -46468,9 +46524,14 @@ export interface operations {
             query?: {
                 /** @description Tìm theo tên / SĐT */
                 q?: string;
-                /** @description Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái. */
-                linkStatus?: "invited" | "active" | "suspended" | "declined" | "ended" | "any";
                 driverType?: "staff" | "collaborator" | "temporary";
+                /** @description `on_trip` = đang gán ít nhất một đơn chiếm lịch; `idle` = không có đơn nào */
+                operation?: "on_trip" | "idle";
+                /** @description Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái; `closed` = đã từ chối + đã kết thúc. */
+                linkStatus?: "invited" | "active" | "suspended" | "declined" | "ended" | "any" | "closed";
+                /** @description `needed` = chỉ liên kết còn mở mà bằng lái chưa xác thực còn hạn, hoặc họ tên trên bằng lệch tên mời */
+                licenceCheck?: "needed";
+                sort?: "status" | "newest" | "name_asc";
                 /** @description Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công — mặc định tháng hiện tại */
                 month?: string;
                 page?: number;
@@ -47767,6 +47828,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignableDriversDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DriversController_summary: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên / SĐT */
+                q?: string;
+                driverType?: "staff" | "collaborator" | "temporary";
+                /** @description `on_trip` = đang gán ít nhất một đơn chiếm lịch; `idle` = không có đơn nào */
+                operation?: "on_trip" | "idle";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DriverSummaryDto"];
+                    };
                 };
             };
             /**
@@ -50322,8 +50516,7 @@ export interface operations {
                 from?: string;
                 /** @description ISO — lịch đến ngày */
                 to?: string;
-                /** @description remaining_asc | remaining_desc | name_asc | updated_desc */
-                sort?: string;
+                sort?: "remaining_asc" | "remaining_desc" | "name_asc" | "updated_desc";
                 page?: number;
                 limit?: number;
             };

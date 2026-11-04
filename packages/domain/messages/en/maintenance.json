@@ -1,7 +1,7 @@
 {
   "page": {
-    "title": "Maintenance centre",
-    "subtitle": "Track condition, service schedules and periodic repairs across your whole fleet.",
+    "title": "Maintenance list",
+    "subtitle": "Track vehicle condition, plan routine maintenance and manage repair costs across your whole fleet.",
     "loading": "Loading the maintenance centre…"
   },
   "filters": {
@@ -16,16 +16,18 @@
     "sortRemainingAsc": "Due soonest first",
     "sortRemainingDesc": "Most km remaining first",
     "sortNameAsc": "Vehicle name A→Z",
-    "sortUpdatedDesc": "Recently updated"
+    "sortUpdatedDesc": "Recently updated",
+    "sortValue": "Sort: {label}"
   },
   "actions": {
-    "detail": "Details",
+    "detail": "View vehicle details",
     "updateOdometer": "Update odometer",
     "editSchedule": "Edit schedule",
     "schedule": "Schedule",
     "complete": "Complete",
     "cancelSchedule": "Cancel schedule",
-    "cancelScheduleConfirm": "Cancel this maintenance schedule? It moves to the history as Cancelled."
+    "cancelScheduleConfirm": "Cancel this maintenance schedule? It moves to the history as Cancelled.",
+    "scheduleNow": "Schedule now"
   },
   "dialog": {
     "loading": "Loading…",
@@ -184,5 +186,29 @@
   "recordHistory": {
     "title": "Maintenance history",
     "total": "{count, plural, one {# record} other {# records}}"
+  },
+  "board": {
+    "listLabel": "Vehicles to maintain",
+    "loading": "Loading the maintenance list",
+    "showing": "Showing {from}-{to} of {total, plural, one {# vehicle} other {# vehicles}}",
+    "more": "Actions for {name}",
+    "lastService": "Last serviced: <b>{date}</b>",
+    "noLastService": "Not serviced yet",
+    "odometer": "Current odometer",
+    "kmUnit": "km",
+    "missingOdometer": "No odometer reading",
+    "nextDue": "Next due: <b>{km}</b>",
+    "noNextDue": "No next service mark",
+    "cycle": "{percent}% of the {interval} cycle",
+    "noCycle": "Oil-change interval not set",
+    "needsOdometer": "Update the odometer to track the cycle",
+    "noSchedule": "Not scheduled",
+    "needNow": "Needs scheduling now",
+    "needSoon": "Needs scheduling",
+    "notYet": "Nothing due yet",
+    "scheduledOn": "Scheduled | {date}",
+    "scheduled": "Scheduled",
+    "inProgressSince": "In service | since {date}",
+    "inProgress": "In service"
   }
 }

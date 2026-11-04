@@ -1,28 +1,98 @@
-/* Trang Tài xế — cùng nhịp chữ với các bảng manage khác. */
-.name {
-  font-weight: var(--xp-font-weight-medium, 500);
+/*
+ * Màn Quản lý tài xế — Figma Partner-XePrime `23737:41945`: tiêu đề + nút, hàng lọc, dải số đếm,
+ * lưới thẻ 4 cột cách nhau 20; các khối cách nhau 20.
+ */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.meta {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-sm, 13px);
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
 }
 
-/* Bộ chọn tháng thống kê tiền công + nút mời — cùng hàng hành động của thanh lọc. */
+/* Sắp xếp + tháng thống kê tiền công — cùng hàng hành động của thanh lọc. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--xp-space-sm);
   align-items: center;
+  gap: var(--xp-space-sm);
 }
 
-.month {
+.sort {
   width: 200px;
 }
 
-/* Số liệu bấm được để mở ngăn kéo — giữ dáng chữ của ô bảng, không đệm nút. */
-.linkCell {
-  height: auto;
+/*
+ * Lưới thẻ — 4 thẻ ~375 ở khung 1560. Track co theo khung với sàn 300px (dưới mức đó hàng hai nút
+ * "Chỉnh sửa thông tin · Xem chuyến" xuống dòng), nên màn hẹp tự bớt cột thay vì bóp thẻ.
+ */
+.grid {
+  --card-gap: 20px;
+  --card-min: 300px;
+  --card-max-cols: 4;
+
+  display: grid;
+  align-items: stretch;
   padding: 0;
-  font-weight: var(--xp-font-weight-medium, 500);
+  margin: 0;
+  gap: var(--card-gap);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      min(
+        100%,
+        max(
+          var(--card-min),
+          calc((100% - (var(--card-max-cols) - 1) * var(--card-gap)) / var(--card-max-cols))
+        )
+      ),
+      1fr
+    )
+  );
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+}
+
+.cell > * {
+  min-width: 0;
+  flex: 1;
+}
+
+.skeletonCard {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+/* Rỗng / không kết quả / lỗi — design không vẽ: một ô trắng bo 16 cùng ngôn ngữ thẻ. */
+.state {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.showing {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
 }

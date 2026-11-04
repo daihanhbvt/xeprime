@@ -1,8 +1,8 @@
 'use client';
 
-import { EditOutlined, WalletOutlined } from '@ant-design/icons';
+import { ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Alert, App, Button, Skeleton } from 'antd';
+import { Alert, App, Button, Skeleton, Tooltip } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
@@ -13,10 +13,11 @@ import { NumberField } from '@/components/form/NumberField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useDriverWageSettings, useUpdateDriverWageSettings } from '../hooks/use-drivers';
 import type { DriverWageSettings } from '../types';
-import styles from './DriverWageSettingsCard.module.css';
+import styles from './DriverWageSettingsButton.module.css';
 
 /**
  * Tiền công tài xế/ngày — MỨC CHUNG của gian hàng (ADR 0075): một số cho mọi xe, tự điền khi gán
@@ -24,10 +25,12 @@ import styles from './DriverWageSettingsCard.module.css';
  * ("chuyến này và các chuyến gán sau"). XePrime chỉ ghi nhận: chủ xe trả trực tiếp cho tài xế. Đổi
  * số này không viết lại các chuyến đã gán.
  *
- * Chưa đặt thì KHÔNG có số nào được gán sẵn: mức gợi ý của nền tảng chỉ hiện làm lời nhắc (và một
- * nút điền nhanh trong hộp nhập).
+ * Design màn Tài xế (04/11/2026) không vẽ chỗ cho nó — chốt cùng ngày: một nút viền cạnh "Mời tài
+ * xế mới", lời giải thích nằm ở tooltip. Chưa đặt thì nút mang sắc cảnh báo (gán tay phải nhập
+ * số, xe "Đặt ngay" không tự gán tài xế) và KHÔNG có số nào được gán sẵn: mức gợi ý của nền tảng
+ * chỉ hiện trong lời nhắc và một nút điền nhanh trong hộp nhập.
  */
-export function DriverWageSettingsCard() {
+export function DriverWageSettingsButton() {
   const t = useTranslations('Drivers.wage.settings');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -36,58 +39,50 @@ export function DriverWageSettingsCard() {
   const [editing, setEditing] = useState(false);
   const canManage = has(PERMISSION.DRIVER_MANAGE);
 
-  if (settings.isLoading) {
-    return (
-      <section className={styles.card}>
-        <Skeleton active paragraph={{ rows: 1 }} />
-      </section>
-    );
-  }
+  if (settings.isLoading) return <Skeleton.Button active size="large" className={styles.skeleton} />;
   if (settings.isError || !settings.data) {
     return (
-      <Alert
-        className={styles.card}
-        type="error"
-        showIcon
-        title={t('loadError')}
-        action={
-          <Button size="small" onClick={() => void settings.refetch()}>
-            {tCommon('retry')}
-          </Button>
-        }
-      />
+      <Tooltip title={t('loadError')}>
+        <Button size="large" icon={<ReloadOutlined />} onClick={() => void settings.refetch()}>
+          {tCommon('retry')}
+        </Button>
+      </Tooltip>
     );
   }
 
   const data = settings.data;
+  const label = data.dailyWage
+    ? t('button', { amount: fmt.money(data.dailyWage) })
+    : canManage
+      ? t('unsetButton')
+      : t('unset');
+  const tooltip = data.dailyWage
+    ? t('hint')
+    : t('unsetHint', { suggested: fmt.money(data.suggestedDaily) });
+
   return (
-    <section className={styles.card} aria-label={t('title')}>
-      <span className={styles.icon} aria-hidden>
-        <WalletOutlined />
-      </span>
-      <div className={styles.body}>
-        <span className={styles.label}>{t('title')}</span>
-        <span className={data.dailyWage ? styles.value : styles.unset}>
-          {data.dailyWage ? t('perDay', { amount: fmt.money(data.dailyWage) }) : t('unset')}
-        </span>
-        <span className={styles.hint}>
-          {data.dailyWage
-            ? t('hint')
-            : t('unsetHint', { suggested: fmt.money(data.suggestedDaily) })}
-        </span>
-      </div>
-      {canManage ? (
-        <Button
-          icon={<EditOutlined />}
-          type={data.dailyWage ? 'default' : 'primary'}
-          onClick={() => setEditing(true)}
-        >
-          {data.dailyWage ? t('edit') : t('set')}
-        </Button>
-      ) : null}
+    <>
+      <Tooltip title={tooltip}>
+        {canManage ? (
+          <Button
+            size="large"
+            icon={<WalletOutlined />}
+            {...(data.dailyWage ? {} : { color: 'orange' as const, variant: 'outlined' as const })}
+            onClick={() => setEditing(true)}
+          >
+            {label}
+          </Button>
+        ) : (
+          // Chỉ xem: cùng dáng nút nhưng không bấm được — số vẫn đọc được, lời giải thích vẫn ở tooltip.
+          <span className={data.dailyWage ? styles.readOnly : cx(styles.readOnly, styles.readOnlyUnset)} tabIndex={0}>
+            <WalletOutlined aria-hidden />
+            {label}
+          </span>
+        )}
+      </Tooltip>
       {/* Dựng có điều kiện: mỗi lần mở là một form mới với số đang lưu. */}
       {editing ? <DriverWageSettingsDialog settings={data} onClose={() => setEditing(false)} /> : null}
-    </section>
+    </>
   );
 }
 

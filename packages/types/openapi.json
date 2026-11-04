@@ -22895,23 +22895,6 @@
             }
           },
           {
-            "name": "linkStatus",
-            "required": false,
-            "in": "query",
-            "description": "Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái.",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "invited",
-                "active",
-                "suspended",
-                "declined",
-                "ended",
-                "any"
-              ]
-            }
-          },
-          {
             "name": "driverType",
             "required": false,
             "in": "query",
@@ -22921,6 +22904,63 @@
                 "staff",
                 "collaborator",
                 "temporary"
+              ]
+            }
+          },
+          {
+            "name": "operation",
+            "required": false,
+            "in": "query",
+            "description": "`on_trip` = đang gán ít nhất một đơn chiếm lịch; `idle` = không có đơn nào",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "on_trip",
+                "idle"
+              ]
+            }
+          },
+          {
+            "name": "linkStatus",
+            "required": false,
+            "in": "query",
+            "description": "Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái; `closed` = đã từ chối + đã kết thúc.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "invited",
+                "active",
+                "suspended",
+                "declined",
+                "ended",
+                "any",
+                "closed"
+              ]
+            }
+          },
+          {
+            "name": "licenceCheck",
+            "required": false,
+            "in": "query",
+            "description": "`needed` = chỉ liên kết còn mở mà bằng lái chưa xác thực còn hạn, hoặc họ tên trên bằng lệch tên mời",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "needed"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "status",
+              "type": "string",
+              "enum": [
+                "status",
+                "newest",
+                "name_asc"
               ]
             }
           },
@@ -24273,6 +24313,158 @@
           }
         },
         "summary": "Tài xế cho bộ chọn gán đơn — kèm cờ bận (theo người, mọi bên thuê) và mức bằng lái",
+        "tags": [
+          "drivers"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/drivers/summary": {
+      "get": {
+        "operationId": "DriversController_summary",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên / SĐT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driverType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "staff",
+                "collaborator",
+                "temporary"
+              ]
+            }
+          },
+          {
+            "name": "operation",
+            "required": false,
+            "in": "query",
+            "description": "`on_trip` = đang gán ít nhất một đơn chiếm lịch; `idle` = không có đơn nào",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "on_trip",
+                "idle"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DriverSummaryDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Số đếm theo trạng thái liên kết + số cần đối chiếu bằng lái (đã áp bộ lọc chung)",
         "tags": [
           "drivers"
         ],
@@ -26925,9 +27117,15 @@
             "name": "sort",
             "required": false,
             "in": "query",
-            "description": "remaining_asc | remaining_desc | name_asc | updated_desc",
             "schema": {
-              "type": "string"
+              "default": "remaining_asc",
+              "type": "string",
+              "enum": [
+                "remaining_asc",
+                "remaining_desc",
+                "name_asc",
+                "updated_desc"
+              ]
             }
           },
           {
@@ -87759,6 +87957,60 @@
           "vehicleName"
         ]
       },
+      "DriverCurrentTripDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "description": "ID đơn"
+          },
+          "bookingCode": {
+            "type": "string"
+          },
+          "bookingStatus": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "pickupAt": {
+            "type": "string"
+          },
+          "returnAt": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string",
+            "description": "Tên xe của chuyến"
+          },
+          "vehiclePlate": {
+            "type": "string",
+            "nullable": true
+          },
+          "assignmentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted"
+            ],
+            "nullable": true,
+            "description": "Tài xế đã nhận (accepted) hay còn chờ trả lời (pending)"
+          }
+        },
+        "required": [
+          "bookingId",
+          "bookingCode",
+          "bookingStatus",
+          "pickupAt",
+          "returnAt",
+          "vehicleName"
+        ]
+      },
       "DriverDto": {
         "type": "object",
         "properties": {
@@ -88236,6 +88488,13 @@
           "upcoming": {
             "$ref": "#/components/schemas/DriverUpcomingDto"
           },
+          "current": {
+            "description": "Các đơn đang gán, sớm nhất trước — tối đa 20; tổng nằm ở driver.activeBookingCount",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriverCurrentTripDto"
+            }
+          },
           "reliability": {
             "$ref": "#/components/schemas/DriverReliabilityDto"
           },
@@ -88251,6 +88510,7 @@
           "driver",
           "month",
           "upcoming",
+          "current",
           "reliability",
           "trend"
         ]
@@ -88331,6 +88591,40 @@
           "accepted",
           "declined",
           "expired"
+        ]
+      },
+      "DriverSummaryDto": {
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "number",
+            "description": "Liên kết còn mở (chờ · đang · tạm khoá)"
+          },
+          "active": {
+            "type": "number"
+          },
+          "invited": {
+            "type": "number"
+          },
+          "suspended": {
+            "type": "number"
+          },
+          "closed": {
+            "type": "number",
+            "description": "Đã từ chối + đã kết thúc"
+          },
+          "licenceCheck": {
+            "type": "number",
+            "description": "Liên kết còn mở cần đối chiếu bằng lái"
+          }
+        },
+        "required": [
+          "open",
+          "active",
+          "invited",
+          "suspended",
+          "closed",
+          "licenceCheck"
         ]
       },
       "DriverSurchargeRuleDto": {

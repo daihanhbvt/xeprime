@@ -142,3 +142,47 @@
 .muted {
   color: var(--xp-color-text-tertiary);
 }
+
+/* Panel "Chuyến đang gán": mỗi đơn một hàng — mã · xe · thời gian · trạng thái đơn + lượt gán. */
+.currentList {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.currentRow {
+  display: grid;
+  align-items: center;
+  padding: var(--xp-space-sm) 0;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-12);
+  grid-template-columns: 130px minmax(160px, 1fr) minmax(180px, 1fr) auto;
+}
+
+.currentRow:first-child {
+  border-top: 0;
+}
+
+.currentCode {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.currentBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+@media (max-width: 768px) {
+  .currentRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .currentBadges {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
