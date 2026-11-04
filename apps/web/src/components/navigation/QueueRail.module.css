@@ -2,7 +2,7 @@
 
 .rail {
   position: sticky;
-  top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md));
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-xs);

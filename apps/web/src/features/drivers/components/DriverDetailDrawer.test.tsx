@@ -3,7 +3,12 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithIntl } from '@/i18n/test-utils';
 import { ApiClientError } from '@/services/api-client';
-import { DRIVER_DETAIL_TAB, type DriverAssignmentRow, type DriverDetailTab, type DriverOverview } from '../types';
+import {
+  DRIVER_DETAIL_TAB,
+  type DriverAssignmentRow,
+  type DriverDetailTab,
+  type DriverOverview,
+} from '../types';
 import { DriverDetailDrawer } from './DriverDetailDrawer';
 
 /**
@@ -52,7 +57,11 @@ vi.mock('@/hooks/use-permissions', () => ({
 }));
 // Biểu đồ vẽ bằng SVG đo kích thước — jsdom không có layout; chỉ cần biết nó nhận đúng điểm.
 vi.mock('@/components/chart/MoneyVolumeChart', () => ({
-  MoneyVolumeChart: (props: { title: string; points: unknown[]; empty: { title: string } | null }) => (
+  MoneyVolumeChart: (props: {
+    title: string;
+    points: unknown[];
+    empty: { title: string } | null;
+  }) => (
     <section aria-label={props.title}>
       {props.empty ? props.empty.title : `${props.points.length} điểm`}
     </section>
@@ -71,7 +80,13 @@ const DRIVER = {
   endedAt: null,
   endedByParty: null,
   account: { displayName: 'An Nguyễn', avatarUrl: null },
-  licence: { state: 'verified', classes: ['B'], expiresOn: '2030-01-01', fullName: null, kind: null },
+  licence: {
+    state: 'verified',
+    classes: ['B'],
+    expiresOn: '2030-01-01',
+    fullName: null,
+    kind: null,
+  },
   activeBookingCount: 1,
   currentOpenLinkStatus: null,
   dropCount: 1,
@@ -96,6 +111,18 @@ function overview(over: Partial<DriverOverview> = {}): DriverOverview {
       editedTrips: 1,
     },
     upcoming: { acceptedTrips: 1, acceptedWage: '1500000', pendingTrips: 1 },
+    current: [
+      {
+        bookingId: 'bk-9',
+        bookingCode: 'BK-0009',
+        bookingStatus: 'reserved',
+        pickupAt: '2026-11-10T01:00:00.000Z',
+        returnAt: '2026-11-12T01:00:00.000Z',
+        vehicleName: 'Toyota Vios',
+        vehiclePlate: '51A-12345',
+        assignmentStatus: 'accepted',
+      },
+    ],
     reliability: {
       windowDays: 90,
       decided: 3,
@@ -179,6 +206,14 @@ describe('DriverDetailDrawer', () => {
     expect(screen.getByLabelText('Tiền công 6 tháng gần nhất').textContent).toBe('6 điểm');
   });
 
+  it('chuyến đang gán: liệt kê đúng đơn, mở được chi tiết đơn', () => {
+    renderDrawer();
+    expect(screen.getByText('Chuyến đang gán (1)')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'BK-0009' }).getAttribute('href')).toContain('bk-9');
+    expect(screen.getByText('51A-12345')).toBeTruthy();
+    expect(screen.getByText('Tài xế đã nhận')).toBeTruthy();
+  });
+
   it('chưa được gán lần nào: tỉ lệ nhận là "chưa có", không phải 0%; xu hướng trống có lời', () => {
     state.overview = overview({
       reliability: {
@@ -201,7 +236,11 @@ describe('DriverDetailDrawer', () => {
         averageDailyWage: null,
         editedTrips: 0,
       },
-      trend: Array.from({ length: 6 }, (_, i) => ({ month: `2026-0${i + 5}`, trips: 0, wageTotal: '0' })),
+      trend: Array.from({ length: 6 }, (_, i) => ({
+        month: `2026-0${i + 5}`,
+        trips: 0,
+        wageTotal: '0',
+      })),
     });
     renderDrawer();
     expect(screen.getByText('Chưa được gán chuyến nào')).toBeTruthy();
@@ -215,9 +254,9 @@ describe('DriverDetailDrawer', () => {
     expect(props.onTabChange).toHaveBeenCalledWith(DRIVER_DETAIL_TAB.TRIPS);
     fireEvent.click(screen.getByRole('button', { name: 'Tài xế sau' }));
     expect(props.onNavigate).toHaveBeenCalledWith('drv-2');
-    expect((screen.getByRole('button', { name: 'Tài xế trước' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (screen.getByRole('button', { name: 'Tài xế trước' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it('tab chuyến: bảng có xe + biển số; tải bảng kê gom cả tháng rồi tải CSV', async () => {

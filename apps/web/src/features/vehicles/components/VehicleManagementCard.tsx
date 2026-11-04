@@ -1,43 +1,22 @@
 'use client';
 
-import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import {
-  MARKETPLACE_VISIBILITY_REASON,
-  MARKETPLACE_VISIBILITY_REASON_META,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS,
-  VEHICLE_PUBLIC_STATUS_META,
-  VEHICLE_SOURCE_TYPE,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-  type VehicleSourceType,
-} from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
-import { RowActions, type RowAction } from '@/components/data-display/RowActions';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import type { RowAction } from '@/components/data-display/RowActions';
 import { vehiclePath } from '@/constants/routes';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
-import { isNegativeMoney, subtractMoney } from '@/lib/money';
+import { cx } from '@/lib/cx';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
-import { VehicleAlertChips } from './VehicleAlerts';
+import {
+  VehicleCardActions,
+  VehicleCardIdentity,
+  VehicleCardMedia,
+  VehicleCardNotices,
+  VehicleStatusBadges,
+  useVehicleCardFigures,
+} from './VehicleCardParts';
 import styles from './VehicleManagementCard.module.css';
 
-/**
- * Xe đang nằm trong tay CHỦ XE chờ họ làm gì đó — hai trạng thái mà người duyệt đã trả xe về.
- *
- * `draft` không có ở đây dù cũng nằm trong tay chủ xe: xe nháp chưa từng được gửi nên không có
- * lý do nào để hiện.
- */
-const NEEDS_OWNER_ACTION: readonly VehiclePublicStatus[] = [
-  VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
-  VEHICLE_PUBLIC_STATUS.REJECTED,
-];
-
-interface VehicleManagementCardProps {
+export interface VehicleCardProps {
   vehicle: VehicleListItem;
   /** Chỉ số của xe này; `undefined` khi chưa tải xong hoặc khi tải hỏng. */
   stats?: VehicleStats;
@@ -52,24 +31,17 @@ interface VehicleManagementCardProps {
   alertsLoading?: boolean;
   alertsFailed?: boolean;
   actions: RowAction[];
-  /** Đích của tên xe — mặc định Hồ sơ 360 ở `/manage`; xem `VehicleCardGrid`. */
+  /** Đích của tên xe — mặc định Hồ sơ xe. */
   detailHref?: (id: string) => string;
 }
 
 /**
- * Thẻ xe trong lưới `/manage/vehicles` — dựng theo Figma `236:1778` (`vehicle-list-v2-desktop`),
- * bản chỉnh 11/08/2026 chuyển lưới desktop lên 5 cột thẻ gọn (~207px).
+ * Thẻ xe dạng LƯỚI — Figma Partner-XePrime "Vehicle Card" `23655:36682` (danh sách từ
+ * `VEHICLE_LIST_FEW_THRESHOLD` xe, `23649:29724`).
  *
- * Giải phẫu khớp frame: **ảnh tràn viền → tên → mã · biển số → loại/dịch vụ kèm HAI trục trạng
- * thái → gạch ngang → giá thuê + khối chỉ số → gạch ngang → hàng nút.** Khác frame có chủ đích:
- *  - Chip nguồn xe dùng đúng `sourceType` đã lưu; cảnh báo đăng kiểm/bảo dưỡng vẫn chờ dữ liệu Wave 4.
- *  - Nhãn "TỔNG CHI PHÍ" thay vì "CHI PHÍ & KHẤU HAO" của Figma — con số là tổng phiếu chi đã
- *    duyệt, không có khấu hao; nhãn phải nói đúng số nó mô tả.
- *  - Thêm hàng giá ngày thường/cuối tuần (dữ liệu có thật trên bản ghi xe).
- *  - KHÔNG có nút "Xoá" (bản chỉnh 11/08/2026) — xoá chỉ nằm trong menu ⋮ của Hồ sơ 360.
- *
- * Không dựng lại primitive: trạng thái dùng `StatusTag`, hành động dùng `RowActions` (chặn nổi
- * bọt, tên khả truy cập).
+ * Giải phẫu: ảnh 186 có chip trạng thái phủ góc dưới → tên + nguồn xe → mã • biển → (loại xe ·
+ * dịch vụ, giữ theo chốt 03/11) → việc cần làm / lý do trả về khi có → gạch → bảy con số theo cặp
+ * → gạch → Lịch · Chỉnh sửa · Chi tiết. KHÔNG có "Xoá" — xoá chỉ ở Hồ sơ xe, nơi đủ ngữ cảnh.
  */
 export function VehicleManagementCard({
   vehicle,
@@ -81,185 +53,93 @@ export function VehicleManagementCard({
   alertsFailed = false,
   actions,
   detailHref = vehiclePath.detail,
-}: VehicleManagementCardProps) {
-  const t = useTranslations('Vehicles.list');
-  const tLabels = useTranslations('Common.labels');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-
-  const empty = tLabels('emptyValue');
-  const specs = `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`;
-  const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR);
-  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
-
-  // Lãi/lỗ chỉ tính khi CẢ HAI vế cùng phạm vi luỹ kế — không trộn số theo kỳ với số luỹ kế.
-  const hasFinance = stats?.totalIncome != null && stats?.totalExpense != null;
-  const profit = hasFinance ? subtractMoney(stats.totalIncome, stats.totalExpense) : null;
-  const atLoss = profit != null && isNegativeMoney(profit);
+}: VehicleCardProps) {
+  const t = useTranslations('Vehicles.list.card');
+  const figures = useVehicleCardFigures({
+    vehicle,
+    stats,
+    statsLoading,
+    statsFailed,
+    alerts,
+    alertsFailed,
+  });
 
   return (
     <article className={styles.card}>
-      <div className={styles.media}>
-        {vehicle.mainImageUrl ? (
-          // Ảnh minh hoạ cho tên nằm ngay dưới → `alt` rỗng, cùng quy ước với `EntityIdentity`.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.image} src={vehicle.mainImageUrl} alt="" loading="lazy" />
-        ) : (
-          <span className={styles.mediaFallback} aria-hidden="true">
-            <CarOutlined />
-          </span>
-        )}
-      </div>
+      <VehicleCardMedia vehicle={vehicle} className={styles.media}>
+        <VehicleStatusBadges vehicle={vehicle} variant="short" className={styles.overlay} />
+      </VehicleCardMedia>
 
       <div className={styles.body}>
-        <div className={styles.identity}>
-          <div className={styles.identityHead}>
-            <Link href={detailHref(vehicle.id)} className={styles.name} title={vehicle.name}>
-              {vehicle.name}
-            </Link>
-            <span className={styles.sourceBadge}>
-              {domainLabel('vehicleSourceType', sourceType)}
-            </span>
-          </div>
-          <p className={styles.meta}>{identity}</p>
-        </div>
+        <VehicleCardIdentity
+          vehicle={vehicle}
+          detailHref={detailHref(vehicle.id)}
+          separator="dot"
+        />
+        <VehicleCardNotices
+          vehicle={vehicle}
+          alerts={alerts}
+          alertsLoading={alertsLoading}
+          alertsFailed={alertsFailed}
+        />
 
-        {/* Hai trục trạng thái độc lập cùng một hàng — Figma `236:1794` vẽ cả hai chip. */}
-        <div className={styles.specsStatus}>
-          <span className={styles.specs}>{specs}</span>
-          <span className={styles.statusPair}>
-            <StatusTag
-              value={vehicle.operationStatus as VehicleOperationStatus}
-              meta={VEHICLE_OPERATION_STATUS_META}
-              group="vehicleOperationStatus"
-            />
-            <StatusTag
-              value={vehicle.publicStatus as VehiclePublicStatus}
-              meta={VEHICLE_PUBLIC_STATUS_META}
-              group="vehiclePublicStatus"
-            />
-            {/*
-             * Chip thứ ba CHỈ khi chủ xe đang tự tạm ẩn (ADR 0048). Mọi lý do ẩn khác đã đọc
-             * được từ chip kiểm duyệt bên cạnh, nên hiện chúng lần nữa là lặp; còn "đã duyệt
-             * nhưng chủ xe tắt" thì KHÔNG đọc được từ chỗ nào khác — và không hiện nó nghĩa là
-             * một chiếc xe đang cất đi trông y hệt một chiếc đang bán.
-             */}
-            {vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED ? (
-              <StatusTag
-                value={MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED}
-                meta={MARKETPLACE_VISIBILITY_REASON_META}
-                group="marketplaceVisibility"
-              />
-            ) : null}
-          </span>
-        </div>
+        <hr className={styles.divider} />
 
-        {/*
-         * Lý do người duyệt trả xe về, ngay trên thẻ.
-         *
-         * Chip trạng thái nói "Bị từ chối" nhưng không nói VÌ SAO, và cái chủ xe cần để đi tiếp
-         * chính là vì sao. Bắt họ mở từng chiếc để tìm là biến một câu trả lời thành một cuộc đi
-         * tìm — đúng lúc họ đang bối rối nhất. Chỉ hiện ở hai trạng thái xe đang nằm trong tay
-         * chủ xe: `approved_public` kèm lý do cũ là một mẩu lịch sử, không phải việc phải làm.
-         */}
-        {NEEDS_OWNER_ACTION.includes(vehicle.publicStatus as VehiclePublicStatus) &&
-        vehicle.latestPublicReview?.reason ? (
-          <p className={styles.reviewReason}>{vehicle.latestPublicReview.reason}</p>
-        ) : null}
-
-        {/*
-         * Cảnh báo do server tính — cùng phép tính với Hồ sơ 360, không suy lại ở đây.
-         * Ba trạng thái tách bạch: đang tải (skeleton) · hỏng (nói thẳng là không biết) ·
-         * xong (rỗng nghĩa là THẬT SỰ không có việc). Không bao giờ hiện "0 cảnh báo" giả.
-         */}
-        {alertsLoading ? (
-          <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
-        ) : alertsFailed ? (
-          <p className={styles.metricsUnavailable}>{t('card.alertsUnavailable')}</p>
-        ) : alerts ? (
-          <VehicleAlertChips alerts={alerts.alerts} />
-        ) : null}
-
-        <div className={styles.metrics}>
-          <dl className={styles.metricRow}>
-            <div>
-              <dt>{t('card.weekdayPrice')}</dt>
-              <dd>{vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : empty}</dd>
-            </div>
-            <div className={styles.alignEnd}>
-              <dt>{t('card.currentOdometer')}</dt>
-              {/*
-               * Chưa có số thì nói "Chưa có" — KHÔNG dựng "0 km" (docs §9). Gọi hỏng thì nói
-               * "Không rõ": khác hẳn "xe chưa từng ghi nhận KM".
-               */}
-              <dd>
-                {alertsFailed
-                  ? t('card.odometerUnknown')
-                  : alerts
-                    ? fmt.km(alerts.currentOdometerKm)
-                    : empty}
-              </dd>
-            </div>
-          </dl>
-          <dl className={styles.metricRow}>
-            <div>
-              <dt>{t('card.weekendPrice')}</dt>
-              <dd>{vehicle.weekendPrice ? fmt.money(vehicle.weekendPrice) : empty}</dd>
-            </div>
-          </dl>
-
-          {statsLoading ? (
-            <Skeleton active paragraph={{ rows: 2, width: ['100%', '70%'] }} title={false} />
-          ) : statsFailed || !stats ? (
-            // Thống kê hỏng KHÔNG làm hỏng cả thẻ — xe vẫn xem/sửa/xoá được.
-            <p className={styles.metricsUnavailable}>{t('card.statsUnavailable')}</p>
-          ) : (
+        <dl className={styles.metrics}>
+          <Figure label={t('weekdayPrice')} value={figures.weekdayPrice} />
+          <Figure label={t('currentOdometer')} value={figures.odometer} end />
+          <Figure label={t('weekendPrice')} value={figures.weekendPrice} />
+          {figures.statsState === 'ready' ? (
+            <Figure label={t('completedTrips')} value={figures.completedTrips} end />
+          ) : null}
+          {figures.finance ? (
             <>
-              <dl className={styles.metricRow}>
-                <div>
-                  <dt>{t('card.activeBookings')}</dt>
-                  <dd>{fmt.count(stats.activeBookings)}</dd>
-                </div>
-                <div className={styles.alignEnd}>
-                  <dt>{t('card.completedBookings')}</dt>
-                  <dd>{fmt.count(stats.completedBookings)}</dd>
-                </div>
-              </dl>
-
-              {hasFinance ? (
-                <>
-                  <dl className={styles.metricRow}>
-                    <div>
-                      <dt>{t('card.totalIncome')}</dt>
-                      <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
-                    </div>
-                    <div className={styles.alignEnd}>
-                      <dt>{t('card.totalExpense')}</dt>
-                      <dd className={styles.expense}>{fmt.money(stats.totalExpense)}</dd>
-                    </div>
-                  </dl>
-
-                  {/* Số mang dấu — Figma `236:2060` hiện "-500.000 đ" đỏ, nhãn giữ nguyên. */}
-                  <dl className={styles.profitRow}>
-                    <dt>{t('card.profit')}</dt>
-                    <dd className={atLoss ? styles.expense : styles.income}>{fmt.money(profit)}</dd>
-                  </dl>
-                </>
-              ) : null}
+              <Figure label={t('totalIncome')} value={figures.finance.income} />
+              <Figure label={t('totalExpense')} value={figures.finance.expense} end />
+              <Figure
+                label={t('profit')}
+                value={figures.finance.profit}
+                tone={figures.finance.atLoss ? 'loss' : 'gain'}
+              />
             </>
-          )}
-        </div>
+          ) : null}
+        </dl>
+        {figures.statsState === 'loading' ? (
+          <Skeleton active paragraph={{ rows: 2, width: ['100%', '70%'] }} title={false} />
+        ) : figures.statsState === 'failed' ? (
+          // Thống kê hỏng KHÔNG làm hỏng cả thẻ — xe vẫn xem/sửa được.
+          <p className={styles.unavailable}>{t('statsUnavailable')}</p>
+        ) : null}
 
-        <div className={styles.actions}>
-          <RowActions
-            actions={actions}
-            maxInline={actions.length}
-            align="start"
-            variant="filled"
-            overflowLabel={t('card.rowActions', { name: vehicle.name })}
-          />
-        </div>
+        <hr className={styles.divider} />
+
+        <VehicleCardActions
+          actions={actions}
+          layout="row"
+          label={t('rowActions', { name: vehicle.name })}
+        />
       </div>
     </article>
+  );
+}
+
+function Figure({
+  label,
+  value,
+  end = false,
+  tone,
+}: {
+  label: string;
+  value: string | null;
+  end?: boolean;
+  tone?: 'gain' | 'loss';
+}) {
+  return (
+    <div className={cx(styles.figure, end && styles.figureEnd)}>
+      <dt>{label}</dt>
+      <dd className={tone === 'gain' ? styles.gain : tone === 'loss' ? styles.loss : undefined}>
+        {value}
+      </dd>
+    </div>
   );
 }

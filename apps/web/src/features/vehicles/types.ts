@@ -13,6 +13,9 @@ export type ListingRepairResult = Schemas['ListingRepairResultDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
 
+/** Hai kiểu xem của danh sách xe nhiều xe (Figma `23649:29724` lưới · `23655:36959` danh sách). */
+export type VehicleListView = 'grid' | 'list';
+
 /** Khớp `VEHICLE_SORT` ở backend DTO. */
 export type VehicleSort = 'newest' | 'name_asc' | 'code_asc' | 'price_asc' | 'price_desc';
 
@@ -29,6 +32,11 @@ export interface VehicleFilters {
   /** Chi nhánh giữ xe — ô "Chi nhánh" trong thanh bộ lọc của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   sort?: VehicleSort;
+  /**
+   * Kiểu xem khi đội xe từ `VEHICLE_LIST_FEW_THRESHOLD` xe: lưới thẻ (mặc định) hay danh sách hàng
+   * ngang. Chỉ là cách VẼ — `filtersToParams` không gửi nó lên server.
+   */
+  view?: VehicleListView;
   page?: number;
   limit?: number;
 }
@@ -47,6 +55,8 @@ export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];
 /** Việc cần làm + KM hiện tại của một xe (Wave 8) — server tính, FE chỉ hiển thị. */
 export type VehicleAlertGroup = Schemas['VehicleAlertsDto'];
 export type VehicleAlertItem = Schemas['VehicleAlertDto'];
+/** Số xe có việc "cần xử lý" — huy hiệu menu Danh sách xe. */
+export type VehicleNeedsActionCount = Schemas['VehicleNeedsActionCountDto'];
 export type VehicleBookingBrief = Schemas['VehicleBookingBriefDto'];
 
 /**

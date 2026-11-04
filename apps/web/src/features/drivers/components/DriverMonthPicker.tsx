@@ -4,7 +4,7 @@ import { DatePicker } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
-import styles from './DriversPage.module.css';
+import styles from './DriverMonthPicker.module.css';
 
 /** Tháng thống kê tiền công trên URL — `YYYY-MM` (giờ VN), cùng định dạng server nhận. */
 export const DRIVER_MONTH_FORMAT = 'YYYY-MM';
@@ -17,10 +17,13 @@ export const DRIVER_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 export function DriverMonthPicker({
   month,
   onChange,
+  size,
 }: {
   /** `YYYY-MM` — bỏ trống = tháng hiện tại. */
   month: string | undefined;
   onChange: (month: string) => void;
+  /** `large` (40px) trên hàng lọc của trang; mặc định trong ngăn chi tiết. */
+  size?: 'large';
 }) {
   const t = useTranslations('Drivers.wage.month');
   const fmt = useAppFormat();
@@ -28,6 +31,7 @@ export function DriverMonthPicker({
   return (
     <DatePicker
       picker="month"
+      size={size}
       className={styles.month}
       value={value}
       format={(v) => fmt.monthYear(v.toDate())}

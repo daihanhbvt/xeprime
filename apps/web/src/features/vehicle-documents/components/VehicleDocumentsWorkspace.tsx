@@ -95,12 +95,9 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { STANDARD_VEHICLE_DOCUMENT_TYPES } from '../constants';
 
-const STANDARD_TYPES: readonly VehicleDocumentType[] = [
-  VEHICLE_DOCUMENT_TYPE.REGISTRATION,
-  VEHICLE_DOCUMENT_TYPE.INSPECTION,
-  VEHICLE_DOCUMENT_TYPE.INSURANCE,
-];
+const STANDARD_TYPES = STANDARD_VEHICLE_DOCUMENT_TYPES;
 
 /** Định dạng file được nhận — dùng chung cho `<input type="file">` ẩn của mọi hàng. */
 const ACCEPTED_FILES = 'image/jpeg,image/png,image/webp,application/pdf';

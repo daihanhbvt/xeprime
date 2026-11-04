@@ -2,13 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { Skeleton } from 'antd';
-import { MAINTENANCE_BOARD_FILTER, MAINTENANCE_BOARD_FILTER_LABEL } from '@xeprime/types';
+import { MAINTENANCE_BOARD_FILTER } from '@xeprime/types';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import type { MaintenanceBoardSummary } from '../types';
 import styles from './MaintenanceBoard.module.css';
 
 /**
- * Dải "việc cần làm" đứng trước bảng (docs §12.1: việc trước, dữ liệu sau).
+ * Dải chip "việc cần làm" ngay dưới hàng lọc (docs §12.1: việc trước, dữ liệu sau). Design
+ * 04/11/2026 không vẽ nó — người dùng chốt giữ, theo dáng chip của hàng lọc.
  *
  * Số đếm lấy từ endpoint summary riêng nên KHÔNG phụ thuộc trang/bộ lọc đang xem — con số
  * "3 xe quá hạn" phải đúng với cả đội xe, không phải với 20 dòng đang hiển thị.
@@ -72,6 +74,7 @@ export function MaintenanceBoardTabs({
   onChange: (filter: string) => void;
 }) {
   const t = useTranslations('Maintenance');
+  const domainLabel = useDomainLabel();
   if (loading && !summary) return <Skeleton.Input active block className={styles.tabsSkeleton} />;
 
   const visibleTabs = TABS.filter(
@@ -90,7 +93,7 @@ export function MaintenanceBoardTabs({
           onClick={() => onChange(tab.key)}
         >
           {tab.dot ? <span className={cx(styles.summaryDot, tab.dot)} aria-hidden="true" /> : null}
-          {MAINTENANCE_BOARD_FILTER_LABEL[tab.key]}
+          {domainLabel('maintenanceBoardFilter', tab.key)}
           {summary ? <span className={styles.summaryCount}>{tab.count(summary)}</span> : null}
         </button>
       ))}

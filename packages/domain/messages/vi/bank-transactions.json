@@ -73,7 +73,8 @@
   "code": {
     "subscription_invoice": "Gói (XPG)",
     "booking_hold": "Giữ chỗ (XPH)",
-    "no_code": "Không có mã"
+    "no_code": "Không có mã",
+    "booking_extension": "Gia hạn (XPE)"
   },
   "handle": {
     "reasonLabel": "Lý do xử lý",

@@ -229,7 +229,9 @@ describe('/manage/vehicles — nội dung thẻ', () => {
 
     const card = cards()[0]!;
     expect(within(card).getByText('Honda SH 150i 2023')).toBeTruthy();
-    expect(within(card).getByText('XM-001 · 59X1-333.44')).toBeTruthy();
+    // Mã và biển số đứng trên một dòng, cách nhau bằng chấm (Figma `23655:36152`).
+    expect(within(card).getByText('XM-001')).toBeTruthy();
+    expect(within(card).getByText('59X1-333.44')).toBeTruthy();
   });
 
   it('không có ảnh: vẫn dựng được thẻ, không để ảnh vỡ', () => {
@@ -246,17 +248,18 @@ describe('/manage/vehicles — nội dung thẻ', () => {
 
     const card = cards()[0]!;
     expect(within(card).getByText('Sẵn sàng')).toBeTruthy();
-    expect(within(card).getByText('Đã duyệt public')).toBeTruthy();
+    // Thẻ lưới dùng nhãn GỌN của design (`23655:36622`: "Chờ duyệt").
+    expect(within(card).getByText('Đã duyệt')).toBeTruthy();
   });
 
-  it('số đơn đang chạy và đã hoàn thành lấy từ API', () => {
+  it('"Chuyến đã đi" lấy từ API; số đơn đang chạy KHÔNG lên thẻ (chốt 03/11/2026)', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).getByText('Đang chạy')).toBeTruthy();
-    expect(within(card).getByText('2')).toBeTruthy();
-    expect(within(card).getByText('Hoàn thành')).toBeTruthy();
+    expect(within(card).getByText('Chuyến đã đi')).toBeTruthy();
     expect(within(card).getByText('15')).toBeTruthy();
+    // Chip vận hành "Đang thuê" đã nói xe đang có khách — không có ô "Đang chạy" thứ hai.
+    expect(within(card).queryByText('Đang chạy')).toBeNull();
   });
 
   it('lợi nhuận tính từ tổng doanh thu trừ tổng chi phí, KHÔNG trộn phạm vi', () => {
@@ -337,7 +340,7 @@ describe('/manage/vehicles — quyền tài chính', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).getByText('Đang chạy')).toBeTruthy();
+    expect(within(card).getByText('Chuyến đã đi')).toBeTruthy();
     expect(within(card).getByText('Honda SH 150i 2023')).toBeTruthy();
   });
 });
@@ -360,7 +363,7 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
     const card = cards()[0]!;
     expect(within(card).getByText('Không tải được số liệu')).toBeTruthy();
     expect(within(card).getByText('Honda SH 150i 2023')).toBeTruthy();
-    expect(within(card).getByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
   });
 
   it('số liệu hỏng KHÔNG hiện số 0 giả', () => {
@@ -368,7 +371,7 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).queryByText('Đang chạy')).toBeNull();
+    expect(within(card).queryByText('Chuyến đã đi')).toBeNull();
   });
 
   it('rỗng và KHÔNG lọc: câu chữ "chưa có xe"', () => {
@@ -406,12 +409,13 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
 /* ------------------------------------------------------------------ hành động */
 
 describe('/manage/vehicles — hành động trên thẻ', () => {
-  it('chỉ có quyền xem: còn Xem chi tiết và Lịch, không có Sửa/Xoá', () => {
+  it('chỉ có quyền xem: còn Chi tiết và Lịch, không có Chỉnh sửa/Xoá', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).getByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
-    expect(within(card).queryByRole('button', { name: 'Sửa' })).toBeNull();
+    expect(within(card).getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Lịch' })).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Chỉnh sửa' })).toBeNull();
     expect(within(card).queryByRole('button', { name: 'Xoá' })).toBeNull();
   });
 
@@ -423,21 +427,21 @@ describe('/manage/vehicles — hành động trên thẻ', () => {
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    // Nhãn đầy đủ ở thẻ desktop (Figma `236:1820` "Xem chi tiết").
-    expect(labels).toEqual(['Xem chi tiết', 'Sửa', 'Lịch']);
+    // Thứ tự và nhãn theo design 03/11/2026 (`23655:36666`) — nút chính vàng đứng CUỐI.
+    expect(labels).toEqual(['Lịch', 'Chỉnh sửa', 'Chi tiết']);
   });
 
-  it('"Xem chi tiết" mở trang chi tiết đúng id', () => {
+  it('"Chi tiết" mở trang chi tiết đúng id', () => {
     renderPage();
-    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Xem chi tiết' }));
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Chi tiết' }));
 
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1');
   });
 
-  it('"Sửa" mở trang sửa đúng id', () => {
+  it('"Chỉnh sửa" mở trang sửa đúng id', () => {
     grant(PERMISSION.VEHICLE_UPDATE);
     renderPage();
-    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Sửa' }));
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Chỉnh sửa' }));
 
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1/edit');
   });
@@ -506,7 +510,8 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(labels).toEqual(['Xem', 'Sửa', 'Lịch']);
+    // Cùng thứ tự với thẻ desktop; ở mobile nút chi tiết rút gọn thành "Xem".
+    expect(labels).toEqual(['Lịch', 'Chỉnh sửa', 'Xem']);
   });
 
   it('số liệu hỏng ở mobile cũng không dựng số 0 giả', () => {
@@ -622,19 +627,23 @@ describe('/manage/vehicles — cảnh báo và KM trên thẻ', () => {
   });
 
   it('mọi thẻ dùng CÙNG một tỉ lệ khung ảnh — ảnh dọc không kéo cao thẻ', () => {
-    const css = readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        '../../../../features/vehicles/components/VehicleManagementCard.module.css',
-      ),
-      'utf8',
-    );
-    const media = css.slice(css.indexOf('.media {'), css.indexOf('.mediaFallback'));
-    expect(media).toContain('aspect-ratio');
+    const read = (name: string) =>
+      readFileSync(
+        join(
+          dirname(fileURLToPath(import.meta.url)),
+          `../../../../features/vehicles/components/${name}`,
+        ),
+        'utf8',
+      );
+    // Thẻ lưới cố định TỈ LỆ khung; khung chung (`VehicleCardParts`) cắt tràn và phủ ảnh kín.
+    const card = read('VehicleManagementCard.module.css');
+    expect(card.slice(card.indexOf('.media {'))).toContain('aspect-ratio');
+    const parts = read('VehicleCardParts.module.css');
+    const media = parts.slice(parts.indexOf('.media {'), parts.indexOf('.mediaFallback'));
     expect(media).toContain('overflow: hidden');
     // Ảnh phủ kín khung cố định thay vì tự quyết chiều cao.
-    expect(css).toContain('object-fit: cover');
-    expect(css).toContain('position: absolute');
+    expect(media).toContain('object-fit: cover');
+    expect(media).toContain('position: absolute');
   });
 });
 

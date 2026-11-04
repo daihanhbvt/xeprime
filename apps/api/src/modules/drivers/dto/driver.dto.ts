@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_STATUS_VALUES,
   DRIVER_ASSIGNMENT_OUTCOME_VALUES,
   DRIVER_ASSIGNMENT_STATUS_VALUES,
   DRIVER_DROP_NOTE_LENGTH,
@@ -11,8 +12,13 @@ import {
   DRIVER_SOURCE_VALUES,
   DRIVER_LICENCE_STATE_VALUES,
   DRIVER_LINK_END_PARTY_VALUES,
+  DRIVER_LICENCE_CHECK_FILTER,
   DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_FILTER_CLOSED,
   DRIVER_LINK_STATUS_VALUES,
+  DRIVER_LIST_SORT,
+  DRIVER_LIST_SORT_VALUES,
+  DRIVER_OPERATION_FILTER_VALUES,
   DRIVER_TYPE_VALUES,
   STOREFRONT_KIND_VALUES,
   DRIVER_LINK_SCOPE_VALUES,
@@ -53,26 +59,57 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 // Phía BÊN THUÊ (khu quản lý)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class DriverListQueryDto {
+const LINK_STATUS_FILTER_VALUES = [
+  ...DRIVER_LINK_STATUS_VALUES,
+  DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_FILTER_CLOSED,
+];
+
+/** Bộ lọc dùng chung của danh sách tài xế và dải số đếm — mọi thứ trừ trạng thái liên kết. */
+export class DriverListFilterDto {
   @ApiPropertyOptional({ description: 'Tìm theo tên / SĐT' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   q?: string;
 
-  @ApiPropertyOptional({
-    enum: [...DRIVER_LINK_STATUS_VALUES, DRIVER_LINK_STATUS_FILTER_ANY],
-    description:
-      'Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái.',
-  })
-  @IsOptional()
-  @IsIn([...DRIVER_LINK_STATUS_VALUES, DRIVER_LINK_STATUS_FILTER_ANY])
-  linkStatus?: string;
-
   @ApiPropertyOptional({ enum: DRIVER_TYPE_VALUES })
   @IsOptional()
   @IsIn(DRIVER_TYPE_VALUES)
   driverType?: string;
+
+  @ApiPropertyOptional({
+    enum: DRIVER_OPERATION_FILTER_VALUES,
+    description: '`on_trip` = đang gán ít nhất một đơn chiếm lịch; `idle` = không có đơn nào',
+  })
+  @IsOptional()
+  @IsIn(DRIVER_OPERATION_FILTER_VALUES)
+  operation?: string;
+}
+
+export class DriverListQueryDto extends DriverListFilterDto {
+  @ApiPropertyOptional({
+    enum: LINK_STATUS_FILTER_VALUES,
+    description:
+      'Lọc trạng thái liên kết. Bỏ trống = các liên kết đang mở (chờ/đang/tạm khoá); `any` = mọi trạng thái; `closed` = đã từ chối + đã kết thúc.',
+  })
+  @IsOptional()
+  @IsIn(LINK_STATUS_FILTER_VALUES)
+  linkStatus?: string;
+
+  @ApiPropertyOptional({
+    enum: [DRIVER_LICENCE_CHECK_FILTER],
+    description:
+      '`needed` = chỉ liên kết còn mở mà bằng lái chưa xác thực còn hạn, hoặc họ tên trên bằng lệch tên mời',
+  })
+  @IsOptional()
+  @IsIn([DRIVER_LICENCE_CHECK_FILTER])
+  licenceCheck?: string;
+
+  @ApiPropertyOptional({ enum: DRIVER_LIST_SORT_VALUES, default: DRIVER_LIST_SORT.STATUS })
+  @IsOptional()
+  @IsIn(DRIVER_LIST_SORT_VALUES)
+  sort?: string;
 
   @ApiPropertyOptional({
     description: 'Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công — mặc định tháng hiện tại',
@@ -212,6 +249,16 @@ export class DriverDto {
       'Tổng tiền công (VND) các lượt kết thúc trong tháng: chuyến hoàn thành + số thoả thuận của chuyến không chạy',
   })
   monthWageTotal!: string;
+}
+
+/** Dải số đếm đầu màn Tài xế — đã áp bộ lọc chung; mỗi ô bằng tổng của danh sách khi bấm vào nó. */
+export class DriverSummaryDto {
+  @ApiProperty({ description: 'Liên kết còn mở (chờ · đang · tạm khoá)' }) open!: number;
+  @ApiProperty() active!: number;
+  @ApiProperty() invited!: number;
+  @ApiProperty() suspended!: number;
+  @ApiProperty({ description: 'Đã từ chối + đã kết thúc' }) closed!: number;
+  @ApiProperty({ description: 'Liên kết còn mở cần đối chiếu bằng lái' }) licenceCheck!: number;
 }
 
 export class DriverPageDto {
@@ -405,7 +452,10 @@ export class DriverWageQuoteDto {
     description: 'Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc khi gian hàng chưa đặt mức chung',
   })
   suggestedDaily!: string;
-  @ApiProperty({ type: String, description: 'Tiền thuê của đơn (VND) — để cảnh báo tiền công cao bất thường' })
+  @ApiProperty({
+    type: String,
+    description: 'Tiền thuê của đơn (VND) — để cảnh báo tiền công cao bất thường',
+  })
   rentAmount!: string;
 }
 
@@ -490,12 +540,16 @@ export class DriverMonthStatsDto {
   agreedTrips!: number;
   @ApiProperty({ type: String, description: 'Số thoả thuận của các chuyến không chạy (VND)' })
   agreedWage!: string;
-  @ApiProperty({ type: String, description: 'Tổng tiền công ghi nhận = hoàn thành + thoả thuận (VND)' })
+  @ApiProperty({
+    type: String,
+    description: 'Tổng tiền công ghi nhận = hoàn thành + thoả thuận (VND)',
+  })
   wageTotal!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái',
+    description:
+      'Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái',
   })
   averageDailyWage!: string | null;
   @ApiProperty({ description: 'Số chuyến bên thuê đã SỬA tiền công ít nhất một lần' })
@@ -508,6 +562,26 @@ export class DriverUpcomingDto {
   @ApiProperty({ type: String, description: 'Tiền công dự kiến của các chuyến đó (VND)' })
   acceptedWage!: string;
   @ApiProperty({ description: 'Lượt gán đang chờ tài xế trả lời' }) pendingTrips!: number;
+}
+
+/**
+ * Một đơn đang giao cho tài xế và còn chiếm lịch — cùng tập đơn mà `DriverDto.activeBookingCount`
+ * đếm, sớm nhất trước. Để bên thuê thấy NGAY chuyến nào đang gán, khỏi đi tìm ở danh sách đơn.
+ */
+export class DriverCurrentTripDto {
+  @ApiProperty({ description: 'ID đơn' }) bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty({ enum: BOOKING_STATUS_VALUES }) bookingStatus!: string;
+  @ApiProperty() pickupAt!: string;
+  @ApiProperty() returnAt!: string;
+  @ApiProperty({ description: 'Tên xe của chuyến' }) vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
+  @ApiPropertyOptional({
+    enum: DRIVER_ASSIGNMENT_STATUS_VALUES,
+    nullable: true,
+    description: 'Tài xế đã nhận (accepted) hay còn chờ trả lời (pending)',
+  })
+  assignmentStatus!: string | null;
 }
 
 /**
@@ -546,10 +620,17 @@ export class DriverOverviewDto {
   @ApiProperty({ type: DriverDto }) driver!: DriverDto;
   @ApiProperty({ type: DriverMonthStatsDto }) month!: DriverMonthStatsDto;
   @ApiProperty({ type: DriverUpcomingDto }) upcoming!: DriverUpcomingDto;
+  @ApiProperty({
+    type: [DriverCurrentTripDto],
+    description:
+      'Các đơn đang gán, sớm nhất trước — tối đa 20; tổng nằm ở driver.activeBookingCount',
+  })
+  current!: DriverCurrentTripDto[];
   @ApiProperty({ type: DriverReliabilityDto }) reliability!: DriverReliabilityDto;
   @ApiProperty({
     type: [DriverWageTrendPointDto],
-    description: 'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt',
+    description:
+      'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt',
   })
   trend!: DriverWageTrendPointDto[];
 }
@@ -656,7 +737,11 @@ export class DriverEmployerDto {
  * mặt tài xế, chốt 26/10/2026). Không bao giờ vào DTO công khai.
  */
 export class DriverEmployerContactDto {
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Họ tên chủ tài khoản bên thuê' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Họ tên chủ tài khoản bên thuê',
+  })
   representativeName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành của gian hàng' })

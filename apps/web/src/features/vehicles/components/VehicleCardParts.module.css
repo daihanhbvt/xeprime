@@ -1,0 +1,220 @@
+/*
+ * Mảnh dùng chung của thẻ xe — Figma Partner-XePrime 03/11/2026 (`23655:38951` ít xe ·
+ * `23655:36682` lưới · `23655:38389` danh sách). Số đo lấy từ chính các frame đó.
+ */
+
+/* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
+
+/*
+ * Ảnh nằm NGOÀI luồng (`position: absolute`): chiều cao khung do thẻ quyết (tỉ lệ hoặc số cố
+ * định), không do kích thước tự nhiên của file — nếu không, thẻ trong một hàng cao thấp lệch nhau.
+ */
+.media {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--xp-color-bg-muted);
+}
+
+.image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  inset: 0;
+}
+
+.mediaFallback {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h2);
+}
+
+/* ─── Danh tính ───────────────────────────────────────────────────────────── */
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.nameRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+/* 18/600 — "Vehicle Name" (Figma `23655:38957`). */
+.name {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  color: var(--xp-color-text);
+  text-decoration: underline;
+}
+
+/* Viên "Sở hữu" — nền gray-50, bo 16, chữ 12/500 (Figma `_Badge` `23655:38958`). */
+.sourceBadge {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* "XP-ZDYEPW0D | 43B - 396.36" và "Ô tô • Tự lái • Có tài xế" — 14/400 gray-medium, cách 8. */
+.line {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  gap: 0 var(--xp-space-sm);
+}
+
+.bar {
+  color: var(--xp-color-border-strong);
+}
+
+.dot,
+.dotSmall {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-border-strong);
+}
+
+.dotSmall {
+  width: 4px;
+  height: 4px;
+}
+
+/* ─── Trạng thái ──────────────────────────────────────────────────────────── */
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Thẻ ít xe: nhãn kiểm duyệt có biểu tượng + viên vận hành, cách nhau 32 (Figma `23667:2767`). */
+.detailedStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-xl);
+}
+
+/* Màu chữ đến từ `statusColorClass` — nhãn và biểu tượng cùng một sắc. */
+.review {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/* Vòng tròn 24 nền nhạt cùng sắc, biểu tượng 12 (Figma "Check icon" `15728:40555`). */
+.reviewIcon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 12px;
+}
+
+/* ─── Việc cần làm ────────────────────────────────────────────────────────── */
+
+.notices {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.reviewReason {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.unavailable {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+/* ─── Nút ─────────────────────────────────────────────────────────────────── */
+
+.actionsColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--xp-space-md);
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Nút cao 36, bo 12, chữ 14/600 (Figma `23655:38994`). Nhân đôi class để thắng AntD. */
+.action.action {
+  height: 36px;
+  border-radius: var(--xp-space-12);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.action.action:not(.actionPrimary) {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Ở hàng nút của thẻ lưới, nút chính giãn hết phần còn lại (Figma `23655:36671`). */
+.actionsRow > .actionPrimary {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.actionsColumn > .action {
+  width: 100%;
+}
+
+/* Điện thoại: nút cao hơn cho vừa ngón tay (cùng nhịp với thẻ đơn thuê ở màn hẹp). */
+@media (max-width: 640px) {
+  .action.action {
+    height: 40px;
+  }
+}

@@ -16,7 +16,7 @@ import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService, makeBookingHoldsService } from './helpers/service-factory';
+import { makeBillingService, makeBookingHoldsService, makeBookingExtensionsService } from './helpers/service-factory';
 
 /**
  * Hàng đợi đối soát + KHỚP TAY của admin (R2 mục 4, ADR 0022 điều 4) — PostgreSQL THẬT.
@@ -37,7 +37,7 @@ const admin = new BankTransactionsService(asService, new AuditService(asService)
 
 const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: () => 'test-key-0123456789abcdef',
-} as unknown as ConfigService);
+} as unknown as ConfigService, makeBookingExtensionsService(asService));
 
 let dbAvailable = false;
 let ownerId: string;

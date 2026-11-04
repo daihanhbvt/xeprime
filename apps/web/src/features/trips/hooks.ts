@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
+  BOOKING_EXTENSION_STATUS,
   HOLD_POLL_FALLBACK_MS,
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
@@ -18,6 +19,7 @@ import {
   cancelTrip,
   fetchTrip,
   fetchTripCancelPreview,
+  fetchTripExtensions,
   fetchTripHandoverEvidence,
   fetchUnpaidHolds,
   fetchTripHandoverPhotoUrl,
@@ -117,6 +119,22 @@ export function useTrip(id: string) {
  * `enabled` do nơi gọi quyết định — màn chi tiết chỉ bật khi chuyến đã thật sự có mốc bàn giao,
  * nên chuyến chưa giao xe không phát request nào.
  */
+/**
+ * Phụ lục gia hạn của chuyến. Có phụ lục chờ tiền ⇒ hỏi lại theo nhịp, để màn tự lật "Đã gia hạn"
+ * khi SePay đối soát đủ — không có nút "tôi đã chuyển khoản".
+ */
+export function useTripExtensions(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.trips.extensions(id),
+    queryFn: () => fetchTripExtensions(id),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) =>
+      query.state.data?.some((e) => e.status === BOOKING_EXTENSION_STATUS.AWAITING_PAYMENT)
+        ? HOLD_POLL_FALLBACK_MS
+        : false,
+  });
+}
+
 export function useTripHandoverEvidence(id: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.trips.handoverEvidence(id),

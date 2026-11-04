@@ -1,17 +1,7 @@
 'use client';
 
-import {
-  CalendarOutlined,
-  CarOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  EnvironmentOutlined,
-  ExclamationCircleOutlined,
-  MessageOutlined,
-  PhoneOutlined,
-  RightOutlined,
-} from '@ant-design/icons';
-import { Button, Tag, Tooltip } from 'antd';
+import { CarOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Button, Tag } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -26,21 +16,24 @@ import {
   type BookingRequestStatus,
   type RouteType,
   type TenantCustomerRiskLevel,
-  type VehicleType,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
-import { EntityIdentity } from '@/components/data-display/EntityIdentity';
-import { RowActions, type RowAction } from '@/components/data-display/RowActions';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { isPositiveMoney, LIST_SEPARATOR, subtractMoney } from '@xeprime/domain';
+import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { customerPath, vehiclePath } from '@/constants/routes';
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import { telHref, zaloHref } from '@/lib/contact';
+import { telHref } from '@/lib/contact';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { openOverlayOnPlainClick } from '@/lib/modal-link';
 import { toAppTz } from '@/lib/datetime';
+import { useListingSpecSummary } from '../hooks/use-listing-spec-summary';
+import { BOOKING_REQUEST_CLOSED_STATUSES } from '../constants';
+import { CustomerContactButtons } from './CustomerContactButtons';
+import { CustomerIdentity } from './CustomerIdentity';
 import { RespondDeadline } from './RespondDeadline';
 import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestCard.module.css';
@@ -54,6 +47,10 @@ interface Props {
   canApprove: boolean;
   canViewVehicle: boolean;
   canViewCustomer: boolean;
+  /**
+   * Đọc được ĐƠN — không dùng trong thẻ nữa: "Xem chi tiết đơn" luôn gọi `onOpenDetail`, và màn
+   * cha mới quyết mở chi tiết đơn hay chi tiết yêu cầu theo quyền này. Giữ prop cho nơi gọi cũ.
+   */
   canViewBooking: boolean;
   /** Thao tác đang chạy trên yêu cầu này; `null` khi rảnh. */
   pendingAction: BookingRequestAction | null;
@@ -82,17 +79,15 @@ interface Props {
 }
 
 /**
- * MỘT yêu cầu thuê trong hộp thư của gian hàng.
+ * MỘT yêu cầu thuê trong hộp thư của gian hàng — Figma Partner-XePrime "Vehicle Card" của màn
+ * Request (`23649:25607`, 02/11/2026).
  *
- * Bố cục theo mẫu 19/09: một THÂN năm vùng (xe · khách · lịch trình · tiền · trạng thái) rồi
- * một CHÂN THẺ ngăn bằng đường kẻ, trái là liên hệ, phải là quyết định (hoặc đường sang đơn đã
- * tạo). Tiền tách khỏi lịch trình thành vùng RIÊNG (trước đó nhét chung một cột, đọc dọc dài) —
- * hai loại thông tin khác nhau ("khi nào" và "bao nhiêu") xứng đáng hai cột ngang hàng. Các
- * vùng là con TRỰC TIẾP của lưới nên `grid-template-areas` xếp lại được theo bề rộng mà không
- * phải render nội dung lần thứ hai cho mobile.
- *
- * Màu nhấn dùng GOLD thương hiệu (`--xp-color-primary*`), không dùng `--xp-color-link` xanh:
- * xanh trong bản mẫu chỉ là màu tạm của người vẽ, còn màu chính của sản phẩm là gold.
+ * Bố cục: DẢI ĐẦU (mã đơn · loại dịch vụ · gửi lúc · xử lý lúc, phải là đồng hồ hạn phản hồi hoặc
+ * nhãn trạng thái + quyết định) rồi THÂN bốn vùng (xe · khách · yêu cầu thuê · chi tiết thanh
+ * toán), cuối cùng là DẢI THÔNG TIN THÊM chỉ khi yêu cầu có (ghi chú, địa chỉ giao, lộ trình, cảnh
+ * báo rủi ro, lý do từ chối) — chốt với người dùng 02/11/2026, xem sổ cái `09_PARTNER_REDESIGN.md`
+ * §3.1. Các vùng là con TRỰC TIẾP của lưới nên `grid-template-areas` xếp lại theo bề rộng mà
+ * không phải render nội dung lần thứ hai cho mobile.
  *
  * Component không tự quyết QUYỀN và không tự gọi API: nó nhận cờ quyền và callback, nên cùng
  * một thẻ dùng được ở mọi chỗ và test không phải dựng cả tầng dữ liệu.
@@ -102,7 +97,6 @@ export function BookingRequestCard({
   canApprove,
   canViewVehicle,
   canViewCustomer,
-  canViewBooking,
   pendingAction,
   onApprove,
   onReject,
@@ -118,6 +112,7 @@ export function BookingRequestCard({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const specs = useListingSpecSummary(request);
 
   /*
    * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
@@ -131,6 +126,8 @@ export function BookingRequestCard({
   // Chặng DUY NHẤT gian hàng còn phải duyệt/từ chối (ADR 0055 gỡ `hold_paid` của ADR 0039).
   const needsDecision = request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   const decidable = needsDecision && !pastDue;
+  const awaitingHold = request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD;
+  const isClosed = (BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status);
   // Bất kỳ thao tác nào đang chạy đều khoá CẢ HAI quyết định: duyệt và từ chối cùng lúc trên
   // một yêu cầu là hai kết cục loại trừ nhau, và cái tới sau chỉ nhận được lỗi khó hiểu.
   const busy = pendingAction !== null;
@@ -142,9 +139,8 @@ export function BookingRequestCard({
    * dùng để gọi một yêu cầu ("cái Carnival hôm qua").
    */
   const titleId = `booking-request-${request.id}-title`;
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
-    .filter(Boolean)
-    .join(LIST_SEPARATOR);
+  // Mã nội bộ của xe đi cùng biển số — thứ nhân viên đọc to ở quầy khi biển số chưa có.
+  const plateLine = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;
@@ -153,79 +149,163 @@ export function BookingRequestCard({
   const phoneLink = telHref(request.customerPhone);
   // Phiên hỗ trợ gian hàng không nhắn tin thay gian hàng (ADR 0050 §10).
   const chatHidden = useSupportHides(SUPPORT_HIDDEN_AREA.CHAT);
-  const zaloLink = zaloHref(request.customerPhone);
+  // Chủ xe tuyến hoa hồng chưa nhắn khách khi yêu cầu chưa thành đơn (ADR 0073) — ẩn hẳn, cùng
+  // luật với SĐT khách; server chặn endpoint mở hội thoại.
+  const canOpenChat = !chatHidden && request.chatOpen;
 
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
   const dropoff = request.returnAt ? toAppTz(request.returnAt) : null;
   const hasSchedule = pickup !== null && dropoff !== null;
   const isLongTerm = request.serviceType === SERVICE_TYPE.LONG_TERM;
+  const isWithDriver = request.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const routeType = request.routeType as RouteType | null;
   const routeIsLongDistance =
     routeType === ROUTE_TYPE.INTER_CITY || routeType === ROUTE_TYPE.INTER_CITY_ONE_WAY;
 
-  /**
-   * MỌI yêu cầu đều mở được chi tiết dạng modal — yêu cầu đã thành đơn mở chi tiết đơn, yêu
-   * cầu còn chờ duyệt (hoặc đã từ chối/huỷ/quá hạn) mở chi tiết YÊU CẦU. Trước đợt này chỉ
-   * yêu cầu đã có đơn mới bấm được, nên đúng những thẻ cần xử lý lại là những thẻ chết.
-   */
-  const openableDetail = true;
-  /** Đường sang ĐƠN chỉ hiện khi thật sự có đơn và người xem đọc được đơn. */
-  const hasBookingLink = Boolean(request.bookingId) && canViewBooking;
-
-  /*
-   * Quyết định đi qua `RowActions` — cụm nút DÙNG CHUNG của dự án (biến thể `filled`).
-   *
-   * Trước đây đây là hai `<Button>` tự dựng: chúng không có tông màu chuẩn của hệ, không có
-   * vùng chạm 44px ở mobile, không thu gọn nhãn khi hẹp, và không chặn sự kiện nổi bọt. Mọi
-   * bảng/thẻ khác trong cổng quản lý đã đi qua `RowActions`; tự vẽ lại một cặp nút thứ hai chỉ
-   * cho màn này là cách chắc chắn nhất để hai chỗ trông khác nhau sau lần chỉnh giao diện sau.
-   */
-  const decisionActions: RowAction[] = [
-    {
-      key: 'reject',
-      label: t('actions.reject'),
-      icon: <CloseCircleOutlined />,
-      showLabel: true,
-      danger: true,
-      loading: pendingAction === 'reject',
-      disabled: busy && pendingAction !== 'reject',
-      onClick: () => onReject(request),
-    },
-    {
-      key: 'approve',
-      // "Duyệt & giữ xe", không phải "Duyệt": đây là hành động DUY NHẤT tạo đơn từ một yêu
-      // cầu, và tác dụng đáng nói nhất của nó là chiếm chỗ trên lịch chiếc xe (ADR 0006). Người
-      // trực cần biết mình sắp khoá một khung giờ, không chỉ "đồng ý" một cách chung chung.
-      label: t('actions.approve'),
-      icon: <CheckCircleOutlined />,
-      showLabel: true,
-      primary: true,
-      loading: pendingAction === 'approve',
-      disabled: busy && pendingAction !== 'approve',
-      onClick: () => onApprove(request),
-    },
-  ];
-
-  const isWithDriver = request.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const hasExtras = Boolean(
     (isWithDriver && (routeType || request.pickupAddress || request.destination)) ||
     request.deliveryRequested ||
     request.note ||
     request.rejectReason ||
-    showRisk,
+    showRisk ||
+    request.customerAccountPhone ||
+    request.customerEmail ||
+    !request.tenantCustomerId,
   );
 
   return (
     <article className={styles.card} aria-labelledby={titleId} aria-busy={busy || undefined}>
+      {/* ── Dải đầu: dấu vết bên trái, trạng thái + quyết định bên phải. ─────── */}
+      <header className={styles.head}>
+        <div className={styles.headMeta}>
+          {request.bookingCode ? (
+            <span className={styles.code}>{t('card.bookingCode', { code: request.bookingCode })}</span>
+          ) : null}
+          <ServiceTypeChip value={request.serviceType} />
+          <span className={styles.stamp}>
+            {t('card.sentAt', { value: fmt.dateTime(request.createdAt) })}
+          </span>
+          {request.decidedAt ? (
+            <span className={styles.stamp}>
+              {t('card.decidedAt', { value: fmt.dateTime(request.decidedAt) })}
+            </span>
+          ) : null}
+        </div>
+
+        <div className={styles.headActions}>
+          {/*
+            Còn chờ quyết định: đồng hồ hạn phản hồi. Mọi chặng khác: nhãn trạng thái ở ĐÚNG chỗ
+            đó (design vẽ viên đỏ có chấm cho kết cục) — hai thứ cùng trả lời "yêu cầu đang ở đâu".
+          */}
+          {needsDecision ? (
+            <RespondDeadline respondBy={request.respondBy} variant="header" />
+          ) : (
+            <StatusBadge
+              value={request.status as BookingRequestStatus}
+              meta={BOOKING_REQUEST_STATUS_META}
+              group="bookingRequestStatus"
+              // Kết cục KHÔNG thành đơn (tab "Đã kết thúc") là viên đỏ — design `23649:25607`.
+              tone={isClosed ? STATUS_COLOR.DANGER : undefined}
+            />
+          )}
+
+          {/*
+            Quyết định chỉ có ở yêu cầu CÒN XỬ LÝ ĐƯỢC (chờ duyệt + chưa quá hạn) và chỉ với người
+            có quyền duyệt. Quá hạn thì nút biến mất hẳn thay vì mờ đi: không có điều kiện nào để
+            chờ nữa, và một nút xám vĩnh viễn chỉ làm người ta thử bấm.
+          */}
+          {decidable && canApprove ? (
+            <>
+              <Button
+                className={styles.rejectButton}
+                icon={<LineIcon name="close" className={styles.buttonIcon} />}
+                loading={pendingAction === 'reject'}
+                disabled={busy && pendingAction !== 'reject'}
+                onClick={() => onReject(request)}
+              >
+                {t('actions.reject')}
+              </Button>
+              <Button
+                type="primary"
+                className={styles.confirmButton}
+                icon={<LineIcon name="tick" className={styles.buttonIcon} />}
+                loading={pendingAction === 'approve'}
+                disabled={busy && pendingAction !== 'approve'}
+                onClick={() => onApprove(request)}
+              >
+                {t('card.confirm')}
+              </Button>
+            </>
+          ) : null}
+
+          {awaitingHold && canApprove ? (
+            /*
+             * Nút HUỶ đứng ở chỗ của hai nút quyết định và không ở đâu khác: đây là chặng duy
+             * nhất mà gian hàng đã hứa nhận chuyến nhưng chuyến chưa thành đơn (ADR 0045). Trước
+             * đó xe hỏng lúc mười giờ tối thì đường duy nhất là chờ hết cửa sổ thanh toán.
+             */
+            <Button
+              className={styles.rejectButton}
+              icon={<LineIcon name="close" className={styles.buttonIcon} />}
+              loading={pendingAction === 'cancel'}
+              disabled={busy && pendingAction !== 'cancel'}
+              onClick={() => onCancel(request)}
+            >
+              {t('actions.cancel')}
+            </Button>
+          ) : null}
+        </div>
+      </header>
+
+      {/*
+        Hai câu trạng thái chỉ một số chặng có — đứng ngay dưới dải đầu, cả chiều ngang, vì chúng
+        giải thích vì sao hàng nút trên kia vắng hoặc khác đi.
+      */}
+      {needsDecision && pastDue ? (
+        <p className={styles.notice}>{t('deadline.pastDueHint')}</p>
+      ) : awaitingHold ? (
+        /*
+         * Gian hàng ĐÃ nhận chuyến; việc còn lại thuộc về khách (ADR 0044 điều 2). Mốc tuyệt đối
+         * chứ không phải đồng hồ chạy: cửa sổ này dài tới hai giờ, và một hộp thư mười thẻ với
+         * mười `setInterval` nhích mỗi giây là chi phí không đổi lại được gì.
+         */
+        <p className={styles.notice}>
+          {t('awaitingHold.footerHint')}
+          {request.holdExpiresAt
+            ? ` ${t('card.payDeadline', { value: fmt.dateTime(request.holdExpiresAt) })}`
+            : ''}
+        </p>
+      ) : null}
+
       <div className={styles.body}>
         {/* ── Xe: mỏ neo thị giác đầu tiên. ─────────────────────────────────── */}
         <div className={styles.vehicle}>
-          <VehicleThumb
-            imageUrl={request.vehicleImageUrl}
-            href={canViewVehicle ? vehiclePath.detail(request.vehicleId) : null}
-            onOpen={() => onOpenVehicle(request)}
-            emptyLabel={t('vehicle.noImage')}
-          />
+          <div className={styles.vehicleMedia}>
+            <VehicleThumb
+              imageUrl={request.vehicleImageUrl}
+              href={canViewVehicle ? vehiclePath.detail(request.vehicleId) : null}
+              onOpen={() => onOpenVehicle(request)}
+              emptyLabel={t('vehicle.noImage')}
+            />
+            {/*
+              Lịch của CHÍNH chiếc xe này — câu hỏi đầu tiên trước khi duyệt là "xe có rảnh khung
+              đó không". LINK thật tới màn lịch (lọc sẵn theo biển số), không phải modal: xem lịch
+              là việc cần cả màn hình.
+            */}
+            {canViewVehicle ? (
+              <Link
+                href={vehicleSchedulePath(
+                  { name: request.vehicleName, plateNumber: request.vehiclePlate },
+                  { back: backHref, branchId: branchCrumb },
+                )}
+                className={styles.scheduleLink}
+                aria-label={t('vehicle.viewScheduleFor', { vehicle: vehicleLabel })}
+              >
+                <LineIcon name="calendar-sm" className={styles.buttonIcon} />
+                {t('vehicle.viewSchedule')}
+              </Link>
+            ) : null}
+          </div>
           <div className={styles.vehicleText}>
             {canViewVehicle ? (
               <Link
@@ -243,139 +323,84 @@ export function BookingRequestCard({
                 {vehicleLabel}
               </span>
             )}
-            <div className={styles.vehicleLine}>
-              {vehicleMeta ? <span className={styles.vehicleMeta}>{vehicleMeta}</span> : null}
-              {request.vehicleType ? (
-                <Tag className={styles.chip}>
-                  {domainLabel('vehicleType', request.vehicleType as VehicleType)}
-                </Tag>
-              ) : null}
-              <Tag className={styles.chip}>{domainLabel('serviceType', request.serviceType)}</Tag>
-            </div>
-            {/*
-              Lịch của CHÍNH chiếc xe này — câu hỏi đầu tiên trước khi duyệt là "xe có rảnh
-              khung đó không". Là LINK thật tới màn lịch (đã lọc sẵn theo biển số) chứ không
-              phải modal: xem lịch là việc cần cả màn hình, và người ta ở lại đó một lúc.
-            */}
-            {canViewVehicle ? (
-              <Link
-                href={vehicleSchedulePath(
-                  { name: request.vehicleName, plateNumber: request.vehiclePlate },
-                  { back: backHref, branchId: branchCrumb },
-                )}
-                className={styles.scheduleLink}
-                aria-label={t('vehicle.viewScheduleFor', { vehicle: vehicleLabel })}
-              >
-                <CalendarOutlined aria-hidden="true" /> {t('vehicle.viewSchedule')}
-              </Link>
+            {specs.length > 0 ? (
+              <p className={styles.specs}>{specs.join(LIST_SEPARATOR)}</p>
             ) : null}
+            {plateLine ? <span className={styles.plate}>{plateLine}</span> : null}
           </div>
         </div>
 
-        {/* ── Khách hàng. ───────────────────────────────────────────────────── */}
+        {/* ── Khách hàng + liên hệ. ─────────────────────────────────────────── */}
         <div className={styles.customer}>
-          <h3 className={styles.zoneTitle}>{t('customer.heading')}</h3>
-          <EntityIdentity
-            kind="person"
-            size="sm"
-            imageUrl={request.customerAvatarUrl}
-            initialSource={request.customerName}
-            name={
-              customerLinkable ? (
-                <Link
-                  href={customerPath.detail(request.tenantCustomerId as string)}
-                  className={styles.customerLink}
-                  onClick={openOverlayOnPlainClick(() => onOpenCustomer(request))}
-                >
-                  {request.customerName}
-                </Link>
-              ) : (
-                request.customerName
-              )
-            }
-            subtitle={
-              phoneLink ? (
-                <a href={phoneLink} className={styles.customerPhone}>
-                  {request.customerPhone}
-                </a>
-              ) : (
-                request.customerPhone
-              )
-            }
-          />
-          {request.customerAccountPhone ? (
-            <p
-              className={styles.accountPhone}
-              title={t('customer.accountPhone', { phone: request.customerAccountPhone })}
-            >
-              {t('customer.accountPhone', { phone: request.customerAccountPhone })}
-            </p>
-          ) : null}
-          {request.customerEmail ? <p className={styles.email}>{request.customerEmail}</p> : null}
-          {!request.tenantCustomerId ? (
-            <p className={styles.hint}>{t('customer.noProfile')}</p>
-          ) : null}
-        </div>
-
-        {/* ── Trạng thái. ───────────────────────────────────────────────────── */}
-        <div className={styles.state}>
-          <StatusTag
-            value={request.status as BookingRequestStatus}
-            meta={BOOKING_REQUEST_STATUS_META}
-            group="bookingRequestStatus"
-          />
-          {/*
-            Đồng hồ đứng ngay dưới chip trạng thái vì nó TRẢ LỜI cùng một câu hỏi ("yêu cầu này
-            đang ở đâu"), chỉ khác là theo trục thời gian. Chỉ hiện khi còn chờ: một đơn đã
-            thành đơn thuê rồi thì hạn phản hồi là chuyện đã qua.
-          */}
-          {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
-        </div>
-
-        {/*
-          ── Yêu cầu thuê: lịch, hoặc gói + nguyện vọng với đơn dài hạn. ──────
-          Yêu cầu ĐÃ thành đơn thì cả vùng này là một NÚT mở chi tiết đơn dạng modal — người
-          trực đọc lịch xong muốn xem tiếp thì bấm thẳng vào chính chỗ vừa đọc, không phải đi
-          tìm một link ở góc. Yêu cầu chưa có đơn thì không có gì để mở, nên nó ở nguyên dạng
-          tĩnh thay vì thành một ô bấm-không-ra-gì.
-        */}
-        <div className={openableDetail ? styles.requestOpenable : styles.request}>
-          <div className={styles.requestHead}>
-            <h3 className={styles.zoneTitle}>{t('schedule.heading')}</h3>
-            {openableDetail ? (
-              <span className={styles.requestCue} aria-hidden="true">
-                {t('trace.viewBooking')} <RightOutlined />
-              </span>
-            ) : null}
+          <div className={styles.customerTop}>
+            <h3 className={styles.zoneLabel}>{t('card.customer')}</h3>
+            <CustomerIdentity
+              avatarUrl={request.customerAvatarUrl}
+              nameSource={request.customerName}
+              name={
+                customerLinkable ? (
+                  <Link
+                    href={customerPath.detail(request.tenantCustomerId as string)}
+                    className={styles.customerLink}
+                    onClick={openOverlayOnPlainClick(() => onOpenCustomer(request))}
+                  >
+                    {request.customerName}
+                  </Link>
+                ) : (
+                  request.customerName
+                )
+              }
+              badge={request.customerIsRegular ? t('detail.regular') : undefined}
+              phone={
+                phoneLink ? (
+                  <a href={phoneLink} className={styles.customerPhone}>
+                    {request.customerPhone}
+                  </a>
+                ) : (
+                  request.customerPhone
+                )
+              }
+            />
           </div>
-          {openableDetail ? (
-            /*
-             * Nút phủ toàn vùng: vùng bấm là cả khối chứ không phải một dòng chữ nhỏ, nhưng
-             * DOM vẫn chỉ có MỘT phần tử tương tác nên không đẻ ra bẫy nhấn lồng nhau và
-             * trình đọc màn hình chỉ nghe đúng một hành động.
-             */
+          <CustomerContactButtons
+            variant="labeled"
+            name={request.customerName}
+            phone={request.customerPhone}
+            onMessage={canOpenChat ? () => onMessage(request) : undefined}
+            messageUnavailable={!request.canMessageOnPlatform}
+            messageLoading={pendingAction === 'message'}
+            disabled={busy}
+          />
+        </div>
+
+        {/* ── Yêu cầu thuê: lịch, hoặc gói + nguyện vọng với đơn dài hạn. ───── */}
+        <section className={styles.panel} aria-labelledby={`${titleId}-request`}>
+          <div className={styles.panelHead}>
+            <h3 id={`${titleId}-request`} className={styles.panelTitle}>
+              {t('card.requestHeading')}
+            </h3>
+            {/*
+              MỌI yêu cầu mở được chi tiết: đã thành đơn thì chi tiết ĐƠN, chưa thì chi tiết YÊU
+              CẦU — nơi duyệt/từ chối được ngay mà không phải tìm lại thẻ trong danh sách.
+            */}
             <button
               type="button"
-              className={styles.requestHitArea}
+              className={styles.detailLink}
               onClick={() => onOpenDetail(request)}
+              aria-label={t('trace.viewBookingFor', { vehicle: vehicleLabel })}
             >
-              <span className={styles.srOnly}>
-                {t('trace.viewBookingFor', { vehicle: vehicleLabel })}
-              </span>
+              {t('card.viewDetail')}
+              <LineIcon name="chevron-sm" className={styles.buttonIcon} />
             </button>
-          ) : null}
+          </div>
           <dl className={styles.facts}>
             {hasSchedule ? (
               <>
-                <Fact label={t('schedule.pickup')} strong>
-                  {fmt.rentalPoint(pickup)}
-                </Fact>
-                <Fact label={t('schedule.return')} strong>
-                  {fmt.rentalPoint(dropoff)}
-                </Fact>
-                <Fact label={t('schedule.duration')}>{fmt.rentalDuration(pickup, dropoff)}</Fact>
+                <Fact label={t('card.pickupAt')}>{fmt.rentalPoint(pickup)}</Fact>
+                <Fact label={t('card.returnAt')}>{fmt.rentalPoint(dropoff)}</Fact>
+                <Fact label={t('card.duration')}>{fmt.rentalDuration(pickup, dropoff)}</Fact>
                 {isLongTerm && request.longTermPackageMonths ? (
-                  <Fact label={t('schedule.package')}>
+                  <Fact label={t('card.package')}>
                     {fmt.packageLabel(request.longTermPackageMonths)}
                   </Fact>
                 ) : null}
@@ -386,102 +411,49 @@ export function BookingRequestCard({
                * Bịa ra một khoảng ngày ở đây sẽ khiến người trực tưởng khách đã chốt giờ nhận.
                */
               <>
-                <Fact label={t('schedule.package')} strong>
+                <Fact label={t('card.package')}>
                   {request.longTermPackageMonths
                     ? fmt.packageLabel(request.longTermPackageMonths)
                     : t('schedule.packageMissing')}
                 </Fact>
-                <Fact label={t('schedule.pickupWish')} strong>
-                  {fmt.pickupWish(request)}
-                </Fact>
+                <Fact label={t('card.pickupWish')}>{fmt.pickupWish(request)}</Fact>
               </>
             )}
-            {/*
-              LUÔN nói rõ một trong hai hình thức nhận xe — im lặng bị đọc là "chắc khách tự đến".
-            */}
-            <Fact label={t('schedule.handoverHeading')}>
-              <span className={styles.handover}>
-                {request.deliveryRequested ? (
-                  <CarOutlined aria-hidden="true" />
-                ) : (
-                  <EnvironmentOutlined aria-hidden="true" />
-                )}{' '}
-                {request.deliveryRequested
-                  ? t('schedule.handoverDelivery')
-                  : t('schedule.handoverAtShop')}
-              </span>
+            {/* LUÔN nói rõ một trong hai hình thức — im lặng bị đọc là "chắc khách tự đến". */}
+            <Fact label={t('card.handover')}>
+              {request.deliveryRequested ? t('card.handoverDelivery') : t('card.handoverSelf')}
             </Fact>
           </dl>
           {isLongTerm && !hasSchedule ? (
             <p className={styles.hint}>{t('schedule.pickupWishHint')}</p>
           ) : null}
-        </div>
+        </section>
 
         {/*
-          ── Tiền — VÙNG RIÊNG cạnh lịch trình (mẫu 19/09), không còn nhét chung một cột với
-          lịch: hai loại thông tin khác nhau ("khi nào" và "bao nhiêu") xứng đáng hai cột ngang
-          hàng thay vì đọc dọc một cột dài. `null` (dài hạn chưa chốt lịch, xe thiếu giá, chưa
-          có chính sách phí — xem docblock `BookingRequestPricingDto`) thì KHÔNG dựng vùng này.
+          ── Chi tiết thanh toán. `pricing = null` (dài hạn chưa chốt lịch, xe thiếu giá, chưa có
+          chính sách phí — xem `BookingRequestPricingDto`) thì không dựng vùng này.
         */}
         {request.pricing ? (
-          <div className={styles.payment}>
-            <h3 className={styles.zoneTitle}>{t('pricing.zoneHeading')}</h3>
-            <dl className={styles.facts}>
-              {/* "Khách trả" KHÔNG lặp lại khi hai số bằng nhau (không có phụ phí) — cùng bài
-                  học đã sửa ở PriceBreakdown: hai nhãn trỏ một số là mập mờ, không phải đầy đủ
-                  hơn. "Tiền thuê" luôn có mặt — nó là con số nền, không đổi theo phụ phí. */}
-              <Fact
-                label={t('pricing.rentalTotal')}
-                strong={request.pricing.customerTotalAmount === request.pricing.rentalTotal}
-              >
-                {fmt.money(request.pricing.rentalTotal)}
-                {request.pricing.isEstimate &&
-                request.pricing.customerTotalAmount === request.pricing.rentalTotal ? (
-                  <span className={styles.pricingEstimateTag}>{t('pricing.estimateBadge')}</span>
-                ) : null}
-              </Fact>
-              {request.pricing.customerTotalAmount !== request.pricing.rentalTotal ? (
-                <Fact label={t('pricing.customerTotal')} strong>
-                  {fmt.money(request.pricing.customerTotalAmount)}
-                  {request.pricing.isEstimate ? (
-                    <span className={styles.pricingEstimateTag}>{t('pricing.estimateBadge')}</span>
-                  ) : null}
-                </Fact>
+          <section className={styles.panel} aria-labelledby={`${titleId}-payment`}>
+            <div className={styles.panelHead}>
+              <h3 id={`${titleId}-payment`} className={styles.panelTitle}>
+                {t('card.paymentHeading')}
+              </h3>
+              {request.pricing.isEstimate ? (
+                <span className={styles.estimateTag}>{t('card.estimate')}</span>
               ) : null}
-              {request.pricing.paidAmount != null ? (
-                <Fact label={t('pricing.paidViaPlatform')}>
-                  {fmt.money(request.pricing.paidAmount)}
-                </Fact>
-              ) : null}
-              {request.pricing.remainingAmount != null ? (
-                <Fact label={t('pricing.payAtHandover')}>
-                  {fmt.money(request.pricing.remainingAmount)}
-                </Fact>
-              ) : null}
-            </dl>
-          </div>
+            </div>
+            <RequestPaymentFacts request={request} />
+          </section>
         ) : null}
-
-        {/* ── Dấu vết xử lý — desktop nằm dưới trạng thái, mobile xuống dưới. ── */}
-        <div className={styles.stamps}>
-          <p className={styles.timestamp}>
-            {t('trace.createdAt', { value: fmt.dateTime(request.createdAt) })}
-          </p>
-          {request.decidedAt ? (
-            <p className={styles.timestamp}>
-              {t('trace.decidedAt', { value: fmt.dateTime(request.decidedAt) })}
-            </p>
-          ) : null}
-        </div>
       </div>
 
       {/*
-        Chi tiết chỉ MỘT SỐ yêu cầu có: lộ trình, địa chỉ giao, ghi chú, lý do từ chối, cảnh
-        báo rủi ro. Tách khỏi thân bốn vùng để thẻ thường (phần lớn yêu cầu) giữ được đúng một
-        hàng gọn, còn yêu cầu có ngữ cảnh thì nở ra hết chiều ngang thay vì nén vào một cột.
+        Dải thông tin thêm — chỉ MỘT SỐ yêu cầu có (chốt 02/11/2026, design chưa vẽ). Tách khỏi
+        thân bốn vùng để thẻ thường (phần lớn yêu cầu) giữ đúng một hàng gọn.
       */}
       {hasExtras ? (
-        <div className={styles.extras}>
+        <div className={styles.extras} aria-label={t('card.extrasLabel')}>
           {showRisk ? (
             <p className={styles.risk} role="note">
               <ExclamationCircleOutlined aria-hidden="true" />{' '}
@@ -491,8 +463,22 @@ export function BookingRequestCard({
             </p>
           ) : null}
 
-          {isWithDriver ? (
-            <dl className={styles.facts}>
+          {request.customerAccountPhone || request.customerEmail || !request.tenantCustomerId ? (
+            <p className={styles.extraLine}>
+              {[
+                request.customerAccountPhone
+                  ? t('customer.accountPhone', { phone: request.customerAccountPhone })
+                  : null,
+                request.customerEmail,
+                !request.tenantCustomerId ? t('customer.noProfile') : null,
+              ]
+                .filter(Boolean)
+                .join(LIST_SEPARATOR)}
+            </p>
+          ) : null}
+
+          {isWithDriver && (routeType || request.pickupAddress || request.destination) ? (
+            <dl className={styles.extraFacts}>
               {routeType ? (
                 <Fact label={t('schedule.route')}>
                   <Tag
@@ -513,14 +499,13 @@ export function BookingRequestCard({
           ) : null}
 
           {/*
-            Địa chỉ giao là văn bản đầy đủ, không tooltip: đó là nơi nhân viên phải lái xe tới.
-            Và KHÔNG quảng cáo giao nhận là miễn phí vĩnh viễn — đơn sinh ra với phí 0₫ rồi chủ
-            xe chốt lại sau khi thoả thuận, nên câu ghi chú phải nói đúng điều đó.
+            Địa chỉ giao là văn bản đầy đủ, không tooltip: đó là nơi nhân viên phải lái xe tới. Và
+            KHÔNG quảng cáo giao nhận là miễn phí vĩnh viễn — phí chốt sau khi hai bên thoả thuận.
           */}
           {request.deliveryRequested ? (
             <div>
               {request.deliveryAddress ? (
-                <dl className={styles.facts}>
+                <dl className={styles.extraFacts}>
                   <Fact label={t('schedule.deliveryAddress')}>{request.deliveryAddress}</Fact>
                 </dl>
               ) : null}
@@ -549,161 +534,115 @@ export function BookingRequestCard({
           ) : null}
 
           {request.rejectReason ? (
-            <div className={styles.rejectReason}>
+            <div className={styles.note}>
               <p className={styles.noteLabel}>{t('trace.rejectReason')}</p>
               <p className={styles.noteBodyFull}>{request.rejectReason}</p>
             </div>
           ) : null}
+
         </div>
       ) : null}
-
-      {/* ── Chân thẻ: liên hệ bên trái, quyết định / đường sang đơn bên phải. ── */}
-      <div className={styles.footer}>
-        <div className={styles.contact}>
-          {/*
-            Chủ xe tuyến hoa hồng chưa nhắn khách khi yêu cầu chưa thành đơn (ADR 0073) — ẩn hẳn,
-            cùng luật với SĐT khách; server chặn endpoint mở hội thoại.
-          */}
-          {chatHidden || !request.chatOpen ? null : (
-            <Tooltip
-              title={request.canMessageOnPlatform ? undefined : t('actions.messageUnavailable')}
-            >
-              {/*
-              `<span>` bọc để tooltip vẫn nhận được sự kiện chuột khi nút bị disable — một nút
-              xám không lý do là thứ người dùng không có cách nào tự giải thích.
-            */}
-              <span className={styles.contactSlot}>
-                <Button
-                  variant="filled"
-                  color="default"
-                  className={styles.contactButton}
-                  icon={<MessageOutlined aria-hidden="true" />}
-                  loading={pendingAction === 'message'}
-                  disabled={!request.canMessageOnPlatform || (busy && pendingAction !== 'message')}
-                  aria-label={t('actions.messageAria', { name: request.customerName })}
-                  onClick={() => onMessage(request)}
-                >
-                  {t('actions.message')}
-                </Button>
-              </span>
-            </Tooltip>
-          )}
-
-          {phoneLink && request.customerPhone ? (
-            <Button
-              variant="filled"
-              color="default"
-              className={styles.contactButton}
-              href={phoneLink}
-              icon={<PhoneOutlined aria-hidden="true" />}
-              aria-label={t('actions.callAria', {
-                name: request.customerName,
-                phone: request.customerPhone,
-              })}
-            >
-              {t('actions.call')}
-            </Button>
-          ) : null}
-
-          {zaloLink && request.customerPhone ? (
-            <Button
-              variant="filled"
-              color="default"
-              className={styles.zaloButton}
-              href={zaloLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t('actions.zaloAria', {
-                name: request.customerName,
-                phone: request.customerPhone,
-              })}
-            >
-              {/* Không cài thêm bộ icon chỉ để có một logo — chữ "Zalo" đã là nhãn rõ ràng. */}
-              <span aria-hidden="true">{t('actions.zalo')}</span>
-            </Button>
-          ) : null}
-        </div>
-
-        {/*
-          Quyết định chỉ có ở yêu cầu CÒN XỬ LÝ ĐƯỢC (chờ duyệt + chưa quá hạn) và chỉ với người
-          có quyền duyệt. Quá hạn thì hàng nút biến mất hẳn thay vì mờ đi: không có điều kiện
-          nào để chờ nữa, và một nút xám vĩnh viễn chỉ làm người ta thử bấm.
-        */}
-        {decidable && canApprove ? (
-          <div className={styles.decision}>
-            <RowActions actions={decisionActions} variant="filled" maxInline={2} />
-          </div>
-        ) : needsDecision && pastDue ? (
-          // Nói vì sao không còn nút, và việc cần làm tiếp — im lặng ở đây đọc như một lỗi tải.
-          <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
-        ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? (
-          /*
-           * Gian hàng ĐÃ nhận chuyến; việc còn lại thuộc về khách (ADR 0044 điều 2). Im lặng ở
-           * đây đọc như thẻ bị mất nút, nên nói thẳng tình trạng — kèm ĐÚNG mốc mà chỗ sẽ tự
-           * nhả nếu tiền không về, thứ quyết định người trực có nên gọi cho khách hay không.
-           *
-           * Mốc tuyệt đối chứ không phải đồng hồ chạy: cửa sổ này dài hai giờ, và một hộp thư
-           * mười thẻ với mười `setInterval` nhích mỗi giây là chi phí không đổi lại được gì.
-           */
-          <div className={styles.awaitingHold}>
-            <p className={styles.expiredHint}>
-              {t('awaitingHold.footerHint')}
-              {request.holdExpiresAt
-                ? ` ${t('awaitingHold.deadline')} ${fmt.dateTime(request.holdExpiresAt)}`
-                : ''}
-            </p>
-            {/*
-              Nút HUỶ đứng ở đây và không ở đâu khác: đây là chặng duy nhất mà gian hàng đã hứa
-              nhận chuyến nhưng chuyến chưa thành đơn. Trước ADR 0045 chặng này không có nút
-              nào — xe hỏng lúc mười giờ tối thì đường duy nhất là gọi điện xin lỗi rồi ngồi
-              chờ hết cửa sổ hai giờ, trong lúc lịch xe vẫn bị giữ.
-
-              `type="link"` chứ không phải một nút đỏ to: nó là lối thoát hiếm khi dùng, không
-              phải việc chính của thẻ. Việc chính ở chặng này là ĐỢI.
-            */}
-            {canApprove ? (
-              <Button
-                type="link"
-                danger
-                size="small"
-                className={styles.cancelButton}
-                loading={pendingAction === 'cancel'}
-                disabled={busy && pendingAction !== 'cancel'}
-                onClick={() => onCancel(request)}
-              >
-                {t('actions.cancel')}
-              </Button>
-            ) : null}
-          </div>
-        ) : hasBookingLink ? (
-          /*
-           * MỞ MODAL, không điều hướng: người trực đang quét cả hộp thư, nhảy sang một trang
-           * khác là mất chỗ đang đọc và mất luôn bộ lọc/trang hiện tại. Trang chi tiết vẫn còn
-           * (link chia sẻ nằm trong chính modal).
-           */
-          <Button type="link" className={styles.bookingLink} onClick={() => onOpenDetail(request)}>
-            {t('trace.viewBooking')} <RightOutlined aria-hidden="true" />
-          </Button>
-        ) : null}
-      </div>
     </article>
   );
 }
 
-/** Một dòng "nhãn — giá trị". Desktop canh nhãn theo cột, mobile đẩy giá trị sang phải. */
+/**
+ * Các dòng tiền của ô "Chi tiết thanh toán", đổi NHÃN theo chặng (chốt 02/11/2026, ADR 0044):
+ * chưa ai nhận chuyến thì tiền giữ chỗ là số DỰ KIẾN; đã phát hành mà chưa đủ thì "chờ khách trả";
+ * chỉ khi tiền về đủ mới là "Đã giữ chỗ". "Khách trả" không lặp lại khi bằng "Tiền thuê".
+ */
+export function RequestPaymentFacts({
+  request,
+  emphasizeLast = false,
+}: {
+  request: BookingRequestItem;
+  /** Popup chi tiết: dòng cuối (phần còn phải thu) tô vàng, chữ to hơn — design `23807:66302`. */
+  emphasizeLast?: boolean;
+}) {
+  const t = useTranslations('BookingRequests.card');
+  const fmt = useAppFormat();
+  const pricing = request.pricing!;
+  const preview = request.approvalPreview ?? null;
+
+  let hold: { label: string; amount: string } | null = null;
+  if (pricing.holdAmount != null) {
+    const paid = pricing.holdPaidAmount ?? '0';
+    const settled = !isPositiveMoney(subtractMoney(pricing.holdAmount, paid));
+    hold = settled
+      ? { label: t('holdPaid'), amount: paid }
+      : {
+          // "Chờ khách trả" chỉ khi cửa sổ thanh toán còn mở; hết hạn/huỷ là khoản KHÔNG về.
+          label:
+            request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
+              ? t('holdAwaiting')
+              : t('holdUnpaid'),
+          amount: pricing.holdAmount,
+        };
+  } else if (pricing.paidAmount != null) {
+    // Đơn đi đường không có khoản giữ chỗ (gian hàng không thu cọc online): số đã trả qua nền tảng.
+    hold = { label: t('holdPaid'), amount: pricing.paidAmount };
+  } else if (preview?.collectsHold && preview.onlineAmount) {
+    hold = { label: t('holdExpected'), amount: preview.onlineAmount };
+  }
+
+  const payAtPickup =
+    pricing.remainingAmount != null
+      ? { label: t('payAtPickup'), amount: pricing.remainingAmount }
+      : preview
+        ? { label: t('payAtPickupExpected'), amount: preview.payAtPickupAmount }
+        : null;
+
+  return (
+    <dl className={styles.facts}>
+      <Fact label={t('rentalTotal')} align="end">
+        {fmt.money(pricing.rentalTotal)}
+      </Fact>
+      {pricing.customerTotalAmount !== pricing.rentalTotal ? (
+        <Fact label={t('customerTotal')} align="end">
+          {fmt.money(pricing.customerTotalAmount)}
+        </Fact>
+      ) : null}
+      {hold ? (
+        <Fact label={hold.label} align="end">
+          {fmt.money(hold.amount)}
+        </Fact>
+      ) : null}
+      {payAtPickup ? (
+        <Fact label={payAtPickup.label} align="end" emphasis={emphasizeLast}>
+          {fmt.money(payAtPickup.amount)}
+        </Fact>
+      ) : null}
+    </dl>
+  );
+}
+
+/** Một dòng "nhãn — giá trị" của hai ô Yêu cầu thuê / Chi tiết thanh toán. */
 function Fact({
   label,
-  strong,
+  align,
+  emphasis = false,
   children,
 }: {
   label: string;
-  strong?: boolean;
+  /** Tiền canh phải để các con số thẳng cột. */
+  align?: 'end';
+  emphasis?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className={styles.fact}>
       <dt className={styles.factLabel}>{label}</dt>
-      <dd className={strong ? styles.factValueStrong : styles.factValue}>{children}</dd>
+      <dd
+        className={
+          emphasis
+            ? styles.factValueEmphasis
+            : align === 'end'
+              ? styles.factValueEnd
+              : styles.factValue
+        }
+      >
+        {children}
+      </dd>
     </div>
   );
 }
@@ -712,8 +651,7 @@ function Fact({
  * Ảnh xe với tỉ lệ CỐ ĐỊNH — ảnh nguồn dọc hay ngang thì hàng vẫn thẳng.
  *
  * Link ảnh mang `aria-hidden` + `tabIndex={-1}`: nó trỏ cùng chỗ với link tên ngay bên cạnh,
- * nên để cả hai lộ ra là bắt người dùng bàn phím Tab hai lần qua cùng một đích và bắt trình đọc
- * màn hình đọc hai lần một liên kết.
+ * nên để cả hai lộ ra là bắt người dùng bàn phím Tab hai lần qua cùng một đích.
  */
 function VehicleThumb({
   imageUrl,

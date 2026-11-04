@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Card, Skeleton, Space } from 'antd';
+import { Alert, Button, Skeleton, Space } from 'antd';
+import { SectionCard } from '@/components/layout/SectionCard';
 import { useState } from 'react';
 import {
   DEPOSIT_STATUS,
@@ -17,6 +18,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
+import { cx } from '@/lib/cx';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { useSettlement } from '../hooks';
 import { ExcessMileageFacts } from './ExcessMileageFacts';
@@ -44,9 +46,12 @@ export function SettlementCard({
   bookingId,
   canView,
   serviceType = null,
+  className,
 }: {
   bookingId: string;
   canView: boolean;
+  /** Lớp của nơi đặt thẻ (vd. kéo cao bằng thẻ bên cạnh trong một hàng hai thẻ). */
+  className?: string;
   /** Loại dịch vụ của đơn — hộp phụ phí bỏ danh mục không ghi được cho loại này (ADR 0075). */
   serviceType?: string | null;
 }) {
@@ -71,15 +76,15 @@ export function SettlementCard({
 
   if (isLoading) {
     return (
-      <Card title={tSettlement('cardTitle')} className={styles.card}>
+      <SectionCard title={tSettlement('cardTitle')} className={cx(styles.card, className)}>
         <Skeleton active paragraph={{ rows: 3 }} title={false} />
-      </Card>
+      </SectionCard>
     );
   }
 
   if (isError || !data) {
     return (
-      <Card title={tSettlement('cardTitle')} className={styles.card}>
+      <SectionCard title={tSettlement('cardTitle')} className={cx(styles.card, className)}>
         <Alert
           type="error"
           showIcon
@@ -91,7 +96,7 @@ export function SettlementCard({
             </Button>
           }
         />
-      </Card>
+      </SectionCard>
     );
   }
 
@@ -115,188 +120,186 @@ export function SettlementCard({
     status === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
 
   return (
-    <Card
+    <SectionCard
       title={tSettlement('cardTitle')}
-      className={styles.card}
-      extra={<StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />}
+      className={cx(styles.card, className)}
+      // Chặng cọc chỉ đáng nêu khi đã có tiền trong tay — "chưa thu" đã nói ngay ở dòng "Cọc đã nhận".
+      extra={
+        status === DEPOSIT_STATUS.NOT_RECEIVED ? undefined : (
+          <StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />
+        )
+      }
     >
+      {/*
+        Bảng gọn của design 03/11/2026 (Figma 23845:49956): mỗi dòng một con số, hành động là
+        LINK ngay cạnh số đó. Phần chi tiết (danh sách phát sinh, vượt km, hoàn cọc) chỉ hiện khi
+        có dữ liệu thật.
+      */}
       <div className={styles.body}>
-        {/* ── Phát sinh ─────────────────────────────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className={styles.sectionTitle}>{tSettlement('surchargeHeading')}</span>
-            {canRecord ? (
-              <Button size="small" onClick={() => setSurchargeOpen(true)}>
-                {tSettlement('surchargeRecord')}
-              </Button>
-            ) : null}
+        <dl className={styles.rows}>
+          <div className={styles.row}>
+            <dt>{tSettlement('surchargeHeading')}</dt>
+            <dd className={styles.rowValue}>
+              {hasSurcharges ? (
+                <b className={styles.money}>{fmt.money(data.surchargeTotal)}</b>
+              ) : (
+                <span>{tSettlement('surchargeNone')}</span>
+              )}
+              {canRecord ? (
+                <button
+                  type="button"
+                  className={styles.inlineLink}
+                  onClick={() => setSurchargeOpen(true)}
+                >
+                  {tSettlement('surchargeRecord')}
+                </button>
+              ) : null}
+            </dd>
           </div>
+        </dl>
 
-          {hasSurcharges ? (
-            <ul className={styles.list}>
-              {data.surcharges.map((row) => (
-                <li key={row.id} className={styles.item}>
-                  <span className={styles.itemMain}>
-                    <span className={styles.itemCategory}>
-                      {domainLabel(
-                        'surchargeCategory',
-                        row.category,
-                        SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category,
-                      )}
-                    </span>
-                    <span className={styles.itemReason}>{row.reason}</span>
+        {hasSurcharges ? (
+          <ul className={styles.list}>
+            {data.surcharges.map((row) => (
+              <li key={row.id} className={styles.item}>
+                <span className={styles.itemMain}>
+                  <span className={styles.itemCategory}>
+                    {domainLabel(
+                      'surchargeCategory',
+                      row.category,
+                      SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category,
+                    )}
                   </span>
-                  <b className={styles.money}>{fmt.money(row.amount)}</b>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.empty}>{tSettlement('surchargeEmpty')}</p>
-          )}
-        </section>
+                  <span className={styles.itemReason}>{row.reason}</span>
+                </span>
+                <b className={styles.money}>{fmt.money(row.amount)}</b>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {/*
-          ── Vượt hạn mức km ────────────────────────────────────────────
-
-          Khối này chỉ hiện khi chuyến CÓ hạn mức (`includedKmPerDay` khác null) — xe không đặt
-          hạn mức thì không có gì để nói, và một dòng "không giới hạn" trên mọi đơn là nhiễu.
-
-          Nó là thông tin ĐỌC, không phải một nút: mọi con số do server tính từ hạn mức đã đóng
-          băng trên đơn, và phụ phí chỉ tồn tại sau khi chủ xe tự bấm ghi trong hộp phát sinh.
+          Vượt hạn mức km — chỉ khi chuyến CÓ hạn mức. Thông tin ĐỌC: mọi con số do server tính từ
+          hạn mức đã đóng băng trên đơn; phụ phí chỉ tồn tại sau khi chủ xe tự ghi.
         */}
         {data.excessMileage.includedKmPerDay != null ? (
           <section className={styles.section}>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionTitle}>{tSettlement('excessMileage.title')}</span>
-            </div>
+            <span className={styles.sectionTitle}>{tSettlement('excessMileage.title')}</span>
             <ExcessMileageFacts suggestion={data.excessMileage} />
           </section>
         ) : null}
 
-        {/* ── Cọc ───────────────────────────────────────────────────── */}
-        <section className={styles.section}>
-          <dl className={styles.rows}>
+        <dl className={styles.rows}>
+          <div className={styles.row}>
+            <dt>{tSettlement('depositRequiredShort')}</dt>
+            <dd className={styles.money}>{fmt.money(data.depositRequired)}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>{tSettlement('depositReceivedShort')}</dt>
+            <dd className={styles.rowValue}>
+              {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
+                // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
+                <span>{tSettlement('depositNotRecorded')}</span>
+              ) : (
+                <b className={styles.money}>{fmt.money(data.depositReceived)}</b>
+              )}
+              {/* Chỉ mở khi còn thiếu so với cọc theo đơn và chưa bước sang giai đoạn hoàn. */}
+              {canRecord && canTakeDeposit ? (
+                <button
+                  type="button"
+                  className={styles.inlineLink}
+                  onClick={() => setDepositOpen(true)}
+                >
+                  {tSettlement('takeDeposit')}
+                </button>
+              ) : null}
+            </dd>
+          </div>
+          {hasSurcharges ? (
             <div className={styles.row}>
-              <dt>{tSettlement('depositRequiredShort')}</dt>
-              <dd className={styles.money}>{fmt.money(data.depositRequired)}</dd>
+              <dt>{tSettlement('surchargeTotalShort')}</dt>
+              <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
             </div>
-            <div className={styles.row}>
-              <dt>{tSettlement('depositReceivedShort')}</dt>
-              <dd className={styles.money}>
-                {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-                  // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
-                  <span className={styles.muted}>{tSettlement('depositNotReceived')}</span>
-                ) : (
-                  fmt.money(data.depositReceived)
-                )}
-                {/*
-                  Đường GHI NHẬN thu cọc — trước đây không tồn tại ở bất kỳ đâu trong sản phẩm,
-                  nên `depositReceived` vĩnh viễn bằng 0 và cả khối này chạy không tải. Chỉ mở
-                  khi còn thiếu so với cọc theo đơn và chưa bước sang giai đoạn hoàn.
-                */}
-                {canRecord && canTakeDeposit ? (
-                  <Button type="link" size="small" onClick={() => setDepositOpen(true)}>
-                    {tSettlement('takeDeposit')}
-                  </Button>
-                ) : null}
+          ) : null}
+          {/*
+            Chỉ nói chuyện hoàn tiền khi thật sự có tiền trong tay. `RECEIVED` (đang thuê, cọc còn
+            giữ) chưa tới lúc đó; `SETTLED` thì phát sinh đã ăn hết — mời "hoàn 0đ" là một việc
+            không có thật.
+          */}
+          {showRefundLine ? (
+            <div className={styles.rowTotal}>
+              <dt>{data.refund ? tSettlement('refunded') : tSettlement('proposedRefundShort')}</dt>
+              <dd className={styles.moneyStrong}>
+                {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
               </dd>
             </div>
-            {hasSurcharges ? (
-              <div className={styles.row}>
-                <dt>{tSettlement('surchargeTotalShort')}</dt>
-                <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
-              </div>
-            ) : null}
-            {/*
-              Chỉ nói chuyện hoàn tiền khi thật sự có tiền trong tay. `RECEIVED` (đang thuê, cọc
-              còn giữ) chưa tới lúc đó; `SETTLED` thì phát sinh đã ăn hết — mời "hoàn 0đ" là một
-              việc không có thật.
-            */}
-            {showRefundLine ? (
-              <div className={styles.rowTotal}>
-                <dt>
-                  {data.refund ? tSettlement('refunded') : tSettlement('proposedRefundShort')}
-                </dt>
-                <dd className={styles.moneyStrong}>
-                  {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-
-          {needsMore ? (
-            <Alert
-              type="warning"
-              showIcon
-              title={tSettlement('needsMoreTitle', { amount: fmt.money(data.additionalDue) })}
-              description={tSettlement('needsMoreBody')}
-            />
           ) : null}
+        </dl>
 
-          {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-            <Alert type="info" showIcon title={tSettlement('noticeNotReceived')} />
-          ) : null}
+        {needsMore ? (
+          <Alert
+            type="warning"
+            showIcon
+            title={tSettlement('needsMoreTitle', { amount: fmt.money(data.additionalDue) })}
+            description={tSettlement('needsMoreBody')}
+          />
+        ) : null}
 
-          {status === DEPOSIT_STATUS.RECEIVED ? (
-            <Alert type="info" showIcon title={tSettlement('noticeReceived')} />
-          ) : null}
+        {status === DEPOSIT_STATUS.SETTLED ? (
+          <Alert type="info" showIcon title={tSettlement('noticeSettled')} />
+        ) : null}
 
-          {status === DEPOSIT_STATUS.SETTLED ? (
-            <Alert type="info" showIcon title={tSettlement('noticeSettled')} />
-          ) : null}
-
-          {data.refund ? (
-            <div className={styles.refundBox}>
-              <div className={styles.refundRow}>
-                <span>{tSettlement('refundMethod')}</span>
-                <b>
-                  {domainLabel(
-                    'refundMethod',
-                    data.refund.refundMethod,
-                    REFUND_METHOD_LABEL[data.refund.refundMethod as RefundMethod],
-                  )}
-                </b>
-              </div>
-              <div className={styles.refundRow}>
-                <span>{tSettlement('refundedAt')}</span>
-                <b>{fmt.dateTime(data.refund.refundedAt)}</b>
-              </div>
-              {data.refund.reference ? (
-                <div className={styles.refundRow}>
-                  <span>{tSettlement('refundReference')}</span>
-                  <b>{data.refund.reference}</b>
-                </div>
-              ) : null}
-              {data.refund.recordedByName ? (
-                <div className={styles.refundRow}>
-                  <span>{tSettlement('refundRecordedBy')}</span>
-                  <b>{data.refund.recordedByName}</b>
-                </div>
-              ) : null}
+        {data.refund ? (
+          <div className={styles.refundBox}>
+            <div className={styles.refundRow}>
+              <span>{tSettlement('refundMethod')}</span>
+              <b>
+                {domainLabel(
+                  'refundMethod',
+                  data.refund.refundMethod,
+                  REFUND_METHOD_LABEL[data.refund.refundMethod as RefundMethod],
+                )}
+              </b>
             </div>
-          ) : null}
+            <div className={styles.refundRow}>
+              <span>{tSettlement('refundedAt')}</span>
+              <b>{fmt.dateTime(data.refund.refundedAt)}</b>
+            </div>
+            {data.refund.reference ? (
+              <div className={styles.refundRow}>
+                <span>{tSettlement('refundReference')}</span>
+                <b>{data.refund.reference}</b>
+              </div>
+            ) : null}
+            {data.refund.recordedByName ? (
+              <div className={styles.refundRow}>
+                <span>{tSettlement('refundRecordedBy')}</span>
+                <b>{data.refund.recordedByName}</b>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-          {status === DEPOSIT_STATUS.AWAITING_REFUND && canRecord ? (
-            <Space direction="vertical" className={styles.actionBlock}>
-              <Button type="primary" block onClick={() => setRefundOpen(true)}>
-                {tSettlement('markRefunded')}
-              </Button>
-              <span className={styles.disclaimer}>{tSettlement('refund.disclaimer')}</span>
-            </Space>
-          ) : null}
-
-          {data.refund && canCorrect ? (
-            <Button
-              size="small"
-              onClick={() => {
-                setCorrecting(true);
-                setRefundOpen(true);
-              }}
-            >
-              {tSettlement('correctRefund')}
+        {status === DEPOSIT_STATUS.AWAITING_REFUND && canRecord ? (
+          <Space direction="vertical" className={styles.actionBlock}>
+            <Button type="primary" block onClick={() => setRefundOpen(true)}>
+              {tSettlement('markRefunded')}
             </Button>
-          ) : null}
-        </section>
+            <span className={styles.disclaimer}>{tSettlement('refund.disclaimer')}</span>
+          </Space>
+        ) : null}
+
+        {data.refund && canCorrect ? (
+          <Button
+            size="small"
+            onClick={() => {
+              setCorrecting(true);
+              setRefundOpen(true);
+            }}
+          >
+            {tSettlement('correctRefund')}
+          </Button>
+        ) : null}
       </div>
 
       {/*
@@ -340,6 +343,6 @@ export function SettlementCard({
           onClose={() => setDepositOpen(false)}
         />
       ) : null}
-    </Card>
+    </SectionCard>
   );
 }

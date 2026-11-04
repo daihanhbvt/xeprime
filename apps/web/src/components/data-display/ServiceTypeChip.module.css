@@ -1,0 +1,32 @@
+/* Figma "_Badge" bo tròn (Partner-XePrime): bo 16, đệm 2/8, chữ 14/500, viền cùng sắc. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.selfDrive {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.withDriver {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.longTerm {
+  border-color: var(--xp-color-pink-border);
+  background: var(--xp-color-pink-bg);
+  color: var(--xp-color-pink);
+}

@@ -188,6 +188,16 @@ export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequi
 }
 
 /**
+ * "Hoàn thiện %" của hồ sơ xe (cột phải màn sửa xe): số điều kiện gửi duyệt ĐÃ ĐẠT trên số điều
+ * kiện ÁP DỤNG cho xe này. Cùng bộ điều kiện với cổng gửi duyệt ở backend — 100% nghĩa là gửi
+ * duyệt được, không phải một thước đo tự đặt.
+ */
+export function publishCompleteness(vehicle: VehicleDetail): { done: number; total: number } {
+  const total = applicableRequirements(toInput(vehicle)).length;
+  return { done: total - missingPublishRequirements(vehicle).length, total };
+}
+
+/**
  * Cách trình bày trạng thái public cho chủ xe — dùng chung cho alert panel và banner Hồ sơ 360.
  *
  * Trả về `type` (màu) + KHOÁ message, không trả câu chữ: nơi gọi đã có bộ dịch của request và
@@ -377,11 +387,10 @@ function task(
  * không biết màn sửa xe chia tab thế nào.
  */
 const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
-  // Mỗi loại giá thiếu mở ĐÚNG mục giá của dịch vụ đó (30/09/2026) — trước đây cả ba cùng về một
-  // tab chung, nên chủ xe thiếu giá có tài xế phải tự tìm nhóm giá đó trong một màn dài.
-  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_EDIT_TAB.PRICING,
-  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_EDIT_TAB.PRICING,
-  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_EDIT_TAB.PRICING,
+  // Mỗi loại giá thiếu mở ĐÚNG tab dịch vụ đó của mục "Dịch vụ xe" (03/11/2026).
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_EDIT_TAB.LONG_TERM,
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_EDIT_TAB.WITH_DRIVER,
   [PUBLISH_REQUIREMENT.PHOTOS]: VEHICLE_EDIT_TAB.MEDIA,
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: VEHICLE_EDIT_TAB.INFORMATION,
   [PUBLISH_REQUIREMENT.IDENTITY]: VEHICLE_EDIT_TAB.INFORMATION,

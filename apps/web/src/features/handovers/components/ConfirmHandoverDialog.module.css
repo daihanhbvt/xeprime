@@ -1,6 +1,6 @@
 /**
- * Hộp xác nhận giao/nhận xe (Wave 10) — gọn, một hành động chính.
- * Vùng nâng cao đóng sẵn và không được chiếm chỗ của nút xác nhận.
+ * "Sẵn sàng giao xe" / "Sẵn sàng nhận lại xe" — Figma Partner-XePrime 23845:54382 (03/11/2026).
+ * Vùng chi tiết đóng sẵn và không được chiếm chỗ của nút xác nhận.
  */
 
 .body {
@@ -10,38 +10,44 @@
   min-width: 0;
 }
 
-.summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: 24px;
+}
+
+.title {
   margin: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  min-width: 0;
-}
-
-.row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
-.row dt {
-  flex: none;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-}
-
-.row dd {
-  margin: 0;
-  font-weight: 600;
   color: var(--xp-color-text);
-  text-align: right;
-  overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
 }
+
+.text {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.text b {
+  color: var(--xp-color-text);
+}
+
+/* Hai nút cùng bề ngang — Quay lại · Xác nhận (design). */
+.footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+  width: 100%;
+}
+
 
 .field {
   display: flex;

@@ -432,6 +432,7 @@ function codeFilterWhere(code: BankTxCodeFilter | undefined): Prisma.BankTransac
       return { referenceCode: null };
     case BANK_TX_CODE_FILTER.SUBSCRIPTION_INVOICE:
     case BANK_TX_CODE_FILTER.BOOKING_HOLD:
+    case BANK_TX_CODE_FILTER.BOOKING_EXTENSION:
       return {
         referenceCode: { startsWith: REFERENCE_CODE_PREFIX[code], mode: 'insensitive' },
       };

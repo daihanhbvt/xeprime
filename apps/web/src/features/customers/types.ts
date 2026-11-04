@@ -22,6 +22,18 @@ export type CustomerDocumentPresign = Schemas['CustomerDocumentPresignDto'];
 export type CustomerDocumentDownload = Schemas['CustomerDocumentDownloadDto'];
 export type VerifyCustomerDocumentInput = Schemas['VerifyCustomerDocumentDto'];
 export type PresignCustomerDocumentInput = Schemas['PresignCustomerDocumentDto'];
+export type UpdateCustomerDocumentInput = Schemas['UpdateCustomerDocumentDto'];
+export type CustomerRevenue = Schemas['CustomerRevenueDto'];
+export type CustomerRevenuePeriod = CustomerRevenue['period'];
+
+/** Bộ lọc lịch sử thuê của MỘT khách (02/11/2026) — server lọc, ngày theo giờ Việt Nam. */
+export interface CustomerBookingHistoryFilters {
+  q?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page: number;
+}
 
 /**
  * Bộ lọc của danh sách khách.

@@ -175,6 +175,9 @@ Cả hai mốc vẫn tính XUÔI từ `acceptedAt` và kẹp bởi `pickupAt` (`
 - Bảng bậc phí giao xe (`deliveryTiers`) có thêm dạng **theo km** `{ toKm, perKm }` — phí = `perKm` ×
   khoảng cách, làm tròn 1.000đ — bên cạnh dạng trọn gói `{ toKm, fee }`; hai dạng loại trừ nhau trong
   một bậc, dữ liệu cũ (chỉ có `fee`) đọc đúng không cần migration. Phép tính bậc vẫn ở đúng một nơi.
+  > **Gỡ ngày 03/11/2026 — [ADR 0078](0078-retire-handover-windows-and-per-km-delivery.md):** mỗi bậc chỉ
+  > còn phí trọn gói; bậc theo km đang dùng được quy đổi thành `perKm × toKm` (làm tròn 1.000đ), server
+  > từ chối `perKm` mới.
 
 ### 10. Bảo hiểm: tuỳ chọn, và chỉ có khi có ĐỐI TÁC đã cấu hình
 

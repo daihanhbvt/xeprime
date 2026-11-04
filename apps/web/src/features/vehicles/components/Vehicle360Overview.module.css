@@ -1,345 +1,130 @@
 /*
- * Hồ sơ 360 của xe — bố cục 02/10/2026: cột chính (thẻ hồ sơ + tab) và cột phụ (hiệu suất, lịch,
- * hoạt động, khu vực quản lý). Mọi màu/khoảng cách/bo góc qua token XePrime (ADR 0003).
+ * Hồ sơ xe — Figma Partner-XePrime section `23672:25621` (03/11/2026). Số đo lấy từ frame
+ * Tổng quan `23670:3440`: cột chính 1041 · khoảng 24 · cột phải 495; thẻ trắng viền xám bo 16, đệm
+ * 20, bóng 6px nhạt.
+ *
+ * Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container vehicle-profile`): cùng component chạy ở
+ * trang và trong modal hồ sơ xe — modal hẹp hơn trang.
  */
 
 .root {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-lg);
-}
-
-/*
- * ─── Hai vùng: cột chính · cột phụ ────────────────────────────────────────
- *
- * Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container`), không đo viewport: cùng component chạy
- * trong cổng quản lý, khu tài khoản (có menu dọc bên trái — viewport "rộng" mà vùng nội dung hẹp)
- * và modal hồ sơ xe. Đo viewport thì một trong ba nơi đó luôn vỡ.
- *
- * Container đặt trên LỚP VỎ RIÊNG (`.shell`), không trên `.root`: `container-type` kéo theo
- * `contain: layout`, và thanh CTA bám đáy ở mobile phải nằm ngoài khối đó.
- */
-.shell {
   container: vehicle-profile / inline-size;
+  gap: 20px;
 }
 
-.layout {
-  display: grid;
-  align-items: start;
-  gap: var(--xp-space-lg);
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
-}
+/* ─── Hàng nút (tiêu đề trang · đầu modal) ────────────────────────────────── */
 
-/* Cột phụ có thể rỗng (khu tài khoản, thiếu quyền đơn, không có lối đi nào) — trả lại bề ngang. */
-.layout:has(> .aside:empty) {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.aside:empty {
-  display: none;
-}
-
-/* Cột chính cũng là một container: lưới tổng quan và thẻ hồ sơ co theo đúng bề rộng của nó. */
-.main {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-  container: vehicle-main / inline-size;
-}
-
-.aside {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-}
-
-/* Hẹp: cột phụ xuống dưới cột chính — cách nó trải ra ở cuối file, sau các luật gốc của nó. */
-@container vehicle-profile (max-width: 1080px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* ─── Thẻ hồ sơ đầu trang ─────────────────────────────────────────────────── */
-
-.profile {
-  display: flex;
-  flex-direction: column;
-  padding: var(--xp-space-lg);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  gap: var(--xp-space-md);
-  box-shadow: var(--xp-shadow-card);
-}
-
-.profileMain {
-  display: grid;
-  align-items: start;
-  gap: var(--xp-space-lg);
-  grid-template-columns: 200px minmax(0, 1fr);
-}
-
-/* Khung ảnh cố định, ảnh cover — không kéo lệch bố cục theo tỉ lệ ảnh nguồn. */
-.profileMedia {
-  position: relative;
-  display: flex;
-  overflow: hidden;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--xp-border-radius-sm);
-  aspect-ratio: 4 / 3;
-  background: var(--xp-color-bg-muted);
-}
-
-.profileImage {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  inset: 0;
-}
-
-.profileMediaFallback {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-h1);
-}
-
-.profileInfo {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-}
-
-.profileHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-.profileTitle {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-/* Tên dài XUỐNG DÒNG chứ không cắt — tên xe là định danh, "Toyota Innova Cross…" là mất nghĩa. */
-.vehicleName {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
-  font-weight: var(--xp-font-weight-bold);
-  line-height: var(--xp-line-height-h2);
-  overflow-wrap: anywhere;
-}
-
-.metaList {
+.actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  padding: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}
+
+/* Nút cao 40, bo 12, chữ 14/600 (Figma `23672:20509`). Nhân đôi class để thắng AntD. */
+.actionButton.actionButton {
+  height: 40px;
+  border-radius: var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.deleteButton.deleteButton {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-space-12);
+}
+
+.inlineActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ─── Khung thẻ ───────────────────────────────────────────────────────────── */
+
+.panel,
+.profile,
+.linksPanel {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+}
+
+.panelHead {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.panelHeading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 18/600 — "Thông số chính" (Figma `23670:3505`). */
+.panelTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.panelSubtitle {
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  gap: var(--xp-space-xs) 0;
-  list-style: none;
+  line-height: 20px;
 }
 
-/*
- * Chấm ngăn cách thuần trang trí — bản `/ ''` giấu nó khỏi trình đọc màn hình. Đặt ở CUỐI mỗi
- * mục (trừ mục cuối) chứ không ở đầu: khi dải xuống dòng, chấm treo ở cuối dòng trên đọc tự nhiên,
- * còn chấm mở đầu dòng dưới trông như một gạch đầu dòng lạc.
- */
-.metaList > li:not(:last-child)::after {
-  margin: 0 var(--xp-space-sm);
-  color: var(--xp-color-text-tertiary);
-  content: '•' / '';
-}
-
-.typeLine {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.metaList b {
-  color: var(--xp-color-text);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.odometerSource {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-/* Một điểm bấm duy nhất (⋮) ở góc phải trên. */
-.profileButtons {
+.panelExtra {
   display: flex;
   flex: none;
+  align-items: center;
+  min-height: 28px;
 }
 
-/* Nút ⋮ là một Ô VUÔNG khai báo tường minh — không phụ thuộc bố cục bọc ngoài. */
-.actionsTrigger.actionsTrigger {
-  width: 40px;
-  height: 40px;
-  flex: none;
+/* Liên kết vàng 14/600 ở góc thẻ — là `<a>` hoặc `<button>`. */
+.panelLink {
+  display: inline-flex;
+  align-items: center;
   padding: 0;
-}
-
-/*
- * Khung trạng thái: hai trục (vận hành · kiểm duyệt) bên trái, "Trên chợ" bên phải — đáy thẳng
- * hàng, như một dải bảng điều khiển chứ không như ba dòng chữ rời.
- */
-.statusPanel {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding-top: var(--xp-space-md);
-  border-top: 1px solid var(--xp-color-border-subtle);
-  gap: var(--xp-space-sm) var(--xp-space-lg);
-}
-
-.axes {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  gap: var(--xp-space-xs);
-}
-
-.axis {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-}
-
-.axis dt {
-  display: inline-flex;
-  min-width: 112px;
-  align-items: center;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  gap: var(--xp-space-xs);
-}
-
-.axisIcon {
-  display: inline-flex;
-}
-
-.axis dd {
-  margin: 0;
-}
-
-.axis dd :global(.ant-tag) {
-  margin-inline-end: 0;
-}
-
-.marketplace {
-  min-width: 0;
-  padding: var(--xp-space-xs) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-muted);
-}
-
-/* Cột chính hẹp: ảnh lên trên trải hết bề ngang, "Trên chợ" thành một hàng cài đặt trọn chiều ngang. */
-@container vehicle-main (max-width: 560px) {
-  .profileMain {
-    gap: var(--xp-space-md);
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .profileMedia {
-    aspect-ratio: 16 / 9;
-  }
-
-  .statusPanel {
-    align-items: stretch;
-  }
-
-  .marketplace {
-    width: 100%;
-  }
-}
-
-/* ─── Tab + lưới tổng quan ────────────────────────────────────────────────── */
-
-.viewTabs :global(.ant-tabs-nav) {
-  margin-bottom: var(--xp-space-md);
-}
-
-/*
- * Hai cột, thẻ cùng hàng CAO BẰNG NHAU (`stretch`) — lưới đọc thành từng cặp ngay ngắn. Thẻ nào
- * vắng (thiếu quyền, xe không có dịch vụ cần cấu hình) thì thẻ sau tự dồn lên; chỉ khi số thẻ nửa
- * bề ngang là số lẻ thì còn một ô trống ngay trước thẻ "Nguồn xe" (thẻ đó luôn trải hết hàng).
- */
-.overviewGrid {
-  display: grid;
-  align-items: stretch;
-  gap: var(--xp-space-md);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.spanFull {
-  grid-column: 1 / -1;
-}
-
-@container vehicle-main (max-width: 720px) {
-  .overviewGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* ─── Thẻ dùng chung ──────────────────────────────────────────────────────── */
-
-/*
- * `.card.card` = (0,2,0) cộng lớp antd = (0,3,0), thắng `.ant-card .ant-card-head` (0,2,0) mà
- * không cần `!important` (cùng cách `VehicleWizard.module.css` làm).
- *
- * Đầu thẻ KHÔNG kẻ vạch: tiêu đề và nội dung là một khối, như các thẻ trong thiết kế.
- */
-.card.card {
-  border-color: var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  box-shadow: var(--xp-shadow-card);
-}
-
-.card.card :global(.ant-card-head) {
-  min-height: 0;
-  padding: var(--xp-space-md) var(--xp-space-lg) 0;
-  border-bottom: 0;
-}
-
-.card.card :global(.ant-card-head-title) {
-  font-size: var(--xp-font-size-body-lg);
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-active);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-}
-
-.card.card :global(.ant-card-body) {
-  padding: var(--xp-space-md) var(--xp-space-lg) var(--xp-space-lg);
-}
-
-.cardLink {
-  display: inline-flex;
-  align-items: center;
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-6);
   white-space: nowrap;
 }
 
-.cardLinkButton.cardLinkButton {
-  height: auto;
-  padding: 0;
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
+.panelLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.panelLink:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .muted {
@@ -348,82 +133,334 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
-/* Ô icon vuông bo góc + một đoạn chữ — mẫu chung của các thẻ chỉ có một câu tình trạng. */
-.iconRow {
+.stack {
   display: flex;
-  align-items: flex-start;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Hai thẻ cạnh nhau, cùng chiều cao (Nguồn xe · Tối ưu nhận chuyến). Còn một thẻ thì giãn hết hàng. */
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.pair:empty {
+  display: none;
+}
+
+.pairItem {
+  min-width: 280px;
+  flex: 1 1 0;
+}
+
+/* ─── Thẻ xe đầu trang ────────────────────────────────────────────────────── */
+
+.profile {
+  display: flex;
+  align-items: stretch;
+  padding: var(--xp-space-md);
+  gap: 20px;
+}
+
+.profileMain {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Ảnh 212×134, bo 12 (Figma `23664:32012`). */
+.profileMedia {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  width: 212px;
+  height: 134px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-space-12);
+  background: var(--xp-color-bg-muted);
+}
+
+.profileMedia :global(.ant-image),
+.profileImage {
+  width: 100%;
+  height: 100%;
+}
+
+.profileImage {
+  object-fit: cover;
+}
+
+.mediaFallback {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h2);
+}
+
+.profileBody {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
   gap: var(--xp-space-md);
 }
 
-.iconTile {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: var(--xp-border-radius);
-  font-size: var(--xp-font-size-h4);
-  place-items: center;
+.profileTop {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
 }
 
-.iconRowText {
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.nameRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+/* 18/600 (Figma `23664:32017`). */
+.vehicleName {
+  overflow: hidden;
+  min-width: 0;
   margin: 0;
-  align-self: center;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Viên "Sở hữu" — nền gray-50, bo 16, chữ 12/500 (Figma `_Badge` `23664:32018`). */
+.sourceBadge {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
 }
 
-.toneSuccess {
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
+/* "ID: XE-002 | Biển số: 43B - 396.36 | Số KM: -" — nhãn xám nhạt, giá trị đậm, gạch đứng ngăn. */
+.metaList {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  gap: 0 var(--xp-space-sm);
+  line-height: 22px;
+  list-style: none;
 }
 
-.toneWarning {
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
+.metaList > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
 }
 
-.toneError {
-  background: var(--xp-color-error-bg);
-  color: var(--xp-color-error);
+.metaList > li + li::before {
+  margin-right: var(--xp-space-sm);
+  color: var(--xp-color-border-strong);
+  content: '|';
 }
 
-.toneMuted {
-  background: var(--xp-color-bg-muted);
+.metaList b {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.metaSkeleton.metaSkeleton {
+  width: 72px;
+  min-width: 72px;
+  height: 18px;
+}
+
+.odometerSource {
   color: var(--xp-color-text-tertiary);
 }
 
-.toneBrand {
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary-active);
+/* "Ô tô • Tự lái • Có tài xế" — 14/400, chấm 6px (Figma `23664:32027`). */
+.specLine {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: 0 var(--xp-space-sm);
+  line-height: 22px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-border-strong);
+}
+
+.marketplace {
+  flex: none;
+}
+
+.reviewReason {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Hiệu suất lũy kế — ngăn bằng vạch đứng, đệm 20 (Figma `23664:32126`). */
+.performance {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--xp-space-sm) 20px;
+  border-left: 1px solid var(--xp-color-border);
+  gap: var(--xp-space-md);
+}
+
+.performanceTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.metrics {
+  display: flex;
+  margin: 0;
+  gap: 56px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+.metric dd {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-xs);
+  line-height: 28px;
+}
+
+.metric dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.star {
+  display: inline-flex;
+  color: var(--xp-color-primary);
+}
+
+.ratingCount {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+}
+
+/* ─── Thân trang: tab + cột phải ──────────────────────────────────────────── */
+
+.layout {
+  display: grid;
+  align-items: start;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 495px);
+}
+
+.main {
+  min-width: 0;
+}
+
+.aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Tab 16/500, vạch dưới xám, tab đang mở chữ vàng + vạch vàng 2px (Figma `23672:4701`). */
+.viewTabs :global(.ant-tabs-nav) {
+  margin-bottom: 20px;
+}
+
+.viewTabs :global(.ant-tabs-nav::before) {
+  border-bottom-color: var(--xp-color-border);
+}
+
+/* Nhân đôi class để thắng CSS-in-JS của AntD (cỡ chữ tab đặt trên `.ant-tabs`). */
+.viewTabs.viewTabs :global(.ant-tabs-tab) {
+  padding: var(--xp-space-sm) var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.viewTabs :global(.ant-tabs-tab:not(.ant-tabs-tab-active) .ant-tabs-tab-btn) {
+  color: var(--xp-color-text-secondary);
 }
 
 /* ─── Việc cần làm ────────────────────────────────────────────────────────── */
 
-/*
- * Nền thẻ theo mức nặng nhất, kèm một vạch màu ở mép trái (bóng `inset` — đi theo bo góc của thẻ,
- * không cần thêm phần tử). Các tông đứng SAU `.card.card` trong file nên thắng cùng độ ưu tiên.
- */
+/* Nền thẻ theo mức nặng nhất + vạch màu mép trái (bóng `inset` đi theo bo góc). */
 .todoCard.todoCritical {
   border-color: color-mix(in srgb, var(--xp-color-error) 30%, var(--xp-color-border));
   background: var(--xp-color-error-bg);
-  box-shadow:
-    inset 4px 0 0 var(--xp-color-error),
-    var(--xp-shadow-card);
+  box-shadow: inset 4px 0 0 var(--xp-color-error);
 }
 
 .todoCard.todoWarning {
   border-color: color-mix(in srgb, var(--xp-color-warning) 30%, var(--xp-color-border));
   background: var(--xp-color-warning-bg);
-  box-shadow:
-    inset 4px 0 0 var(--xp-color-warning),
-    var(--xp-shadow-card);
+  box-shadow: inset 4px 0 0 var(--xp-color-warning);
 }
 
 .todoCard.todoInfo {
-  box-shadow:
-    inset 4px 0 0 var(--xp-color-info),
-    var(--xp-shadow-card);
+  box-shadow: inset 4px 0 0 var(--xp-color-info);
+}
+
+.todoCard {
+  gap: var(--xp-space-12);
 }
 
 .todoTitle {
@@ -449,341 +486,404 @@
   color: var(--xp-color-info);
 }
 
-.todoClear .todoIcon {
-  color: var(--xp-color-success);
-}
-
 /* Lời nhắc `info` ở cuối thẻ — tách khỏi danh sách việc phải làm bên trên. */
 .todoNote {
-  margin-top: var(--xp-space-md);
+  margin-top: var(--xp-space-xs);
 }
 
-.todoList {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
+/* ─── Thông số chính ──────────────────────────────────────────────────────── */
+
+/* Sáu ô nền gray-50, bo 12, đệm 12, cách 12 (Figma `23670:3506`). */
+.specTiles {
+  display: grid;
   margin: 0;
-  align-self: center;
-  gap: var(--xp-space-xs);
-  list-style: none;
+  gap: var(--xp-space-12);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
-.todoItem {
+.specTile {
   display: flex;
-  align-items: baseline;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-space-12);
+  background: var(--xp-color-bg-layout);
+  gap: var(--xp-space-sm);
+}
+
+/* Nhãn dài ("Nguồn năng lượng") cắt "…"; `title` trên ô giữ chữ đầy đủ. */
+.specTile dt {
+  overflow: hidden;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Giá trị dài ("Số tự động (AT)", tên mẫu dài) xuống dòng — cắt "…" là mất đúng phần cần đọc. */
+.specTile dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.odometerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.odometerValue {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  gap: 10px;
+}
+
+.odometerValue b {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.odometerIcon {
+  display: inline-flex;
+  color: var(--xp-color-text);
+  font-size: 22px;
+}
+
+.odometerLabel {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  gap: var(--xp-space-xs);
-}
-
-.todoDot {
-  flex: none;
-  font-size: 10px;
-  line-height: 1;
-}
-
-.error {
-  color: var(--xp-color-error);
-}
-
-.warning {
-  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
 }
 
 /* ─── Thư viện ảnh ────────────────────────────────────────────────────────── */
 
-/* 3 × 2 ô = `GALLERY_VISIBLE`. Ảnh dư nằm trong DOM (để trình xem lướt được) nhưng ẩn. */
 .gallery {
   display: grid;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-sm);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   list-style: none;
 }
 
 .galleryItem {
   position: relative;
-  overflow: hidden;
-  border-radius: var(--xp-border-radius-sm);
-  aspect-ratio: 4 / 3;
-  background: var(--xp-color-bg-muted);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-sm);
 }
 
 .galleryHidden {
   display: none;
 }
 
-/* PreviewImage cho <img> KẾ THỪA hình học + object-fit từ vỏ — khai báo ở vỏ. */
-.galleryThumb {
-  display: block;
+/* "+N" phủ lên ô cuối — bấm xuyên qua để mở trình xem (ảnh bên dưới vẫn là nút). */
+.galleryMore {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
   width: 100%;
-  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-space-12);
+  aspect-ratio: 188 / 120;
+  background: rgba(10, 13, 18, 0.55);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  pointer-events: none;
+}
+
+.galleryItem :global(.ant-image) {
+  width: 100%;
+}
+
+/* Ảnh tỉ lệ 188 × 120, bo 12 (Figma `23670:3534`). */
+.galleryThumb,
+.galleryEmpty {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-space-12);
+  aspect-ratio: 188 / 120;
+}
+
+.galleryThumb {
   object-fit: cover;
 }
 
-.coverBadge {
+.galleryEmpty {
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-tertiary);
+}
+
+a.galleryEmpty:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+a.galleryEmpty:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.emptySlotIcon {
+  position: relative;
+  display: inline-flex;
+  font-size: 40px;
+}
+
+.emptySlotPlus {
   position: absolute;
-  top: var(--xp-space-xs);
-  left: var(--xp-space-xs);
+  right: -6px;
+  bottom: -6px;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-text-tertiary);
+  color: var(--xp-color-bg-container);
+  font-size: 11px;
+}
+
+.galleryLabel {
   display: inline-flex;
   align-items: center;
-  padding: 0 var(--xp-space-xs);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-overline);
-  font-weight: var(--xp-font-weight-semibold);
-  gap: 2px;
-  line-height: 18px;
-  pointer-events: none;
-}
-
-.coverBadge :global(.anticon) {
-  color: var(--xp-color-primary);
-}
-
-/* Nhãn vị trí nằm ĐÈ trên ảnh, dải tối ở đáy để chữ luôn đọc được (cùng kiểu dải ảnh nhỏ). */
-.galleryLabel {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  overflow: hidden;
-  padding: 1px 4px;
-  background: var(--xp-color-bg-overlay);
-  color: var(--xp-color-text-inverse);
-  font-size: var(--xp-font-size-overline);
-  line-height: 1.4;
-  pointer-events: none;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* "+N" phủ ô cuối — bấm vẫn xuyên xuống ảnh, mở trình xem tại đó để lướt tiếp. */
-.galleryMore {
-  position: absolute;
-  display: grid;
-  background: var(--xp-color-bg-overlay);
-  color: var(--xp-color-text-inverse);
-  font-size: var(--xp-font-size-h4);
-  font-weight: var(--xp-font-weight-bold);
-  inset: 0;
-  place-items: center;
-  pointer-events: none;
-}
-
-/* ─── Thông số chính ──────────────────────────────────────────────────────── */
-
-.specGrid {
-  display: grid;
-  margin: 0;
-  gap: var(--xp-space-sm);
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-}
-
-.specTile {
-  min-width: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-}
-
-.specTile dt {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.specTile dd {
-  margin: 2px 0 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-  overflow-wrap: anywhere;
-}
-
-/* ─── Giá & chính sách ────────────────────────────────────────────────────── */
-
-.priceTiles {
-  display: grid;
-  margin: 0 0 var(--xp-space-md);
   gap: var(--xp-space-sm);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  line-height: 20px;
 }
 
-.priceTile {
-  min-width: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-gold-soft);
-  border-radius: var(--xp-border-radius-sm);
+/* "Ảnh bìa" — viên vàng nhạt viền vàng (Figma `23670:3534`). */
+.coverBadge {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
 }
 
-.priceTile dt {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.priceTile dd {
-  margin: 2px 0 0;
-  color: var(--xp-color-price);
-  font-size: var(--xp-font-size-body-lg);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-bold);
-  overflow-wrap: anywhere;
-}
+/* ─── Danh sách nhãn — giá trị (Nguồn xe · Giá thuê) ──────────────────────── */
 
 .kvList {
   display: flex;
   flex-direction: column;
   margin: 0;
+  gap: var(--xp-space-12);
 }
 
 .kvRow {
   display: flex;
-  align-items: baseline;
+  min-width: 0;
+  align-items: center;
   justify-content: space-between;
-  padding: var(--xp-space-xs) 0;
-  border-bottom: 1px dashed var(--xp-color-border);
-  gap: var(--xp-space-sm);
-}
-
-.kvRow:last-child {
-  border-bottom: 0;
+  gap: var(--xp-space-md);
 }
 
 .kvRow dt {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
 }
 
 .kvRow dd {
+  display: inline-flex;
+  align-items: center;
   margin: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-semibold);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-6);
   text-align: end;
 }
 
-/* ─── Nguồn xe ────────────────────────────────────────────────────────────── */
+.sourceTag {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-success-border);
+  border-radius: var(--xp-space-6);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-label);
+  line-height: 20px;
+}
 
-.sourceBody {
+.deliveryOn {
+  color: var(--xp-color-text);
+}
+
+.deliveryOn :global(.anticon) {
+  color: var(--xp-color-success);
+}
+
+/* ─── Tối ưu nhận chuyến ──────────────────────────────────────────────────── */
+
+.toggleList {
   display: flex;
-  min-width: 0;
-  flex: 1;
   flex-direction: column;
-  align-self: center;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-md);
 }
 
-.sourceFacts {
+.toggleRow {
   display: flex;
-  flex-wrap: wrap;
-  margin: 0;
-  gap: var(--xp-space-xs) var(--xp-space-lg);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-lg);
 }
 
-.sourceFacts > div {
+.toggleText {
   display: flex;
   min-width: 0;
-  align-items: baseline;
-  gap: var(--xp-space-sm);
+  flex-direction: column;
+  gap: 2px;
 }
 
-.sourceFacts dt {
-  flex: none;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.sourceFacts dd {
+.toggleLabel {
   margin: 0;
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.toggleHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+/* ─── Giá thuê & Chính sách (cột phải) ────────────────────────────────────── */
+
+/* Hai ô giá nền vàng nhạt, chữ giữa (Figma "Giá thuê & Chính sách"). */
+.priceTiles {
+  display: grid;
+  margin: 0;
+  gap: var(--xp-space-12);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.priceTile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--xp-space-md) var(--xp-space-sm);
+  border-radius: var(--xp-space-12);
+  background: var(--xp-color-primary-light);
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.priceTile dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+}
+
+.priceTile dd {
+  margin: 0;
+  color: var(--xp-color-primary-active);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
+}
+
+.priceUnit {
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
 }
 
 /* ─── Tab thông số kỹ thuật ───────────────────────────────────────────────── */
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: var(--xp-space-md);
-  gap: var(--xp-space-xs);
-}
-
-.description {
-  margin: var(--xp-space-md) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  white-space: pre-wrap;
-}
-
-/*
- * antd đặt `word-break: break-word` cho ô nội dung của Descriptions — hiệu lực thật là
- * `overflow-wrap: anywhere`, cho phép bẻ GIỮA từ và kéo bề rộng tối thiểu của ô xuống một ký tự.
- * Cộng với `table-layout: auto` của biến thể `bordered`, "Toyota" thành sáu dòng một chữ cái.
- *
- * Luật của antd là `.ant-descriptions.ant-descriptions-bordered > .ant-descriptions-view > table`
- * (0,3,1), nên các luật dưới đây ghép đủ lớp để vượt qua, chứ không dùng `!important`.
- * `overflow-wrap: break-word` chỉ bẻ khi một từ dài hơn cả dòng; `table-layout: fixed` chia cột đều.
- */
-.specsTable:global(.ant-descriptions.ant-descriptions-bordered)
-  > :global(.ant-descriptions-view)
-  > table {
-  table-layout: fixed;
-}
-
-.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-content),
-.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-label) {
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-
-/* ─── Cột phụ: hiệu suất ──────────────────────────────────────────────────── */
-
-.statGrid {
+/* Lưới nhãn | giá trị × 2, viền mảnh, bo 12 (Figma `23672:4487`). */
+.specsTable {
   display: grid;
+  overflow: hidden;
   margin: 0;
-  gap: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-space-12);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.stat {
+.specsCell {
+  display: grid;
   min-width: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
+  border-bottom: 1px solid var(--xp-color-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.statWide {
-  grid-column: 1 / -1;
+.specsCell:nth-child(odd) {
+  border-right: 1px solid var(--xp-color-border);
 }
 
-.stat dt {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.stat dd {
-  display: flex;
-  align-items: center;
-  margin: 2px 0 0;
+.specsCell dt,
+.specsCell dd {
+  min-width: 0;
+  padding: var(--xp-space-12);
+  margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-bold);
-  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  overflow-wrap: anywhere;
 }
 
-.star {
+.specsCell dt {
+  border-right: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-layout);
+}
+
+/* ─── Tab tiện ích xe ─────────────────────────────────────────────────────── */
+
+.featureList {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-12) var(--xp-space-xl);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+}
+
+.featureItem {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-sm);
+  line-height: 20px;
+}
+
+.featureCheck {
   display: inline-flex;
-  color: var(--xp-color-primary);
+  flex: none;
+  color: var(--xp-color-success);
+  font-size: 12px;
 }
 
-/* ─── Cột phụ: lịch thuê sắp tới ──────────────────────────────────────────── */
+.description {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  white-space: pre-line;
+}
+
+/* ─── Cột phải: lịch thuê sắp tới ─────────────────────────────────────────── */
 
 .emptyNote {
   display: flex;
@@ -791,34 +891,68 @@
   gap: var(--xp-space-sm);
 }
 
+.iconTile {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--xp-border-radius);
+  font-size: var(--xp-font-size-h4);
+  place-items: center;
+}
+
+.toneMuted {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+}
+
 .scheduleList {
   display: flex;
   flex-direction: column;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
   list-style: none;
 }
 
+/* Vạch vàng 3px mép trái (Figma "Lịch thuê sắp tới"). */
 .scheduleItem {
-  padding: 2px 0 2px var(--xp-space-sm);
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 2px var(--xp-space-md);
   border-left: 3px solid var(--xp-color-primary);
+  gap: var(--xp-space-xs);
+}
+
+.scheduleHead {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
 }
 
 .scheduleTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
 }
 
 .scheduleSub {
-  margin: 2px 0 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
 }
 
-/* ─── Cột phụ: hoạt động gần đây (dòng thời gian) ─────────────────────────── */
+.scheduleRange {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* ─── Cột phải: hoạt động gần đây ─────────────────────────────────────────── */
 
 .timeline {
   display: flex;
@@ -828,41 +962,35 @@
   list-style: none;
 }
 
-/* Đường nối giữa các mốc — vẽ bằng `::before` của từng mục, mục cuối không có. */
+/* Mỗi đơn một khối, ngăn bằng vạch mảnh; chấm màu trạng thái đứng trước tên (Figma). */
 .timelineItem {
   position: relative;
-  padding: 0 0 var(--xp-space-md) 22px;
+  padding: var(--xp-space-md) 0 var(--xp-space-md) 18px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
 }
 
-.timelineItem::before {
-  position: absolute;
-  top: 16px;
-  bottom: 0;
-  left: 5px;
-  width: 2px;
-  background: var(--xp-color-border);
-  content: '';
+.timelineItem:first-child {
+  padding-top: 0;
 }
 
 .timelineItem:last-child {
   padding-bottom: 0;
-}
-
-.timelineItem:last-child::before {
-  display: none;
+  border-bottom: 0;
 }
 
 .timelineDot {
   position: absolute;
-  top: 4px;
+  top: calc(var(--xp-space-md) + 6px);
   left: 0;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--xp-color-bg-container);
+  width: 8px;
+  height: 8px;
   border-radius: var(--xp-border-radius-pill);
   /* Màu lấy từ `statusColorClass` (đặt `color`) — cùng nguồn với thẻ trạng thái bên dưới. */
   background: currentColor;
-  box-shadow: 0 0 0 1px var(--xp-color-border);
+}
+
+.timelineItem:first-child .timelineDot {
+  top: 6px;
 }
 
 .timelineHead {
@@ -885,16 +1013,16 @@
 
 .timelineAmount {
   flex: none;
-  color: var(--xp-color-price);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
   font-variant-numeric: tabular-nums;
   font-weight: var(--xp-font-weight-semibold);
 }
 
 .timelineSub {
-  margin: 2px 0 0;
+  margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
 }
 
 .timelineFoot {
@@ -902,8 +1030,8 @@
   align-items: center;
   justify-content: space-between;
   margin-top: var(--xp-space-xs);
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
   gap: var(--xp-space-sm);
 }
 
@@ -911,23 +1039,13 @@
   margin-inline-end: 0;
 }
 
-/* ─── Cột phụ: các khu vực quản lý ────────────────────────────────────────── */
+/* ─── Cột phải: lối tắt ───────────────────────────────────────────────────── */
 
 .linksPanel {
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
-}
-
-.bandTitle {
-  margin: 0 0 var(--xp-space-sm);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: var(--xp-space-12);
 }
 
 .linkList {
@@ -944,25 +1062,20 @@
   min-height: 40px;
   align-items: center;
   padding: var(--xp-space-xs) var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-container);
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   gap: var(--xp-space-sm);
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  transition: background-color var(--xp-motion-duration-fast) ease;
 }
 
 .linkItem:hover {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
+  background: var(--xp-color-bg-hover);
   color: var(--xp-color-text);
 }
 
 .linkItem:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
+  outline: 2px solid var(--xp-color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -983,15 +1096,43 @@
   font-size: 10px;
 }
 
-/*
- * Cột phụ khi đã xuống dưới cột chính. Đặt SAU các luật gốc vì cùng độ ưu tiên — đặt trước thì
- * `.linkList { display: flex }` ở trên đè mất lưới.
- *
- * FLEX-WRAP chứ không lưới `auto-fit`: thẻ nào đứng một mình trên hàng (khu tài khoản chỉ có
- * "Hoạt động gần đây") thì giãn hết bề ngang, ba thẻ thì chia ba. Lưới thì không làm được thế khi
- * mục lục bên dưới trải hết các cột — cột trống không còn bị gộp lại.
- */
-@container vehicle-profile (max-width: 1080px) {
+/* ─── Bề rộng thật hẹp hơn design ─────────────────────────────────────────── */
+
+/* Màn 1280–1440: hiệu suất gọn lại (giữ bên phải), cột phải hẹp lại. */
+@container vehicle-profile (max-width: 1320px) {
+  .metrics {
+    gap: var(--xp-space-xl);
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  }
+}
+
+/* Hẹp hơn nữa: hiệu suất xuống dưới thẻ, trải một hàng. */
+@container vehicle-profile (max-width: 1120px) {
+  .profile {
+    flex-wrap: wrap;
+  }
+
+  .profileMain {
+    flex-basis: 100%;
+  }
+
+  .performance {
+    flex: 1 1 100%;
+    padding: var(--xp-space-md) 0 0;
+    border-top: 1px solid var(--xp-color-border);
+    border-left: 0;
+  }
+}
+
+/* Modal / tablet: cột phải xuống dưới, các thẻ của nó chia hàng. */
+@container vehicle-profile (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .aside {
     flex-direction: row;
     flex-wrap: wrap;
@@ -1000,51 +1141,51 @@
 
   .aside > * {
     min-width: 0;
-    flex: 1 1 260px;
+    flex: 1 1 300px;
   }
 
-  /* Mục lục trải trọn hàng cuối, mục xếp lưới — một cột hẹp mười hàng để trống cả nửa màn. */
-  .aside > .linksPanel {
+  .profileTop {
+    flex-direction: column;
+  }
+}
+
+/* Điện thoại: ảnh lên trên, mọi lưới gập một cột. */
+@container vehicle-profile (max-width: 600px) {
+  .profileMain {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profileMedia {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 212 / 134;
+  }
+
+  .metrics {
+    justify-content: space-between;
+    gap: var(--xp-space-md);
+  }
+
+  .specsTable,
+  .featureList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .specsCell:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .pairItem {
+    min-width: 0;
     flex-basis: 100%;
   }
 
-  .linkList {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
-}
-
-/* ─── CTA cố định đáy màn (mobile — Figma `236:4890`) ─────────────────────── */
-
-.mobileActions {
-  display: none;
-}
-
-@media (max-width: 640px) {
-  /* Thao tác chuyển xuống thanh CTA đáy màn; "Trên chợ" vẫn ở lại thẻ hồ sơ. */
-  .profileButtons {
-    display: none;
+  .actions {
+    justify-content: flex-start;
   }
 
-  /* Vùng chạm 44px (docs §12.7). */
   .linkItem {
     min-height: 44px;
-  }
-
-  /*
-   * `sticky` ở CUỐI luồng nội dung: thanh bám đáy trong suốt lúc cuộn rồi đậu về vị trí thật ở
-   * cuối trang. Đáy dịch lên đúng chiều cao bottom-nav của AppShell + vùng an toàn iOS.
-   */
-  .mobileActions {
-    position: sticky;
-    z-index: 1;
-    bottom: calc(var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
-    display: flex;
-    padding: var(--xp-space-sm);
-    border: 1px solid var(--xp-color-border);
-    border-radius: var(--xp-border-radius);
-    background: var(--xp-color-bg-container);
-    box-shadow: var(--xp-shadow-card);
-    gap: var(--xp-space-sm);
   }
 }

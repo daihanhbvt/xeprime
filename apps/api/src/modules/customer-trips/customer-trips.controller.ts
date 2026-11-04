@@ -15,6 +15,8 @@ import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
+import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
+import { CustomerBookingExtensionDto } from '../booking-extensions/dto/booking-extension.dto';
 import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
@@ -42,7 +44,10 @@ import {
 // Khách thấy chuyến ĐI THUÊ, chủ xe thấy chuyến CHO THUÊ — phạm vi lọc theo realm của phiên (ADR 0053).
 @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class CustomerTripsController {
-  constructor(private readonly trips: CustomerTripsService) {}
+  constructor(
+    private readonly trips: CustomerTripsService,
+    private readonly extensions: BookingExtensionsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Danh sách chuyến của tôi (lọc theo tab, phân trang ở DB)' })
@@ -82,6 +87,21 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.detail(user.id, id);
+  }
+
+  /**
+   * PHỤ LỤC GIA HẠN của chuyến (ADR 0077) — mã XPE… + tài khoản nhận để khách quét QR. Chỉ realm
+   * khách; không có dòng phía chủ xe (ADR 0064 điều 11). Chuyến của người khác ⇒ mảng rỗng.
+   */
+  @Get(':id/extensions')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @ApiOperation({ summary: 'Các phụ lục gia hạn của một chuyến của tôi (cũ trước)' })
+  @ApiOkResponse({ type: [CustomerBookingExtensionDto] })
+  extensionsOf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerBookingExtensionDto[]> {
+    return this.extensions.listForCustomer(user.id, id);
   }
 
   /**

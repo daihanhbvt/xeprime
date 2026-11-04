@@ -310,11 +310,15 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     expect(screen.queryByText(/tự động (tra cứu|xác thực|định danh)/i)).toBeNull();
   });
 
-  it('hiện khung giờ giao nhận nhưng KHÔNG lộ thời gian chết nội bộ của gian hàng', async () => {
+  /*
+   * Khung giờ giao nhận đã gỡ (ADR 0078): API luôn trả hai mảng rỗng. Kể cả một bản API cũ còn trả
+   * khung giờ, trang KHÔNG công bố một giới hạn mà server không còn giữ.
+   */
+  it('không hiện khung giờ giao nhận, và KHÔNG lộ thời gian chết nội bộ của gian hàng', async () => {
     renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
 
-    expect(screen.getByText('Khung giờ giao nhận')).toBeTruthy();
-    expect(screen.getByText(/08:00–18:00/)).toBeTruthy();
+    expect(screen.queryByText('Khung giờ giao nhận')).toBeNull();
+    expect(screen.queryByText(/08:00–18:00/)).toBeNull();
     expect(screen.queryByText(/chuẩn bị giữa hai chuyến/i)).toBeNull();
   });
 

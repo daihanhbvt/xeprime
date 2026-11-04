@@ -3,7 +3,9 @@
     "title": "Rental requests",
     "subtitle": "Your shop's request inbox: see which vehicle a guest asked for, when they need it, then approve or decline right here.",
     "listLabel": "Rental request list",
-    "totalLabel": "{count, plural, one {# request} other {# requests}}"
+    "totalLabel": "{count, plural, one {# request} other {# requests}}",
+    "inboxTitle": "Booking requests",
+    "inboxSubtitle": "Follow what each customer wants to rent and when. Accept or decline requests right here."
   },
   "tabs": {
     "ariaLabel": "Filter requests by status",
@@ -14,7 +16,8 @@
     "rejected": "Rejected",
     "cancelled": "Cancelled",
     "expired": "Expired",
-    "all": "All"
+    "all": "All",
+    "ended": "Ended"
   },
   "filters": {
     "searchLabel": "Search requests",
@@ -100,7 +103,14 @@
     "phone": "Phone number",
     "createdAt": "Submitted at",
     "decidedAt": "Handled at",
-    "accountPhone": "Account phone"
+    "accountPhone": "Account phone",
+    "dialogTitle": "Rental request details",
+    "service": "Service",
+    "viewProfile": "View profile",
+    "regular": "Returning customer",
+    "paymentHeading": "Payment",
+    "moreHeading": "Notes & history",
+    "email": "Email"
   },
   "actions": {
     "approve": "Approve & hold vehicle",
@@ -699,5 +709,35 @@
       "openBooking": "Open booking",
       "close": "Close"
     }
+  },
+  "card": {
+    "confirm": "Accept request",
+    "bookingCode": "#{code}",
+    "sentAt": "Sent: {value}",
+    "decidedAt": "Handled: {value}",
+    "awaitingConfirm": "Awaiting response:",
+    "payDeadline": "Customer pays by: {value}",
+    "customer": "Customer",
+    "requestHeading": "Rental request",
+    "viewDetail": "View details",
+    "pickupAt": "Pickup:",
+    "returnAt": "Return:",
+    "duration": "Duration:",
+    "handover": "Handover:",
+    "handoverSelf": "Customer picks up",
+    "handoverDelivery": "Delivered to customer",
+    "package": "Package:",
+    "pickupWish": "Preferred pickup:",
+    "paymentHeading": "Payment details",
+    "rentalTotal": "Rental:",
+    "customerTotal": "Customer pays:",
+    "holdExpected": "Reservation payment (estimated):",
+    "holdAwaiting": "Reservation payment (awaiting customer):",
+    "holdPaid": "Reserved:",
+    "payAtPickup": "Paid to owner at pickup:",
+    "payAtPickupExpected": "Paid to owner at pickup (estimated):",
+    "estimate": "Estimate",
+    "extrasLabel": "More about this request",
+    "holdUnpaid": "Reservation payment (not paid):"
   }
 }

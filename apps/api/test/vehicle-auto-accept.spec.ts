@@ -311,7 +311,6 @@ afterEach(async () => {
   await prisma.notification.deleteMany({ where: { tenantId: tenants } });
   await prisma.auditLog.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleServiceSetting.deleteMany({ where: { tenantId: tenants } });
-  await prisma.vehicleHandoverWindow.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleOperationSetting.deleteMany({ where: { tenantId: tenants } });
 });
 
@@ -558,19 +557,19 @@ describe('Không đủ điều kiện — về hàng chờ, không tự từ ch�
   });
 });
 
-describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER', () => {
-  maybe('giờ nhận ngoài khung giao xe bị từ chối bằng mã lỗi riêng', async () => {
+describe('Giờ nhận và điều khoản — kiểm ngay lúc gửi, ở SERVER', () => {
+  /*
+   * Khung giờ giao/nhận đã gỡ (ADR 0078): kể cả khi app cũ gửi khung giờ lên, 05:00 vẫn đặt được
+   * — server không còn giữ khung nào để chặn.
+   */
+  maybe('giờ nhận lúc 05:00 vẫn gửi được dù app cũ từng gửi khung giờ', async () => {
     await settings.saveOperation(tenantId, vehicleId, ownerId, {
       turnaroundBufferMinutes: 0,
       pickupWindows: [{ start: '08:00', end: '18:00' }],
       returnWindows: [{ start: '08:00', end: '18:00' }],
     });
-    await expect(
-      submit({ pickupAt: vnAt(5, 5).toISOString(), returnAt: vnAt(7, 10).toISOString() }),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.HANDOVER_WINDOW_VIOLATION },
-    });
-    expect(await prisma.bookingRequest.count({ where: { tenantId } })).toBe(0);
+    await submit({ pickupAt: vnAt(5, 5).toISOString(), returnAt: vnAt(7, 10).toISOString() });
+    expect(await prisma.bookingRequest.count({ where: { tenantId } })).toBe(1);
   });
 
   maybe(

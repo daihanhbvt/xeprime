@@ -1,0 +1,172 @@
+/*
+ * Figma Partner-XePrime "Vehicle Edit Sidebar" (`23790:46261`): khung trắng viền xám bo 16, đệm
+ * 20/12, bóng xs; mục cao 48, đệm 0/12, bo 12, chữ 14/500; tiêu đề nhóm 12/500 chữ rất nhạt; số đếm
+ * là viên bo tròn nền xám nhạt. Dính theo khi cuộn (dưới header).
+ */
+.rail {
+  position: sticky;
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md));
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: 20px var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 0 var(--xp-space-12);
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  text-transform: uppercase;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--xp-space-12);
+  border: 0;
+  border-radius: var(--xp-border-radius-control);
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.active,
+.active:hover {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.neutral {
+  background: var(--xp-color-text-tertiary);
+}
+
+.warning {
+  background: var(--xp-color-warning-strong);
+}
+
+.info {
+  background: var(--xp-color-info-strong);
+}
+
+.success {
+  background: var(--xp-color-success);
+}
+
+.danger {
+  background: var(--xp-color-error);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  min-width: 34px;
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Màn hẹp: cột thành MỘT hàng cuộn ngang — tiêu đề nhóm ẩn (chấm màu vẫn nói nhóm), mục co theo
+ * chữ. Không dính theo để không ăn mất chiều cao ít ỏi của điện thoại.
+ */
+@media (max-width: 1024px) {
+  .rail {
+    position: static;
+    flex-direction: row;
+    gap: var(--xp-space-xs);
+    overflow-x: auto;
+    padding: var(--xp-space-6);
+    scrollbar-width: none;
+  }
+
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .group {
+    flex-direction: row;
+  }
+
+  .groupTitle {
+    display: none;
+  }
+
+  .items {
+    flex-direction: row;
+    gap: var(--xp-space-xs);
+  }
+
+  .item {
+    width: auto;
+    height: 40px;
+    white-space: nowrap;
+  }
+
+  .label {
+    overflow: visible;
+  }
+
+  .count {
+    min-width: 28px;
+    padding: 0 var(--xp-space-6);
+  }
+}

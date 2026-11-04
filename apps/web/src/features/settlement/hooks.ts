@@ -45,6 +45,8 @@ function useSettlementMutation<TInput>(
       queryClient.setQueryData(queryKeys.bookings.settlement(bookingId), next);
       // Thẻ cọc và chi tiết đơn hiện cạnh nhau — làm mới cả nhánh để không nơi nào kể chuyện cũ.
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      // Phụ phí / quyết toán đổi tiền đơn ⇒ đổi "Còn nợ" và tab Thu chi của hồ sơ khách.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     },
   });
 }

@@ -1,35 +1,21 @@
 'use client';
 
-import {
-  DownOutlined,
-  LockOutlined,
-  LogoutOutlined,
-  MenuOutlined,
-  ShopOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { DownOutlined, MenuOutlined } from '@ant-design/icons';
 import { Avatar, Button, Dropdown } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
-import { ROUTES } from '@/constants/routes';
 import { workspaceAvatar } from '@/features/account/workspace-avatar';
-import {
-  PARTNER_TRACK,
-  isCommissionOwner,
-  resolvePartnerTrack,
-} from '@/features/auth/post-auth-destination';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { ZONE } from '@/zones';
 import { useZone } from '@/zones/ZoneProvider';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
-import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { initialOf } from '@/lib/initials';
 import { useAppDispatch } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { ManageBreadcrumb } from './ManageBreadcrumb';
+import { useAccountMenuItems } from './use-account-menu';
 import styles from './Topbar.module.css';
 
 /**
@@ -51,15 +37,16 @@ import styles from './Topbar.module.css';
  * đi kèm `/auth/me` nên có ngay ở lần vẽ đầu), và chính nó là nút mở menu — tên gian hàng đứng
  * cạnh nó, còn tên người đang đăng nhập nằm trong menu.
  *
- * Menu ở đây dùng CÙNG bộ mục với `ManageUserCard` ở chân sidebar, cố ý: hai lối vào cho một
- * menu, không phải hai menu khác nhau tuỳ chỗ bấm.
+ * Menu ở đây là `useAccountMenuItems` — CÙNG bộ mục với `ManageUserCard` ở chân sidebar, cố ý: hai
+ * lối vào cho một menu, không phải hai menu khác nhau tuỳ chỗ bấm.
+ *
+ * Từ 02/11/2026 site partner dùng header menu ngang (`PartnerHeader`); thanh này còn lại cho khung
+ * sidebar của site quản trị — kể cả phiên hỗ trợ gian hàng (ADR 0050 §12).
  */
 export function Topbar({ user }: { user: CurrentUser }) {
   const t = useTranslations('Navigation');
-  const tManage = useTranslations('ManageCommon');
   const dispatch = useAppDispatch();
-  const logout = usePortalLogout();
-  const localeGroup = useLocaleMenuGroup();
+  const accountMenu = useAccountMenuItems();
   const zone = useZone();
   const isAdmin = zone === ZONE.ADMIN;
   const isCommission = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
@@ -102,62 +89,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
           Đổi ngôn ngữ nằm trong menu tài khoản, giống hệt header khu khách — thanh trên cùng chỉ
           giữ những thứ bấm hằng ngày, còn cài đặt cá nhân đi cùng một chỗ với chúng.
         */}
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              {
-                key: 'identity',
-                label: (
-                  <span className={styles.menuIdentity}>
-                    <span className={styles.menuShop}>{workspaceName}</span>
-                    <span className={styles.menuUser}>
-                      {tManage('shell.signedInAs', { name: user.displayName })}
-                    </span>
-                  </span>
-                ),
-                disabled: true,
-              },
-              { type: 'divider' },
-              // Cùng quy ước với `ManageUserCard`: partner → "Tài khoản & bảo mật", admin → bảo mật.
-              isAdmin
-                ? {
-                    key: 'security',
-                    icon: <LockOutlined aria-hidden />,
-                    label: <Link href={ROUTES.ADMIN.SECURITY}>{tManage('shell.security')}</Link>,
-                  }
-                : {
-                    key: 'account',
-                    icon: <UserOutlined aria-hidden />,
-                    label: (
-                      <Link href={ROUTES.MANAGE.ACCOUNT}>
-                        {isCommissionOwner(user)
-                          ? tManage('shell.ownerProfile')
-                          : tManage('shell.account')}
-                      </Link>
-                    ),
-                  },
-              ...(tenantName && !isAdmin && !isCommission
-                ? [
-                    {
-                      key: 'shop',
-                      icon: <ShopOutlined aria-hidden />,
-                      label: <Link href={ROUTES.MANAGE.SHOP}>{tManage('shell.shopSettings')}</Link>,
-                    },
-                  ]
-                : []),
-              { type: 'divider' },
-              localeGroup,
-              { type: 'divider' },
-              {
-                key: 'logout',
-                icon: <LogoutOutlined aria-hidden />,
-                label: t('public.logout'),
-                onClick: () => void logout(),
-              },
-            ],
-          }}
-        >
+        <Dropdown trigger={['click']} menu={{ items: accountMenu }}>
           <button type="button" className={styles.avatarButton} aria-label={t('public.account')}>
             {/*
               Ảnh của KHU LÀM VIỆC (`workspaceAvatar`): logo gian hàng, vuông bo góc — danh tính

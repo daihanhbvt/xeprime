@@ -3,7 +3,9 @@
     "title": "Customers",
     "subtitle": "Your shop's customer book: rental history, debt, notes and documents — visible only to your shop.",
     "add": "Add customer",
-    "totalLabel": "{count, plural, one {# customer} other {# customers}}"
+    "totalLabel": "{count, plural, one {# customer} other {# customers}}",
+    "listTitle": "Customers",
+    "listSubtitle": "Profiles, contact details and booking history of the customers who rent from your shop"
   },
   "permission": {
     "title": "You don't have permission to view the customer book",
@@ -18,7 +20,10 @@
     "debt": "Outstanding · {count, plural, one {# customer} other {# customers}}",
     "debtShort": "Owing · {count, plural, one {# customer} other {# customers}}",
     "risk": "Watchlist / refused service",
-    "riskShort": "Watchlist / refused"
+    "riskShort": "Watchlist / refused",
+    "totalCustomers": "Total customers",
+    "totalRentals": "Total rentals",
+    "totalRevenue": "Total revenue"
   },
   "filters": {
     "search": "Find a customer",
@@ -40,7 +45,8 @@
     "emptyBody": "Customers are added automatically when you create a booking or accept a Marketplace request. You can also add one by hand right now.",
     "noResultsTitle": "No customer matches these filters",
     "noResultsBody": "Try removing a filter, or search by phone number.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "emptyAutoBody": "Customers are added automatically when they book on XePrime or when you create a booking for them."
   },
   "card": {
     "identity": "Customer",
@@ -55,7 +61,9 @@
     "debt": "Outstanding",
     "status": "Status",
     "actions": "Actions",
-    "open": "Open profile"
+    "open": "Open profile",
+    "index": "No.",
+    "unclassified": "Unclassified"
   },
   "detail": {
     "title": "Customer profile",
@@ -222,5 +230,128 @@
     "reasonMax": "Reason is limited to 1000 characters",
     "noteBodyRequired": "Enter the note content",
     "noteBodyMax": "Note is limited to 2000 characters"
+  },
+  "profile": {
+    "more": "More actions",
+    "phoneCopy": "Copy phone number",
+    "profileTitle": "Customer profile",
+    "label": "Customer label",
+    "lastRental": "Last rental",
+    "since": "In your book since",
+    "debtBanner": {
+      "title": "{amount} outstanding",
+      "body": "Booking {code} is not fully paid · Collected {paid}",
+      "bodyMore": "Booking {code} and {count, plural, one {# other} other {# others}} are not fully paid · Collected {paid}",
+      "collect": "Collect payment"
+    },
+    "current": {
+      "title": "Current booking",
+      "count": "{count, plural, one {# ongoing / upcoming booking} other {# ongoing / upcoming bookings}}",
+      "empty": "The customer has no ongoing or upcoming booking.",
+      "pickup": "Pickup",
+      "return": "Return",
+      "total": "Rental value",
+      "next": "Next step:",
+      "nextAwaiting": "Prepare the handover and keep track of payment.",
+      "nextRenting": "Follow the trip and receive the vehicle when it comes back.",
+      "viewBooking": "View booking"
+    },
+    "timeline": {
+      "title": "Booking progress",
+      "awaiting": "Awaiting handover",
+      "awaitingBody": "Pickup planned at {time}",
+      "renting": "On trip",
+      "rentingBody": "Handed over at {time}",
+      "unpaid": "Payment not fully recorded",
+      "unpaidBody": "<b>{amount}</b> still to collect for this booking.",
+      "paid": "Fully paid",
+      "paidBody": "Nothing left to collect for this booking.",
+      "returnPlan": "Planned return",
+      "returnPlanBody": "{time} · Trip not completed yet."
+    },
+    "notes": {
+      "title": "Operational notes",
+      "internal": "Internal"
+    },
+    "history": {
+      "title": "Rental history",
+      "searchPlaceholder": "Search by booking code, vehicle name or plate…",
+      "status": "Status",
+      "statusAll": "All statuses",
+      "time": "Pickup date",
+      "colBooking": "Booking",
+      "colVehicle": "Vehicle",
+      "colTime": "Rental period",
+      "colService": "Service",
+      "colStatus": "Status",
+      "colTotal": "Total",
+      "colActions": "Actions",
+      "pickupAt": "Pickup:",
+      "returnAt": "Return:",
+      "preview": "Preview booking {code}",
+      "previewTitle": "Booking {code}",
+      "previewHint": "Opened from the list",
+      "duration": "Scheduled duration",
+      "paid": "Collected",
+      "remaining": "Still to collect",
+      "emptyTitle": "No matching bookings",
+      "emptyBody": "Clear some filters to see the full rental history.",
+      "errorTitle": "Could not load rental history",
+      "totalLabel": "{count, plural, one {# booking} other {# bookings}}"
+    },
+    "finance": {
+      "title": "Revenue from this customer",
+      "period": {
+        "week": "This week",
+        "month": "This month",
+        "quarter": "This quarter",
+        "year": "This year"
+      },
+      "receivable": "Receivable · {count, plural, one {# unpaid booking} other {# unpaid bookings}}",
+      "collected": "Collected this period",
+      "completed": "Completed trips",
+      "collect": "Collect payment",
+      "chartTitle": "Booking value by pickup date",
+      "chartMoney": "Booking value",
+      "chartCount": "Bookings",
+      "chartEmpty": "No bookings in this period",
+      "receivablesTitle": "Receivables",
+      "ledgerLink": "Open the ledger",
+      "colContent": "Details",
+      "colPaid": "Collected",
+      "colDebt": "Outstanding",
+      "unpaid": "Not fully paid",
+      "receivablesEmpty": "Nothing left to collect from this customer.",
+      "errorTitle": "Could not load revenue figures",
+      "receiptsTitle": "Recorded receipts"
+    },
+    "docs": {
+      "title": "Customer documents",
+      "upload": "Upload document",
+      "holder": "Holder",
+      "number": "Document number",
+      "numberOf": {
+        "citizen_id": "ID number",
+        "driver_licence": "Licence number",
+        "passport": "Passport number",
+        "other": "Document number"
+      },
+      "expiry": "Expiry",
+      "noExpiry": "None",
+      "status": "Status",
+      "notUploaded": "Not uploaded",
+      "notVerified": "Not checked",
+      "verified": "Checked",
+      "remove": "Delete",
+      "verify": "Mark as checked",
+      "replace": "Replace",
+      "editInfo": "Edit details",
+      "dialogEdit": "Edit document details",
+      "save": "Save",
+      "saved": "Document details saved",
+      "replaced": "Document replaced",
+      "dropHint": "Click or drag the document photo here",
+      "uploading": "Uploading…"
+    }
   }
 }

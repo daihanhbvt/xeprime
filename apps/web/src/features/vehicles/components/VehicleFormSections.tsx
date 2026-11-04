@@ -631,7 +631,11 @@ export function VehicleIdentitySection({
   isCar,
   lockedNotice,
   setValue,
-}: DependentSectionProps) {
+  bodyTypeElsewhere = false,
+}: DependentSectionProps & {
+  /** Màn sửa xe bày kiểu dáng thành thẻ RIÊNG (design 23683:17598) — khối này bỏ ô đó đi. */
+  bodyTypeElsewhere?: boolean;
+}) {
   const t = useTranslations('Vehicles.form.specs');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
 
@@ -689,7 +693,7 @@ export function VehicleIdentitySection({
         <VehicleClassificationFields
           control={control}
           vehicleType={vehicleType}
-          bodyTypePicker={<BodyTypePicker control={control} />}
+          bodyTypePicker={bodyTypeElsewhere ? undefined : <BodyTypePicker control={control} />}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
         />
@@ -842,16 +846,25 @@ export function FeaturesSelect({
 export function BodyTypePicker({
   control,
   disabled = false,
-}: Pick<SectionProps, 'control'> & { disabled?: boolean }) {
+  showLabel = true,
+}: Pick<SectionProps, 'control'> & {
+  disabled?: boolean;
+  /** Tắt khi thẻ chứa nó đã mang tiêu đề "Kiểu dáng xe" — không nói hai lần. */
+  showLabel?: boolean;
+}) {
   const t = useTranslations('Vehicles.form.specs');
   const { items, isLoading } = useCatalogItems(CATALOG_TYPE.BODY_TYPE);
 
   return (
     <div className={styles.galleryBlock}>
-      <div className={styles.fieldLabel} id="vehicle-body-type-label">
-        {t('bodyType')}
-      </div>
-      <div className={styles.fieldHint}>{t('bodyTypeHint')}</div>
+      {showLabel ? (
+        <>
+          <div className={styles.fieldLabel} id="vehicle-body-type-label">
+            {t('bodyType')}
+          </div>
+          <div className={styles.fieldHint}>{t('bodyTypeHint')}</div>
+        </>
+      ) : null}
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 2 }} title={false} />
       ) : (

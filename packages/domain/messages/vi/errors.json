@@ -220,7 +220,11 @@
     "WITH_DRIVER_PRICE_OUT_OF_RANGE": "Giá có tài xế/ngày nằm ngoài khoảng hợp lý. Kiểm tra lại số (thừa hoặc thiếu số 0).",
     "DRIVER_SURCHARGE_RETIRED": "Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói.",
     "SURCHARGE_CATEGORY_RETIRED": "Loại phụ phí này đã gỡ — giá có tài xế là giá trọn gói.",
-    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "Chuyến có tài xế không ghi phụ phí quá giờ hay vượt km — khách trả một giá trọn gói."
+    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "Chuyến có tài xế không ghi phụ phí quá giờ hay vượt km — khách trả một giá trọn gói.",
+    "BOOKING_EXTENSION_NOT_ALLOWED": "Chỉ gia hạn được đơn thuê dài hạn đang thuê.",
+    "BOOKING_EXTENSION_PENDING": "Đơn này đang có một lần gia hạn chờ khách thanh toán.",
+    "BOOKING_EXTENSION_NOT_CANCELLABLE": "Lần gia hạn này không còn huỷ được.",
+    "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn — kiểm tra giá thuê theo tháng của xe."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

@@ -1,11 +1,7 @@
 /*
- * Hộp thư yêu cầu thuê — KHÔNG trần bề rộng, giống `/manage/bookings` (danh sách/bảng) chứ
- * không phải `--xp-shell-form-max-width` (dành cho trang FORM). Mỗi thẻ giờ có 5 vùng ngang
- * hàng (xe · khách · lịch trình · tiền · trạng thái — mẫu 19/09); ép vào trần 1216px của một
- * form là nguồn cơn bảng tiền bị bóp chữ xuống dòng lung tung (phản hồi người dùng 19/09/2026).
- *
- * Màu nhấn là GOLD của thương hiệu. Bản vẽ dùng xanh cho gạch tab, badge và link; ở đây chúng
- * lấy `--xp-color-primary*` để màn này không đẻ ra một màu nhấn thứ hai chỉ sống ở đúng đây.
+ * Hộp thư yêu cầu thuê (Figma Partner-XePrime `23649:25560`, 02/11/2026) — KHÔNG trần bề rộng,
+ * giống `/manage/bookings`: mỗi thẻ có bốn vùng ngang hàng (xe · khách · yêu cầu thuê · thanh
+ * toán), ép vào trần của một trang FORM là bảng tiền bị bóp chữ xuống dòng (phản hồi 19/09/2026).
  */
 .page {
   width: 100%;
@@ -17,56 +13,26 @@
   min-width: 0;
 }
 
-/* ── Tab trạng thái ─────────────────────────────────────────────────────── */
+/* ── Hàng công cụ: tab gộp trái, bộ lọc phải ──────────────────────────── */
 
-.tabs {
-  margin-bottom: var(--xp-space-md);
-}
-
-/*
- * Thanh lọc nằm trong khe phải của hàng tab: khoảng cách dưới là việc của hàng tab, không phải
- * của nó — giữ lại thì gạch chân tab bị đẩy lệch khỏi chữ.
- *
- * Ở mobile nó xuống hàng riêng nên khoảng cách quay lại; đó là lý do quy tắc nằm trong media
- * query của desktop chứ không đặt vô điều kiện.
- */
-@media (min-width: 641px) {
-  /*
-   * Nhân đôi class để chắc chắn thắng `.wrapper` của `FilterBar.module.css`: hai selector một
-   * class có specificity BẰNG nhau, nên nếu không nhân đôi thì ai thắng phụ thuộc thứ tự
-   * stylesheet được gộp — thứ có thể đổi theo thứ tự import ở lần build sau.
-   */
-  .tabFilters.tabFilters {
-    margin-bottom: 0;
-  }
-}
-
-.tabLabel {
-  display: inline-flex;
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--xp-space-xs);
+  justify-content: space-between;
+  gap: var(--xp-space-12) var(--xp-space-lg);
+  margin-bottom: 20px;
 }
 
 /*
- * Con số của tab đang KHÔNG mở là chữ xám trần — trong mẫu chỉ tab đang mở mới đeo viên tròn,
- * và làm đúng vậy giữ cho hàng tab không thành một dãy sáu viên tròn tranh nhau.
+ * Thanh lọc nằm trong hàng công cụ: khoảng cách dưới là việc của hàng, không phải của nó. Nhân
+ * đôi class để thắng `.wrapper` của `FilterBar.module.css` bất kể thứ tự stylesheet được gộp.
  */
-.tabCount {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.tabs :global(.ant-tabs-tab-active) .tabCount {
-  display: inline-flex;
-  min-width: 22px;
-  padding: 0 6px;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-primary);
-  color: var(--xp-color-primary-contrast);
-  font-weight: var(--xp-font-weight-semibold);
-  justify-content: center;
-  line-height: 18px;
+.tabFilters.tabFilters {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+  margin-left: auto;
 }
 
 /* ── Danh sách ──────────────────────────────────────────────────────────── */
@@ -77,7 +43,7 @@
   flex-direction: column;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-md);
+  gap: 20px;
   list-style: none;
 }
 

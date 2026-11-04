@@ -21,6 +21,7 @@ import { setMobileNavOpen } from '@/store/slices/app.slice';
 import { ManageMenu } from './ManageMenu';
 import { ManageUserCard } from './ManageUserCard';
 import { NavBadge } from './NavBadge';
+import { needsActionLabel } from './needs-action-label';
 import { useManageNav } from './use-manage-nav';
 import { useNavBadges } from './use-nav-badges';
 import styles from './MobileNav.module.css';
@@ -87,7 +88,8 @@ export function MobileNav() {
         {tabs.map((tab) => {
           const active = tab.href === activeHref;
           const label = t(tab.labelKey);
-          const count = tab.badge ? badges[tab.badge] : 0;
+          const count = tab.badge ? badges.counts[tab.badge] : 0;
+          const urgent = Boolean(tab.badge && badges.urgent[tab.badge]) && count > 0;
           return (
             <Link
               key={tab.key}
@@ -97,13 +99,13 @@ export function MobileNav() {
               // Nhãn tab bị rút ngắn cho vừa 5 cột; tên đọc được phải là tên đầy đủ kèm số
               // việc đang chờ, chứ không phải chữ "Yêu cầu" trơ trọi.
               aria-label={
-                count > 0 ? `${label}, ${tShell('shell.needsAction', { count })}` : undefined
+                count > 0 ? `${label}, ${needsActionLabel(tShell, count, urgent)}` : undefined
               }
             >
               <span className={styles.iconWrap}>
                 {decorativeIcon(createElement(tab.icon, { className: styles.icon }))}
                 <span className={styles.tabBadge}>
-                  <NavBadge count={count} />
+                  <NavBadge count={count} urgent={urgent} />
                 </span>
               </span>
               <span className={styles.label}>{label}</span>

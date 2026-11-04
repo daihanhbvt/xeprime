@@ -42,16 +42,15 @@ const VIEWPORT_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE
  * gian hàng — dựng sidebar rồi để mọi mục bên trong trả 403 là lừa người dùng. Wizard còn tự mở gian
  * hàng ở bước lưu: nằm trong khung đầy đủ thì sidebar bật lên giữa chừng.
  */
-const BARE_PATHS: readonly string[] = [
-  ROUTES.MANAGE.ONBOARDING,
-  ROUTES.MANAGE.VEHICLE_REGISTER,
-];
+const BARE_PATHS: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAGE.VEHICLE_REGISTER];
 
 /**
  * Khung của SITE PARTNER (`partner.xeprime.vn`, realm `partner` — ADR 0051 điều 3 · ADR 0053).
  *
  * Phục vụ HAI tuyến trên một cây URL: gian hàng tuyến gói (Full Manage) và chủ xe tuyến hoa hồng
- * (Owner Lite). Menu chọn theo tuyến (`useManageNavTree`); trang nào tuyến nào được ở lại do
+ * (Owner Lite). Khung là header menu NGANG của design Partner-XePrime (`ShellFrame layout="topnav"`,
+ * 02/11/2026 — bản đồ menu cũ → mới ở `docs/design/09_PARTNER_REDESIGN.md`).
+ * Menu chọn theo tuyến (`useManageNavTree`); trang nào tuyến nào được ở lại do
  * `partnerPageRedirect` quyết — cùng một luật với đích sau đăng nhập (bảng B1):
  *
  *  - chưa có gian hàng → `/register` (chọn tuyến);
@@ -169,7 +168,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ShellFrame user={user} viewport={VIEWPORT_PATHS.includes(pathname)} notices={notices}>
+    <ShellFrame
+      user={user}
+      layout="topnav"
+      viewport={VIEWPORT_PATHS.includes(pathname)}
+      notices={notices}
+    >
       {children}
     </ShellFrame>
   );

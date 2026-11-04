@@ -12,11 +12,10 @@ import {
 /**
  * ĐƯỜNG DẪN TỚI MỘT CHIẾC XE PHẢI Ở LẠI TRONG KHU CỦA NGƯỜI DÙNG.
  *
- * Vì sao bộ test này tồn tại: chủ xe cá nhân tuyến hoa hồng KHÔNG dùng được màn sửa xe đầy đủ của
- * tuyến gói (`/vehicles/<id>/edit`) — `AppShell` đá họ về trang chủ Owner Lite (ADR 0027 · ADR
- * 0028 điều 1). Từ ADR 0051 Owner Lite ở CÙNG site partner với Full Manage, nên khu "tài khoản"
- * (`WORKSPACE.ACCOUNT`) giờ là không gian quản lý xe `/vehicles/<id>/manage/...` của site partner.
- * Một link tới màn sửa đầy đủ ở đây là **một ngõ cụt** với đúng nhóm người dùng của Owner Lite.
+ * Vì sao bộ test này tồn tại: mỗi link phải dẫn tới một trang mà `AppShell` cho tuyến đó ở lại —
+ * một link tới trang tuyến kia là **một ngõ cụt** (bị đá về trang chủ). Từ 03/11/2026 hai tuyến
+ * dùng CHUNG trang chi tiết và màn sửa xe (`/vehicles/<id>`, `/vehicles/<id>/edit`); phần chỉ tuyến
+ * gói có (nguồn xe, bảo dưỡng) thì tuyến hoa hồng không có lối vào nào.
  *
  * Đây là phép kiểm THUẦN — không render, không mock — vì luật nằm trọn trong bảng đường dẫn.
  */
@@ -25,7 +24,12 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
   const account = workspaceVehiclePaths(WORKSPACE.ACCOUNT);
   const ID = '01M0GSW2002RRX9QAAPZ4WM9VB';
 
-  it('Owner Lite KHÔNG sinh ra đường dẫn nào vào màn sửa của tuyến gói', () => {
+  /*
+   * 03/11/2026 (sổ cái §3.6 E24): hai tuyến dùng CHUNG trang chi tiết và màn sửa xe — mọi đích của
+   * tuyến hoa hồng là trang họ được ở (không có cú đá ngược), không còn không gian "Quản lý xe" cũ
+   * (nó chỉ còn chuyển hướng).
+   */
+  it('Owner Lite dẫn vào trang chi tiết + màn sửa CHUNG, đều là trang tuyến hoa hồng được ở', () => {
     const hrefs = [
       account.detail(ID),
       account.profile(ID),
@@ -39,8 +43,7 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
 
     for (const href of hrefs) {
       expect(href).not.toBeNull();
-      expect(href).toMatch(new RegExp(`^/manage/vehicles/${ID}(/manage(/|$)|$)`));
-      expect(href).not.toContain('/edit');
+      expect(href).toMatch(new RegExp(`^/manage/vehicles/${ID}(/edit(\\?tab=[a-z-]+)?|/manage/.+)?$`));
       // Mọi đích đều là trang tuyến hoa hồng được ở — không có link nào dẫn tới cú đá ngược.
       expect(isCommissionPage(href as string), href as string).toBe(true);
     }
@@ -77,11 +80,9 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
   });
 
   it('giá và tối ưu nhận chuyến có ở CẢ HAI khu — không khu nào mất tính năng', () => {
-    expect(account.pricing(ID)).toBe(
-      `/manage/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.PRICING}`,
-    );
-    expect(account.optimization(ID)).toBe(
-      `/manage/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION}`,
-    );
+    expect(account.pricing(ID)).toBe(manage.pricing(ID));
+    expect(account.optimization(ID)).toBe(manage.optimization(ID));
+    // Phần chỉ tuyến gói có (nguồn xe) vẫn không có lối vào ở tuyến hoa hồng.
+    expect(account.part(ID, VEHICLE_EDIT_TAB.SOURCE, null)).toBeNull();
   });
 });

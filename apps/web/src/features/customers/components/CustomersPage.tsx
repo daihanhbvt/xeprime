@@ -1,10 +1,9 @@
 'use client';
 
-import { PlusOutlined } from '@ant-design/icons';
-import { Button, Spin } from 'antd';
+import { Spin } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -12,7 +11,6 @@ import { customerPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { CUSTOMERS_DEFAULT_LIMIT } from '@/features/customers/api';
-import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
 import { CustomerSummaryCards } from '@/features/customers/components/CustomerSummaryCards';
 import { CustomerTable } from '@/features/customers/components/CustomerTable';
 import { relationshipValues, sortValues } from '@/features/customers/constants';
@@ -32,6 +30,10 @@ export function CustomersPage() {
 
 /**
  * Sổ khách của GIAN HÀNG (gap S-01) — "khách này thuê 6 lần, còn nợ 2tr, từng trả xe muộn".
+ * Figma Partner-XePrime "Users List" `23777:53057` (02/11/2026).
+ *
+ * KHÔNG có nút "Thêm khách hàng" (chốt 02/11/2026): khách vào sổ TỰ ĐỘNG khi đặt xe hoặc khi gian
+ * hàng lập đơn — sổ khách là hệ quả của giao dịch, không phải một danh bạ nhập tay.
  *
  * KHÔNG phải `/manage/admin/customers`: đó là màn giám sát khách thuê toàn nền tảng của admin.
  * Trang này chỉ thấy khách của chính gian hàng đang đăng nhập, và backend là nơi quyết định
@@ -44,15 +46,12 @@ function CustomersView() {
   const { has } = usePermissions();
 
   const canView = has(PERMISSION.CUSTOMER_VIEW);
-  const canManage = has(PERMISSION.CUSTOMER_MANAGE);
   const canViewFinance = has(PERMISSION.FINANCE_VIEW);
 
   const { filters, relationship, sort, setFilters, clear, hasActiveFilters } =
     useCustomerFilters(canViewFinance);
   const { data, isError, refetch, isFetching } = useCustomers(filters, canView);
   const summary = useCustomerSummary(canView);
-
-  const [formOpen, setFormOpen] = useState(false);
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? {
@@ -102,23 +101,9 @@ function CustomersView() {
     setFilters(next);
   }
 
-  const addButton = canManage ? (
-    <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-      {t('page.add')}
-    </Button>
-  ) : null;
-
   return (
     <div className={styles.page}>
-      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={addButton} />
-
-      {canView ? (
-        <CustomerSummaryCards
-          summary={summary.data}
-          loading={summary.isLoading}
-          canViewFinance={canViewFinance}
-        />
-      ) : null}
+      <ManagePageHeader title={t('page.listTitle')} subtitle={t('page.listSubtitle')} />
 
       <FilterBar
         fields={filterFields}
@@ -128,7 +113,13 @@ function CustomersView() {
         searchDebounceMs={300}
       />
 
-      <p className={styles.hint}>{t('hints.relationship')}</p>
+      {canView ? (
+        <CustomerSummaryCards
+          summary={summary.data}
+          loading={summary.isLoading}
+          canViewFinance={canViewFinance}
+        />
+      ) : null}
 
       <CustomerTable
         items={items}
@@ -138,18 +129,11 @@ function CustomersView() {
         filtered={hasActiveFilters}
         canViewFinance={canViewFinance}
         permissionDenied={!canView}
-        emptyAction={addButton}
         onClearFilters={clear}
         onOpen={(customer) => router.push(customerPath.detail(customer.id))}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
-      <CustomerFormModal
-        open={formOpen}
-        customer={null}
-        onClose={() => setFormOpen(false)}
-        onOpenExisting={(id) => router.push(customerPath.detail(id))}
-      />
     </div>
   );
 }

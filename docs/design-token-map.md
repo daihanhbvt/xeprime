@@ -267,6 +267,8 @@ Bậc sm/lg có HAI lớp, trong khi `apps/mobile/shared/src/theme/elevation.ts`
 | `--xp-drawer-width` / `-lg` | 560 / 720 px | căn theo modal |
 | `--xp-container-max-width` | **1280px** | `117:1203`, `127:2060` vẽ 1200 — nới lên 1280 (14/08/2026) cho mọi trang; marketplace bỏ số 1120 gõ tay, dùng chung token này |
 | `--xp-shell-form-max-width` | **1216px** | `60:69` FormColumn thụt 64px so với workspace → đi theo 1280 |
+| `--xp-shell-partner-max-width` | **1560px** | Partner-XePrime Header `23649:27690` (1920 − 2 × 180) — cột chung của header menu ngang và vùng nội dung site partner |
+| `--xp-shell-partner-header-height` | **74px** | Partner-XePrime Header: đệm 16 + nút 42 + đệm 16. Khung partner gán nó cho `--xp-shell-header-offset` (biến cục bộ của khung, không phải token) — phần dính của các màn đọc biến đó, rơi về `--xp-shell-topbar-height` ở site quản trị |
 
 ⚠️ **`controlHeight` giữ 32px, KHÔNG đổi thành 40.** Figma `125:1571` (button `padding: 10px 20px`, chữ 15px) và `125:2691` (input `padding: 10px 12px`) đều ra ~40px = AntD `size="large"`. Đổi mặc định sang 40 làm cao lên **mọi** input/button/select ở 37 trang — thuộc wave component, không phải wave token. Ghi ở **P16**.
 
@@ -497,6 +499,9 @@ code của màn trang chủ Figma `19695:40693`.
 | Luồng đặt xe v2 | `--xp-color-primary-border` | `#e8ca8d` (`Stroke/primary-300`; tối `#946e1f`) | viền thẻ tiền, thẻ giữ chỗ, phương thức thanh toán đang mở |
 | | `--xp-color-success-accent` | `#12b76a` (`Status/success-500`) | viền nét đứt thẻ "chuyến đã xác nhận" |
 | | `--xp-color-success-border` | `#6ce9a6` (`Status/success-300`) | viền nhãn trạng thái xanh |
+| | `--xp-color-info-border` | `#84caff` (`Status/information-300`) | viền nhãn "Tự lái", nút Zalo — thẻ đơn/yêu cầu site partner |
+| | `--xp-color-error-border` | `#fda29b` (`Status/error-300`) | viền nút "Từ chối", nhãn kết cục đỏ — thẻ yêu cầu site partner |
+| | `--xp-color-pink` / `-pink-bg` / `-pink-border` | `#dd2590` / `#fdf2fa` / `#faa7e0` (`Status/pink-*`) | viên "Thuê xe dài hạn" trên thẻ đơn/yêu cầu site partner |
 | | `--xp-color-warning-subtle` | `#fffaeb` (`Status/warning-low`) | nền hộp lưu ý của trang thanh toán |
 | Gradient | `--xp-gradient-primary` | `#e9c336 → #e8c664 → #e3b012` (90°) | nút chính, pill "Khám phá" |
 | | `--xp-gradient-text-hero` / `-text-gold` / `-text-destination` | — | chữ nhấn hero / dải đối tác / tên thành phố |

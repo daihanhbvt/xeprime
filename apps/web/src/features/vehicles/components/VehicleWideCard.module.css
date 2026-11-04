@@ -1,0 +1,261 @@
+/*
+ * Thẻ xe NGANG — Figma Partner-XePrime 03/11/2026.
+ *  - `stacked` (`23655:38951`, ít xe): đệm 16, hai tầng cách 20; tầng đầu ảnh 247×156 · nội dung
+ *    (danh tính | cột nút 120, cách 20); tầng dưới khối số liệu xám.
+ *  - `row` (`23655:38389`, danh sách): đệm 8, một hàng: ảnh 256×162 · danh tính 300 · số liệu ·
+ *    cột nút giãn phần còn lại.
+ * Bo 16, viền xám, bóng 6px nhạt cho cả hai.
+ */
+.card {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+  container-type: inline-size;
+  transition: border-color var(--xp-motion-duration-fast) ease;
+}
+
+.card:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.card:focus-within {
+  border-color: var(--xp-color-border-focus);
+}
+
+.inner {
+  display: flex;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  gap: 20px;
+}
+
+.media {
+  border-radius: var(--xp-space-12);
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  gap: 20px;
+}
+
+.details {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.detailsFoot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ─── Khối số liệu ────────────────────────────────────────────────────────── */
+
+.metrics {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-space-12);
+  background: var(--xp-color-bg-layout);
+  gap: 40px;
+}
+
+.metricColumn {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-12);
+}
+
+.metricRow {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.metricRow dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.metricRow dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.metricRow dd.gain {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.metricRow dd.loss {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.unavailable {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ─── stacked (ít xe) ─────────────────────────────────────────────────────── */
+
+.stacked .inner {
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  gap: 20px;
+}
+
+.stacked .media {
+  width: 247px;
+  height: 156px;
+}
+
+.stacked .content {
+  padding: var(--xp-space-sm) 0;
+}
+
+.stacked .actions {
+  width: 120px;
+}
+
+/* ─── row (danh sách) ─────────────────────────────────────────────────────── */
+
+.row .inner {
+  align-items: stretch;
+  padding: var(--xp-space-sm);
+  gap: 27px;
+}
+
+.row .head {
+  flex: 0 1 auto;
+}
+
+.row .media {
+  width: 256px;
+  height: 162px;
+}
+
+.row .details {
+  width: 300px;
+  flex: 0 1 300px;
+  padding: var(--xp-space-sm) 0;
+}
+
+.row .metrics {
+  flex: 0 1 664px;
+  align-self: stretch;
+  margin: var(--xp-space-sm) 0;
+  gap: var(--xp-space-xl);
+}
+
+.row .actions {
+  min-width: 140px;
+  flex: 1 1 140px;
+  padding: var(--xp-space-sm);
+}
+
+/* ─── Bề rộng thật hẹp hơn design ─────────────────────────────────────────── */
+
+/* Hàng danh sách hẹp (màn ≤1440): số liệu xuống dưới ảnh + danh tính, nút vẫn ở mép phải. */
+@container (max-width: 1180px) {
+  .row .inner {
+    flex-wrap: wrap;
+    gap: var(--xp-space-md);
+  }
+
+  .row .head {
+    flex: 1 1 520px;
+  }
+
+  .row .details {
+    flex: 1 1 auto;
+  }
+
+  .row .metrics {
+    order: 3;
+    flex: 1 1 100%;
+    margin: 0;
+  }
+
+  .row .actions {
+    flex: 0 0 160px;
+  }
+}
+
+/* Thẻ ít xe trong cột hẹp (màn 1280, hai thẻ một hàng): ảnh nhỏ lại, nút vẫn là một cột. */
+@container (max-width: 680px) {
+  .stacked .media {
+    width: 180px;
+    height: 120px;
+  }
+
+  .metrics {
+    gap: var(--xp-space-lg);
+  }
+}
+
+/* Rất hẹp (tablet dọc): ảnh lên trên, nút thành một hàng, số liệu một cột. */
+@container (max-width: 520px) {
+  .stacked .metrics,
+  .row .metrics {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--xp-space-12);
+  }
+
+  .head,
+  .row .head {
+    flex-direction: column;
+  }
+
+  .stacked .media,
+  .row .media {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 247 / 156;
+  }
+
+  .content {
+    flex-direction: column;
+  }
+
+  .stacked .actions,
+  .row .actions {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}

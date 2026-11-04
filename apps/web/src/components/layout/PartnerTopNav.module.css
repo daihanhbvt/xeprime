@@ -1,0 +1,185 @@
+/*
+ * Menu ngang site partner — Figma Partner-XePrime `23649:27576` (Filter Controls), trạng thái mục
+ * `23649:11528`, dropdown `23661:27362`.
+ */
+.nav {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/* Mục cấp 1: 8px 12px, bo 12px, biểu tượng 24px, chữ 14px/Medium. */
+.item {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) 12px;
+  border: none;
+  border-radius: var(--xp-border-radius-control);
+  background: none;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Hovered (`23649:27791`): nền xám nhạt. */
+.item:hover {
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Active — dropdown đang mở (`23649:11529`): nền vàng nhạt, chữ + biểu tượng vàng đậm. */
+.itemOpen,
+.itemOpen:hover {
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+.item:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.icon {
+  font-size: 24px;
+}
+
+.label {
+  min-width: 0;
+}
+
+/* Dấu +/− 12px, luôn màu thương hiệu. */
+.toggle {
+  font-size: 12px;
+  color: var(--xp-color-primary);
+}
+
+/*
+ * Khuôn `_Badge` `23661:27584` (bo tròn, viền, chữ 12px) tô màu cảnh báo — cùng bộ token với
+ * `StatusBadge` `.warning` / `.danger`, nên huy hiệu menu và chip trạng thái nói cùng một ngôn ngữ màu.
+ */
+.count {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 6px;
+  border: 1px solid var(--xp-color-warning-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.countUrgent {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/*
+ * Dropdown (`23649:23990` "Operations Menu"): thẻ trắng bo 16px, đệm 12px, các dòng cách 4px.
+ * Dòng (`23649:28348`): đệm 12px, bo 12px, biểu tượng 24px, chữ 14px/Medium. Rê chuột / đang mở
+ * (`23649:28357` / `23649:28349`): chữ và biểu tượng sang vàng, KHÔNG đổi nền.
+ *
+ * `.dropdown.dropdown`: CSS-in-JS của AntD chèn SAU CSS Module với cùng độ ưu tiên (0,3,0) cho dòng
+ * menu — lặp class là cách nâng độ ưu tiên mà không cần !important.
+ */
+.dropdown.dropdown :global(.ant-dropdown-menu) {
+  display: flex;
+  min-width: 232px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item) {
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--xp-border-radius-control);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item:hover),
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item-active),
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item-selected) {
+  background: none;
+  color: var(--xp-color-primary);
+}
+
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item:focus-visible) {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/* Biểu tượng dòng 24px — AntD ép `.ant-dropdown-menu-item-icon` về 12px và tự chừa lề phải. */
+.dropdown.dropdown :global(.ant-dropdown-menu .ant-dropdown-menu-item .ant-dropdown-menu-item-icon) {
+  min-width: 24px;
+  margin-inline-end: 0;
+  font-size: 24px;
+}
+
+/* Liên kết trong dòng ăn theo màu của dòng — AntD tô link màu riêng. */
+.dropdown.dropdown :global(.ant-dropdown-menu-title-content a) {
+  color: inherit;
+}
+
+.dropdown.dropdown :global(.ant-dropdown-menu-item-extra) {
+  margin-inline-start: var(--xp-space-lg);
+}
+
+.menuIcon {
+  font-size: 24px;
+}
+
+/*
+ * Bề ngang: design vẽ ở 1920. Hẹp dần thì bớt chi tiết theo thứ tự ít mất thông tin nhất — bỏ dấu
+ * +/− và co đệm, rồi bỏ biểu tượng; nhãn chữ không bao giờ bị cắt. Dưới ranh vỏ 1024px menu nhường
+ * chỗ cho nút mở drawer (`PartnerHeader`).
+ */
+@media (max-width: 1366px) {
+  .item {
+    padding-inline: var(--xp-space-sm);
+  }
+
+  .toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .nav {
+    gap: 4px;
+  }
+
+  .icon {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .nav {
+    display: none;
+  }
+}

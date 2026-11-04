@@ -20,7 +20,9 @@
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-lg);
   background: var(--xp-color-bg-container);
-  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  scroll-margin-top: calc(
+    var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md)
+  );
 }
 
 /* Tiêu điểm đến từ lệnh cuộn (`useScrollToSection`), không phải từ bàn phím — không vẽ viền. */

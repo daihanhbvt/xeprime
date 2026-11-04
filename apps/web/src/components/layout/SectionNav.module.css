@@ -9,7 +9,7 @@
 .rail {
   position: sticky;
   /* Dưới topbar dính của vỏ quản lý, không chui lên đè nó. */
-  top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md));
   align-self: start;
   min-width: 0;
 }
@@ -86,7 +86,7 @@
     /* Dính ở đầu vùng nội dung: cuộn giữa chừng vẫn nhảy sang phần khác được. */
     position: sticky;
     z-index: 4;
-    top: var(--xp-shell-topbar-height);
+    top: var(--xp-shell-header-offset, var(--xp-shell-topbar-height));
     padding-block: var(--xp-space-sm);
     background: var(--xp-color-bg-layout);
   }

@@ -9,9 +9,7 @@ import {
 } from '@xeprime/types';
 import {
   VEHICLE_EDIT_TAB,
-  VEHICLE_MANAGE_SECTION,
   type VehicleEditTab,
-  type VehicleManageSection,
 } from '@/constants/routes';
 import { toTenantSupportRoute } from '@/constants/tenant-support-routes';
 import type { SupportContext } from './types';
@@ -184,20 +182,9 @@ export function supportSessionOf(context: SupportContext): SupportSession {
 }
 
 /**
- * Mục của không gian "Quản lý xe" (Owner Lite) mở trong phiên, kèm capability cần để THẤY mục.
- * Giá, giao xe có phí, điều khoản, phụ phí, lịch sử chuyến không có ở đây — ẩn hẳn.
+ * Mục của màn sửa xe mở trong phiên, kèm capability cần để THẤY mục — một bảng cho cả hai tuyến từ
+ * 03/11/2026 (không gian "Quản lý xe" Owner Lite cũ chuyển hướng vào màn này).
  */
-const SUPPORT_VEHICLE_SECTIONS: Readonly<Partial<Record<VehicleManageSection, SupportCapability>>> =
-  {
-    [VEHICLE_MANAGE_SECTION.INFORMATION]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
-    [VEHICLE_MANAGE_SECTION.IMAGES]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
-    [VEHICLE_MANAGE_SECTION.DOCUMENTS]: SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
-    [VEHICLE_MANAGE_SECTION.HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
-    [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
-    [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
-  };
-
-/** Tab của màn sửa xe (Full Manage) mở trong phiên, kèm capability cần để THẤY tab. */
 const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapability>>> = {
   [VEHICLE_EDIT_TAB.INFORMATION]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
   [VEHICLE_EDIT_TAB.MEDIA]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
@@ -210,6 +197,16 @@ const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapab
    */
   [VEHICLE_EDIT_TAB.OPERATIONS]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  /*
+   * Menu 03/11/2026: "Chính sách thuê" (thời gian chuẩn bị xe) và hai tab dịch vụ có thiết lập vận
+   * hành (tự nhận chuyến, thiết lập có tài xế) mang ĐÚNG capability của các mục cũ. Giá, chính sách
+   * có tiền (cọc, giao xe có phí…) và điều khoản vẫn là khu TIỀN — mục tự giấu chúng (điều khoản
+   * hỏi `CONDITIONS`, không có trong bảng này); tab Dài hạn không có mặt.
+   */
+  [VEHICLE_EDIT_TAB.POLICY]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.HANDOVER]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.SELF_DRIVE]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.WITH_DRIVER]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   /*
@@ -220,16 +217,6 @@ const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapab
 };
 
 const PINNED = new Set(SUPPORT_VEHICLE_PINNED_FIELDS);
-
-/** Ngoài phiên: mọi mục đều mở (quyết định thuộc về quyền/cờ gói như trước). */
-export function supportAllowsVehicleSection(
-  session: SupportSession | null,
-  section: VehicleManageSection,
-): boolean {
-  if (session === null) return true;
-  const capability = SUPPORT_VEHICLE_SECTIONS[section];
-  return capability !== undefined && session.can(capability);
-}
 
 export function supportAllowsVehicleTab(session: SupportSession | null, tab: string): boolean {
   if (session === null) return true;

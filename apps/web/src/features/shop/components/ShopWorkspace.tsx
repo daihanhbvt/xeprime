@@ -5,8 +5,11 @@ import { Alert, Avatar, Button, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
+  FEATURE_STATE,
+  isFeatureVisible,
   isPackageShopTrack,
   PERMISSION,
+  PLAN_FEATURE,
   TENANT_STATUS,
   TENANT_STATUS_META,
   type TenantStatus,
@@ -16,10 +19,12 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
+import { BranchesView } from '@/features/branches/components/BranchesView';
 import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
 import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useScrollToSection } from '@/hooks/use-scroll-to-section';
 import { initialOf } from '@/lib/initials';
@@ -152,6 +157,16 @@ export function ShopWorkspace({
   const supportHidesLegal = useSupportHides(SUPPORT_HIDDEN_AREA.SHOP_LEGAL);
   const canSeeTax = has(PERMISSION.SELLER_PROFILE_VIEW) && !supportHidesLegal;
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
+  /*
+   * Chi nhánh (02/11/2026 — rời menu, về đây): `branches.view` — guard của `GET /branches` — và cờ
+   * gói `branches`, CÙNG luật với mục menu cũ: `hidden` ⇒ vắng hẳn, `read_only` ⇒ vẫn xem/sửa, chỉ
+   * khoá thêm mới (`FeatureWriteTooltip` trong `BranchesView`). Cờ vắng trong cache ⇒ `enabled`.
+   */
+  const featureStates = useFeatureStates();
+  const canSeeBranches =
+    has(PERMISSION.BRANCH_VIEW) &&
+    isFeatureVisible(featureStates[PLAN_FEATURE.BRANCHES] ?? FEATURE_STATE.ENABLED);
+  const tBranches = useTranslations('Branches');
   const tTax = useTranslations('Account.tax');
 
   const items: SectionNavItem<ShopSection>[] = [
@@ -159,6 +174,7 @@ export function ShopWorkspace({
     { key: SHOP_SECTION.OWNER, label: tSections('owner') },
     { key: SHOP_SECTION.LEGAL, label: tSections('legal') },
     ...(canSeeTax ? [{ key: SHOP_SECTION.TAX, label: tTax('title') }] : []),
+    ...(canSeeBranches ? [{ key: SHOP_SECTION.BRANCHES, label: tBranches('page.title') }] : []),
     ...(canSeePlan ? [{ key: SHOP_SECTION.PLAN, label: tSections('plan') }] : []),
   ];
 
@@ -316,6 +332,16 @@ export function ShopWorkspace({
 
               {/* <form> riêng, lưu vào hồ sơ người bán — đứng NGOÀI form hồ sơ ở trên. */}
               {canSeeTax ? <SellerTaxSection id={shopSectionDomId(SHOP_SECTION.TAX)} /> : null}
+
+              {canSeeBranches ? (
+                <SectionCard
+                  id={shopSectionDomId(SHOP_SECTION.BRANCHES)}
+                  title={tBranches('page.title')}
+                  hint={tBranches('page.subtitle')}
+                >
+                  <BranchesView variant="section" />
+                </SectionCard>
+              ) : null}
 
               {canSeePlan ? (
                 <SectionCard id={shopSectionDomId(SHOP_SECTION.PLAN)} title={tSections('plan')}>

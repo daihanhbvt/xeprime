@@ -100,28 +100,6 @@
   font-weight: 700;
 }
 
-/* Ba dòng danh tính ở đầu menu — cùng khối với bản ở `ManageUserCard`. */
-.menuIdentity {
-  display: flex;
-  min-width: 0;
-  max-width: 240px;
-  flex-direction: column;
-  gap: 2px;
-  cursor: default;
-}
-
-.menuShop {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
-  overflow-wrap: anywhere;
-}
-
-.menuUser {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  overflow-wrap: anywhere;
-}
-
 /* Ranh chính tắc 1024px (`--xp-bp-tablet`) — hamburger xuất hiện đúng lúc sidebar biến mất. */
 @media (max-width: 1024px) {
   .header {

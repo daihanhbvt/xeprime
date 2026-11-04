@@ -11,6 +11,7 @@ import {
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
   isSupportContextId,
+  type BookingListPreset,
   type PlatformPartnerKind,
   type RegistrationTrack,
 } from '@xeprime/types';
@@ -235,7 +236,10 @@ export const ROUTES = {
      * LỐI ĐI CHUYỂN TIẾP tới chuyến ĐI THUÊ cũ của tài khoản này (15/09/2026) — từ ADR 0053 tài khoản
      * đối tác không đặt xe nữa; trang chỉ còn cho dữ liệu có trước đợt tách realm.
      */
-    /** Chi nhánh gian hàng — nơi xe thực sự nằm, và là vị trí công khai của xe. */
+    /**
+     * ALIAS CHUYỂN TIẾP (02/11/2026) — chi nhánh là section của trang Cửa hàng ở site partner
+     * (`shopSectionPath(SHOP_SECTION.BRANCHES)`). Phiên hỗ trợ gian hàng vẫn còn trang riêng ở route này.
+     */
     SHOP_BRANCHES: partner('/shop/branches'),
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: partner('/shop/policies'),
@@ -579,10 +583,10 @@ export function workspacePaths(workspace: Workspace): {
       bookings: ROUTES.MANAGE.BOOKINGS,
       bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
       ownerProfile: ROUTES.MANAGE.SHOP,
-      branches: ROUTES.MANAGE.SHOP_BRANCHES,
-      // Hai mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026) — chúng là section
+      // Ba mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026; chi nhánh 02/11) — chúng là section
       // của trang Cửa hàng. Trỏ vào hằng số route cũ vẫn tới nơi, nhưng qua một lần chuyển
       // hướng thừa, và mỗi lần chuyển hướng là một lần mất tham số mà người gọi vừa gắn vào.
+      branches: shopSectionPath(SHOP_SECTION.BRANCHES),
       subscription: shopSectionPath(SHOP_SECTION.PLAN),
       sellerProfile: shopSectionPath(SHOP_SECTION.TAX),
       support: ROUTES.MANAGE.SUPPORT,
@@ -667,31 +671,23 @@ export interface WorkspaceVehiclePaths {
 
 export function workspaceVehiclePaths(workspace: Workspace): WorkspaceVehiclePaths {
   const isManage = workspace === WORKSPACE.MANAGE;
+  /*
+   * 03/11/2026 (sổ cái §3.6 E24): hai tuyến dùng CHUNG trang chi tiết và màn sửa xe. Không gian
+   * "Quản lý xe" cũ của chủ xe tuyến hoa hồng chỉ còn là các lần chuyển hướng tới mục tương ứng.
+   */
   return {
-    detail: isManage ? vehiclePath.detail : ownerVehiclePath.manage,
-    overview: isManage ? vehiclePath.detail : ownerVehiclePath.detail,
+    detail: vehiclePath.detail,
+    overview: vehiclePath.detail,
     manageSection: ownerVehicleManagePath.section,
     edit: (id) => vehiclePath.edit(id),
-    part: (id, tab, section) =>
-      isManage
-        ? vehicleTabPath(id, tab)
-        : section
-          ? ownerVehicleManagePath.section(id, section)
-          : null,
-    profile: (id) =>
-      isManage
-        ? vehiclePath.edit(id)
-        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_DEFAULT_SECTION),
-    // Cổng quản lý: MỤC trong màn sửa xe, không phải route `/pricing` cũ — route đó nay chỉ
-    // còn là một lần chuyển hướng tới đúng mục này, và bắt link mới đi qua nó là một nhịp thừa.
-    pricing: (id) =>
-      isManage
-        ? vehicleTabPath(id, VEHICLE_EDIT_TAB.PRICING)
-        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING),
-    optimization: (id) =>
-      isManage
-        ? vehicleTabPath(id, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION)
-        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION),
+    /*
+     * Phần chỉ tuyến gói có (nguồn xe, bảo dưỡng — `section: null`) thì tuyến hoa hồng trả `null` để
+     * nơi gọi ẩn hẳn lối vào, thay vì dẫn chủ xe vào một mục màn sửa không dựng cho họ.
+     */
+    part: (id, tab, section) => (isManage || section ? vehicleTabPath(id, tab) : null),
+    profile: (id) => vehiclePath.edit(id),
+    pricing: (id) => vehicleTabPath(id, VEHICLE_EDIT_TAB.PRICING),
+    optimization: (id) => vehicleTabPath(id, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION),
   };
 }
 
@@ -824,33 +820,50 @@ export const vehiclePath = {
  * rơi về tab "Thông tin", và không ai nhận ra.
  */
 export const VEHICLE_EDIT_TAB = {
+  /*
+   * ── Mục của menu trái (design `23731:37932`, 03/11/2026) ─────────────────────
+   *
+   * Hồ sơ xe: Thông tin chung · Hình ảnh · Giấy tờ (· Lịch sử chuyến — chỉ chủ xe tuyến hoa hồng).
+   * Hình thức cho thuê: Dịch vụ & giá (ba tab — mỗi tab một giá trị riêng) · Chính sách thuê.
+   * Vận hành nâng cao: Bảo dưỡng & KM · Nguồn gốc & tài chính.
+   */
   INFORMATION: 'information',
   /** Thư viện ảnh — giá trị chuẩn là `media` (không phải `images`). */
   MEDIA: 'media',
-  PRICING: 'pricing',
-  SOURCE: 'source',
   DOCUMENTS: 'documents',
-  MAINTENANCE: 'maintenance',
+  /** Lịch sử chuyến của xe — chỉ ở tuyến hoa hồng (gian hàng có màn Đơn thuê lọc theo xe). */
+  TRIP_HISTORY: 'trip-history',
+  /** Ba tab của mục "Dịch vụ & giá": công tắc dịch vụ · tự nhận chuyến · giá · khuyến mãi. */
+  SELF_DRIVE: 'self-drive',
+  WITH_DRIVER: 'with-driver',
+  LONG_TERM: 'long-term',
   /**
-   * Vận hành & điều kiện thuê — tab của develop, nay là BÍ DANH: mở "Thời gian giao nhận" (khối
-   * đầu tiên của tab cũ). Link cũ, bookmark và cảnh báo mang `?tab=operations` vẫn mở được.
+   * "Chính sách thuê" (03/11/2026): công tắc chính sách gian hàng · giao xe tận nơi · cọc · km ·
+   * quá giờ · thời gian chuẩn bị xe · giấy tờ & điều khoản của hai nhóm dịch vụ.
    */
-  OPERATIONS: 'operations',
+  POLICY: 'policy',
+  MAINTENANCE: 'maintenance',
+  SOURCE: 'source',
 
   /*
-   * ── Mục bổ ra từ tab "Vận hành & điều kiện thuê" (29/09/2026) ────────────
+   * ── BÍ DANH của các bản menu trước — link cũ, bookmark, email, cảnh báo vẫn mở đúng chỗ ──
    *
-   * Bốn giá trị là MỤC MENU (giao nhận · nhận chuyến & thủ tục × 2 · phụ phí). Hai giá trị
-   * `*-terms` là BÍ DANH trỏ về "Nhận chuyến & thủ tục" của dịch vụ đó — xem `resolveEditTab`.
-   *
-   * Giá trị TRÙNG TÊN với mục của `VEHICLE_MANAGE_SECTION` (dấu `-` thay cho `/`) để
-   * `vehicles.part()` ánh xạ được một-một giữa hai khu.
+   * `resolveEditTab` quy chúng về mục thật. Giá trị TRÙNG TÊN với mục của `VEHICLE_MANAGE_SECTION`
+   * (dấu `-` thay cho `/`) để đường dẫn cũ của tuyến hoa hồng chuyển hướng một-một.
    */
+  /** "Giá & chính sách" — nay chia vào ba tab dịch vụ + Chính sách thuê. */
+  PRICING: 'pricing',
+  /** "Điều kiện" và "Giao nhận" của menu sáng 03/11/2026 → Chính sách thuê. */
+  CONDITIONS: 'conditions',
+  HANDOVER: 'handover',
+  /** "Vận hành & điều kiện thuê" của develop và "Thời gian giao nhận" (30/09) → Chính sách thuê. */
+  OPERATIONS: 'operations',
   HANDOVER_TIME: 'handover-time',
+  /** "Nhận chuyến & thủ tục" (30/09) → tab dịch vụ đó; phần thủ tục → Chính sách thuê. */
   SELF_DRIVE_OPTIMIZATION: 'self-drive-optimization',
   SELF_DRIVE_TERMS: 'self-drive-terms',
   WITH_DRIVER_OPTIMIZATION: 'with-driver-optimization',
-  /** BÍ DANH — phụ phí tài xế đã gỡ (ADR 0075); link cũ mở "Nhận chuyến & thủ tục". */
+  /** Phụ phí tài xế đã gỡ (ADR 0075) → tab Có tài xế. */
   WITH_DRIVER_SURCHARGES: 'with-driver-surcharges',
   WITH_DRIVER_TERMS: 'with-driver-terms',
 } as const;
@@ -863,6 +876,35 @@ export function vehicleTabPath(id: string, tab: VehicleEditTab): string {
 }
 
 /**
+ * Mục CŨ của không gian "Quản lý xe" (`/vehicles/<id>/manage/<mục>` — Owner Lite, trước 03/11/2026)
+ * → mục của màn sửa xe dùng chung hai tuyến. Gồm cả các đường dẫn cũ hơn nữa (30/09) đã từng
+ * chuyển hướng trong không gian đó. Mục lạ về "Thông tin chung".
+ */
+const LEGACY_MANAGE_SECTION_TAB: Readonly<Record<string, VehicleEditTab>> = {
+  information: VEHICLE_EDIT_TAB.INFORMATION,
+  images: VEHICLE_EDIT_TAB.MEDIA,
+  documents: VEHICLE_EDIT_TAB.DOCUMENTS,
+  'trip-history': VEHICLE_EDIT_TAB.TRIP_HISTORY,
+  pricing: VEHICLE_EDIT_TAB.PRICING,
+  'handover-time': VEHICLE_EDIT_TAB.POLICY,
+  'self-drive/optimization': VEHICLE_EDIT_TAB.SELF_DRIVE,
+  'self-drive/pricing': VEHICLE_EDIT_TAB.SELF_DRIVE,
+  'self-drive/terms': VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS,
+  'self-drive/delivery': VEHICLE_EDIT_TAB.POLICY,
+  'self-drive/handover-time': VEHICLE_EDIT_TAB.POLICY,
+  'with-driver/optimization': VEHICLE_EDIT_TAB.WITH_DRIVER,
+  'with-driver/pricing': VEHICLE_EDIT_TAB.WITH_DRIVER,
+  'with-driver/surcharges': VEHICLE_EDIT_TAB.WITH_DRIVER,
+  'with-driver/terms': VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS,
+};
+
+export function editTabOfLegacyManageSection(
+  section: readonly string[] | undefined,
+): VehicleEditTab {
+  return LEGACY_MANAGE_SECTION_TAB[(section ?? []).join('/')] ?? VEHICLE_EDIT_TAB.INFORMATION;
+}
+
+/**
  * Chi tiết một đơn thuê (Wave 10) — route THẬT, không phải drawer.
  *
  * Vận hành một chuyến (giao xe → đang thuê → nhận lại → hoàn cọc) kéo dài nhiều ngày và nhiều
@@ -872,6 +914,21 @@ export function vehicleTabPath(id: string, tab: VehicleEditTab): string {
 export const bookingPath = {
   detail: (id: string): string => `${ROUTES.MANAGE.BOOKINGS}/${id}`,
 };
+
+/**
+ * Tham số URL của ngăn đang xem trên màn "Quản lý đơn thuê xe" — vắng = "Tất cả". Cùng tên với
+ * tham số `preset` của `GET /bookings`: URL và API nói một từ vựng (`BOOKING_LIST_PRESET`).
+ */
+export const BOOKINGS_GROUP_PARAM = 'preset';
+
+/**
+ * Một ngăn của cột trái "Quản lý đơn thuê xe" (02/11/2026): Chờ giao xe · Đang thuê · Hoàn thành ·
+ * Đã huỷ. Là tham số của CÙNG danh sách chứ không phải một route riêng — route cũ
+ * `/bookings/awaiting-pickup` chuyển tiếp về `bookingsGroupPath(AWAITING_PICKUP)`.
+ */
+export function bookingsGroupPath(group: BookingListPreset): string {
+  return `${ROUTES.MANAGE.BOOKINGS}?${BOOKINGS_GROUP_PARAM}=${group}`;
+}
 
 /**
  * Hồ sơ một khách trong SỔ KHÁCH của gian hàng (S-01) — route thật, không phải drawer.
@@ -1033,6 +1090,11 @@ export const SHOP_SECTION = {
    * nhất của MST mà hợp đồng và báo cáo thuế đọc.
    */
   TAX: 'tax',
+  /**
+   * Chi nhánh — nơi xe thực sự nằm (02/11/2026: rời menu, về làm section ở đây theo design mới;
+   * `/shop/branches` chuyển tiếp tới section này).
+   */
+  BRANCHES: 'branches',
   /** Gói hiện hành, hạn mức chỗ, và hoá đơn thanh toán. */
   PLAN: 'plan',
 } as const;

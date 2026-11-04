@@ -2,21 +2,17 @@
 
 import { useMemo } from 'react';
 import {
+  BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
-  BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
   VEHICLE_OPERATION_STATUS,
   type VehiclePublicStatus,
 } from '@xeprime/types';
-import { ROUTES, bookingPath } from '@/constants/routes';
+import { ROUTES, bookingPath, bookingsGroupPath } from '@/constants/routes';
 import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useWorkspace } from '@/hooks/use-workspace';
-import type { BookingSort } from '@/features/bookings/types';
-
-/** "Đang cho thuê" xếp theo GIỜ TRẢ — chuyến quá hạn đứng đầu danh sách mà thẻ dẫn tới. */
-const ACTIVE_SORT: BookingSort = 'return_asc';
 
 export interface DashboardLinks {
   requests: string;
@@ -62,14 +58,16 @@ export function useDashboardLinks(branchId?: string): DashboardLinks {
       awaitingPayment: ownerTrips
         ? trips
         : branch(`${paths.bookingRequests}?status=${BOOKING_REQUEST_STATUS.AWAITING_HOLD}`),
-      awaitingPickup: ownerTrips ? trips : branch(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP),
-      active: ownerTrips
+      // Ba thẻ đơn trỏ vào đúng NGĂN của cột trái "Quản lý đơn thuê xe" (02/11/2026); ngăn tự mang
+      // cách sắp xếp mặc định của nó (đang thuê: trả xe sớm nhất trước).
+      awaitingPickup: ownerTrips
         ? trips
-        : branch(`${paths.bookings}?status=${BOOKING_STATUS.ACTIVE}&sort=${ACTIVE_SORT}`),
+        : branch(bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP)),
+      active: ownerTrips ? trips : branch(bookingsGroupPath(BOOKING_LIST_PRESET.RENTING)),
       allBookings: ownerTrips ? trips : branch(paths.bookings),
       completed: ownerTrips
         ? `${trips}?filter=${CUSTOMER_TRIP_FILTER.HISTORY}`
-        : branch(`${paths.bookings}?status=${BOOKING_STATUS.COMPLETED}`),
+        : branch(bookingsGroupPath(BOOKING_LIST_PRESET.COMPLETED)),
       calendar: branch(paths.calendar),
       availableVehicles: branch(`${paths.vehicles}?operationStatus=${VEHICLE_OPERATION_STATUS.AVAILABLE}`),
       booking: bookingPath.detail,

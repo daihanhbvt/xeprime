@@ -46,6 +46,11 @@ vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
 }));
 
+// Menu tài khoản dùng chung (`useAccountMenuItems`) có nhóm đổi ngôn ngữ — nó cần router.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}));
+
 function setUser(over: Partial<NonNullable<typeof user.value>> = {}) {
   user.value = {
     id: '01HUSER000000000000000000',

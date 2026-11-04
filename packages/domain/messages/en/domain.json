@@ -257,8 +257,8 @@
   "handoverPhotoSlot": {
     "front": "Front",
     "rear": "Rear",
-    "left": "Left",
-    "right": "Right",
+    "left": "Left side",
+    "right": "Right side",
     "odometer": "Odometer"
   },
   "handoverStatus": {
@@ -977,7 +977,9 @@
     "hold_overpay": "Overpayment refund",
     "withdrawal": "Bank withdrawal",
     "withdrawal_reversal": "Returned — transfer failed",
-    "adjustment": "Adjustment"
+    "adjustment": "Adjustment",
+    "extension_release": "Extension reservation payout",
+    "extension_refund": "Extension refund"
   },
   "withdrawalStatus": {
     "pending": "Awaiting review",
@@ -1100,7 +1102,9 @@
     "contact_reveal": "Full contact viewed",
     "bulk_create": "Created in bulk",
     "bulk_release": "Released in bulk",
-    "attach": "Attached"
+    "attach": "Attached",
+    "prep_check": "Marked prep task",
+    "prep_uncheck": "Unmarked prep task"
   },
   "billingPhase": {
     "current": "Active",
@@ -1252,7 +1256,8 @@
       "view_image": "Open driving licence photo"
     },
     "customer_document": {
-      "verify": "Verify customer document"
+      "verify": "Verify customer document",
+      "update": "Edit customer document details"
     },
     "driver": {
       "create": "Add driver",
@@ -1492,6 +1497,12 @@
       "activate": "Activate plan guide email template",
       "delete": "Delete plan guide email template",
       "send_test": "Send test plan guide email"
+    },
+    "booking_extension": {
+      "create": "Create rental extension",
+      "activate": "Rental extension took effect",
+      "cancel": "Cancel rental extension",
+      "expire": "Rental extension payment expired"
     }
   },
   "auditTargetType": {

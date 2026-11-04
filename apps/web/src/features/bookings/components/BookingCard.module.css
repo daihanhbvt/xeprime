@@ -1,0 +1,384 @@
+/*
+ * Thẻ một đơn thuê — Figma Partner-XePrime "Vehicle Card" của All Request (`23797:48619`,
+ * 02/11/2026): bo 16, viền xám, bóng 8px nhạt; DẢI ĐẦU nền gray-25 đệm 8/20; THÂN đệm 20, ba vùng
+ * (xe 450 · khách · hành động 146) dàn đều. `@container` theo bề rộng THẬT của cột danh sách (nằm
+ * cạnh cột trạng thái), không theo khổ máy.
+ */
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 8px 0 rgba(10, 13, 18, 0.04);
+  container-type: inline-size;
+}
+
+/* ── Dải đầu ─────────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  padding: var(--xp-space-sm) 20px;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-layout);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.code {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.timeline {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm) var(--xp-space-12);
+  min-width: 0;
+}
+
+.period {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  white-space: nowrap;
+}
+
+.timePoint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.clock {
+  margin-left: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: 16px;
+}
+
+.arrow {
+  color: var(--xp-color-text-tertiary);
+  font-size: 16px;
+}
+
+/* Thanh tiến độ: rãnh xám 8px, phần đã đi tô theo ngăn; bề rộng là biến lúc chạy. */
+.track {
+  position: relative;
+  flex: 0 1 320px;
+  min-width: 120px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--progress, 0%);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.info {
+  background: var(--xp-color-info-strong);
+}
+
+.success {
+  background: var(--xp-color-success);
+}
+
+.danger {
+  background: var(--xp-color-error);
+}
+
+.empty {
+  background: transparent;
+}
+
+.status {
+  flex: 0 0 auto;
+  min-width: 160px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+}
+
+.warning {
+  color: var(--xp-color-warning);
+}
+
+.status.danger {
+  background: none;
+  color: var(--xp-color-error);
+}
+
+/* ── Thân ────────────────────────────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-md);
+  padding: 20px;
+}
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 142px;
+  height: 80px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-placeholder);
+  font-size: 28px;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicleText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.vehicleTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.vehicleCode {
+  flex: none;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.vehicleName {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.specs {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.customer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.zoneLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.customerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Link có hình nút: cao 36, bo 12, chữ 14/600 — ba sắc theo design. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-6);
+  height: 36px;
+  padding: var(--xp-space-sm) 14px;
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.handle {
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.handle:hover {
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(1.04);
+}
+
+/* "Gia hạn" — viền vàng, nền vàng nhạt (Figma `23807:68543`). */
+.extend {
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.extend:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+}
+
+.extend:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.receive {
+  background: var(--xp-color-success);
+  color: var(--xp-color-text-on-dark);
+}
+
+.receive:hover {
+  color: var(--xp-color-text-on-dark);
+  filter: brightness(1.06);
+}
+
+.detail {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+}
+
+.detail:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.buttonIcon {
+  font-size: 20px;
+}
+
+/* ── Mốc container ───────────────────────────────────────────────────────── */
+
+/* Vừa: xe + khách một hàng, hành động xuống hàng riêng canh phải. */
+@container (min-width: 640px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* Rộng (desktop): đúng một hàng ba vùng như design. */
+@container (min-width: 1040px) {
+  .body {
+    grid-template-columns: minmax(0, 450px) minmax(0, 1fr) 146px;
+    align-items: center;
+  }
+
+  /* Cột khách đứng ở một mốc cố định của mọi thẻ — tên dài ngắn không làm nó xô lệch. */
+  .customer {
+    padding-left: var(--xp-space-xl);
+  }
+
+  .actions {
+    grid-column: auto;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* Điện thoại: ảnh nhỏ lại, dải đầu xếp dọc, nút trải hết chiều ngang, vùng chạm 44px. */
+@container (max-width: 520px) {
+  .thumb {
+    width: 104px;
+    height: 64px;
+  }
+
+  .timeline {
+    justify-content: flex-start;
+  }
+
+  .track {
+    flex-basis: 100%;
+  }
+
+  .status {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .action {
+    flex: 1;
+    height: 44px;
+  }
+}

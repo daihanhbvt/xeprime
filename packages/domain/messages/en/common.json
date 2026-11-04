@@ -249,7 +249,10 @@
       "maxReached": "{count, plural, one {# file} other {# files}} maximum",
       "downloadFile": "Download {name}",
       "removeFile": "Remove file {name}",
-      "legacyNote": "This older document must be re-uploaded to keep it private"
+      "legacyNote": "This older document must be re-uploaded to keep it private",
+      "retryFile": "Retry {name}",
+      "dropFile": "Discard {name}",
+      "uploadingFile": "Uploading {name}"
     },
     "dateRange": {
       "fromDate": "From date",

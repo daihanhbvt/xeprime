@@ -163,7 +163,8 @@ describe('VehiclePublicationTaskItem — nháp', () => {
     expect(screen.getByText('Còn thiếu: Giá tự lái (ngày thường).')).toBeTruthy();
     // Mục thiếu đầu tiên là GIÁ, nên nút mở thẳng tab giá chứ không thả vào tab mặc định.
     const cta = screen.getByRole('link', { name: /Hoàn tất hồ sơ/ });
-    expect(cta.getAttribute('href')).toContain('/edit?tab=pricing');
+    // Thiếu giá tự lái mở ĐÚNG tab tự lái của mục Dịch vụ xe (03/11/2026).
+    expect(cta.getAttribute('href')).toContain('/edit?tab=self-drive');
     // Không có nút gửi duyệt khi hồ sơ còn thiếu.
     expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
   });

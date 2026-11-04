@@ -249,7 +249,10 @@
       "maxReached": "Tối đa {count, plural, other {# tệp}}",
       "downloadFile": "Tải xuống {name}",
       "removeFile": "Gỡ tệp {name}",
-      "legacyNote": "Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư"
+      "legacyNote": "Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư",
+      "retryFile": "Thử lại {name}",
+      "dropFile": "Bỏ {name}",
+      "uploadingFile": "Đang tải {name}"
     },
     "dateRange": {
       "fromDate": "Từ ngày",

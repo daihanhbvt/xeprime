@@ -61,9 +61,48 @@ export const DRIVER_LINK_STATUS_META: Readonly<Record<DriverLinkStatus, StatusMe
   [DRIVER_LINK_STATUS.ENDED]: { label: 'Đã kết thúc', color: STATUS_COLOR.NEUTRAL },
 };
 
+/** Giá trị lọc `linkStatus` = hai trạng thái LỊCH SỬ (đã từ chối · đã kết thúc). */
+export const DRIVER_LINK_STATUS_FILTER_CLOSED = 'closed';
+
+export const DRIVER_LINK_CLOSED_STATUSES: readonly DriverLinkStatus[] = [
+  DRIVER_LINK_STATUS.DECLINED,
+  DRIVER_LINK_STATUS.ENDED,
+];
+
 export function isDriverLinkStatus(value: unknown): value is DriverLinkStatus {
   return typeof value === 'string' && (DRIVER_LINK_STATUS_VALUES as string[]).includes(value);
 }
+
+/**
+ * Lọc "Vận hành" của danh sách tài xế: đang có chuyến (một đơn chiếm lịch đang gán cho liên kết) ·
+ * rảnh. Cùng phép đếm với `activeBookingCount` của `DriverDto`.
+ */
+export const DRIVER_OPERATION_FILTER = {
+  ON_TRIP: 'on_trip',
+  IDLE: 'idle',
+} as const;
+
+export type DriverOperationFilter =
+  (typeof DRIVER_OPERATION_FILTER)[keyof typeof DRIVER_OPERATION_FILTER];
+export const DRIVER_OPERATION_FILTER_VALUES = Object.values(
+  DRIVER_OPERATION_FILTER,
+) as DriverOperationFilter[];
+
+/**
+ * Lọc "Cần đối chiếu giấy tờ": liên kết CÒN MỞ mà tài khoản chưa có bằng lái đã xác thực còn hạn,
+ * hoặc họ tên trên bằng lệch với tên bên thuê nhập khi mời (`holderNameDiffers`).
+ */
+export const DRIVER_LICENCE_CHECK_FILTER = 'needed';
+
+/** Sắp xếp danh sách tài xế. `status` (lời mời chờ trả lời lên đầu, rồi tên) là mặc định của server. */
+export const DRIVER_LIST_SORT = {
+  STATUS: 'status',
+  NEWEST: 'newest',
+  NAME_ASC: 'name_asc',
+} as const;
+
+export type DriverListSort = (typeof DRIVER_LIST_SORT)[keyof typeof DRIVER_LIST_SORT];
+export const DRIVER_LIST_SORT_VALUES = Object.values(DRIVER_LIST_SORT) as DriverListSort[];
 
 /** Ai chấm dứt liên kết — ghi lại để hai phía đọc đúng câu chuyện. */
 export const DRIVER_LINK_END_PARTY = {

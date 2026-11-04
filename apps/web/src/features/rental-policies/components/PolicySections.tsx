@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import {
   useFieldArray,
   useFormState,
@@ -20,7 +20,6 @@ import {
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
-  DELIVERY_TIER_FEE_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
   type CollateralMode,
@@ -34,6 +33,7 @@ import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { cx } from '@/lib/cx';
 import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
 import { PolicyInfoTip } from './PolicyInfoTip';
@@ -42,6 +42,18 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
 import styles from './PolicySections.module.css';
 
 type LegacyTierView = { minDays: number; percent: number };
+
+/**
+ * Bố cục PHẲNG (màn sửa xe, design `23731:37932`): các khối là phần của MỘT thẻ do nơi gọi dựng,
+ * cách nhau bằng vạch kẻ — không viền thẻ lồng trong thẻ. Dòng nhắc trùng với công tắc/lựa chọn
+ * ngay cạnh nó bị bỏ; công thức và bản xem trước đi vào icon ⓘ cạnh tiêu đề. Trang chính sách gian
+ * hàng không bọc nên giữ bố cục thẻ như cũ.
+ */
+const FlatLayout = createContext(false);
+
+export function PolicyFlatLayout({ children }: { children: ReactNode }) {
+  return <FlatLayout.Provider value>{children}</FlatLayout.Provider>;
+}
 
 /** Năm khối của một bộ chính sách thuê — mã để nơi gọi chọn khối nào hiện. */
 export const POLICY_BLOCK = {
@@ -94,9 +106,10 @@ export function PolicySections({
   const shown = ALL_BLOCKS.filter((block) => blocks.includes(block));
   const n = (block: PolicyBlock, title: string) =>
     numbered ? `${shown.indexOf(block) + 1}. ${title}` : title;
+  const flat = useContext(FlatLayout);
 
-  return (
-    <div className={styles.stack}>
+  const body = (
+    <>
       {shown.includes(POLICY_BLOCK.COLLATERAL) ? (
         <CollateralPolicySection
           control={control}
@@ -134,8 +147,9 @@ export function PolicySections({
           disabled={disabled}
         />
       ) : null}
-    </div>
+    </>
   );
+  return flat ? body : <div className={styles.stack}>{body}</div>;
 }
 
 function SectionTitle({
@@ -147,11 +161,21 @@ function SectionTitle({
   infoLabel: string;
   children: ReactNode;
 }) {
+  const flat = useContext(FlatLayout);
   return (
     <div className={styles.titleRow}>
-      <h2 className={styles.cardTitle}>{title}</h2>
+      <h2 className={cx(styles.cardTitle, flat && styles.flatTitle)}>{title}</h2>
       <PolicyInfoTip label={infoLabel}>{children}</PolicyInfoTip>
     </div>
+  );
+}
+
+/** Công thức / bản xem trước trong icon ⓘ của tiêu đề khối (bố cục phẳng). */
+function TipPreview({ title, text }: { title: string; text: string }) {
+  return (
+    <span className={styles.tipPreview}>
+      <strong>{title}</strong> {text}
+    </span>
   );
 }
 
@@ -209,6 +233,7 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
   const control = outerControl as unknown as Control<PolicyFormValues>;
   const t = useTranslations('Vehicles.pricing.deposit');
   const domainLabel = useDomainLabel();
+  const flat = useContext(FlatLayout);
   const mode = useWatch({ control, name: 'collateralMode' });
 
   /*
@@ -228,7 +253,7 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
   }));
 
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <SectionTitle title={title} infoLabel={t('tipLabel')}>
         {t('hint')}
       </SectionTitle>
@@ -274,7 +299,8 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
         />
       ) : null}
 
-      {mode === COLLATERAL_MODE.NONE ? (
+      {/* Bản phẳng: mô tả của lựa chọn "Miễn thế chấp" đã nói đúng điều này. */}
+      {mode === COLLATERAL_MODE.NONE && !flat ? (
         <Alert type="info" showIcon title={t('noneTitle')} description={t('noneBody')} />
       ) : null}
     </section>
@@ -319,12 +345,22 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
   const crossError = tierErrors?.root?.message ?? tierErrors?.message;
   const tiersComplete =
     tiers.length > 0 && tiers.every((tier) => tier?.toKm != null) && radius != null;
+  const flat = useContext(FlatLayout);
+  const summary = tiersComplete
+    ? deliverySummaryText(
+        { deliveryTiers: tiers, deliveryMaxRadiusKm: radius },
+        { money: fmt.money, free: t('free'), quote: t('summaryQuote') },
+      )
+    : null;
 
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel={t('tipLabel')}>
           {t('hint')}
+          {flat && enabled && summary ? (
+            <TipPreview title={t('previewTitle')} text={summary} />
+          ) : null}
         </SectionTitle>
         <SwitchField
           control={control}
@@ -374,44 +410,16 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
                     />
                   </div>
                 </div>
-                {/*
-                 * Hai cách tính LOẠI TRỪ nhau (ADR 0064): trọn gói cho cả bậc, hoặc đơn giá theo km
-                 * nhân khoảng cách thật. Chỉ ô của cách đang chọn được dựng — form không giữ hai số.
-                 */}
+                {/* Mỗi bậc MỘT phí trọn gói — phí theo km đã gỡ (ADR 0078). */}
                 <div className={styles.feeCell}>
-                  <RadioGroupField
+                  <NumberField
                     control={control}
-                    name={`deliveryTiers.${index}.feeMode`}
-                    label={t('feeModeLabel', { index: index + 1 })}
-                    vertical={false}
-                    options={[
-                      { value: DELIVERY_TIER_FEE_MODE.FLAT, label: t('feeModeFlat') },
-                      { value: DELIVERY_TIER_FEE_MODE.PER_KM, label: t('feeModePerKm') },
-                    ]}
+                    name={`deliveryTiers.${index}.fee`}
+                    label={t('tierFeeLabel', { index: index + 1 })}
+                    money
+                    help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
                     disabled={disabled}
                   />
-                  {tiers[index]?.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM ? (
-                    <NumberField
-                      key="perKm"
-                      control={control}
-                      name={`deliveryTiers.${index}.perKm`}
-                      label={t('tierPerKmLabel', { index: index + 1 })}
-                      money
-                      addonAfter={t('perKmUnit')}
-                      help={t('perKmHint')}
-                      disabled={disabled}
-                    />
-                  ) : (
-                    <NumberField
-                      key="fee"
-                      control={control}
-                      name={`deliveryTiers.${index}.fee`}
-                      label={t('tierFeeLabel', { index: index + 1 })}
-                      money
-                      help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
-                      disabled={disabled}
-                    />
-                  )}
                 </div>
                 {hideControls ? null : (
                   <Button
@@ -434,14 +442,7 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
             {hideControls ? null : (
               <Button
                 icon={<PlusOutlined aria-hidden="true" />}
-                onClick={() =>
-                  append({
-                    toKm: null,
-                    feeMode: DELIVERY_TIER_FEE_MODE.FLAT,
-                    fee: null,
-                    perKm: null,
-                  })
-                }
+                onClick={() => append({ toKm: null, fee: null })}
                 disabled={disabled}
               >
                 {t('addTier')}
@@ -473,25 +474,16 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
             />
           </div>
 
-          {tiersComplete ? (
+          {summary && !flat ? (
             <div className={styles.previewCard}>
               <InfoCircleOutlined className={styles.previewIcon} aria-hidden="true" />
               <span>
-                <strong>{t('previewTitle')}</strong>{' '}
-                {deliverySummaryText(
-                  { deliveryTiers: tiers, deliveryMaxRadiusKm: radius },
-                  {
-                    money: fmt.money,
-                    free: t('free'),
-                    quote: t('summaryQuote'),
-                    perKm: (amount) => t('perKmSummary', { amount }),
-                  },
-                )}
+                <strong>{t('previewTitle')}</strong> {summary}
               </span>
             </div>
           ) : null}
         </>
-      ) : (
+      ) : flat ? null : (
         <p className={styles.disabledNote}>{t('disabledNote')}</p>
       )}
     </section>
@@ -530,12 +522,18 @@ export function MileagePolicySection<T extends PolicyFormValues>({
   const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
   const includedKm = useWatch({ control, name: 'includedDistanceKmPerDay' });
   const feePerKm = useWatch({ control, name: 'excessDistanceFeePerKm' });
+  const flat = useContext(FlatLayout);
+  const preview =
+    includedKm != null && feePerKm != null
+      ? t('preview', { km: fmt.km(includedKm), fee: fmt.money(String(feePerKm)) })
+      : t('previewIncomplete');
 
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel={t('tipLabel')}>
           {t('hint')}
+          {flat && enabled ? <TipPreview title={t('previewTitle')} text={preview} /> : null}
         </SectionTitle>
         <SwitchField
           control={control}
@@ -579,16 +577,14 @@ export function MileagePolicySection<T extends PolicyFormValues>({
               />
             </div>
           </div>
-          <div className={styles.formulaCard}>
-            <span className={styles.previewTitle}>{t('previewTitle')}</span>
-            <span className={styles.previewText}>
-              {includedKm != null && feePerKm != null
-                ? t('preview', { km: fmt.km(includedKm), fee: fmt.money(String(feePerKm)) })
-                : t('previewIncomplete')}
-            </span>
-          </div>
+          {flat ? null : (
+            <div className={styles.formulaCard}>
+              <span className={styles.previewTitle}>{t('previewTitle')}</span>
+              <span className={styles.previewText}>{preview}</span>
+            </div>
+          )}
         </>
-      ) : (
+      ) : flat ? null : (
         <p className={styles.disabledNote}>{t('disabledNote')}</p>
       )}
     </section>
@@ -608,11 +604,14 @@ function OvertimeSection({
   const fmt = useAppFormat();
 
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
+  const flat = useContext(FlatLayout);
+  const formula = fee != null ? t('formula', { fee: fmt.money(String(fee)) }) : t('formulaNone');
 
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <SectionTitle title={title} infoLabel={t('tipLabel')}>
         {t('hint')}
+        {flat ? <TipPreview title={t('formulaTitle')} text={formula} /> : null}
       </SectionTitle>
       <div className={styles.fieldRow}>
         <div className={styles.overtimeField}>
@@ -662,12 +661,12 @@ function OvertimeSection({
           />
         </div>
       </div>
-      <div className={styles.formulaCard}>
-        <span className={styles.previewTitle}>{t('formulaTitle')}</span>
-        <span className={styles.previewText}>
-          {fee != null ? t('formula', { fee: fmt.money(String(fee)) }) : t('formulaNone')}
-        </span>
-      </div>
+      {flat ? null : (
+        <div className={styles.formulaCard}>
+          <span className={styles.previewTitle}>{t('formulaTitle')}</span>
+          <span className={styles.previewText}>{formula}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -693,6 +692,7 @@ function DiscountSection({
   const { errors } = useFormState({ control, name: 'discountTiers' });
   const { fields, append, remove } = useFieldArray({ control, name: 'discountTiers' });
   const hideControls = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && disabled;
+  const flat = useContext(FlatLayout);
 
   const optionsFor = (index: number) =>
     LONG_TERM_PACKAGE_MONTHS.filter(
@@ -708,7 +708,7 @@ function DiscountSection({
   const crossError = tierErrors?.root?.message ?? tierErrors?.message;
 
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel={t('tipLabel')}>
           {t('hint')}

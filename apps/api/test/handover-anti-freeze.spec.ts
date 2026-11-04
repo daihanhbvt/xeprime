@@ -84,7 +84,7 @@ const handovers = new HandoversService(
   asService,
   bookings,
   odometer,
-  new MaintenanceService(asService, occupancy, odometer, files, audit, receipts),
+  new MaintenanceService(asService, odometer, files, audit, receipts),
   files,
   audit,
 );

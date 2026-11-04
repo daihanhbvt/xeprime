@@ -3,6 +3,9 @@ import {
   DOCUMENT_UPLOAD_MAX_BYTES,
   DOCUMENT_UPLOAD_MIME_TYPES,
   MAINTENANCE_BOARD_FILTER_VALUES,
+  MAINTENANCE_BOARD_SORT,
+  MAINTENANCE_BOARD_SORT_VALUES,
+  type MaintenanceBoardSort,
   MAINTENANCE_STATUS_VALUES,
   MAINTENANCE_TYPE_VALUES,
   ODOMETER_CORRECTION_REASON_VALUES,
@@ -174,9 +177,18 @@ export class MaintenanceRecordDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customTypeName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) title!: string | null;
   @ApiProperty({ enum: MAINTENANCE_STATUS_VALUES }) status!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)',
+  })
   plannedStartAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Không còn ghi (ADR 0079) — chỉ phiếu cũ đã đóng còn giá trị lịch sử',
+  })
   plannedEndAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   completedAt!: string | null;
@@ -219,12 +231,22 @@ export class SaveMaintenanceRecordDto {
   @MaxLength(255)
   title?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc bắt đầu dự kiến' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedStartAt?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc kết thúc dự kiến' })
+  /** App cũ còn gửi; server bỏ qua (ADR 0079). Vẫn soát dạng để lệnh sai không lọt qua im lặng. */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Bị bỏ qua (ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedEndAt?: string | null;
@@ -437,11 +459,12 @@ export class MaintenanceBoardQueryDto {
   to?: string;
 
   @ApiPropertyOptional({
-    description: 'remaining_asc | remaining_desc | name_asc | updated_desc',
+    enum: MAINTENANCE_BOARD_SORT_VALUES,
+    default: MAINTENANCE_BOARD_SORT.REMAINING_ASC,
   })
   @IsOptional()
-  @IsIn(['remaining_asc', 'remaining_desc', 'name_asc', 'updated_desc'])
-  sort?: 'remaining_asc' | 'remaining_desc' | 'name_asc' | 'updated_desc';
+  @IsIn(MAINTENANCE_BOARD_SORT_VALUES)
+  sort?: MaintenanceBoardSort;
 
   @ApiPropertyOptional({ minimum: 1 })
   @IsOptional()

@@ -1,0 +1,72 @@
+/*
+ * Figma "_Badge" có chấm (Partner-XePrime): bo 6, đệm 2/8, chữ 14/500, chấm 6px cùng màu chữ.
+ * Nền nhạt + viền cùng sắc chứ không chỉ đổi màu chữ — người mù màu vẫn phân biệt được bằng hình.
+ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.success {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.danger {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.warning {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.info {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+/* Hồng — "Từ chối phục vụ" (Figma `23777:53057`), cùng họ token với chip thuê dài hạn. */
+.accent {
+  border-color: var(--xp-color-pink-border);
+  background: var(--xp-color-pink-bg);
+  color: var(--xp-color-pink);
+}
+
+.neutral {
+  border-color: var(--xp-color-border);
+}
+
+/* Biến thể gọn — chip trạng thái trên thẻ xe (Figma `23655:36621`): không chấm, chữ 12/18. */
+.compact {
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.compact::before {
+  display: none;
+}

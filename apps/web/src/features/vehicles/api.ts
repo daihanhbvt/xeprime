@@ -22,6 +22,7 @@ import type {
   VehicleFilters,
   VehicleAlertGroup,
   VehicleListItem,
+  VehicleNeedsActionCount,
   VehicleSource,
   VehicleSourceContractFile,
   VehicleStats,
@@ -103,6 +104,13 @@ export function fetchVehicleAlerts(ids: string[]): Promise<VehicleAlertGroup[]> 
   if (ids.length === 0) return Promise.resolve([]);
   return apiGet<VehicleAlertGroup[]>('/vehicles/alerts', { ids: ids.join(',') });
 }
+
+/**
+ * Số xe có việc "cần xử lý" (giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về khi đăng chợ, thiếu KM
+ * trả) — huy hiệu mục menu Danh sách xe. Cùng phép tính với chip trên thẻ xe, server đếm.
+ */
+export const fetchVehicleNeedsActionCount = (): Promise<VehicleNeedsActionCount> =>
+  apiGet<VehicleNeedsActionCount>('/vehicles/needs-action-count');
 
 /**
  * Đếm đội xe theo trạng thái vận hành — nói về cả đội xe của phạm vi đang xem, không theo trang

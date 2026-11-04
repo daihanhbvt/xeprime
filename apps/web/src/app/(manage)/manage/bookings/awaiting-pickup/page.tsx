@@ -1,24 +1,26 @@
-'use client';
-
-import { Spin } from 'antd';
-import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { BOOKING_LIST_PRESET } from '@xeprime/types';
-import { BookingsListView } from '@/features/bookings/components/BookingsListView';
-import styles from '../bookings-page.module.css';
+import { BOOKINGS_GROUP_PARAM, bookingsGroupPath } from '@/constants/routes';
 
 /**
- * "Chờ giao xe" — CÙNG danh sách đơn, cùng endpoint, chỉ khoá sẵn một nhóm việc.
+ * "Chờ giao xe" từ 02/11/2026 là một NGĂN ở cột trái của màn "Quản lý đơn thuê xe" (design
+ * Partner-XePrime) — route cũ chỉ còn chuyển tiếp, để link trong thông báo, email và bookmark
+ * không chết (sổ cái `docs/design/09_PARTNER_REDESIGN.md` §3.2).
  *
- * Đây là một route chứ không phải `/manage/bookings?preset=…` vì mục menu đang mở được quyết
- * bằng `matchSelectedKey(pathname, …)`, và `usePathname()` không mang theo query (lý do đầy đủ
- * ở `ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP`). Các bộ lọc còn lại — từ khoá, trạng thái, sắp
- * xếp, trang — vẫn sống ở searchParams như mọi danh sách khác, nên link vẫn gửi được nguyên vẹn.
+ * Mang theo mọi tham số lọc của link cũ (từ khoá, chi nhánh, dịch vụ, sắp xếp, trang) trừ chính
+ * tham số ngăn — link cũ không có nó, và ngăn ở đây luôn là "Chờ giao xe".
  */
-export default function BookingsAwaitingPickupPage() {
-  // useBookingFilters đọc useSearchParams → cần Suspense trong route tĩnh (Next).
-  return (
-    <Suspense fallback={<Spin size="large" className={styles.state} />}>
-      <BookingsListView preset={BOOKING_LIST_PRESET.AWAITING_PICKUP} />
-    </Suspense>
-  );
+export default async function BookingsAwaitingPickupPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (key === BOOKINGS_GROUP_PARAM || value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) params.append(key, item);
+  }
+  const rest = params.toString();
+  const target = bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP);
+  redirect(rest ? `${target}&${rest}` : target);
 }

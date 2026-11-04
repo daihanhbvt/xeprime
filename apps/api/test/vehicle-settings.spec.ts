@@ -12,7 +12,6 @@ import {
   DRIVER_SURCHARGE_KIND,
   DRIVER_SURCHARGE_KIND_VALUES,
   DRIVER_SURCHARGE_UNIT,
-  HANDOVER_WINDOW_KIND,
   IDENTITY_VERIFY_METHOD,
   MEMBERSHIP_STATUS,
   ROUTE_TYPE,
@@ -162,7 +161,6 @@ afterEach(async () => {
   await prisma.bookingSurcharge.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleOccupancy.deleteMany({ where: { tenantId: tenants } });
   await prisma.booking.deleteMany({ where: { tenantId: tenants } });
-  await prisma.vehicleHandoverWindow.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleOperationSetting.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleServiceSetting.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleDriverSurchargeRule.deleteMany({ where: { tenantId: tenants } });
@@ -256,99 +254,41 @@ describe('Phạm vi gian hàng — thiết lập của xe không rò sang gian h
   });
 });
 
-describe('Khung giờ giao nhận — luật ở DB, không ở form', () => {
-  maybe(
-    'CHECK từ chối khoảng phút vô nghĩa; EXCLUDE từ chối hai khung cùng loại chồng nhau',
-    async () => {
-      await expect(
-        prisma.vehicleHandoverWindow.create({
-          data: {
-            id: newId(),
-            tenantId: tenantA,
-            vehicleId: vehicleA,
-            kind: HANDOVER_WINDOW_KIND.PICKUP,
-            startMinute: 600,
-            endMinute: 600,
-          },
-        }),
-      ).rejects.toThrow();
-
-      await prisma.vehicleHandoverWindow.create({
-        data: {
-          id: newId(),
-          tenantId: tenantA,
-          vehicleId: vehicleA,
-          kind: HANDOVER_WINDOW_KIND.PICKUP,
-          startMinute: 360,
-          endMinute: 720,
-        },
-      });
-      // Chồng lấn cùng loại → 23P01.
-      await expect(
-        prisma.vehicleHandoverWindow.create({
-          data: {
-            id: newId(),
-            tenantId: tenantA,
-            vehicleId: vehicleA,
-            kind: HANDOVER_WINDOW_KIND.PICKUP,
-            startMinute: 700,
-            endMinute: 900,
-          },
-        }),
-      ).rejects.toThrow();
-      // Kề nhau (nửa mở) và khác loại thì hợp lệ.
-      await prisma.vehicleHandoverWindow.createMany({
-        data: [
-          {
-            id: newId(),
-            tenantId: tenantA,
-            vehicleId: vehicleA,
-            kind: HANDOVER_WINDOW_KIND.PICKUP,
-            startMinute: 720,
-            endMinute: 900,
-          },
-          {
-            id: newId(),
-            tenantId: tenantA,
-            vehicleId: vehicleA,
-            kind: HANDOVER_WINDOW_KIND.RETURN,
-            startMinute: 360,
-            endMinute: 720,
-          },
-        ],
-      });
-      const rows = await prisma.vehicleHandoverWindow.count({ where: { vehicleId: vehicleA } });
-      expect(rows).toBe(3);
-    },
-  );
-
-  maybe('giờ nhận/trả ngoài khung bị SERVER từ chối bằng mã lỗi riêng', async () => {
-    await settings.saveOperation(tenantA, vehicleA, ownerA, {
-      turnaroundBufferMinutes: 0,
+/*
+ * Khung giờ giao/nhận ĐÃ GỠ (ADR 0078): xe nhận/trả mọi giờ. App phát hành trước đó vẫn gửi hai
+ * mảng khung giờ — server nhận rồi bỏ qua, và đọc luôn trả rỗng.
+ */
+describe('Khung giờ giao nhận đã gỡ — API giữ hình dạng cho app cũ', () => {
+  maybe('lưu kèm khung giờ không lỗi, khung giờ bị bỏ qua, đọc trả rỗng', async () => {
+    const saved = await settings.saveOperation(tenantA, vehicleA, ownerA, {
+      turnaroundBufferMinutes: 60,
       pickupWindows: [{ start: '08:00', end: '18:00' }],
       returnWindows: [{ start: '08:00', end: '18:00' }],
     });
+    expect(saved).toMatchObject({
+      turnaroundBufferMinutes: 60,
+      pickupWindows: [],
+      returnWindows: [],
+    });
 
-    // 05:00 giờ VN — ngoài khung nhận.
-    await expect(
-      settings.assertHandoverWindows(prisma, vehicleA, vnDay(3, 5), vnDay(4, 10)),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.HANDOVER_WINDOW_VIOLATION, details: { kind: 'pickup' } },
+    // Client mới không gửi hai trường đó nữa.
+    const next = await settings.saveOperation(tenantA, vehicleA, ownerA, {
+      turnaroundBufferMinutes: 30,
     });
-    // Giờ nhận hợp lệ, giờ TRẢ ngoài khung.
-    await expect(
-      settings.assertHandoverWindows(prisma, vehicleA, vnDay(3, 10), vnDay(4, 22)),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.HANDOVER_WINDOW_VIOLATION, details: { kind: 'return' } },
+    expect(next).toMatchObject({
+      turnaroundBufferMinutes: 30,
+      pickupWindows: [],
+      returnWindows: [],
     });
-    // Cả hai trong khung → không ném.
-    await expect(
-      settings.assertHandoverWindows(prisma, vehicleA, vnDay(3, 10), vnDay(4, 16)),
-    ).resolves.toBeUndefined();
-    // Không cấu hình khung nào = nhận mọi giờ.
-    await expect(
-      settings.assertHandoverWindows(prisma, vehicleB, vnDay(3, 5), vnDay(4, 23)),
-    ).resolves.toBeUndefined();
+
+    const terms = await settings.rentalTermsSnapshotFor(
+      prisma,
+      vehicleA,
+      SERVICE_TYPE.SELF_DRIVE,
+      null,
+    );
+    expect(terms.pickupWindows).toEqual([]);
+    expect(terms.returnWindows).toEqual([]);
   });
 });
 
@@ -541,13 +481,12 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
 describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý do', () => {
   maybe('từng điều kiện trả đúng mã chặn của nó', async () => {
     const base = await settings.serviceSettingFor(prisma, vehicleA, SERVICE_TYPE.SELF_DRIVE);
-    const windows = { pickup: [], return: [] };
     const now = new Date();
     const at = (h: number) => new Date(now.getTime() + h * 3600_000);
 
     // Chưa bật.
     expect(
-      settings.evaluateAutoAccept(base, windows, {
+      settings.evaluateAutoAccept(base, {
         serviceType: SERVICE_TYPE.SELF_DRIVE,
         pickupAt: at(48),
         returnAt: at(72),
@@ -570,17 +509,17 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
      * trước 30 ngày đều phải tự nhận.
      */
     expect(
-      settings.evaluateAutoAccept(on, windows, { ...input, pickupAt: at(2), returnAt: at(30) }),
+      settings.evaluateAutoAccept(on, { ...input, pickupAt: at(2), returnAt: at(30) }),
     ).toBeNull();
     expect(
-      settings.evaluateAutoAccept(on, windows, {
+      settings.evaluateAutoAccept(on, {
         ...input,
         pickupAt: at(24 * 30),
         returnAt: at(24 * 31),
       }),
     ).toBeNull();
     expect(
-      settings.evaluateAutoAccept(on, windows, {
+      settings.evaluateAutoAccept(on, {
         ...input,
         pickupAt: at(48),
         returnAt: at(72),
@@ -590,20 +529,22 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
     expect(
       settings.evaluateAutoAccept(
         { ...on, requireTermsAcceptance: true, termsText: 'x' },
-        windows,
         { ...input, pickupAt: at(48), returnAt: at(72), termsAccepted: false },
       ),
     ).toBe(AUTO_ACCEPT_BLOCKER.TERMS_NOT_ACCEPTED);
     expect(
-      settings.evaluateAutoAccept({ ...on, minRentalMinutes: 720 }, windows, {
-        ...input,
-        pickupAt: at(48),
-        returnAt: at(50),
-      }),
+      settings.evaluateAutoAccept(
+        { ...on, minRentalMinutes: 720 },
+        {
+          ...input,
+          pickupAt: at(48),
+          returnAt: at(50),
+        },
+      ),
     ).toBe(AUTO_ACCEPT_BLOCKER.BELOW_MIN_DURATION);
     // Có tài xế + cần giữ chỗ: không hứa tài xế trước hàng giờ (ADR 0028 điều 6).
     expect(
-      settings.evaluateAutoAccept(on, windows, {
+      settings.evaluateAutoAccept(on, {
         ...input,
         serviceType: SERVICE_TYPE.WITH_DRIVER,
         pickupAt: at(48),
@@ -613,7 +554,7 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
     ).toBe(AUTO_ACCEPT_BLOCKER.HOLD_REQUIRED_WITH_DRIVER);
     // Dài hạn không bao giờ tự nhận.
     expect(
-      settings.evaluateAutoAccept(on, windows, {
+      settings.evaluateAutoAccept(on, {
         ...input,
         serviceType: SERVICE_TYPE.LONG_TERM,
         pickupAt: at(48),
@@ -622,7 +563,7 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
     ).toBe(AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED);
     // Đủ điều kiện.
     expect(
-      settings.evaluateAutoAccept(on, windows, { ...input, pickupAt: at(48), returnAt: at(72) }),
+      settings.evaluateAutoAccept(on, { ...input, pickupAt: at(48), returnAt: at(72) }),
     ).toBeNull();
   });
 

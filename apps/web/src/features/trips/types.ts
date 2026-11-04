@@ -38,3 +38,6 @@ export type ProvideRefundAccountInput = Schemas['ProvideRefundAccountDto'];
 
 /** Xem trước lượt khách tự huỷ — số được hoàn / số mất do server tính (ADR 0064). */
 export type CustomerTripCancelPreview = Schemas['CustomerTripCancelPreviewDto'];
+
+/** Phụ lục gia hạn nhìn từ phía khách (ADR 0077) — không có dòng phía chủ xe. */
+export type CustomerTripExtension = Schemas['CustomerBookingExtensionDto'];

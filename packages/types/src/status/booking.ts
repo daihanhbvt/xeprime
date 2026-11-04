@@ -182,9 +182,17 @@ export function isNoShowGracePassed(pickupAt: Date | string, now: Date = new Dat
  *
  * `awaiting_pickup` = đơn đã hình thành nhưng XE CHƯA RỜI BÃI. Nó cắt ngang `reserved` và
  * `confirmed`, nên không có một `status` nào diễn đạt được nó.
+ *
+ * Ba nhóm còn lại (02/11/2026) là cột trái của màn "Quản lý đơn thuê xe" site partner: `renting`
+ * (xe đang ở ngoài với khách), `completed`, `cancelled` (gồm cả khách không đến). Bốn nhóm phủ
+ * kín mọi đơn mà luồng hiện tại sinh ra và không chồng lên nhau — số đếm của chúng
+ * (`BookingPageMetaDto.presetCounts`) cộng lại đúng bằng "Tất cả".
  */
 export const BOOKING_LIST_PRESET = {
   AWAITING_PICKUP: 'awaiting_pickup',
+  RENTING: 'renting',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
 } as const;
 
 export type BookingListPreset = (typeof BOOKING_LIST_PRESET)[keyof typeof BOOKING_LIST_PRESET];

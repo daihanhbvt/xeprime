@@ -103,6 +103,14 @@ export interface AppFormat {
    */
   minutesDuration: (totalMinutes: number) => string;
   /**
+   * Một khoảng thời gian chỉ bằng ĐƠN VỊ LỚN NHẤT: `2 ngày` · `5 giờ` · `12 phút` — dòng tiến độ
+   * trên thẻ đơn ("còn 1 giờ"), nơi đọc lướt cần một con số chứ không cần độ chính xác tới phút.
+   * Làm tròn XUỐNG (chưa đủ một giờ thì vẫn là phút), âm thì 0.
+   */
+  roughDuration: (totalMinutes: number) => string;
+  /** Ngày-tháng ngắn theo locale, giờ Việt Nam: `29/10` · `10/29`. */
+  dayMonth: (value: IsoDateTimeString | null | undefined) => string;
+  /**
    * Cả khoảng thuê trên MỘT dòng: `14/09 17:00 → 15/09 17:00 (1 ngày)`.
    *
    * Dùng ở dòng tóm tắt `/search`, và cố ý ghép từ đúng những mảnh mà ô chọn thời gian đang
@@ -279,6 +287,13 @@ export function createAppFormat(
     return t('units.hourAndMinute', { hours, minutes });
   };
 
+  const roughDuration = (totalMinutes: number) => {
+    const total = Math.max(0, Math.floor(totalMinutes));
+    if (total >= 24 * 60) return t('units.day', { count: Math.floor(total / (24 * 60)) });
+    if (total >= 60) return t('units.hour', { count: Math.floor(total / 60) });
+    return t('units.minute', { count: total });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -329,6 +344,8 @@ export function createAppFormat(
     rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
     rentalDuration: duration,
     minutesDuration,
+    roughDuration,
+    dayMonth: (value) => (value ? toAppTz(value).format(pattern.dayMonth) : empty),
     rentalRangeSummary: (from, to) => {
       /*
        * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm
