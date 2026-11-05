@@ -1,0 +1,320 @@
+/*
+ * Thẻ chuyến trong cột Kanban — Figma Partner-XePrime "_Kanban Item" (`23895:15196`, `23895:15208`,
+ * 05/11/2026). Số đo lấy thẳng từ design: đệm 16, khối cách 12, bo 16, viền gray-low200, bóng 6px rất
+ * nhạt; chữ 14/20 cho mã · khách · ô lịch, 12/18 cho thông số xe và lưới tiền.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.clickable:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.card[aria-busy='true'] {
+  opacity: 0.85;
+}
+
+/* ── Dải đầu: ⋮⋮ · mã (14/500 xám đậm) … viên dịch vụ bên phải ─────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.headStart {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.code {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Xe: ảnh 76×48 bo 8 · tên 16/600 · biển số + thông số 12/18 một dòng ──── */
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.thumb {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  width: 76px;
+  height: 48px;
+  border-radius: var(--xp-border-radius-chip);
+  background: var(--xp-color-bg-muted);
+}
+
+.vehicleText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.vehicleName {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.vehicleName:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.tags {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.plate {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.specs {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Khách: nét đứt phía trên · ảnh 32 + tên/SĐT 14/20 · ba nút liên hệ bên phải ── */
+
+.customer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding-top: var(--xp-space-12);
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.customerIdentity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── Ô lịch: nền gray-50, bo 12, đệm 12, dòng cách 8; nhãn 132px xám, giá trị 14/500 ── */
+
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.factLabel {
+  color: var(--xp-color-text-tertiary);
+}
+
+.factValue {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.factHint {
+  color: var(--xp-color-info-strong);
+  font-size: 16px;
+}
+
+/* ── Lưới tiền ba cột: nhãn 12/400 xám trên, số 12/500 dưới, cách 2 ────────── */
+
+.money {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+  margin: 0;
+}
+
+.moneyCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.moneyLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.moneyValue {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.moneyEmphasis {
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.hold {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+/* Viên trạng thái giữ chỗ — bo 16, đệm 2/8, chữ 12/500. */
+.holdChip {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.unpaid {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.paid {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+/* ── Thanh tiến độ 8px (đang thuê) ───────────────────────────────────────── */
+
+.progress {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  height: 8px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.progressBar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--progress, 0%);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.progress_info {
+  background: var(--xp-color-info-strong);
+}
+
+.progress_danger {
+  background: var(--xp-color-error);
+}
+
+/* ── Chân thẻ: viền gray-100 trên, đệm trên 12; đồng hồ nghiêng trái, nút phải ── */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.status {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: 20px;
+}
+
+/* Câu tình trạng dài ("Quá giờ trả xe 6 ngày") xuống dòng trong chính nó, nút luôn ở cùng hàng. */
+.status > p {
+  white-space: normal;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.hintList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

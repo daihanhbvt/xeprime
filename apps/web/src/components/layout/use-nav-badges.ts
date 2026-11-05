@@ -56,11 +56,14 @@ export function useNavBadges(): NavBadges {
       [NAV_BADGE.BOOKING_REQUESTS_PENDING]: requests.count,
       [NAV_BADGE.CHAT_UNREAD]: isShopScope ? chatUnread : 0,
       [NAV_BADGE.HANDOVERS_DUE]: handovers.count,
+      // "Đơn thuê xe" gộp (05/11/2026): việc của cùng một ca trực ở cùng một mục.
+      [NAV_BADGE.RENTALS_WORK]: requests.count + handovers.count,
       [NAV_BADGE.VEHICLES_NEEDS_ACTION]: vehiclesNeedsAction,
     },
     urgent: {
       [NAV_BADGE.BOOKING_REQUESTS_PENDING]: requests.urgent,
       [NAV_BADGE.HANDOVERS_DUE]: handovers.urgent,
+      [NAV_BADGE.RENTALS_WORK]: requests.urgent || handovers.urgent,
     },
   };
 }

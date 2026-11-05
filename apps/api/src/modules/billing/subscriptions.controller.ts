@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
@@ -12,6 +22,7 @@ import {
   SubscriptionDto,
   SubscriptionListQueryDto,
   SubscriptionPageDto,
+  UpdateSubscriptionDto,
 } from './dto/billing.dto';
 
 /**
@@ -50,9 +61,26 @@ export class SubscriptionsController {
     return this.billing.assign(tenantId, user.id, dto);
   }
 
+  @Patch(':id')
+  @ApiOperation({
+    summary:
+      'Sửa một kỳ còn hạn: giá (chỉ kỳ admin gán), ngày kết thúc (kỳ xếp sau dời theo), trần số xe, ghi chú (ADR 0080)',
+  })
+  @ApiOkResponse({ type: SubscriptionDto })
+  update(
+    @Param('tenantId') tenantId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateSubscriptionDto,
+  ): Promise<SubscriptionDto> {
+    return this.billing.updateSubscription(tenantId, user.id, id, dto);
+  }
+
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Huỷ sớm một thuê bao đang hiệu lực' })
+  @ApiOperation({
+    summary: 'Huỷ sớm một kỳ còn hạn — các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080)',
+  })
   @ApiOkResponse({ type: SubscriptionDto })
   cancel(
     @Param('tenantId') tenantId: string,

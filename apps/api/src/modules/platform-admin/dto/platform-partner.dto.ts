@@ -26,6 +26,7 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { PlanTermRefDto } from '../../billing/dto/billing.dto';
+import { OwnerCommissionTierDto } from '../../fee-policies/dto/fee-policy.dto';
 
 /**
  * Read-model của drawer CHI TIẾT đối tác (Platform Admin) — toàn bộ là GET.
@@ -140,6 +141,12 @@ export class PartnerQuotaItemDto {
 export class PartnerVehicleTypeQuotasDto {
   @ApiProperty({ type: PartnerQuotaItemDto }) car!: PartnerQuotaItemDto;
   @ApiProperty({ type: PartnerQuotaItemDto }) motorbike!: PartnerQuotaItemDto;
+  @ApiProperty({
+    description:
+      'Hai loại xe đếm chung MỘT trần (gói doanh nghiệp phạm vi all, hoặc Owner Lite tuyến hoa hồng) — car và ' +
+      'motorbike khi đó là CÙNG một con số tổng; hiển thị một dòng, đừng cộng hai dòng',
+  })
+  combined!: boolean;
 }
 
 export class PartnerPlanSummaryDto {
@@ -552,9 +559,21 @@ export class PartnerFeatureStateDto {
   @ApiProperty({ description: '@xeprime/types → FeatureState' }) state!: string;
 }
 
+/**
+ * Chính sách phí ĐANG HIỆU LỰC theo luồng tiền v2 (ADR 0064): phí sàn cố định theo loại xe khách
+ * trả mỗi đơn + hoa hồng lũy tiến theo ngày trừ vào tiền chủ xe (tuyến gói: 0). Không còn
+ * `serviceFeePercent` — cột đó chỉ giữ để đọc lại đơn cũ, in nó ra là báo sai phí đang thu.
+ */
 export class PartnerFeePolicyDto {
-  @ApiProperty({ description: 'Decimal — % phí dịch vụ XePrime của chính sách đang hiệu lực' })
-  serviceFeePercent!: string;
+  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn ô tô — VND, chuỗi (ADR 0007)' })
+  platformFeeCar!: string;
+  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn xe máy — VND, chuỗi' })
+  platformFeeMotorbike!: string;
+  @ApiProperty({
+    type: [OwnerCommissionTierDto],
+    description: 'Nấc hoa hồng chủ xe tuyến hoa hồng, `fromDay` tăng dần; tuyến gói không áp',
+  })
+  ownerCommissionTiers!: OwnerCommissionTierDto[];
   @ApiProperty() version!: number;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   effectiveFrom!: string | null;

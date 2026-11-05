@@ -51,10 +51,8 @@ const operations = () => screen.getByRole('button', { name: /^Vận hành/ });
 
 describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
   it('cộng yêu cầu chờ duyệt + lượt giao/trả đến hạn, màu cam khi chưa có gì trễ', () => {
-    badges.counts = {
-      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: 2,
-      [NAV_BADGE.HANDOVERS_DUE]: 3,
-    };
+    // Mục "Đơn thuê xe" gộp mang tổng chờ duyệt (2) + giao/trả đến hạn (3) — useNavBadges cộng.
+    badges.counts = { [NAV_BADGE.RENTALS_WORK]: 5 };
     render(<PartnerTopNav />);
 
     const button = operations();
@@ -65,11 +63,8 @@ describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
   });
 
   it('một mục có việc trễ → huy hiệu khối đỏ, và "gấp" được nói thành lời', () => {
-    badges.counts = {
-      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: 1,
-      [NAV_BADGE.HANDOVERS_DUE]: 2,
-    };
-    badges.urgent = { [NAV_BADGE.HANDOVERS_DUE]: true };
+    badges.counts = { [NAV_BADGE.RENTALS_WORK]: 3 };
+    badges.urgent = { [NAV_BADGE.RENTALS_WORK]: true };
     render(<PartnerTopNav />);
 
     const button = operations();

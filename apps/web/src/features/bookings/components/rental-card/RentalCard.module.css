@@ -1,0 +1,378 @@
+/*
+ * Khung MỘT thẻ chuyến trên màn "Đơn thuê xe" gộp — Figma Partner-XePrime "Vehicle Card" của
+ * "Rental Request - List" (`23978:92713`, 05/11/2026). Một khuôn cho cả bốn nhóm (yêu cầu chờ
+ * duyệt · chờ khách trả · chờ giao · đang thuê): bo 16, viền xám, bóng 8px rất nhạt; DẢI ĐẦU nền
+ * `gray-25` (đệm 6/20); THÂN đệm 16, bốn vùng cách 20 (xe · khách có kẻ dọc hai bên · ô lịch · ô tiền).
+ *
+ * `@container`, KHÔNG `@media`: chiều rộng thật của thẻ là cột nội dung cạnh cột trái, không phải
+ * khổ máy (bài học 19/09/2026). MOBILE-FIRST: một cột, hai mốc container mở dần ra.
+ */
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 8px 0 rgba(10, 13, 18, 0.04);
+  container-type: inline-size;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.clickable:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.card[aria-busy='true'] {
+  opacity: 0.85;
+}
+
+/* ── Dải đầu ─────────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  min-height: 48px;
+  padding: var(--xp-space-6) 20px;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-layout);
+}
+
+.headMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.headAside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+  min-height: 36px;
+}
+
+/* Mã đơn / "Yêu cầu · gửi lúc" — cũng là lối vào chi tiết bằng bàn phím. */
+.detailButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.detailButton:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.detailButton:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.stamp {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+  white-space: nowrap;
+}
+
+/* Câu trạng thái dưới dải đầu (quá hạn phản hồi · lý do không còn nút…). */
+.notice {
+  margin: 0;
+  padding: var(--xp-space-sm) 20px;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+/* ── Thân bốn vùng ───────────────────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'vehicle'
+    'customer'
+    'schedule'
+    'payment';
+  gap: 20px;
+  padding: var(--xp-space-md);
+}
+
+.vehicle {
+  grid-area: vehicle;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.vehicleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.thumb {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  width: 142px;
+  height: 80px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.thumbImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--xp-color-text-placeholder);
+  font-size: 28px;
+}
+
+.vehicleText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.vehicleName,
+.vehicleNamePlain {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicleName:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.specs {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.scheduleLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.scheduleLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.linkIcon {
+  font-size: 20px;
+}
+
+.customer {
+  grid-area: customer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Hai ô lịch / tiền: nền gray-25, viền, bo 16, đệm 16, chữ 12/18. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+}
+
+.schedulePanel {
+  grid-area: schedule;
+}
+
+.paymentPanel {
+  grid-area: payment;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(0, 120px) minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.factMoney {
+  composes: fact;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.factLabel {
+  min-width: 0;
+  color: var(--xp-color-text-tertiary);
+}
+
+.factValue {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.factMoney .factValue {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.factEmphasis {
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.panelNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+/* ── Dải thông tin thêm (chỉ khi có) ─────────────────────────────────────── */
+
+.extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-12) var(--xp-space-lg);
+  padding: var(--xp-space-12) 20px;
+  border-top: 1px solid var(--xp-color-border);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.extras > * {
+  min-width: 0;
+}
+
+/* ── Mốc container ───────────────────────────────────────────────────────── */
+
+/* Vừa (tablet / cột hẹp): xe + khách một hàng, ô lịch + ô tiền một hàng. */
+@container (min-width: 720px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'vehicle customer'
+      'schedule payment';
+  }
+
+  .customer {
+    padding-left: 20px;
+    border-left: 1px solid var(--xp-color-border);
+  }
+}
+
+/* Rộng (desktop): đúng một hàng bốn vùng như design (thẻ rộng 1260 cạnh cột trái 280). */
+@container (min-width: 1180px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) 240px minmax(270px, 300px) minmax(240px, 270px);
+    grid-template-areas: 'vehicle customer schedule payment';
+  }
+
+  .customer {
+    padding: 0 var(--xp-space-md);
+    border-right: 1px solid var(--xp-color-border);
+  }
+}
+
+/* Rất hẹp (điện thoại): ảnh xe nhỏ lại, hàng nút trải hết chiều ngang, nút cao 44. */
+@container (max-width: 480px) {
+  .thumb {
+    width: 112px;
+    height: 64px;
+  }
+
+  /* Đồng hồ / câu tình trạng chiếm cả dòng; các nút chia đều dòng dưới, cao 44 (vùng chạm). */
+  .headAside {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .headAside > p,
+  .headAside > [role='progressbar'] {
+    flex: 1 1 100%;
+  }
+
+  .headAside > :global(.ant-btn),
+  .headAside > a,
+  .headAside > button,
+  .headAside > span:not([role='progressbar']) {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 44px;
+  }
+}

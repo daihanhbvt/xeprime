@@ -135,6 +135,13 @@ const LIST_SELECT = {
   serviceFeePercent: true,
   serviceFeeAmount: true,
   customerTotalAmount: true,
+  /*
+   * Ô "Thanh toán" của thẻ đơn (05/11/2026): số khách THỰC CHUYỂN giữ chỗ (`booking_holds`) và
+   * phần trả chủ xe lúc nhận xe (`fees.payAtPickupAmount` của snapshot). Snapshot là jsonb gọn
+   * của MỘT đơn; trang bị chặn trần bởi `BOOKING_MAX_LIMIT`.
+   */
+  priceSnapshot: true,
+  hold: { select: { paidAmount: true } },
   createdAt: true,
   // Hai cột hành trình có mặt ở DANH SÁCH vì "nơi giao xe" suy từ chúng (xem `handoverPlaceOf`).
   routeType: true,
@@ -193,6 +200,8 @@ const DETAIL_SELECT = {
   // Một đơn chỉ có tối đa một khoản giữ chỗ. Đọc số THỰC THU để màn chi tiết không diễn giải
   // `fees.holdAmount` (số phải thu trong snapshot) thành số khách đã chuyển.
   hold: { select: { paidAmount: true, paidAt: true } },
+  // Chi tiết đơn đọc thêm CÂU lý do của lượt huỷ cho banner kết cục (05/11/2026).
+  cancellation: { select: { responsibleParty: true, reasonCategory: true, reason: true } },
   // `routeType` + `pickupAddress` đã nằm trong LIST_SELECT ở trên; phần còn lại của địa chỉ đón
   // chỉ chi tiết mới cần (dựng `AddressView` có ghim toạ độ).
   pickupAddressLine: true,
@@ -1509,7 +1518,18 @@ function searchOr(q: string): Prisma.BookingWhereInput[] {
     : pii.phones.length > 0
       ? [{ customerPhone: { in: [...pii.phones] } }]
       : [];
-  return [{ customerName: contains }, { code: contains }, ...phone];
+  /*
+   * Tên xe + biển số (05/11/2026): màn "Đơn thuê xe" gộp yêu cầu và đơn dưới MỘT ô tìm kiếm — hai
+   * nhóm yêu cầu đã tìm được theo xe (`searchWhere` của BookingRequestsService), hai nhóm đơn phải
+   * trả lời cùng câu hỏi, nếu không gõ biển số thì nửa màn có kết quả, nửa kia rỗng.
+   */
+  return [
+    { customerName: contains },
+    { code: contains },
+    ...phone,
+    { vehicle: { name: contains } },
+    { vehicle: { plateNumber: contains } },
+  ];
 }
 
 function orderByOf(
@@ -1715,6 +1735,10 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     cancellationParty: b.cancellation?.responsibleParty ?? null,
     pickupHandoverStatus: b.handovers[0]?.status ?? null,
     ...handoverPlaceOf(b),
+    customerTotalAmount: b.customerTotalAmount as unknown as string | null,
+    holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
+    payAtPickupAmount:
+      (b.priceSnapshot as unknown as BookingPriceSnapshot | null)?.fees?.payAtPickupAmount ?? null,
   };
 }
 
@@ -1729,11 +1753,10 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
     priceSnapshot,
-    customerTotalAmount: b.customerTotalAmount as unknown as string | null,
-    holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
     holdPaidAt: b.hold?.paidAt?.toISOString() ?? null,
+    cancellationReasonCategory: b.cancellation?.reasonCategory ?? null,
+    cancellationReason: b.cancellation?.reason ?? null,
     confirmedAt: (b.bookingRequest?.decidedAt ?? b.createdAt).toISOString(),
-    payAtPickupAmount: internalSnapshot?.fees?.payAtPickupAmount ?? null,
     // Kinh tế của CHỦ XE đã đóng băng trong snapshot (ADR 0024) — DTO nội bộ gian hàng (ADR 0064).
     ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
     ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,

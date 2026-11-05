@@ -86,7 +86,7 @@
   "list": {
     "title": "All bookings",
     "searchLabel": "Search bookings",
-    "searchPlaceholder": "Search by customer name, phone or booking code",
+    "searchPlaceholder": "Search rental code, customer, vehicle, plate...",
     "statusAll": "All statuses",
     "sortLabel": "Sort",
     "sort": {
@@ -689,25 +689,14 @@
   },
   "board": {
     "title": "Bookings",
-    "subtitle": "Manage self-drive, with-driver and long-term bookings in one place; track pickups, returns and revenue per trip",
+    "subtitle": "Manage every booking request and rental in one flow. Click a card to see its details.",
     "create": "Create booking",
     "railLabel": "Filter bookings by status",
     "all": "All",
-    "groupNeedsAction": "NEEDS ACTION",
-    "groupEnded": "ENDED",
-    "preset": {
-      "awaiting_pickup": "Awaiting pickup",
-      "renting": "On rental",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
-    },
-    "recent": "{count, plural, one {Latest trip} other {# latest trips}}",
     "viewAll": "View all ({count})",
     "customer": "Customer",
     "handlePickup": "Hand over car",
     "receiveBack": "Receive car",
-    "viewDetail": "View details",
-    "progress": "{percent}% done · {remaining} left",
     "overdueReturn": "Return overdue by {duration}",
     "pickupToday": "Pickup today · {time}",
     "pickupOverdue": "Pickup overdue · {time}",
@@ -723,11 +712,102 @@
     "cancelled": "Cancelled",
     "noShow": "Customer no-show",
     "listLabel": "{group} bookings",
-    "emptyGroupTitle": "No bookings here yet",
-    "emptyGroupBody": "Bookings appear here once they reach this status.",
     "emptyAllTitle": "Your shop has no bookings yet",
     "groupError": "Could not load this group",
-    "plate": "Plate {plate}"
+    "plate": "Plate {plate}",
+    "ended": "Ended rentals",
+    "endedWithCount": "Ended rentals ({count})",
+    "stage": {
+      "needs_action": "Needs action",
+      "awaiting_payment": "Awaiting payment",
+      "awaiting_pickup": "Awaiting pickup",
+      "renting": "On rent"
+    },
+    "stageEmpty": {
+      "needs_action": {
+        "title": "No requests need your action",
+        "body": "New customer requests appear here for you to confirm or decline."
+      },
+      "awaiting_payment": {
+        "title": "No trips are waiting for payment",
+        "body": "Trips you confirmed stay here until the customer pays the reservation in full."
+      },
+      "awaiting_pickup": {
+        "title": "No trips are waiting for pickup",
+        "body": "Trips whose reservation has been paid appear here so you can prepare the handover."
+      },
+      "renting": {
+        "title": "No vehicles are on rent",
+        "body": "Trips handed over to the customer stay here until you receive the vehicle back."
+      }
+    },
+    "emptyAllBody": "Customer booking requests and rentals you create appear here by stage.",
+    "noAccessTitle": "You can’t view rentals yet",
+    "noAccessBody": "Ask the shop owner for permission to view booking requests or rentals.",
+    "openDetail": "View rental {code}",
+    "viewDetailShort": "Details",
+    "remaining": "Remaining: {remaining}",
+    "money": {
+      "rental": "Rental:",
+      "customerTotal": "Customer pays:",
+      "holdPaid": "Reservation paid:",
+      "payAtPickup": "Paid to owner at pickup:",
+      "collected": "Collected:",
+      "debt": "Still to collect:"
+    },
+    "view": {
+      "label": "View",
+      "board": "Kanban board view",
+      "list": "List view"
+    },
+    "kanban": {
+      "label": "Rentals board by stage",
+      "dragHint": "Cards can only move to the next step",
+      "handle": "Drag the {vehicle} card to the next step",
+      "drop": {
+        "approve": "Drop here to confirm the request",
+        "pickup": "Drop here to open the pickup handover",
+        "locked": "Cards move here on their own once the customer pays the reservation in full",
+        "notNext": "Cards can only move to the next step"
+      },
+      "dropped": {
+        "locked": "A trip only moves to \"Awaiting pickup\" once the customer pays the reservation in full.",
+        "notNext": "Cards can only move to the next step."
+      },
+      "columnError": "Couldn't load this column",
+      "retry": "Try again",
+      "loadMore": "Load more",
+      "loadingMore": "Loading more…",
+      "loadMoreError": "Couldn't load more",
+      "dnd": {
+        "instructions": "Press Space or Enter to pick up a card. Use the left and right arrow keys to choose a column, press Space or Enter to drop, Esc to cancel.",
+        "pickedUp": "Picked up the {item} card in the {from} column.",
+        "over": "The {item} card is over the {to} column.",
+        "overNone": "The {item} card is not over any column.",
+        "dropped": "Dropped the {item} card on the {to} column.",
+        "droppedNone": "Dropped the {item} card, nothing changed.",
+        "cancelled": "Stopped dragging the {item} card."
+      },
+      "money": {
+        "rental": "Rental",
+        "customerTotal": "Customer pays",
+        "payAtPickup": "Due at pickup",
+        "hold": "Reservation",
+        "collected": "Collected",
+        "debt": "Outstanding"
+      },
+      "holdState": {
+        "expected": "Estimated",
+        "unpaid": "Unpaid",
+        "paid": "Paid"
+      }
+    },
+    "paymentArrived": {
+      "title": "Payment received",
+      "body": "The customer has paid for rental #{code}. Please check the remaining steps before handing over the vehicle!",
+      "bodyNoCode": "The customer has paid the reservation in full for the {vehicle} trip. Please check the remaining steps before handing over the vehicle!",
+      "action": "View rental"
+    }
   },
   "extension": {
     "close": "Cancel",
@@ -923,7 +1003,8 @@
       "bodyPickup": "Please complete all information before handing the vehicle over so the rental goes smoothly!",
       "bodyReturn": "Please add the condition photos when taking the vehicle back so there is evidence if a dispute comes up.",
       "continue": "Continue anyway"
-    }
+    },
+    "cancelledBannerWithReason": "This rental was cancelled. Reason: {reason}."
   },
   "documentsDialog": {
     "title": "{name}'s documents",
@@ -940,5 +1021,58 @@
     "tooLarge": "Amount is too large",
     "required": "Enter the delivery fee",
     "noteMax": "At most 500 characters"
+  },
+  "history": {
+    "title": "Ended rentals",
+    "subtitle": "Rentals that were completed or cancelled, and requests that never became a rental.",
+    "tabsLabel": "Filter by outcome",
+    "tabs": {
+      "all": "All",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "not_converted": "Not converted"
+    },
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search rental code, customer, vehicle, plate...",
+    "serviceLabel": "Service",
+    "serviceAll": "All services",
+    "outcomeLabel": "Status",
+    "outcomeAll": "All statuses",
+    "tableLabel": "Ended rentals",
+    "columns": {
+      "code": "Code",
+      "vehicle": "Vehicle",
+      "service": "Service",
+      "customer": "Customer",
+      "period": "Rental period",
+      "outcome": "Status",
+      "endedAt": "Ended at",
+      "actions": "Actions"
+    },
+    "noCode": "Request",
+    "open": "View details",
+    "noSchedule": "Schedule not set",
+    "errorTitle": "Couldn’t load ended rentals",
+    "empty": {
+      "all": {
+        "title": "No trips have ended yet",
+        "body": "Completed and cancelled rentals, and requests that never became a rental, are kept here."
+      },
+      "completed": {
+        "title": "No completed rentals yet",
+        "body": "Rentals whose vehicle came back appear here."
+      },
+      "cancelled": {
+        "title": "No cancelled rentals",
+        "body": "Cancelled rentals and no-shows appear here."
+      },
+      "not_converted": {
+        "title": "No unconverted requests",
+        "body": "Declined, expired, withdrawn or unpaid requests appear here."
+      }
+    },
+    "noResultsTitle": "No trips match these filters",
+    "noResultsBody": "Try another keyword or clear some filters.",
+    "totalLabel": "{count, plural, one {# trip} other {# trips}}"
   }
 }

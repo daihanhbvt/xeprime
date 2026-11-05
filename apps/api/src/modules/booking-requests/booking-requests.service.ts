@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { licenceTripLastDayKey, subtractMoney } from '@xeprime/domain';
+import { formatMoneyVndVi, licenceTripLastDayKey, subtractMoney } from '@xeprime/domain';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
@@ -15,7 +17,9 @@ import {
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
   BOOKING_REQUEST_DECISION_SOURCE,
+  BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
+  HOLD_HOST_REMINDER_COOLDOWN_MINUTES,
   BOOKING_STATUS,
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
   CANCELLATION_STAGE,
@@ -101,10 +105,34 @@ import {
   BookingRequestPricingDto,
   BookingRequestReceiptDto,
   CreateBookingRequestDto,
+  PaymentReminderResultDto,
+  type BookingRequestSort,
 } from './dto/booking-request.dto';
 import type { VehicleBusyDaysDto } from '../calendar/dto/busy-days.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
+
+/** Chặng của khoản giữ chỗ còn nhắc khách được — đang chờ tiền hoặc tiền về thiếu. */
+const REMINDABLE_HOLD_STATUSES = [
+  BOOKING_HOLD_STATUS.PENDING,
+  BOOKING_HOLD_STATUS.UNDERPAID,
+] as const;
+
+/**
+ * Các cột quyết định lời nhắc thanh toán của gian hàng (05/11/2026) — MỘT khối cho DTO hộp thư
+ * (`paymentReminderAvailableAt`) và cho lượt bấm (`remindPayment`). Khai TRƯỚC `SELECT` vì nó
+ * được spread vào đó.
+ */
+const REMINDER_HOLD_SELECT = {
+  status: true,
+  expiresAt: true,
+  createdAt: true,
+  hostRemindedAt: true,
+  paymentRemindedAt: true,
+  finalPaymentRemindedAt: true,
+} satisfies Prisma.BookingHoldSelect;
+
+type ReminderHold = Prisma.BookingHoldGetPayload<{ select: typeof REMINDER_HOLD_SELECT }>;
 
 const SELECT = {
   id: true,
@@ -206,7 +234,9 @@ const SELECT = {
    * Tiền của yêu cầu (`resolvePricing`) — ĐÚNG một quan hệ 1-1 mỗi loại, cùng một truy vấn với
    * phần còn lại của inbox, không phải một lượt tra thêm sau khi có danh sách.
    */
-  hold: { select: { amount: true, paidAmount: true, priceSnapshotJson: true, expiresAt: true } },
+  hold: {
+    select: { amount: true, paidAmount: true, priceSnapshotJson: true, ...REMINDER_HOLD_SELECT },
+  },
   booking: {
     select: { code: true, totalAmount: true, customerTotalAmount: true, paidAmount: true },
   },
@@ -1537,7 +1567,7 @@ export class BookingRequestsService {
       this.prisma.bookingRequest.count({ where }),
       this.prisma.bookingRequest.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: requestOrderBy(query.sort, query.status),
         skip: paging.skip,
         take: paging.take,
         select: SELECT,
@@ -2207,6 +2237,121 @@ export class BookingRequestsService {
   }
 
   /**
+   * Gian hàng NHẮC khách chuyển tiền giữ chỗ — nút "Nhắc khách" của nhóm "Chờ khách thanh toán"
+   * (05/11/2026). Chỉ là MỘT thông báo: không gia hạn cửa sổ thanh toán (ADR 0044 điều 3), không
+   * đổi tiền, không đổi trạng thái.
+   *
+   * Khoảng lặng `HOLD_HOST_REMINDER_COOLDOWN_MINUTES` tính từ lời nhắc GẦN NHẤT khách đã nhận, bất
+   * kể ai gửi (lúc khoản giữ chỗ ra đời, hai mốc worker, lượt bấm trước), và nằm TRONG câu `UPDATE`
+   * claim — không phải một `if` đọc trước: hai nhân viên bấm cùng lúc thì chỉ một tin đi, bên thua
+   * nhận 429 kèm mốc bấm lại. Thông báo + audit cùng transaction với dấu claim.
+   */
+  async remindPayment(
+    tenantId: string,
+    userId: string,
+    id: string,
+  ): Promise<PaymentReminderResultDto> {
+    const req = await this.prisma.bookingRequest.findFirst({
+      where: { id, tenantId },
+      select: {
+        status: true,
+        customerUserId: true,
+        vehicle: { select: { name: true } },
+        hold: { select: { id: true, code: true, amount: true, paidAmount: true, ...REMINDER_HOLD_SELECT } },
+      },
+    });
+    if (!req) throw notFound();
+
+    const now = new Date();
+    const hold = req.hold;
+    const customerUserId = req.customerUserId;
+    if (
+      req.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD ||
+      !customerUserId ||
+      !hold ||
+      !holdAcceptsReminder(hold, now)
+    ) {
+      throw reminderNotAvailable(req.status);
+    }
+    const availableAt = reminderAvailableAt(hold);
+    if (availableAt > now) throw reminderTooSoon(availableAt);
+
+    const threshold = new Date(now.getTime() - HOLD_HOST_REMINDER_COOLDOWN_MINUTES * 60_000);
+    const quietSince = (column: 'hostRemindedAt' | 'paymentRemindedAt' | 'finalPaymentRemindedAt') =>
+      ({ OR: [{ [column]: null }, { [column]: { lte: threshold } }] }) as Prisma.BookingHoldWhereInput;
+
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.bookingHold.updateMany({
+        where: {
+          id: hold.id,
+          status: { in: [...REMINDABLE_HOLD_STATUSES] },
+          expiresAt: { gt: now },
+          createdAt: { lte: threshold },
+          AND: [
+            quietSince('hostRemindedAt'),
+            quietSince('paymentRemindedAt'),
+            quietSince('finalPaymentRemindedAt'),
+          ],
+        },
+        data: { hostRemindedAt: now },
+      });
+      if (claimed.count === 0) {
+        // Ai đó vừa nhắc trước (nhân viên khác, worker) hoặc khoản vừa đổi chặng — đọc lại để nói đúng.
+        const fresh = await tx.bookingHold.findUnique({
+          where: { id: hold.id },
+          select: REMINDER_HOLD_SELECT,
+        });
+        if (!fresh || !holdAcceptsReminder(fresh, now)) throw reminderNotAvailable(req.status);
+        throw reminderTooSoon(reminderAvailableAt(fresh));
+      }
+
+      const remaining = hold.amount.sub(hold.paidAmount);
+      const deadline = hold.expiresAt.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+      });
+      await this.notifications.emitToUser(
+        customerUserId,
+        {
+          type: NOTIFICATION_TYPE.HOLD_EXPIRING,
+          title: `Chủ xe nhắc bạn thanh toán giữ chỗ ${req.vehicle.name}`,
+          body:
+            `Thanh toán ${formatMoneyVndVi(remaining.toString())} (nội dung ${hold.code}) trước ${deadline}. ` +
+            'Quá hạn, xe sẽ mở lại cho khách khác.',
+          tenantId,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: id,
+          // Tin có hạn dùng như lời nhắc của worker: máy bật lại sau khi chỗ đã nhả thì không hiện nữa.
+          pushExpiresAt: hold.expiresAt,
+        },
+        tx,
+      );
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking_request.remind_payment',
+          targetType: 'booking_request',
+          targetId: id,
+        },
+        tx,
+      );
+    });
+
+    return {
+      remindedAt: now.toISOString(),
+      nextAvailableAt: new Date(
+        now.getTime() + HOLD_HOST_REMINDER_COOLDOWN_MINUTES * 60_000,
+      ).toISOString(),
+    };
+  }
+
+  /**
    * Nạp yêu cầu CÒN xử lý được: đang chờ duyệt **và** chưa quá hạn phản hồi.
    *
    * Hai điều kiện, hai mã lỗi khác nhau có chủ đích. Trạng thái `expired` do worker ghi theo
@@ -2780,6 +2925,13 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     decisionSource: r.decisionSource ?? null,
     // Hạn của KHÁCH, không phải của gian hàng — xem docblock ở DTO.
     holdExpiresAt: (r.hold?.expiresAt as unknown as string | null) ?? null,
+    paymentReminderAvailableAt:
+      r.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD &&
+      r.customerUserId != null &&
+      r.hold != null &&
+      holdAcceptsReminder(r.hold, new Date())
+        ? reminderAvailableAt(r.hold).toISOString()
+        : null,
     vehicleProtectionSelected: r.vehicleProtectionSelected,
     personalAccidentSelected: r.personalAccidentSelected,
   };
@@ -2822,6 +2974,24 @@ function submittedNotification(customerName: string, vehicleName: string, reques
  * nghĩa. `contains` + `insensitive` dịch ra `ILIKE '%…%'`, đi được bằng index trigram đã có
  * trên `vehicles(name, plate_number)`.
  */
+/**
+ * Thứ tự trang hộp thư. `urgent` = hạn ĐANG CHẠY gần nhất trước: lọc đúng một chặng chờ khách trả
+ * (`awaiting_hold`) thì đồng hồ là hạn chuyển tiền của khách (`booking_holds.expires_at`); mọi
+ * trường hợp khác là hạn phản hồi của gian hàng. `id` chốt thứ tự để phân trang không lặp dòng
+ * khi hai yêu cầu cùng một mốc.
+ */
+function requestOrderBy(
+  sort: BookingRequestSort | undefined,
+  statuses: readonly string[] | undefined,
+): Prisma.BookingRequestOrderByWithRelationInput[] {
+  if (sort !== 'urgent') return [{ createdAt: 'desc' }, { id: 'desc' }];
+  const onlyAwaitingHold =
+    statuses?.length === 1 && statuses[0] === BOOKING_REQUEST_STATUS.AWAITING_HOLD;
+  return onlyAwaitingHold
+    ? [{ hold: { expiresAt: 'asc' } }, { id: 'asc' }]
+    : [{ respondBy: 'asc' }, { id: 'asc' }];
+}
+
 function searchWhere(q: string | undefined): Prisma.BookingRequestWhereInput {
   const term = q?.trim();
   if (!term) return {};
@@ -2872,6 +3042,42 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy yêu cầu đặt xe',
+  });
+}
+
+function holdAcceptsReminder(hold: ReminderHold, now: Date): boolean {
+  return (
+    (REMINDABLE_HOLD_STATUSES as readonly string[]).includes(hold.status) && hold.expiresAt > now
+  );
+}
+
+/**
+ * Lúc gian hàng nhắc lại được = lời nhắc GẦN NHẤT khách đã nhận + khoảng lặng. Cùng phép so với
+ * điều kiện của câu `UPDATE` trong `remindPayment` — hai chỗ nói cùng một mốc.
+ */
+function reminderAvailableAt(hold: ReminderHold): Date {
+  const last = [hold.createdAt, hold.hostRemindedAt, hold.paymentRemindedAt, hold.finalPaymentRemindedAt]
+    .filter((value): value is Date => value != null)
+    .reduce((latest, value) => (value > latest ? value : latest));
+  return new Date(last.getTime() + HOLD_HOST_REMINDER_COOLDOWN_MINUTES * 60_000);
+}
+
+function reminderTooSoon(availableAt: Date): HttpException {
+  return new HttpException(
+    {
+      code: API_ERROR_CODE.PAYMENT_REMINDER_TOO_SOON,
+      message: 'Khách vừa nhận lời nhắc thanh toán — vui lòng thử lại sau',
+      details: { availableAt: availableAt.toISOString() },
+    },
+    HttpStatus.TOO_MANY_REQUESTS,
+  );
+}
+
+function reminderNotAvailable(stage: string): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.PAYMENT_REMINDER_NOT_AVAILABLE,
+    message: 'Chuyến này không còn chờ khách thanh toán',
+    details: { stage },
   });
 }
 

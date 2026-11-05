@@ -17,7 +17,8 @@ export interface StatusRailItem<T extends string> {
 
 export interface StatusRailGroup<T extends string> {
   key: string;
-  label: string;
+  /** Tiêu đề nhóm (chữ hoa nhỏ). Vắng = nhóm phẳng, không tiêu đề (màn "Đơn thuê xe" 05/11/2026). */
+  label?: string;
   items: readonly StatusRailItem<T>[];
 }
 
@@ -75,7 +76,7 @@ export function StatusRail<T extends string>({
         .filter((group) => group.items.length > 0)
         .map((group) => (
           <div key={group.key} className={styles.group}>
-            <h2 className={styles.groupTitle}>{group.label}</h2>
+            {group.label ? <h2 className={styles.groupTitle}>{group.label}</h2> : null}
             <ul className={styles.items}>{group.items.map(renderItem)}</ul>
           </div>
         ))}

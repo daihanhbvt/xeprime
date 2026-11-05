@@ -6,6 +6,7 @@ import {
   approveBookingRequest,
   cancelBookingRequest,
   rejectBookingRequest,
+  remindBookingRequestPayment,
   startBookingRequestConversation,
 } from '../api';
 import type { ApproveBookingRequestInput, CancelBookingRequestInput } from '../types';
@@ -47,7 +48,21 @@ export function useRejectBookingRequest() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
         queryClient.invalidateQueries({ queryKey: queryKeys.trips.all }),
+        // Yêu cầu vừa đóng sang ngăn "Không thành đơn" của màn "Đơn đã kết thúc".
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.historyAll }),
       ]),
+  });
+}
+
+/**
+ * Nhắc khách chuyển tiền giữ chỗ (05/11/2026). Làm mới hộp thư để nút đọc lại
+ * `paymentReminderAvailableAt` mới (server vừa ghi mốc nhắc).
+ */
+export function useRemindBookingRequestPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => remindBookingRequestPayment(id),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
   });
 }
 

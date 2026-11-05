@@ -179,7 +179,7 @@ nơi gọi nào ở web hay app native.
 > 3. Audit tách bốn đường gán: `subscription.assign` · `renew` (cùng bậc) · `schedule_change`
 >    (khác bậc, từ kỳ sau) · `change_now` — kèm `previousTerm` / `replacedTerms` trong `after`.
 > 4. Luật huỷ — `subscriptionCancelBlockOf`, server và nút Huỷ ở web đọc cùng hàm: chỉ huỷ kỳ còn
->    hạn ở ĐUÔI chuỗi (có kỳ xếp sau ⇒ `SUBSCRIPTION_LATER_TERM_EXISTS`); dòng hoa hồng ĐANG CHẠY
+>    hạn ở ĐUÔI chuỗi (có kỳ xếp sau ⇒ `SUBSCRIPTION_LATER_TERM_EXISTS`) — **ghi đè bởi ADR 0080 điều 1: huỷ kèm các kỳ xếp sau, mã lỗi đã gỡ**; dòng hoa hồng ĐANG CHẠY
 >    không huỷ được (đổi tuyến bằng cách gán gói), dòng hoa hồng ĐÃ XẾP LỊCH thì huỷ được. Huỷ kỳ
 >    CUỐI CÙNG còn hạn gán lại dòng hoa hồng mặc định trong cùng transaction (`fallbackTerm` trong
 >    audit) — "không có gói" (pha `unconfigured`) không bao giờ là kết quả của một lượt huỷ.

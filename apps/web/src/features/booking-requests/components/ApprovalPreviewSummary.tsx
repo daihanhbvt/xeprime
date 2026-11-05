@@ -38,8 +38,6 @@ export function ApprovalPreviewSummary({
   showMoney?: boolean;
 }) {
   const t = useTranslations('BookingRequests.approvalPreview');
-  const fmt = useAppFormat();
-  const w = windows === undefined ? preview.windows : windows;
 
   return (
     <section className={styles.root} aria-label={t('title')}>
@@ -50,32 +48,70 @@ export function ApprovalPreviewSummary({
 
       {showMoney ? <OwnerPayoutTable payout={preview.ownerPayout} label={t('title')} /> : null}
 
-      {!preview.collectsHold ? (
-        <p className={styles.note}>{t('noHold')}</p>
-      ) : w ? (
-        <>
-          <ul className={styles.notes}>
-            <li>
-              {t('paymentWindow', {
-                duration: fmt.minutesDuration(w.paymentWindowMinutes),
-                time: fmt.dateTime(w.expiresAt),
-              })}
-            </li>
-            <li>
-              {w.freeCancelMinutes > 0
-                ? t('freeCancel', {
-                    duration: fmt.minutesDuration(w.freeCancelMinutes),
-                    time: fmt.dateTime(w.freeCancelUntil),
-                  })
-                : t('noFreeCancel')}
-            </li>
-            <li>{t('lateCancel')}</li>
-          </ul>
-          {w.tooShort ? <Alert type="warning" showIcon title={t('tooShort')} /> : null}
-        </>
-      ) : windowsPendingHint ? (
-        <p className={styles.note}>{windowsPendingHint}</p>
-      ) : null}
+      <ApprovalWindowNotes
+        preview={preview}
+        windows={windows}
+        windowsPendingHint={windowsPendingHint}
+      />
     </section>
+  );
+}
+
+/**
+ * Hai cửa sổ của khách NẾU duyệt ngay (ADR 0066 · 0072): bao lâu để chuyển tiền giữ chỗ, bao lâu
+ * huỷ miễn phí KỂ TỪ LÚC TRẢ ĐỦ, và hậu quả huỷ muộn — MỘT bản cho hộp duyệt theo ngày, hộp duyệt dài
+ * hạn và khối xem trước. Mọi mốc do server tính (`holdWindowsFor` / `freeCancelWindowFromPayment`).
+ */
+export function ApprovalWindowNotes({
+  preview,
+  windows,
+  windowsPendingHint,
+  className,
+}: {
+  preview: ApprovalPreview;
+  windows?: ApprovalWindows | null;
+  windowsPendingHint?: string;
+  /** Khung ngoài — hộp duyệt theo ngày đặt các ghi chú vào ô nền xanh của design. */
+  className?: string;
+}) {
+  const t = useTranslations('BookingRequests.approvalPreview');
+  const fmt = useAppFormat();
+  const w = windows === undefined ? preview.windows : windows;
+
+  if (!preview.collectsHold) {
+    return (
+      <div className={className}>
+        <p className={styles.note}>{t('noHold')}</p>
+      </div>
+    );
+  }
+  if (!w) {
+    return windowsPendingHint ? (
+      <div className={className}>
+        <p className={styles.note}>{windowsPendingHint}</p>
+      </div>
+    ) : null;
+  }
+  return (
+    <div className={className}>
+      <ul className={styles.notes}>
+        <li>
+          {t('paymentWindow', {
+            duration: fmt.minutesDuration(w.paymentWindowMinutes),
+            time: fmt.dateTime(w.expiresAt),
+          })}
+        </li>
+        <li>
+          {w.freeCancelMinutes > 0
+            ? t('freeCancel', {
+                duration: fmt.minutesDuration(w.freeCancelMinutes),
+                time: fmt.dateTime(w.freeCancelUntil),
+              })
+            : t('noFreeCancel')}
+        </li>
+        <li>{t('lateCancel')}</li>
+      </ul>
+      {w.tooShort ? <Alert type="warning" showIcon title={t('tooShort')} /> : null}
+    </div>
   );
 }

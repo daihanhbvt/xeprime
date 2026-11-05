@@ -42,6 +42,7 @@ import type { PlatformContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
+import { parseCommissionTiers } from '../fee-policies/fee-policies.service';
 import type {
   PartnerBillingDto,
   PartnerBranchDto,
@@ -492,10 +493,7 @@ export class PlatformPartnerDetailService {
       termStartsAt: row?.startsAt.toISOString() ?? null,
       quota: {
         vehicles,
-        vehiclesByType: {
-          car: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.CAR], usage),
-          motorbike: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.MOTORBIKE], usage),
-        },
+        vehiclesByType: typeQuotasOf(vehicleQuota, usage),
         // Không còn trần chi nhánh theo gói (ADR 0065 điều 1): tuyến gói = không giới hạn; tuyến
         // hoa hồng không có khái niệm này (nhiều chi nhánh là cờ năng lực của gói).
         branches: onPackage ? limitItem(branchesUsed, null) : notApplicable(branchesUsed),
@@ -705,11 +703,21 @@ export class PlatformPartnerDetailService {
   private async activeFeePolicy(): Promise<PartnerFeePolicyDto | null> {
     const row = await this.prisma.feePolicy.findFirst({
       where: { status: FEE_POLICY_STATUS.ACTIVE },
-      select: { serviceFeePercent: true, version: true, effectiveFrom: true },
+      select: {
+        version: true,
+        effectiveFrom: true,
+        customerPlatformFeeCar: true,
+        customerPlatformFeeMotorbike: true,
+        ownerCommissionTiers: true,
+      },
     });
+    // Luồng tiền v2 (ADR 0064): phí sàn theo loại xe + nấc hoa hồng — cùng parser với writer của
+    // chính sách, không đọc `service_fee_percent` (cột chỉ còn để đọc lại đơn cũ).
     return row
       ? {
-          serviceFeePercent: row.serviceFeePercent.toFixed(2),
+          platformFeeCar: row.customerPlatformFeeCar.toFixed(2),
+          platformFeeMotorbike: row.customerPlatformFeeMotorbike.toFixed(2),
+          ownerCommissionTiers: parseCommissionTiers(row.ownerCommissionTiers),
           version: row.version,
           effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
         }
@@ -787,6 +795,21 @@ function typeQuotaItem(quota: TypeQuota, usage: UsageByType): PartnerQuotaItemDt
 }
 
 /**
+ * Trần xe theo loại (ADR 0065). Khi CẢ HAI loại đếm trong cùng một phạm vi `all` (kỳ doanh nghiệp,
+ * hoặc trần Owner Lite tổng), hai mục mang CÙNG con số tổng — `combined` báo để giao diện hiện một
+ * dòng thay vì "Xe máy 26 · Ô tô 26" (đọc như 52 xe).
+ */
+function typeQuotasOf(quota: FleetQuota, usage: UsageByType) {
+  return {
+    car: typeQuotaItem(quota[VEHICLE_TYPE.CAR], usage),
+    motorbike: typeQuotaItem(quota[VEHICLE_TYPE.MOTORBIKE], usage),
+    combined:
+      quota[VEHICLE_TYPE.CAR].countedScope === PLAN_VEHICLE_SCOPE.ALL &&
+      quota[VEHICLE_TYPE.MOTORBIKE].countedScope === PLAN_VEHICLE_SCOPE.ALL,
+  };
+}
+
+/**
  * Trần xe GỘP của cả gian hàng (hình dạng trước ADR 0065): tổng trần các kỳ gói phủ hai loại xe
  * (một kỳ `all` chỉ tính một lần), có loại không giới hạn ⇒ không giới hạn. Ngoài tuyến gói: trần
  * Owner Lite TỔNG như cũ. Chi tiết theo loại là `vehiclesByType`/`vehicleQuotaByType`.
@@ -849,10 +872,7 @@ function planSummaryOf(
     graceEndsAt: context.graceEndsAt?.toISOString() ?? null,
     packageScopes: context.packageScopes,
     vehicleQuota: fleetQuotaItem(vehicleQuota, usage),
-    vehicleQuotaByType: {
-      car: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.CAR], usage),
-      motorbike: typeQuotaItem(vehicleQuota[VEHICLE_TYPE.MOTORBIKE], usage),
-    },
+    vehicleQuotaByType: typeQuotasOf(vehicleQuota, usage),
     nextTerm,
   };
 }

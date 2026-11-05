@@ -15,7 +15,6 @@ import {
   HistoryOutlined,
   IdcardOutlined,
   InsuranceOutlined,
-  InboxOutlined,
   MobileOutlined,
   PercentageOutlined,
   PictureOutlined,
@@ -65,6 +64,13 @@ export type NavLabelKey = Parameters<ReturnType<typeof useTranslations<'Navigati
 export const NAV_BADGE = {
   /** Yêu cầu đặt xe đang chờ gian hàng duyệt — đỏ khi có yêu cầu sắp hết hạn trả lời. */
   BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
+  /**
+   * Mục "Đơn thuê xe" gộp (05/11/2026): yêu cầu CHỜ DUYỆT + lượt giao/trả ĐẾN HẠN (hẹn tới hết hôm
+   * nay, gồm quá giờ) — hai việc của cùng một ca trực, cộng lại vì giờ chúng ở cùng một mục. Đỏ khi
+   * có yêu cầu sắp hết hạn trả lời HOẶC lượt quá giờ. Không đếm chuyến chờ khách thanh toán: đó là
+   * việc của khách.
+   */
+  RENTALS_WORK: 'rentalsWork',
   /** Tin nhắn chưa đọc. */
   CHAT_UNREAD: 'chatUnread',
   /**
@@ -261,21 +267,17 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: PARTNER_NAV_ICON.calendar,
       },
       {
-        // Yêu cầu khách gửi lên, CHƯA phải đơn thuê: thực thể riêng, quyền riêng, luồng duyệt riêng.
-        key: 'booking-requests',
-        labelKey: 'manage.bookingRequests',
-        href: ROUTES.MANAGE.BOOKING_REQUESTS,
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: PARTNER_NAV_ICON.bookingRequests,
-        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
-      },
-      {
+        /*
+         * MỘT mục cho cả chuyến (05/11/2026): yêu cầu chờ duyệt → chờ khách trả → chờ giao → đang
+         * thuê trên cùng màn "Đơn thuê xe". Yêu cầu và đơn vẫn là hai thực thể, hai quyền — thấy
+         * mục khi có MỘT trong hai, nhóm của thực thể thiếu quyền tự vắng trên màn.
+         */
         key: 'bookings',
-        labelKey: 'manage.bookingManagement',
+        labelKey: 'manage.rentals',
         href: ROUTES.MANAGE.BOOKINGS,
-        permission: PERMISSION.BOOKING_VIEW,
+        permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: PARTNER_NAV_ICON.bookings,
-        badge: NAV_BADGE.HANDOVERS_DUE,
+        badge: NAV_BADGE.RENTALS_WORK,
       },
       {
         key: 'customers',
@@ -773,23 +775,15 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
       },
       /*
        * THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói, ADR 0038 điều 5) không có danh sách phía
-       * chủ xe — họ giữ hộp thư + bảng đơn để còn bàn giao những chuyến đang chạy.
+       * chủ xe — họ dùng màn "Đơn thuê xe" gộp để còn bàn giao những chuyến đang chạy.
        */
       {
-        key: 'booking-requests',
-        labelKey: 'manage.bookingRequests',
-        href: ROUTES.MANAGE.BOOKING_REQUESTS,
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: PARTNER_NAV_ICON.bookingRequests,
-        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
-        memberOnly: true,
-      },
-      {
         key: 'bookings',
-        labelKey: 'manage.bookingManagement',
+        labelKey: 'manage.rentals',
         href: ROUTES.MANAGE.BOOKINGS,
-        permission: PERMISSION.BOOKING_VIEW,
+        permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: PARTNER_NAV_ICON.bookings,
+        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
         memberOnly: true,
       },
     ],
@@ -947,19 +941,22 @@ const SHOP_MOBILE_TABS: readonly MobileTab[] = [
     icon: CalendarOutlined,
   },
   {
-    key: 'booking-requests',
-    labelKey: 'manage.bookingRequestsShort',
-    href: ROUTES.MANAGE.BOOKING_REQUESTS,
-    permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: InboxOutlined,
-    badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
-  },
-  {
+    // "Đơn thuê xe" gộp yêu cầu + đơn (05/11/2026) — một ô cho cả chuyến.
     key: 'bookings',
     labelKey: 'manage.bookingsShort',
     href: ROUTES.MANAGE.BOOKINGS,
-    permission: PERMISSION.BOOKING_VIEW,
+    permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
     icon: FileDoneOutlined,
+    badge: NAV_BADGE.RENTALS_WORK,
+  },
+  {
+    // Ô thứ tư nhường cho đội xe — việc hằng ngày kế tiếp sau khi yêu cầu + đơn gộp một ô.
+    key: 'vehicles',
+    labelKey: 'manage.vehiclesShort',
+    href: ROUTES.MANAGE.VEHICLES,
+    permission: PERMISSION.VEHICLE_VIEW,
+    icon: CarOutlined,
+    badge: NAV_BADGE.VEHICLES_NEEDS_ACTION,
   },
 ];
 
@@ -1143,7 +1140,7 @@ export function branchKeyOf(
  *
  * Không hồ sơ/mật khẩu/ví/thuế/chuyến đi thuê: đó là tài khoản CÁ NHÂN của chủ xe, không phải khu
  * vận hành của gian hàng. "Chuyến của tôi" (`/trips`) đọc theo NGƯỜI ĐĂNG NHẬP nên không dùng được
- * trong phiên — chuyến phía chủ xe đi qua hai màn tenant-scoped Yêu cầu thuê / Đơn thuê.
+ * trong phiên — chuyến phía chủ xe đi qua màn tenant-scoped "Đơn thuê xe" (gộp yêu cầu + đơn).
  */
 const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
   {
@@ -1166,17 +1163,11 @@ const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
         icon: CalendarOutlined,
       },
       {
-        key: 'booking-requests',
-        labelKey: 'manage.bookingRequestsShort',
-        href: ROUTES.MANAGE.BOOKING_REQUESTS,
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: InboxOutlined,
-      },
-      {
+        // Yêu cầu + đơn gộp một màn (05/11/2026) — cùng như site partner.
         key: 'bookings',
         labelKey: 'manage.bookingsShort',
         href: ROUTES.MANAGE.BOOKINGS,
-        permission: PERMISSION.BOOKING_VIEW,
+        permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: FileDoneOutlined,
       },
       {
@@ -1206,11 +1197,11 @@ const OWNER_LITE_SUPPORT_TABS: readonly MobileTab[] = [
     icon: CalendarOutlined,
   },
   {
-    key: 'booking-requests',
-    labelKey: 'manage.bookingRequestsShort',
-    href: ROUTES.MANAGE.BOOKING_REQUESTS,
-    permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: InboxOutlined,
+    key: 'bookings',
+    labelKey: 'manage.bookingsShort',
+    href: ROUTES.MANAGE.BOOKINGS,
+    permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
+    icon: FileDoneOutlined,
   },
 ];
 

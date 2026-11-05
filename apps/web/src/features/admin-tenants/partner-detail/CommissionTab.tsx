@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
+import { useCommissionTierSummary } from '@/features/fee-policies/hooks/use-tier-range-label';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import type { PartnerCommission } from './api';
@@ -46,6 +47,8 @@ export function CommissionTab({ tenantId }: { tenantId: string }) {
 
 function CommissionContent({ data }: { data: PartnerCommission }) {
   const t = useTranslations('AdminTenants.partnerDetail.commission');
+  const tCommon = useTranslations('Common');
+  const tierSummary = useCommissionTierSummary();
   const fmt = useAppFormat();
   const periodLabel = usePeriodLabel();
   const current = data.months.find((month) => !month.closed) ?? null;
@@ -118,15 +121,25 @@ function CommissionContent({ data }: { data: PartnerCommission }) {
             <KeyValues
               items={[
                 {
+                  // Hoa hồng lũy tiến theo ngày (ADR 0064 điều 3) — không còn một % phẳng.
                   key: 'rate',
                   label: t('policy.rate'),
                   value: (
                     <strong>
-                      {t('policy.percent', { value: Number(data.feePolicy.serviceFeePercent) })}
+                      {tierSummary(data.feePolicy.ownerCommissionTiers) ||
+                        tCommon('labels.emptyValue')}
                     </strong>
                   ),
                 },
                 { key: 'basis', label: t('policy.basis'), value: t('policy.basisValue') },
+                {
+                  key: 'platformFee',
+                  label: t('policy.platformFee'),
+                  value: t('policy.platformFeeValue', {
+                    car: fmt.money(data.feePolicy.platformFeeCar),
+                    motorbike: fmt.money(data.feePolicy.platformFeeMotorbike),
+                  }),
+                },
                 {
                   key: 'from',
                   label: t('policy.effectiveFrom'),

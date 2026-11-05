@@ -274,6 +274,13 @@ export const queryKeys = {
   bookings: {
     all: ['bookings'] as const,
     list: (params: QueryParams) => ['bookings', 'list', params] as const,
+    /**
+     * "Đơn đã kết thúc" — đơn đã đóng + yêu cầu không thành đơn (`GET /booking-history`, 05/11/2026).
+     * Dưới nhánh `bookings` để mọi lượt đổi đơn làm mới theo; lượt đóng YÊU CẦU (từ chối/huỷ) làm
+     * mới riêng tiền tố `historyAll`.
+     */
+    historyAll: ['bookings', 'history'] as const,
+    history: (params: QueryParams) => ['bookings', 'history', params] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
     /** Bàn giao xe của một đơn (Wave 7) — nằm dưới nhánh `bookings` vì xác nhận bàn giao
      *  đổi luôn trạng thái đơn, invalidate một chỗ là đủ. */

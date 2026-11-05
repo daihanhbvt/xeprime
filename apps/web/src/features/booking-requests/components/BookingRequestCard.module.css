@@ -1,87 +1,19 @@
 /*
- * Thẻ một yêu cầu thuê — Figma Partner-XePrime "Vehicle Card" của màn Request (`23649:25607`,
- * 02/11/2026): bo 16, viền xám, bóng 8px rất nhạt; DẢI ĐẦU nền `gray-25` cao ~48 (đệm 6/20); THÂN
- * đệm 20, bốn vùng cách 20 (xe · khách có kẻ dọc hai bên · ô Yêu cầu thuê · ô Chi tiết thanh toán).
- *
- * `@container`, KHÔNG `@media`: chiều rộng thật của thẻ là chiều rộng cột nội dung, không phải khổ
- * máy (bài học 19/09/2026 — `@media` từng bung bốn vùng ở viewport "đủ rộng" trong khi cột thật
- * còn hẹp). MOBILE-FIRST: mặc định một cột, hai mốc container mở dần ra.
+ * Phần RIÊNG của thẻ yêu cầu — khung (dải đầu, bốn vùng, mốc container) ở
+ * `features/bookings/components/rental-card/RentalCard.module.css`, dùng chung với thẻ ĐƠN
+ * (05/11/2026). Ở đây: nút của dải đầu, vùng khách, dải thông tin thêm và các dòng tiền cỡ chữ
+ * của popup chi tiết (`RequestPaymentFacts`).
  */
-.card {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-bg-container);
-  box-shadow: 0 0 8px 0 rgba(10, 13, 18, 0.04);
-  container-type: inline-size;
-}
 
-.card[aria-busy='true'] {
-  opacity: 0.85;
-}
-
-/* ── Dải đầu ─────────────────────────────────────────────────────────────── */
-
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm) var(--xp-space-md);
-  min-height: 48px;
-  padding: var(--xp-space-6) 20px;
-  border-bottom: 1px solid var(--xp-color-border);
-  background: var(--xp-color-bg-layout);
-}
-
-.headMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-xs) var(--xp-space-md);
-  min-width: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: 20px;
-}
-
-.code {
-  white-space: nowrap;
-}
-
-/* Chấm 6px giữa các mốc — Figma "_Dot". Vẽ bằng CSS, không phải ảnh. */
-.stamp {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-md);
-  white-space: nowrap;
-}
-
-.stamp::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--xp-color-border-strong);
-}
-
-.headActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--xp-space-12);
-}
+/* ── Nút dải đầu (design "Rental Request - List": cao 36, bo 12, chữ 14/600) ─── */
 
 .buttonIcon {
   font-size: 20px;
 }
 
 .rejectButton.rejectButton,
-.confirmButton.confirmButton {
+.confirmButton.confirmButton,
+.ghostButton.ghostButton {
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-6);
@@ -94,16 +26,17 @@
   box-shadow: none;
 }
 
+/* Từ chối / Huỷ chuyến: nền đỏ nhạt, chữ đỏ đậm, không viền. */
 .rejectButton.rejectButton {
-  border: 1px solid var(--xp-color-error-border);
-  background: var(--xp-color-bg-container);
+  border: 0;
+  background: var(--xp-color-error-bg);
   color: var(--xp-color-error);
 }
 
 .rejectButton.rejectButton:hover:not(:disabled) {
-  border-color: var(--xp-color-error);
   background: var(--xp-color-error-bg);
   color: var(--xp-color-error);
+  filter: brightness(0.97);
 }
 
 .confirmButton.confirmButton {
@@ -118,138 +51,23 @@
   filter: brightness(1.04);
 }
 
-/* Câu trạng thái dưới dải đầu (quá hạn phản hồi · đang chờ khách trả). */
-.notice {
-  margin: 0;
-  padding: var(--xp-space-sm) 20px;
-  border-bottom: 1px solid var(--xp-color-border);
-  background: var(--xp-color-warning-subtle);
+/* Nhắc khách: viền xám, nền trắng. */
+.ghostButton.ghostButton {
+  border: 1px solid var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: 20px;
 }
 
-/* ── Thân bốn vùng ───────────────────────────────────────────────────────── */
-
-.body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    'vehicle'
-    'customer'
-    'request'
-    'payment';
-  gap: 20px;
-  padding: 20px;
-}
-
-.vehicle {
-  grid-area: vehicle;
-  display: flex;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
-.vehicleMedia {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--xp-space-12);
-}
-
-.thumb {
-  display: block;
-  overflow: hidden;
-  width: 160px;
-  aspect-ratio: 260 / 146;
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-bg-muted);
-}
-
-.thumbImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumbFallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: var(--xp-color-text-placeholder);
-  font-size: 32px;
-}
-
-.scheduleLink {
+.tooltipAnchor {
   display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-6);
-  color: var(--xp-color-primary);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: 20px;
-  white-space: nowrap;
 }
 
-.scheduleLink:hover {
-  color: var(--xp-color-primary-hover);
+.tooltipAnchor > :global(.ant-btn) {
+  flex: 1;
+  min-height: inherit;
 }
 
-.vehicleText {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--xp-space-6);
-  min-width: 0;
-}
-
-.vehicleName,
-.vehicleNamePlain {
-  overflow: hidden;
-  max-width: 100%;
-  color: var(--xp-color-text);
-  font-size: 18px;
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: 28px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vehicleName:hover {
-  color: var(--xp-color-primary-active);
-}
-
-.specs {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: 22px;
-}
-
-.plate {
-  padding: 2px var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-layout);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.customer {
-  grid-area: customer;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
+/* ── Vùng khách ──────────────────────────────────────────────────────────── */
 
 .customerTop {
   display: flex;
@@ -278,145 +96,7 @@
   color: inherit;
 }
 
-/* Hai ô "Yêu cầu thuê" / "Chi tiết thanh toán": nền gray-25, viền, bo 16, đệm 16. */
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-12);
-  min-width: 0;
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-bg-layout);
-}
-
-.panel:nth-of-type(1) {
-  grid-area: request;
-}
-
-.panel:nth-of-type(2) {
-  grid-area: payment;
-}
-
-.panelHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  padding-bottom: var(--xp-space-sm);
-  border-bottom: 1px solid var(--xp-color-border);
-}
-
-.panelTitle {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: 24px;
-}
-
-.detailLink {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-6);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--xp-color-primary);
-  font: inherit;
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: 20px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.detailLink:hover {
-  color: var(--xp-color-primary-hover);
-}
-
-.detailLink:focus-visible {
-  border-radius: var(--xp-border-radius-sm);
-  outline: 2px solid var(--xp-color-focus-ring);
-  outline-offset: 2px;
-}
-
-.estimateTag {
-  padding: 0 var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: 20px;
-}
-
-.facts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-12);
-  margin: 0;
-}
-
-.fact {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-12);
-  font-size: var(--xp-font-size-body);
-  line-height: 20px;
-}
-
-/* Nhãn dài ("Tiền giữ chỗ (khách chưa trả):") xuống dòng thay vì đẩy con số ra ngoài ô. */
-.factLabel {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--xp-color-text-tertiary);
-}
-
-.factValue,
-.factValueEnd {
-  margin: 0;
-  min-width: 0;
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.factValueEnd {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Dòng "còn phải thu" của popup chi tiết — vàng thương hiệu, 16/600 (design `23807:66304`). */
-.factValueEmphasis {
-  composes: factValueEnd;
-  color: var(--xp-color-primary);
-  font-size: var(--xp-font-size-body-lg);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.hint {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 18px;
-}
-
 /* ── Dải thông tin thêm ──────────────────────────────────────────────────── */
-
-.extras {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-12) var(--xp-space-lg);
-  padding: var(--xp-space-12) 20px;
-  border-top: 1px solid var(--xp-color-border);
-  font-size: var(--xp-font-size-body);
-  line-height: 20px;
-}
-
-.extras > * {
-  min-width: 0;
-}
 
 .extraLine {
   margin: 0;
@@ -430,8 +110,22 @@
   margin: 0;
 }
 
-.extraFacts .fact {
-  justify-content: flex-start;
+.extraFact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.extraFactLabel {
+  color: var(--xp-color-text-tertiary);
+}
+
+.extraFactValue {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
 }
 
 .chip {
@@ -442,6 +136,13 @@
   margin: 0;
   color: var(--xp-color-error);
   font-weight: var(--xp-font-weight-medium);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
 }
 
 .note {
@@ -476,64 +177,53 @@
   color: var(--xp-color-primary-active);
 }
 
-/* ── Mốc container ───────────────────────────────────────────────────────── */
+/* ── Dòng tiền ở cỡ chữ của popup chi tiết yêu cầu (`RequestPaymentFacts`) ── */
 
-/* Vừa (tablet / cột hẹp): xe + khách một hàng, hai ô tiền/lịch một hàng. */
-@container (min-width: 720px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      'vehicle customer'
-      'request payment';
-  }
-
-  .customer {
-    padding-left: 20px;
-    border-left: 1px solid var(--xp-color-border);
-  }
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
 }
 
-/* Rộng (desktop): đúng một hàng bốn vùng như design. */
-@container (min-width: 1280px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) minmax(300px, 337px) minmax(
-        260px,
-        278px
-      );
-    grid-template-areas: 'vehicle customer request payment';
-  }
-
-  .customer {
-    padding-right: 20px;
-    border-right: 1px solid var(--xp-color-border);
-  }
-
-  .thumb {
-    width: 260px;
-  }
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
 }
 
-/* Rất hẹp (điện thoại): ảnh xe nhỏ lại, nút quyết định trải hết chiều ngang. */
-@container (max-width: 480px) {
-  .thumb {
-    width: 112px;
-  }
+/* Nhãn dài xuống dòng thay vì đẩy con số ra ngoài ô. */
+.factLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--xp-color-text-tertiary);
+}
 
-  .vehicleName,
-  .vehicleNamePlain {
-    font-size: var(--xp-font-size-body-lg);
-    line-height: 24px;
-  }
+.factValueEnd {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  white-space: nowrap;
+}
 
-  .headActions {
-    width: 100%;
-    justify-content: stretch;
-  }
+/* Dòng "còn phải thu" của popup chi tiết — vàng thương hiệu, 16/600 (design `23807:66304`). */
+.factValueEmphasis {
+  composes: factValueEnd;
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
 
-  .rejectButton.rejectButton,
-  .confirmButton.confirmButton {
-    flex: 1;
-    height: 44px;
-    justify-content: center;
-  }
+/* ⓘ cạnh tên khách ở thẻ Kanban — đỏ khi khách bị đánh dấu rủi ro. */
+.infoHint {
+  color: var(--xp-color-text-tertiary);
+}
+
+.riskHint {
+  color: var(--xp-color-error);
 }

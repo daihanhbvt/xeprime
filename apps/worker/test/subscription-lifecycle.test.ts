@@ -40,6 +40,8 @@ let packagePlanId: string;
 const tenantIds: string[] = [];
 /** Bậc theo loại xe (ADR 0065) do từng test tự dựng — `after` dọn cùng. */
 const extraPlanIds: string[] = [];
+/** Người dùng thành viên do  dựng —  dọn cùng. */
+const memberUserIds: string[] = [];
 
 async function mkTenant(label: string): Promise<string> {
   const id = newId();
@@ -154,7 +156,7 @@ after(async () => {
     await prisma.plan.deleteMany({
       where: { id: { in: [commissionPlanId, packagePlanId, ...extraPlanIds] } },
     });
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...memberUserIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -489,4 +491,128 @@ test('cặp gói ô tô + xe máy hết hạn cùng lúc ⇒ MỘT tin hết h�
   assert.match(notes[0]!.title, /Ô tô · 5 xe/);
   assert.match(notes[0]!.body ?? '', /xe máy/);
   assert.match(notes[0]!.body ?? '', /ô tô/);
+});
+
+/**
+ * Thành viên nhận tin của gian hàng (`notifyTenantMembers`). Mỗi gian hàng một người dùng RIÊNG:
+ * một tài khoản đối tác thuộc tối đa MỘT gian hàng (ADR 0053, unique `user_id`).
+ */
+async function addMember(tenantId: string) {
+  const userId = newId();
+  await prisma.user.create({
+    data: {
+      id: userId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Thành viên vòng đời',
+      email: `sl-m-${userId.slice(-8).toLowerCase()}-${RUN}@xeprime.test`,
+    },
+  });
+  memberUserIds.push(userId);
+  await prisma.tenantMembership.create({
+    data: { id: newId(), tenantId, userId, roleKey: 'shop_owner', status: 'active' },
+  });
+}
+
+const notesOf = (tenantId: string, type: string) =>
+  prisma.notification.findMany({ where: { tenantId, type }, select: { body: true } });
+
+test('đã gia hạn (có kỳ xếp sau) ⇒ không nhắc sắp hết hạn; huỷ kỳ xếp sau ⇒ được nhắc lại', async () => {
+  if (!dbAvailable) return;
+  const plans = await scopedPlans();
+  const tenantId = await mkTenant('renewed-remind');
+  await addMember(tenantId);
+  const now = new Date();
+  const endsAt = new Date(now.getTime() + 2 * DAY);
+  await scopedRow(tenantId, plans.moto, 'motorbike', endsAt);
+  const nextId = newId();
+  await prisma.tenantSubscription.create({
+    data: {
+      id: nextId,
+      tenantId,
+      planId: plans.moto,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      price: 0,
+      termMonths: 1,
+      billingMode: BILLING_MODE.PACKAGE,
+      vehicleScope: 'motorbike',
+      startsAt: endsAt,
+      endsAt: new Date(endsAt.getTime() + 30 * DAY),
+    },
+  });
+
+  await sweepSubscriptionLifecycle(prisma, now);
+  assert.equal((await notesOf(tenantId, 'subscription_expiring')).length, 0, 'đã gia hạn ⇒ không nhắc');
+
+  await prisma.tenantSubscription.update({
+    where: { id: nextId },
+    data: { status: SUBSCRIPTION_STATUS.CANCELLED },
+  });
+  await sweepSubscriptionLifecycle(prisma, now);
+  assert.ok((await notesOf(tenantId, 'subscription_expiring')).length > 0, 'huỷ kỳ sau ⇒ nhắc lại');
+});
+
+test('kỳ hết hạn đã có kỳ nối tiếp ⇒ không báo "đã hết hạn", và cột mốc vẫn được claim', async () => {
+  if (!dbAvailable) return;
+  const plans = await scopedPlans();
+  const tenantId = await mkTenant('renewed-expired');
+  await addMember(tenantId);
+  const now = new Date();
+  const endsAt = new Date(now.getTime() - HOUR);
+  await scopedRow(tenantId, plans.car, 'car', endsAt);
+  // Kỳ nối tiếp là gói DOANH NGHIỆP (`all`) — xung đột với ô tô, nên cũng là "đã gia hạn".
+  const entId = newId();
+  await prisma.plan.create({
+    data: {
+      id: entId,
+      code: `sl2-ent-${RUN}-${entId.slice(-4)}`,
+      name: 'Doanh nghiệp',
+      status: PLAN_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      vehicleScope: 'all',
+      sortOrder: 999,
+      limitsJson: { features: [], graceDays: 7, maxVehicles: null, salesOnly: true, termPrices: [] },
+    },
+  });
+  extraPlanIds.push(entId);
+  await scopedRow(tenantId, entId, 'all', new Date(endsAt.getTime() + 30 * DAY));
+  await prisma.tenantSubscription.updateMany({
+    where: { tenantId, planId: entId },
+    data: { startsAt: endsAt },
+  });
+
+  await sweepSubscriptionLifecycle(prisma, now);
+  assert.equal((await notesOf(tenantId, 'subscription_expired')).length, 0);
+  const old = await prisma.tenantSubscription.findFirstOrThrow({
+    where: { tenantId, planId: plans.car },
+    select: { expiryNotifiedAt: true },
+  });
+  assert.ok(old.expiryNotifiedAt, 'claim để lượt sau không quét lại');
+});
+
+test('gói bán qua tư vấn sắp hết hạn ⇒ lời nhắc chỉ lối liên hệ XePrime', async () => {
+  if (!dbAvailable) return;
+  const tenantId = await mkTenant('sales-only');
+  await addMember(tenantId);
+  const entId = newId();
+  await prisma.plan.create({
+    data: {
+      id: entId,
+      code: `sl2-ent2-${RUN}-${entId.slice(-4)}`,
+      name: 'Doanh nghiệp',
+      status: PLAN_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      vehicleScope: 'all',
+      sortOrder: 999,
+      limitsJson: { features: [], graceDays: 7, maxVehicles: null, salesOnly: true, termPrices: [] },
+    },
+  });
+  extraPlanIds.push(entId);
+  const now = new Date();
+  await scopedRow(tenantId, entId, 'all', new Date(now.getTime() + 2 * DAY));
+
+  await sweepSubscriptionLifecycle(prisma, now);
+  const notes = await notesOf(tenantId, 'subscription_expiring');
+  assert.ok(notes.length > 0);
+  assert.match(notes[0]!.body ?? '', /liên hệ XePrime/);
+  assert.doesNotMatch(notes[0]!.body ?? '', /Gói của tôi/);
 });

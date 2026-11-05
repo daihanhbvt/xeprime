@@ -4,13 +4,18 @@ import {
   SUBSCRIPTION_ASSIGN_KIND,
   SUBSCRIPTION_CANCEL_BLOCK,
   SUBSCRIPTION_CHANGE_TIMING,
+  SUBSCRIPTION_EDIT_BLOCK,
   SUBSCRIPTION_ORIGIN,
   SUBSCRIPTION_TERM_STATE,
   daysLeftUntil,
+  laterChainTermsOf,
   planSubscriptionChain,
   subscriptionAssignKindOfAction,
   subscriptionCancelBlockOf,
+  subscriptionEditBlockOf,
+  subscriptionEndsAtValid,
   subscriptionOriginOf,
+  subscriptionShiftPlan,
   subscriptionTermStateOf,
 } from './subscription-term';
 
@@ -172,36 +177,29 @@ describe('subscriptionCancelBlockOf', () => {
     ...over,
   });
 
-  it('kỳ đuôi trả phí huỷ được', () => {
-    const cur = live({});
-    expect(subscriptionCancelBlockOf(cur, [cur], NOW)).toBeNull();
-  });
-
-  it('có kỳ xếp sau ⇒ LATER_TERM', () => {
+  it('kỳ trả phí còn hạn huỷ được — kể cả khi có kỳ xếp sau (huỷ kèm, ADR 0080)', () => {
     const cur = live({});
     const next = live({
       id: 'next',
       startsAt: '2027-01-01T00:00:00.000Z',
       endsAt: '2027-02-01T00:00:00.000Z',
     });
-    expect(subscriptionCancelBlockOf(cur, [cur, next], NOW)).toBe(
-      SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM,
-    );
-    expect(subscriptionCancelBlockOf(next, [cur, next], NOW)).toBeNull();
+    expect(subscriptionCancelBlockOf(cur, NOW)).toBeNull();
+    expect(subscriptionCancelBlockOf(next, NOW)).toBeNull();
+    expect(laterChainTermsOf(cur, [cur, next], NOW).map((t) => t.id)).toEqual(['next']);
+    expect(laterChainTermsOf(next, [cur, next], NOW)).toEqual([]);
   });
 
   it('dòng hoa hồng ĐANG CHẠY không huỷ được; đã XẾP LỊCH thì huỷ được', () => {
     const running = live({ billingMode: 'commission' });
-    expect(subscriptionCancelBlockOf(running, [running], NOW)).toBe(
-      SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM,
-    );
+    expect(subscriptionCancelBlockOf(running, NOW)).toBe(SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM);
     const scheduled = live({
       id: 'down',
       billingMode: 'commission',
       startsAt: '2027-01-01T00:00:00.000Z',
       endsAt: '2027-02-01T00:00:00.000Z',
     });
-    expect(subscriptionCancelBlockOf(scheduled, [scheduled], NOW)).toBeNull();
+    expect(subscriptionCancelBlockOf(scheduled, NOW)).toBeNull();
   });
 
   it('kỳ đã hết hạn / đã huỷ ⇒ NOT_LIVE', () => {
@@ -209,7 +207,7 @@ describe('subscriptionCancelBlockOf', () => {
       endsAt: '2026-10-01T00:00:00.000Z',
       startsAt: '2026-09-01T00:00:00.000Z',
     });
-    expect(subscriptionCancelBlockOf(ended, [ended], NOW)).toBe(SUBSCRIPTION_CANCEL_BLOCK.NOT_LIVE);
+    expect(subscriptionCancelBlockOf(ended, NOW)).toBe(SUBSCRIPTION_CANCEL_BLOCK.NOT_LIVE);
   });
 });
 
@@ -301,7 +299,7 @@ describe('chuỗi kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
     expect(plan.cancel.map((t) => t.id)).toEqual(['c']);
   });
 
-  it('kỳ xe máy xếp sau KHÔNG chặn huỷ kỳ ô tô', () => {
+  it('chuỗi xếp sau theo BAO ĐÓNG xung đột phạm vi', () => {
     const car = term({ id: 'car' });
     const motoLater = term({
       id: 'moto',
@@ -309,10 +307,77 @@ describe('chuỗi kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
       startsAt: '2027-01-01T00:00:00.000Z',
       endsAt: '2027-02-01T00:00:00.000Z',
     });
-    expect(subscriptionCancelBlockOf(car, [car, motoLater], NOW)).toBeNull();
+    // Kỳ xe máy xếp sau không thuộc chuỗi ô tô.
+    expect(laterChainTermsOf(car, [car, motoLater], NOW)).toEqual([]);
     const carLater = { ...motoLater, id: 'car2', vehicleScope: 'car' };
-    expect(subscriptionCancelBlockOf(car, [car, carLater], NOW)).toBe(
-      SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM,
+    expect(laterChainTermsOf(car, [car, carLater], NOW).map((t) => t.id)).toEqual(['car2']);
+
+    // xe máy → doanh nghiệp (all) → ô tô: ô tô đi theo vì nó xung đột với kỳ doanh nghiệp.
+    const moto = term({ id: 'm', vehicleScope: 'motorbike' });
+    const ent = term({
+      id: 'ent',
+      vehicleScope: 'all',
+      startsAt: '2027-01-01T00:00:00.000Z',
+      endsAt: '2027-04-01T00:00:00.000Z',
+    });
+    const carAfter = term({
+      id: 'c2',
+      startsAt: '2027-04-01T00:00:00.000Z',
+      endsAt: '2027-05-01T00:00:00.000Z',
+    });
+    expect(laterChainTermsOf(moto, [carAfter, ent, moto], NOW).map((t) => t.id)).toEqual([
+      'ent',
+      'c2',
+    ]);
+  });
+});
+
+describe('sửa kỳ (ADR 0080)', () => {
+  const term = (over: Record<string, unknown>) => ({
+    id: 'ent',
+    planId: 'enterprise_contact',
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    billingMode: 'package',
+    vehicleScope: 'all',
+    startsAt: '2026-09-21T00:00:00.000Z',
+    endsAt: '2026-12-21T00:00:00.000Z',
+    ...over,
+  });
+
+  it('chỉ kỳ trả phí còn hạn sửa được', () => {
+    expect(subscriptionEditBlockOf(term({}), NOW)).toBeNull();
+    expect(subscriptionEditBlockOf(term({ billingMode: 'commission' }), NOW)).toBe(
+      SUBSCRIPTION_EDIT_BLOCK.COMMISSION_TERM,
     );
+    expect(subscriptionEditBlockOf(term({ status: SUBSCRIPTION_STATUS.CANCELLED }), NOW)).toBe(
+      SUBSCRIPTION_EDIT_BLOCK.NOT_LIVE,
+    );
+  });
+
+  it('ngày kết thúc mới phải sau bây giờ, sau ngày bắt đầu, và không quá 36 tháng', () => {
+    const cur = term({});
+    expect(subscriptionEndsAtValid(cur, '2027-01-31T00:00:00.000Z', NOW)).toBe(true);
+    expect(subscriptionEndsAtValid(cur, '2026-10-01T00:00:00.000Z', NOW)).toBe(false);
+    expect(subscriptionEndsAtValid(cur, '2062-01-01T00:00:00.000Z', NOW)).toBe(false);
+    expect(subscriptionEndsAtValid(cur, 'not-a-date', NOW)).toBe(false);
+  });
+
+  it('dời ngày kết thúc ⇒ kỳ xếp sau dời cùng khoảng, giữ độ dài', () => {
+    const cur = term({});
+    const next = term({
+      id: 'next',
+      startsAt: '2026-12-21T00:00:00.000Z',
+      endsAt: '2027-03-21T00:00:00.000Z',
+    });
+    const shifts = subscriptionShiftPlan(
+      cur,
+      [cur, next],
+      new Date('2026-12-31T00:00:00.000Z'),
+      NOW,
+    );
+    expect(shifts).toHaveLength(1);
+    expect(shifts[0]!.startsAt.toISOString()).toBe('2026-12-31T00:00:00.000Z');
+    expect(shifts[0]!.endsAt.toISOString()).toBe('2027-03-31T00:00:00.000Z');
+    expect(subscriptionShiftPlan(cur, [cur, next], new Date(cur.endsAt), NOW)).toEqual([]);
   });
 });

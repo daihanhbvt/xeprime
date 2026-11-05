@@ -89,3 +89,29 @@
   background: var(--xp-color-error-bg);
   font-weight: var(--xp-font-weight-semibold);
 }
+
+/* Bản GỌN ở chân thẻ Kanban (Figma `23895:15181`: chỉ "⏱ 59:39") — nhãn vẫn được đọc bằng trình đọc
+   màn hình, chỉ không chiếm chỗ trên cột hẹp. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Chân thẻ Kanban: con số NGHIÊNG 14/400 đỏ (Figma "Confirmation Status"). */
+.compact {
+  font-style: italic;
+}
+
+.compact .headerClock,
+.compact.headerUrgent .headerClock {
+  padding: 0;
+  background: none;
+  font-weight: var(--xp-font-weight-regular);
+}

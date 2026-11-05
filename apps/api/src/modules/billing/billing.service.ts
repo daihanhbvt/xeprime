@@ -49,12 +49,19 @@ import {
   SUBSCRIPTION_CANCEL_BLOCK,
   SUBSCRIPTION_CANCEL_REASON,
   SUBSCRIPTION_CHANGE_TIMING,
+  SUBSCRIPTION_EDIT_BLOCK,
+  SUBSCRIPTION_EDIT_MAX_END_MONTHS,
+  SUBSCRIPTION_ORIGIN,
   SUBSCRIPTION_STATUS,
   AUDIT_TARGET_TYPE,
+  laterChainTermsOf,
   planSubscriptionChain,
   subscriptionCancelBlockOf,
   subscriptionChainLockKey,
+  subscriptionEditBlockOf,
+  subscriptionEndsAtValid,
   subscriptionOriginOf,
+  subscriptionShiftPlan,
   subscriptionTermStateOf,
   type SubscriptionChainPlan,
   VEHICLE_PUBLIC_STATUS,
@@ -93,6 +100,7 @@ import {
   TenantPlanCatalogDto,
   TenantPlanDto,
   UpdatePlanDto,
+  UpdateSubscriptionDto,
   VehicleTypeQuotaDto,
 } from './dto/billing.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -181,6 +189,28 @@ const TERM_SNAPSHOT_SELECT = {
 type TermSnapshotRow = Prisma.TenantSubscriptionGetPayload<{
   select: typeof TERM_SNAPSHOT_SELECT;
 }>;
+
+/** Đủ để sửa một kỳ (ADR 0080): snapshot cho audit + giá, hạn mức, ghi chú, nguồn gốc. */
+const EDIT_SELECT = {
+  ...TERM_SNAPSHOT_SELECT,
+  price: true,
+  termMonths: true,
+  quotaJson: true,
+  note: true,
+  createdBy: true,
+  plan: { select: { code: true, name: true, limitsJson: true } },
+} satisfies Prisma.TenantSubscriptionSelect;
+
+/**
+ * Ba cột claim của job vòng đời gắn với `ends_at` CŨ — kỳ đổi ngày thì xoá để nhắc gia hạn / báo
+ * hết hạn chạy lại theo ngày mới, thay vì im lặng vì "đã nhắc rồi".
+ */
+const LIFECYCLE_CLAIMS_RESET = {
+  renewalRemindedAt: null,
+  expiryNotifiedAt: null,
+  graceGuideNotifiedAt: null,
+  lapseHandledAt: null,
+} satisfies Prisma.TenantSubscriptionUpdateInput;
 
 /** Kỳ TRẢ PHÍ — mọi dòng không phải hoa hồng 0đ (kể cả dòng cũ thiếu `billing_mode`). */
 const isPaidRow = (term: TermSnapshotRow) => term.billingMode !== BILLING_MODE.COMMISSION;
@@ -842,7 +872,9 @@ export class BillingService {
    * Luật (`subscriptionCancelBlockOf`, web đọc cùng hàm):
    *  - Kỳ đã huỷ / đã hết hạn ⇒ `INVALID_STATUS_TRANSITION` — không còn gì để huỷ.
    *  - Dòng hoa hồng mặc định ⇒ `INVALID_STATUS_TRANSITION` — đổi tuyến bằng cách GÁN gói.
-   *  - Đã có kỳ xếp SAU nó ⇒ `SUBSCRIPTION_LATER_TERM_EXISTS` — huỷ từ đuôi chuỗi, hoặc đổi gói ngay.
+   *
+   * Các kỳ XẾP SAU nó trong chuỗi (`laterChainTermsOf`) bị huỷ KÈM trong cùng transaction (ADR 0080
+   * điều 1) — mỗi kỳ trả phí một dòng audit lý do `cascade`. Chuỗi không bao giờ bị hở một khoảng.
    *
    * Huỷ kỳ CUỐI CÙNG còn hạn thì trong CÙNG transaction gán lại dòng hoa hồng mặc định
    * (`assignDefaultPlanWithinTx`): "không có gói" là pha `unconfigured` — mọi đường ghi tiền từ
@@ -870,14 +902,7 @@ export class BillingService {
         where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
         select: TERM_SNAPSHOT_SELECT,
       });
-      const block = subscriptionCancelBlockOf(target, live, now);
-      if (block === SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.SUBSCRIPTION_LATER_TERM_EXISTS,
-          message:
-            'Gian hàng đã có một kỳ gói xếp lịch sau kỳ này — huỷ kỳ xếp sau trước, hoặc đổi gói ngay',
-        });
-      }
+      const block = subscriptionCancelBlockOf(target, now);
       if (block) {
         throw new ConflictException({
           code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
@@ -888,8 +913,10 @@ export class BillingService {
         });
       }
 
-      await tx.tenantSubscription.update({
-        where: { id: target.id },
+      const cascade = laterChainTermsOf(target, live, now);
+      const cancelledIds = new Set([target.id, ...cascade.map((term) => term.id)]);
+      await tx.tenantSubscription.updateMany({
+        where: { id: { in: [...cancelledIds] }, status: SUBSCRIPTION_STATUS.ACTIVE },
         data: { status: SUBSCRIPTION_STATUS.CANCELLED },
       });
       /*
@@ -908,7 +935,7 @@ export class BillingService {
        * hiệu lực trên các dòng đã bắt đầu, SAU khi kỳ bị huỷ đã lật `cancelled`.
        */
       const stillRunning =
-        live.some((term) => term.id !== target.id && term.startsAt.getTime() <= now.getTime()) ||
+        live.some((term) => !cancelledIds.has(term.id) && term.startsAt.getTime() <= now.getTime()) ||
         resolveActivePackageTerms(await this.loadEffectiveRows(tenantId, now, tx), now).length > 0;
       const fallback = stillRunning
         ? null
@@ -928,17 +955,298 @@ export class BillingService {
             status: SUBSCRIPTION_STATUS.CANCELLED,
             reason: SUBSCRIPTION_CANCEL_REASON.MANUAL,
             term: termSnapshot(target),
+            ...(cascade.length > 0 ? { cascadedTerms: cascade.map(termSnapshot) } : {}),
             ...(fallback ? { fallbackTerm: termSnapshot(fallback) } : {}),
           },
         },
         tx,
       );
+      // Dòng hoa hồng đã xếp lịch bị huỷ kèm là dòng hệ thống — như `planChainWithinTx`, không audit.
+      for (const term of cascade.filter(isPaidRow)) {
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId,
+            actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+            action: SUBSCRIPTION_AUDIT_ACTION.CANCEL,
+            targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
+            targetId: term.id,
+            before: { status: SUBSCRIPTION_STATUS.ACTIVE, term: termSnapshot(term) },
+            after: {
+              status: SUBSCRIPTION_STATUS.CANCELLED,
+              reason: SUBSCRIPTION_CANCEL_REASON.CASCADE,
+              term: termSnapshot(term),
+              causedBy: target.id,
+            },
+          },
+          tx,
+        );
+      }
       return tx.tenantSubscription.findUniqueOrThrow({
         where: { id: target.id },
         select: SUB_SELECT,
       });
     });
     return toSubscriptionDto(row);
+  }
+
+  /**
+   * Sửa một kỳ TRẢ PHÍ còn hạn — giá, ngày kết thúc, trần số xe, ghi chú (ADR 0080 điều 2–3).
+   *
+   *  - Kỳ đã huỷ / hết hạn / dòng hoa hồng ⇒ `SUBSCRIPTION_TERM_NOT_EDITABLE`.
+   *  - GIÁ chỉ sửa được ở kỳ admin gán (`origin = admin`): kỳ sinh từ hoá đơn gian hàng đã trả
+   *    phải giữ số tiền khớp hoá đơn ⇒ `SUBSCRIPTION_PRICE_NOT_EDITABLE`. Hoá đơn `paid` của kỳ admin
+   *    gán được ghi lại theo giá mới (0đ ⇒ void; chưa có mà giá > 0 ⇒ sinh mới) — hoá đơn đó là
+   *    chứng từ của chính lượt gán, không phải một khoản tiền qua đối soát.
+   *  - NGÀY KẾT THÚC đổi thì các kỳ xếp sau trong chuỗi dời theo cùng khoảng (`subscriptionShiftPlan`)
+   *    — mỗi kỳ bị dời một dòng audit `subscription.shift`. Thứ tự ghi đi theo EXCLUDE (kiểm từng
+   *    dòng): kéo dài thì dời kỳ muộn nhất trước, rút ngắn thì sửa kỳ này trước. Chồng lên kỳ ngoài
+   *    chuỗi ⇒ EXCLUDE từ chối ⇒ `SUBSCRIPTION_TERM_CONFLICT`, cả transaction rơi.
+   *    Ba cột claim của job vòng đời trên các kỳ bị đổi ngày được xoá để nhắc lại theo ngày mới.
+   *  - TRẦN SỐ XE ghi vào snapshot `quota_json` của kỳ (ADR 0041 điều 3). Hạ trần dưới số xe đang
+   *    dùng không gỡ xe nào — như hạ bậc, cổng tạo/đưa xe lên chợ chặn từ lượt sau.
+   */
+  async updateSubscription(
+    tenantId: string,
+    actorUserId: string,
+    subscriptionId: string,
+    dto: UpdateSubscriptionDto,
+  ): Promise<SubscriptionDto> {
+    if (
+      dto.price === undefined &&
+      dto.endsAt === undefined &&
+      dto.maxVehicles === undefined &&
+      dto.note === undefined
+    ) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Chưa có thay đổi nào để lưu',
+      });
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await lockSubscriptionChain(tx, tenantId);
+      const now = new Date();
+      const target = await tx.tenantSubscription.findFirst({
+        where: { id: subscriptionId, tenantId },
+        select: EDIT_SELECT,
+      });
+      if (!target) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy thuê bao',
+        });
+      }
+      const block = subscriptionEditBlockOf(target, now);
+      if (block) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SUBSCRIPTION_TERM_NOT_EDITABLE,
+          message:
+            block === SUBSCRIPTION_EDIT_BLOCK.COMMISSION_TERM
+              ? 'Dòng tuyến hoa hồng không sửa được — đổi tuyến bằng cách gán gói'
+              : 'Chỉ sửa được kỳ đang hiệu lực hoặc đang chờ đến kỳ',
+          details: { reason: block },
+        });
+      }
+      const adminOrigin = subscriptionOriginOf(target) === SUBSCRIPTION_ORIGIN.ADMIN;
+      if (dto.price !== undefined && !adminOrigin) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SUBSCRIPTION_PRICE_NOT_EDITABLE,
+          message: 'Kỳ sinh từ hoá đơn gian hàng đã thanh toán — không sửa được giá',
+        });
+      }
+      const endsAt = dto.endsAt === undefined ? target.endsAt : new Date(dto.endsAt);
+      if (dto.endsAt !== undefined && !subscriptionEndsAtValid(target, endsAt, now)) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: `Ngày kết thúc phải sau ngày bắt đầu, sau hôm nay và trong ${SUBSCRIPTION_EDIT_MAX_END_MONTHS} tháng tới`,
+          details: { field: 'endsAt', maxMonths: SUBSCRIPTION_EDIT_MAX_END_MONTHS },
+        });
+      }
+
+      const price =
+        dto.price === undefined ? target.price : new Prisma.Decimal(dto.price).toDecimalPlaces(2);
+      const beforeQuota =
+        parsePlanQuota(target.quotaJson) ?? quotaOf(parsePlanLimits(target.plan.limitsJson));
+      const quota: PlanQuotaSnapshot =
+        dto.maxVehicles === undefined ? beforeQuota : { ...beforeQuota, maxVehicles: dto.maxVehicles };
+      const note = dto.note === undefined ? target.note : dto.note?.trim() || null;
+
+      const priceChanged = !price.equals(target.price);
+      const endsChanged = endsAt.getTime() !== target.endsAt.getTime();
+      const quotaChanged = quota.maxVehicles !== beforeQuota.maxVehicles;
+      const noteChanged = note !== target.note;
+      if (!priceChanged && !endsChanged && !quotaChanged && !noteChanged) {
+        return tx.tenantSubscription.findUniqueOrThrow({
+          where: { id: target.id },
+          select: SUB_SELECT,
+        });
+      }
+
+      const live = await tx.tenantSubscription.findMany({
+        where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
+        select: { ...TERM_SNAPSHOT_SELECT, createdBy: true },
+      });
+      const shifts = subscriptionShiftPlan(target, live, endsAt, now);
+      const extending = endsAt.getTime() > target.endsAt.getTime();
+      const shiftOne = async (shift: (typeof shifts)[number]) => {
+        await tx.tenantSubscription.update({
+          where: { id: shift.term.id },
+          data: { startsAt: shift.startsAt, endsAt: shift.endsAt, ...LIFECYCLE_CLAIMS_RESET },
+        });
+        if (shift.term.createdBy) {
+          await tx.subscriptionInvoice.updateMany({
+            where: { subscriptionId: shift.term.id, status: SUBSCRIPTION_INVOICE_STATUS.PAID },
+            data: { periodFrom: shift.startsAt, periodTo: shift.endsAt },
+          });
+        }
+      };
+      if (extending) {
+        for (const shift of [...shifts].reverse()) await shiftOne(shift);
+      }
+      const updated = await tx.tenantSubscription.update({
+        where: { id: target.id },
+        data: {
+          price,
+          endsAt,
+          note,
+          ...(quotaChanged ? { quotaJson: quota as unknown as Prisma.InputJsonValue } : {}),
+          ...(endsChanged ? LIFECYCLE_CLAIMS_RESET : {}),
+        },
+        select: SUB_SELECT,
+      });
+      if (!extending) {
+        for (const shift of shifts) await shiftOne(shift);
+      }
+
+      if (adminOrigin && (priceChanged || endsChanged || quotaChanged)) {
+        await this.syncAdminInvoiceWithinTx(tx, {
+          tenantId,
+          term: updated,
+          quota,
+        });
+      }
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: SUBSCRIPTION_AUDIT_ACTION.UPDATE,
+          targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
+          targetId: target.id,
+          before: {
+            term: termSnapshot(target),
+            price: target.price.toString(),
+            maxVehicles: beforeQuota.maxVehicles,
+            note: target.note,
+          },
+          after: {
+            term: termSnapshot(updated),
+            price: price.toString(),
+            maxVehicles: quota.maxVehicles,
+            note,
+            ...(shifts.length > 0
+              ? {
+                  shiftedTerms: shifts.map((shift) => ({
+                    subscriptionId: shift.term.id,
+                    startsAt: shift.startsAt.toISOString(),
+                    endsAt: shift.endsAt.toISOString(),
+                  })),
+                }
+              : {}),
+          },
+        },
+        tx,
+      );
+      for (const shift of shifts) {
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId,
+            actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+            action: SUBSCRIPTION_AUDIT_ACTION.SHIFT,
+            targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
+            targetId: shift.term.id,
+            before: { term: termSnapshot(shift.term) },
+            after: {
+              term: {
+                ...termSnapshot(shift.term),
+                startsAt: shift.startsAt.toISOString(),
+                endsAt: shift.endsAt.toISOString(),
+              },
+              causedBy: target.id,
+            },
+          },
+          tx,
+        );
+      }
+      return updated;
+    });
+
+    return toSubscriptionDto(row);
+  }
+
+  /**
+   * Hoá đơn `paid` của một kỳ ADMIN GÁN đi theo kỳ sau khi sửa — chứng từ của lượt gán phải nói đúng
+   * giá, kỳ và hạn mức đang áp. 0đ ⇒ void (một hoá đơn 0đ là nhiễu, như lúc gán); chưa có hoá đơn
+   * mà giá > 0 (kỳ tặng nay tính tiền) ⇒ sinh mới, `paid` như lượt gán tay.
+   */
+  private async syncAdminInvoiceWithinTx(
+    tx: Prisma.TransactionClient,
+    args: { tenantId: string; term: SubRow; quota: PlanQuotaSnapshot },
+  ): Promise<void> {
+    const { term, quota } = args;
+    const invoice = await tx.subscriptionInvoice.findFirst({
+      where: { subscriptionId: term.id, status: SUBSCRIPTION_INVOICE_STATUS.PAID },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, linesJson: true },
+    });
+    if (term.price.isZero()) {
+      if (invoice) {
+        await tx.subscriptionInvoice.update({
+          where: { id: invoice.id },
+          data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+        });
+      }
+      return;
+    }
+    // Dòng trước ADR 0015 không có kỳ hạn — không dựng được dòng hoá đơn đúng; để nguyên chứng từ cũ.
+    if (term.termMonths === null) return;
+    const pricing = this.priceTerm(term.price.toString(), term.termMonths);
+    const snapshot: PlanInvoiceSnapshot = {
+      planId: term.planId,
+      planCode: term.plan.code,
+      termMonths: term.termMonths,
+      vehicleScope: planVehicleScopeOf(term.vehicleScope),
+      quota,
+      lines: pricing.lines,
+    };
+    if (!invoice) {
+      await this.createInvoiceWithinTx(tx, {
+        tenantId: args.tenantId,
+        subscriptionId: term.id,
+        snapshot,
+        subtotal: pricing.subtotal,
+        discountAmount: pricing.discountAmount,
+        periodFrom: term.startsAt,
+        periodTo: term.endsAt,
+        paid: true,
+      });
+      return;
+    }
+    await tx.subscriptionInvoice.update({
+      where: { id: invoice.id },
+      data: {
+        linesJson: snapshot as unknown as Prisma.InputJsonValue,
+        subtotal: pricing.subtotal,
+        discountAmount: pricing.discountAmount,
+        totalAmount: pricing.total,
+        paidAmount: pricing.total,
+        periodFrom: term.startsAt,
+        periodTo: term.endsAt,
+      },
+    });
   }
 
   /**

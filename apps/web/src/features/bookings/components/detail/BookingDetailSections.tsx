@@ -7,7 +7,9 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { rentalProgress } from '@xeprime/domain';
 import {
+  BOOKING_HISTORY_OUTCOME,
   BOOKING_STATUS,
+  CANCELLATION_PARTY,
   HANDOVER_TYPE,
   PERMISSION,
   STATUS_COLOR,
@@ -28,6 +30,7 @@ import { useInvalidateHandovers } from '@/features/handovers/hooks';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 import { dayjs } from '@/lib/datetime';
@@ -66,8 +69,8 @@ type StepState = 'done' | 'current' | 'todo' | 'failed';
  * 03/11/2026): lúc xác nhận · lúc tiền giữ chỗ về (design ghi "nhận cọc" — đổi theo ADR 0044 điều
  * 9: khoản QR là tiền giữ chỗ, không phải cọc) · giờ phải giao / đã giao · giờ trả / đã nhận lại.
  *
- * Đơn huỷ / khách không đến: bước sau "Đã xác nhận" thành một bước đỏ nói đúng kết cục (tự dựng —
- * design không vẽ).
+ * Đơn huỷ / khách không đến KHÔNG có thanh bước (Figma "Details - Failed" `23948:99504`, 05/11/2026
+ * — thay bước đỏ tự dựng 02/11): chuyến không diễn ra, banner kết cục ngay dưới tiêu đề nói đủ.
  */
 export function BookingStepper() {
   const t = useTranslations('Bookings.detailPage');
@@ -75,6 +78,7 @@ export function BookingStepper() {
   const { booking } = useBookingDetailActions();
   const stage = bookingStageOf(booking.status);
   const ended = stage === 'cancelled' || stage === 'noShow';
+  if (ended) return null;
   const at = (
     key: 'confirmed' | 'holdPaid' | 'pickupDue' | 'pickedUp' | 'returnDue' | 'returned',
     iso: string,
@@ -85,12 +89,7 @@ export function BookingStepper() {
     label: t('stage.confirmed'),
     hint: at('confirmed', booking.confirmedAt),
   };
-  const steps: { key: string; label: string; hint: string | null; state: StepState }[] = ended
-    ? [
-        { ...confirmed, state: 'done' },
-        { key: stage, label: t(`stage.${stage}`), hint: null, state: 'failed' },
-      ]
-    : (
+  const steps: { key: string; label: string; hint: string | null; state: StepState }[] = (
         [
           confirmed,
           {
@@ -561,9 +560,14 @@ export function HandoverPhotosCard() {
   );
 }
 
-/** Banner kết cục của đơn đã khép — hoàn thành nói số đã vào ví (khi có), huỷ nói chuyến không diễn ra. */
+/**
+ * Banner kết cục của đơn đã khép — hoàn thành nói số đã vào ví (khi có); huỷ nói LÝ DO (nhóm lý do +
+ * câu gửi khách của `booking_cancellations`, Figma "Details - Failed" 05/11/2026), đơn cũ không có
+ * dòng trách nhiệm thì câu chung.
+ */
 export function BookingOutcomeBanner() {
   const t = useTranslations('Bookings.detailPage');
+  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
   const { booking } = useBookingDetailActions();
   const stage = bookingStageOf(booking.status);
@@ -582,11 +586,25 @@ export function BookingOutcomeBanner() {
     );
   }
   if (stage === 'cancelled' || stage === 'noShow') {
+    const reason = [
+      booking.cancellationReasonCategory
+        ? domainLabel('cancellationReasonCategory', booking.cancellationReasonCategory)
+        : null,
+      booking.cancellationReason?.trim() || null,
+    ]
+      .filter(Boolean)
+      .join(' — ');
     return (
       <Alert
         type="error"
         className={styles.banner}
-        title={stage === 'cancelled' ? t('cancelledBanner') : t('noShowBanner')}
+        title={
+          stage === 'noShow'
+            ? t('noShowBanner')
+            : reason
+              ? t('cancelledBannerWithReason', { reason })
+              : t('cancelledBanner')
+        }
       />
     );
   }
@@ -601,9 +619,26 @@ const STAGE_COLOR: Record<Stage, StatusColor> = {
   noShow: STATUS_COLOR.DANGER,
 };
 
-/** Chip chặng ở tiêu đề — cùng nhãn với stepper, cùng sắc với thẻ danh sách đơn. */
-export function BookingStageChip({ status }: { status: string }) {
+/**
+ * Chip chặng ở tiêu đề — cùng nhãn với stepper, cùng sắc với thẻ danh sách đơn. Đơn huỷ nói AI huỷ
+ * ("Khách hàng đã huỷ" / "Bạn đã huỷ" — design "Details - Failed"), cùng nhãn kết cục với màn "Đơn đã
+ * kết thúc"; phía huỷ do SERVER suy (ADR 0045 điều 2).
+ */
+export function BookingStageChip({
+  status,
+  cancellationParty,
+}: {
+  status: string;
+  cancellationParty?: string | null;
+}) {
   const t = useTranslations('Bookings.detailPage.stage');
+  const domainLabel = useDomainLabel();
   const stage = bookingStageOf(status);
-  return <ToneDotBadge color={STAGE_COLOR[stage]}>{t(stage)}</ToneDotBadge>;
+  const label =
+    stage === 'cancelled' && cancellationParty === CANCELLATION_PARTY.CUSTOMER
+      ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_CUSTOMER)
+      : stage === 'cancelled' && cancellationParty === CANCELLATION_PARTY.HOST
+        ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_HOST)
+        : t(stage);
+  return <ToneDotBadge color={STAGE_COLOR[stage]}>{label}</ToneDotBadge>;
 }

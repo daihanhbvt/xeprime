@@ -83,9 +83,14 @@ vi.mock('./use-nav-badges', () => ({
   useNavBadges: () => ({
     counts: {
       [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsPending,
+      // "Đơn thuê xe" gộp (05/11/2026) mang số "cần xử lý" của cả chuyến — cùng nguồn trong test.
+      [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsPending,
       [NAV_BADGE.CHAT_UNREAD]: badges.chatUnread,
     },
-    urgent: { [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsUrgent },
+    urgent: {
+      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsUrgent,
+      [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsUrgent,
+    },
   }),
 }));
 
@@ -256,8 +261,7 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
     expect(itemLabels()).toEqual([
       'Tổng quan',
       'Lịch thuê xe',
-      'Yêu cầu đặt xe',
-      'Quản lý đơn thuê xe',
+      'Đơn thuê xe',
       'Danh sách khách hàng',
       'Danh sách xe',
       'Quản lý tài xế',
@@ -273,18 +277,16 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
     ]);
   });
 
-  it('Bảo dưỡng và Yêu cầu đặt xe giữ NGUYÊN route riêng', () => {
+  it('Bảo dưỡng giữ route riêng; yêu cầu + đơn là MỘT mục "Đơn thuê xe" (05/11/2026)', () => {
     renderMenu();
 
     expect(screen.getByRole('link', { name: 'Bảo dưỡng' }).getAttribute('href')).toBe(
       '/manage/maintenance',
     );
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe' }).getAttribute('href')).toBe(
-      '/manage/booking-requests',
-    );
-    expect(screen.getByRole('link', { name: 'Quản lý đơn thuê xe' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe' }).getAttribute('href')).toBe(
       '/manage/bookings',
     );
+    expect(screen.queryByRole('link', { name: 'Yêu cầu đặt xe' })).toBeNull();
   });
 
   it('mục ẨN không thành dòng — nhưng đứng ở trang của nó thì khối của nó vẫn bung', () => {
@@ -292,7 +294,7 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
     renderMenu();
 
     expect(itemLabels()).not.toContain('Chờ giao xe');
-    expect(itemLabels()).toContain('Quản lý đơn thuê xe');
+    expect(itemLabels()).toContain('Đơn thuê xe');
   });
 
   it('mọi link trong menu đều trỏ vào /manage — không có link chết', () => {
@@ -376,8 +378,8 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 2;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
-    expect(requests.getAttribute('aria-label')).toBe('Yêu cầu đặt xe, 2 việc cần xử lý');
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
+    expect(requests.getAttribute('aria-label')).toBe('Đơn thuê xe, 2 việc cần xử lý');
     expect(requests.textContent).toContain('2');
   });
 
@@ -386,9 +388,9 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsUrgent = true;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
     expect(requests.getAttribute('aria-label')).toBe(
-      'Yêu cầu đặt xe, 2 việc cần xử lý, có việc gấp',
+      'Đơn thuê xe, 2 việc cần xử lý, có việc gấp',
     );
     expect(requests.querySelector('[class*="urgent"]')).toBeTruthy();
   });
@@ -397,7 +399,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 2;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
     expect(requests.querySelector('[class*="badge"]')).toBeTruthy();
     expect(requests.querySelector('[class*="urgent"]')).toBeNull();
   });
@@ -417,7 +419,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
   it('không có việc gì chờ → KHÔNG dựng huy hiệu rỗng', () => {
     renderMenu();
 
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe' }).textContent).toBe('Yêu cầu đặt xe');
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe' }).textContent).toBe('Đơn thuê xe');
   });
 
   it('việc nằm trong khối đang GẬP thì con số dồn lên nhãn khối', () => {
@@ -426,7 +428,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
 
     fireEvent.click(sectionToggle('Vận hành'));
 
-    expect(screen.queryByRole('link', { name: /^Yêu cầu đặt xe/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Đơn thuê xe/ })).toBeNull();
     // Tên truy cập được của nút gập lúc này mang cả số việc — tìm theo tiền tố.
     const toggle = screen.getByRole('button', { name: /nhóm Vận hành/ });
     expect(toggle.closest('li')?.textContent).toContain('3');
@@ -439,7 +441,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     const { container } = renderMenu(true);
 
     expect(container.querySelector('[class*="iconDotted"]')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe, 2 việc cần xử lý' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe, 2 việc cần xử lý' })).toBeTruthy();
   });
 
   it('thu gọn mà không có việc gì chờ → không có chấm nào', () => {
@@ -452,7 +454,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 120;
     renderMenu();
 
-    expect(screen.getByRole('link', { name: /^Yêu cầu đặt xe/ }).textContent).toContain('99+');
+    expect(screen.getByRole('link', { name: /^Đơn thuê xe/ }).textContent).toContain('99+');
   });
 });
 
@@ -586,11 +588,11 @@ describe('useManageNav — mục đang sáng', () => {
     expect(selectedLabel(container)).toBe('Danh sách xe');
   });
 
-  it('tiền tố gần giống KHÔNG chọn nhầm: booking-requests ≠ bookings', () => {
-    nav.pathname = '/manage/booking-requests';
+  it('"Đơn đã kết thúc" (/bookings/ended) vẫn sáng mục "Đơn thuê xe"', () => {
+    nav.pathname = '/manage/bookings/ended';
     const { container } = renderMenu();
 
-    expect(selectedLabel(container)).toBe('Yêu cầu đặt xe');
+    expect(selectedLabel(container)).toBe('Đơn thuê xe');
   });
 
   it('/manage chỉ sáng Tổng quan khi ở ĐÚNG /manage', () => {
@@ -887,18 +889,17 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
 
     const labels = itemLabels();
     expect(labels).toContain('Chuyến cho thuê');
-    expect(labels).not.toContain('Yêu cầu đặt xe');
-    expect(labels).not.toContain('Quản lý đơn thuê xe');
+    expect(labels).not.toContain('Đơn thuê xe');
   });
 
-  it('thành viên gian hàng tuyến hoa hồng: giữ hộp thư + bảng đơn, không có "Chuyến cho thuê"', () => {
+  it('thành viên gian hàng tuyến hoa hồng: giữ màn "Đơn thuê xe", không có "Chuyến cho thuê"', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.COMMISSION };
     renderMenu();
 
     const labels = itemLabels();
     expect(labels).not.toContain('Chuyến cho thuê');
-    expect(labels).toEqual(expect.arrayContaining(['Yêu cầu đặt xe', 'Quản lý đơn thuê xe']));
+    expect(labels).toEqual(expect.arrayContaining(['Đơn thuê xe']));
     // Ví và Hồ sơ chủ xe là của CHỦ — hai khối đó vắng hẳn, không còn nhãn khối rỗng.
     expect(screen.queryByText('Doanh thu')).toBeNull();
   });

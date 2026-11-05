@@ -1671,5 +1671,18 @@
     "far": "Còn trên 12 giờ",
     "same_day": "Trong ngày (2–12 giờ)",
     "critical": "Sát giờ (dưới 2 giờ)"
+  },
+  "bookingHistoryOutcome": {
+    "completed": "Hoàn thành",
+    "cancelled_by_customer": "Khách hàng đã huỷ",
+    "cancelled_by_host": "Bạn đã huỷ",
+    "cancelled_other": "Đã huỷ",
+    "no_show": "Khách không đến",
+    "request_rejected": "Bạn đã từ chối",
+    "request_expired": "Quá hạn phản hồi",
+    "request_withdrawn": "Khách rút yêu cầu",
+    "request_hold_expired": "Hết hạn thanh toán",
+    "request_slot_taken": "Xe đã có khách khác nhận",
+    "request_cancelled_by_host": "Bạn đã huỷ khi chờ thanh toán"
   }
 }

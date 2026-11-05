@@ -197,8 +197,9 @@ export function notificationHref(
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:
       return ROUTES.MANAGE.BOOKINGS;
+    // Yêu cầu + đơn ở cùng màn "Đơn thuê xe" (05/11/2026) — ô "Tất cả" thấy chuyến ở mọi chặng.
     case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:
-      return ROUTES.MANAGE.BOOKING_REQUESTS;
+      return ROUTES.MANAGE.BOOKINGS;
     case NOTIFICATION_TARGET_TYPE.TENANT:
       return ROUTES.MANAGE.SHOP;
     case NOTIFICATION_TARGET_TYPE.VEHICLE:

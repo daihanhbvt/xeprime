@@ -23,6 +23,7 @@ export * from './vehicle-settings';
 export * from './booking';
 export * from './booking-request';
 export * from './booking-extension';
+export * from './booking-history';
 export * from './customer-trip';
 export * from './cancellation';
 export * from './tenant-customer';

@@ -1,113 +1,147 @@
 'use client';
 
-import { Alert, Input, Modal, Tag } from 'antd';
+import { Alert, Button, Input, Select } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { REJECT_REASON_MAX_LENGTH, REJECT_REASON_PRESETS } from '../constants';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import {
+  REJECT_REASON_MAX_LENGTH,
+  REJECT_REASON_PRESETS,
+  type RejectReasonPreset,
+} from '../constants';
 import type { BookingRequestDecisionTarget } from '../types';
-import styles from './RejectBookingRequestDialog.module.css';
+import styles from './DecisionReasonDialog.module.css';
 
 interface Props {
   request: BookingRequestDecisionTarget | null;
   submitting: boolean;
-  /** Lỗi của lần gửi vừa rồi — hộp thoại Ở LẠI để sửa, không đóng và nuốt mất chữ đã gõ. */
+  /** Lỗi lần từ chối vừa rồi — hộp thoại ở lại, chữ đã gõ còn nguyên. */
   error: string | null;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 }
 
 /**
- * Từ chối một yêu cầu thuê — có LÝ DO.
-
- * Trước đây nút "Từ chối" chỉ hỏi một câu xác nhận rồi gửi `reason: undefined`, dù backend nhận
- * và lưu lý do, và thông báo gửi cho khách có chỗ để hiện nó. Khách nhận được đúng một chữ "bị
- * từ chối" và không biết nên đặt lại hay đi tìm xe khác.
+ * Từ chối một yêu cầu — Figma Partner-XePrime "Từ chối yêu cầu thuê xe" (`23919:39682`, 05/11/2026):
+ * viên tóm tắt khách · xe, "Lý do từ chối" (chọn) + "Ghi chú cho khách" (bắt buộc), hai nút.
  *
- * DTO backend giữ `reason` TUỲ CHỌN (dữ liệu cũ và các đường gọi khác không được vỡ), nhưng
- * giao diện này bắt buộc: không có lý do thì không bấm gửi được.
- *
- * Mẫu có sẵn là để bấm-rồi-sửa, không phải để khoá: chọn xong vẫn gõ lại được, vì hoàn cảnh
- * thật luôn có chi tiết mà bốn câu mẫu không nói hết.
+ * Backend nhận MỘT câu `reason` — câu khách đọc được. Ô chọn lý do là lối gõ nhanh: chọn là điền
+ * sẵn câu mẫu vào ô ghi chú để sửa tiếp; "Lý do khác" để trống cho người trực tự viết. Lý do là
+ * BẮT BUỘC: một chữ "đã từ chối" trơn để khách tự đoán nên làm gì tiếp.
  */
-function RejectForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestDecisionTarget }) {
-  const t = useTranslations('BookingRequests');
-  const tCommon = useTranslations('Common');
+function RejectForm({
+  request,
+  submitting,
+  error,
+  onCancel,
+  onConfirm,
+}: Props & { request: BookingRequestDecisionTarget }) {
+  const t = useTranslations('BookingRequests.reject');
 
-  const [reason, setReason] = useState('');
+  const [preset, setPreset] = useState<RejectReasonPreset | null>(null);
+  const [note, setNote] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const trimmed = reason.trim();
-  const invalid = trimmed.length === 0;
+  const trimmed = note.trim();
+  const presetMissing = preset === null;
+  const noteMissing = trimmed.length === 0;
+
+  function choosePreset(value: RejectReasonPreset) {
+    setPreset(value);
+    // Câu mẫu thay cho câu mẫu trước — KHÔNG đè chữ người trực đã tự gõ.
+    const presetTexts = REJECT_REASON_PRESETS.filter((key) => key !== 'other').map((key) =>
+      t(`presets.${key}`).trim(),
+    );
+    if (trimmed === '' || presetTexts.includes(trimmed)) {
+      setNote(value === 'other' ? '' : t(`presets.${value}`));
+    }
+  }
 
   function submit() {
     setTouched(true);
-    if (invalid) return;
+    if (submitting || presetMissing || noteMissing) return;
     onConfirm(trimmed);
   }
 
   return (
-    <Modal
+    <ResponsiveDialog
       open
-      title={t('reject.title')}
-      okText={t('reject.confirm')}
-      cancelText={tCommon('actions.cancel')}
-      okButtonProps={{ danger: true }}
-      confirmLoading={submitting}
-      onCancel={onCancel}
-      onOk={submit}
-      destroyOnHidden
+      onClose={onCancel}
+      size="sm"
+      title={
+        <span className={styles.titleBlock}>
+          <span>{t('title')}</span>
+          <span className={styles.subtitle}>
+            {t.rich('subtitle', { b: (chunks) => <strong>{chunks}</strong> })}
+          </span>
+        </span>
+      }
+      footer={
+        <div className={styles.footer}>
+          <Button size="large" onClick={onCancel} disabled={submitting}>
+            {t('back')}
+          </Button>
+          <Button size="large" type="primary" danger loading={submitting} onClick={submit}>
+            {t('confirm')}
+          </Button>
+        </div>
+      }
     >
       <div className={styles.body}>
-        <p className={styles.context}>
-          {t('reject.context', { customer: request.customerName, vehicle: request.vehicleName })}
+        <p className={styles.summary}>
+          <span className={styles.summaryName}>{request.customerName}</span>
+          <span className={styles.summaryDot} aria-hidden="true" />
+          <span className={styles.summaryVehicle}>{request.vehicleName}</span>
         </p>
 
-        <div className={styles.field}>
-          <span className={styles.label}>{t('reject.presetLabel')}</span>
-          <div className={styles.presets}>
-            {REJECT_REASON_PRESETS.map((preset) => {
-              const text = t(`reject.presets.${preset}`);
-              return (
-                <Tag.CheckableTag
-                  key={preset}
-                  checked={trimmed === text.trim()}
-                  onChange={() => {
-                    setReason(text);
-                    setTouched(true);
-                  }}
-                >
-                  {text}
-                </Tag.CheckableTag>
-              );
-            })}
-          </div>
-        </div>
+        <label className={styles.field}>
+          <span className={styles.label}>
+            {t('presetLabel')} <span className={styles.required}>*</span>
+          </span>
+          <Select<RejectReasonPreset>
+            value={preset ?? undefined}
+            placeholder={t('presetPlaceholder')}
+            onChange={choosePreset}
+            status={touched && presetMissing ? 'error' : undefined}
+            options={REJECT_REASON_PRESETS.map((key) => ({
+              value: key,
+              label: key === 'other' ? t('presets.other') : t(`presets.${key}`),
+            }))}
+          />
+          {touched && presetMissing ? (
+            <span className={styles.error} role="alert">
+              {t('presetRequired')}
+            </span>
+          ) : null}
+        </label>
 
         <label className={styles.field}>
-          <span className={styles.label}>{t('reject.reasonLabel')}</span>
+          <span className={styles.label}>
+            {t('reasonLabel')} <span className={styles.required}>*</span>
+          </span>
           <Input.TextArea
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
             onBlur={() => setTouched(true)}
-            placeholder={t('reject.reasonPlaceholder')}
+            placeholder={t('reasonPlaceholder')}
             maxLength={REJECT_REASON_MAX_LENGTH}
             showCount
             autoSize={{ minRows: 3, maxRows: 8 }}
-            status={touched && invalid ? 'error' : undefined}
-            aria-invalid={touched && invalid ? true : undefined}
+            status={touched && noteMissing ? 'error' : undefined}
+            aria-invalid={touched && noteMissing ? true : undefined}
           />
-          {touched && invalid ? (
+          {touched && noteMissing ? (
             <span className={styles.error} role="alert">
-              {t('reject.reasonRequired')}
+              {t('reasonRequired')}
             </span>
           ) : (
-            <span className={styles.hint}>{t('reject.reasonHint')}</span>
+            <span className={styles.hint}>{t('reasonHint')}</span>
           )}
         </label>
 
-        {error ? <Alert type="error" showIcon title={error} /> : null}
+        {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
       </div>
-    </Modal>
+    </ResponsiveDialog>
   );
 }
 

@@ -53,6 +53,10 @@ const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as BOOKING_REQUEST_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_REQUEST_MAX_LIMIT };
 
+/** Thứ tự của hộp thư yêu cầu — xem `BookingRequestListQueryDto.sort`. */
+export const BOOKING_REQUEST_SORT = ['newest', 'urgent'] as const;
+export type BookingRequestSort = (typeof BOOKING_REQUEST_SORT)[number];
+
 /**
  * Chuỗi rỗng / toàn khoảng trắng ⇒ `undefined`, để `@IsOptional` bỏ qua nó.
  *
@@ -530,6 +534,17 @@ export class BookingRequestListQueryDto {
   @BranchIdQuery()
   branchId?: string;
 
+  /**
+   * Thứ tự (05/11/2026). `newest` (mặc định, như cũ) = mới gửi trước. `urgent` = hạn ĐANG CHẠY
+   * gần nhất trước — màn "Đơn thuê xe" là một ca trực, việc sắp hết hạn phải đứng đầu: nhóm "Cần
+   * xử lý" theo hạn phản hồi của gian hàng, nhóm "Chờ khách thanh toán" (`status=awaiting_hold`)
+   * theo hạn chuyển tiền giữ chỗ của khách.
+   */
+  @ApiPropertyOptional({ enum: BOOKING_REQUEST_SORT, default: 'newest' })
+  @IsOptional()
+  @IsIn(BOOKING_REQUEST_SORT)
+  sort?: BookingRequestSort;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -884,6 +899,19 @@ export class BookingRequestDto {
   })
   holdExpiresAt!: string | null;
 
+  /**
+   * Lúc nút "Nhắc khách" mở lại (05/11/2026) = lời nhắc gần nhất khách đã nhận +
+   * `HOLD_HOST_REMINDER_COOLDOWN_MINUTES`. `null` khi không có gì để nhắc: chuyến không ở chặng chờ
+   * khách trả, khoản giữ chỗ đã đủ/hết hạn, hoặc khách không có tài khoản nhận thông báo. Mốc ở
+   * quá khứ = bấm được ngay. Server vẫn chặn lại trong câu UPDATE — đây chỉ là gợi ý cho nút.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc',
+  })
+  paymentReminderAvailableAt!: string | null;
+
   /** Khách đã tích bảo hiểm vật chất xe (`IV`) lúc gửi — lượt chốt giá tính theo lựa chọn này. */
   @ApiProperty() vehicleProtectionSelected!: boolean;
   /** Khách đã tích bảo hiểm tai nạn người (`IP`) lúc gửi. */
@@ -936,6 +964,12 @@ export class BookingRequestPageMetaDto extends PaginationMetaDto {
 export class BookingRequestPageDto {
   @ApiProperty({ type: [BookingRequestDto] }) data!: BookingRequestDto[];
   @ApiProperty({ type: BookingRequestPageMetaDto }) meta!: BookingRequestPageMetaDto;
+}
+
+/** Kết quả lượt gian hàng nhắc khách thanh toán tiền giữ chỗ. */
+export class PaymentReminderResultDto {
+  @ApiProperty({ description: 'ISO-8601 UTC — lúc lời nhắc được gửi' }) remindedAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC — lúc nhắc lại được' }) nextAvailableAt!: string;
 }
 
 /** Kết quả trả khách sau khi gửi yêu cầu (không lộ nội bộ tenant). */

@@ -157,6 +157,7 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   // được `ownerTripsRedirect` đưa sang `TRIPS`. `/bookings/[id]` là chi tiết đơn dùng chung.
   { href: ROUTES.MANAGE.BOOKING_REQUESTS },
   { href: ROUTES.MANAGE.BOOKINGS },
+  { href: ROUTES.MANAGE.BOOKINGS_ENDED },
   { href: ROUTES.MANAGE.CHAT },
   { href: ROUTES.MANAGE.BALANCE },
   // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
@@ -246,7 +247,7 @@ function packageEquivalent(pathname: string): string | null {
     return withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN));
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return balancePayoutPath();
-  if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKING_REQUESTS;
+  if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKINGS;
   return null;
 }
 
@@ -258,6 +259,7 @@ const OWNER_TRIPS_REPLACES: readonly string[] = [
   ROUTES.MANAGE.BOOKING_REQUESTS,
   ROUTES.MANAGE.BOOKINGS,
   ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
+  ROUTES.MANAGE.BOOKINGS_ENDED,
 ];
 
 /**
@@ -272,7 +274,7 @@ function ownerTripsRedirect(user: AuthScope | null | undefined, pathname: string
   if (isCommissionOwner(user)) {
     return OWNER_TRIPS_REPLACES.includes(pathname) ? ROUTES.MANAGE.TRIPS : null;
   }
-  return pathname === ROUTES.MANAGE.TRIPS ? ROUTES.MANAGE.BOOKING_REQUESTS : null;
+  return pathname === ROUTES.MANAGE.TRIPS ? ROUTES.MANAGE.BOOKINGS : null;
 }
 
 /**

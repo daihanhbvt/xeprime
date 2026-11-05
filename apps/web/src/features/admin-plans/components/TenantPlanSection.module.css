@@ -278,3 +278,10 @@
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-regular);
 }
+
+/* Các kỳ xếp sau bị huỷ kèm / dời theo (ADR 0080). */
+.cascadeList {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+  font-weight: 600;
+}

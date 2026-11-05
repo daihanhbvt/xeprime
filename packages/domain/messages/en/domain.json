@@ -1671,5 +1671,18 @@
     "far": "More than 12 hours ahead",
     "same_day": "Same day (2–12 hours)",
     "critical": "Last minute (under 2 hours)"
+  },
+  "bookingHistoryOutcome": {
+    "completed": "Completed",
+    "cancelled_by_customer": "Cancelled by customer",
+    "cancelled_by_host": "Cancelled by you",
+    "cancelled_other": "Cancelled",
+    "no_show": "Customer no-show",
+    "request_rejected": "Declined by you",
+    "request_expired": "No response in time",
+    "request_withdrawn": "Withdrawn by customer",
+    "request_hold_expired": "Payment expired",
+    "request_slot_taken": "Taken by another customer",
+    "request_cancelled_by_host": "Cancelled by you before payment"
   }
 }

@@ -23,6 +23,7 @@ export function CustomerContactButtons({
   messageUnavailable = false,
   messageLoading = false,
   disabled = false,
+  compact = false,
 }: {
   name: string;
   phone: string | null | undefined;
@@ -34,6 +35,8 @@ export function CustomerContactButtons({
   messageLoading?: boolean;
   /** Một thao tác khác đang chạy trên cùng bản ghi. */
   disabled?: boolean;
+  /** Thẻ Kanban: ba nút cách 8 (design "_Kanban Item"), không xuống dòng. */
+  compact?: boolean;
 }) {
   const t = useTranslations('BookingRequests.actions');
   const phoneLink = telHref(phone);
@@ -43,9 +46,11 @@ export function CustomerContactButtons({
   if (!onMessage && !phoneLink && !zaloLink) return null;
 
   return (
-    <div className={styles.group}>
+    <div className={cx(styles.group, compact && styles.compact)}>
       {onMessage ? (
-        <Tooltip title={messageUnavailable ? t('messageUnavailable') : iconOnly ? t('message') : undefined}>
+        <Tooltip
+          title={messageUnavailable ? t('messageUnavailable') : iconOnly ? t('message') : undefined}
+        >
           {/* `<span>` để tooltip vẫn nhận chuột khi nút bị disable. */}
           <span className={styles.slot}>
             <Button

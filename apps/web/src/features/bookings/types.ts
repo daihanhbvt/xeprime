@@ -1,4 +1,9 @@
-import type { BookingListPreset, components } from '@xeprime/types';
+import type {
+  BookingHistoryOutcome,
+  BookingHistoryTab,
+  BookingListPreset,
+  components,
+} from '@xeprime/types';
 
 /**
  * Shape đơn thuê lấy thẳng từ contract sinh bởi OpenAPI (ADR 0007) — KHÔNG viết tay lại DTO.
@@ -50,6 +55,21 @@ export type BookingHandoverPrep = Schemas['BookingHandoverPrepDto'];
 export type SetHandoverPrepCheckInput = Schemas['SetHandoverPrepCheckDto'];
 export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
+
+/** Một dòng "Đơn đã kết thúc" — đơn đã đóng HOẶC yêu cầu không thành đơn (`kind`). */
+export type BookingHistoryItem = Schemas['BookingHistoryItemDto'];
+export type BookingHistoryMeta = Schemas['BookingHistoryMetaDto'];
+
+/** Bộ lọc màn "Đơn đã kết thúc" — sống ở URL (ADR 0004). */
+export interface BookingHistoryFilters {
+  tab?: BookingHistoryTab;
+  outcome?: BookingHistoryOutcome;
+  q?: string;
+  serviceType?: string;
+  branchId?: string;
+  page?: number;
+  limit?: number;
+}
 
 /** Khớp `BOOKING_SORT` ở backend DTO. */
 export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc';

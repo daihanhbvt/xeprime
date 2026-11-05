@@ -131,7 +131,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
       within(bar)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Tổng quan', 'Lịch xe', 'Yêu cầu', 'Đơn thuê']);
+    ).toEqual(['Tổng quan', 'Lịch xe', 'Đơn thuê', 'Xe']);
     expect(within(bar).getByRole('button', { name: /Thêm$/ })).toBeTruthy();
   });
 
@@ -226,11 +226,11 @@ describe('MobileNav — tab đang sáng', () => {
   });
 
   it('/manage chỉ sáng "Tổng quan" khi ở ĐÚNG /manage', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/customers';
     const { container } = renderNav();
     const bar = bottomBar(container);
 
-    // `/manage/vehicles` không thuộc tab chính nào → "Thêm" mới là mục sáng.
+    // `/manage/customers` không thuộc tab chính nào → "Thêm" mới là mục sáng.
     expect(moreButton().className).not.toBe(tab(bar, 'Tổng quan').className);
   });
 
@@ -248,7 +248,7 @@ describe('MobileNav — tab đang sáng', () => {
   });
 
   it('route ngoài mọi tab chính → không tab nào mang aria-current', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/customers';
     const { container } = renderNav();
 
     for (const link of within(bottomBar(container)).getAllByRole('link')) {

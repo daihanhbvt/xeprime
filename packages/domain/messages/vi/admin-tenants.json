@@ -396,12 +396,14 @@
       "fee": {
         "title": "Chính sách phí",
         "none": "Chưa có chính sách phí hiệu lực",
-        "serviceFee": "Phí dịch vụ XePrime",
-        "percent": "{value}%",
+        "platformFee": "Phí sàn khách trả mỗi đơn",
+        "platformFeeValue": "{car} ô tô · {motorbike} xe máy",
+        "commission": "Hoa hồng chủ xe",
+        "commissionNone": "0% — gian hàng gói không bị trừ hoa hồng trên chuyến",
         "version": "Phiên bản chính sách",
         "effectiveFrom": "Áp dụng từ",
         "noteLabel": "Ghi chú",
-        "note": "Chính sách phí chung của nền tảng. Gian hàng gói không bị trừ hoa hồng trên chuyến."
+        "note": "Chính sách phí chung của nền tảng, đọc từ phiên bản đang hiệu lực."
       },
       "invoices": {
         "statusTitle": "Tình trạng hoá đơn",
@@ -441,10 +443,11 @@
       "policy": {
         "title": "Chính sách phí dịch vụ",
         "none": "Chưa có chính sách phí hiệu lực",
-        "rate": "Tỷ lệ hiện tại",
-        "percent": "{value}%",
+        "rate": "Hoa hồng lũy tiến theo ngày",
         "basis": "Cơ sở tính",
-        "basisValue": "Tiền thuê của chuyến — khách trả phí dịch vụ",
+        "basisValue": "Tiền thuê từng ngày của chuyến — trừ vào tiền chủ xe nhận",
+        "platformFee": "Phí sàn khách trả mỗi đơn",
+        "platformFeeValue": "{car} ô tô · {motorbike} xe máy",
         "effectiveFrom": "Áp dụng từ",
         "version": "Phiên bản chính sách"
       },
@@ -545,7 +548,8 @@
       "notCovered": "{used} xe · chưa có gói cho loại xe này",
       "type": {
         "motorbike": "Xe máy",
-        "car": "Ô tô"
+        "car": "Ô tô",
+        "all": "Mọi loại xe"
       },
       "scope": {
         "motorbike": "Xe máy",

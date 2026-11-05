@@ -268,9 +268,9 @@ describe('nav — cấu trúc khối', () => {
   });
 
   it('mỗi dropdown đúng các dòng của design, đúng thứ tự', () => {
+    // "Đơn thuê xe" gộp yêu cầu + đơn thành MỘT dòng (05/11/2026).
     expect(shownHrefs('operations')).toEqual([
       ROUTES.MANAGE.CALENDAR,
-      ROUTES.MANAGE.BOOKING_REQUESTS,
       ROUTES.MANAGE.BOOKINGS,
       ROUTES.MANAGE.CUSTOMERS,
     ]);
@@ -309,7 +309,6 @@ describe('nav — cấu trúc khối', () => {
       ROUTES.MANAGE.VEHICLES,
       ROUTES.MANAGE.MAINTENANCE,
       ROUTES.MANAGE.BOOKINGS,
-      ROUTES.MANAGE.BOOKING_REQUESTS,
       ROUTES.MANAGE.CUSTOMERS,
       ROUTES.MANAGE.FINANCE,
       ROUTES.MANAGE.RECEIPTS,
@@ -328,6 +327,10 @@ describe('nav — cấu trúc khối', () => {
     // "Chờ giao xe": ngăn `?group=awaiting_pickup` của "Quản lý đơn thuê xe" (02/11/2026); route cũ
     // chuyển tiếp tới đó nên không còn là một mục của cây.
     expect(inTree).not.toContain(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP);
+    // Hộp thư "Yêu cầu đặt xe" + "Đơn đã kết thúc": nhóm và nút của màn "Đơn thuê xe" (05/11/2026);
+    // route hộp thư cũ chuyển tiếp tới nhóm tương ứng nên không còn là một mục của cây.
+    expect(inTree).not.toContain(ROUTES.MANAGE.BOOKING_REQUESTS);
+    expect(inTree).not.toContain(ROUTES.MANAGE.BOOKINGS_ENDED);
     // Tin nhắn: icon ở header (`ChatMenu`), không còn là dòng menu.
     expect(inTree).not.toContain(ROUTES.MANAGE.CHAT);
   });
@@ -394,9 +397,9 @@ describe('nav — cấu trúc khối', () => {
     // Yêu cầu: chờ duyệt · Đơn: lượt giao/trả ĐẾN HẠN (04/11/2026). Lịch KHÔNG mang số nữa: lượt
     // giao/nhận hôm nay đã nằm trong số của Đơn, khối "Vận hành" sẽ đếm trùng.
     // Danh sách xe: số XE CÓ VIỆC CHẶN, không phải tổng xe (03/11/2026).
+    // "Đơn thuê xe" gộp (05/11/2026): yêu cầu chờ duyệt + lượt giao/trả đến hạn ở CÙNG một mục.
     expect(badged).toEqual([
-      [ROUTES.MANAGE.BOOKING_REQUESTS, NAV_BADGE.BOOKING_REQUESTS_PENDING],
-      [ROUTES.MANAGE.BOOKINGS, NAV_BADGE.HANDOVERS_DUE],
+      [ROUTES.MANAGE.BOOKINGS, NAV_BADGE.RENTALS_WORK],
       [ROUTES.MANAGE.VEHICLES, NAV_BADGE.VEHICLES_NEEDS_ACTION],
     ]);
     // Nền tảng chưa có nguồn đếm nào — không gắn huy hiệu suông.
@@ -519,8 +522,7 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
         'manage.dashboard',
         'manage.rentalCalendar',
         'manage.vehicleList',
-        'manage.bookingManagement',
-        'manage.bookingRequests',
+        'manage.rentals',
       ]),
     );
   });
@@ -636,11 +638,12 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     expect(matchSelectedKey('/manage/receipts', shopLeaves)).toBe('/manage/receipts');
   });
 
-  it('tiền tố GẦN GIỐNG không chọn nhầm: booking-requests ≠ bookings', () => {
-    expect(matchSelectedKey('/manage/booking-requests', shopLeaves)).toBe(
-      '/manage/booking-requests',
-    );
+  it('tiền tố GẦN GIỐNG không chọn nhầm: booking-requests không sáng mục "Đơn thuê xe"', () => {
+    // Route hộp thư cũ chỉ chuyển tiếp (05/11/2026) — nó không phải một mục, và "/bookings" là
+    // tiền tố CHUỖI chứ không phải tiền tố ĐƯỜNG DẪN của nó.
+    expect(matchSelectedKey('/manage/booking-requests', shopLeaves)).toBeUndefined();
     expect(matchSelectedKey('/manage/bookings', shopLeaves)).toBe('/manage/bookings');
+    expect(matchSelectedKey(ROUTES.MANAGE.BOOKINGS_ENDED, shopLeaves)).toBe('/manage/bookings');
   });
 
   it('mọi trang dưới /bookings thuộc mục "Quản lý đơn thuê xe"', () => {
@@ -723,7 +726,7 @@ describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha
 
   it('menu partner phẳng → không mục nào có mục cha; menu nền tảng vẫn có', () => {
     expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBeUndefined();
-    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.BOOKING_REQUESTS)).toBeUndefined();
+    expect(branchKeyOf(SHOP_NAV, ROUTES.MANAGE.BOOKINGS)).toBeUndefined();
     expect(branchKeyOf(PLATFORM_NAV, ROUTES.ADMIN.PLANS)).toBe('platform-billing');
   });
 
@@ -765,11 +768,12 @@ describe('mobileTabsForZone — 4 tab dưới đáy', () => {
   });
 
   it('bốn đích chính của gian hàng giữ nguyên sau khi sắp lại menu', () => {
+    // Yêu cầu + đơn gộp một ô (05/11/2026); ô thứ tư là đội xe.
     expect(tabsFor(false).map((tab) => tab.key)).toEqual([
       'dashboard',
       'calendar',
-      'booking-requests',
       'bookings',
+      'vehicles',
     ]);
   });
 });
@@ -835,15 +839,16 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
    * Chủ xe cá nhân có một tới ba xe (07/10/2026): yêu cầu và đơn gộp vào MỘT danh sách thẻ
    * "Chuyến cho thuê". Hộp thư sáu tab + bảng đơn là bề mặt của đội xe tuyến gói.
    */
-  it('menu hoa hồng: CHỦ thấy "Chuyến cho thuê" (kèm huy hiệu), thành viên giữ hộp thư + bảng đơn', () => {
+  it('menu hoa hồng: CHỦ thấy "Chuyến cho thuê" (kèm huy hiệu), thành viên giữ màn "Đơn thuê xe"', () => {
     const leaves = flattenLeaves(commissionNav);
     const byHref = (href: string) => leaves.find((leaf) => leaf.href === href);
     const trips = byHref(ROUTES.MANAGE.TRIPS);
     expect(trips?.ownerOnly).toBe(true);
     expect(trips?.badge).toBe(NAV_BADGE.BOOKING_REQUESTS_PENDING);
     // Hai trục loại trừ nhau: không ai thấy cả "Chuyến cho thuê" lẫn hộp thư cùng lúc.
-    expect(byHref(ROUTES.MANAGE.BOOKING_REQUESTS)?.memberOnly).toBe(true);
+    expect(byHref(ROUTES.MANAGE.BOOKING_REQUESTS)).toBeUndefined();
     expect(byHref(ROUTES.MANAGE.BOOKINGS)?.memberOnly).toBe(true);
+    expect(byHref(ROUTES.MANAGE.BOOKINGS)?.badge).toBe(NAV_BADGE.BOOKING_REQUESTS_PENDING);
     expect(
       mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION).map((tab) => tab.href),
     ).toContain(ROUTES.MANAGE.TRIPS);
@@ -938,7 +943,6 @@ describe('supportNavSections — menu của phiên hỗ trợ', () => {
         'dashboard',
         'vehicles',
         'calendar',
-        'booking-requests',
         'bookings',
         'customers',
         // Chi nhánh là section của trang Cửa hàng trong phiên cũng như ở site partner.
@@ -971,7 +975,7 @@ describe('supportNavSections — menu của phiên hỗ trợ', () => {
 
   it('Owner Lite: chỉ công việc cho thuê — không Tổng quan, không sổ khách, không khu tài khoản', () => {
     const rel = lite.map((leaf) => leaf.href.slice(base.length + 1));
-    expect(rel).toEqual(['vehicles', 'calendar', 'booking-requests', 'bookings', 'support/cases']);
+    expect(rel).toEqual(['vehicles', 'calendar', 'bookings', 'support/cases']);
   });
 
   it('package_pending: không có menu nào (chỉ trạng thái đăng ký)', () => {

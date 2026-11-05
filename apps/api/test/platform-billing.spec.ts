@@ -1047,25 +1047,21 @@ describe('Billing — gia hạn / đổi gói theo thời điểm áp dụng (AD
     });
   });
 
-  maybe('huỷ kỳ đang chạy khi đã có kỳ xếp sau ⇒ SUBSCRIPTION_LATER_TERM_EXISTS; huỷ từ đuôi thì được', async () => {
+  maybe('huỷ kỳ xếp lịch giữ kỳ đang chạy; huỷ kỳ đang chạy kéo theo kỳ xếp sau (ADR 0080)', async () => {
     const shop = await mkScratchTenant('gap');
     const plan = await mkPlan('gap');
     const current = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
     const scheduled = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+    const tail = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
 
-    await expect(billing.cancel(shop, actorId, current.id)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.SUBSCRIPTION_LATER_TERM_EXISTS },
-    });
-    // Không có gì bị đổi khi bị từ chối.
-    expect((await prisma.tenantSubscription.findUnique({ where: { id: current.id } }))?.status)
-      .toBe(SUBSCRIPTION_STATUS.ACTIVE);
-
-    await billing.cancel(shop, actorId, scheduled.id);
+    await billing.cancel(shop, actorId, tail.id);
     // Còn kỳ đang chạy ⇒ huỷ kỳ xếp lịch KHÔNG sinh dòng dự phòng.
     expect((await billing.currentPlan(shop))?.subscriptionId).toBe(current.id);
 
     const cancelled = await billing.cancel(shop, actorId, current.id);
     expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
+    expect((await prisma.tenantSubscription.findUnique({ where: { id: scheduled.id } }))?.status)
+      .toBe(SUBSCRIPTION_STATUS.CANCELLED);
     const fallback = await billing.currentPlan(shop);
     expect(fallback?.billingMode).toBe(BILLING_MODE.COMMISSION);
 
@@ -1074,7 +1070,104 @@ describe('Billing — gia hạn / đổi gói theo thời điểm áp dụng (AD
       status: SUBSCRIPTION_STATUS.CANCELLED,
       reason: 'manual',
       term: { subscriptionId: current.id },
+      cascadedTerms: [{ subscriptionId: scheduled.id }],
       fallbackTerm: { subscriptionId: fallback!.subscriptionId },
+    });
+    expect((await auditOf(scheduled.id, 'subscription.cancel'))!.afterJson).toMatchObject({
+      reason: 'cascade',
+      causedBy: current.id,
+    });
+  });
+
+  maybe('sửa kỳ admin gán: giá + trần xe + ghi chú, hoá đơn đi theo; kéo dài ⇒ kỳ sau dời theo', async () => {
+    const shop = await mkScratchTenant('edit');
+    const plan = await mkPlan('edit');
+    const current = await billing.assign(shop, actorId, {
+      planId: plan.id,
+      termMonths: 1,
+      price: '500000',
+    });
+    const scheduled = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+
+    const newEnd = new Date(new Date(current.endsAt).getTime() + 10 * 86_400_000);
+    const updated = await billing.updateSubscription(shop, actorId, current.id, {
+      price: '700000',
+      endsAt: newEnd.toISOString(),
+      maxVehicles: 12,
+      note: '  HĐ 01/2026  ',
+    });
+    expect(updated.price).toBe('700000');
+    expect(updated.endsAt).toBe(newEnd.toISOString());
+    expect(updated.quota?.maxVehicles).toBe(12);
+    expect(updated.note).toBe('HĐ 01/2026');
+
+    const invoice = await prisma.subscriptionInvoice.findFirst({
+      where: { subscriptionId: current.id },
+      select: { totalAmount: true, paidAmount: true, periodTo: true, status: true },
+    });
+    expect(invoice?.totalAmount.toString()).toBe('700000');
+    expect(invoice?.paidAmount.toString()).toBe('700000');
+    expect(invoice?.periodTo.toISOString()).toBe(newEnd.toISOString());
+
+    const shifted = await prisma.tenantSubscription.findUniqueOrThrow({ where: { id: scheduled.id } });
+    expect(shifted.startsAt.toISOString()).toBe(newEnd.toISOString());
+    expect(shifted.endsAt.getTime() - shifted.startsAt.getTime()).toBe(
+      new Date(scheduled.endsAt).getTime() - new Date(scheduled.startsAt).getTime(),
+    );
+    await expectNoOverlap(shop);
+    expect(await auditOf(current.id, 'subscription.update')).toBeTruthy();
+    expect((await auditOf(scheduled.id, 'subscription.shift'))!.afterJson).toMatchObject({
+      causedBy: current.id,
+    });
+
+    // Rút ngắn lại ⇒ kỳ sau dời về sớm hơn, không để hở.
+    const shorter = new Date(new Date(current.endsAt).getTime() - 5 * 86_400_000);
+    await billing.updateSubscription(shop, actorId, current.id, { endsAt: shorter.toISOString() });
+    const back = await prisma.tenantSubscription.findUniqueOrThrow({ where: { id: scheduled.id } });
+    expect(back.startsAt.toISOString()).toBe(shorter.toISOString());
+    await expectNoOverlap(shop);
+
+    // Giá 0đ ⇒ hoá đơn của lượt gán bị void.
+    await billing.updateSubscription(shop, actorId, current.id, { price: '0' });
+    const voided = await prisma.subscriptionInvoice.findFirst({
+      where: { subscriptionId: current.id },
+      select: { status: true },
+    });
+    expect(voided?.status).toBe('void');
+  });
+
+  maybe('sửa kỳ: kỳ từ hoá đơn đã trả không sửa giá; ngày sai, dòng hoa hồng, kỳ đã huỷ bị từ chối', async () => {
+    const shop = await mkScratchTenant('edit-guard');
+    const plan = await mkPlan('edit-guard');
+    const assigned = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+    // Kỳ "kích hoạt từ hoá đơn": không có người gán.
+    await prisma.tenantSubscription.update({ where: { id: assigned.id }, data: { createdBy: null } });
+
+    await expect(
+      billing.updateSubscription(shop, actorId, assigned.id, { price: '1' }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SUBSCRIPTION_PRICE_NOT_EDITABLE } });
+    // Ngày kết thúc, trần xe vẫn sửa được.
+    const ok = await billing.updateSubscription(shop, actorId, assigned.id, { maxVehicles: null });
+    expect(ok.quota?.maxVehicles).toBeNull();
+
+    await expect(
+      billing.updateSubscription(shop, actorId, assigned.id, {
+        endsAt: new Date(Date.now() - 86_400_000).toISOString(),
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+    await expect(billing.updateSubscription(shop, actorId, assigned.id, {})).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+    });
+
+    await billing.cancel(shop, actorId, assigned.id);
+    await expect(
+      billing.updateSubscription(shop, actorId, assigned.id, { note: 'x' }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SUBSCRIPTION_TERM_NOT_EDITABLE } });
+    const fallback = await billing.currentPlan(shop);
+    await expect(
+      billing.updateSubscription(shop, actorId, fallback!.subscriptionId, { note: 'x' }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.SUBSCRIPTION_TERM_NOT_EDITABLE, details: { reason: 'commission_term' } },
     });
   });
 

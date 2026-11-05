@@ -1,45 +1,37 @@
 'use client';
 
-import { Alert, Input, Modal, Radio } from 'antd';
+import { Alert, Button, Input, Select } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CANCELLATION_REASON_CATEGORY_VALUES,
-  cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { REJECT_REASON_MAX_LENGTH } from '../constants';
-import type { BookingRequestDecisionTarget } from '../types';
-import styles from './CancelBookingRequestDialog.module.css';
+import type { BookingRequestDecisionTarget, BookingRequestItem } from '../types';
+import styles from './DecisionReasonDialog.module.css';
 
 interface Props {
   request: BookingRequestDecisionTarget | null;
   submitting: boolean;
-  /** Lỗi của lần gửi vừa rồi — hộp thoại Ở LẠI để sửa, không nuốt mất chữ đã gõ. */
   error: string | null;
   onCancel: () => void;
   onConfirm: (input: { reasonCategory: CancellationReasonCategory; reason?: string }) => void;
 }
 
 /**
- * HUỶ một chuyến ĐÃ NHẬN — khác hẳn "Từ chối", và hộp thoại này phải nói rõ khác ở đâu.
+ * HUỶ một chuyến ĐÃ NHẬN (chặng chờ khách thanh toán) — Figma Partner-XePrime "Huỷ yêu cầu thuê xe"
+ * (`23930:44688`, 05/11/2026). Khác hẳn "Từ chối": huỷ là rút lại một lời đã hứa — khách đang đếm
+ * ngược để chuyển tiền, hoặc đã chuyển một phần.
  *
- * Từ chối là trả lời "không" cho một câu hỏi. Huỷ là rút lại một lời đã hứa: khách đang đếm
- * ngược để chuyển tiền, hoặc đã chuyển một phần. Nên ở đây có ba thứ mà hộp thoại từ chối
- * không có:
- *
- *  1. **Ba hệ quả nói thẳng, không nằm trong tooltip** — xe quay lại chợ, khách nhận thông báo,
- *     và tiền đã chuyển được hoàn. Đó là thứ người bấm cần biết TRƯỚC khi bấm, nên nó là chữ
- *     chính. Dấu "i" chỉ giữ phần giải thích thêm (ảnh hưởng tới chỉ số uy tín).
- *  2. **Nhóm lý do BẮT BUỘC.** Ô văn xuôi không thống kê được, và nhóm lý do là thứ vận hành
- *     đọc để biết nên sửa chỗ nào. "Lý do khác" bắt buộc kèm chữ — chọn nó mà bỏ trống là nói
- *     với khách đúng một chữ "đã huỷ".
- *  3. **Không có nhóm "bất khả kháng".** Trách nhiệm do hệ thống suy từ người thao tác, không
- *     phải do người huỷ tự khai (ADR 0045 điều 2) — cho tự chọn là xoá luôn ý nghĩa của chỉ số.
- *
- * Nhóm lý do là RADIO chứ không phải chip bấm-rồi-sửa như hộp thoại từ chối: ở đó chip chỉ là
- * gợi ý để gõ nhanh, còn ở đây lựa chọn ĐI THẲNG vào dữ liệu và chỉ có đúng một giá trị.
+ *  1. **Hệ quả nói thẳng, không trong tooltip** — ô đỏ: tính vào uy tín, khách được hoàn phần đã
+ *     chuyển. Dấu "i" chỉ giữ phần giải thích chỉ số.
+ *  2. **Nhóm lý do BẮT BUỘC** (đi thẳng vào `booking_cancellations.reason_category`) và **ghi chú cho
+ *     khách BẮT BUỘC** (design) — khách đọc đúng câu này trong thông báo.
+ *  3. **Không có nhóm "bất khả kháng"**: trách nhiệm do hệ thống suy (ADR 0045 điều 2).
  */
 function CancelForm({
   request,
@@ -50,83 +42,87 @@ function CancelForm({
 }: Props & { request: BookingRequestDecisionTarget }) {
   const t = useTranslations('BookingRequests.cancel');
   const tDomain = useTranslations('Domain');
-  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
 
   const [category, setCategory] = useState<CancellationReasonCategory | null>(null);
   const [reason, setReason] = useState('');
   const [touched, setTouched] = useState(false);
 
   const trimmed = reason.trim();
-  const needsText = category !== null && cancellationReasonNeedsText(category);
-  const invalid = category === null || (needsText && trimmed.length === 0);
+  const categoryMissing = category === null;
+  const reasonMissing = trimmed.length === 0;
+  // Màn "Đơn thuê xe" truyền nguyên dòng yêu cầu; nơi gọi hẹp hơn thì không có mốc này.
+  const holdExpiresAt = (request as Partial<BookingRequestItem>).holdExpiresAt ?? null;
 
   function submit() {
     setTouched(true);
-    if (invalid || category === null) return;
-    onConfirm({ reasonCategory: category, reason: trimmed || undefined });
+    if (submitting || category === null || reasonMissing) return;
+    onConfirm({ reasonCategory: category, reason: trimmed });
   }
 
   return (
-    <Modal
+    <ResponsiveDialog
       open
-      title={t('title')}
-      okText={t('confirm')}
-      cancelText={tCommon('actions.cancel')}
-      okButtonProps={{ danger: true }}
-      confirmLoading={submitting}
-      onCancel={onCancel}
-      onOk={submit}
-      destroyOnHidden
+      onClose={onCancel}
+      size="sm"
+      title={
+        <span className={styles.titleBlock}>
+          <span>{t('title')}</span>
+          <span className={styles.subtitle}>
+            {holdExpiresAt
+              ? t.rich('subtitleWithDeadline', {
+                  b: (chunks) => <strong>{chunks}</strong>,
+                  time: fmt.dateTime(holdExpiresAt),
+                })
+              : t.rich('subtitle', { b: (chunks) => <strong>{chunks}</strong> })}
+          </span>
+        </span>
+      }
+      footer={
+        <div className={styles.footer}>
+          <Button size="large" onClick={onCancel} disabled={submitting}>
+            {t('back')}
+          </Button>
+          <Button size="large" type="primary" danger loading={submitting} onClick={submit}>
+            {t('confirm')}
+          </Button>
+        </div>
+      }
     >
       <div className={styles.body}>
-        <p className={styles.context}>
-          {t('context', { customer: request.customerName, vehicle: request.vehicleName })}
+        <p className={styles.summary}>
+          <span className={styles.summaryName}>{request.customerName}</span>
+          <span className={styles.summaryDot} aria-hidden="true" />
+          <span className={styles.summaryVehicle}>{request.vehicleName}</span>
         </p>
 
-        {/*
-          Ba hệ quả là chữ chính, không phải tooltip. Người bấm nút đỏ này cần biết tiền đi đâu
-          trước khi bấm — giấu điều đó sau một dấu "i" là giấu đúng thứ không được giấu.
-        */}
-        <ul className={styles.effects}>
-          <li>{t('effects.vehicle')}</li>
-          <li>{t('effects.customer')}</li>
-          <li>{t('effects.money')}</li>
-          <li>
-            {t('effects.metrics')}
-            <InfoHint
-              className={styles.infoHint}
-              label={t('effects.metricsHintLabel')}
-              content={t('effects.metricsHint')}
-            />
-          </li>
-        </ul>
-
-        <fieldset className={styles.field}>
-          <legend className={styles.label}>{t('categoryLabel')}</legend>
-          <Radio.Group
-            className={styles.categories}
-            value={category}
-            onChange={(event) => {
-              setCategory(event.target.value as CancellationReasonCategory);
+        <label className={styles.field}>
+          <span className={styles.label}>
+            {t('categoryLabel')} <span className={styles.required}>*</span>
+          </span>
+          <Select<CancellationReasonCategory>
+            value={category ?? undefined}
+            placeholder={t('categoryPlaceholder')}
+            onChange={(value) => {
+              setCategory(value);
               setTouched(true);
             }}
-          >
-            {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
-              <Radio key={value} value={value}>
-                {tDomain(`cancellationReasonCategory.${value}`)}
-              </Radio>
-            ))}
-          </Radio.Group>
-          {touched && category === null ? (
+            status={touched && categoryMissing ? 'error' : undefined}
+            options={CANCELLATION_REASON_CATEGORY_VALUES.map((value) => ({
+              value,
+              label: tDomain(`cancellationReasonCategory.${value}`),
+            }))}
+          />
+          {touched && categoryMissing ? (
             <span className={styles.error} role="alert">
               {t('categoryRequired')}
             </span>
           ) : null}
-        </fieldset>
+        </label>
 
         <label className={styles.field}>
           <span className={styles.label}>
-            {needsText ? t('reasonLabelRequired') : t('reasonLabel')}
+            {t('reasonLabel')} <span className={styles.required}>*</span>
           </span>
           <Input.TextArea
             value={reason}
@@ -136,10 +132,10 @@ function CancelForm({
             maxLength={REJECT_REASON_MAX_LENGTH}
             showCount
             autoSize={{ minRows: 3, maxRows: 8 }}
-            status={touched && needsText && trimmed.length === 0 ? 'error' : undefined}
-            aria-invalid={touched && needsText && trimmed.length === 0 ? true : undefined}
+            status={touched && reasonMissing ? 'error' : undefined}
+            aria-invalid={touched && reasonMissing ? true : undefined}
           />
-          {touched && needsText && trimmed.length === 0 ? (
+          {touched && reasonMissing ? (
             <span className={styles.error} role="alert">
               {t('reasonRequired')}
             </span>
@@ -148,9 +144,22 @@ function CancelForm({
           )}
         </label>
 
-        {error ? <Alert type="error" showIcon title={error} /> : null}
+        {/* Hệ quả là chữ chính — người bấm nút đỏ cần biết tiền đi đâu TRƯỚC khi bấm. */}
+        <div className={styles.warning} role="note">
+          <p>
+            {t.rich('warning', { b: (chunks) => <strong>{chunks}</strong> })}
+            <InfoHint
+              className={styles.infoHint}
+              label={t('effects.metricsHintLabel')}
+              content={t('effects.metricsHint')}
+            />
+          </p>
+          <p>{t('effects.money')}</p>
+        </div>
+
+        {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
       </div>
-    </Modal>
+    </ResponsiveDialog>
   );
 }
 
