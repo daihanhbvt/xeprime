@@ -3,12 +3,12 @@
 import { useMemo } from 'react';
 import {
   BOOKING_LIST_PRESET,
-  BOOKING_REQUEST_STATUS,
   CUSTOMER_TRIP_FILTER,
   VEHICLE_OPERATION_STATUS,
   type VehiclePublicStatus,
 } from '@xeprime/types';
-import { ROUTES, bookingPath, bookingsGroupPath } from '@/constants/routes';
+import { RENTAL_STAGE } from '@/constants/rental-stages';
+import { ROUTES, bookingPath, bookingsGroupPath, rentalStagePath } from '@/constants/routes';
 import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -54,10 +54,11 @@ export function useDashboardLinks(branchId?: string): DashboardLinks {
     const branch = (href: string) => withBranchParam(href, branchId ?? null);
     const trips = ROUTES.MANAGE.TRIPS;
     return {
-      requests: ownerTrips ? trips : branch(paths.bookingRequests),
+      // Hai thẻ yêu cầu trỏ vào hai NHÓM đầu của màn "Đơn thuê xe" gộp (05/11/2026).
+      requests: ownerTrips ? trips : branch(rentalStagePath(RENTAL_STAGE.NEEDS_ACTION)),
       awaitingPayment: ownerTrips
         ? trips
-        : branch(`${paths.bookingRequests}?status=${BOOKING_REQUEST_STATUS.AWAITING_HOLD}`),
+        : branch(rentalStagePath(RENTAL_STAGE.AWAITING_PAYMENT)),
       // Ba thẻ đơn trỏ vào đúng NGĂN của cột trái "Quản lý đơn thuê xe" (02/11/2026); ngăn tự mang
       // cách sắp xếp mặc định của nó (đang thuê: trả xe sớm nhất trước).
       awaitingPickup: ownerTrips

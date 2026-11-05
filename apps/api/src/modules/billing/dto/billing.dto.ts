@@ -21,6 +21,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -388,6 +389,49 @@ export class AssignSubscriptionDto {
   @IsOptional()
   @IsIn(SUBSCRIPTION_CHANGE_TIMING_VALUES)
   timing?: SubscriptionChangeTiming;
+}
+
+/**
+ * Sửa một kỳ còn hạn (ADR 0080 điều 2). Trường VẮNG = giữ nguyên; `null` ở `maxVehicles` = không
+ * giới hạn, ở `note` = xoá ghi chú. Phải có ít nhất một trường.
+ */
+export class UpdateSubscriptionDto {
+  @ApiPropertyOptional({
+    description:
+      'Giá CẢ KỲ mới — VND, chuỗi. Chỉ kỳ do admin gán (origin=admin); kỳ sinh từ hoá đơn gian ' +
+      'hàng đã trả ⇒ 409 SUBSCRIPTION_PRICE_NOT_EDITABLE. Hoá đơn của kỳ được ghi lại theo giá mới',
+    example: '15000000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'price phải là số tiền hợp lệ' })
+  price?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Ngày kết thúc mới (ISO-8601). Phải sau ngày bắt đầu, sau bây giờ và trong 36 tháng tới. ' +
+      'Các kỳ xếp sau trong chuỗi dời theo cùng khoảng, giữ nguyên độ dài',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  endsAt?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Trần số xe của kỳ (snapshot quota). null = không giới hạn',
+  })
+  // Không `@Type(() => Number)`: body JSON đã là số, và ép kiểu sẽ biến `null` (không giới hạn) thành 0.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  maxVehicles?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú; null = xoá' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  note?: string | null;
 }
 
 export class SubscriptionDto {

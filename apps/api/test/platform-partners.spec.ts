@@ -684,13 +684,22 @@ describe('Drawer chi tiết đối tác — quyền', () => {
         kind: PARTNER_QUOTA_KIND.TOTAL,
         limit: 30,
       });
+      // Cùng MỘT trần ⇒ giao diện hiện một dòng, không cộng hai con số tổng.
+      expect(shop.quota.vehiclesByType.combined).toBe(true);
       expect(shop.quota.members).toMatchObject({ kind: PARTNER_QUOTA_KIND.TOTAL, limit: 10 });
+      // Chính sách phí theo luồng tiền v2 (ADR 0064) — không còn % phí dịch vụ phẳng.
+      if (shop.feePolicy) {
+        expect(shop.feePolicy).not.toHaveProperty('serviceFeePercent');
+        expect(typeof shop.feePolicy.platformFeeCar).toBe('string');
+        expect(Array.isArray(shop.feePolicy.ownerCommissionTiers)).toBe(true);
+      }
 
       const lite = (await get(`${ids.lite}/billing`, ids.superAdmin)).body;
       expect(lite.quota.vehicles).toMatchObject({
         kind: PARTNER_QUOTA_KIND.TOTAL,
         reason: 'owner_lite',
       });
+      expect(lite.quota.vehiclesByType.combined).toBe(true);
       expect(lite.quota.branches.kind).toBe(PARTNER_QUOTA_KIND.NOT_APPLICABLE);
       expect(lite.quota.members.kind).toBe(PARTNER_QUOTA_KIND.NOT_APPLICABLE);
     },

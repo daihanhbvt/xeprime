@@ -38,7 +38,10 @@ export function BookingDetailPage() {
             title={
               <span className={styles.title}>
                 {t('detailPage.title', { code: booking.code })}
-                <BookingStageChip status={booking.status} />
+                <BookingStageChip
+                  status={booking.status}
+                  cancellationParty={booking.cancellationParty}
+                />
               </span>
             }
             subtitle={t('detailPage.createdAt', { date: fmt.date(booking.createdAt) })}

@@ -5006,6 +5006,11 @@ model BookingHold {
   /// còn một bộ đếm thì không nói được mốc nào đã bắn khi worker bỏ lỡ mốc đầu (máy dừng, hoặc
   /// hold sinh ra khi cửa sổ đã ngắn hơn 60 phút vì bị kẹp bởi giờ nhận xe).
   finalPaymentRemindedAt DateTime? @map("final_payment_reminded_at") @db.Timestamptz(3)
+  /// Lượt GIAN HÀNG bấm "Nhắc khách" gần nhất (05/11/2026). Cột CLAIM như hai cột trên: lượt bấm
+  /// chỉ ghi khi lời nhắc gần nhất khách nhận (lúc tạo, hai mốc worker, lượt bấm trước) đã cũ hơn
+  /// `HOLD_HOST_REMINDER_COOLDOWN_MINUTES` — điều kiện nằm trong chính câu `UPDATE`, hai nhân viên
+  /// bấm cùng lúc thì chỉ một tin đi.
+  hostRemindedAt         DateTime? @map("host_reminded_at") @db.Timestamptz(3)
   /// **LEGACY (ADR 0039 điều 3, đã bị ADR 0044 ghi đè)** — số lần cửa sổ trả tiền từng được tự
   /// cộng thêm. Không còn đường nào ghi vào cột này: cửa sổ nay là 120 phút và hết hạn là hết.
   /// Giữ lại để đọc được lịch sử các hold sinh trong thời gian ADR 0039 còn hiệu lực.

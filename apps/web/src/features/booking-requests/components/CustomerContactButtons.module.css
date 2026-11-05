@@ -71,3 +71,10 @@
     width: 44px;
   }
 }
+
+/* Thẻ Kanban: ba nút cách 8, một hàng (Figma "_Kanban Item" `23895:15196`). */
+.compact {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: var(--xp-space-sm);
+}

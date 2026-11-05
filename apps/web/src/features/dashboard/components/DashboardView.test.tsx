@@ -235,12 +235,12 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
     await renderView();
 
     const requests = await tile('Yêu cầu chờ duyệt');
-    expect(requests.getAttribute('href')).toBe(ROUTES.MANAGE.BOOKING_REQUESTS);
+    expect(requests.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=needs_action`);
     expect(within(requests).getByText('3')).toBeTruthy();
     expect(within(requests).getByText('1 sắp hết hạn trả lời')).toBeTruthy();
 
     const payment = await tile('Chờ khách thanh toán');
-    expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKING_REQUESTS}?status=awaiting_hold`);
+    expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=awaiting_payment`);
 
     const pickups = await tile('Chờ giao xe');
     expect(pickups.getAttribute('href')).toBe(

@@ -15,6 +15,7 @@ import {
   CancelBookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageDto,
+  PaymentReminderResultDto,
   RejectBookingRequestDto,
 } from './dto/booking-request.dto';
 import { BookingRequestsService } from './booking-requests.service';
@@ -131,6 +132,32 @@ export class BookingRequestsController {
     @Body() dto: CancelBookingRequestDto,
   ): Promise<BookingRequestDto> {
     return this.requests.cancelByHost(tenant.tenantId, user.id, id, dto);
+  }
+
+  /**
+   * NHẮC khách chuyển tiền giữ chỗ — nút "Nhắc khách" của nhóm "Chờ khách thanh toán" (05/11/2026).
+   *
+   * Cùng quyền với Huỷ chuyến: người nhận chuyến là người theo nó tới lúc tiền về. KHÔNG mở cho
+   * phiên hỗ trợ (không `@SupportAction`): nhân sự nền tảng không gửi tin thay gian hàng (ADR 0050).
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
+  @Post(':id/remind-payment')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
+  @ApiOperation({
+    summary: 'Nhắc khách thanh toán tiền giữ chỗ (chặng awaiting_hold)',
+    description:
+      'Gửi MỘT thông báo cho tài khoản khách; không gia hạn cửa sổ thanh toán. Khách vừa nhận lời ' +
+      'nhắc (lúc tạo khoản giữ chỗ, hai mốc worker, lượt bấm trước) trong ' +
+      'HOLD_HOST_REMINDER_COOLDOWN_MINUTES phút → 429 PAYMENT_REMINDER_TOO_SOON kèm details.availableAt. ' +
+      'Không còn chờ thanh toán / khách không có tài khoản → 409 PAYMENT_REMINDER_NOT_AVAILABLE.',
+  })
+  @ApiOkResponse({ type: PaymentReminderResultDto })
+  remindPayment(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<PaymentReminderResultDto> {
+    return this.requests.remindPayment(tenant.tenantId, user.id, id);
   }
 
   /**

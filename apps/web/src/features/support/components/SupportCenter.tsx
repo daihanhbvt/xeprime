@@ -57,7 +57,7 @@ const QUICK_START: readonly QuickStartLink[] = [
   },
   {
     key: 'requests',
-    href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    href: ROUTES.MANAGE.BOOKINGS,
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
     icon: InboxOutlined,
   },

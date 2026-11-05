@@ -23,7 +23,9 @@ import {
   PLAN_VEHICLE_SCOPE,
   PLAN_VEHICLE_SCOPE_VALUES,
   planTermPrice,
+  laterChainTermsOf,
   subscriptionCancelBlockOf,
+  subscriptionEditBlockOf,
   type PlanLimitsJson,
   type SubscriptionChangeTiming,
   type SubscriptionTermMonths,
@@ -40,6 +42,7 @@ import { useAssignSubscription, useCancelSubscription } from '../hooks/use-plan-
 import { useLiveSubscriptions, usePlans, useTenantSubscriptions } from '../hooks/use-plans';
 import { groupPlans } from '../plan-catalog';
 import type { CurrentPlan, Plan, PlatformTenantPlanTerm, Subscription } from '../types';
+import { EditTermDialog } from './EditTermDialog';
 import styles from './TenantPlanSection.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -65,9 +68,13 @@ function sortByScope<T extends Pick<Subscription, 'vehicleScope' | 'startsAt'>>(
  * nối đuôi kỳ đó (ADR 0010 điều 2). Màn này nói đúng điều đó: thẻ "Đang hiệu lực", thẻ "Kỳ kế
  * tiếp", và lịch sử gắn trạng thái KỲ — không in thẳng `status = active` của DB.
  *
- * Hai nguồn dữ liệu, cố ý tách: chuỗi kỳ CÒN HẠN (`state=live`) cho thẻ, xem trước và luật huỷ;
- * LỊCH SỬ (phân trang) chỉ để đọc. Luật xem trước và luật huỷ là CÙNG hàm server dùng
- * (`planSubscriptionChain`, `subscriptionCancelBlockOf`) — ngày web hứa là ngày server ghi.
+ * Hai nguồn dữ liệu, cố ý tách: chuỗi kỳ CÒN HẠN (`state=live`) cho thẻ, xem trước, luật huỷ và
+ * luật sửa; LỊCH SỬ (phân trang) chỉ để đọc. Các luật đó là CÙNG hàm server dùng
+ * (`planSubscriptionChain`, `subscriptionCancelBlockOf`, `laterChainTermsOf`,
+ * `subscriptionEditBlockOf`) — ngày web hứa là ngày server ghi.
+ *
+ * ADR 0080: huỷ một kỳ có kỳ xếp sau thì các kỳ đó huỷ kèm (hộp xác nhận kể tên từng kỳ); mỗi kỳ
+ * trả phí còn hạn có nút Sửa (giá — chỉ kỳ admin gán, ngày kết thúc, trần xe, ghi chú).
  */
 export function TenantPlanSection({
   tenantId,
@@ -88,6 +95,7 @@ export function TenantPlanSection({
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const [assignOpen, setAssignOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   /*
@@ -122,6 +130,8 @@ export function TenantPlanSection({
 
   const hasPlan = current.length > 0 || terms.length > 0 || Boolean(currentPlan);
   const historyItems = history.data?.items ?? [];
+  // Sửa đọc bản CÒN HẠN mới nhất của kỳ, không bản trên trang lịch sử (có thể cũ hơn một lượt dời).
+  const editing = editingId ? (live.find((sub) => sub.id === editingId) ?? null) : null;
 
   return (
     <div className={styles.section}>
@@ -217,10 +227,15 @@ export function TenantPlanSection({
                   <HistoryRow
                     key={sub.id}
                     term={sub}
-                    // Luật huỷ đọc CHUỖI KỲ CÒN HẠN đầy đủ, không đọc trang lịch sử đang xem.
-                    cancellable={subscriptionCancelBlockOf(sub, live) === null}
+                    cancellable={subscriptionCancelBlockOf(sub) === null}
+                    // Các kỳ huỷ kèm đọc CHUỖI KỲ CÒN HẠN đầy đủ, không đọc trang lịch sử đang xem.
+                    cascade={laterChainTermsOf(sub, live)}
+                    editable={
+                      subscriptionEditBlockOf(sub) === null && live.some((l) => l.id === sub.id)
+                    }
                     cancelling={cancel.isPending && cancel.variables === sub.id}
                     onCancel={() => handleCancel(sub)}
+                    onEdit={() => setEditingId(sub.id)}
                   />
                 ))}
               </ul>
@@ -247,6 +262,15 @@ export function TenantPlanSection({
           tenantId={tenantId}
           liveTerms={live}
           onClose={() => setAssignOpen(false)}
+        />
+      ) : null}
+      {canManageBilling && editing ? (
+        <EditTermDialog
+          key={editing.id}
+          tenantId={tenantId}
+          term={editing}
+          liveTerms={live}
+          onClose={() => setEditingId(null)}
         />
       ) : null}
     </div>
@@ -306,13 +330,20 @@ function TermCard({ term, variant }: { term: Subscription; variant: 'current' | 
 function HistoryRow({
   term,
   cancellable,
+  cascade,
+  editable,
   cancelling,
   onCancel,
+  onEdit,
 }: {
   term: Subscription;
   cancellable: boolean;
+  /** Các kỳ xếp sau bị huỷ kèm nếu huỷ kỳ này (ADR 0080 điều 1). */
+  cascade: readonly Subscription[];
+  editable: boolean;
   cancelling: boolean;
   onCancel: () => void;
+  onEdit: () => void;
 }) {
   const t = useTranslations('AdminPlans.tenant');
   const fmt = useAppFormat();
@@ -355,12 +386,33 @@ function HistoryRow({
           meta={SUBSCRIPTION_TERM_STATE_META}
           group="subscriptionTermState"
         />
+        {editable ? (
+          <Button size="small" type="link" onClick={onEdit}>
+            {t('editAction')}
+          </Button>
+        ) : null}
         {cancellable ? (
           <Popconfirm
             title={scheduled ? t('cancelScheduledTitle') : t('cancelCurrentTitle')}
             description={
               <div className={styles.confirmBody}>
                 {scheduled ? t('cancelScheduledBody') : t('cancelCurrentBody')}
+                {cascade.length > 0 ? (
+                  <>
+                    <div>{t('cancelCascade', { count: cascade.length })}</div>
+                    <ul className={styles.cascadeList}>
+                      {cascade.map((later) => (
+                        <li key={later.id}>
+                          {t('cascadeItem', {
+                            plan: later.planName,
+                            from: fmt.date(later.startsAt),
+                            to: fmt.date(later.endsAt),
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
               </div>
             }
             okText={t('cancelConfirmOk')}

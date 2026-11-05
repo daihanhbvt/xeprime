@@ -107,7 +107,9 @@
     "wallet": "Quản lý ví",
     "transactionHistory": "Lịch sử giao dịch",
     "shopInfo": "Thông tin cửa hàng",
-    "staffPermissions": "Nhân viên & Phân quyền"
+    "staffPermissions": "Nhân viên & Phân quyền",
+    "rentals": "Đơn thuê xe",
+    "vehiclesShort": "Xe"
   },
   "manageGroups": {
     "overview": "Tổng quan",

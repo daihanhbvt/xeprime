@@ -1,16 +1,23 @@
-import { SUPPORT_CAPABILITY } from '@xeprime/types';
-import { Suspense } from 'react';
-import { LoadingState } from '@/components/feedback/LoadingState';
-import { BookingRequestsView } from '@/features/booking-requests/components/BookingRequestsView';
-import { SupportRoute } from '@/features/tenant-support/components/SupportWorkspaceGate';
+import { redirect } from 'next/navigation';
+import { adminTenantSupportPath } from '@/constants/routes';
+import { legacyRequestsTarget } from '@/features/bookings/rentals-redirect';
 
-/** Yêu cầu thuê — CHÍNH `BookingRequestsView`; liên hệ khách bị che ở server. */
-export default function Page() {
-  return (
-    <SupportRoute requires={SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW}>
-      <Suspense fallback={<LoadingState variant="cards" rows={4} />}>
-        <BookingRequestsView />
-      </Suspense>
-    </SupportRoute>
+/**
+ * Hộp thư yêu cầu trong phiên hỗ trợ (ADR 0050) — đã gộp vào màn "Đơn thuê xe" như site partner
+ * (05/11/2026). Route cũ chỉ chuyển tiếp, giữ nguyên phiên và bộ lọc.
+ */
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ contextId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const root = adminTenantSupportPath.root((await params).contextId);
+  redirect(
+    legacyRequestsTarget(await searchParams, {
+      bookings: `${root}/bookings`,
+      ended: `${root}/bookings/ended`,
+    }),
   );
 }

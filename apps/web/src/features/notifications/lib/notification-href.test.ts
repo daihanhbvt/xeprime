@@ -62,7 +62,8 @@ describe('notificationHref — khu quản lý không bị đổi', () => {
         { targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST, targetId: 'RQ1' },
         'manage',
       ),
-    ).toBe('/manage/booking-requests');
+      // Yêu cầu + đơn ở cùng màn "Đơn thuê xe" (05/11/2026).
+    ).toBe('/manage/bookings');
   });
 });
 

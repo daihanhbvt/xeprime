@@ -264,6 +264,31 @@
     "cancelCurrentBody": "This plan term ends as soon as you confirm. If it is the last running plan term, the shop moves back to the default commission track. Money already collected is not refunded automatically.",
     "cancelScheduledTitle": "Cancel the scheduled term?",
     "cancelScheduledBody": "This term will not start; the current plan keeps running until it ends. Money already collected is not refunded automatically.",
+    "cancelCascade": "{count, plural, one {# later term} other {# later terms}} will be cancelled too:",
+    "cascadeItem": "{plan} · {from} → {to}",
+    "editAction": "Edit",
+    "edit": {
+      "title": "Edit plan term · {plan}",
+      "period": "Currently effective: {from} → {to}",
+      "price": "Price for the term",
+      "priceHelp": "The invoice for this assignment is rewritten at the new price. Enter 0 to give this term for free.",
+      "endsAt": "End date",
+      "endsAtHelp": "Pick a time after today and within the next 36 months.",
+      "unlimitedVehicles": "Unlimited vehicles",
+      "maxVehicles": "Maximum vehicles",
+      "note": "Note",
+      "notePlaceholder": "Contract number, reason for the change…",
+      "shiftNotice": "{count, plural, one {# later term moves} other {# later terms move}} with it, keeping their length:",
+      "submit": "Save changes",
+      "success": "Plan term updated",
+      "unchanged": "Nothing has changed yet",
+      "validation": {
+        "required": "Required",
+        "endsAtInvalid": "The end date must be after the start date, after today and within the next 36 months",
+        "vehiclesMin": "Enter a whole number of 1 or more",
+        "noteTooLong": "The note can be at most 1,000 characters"
+      }
+    },
     "origin": {
       "payment": "Activated automatically when paid in full",
       "system": "Default commission track assigned by the system"

@@ -316,11 +316,15 @@ export const API_ERROR_CODE = {
    */
   SUBSCRIPTION_TERM_CONFLICT: 'SUBSCRIPTION_TERM_CONFLICT',
   /**
-   * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
-   * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
-   * Huỷ kỳ xếp sau trước, hoặc dùng "Đổi gói ngay".
+   * Sửa một kỳ thuê bao không sửa được: đã huỷ / đã hết hạn, hoặc là dòng tuyến hoa hồng (ADR 0080
+   * điều 2). `details.reason` mang `SubscriptionEditBlock`. 409.
    */
-  SUBSCRIPTION_LATER_TERM_EXISTS: 'SUBSCRIPTION_LATER_TERM_EXISTS',
+  SUBSCRIPTION_TERM_NOT_EDITABLE: 'SUBSCRIPTION_TERM_NOT_EDITABLE',
+  /**
+   * Sửa GIÁ của một kỳ sinh từ hoá đơn gian hàng đã trả — số tiền trên kỳ phải khớp hoá đơn đã
+   * thu (ADR 0080 điều 3). Ngày kết thúc, hạn mức xe, ghi chú vẫn sửa được. 409.
+   */
+  SUBSCRIPTION_PRICE_NOT_EDITABLE: 'SUBSCRIPTION_PRICE_NOT_EDITABLE',
   /**
    * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
    *
@@ -396,6 +400,16 @@ export const API_ERROR_CODE = {
   INSTANT_BOOK_UNAVAILABLE: 'INSTANT_BOOK_UNAVAILABLE',
   /** Hold không ở trạng thái chờ tiền — đã trả, đã hết hạn hoặc đã huỷ. `details` mang `{ status }`. */
   HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
+  /**
+   * Gian hàng nhắc khách thanh toán khi khách VỪA nhận một lời nhắc — `HOLD_HOST_REMINDER_COOLDOWN_MINUTES`
+   * (05/11/2026). 429; `details` mang `{ availableAt }` (ISO) để nút nói được lúc nào bấm lại.
+   */
+  PAYMENT_REMINDER_TOO_SOON: 'PAYMENT_REMINDER_TOO_SOON',
+  /**
+   * Chuyến không còn chờ khách thanh toán (tiền vừa về, hết hạn, đã huỷ) hoặc khách không có tài
+   * khoản để nhận thông báo — không có ai/khoản nào để nhắc. 409; `details` mang `{ stage }`.
+   */
+  PAYMENT_REMINDER_NOT_AVAILABLE: 'PAYMENT_REMINDER_NOT_AVAILABLE',
   /**
    * Giờ nhận xe quá gần để kịp thu tiền giữ chỗ — ADR 0044 điều 4.
    *

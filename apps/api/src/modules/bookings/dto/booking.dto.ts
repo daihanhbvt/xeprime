@@ -257,6 +257,26 @@ export class BookingListItemDto {
   /** Phía chịu trách nhiệm của lượt huỷ (`booking_cancellations`, ADR 0045) — null khi đơn không bị huỷ. */
   @ApiPropertyOptional({ type: String, nullable: true, enum: CANCELLATION_PARTY_VALUES })
   cancellationParty!: string | null;
+  /*
+   * Ba dòng tiền của ô "Thanh toán" trên thẻ đơn (màn "Đơn thuê xe" gộp, 05/11/2026) — trước chỉ
+   * chi tiết đơn có. Ở DANH SÁCH vì thẻ của cả bốn nhóm cùng một khuôn: tiền thuê · khách trả ·
+   * đã giữ chỗ · trả chủ xe khi nhận xe.
+   */
+  /**
+   * Tổng khách phải trả cả chuyến, gồm các phụ phí phía khách đã đóng băng lúc đặt.
+   * `null` với đơn lập tay/đơn cũ không đi qua chính sách phí của marketplace.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  customerTotalAmount!: string | null;
+  /**
+   * Số khách đã chuyển cho XePrime để giữ chỗ. Đây là số THỰC THU trên `booking_holds`,
+   * không phải cọc tài sản `depositAmount` mà chủ xe giữ khi giao xe.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  holdPaidAmount!: string | null;
+  /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  payAtPickupAmount!: string | null;
 }
 
 /**
@@ -349,21 +369,6 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiPropertyOptional({ type: BookingPriceSnapshotDto, nullable: true })
   priceSnapshot!: BookingPriceSnapshotDto | null;
   /**
-   * Tổng khách phải trả cả chuyến, gồm các phụ phí phía khách đã đóng băng lúc đặt.
-   * `null` với đơn lập tay/đơn cũ không đi qua chính sách phí của marketplace.
-   */
-  @ApiPropertyOptional({ type: String, nullable: true })
-  customerTotalAmount!: string | null;
-  /**
-   * Số khách đã chuyển cho XePrime để giữ chỗ. Đây là số THỰC THU trên `booking_holds`,
-   * không phải cọc tài sản `depositAmount` mà chủ xe giữ khi giao xe.
-   */
-  @ApiPropertyOptional({ type: String, nullable: true })
-  holdPaidAmount!: string | null;
-  /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
-  @ApiPropertyOptional({ type: String, nullable: true })
-  payAtPickupAmount!: string | null;
-  /**
    * Kinh tế của CHỦ XE, đóng băng trong snapshot lúc đặt (ADR 0024) — DTO nội bộ của gian hàng nên
    * hiện ở đây là đúng chỗ (ADR 0064). `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
    */
@@ -427,6 +432,16 @@ export class BookingDetailDto extends BookingListItemDto {
     description: 'Lúc tiền giữ chỗ về ĐỦ (ADR 0044) — null với đơn không qua giữ chỗ',
   })
   holdPaidAt!: string | null;
+
+  /**
+   * Nhóm lý do + câu gửi khách của lượt huỷ (`booking_cancellations`, ADR 0045) — banner "Đơn hàng
+   * đã huỷ. Lý do: …" của chi tiết đơn (Figma "Details - Failed", 05/11/2026). `null` khi đơn không
+   * bị huỷ hoặc đơn cũ không có dòng trách nhiệm.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: CANCELLATION_REASON_CATEGORY_VALUES })
+  cancellationReasonCategory!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  cancellationReason!: string | null;
 
   @ApiPropertyOptional({
     type: Number,

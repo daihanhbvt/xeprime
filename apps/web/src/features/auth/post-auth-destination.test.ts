@@ -286,17 +286,17 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
     }
   });
 
-  it('THÀNH VIÊN của gian hàng hết gói giữ hộp thư + bảng đơn, /trips đưa về hộp thư', () => {
+  it('THÀNH VIÊN của gian hàng hết gói giữ màn "Đơn thuê xe", /trips đưa về đó', () => {
     const staff: AuthScope = {
       tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
     };
     expect(partnerPageRedirect(staff, M.BOOKING_REQUESTS)).toBeNull();
     expect(partnerPageRedirect(staff, M.BOOKINGS)).toBeNull();
-    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKINGS);
   });
 
-  it('tuyến gói mở /trips → hộp thư yêu cầu (họ có hộp thư + bảng đơn đầy đủ)', () => {
-    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+  it('tuyến gói mở /trips → màn "Đơn thuê xe" gộp yêu cầu + đơn (05/11/2026)', () => {
+    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKINGS);
     expect(partnerPageRedirect(packageCurrent, M.BOOKING_REQUESTS)).toBeNull();
     expect(partnerPageRedirect(packageCurrent, M.BOOKINGS)).toBeNull();
   });

@@ -107,7 +107,9 @@
     "wallet": "Wallet",
     "transactionHistory": "Transaction history",
     "shopInfo": "Shop information",
-    "staffPermissions": "Staff & permissions"
+    "staffPermissions": "Staff & permissions",
+    "rentals": "Rentals",
+    "vehiclesShort": "Vehicles"
   },
   "manageGroups": {
     "overview": "Overview",

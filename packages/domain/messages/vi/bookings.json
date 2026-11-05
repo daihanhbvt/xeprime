@@ -86,7 +86,7 @@
   "list": {
     "title": "Tất cả đơn thuê",
     "searchLabel": "Tìm đơn thuê",
-    "searchPlaceholder": "Tìm theo tên khách, SĐT, mã đơn",
+    "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số,...",
     "statusAll": "Tất cả trạng thái",
     "sortLabel": "Sắp xếp",
     "sort": {
@@ -689,25 +689,14 @@
   },
   "board": {
     "title": "Đơn thuê xe",
-    "subtitle": "Quản lý tập trung các đơn thuê tự lái, có tài xế và thuê dài hạn; kiểm soát lịch nhận - trả xe và doanh thu từng chuyến",
+    "subtitle": "Quản lý toàn bộ yêu cầu đặt xe và đơn thuê trên một luồng. Nhấn vào thẻ để xem chi tiết.",
     "create": "Tạo đơn thuê",
     "railLabel": "Lọc đơn thuê theo trạng thái",
     "all": "Tất cả",
-    "groupNeedsAction": "CẦN XỬ LÝ",
-    "groupEnded": "ĐÃ KẾT THÚC",
-    "preset": {
-      "awaiting_pickup": "Chờ giao xe",
-      "renting": "Đang thuê",
-      "completed": "Hoàn thành",
-      "cancelled": "Đã hủy"
-    },
-    "recent": "{count, plural, other {# chuyến gần nhất}}",
     "viewAll": "Xem tất cả ({count})",
     "customer": "Khách hàng",
     "handlePickup": "Xử lý giao xe",
     "receiveBack": "Nhận xe",
-    "viewDetail": "Xem chi tiết",
-    "progress": "Đã đi {percent}% · còn {remaining}",
     "overdueReturn": "Quá giờ trả xe {duration}",
     "pickupToday": "Giao xe hôm nay · {time}",
     "pickupOverdue": "Quá giờ giao xe · {time}",
@@ -723,11 +712,102 @@
     "cancelled": "Đã hủy",
     "noShow": "Khách không đến",
     "listLabel": "Danh sách đơn {group}",
-    "emptyGroupTitle": "Chưa có đơn nào ở mục này",
-    "emptyGroupBody": "Đơn xuất hiện ở đây khi chuyển sang trạng thái tương ứng.",
     "emptyAllTitle": "Gian hàng chưa có đơn thuê nào",
     "groupError": "Không tải được nhóm đơn này",
-    "plate": "Biển số {plate}"
+    "plate": "Biển số {plate}",
+    "ended": "Đơn đã kết thúc",
+    "endedWithCount": "Đơn đã kết thúc ({count})",
+    "stage": {
+      "needs_action": "Cần xử lý",
+      "awaiting_payment": "Chờ khách thanh toán",
+      "awaiting_pickup": "Chờ giao xe",
+      "renting": "Đang thuê"
+    },
+    "stageEmpty": {
+      "needs_action": {
+        "title": "Không còn yêu cầu nào cần xử lý",
+        "body": "Yêu cầu mới của khách sẽ hiện ở đây để bạn xác nhận hoặc từ chối."
+      },
+      "awaiting_payment": {
+        "title": "Không có chuyến nào đang chờ khách thanh toán",
+        "body": "Chuyến bạn đã xác nhận hiện ở đây cho tới khi khách thanh toán đủ tiền giữ chỗ."
+      },
+      "awaiting_pickup": {
+        "title": "Không có chuyến nào chờ giao xe",
+        "body": "Chuyến đã được khách thanh toán giữ chỗ sẽ hiện ở đây để chuẩn bị bàn giao."
+      },
+      "renting": {
+        "title": "Không có xe nào đang cho thuê",
+        "body": "Chuyến đã giao xe cho khách sẽ hiện ở đây cho tới khi bạn nhận xe về."
+      }
+    },
+    "emptyAllBody": "Yêu cầu đặt xe của khách và đơn bạn tạo sẽ hiện ở đây theo từng chặng.",
+    "noAccessTitle": "Bạn chưa có quyền xem đơn thuê",
+    "noAccessBody": "Liên hệ chủ gian hàng để được cấp quyền xem yêu cầu đặt xe hoặc đơn thuê.",
+    "openDetail": "Xem chi tiết đơn {code}",
+    "viewDetailShort": "Chi tiết",
+    "remaining": "Còn lại: {remaining}",
+    "money": {
+      "rental": "Tiền thuê:",
+      "customerTotal": "Khách trả:",
+      "holdPaid": "Đã giữ chỗ:",
+      "payAtPickup": "Trả chủ xe khi nhận xe:",
+      "collected": "Đã thu:",
+      "debt": "Còn phải thu:"
+    },
+    "view": {
+      "label": "Dạng xem",
+      "board": "Xem dạng bảng Kanban",
+      "list": "Xem dạng danh sách"
+    },
+    "kanban": {
+      "label": "Bảng đơn thuê theo chặng",
+      "dragHint": "Chỉ kéo được sang bước tiếp theo",
+      "handle": "Kéo thẻ {vehicle} sang bước tiếp theo",
+      "drop": {
+        "approve": "Thả vào đây để xác nhận yêu cầu",
+        "pickup": "Thả vào đây để mở bước giao xe",
+        "locked": "Thẻ tự sang cột này khi khách thanh toán đủ tiền giữ chỗ",
+        "notNext": "Chỉ kéo được sang bước tiếp theo"
+      },
+      "dropped": {
+        "locked": "Chuyến chỉ sang \"Chờ giao xe\" khi khách thanh toán đủ tiền giữ chỗ.",
+        "notNext": "Chỉ kéo được thẻ sang bước tiếp theo."
+      },
+      "columnError": "Không tải được cột này",
+      "retry": "Thử lại",
+      "loadMore": "Tải thêm",
+      "loadingMore": "Đang tải thêm…",
+      "loadMoreError": "Không tải thêm được",
+      "dnd": {
+        "instructions": "Nhấn Space hoặc Enter để nhấc thẻ. Dùng phím mũi tên trái, phải để chọn cột, nhấn Space hoặc Enter để thả, Esc để huỷ.",
+        "pickedUp": "Đã nhấc thẻ {item} ở cột {from}.",
+        "over": "Thẻ {item} đang ở trên cột {to}.",
+        "overNone": "Thẻ {item} không ở trên cột nào.",
+        "dropped": "Đã thả thẻ {item} vào cột {to}.",
+        "droppedNone": "Đã thả thẻ {item}, không có gì thay đổi.",
+        "cancelled": "Đã huỷ kéo thẻ {item}."
+      },
+      "money": {
+        "rental": "Tiền thuê",
+        "customerTotal": "Khách trả",
+        "payAtPickup": "Trả khi nhận xe",
+        "hold": "Giữ chỗ",
+        "collected": "Đã thu",
+        "debt": "Còn phải thu"
+      },
+      "holdState": {
+        "expected": "Dự kiến",
+        "unpaid": "Chưa thanh toán",
+        "paid": "Đã thanh toán"
+      }
+    },
+    "paymentArrived": {
+      "title": "Ghi nhận thanh toán",
+      "body": "Khách đã thanh toán cho đơn hàng #{code}. Vui lòng kiểm tra các bước trước khi tiến hành giao xe!",
+      "bodyNoCode": "Khách đã thanh toán đủ tiền giữ chỗ cho chuyến {vehicle}. Vui lòng kiểm tra các bước trước khi tiến hành giao xe!",
+      "action": "Xem đơn hàng"
+    }
   },
   "extension": {
     "close": "Huỷ",
@@ -923,7 +1003,8 @@
       "bodyPickup": "Vui lòng bổ sung đầy đủ thông tin trước khi bàn giao xe để đảm bảo quá trình cho thuê diễn ra thuận lợi!",
       "bodyReturn": "Vui lòng bổ sung đủ ảnh hiện trạng khi nhận lại xe để có căn cứ đối chiếu nếu phát sinh tranh chấp.",
       "continue": "Vẫn tiếp tục"
-    }
+    },
+    "cancelledBannerWithReason": "Đơn hàng đã huỷ. Lý do: {reason}."
   },
   "documentsDialog": {
     "title": "Giấy tờ của {name}",
@@ -940,5 +1021,58 @@
     "tooLarge": "Số tiền quá lớn",
     "required": "Nhập phí giao nhận",
     "noteMax": "Tối đa 500 ký tự"
+  },
+  "history": {
+    "title": "Đơn đã kết thúc",
+    "subtitle": "Tổng hợp các đơn thuê đã hoàn thành, bị huỷ và các yêu cầu không thành đơn.",
+    "tabsLabel": "Lọc theo kết thúc",
+    "tabs": {
+      "all": "Tất cả",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã huỷ",
+      "not_converted": "Không thành đơn"
+    },
+    "searchLabel": "Tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số,...",
+    "serviceLabel": "Dịch vụ",
+    "serviceAll": "Tất cả dịch vụ",
+    "outcomeLabel": "Trạng thái",
+    "outcomeAll": "Tất cả trạng thái",
+    "tableLabel": "Danh sách đơn đã kết thúc",
+    "columns": {
+      "code": "Mã đơn",
+      "vehicle": "Xe",
+      "service": "Dịch vụ",
+      "customer": "Khách hàng",
+      "period": "Thời gian thuê",
+      "outcome": "Trạng thái",
+      "endedAt": "Kết thúc lúc",
+      "actions": "Thao tác"
+    },
+    "noCode": "Yêu cầu",
+    "open": "Xem chi tiết",
+    "noSchedule": "Chưa chốt lịch",
+    "errorTitle": "Không tải được danh sách đơn đã kết thúc",
+    "empty": {
+      "all": {
+        "title": "Chưa có chuyến nào kết thúc",
+        "body": "Đơn hoàn thành, bị huỷ và yêu cầu không thành đơn sẽ được lưu ở đây."
+      },
+      "completed": {
+        "title": "Chưa có đơn nào hoàn thành",
+        "body": "Đơn đã nhận xe về sẽ hiện ở đây."
+      },
+      "cancelled": {
+        "title": "Chưa có đơn nào bị huỷ",
+        "body": "Đơn bị huỷ hoặc khách không đến sẽ hiện ở đây."
+      },
+      "not_converted": {
+        "title": "Chưa có yêu cầu nào không thành đơn",
+        "body": "Yêu cầu bị từ chối, quá hạn, khách rút hoặc hết hạn thanh toán sẽ hiện ở đây."
+      }
+    },
+    "noResultsTitle": "Không có chuyến nào khớp bộ lọc",
+    "noResultsBody": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc.",
+    "totalLabel": "{count, plural, other {# chuyến}}"
   }
 }

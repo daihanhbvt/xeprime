@@ -423,7 +423,7 @@ function perVehicleType(car: Prisma.Decimal, motorbike: Prisma.Decimal): PerVehi
  * đọc chính kết quả này và chặn kích hoạt (thiếu ngày 1, thứ tự sai…), còn bản đã kích hoạt thì
  * bất biến và đã qua cổng đó.
  */
-function parseCommissionTiers(raw: Prisma.JsonValue): OwnerCommissionTier[] {
+export function parseCommissionTiers(raw: Prisma.JsonValue): OwnerCommissionTier[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((item) => {
     if (typeof item !== 'object' || item === null || Array.isArray(item)) return [];

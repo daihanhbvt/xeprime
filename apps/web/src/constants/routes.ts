@@ -11,11 +11,15 @@ import {
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
   isSupportContextId,
+  BOOKING_HISTORY_TAB,
+  BOOKING_LIST_PRESET,
+  type BookingHistoryTab,
   type BookingListPreset,
   type PlatformPartnerKind,
   type RegistrationTrack,
 } from '@xeprime/types';
 import { ZONE, siteHref, zonePath, type Zone } from '@/zones';
+import { RENTAL_STAGE, type RentalStage } from './rental-stages';
 
 /** Đường dẫn trong khu partner/admin — xem `zones/zone-config.ts` (chế độ `host` | `path`). */
 const partner = (path: string): string => zonePath(ZONE.PARTNER, path);
@@ -191,7 +195,16 @@ export const ROUTES = {
      * một ĐƯỜNG DẪN (không phải `?preset=`) vì mục menu đang mở quyết bằng `usePathname()`.
      */
     BOOKINGS_AWAITING_PICKUP: partner('/bookings/awaiting-pickup'),
+    /**
+     * Hộp thư yêu cầu CŨ — đã gộp vào `BOOKINGS` (màn "Đơn thuê xe", 05/11/2026). Route ở lại làm
+     * CHUYỂN TIẾP (`?status=` cũ → nhóm tương ứng) để link trong email/thông báo cũ không chết.
+     */
     BOOKING_REQUESTS: partner('/booking-requests'),
+    /**
+     * "Đơn đã kết thúc" (05/11/2026) — đơn hoàn thành / huỷ / khách không đến + yêu cầu không thành
+     * đơn, MỘT bảng xếp theo lúc kết thúc (`GET /booking-history`). Ngăn ở `?tab=`.
+     */
+    BOOKINGS_ENDED: partner('/bookings/ended'),
     /**
      * CHUYẾN CHO THUÊ — chỉ CHỦ xe tuyến HOA HỒNG (Owner Lite): MỘT danh sách thẻ gộp yêu cầu thuê
      * và đơn thuê trên xe của chủ xe cá nhân (vài chiếc), đọc `GET /trips?role=host`. Với họ,
@@ -581,7 +594,8 @@ export function workspacePaths(workspace: Workspace): {
       calendar: ROUTES.MANAGE.CALENDAR,
       chat: ROUTES.MANAGE.CHAT,
       bookings: ROUTES.MANAGE.BOOKINGS,
-      bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
+      // Hộp thư yêu cầu đã gộp vào "Đơn thuê xe" (05/11/2026) — đích là nhóm "Cần xử lý".
+      bookingRequests: rentalStagePath(RENTAL_STAGE.NEEDS_ACTION),
       ownerProfile: ROUTES.MANAGE.SHOP,
       // Ba mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026; chi nhánh 02/11) — chúng là section
       // của trang Cửa hàng. Trỏ vào hằng số route cũ vẫn tới nơi, nhưng qua một lần chuyển
@@ -604,7 +618,7 @@ export function workspacePaths(workspace: Workspace): {
     calendar: ROUTES.MANAGE.CALENDAR,
     chat: ROUTES.MANAGE.CHAT,
     bookings: ROUTES.MANAGE.BOOKINGS,
-    bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
+    bookingRequests: rentalStagePath(RENTAL_STAGE.NEEDS_ACTION),
     // Hồ sơ chủ xe = trang tài khoản của họ. Chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định,
     // và địa chỉ của nó sửa ở section "Địa chỉ nhận xe" của chính trang đó.
     ownerProfile: accountSectionPath(ACCOUNT_SECTION.PROFILE),
@@ -927,7 +941,22 @@ export const BOOKINGS_GROUP_PARAM = 'preset';
  * `/bookings/awaiting-pickup` chuyển tiếp về `bookingsGroupPath(AWAITING_PICKUP)`.
  */
 export function bookingsGroupPath(group: BookingListPreset): string {
-  return `${ROUTES.MANAGE.BOOKINGS}?${BOOKINGS_GROUP_PARAM}=${group}`;
+  // Hai ngăn đã kết thúc rời màn "Đơn thuê xe" sang "Đơn đã kết thúc" (05/11/2026).
+  if (group === BOOKING_LIST_PRESET.COMPLETED) return bookingHistoryPath(BOOKING_HISTORY_TAB.COMPLETED);
+  if (group === BOOKING_LIST_PRESET.CANCELLED) return bookingHistoryPath(BOOKING_HISTORY_TAB.CANCELLED);
+  return rentalStagePath(group);
+}
+
+/** Một nhóm của màn "Đơn thuê xe" gộp (05/11/2026) — xem `RENTAL_STAGE`. */
+export function rentalStagePath(stage: RentalStage): string {
+  return `${ROUTES.MANAGE.BOOKINGS}?${BOOKINGS_GROUP_PARAM}=${stage}`;
+}
+
+/** Màn "Đơn đã kết thúc"; vắng `tab` = "Tất cả". */
+export function bookingHistoryPath(tab?: BookingHistoryTab): string {
+  return tab && tab !== BOOKING_HISTORY_TAB.ALL
+    ? `${ROUTES.MANAGE.BOOKINGS_ENDED}?tab=${tab}`
+    : ROUTES.MANAGE.BOOKINGS_ENDED;
 }
 
 /**

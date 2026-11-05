@@ -1,0 +1,161 @@
+/*
+ * "Đơn đã kết thúc" — Figma Partner-XePrime "Rental Request - Order Done" (`23948:87473`): hàng
+ * ngăn bên trái + tìm kiếm/lọc bên phải cùng một hàng (hẹp thì xuống dòng), bảng trong khung trắng
+ * viền xám bo 12, phân trang ngoài khung (cùng kỷ luật bảng sổ khách §3.4 dòng 9).
+ */
+.page {
+  width: 100%;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12) var(--xp-space-md);
+  margin: 20px 0;
+}
+
+.filters {
+  flex: 1 1 520px;
+  justify-content: flex-end;
+}
+
+.code {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 88px;
+  height: 56px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-placeholder);
+  font-size: 22px;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.strong {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+/* Viên kết cục: chấm 6 + chữ 14/500, viền + nền nhạt cùng sắc. */
+.outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.outcome::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.outcomeSuccess {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.outcomeDanger {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/* ── Thẻ mobile ──────────────────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.cardFacts {
+  display: grid;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.cardFacts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.cardFacts dt {
+  color: var(--xp-color-text-tertiary);
+}
+
+.cardFacts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .filters {
+    flex-basis: 100%;
+  }
+}

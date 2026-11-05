@@ -154,7 +154,7 @@ describe('Tổng quan chủ xe cá nhân', () => {
     await renderView();
 
     const requests = (await screen.findByText('Yêu cầu chờ duyệt')).closest('a')!;
-    expect(requests.getAttribute('href')).toBe(ROUTES.MANAGE.BOOKING_REQUESTS);
+    expect(requests.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=needs_action`);
     expect(screen.queryByTestId('wallet-panel')).toBeNull();
   });
 });

@@ -125,7 +125,7 @@
     "cancel": "Huỷ chuyến"
   },
   "approve": {
-    "title": "Duyệt và giữ xe cho khách?",
+    "title": "Phê duyệt yêu cầu thuê xe",
     "vehicle": "Xe",
     "customer": "Khách",
     "schedule": "Lịch thuê",
@@ -133,11 +133,15 @@
     "customerTotal": "Tổng tiền chuyến",
     "effect": "Duyệt sẽ giữ lịch xe và chốt giá. Đơn thuê được tạo khi khách thanh toán đủ; chuyến không thu tiền giữ chỗ được tạo ngay.",
     "deliveryNote": "Yêu cầu có giao xe tận nơi. Phí giao nhận để 0₫ khi tạo đơn — cập nhật lại trên đơn sau khi thoả thuận với khách.",
-    "confirm": "Duyệt & giữ xe",
+    "confirm": "Xác nhận yêu cầu",
     "success": "Đã giữ xe — đã tạo đơn thuê",
     "successLongTerm": "Đã giữ xe — đã tạo đơn thuê dài hạn",
     "scheduleConflict": "Xe đã bận khung giờ này — chọn ngày giờ nhận khác hoặc từ chối yêu cầu.",
-    "expired": "Yêu cầu đã quá hạn phản hồi — không duyệt được nữa. Hãy gọi cho khách."
+    "expired": "Yêu cầu đã quá hạn phản hồi — không duyệt được nữa. Hãy gọi cho khách.",
+    "subtitleHold": "Sau khi xác nhận, yêu cầu sẽ chuyển sang trạng thái <b>Chờ khách thanh toán</b>.",
+    "subtitleNoHold": "Sau khi xác nhận, đơn thuê được tạo ngay và chuyển sang <b>Chờ giao xe</b>.",
+    "back": "Quay lại",
+    "profitHeading": "Lợi nhuận chuyến"
   },
   "longTerm": {
     "title": "Duyệt và giữ xe — thuê dài hạn",
@@ -159,13 +163,13 @@
     "wishLegacy": "Yêu cầu cũ — khách chưa nêu nguyện vọng theo mẫu mới"
   },
   "reject": {
-    "title": "Từ chối yêu cầu thuê",
+    "title": "Từ chối yêu cầu thuê xe",
     "context": "{customer} · {vehicle}",
-    "reasonLabel": "Lý do từ chối (gửi cho khách)",
+    "reasonLabel": "Ghi chú cho khách",
     "reasonPlaceholder": "Nói ngắn gọn vì sao chưa nhận được yêu cầu này",
     "reasonRequired": "Nhập lý do để khách biết vì sao yêu cầu bị từ chối",
     "reasonHint": "Khách đọc được câu này trong thông báo, nên viết đủ để họ biết nên làm gì tiếp.",
-    "presetLabel": "Chọn nhanh một lý do",
+    "presetLabel": "Lý do từ chối",
     "presets": {
       "vehicleUnavailable": "Xe hiện không sẵn sàng cho khoảng thời gian này.",
       "scheduleUnavailable": "Lịch khách yêu cầu không sắp xếp được.",
@@ -173,7 +177,11 @@
       "other": "Lý do khác"
     },
     "confirm": "Từ chối yêu cầu",
-    "success": "Đã từ chối yêu cầu"
+    "success": "Đã từ chối yêu cầu",
+    "subtitle": "Sau khi từ chối, yêu cầu sẽ được chuyển sang danh sách <b>Đã kết thúc</b>.",
+    "back": "Quay lại",
+    "presetPlaceholder": "Chọn lý do",
+    "presetRequired": "Chọn một lý do từ chối"
   },
   "states": {
     "loading": "Đang tải yêu cầu thuê…",
@@ -543,7 +551,11 @@
     "holdTitle": "Đã nhận chuyến — chờ khách thanh toán",
     "holdLead": "Lịch xe đã được giữ và mã thanh toán đã gửi cho khách. Đơn thuê mở tự động khi XePrime nhận đủ tiền giữ chỗ.",
     "holdNext": "Khách có tối đa 2 giờ để chuyển khoản (ngắn hơn nếu giờ nhận xe gần). Hết hạn mà chưa đủ tiền, chỗ tự nhả và bạn nhận thông báo.",
-    "holdClose": "Về hộp thư yêu cầu"
+    "holdClose": "Về hộp thư yêu cầu",
+    "toastTitle": "Thành công",
+    "toastHold": "Yêu cầu của {customer} đã chuyển sang Chờ khách thanh toán. Khách có đến {time} để thanh toán; quá hạn yêu cầu tự huỷ và xe trở lại sẵn sàng cho thuê.",
+    "toastHoldNoDeadline": "Yêu cầu của {customer} đã chuyển sang Chờ khách thanh toán.",
+    "toastBooked": "Đơn thuê của {customer} đã được tạo và chuyển sang Chờ giao xe."
   },
   "deadline": {
     "label": "Hạn phản hồi",
@@ -573,7 +585,7 @@
     }
   },
   "cancel": {
-    "title": "Huỷ chuyến đã nhận",
+    "title": "Huỷ yêu cầu thuê xe",
     "context": "Chuyến của {customer} · {vehicle}",
     "effects": {
       "vehicle": "Xe quay lại chợ ngay, khung giờ này mở cho khách khác.",
@@ -583,17 +595,22 @@
       "metricsHintLabel": "Ảnh hưởng tới chỉ số uy tín",
       "metricsHint": "Chuyến bạn đã nhận rồi huỷ sẽ bị trừ khỏi tỉ lệ “nhận và giữ chuyến” hiển thị công khai. Từ chối một yêu cầu TRONG hạn thì không bị trừ như vậy — nó chỉ không được tính là đã nhận. Khách không thanh toán hoặc khách tự huỷ thì không ảnh hưởng gì tới bạn."
     },
-    "categoryLabel": "Vì sao bạn huỷ?",
+    "categoryLabel": "Lý do huỷ",
     "categoryRequired": "Chọn một nhóm lý do",
-    "reasonLabel": "Nhắn thêm cho khách (không bắt buộc)",
+    "reasonLabel": "Ghi chú cho khách",
     "reasonLabelRequired": "Nói rõ lý do cho khách",
     "reasonPlaceholder": "Ví dụ: xe vừa bị va chạm sáng nay, đang ở gara.",
     "reasonHint": "Khách sẽ đọc đúng những gì bạn viết ở đây.",
-    "reasonRequired": "Chọn “Lý do khác” thì phải ghi rõ cho khách",
-    "confirm": "Huỷ chuyến",
+    "reasonRequired": "Nhập ghi chú để khách biết vì sao chuyến bị huỷ",
+    "confirm": "Huỷ yêu cầu thuê xe",
     "success": "Đã huỷ chuyến và nhả lịch xe",
     "raceLost": "Khách vừa thanh toán xong nên chuyến đã thành đơn thuê — không huỷ từ đây được nữa. Mở đơn để xử lý tiếp.",
-    "notAllowed": "Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu."
+    "notAllowed": "Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu.",
+    "subtitle": "Chuyến đang ở trạng thái <b>Chờ khách thanh toán</b>. Nếu bạn huỷ, yêu cầu chuyển sang danh sách Đã kết thúc và xe trở lại sẵn sàng cho thuê.",
+    "subtitleWithDeadline": "Chuyến đang ở trạng thái <b>Chờ khách thanh toán</b> — khách có đến {time} để thanh toán, quá hạn sẽ tự huỷ. Nếu bạn huỷ, yêu cầu chuyển sang danh sách Đã kết thúc và xe trở lại sẵn sàng cho thuê.",
+    "back": "Quay lại",
+    "categoryPlaceholder": "Chọn lý do",
+    "warning": "Huỷ ở bước này, cửa hàng sẽ bị <b>trừ điểm uy tín</b> và yêu cầu chuyển sang danh sách Đã kết thúc."
   },
   "stats": {
     "pending": "Chờ duyệt",
@@ -738,6 +755,17 @@
     "payAtPickupExpected": "Trả chủ xe khi nhận xe (dự kiến):",
     "estimate": "Tạm tính",
     "extrasLabel": "Thông tin thêm của yêu cầu",
-    "holdUnpaid": "Tiền giữ chỗ (khách chưa trả):"
+    "holdUnpaid": "Tiền giữ chỗ (khách chưa trả):",
+    "confirmShort": "Xác nhận",
+    "awaitingPayment": "Chờ thanh toán:",
+    "paymentExpired": "Đã hết hạn thanh toán",
+    "openDetail": "Xem chi tiết yêu cầu {vehicle}",
+    "remind": "Nhắc khách",
+    "remindAvailableAt": "Khách vừa nhận lời nhắc — nhắc lại được lúc {time}",
+    "customerInfo": "Thông tin thêm về khách",
+    "handoverInfo": "Chi tiết nhận xe"
+  },
+  "remind": {
+    "success": "Đã nhắc {name} thanh toán. Có thể nhắc lại sau {time}."
   }
 }

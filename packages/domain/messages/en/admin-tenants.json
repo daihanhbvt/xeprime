@@ -396,12 +396,14 @@
       "fee": {
         "title": "Fee policy",
         "none": "No active fee policy",
-        "serviceFee": "XePrime service fee",
-        "percent": "{value}%",
+        "platformFee": "Platform fee the renter pays per booking",
+        "platformFeeValue": "{car} per car · {motorbike} per motorbike",
+        "commission": "Owner commission",
+        "commissionNone": "0% — subscription shops pay no commission on trips",
         "version": "Policy version",
         "effectiveFrom": "Effective from",
         "noteLabel": "Note",
-        "note": "The platform-wide fee policy. Subscription shops pay no commission on trips."
+        "note": "The platform-wide fee policy, read from the version currently in effect."
       },
       "invoices": {
         "statusTitle": "Invoice status",
@@ -441,10 +443,11 @@
       "policy": {
         "title": "Service fee policy",
         "none": "No active fee policy",
-        "rate": "Current rate",
-        "percent": "{value}%",
+        "rate": "Tiered commission by rental day",
         "basis": "Basis",
-        "basisValue": "Trip rental value — the renter pays the service fee",
+        "basisValue": "Each day's rental price — deducted from the owner's payout",
+        "platformFee": "Platform fee the renter pays per booking",
+        "platformFeeValue": "{car} per car · {motorbike} per motorbike",
         "effectiveFrom": "Effective from",
         "version": "Policy version"
       },
@@ -545,7 +548,8 @@
       "notCovered": "{used} vehicles · no plan for this vehicle type",
       "type": {
         "motorbike": "Motorbikes",
-        "car": "Cars"
+        "car": "Cars",
+        "all": "All vehicles"
       },
       "scope": {
         "motorbike": "Motorbikes",

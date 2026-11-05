@@ -34,10 +34,15 @@
   white-space: nowrap;
 }
 
+/*
+ * Hẹp (cột khách 240px của thẻ "Đơn thuê xe") thì viên "Khách quen" xuống dòng dưới tên thay vì
+ * cắt tên còn "Nguy…" — tên là thứ người trực đọc to khi gọi khách.
+ */
 .nameRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--xp-space-sm);
+  gap: 2px var(--xp-space-sm);
   min-width: 0;
 }
 
@@ -57,4 +62,14 @@
   font-weight: var(--xp-font-weight-medium);
   line-height: 18px;
   white-space: nowrap;
+}
+
+/* Thẻ Kanban (Figma "_Kanban Item" `23895:15196`): ảnh 32, cách 8, tên 14/500, SĐT 14/400. */
+.small {
+  gap: var(--xp-space-sm);
+}
+
+.small .name {
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
 }

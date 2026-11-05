@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -298,12 +298,20 @@ describe('Stepper', () => {
     );
   });
 
-  it('đơn huỷ: không vẽ bốn bước, có bước "Đã huỷ" + banner', () => {
+  it('đơn huỷ: KHÔNG có thanh bước (design "Details - Failed"), banner nói lý do khi có', () => {
     renderDetail({ ...BOOKING, status: BOOKING_STATUS.CANCELLED, handoverPrep: null });
-    const steps = screen.getByRole('list', { name: 'Tiến trình đơn thuê' });
-    expect(within(steps).queryByText('Đang thuê')).toBeNull();
-    expect(within(steps).getByText('Đã huỷ')).toBeTruthy();
+    expect(screen.queryByRole('list', { name: 'Tiến trình đơn thuê' })).toBeNull();
     expect(screen.getByText('Đơn đã huỷ — chuyến không diễn ra.')).toBeTruthy();
+    cleanup();
+
+    renderDetail({
+      ...BOOKING,
+      status: BOOKING_STATUS.CANCELLED,
+      handoverPrep: null,
+      cancellationReasonCategory: 'other',
+      cancellationReason: 'Có việc đột xuất',
+    });
+    expect(screen.getByText(/Đơn hàng đã huỷ. Lý do: .*Có việc đột xuất./)).toBeTruthy();
   });
 });
 

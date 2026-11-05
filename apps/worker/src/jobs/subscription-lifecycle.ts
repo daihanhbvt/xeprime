@@ -26,6 +26,7 @@ import {
   type PlanInvoiceSnapshot,
   type PlanVehicleScope,
 } from '@xeprime/types';
+import { toAppTz } from '@xeprime/domain';
 import { notifyTenantMembers, recordSystemAudit } from '../lib/notify';
 import { newReferenceCode } from '../lib/reference-code';
 
@@ -33,6 +34,12 @@ import { newReferenceCode } from '../lib/reference-code';
 const BATCH = 100;
 
 const MS_PER_DAY = 86_400_000;
+
+/**
+ * Ngày trong tin nhắc theo giờ VIỆT NAM. `toLocaleDateString` không kèm múi giờ đọc theo giờ máy —
+ * container chạy UTC, nên kỳ hết hạn lúc 00:00–07:00 giờ VN bị báo lùi một ngày.
+ */
+const vnDate = (at: Date) => toAppTz(at).format('DD/MM/YYYY');
 
 /** Hạn chuyển khoản của hoá đơn CHÀO gói (ADR 0026 điều 4) — dài hơn hoá đơn tự mua (72h):
  *  tin nhắc nằm trong chuông vài ngày, mã chết sớm hơn tin là một lời mời hỏng. */
@@ -109,24 +116,67 @@ function scopeLabelsOf(rows: readonly { vehicleScope: string }[]): string {
   );
 }
 
-/** Chỉ nhắc gói TUYẾN GÓI — thuê bao hoa hồng 0đ hết hạn không có gì để "gia hạn". */
+/**
+ * Kỳ `s` ĐÃ CÓ một kỳ gói xếp sau ở phạm vi xung đột (ADR 0065) — gian hàng đã gia hạn hoặc đã
+ * được xếp lịch đổi gói. Nhắc "sắp hết hạn / hãy gia hạn" lúc đó là báo một việc họ đã làm.
+ *
+ * Xung đột TRỰC TIẾP là đủ: kỳ đầu tiên trong chuỗi xếp sau (`laterChainTermsOf`) luôn xung đột
+ * thẳng với `s`. EXCLUDE ở DB bảo đảm kỳ xung đột xếp sau bắt đầu từ `s.ends_at` trở đi.
+ */
+const HAS_LATER_PACKAGE_TERM = Prisma.sql`EXISTS (
+  SELECT 1 FROM tenant_subscriptions n
+   WHERE n.tenant_id = s.tenant_id
+     AND n.id <> s.id
+     AND n.status = ${SUBSCRIPTION_STATUS.ACTIVE}
+     AND n.billing_mode = ${BILLING_MODE.PACKAGE}
+     AND n.starts_at >= s.ends_at
+     AND (n.vehicle_scope = s.vehicle_scope
+          OR n.vehicle_scope = ${PLAN_VEHICLE_SCOPE.ALL}
+          OR s.vehicle_scope = ${PLAN_VEHICLE_SCOPE.ALL}))`;
+
+/** Các id trong `ids` đã có kỳ gói xếp sau — xem {@link HAS_LATER_PACKAGE_TERM}. */
+async function renewedTermIds(prisma: PrismaClient, ids: readonly string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows: { id: string }[] = await prisma.$queryRaw`
+    SELECT s.id FROM tenant_subscriptions s
+     WHERE s.id = ANY(${[...ids]}::text[]) AND ${HAS_LATER_PACKAGE_TERM}`;
+  return new Set(rows.map((row) => row.id));
+}
+
+/**
+ * Bậc bán bằng TƯ VẤN (`salesOnly`, vd Doanh nghiệp — ADR 0041 điều 5): gian hàng không tự gia hạn
+ * được ở "Gói của tôi", nên lời nhắc chỉ lối liên hệ XePrime thay vì một màn họ không mua được.
+ */
+const anySalesOnly = (rows: readonly { plan: { limitsJson: Prisma.JsonValue } }[]) =>
+  rows.some((row) => parsePlanLimits(row.plan.limitsJson).salesOnly);
+
+/**
+ * Chỉ nhắc gói TUYẾN GÓI — thuê bao hoa hồng 0đ hết hạn không có gì để "gia hạn". Kỳ đã có kỳ xếp
+ * sau bị loại NGAY TRONG SQL, không claim: admin huỷ kỳ xếp sau thì kỳ này lại được nhắc, và vì cửa
+ * sổ chỉ dài {@link SUBSCRIPTION_RENEWAL_REMINDER_DAYS} ngày nên số dòng bị loại luôn có trần.
+ */
 async function remindRenewal(prisma: PrismaClient, now: Date): Promise<number> {
   const dueBefore = new Date(now.getTime() + SUBSCRIPTION_RENEWAL_REMINDER_DAYS * MS_PER_DAY);
+  const due: { id: string }[] = await prisma.$queryRaw`
+    SELECT s.id FROM tenant_subscriptions s
+     WHERE s.status = ${SUBSCRIPTION_STATUS.ACTIVE}
+       AND s.billing_mode = ${BILLING_MODE.PACKAGE}
+       AND s.renewal_reminded_at IS NULL
+       AND s.ends_at > ${now}
+       AND s.ends_at <= ${dueBefore}
+       AND NOT ${HAS_LATER_PACKAGE_TERM}
+     ORDER BY s.ends_at ASC, s.id ASC
+     LIMIT ${BATCH}`;
+  if (due.length === 0) return 0;
   const candidates = await prisma.tenantSubscription.findMany({
-    where: {
-      status: SUBSCRIPTION_STATUS.ACTIVE,
-      billingMode: BILLING_MODE.PACKAGE,
-      renewalRemindedAt: null,
-      endsAt: { gt: now, lte: dueBefore },
-    },
-    orderBy: { endsAt: 'asc' },
-    take: BATCH,
+    where: { id: { in: due.map((row) => row.id) } },
+    orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
     select: {
       id: true,
       tenantId: true,
       endsAt: true,
       vehicleScope: true,
-      plan: { select: { name: true } },
+      plan: { select: { name: true, limitsJson: true } },
     },
   });
 
@@ -146,7 +196,9 @@ async function remindRenewal(prisma: PrismaClient, now: Date): Promise<number> {
     await notifyTenantMembers(prisma, first.tenantId, {
       type: NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING,
       title: `Gói ${planNamesOf(claimed)} sắp hết hạn`,
-      body: `Hết hạn ${first.endsAt.toLocaleDateString('vi-VN')} — gia hạn gói ${scopeLabelsOf(claimed)} ở màn "Gói của tôi" để giữ 0đ trên chuyến.`,
+      body: anySalesOnly(claimed)
+        ? `Hết hạn ${vnDate(first.endsAt)} — liên hệ XePrime để gia hạn gói ${scopeLabelsOf(claimed)} và giữ 0đ trên chuyến.`
+        : `Hết hạn ${vnDate(first.endsAt)} — gia hạn gói ${scopeLabelsOf(claimed)} ở màn "Gói của tôi" để giữ 0đ trên chuyến.`,
       tenantId: first.tenantId,
     });
     // MỘT thư hướng dẫn cho cả nhóm — dedupe của outbox theo thuê bao, nên neo vào dòng đầu.
@@ -181,8 +233,24 @@ async function notifyExpiry(prisma: PrismaClient, now: Date): Promise<number> {
     },
   });
 
+  /*
+   * Kỳ đã có kỳ xếp sau (đã gia hạn / đã xếp lịch đổi gói): kỳ kế tiếp nối liền, không có ân hạn
+   * nào để báo. Vẫn CLAIM cột mốc — khác `remindRenewal`, câu chọn ở đây không có cận dưới, nên
+   * một dòng bỏ qua mà không claim sẽ bị quét lại mãi mãi.
+   */
+  const renewed = await renewedTermIds(
+    prisma,
+    candidates.map((sub) => sub.id),
+  );
+  if (renewed.size > 0) {
+    await prisma.tenantSubscription.updateMany({
+      where: { id: { in: [...renewed] }, expiryNotifiedAt: null },
+      data: { expiryNotifiedAt: now },
+    });
+  }
+
   let sent = 0;
-  for (const group of groupByTenant(candidates)) {
+  for (const group of groupByTenant(candidates.filter((sub) => !renewed.has(sub.id)))) {
     const claimed: typeof group = [];
     for (const sub of group) {
       const res = await prisma.tenantSubscription.updateMany({
@@ -207,13 +275,16 @@ async function notifyExpiry(prisma: PrismaClient, now: Date): Promise<number> {
       claimed.map((sub) => sub.id),
       now,
     );
+    // Bậc tư vấn không tự gia hạn được — chỉ lối liên hệ XePrime (xem `anySalesOnly`).
+    const renew = anySalesOnly(claimed) ? 'liên hệ XePrime để gia hạn' : 'gia hạn';
+    const Renew = renew.charAt(0).toUpperCase() + renew.slice(1);
     const body = keepsPackageTrack
       ? graceDays > 0
-        ? `Còn ${graceDays} ngày ân hạn — gia hạn để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
-        : `Gia hạn để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
+        ? `Còn ${graceDays} ngày ân hạn — ${renew} để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
+        : `${Renew} để tiếp tục đăng và đưa ${typeLabel} lên chợ. Xe đang bán vẫn ở trên chợ.`
       : graceDays > 0
-        ? `Còn ${graceDays} ngày ân hạn — gia hạn gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`
-        : `Gia hạn gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`;
+        ? `Còn ${graceDays} ngày ân hạn — ${renew} gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`
+        : `${Renew} gói ${typeLabel} ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.`;
     await notifyTenantMembers(prisma, first.tenantId, {
       type: NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED,
       title: `Gói ${planNamesOf(claimed)} đã hết hạn`,
@@ -239,7 +310,8 @@ async function notifyExpiry(prisma: PrismaClient, now: Date): Promise<number> {
  * KHÔNG gửi bù thư cho mốc đã qua. `dedupe_key` UNIQUE của outbox là lớp gác thứ hai.
  *
  * Lọc trong SQL, không ở Node: cận dưới `ends_at > now − max(graceDays)` của các gói tuyến gói,
- * loại thuê bao đã qua mốc (`grace_guide_notified_at IS NOT NULL`), sắp tăng dần và đi theo trang keyset
+ * loại thuê bao đã qua mốc (`grace_guide_notified_at IS NOT NULL`) và thuê bao đã có kỳ gói xếp
+ * sau (`HAS_LATER_PACKAGE_TERM` — gian hàng đã gia hạn, không ở ân hạn), sắp tăng dần và đi theo trang keyset
  * `(ends_at, id)` — thuê bao không có email người nhận không chặn những trang sau.
  * `pageSize` chỉ để test ép nhiều trang.
  */
@@ -276,6 +348,7 @@ export async function remindDuringGrace(
          AND s.ends_at <= ${upper}
          AND s.ends_at > ${lower}
          AND s.grace_guide_notified_at IS NULL
+         AND NOT ${HAS_LATER_PACKAGE_TERM}
          ${afterCursor}
        ORDER BY s.ends_at ASC, s.id ASC
        LIMIT ${pageSize}`;

@@ -101,6 +101,10 @@ export const SUBSCRIPTION_AUDIT_ACTION = {
   CANCEL: 'subscription.cancel',
   /** Webhook SePay nhận đủ tiền hoá đơn gói ⇒ bật kỳ (ADR 0022 · 0040). Do HỆ THỐNG ghi. */
   ACTIVATE_FROM_PAYMENT: 'subscription.activate_from_payment',
+  /** Admin sửa giá / ngày kết thúc / hạn mức xe / ghi chú của một kỳ (ADR 0080 điều 2). */
+  UPDATE: 'subscription.update',
+  /** Kỳ xếp sau bị dời theo vì kỳ trước nó đổi ngày kết thúc — một dòng mỗi kỳ bị dời. */
+  SHIFT: 'subscription.shift',
 } as const;
 
 /** Vì sao một kỳ bị huỷ — ghi vào `after.reason` của dòng audit `subscription.cancel`. */
@@ -109,6 +113,8 @@ export const SUBSCRIPTION_CANCEL_REASON = {
   MANUAL: 'manual',
   /** Bị thay bởi một lượt "đổi gói ngay". */
   REPLACED: 'replaced',
+  /** Huỷ kèm vì kỳ đứng trước nó trong chuỗi bị huỷ (ADR 0080 điều 1). */
+  CASCADE: 'cascade',
 } as const;
 
 export type SubscriptionCancelReason =
@@ -237,6 +243,40 @@ export function planSubscriptionChain<T extends SubscriptionChainTerm>(
   };
 }
 
+/**
+ * Các kỳ còn hạn XẾP SAU `term` trong chuỗi của nó — thứ đi cùng nó khi nó bị huỷ hoặc bị dời
+ * ngày kết thúc (ADR 0080 điều 1–2).
+ *
+ * "Trong chuỗi" là BAO ĐÓNG xung đột phạm vi (ADR 0065), không chỉ cùng phạm vi với `term`: huỷ
+ * kỳ xe máy kéo theo kỳ doanh nghiệp (`all`) xếp sau nó, và kỳ ô tô xếp sau kỳ doanh nghiệp đó
+ * cũng đi theo — để nó lại là để một khoảng trống giữa kỳ ô tô đang chạy và kỳ ô tô tương lai.
+ * Duyệt theo `startsAt` tăng dần nên một kỳ chỉ được kéo theo bởi kỳ bắt đầu TRƯỚC nó.
+ *
+ * Dòng hoa hồng đã xếp lịch (hạ về hoa hồng từ kỳ sau, phạm vi `all`) cũng thuộc chuỗi.
+ */
+export function laterChainTermsOf<T extends SubscriptionChainTerm>(
+  term: SubscriptionChainTerm,
+  terms: readonly T[],
+  now: Date | number = Date.now(),
+): T[] {
+  const at = typeof now === 'number' ? now : now.getTime();
+  const startsAt = toMs(term.startsAt);
+  const candidates = terms
+    .filter(
+      (other) => other.id !== term.id && isLiveTerm(other, at) && toMs(other.startsAt) > startsAt,
+    )
+    .sort((a, b) => toMs(a.startsAt) - toMs(b.startsAt));
+  const scopes = [planVehicleScopeOf(term.vehicleScope)];
+  const chain: T[] = [];
+  for (const other of candidates) {
+    const scope = planVehicleScopeOf(other.vehicleScope);
+    if (!scopes.some((included) => planScopesConflict(included, scope))) continue;
+    chain.push(other);
+    scopes.push(scope);
+  }
+  return chain;
+}
+
 /** Vì sao một kỳ KHÔNG huỷ được — `null` là huỷ được. */
 export const SUBSCRIPTION_CANCEL_BLOCK = {
   /** Đã huỷ hoặc đã hết hạn — không còn gì để huỷ. */
@@ -246,32 +286,98 @@ export const SUBSCRIPTION_CANCEL_BLOCK = {
    * gói. (Dòng hoa hồng đã XẾP LỊCH — hạ về hoa hồng từ kỳ sau — thì huỷ được: đó là huỷ lịch hạ.)
    */
   DEFAULT_TERM: 'default_term',
-  /** Có kỳ khác xếp sau — huỷ kỳ này sẽ để lại khoảng trống không gói. */
-  LATER_TERM: 'later_term',
 } as const;
 
 export type SubscriptionCancelBlock =
   (typeof SUBSCRIPTION_CANCEL_BLOCK)[keyof typeof SUBSCRIPTION_CANCEL_BLOCK];
 
 /**
- * Huỷ được một kỳ khi: còn hạn, không phải dòng hoa hồng đang chạy, và là ĐUÔI chuỗi (không kỳ nào
- * xếp sau). Server (`BillingService.cancel`) và nút "Huỷ" ở web đọc cùng một luật.
+ * Huỷ được một kỳ khi: còn hạn và không phải dòng hoa hồng đang chạy. Server
+ * (`BillingService.cancel`) và nút "Huỷ" ở web đọc cùng một luật.
+ *
+ * Kỳ có kỳ xếp sau VẪN huỷ được (ADR 0080 điều 1, thay luật "chỉ huỷ ở đuôi" của ADR 0041 điều 6.4):
+ * các kỳ trong `laterChainTermsOf` bị huỷ cùng nó, trong cùng transaction — chuỗi không bao giờ bị
+ * hở một khoảng.
  */
 export function subscriptionCancelBlockOf(
   term: SubscriptionChainTerm,
-  terms: readonly SubscriptionChainTerm[],
   now: Date | number = Date.now(),
 ): SubscriptionCancelBlock | null {
   const at = typeof now === 'number' ? now : now.getTime();
   if (!isLiveTerm(term, at)) return SUBSCRIPTION_CANCEL_BLOCK.NOT_LIVE;
-  const startsAt = toMs(term.startsAt);
-  if (!isPaidTerm(term) && startsAt <= at) return SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM;
-  // Chỉ kỳ cùng phạm vi XUNG ĐỘT mới là "kỳ xếp sau" (ADR 0065): kỳ xe máy bắt đầu tháng sau không
-  // chặn huỷ kỳ ô tô — huỷ kỳ ô tô không để lại khoảng trống nào trong chuỗi xe máy.
-  const later = termsConflictingWith(terms, term.vehicleScope).some(
-    (other) => other.id !== term.id && isLiveTerm(other, at) && toMs(other.startsAt) > startsAt,
-  );
-  return later ? SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM : null;
+  if (!isPaidTerm(term) && toMs(term.startsAt) <= at) return SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM;
+  return null;
+}
+
+/** Vì sao một kỳ KHÔNG sửa được — `null` là sửa được (ADR 0080 điều 2). */
+export const SUBSCRIPTION_EDIT_BLOCK = {
+  /** Đã huỷ hoặc đã hết hạn. */
+  NOT_LIVE: 'not_live',
+  /** Dòng hoa hồng — không có giá, không có hạn mức mua; đổi tuyến bằng cách gán gói. */
+  COMMISSION_TERM: 'commission_term',
+} as const;
+
+export type SubscriptionEditBlock =
+  (typeof SUBSCRIPTION_EDIT_BLOCK)[keyof typeof SUBSCRIPTION_EDIT_BLOCK];
+
+export function subscriptionEditBlockOf(
+  term: SubscriptionChainTerm,
+  now: Date | number = Date.now(),
+): SubscriptionEditBlock | null {
+  const at = typeof now === 'number' ? now : now.getTime();
+  if (!isLiveTerm(term, at)) return SUBSCRIPTION_EDIT_BLOCK.NOT_LIVE;
+  if (!isPaidTerm(term)) return SUBSCRIPTION_EDIT_BLOCK.COMMISSION_TERM;
+  return null;
+}
+
+/**
+ * Ngày kết thúc mới xa nhất admin được đặt, tính từ hôm nay — chặn một lỗi gõ năm (2062) biến
+ * thành gói tặng vài chục năm. Kỳ hạn bán dài nhất là 12 tháng; ba năm là thừa cho mọi gia hạn tay.
+ */
+export const SUBSCRIPTION_EDIT_MAX_END_MONTHS = 36;
+
+/**
+ * Ngày kết thúc mới có hợp lệ không: sau ngày bắt đầu, sau BÂY GIỜ (rút về quá khứ là huỷ — dùng
+ * nút Huỷ), và không xa quá `SUBSCRIPTION_EDIT_MAX_END_MONTHS`.
+ */
+export function subscriptionEndsAtValid(
+  term: Pick<SubscriptionChainTerm, 'startsAt'>,
+  endsAt: Date | string,
+  now: Date | number = Date.now(),
+): boolean {
+  const at = typeof now === 'number' ? now : now.getTime();
+  const end = toMs(endsAt);
+  if (!Number.isFinite(end)) return false;
+  const max = new Date(at);
+  max.setUTCMonth(max.getUTCMonth() + SUBSCRIPTION_EDIT_MAX_END_MONTHS);
+  return end > toMs(term.startsAt) && end > at && end <= max.getTime();
+}
+
+export interface SubscriptionShift<T> {
+  term: T;
+  startsAt: Date;
+  endsAt: Date;
+}
+
+/**
+ * Dời ngày kết thúc của `term` thì các kỳ xếp sau nó (`laterChainTermsOf`) dời theo CÙNG một
+ * khoảng, giữ nguyên độ dài (ADR 0080 điều 2): kéo dài không đè lên kỳ sau, rút ngắn không để hở.
+ * Kỳ ngoài chuỗi không đụng tới; nếu dời làm một kỳ trong chuỗi chồng lên nó, EXCLUDE ở DB từ chối
+ * (`SUBSCRIPTION_TERM_CONFLICT`).
+ */
+export function subscriptionShiftPlan<T extends SubscriptionChainTerm>(
+  term: SubscriptionChainTerm,
+  terms: readonly T[],
+  endsAt: Date,
+  now: Date | number = Date.now(),
+): SubscriptionShift<T>[] {
+  const delta = endsAt.getTime() - toMs(term.endsAt);
+  if (delta === 0) return [];
+  return laterChainTermsOf(term, terms, now).map((other) => ({
+    term: other,
+    startsAt: new Date(toMs(other.startsAt) + delta),
+    endsAt: new Date(toMs(other.endsAt) + delta),
+  }));
 }
 
 /**
