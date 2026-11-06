@@ -23,6 +23,7 @@ import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { SegmentedTabs } from '@/components/navigation/SegmentedTabs';
 import { ROUTES } from '@/constants/routes';
+import { chatThreadHref } from '@/features/chat/chat-links';
 import { CustomerContactButtons } from '@/features/booking-requests/components/CustomerContactButtons';
 import { useStartBookingRequestConversation } from '@/features/booking-requests/hooks/use-booking-request-mutations';
 import { saveHandoverDraft } from '@/features/handovers/api';
@@ -400,7 +401,9 @@ export function ContactButtons({ variant = 'icon' }: { variant?: 'labeled' | 'ic
           ? () =>
               start.mutate(requestId, {
                 onSuccess: (conversation) =>
-                  router.push(`${ROUTES.MANAGE.CHAT}?c=${conversation.id}`),
+                  router.push(
+                    chatThreadHref(ROUTES.MANAGE.CHAT, conversation.id, { tripId: requestId }),
+                  ),
                 onError: (err) => message.error(errorMessage(err)),
               })
           : undefined

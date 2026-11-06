@@ -1177,7 +1177,9 @@
       "graceMinutesTipLabel": "About the maximum grace period",
       "roundingMinutesTipLabel": "About the minimum rounding unit",
       "unitPerHour": "đ / hour",
-      "unitMinutes": "minutes"
+      "unitMinutes": "minutes",
+      "formulaRounded": "Late fee = hours late (after the grace time, rounded up to the hour) × {fee}. Calculated at return.",
+      "hintRounded": "The late fee is calculated at return: the grace time is deducted and the remaining delay is rounded up to the hour."
     },
     "longTermDiscount": {
       "title": "Duration commitment discount (long-term)",
@@ -1256,7 +1258,10 @@
       "notCheaperBody": "At this level renters have no reason to pick a long-term package.",
       "base": "Base long-term price {monthly}/month",
       "packagesLead": "Renters will see these packages (duration discounts included):",
-      "perMonth": "{amount}/month"
+      "perMonth": "{amount}/month",
+      "suggestedLine": "Suggested price: {min} – {max}/month",
+      "notCheaperShort": "not cheaper than a full month of daily rentals ({reference})",
+      "suggestTipLabel": "How the suggested price is worked out"
     },
     "unitPerDay": "đ / day",
     "unitPerHour": "đ / hour",
@@ -1302,7 +1307,8 @@
       "excessFeeRequired": "Enter the fee for each extra kilometre",
       "excessFeeMax": "That excess mileage fee is too high",
       "moneyThousandStep": "The amount must be a multiple of 1,000 VND",
-      "perKmRequired": "Enter a price per km above 0 — for free delivery choose a 0 VND flat fee"
+      "perKmRequired": "Enter a price per km above 0 — for free delivery choose a 0 VND flat fee",
+      "overtimeFeeRequired": "Enter the fee per extra hour, or turn the late fee off"
     },
     "calendarLink": "Custom prices by calendar",
     "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table.",
@@ -1327,7 +1333,19 @@
     "backToList": "Back to vehicle list",
     "forbiddenTitle": "No access",
     "notFoundTitle": "Vehicle not found",
-    "notFoundBody": "The vehicle may have been deleted, or it does not belong to this shop."
+    "notFoundBody": "The vehicle may have been deleted, or it does not belong to this shop.",
+    "longTermPreview": {
+      "eyebrow": "What customers see on the marketplace",
+      "aria": "Long-term package price preview",
+      "exampleLabel": "1-month price (example)",
+      "monthlyLabel": "Base long-term price: {amount}/month",
+      "featured": "{months} package",
+      "saving": "Customers save {amount} on the package",
+      "noTiers": "No discount tiers yet — customers pay the full package price.",
+      "exampleEmpty": "Enter an example monthly price to preview",
+      "monthlyEmpty": "Enter the base long-term price to preview package prices",
+      "exampleNote": "Example only. Each vehicle's real price is based on that vehicle's monthly price."
+    }
   },
   "documents": {
     "noPermissionTitle": "No permission to view documents",

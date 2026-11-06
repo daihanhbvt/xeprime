@@ -13,10 +13,10 @@ import {
 import { useTranslations } from 'next-intl';
 import { useMemo, type RefObject } from 'react';
 import Link from 'next/link';
-import { listingPath } from '@/constants/routes';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
+import { messageTripHref, messageVehicleHref } from '../chat-links';
 import type { ThreadEntry } from '../hooks/use-thread';
 import type { MessageAttachment } from '../types';
 import styles from './ChatView.module.css';
@@ -153,7 +153,7 @@ export function MessageList({
                         state === CHAT_SEND_STATE.FAILED && styles.bubbleFailed,
                       )}
                     >
-                      {message.vehicle ? <VehicleCard vehicle={message.vehicle} /> : null}
+                      <ContextCard message={message} viewerSide={viewerSide} />
 
                       {message.text ? (
                         <span className={styles.bubbleText}>{message.text}</span>
@@ -223,31 +223,50 @@ export function MessageList({
 }
 
 /**
- * Thẻ xe gắn trên một tin nhắn — kiểu trích dẫn: "câu này đang hỏi về chiếc này".
+ * Thẻ ngữ cảnh gắn trên một tin nhắn — kiểu trích dẫn: "câu này đang hỏi về chiếc này / chuyến này".
  *
  * Đây là thứ thay cho việc tách hội thoại theo xe. Cùng một thread với gian hàng có thể nói về
- * nhiều chiếc, và thẻ giữ cho từng câu vẫn rõ ngữ cảnh; bấm vào là sang tin đăng.
+ * nhiều chiếc, nhiều chuyến, và thẻ giữ cho từng câu vẫn rõ ngữ cảnh. Có chuyến thì thẻ là thẻ
+ * CHUYẾN (ảnh + tên xe của chuyến đó) — bấm vào mở đúng chuyến ở site của người xem.
  */
-function VehicleCard({
-  vehicle,
+function ContextCard({
+  message,
+  viewerSide,
 }: {
-  vehicle: NonNullable<ThreadEntry['message']['vehicle']>;
+  message: ThreadEntry['message'];
+  viewerSide: string;
 }) {
   const t = useTranslations('Chat');
+  const fmt = useAppFormat();
+  const { vehicle, trip } = message;
+
+  let href: string;
+  if (trip) href = messageTripHref(viewerSide, trip);
+  else if (vehicle) href = messageVehicleHref(viewerSide, vehicle.id);
+  else return null;
+
+  const name = vehicle?.name ?? t('trip');
+  const schedule = trip?.pickupAt ? fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt) : null;
+  const detail = [trip?.code ? t('tripCode', { code: trip.code }) : null, schedule]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <Link
-      href={listingPath.detail(vehicle.id)}
+      href={href}
       className={styles.vehicleCard}
-      aria-label={t('about', { subject: vehicle.name })}
+      aria-label={t('about', { subject: trip ? t('tripOf', { name }) : name })}
     >
-      {vehicle.imageUrl ? (
+      {vehicle?.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, không qua loader của Next
-        <img src={vehicle.imageUrl} alt={vehicle.name} className={styles.vehicleCardThumb} />
+        <img src={vehicle.imageUrl} alt={name} className={styles.vehicleCardThumb} />
       ) : null}
       <span className={styles.vehicleCardBody}>
-        <span className={styles.vehicleCardLabel}>{t('aboutVehicle')}</span>
-        <span className={styles.vehicleCardName}>{vehicle.name}</span>
+        <span className={styles.vehicleCardLabel}>
+          {trip ? t('aboutTrip') : t('aboutVehicle')}
+        </span>
+        <span className={styles.vehicleCardName}>{name}</span>
+        {detail ? <span className={styles.vehicleCardDetail}>{detail}</span> : null}
       </span>
     </Link>
   );

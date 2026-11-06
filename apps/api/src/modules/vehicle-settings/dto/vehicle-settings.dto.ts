@@ -18,6 +18,7 @@ import {
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
   TURNAROUND_BUFFER_MAX_MINUTES,
+  VEHICLE_TYPE_VALUES,
   VEHICLE_TRIP_HISTORY_FILTER,
   VEHICLE_TRIP_HISTORY_FILTER_VALUES,
   VEHICLE_TRIP_HISTORY_KIND_VALUES,
@@ -71,6 +72,20 @@ export class VehicleOperationSettingsDto {
   })
   turnaroundBufferMinutes!: number;
 
+  @ApiProperty({
+    description:
+      'true = xe theo thời gian chết MẶC ĐỊNH của gian hàng cho loại xe này ' +
+      '(`turnaroundBufferMinutes` là số hiệu lực đọc từ mặc định đó)',
+  })
+  useShopDefault!: boolean;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0)',
+  })
+  shopDefaultMinutes!: number | null;
+
   @ApiProperty({ type: [HandoverWindowDto], deprecated: true, description: 'Luôn rỗng (ADR 0078)' })
   pickupWindows!: HandoverWindowDto[];
 
@@ -92,6 +107,15 @@ export class SaveVehicleOperationSettingsDto {
   @Min(0)
   @Max(TURNAROUND_BUFFER_MAX_MINUTES)
   turnaroundBufferMinutes!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). ' +
+      'Bỏ trống = false — app cũ gửi số như trước',
+  })
+  @IsOptional()
+  @IsBoolean()
+  useShopDefault?: boolean;
 
   @ApiPropertyOptional({
     type: [HandoverWindowDto],
@@ -116,6 +140,50 @@ export class SaveVehicleOperationSettingsDto {
   @ValidateNested({ each: true })
   @Type(() => HandoverWindowDto)
   returnWindows?: HandoverWindowDto[];
+}
+
+// ── Mặc định vận hành của gian hàng theo loại xe (06/11/2026) ────────────────
+
+/** Query của GET/PUT /shop/operation-defaults — luôn theo MỘT loại xe. */
+export class ShopOperationDefaultsQueryDto {
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES })
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType!: string;
+}
+
+/** GET/PUT /shop/operation-defaults — thời gian chết mặc định của một loại xe. */
+export class ShopOperationDefaultsDto {
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES })
+  vehicleType!: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0)',
+  })
+  turnaroundBufferMinutes!: number | null;
+
+  @ApiProperty({ description: 'Số xe cùng loại đang theo mặc định này (chưa tự đặt riêng)' })
+  inheritingVehicles!: number;
+
+  @ApiProperty({ description: 'Số xe cùng loại đã tự đặt thời gian chết riêng' })
+  overriddenVehicles!: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — null khi chưa lưu lần nào',
+  })
+  updatedAt!: string | null;
+}
+
+/** PUT /shop/operation-defaults — áp cho lịch giữ MỚI của các xe đang theo mặc định (ADR 0006). */
+export class SaveShopOperationDefaultsDto {
+  @ApiProperty({ minimum: 0, maximum: TURNAROUND_BUFFER_MAX_MINUTES })
+  @IsInt()
+  @Min(0)
+  @Max(TURNAROUND_BUFFER_MAX_MINUTES)
+  turnaroundBufferMinutes!: number;
 }
 
 // ── Thiết lập theo dịch vụ ───────────────────────────────────────────────────

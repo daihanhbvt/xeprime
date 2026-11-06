@@ -210,5 +210,31 @@
     "scheduled": "Scheduled",
     "inProgressSince": "In service | since {date}",
     "inProgress": "In service"
+  },
+  "missingKmQueue": {
+    "listLabel": "Missing return mileage tasks",
+    "forbidden": "You can't view handover tasks",
+    "forbiddenHint": "This list belongs to handover records. Ask an administrator if you need access.",
+    "loadError": "Couldn't load missing mileage tasks",
+    "loadErrorHint": "The connection may have dropped. Try again to see outstanding tasks.",
+    "empty": "No return mileage missing",
+    "emptyHint": "Every return handover has an odometer reading — your fleet's mileage is complete.",
+    "columns": {
+      "vehicle": "Vehicle",
+      "booking": "Booking",
+      "confirmedAt": "Return confirmed at",
+      "pickupKm": "Mileage at pickup",
+      "actions": "Actions"
+    },
+    "noPlate": "No plate number",
+    "cardBooking": "Booking <link>{code}</link> · {time}",
+    "cardPickupKm": "Mileage at pickup: {km}",
+    "resolve": "Add mileage",
+    "needPermission": "Mileage edit permission required",
+    "resolveForbidden": "You can't open this handover record",
+    "resolveForbiddenHint": "Adding mileage requires permission to view this booking's handovers.",
+    "resolveLoadError": "Couldn't load the handover record",
+    "resolveLoadErrorHint": "The connection may have dropped. This task is still in the queue.",
+    "alreadyResolved": "This handover already has a mileage reading — nothing left to do."
   }
 }

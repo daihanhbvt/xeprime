@@ -191,7 +191,67 @@
       "ok": "Xác nhận thay đổi"
     },
     "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
-    "dirtyDiscard": "Hủy bỏ"
+    "dirtyDiscard": "Hủy bỏ",
+    "workspace": {
+      "title": "Chính sách thuê",
+      "subtitle": "Áp dụng làm quy định mặc định cho toàn bộ gian hàng. Bạn có thể tùy chỉnh chính sách riêng cho từng xe khi cần.",
+      "vehicleTabsLabel": "Chính sách theo loại xe",
+      "nav": {
+        "label": "Mục lục chính sách thuê",
+        "rules": "Chính sách & Quy định cho thuê",
+        "delivery": "Giao nhận xe",
+        "longTerm": "Ưu đãi dài hạn"
+      },
+      "actionsLabel": "Lưu chính sách thuê",
+      "switchType": {
+        "title": "Bỏ thay đổi chưa lưu?",
+        "body": "Chính sách {vehicle} đang có thay đổi chưa lưu. Chuyển sang {next} sẽ bỏ các thay đổi đó.",
+        "ok": "Bỏ thay đổi và chuyển"
+      },
+      "payment": {
+        "title": "Thanh toán & hóa đơn",
+        "subtitle": "Cách khách thanh toán giữ chỗ và quy trình xuất hóa đơn.",
+        "tipLabel": "Giải thích khoản giữ chỗ"
+      },
+      "procedures": {
+        "title": "Thủ tục & Điều khoản cho thuê"
+      },
+      "collateral": {
+        "title": "Tài sản thế chấp",
+        "modeCash": "Khách đặt một khoản tiền, chủ xe hoàn lại sau khi khách bàn giao xe xong.",
+        "modeNone": "Tạo điều kiện tối đa thu hút khách đặt thuê xe nhanh chóng.",
+        "overriddenTipLabel": "Xe dùng chính sách riêng"
+      },
+      "mileage": {
+        "hint": "Giới hạn km/ngày và phụ phí vượt mức."
+      },
+      "overtime": {
+        "title": "Hạn mức & phí trả xe quá giờ",
+        "hint": "Thời hạn trả xe và phụ phí trả xe trễ.",
+        "grace": "Miễn phí tối đa"
+      },
+      "delivery": {
+        "title": "Giao nhận xe",
+        "serviceTitle": "Dịch vụ giao nhận xe tận nơi",
+        "serviceHint": "Cấu hình phạm vi giao nhận và phí vận chuyển xe hai chiều cho đơn hàng",
+        "from": "Từ",
+        "to": "Đến",
+        "fee": "Phí áp dụng",
+        "ok": "Không có khoảng cách nào trùng nhau",
+        "empty": "Chưa có khoảng cách nào — thêm ít nhất một mốc để khách đặt giao xe tận nơi."
+      },
+      "turnaround": {
+        "title": "Thời gian chết giữa hai chuyến",
+        "hint": "Khoảng chuẩn bị (vệ sinh, sạc, kiểm tra,...) được cộng vào lịch xe sau mỗi chuyến.",
+        "applies": "{count, plural, other {# xe}} đang theo mặc định này. Xe tự đặt riêng ở trang sửa xe thì giữ số của xe.",
+        "tipLabel": "Giải thích phạm vi áp dụng thời gian chết"
+      },
+      "longTerm": {
+        "title": "Ưu đãi thuê dài hạn (trên 1 tháng)",
+        "empty": "Chưa có mốc ưu đãi — khách thuê dài hạn trả nguyên giá gói.",
+        "inactive": "Các mốc dưới đây đang tắt nên khách chưa thấy. Lưu thay đổi sẽ bật chúng; không muốn dùng thì xoá đi."
+      }
+    }
   },
   "vatInvoice": {
     "title": "Hoá đơn VAT",
@@ -203,7 +263,8 @@
     "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp — hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
     "enabled": "Đã bật hỗ trợ xuất hoá đơn VAT cho mọi xe",
     "disabled": "Đã tắt hỗ trợ xuất hoá đơn VAT",
-    "loadError": "Không tải được thiết lập hoá đơn VAT"
+    "loadError": "Không tải được thiết lập hoá đơn VAT",
+    "rowHint": "Khi bật, xe sẽ hiển thị nhãn hỗ trợ xuất hóa đơn trên thẻ xe và trang chi tiết, đồng thời xuất hiện trong bộ lọc tìm kiếm. Bạn chủ động xuất hóa đơn theo thỏa thuận với khách hàng; XePrime không xuất thay hoặc điều chỉnh giá thuê, phí và thuế."
   },
   "paymentSettings": {
     "title": "Thanh toán giữ chỗ qua XePrime",
@@ -228,8 +289,8 @@
     },
     "locked": {
       "platform": {
-        "title": "XePrime đang thu khoản giữ chỗ cho mọi gian hàng",
-        "body": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước — không phân biệt gói dịch vụ. Công tắc tạm khoá và sẽ mở lại sau; lựa chọn của bạn được giữ nguyên để dùng lại đúng lúc đó."
+        "title": "XePrime đang áp dụng thu tiền giữ chỗ cho tất cả gian hàng",
+        "body": "Hiện tại, tất cả chuyến thuê xe trên XePrime đều yêu cầu khách thanh toán tiền giữ chỗ trước, không phân biệt gói dịch vụ. Tính năng bật/tắt thu tiền giữ chỗ đang tạm khóa và sẽ được mở lại trong thời gian tới. Lựa chọn hiện tại của bạn vẫn được lưu để tiếp tục áp dụng khi tính năng hoạt động trở lại."
       },
       "commission": {
         "title": "Gian hàng của bạn luôn thu cọc qua XePrime",

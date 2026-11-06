@@ -39,7 +39,12 @@
   color: var(--xp-color-text-secondary);
 }
 
-/* Active — dropdown đang mở (`23649:11529`): nền vàng nhạt, chữ + biểu tượng vàng đậm. */
+/*
+ * Active (`23649:11529`): nền vàng nhạt, chữ + biểu tượng vàng đậm — khi dropdown đang mở, và khi
+ * khối chứa trang đang xem (06/11/2026, người dùng chốt; design không tô trạng thái này).
+ */
+.itemActive,
+.itemActive:hover,
 .itemOpen,
 .itemOpen:hover {
   background: var(--xp-color-primary-subtle);

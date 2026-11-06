@@ -2,6 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAV_BADGE, SHOP_NAV, type NavLeaf } from '@/constants/nav';
+import { ROUTES } from '@/constants/routes';
 
 import { PartnerTopNav } from './PartnerTopNav';
 
@@ -17,7 +18,9 @@ const badges = vi.hoisted(() => ({
   urgent: {} as Record<string, boolean>,
 }));
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/manage' }));
+const nav = vi.hoisted(() => ({ pathname: '/manage' }));
+
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }));
 
 vi.mock('./use-manage-nav-tree', () => ({ useManageNavTree: () => ({ sections: SHOP_NAV }) }));
 
@@ -41,13 +44,14 @@ vi.mock('./use-nav-leaf-access', () => {
 });
 
 beforeEach(() => {
+  nav.pathname = '/manage';
   badges.counts = {};
   badges.urgent = {};
 });
 
 afterEach(cleanup);
 
-const operations = () => screen.getByRole('button', { name: /^Vận hành/ });
+const operations = () => screen.getByRole('link', { name: /^Vận hành/ });
 
 describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
   it('cộng yêu cầu chờ duyệt + lượt giao/trả đến hạn, màu cam khi chưa có gì trễ', () => {
@@ -55,11 +59,11 @@ describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
     badges.counts = { [NAV_BADGE.RENTALS_WORK]: 5 };
     render(<PartnerTopNav />);
 
-    const button = operations();
-    expect(button.getAttribute('aria-label')).toBe('Vận hành, 5 việc cần xử lý');
-    const badge = button.querySelector('[class*="count"]');
+    const item = operations();
+    expect(item.getAttribute('aria-label')).toBe('Vận hành, 5 việc cần xử lý');
+    const badge = item.querySelector('[class*="count"]');
     expect(badge?.textContent).toBe('5');
-    expect(button.querySelector('[class*="countUrgent"]')).toBeNull();
+    expect(item.querySelector('[class*="countUrgent"]')).toBeNull();
   });
 
   it('một mục có việc trễ → huy hiệu khối đỏ, và "gấp" được nói thành lời', () => {
@@ -67,15 +71,46 @@ describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
     badges.urgent = { [NAV_BADGE.RENTALS_WORK]: true };
     render(<PartnerTopNav />);
 
-    const button = operations();
-    expect(button.getAttribute('aria-label')).toBe('Vận hành, 3 việc cần xử lý, có việc gấp');
-    expect(button.querySelector('[class*="countUrgent"]')).toBeTruthy();
+    const item = operations();
+    expect(item.getAttribute('aria-label')).toBe('Vận hành, 3 việc cần xử lý, có việc gấp');
+    expect(item.querySelector('[class*="countUrgent"]')).toBeTruthy();
   });
 
   it('không có việc đến hạn → không có huy hiệu, nhãn khối trơn', () => {
     render(<PartnerTopNav />);
 
-    const button = screen.getByRole('button', { name: 'Vận hành' });
-    expect(button.querySelector('[class*="count"]')).toBeNull();
+    const item = screen.getByRole('link', { name: 'Vận hành' });
+    expect(item.querySelector('[class*="count"]')).toBeNull();
+  });
+});
+
+describe('PartnerTopNav — nhãn khối là liên kết, khối của trang đang mở được tô', () => {
+  const active = (el: HTMLElement) => el.className.includes('itemActive');
+
+  it('bấm "Vận hành" đi tới "Đơn thuê xe" — mục đầu tiên của khối', () => {
+    render(<PartnerTopNav />);
+    expect(operations().getAttribute('href')).toBe(ROUTES.MANAGE.BOOKINGS);
+  });
+
+  it('trang con của một mục trong khối → nhãn khối active, aria-current="true"', () => {
+    nav.pathname = `${ROUTES.MANAGE.BOOKINGS}/01HZZZZZZZZZZZZZZZZZZZZZZZ`;
+    render(<PartnerTopNav />);
+    // Trang chi tiết đơn thuộc "Đơn thuê xe" — chính đích của nhãn khối.
+    expect(active(operations())).toBe(true);
+    expect(operations().getAttribute('aria-current')).toBe('page');
+    expect(active(screen.getByRole('link', { name: 'Tổng quan' }))).toBe(false);
+  });
+
+  it('mục khác trong khối (Lịch thuê xe) → khối vẫn active, nhưng không phải "page"', () => {
+    nav.pathname = ROUTES.MANAGE.CALENDAR;
+    render(<PartnerTopNav />);
+    expect(active(operations())).toBe(true);
+    expect(operations().getAttribute('aria-current')).toBe('true');
+  });
+
+  it('ở Tổng quan → chỉ "Tổng quan" active', () => {
+    render(<PartnerTopNav />);
+    expect(active(screen.getByRole('link', { name: 'Tổng quan' }))).toBe(true);
+    expect(active(operations())).toBe(false);
   });
 });

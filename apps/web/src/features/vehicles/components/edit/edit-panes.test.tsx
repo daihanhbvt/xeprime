@@ -46,14 +46,23 @@ vi.mock('@/features/vehicle-manage/hooks', () => ({
   useSaveVehicleOperationSettings: () => saveOperation,
 }));
 const operationSettings = vi.hoisted(() => ({
-  data: { turnaroundBufferMinutes: 0, pickupWindows: [], returnWindows: [], updatedAt: null },
+  data: {
+    turnaroundBufferMinutes: 0,
+    useShopDefault: false,
+    shopDefaultMinutes: 120 as number | null,
+    pickupWindows: [],
+    returnWindows: [],
+    updatedAt: null,
+  },
   isLoading: false,
   isError: false,
   refetch: vi.fn(),
 }));
 const saveOperation = vi.hoisted(() => ({
   mutateAsync: vi.fn(async (body?: Record<string, unknown>) => ({
-    turnaroundBufferMinutes: Number(body?.turnaroundBufferMinutes ?? 0),
+    turnaroundBufferMinutes: body?.useShopDefault ? 120 : Number(body?.turnaroundBufferMinutes ?? 0),
+    useShopDefault: body?.useShopDefault === true,
+    shopDefaultMinutes: 120,
     pickupWindows: [],
     returnWindows: [],
     updatedAt: null,
@@ -449,8 +458,19 @@ describe('Chính sách thuê — mọi thứ áp cho cả xe', () => {
     fireEvent.click(screen.getByRole('radio', { name: '1 giờ' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
     await waitFor(() => expect(saveOperation.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(saveOperation.mutateAsync.mock.calls[0]![0]).toEqual({ turnaroundBufferMinutes: 60 });
+    expect(saveOperation.mutateAsync.mock.calls[0]![0]).toEqual({
+      turnaroundBufferMinutes: 60,
+      useShopDefault: false,
+    });
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('thời gian chuẩn bị xe: chọn "Theo gian hàng" gửi cờ kế thừa, nhãn nói số của gian hàng', async () => {
+    renderPolicy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Theo gian hàng (2 giờ)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
+    await waitFor(() => expect(saveOperation.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(saveOperation.mutateAsync.mock.calls[0]![0]).toMatchObject({ useShopDefault: true });
   });
 
   it('điều khoản — hai khối: tự lái & dài hạn · có tài xế; mỗi khối ghi đúng thiết lập của nó', async () => {

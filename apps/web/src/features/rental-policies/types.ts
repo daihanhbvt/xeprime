@@ -24,3 +24,7 @@ export type DeliveryDistance = components['schemas']['DeliveryDistanceDto'];
  * (`PATCH /bookings/:id/delivery-fee`).
  */
 export type BookingRequestDeliveryQuote = components['schemas']['BookingRequestDeliveryQuoteDto'];
+
+/** Thời gian chết mặc định của gian hàng theo loại xe (06/11/2026). */
+export type ShopOperationDefaults = components['schemas']['ShopOperationDefaultsDto'];
+export type SaveShopOperationDefaultsInput = components['schemas']['SaveShopOperationDefaultsDto'];

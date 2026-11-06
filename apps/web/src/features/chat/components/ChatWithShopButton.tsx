@@ -8,6 +8,7 @@ import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
+import { chatThreadHref } from '../chat-links';
 import { useStartConversation } from '../hooks/use-chat-mutations';
 import { useTranslations } from 'next-intl';
 
@@ -25,6 +26,7 @@ import { useTranslations } from 'next-intl';
  */
 export function ChatWithShopButton({
   vehicleId,
+  tripId,
   shopSlug,
   block,
   size,
@@ -37,6 +39,11 @@ export function ChatWithShopButton({
 }: {
   /** Nhắn từ một chiếc xe — xe đi kèm làm thẻ ngữ cảnh cho câu nhắn đầu tiên. */
   vehicleId?: string;
+  /**
+   * Nhắn từ một CHUYẾN (id yêu cầu thuê) — câu đầu tiên mang thẻ chuyến, gian hàng bấm vào mở
+   * đúng đơn / yêu cầu đó. Vẫn cần `vehicleId` để mở hội thoại (xe xác định gian hàng).
+   */
+  tripId?: string;
   /** Nhắn từ trang gian hàng, khi chưa có chiếc xe nào đang mở. */
   shopSlug?: string;
   block?: boolean;
@@ -76,11 +83,10 @@ export function ChatWithShopButton({
     start.mutate(vehicleId ? { vehicleId } : { shopSlug }, {
       onSuccess: (conversation) => {
         onNavigate?.();
-        // `v` = xe đang xem. Hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên
-        // chiếc xe phải đi kèm riêng để ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên. Vào
-        // từ trang gian hàng thì không có xe nào để gắn — bỏ hẳn tham số, đừng gửi `v=undefined`.
-        const query = vehicleId ? `?c=${conversation.id}&v=${vehicleId}` : `?c=${conversation.id}`;
-        router.push(`${ROUTES.CHAT}${query}`);
+        // Hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên chiếc xe — hay chuyến
+        // đang xem — phải đi kèm riêng để ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên. Vào
+        // từ trang gian hàng thì không có gì để gắn.
+        router.push(chatThreadHref(ROUTES.CHAT, conversation.id, { vehicleId, tripId }));
       },
       onError: (err) => {
         if (isUnauthenticated(err)) {

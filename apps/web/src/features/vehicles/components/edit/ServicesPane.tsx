@@ -25,10 +25,15 @@ import { ROUTES, VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/route
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
-import { POLICY_BLOCK, PolicySections } from '@/features/rental-policies/components/PolicySections';
+import {
+  POLICY_BLOCK,
+  PolicyFlatLayout,
+  PolicySections,
+} from '@/features/rental-policies/components/PolicySections';
 import {
   CalendarPriceLink,
   DirectDiscountEditor,
+  LongTermPackagePreviewLive,
   LongTermPriceHintLive,
 } from '@/features/rental-policies/components/PricingParts';
 import type { VehiclePricingFormApi } from '@/features/rental-policies/hooks/use-vehicle-pricing-form';
@@ -324,23 +329,46 @@ function ServicesBody({
             {control && service === SERVICE_TYPE.LONG_TERM ? (
               <>
                 <EditCard title={t('price.title')}>
-                  <PriceField control={control} name="monthlyPrice" label="monthly" perMonth />
-                  <LongTermPriceHintLive control={control} />
+                  {/*
+                    Gian hàng: giá từng gói nằm ở khung xem trước cạnh mốc ưu đãi — dưới ô chỉ còn một
+                    dòng "Giá đề xuất". Tuyến hoa hồng không có khung đó nên giữ hộp gợi ý kèm giá gói.
+                  */}
+                  <PriceField
+                    control={control}
+                    name="monthlyPrice"
+                    label="monthly"
+                    perMonth
+                    help={
+                      isManage ? <LongTermPriceHintLive control={control} compact /> : undefined
+                    }
+                  />
+                  {isManage ? null : <LongTermPriceHintLive control={control} />}
                 </EditCard>
                 {isManage ? (
                   <EditCard title={t('policy.longTermTitle')}>
-                    {!policyEditable ? <InheritedPolicyNote onOpenSwitch={onOpenPolicy} /> : null}
-                    <PolicySections
-                      control={
-                        control as unknown as Parameters<typeof PolicySections>[0]['control']
-                      }
-                      numbered={false}
-                      blocks={[POLICY_BLOCK.DISCOUNT]}
-                      legacyDiscountTiers={
-                        (priced!.pricing.policy ?? priced!.pricing.shopPolicy)?.legacyDiscountTiers
-                      }
-                      disabled={disabled || !policyEditable}
-                    />
+                    <div className={styles.longTermDiscount}>
+                      <div className={styles.longTermDiscountSettings}>
+                        {!policyEditable ? (
+                          <InheritedPolicyNote onOpenSwitch={onOpenPolicy} />
+                        ) : null}
+                        {/* Phẳng: khối mốc đã nằm trong thẻ "Ưu đãi thuê dài hạn" — không thẻ lồng thẻ. */}
+                        <PolicyFlatLayout>
+                          <PolicySections
+                            control={
+                              control as unknown as Parameters<typeof PolicySections>[0]['control']
+                            }
+                            numbered={false}
+                            blocks={[POLICY_BLOCK.DISCOUNT]}
+                            legacyDiscountTiers={
+                              (priced!.pricing.policy ?? priced!.pricing.shopPolicy)
+                                ?.legacyDiscountTiers
+                            }
+                            disabled={disabled || !policyEditable}
+                          />
+                        </PolicyFlatLayout>
+                      </div>
+                      <LongTermPackagePreviewLive control={control} />
+                    </div>
                   </EditCard>
                 ) : null}
               </>
@@ -413,6 +441,7 @@ function PriceField({
   required,
   perHour,
   perMonth,
+  help,
 }: {
   control: Control<VehiclePricingFormValues>;
   name: keyof VehiclePricingFormValues;
@@ -420,6 +449,8 @@ function PriceField({
   required?: boolean;
   perHour?: boolean;
   perMonth?: boolean;
+  /** Dòng nhỏ ngay dưới ô (lỗi kiểm tra vẫn thắng nó). */
+  help?: ReactNode;
 }) {
   const t = useTranslations('Vehicles.pricing');
   const copy = PRICE_COPY[label];
@@ -436,6 +467,7 @@ function PriceField({
       money
       addonAfter={perHour ? t('unitPerHour') : perMonth ? t('unitPerMonth') : t('unitPerDay')}
       required={required}
+      help={help}
     />
   );
 }

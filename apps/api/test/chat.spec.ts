@@ -238,10 +238,11 @@ async function seedRequestFor(
   vehicleId: string,
   customerUserId: string,
   converted = false,
-): Promise<void> {
+): Promise<string> {
+  const id = newId();
   await prisma.bookingRequest.create({
     data: {
-      id: newId(),
+      id,
       tenantId,
       vehicleId,
       customerUserId,
@@ -255,6 +256,7 @@ async function seedRequestFor(
       returnAt: new Date(Date.now() + 172_800_000),
     },
   });
+  return id;
 }
 
 const maybe = (name: string, fn: () => Promise<void>) =>
@@ -605,6 +607,87 @@ describe('ChatService — tin nhắn', () => {
     });
     expect(msg.vehicle).toBeNull();
     expect(msg.text).toBe('thử gắn xe lạ');
+  });
+
+  /**
+   * Thẻ CHUYẾN: nhắn từ một chuyến thì câu đầu mang chuyến đó, và xe của thẻ là xe CỦA chuyến —
+   * không phải xe client gửi kèm.
+   */
+  maybe('tin nhắn mang thẻ chuyến; xe của thẻ là xe của chuyến', async () => {
+    const requestId = await seedRequestFor(tenantId, raceVehicleId, customerId);
+    const msg = await chat.sendMessage(customerId, conversationId, {
+      text: 'Hỏi về chuyến này',
+      bookingRequestId: requestId,
+      vehicleId,
+    });
+
+    expect(msg.trip).toMatchObject({ id: requestId, bookingId: null, code: null });
+    expect(msg.trip?.pickupAt).toBeTruthy();
+    expect(msg.vehicle?.id).toBe(raceVehicleId);
+    const conv = await prisma.conversation.findUniqueOrThrow({ where: { id: conversationId } });
+    expect(conv.vehicleId).toBe(raceVehicleId);
+  });
+
+  /** Gian hàng trả lời từ "Đơn thuê xe" cũng gắn được chuyến của khách trong thread. */
+  maybe('phía gian hàng gắn được chuyến của chính khách trong thread', async () => {
+    const requestId = await seedRequestFor(tenantId, raceVehicleId, customerId);
+    const msg = await chat.sendMessage(staffId, conversationId, {
+      text: 'Chuyến của anh đã sẵn sàng',
+      bookingRequestId: requestId,
+    });
+    expect(msg.trip?.id).toBe(requestId);
+    expect(msg.vehicle?.id).toBe(raceVehicleId);
+  });
+
+  /**
+   * Thẻ chuyến lộ lịch thuê — chuyến của khách KHÁC (dù cùng gian hàng) hay của gian hàng khác
+   * đều bị bỏ thẻ, tin vẫn đi.
+   */
+  maybe('chuyến không thuộc cặp (khách, gian hàng) của thread bị bỏ thẻ', async () => {
+    const someoneElses = await seedRequestFor(tenantId, vehicleId, strangerId);
+    const otherShops = await seedRequestFor(otherTenantId, otherVehicleId, customerId);
+
+    for (const bookingRequestId of [someoneElses, otherShops, 'KHONGTONTAI0000000000000000']) {
+      const msg = await chat.sendMessage(staffId, conversationId, {
+        text: 'thử gắn chuyến lạ',
+        bookingRequestId,
+      });
+      expect(msg.trip).toBeNull();
+      expect(msg.vehicle).toBeNull();
+      expect(msg.text).toBe('thử gắn chuyến lạ');
+    }
+  });
+
+  /** Câu hỏi gửi lúc yêu cầu còn chờ; về sau thành ĐƠN thì thẻ dẫn thẳng tới đơn, lịch của đơn. */
+  maybe('thẻ chuyến đọc đơn SỐNG — yêu cầu thành đơn thì thẻ có mã đơn', async () => {
+    const requestId = await seedRequestFor(tenantId, raceVehicleId, customerId);
+    const sent = await chat.sendMessage(customerId, conversationId, {
+      text: 'Chuyến sắp tới',
+      bookingRequestId: requestId,
+    });
+    expect(sent.trip?.bookingId).toBeNull();
+
+    const bookingId = newId();
+    const pickupAt = new Date(Date.now() + 3 * 86_400_000);
+    const returnAt = new Date(Date.now() + 4 * 86_400_000);
+    await prisma.booking.create({
+      data: {
+        id: bookingId,
+        tenantId,
+        vehicleId: raceVehicleId,
+        code: `BK-${bookingId.slice(-6)}`,
+        customerName: 'Khách',
+        customerPhone: '0900000222',
+        pickupAt,
+        returnAt,
+      },
+    });
+    await prisma.bookingRequest.update({ where: { id: requestId }, data: { bookingId } });
+
+    const page = await chat.listMessages(customerId, conversationId, {});
+    const reread = page.data.find((m) => m.id === sent.id);
+    expect(reread?.trip).toMatchObject({ id: requestId, bookingId, code: `BK-${bookingId.slice(-6)}` });
+    expect(new Date(reread?.trip?.pickupAt as unknown as string).getTime()).toBe(pickupAt.getTime());
   });
 
   maybe('người ngoài không gửi/không đọc được', async () => {

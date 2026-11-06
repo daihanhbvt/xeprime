@@ -11,6 +11,7 @@ import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { useAppFormat } from '@/i18n/use-app-format';
 
 import type { VehiclePricingFormValues } from '../schema';
+import { LongTermPackagePreview } from './LongTermPackagePreview';
 import { LongTermPriceHint } from './LongTermPriceHint';
 import { PolicyInfoTip } from './PolicyInfoTip';
 import styles from './PricingParts.module.css';
@@ -170,7 +171,14 @@ export function DirectDiscountEditor({
  * Cầu useWatch → LongTermPriceHint: gợi ý VÀ bảng giá gói đổi ngay khi chủ xe gõ giá hoặc sửa
  * mốc ưu đãi, không đợi lưu — thấy ngay khách sẽ trả bao nhiêu cho từng gói.
  */
-export function LongTermPriceHintLive({ control }: { control: Control<VehiclePricingFormValues> }) {
+export function LongTermPriceHintLive({
+  control,
+  compact = false,
+}: {
+  control: Control<VehiclePricingFormValues>;
+  /** Một dòng "Giá đề xuất" — khi màn đã có khung xem trước giá gói riêng (`LongTermPackagePreviewLive`). */
+  compact?: boolean;
+}) {
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
   const discountTiers = useWatch({ control, name: 'discountTiers' });
@@ -180,6 +188,25 @@ export function LongTermPriceHintLive({ control }: { control: Control<VehiclePri
       weekdayPrice={weekdayPrice}
       monthlyPrice={monthlyPrice}
       discountTiers={discountTiers}
+      discountEnabled={discountEnabled}
+      compact={compact}
+    />
+  );
+}
+
+/** Khung "Khách sẽ thấy trên sàn" của ưu đãi dài hạn một xe — giá tháng + mốc đang nhập, đổi ngay. */
+export function LongTermPackagePreviewLive({
+  control,
+}: {
+  control: Control<VehiclePricingFormValues>;
+}) {
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  const discountTiers = useWatch({ control, name: 'discountTiers' });
+  const discountEnabled = useWatch({ control, name: 'discountEnabled' });
+  return (
+    <LongTermPackagePreview
+      monthly={monthlyPrice}
+      tiers={discountTiers}
       discountEnabled={discountEnabled}
     />
   );

@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-media-query';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
+import { chatThreadHref } from '../chat-links';
 import { useChatBadge } from '../hooks/use-chat-badge';
 import {
   RECENT_CONVERSATIONS_LIMIT,
@@ -20,8 +21,6 @@ import {
 import type { ConversationSummary } from '../types';
 import styles from './ChatMenu.module.css';
 
-/** Tham số deep link của `ChatView` — bấm một dòng ở popup mở ĐÚNG hội thoại đó. */
-const CONVERSATION_PARAM = 'c';
 
 /**
  * Biểu tượng tin nhắn ở thanh trên cùng — MỘT component cho cả khu khách (`CHAT_SIDE.CUSTOMER`)
@@ -181,7 +180,7 @@ function ConversationRow({
     <Link
       // Là LIÊN KẾT thật chứ không phải `router.push` trong `onClick`: mở tab mới, sao chép địa
       // chỉ và bấm giữa chuột đều hoạt động như mọi dòng danh sách khác trong sản phẩm.
-      href={`${inboxHref}?${CONVERSATION_PARAM}=${encodeURIComponent(conversation.id)}`}
+      href={chatThreadHref(inboxHref, conversation.id)}
       className={cx(styles.item, unread && styles.itemUnread)}
       onClick={onNavigate}
     >

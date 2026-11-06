@@ -624,18 +624,33 @@ describe('Custom role chỉ có vehicles.view', () => {
     expect(finance).not.toContain(VEHICLE_ALERT_KIND.MAINTENANCE_OVERDUE);
   });
 
-  maybe('link tới đơn CHỈ xuất hiện khi có bookings.view', async () => {
+  maybe('link về hàng đợi Thiếu KM trả, kèm bookingId CHỈ khi có bookings.view', async () => {
     const { vehicle, booking } = await loadedVehicle();
+    const missingHref = (row: Awaited<ReturnType<typeof alerts.forVehicle>>) =>
+      row.alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER)?.href;
 
-    // handovers.view + bookings.view → link thẳng đơn.
+    // Đủ quyền hàng đợi + bookings.view → hàng đợi, mở thẳng biên bản đó để bổ sung KM.
     const withBookings = await alerts.forVehicle(
+      tenantId,
+      vehicle.id,
+      scopeOf(
+        PERMISSION.HANDOVER_VIEW,
+        PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+        PERMISSION.BOOKING_VIEW,
+      ),
+    );
+    expect(missingHref(withBookings)).toBe(
+      `/manage/maintenance?filter=missing_return_km&resolve=${booking.id}`,
+    );
+
+    // Có bookings.view nhưng không vào được hàng đợi → KHÔNG dẫn về màn đơn (ở đó không bổ
+    // sung KM được), cũng không rò bookingId.
+    const bookingsOnly = await alerts.forVehicle(
       tenantId,
       vehicle.id,
       scopeOf(PERMISSION.HANDOVER_VIEW, PERMISSION.BOOKING_VIEW),
     );
-    expect(
-      withBookings.alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER)?.href,
-    ).toBe(`/manage/bookings?booking=${booking.id}`);
+    expect(missingHref(bookingsOnly)).toBeNull();
 
     // handovers.view + maintenance.view (không có bookings.view) → về hàng đợi chung.
     const withQueue = await alerts.forVehicle(

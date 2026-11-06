@@ -83,6 +83,7 @@ export function useMaintenanceBoardFilters() {
     sort: sp.get('sort') ?? 'remaining_asc',
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
+    resolve: sp.get('resolve') ?? undefined,
   }));
 }
 

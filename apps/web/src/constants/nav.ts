@@ -243,17 +243,13 @@ export const SHOP_NAV: readonly NavSection[] = [
     icon: PARTNER_NAV_ICON.operations,
     children: [
       {
-        key: 'calendar',
-        labelKey: 'manage.rentalCalendar',
-        href: ROUTES.MANAGE.CALENDAR,
-        permission: PERMISSION.CALENDAR_VIEW,
-        icon: PARTNER_NAV_ICON.calendar,
-      },
-      {
         /*
          * MỘT mục cho cả chuyến (05/11/2026): yêu cầu chờ duyệt → chờ khách trả → chờ giao → đang
          * thuê trên cùng màn "Đơn thuê xe". Yêu cầu và đơn vẫn là hai thực thể, hai quyền — thấy
          * mục khi có MỘT trong hai, nhóm của thực thể thiếu quyền tự vắng trên màn.
+         *
+         * Đứng ĐẦU khối (06/11/2026): bấm nhãn "Vận hành" trên menu ngang đi thẳng tới mục đầu tiên
+         * của khối — việc hằng ngày là đơn, không phải lịch.
          */
         key: 'bookings',
         labelKey: 'manage.rentals',
@@ -261,6 +257,13 @@ export const SHOP_NAV: readonly NavSection[] = [
         permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: PARTNER_NAV_ICON.bookings,
         badge: NAV_BADGE.RENTALS_WORK,
+      },
+      {
+        key: 'calendar',
+        labelKey: 'manage.rentalCalendar',
+        href: ROUTES.MANAGE.CALENDAR,
+        permission: PERMISSION.CALENDAR_VIEW,
+        icon: PARTNER_NAV_ICON.calendar,
       },
       {
         key: 'customers',
@@ -736,13 +739,6 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
     icon: PARTNER_NAV_ICON.operations,
     children: [
       {
-        key: 'calendar',
-        labelKey: 'manage.rentalCalendar',
-        href: ROUTES.MANAGE.CALENDAR,
-        permission: PERMISSION.CALENDAR_VIEW,
-        icon: PARTNER_NAV_ICON.calendar,
-      },
-      {
         /*
          * CÙNG màn "Đơn thuê xe" với gian hàng, cho cả chủ lẫn thành viên (06/11/2026, thay danh sách
          * "Chuyến cho thuê" riêng của chủ xe). Màn gộp yêu cầu + đơn nên lý do tách màn cũ — chủ xe vài
@@ -755,6 +751,13 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: PARTNER_NAV_ICON.bookings,
         badge: NAV_BADGE.RENTALS_WORK,
+      },
+      {
+        key: 'calendar',
+        labelKey: 'manage.rentalCalendar',
+        href: ROUTES.MANAGE.CALENDAR,
+        permission: PERMISSION.CALENDAR_VIEW,
+        icon: PARTNER_NAV_ICON.calendar,
       },
     ],
   },

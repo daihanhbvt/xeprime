@@ -268,10 +268,11 @@ describe('nav — cấu trúc khối', () => {
   });
 
   it('mỗi dropdown đúng các dòng của design, đúng thứ tự', () => {
-    // "Đơn thuê xe" gộp yêu cầu + đơn thành MỘT dòng (05/11/2026).
+    // "Đơn thuê xe" gộp yêu cầu + đơn thành MỘT dòng (05/11/2026), đứng đầu khối (06/11/2026) —
+    // bấm nhãn "Vận hành" đi thẳng tới đó.
     expect(shownHrefs('operations')).toEqual([
-      ROUTES.MANAGE.CALENDAR,
       ROUTES.MANAGE.BOOKINGS,
+      ROUTES.MANAGE.CALENDAR,
       ROUTES.MANAGE.CUSTOMERS,
     ]);
     expect(shownHrefs('fleet')).toEqual([

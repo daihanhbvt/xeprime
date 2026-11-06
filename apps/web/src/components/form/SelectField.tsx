@@ -125,16 +125,24 @@ export function SelectField<T extends FieldValues>({
         mode={mode}
         // `''` là "chưa chọn" của form (giá trị mặc định) — đưa về `undefined` để AntD hiện
         // placeholder thay vì vẽ một lựa chọn rỗng.
+        // Trường SỐ (vd mốc gói tháng) với option là chuỗi: so khớp bằng chuỗi để ô hiện NHÃN ("1
+        // tháng") thay vì số trần, và trả lại SỐ cho form — không đổi kiểu dữ liệu của trường.
         value={
-          field.value === '' ? undefined : ((field.value as string | string[] | null | undefined) ?? undefined)
+          field.value === ''
+            ? undefined
+            : typeof field.value === 'number'
+              ? String(field.value)
+              : ((field.value as string | string[] | null | undefined) ?? undefined)
         }
         // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
         onChange={(value: string | string[] | undefined) => {
-          const next = value ?? (mode === 'multiple' ? [] : null);
+          const raw = value ?? (mode === 'multiple' ? [] : null);
+          const next =
+            typeof field.value === 'number' && typeof raw === 'string' ? Number(raw) : raw;
           field.onChange(next);
           // Giá trị đi kèm: nơi nghe thường cần chính nó (ghi bộ nhớ, tra danh mục con). Đọc lại
           // `field.value` ở đó sẽ ra giá trị CŨ — RHF chưa render lại tại thời điểm này.
-          onAfterChange?.(next);
+          onAfterChange?.(raw);
         }}
         onBlur={field.onBlur}
         options={

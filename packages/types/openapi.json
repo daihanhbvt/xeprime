@@ -62295,6 +62295,288 @@
         ]
       }
     },
+    "/shop/operation-defaults": {
+      "get": {
+        "operationId": "ShopOperationDefaultsController_get",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ShopOperationDefaultsDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thời gian chết mặc định của gian hàng theo loại xe",
+        "tags": [
+          "rental-policies"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "put": {
+        "operationId": "ShopOperationDefaultsController_save",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveShopOperationDefaultsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ShopOperationDefaultsDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu thời gian chết mặc định theo loại xe (áp cho lịch giữ mới của xe đang theo mặc định)",
+        "tags": [
+          "rental-policies"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/shop/payment-settings": {
       "get": {
         "description": "Tuyến hoa hồng trả `depositRequired = true`, `editable = false`: công tắc hiện ở trạng thái bật và khoá, không ẩn (ADR 0027 điều 4).\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).",
@@ -94380,6 +94662,16 @@
               }
             ]
           },
+          "trip": {
+            "nullable": true,
+            "description": "Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MessageTripDto"
+              }
+            ]
+          },
           "attachments": {
             "type": "array",
             "items": {
@@ -94423,6 +94715,38 @@
         },
         "required": [
           "data"
+        ]
+      },
+      "MessageTripDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách)"
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đơn thuê — có khi đã thành đơn"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã đơn — có khi đã thành đơn"
+          },
+          "pickupAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)"
+          },
+          "returnAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC — giờ trả"
+          }
+        },
+        "required": [
+          "id"
         ]
       },
       "MessageVehicleDto": {
@@ -107226,6 +107550,19 @@
           "entityType"
         ]
       },
+      "SaveShopOperationDefaultsDto": {
+        "type": "object",
+        "properties": {
+          "turnaroundBufferMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "turnaroundBufferMinutes"
+        ]
+      },
       "SaveSurchargeDto": {
         "type": "object",
         "properties": {
@@ -107330,6 +107667,10 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1440
+          },
+          "useShopDefault": {
+            "type": "boolean",
+            "description": "true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false — app cũ gửi số như trước"
           },
           "pickupWindows": {
             "deprecated": true,
@@ -107653,6 +107994,10 @@
             "type": "string",
             "description": "ID xe làm ngữ cảnh cho tin nhắn này"
           },
+          "bookingRequestId": {
+            "type": "string",
+            "description": "ID yêu cầu thuê (chuyến) làm ngữ cảnh cho tin nhắn này"
+          },
           "attachments": {
             "type": "array",
             "items": {
@@ -107905,6 +108250,41 @@
         },
         "required": [
           "passed"
+        ]
+      },
+      "ShopOperationDefaultsDto": {
+        "type": "object",
+        "properties": {
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "turnaroundBufferMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0)"
+          },
+          "inheritingVehicles": {
+            "type": "number",
+            "description": "Số xe cùng loại đang theo mặc định này (chưa tự đặt riêng)"
+          },
+          "overriddenVehicles": {
+            "type": "number",
+            "description": "Số xe cùng loại đã tự đặt thời gian chết riêng"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — null khi chưa lưu lần nào"
+          }
+        },
+        "required": [
+          "vehicleType",
+          "inheritingVehicles",
+          "overriddenVehicles"
         ]
       },
       "ShopOwnerAccountDto": {
@@ -113916,6 +114296,15 @@
             "type": "number",
             "description": "Phút chuẩn bị giữa hai chuyến — áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), không tính lại occupancy đã có"
           },
+          "useShopDefault": {
+            "type": "boolean",
+            "description": "true = xe theo thời gian chết MẶC ĐỊNH của gian hàng cho loại xe này (`turnaroundBufferMinutes` là số hiệu lực đọc từ mặc định đó)"
+          },
+          "shopDefaultMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0)"
+          },
           "pickupWindows": {
             "deprecated": true,
             "description": "Luôn rỗng (ADR 0078)",
@@ -113940,6 +114329,7 @@
         },
         "required": [
           "turnaroundBufferMinutes",
+          "useShopDefault",
           "pickupWindows",
           "returnWindows"
         ]

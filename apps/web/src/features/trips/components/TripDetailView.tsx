@@ -636,6 +636,7 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
                 <>
                   <ChatWithShopButton
                     vehicleId={data.vehicle.id}
+                    tripId={data.id}
                     type="primary"
                     size="large"
                     block

@@ -927,6 +927,18 @@ export const bookingPath = {
 };
 
 /**
+ * Tham số URL mở sẵn chi tiết MỘT yêu cầu trên màn "Đơn thuê xe" — yêu cầu không có trang riêng
+ * (chi tiết là hộp thoại), nên link từ nơi khác (thẻ chuyến trong tin nhắn) đi qua tham số này.
+ * Yêu cầu đã thành đơn thì mở chi tiết ĐƠN.
+ */
+export const BOOKING_REQUEST_OPEN_PARAM = 'request';
+
+export const bookingRequestPath = {
+  open: (id: string): string =>
+    `${ROUTES.MANAGE.BOOKINGS}?${new URLSearchParams({ [BOOKING_REQUEST_OPEN_PARAM]: id })}`,
+};
+
+/**
  * Tham số URL của ngăn đang xem trên màn "Quản lý đơn thuê xe" — vắng = "Tất cả". Cùng tên với
  * tham số `preset` của `GET /bookings`: URL và API nói một từ vựng (`BOOKING_LIST_PRESET`).
  */

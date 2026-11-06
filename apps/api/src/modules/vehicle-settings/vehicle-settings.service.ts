@@ -41,7 +41,9 @@ import {
   DriverSurchargeRuleDto,
   PatchVehicleServiceSettingDto,
   SaveDriverSurchargeRulesDto,
+  SaveShopOperationDefaultsDto,
   SaveVehicleOperationSettingsDto,
+  ShopOperationDefaultsDto,
   VehicleOperationSettingsDto,
   VehicleServiceSettingDto,
   WithDriverAutoAcceptCapabilityDto,
@@ -123,15 +125,14 @@ export class VehicleSettingsService {
 
   async getOperation(tenantId: string, vehicleId: string): Promise<VehicleOperationSettingsDto> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
-    const setting = await this.prisma.vehicleOperationSetting.findUnique({
-      where: { vehicleId },
-      select: { turnaroundBufferMinutes: true, updatedAt: true },
-    });
+    const resolved = await this.resolveTurnaround(this.prisma, vehicleId);
     return {
-      turnaroundBufferMinutes: setting?.turnaroundBufferMinutes ?? 0,
+      turnaroundBufferMinutes: resolved.effective,
+      useShopDefault: resolved.own == null,
+      shopDefaultMinutes: resolved.shopDefault,
       pickupWindows: [],
       returnWindows: [],
-      updatedAt: setting?.updatedAt.toISOString() ?? null,
+      updatedAt: resolved.updatedAt?.toISOString() ?? null,
     };
   }
 
@@ -147,14 +148,124 @@ export class VehicleSettingsService {
   ): Promise<VehicleOperationSettingsDto> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
     const before = await this.getOperation(tenantId, vehicleId);
+    // NULL = theo mặc định gian hàng. App cũ không gửi cờ ⇒ vẫn ghi số riêng như trước.
+    const own = dto.useShopDefault ? null : dto.turnaroundBufferMinutes;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.vehicleOperationSetting.upsert({
         where: { vehicleId },
+        create: { id: newId(), tenantId, vehicleId, turnaroundBufferMinutes: own, updatedBy: userId },
+        update: { turnaroundBufferMinutes: own, updatedBy: userId },
+      });
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'vehicle.operation_settings.update',
+          targetType: 'vehicle',
+          targetId: vehicleId,
+          before: {
+            turnaroundBufferMinutes: before.useShopDefault ? null : before.turnaroundBufferMinutes,
+          },
+          after: { turnaroundBufferMinutes: own },
+        },
+        tx,
+      );
+    });
+
+    return this.getOperation(tenantId, vehicleId);
+  }
+
+  /**
+   * Phút chết áp cho occupancy MỚI của xe: số riêng của xe, nếu không thì mặc định gian hàng của
+   * loại xe, nếu không nữa thì 0 (không âm thầm áp 1–2 giờ).
+   */
+  async turnaroundBufferFor(db: Db, vehicleId: string): Promise<number> {
+    return (await this.resolveTurnaround(db, vehicleId)).effective;
+  }
+
+  private async resolveTurnaround(
+    db: Db,
+    vehicleId: string,
+  ): Promise<{
+    own: number | null;
+    shopDefault: number | null;
+    effective: number;
+    updatedAt: Date | null;
+  }> {
+    const vehicle = await db.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: {
+        tenantId: true,
+        vehicleType: true,
+        operationSettings: { select: { turnaroundBufferMinutes: true, updatedAt: true }, take: 1 },
+      },
+    });
+    if (!vehicle) return { own: null, shopDefault: null, effective: 0, updatedAt: null };
+    const setting = vehicle.operationSettings[0] ?? null;
+    const own = setting?.turnaroundBufferMinutes ?? null;
+    const shopDefault =
+      (
+        await db.tenantOperationDefault.findUnique({
+          where: {
+            tenantId_vehicleType: { tenantId: vehicle.tenantId, vehicleType: vehicle.vehicleType },
+          },
+          select: { turnaroundBufferMinutes: true },
+        })
+      )?.turnaroundBufferMinutes ?? null;
+    return {
+      own,
+      shopDefault,
+      effective: own ?? shopDefault ?? 0,
+      updatedAt: setting?.updatedAt ?? null,
+    };
+  }
+
+  // ── Mặc định vận hành của gian hàng (06/11/2026) ─────────────────────────
+
+  async getShopOperationDefaults(
+    tenantId: string,
+    vehicleType: string,
+  ): Promise<ShopOperationDefaultsDto> {
+    const [row, total, overridden] = await this.prisma.$transaction([
+      this.prisma.tenantOperationDefault.findUnique({
+        where: { tenantId_vehicleType: { tenantId, vehicleType } },
+        select: { turnaroundBufferMinutes: true, updatedAt: true },
+      }),
+      this.prisma.vehicle.count({ where: { tenantId, vehicleType, deletedAt: null } }),
+      this.prisma.vehicleOperationSetting.count({
+        where: {
+          tenantId,
+          turnaroundBufferMinutes: { not: null },
+          vehicle: { vehicleType, deletedAt: null },
+        },
+      }),
+    ]);
+    return {
+      vehicleType,
+      turnaroundBufferMinutes: row?.turnaroundBufferMinutes ?? null,
+      inheritingVehicles: Math.max(0, total - overridden),
+      overriddenVehicles: overridden,
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+    };
+  }
+
+  /** Áp cho lịch giữ MỚI của mọi xe đang theo mặc định; occupancy đã có giữ nguyên (ADR 0006). */
+  async saveShopOperationDefaults(
+    tenantId: string,
+    vehicleType: string,
+    userId: string,
+    dto: SaveShopOperationDefaultsDto,
+  ): Promise<ShopOperationDefaultsDto> {
+    const before = await this.getShopOperationDefaults(tenantId, vehicleType);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenantOperationDefault.upsert({
+        where: { tenantId_vehicleType: { tenantId, vehicleType } },
         create: {
           id: newId(),
           tenantId,
-          vehicleId,
+          vehicleType,
           turnaroundBufferMinutes: dto.turnaroundBufferMinutes,
           updatedBy: userId,
         },
@@ -165,26 +276,16 @@ export class VehicleSettingsService {
           tenantId,
           actorUserId: userId,
           actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-          action: 'vehicle.operation_settings.update',
-          targetType: 'vehicle',
-          targetId: vehicleId,
-          before: { turnaroundBufferMinutes: before.turnaroundBufferMinutes },
-          after: { turnaroundBufferMinutes: dto.turnaroundBufferMinutes },
+          action: 'tenant.operation_defaults.update',
+          targetType: 'tenant',
+          targetId: tenantId,
+          before: { vehicleType, turnaroundBufferMinutes: before.turnaroundBufferMinutes },
+          after: { vehicleType, turnaroundBufferMinutes: dto.turnaroundBufferMinutes },
         },
         tx,
       );
     });
-
-    return this.getOperation(tenantId, vehicleId);
-  }
-
-  /** Phút chết áp cho occupancy MỚI của xe — 0 khi chưa cấu hình (không âm thầm áp 1–2 giờ). */
-  async turnaroundBufferFor(db: Db, vehicleId: string): Promise<number> {
-    const row = await db.vehicleOperationSetting.findUnique({
-      where: { vehicleId },
-      select: { turnaroundBufferMinutes: true },
-    });
-    return row?.turnaroundBufferMinutes ?? 0;
+    return this.getShopOperationDefaults(tenantId, vehicleType);
   }
 
   // ── Thiết lập theo dịch vụ ───────────────────────────────────────────────

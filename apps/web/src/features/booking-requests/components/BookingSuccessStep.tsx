@@ -139,6 +139,7 @@ export function BookingSuccessStep({
             <ShopChatButton
               shopSlug={listing.shopSlug}
               vehicleId={vehicleId}
+              tripId={receipt.id}
               publicChatOpen={listing.shopChatOpen}
               label={t('done.chatHost')}
               size="large"

@@ -110,7 +110,7 @@ export function DepositToggleCard({ settings, canEdit, saving, onChange }: Props
 }
 
 /** `null` = công tắc dùng được. Chuỗi trả về là khoá i18n dưới `locked.*`. */
-function lockReason(
+export function lockReason(
   settings: PaymentSettings,
 ): 'platform' | 'commission' | 'featureMissing' | 'notConfigured' | null {
   /*
