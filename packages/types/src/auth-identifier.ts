@@ -11,7 +11,7 @@
  * web + app native) và `apps/api` (class-validator) đều nhận cùng bộ hàm này rồi tự gắn câu lỗi
  * theo ngôn ngữ của mình.
  */
-import { VN_PHONE_PATTERN } from './phone';
+import { VN_MOBILE_PHONE_PATTERN } from './phone';
 
 /**
  * Email hợp lệ ở mức hình dạng: có local part, có domain, có TLD ≥ 2 ký tự, không khoảng trắng
@@ -64,7 +64,7 @@ export function detectLoginIdentifierKind(raw: string): LoginIdentifierKind {
   return LOGIN_IDENTIFIER_KIND.UNKNOWN;
 }
 
-/** `090 123 4567` → `0901234567`. Bỏ dấu phân tách trước khi đối chiếu `VN_PHONE_PATTERN`. */
+/** Bỏ dấu phân tách (`090 123 4567` → `0901234567`) — chỉ cho TRA CỨU, không cho phép kiểm hợp lệ (ADR 0082). */
 export function compactPhoneInput(raw: string): string {
   return raw.trim().replace(PHONE_SEPARATORS, '');
 }
@@ -72,9 +72,9 @@ export function compactPhoneInput(raw: string): string {
 /**
  * Chuỗi này có dùng để đăng nhập được không.
  *
- * SĐT vẫn phải đúng `VN_PHONE_PATTERN` (`0xxxxxxxxx` / `+84xxxxxxxxx`) — cùng một luật với ô SĐT
- * lúc đăng ký, để không có chuyện đăng ký một dạng rồi đăng nhập lại phải gõ dạng khác. Dấu
- * cách/chấm/gạch được bỏ qua vì đó là cách người ta chép số từ danh bạ, không phải một số khác.
+ * SĐT phải đúng `VN_MOBILE_PHONE_PATTERN` — cùng luật với ô SĐT lúc đăng ký (ADR 0082): di động
+ * 10 số, `0…` / `84…` / `+84…`, CHỈ chữ số và `+` đầu. Ô nhập đã tự lọc dấu cách lúc gõ/dán
+ * (`sanitizePhoneInput`), nên chuỗi còn dấu cách tới đây là chuỗi không đi qua ô nhập — chặn.
  */
 export function isValidLoginIdentifier(raw: string): boolean {
   const trimmed = raw.trim();
@@ -84,7 +84,7 @@ export function isValidLoginIdentifier(raw: string): boolean {
     case LOGIN_IDENTIFIER_KIND.EMAIL:
       return EMAIL_PATTERN.test(trimmed);
     case LOGIN_IDENTIFIER_KIND.PHONE:
-      return VN_PHONE_PATTERN.test(compactPhoneInput(trimmed));
+      return VN_MOBILE_PHONE_PATTERN.test(trimmed);
     default:
       return false;
   }

@@ -16,7 +16,7 @@ import {
   TENANT_CUSTOMER_RISK_LEVEL_VALUES,
   VEHICLE_TYPE_VALUES,
   VN_PHONE_PATTERN,
-  compactPhoneInput,
+  normalizeVnPhoneInput,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -73,7 +73,7 @@ const optionalTrimmedText = ({ value }: { value: unknown }) => {
 /** Như trên, và bỏ dấu cách/chấm/gạch của SĐT chép từ danh bạ (`090 123 4567`) trước khi so mẫu. */
 const optionalPhoneInput = ({ value }: { value: unknown }) => {
   const text = optionalTrimmedText({ value });
-  return typeof text === 'string' ? compactPhoneInput(text) : text;
+  return typeof text === 'string' ? normalizeVnPhoneInput(text) : text;
 };
 
 /**

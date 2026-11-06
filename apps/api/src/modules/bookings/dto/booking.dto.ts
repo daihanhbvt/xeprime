@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_HANDOVER_PLACE_VALUES,
@@ -733,11 +734,9 @@ export class ExternalDriverInputDto {
     example: '0901234567',
     pattern: VN_PHONE_PATTERN.source,
     description:
-      'SĐT di động VN (`0xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua) — khách gọi số này để gặp người đón',
+      'SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) — khách gọi số này để gặp người đón',
   })
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.replace(/[\s.-]/g, '') : value,
-  )
+  @PhoneInput()
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;

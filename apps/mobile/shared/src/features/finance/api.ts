@@ -16,6 +16,7 @@ export {
   vehicleProfitParams,
   customerRevenueParams,
   debtFiltersToParams,
+  debtScopeToParams,
   RECEIPTS_DEFAULT_LIMIT,
 } from '@/api/finance/api';
 
@@ -25,6 +26,7 @@ export type {
   CustomerRevenue,
   DebtFilters,
   DebtItem,
+  DebtSummary,
   FinanceCategory,
   FinanceCategoryBreakdown,
   FinanceCategoryBreakdownItem,

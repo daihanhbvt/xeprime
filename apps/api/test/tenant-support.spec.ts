@@ -1810,7 +1810,7 @@ describe('Đợt 2A — màn đọc của gian hàng trong phiên', () => {
         tenantId: ids.packageTenant,
         fullName: 'Nguyễn Văn Khách',
         phone: '0912345678',
-        normalizedPhone: '84912345678',
+        normalizedPhone: '0912345678',
         email: 'khach.that@example.com',
         address: '12 Ngõ Riêng Tư, Hà Nội',
         riskLevel: TENANT_CUSTOMER_RISK_LEVEL.WATCHLIST,

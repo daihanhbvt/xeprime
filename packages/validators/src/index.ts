@@ -58,7 +58,8 @@ import {
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
-  VN_PHONE_PATTERN,
+  isVnMobilePhoneInput,
+  isVnPhoneInput,
 } from '@xeprime/types';
 
 export {
@@ -66,6 +67,9 @@ export {
   requiredPhoneSchema,
   buildPhoneSchema,
   buildRequiredPhoneSchema,
+  buildMobilePhoneSchema,
+  buildRequiredMobilePhoneSchema,
+  requiredMobilePhoneSchema,
   type PhoneSchemaLabels,
 } from './phone';
 
@@ -522,7 +526,9 @@ export const vehicleSourceFormSchema = yup.object({
       is: (value: string) => value === 'rented' || value === 'partnership',
       then: (s) => s.required('ownerNameRequired'),
     }),
-  ownerPhone: optionalText(30),
+  // SĐT liên hệ của chủ xe gốc — cùng luật mọi ô SĐT liên hệ (ADR 0082). Viết tại chỗ vì
+  // `contactPhoneRule` khai ở dưới (const — dùng trước khai báo là lỗi lúc nạp module).
+  ownerPhone: yup.string().trim().default('').test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   ownerEmail: yup.string().trim().email('ownerEmailInvalid').max(160).default(''),
   monthlyRent: optionalMoney.when('sourceType', {
     is: 'rented',
@@ -826,7 +832,7 @@ const contactPhoneRule = yup
   .string()
   .trim()
   .default('')
-  .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true });
+  .test('vn-phone', 'phoneInvalid', isVnPhoneInput);
 
 /**
  * Xã/phường BẮT BUỘC — cho địa chỉ trở thành CHI NHÁNH (nơi khách tới nhận xe). ADR 0077 ghi đè
@@ -986,7 +992,13 @@ export const partnerSignupSchema = yup.object({
    * chủ xe của wizard đang đòi (form một trang thay bước đó, không được hỏi ít hơn).
    */
   addressLine: addressShape.addressLine.required('addressLineRequired'),
-  phone: contactPhoneRule.required('phoneRequired'),
+  // SĐT TÀI KHOẢN đối tác — xác minh OTP, nên chỉ di động (ADR 0082).
+  phone: yup
+    .string()
+    .trim()
+    .default('')
+    .required('phoneRequired')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput),
   email: yup.string().trim().default('').required('emailRequired').email('emailInvalid'),
   /** Mã OTP đã xác thực — gửi kèm `POST /auth/register` (ADR 0060). */
   otpCode: yup.string().trim().default(''),
@@ -1257,7 +1269,7 @@ export const accountPhoneChangeSchema = yup.object({
     .string()
     .trim()
     .required('phoneRequired')
-    .matches(VN_PHONE_PATTERN, 'phoneInvalid')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput)
     .default(''),
 });
 
@@ -1291,7 +1303,7 @@ export const customerFormSchema = yup.object({
     .trim()
     .required('fullNameRequired')
     .max(TENANT_CUSTOMER_FIELD_MAX.FULL_NAME, 'fullNameMax'),
-  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  phone: yup.string().trim().required('phoneRequired').test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   email: yup
     .string()
     .trim()
@@ -1387,7 +1399,11 @@ export type InviteMemberValues = yup.InferType<typeof inviteMemberSchema>;
  * Message là MÃ — `useValidationResolver` tra `Drivers.form.errors.*`.
  */
 export const inviteDriverSchema = yup.object({
-  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  phone: yup
+    .string()
+    .trim()
+    .required('phoneRequired')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput),
   name: yup.string().trim().required('nameRequired').max(255),
   driverType: yup
     .mixed<DriverType>()

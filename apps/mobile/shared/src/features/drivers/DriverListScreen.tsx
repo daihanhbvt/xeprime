@@ -1,19 +1,26 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { nowInAppTz } from '@xeprime/domain';
-import { RefreshControl, type ListRenderItem } from 'react-native';
+import { RefreshControl, ScrollView, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  DRIVER_LICENCE_CHECK_FILTER,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_FILTER_CLOSED,
   DRIVER_LINK_STATUS_VALUES,
+  DRIVER_LIST_SORT,
+  DRIVER_LIST_SORT_VALUES,
+  DRIVER_OPERATION_FILTER,
+  DRIVER_OPERATION_FILTER_VALUES,
   DRIVER_TYPE_VALUES,
   PERMISSION,
 } from '@xeprime/types';
 import type { InviteDriverValues } from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -41,6 +48,7 @@ import { EditDriverSheet, InviteDriverSheet } from './components/DriverFormSheet
 import { DriverWageSettingsCard } from './components/DriverWageSettingsCard';
 import { DRIVER_DETAIL_TAB } from './DriverDetailScreen';
 import {
+  useDriverSummary,
   useDriversPage,
   useEndDriver,
   useResumeDriver,
@@ -55,6 +63,19 @@ const SEARCH_DEBOUNCE_MS = 300;
  * liên kết CÒN MỞ" (mặc định của server), với loại tài xế là "mọi loại".
  */
 const FILTER_ALL = 'all';
+
+/**
+ * Dải số đếm đầu màn — lối lọc nhanh của CÙNG tham số `linkStatus` / `licenceCheck` với ô
+ * "Trạng thái" (web `DriversPage`). Mỗi ô bằng tổng danh sách khi bấm vào nó.
+ */
+const SUMMARY_CHIPS = [
+  { key: 'open', label: 'summary.all', linkStatus: FILTER_ALL, licenceCheck: false },
+  { key: 'active', label: 'summary.active', linkStatus: DRIVER_LINK_STATUS.ACTIVE, licenceCheck: false },
+  { key: 'invited', label: 'summary.invited', linkStatus: DRIVER_LINK_STATUS.INVITED, licenceCheck: false },
+  { key: 'licenceCheck', label: 'summary.licenceCheck', linkStatus: FILTER_ALL, licenceCheck: true },
+  { key: 'suspended', label: 'summary.suspended', linkStatus: DRIVER_LINK_STATUS.SUSPENDED, licenceCheck: false },
+  { key: 'closed', label: 'summary.closed', linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED, licenceCheck: false },
+] as const;
 
 type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
@@ -84,6 +105,10 @@ export function DriverListScreen() {
   const [search, setSearch] = useState('');
   const [linkStatus, setLinkStatus] = useState<string>(FILTER_ALL);
   const [driverType, setDriverType] = useState<string>(FILTER_ALL);
+  const [operation, setOperation] = useState<string>(FILTER_ALL);
+  const [licenceCheck, setLicenceCheck] = useState(false);
+  // Mặc định của MÀN là mới nhất (khác mặc định server) — như web.
+  const [sort, setSort] = useState<string>(DRIVER_LIST_SORT.NEWEST);
   const [page, setPage] = useState(FIRST_PAGE);
   // Tháng thống kê tiền công (ADR 0075) — `YYYY-MM` giờ VN, mặc định tháng hiện tại (như web).
   const thisMonth = nowInAppTz().format(MONTH_PERIOD_FORMAT);
@@ -97,11 +122,18 @@ export function DriverListScreen() {
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
 
+  const sharedFilters = {
+    ...(trimmedSearch ? { q: trimmedSearch } : {}),
+    ...(driverType === FILTER_ALL ? {} : { driverType }),
+    ...(operation === FILTER_ALL ? {} : { operation }),
+  };
+  const summary = useDriverSummary(sharedFilters, canView);
   const query = useDriversPage(
     {
-      ...(trimmedSearch ? { q: trimmedSearch } : {}),
+      ...sharedFilters,
       ...(linkStatus === FILTER_ALL ? {} : { linkStatus }),
-      ...(driverType === FILTER_ALL ? {} : { driverType }),
+      ...(licenceCheck ? { licenceCheck: DRIVER_LICENCE_CHECK_FILTER } : {}),
+      sort,
       ...(month === thisMonth ? {} : { month }),
       page,
     },
@@ -122,7 +154,11 @@ export function DriverListScreen() {
   }, []);
 
   const changeFilter = useCallback((groupKey: string, value: string) => {
-    if (groupKey === 'linkStatus') setLinkStatus(value);
+    if (groupKey === 'linkStatus') {
+      setLinkStatus(value);
+      setLicenceCheck(false);
+    } else if (groupKey === 'operation') setOperation(value);
+    else if (groupKey === 'sort') setSort(value);
     else setDriverType(value);
     setPage(FIRST_PAGE);
   }, []);
@@ -141,7 +177,31 @@ export function DriverListScreen() {
             value,
             label: domainLabel('driverLinkStatus', value),
           })),
+          { value: DRIVER_LINK_STATUS_FILTER_CLOSED, label: t('filters.closed') },
         ],
+      },
+      {
+        key: 'operation',
+        label: t('filters.operation'),
+        value: operation,
+        resetValue: FILTER_ALL,
+        options: [
+          { value: FILTER_ALL, label: t('filters.allOperations') },
+          ...DRIVER_OPERATION_FILTER_VALUES.map((value) => ({
+            value,
+            label: t(value === DRIVER_OPERATION_FILTER.ON_TRIP ? 'filters.onTrip' : 'filters.idle'),
+          })),
+        ],
+      },
+      {
+        key: 'sort',
+        label: t('filters.sort.label'),
+        value: sort,
+        resetValue: DRIVER_LIST_SORT.NEWEST,
+        options: DRIVER_LIST_SORT_VALUES.map((value) => ({
+          value,
+          label: t(`filters.sort.${value}`),
+        })),
       },
       {
         key: 'driverType',
@@ -157,7 +217,7 @@ export function DriverListScreen() {
         ],
       },
     ],
-    [domainLabel, driverType, linkStatus, t],
+    [domainLabel, driverType, linkStatus, operation, sort, t],
   );
 
   const feedback = useCallback(
@@ -227,7 +287,11 @@ export function DriverListScreen() {
   );
 
   const filtered =
-    linkStatus !== FILTER_ALL || driverType !== FILTER_ALL || trimmedSearch.length > 0;
+    linkStatus !== FILTER_ALL ||
+    driverType !== FILTER_ALL ||
+    operation !== FILTER_ALL ||
+    licenceCheck ||
+    trimmedSearch.length > 0;
   const endingInvite = ending?.linkStatus === DRIVER_LINK_STATUS.INVITED;
 
   if (!permissions.isLoading && !canView) {
@@ -267,6 +331,26 @@ export function DriverListScreen() {
           action={inviteButton}
           summary={
             <YStack gap={layout.inline}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <YStack fd="row" gap={layout.inline}>
+                  {SUMMARY_CHIPS.map((chip) => (
+                    <Chip
+                      key={chip.key}
+                      label={`${t(chip.label)} · ${summary.data?.[chip.key] ?? 0}`}
+                      selected={
+                        chip.licenceCheck
+                          ? licenceCheck
+                          : !licenceCheck && linkStatus === chip.linkStatus
+                      }
+                      onPress={() => {
+                        setLinkStatus(chip.linkStatus);
+                        setLicenceCheck(chip.licenceCheck);
+                        setPage(FIRST_PAGE);
+                      }}
+                    />
+                  ))}
+                </YStack>
+              </ScrollView>
               <DriverWageSettingsCard />
               <MonthPeriodField
                 label={t('wage.month.label')}

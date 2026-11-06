@@ -14,6 +14,8 @@ export const VEHICLE_EDIT_TAB = {
   PRICING: 'pricing',
   SOURCE: 'source',
   DOCUMENTS: 'documents',
+  /** Lịch sử chuyến của xe — mục thứ tư của nhóm "Hồ sơ xe" bên web (`vehicle-edit-nav.ts`). */
+  TRIP_HISTORY: 'trip-history',
   MAINTENANCE: 'maintenance',
   /**
    * Vận hành & điều kiện thuê — tab cũ của web, nay là BÍ DANH của "Thời gian giao nhận"

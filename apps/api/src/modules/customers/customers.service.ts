@@ -1193,7 +1193,9 @@ function searchSql(raw: string | undefined): Prisma.Sql | null {
   const phoneParts: Prisma.Sql[] = [];
   if (digits.length >= 3) {
     // Cả dạng đã chuẩn hoá (gõ `0901…`) lẫn dãy số thô (gõ đuôi số `234567`).
-    for (const pattern of new Set([`%${normalizePhone(digits)}%`, `%${digits}%`])) {
+    // Gõ dở theo kiểu quốc tế (`84901…`) — dạng lưu là `0901…` (ADR 0082).
+    const local = digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
+    for (const pattern of new Set([`%${normalizePhone(digits)}%`, `%${local}%`, `%${digits}%`])) {
       phoneParts.push(Prisma.sql`c.normalized_phone LIKE ${pattern}`);
     }
   }
@@ -1331,7 +1333,7 @@ function toListItem(row: CustomerListRow, canViewFinance: boolean): TenantCustom
 function normalizeVnPhoneOrNull(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
   const normalized = normalizePhone(raw);
-  return /^84\d{8,12}$/.test(normalized) ? normalized : null;
+  return /^0\d{8,12}$/.test(normalized) ? normalized : null;
 }
 
 function customerNotFound(): NotFoundException {

@@ -1,9 +1,12 @@
 import { memo, useCallback, type ReactNode } from 'react';
+import { Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  BOOKING_STATUS,
   BOOKING_STATUS_META,
+  isCancellationParty,
   DRIVER_ASSIGNMENT_STATUS_META,
   HANDOVER_STATUS,
   HANDOVER_STATUS_META,
@@ -13,7 +16,18 @@ import {
   type BookingStatus,
   type StatusColor,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from '@xeprime/domain';
+import {
+  isLateReturn,
+  LIST_SEPARATOR,
+  PICKUP_URGENCY,
+  pickupUrgency,
+  rentalProgress,
+  telHref,
+  zaloHref,
+  type PickupUrgency,
+} from '@xeprime/domain';
+import { IconButton } from '@/components/ui/IconButton';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
@@ -67,10 +81,16 @@ const AWAITING_PICKUP_HANDOVER_LABEL_KEY = {
 function BookingCardImpl({
   booking,
   onPress,
+  onExtend,
   awaitingPickup = false,
 }: {
   booking: BookingListItem;
   onPress: (booking: BookingListItem) => void;
+  /**
+   * "Gia hạn" (ADR 0077) — nơi gọi chỉ truyền khi người dùng có `bookings.update`. Thẻ tự soát
+   * phần còn lại: đơn DÀI HẠN đang thuê, đặt qua chợ (web `BookingCard.extendable`).
+   */
+  onExtend?: (booking: BookingListItem) => void;
   /**
    * Thẻ đang phục vụ nhóm việc "Chờ giao xe".
    *
@@ -105,6 +125,24 @@ function BookingCardImpl({
    * này nằm trong một danh sách dài.
    */
   const open = useCallback(() => onPress(booking), [onPress, booking]);
+  const extend = useCallback(() => onExtend?.(booking), [onExtend, booking]);
+  const tBoard = useTranslations('Bookings.board');
+  const tExtension = useTranslations('Bookings.extension');
+  const tContact = useTranslations('BookingRequests.actions');
+  const extendable =
+    onExtend !== undefined &&
+    status === BOOKING_STATUS.ACTIVE &&
+    booking.serviceType === SERVICE_TYPE.LONG_TERM &&
+    booking.bookingRequestId != null;
+  const timeline = awaitingPickup ? null : timelineOf(booking, status, tBoard, fmt);
+  const tel = telHref(booking.customerPhone);
+  const zalo = zaloHref(booking.customerPhone);
+  const toneColor: Record<TimelineTone, string> = {
+    muted: colors.textMuted,
+    warning: colors.warning,
+    danger: colors.danger,
+    success: colors.success,
+  };
 
   return (
     <Card
@@ -195,6 +233,55 @@ function BookingCardImpl({
               </FactLine>
             )}
           </YStack>
+
+          {/*
+            Thanh tiến độ chuyến + dòng trạng thái (Figma "All Request", 02/11/2026): đang thuê thì đã
+            đi bao nhiêu % / còn bao lâu (đỏ khi quá giờ trả), hoàn tất thì đầy, huỷ thì rỗng.
+          */}
+          {timeline ? (
+            <YStack gap={space.xs}>
+              <ProgressBar percent={timeline.percent} tone={timeline.bar} size="sm" />
+              <Text col={toneColor[timeline.tone]} fos={fontSize.label} numberOfLines={1}>
+                {timeline.text}
+              </Text>
+            </YStack>
+          ) : null}
+
+          {/* Liên hệ khách (gọi / Zalo) + "Gia hạn" — web `CustomerContactButtons` + nút gia hạn. */}
+          {tel || zalo || extendable ? (
+            <XStack ai="center" gap={space.xs}>
+              {tel && booking.customerPhone ? (
+                <IconButton
+                  icon="call-outline"
+                  label={tContact('callAria', {
+                    name: booking.customerName,
+                    phone: booking.customerPhone,
+                  })}
+                  tone="accent"
+                  onPress={() => void Linking.openURL(tel)}
+                />
+              ) : null}
+              {zalo ? (
+                <IconButton
+                  icon="chatbubbles-outline"
+                  label={tContact('zalo')}
+                  tone="accent"
+                  onPress={() => void Linking.openURL(zalo)}
+                />
+              ) : null}
+              <YStack f={1} />
+              {extendable ? (
+                <Button
+                  label={tExtension('action')}
+                  icon="sync-outline"
+                  variant="outline"
+                  size="sm"
+                  block={false}
+                  onPress={extend}
+                />
+              ) : null}
+            </XStack>
+          ) : null}
 
           <YStack height={1} bg={colors.borderSubtle} />
 
@@ -368,3 +455,87 @@ function FactLine({
 }
 
 export const BookingCard = memo(BookingCardImpl);
+
+type TimelineTone = 'muted' | 'warning' | 'danger' | 'success';
+
+/** Lượt "sắp trả" — dòng trạng thái chuyển cam khi còn dưới 2 giờ (web `RETURN_SOON_MINUTES`). */
+const RETURN_SOON_MINUTES = 120;
+
+/**
+ * Thanh + dòng trạng thái của thẻ — chép `progressOf` / `statusLine` của web `BookingCard`, chia
+ * theo TRẠNG THÁI đơn (app không chia thẻ theo ngăn như cột trái web).
+ */
+function timelineOf(
+  booking: BookingListItem,
+  status: BookingStatus,
+  t: ReturnType<typeof useTranslations<'Bookings.board'>>,
+  fmt: ReturnType<typeof useAppFormat>,
+): {
+  percent: number;
+  bar: 'active' | 'success' | 'exception';
+  text: string;
+  tone: TimelineTone;
+} {
+  if (status === BOOKING_STATUS.ACTIVE) {
+    const { percent, remainingMinutes, overdueMinutes } = rentalProgress(
+      booking.actualPickupAt ?? booking.pickupAt,
+      booking.returnAt,
+    );
+    if (overdueMinutes > 0) {
+      return {
+        percent: 100,
+        bar: 'exception',
+        text: t('overdueReturn', { duration: fmt.minutesDuration(overdueMinutes) }),
+        tone: 'danger',
+      };
+    }
+    return {
+      percent,
+      bar: 'active',
+      // `progress` gỡ ở web 05/11/2026 — thẻ mới chỉ nói phần còn lại, thanh tiến độ nói phần trăm.
+      text: t('remaining', { remaining: fmt.minutesDuration(remainingMinutes) }),
+      tone: remainingMinutes <= RETURN_SOON_MINUTES ? 'warning' : 'muted',
+    };
+  }
+  if (status === BOOKING_STATUS.COMPLETED) {
+    const late = isLateReturn(booking.returnAt, booking.actualReturnAt);
+    return {
+      percent: 100,
+      bar: 'success',
+      text: late ? t('returnedLate') : t('returnedOnTime'),
+      tone: late ? 'warning' : 'success',
+    };
+  }
+  if (status === BOOKING_STATUS.CANCELLED || status === BOOKING_STATUS.NO_SHOW) {
+    const party = booking.cancellationParty;
+    return {
+      percent: 0,
+      bar: 'exception',
+      text:
+        status === BOOKING_STATUS.NO_SHOW
+          ? t('noShow')
+          : party && isCancellationParty(party)
+            ? t(`cancelledBy.${party}`)
+            : t('cancelled'),
+      tone: 'danger',
+    };
+  }
+  const urgency = pickupUrgency(booking.pickupAt);
+  const time = fmt.time(booking.pickupAt);
+  return {
+    percent: 0,
+    bar: 'active',
+    text:
+      urgency === PICKUP_URGENCY.OVERDUE
+        ? t('pickupOverdue', { time })
+        : urgency === PICKUP_URGENCY.TODAY
+          ? t('pickupToday', { time })
+          : t('pickupUpcoming', { date: fmt.dayMonth(booking.pickupAt), time }),
+    tone:
+      urgency === PICKUP_URGENCY.OVERDUE
+        ? 'danger'
+        : urgency === PICKUP_URGENCY.TODAY
+          ? 'warning'
+          : 'muted',
+  };
+}

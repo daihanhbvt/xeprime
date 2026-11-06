@@ -1,18 +1,21 @@
-import { isSameVnPhone, normalizeVnPhone, toLocalVnPhone } from '@xeprime/types';
+import { Transform } from 'class-transformer';
+import {
+  isSameVnPhone,
+  normalizeVnPhone,
+  normalizeVnPhoneInput,
+  toIntlVnPhone,
+  toLocalVnPhone,
+} from '@xeprime/types';
 
 /**
  * Chuẩn hoá và hiển thị số điện thoại Việt Nam.
  *
- * Hệ đang lưu SĐT ở HAI dạng, có chủ đích và không gộp được:
- *  - `users.phone`: dạng `84xxxxxxxxx` (đi qua `normalizePhone` khi đăng nhập/OTP — khớp
- *    định dạng eSMS legacy, và là cột `@unique` nên phải chuẩn hoá trước khi ghi).
- *  - `bookings.customer_phone` / `booking_requests.customer_phone`: **giữ nguyên như shop/khách
- *    gõ** (`0xxxxxxxxx`, `+84…`, có dấu cách…) — đây là dữ liệu nghiệp vụ của shop, không phải
- *    định danh đăng nhập.
+ * Từ ADR 0082 MỌI cột SĐT lưu MỘT dạng: nội địa `0xxxxxxxxx`. Client gửi `0…`, `84…`, `+84…`
+ * (kể cả dấu cách/chấm/gạch) đều được — `@PhoneInput()` quy về `0…` ngay ở mép DTO, trước cả
+ * phép kiểm `VN_PHONE_PATTERN`, nên service không bao giờ thấy dạng khác.
  *
- * Hệ quả: một ô "tra theo SĐT" chỉ so khớp một dạng thì gần như luôn trả về rỗng. Mọi chỗ tra
- * cứu dùng `phoneLookupVariants`, mọi chỗ hiển thị dùng `toLocalPhone` — để cùng một người
- * trông giống nhau trên mọi màn hình.
+ * `phoneLookupVariants` vẫn giữ để tra cứu khớp cả dữ liệu cũ còn sót (hàng đụng số mà migration
+ * 20261106090000 để nguyên cho người vận hành xử lý).
  */
 
 /**
@@ -24,6 +27,26 @@ export const normalizePhone = normalizeVnPhone;
 export const toLocalPhone = toLocalVnPhone;
 
 /**
+ * Transform DTO: `0…` / `84…` / `+84…` (CHỈ chữ số + `+` đầu) → `0…`. Chuỗi có dấu cách / chấm /
+ * chữ đi nguyên tới `@Matches` để bị chặn (ADR 0082). Giá trị không phải chuỗi giữ nguyên.
+ */
+export const phoneInputTransform = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' ? normalizeVnPhoneInput(value) : value;
+
+/** Như `phoneInputTransform`, nhưng ô TUỲ CHỌN: chuỗi rỗng ⇒ `null` để `@IsOptional` bỏ qua. */
+export const optionalPhoneInputTransform = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' && value.trim() === '' ? null : phoneInputTransform({ value });
+
+/**
+ * Đặt TRƯỚC `@Matches(VN_PHONE_PATTERN)` ở mọi ô SĐT của DTO — nhận `0…`/`84…`/`+84…`, ghi
+ * xuống luôn là `0…` (ADR 0082).
+ */
+export const PhoneInput = (): PropertyDecorator => Transform(phoneInputTransform);
+
+/** `@PhoneInput()` cho ô tuỳ chọn — `''` thành `null`. */
+export const OptionalPhoneInput = (): PropertyDecorator => Transform(optionalPhoneInputTransform);
+
+/**
  * Mọi dạng lưu có thể có của một SĐT người dùng gõ vào ô tra cứu, để dùng với `{ in: [...] }`.
  *
  * Vẫn là so khớp CHÍNH XÁC (không `contains`): nhân viên hỗ trợ có sẵn số khách đọc cho, còn
@@ -32,15 +55,16 @@ export const toLocalPhone = toLocalVnPhone;
 export function phoneLookupVariants(raw: string): string[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
-  return [...new Set([trimmed, normalizePhone(trimmed), toLocalPhone(trimmed)])];
+  // Dạng `84…` chỉ để khớp hàng cũ migration chưa đổi được (đụng số) — dạng lưu là `0…`.
+  return [...new Set([trimmed, normalizePhone(trimmed), toIntlVnPhone(trimmed)])];
 }
 
 /**
  * SĐT TÀI KHOẢN của khách để hiện CẠNH SĐT liên hệ của một chuyến — `null` khi hai số là một.
  *
  * Từ ADR 0063 khách để lại được một SĐT liên hệ khác số tài khoản mà không qua OTP; chủ xe phải
- * thấy cả số đã xác minh. So bằng `isSameVnPhone` (`users.phone` lưu `84…`, liên hệ lưu `0…`) để
- * cùng một số viết hai kiểu không bị hiện thành hai số. Trả về dạng hiển thị `0xxxxxxxxx`.
+ * thấy cả số đã xác minh. So bằng `isSameVnPhone` để dữ liệu cũ viết hai kiểu không bị hiện
+ * thành hai số. Trả về dạng hiển thị `0xxxxxxxxx`.
  *
  * Gác quyền xem KHÔNG nằm ở đây: nơi gọi chỉ gọi khi chủ xe đã được thấy liên hệ (ADR 0056).
  */

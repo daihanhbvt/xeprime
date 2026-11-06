@@ -38,7 +38,7 @@ function mockFetch(body: unknown, status = 200) {
 describe('EsmsOtpProvider', () => {
   it('gửi đúng câu mẫu của môi trường, brandname CSKH (SmsType 2)', async () => {
     const fetchFn = mockFetch({ CodeResult: '100' });
-    await new EsmsOtpProvider(config).send('84901234567', '482913');
+    await new EsmsOtpProvider(config).send('0901234567', '482913');
 
     const sent = JSON.parse((fetchFn.mock.calls[0] as [string, { body: string }])[1].body);
     expect(sent).toMatchObject({
@@ -51,6 +51,6 @@ describe('EsmsOtpProvider', () => {
 
   it('CodeResult khác 100 (vd 146 lệch mẫu) ⇒ ném lỗi, không nuốt', async () => {
     mockFetch({ CodeResult: '146', ErrorMessage: 'Template not registered' });
-    await expect(new EsmsOtpProvider(config).send('84901234567', '482913')).rejects.toThrow();
+    await expect(new EsmsOtpProvider(config).send('0901234567', '482913')).rejects.toThrow();
   });
 });

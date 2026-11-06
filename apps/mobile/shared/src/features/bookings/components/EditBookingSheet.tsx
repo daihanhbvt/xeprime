@@ -11,7 +11,7 @@ import {
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
-  VN_PHONE_PATTERN,
+  isVnPhoneInput,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -49,7 +49,7 @@ function buildEditSchema(labels: { name: string; phone: string }) {
       .string()
       .trim()
       .default('')
-      .matches(VN_PHONE_PATTERN, { message: labels.phone, excludeEmptyString: true }),
+      .test('vn-phone', labels.phone, isVnPhoneInput),
     depositAmount: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))

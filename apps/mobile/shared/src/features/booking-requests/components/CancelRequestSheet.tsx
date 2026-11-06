@@ -6,7 +6,6 @@ import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
   CANCELLATION_REASON_CATEGORY_VALUES,
-  cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { REASON_MAX } from '@/lib/reason';
@@ -18,8 +17,10 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
+import { useAppFormat } from '@/i18n/use-app-format';
 import type { BookingRequestDecisionTarget } from '../api';
+import { DecisionFooter, DecisionLead, DecisionWarning, richBold } from './DecisionSheetParts';
 
 type CancelValues = { reason: string };
 
@@ -57,23 +58,23 @@ export function CancelRequestSheet({
   const colors = useColors();
   const t = useTranslations('BookingRequests.cancel');
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
 
   const [category, setCategory] = useState<CancellationReasonCategory | null>(null);
   const [categoryTouched, setCategoryTouched] = useState(false);
-  const needsText = category !== null && cancellationReasonNeedsText(category);
+  /** Mốc khách phải trả xong — nơi gọi hẹp hơn (không mang mốc) thì câu dẫn bỏ giờ. */
+  const holdExpiresAt = (request as { holdExpiresAt?: string | null }).holdExpiresAt ?? null;
 
   /*
-   * Ô chữ chỉ bắt buộc khi chọn "Lý do khác" — mọi nhóm khác đã tự nói đủ cho khách hiểu. Schema
-   * dựng lại theo `needsText` để câu lỗi xuất hiện đúng lúc, không phải lúc nào cũng đỏ.
+   * Web 05/11/2026: ghi chú gửi khách BẮT BUỘC với mọi nhóm lý do — khách đọc đúng câu này trong
+   * thông báo huỷ; một nhãn nhóm trơn không cho họ biết chuyện gì đã xảy ra.
    */
   const schema = useMemo(
     () =>
       yup.object({
-        reason: needsText
-          ? yup.string().trim().required(t('reasonRequired')).max(REASON_MAX).default('')
-          : yup.string().trim().max(REASON_MAX).default(''),
+        reason: yup.string().trim().required(t('reasonRequired')).max(REASON_MAX).default(''),
       }),
-    [t, needsText],
+    [t],
   );
 
   const { control, handleSubmit } = useForm<CancelValues>({
@@ -81,11 +82,14 @@ export function CancelRequestSheet({
     defaultValues: { reason: '' },
   });
 
-  const submit = handleSubmit((values) => {
-    setCategoryTouched(true);
-    if (category === null) return;
-    onConfirm({ reasonCategory: category, reason: values.reason.trim() || undefined });
-  });
+  const submit = handleSubmit(
+    (values) => {
+      setCategoryTouched(true);
+      if (category === null) return;
+      onConfirm({ reasonCategory: category, reason: values.reason.trim() });
+    },
+    () => setCategoryTouched(true),
+  );
 
   return (
     <BottomSheet
@@ -94,39 +98,34 @@ export function CancelRequestSheet({
       title={t('title')}
       subtitle={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
       footer={
-        <Button
-          label={t('confirm')}
-          icon="close-circle-outline"
-          variant="danger"
-          loading={loading}
-          onPress={() => void submit()}
+        <DecisionFooter
+          backLabel={t('back')}
+          onBack={onClose}
+          confirm={
+            <Button
+              label={t('confirm')}
+              icon="close-circle-outline"
+              variant="danger"
+              loading={loading}
+              onPress={() => void submit()}
+            />
+          }
         />
       }
     >
-      {/*
-        Hệ quả là chữ chính trên nền cảnh báo, không phải tooltip. Người chạm nút đỏ này cần biết
-        tiền đi đâu trước khi chạm — giấu điều đó sau dấu "i" là giấu đúng thứ không được giấu.
-      */}
-      <YStack gap={space.xs} p={space.md} br={radius.md} bg={colors.warningSurface}>
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          {t('effects.vehicle')}
-        </Text>
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          {t('effects.customer')}
-        </Text>
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          {t('effects.money')}
-        </Text>
-        <XStack ai="center" gap={4}>
-          <Text col={colors.text} fos={fontSize.bodySm} flexShrink={1}>
-            {t('effects.metrics')}
-          </Text>
-          <InfoHint label={t('effects.metricsHintLabel')} content={t('effects.metricsHint')} />
-        </XStack>
-      </YStack>
+      <DecisionLead>
+        {holdExpiresAt
+          ? t.rich('subtitleWithDeadline', { b: richBold, time: fmt.dateTime(holdExpiresAt) })
+          : t.rich('subtitle', { b: richBold })}
+      </DecisionLead>
 
-      <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
+      <YStack gap={space.sm}>
         <FieldLabel label={t('categoryLabel')} required />
+        {category === null ? (
+          <Text col={colors.placeholder} fos={fontSize.bodySm}>
+            {t('categoryPlaceholder')}
+          </Text>
+        ) : null}
         <XStack gap={space.xs} flexWrap="wrap">
           {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
             <Chip
@@ -151,14 +150,30 @@ export function CancelRequestSheet({
       <TextField
         control={control}
         name="reason"
-        label={needsText ? t('reasonLabelRequired') : t('reasonLabel')}
+        label={t('reasonLabel')}
         placeholder={t('reasonPlaceholder')}
         hint={t('reasonHint')}
         multiline
         rows={4}
         maxLength={REASON_MAX}
-        required={needsText}
+        required
       />
+
+      {/*
+        Hệ quả là chữ chính trên nền cảnh báo, không phải tooltip — người chạm nút đỏ cần biết
+        điểm uy tín và tiền đi đâu TRƯỚC khi chạm (web `.warning`, 05/11/2026).
+      */}
+      <DecisionWarning>
+        <XStack ai="center" gap={4}>
+          <Text col={colors.text} fos={fontSize.bodySm} flexShrink={1}>
+            {t.rich('warning', { b: richBold })}
+          </Text>
+          <InfoHint label={t('effects.metricsHintLabel')} content={t('effects.metricsHint')} />
+        </XStack>
+        <Text col={colors.text} fos={fontSize.bodySm}>
+          {t('effects.money')}
+        </Text>
+      </DecisionWarning>
     </BottomSheet>
   );
 }

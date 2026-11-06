@@ -495,6 +495,12 @@ export const ROUTES = {
      */
     bookingsAwaitingPickup: (): Href => '/manage/bookings/awaiting-pickup',
     /**
+     * "Đơn đã kết thúc" (05/11/2026, web `BOOKINGS_ENDED`) — đơn hoàn thành / huỷ / khách không đến
+     * + yêu cầu không thành đơn. `tab` = ngăn mở sẵn (`BOOKING_HISTORY_TAB`), vắng = "Tất cả".
+     */
+    bookingsEnded: (tab?: string): Href =>
+      tab ? { pathname: '/manage/bookings/ended', params: { tab } } : '/manage/bookings/ended',
+    /**
      * Tạo đơn tại quầy. `prefill` mang tên + SĐT của một khách đã có trong sổ — cùng vai với
      * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách —
      * và có thể mang sẵn XE + KHOẢNG THUÊ khi vào từ một ô trên lịch.
@@ -618,6 +624,8 @@ export const ROUTES = {
           return { pathname: '/manage/vehicles/[id]/edit/documents', params };
         case VEHICLE_EDIT_TAB.MAINTENANCE:
           return { pathname: '/manage/vehicles/[id]/edit/maintenance', params };
+        case VEHICLE_EDIT_TAB.TRIP_HISTORY:
+          return { pathname: '/manage/vehicles/[id]/edit/trip-history', params };
         default:
           return { pathname: '/manage/vehicles/[id]/edit/information', params };
       }

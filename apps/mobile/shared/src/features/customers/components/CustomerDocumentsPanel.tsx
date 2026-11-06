@@ -55,6 +55,7 @@ import {
   useCustomerDocuments,
   useDeleteCustomerDocument,
   useInvalidateCustomers,
+  useUpdateCustomerDocument,
   useVerifyCustomerDocument,
 } from '../hooks/use-customers';
 import { customersApi, type CustomerDocument, type PresignCustomerDocumentInput } from '../api';
@@ -95,6 +96,7 @@ export function CustomerDocumentsPanel({
   const colors = useColors();
   const t = useTranslations('Customers');
   const tCommon = useTranslations('Common.actions');
+  const tDocs = useTranslations('Customers.profile.docs');
   const tStates = useTranslations('Common.states');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -111,6 +113,10 @@ export function CustomerDocumentsPanel({
 
   const [documentType, setDocumentType] = useState<string>(CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID);
   const [customTypeName, setCustomTypeName] = useState('');
+  // Chủ thẻ + số giấy tờ (02/11/2026) — tuỳ chọn, sửa lại được sau ở "Sửa thông tin".
+  const [holderName, setHolderName] = useState('');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [editing, setEditing] = useState<CustomerDocument | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [pickingExpiry, setPickingExpiry] = useState(false);
   const [pickingSource, setPickingSource] = useState(false);
@@ -150,6 +156,8 @@ export function CustomerDocumentsPanel({
             // Nhãn tự đặt chỉ có nghĩa với loại "khác" — gửi kèm loại khác bị CHECK của DB từ chối.
             customTypeName: isOtherType ? customTypeName.trim() || null : null,
             expiresAt,
+            holderName: holderName.trim() || null,
+            documentNumber: documentNumber.trim() || null,
             fileName: meta.fileName,
             // Thu hẹp về ĐÚNG union của contract; lớp chặn thật là `@IsIn` ở server.
             contentType: meta.contentType as PresignCustomerDocumentInput['contentType'],
@@ -161,6 +169,8 @@ export function CustomerDocumentsPanel({
         toast.showSuccess(t('documents.uploaded'));
         setExpiresAt(null);
         setCustomTypeName('');
+        setHolderName('');
+        setDocumentNumber('');
       } catch (err) {
         toast.showError(
           getErrorCode(err) === API_ERROR_CODE.UPLOADS_NOT_CONFIGURED
@@ -178,6 +188,8 @@ export function CustomerDocumentsPanel({
       isOtherType,
       customTypeName,
       expiresAt,
+      holderName,
+      documentNumber,
       invalidate,
       toast,
       t,
@@ -248,6 +260,18 @@ export function CustomerDocumentsPanel({
                 onChangeText={setCustomTypeName}
               />
             ) : null}
+            <TextControl
+              label={tDocs('holder')}
+              value={holderName}
+              maxLength={160}
+              onChangeText={setHolderName}
+            />
+            <TextControl
+              label={tDocs(`numberOf.${documentType}` as 'numberOf.other')}
+              value={documentNumber}
+              maxLength={60}
+              onChangeText={setDocumentNumber}
+            />
             <XStack ai="flex-end" gap={space.xs}>
               <YStack f={1} minWidth={0}>
                 <FieldBox
@@ -341,6 +365,18 @@ export function CustomerDocumentsPanel({
                     {document.uploadedByName ?? t('documents.unknownUploader')} ·{' '}
                     {fmt.date(document.createdAt)}
                   </Text>
+                  {document.holderName || document.documentNumber ? (
+                    <Text col={colors.text} fos={fontSize.label} numberOfLines={2}>
+                      {[
+                        document.holderName ? `${tDocs('holder')}: ${document.holderName}` : null,
+                        document.documentNumber
+                          ? `${tDocs(`numberOf.${document.documentType}` as 'numberOf.other')}: ${document.documentNumber}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  ) : null}
                 </YStack>
               </XStack>
 
@@ -407,6 +443,13 @@ export function CustomerDocumentsPanel({
                 ) : null}
                 {canManage && !disabled ? (
                   <IconButton
+                    icon="create-outline"
+                    label={tDocs('editInfo')}
+                    onPress={() => setEditing(document)}
+                  />
+                ) : null}
+                {canManage && !disabled ? (
+                  <IconButton
                     icon="trash-outline"
                     label={t('documents.removeLabel', { name: document.originalName })}
                     tone="danger"
@@ -418,6 +461,14 @@ export function CustomerDocumentsPanel({
           </Card>
         );
       })}
+
+      {editing ? (
+        <EditDocumentSheet
+          customerId={customerId}
+          document={editing}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
 
       <DatePickerSheet
         open={pickingExpiry}
@@ -583,5 +634,94 @@ function IconTile({
     >
       {body}
     </YStack>
+  );
+}
+
+/** "Sửa thông tin giấy tờ" — chủ thẻ / số / hạn, ảnh không đổi (web `EditDocumentDialog`, 02/11/2026). */
+function EditDocumentSheet({
+  customerId,
+  document,
+  onClose,
+}: {
+  customerId: string;
+  document: CustomerDocument;
+  onClose: () => void;
+}) {
+  const t = useTranslations('Customers.profile.docs');
+  const tCommon = useTranslations('Common.actions');
+  const fmt = useAppFormat();
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const update = useUpdateCustomerDocument();
+  const [holderName, setHolderName] = useState(document.holderName ?? '');
+  const [documentNumber, setDocumentNumber] = useState(document.documentNumber ?? '');
+  const [expiresAt, setExpiresAt] = useState<string | null>(document.expiresAt ?? null);
+  const [picking, setPicking] = useState(false);
+
+  async function submit() {
+    if (update.isPending) return;
+    try {
+      await update.mutateAsync({
+        id: customerId,
+        documentId: document.id,
+        input: {
+          holderName: holderName.trim() || null,
+          documentNumber: documentNumber.trim() || null,
+          expiresAt,
+        },
+      });
+      toast.showSuccess(t('saved'));
+      onClose();
+    } catch (err) {
+      toast.showError(errorMessage(err));
+    }
+  }
+
+  return (
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={t('dialogEdit')}
+      footer={<Button label={t('save')} loading={update.isPending} onPress={() => void submit()} />}
+    >
+      <YStack gap={space.md}>
+        <TextControl label={t('holder')} value={holderName} maxLength={160} onChangeText={setHolderName} />
+        <TextControl
+          label={t(`numberOf.${document.documentType}` as 'numberOf.other')}
+          value={documentNumber}
+          maxLength={60}
+          onChangeText={setDocumentNumber}
+        />
+        <XStack ai="flex-end" gap={space.xs}>
+          <YStack f={1} minWidth={0}>
+            <FieldBox
+              label={t('expiry')}
+              value={expiresAt ? fmt.dateKey(expiresAt) : ''}
+              placeholder={t('expiry')}
+              icon="calendar-outline"
+              onPress={() => setPicking(true)}
+            />
+          </YStack>
+          {expiresAt ? (
+            <IconButton
+              icon="close-circle-outline"
+              label={tCommon('clearValue')}
+              onPress={() => setExpiresAt(null)}
+            />
+          ) : null}
+        </XStack>
+      </YStack>
+      <DatePickerSheet
+        open={picking}
+        title={t('expiry')}
+        value={expiresAt ?? ''}
+        minDate={FORM_DATE_FLOOR}
+        onClose={() => setPicking(false)}
+        onChange={(value) => {
+          setExpiresAt(value || null);
+          setPicking(false);
+        }}
+      />
+    </BottomSheet>
   );
 }

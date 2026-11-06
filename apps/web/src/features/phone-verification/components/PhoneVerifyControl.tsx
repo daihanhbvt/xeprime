@@ -4,7 +4,7 @@ import { CheckCircleFilled } from '@ant-design/icons';
 import { Alert, Button, Input } from 'antd';
 import { useEffect, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { VN_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
+import { VN_MOBILE_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
 import styles from './PhoneVerifyControl.module.css';
@@ -48,7 +48,7 @@ export function PhoneVerifyControl<T extends FieldValues>({
     onVerifiedChange(verified);
   }, [verified, onVerifiedChange]);
 
-  const phoneValid = VN_PHONE_PATTERN.test(phone);
+  const phoneValid = VN_MOBILE_PHONE_PATTERN.test(phone.trim());
 
   return (
     <div className={styles.wrap}>

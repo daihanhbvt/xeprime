@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_STATUS_META } from '@xeprime/types';
+import { BOOKING_STATUS_META, BOOKING_STATUS_SELECTABLE_VALUES } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
 import { metaColor } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
+import { Chip } from '@/components/ui/Chip';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { DataRow } from '@/components/ui/DataRow';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { Pagination } from '@/components/ui/Pagination';
@@ -19,7 +22,9 @@ import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
-import { useCustomerBookings } from '../hooks/use-customers';
+import { useCustomerBookingHistory } from '../hooks/use-customers';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const SKELETON_ROWS = 3;
 
@@ -43,8 +48,55 @@ export function CustomerBookingHistory({
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
 
+  const tFilter = useTranslations('Customers.profile.history');
   const [page, setPage] = useState(FIRST_PAGE);
-  const { data, isLoading, isError, error, refetch } = useCustomerBookings(customerId, page);
+  /* Tìm + lọc trạng thái ở SERVER (02/11/2026, web `useCustomerBookingHistory`). */
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const q = useDebouncedValue(search, SEARCH_DEBOUNCE_MS).trim();
+  const { data, isLoading, isError, error, refetch } = useCustomerBookingHistory(customerId, {
+    ...(q ? { q } : {}),
+    ...(status ? { status } : {}),
+    page,
+  });
+  const filtered = q.length > 0 || status !== undefined;
+
+  const filters = (
+    <YStack gap={space.sm}>
+      <SearchInput
+        value={search}
+        onChange={(next) => {
+          setSearch(next);
+          setPage(FIRST_PAGE);
+        }}
+        label={tFilter('searchPlaceholder')}
+        placeholder={tFilter('searchPlaceholder')}
+      />
+      <XStack flexWrap="wrap" gap={space.xs}>
+        <Chip
+          label={tFilter('statusAll')}
+          size="sm"
+          selected={status === undefined}
+          onPress={() => {
+            setStatus(undefined);
+            setPage(FIRST_PAGE);
+          }}
+        />
+        {BOOKING_STATUS_SELECTABLE_VALUES.map((value) => (
+          <Chip
+            key={value}
+            label={domainLabel('bookingStatus', value)}
+            size="sm"
+            selected={status === value}
+            onPress={() => {
+              setStatus(value);
+              setPage(FIRST_PAGE);
+            }}
+          />
+        ))}
+      </XStack>
+    </YStack>
+  );
 
   const items = data?.items ?? [];
   const meta = data?.meta;
@@ -52,6 +104,7 @@ export function CustomerBookingHistory({
   if (isLoading && !data) {
     return (
       <YStack gap={space.md}>
+        {filters}
         {Array.from({ length: SKELETON_ROWS }, (_, i) => (
           <RecordCardSkeleton key={i} />
         ))}
@@ -65,16 +118,28 @@ export function CustomerBookingHistory({
 
   if (items.length === 0) {
     return (
-      <ScreenMessage
-        icon="document-text-outline"
-        title={t('emptyTitle')}
-        description={t('emptyBody')}
-      />
+      <YStack gap={space.md}>
+        {filters}
+        {filtered ? (
+          <ScreenMessage
+            icon="search-outline"
+            title={tFilter('emptyTitle')}
+            description={tFilter('emptyBody')}
+          />
+        ) : (
+          <ScreenMessage
+            icon="document-text-outline"
+            title={t('emptyTitle')}
+            description={t('emptyBody')}
+          />
+        )}
+      </YStack>
     );
   }
 
   return (
     <YStack gap={space.md}>
+      {filters}
       {items.map((booking) => (
         <Card
           key={booking.id}

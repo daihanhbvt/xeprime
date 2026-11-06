@@ -12,10 +12,6 @@ type Schemas = components['schemas'];
  */
 export type WalletSummary = Schemas['WalletSummaryDto'];
 
-/** Một dòng sổ. `amount` dương = vào ví, âm = ra. */
-export type WalletEntry = Schemas['WalletEntryDto'];
-export type WalletEntryPage = Schemas['WalletEntryPageDto'];
-
 /** Yêu cầu rút nhìn từ chủ ví — số tài khoản đã che. */
 export type WithdrawalRequest = Schemas['WithdrawalRequestDto'];
 export type CreateWithdrawalInput = Schemas['CreateWithdrawalDto'];
@@ -29,6 +25,10 @@ export type CreateWithdrawalInput = Schemas['CreateWithdrawalDto'];
 export type WalletStatement = Schemas['WalletStatementDto'];
 export type WalletStatementTrip = Schemas['WalletStatementTripDto'];
 export type WalletStatementTotals = Schemas['WalletStatementTotalsDto'];
+
+/** Một dòng Biến động số dư — bút toán sổ ví HOẶC lệnh rút (`source`), `GET /shop/wallet/activity`. */
+export type WalletActivity = Schemas['WalletActivityDto'];
+export type WalletActivityPage = Schemas['WalletActivityPageDto'];
 
 /** Kỳ + trang của bảng tổng hợp. Native không có URL nên chúng sống ở state màn. */
 export interface WalletStatementFilters {
@@ -52,11 +52,18 @@ export type WalletScope = (typeof WALLET_SCOPE)[keyof typeof WALLET_SCOPE];
 
 const base = (scope: WalletScope) => `/${scope}/wallet`;
 
-/** Cỡ trang sổ ví — cùng cỡ với web để hai bên lật cùng nhịp; màn hình đọc lại hằng này. */
-export const WALLET_ENTRIES_PAGE_SIZE = 20;
-
 /** Cỡ trang bảng tổng hợp — cùng cỡ với web. */
 export const WALLET_STATEMENT_PAGE_SIZE = 20;
+
+/** Cỡ trang tab Biến động số dư — cùng cỡ với web. */
+export const WALLET_ACTIVITY_PAGE_SIZE = 20;
+
+/** Kỳ + trang của tab Biến động số dư — cùng khuôn bộ lọc với bảng tổng hợp. */
+export const walletActivityParams = (filters: WalletStatementFilters): QueryParams => ({
+  period: filters.period,
+  page: filters.page,
+  limit: WALLET_ACTIVITY_PAGE_SIZE,
+});
 
 /** Tham số bảng tổng hợp — kỳ và trang. */
 export const walletStatementParams = (filters: WalletStatementFilters): QueryParams => ({
@@ -65,19 +72,9 @@ export const walletStatementParams = (filters: WalletStatementFilters): QueryPar
   limit: WALLET_STATEMENT_PAGE_SIZE,
 });
 
-/** Tham số phân trang sổ. */
-export const walletEntriesParams = (page: number): QueryParams => ({
-  page,
-  limit: WALLET_ENTRIES_PAGE_SIZE,
-});
-
 export const walletApi = {
   summary(scope: WalletScope): Promise<WalletSummary> {
     return getApiClient().get<WalletSummary>(base(scope));
-  },
-
-  entries(scope: WalletScope, params: QueryParams): Promise<WalletEntryPage> {
-    return getApiClient().get<WalletEntryPage>(`${base(scope)}/entries`, params);
   },
 
   /**
@@ -88,6 +85,11 @@ export const walletApi = {
    */
   statement(params: QueryParams): Promise<WalletStatement> {
     return getApiClient().get<WalletStatement>('/shop/wallet/statement', params);
+  },
+
+  /** Biến động số dư của gian hàng trong một kỳ — chỉ phía partner có. */
+  activity(params: QueryParams): Promise<WalletActivityPage> {
+    return getApiClient().get<WalletActivityPage>('/shop/wallet/activity', params);
   },
 
   withdrawals(scope: WalletScope): Promise<WithdrawalRequest[]> {

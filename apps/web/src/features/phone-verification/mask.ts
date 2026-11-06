@@ -1,12 +1,4 @@
-/** `0xxxxxxxxx` / `+84xxxxxxxxx` / `84xxxxxxxxx` → `0xxxxxxxxx`. */
-function toLocalPhone(raw: string): string {
-  const trimmed = raw.trim();
-  return trimmed.startsWith('+84')
-    ? `0${trimmed.slice(3)}`
-    : trimmed.startsWith('84')
-      ? `0${trimmed.slice(2)}`
-      : trimmed;
-}
+import { toLocalVnPhone as toLocalPhone } from '@xeprime/types';
 
 /**
  * Che bớt SĐT khi hiển thị lại cho khách ("Mã đã gửi đến 09•• ••• 567"). Nhận cả dạng nhập

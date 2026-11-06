@@ -24,7 +24,14 @@ import { CardAccent } from '@/components/ui/CardAccent';
 import { Chip } from '@/components/ui/Chip';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { telHref, toAppTz, zaloHref, LIST_SEPARATOR } from '@xeprime/domain';
+import {
+  isPositiveMoney,
+  subtractMoney,
+  telHref,
+  toAppTz,
+  zaloHref,
+  LIST_SEPARATOR,
+} from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCustomerProfileAccess } from '../hooks/use-customer-profile-access';
@@ -33,7 +40,11 @@ import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
-import { useStartBookingRequestConversation } from '../hooks/use-booking-requests';
+import {
+  useRemindBookingRequestPayment,
+  useStartBookingRequestConversation,
+} from '../hooks/use-booking-requests';
+import { useNow } from '@/hooks/use-now';
 import { useDomainLabel } from '@/i18n/domain';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
@@ -104,6 +115,7 @@ function BookingRequestCardImpl({
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
+  const tCard = useTranslations('BookingRequests.card');
   /*
    * Chỉ `pending_host_approval` còn cần gian hàng quyết định: `hold_paid` (luồng thu-trước-duyệt)
    * đã gỡ hẳn ở ADR 0055 và DB từ chối trạng thái đó — cùng vị từ `needsDecision` của web.
@@ -250,6 +262,12 @@ function BookingRequestCardImpl({
                   />
                 </YStack>
               </XStack>
+              {/* Mã ĐƠN đã sinh từ yêu cầu (02/11/2026) — tra chéo với danh sách đơn thuê. */}
+              {request.bookingCode ? (
+                <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {tCard('bookingCode', { code: request.bookingCode })}
+                </Text>
+              ) : null}
               {vehicleMeta ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={2}>
                   {vehicleMeta}
@@ -345,6 +363,16 @@ function BookingRequestCardImpl({
                 >
                   {request.customerName}
                 </Text>
+                {/* "Khách quen" (02/11/2026) — server suy từ số đơn đã hoàn tất với gian hàng. */}
+                {request.customerIsRegular ? (
+                  <XStack>
+                    <StatusBadge
+                      label={t('detail.regular')}
+                      color={STATUS_COLOR.SUCCESS}
+                      size="sm"
+                    />
+                  </XStack>
+                ) : null}
                 {/* Số điện thoại là liên kết `tel:` như web — chạm là gọi. */}
                 <Text
                   col={colors.accentText}
@@ -501,18 +529,26 @@ function BookingRequestCardImpl({
                   {...(request.pricing.isEstimate ? { hint: t('pricing.estimateBadge') } : {})}
                 />
               ) : null}
-              {request.pricing.paidAmount != null ? (
-                <DataRow
-                  label={t('pricing.paidViaPlatform')}
-                  value={fmt.money(request.pricing.paidAmount)}
-                />
-              ) : null}
-              {request.pricing.remainingAmount != null ? (
-                <DataRow
-                  label={t('pricing.payAtHandover')}
-                  value={fmt.money(request.pricing.remainingAmount)}
-                />
-              ) : null}
+              {/* Tiền giữ chỗ + phần trả khi nhận xe — đúng phép chọn `RequestPaymentFacts` web. */}
+              {(() => {
+                const facts = paymentFactsOf(request, status);
+                return (
+                  <>
+                    {facts.hold ? (
+                      <DataRow
+                        label={tCard(facts.hold.labelKey)}
+                        value={fmt.money(facts.hold.amount)}
+                      />
+                    ) : null}
+                    {facts.payAtPickup ? (
+                      <DataRow
+                        label={tCard(facts.payAtPickup.labelKey)}
+                        value={fmt.money(facts.payAtPickup.amount)}
+                      />
+                    ) : null}
+                  </>
+                );
+              })()}
             </YStack>
           ) : null}
 
@@ -669,16 +705,25 @@ function BookingRequestCardImpl({
                * đây đọc như thẻ bị mất nút. Nói thẳng lý do thay vì để trống khó hiểu.
                */
               <YStack gap={space.xs}>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {/*
-                    Kèm ĐÚNG mốc mà chỗ sẽ tự nhả nếu tiền không về — thứ quyết định người trực
-                    có nên gọi cho khách hay không. Mốc tuyệt đối, không phải đồng hồ chạy: một
-                    danh sách mười thẻ với mười nhịp mỗi giây là chi phí không đổi lại được gì.
-                  */}
-                  {request.holdExpiresAt
-                    ? `${t('awaitingHold.footerHint')} ${t('awaitingHold.deadline')} ${fmt.dateTime(request.holdExpiresAt)}`
-                    : t('awaitingHold.footerHint')}
-                </Text>
+                {/*
+                  Đồng hồ đếm ngược tới hạn khách chuyển tiền (web `CountdownClock`, 05/11/2026) —
+                  dùng đồng hồ CHUNG `useNow` nên mười thẻ vẫn là một nhịp.
+                */}
+                {request.holdExpiresAt ? (
+                  <RespondDeadline
+                    respondBy={request.holdExpiresAt}
+                    label={tCard('awaitingPayment')}
+                    expiredLabel={tCard('paymentExpired')}
+                  />
+                ) : (
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('awaitingHold.footerHint')}
+                  </Text>
+                )}
+                {/* Server trả `null` khi không có gì để nhắc — web cũng ẩn nút khi đó. */}
+                {canDecide && request.paymentReminderAvailableAt ? (
+                  <RemindPaymentButton request={request} />
+                ) : null}
                 {/*
                   Lối thoát HUỶ — chặng DUY NHẤT mà gian hàng đã hứa nhận nhưng chuyến chưa thành
                   đơn. Trước ADR 0045 chặng này không có nút nào: xe hỏng lúc mười giờ tối thì
@@ -762,11 +807,11 @@ function ContactRow({ request }: { request: BookingRequestItem }) {
       {request.chatOpen ? (
         <ContactButton
           label={t('message')}
-        accessibilityLabel={t('messageAria', { name: request.customerName })}
-        icon="chatbubble-outline"
-        disabled={!canMessage}
-        {...(canMessage ? {} : { accessibilityHint: t('messageUnavailable') })}
-        loading={startConversation.isPending}
+          accessibilityLabel={t('messageAria', { name: request.customerName })}
+          icon="chatbubble-outline"
+          disabled={!canMessage}
+          {...(canMessage ? {} : { accessibilityHint: t('messageUnavailable') })}
+          loading={startConversation.isPending}
           onPress={message}
         />
       ) : null}
@@ -979,3 +1024,97 @@ function Timestamp({ children }: { children: string }) {
 }
 
 export const BookingRequestCard = memo(BookingRequestCardImpl);
+
+type HoldLabelKey = 'holdPaid' | 'holdAwaiting' | 'holdUnpaid' | 'holdExpected';
+type PickupLabelKey = 'payAtPickup' | 'payAtPickupExpected';
+
+/**
+ * Dòng tiền giữ chỗ + phần trả khi nhận xe của một yêu cầu — chép nguyên `RequestPaymentFacts`
+ * (web, 02/11/2026): có khoản giữ chỗ thì "Đã thanh toán" / "Chờ khách trả" (chỉ khi cửa sổ còn
+ * mở) / "Chưa thanh toán"; đơn không qua khoản giữ chỗ đọc số đã trả qua nền tảng; chưa duyệt
+ * thì số DỰ KIẾN của lượt duyệt (`approvalPreview`) khi gian hàng thu giữ chỗ.
+ */
+function paymentFactsOf(
+  request: BookingRequestItem,
+  status: string,
+): {
+  hold: { labelKey: HoldLabelKey; amount: string } | null;
+  payAtPickup: { labelKey: PickupLabelKey; amount: string } | null;
+} {
+  const pricing = request.pricing;
+  if (!pricing) return { hold: null, payAtPickup: null };
+  const preview = request.approvalPreview ?? null;
+
+  let hold: { labelKey: HoldLabelKey; amount: string } | null = null;
+  if (pricing.holdAmount != null) {
+    const paid = pricing.holdPaidAmount ?? '0';
+    const settled = !isPositiveMoney(subtractMoney(pricing.holdAmount, paid));
+    hold = settled
+      ? { labelKey: 'holdPaid', amount: paid }
+      : {
+          labelKey: status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? 'holdAwaiting' : 'holdUnpaid',
+          amount: pricing.holdAmount,
+        };
+  } else if (pricing.paidAmount != null) {
+    hold = { labelKey: 'holdPaid', amount: pricing.paidAmount };
+  } else if (preview?.collectsHold && preview.onlineAmount) {
+    hold = { labelKey: 'holdExpected', amount: preview.onlineAmount };
+  }
+
+  const payAtPickup =
+    pricing.remainingAmount != null
+      ? { labelKey: 'payAtPickup' as const, amount: pricing.remainingAmount }
+      : preview
+        ? { labelKey: 'payAtPickupExpected' as const, amount: preview.payAtPickupAmount }
+        : null;
+
+  return { hold, payAtPickup };
+}
+
+/**
+ * "Nhắc khách" — nhóm "Chờ khách thanh toán" (web 05/11/2026). Chỉ gửi MỘT thông báo, không gia
+ * hạn cửa sổ (ADR 0044). Khoảng lặng do SERVER quyết (`paymentReminderAvailableAt`, 429 khi bấm
+ * sớm); ở đây chỉ khoá nút tới mốc đó cho đỡ một vòng lỗi.
+ */
+function RemindPaymentButton({ request }: { request: BookingRequestItem }) {
+  const tCard = useTranslations('BookingRequests.card');
+  const tRemind = useTranslations('BookingRequests.remind');
+  const fmt = useAppFormat();
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const colors = useColors();
+  const remind = useRemindBookingRequestPayment();
+  const availableAt = request.paymentReminderAvailableAt ?? null;
+  const now = useNow(availableAt != null);
+  const cooling = availableAt != null && new Date(availableAt).getTime() > now;
+
+  return (
+    <YStack gap={space.xs}>
+      <Button
+        icon="notifications-outline"
+        label={tCard('remind')}
+        variant="secondary"
+        size="sm"
+        disabled={cooling || remind.isPending}
+        loading={remind.isPending}
+        onPress={() =>
+          remind.mutate(request.id, {
+            onSuccess: (res) =>
+              toast.showSuccess(
+                tRemind('success', {
+                  name: request.customerName,
+                  time: fmt.time(res.nextAvailableAt),
+                }),
+              ),
+            onError: (err) => toast.showError(errorMessage(err)),
+          })
+        }
+      />
+      {cooling && availableAt ? (
+        <Text fos={fontSize.label} col={colors.textMuted}>
+          {tCard('remindAvailableAt', { time: fmt.time(availableAt) })}
+        </Text>
+      ) : null}
+    </YStack>
+  );
+}

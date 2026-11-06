@@ -13,6 +13,9 @@ import {
   customersApi,
   type CreateCustomerNoteInput,
   type CreateTenantCustomerInput,
+  type CustomerBookingHistoryFilters,
+  type CustomerRevenuePeriod,
+  type UpdateCustomerDocumentInput,
   type CustomerDocument,
   type CustomerFilters,
   type UpdateCustomerRiskInput,
@@ -98,6 +101,34 @@ export function useCustomerBookings(id: string | null, page: number, enabled = t
     queryFn: () => customersApi.bookings(id as string, page),
     // Khoá đã ôm cả id khách lẫn số trang, nên `prev` chỉ có thể là trang trước CỦA CÙNG khách —
     // giữ nó lại để đổi trang không nháy về khung xương (y như web).
+    placeholderData: (prev) => prev,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+/** Lịch sử thuê CÓ LỌC (tìm · trạng thái · khoảng ngày nhận) — web `useCustomerBookingHistory`. */
+export function useCustomerBookingHistory(
+  id: string | null,
+  filters: CustomerBookingHistoryFilters,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.customers.bookingHistory(id ?? '', { ...filters }),
+    queryFn: () => customersApi.bookingHistory(id as string, filters),
+    placeholderData: (prev) => prev,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+/** Doanh thu theo kỳ + khoản phải thu của một khách (cần `finance.view` ở server). */
+export function useCustomerRevenue(
+  id: string | null,
+  period: CustomerRevenuePeriod,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.customers.revenue(id ?? '', period),
+    queryFn: () => customersApi.revenue(id as string, period),
     placeholderData: (prev) => prev,
     enabled: Boolean(id) && enabled,
   });
@@ -353,5 +384,22 @@ export function useCustomerDocumentPreviews(
     },
     enabled: Boolean(customerId) && enabled && ids.length > 0,
     staleTime: PREVIEW_URL_STALE_MS,
+  });
+}
+
+/** Sửa chủ thẻ / số giấy tờ / hạn của một giấy tờ — ảnh không đổi (02/11/2026). */
+export function useUpdateCustomerDocument() {
+  const invalidate = useInvalidateCustomers();
+  return useMutation({
+    mutationFn: ({
+      id,
+      documentId,
+      input,
+    }: {
+      id: string;
+      documentId: string;
+      input: UpdateCustomerDocumentInput;
+    }) => customersApi.updateDocument(id, documentId, input),
+    onSuccess: invalidate,
   });
 }

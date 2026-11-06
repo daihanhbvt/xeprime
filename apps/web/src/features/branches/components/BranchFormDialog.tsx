@@ -172,6 +172,7 @@ export function BranchFormDialog({
         <TextField
           control={control}
           name="phone"
+          type="tel"
           label={t('form.phoneLabel')}
           placeholder={phoneMasked ? (branch?.phone ?? undefined) : t('form.phonePlaceholder')}
         />

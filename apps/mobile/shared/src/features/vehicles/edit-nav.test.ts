@@ -16,19 +16,21 @@ const shape = (groups: ReturnType<typeof vehicleEditNavGroups>) =>
 
 /** Web `vehicle-edit-nav.ts` → `editNavGroups`: sáu nhóm, đúng thứ tự, đúng nhãn. */
 describe('vehicleEditNavGroups — menu sửa xe như web', () => {
-  it('đủ năng lực: sáu nhóm, mười mục, đúng thứ tự', () => {
+  it('đủ năng lực: bảy nhóm, mười một mục, đúng thứ tự', () => {
     const groups = vehicleEditNavGroups({ enabled: () => true, services: ALL_SERVICES });
     expect(shape(groups)).toEqual([
-      ['info', ['information', 'media', 'documents']],
-      ['pricingHandover', ['pricing', 'handover-time']],
+      ['info', ['information', 'media', 'documents', 'trip-history']],
+      ['services', ['pricing']],
+      ['policy', ['handover-time']],
       ['selfDrive', ['self-drive-optimization']],
       ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
-      ['advanced', ['source', 'maintenance']],
+      ['advanced', ['maintenance', 'source']],
     ]);
     expect(groups.map((g) => g.labelKey)).toEqual([
       'groups.info',
-      'groups.pricingHandover',
+      'groups.services',
+      'groups.policy',
       'groups.selfDrive',
       'groups.withDriver',
       'groups.longTerm',
@@ -38,12 +40,13 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       'items.information',
       'items.images',
       'items.documents',
-      'items.pricing',
-      'items.handoverTime',
+      'items.tripHistory',
+      'items.services',
+      'items.turnaround',
       'items.bookingTerms',
       'items.bookingTerms',
-      'items.source',
       'items.maintenance',
+      'items.source',
     ]);
   });
 
@@ -58,8 +61,9 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       services: ALL_SERVICES,
     });
     expect(shape(groups)).toEqual([
-      ['info', ['information', 'media']],
-      ['pricingHandover', ['pricing', 'handover-time']],
+      ['info', ['information', 'media', 'trip-history']],
+      ['services', ['pricing']],
+      ['policy', ['handover-time']],
       ['selfDrive', ['self-drive-optimization']],
       ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
@@ -73,7 +77,8 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
     });
     expect(Object.fromEntries(groups.map((g) => [g.key, g.dimmed]))).toEqual({
       info: false,
-      pricingHandover: false,
+      services: false,
+      policy: false,
       selfDrive: false,
       withDriver: true,
       longTerm: true,

@@ -5,6 +5,7 @@ import {
   SOURCE_CONTRACT_MAX_FILES,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
+  VN_PHONE_PATTERN,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -20,6 +21,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { OptionalPhoneInput } from '../../../common/phone';
 import { IsCalendarDate } from '../../../common/calendar-date';
 
 /** Tiền dạng chuỗi thập phân (ADR 0007) — cùng pattern với vehicle.dto. */
@@ -172,10 +174,15 @@ export class SaveVehicleSourceDto {
   @MaxLength(160)
   ownerName?: string | null;
 
-  @ApiPropertyOptional({ description: 'Số điện thoại liên hệ của chủ xe', type: String, nullable: true })
+  @ApiPropertyOptional({
+    description: 'SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)',
+    type: String,
+    nullable: true,
+  })
+  @OptionalPhoneInput()
   @IsOptional()
   @IsString()
-  @MaxLength(30)
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   ownerPhone?: string | null;
 
   @ApiPropertyOptional({ description: 'Email chủ xe (tuỳ chọn)', type: String, nullable: true })

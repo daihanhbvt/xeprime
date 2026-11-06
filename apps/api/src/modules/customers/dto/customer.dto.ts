@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
   ADDRESS_LINE_MAX_LENGTH,
@@ -184,6 +185,7 @@ export class CreateTenantCustomerDto {
     description:
       'Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.',
   })
+  @PhoneInput()
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
@@ -241,6 +243,7 @@ export class UpdateTenantCustomerDto {
     description: 'Đổi sang SĐT đã thuộc khách khác → 409 CUSTOMER_PHONE_DUPLICATE',
   })
   @IsOptional()
+  @PhoneInput()
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;

@@ -8,6 +8,8 @@ import partnerHero from '../assets/images/partner/partner-hero.webp';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 // Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
+// Hộp rỗng 160px — Figma "List - Scroll - Empty" (20063:60274), sinh từ apps/web/public/illustrations/list-empty.svg.
+import listEmpty from '../assets/images/list-empty.png';
 // Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
 // diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
 import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
@@ -58,6 +60,7 @@ export const images = {
   partnerHero,
   ownerShopShowroom,
   driverLicenceEmpty,
+  listEmpty,
   partnerGuideAccount,
   partnerGuideChoose,
   partnerGuidePublish,

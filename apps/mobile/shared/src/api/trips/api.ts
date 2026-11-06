@@ -30,6 +30,8 @@ export type CustomerTripHandoverEvidencePhoto = Schemas['CustomerTripHandoverEvi
 export type PrivateFileTicket = Schemas['SourceContractDownloadDto'];
 /** Xem trước lượt khách tự huỷ — số được hoàn / số mất do server tính (ADR 0064). */
 export type CustomerTripCancelPreview = Schemas['CustomerTripCancelPreviewDto'];
+/** Phụ lục GIA HẠN của chuyến dài hạn (ADR 0077) — mã XPE… + tài khoản nhận, không dòng phía chủ xe. */
+export type CustomerTripExtension = Schemas['CustomerBookingExtensionDto'];
 
 export const TRIPS_DEFAULT_LIMIT = 10;
 
@@ -125,6 +127,11 @@ export const tripsApi = {
    * Mảng rỗng là câu trả lời hợp lệ (chuyến chưa được duyệt, hoặc gian hàng chưa xác nhận bàn
    * giao nào) — không phải lỗi, và giao diện không được biến nó thành thông báo hỏng.
    */
+  /** Phụ lục gia hạn (cũ trước). Chuyến chưa gia hạn ⇒ mảng rỗng, không phải lỗi. */
+  extensions(id: string): Promise<CustomerTripExtension[]> {
+    return getApiClient().get<CustomerTripExtension[]>(`/trips/${encodeURIComponent(id)}/extensions`);
+  },
+
   handoverEvidence(id: string): Promise<CustomerTripHandoverEvidence[]> {
     return getApiClient().get<CustomerTripHandoverEvidence[]>(
       `/trips/${encodeURIComponent(id)}/handover-evidence`,

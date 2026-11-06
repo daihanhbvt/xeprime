@@ -125,7 +125,8 @@ export function CustomerRevenueList({
                 <YStack gap={space.xs}>
                   {/* Tầng 1 — MẶT NGƯỜI, tên, và số tiền: ai, mang về bao nhiêu. */}
                   <XStack ai="center" gap={space.sm}>
-                    <Avatar name={row.fullName} size={AVATAR_SIZE} />
+                    {/* Ảnh tài khoản nền tảng của khách (PR #276) — null khi chưa liên kết / thiếu `customer.view`. */}
+                    <Avatar name={row.fullName} url={row.avatarUrl} size={AVATAR_SIZE} />
 
                     <YStack f={1} minWidth={0} gap={2}>
                       <Text
@@ -136,6 +137,12 @@ export function CustomerRevenueList({
                       >
                         {row.fullName}
                       </Text>
+                      {/* SĐT chỉ có khi người xem có `customer.view` — server đã che. */}
+                      {row.phone ? (
+                        <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                          {row.phone}
+                        </Text>
+                      ) : null}
                     </YStack>
 
                     <Text

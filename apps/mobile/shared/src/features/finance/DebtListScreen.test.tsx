@@ -8,6 +8,7 @@ import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { DebtListScreen } from './DebtListScreen';
 import { debtsApi, type DebtItem } from './api';
+import { bookingsApi } from '@/features/bookings/api';
 
 const mockPush = jest.fn();
 
@@ -142,14 +143,38 @@ describe('DebtListScreen — thẻ và hành động', () => {
 
     expect(await findByText('Hoàn thành')).toBeTruthy();
     // Đã trả / tổng đứng chung một dòng phụ dưới nhãn 'Còn nợ'.
-    expect(await findByText('2.000.000 ₫ / 5.000.000 ₫')).toBeTruthy();
+    expect(await findByText('Đã trả 2.000.000 ₫ / 5.000.000 ₫')).toBeTruthy();
     expect(await findByText('3.000.000 ₫')).toBeTruthy();
   });
 
-  it('"Xem đơn" đi tới chi tiết đơn, không tới một bản chi tiết thứ hai', async () => {
+  it('"Xem đơn" mở tấm chi tiết công nợ (như hộp của web); nút chân tấm đi tới chi tiết đơn', async () => {
+    jest.spyOn(bookingsApi, 'detail').mockResolvedValue({
+      id: '01JQZX0000000000000000000B',
+      code: 'DH-0001',
+      status: 'completed',
+      handoverPrep: null,
+      vehicleId: 'v1',
+      vehicleName: 'Toyota Vios',
+      vehiclePlate: '51A-12345',
+      vehicleImageUrl: null,
+      customerName: 'Trần Thị Bình',
+      customerPhone: '0901234567',
+      customerAvatarUrl: null,
+      pickupAt: '2026-11-01T02:00:00.000Z',
+      returnAt: '2026-11-03T02:00:00.000Z',
+      amountDue: '5000000',
+      collectedAmount: '2000000',
+      debtAmount: '3000000',
+      depositAmount: '0',
+      surchargeTotal: '0',
+    } as unknown as Awaited<ReturnType<typeof bookingsApi.detail>>);
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW, PERMISSION.BOOKING_VIEW]);
 
     await fireEvent.press(await findByText('Xem đơn'));
+    expect(await findByText('Đơn hàng #DH-0001')).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
+
+    await fireEvent.press(await findByText('Chi tiết đơn thuê'));
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/manage/bookings/[id]',

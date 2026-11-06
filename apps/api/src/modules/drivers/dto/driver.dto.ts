@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import {
   BOOKING_STATUS_VALUES,
   DRIVER_ASSIGNMENT_OUTCOME_VALUES,
@@ -27,6 +28,7 @@ import {
   DRIVER_WAGE_REASON_MAX_LENGTH,
   DRIVER_WAGE_STAGE_VALUES,
   type DriverWageStage,
+  VN_MOBILE_PHONE_PATTERN,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -50,7 +52,6 @@ const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as DRIVER_DEFAULT_LIMIT, MAX_LIMIT as DRIVER_MAX_LIMIT };
 
-const PHONE_PATTERN = /^(0|\+?84)\d{9}$/;
 /** Tiền công: VND nguyên, tối đa 12 chữ số. */
 const WAGE_PATTERN = /^\d{1,12}$/;
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -137,8 +138,9 @@ export class DriverListQueryDto extends DriverListFilterDto {
 /** Mời một tài khoản KHÁCH làm tài xế — SĐT phải là tài khoản khách đã xác minh. */
 export class InviteDriverDto {
   @ApiProperty({ example: '0901234567', description: 'SĐT tài khoản khách của tài xế' })
+  @PhoneInput()
   @IsString()
-  @Matches(PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({ example: 'Trần Văn B', description: 'Tên bên thuê gọi tài xế này' })

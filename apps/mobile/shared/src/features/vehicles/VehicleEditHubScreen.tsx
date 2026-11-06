@@ -178,6 +178,9 @@ function EditMenu({
       if (tab === VEHICLE_EDIT_TAB.SOURCE) return can.source;
       if (tab === VEHICLE_EDIT_TAB.DOCUMENTS) return can.documents;
       if (tab === VEHICLE_EDIT_TAB.MAINTENANCE) return can.maintenance;
+      // Cần CẢ hai quyền xem đơn và xem yêu cầu — như màn Lịch sử chuyến và backend.
+      if (tab === VEHICLE_EDIT_TAB.TRIP_HISTORY)
+        return has(PERMISSION.BOOKING_VIEW) && has(PERMISSION.BOOKING_REQUEST_VIEW);
       return true;
     },
     services,

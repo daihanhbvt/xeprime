@@ -73,7 +73,7 @@ export interface StorefrontShopIdentity {
 
 export interface StorefrontOwnerIdentity {
   displayName: string;
-  /** Dạng lưu `84…` hoặc nội địa — trả ra luôn ở dạng nội địa `0…`. */
+  /** Dạng lưu `0…` (ADR 0082) — vẫn quy về `0…` để hàng cũ không lộ `84…`. */
   phone: string | null;
   phoneVerified: boolean;
   email: string | null;

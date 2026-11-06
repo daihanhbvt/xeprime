@@ -998,6 +998,7 @@
       "termMonthsMin": "Loan term must be greater than 0",
       "termMonthsMax": "Loan term exceeds the allowed limit",
       "ownerNameRequired": "Enter the vehicle owner's / business name",
+      "phoneInvalid": "Invalid phone number (digits only, e.g. 0901234567)",
       "ownerEmailInvalid": "Invalid email address",
       "monthlyRentRequired": "Enter the monthly rent",
       "commissionTypeError": "Rate must be a number",

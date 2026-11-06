@@ -103,6 +103,7 @@ export function InviteDriverModal({
         <TextField
           control={control}
           name="phone"
+          type="tel"
           label={t('form.phone')}
           placeholder={t('form.phonePlaceholder')}
           autoComplete="tel"

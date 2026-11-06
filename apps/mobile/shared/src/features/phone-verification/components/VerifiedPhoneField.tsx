@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useController, useWatch, type Control, type FieldValues } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { VN_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
+import { VN_MOBILE_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -108,7 +108,7 @@ export function VerifiedPhoneField({
   /** Lượt xác thực do nút GỬI của form mở — đúng mã thì form tự gửi tiếp (`onVerified`). */
   const continueAfterVerify = useRef(false);
   const phone = String(useWatch({ control, name: phoneName }) ?? '').trim();
-  const phoneValid = VN_PHONE_PATTERN.test(phone);
+  const phoneValid = VN_MOBILE_PHONE_PATTERN.test(phone.trim());
   const code = String(codeField.value ?? '');
   const verified = verifiedField.value === true;
 

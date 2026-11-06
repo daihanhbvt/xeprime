@@ -18,6 +18,21 @@ export type CustomerDocumentPresign = Schemas['CustomerDocumentPresignDto'];
 export type CustomerDocumentDownload = Schemas['CustomerDocumentDownloadDto'];
 export type VerifyCustomerDocumentInput = Schemas['VerifyCustomerDocumentDto'];
 export type PresignCustomerDocumentInput = Schemas['PresignCustomerDocumentDto'];
+/** Sửa chủ thẻ / số giấy tờ / hạn — ảnh không đổi (02/11/2026). */
+export type UpdateCustomerDocumentInput = Schemas['UpdateCustomerDocumentDto'];
+/** Tab "Thu chi" của chi tiết khách — doanh thu theo kỳ + khoản phải thu. */
+export type CustomerRevenue = Schemas['CustomerRevenueDto'];
+export type CustomerRevenuePeriod = CustomerRevenue['period'];
+
+/** Bộ lọc lịch sử thuê của MỘT khách (02/11/2026) — server lọc, ngày theo giờ Việt Nam. */
+export interface CustomerBookingHistoryFilters {
+  q?: string;
+  status?: string;
+  /** `YYYY-MM-DD` — khoảng ngày NHẬN xe. */
+  from?: string;
+  to?: string;
+  page: number;
+}
 
 /** Cùng `CUSTOMER_DEFAULT_LIMIT` của DTO backend. */
 export const CUSTOMERS_DEFAULT_LIMIT = 20;
@@ -118,6 +133,31 @@ export const customersApi = {
     return getApiClient().fetchPage<CustomerBooking>(`${one(id)}/bookings`, { page, limit }, limit);
   },
 
+  /** Lịch sử thuê CÓ LỌC (tìm · trạng thái · khoảng ngày nhận) — phân trang ở server. */
+  bookingHistory(
+    id: string,
+    filters: CustomerBookingHistoryFilters,
+    limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
+  ): Promise<Paged<CustomerBooking>> {
+    return getApiClient().fetchPage<CustomerBooking>(
+      `${one(id)}/bookings`,
+      {
+        q: filters.q ?? null,
+        status: filters.status ?? null,
+        from: filters.from ?? null,
+        to: filters.to ?? null,
+        page: filters.page,
+        limit,
+      },
+      limit,
+    );
+  },
+
+  /** Doanh thu theo kỳ + khoản phải thu của một khách (cần `finance.view` ở server). */
+  revenue(id: string, period: CustomerRevenuePeriod): Promise<CustomerRevenue> {
+    return getApiClient().get<CustomerRevenue>(`${one(id)}/revenue`, { period });
+  },
+
   notes(
     id: string,
     page: number,
@@ -175,6 +215,17 @@ export const customersApi = {
   ): Promise<CustomerDocument> {
     return getApiClient().post<CustomerDocument>(
       `${docs(id)}/${encodeURIComponent(documentId)}/verify`,
+      body,
+    );
+  },
+
+  updateDocument(
+    id: string,
+    documentId: string,
+    body: UpdateCustomerDocumentInput,
+  ): Promise<CustomerDocument> {
+    return getApiClient().patch<CustomerDocument>(
+      `${docs(id)}/${encodeURIComponent(documentId)}`,
       body,
     );
   },

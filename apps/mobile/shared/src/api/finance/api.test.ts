@@ -183,7 +183,9 @@ describe('debtFiltersToParams', () => {
   it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định', () => {
     expect(debtFiltersToParams({})).toEqual({
       q: null,
+      status: null,
       filter: null,
+      sort: null,
       branchId: null,
       page: 1,
       limit: RECEIPTS_DEFAULT_LIMIT,

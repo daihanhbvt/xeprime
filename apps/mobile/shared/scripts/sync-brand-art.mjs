@@ -19,9 +19,9 @@ const here = dirname(fileURLToPath(import.meta.url));
  *
  * Bề rộng bám mốc mobile của web (`max-width: 320px`), nhân theo mật độ màn.
  */
-const illustrationSource = join(here, '../../web/public/illustrations');
+const illustrationSource = join(here, '../../../web/public/illustrations');
 const illustrationTarget = join(here, '../assets/images');
-const ILLUSTRATIONS = ['shop-onboarding', 'owner-personal-car', 'owner-shop-showroom'];
+const ILLUSTRATIONS = ['shop-onboarding', 'owner-personal-car', 'owner-shop-showroom', 'list-empty'];
 
 for (const key of ILLUSTRATIONS) {
   const svg = readFileSync(join(illustrationSource, `${key}.svg`));

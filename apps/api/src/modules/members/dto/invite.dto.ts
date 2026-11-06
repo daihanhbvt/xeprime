@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES, VN_PHONE_PATTERN } from '@xeprime/types';
-import { Transform, Type } from 'class-transformer';
+import { PhoneInput } from '../../../common/phone';
+import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES, VN_MOBILE_PHONE_PATTERN } from '@xeprime/types';
+import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { MemberBranchScopeDto } from './member.dto';
@@ -20,8 +21,8 @@ export class CreateInviteDto extends MemberBranchScopeDto {
     description:
       'SĐT người được mời. Chỉ tài khoản đối tác có ĐÚNG số này (đã xác minh) mới nhận được lời mời.',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  @PhoneInput()
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({

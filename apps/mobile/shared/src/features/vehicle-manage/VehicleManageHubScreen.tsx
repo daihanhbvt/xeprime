@@ -238,6 +238,8 @@ function VehicleSummaryCard({
     <VehicleEditHeaderCard
       vehicle={vehicle}
       statusEditable={statusEditable}
+      // Khu chủ xe (tài khoản) — web bật `showOwnerStats={!isManage}`, nên chỉ bật ở đây.
+      showOwnerStats
       onEditImages={
         statusEditable
           ? () =>

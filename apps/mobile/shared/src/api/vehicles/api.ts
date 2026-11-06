@@ -103,7 +103,15 @@ export function vehicleFiltersToParams(filters: VehicleFilters): QueryParams {
  * `tenant_id` KHÔNG bao giờ là tham số: backend lấy từ membership (CLAUDE.md mục 5). Client cũng
  * không tự đặt `approved_public` — lên chợ phải đi qua `submitPublic` (ADR 0008).
  */
+/** Số xe có việc chặn — huy hiệu menu "Danh sách xe" (03/11/2026), cùng phép tính chip đỏ thẻ xe. */
+export type VehicleNeedsActionCount = components['schemas']['VehicleNeedsActionCountDto'];
+
 export const vehiclesApi = {
+  /** Huy hiệu menu "Danh sách xe" — phạm vi chi nhánh theo membership (ADR 0052). */
+  needsActionCount(): Promise<VehicleNeedsActionCount> {
+    return getApiClient().get<VehicleNeedsActionCount>('/vehicles/needs-action-count');
+  },
+
   list(filters: VehicleFilters): Promise<Paged<VehicleListItem>> {
     return getApiClient().fetchPage<VehicleListItem>(
       '/vehicles',

@@ -105,10 +105,10 @@ const C = ACCOUNT_REALM.CUSTOMER;
 const P = ACCOUNT_REALM.PARTNER;
 
 describe('Phone verification OTP (Phase 4)', () => {
-  maybe('normalizePhone: 0.. / +84.. / 84.. → 84xxxxxxxxx', async () => {
-    expect(normalizePhone('0901234567')).toBe('84901234567');
-    expect(normalizePhone('+84901234567')).toBe('84901234567');
-    expect(normalizePhone('84901234567')).toBe('84901234567');
+  maybe('normalizePhone: 0.. / +84.. / 84.. → 0xxxxxxxxx (ADR 0082)', async () => {
+    expect(normalizePhone('0901234567')).toBe('0901234567');
+    expect(normalizePhone('+84901234567')).toBe('0901234567');
+    expect(normalizePhone('84901234567')).toBe('0901234567');
   });
 
   maybe('gửi → verify happy path (devCode ở mock)', async () => {

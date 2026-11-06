@@ -9,8 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
-import type { BankAccount, BankAccountScope } from '@/api/bank-accounts/api';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { BANK_ACCOUNT_SCOPE, type BankAccount, type BankAccountScope } from '@/api/bank-accounts/api';
 import { currentBankAccount } from '../current-account';
 import { BankAccountCard } from './BankAccountCard';
 import { BankAccountFormSheet } from './BankAccountFormSheet';
@@ -102,9 +102,17 @@ export function BankAccountList({
                 tone={colors.accentText}
                 surface={colors.primaryLight}
               />
-              <Text f={1} minWidth={120} col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('emptyTitle')}
-              </Text>
+              <YStack f={1} minWidth={120} gap={2}>
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {t('emptyTitle')}
+                </Text>
+                {/* Câu nói vì sao cần khai — web khối "Tài khoản nhận tiền" của site partner (PR #276). */}
+                {scope === BANK_ACCOUNT_SCOPE.SHOP ? (
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('emptyHint')}
+                  </Text>
+                ) : null}
+              </YStack>
               <Button
                 label={t('actions.add')}
                 icon="add"

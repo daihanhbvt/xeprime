@@ -311,7 +311,9 @@
       "selfDrive": "Self-drive rental",
       "withDriver": "Rental with driver",
       "longTerm": "Long-term rental",
-      "advanced": "Advanced"
+      "advanced": "Advanced",
+      "services": "Services & prices",
+      "policy": "Rental policy"
     },
     "items": {
       "information": "Vehicle info & features",
@@ -323,7 +325,9 @@
       "bookingTerms": "Booking & rental terms",
       "surcharges": "Surcharges",
       "source": "Vehicle source & finance",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "services": "Services & prices",
+      "turnaround": "Turnaround buffer between trips"
     },
     "longTermNote": "Monthly price is under Prices & policy"
   }

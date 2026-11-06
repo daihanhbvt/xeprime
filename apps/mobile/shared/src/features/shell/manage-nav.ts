@@ -25,10 +25,14 @@ import { PARTNER_TRACK, type PartnerTrack } from './partner-track';
 /** Khoá nhãn trong namespace `Navigation`. Ghép động sẽ lọt typecheck của `use-intl`. */
 export type ManageNavLabel = string;
 
-/** Chỗ ĐƯỢC PHÉP mang huy hiệu "cần xử lý" — đúng hai, y như web. */
+/** Chỗ ĐƯỢC PHÉP mang huy hiệu "cần xử lý" — đúng bộ `NAV_BADGE` của web (04/11/2026). */
 export const MANAGE_NAV_BADGE = {
   BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
   CHAT_UNREAD: 'chatUnread',
+  /** Lượt giao + trả ĐẾN HẠN (hôm nay hoặc đã quá giờ) — mục "Quản lý đơn thuê xe". */
+  HANDOVERS_DUE: 'handoversDue',
+  /** Xe có việc chặn (giấy tờ/bảo dưỡng quá hạn, bị trả về khi đăng chợ, thiếu KM trả). */
+  VEHICLES_NEEDS_ACTION: 'vehiclesNeedsAction',
 } as const;
 
 export type ManageNavBadge = (typeof MANAGE_NAV_BADGE)[keyof typeof MANAGE_NAV_BADGE];
@@ -135,6 +139,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             icon: 'list-outline',
             permission: PERMISSION.VEHICLE_VIEW,
             href: ROUTES.manage.vehicles(),
+            badge: MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION,
           },
           {
             key: 'maintenance',
@@ -187,6 +192,16 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             icon: 'checkbox-outline',
             permission: PERMISSION.BOOKING_VIEW,
             href: ROUTES.manage.bookings(),
+            badge: MANAGE_NAV_BADGE.HANDOVERS_DUE,
+          },
+          {
+            // "Đơn đã kết thúc" (05/11/2026, web `BOOKINGS_ENDED`) — đơn đã đóng + yêu cầu không
+            // thành đơn. Server lọc phần yêu cầu theo quyền (`includesRequests`).
+            key: 'bookings-ended',
+            labelKey: 'manage.bookingsEnded',
+            icon: 'archive-outline',
+            permission: PERMISSION.BOOKING_VIEW,
+            href: ROUTES.manage.bookingsEnded(),
           },
         ],
       },
@@ -244,25 +259,17 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             href: ROUTES.manage.finance(),
           },
           {
+            /*
+             * "Lịch sử giao dịch" gồm hai tab: Giao dịch thu chi và Công nợ (web PR #276, design
+             * 04/11/2026). Công nợ không còn là mục menu riêng — tab của nó (`TransactionHistoryTabs`)
+             * mang cờ gói `debts` của chính nó.
+             */
             key: 'receipts',
-            labelKey: 'manage.receipts',
+            labelKey: 'manage.transactionHistory',
             icon: 'swap-horizontal-outline',
             permission: PERMISSION.FINANCE_VIEW,
             feature: PLAN_FEATURE.FINANCE,
             href: ROUTES.manage.receipts(),
-          },
-          {
-            /*
-             * Công nợ gác bằng cờ gói RIÊNG (`debts`), không phải `finance` — đúng cờ mà
-             * `GET /debts` mang ở backend. Gộp hai cờ vào một là ẩn nhầm một màn mà gian hàng đã
-             * mua, hoặc mở một màn họ chưa mua.
-             */
-            key: 'debts',
-            labelKey: 'manage.debts',
-            icon: 'card-outline',
-            permission: PERMISSION.FINANCE_VIEW,
-            feature: PLAN_FEATURE.DEBTS,
-            href: ROUTES.manage.debts(),
           },
         ],
       },
@@ -386,6 +393,7 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         icon: 'list-outline',
         permission: PERMISSION.VEHICLE_VIEW,
         href: ROUTES.manage.vehicles(),
+        badge: MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION,
       },
       {
         key: 'calendar',
@@ -426,6 +434,7 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         icon: 'checkbox-outline',
         permission: PERMISSION.BOOKING_VIEW,
         href: ROUTES.manage.bookings(),
+        badge: MANAGE_NAV_BADGE.HANDOVERS_DUE,
         memberOnly: true,
       },
       {

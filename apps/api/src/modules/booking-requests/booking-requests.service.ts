@@ -1371,8 +1371,8 @@ export class BookingRequestsService {
    * lối ra (đổi số).
    */
   private async assertNotOwnVehicle(vehicleTenantId: string, verifiedPhone: string): Promise<void> {
-    // Mọi biến thể lưu được của cùng một số — cột `users.phone` lưu dạng `84…` nhưng không phải
-    // mọi đường ghi xưa đều chuẩn hoá, nên tra theo biến thể chứ không so một chuỗi.
+    // Mọi biến thể lưu được của cùng một số — cột `users.phone` lưu dạng `0…` (ADR 0082) nhưng
+    // hàng cũ đụng số có thể còn `84…`, nên tra theo biến thể chứ không so một chuỗi.
     const ownMember = await this.prisma.tenantMembership.findFirst({
       where: {
         tenantId: vehicleTenantId,

@@ -28,7 +28,12 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
-import { useCreateCategory, useDeleteCategory, useFinanceCategories } from '../hooks/use-finance';
+import {
+  useCreateCategory,
+  useDeleteCategory,
+  useFinanceCategories,
+  useRenameCategory,
+} from '../hooks/use-finance';
 import type { CreateCategoryInput, FinanceCategory } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
 
@@ -78,11 +83,14 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
   const [type, setType] = useState<string>(RECEIPT_TYPE.EXPENSE);
   const [name, setName] = useState('');
   const [removing, setRemoving] = useState<FinanceCategory | null>(null);
+  /** Hàng đang đổi tên (PR #276) — một hàng một lúc, như bảng của web. */
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
   /* Chỉ gọi khi tấm MỞ — danh mục không có giá trị gì cho tới lúc người dùng mở nó ra. */
   const query = useFinanceCategories(undefined, open);
   const create = useCreateCategory();
   const remove = useDeleteCategory();
+  const rename = useRenameCategory();
 
   const trimmed = name.trim();
 
@@ -100,10 +108,34 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
     );
   };
 
+  const saveRename = () => {
+    if (!editing) return;
+    const next = editing.name.trim();
+    const current = query.data?.find((c) => c.id === editing.id);
+    // Không đổi gì (hoặc rỗng) thì đóng ô sửa, không gọi server.
+    if (!next || next === current?.name) {
+      setEditing(null);
+      return;
+    }
+    rename.mutate(
+      { id: editing.id, name: next },
+      {
+        onSuccess: () => {
+          setEditing(null);
+          toast.showSuccess(t('renamed'));
+        },
+        onError: (error) => toast.showError(getErrorMessage(error)),
+      },
+    );
+  };
+
   const confirmRemove = () => {
     if (!removing) return;
     remove.mutate(removing.id, {
-      onSuccess: () => setRemoving(null),
+      onSuccess: () => {
+        setRemoving(null);
+        toast.showSuccess(t('deleted'));
+      },
       onError: (error) => {
         toast.showError(getErrorMessage(error));
         setRemoving(null);
@@ -175,16 +207,27 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
                 py={space.xs}
                 minHeight={sizing.touchTarget}
               >
-                <Text
-                  f={1}
-                  minWidth={0}
-                  col={colors.text}
-                  fos={fontSize.bodySm}
-                  fow={fontWeight.medium}
-                  numberOfLines={2}
-                >
-                  {category.name}
-                </Text>
+                {editing?.id === category.id ? (
+                  <YStack f={1} minWidth={0}>
+                    <TextControl
+                      label={t('nameLabel')}
+                      value={editing.name}
+                      onChangeText={(next) => setEditing({ id: category.id, name: next })}
+                      maxLength={NAME_MAX}
+                    />
+                  </YStack>
+                ) : (
+                  <Text
+                    f={1}
+                    minWidth={0}
+                    col={colors.text}
+                    fos={fontSize.bodySm}
+                    fow={fontWeight.medium}
+                    numberOfLines={2}
+                  >
+                    {category.name}
+                  </Text>
+                )}
 
                 {/*
                   Hai viên nhãn trả lời hai câu khác nhau — CHIỀU TIỀN (Thu/Chi) và NGUỒN (hệ
@@ -221,19 +264,42 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
                 </XStack>
 
                 {/*
-                  Ô CUỐI chỉ giữ nút xoá, bề rộng CỐ ĐỊNH bằng vùng chạm — giữ chỗ cả ở hàng hệ
+                  Ô CUỐI giữ nút sửa + xoá, bề rộng CỐ ĐỊNH bằng hai vùng chạm — giữ chỗ cả ở hàng hệ
                   thống (không xoá được) để hai cột nhãn của mọi hàng thẳng nhau. Người không có
                   quyền sửa thì không có cột này, danh sách khỏi chừa một dải trống.
                 */}
                 {canManage ? (
-                  <XStack w={sizing.touchTarget} ai="center" jc="flex-end">
-                    {category.isSystem ? null : (
-                      <IconButton
-                        icon="trash-outline"
-                        label={t('delete')}
-                        tone="danger"
-                        onPress={() => setRemoving(category)}
-                      />
+                  <XStack w={sizing.touchTarget * 2} ai="center" jc="flex-end">
+                    {category.isSystem ? null : editing?.id === category.id ? (
+                      <>
+                        <IconButton
+                          icon="checkmark"
+                          label={t('save')}
+                          tone="primary"
+                          loading={rename.isPending}
+                          onPress={saveRename}
+                        />
+                        <IconButton
+                          icon="close"
+                          label={t('discard')}
+                          disabled={rename.isPending}
+                          onPress={() => setEditing(null)}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <IconButton
+                          icon="create-outline"
+                          label={t('edit')}
+                          onPress={() => setEditing({ id: category.id, name: category.name })}
+                        />
+                        <IconButton
+                          icon="trash-outline"
+                          label={t('delete')}
+                          tone="danger"
+                          onPress={() => setRemoving(category)}
+                        />
+                      </>
                     )}
                   </XStack>
                 ) : null}
@@ -246,7 +312,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
       <AlertDialog
         open={removing !== null}
         title={t('delete')}
-        message={removing?.name}
+        message={removing ? t('deleteConfirm', { name: removing.name }) : undefined}
         confirmLabel={tActions('delete')}
         destructive
         loading={remove.isPending}

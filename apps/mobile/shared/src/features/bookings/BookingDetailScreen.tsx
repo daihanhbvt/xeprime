@@ -6,7 +6,9 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  BOOKING_HISTORY_OUTCOME,
   BOOKING_STATUS,
+  CANCELLATION_PARTY,
   BOOKING_STATUS_META,
   canTransitionBooking,
   CANCELLATION_REASON_CATEGORY,
@@ -18,7 +20,9 @@ import {
   isDriverMissingAlertDue,
   isDriverReassignable,
   STATUS_COLOR,
+  TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
   HANDOVER_TYPE,
+  type HandoverType,
   isBookingFinal,
   isNoShowGracePassed,
   PERMISSION,
@@ -63,7 +67,13 @@ import { BookingMoneyCard } from './components/BookingMoneyCard';
 import { BookingStatusSheet, type Decision } from './components/BookingStatusSheet';
 import { BookingSettlementCard } from './components/BookingSettlementCard';
 import { BookingInsurancePanel } from './components/BookingInsurancePanel';
-import { BookingTripCard } from './components/BookingTripCard';
+import { BookingExtensionsPanel } from './components/BookingExtensionsPanel';
+import { HandoverPrepCard, missingPhotoSlots, prepRowStates } from './components/HandoverPrepCard';
+import {
+  BookingOutcomeBanner,
+  BookingStepper,
+  TripScheduleCard,
+} from './components/BookingStageSections';
 import { DeliveryFeeSheet } from './components/DeliveryFeeSheet';
 import { EditBookingSheet } from './components/EditBookingSheet';
 import { AssignDriverWageSheet } from './components/AssignDriverWageSheet';
@@ -214,6 +224,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
   const styles = useStyles();
   const { refreshing, onRefresh } = useBookingRefresh(booking.id);
   const t = useTranslations('Bookings');
+  const tSide = useTranslations('Bookings.detailPage.side');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
@@ -259,6 +270,17 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
   const closed = isBookingFinal(status);
 
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
+  // Cổng của khối "Chuẩn bị bàn giao" — cùng `can` của web (BookingDetailActions).
+  const prepFinance = useFeature(PLAN_FEATURE.FINANCE);
+  const prepContracts = useFeature(PLAN_FEATURE.CONTRACTS);
+  const prepCan = {
+    collect: permissions.has(PERMISSION.PAYMENT_RECORD) && prepFinance.isVisible,
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && prepContracts.isVisible,
+    markPrep: permissions.has(PERMISSION.HANDOVER_MANAGE) && !closed,
+    documents:
+      Boolean(booking.tenantCustomerId) && permissions.has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE),
+    managePhotos: permissions.has(PERMISSION.HANDOVER_MANAGE),
+  };
   const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
   /*
    * Tài xế mở cho CẢ HAI tuyến, không sau cờ gói (ADR 0063) — chỉ gác bằng quyền. Và CHỈ đơn
@@ -340,7 +362,19 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                   {t('detail.cardTitle')}
                 </Text>
                 <StatusBadge
-                  label={domainLabel('bookingStatus', status, meta.label)}
+                  label={
+                    /* Đơn huỷ nói AI huỷ — phía huỷ do SERVER suy (web `BookingStageChip`, ADR 0045). */
+                    status === BOOKING_STATUS.CANCELLED &&
+                    booking.cancellationParty === CANCELLATION_PARTY.CUSTOMER
+                      ? domainLabel(
+                          'bookingHistoryOutcome',
+                          BOOKING_HISTORY_OUTCOME.CANCELLED_BY_CUSTOMER,
+                        )
+                      : status === BOOKING_STATUS.CANCELLED &&
+                          booking.cancellationParty === CANCELLATION_PARTY.HOST
+                        ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_HOST)
+                        : domainLabel('bookingStatus', status, meta.label)
+                  }
                   color={meta.color}
                   size="sm"
                 />
@@ -394,6 +428,17 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
                   {booking.customerName}
                 </Text>
+                {/* "Khách quen" — đủ số chuyến hoàn tất với gian hàng (web `BookingDetailSide`). */}
+                {booking.customerCompletedRentals != null &&
+                booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
+                  <XStack>
+                    <StatusBadge
+                      label={tSide('returningCustomer')}
+                      color={STATUS_COLOR.SUCCESS}
+                      size="sm"
+                    />
+                  </XStack>
+                ) : null}
                 {booking.customerPhone ? (
                   // Vận hành gọi khách ngay từ đây — trên điện thoại là một chạm.
                   <Pressable
@@ -505,6 +550,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
             status={status}
             onEdit={() => setEditing(true)}
             onDecide={setDecision}
+            prepCan={prepCan}
           />
 
           {/*
@@ -712,7 +758,17 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
             </Card>
           ) : null}
 
-          <BookingTripCard bookingId={booking.id} bookingStatus={status} />
+          {/* Banner kết cục + tiến trình 4 chặng + chuyến đi (Figma `23845:49956`, 03/11/2026). */}
+          <BookingOutcomeBanner booking={booking} />
+          <BookingStepper booking={booking} />
+          {/* Thay `BookingTripCard` cũ (trùng giờ giao/nhận + Odo) — khớp web `TripScheduleCard`. */}
+          <TripScheduleCard booking={booking} />
+
+          {/* Chuẩn bị bàn giao (03/11/2026) — chỉ có khi server trả `handoverPrep`. */}
+          <HandoverPrepCard booking={booking} can={prepCan} />
+
+          {/* Phụ lục gia hạn đơn dài hạn (ADR 0077) — tự ẩn với đơn khác. */}
+          <BookingExtensionsPanel booking={booking} />
 
           <BookingSettlementCard bookingId={booking.id} />
 
@@ -868,9 +924,12 @@ function BookingActionBar({
   status,
   onEdit,
   onDecide,
+  prepCan,
 }: {
   booking: BookingDetail;
   status: BookingStatus;
+  /** Cổng của khối "Chuẩn bị bàn giao" — để cảnh báo "còn thiếu" đếm đúng bộ dòng đang hiện. */
+  prepCan: { collect: boolean; contract: boolean };
   /** Mở form sửa đơn — state của nó nằm ở màn cha vì tấm trượt mount theo điều kiện. */
   onEdit: () => void;
   /** Mở hộp xác nhận cho một quyết định khép đơn (huỷ / khách không đến). */
@@ -908,6 +967,25 @@ function BookingActionBar({
   const hasDebt = !isZeroMoney(booking.debtAmount);
   /** Đã lập biên bản chưa — lối "Ảnh bàn giao" chỉ có nghĩa khi thật sự đã có biên bản. */
   const hasHandover = Boolean(context?.pickup ?? context?.return);
+
+  const tAlert = useTranslations('Bookings.detailPage.handoverAlert');
+  const [handoverAlert, setHandoverAlert] = useState<HandoverType | null>(null);
+  /** Bản native của `requestHandover` (web): đủ việc thì mở luồng ngay, thiếu thì hỏi lại. */
+  const requestHandover = (type: HandoverType) => {
+    const prepMissing =
+      type === HANDOVER_TYPE.PICKUP && booking.handoverPrep
+        ? prepRowStates(booking.handoverPrep, prepCan).some((row) => !row.done)
+        : false;
+    const slots = missingPhotoSlots(
+      type === HANDOVER_TYPE.PICKUP ? context?.pickup?.photos : context?.return?.photos,
+      booking.vehicleType,
+    );
+    if (!prepMissing && slots.length === 0) {
+      navigateOnce(ROUTES.manage.handover(booking.id, type));
+      return;
+    }
+    setHandoverAlert(type);
+  };
 
   const cta =
     canViewHandover && context
@@ -1059,7 +1137,7 @@ function BookingActionBar({
             // Thiếu `handovers.confirm` thì nút đứng đó nhưng mờ kèm lời giải thích — đúng web,
             // thay vì bấm được rồi ăn 403.
             disabled={!canConfirmHandover}
-            onPress={() => navigateOnce(ROUTES.manage.handover(booking.id, cta.type))}
+            onPress={() => requestHandover(cta.type)}
           />
         ) : null}
         {cta && !canConfirmHandover ? (
@@ -1084,6 +1162,25 @@ function BookingActionBar({
           </Text>
         ) : null}
       </YStack>
+
+      {/*
+        Cảnh báo "còn thiếu" trước khi bàn giao (web `requestHandover`, 03/11/2026): lượt GIAO soát
+        các dòng "Chuẩn bị bàn giao" chưa xong + góc ảnh bắt buộc còn trống; lượt NHẬN chỉ soát ảnh.
+        Không chặn — "Vẫn tiếp tục" mở đúng luồng bàn giao.
+      */}
+      <AlertDialog
+        open={handoverAlert !== null}
+        title={tAlert('title')}
+        message={tAlert(handoverAlert === HANDOVER_TYPE.PICKUP ? 'bodyPickup' : 'bodyReturn')}
+        confirmLabel={tAlert('continue')}
+        destructive
+        onConfirm={() => {
+          const type = handoverAlert;
+          setHandoverAlert(null);
+          if (type) navigateOnce(ROUTES.manage.handover(booking.id, type));
+        }}
+        onCancel={() => setHandoverAlert(null)}
+      />
 
       {/* Gắn/tháo theo cờ mở: số điền sẵn chỉ đọc lúc dựng. */}
       {collecting ? (

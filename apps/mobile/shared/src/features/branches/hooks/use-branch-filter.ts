@@ -33,6 +33,8 @@ export interface BranchFilterOptions {
   onChange?: (branchId: string | undefined) => void;
   /** Giá trị sống ở state CỤC BỘ (hộp chọn xe) — không ghi bộ nhớ menu. */
   local?: boolean;
+  /** `false` = màn không có ô chi nhánh (danh sách xe tuyến hoa hồng) — không gọi API chi nhánh. */
+  enabled?: boolean;
 }
 
 export interface BranchFilterState {
@@ -49,13 +51,13 @@ export interface BranchFilterState {
 }
 
 export function useBranchFilter(options: BranchFilterOptions = {}): BranchFilterState {
-  const { value, onChange, local } = options;
+  const { value, onChange, local, enabled = true } = options;
   const t = useTranslations('Branches');
   const permissions = usePermissions();
   const { tenant, isLoading: sessionLoading } = useTenantScope();
   const tenantId = tenant?.id ?? null;
 
-  const canView = permissions.has(PERMISSION.BRANCH_VIEW) && Boolean(tenantId);
+  const canView = enabled && permissions.has(PERMISSION.BRANCH_VIEW) && Boolean(tenantId);
   const query = useActiveBranches(canView);
   const noProvince = t('labels.noProvince');
 
@@ -148,7 +150,10 @@ export function useBranchRouteParam(): [string | undefined, (next: string | unde
  *
  * `onChanged` chạy mỗi lần chi nhánh đổi (kể cả lúc tự nhả) — màn dùng để về trang đầu.
  */
-export function useScreenBranchFilter(onChanged?: () => void): {
+export function useScreenBranchFilter(
+  onChanged?: () => void,
+  enabled = true,
+): {
   branchId: string | undefined;
   filter: BranchFilterState;
 } {
@@ -164,7 +169,7 @@ export function useScreenBranchFilter(onChanged?: () => void): {
     },
     [setBranchId],
   );
-  const filter = useBranchFilter({ value: branchId, onChange: change });
+  const filter = useBranchFilter({ value: branchId, onChange: change, enabled });
   return { branchId, filter };
 }
 

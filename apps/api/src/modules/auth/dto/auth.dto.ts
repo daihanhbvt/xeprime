@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import {
   IsEmail,
   IsIn,
@@ -16,8 +17,7 @@ import {
   MEMBERSHIP_BRANCH_SCOPE_VALUES,
   MOBILE_CLIENT_APP_VALUES,
   PLAN_FEATURE_VALUES,
-  normalizeDisplayName,
-  VN_PHONE_PATTERN,
+  VN_MOBILE_PHONE_PATTERN,\n  normalizeDisplayName,
   type AccountRealm,
   type MobileClientApp,
 } from '@xeprime/types';
@@ -62,8 +62,8 @@ class RegisterFields extends PasswordField {
   displayName!: string;
 
   @ApiProperty({ example: '0901234567' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  @PhoneInput()
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 }
 
@@ -165,8 +165,8 @@ export class ResetPasswordDto extends PasswordField {
  */
 export class ResetPasswordWithOtpDto extends PasswordField {
   @ApiProperty({ example: '0901234567' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  @PhoneInput()
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({
