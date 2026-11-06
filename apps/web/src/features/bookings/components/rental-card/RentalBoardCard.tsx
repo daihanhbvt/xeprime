@@ -18,7 +18,7 @@ export interface RentalBoardFact {
   hint?: { label: string; content: ReactNode } | null;
 }
 
-/** Một ô tiền của lưới ba cột (nhãn trên, số dưới). */
+/** Một ô tiền của hàng tiền (nhãn trên, số dưới). */
 export interface RentalBoardMoney {
   key: string;
   label: string;
@@ -27,8 +27,8 @@ export interface RentalBoardMoney {
 }
 
 /**
- * Hàng "Giữ chỗ" — số + viên trạng thái theo CHẶNG (ADR 0044): chưa duyệt là số dự kiến, đã phát QR
- * mà chưa đủ là "Chưa thanh toán", tiền về đủ là "Đã thanh toán".
+ * Ô "Giữ chỗ" — ô CUỐI của hàng tiền: số + viên trạng thái theo CHẶNG (ADR 0044) ngay dưới số: chưa
+ * duyệt là số dự kiến, đã phát QR mà chưa đủ là "Chưa thanh toán", tiền về đủ là "Đã thanh toán".
  */
 export interface RentalBoardHold {
   label: string;
@@ -63,8 +63,9 @@ interface Props {
  * Khung thẻ chuyến trong CỘT Kanban — Figma Partner-XePrime "_Kanban Item" (`23895:15196` chờ duyệt,
  * `23895:15208` đang thuê; 05/11/2026). Rộng 348, đệm 16, các khối cách 12: dải đầu (tay nắm · mã ·
  * dịch vụ) · xe (ảnh 76×48, biển số + thông số một dòng) · nét đứt · khách (ảnh 32, liên hệ bên phải)
- * · ô lịch nền xám (nhãn 132px) · lưới tiền ba cột · hàng giữ chỗ + viên trạng thái · thanh tiến độ
- * (đang thuê) · chân thẻ (đồng hồ nghiêng trái, nút phải).
+ * · ô lịch nền xám (nhãn 132px) · MỘT hàng tiền (khách trả · trả khi nhận xe · giữ chỗ + viên trạng
+ * thái — bỏ "Tiền thuê" và gộp hàng giữ chỗ lên, 05/11/2026) · thanh tiến độ (đang thuê) · chân thẻ
+ * (câu tình trạng nghiêng trái, nút phải; câu dài thì nút xuống hàng dưới).
  *
  * Cùng nội dung nghiệp vụ với thẻ List (`RentalCard`) — chỉ khác khung. Chi tiết không có chỗ ở đây
  * (ghi chú khách, địa chỉ giao, lộ trình) đi vào ⓘ; lịch xe, mốc xử lý, dải thông tin thêm còn ở List
@@ -154,7 +155,7 @@ export function RentalBoardCard({
         ))}
       </dl>
 
-      {money.length > 0 ? (
+      {money.length > 0 || hold ? (
         <dl className={styles.money}>
           {money.map((cell) => (
             <div key={cell.key} className={styles.moneyCell}>
@@ -164,17 +165,16 @@ export function RentalBoardCard({
               </dd>
             </div>
           ))}
+          {hold ? (
+            <div className={styles.moneyCell}>
+              <dt className={styles.moneyLabel}>{hold.label}</dt>
+              <dd className={styles.moneyValue}>{fmt.money(hold.amount)}</dd>
+              <dd className={styles.holdState}>
+                <span className={cx(styles.holdChip, styles[hold.state])}>{hold.stateLabel}</span>
+              </dd>
+            </div>
+          ) : null}
         </dl>
-      ) : null}
-
-      {hold ? (
-        <div className={styles.hold}>
-          <dl className={styles.moneyCell}>
-            <dt className={styles.moneyLabel}>{hold.label}</dt>
-            <dd className={styles.moneyValue}>{fmt.money(hold.amount)}</dd>
-          </dl>
-          <span className={cx(styles.holdChip, styles[hold.state])}>{hold.stateLabel}</span>
-        </div>
       ) : null}
 
       {progress}

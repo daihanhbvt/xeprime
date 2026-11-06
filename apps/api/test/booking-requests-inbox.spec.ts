@@ -8,6 +8,7 @@ import {
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
+  BOOKING_STATUS,
   BRANCH_STATUS,
   MEMBERSHIP_STATUS,
   SERVICE_TYPE,
@@ -471,6 +472,78 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
     const theirs = await requests.list(otherTenantId, {}, null);
     expect(total(theirs)).toBe(1);
     expect(total(mine)).toBeGreaterThan(total(theirs));
+  });
+
+  maybe(
+    'yêu cầu đã QUÁ HẠN phản hồi mà worker chưa quét: không ở danh sách, không ở con số',
+    async () => {
+      const before = await requests.list(
+        tenantId,
+        { status: [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL] },
+        null,
+      );
+      const id = await seedRequest({
+        tenantId,
+        vehicleId: vehicleAId,
+        customerPhone: '0905555555',
+      });
+      // Cột `status` vẫn còn sống — chỉ đồng hồ đã qua hạn (worker dừng / chưa tới nhịp).
+      await prisma.bookingRequest.update({
+        where: { id },
+        data: { respondBy: new Date(Date.now() - 60_000) },
+      });
+
+      const after = await requests.list(
+        tenantId,
+        { status: [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL] },
+        null,
+      );
+      expect(after.data.some((r) => r.id === id)).toBe(false);
+      expect(countOf(after, BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL)).toBe(
+        countOf(before, BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL),
+      );
+    },
+  );
+});
+
+describe('BookingRequestsService.getOne — xe chưa về từ chuyến quá giờ trả', () => {
+  maybe('xe đang ở một chuyến quá giờ trả ⇒ `vehicleStillOut` chỉ ra chuyến đó', async () => {
+    const overdueId = newId();
+    await prisma.booking.create({
+      data: {
+        id: overdueId,
+        tenantId,
+        vehicleId: vehicleBId,
+        code: `DH${overdueId.slice(-6).toUpperCase()}`,
+        customerName: 'Khách đang trễ',
+        status: BOOKING_STATUS.ACTIVE,
+        pickupAt: new Date(Date.now() - 2 * DAY),
+        returnAt: new Date(Date.now() - 3 * 60 * 60_000),
+        baseAmount: new Prisma.Decimal('200000'),
+        discountAmount: new Prisma.Decimal('0'),
+        deliveryFee: new Prisma.Decimal('0'),
+        totalAmount: new Prisma.Decimal('200000'),
+        depositAmount: new Prisma.Decimal('0'),
+      },
+    });
+    try {
+      const id = await seedRequest({
+        tenantId,
+        vehicleId: vehicleBId,
+        customerPhone: '0906666666',
+      });
+      const detail = await requests.getOne(tenantId, id);
+      expect(detail.vehicleStillOut).toMatchObject({ bookingId: overdueId });
+
+      // Xe đã về (đơn hoàn thành) ⇒ hết cảnh báo.
+      await prisma.booking.update({
+        where: { id: overdueId },
+        data: { status: BOOKING_STATUS.COMPLETED, actualReturnAt: new Date() },
+      });
+      expect((await requests.getOne(tenantId, id)).vehicleStillOut).toBeNull();
+    } finally {
+      await prisma.booking.delete({ where: { id: overdueId } });
+    }
   });
 });
 

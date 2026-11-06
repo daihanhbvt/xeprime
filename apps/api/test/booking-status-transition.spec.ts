@@ -4,13 +4,17 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   BOOKING_NO_SHOW_GRACE_MINUTES,
+  BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   type BookingStatus,
   CANCELLATION_REASON_CATEGORY,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
+  NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -51,6 +55,7 @@ const bookings = makeBookingsService(asService, {
 
 let dbAvailable = false;
 let ownerId: string;
+let customerId: string;
 let tenantId: string;
 let vehicleId: string;
 
@@ -127,6 +132,36 @@ async function seedVehicle(): Promise<string> {
   return id;
 }
 
+/** Gắn đơn với một yêu cầu trên chợ của tài khoản khách — đơn "đặt qua chợ" như đường duyệt thật. */
+async function linkMarketplaceRequest(bookingId: string, startAt: Date): Promise<void> {
+  await prisma.bookingRequest.create({
+    data: {
+      id: newId(),
+      respondBy: bookingRequestRespondBy(new Date()),
+      tenantId,
+      vehicleId,
+      status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      customerName: 'Khách Test',
+      customerPhone: '0900000000',
+      customerUserId: customerId,
+      bookingId,
+      pickupAt: startAt,
+      returnAt: new Date(startAt.getTime() + 24 * 3_600_000),
+    },
+  });
+}
+
+const lastCustomerNotice = (bookingId: string) =>
+  prisma.notification.findFirst({
+    where: {
+      userId: customerId,
+      type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+      targetId: bookingId,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
 const countOccupancy = (bookingId: string) =>
   prisma.vehicleOccupancy.count({
     where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING, sourceId: bookingId },
@@ -149,6 +184,7 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
+  customerId = newId();
   tenantId = newId();
   vehicleId = newId();
 
@@ -158,6 +194,14 @@ beforeAll(async () => {
       id: ownerId,
       displayName: 'Chủ shop',
       email: `owner-${ownerId}@xeprime.test`,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: customerId,
+      displayName: 'Khách Test',
+      email: `customer-${customerId}@xeprime.test`,
     },
   });
   await prisma.tenant.create({
@@ -194,14 +238,16 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     await prisma.vehicleHandover.deleteMany({ where: { tenantId } });
+    await prisma.bookingRequest.deleteMany({ where: { tenantId } });
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.vehicleOccupancy.deleteMany({ where: { tenantId } });
     await prisma.auditLog.deleteMany({ where: { tenantId } });
     await prisma.notification.deleteMany({ where: { tenantId } });
+    await prisma.notification.deleteMany({ where: { userId: customerId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, customerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -216,21 +262,45 @@ describe('DTO — lý do bắt buộc đúng chỗ', () => {
   const errorsFor = (payload: Record<string, unknown>) =>
     validate(plainToInstance(TransitionBookingDto, payload));
 
-  it.each([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW])(
-    '%s thiếu lý do → từ chối ngay ở biên',
-    async (status) => {
-      const errors = await errorsFor({ status });
+  /*
+   * Chữ tự do BẮT BUỘC đúng hai ca (người dùng chốt 06/11/2026): no_show, và huỷ với nhóm "Lý do
+   * khác". Các nhóm còn lại đã tự nói vì sao.
+   */
+  const NEEDS_TEXT = [
+    { status: BOOKING_STATUS.NO_SHOW },
+    { status: BOOKING_STATUS.CANCELLED, reasonCategory: CANCELLATION_REASON_CATEGORY.OTHER },
+  ];
+
+  it.each(NEEDS_TEXT)('$status $reasonCategory thiếu lý do → từ chối ngay ở biên', async (base) => {
+    const errors = await errorsFor(base);
+    expect(errors.map((e) => e.property)).toContain('reason');
+  });
+
+  it.each(NEEDS_TEXT)(
+    '$status $reasonCategory với lý do toàn khoảng trắng vẫn là thiếu lý do',
+    async (base) => {
+      const errors = await errorsFor({ ...base, reason: '    ' });
       expect(errors.map((e) => e.property)).toContain('reason');
     },
   );
 
-  it.each([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW])(
-    '%s với lý do toàn khoảng trắng vẫn là thiếu lý do',
-    async (status) => {
-      const errors = await errorsFor({ status, reason: '    ' });
-      expect(errors.map((e) => e.property)).toContain('reason');
-    },
-  );
+  it.each([undefined, '', '   '])('huỷ với nhóm cụ thể: ghi chú "%s" là hợp lệ', async (reason) => {
+    const dto = plainToInstance(TransitionBookingDto, {
+      status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE,
+      ...(reason === undefined ? {} : { reason }),
+    });
+    expect(await validate(dto)).toHaveLength(0);
+  });
+
+  it('ghi chú tuỳ chọn vẫn bị trần 500 ký tự', async () => {
+    const errors = await errorsFor({
+      status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE,
+      reason: 'x'.repeat(501),
+    });
+    expect(errors.map((e) => e.property)).toContain('reason');
+  });
 
   it('lý do được trim trước khi vào service', async () => {
     const dto = plainToInstance(TransitionBookingDto, {
@@ -354,6 +424,43 @@ describe('Hủy đơn', () => {
     expect(after.status).toBe(BOOKING_STATUS.ACTIVE);
     expect(await countOccupancy(id)).toBe(1);
   });
+
+  /**
+   * "Ghi chú cho khách" của hộp huỷ đơn (Figma `23930:44688`): khách đọc ĐÚNG câu chủ xe viết,
+   * như lượt huỷ ở chặng chờ thanh toán — không phải câu chung "liên hệ chủ xe".
+   */
+  maybe('đơn qua chợ bị huỷ: thông báo của khách mang nguyên ghi chú của chủ xe', async () => {
+    const { id, startAt } = await seedBooking(BOOKING_STATUS.RESERVED);
+    await linkMarketplaceRequest(id, startAt);
+
+    await bookings.transition(tenantId, id, ownerId, {
+      status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE,
+      reason: 'Xe có lịch đột xuất. Vui lòng thông cảm!',
+    });
+
+    const notice = await lastCustomerNotice(id);
+    expect(notice?.body).toContain('“Xe có lịch đột xuất. Vui lòng thông cảm!”');
+    expect(notice?.body).not.toContain('Liên hệ chủ xe');
+  });
+
+  maybe('huỷ không ghi chú: khách nhận câu chung, audit không có khoá reason rỗng', async () => {
+    const { id, startAt } = await seedBooking(BOOKING_STATUS.RESERVED);
+    await linkMarketplaceRequest(id, startAt);
+
+    await bookings.transition(tenantId, id, ownerId, {
+      status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE,
+      reason: '',
+    });
+
+    expect((await lastCustomerNotice(id))?.body).toContain('Liên hệ chủ xe');
+    expect((await lastTransitionAudit(id))?.afterJson).toEqual({
+      status: BOOKING_STATUS.CANCELLED,
+    });
+    const cancellation = await prisma.bookingCancellation.findFirst({ where: { bookingId: id } });
+    expect(cancellation?.reason).toBeNull();
+  });
 });
 
 /**
@@ -383,6 +490,24 @@ describe('Ghi nhận khách không đến', () => {
       status: BOOKING_STATUS.NO_SHOW,
       reason: 'Quá hẹn 3 tiếng, không liên lạc được',
     });
+  });
+
+  // Lý do no-show là ghi chú NỘI BỘ — chỉ lượt huỷ mới gửi câu của chủ xe cho khách.
+  maybe('lý do no-show KHÔNG lọt vào thông báo của khách', async () => {
+    const { id, startAt } = await seedBooking(
+      BOOKING_STATUS.RESERVED,
+      pickedUpAgo(BOOKING_NO_SHOW_GRACE_MINUTES + 30),
+    );
+    await linkMarketplaceRequest(id, startAt);
+
+    await bookings.transition(tenantId, id, ownerId, {
+      status: BOOKING_STATUS.NO_SHOW,
+      reason: 'Gọi 3 lần không bắt máy',
+    });
+
+    const notice = await lastCustomerNotice(id);
+    expect(notice).not.toBeNull();
+    expect(notice?.body).not.toContain('Gọi 3 lần');
   });
 
   maybe('CHƯA qua ân hạn → 409, đơn và lịch không nhúc nhích', async () => {

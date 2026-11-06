@@ -14,6 +14,23 @@ import { renderWithIntl } from '@/i18n/test-utils';
 import type { BookingRequestItem } from '@/features/booking-requests/types';
 import type { BookingFilters, BookingListItem } from '../types';
 
+// Hộp ghi nhận "Khách không đến" có test riêng (`booking-status-actions.test.tsx`) — ở đây chỉ cần biết thẻ mở đúng hộp cho đúng đơn.
+vi.mock('./BookingStatusTransitionDialog', () => ({
+  BookingStatusTransitionDialog: ({
+    booking,
+    target,
+  }: {
+    booking: { code: string };
+    target: string;
+  }) => <div role="dialog">{`${target} ${booking.code}`}</div>,
+}));
+// Hộp "Xác nhận đã nhận lại xe" có test riêng (`confirm-return-dialog.test.tsx`).
+vi.mock('@/features/handovers/components/ConfirmReturnDialog', () => ({
+  ConfirmReturnDialog: ({ booking }: { booking: { code: string } }) => (
+    <div role="dialog">{`return ${booking.code}`}</div>
+  ),
+}));
+
 /**
  * Màn "Đơn thuê xe" GỘP (05/11/2026) — bốn nhóm của một chuyến: Cần xử lý · Chờ khách thanh toán
  * (YÊU CẦU) · Chờ giao xe · Đang thuê (ĐƠN). Test chặn ở tầng hook đọc server và kiểm: truy vấn
@@ -555,7 +572,7 @@ describe('Thẻ yêu cầu — Chờ khách thanh toán', () => {
     expect(screen.queryByRole('button', { name: 'Nhắc khách' })).toBeNull();
   });
 
-  it('huỷ: phải chọn lý do VÀ ghi chú cho khách, rồi mới gửi', async () => {
+  it('huỷ: phải chọn lý do rồi mới gửi', async () => {
     seedRequests(BOOKING_REQUEST_STATUS.AWAITING_HOLD, [awaiting()]);
     renderPage('preset=awaiting_payment');
     fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến' }));
@@ -563,6 +580,31 @@ describe('Thẻ yêu cầu — Chờ khách thanh toán', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Huỷ yêu cầu thuê xe' }));
     expect(mutations.cancel.mutate).not.toHaveBeenCalled();
     expect(within(dialog).getByText('Chọn một nhóm lý do')).toBeTruthy();
+  });
+
+  // Ghi chú cho khách chỉ bắt buộc với "Lý do khác" (chốt 06/11/2026, cùng luật với API).
+  it('huỷ: ghi chú bắt buộc với "Lý do khác", tuỳ chọn với nhóm cụ thể', async () => {
+    seedRequests(BOOKING_REQUEST_STATUS.AWAITING_HOLD, [awaiting()]);
+    renderPage('preset=awaiting_payment');
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến' }));
+    const dialog = await screen.findByRole('dialog');
+    const pick = async (label: string) => {
+      fireEvent.mouseDown(within(dialog).getByRole('combobox'));
+      fireEvent.click(await screen.findByTitle(label));
+    };
+
+    await pick('Lý do khác');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Huỷ yêu cầu thuê xe' }));
+    expect(mutations.cancel.mutate).not.toHaveBeenCalled();
+    expect(
+      within(dialog).getByText('Nhập ghi chú để khách biết vì sao chuyến bị huỷ'),
+    ).toBeTruthy();
+
+    await pick('Trùng lịch với chuyến khác');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Huỷ yêu cầu thuê xe' }));
+    expect(mutations.cancel.mutate).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(mutations.cancel.mutate.mock.calls[0])).not.toContain('"reason"');
+    expect(JSON.stringify(mutations.cancel.mutate.mock.calls[0])).toContain('schedule_conflict');
   });
 });
 
@@ -589,7 +631,54 @@ describe('Thẻ đơn — Chờ giao xe / Đang thuê', () => {
     expect(screen.getByText(/Quá giờ giao xe/)).toBeTruthy();
   });
 
-  it('Đang thuê: thanh tiến độ + "Còn lại"; "Nhận xe" mở trang chi tiết; "Gia hạn" chỉ đơn dài hạn qua chợ', () => {
+  it('qua ân hạn mà chưa giao ⇒ "Khách không đến" ngay trên thẻ, mở hộp ghi nhận; chưa qua ân hạn / thiếu quyền thì không', () => {
+    permissions.granted.add(PERMISSION.BOOKING_UPDATE);
+    seedBookings(BOOKING_LIST_PRESET.AWAITING_PICKUP, [
+      booking({ id: 'A1', pickupAt: new Date(Date.now() - 2 * HOUR).toISOString() }),
+      booking({ id: 'A2', pickupAt: new Date(Date.now() - 5 * 60_000).toISOString() }),
+    ]);
+    renderPage('preset=awaiting_pickup');
+    const buttons = screen.getAllByRole('button', { name: 'Khách không đến' });
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(buttons[0]!);
+    expect(screen.getByRole('dialog').textContent).toBe(`${BOOKING_STATUS.NO_SHOW} XP-A1`);
+
+    cleanup();
+    permissions.granted.delete(PERMISSION.BOOKING_UPDATE);
+    renderPage('preset=awaiting_pickup');
+    expect(screen.queryByRole('button', { name: 'Khách không đến' })).toBeNull();
+  });
+
+  it('đã qua cả giờ TRẢ mà chưa xác nhận giao ⇒ câu đỏ riêng, không còn "Quá giờ giao xe"', () => {
+    seedBookings(BOOKING_LIST_PRESET.AWAITING_PICKUP, [
+      booking({
+        id: 'A1',
+        pickupAt: new Date(Date.now() - 30 * HOUR).toISOString(),
+        returnAt: new Date(Date.now() - 6 * HOUR).toISOString(),
+      }),
+    ]);
+    renderPage('preset=awaiting_pickup');
+    expect(screen.getByText(/Quá cả giờ trả xe .* chưa xác nhận giao xe/)).toBeTruthy();
+    expect(screen.queryByText(/Quá giờ giao xe/)).toBeNull();
+  });
+
+  it('Đang thuê + khách đã báo trả xe ⇒ thẻ nói lời báo và hạn tự hoàn thành thay cho "quá giờ trả"', () => {
+    seedBookings(BOOKING_LIST_PRESET.RENTING, [
+      booking({
+        id: 'R1',
+        status: BOOKING_STATUS.ACTIVE,
+        pickupAt: new Date(Date.now() - 30 * HOUR).toISOString(),
+        returnAt: new Date(Date.now() - 2 * HOUR).toISOString(),
+        customerReturnedAt: new Date(Date.now() - HOUR).toISOString(),
+        returnAutoCompleteAt: new Date(Date.now() + 23 * HOUR).toISOString(),
+      }),
+    ]);
+    renderPage('preset=renting');
+    expect(screen.getByText(/Khách báo đã trả xe .* tự hoàn thành/)).toBeTruthy();
+    expect(screen.queryByText(/Quá giờ trả xe/)).toBeNull();
+  });
+
+  it('Đang thuê: thanh tiến độ + "Còn lại"; "Nhận xe" mở hộp nhận xe; "Gia hạn" chỉ đơn dài hạn qua chợ', () => {
     permissions.granted.add(PERMISSION.HANDOVER_CONFIRM);
     permissions.granted.add(PERMISSION.BOOKING_UPDATE);
     seedBookings(BOOKING_LIST_PRESET.RENTING, [
@@ -608,9 +697,11 @@ describe('Thẻ đơn — Chờ giao xe / Đang thuê', () => {
     expect(screen.getByText('Còn lại: 4 giờ')).toBeTruthy();
     expect(screen.getAllByRole('progressbar')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: /Gia hạn/ })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: /Nhận xe/ })[0]!.getAttribute('href')).toBe(
-      bookingPath.detail('L1'),
-    );
+    // "Nhận xe" mở THẲNG hộp xác nhận (06/11/2026), cho đúng đơn — không đổi trang.
+    expect(screen.queryByRole('link', { name: /Nhận xe/ })).toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: /Nhận xe/ })[0]!);
+    expect(screen.getByRole('dialog').textContent).toBe('return XP-L1');
+    expect(nav.push).not.toHaveBeenCalled();
   });
 
   it('ô tiền đơn qua chợ: tiền thuê · khách trả · đã giữ chỗ · trả chủ xe khi nhận xe', () => {

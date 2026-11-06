@@ -11,7 +11,7 @@
     "INVALID_CREDENTIALS": "That phone number or password is incorrect.",
     "INVALID_RESET_TOKEN": "This reset link is invalid or has expired.",
     "ACCOUNT_LOCKED": "This account is locked. Contact support to unlock it.",
-    "LOGIN_TEMPORARILY_LOCKED": "Too many failed attempts. Sign-in is paused — try again in a few minutes, or use \"Forgot password\".",
+    "LOGIN_TEMPORARILY_LOCKED": "Too many incorrect attempts. Please try again in a few minutes or use \"Forgot password\".",
     "CURRENT_PASSWORD_INCORRECT": "Your current password is incorrect.",
     "PASSWORD_NOT_SET": "This account doesn't have a password yet. Set one for the first time instead of changing it.",
     "PASSWORD_UNCHANGED": "Your new password must be different from the current one.",
@@ -55,8 +55,8 @@
     "OTP_INVALID": "That verification code is incorrect.",
     "OTP_EXPIRED": "The verification code has expired. Request a new one.",
     "OTP_COOLDOWN": "Please wait a moment before requesting another code.",
-    "OTP_TOO_MANY": "Too many codes requested. Try again in a few minutes.",
-    "OTP_LOCKED": "Too many incorrect attempts. Try again later.",
+    "OTP_TOO_MANY": "You've requested too many codes. Please try again in a few minutes.",
+    "OTP_LOCKED": "Too many incorrect attempts, so this code has been cancelled. Please request a new code.",
     "DRIVER_LICENCE_IMAGE_INVALID": "The uploaded file is not a valid image — choose a JPG, PNG or WEBP photo.",
     "DRIVER_LICENCE_SUBMISSION_LIMIT": "You have sent many licence photos in the last 24 hours. Please try again tomorrow, or contact XePrime if you need help.",
     "DRIVER_LICENCE_STATE_CONFLICT": "Your licence submission has just changed — please reload the page.",
@@ -72,6 +72,7 @@
     "HANDOVER_ODOMETER_BELOW_PICKUP": "The return reading can't be lower than the pickup reading.",
     "HANDOVER_ODOMETER_SUSPICIOUS": "That mileage difference looks unusual. Please double-check it.",
     "HANDOVER_NOT_ELIGIBLE": "This booking isn't ready for handover.",
+    "HANDOVER_COLLECT_AMOUNT_CHANGED": "The amount still to collect has just changed. Check the new amount, then confirm.",
     "VEHICLE_CODE_DUPLICATE": "This vehicle code is already used in your shop (including deleted vehicles). Use another code or leave it blank to auto-generate.",
     "CUSTOMER_PHONE_DUPLICATE": "This phone number is already in your customer book.",
     "CUSTOMER_ARCHIVED": "This customer has been archived.",
@@ -82,7 +83,7 @@
     "BRANCH_HAS_DEPENDENCIES": "This branch still has related records, so it can't be deleted.",
     "BRANCH_DEFAULT_IMMUTABLE": "The default branch can't be edited or deleted.",
     "BRANCH_LOCATION_REQUIRED": "This branch needs an address before it can be used.",
-    "RATE_LIMITED": "That was too fast. Try again in a few seconds.",
+    "RATE_LIMITED": "You're going a little fast. Please wait a moment and try again.",
     "INTERNAL_ERROR": "The server hit a problem. Please try again later.",
     "UPLOADS_NOT_CONFIGURED": "File uploads aren't configured.",
     "INSURANCE_PARTNER_NOT_CONFIGURED": "No insurance partner is connected in this environment — retrying won't issue a certificate.",
@@ -91,6 +92,10 @@
     "TRIP_NOT_RECEIVED_NOT_ALLOWED": "You can no longer report that you did not receive the vehicle for this trip. Please contact support.",
     "TRIP_NOT_RECEIVED_TOO_EARLY": "The pickup time has not arrived yet, so you cannot report that you did not receive the vehicle.",
     "TRIP_NOT_RECEIVED_WINDOW_CLOSED": "The time to report that you did not receive the vehicle has passed. Please open a support request.",
+    "TRIP_PICKUP_CONFIRM_NOT_ALLOWED": "You can no longer confirm pickup for this trip — the host may have already confirmed it. Please reload the page.",
+    "TRIP_PICKUP_CONFIRM_TOO_EARLY": "The pickup time has not arrived yet, so you cannot confirm that you received the vehicle.",
+    "TRIP_RETURN_REPORT_NOT_ALLOWED": "You can no longer report the return for this trip — the host may have already confirmed it. Please reload the page.",
+    "BOOKING_RETURN_REPORT_NOT_PENDING": "There is no return report waiting for confirmation on this trip. Please reload the page.",
     "PROFILE_INCOMPLETE": "Your shop profile is still missing required details, so it cannot be submitted for review.",
     "SHOP_LISTING_REQUIREMENTS_MISSING": "Your shop profile is still missing required details, so this vehicle cannot be submitted.",
     "RECEIPT_BOOKING_VEHICLE_MISMATCH": "The booking you picked does not run the vehicle you picked. Clear one of the two.",
@@ -228,6 +233,15 @@
     "BOOKING_EXTENSION_PENDING": "This booking already has an extension awaiting payment.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "This extension can no longer be cancelled.",
     "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced — check the vehicle's monthly price."
+  },
+  "codeWithWait": {
+    "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",
+    "LOGIN_TEMPORARILY_LOCKED": "Too many incorrect attempts. Please try again in {wait} or use \"Forgot password\".",
+    "OTP_COOLDOWN": "Please wait {wait} before requesting a new code.",
+    "OTP_TOO_MANY": "You've requested too many codes. Please try again in {wait}."
+  },
+  "wait": {
+    "seconds": "{count, plural, one {# second} other {# seconds}}"
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",

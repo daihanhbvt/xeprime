@@ -22,6 +22,7 @@ import {
   type MobileClientApp,
 } from '@xeprime/types';
 import { Public, Realms, VerifiesCredentials } from '../../common/decorators';
+import { AUTH_THROTTLE } from './auth-throttle';
 import { AuthService } from './auth.service';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
 import { AppleIdentityVerifier } from './social/apple-identity.verifier';
@@ -44,13 +45,12 @@ import {
 } from './dto/mobile-auth.dto';
 
 /**
- * Mức chặn tần suất theo LOẠI cửa — đặt tên một chỗ thay vì rải số ở từng route:
- *  - `CREDENTIAL`: cửa dò mật khẩu (đăng nhập, đăng ký) — chặt nhất;
+ * Mức chặn tần suất theo LOẠI cửa — đặt tên một chỗ thay vì rải số ở từng route. Đăng nhập/đăng ký
+ * dùng `AUTH_THROTTLE` chung với web (cùng `AuthService`); hai mức dưới chỉ app có:
  *  - `SOCIAL`: đổi bằng chứng của provider lấy phiên (one-time code, token Apple) — dùng một lần;
  *  - `SESSION`: xoay / thu hồi refresh token — app gọi thường xuyên.
  */
 const THROTTLE_PER_MINUTE = {
-  CREDENTIAL: { default: { limit: 5, ttl: 60_000 } },
   SOCIAL: { default: { limit: 10, ttl: 60_000 } },
   SESSION: { default: { limit: 20, ttl: 60_000 } },
 } as const;
@@ -88,14 +88,14 @@ export class MobileAuthController {
    * Đăng nhập bằng SĐT + mật khẩu — cả hai app chỉ phục vụ realm `customer`/`partner`, nên email
    * bị từ chối bằng `PHONE_LOGIN_REQUIRED` ngay trong `AuthService.loginWithPassword` (ADR 0060).
    *
-   * 5 lần/phút: đây là cửa dò mật khẩu duy nhất của app native. `AuthService.loginWithPassword`
-   * đã trả cùng một lỗi cho "không có tài khoản" và "sai mật khẩu", nên rate limit là lớp còn lại.
+   * Cửa dò mật khẩu duy nhất của app native — cùng mức với `POST /auth/login` (`AUTH_THROTTLE`).
+   * Theo IP là lớp chống spam; dò một tài khoản bị khoá theo định danh ở `LoginThrottleService`.
    */
   @Public()
   @VerifiesCredentials()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
+  @Throttle(AUTH_THROTTLE.LOGIN)
   @ApiOperation({ summary: 'Native: đăng nhập bằng số điện thoại + mật khẩu' })
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
@@ -114,8 +114,8 @@ export class MobileAuthController {
    * cookie. Cùng `AuthService.register`, nên luật mật khẩu, chuẩn hoá SĐT và nhánh `PHONE_TAKEN`
    * chỉ có một bản.
    *
-   * 5 lần/phút, bằng với `login`: băm mật khẩu tốn ~250ms mỗi lượt, và mã OTP sai đã được đếm/khoá
-   * ở `PhoneVerificationService`.
+   * Cùng mức với `POST /auth/register` (`AUTH_THROTTLE`): băm mật khẩu tốn ~250ms mỗi lượt, và mã
+   * OTP sai đã được đếm/khoá ở `PhoneVerificationService`.
    *
    * Từ ADR 0060 SĐT phải qua OTP `purpose=register` (gửi bằng `POST /auth/phone/send-otp` kèm
    * `clientApp`) — giống hệt web. Bản app chưa gửi `code` nhận 400 `VALIDATION_FAILED` và KHÔNG
@@ -125,7 +125,7 @@ export class MobileAuthController {
   @VerifiesCredentials()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
+  @Throttle(AUTH_THROTTLE.REGISTER)
   @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu + mã OTP' })
   @ApiCreatedResponse({ type: MobileSessionDto })
   async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {

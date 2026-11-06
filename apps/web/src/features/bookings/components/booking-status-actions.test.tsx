@@ -221,27 +221,48 @@ describe('Hộp xác nhận hủy đơn', () => {
     expect(screen.getByText(/Mazda 3/)).toBeTruthy();
   });
 
-  it('thiếu lý do thì chặn ngay ở client, không gửi request', async () => {
+  /*
+   * Ô chữ chỉ bắt buộc khi nhóm là "Lý do khác" (chốt 06/11/2026) — các nhóm còn lại đã tự nói
+   * vì sao. Cùng luật với DTO `transitionNeedsReason`.
+   */
+  it('"Lý do khác" mà để trống ô chữ thì chặn ngay ở client, không gửi request', async () => {
     renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
     openClosingDialog('Hủy đơn');
 
     const dialog = await screen.findByRole('dialog');
+    await pickReasonCategory(dialog, 'Lý do khác');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
 
     expect(await screen.findByText('Nhập lý do trước khi tiếp tục')).toBeTruthy();
     expect(transition.mutate).not.toHaveBeenCalled();
   });
 
-  it('khoảng trắng không phải là lý do', async () => {
+  it('"Lý do khác": khoảng trắng không phải là lý do', async () => {
     renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
     openClosingDialog('Hủy đơn');
 
     const dialog = await screen.findByRole('dialog');
+    await pickReasonCategory(dialog, 'Lý do khác');
     fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: '   ' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
 
     expect(await screen.findByText('Nhập lý do trước khi tiếp tục')).toBeTruthy();
     expect(transition.mutate).not.toHaveBeenCalled();
+  });
+
+  it('nhóm cụ thể, không ghi chú: gửi được và KHÔNG kèm reason', async () => {
+    renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
+    openClosingDialog('Hủy đơn');
+
+    const dialog = await screen.findByRole('dialog');
+    await pickReasonCategory(dialog, 'Trùng lịch với chuyến khác');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
+
+    await waitFor(() => expect(transition.mutate).toHaveBeenCalledTimes(1));
+    expect(transition.mutate.mock.calls[0]![0]).toEqual({
+      status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: 'schedule_conflict',
+    });
   });
 
   /*
@@ -259,7 +280,49 @@ describe('Hộp xác nhận hủy đơn', () => {
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
 
-    expect(await screen.findByText('Chọn một nhóm lý do')).toBeTruthy();
+    expect(await screen.findByText('Chọn lý do hủy đơn')).toBeTruthy();
+    expect(transition.mutate).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Khuôn Figma `23930:44688` (06/11/2026). Đơn đặt qua CHỢ: ghi chú đi tới khách và lượt huỷ trừ
+   * uy tín — hộp nói cả hai TRƯỚC khi bấm. Đơn tự lập: không có tài khoản khách để đọc ghi chú,
+   * không vào mẫu số chỉ số uy tín (ADR 0045 điều 3) — nói vậy là doạ sai.
+   */
+  it('đơn qua chợ: ô "Ghi chú cho khách" và cảnh báo trừ uy tín', async () => {
+    renderActions(booking({ status: BOOKING_STATUS.RESERVED, bookingRequestId: 'req-1' }));
+    openClosingDialog('Hủy đơn');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Ghi chú cho khách')).toBeTruthy();
+    expect(within(dialog).getByRole('note').textContent).toContain('trừ điểm uy tín');
+    expect(within(dialog).getByRole('note').textContent).toContain('hoàn 100%');
+
+    await pickReasonCategory(dialog, 'Lý do khác');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
+    expect(await screen.findByText('Nhập ghi chú để khách biết vì sao đơn bị hủy')).toBeTruthy();
+    expect(transition.mutate).not.toHaveBeenCalled();
+  });
+
+  it('đơn tự lập: ghi chú nội bộ, KHÔNG có cảnh báo uy tín', async () => {
+    renderActions(booking({ status: BOOKING_STATUS.RESERVED, bookingRequestId: null }));
+    openClosingDialog('Hủy đơn');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText('Ghi chú cho khách')).toBeNull();
+    expect(within(dialog).getByText('Ghi chú nội bộ')).toBeTruthy();
+    expect(within(dialog).queryByRole('note')).toBeNull();
+  });
+
+  it('viên tóm tắt có biển số; "Quay lại" đóng hộp mà không gửi', async () => {
+    renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
+    openClosingDialog('Hủy đơn');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/43B-336\.92/)).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Quay lại' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(transition.mutate).not.toHaveBeenCalled();
   });
 

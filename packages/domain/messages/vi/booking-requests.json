@@ -141,7 +141,12 @@
     "subtitleHold": "Sau khi xác nhận, yêu cầu sẽ chuyển sang trạng thái <b>Chờ khách thanh toán</b>.",
     "subtitleNoHold": "Sau khi xác nhận, đơn thuê được tạo ngay và chuyển sang <b>Chờ giao xe</b>.",
     "back": "Quay lại",
-    "profitHeading": "Lợi nhuận chuyến"
+    "profitHeading": "Lợi nhuận chuyến",
+    "stillOut": {
+      "title": "Xe chưa về từ chuyến #{code} — đã quá giờ trả {duration}",
+      "body": "Lịch xe chỉ giữ tới giờ trả theo đơn, nên chuyến mới vẫn duyệt được. Chỉ duyệt khi chắc xe về kịp; tự động nhận chuyến đang tạm dừng với xe này.",
+      "open": "Mở chuyến đang trễ"
+    }
   },
   "longTerm": {
     "title": "Duyệt và giữ xe — thuê dài hạn",

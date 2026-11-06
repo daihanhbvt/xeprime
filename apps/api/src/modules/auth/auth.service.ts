@@ -327,12 +327,7 @@ export class AuthService {
         message: 'Mật khẩu hiện tại không đúng',
       });
     }
-    if (await bcrypt.compare(newPassword, user.passwordHash)) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.PASSWORD_UNCHANGED,
-        message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
-      });
-    }
+    await assertPasswordChanged(newPassword, user.passwordHash);
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
@@ -445,7 +440,11 @@ export class AuthService {
     const tokenHash = this.hashToken(token);
     const record = await this.prisma.passwordResetToken.findFirst({
       where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { realm } },
-      select: { id: true, userId: true, user: { select: { phone: true, email: true } } },
+      select: {
+        id: true,
+        userId: true,
+        user: { select: { phone: true, email: true, passwordHash: true } },
+      },
     });
     if (!record) {
       throw new BadRequestException({
@@ -453,6 +452,8 @@ export class AuthService {
         message: 'Liên kết đặt lại không hợp lệ hoặc đã hết hạn',
       });
     }
+    // Kiểm TRƯỚC transaction: token chưa bị tiêu, người dùng chọn mật khẩu khác rồi gửi lại được.
+    await assertPasswordChanged(newPassword, record.user.passwordHash);
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.prisma.$transaction(async (tx) => {
@@ -558,6 +559,12 @@ export class AuthService {
         message: 'Mã xác thực không đúng',
       });
     }
+    /*
+     * Mật khẩu mới trùng mật khẩu đang dùng ⇒ `PASSWORD_UNCHANGED`. Kiểm SAU khi mã đã chứng minh
+     * sở hữu số (không lộ gì cho người không cầm máy) và TRƯỚC khi tiêu mã: mã vẫn ở trạng thái
+     * đã xác minh, người dùng chọn mật khẩu khác và gửi lại ngay trong cửa sổ, không phải xin mã mới.
+     */
+    await assertPasswordChanged(newPassword, account.passwordHash);
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const now = new Date();
@@ -585,10 +592,11 @@ export class AuthService {
     phone: string | null;
     email: string | null;
     phoneVerifiedAt: Date | null;
+    passwordHash: string | null;
   } | null> {
     return this.prisma.user.findFirst({
       where: { realm, phone: normalizedPhone, deletedAt: null, status: USER_STATUS.ACTIVE },
-      select: { id: true, phone: true, email: true, phoneVerifiedAt: true },
+      select: { id: true, phone: true, email: true, phoneVerifiedAt: true, passwordHash: true },
     });
   }
 
@@ -948,6 +956,22 @@ function toTenantSummary(
     graceEndsAt: plan.graceEndsAt?.toISOString() ?? null,
     publicVehicleCount,
   };
+}
+
+/**
+ * Mật khẩu mới trùng mật khẩu đang dùng ⇒ 400 `PASSWORD_UNCHANGED` — MỘT luật cho đổi mật khẩu và
+ * cả hai đường đặt lại (link email, mã OTP). Tài khoản chưa có mật khẩu thì không có gì để trùng.
+ */
+async function assertPasswordChanged(
+  newPassword: string,
+  currentHash: string | null,
+): Promise<void> {
+  if (currentHash && (await bcrypt.compare(newPassword, currentHash))) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.PASSWORD_UNCHANGED,
+      message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+    });
+  }
 }
 
 /** SĐT đã có tài khoản TRONG realm — một mã, một câu, ở mọi đường tạo/gắn số. */

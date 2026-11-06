@@ -22,6 +22,7 @@ import type { BookingRequestDecisionTarget, BookingRequestItem } from '../types'
 import { ApprovalWindowNotes } from './ApprovalPreviewSummary';
 import { RequestPaymentFacts } from './BookingRequestCard';
 import { RespondDeadline } from './RespondDeadline';
+import { VehicleStillOutAlert } from './VehicleStillOutAlert';
 import styles from './ApproveBookingRequestDialog.module.css';
 
 interface Props {
@@ -240,6 +241,8 @@ function ApproveForm({
         {approvalPreview ? (
           <ApprovalWindowNotes preview={approvalPreview} className={styles.notes} />
         ) : null}
+
+        <VehicleStillOutAlert stillOut={current.vehicleStillOut ?? null} />
 
         {current.deliveryRequested ? (
           <Alert type="info" showIcon title={t('approve.deliveryNote')} />

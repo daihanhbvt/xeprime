@@ -219,16 +219,16 @@ export function BookingHistoryView() {
       title: t('columns.endedAt'),
       key: 'endedAt',
       width: 160,
-      render: (_, row) => fmt.dateTime(row.endedAt),
+      render: (_, row) => <span className={styles.endedAt}>{fmt.dateTime(row.endedAt)}</span>,
     },
     {
       title: t('columns.actions'),
       key: 'actions',
       align: 'right',
       fixed: 'right',
-      width: 130,
+      width: 148,
       render: (_, row) => (
-        <Button size="small" onClick={() => openRow(row)}>
+        <Button className={styles.openButton} onClick={() => openRow(row)}>
           {t('open')}
         </Button>
       ),
@@ -263,7 +263,7 @@ export function BookingHistoryView() {
           <dd>{fmt.dateTime(row.endedAt)}</dd>
         </div>
       </dl>
-      <Button block onClick={() => openRow(row)}>
+      <Button block className={styles.openButton} onClick={() => openRow(row)}>
         {t('open')}
       </Button>
     </article>

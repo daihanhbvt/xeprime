@@ -35,6 +35,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingsService,
   makeCustomersService,
+  makeHandoverMoneyServices,
   makeNotificationService,
   makeVehiclesService,
   vehicleCreator,
@@ -93,7 +94,15 @@ const bookings = makeBookingsService(asService, {
   notifications: notifications,
   customers: makeCustomersService(asService, audit),
 });
-const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
+const handovers = new HandoversService(
+  asService,
+  bookings,
+  odometer,
+  maintenance,
+  files,
+  audit,
+  ...makeHandoverMoneyServices(asService, audit),
+);
 const alerts = new VehicleAlertsService(asService);
 
 /**

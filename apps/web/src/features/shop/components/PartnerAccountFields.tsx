@@ -16,6 +16,7 @@ import { PHONE_VERIFICATION_PURPOSE, VN_PHONE_PATTERN } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { useContactVerify } from '@/features/account/hooks/use-contact-verify';
 import { CONTACT_CHANNEL } from '@/features/account/types';
@@ -345,7 +346,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               onClick={() => void resend()}
             >
               {otp.cooldown > 0
-                ? t('signup.fields.otpCode.resendIn', { seconds: otp.cooldown })
+                ? t('signup.fields.otpCode.resendInTime', { time: formatOtpCooldown(otp.cooldown) })
                 : t('signup.fields.otpCode.resend')}
             </Button>
           </div>

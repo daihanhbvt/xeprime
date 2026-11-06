@@ -126,6 +126,8 @@ const TRIP: CustomerTripDetail = {
   // Lưới "Chưa nhận được xe" (ADR 0066 điều 5) — fixture chưa tới giờ nhận, chưa có khiếu nại.
   openDispute: false,
   canReportNotReceived: false,
+  canConfirmPickup: false,
+  canReportReturn: false,
   notReceivedReportUntil: null,
   // GCN bảo hiểm (ADR 0064) — chuyến này chưa bàn giao nên chưa có giấy nào.
   insuranceCertificates: [],

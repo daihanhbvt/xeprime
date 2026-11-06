@@ -127,7 +127,7 @@ export function MarketForgotPassword({
   }
 
   async function confirmCode(submitted: string) {
-    if (busy || submitted.length !== OTP_POLICY.CODE_LENGTH) return;
+    if (busy || otp.codeDead || submitted.length !== OTP_POLICY.CODE_LENGTH) return;
     setError(null);
     if (submitted === verifiedCode) {
       setStep(FORGOT_STEP.PASSWORD);
@@ -180,6 +180,8 @@ export function MarketForgotPassword({
         setVerifiedCode(null);
         setCode('');
         setStep(FORGOT_STEP.CODE);
+        // Khoá / hết hạn ⇒ bước mã mở ra với ô mã đã khoá, chỉ còn "Gửi lại mã".
+        otp.noteCodeError(err);
       }
       setError(errorMessage(err));
     } finally {
@@ -214,6 +216,7 @@ export function MarketForgotPassword({
               setCode(next);
             }}
             verifying={busy === 'verify'}
+            locked={otp.codeDead}
             error={error}
             devCode={otp.devCode}
             cooldown={otp.cooldown}
@@ -336,6 +339,7 @@ function CodeStep({
   code,
   onCodeChange,
   verifying,
+  locked,
   error,
   devCode,
   cooldown,
@@ -347,6 +351,8 @@ function CodeStep({
   code: string;
   onCodeChange: (code: string) => void;
   verifying: boolean;
+  /** Mã đã bị server huỷ — khoá ô mã và nút gửi, chỉ còn "Gửi lại mã". */
+  locked: boolean;
   error: string | null;
   devCode: string | null;
   cooldown: number;
@@ -375,6 +381,7 @@ function CodeStep({
         onChange={onCodeChange}
         onComplete={onSubmit}
         submitting={verifying}
+        locked={locked}
         error={error}
         devCode={devCode}
         autoFocus
@@ -384,6 +391,7 @@ function CodeStep({
           size="form"
           block
           loading={verifying}
+          disabled={locked}
           onClick={() => submitCodeOrFocus(code, codeRef, onSubmit)}
         >
           {t('submit')}

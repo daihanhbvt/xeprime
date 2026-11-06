@@ -43,6 +43,7 @@ import {
   makeBookingHoldsService,
   makeBookingsService,
   makeCustomersService,
+  makeHandoverMoneyServices,
   makeNotificationService,
   makePricingService,
   makeSupportService,
@@ -87,6 +88,7 @@ const handovers = new HandoversService(
   new MaintenanceService(asService, odometer, files, audit, receipts),
   files,
   audit,
+  ...makeHandoverMoneyServices(asService, audit),
 );
 const support: SupportService = makeSupportService(asService, notifications);
 const trips = new CustomerTripsService(

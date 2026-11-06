@@ -114,6 +114,26 @@
   color: var(--xp-color-error);
 }
 
+/* Ngày giờ kết thúc là một khối — bảng `tableLayout: auto` co cột này trước nếu để xuống dòng. */
+.endedAt {
+  white-space: nowrap;
+}
+
+/* "Xem chi tiết": nút viền xám cao 36, padding 8/12, bo 12, chữ 14/600 (Figma `23948:87473`).
+ * Lặp class để thắng selector `:where(...)` của AntD; hover vẫn để AntD lo. */
+.openButton.openButton {
+  height: 36px;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  box-shadow: none;
+}
+
 /* ── Thẻ mobile ──────────────────────────────────────────────────────────── */
 
 .card {

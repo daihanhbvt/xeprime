@@ -9,6 +9,7 @@ import { useState } from 'react';
 import {
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
   isBookingRequestPastDue,
   PERMISSION,
   SERVICE_TYPE_VALUES,
@@ -72,6 +73,8 @@ import { RentalStageHeading, STAGE_TONE } from './RentalStageHeading';
 import { RentalsBoard, type BoardColumn } from './board/RentalsBoard';
 import { RentalsViewToggle } from './board/RentalsViewToggle';
 import type { RentalCardLayout } from './rental-card/RentalCard';
+import { ConfirmReturnDialog } from '@/features/handovers/components/ConfirmReturnDialog';
+import { BookingStatusTransitionDialog } from './BookingStatusTransitionDialog';
 import { ExtendBookingDialog } from './ExtendBookingDialog';
 import styles from './BookingsListView.module.css';
 
@@ -242,6 +245,8 @@ export function BookingsListView() {
   const canMessage = canViewRequests && !chatHidden;
   // Gia hạn (ADR 0077) là tiền của chuyến — phiên hỗ trợ không mở.
   const canExtend = has(PERMISSION.BOOKING_UPDATE) && !settlementHidden;
+  // "Khách không đến" là một kết cục bàn giao — phiên hỗ trợ không ghi thay gian hàng.
+  const canNoShow = has(PERMISSION.BOOKING_UPDATE) && !hidesHandover;
   const canRemind = canApprove && !chatHidden;
 
   /** Chỗ đang đứng kèm nhóm + trang — link "Xem lịch xe" quay về đúng đây. */
@@ -403,6 +408,8 @@ export function BookingsListView() {
   const [vehicleDetailId, setVehicleDetailId] = useState<string | null>(null);
   const [customerDetail, setCustomerDetail] = useState<{ id: string; name: string } | null>(null);
   const [extending, setExtending] = useState<BookingListItem | null>(null);
+  const [noShowFor, setNoShowFor] = useState<BookingListItem | null>(null);
+  const [receiving, setReceiving] = useState<BookingListItem | null>(null);
 
   function openConversation(requestId: string) {
     startConversation.mutate(requestId, {
@@ -483,6 +490,8 @@ export function BookingsListView() {
         canHandle={canHandle}
         onMessage={canMessage && requestId ? () => openConversation(requestId) : undefined}
         onExtend={canExtend ? () => setExtending(booking) : undefined}
+        onNoShow={canNoShow ? () => setNoShowFor(booking) : undefined}
+        onReceive={canHandle ? () => setReceiving(booking) : undefined}
         messagePending={pending}
         busy={pending}
         backHref={backHref}
@@ -813,6 +822,21 @@ export function BookingsListView() {
 
       {extending ? (
         <ExtendBookingDialog booking={extending} onClose={() => setExtending(null)} />
+      ) : null}
+
+      {/* Dựng có điều kiện: mỗi lần mở là một form mới, không còn lý do của lần bấm trước. */}
+      {noShowFor ? (
+        <BookingStatusTransitionDialog
+          booking={noShowFor}
+          target={BOOKING_STATUS.NO_SHOW}
+          open
+          onClose={() => setNoShowFor(null)}
+        />
+      ) : null}
+
+      {/* "Nhận xe" ở thẻ (List + Kanban) — cùng hộp với nút xác nhận ở trang chi tiết. */}
+      {receiving ? (
+        <ConfirmReturnDialog booking={receiving} onClose={() => setReceiving(null)} />
       ) : null}
     </div>
   );

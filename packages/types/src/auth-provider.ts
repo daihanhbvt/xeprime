@@ -64,6 +64,29 @@ export const APPLE_SIGN_IN_LIMITS = {
 export const USER_DISPLAY_NAME_MAX_LENGTH = 255;
 
 /**
+ * Luật ô "Tên hiển thị" / "Họ tên" khi TỰ ĐĂNG KÝ bằng SĐT — form (yup, `@xeprime/validators`) và
+ * DTO của API đọc cùng một chỗ, nên client và server không thể lệch nhau.
+ *
+ *  - Độ dài tính SAU khi bỏ khoảng trắng đầu/cuối và chuẩn hoá Unicode về NFC: bàn phím tiếng
+ *    Việt có thể gõ "ễ" thành 2–3 code point (NFD), và không ai đáng bị báo "quá dài" vì bộ gõ.
+ *  - Chỉ chữ cái (mọi ngôn ngữ, kèm dấu), chữ số và khoảng trắng. Không ký hiệu: tên này hiện cho
+ *    chủ xe, trên tin nhắn và hợp đồng — `@`, `$`, `<>` ở đó chỉ là rác hoặc mồi giả mạo.
+ *
+ * Chỉ áp cho lượt đăng ký: tên lấy từ Google/Facebook/Apple giữ nguyên như nhà cung cấp trả
+ * (trần `USER_DISPLAY_NAME_MAX_LENGTH`).
+ */
+export const DISPLAY_NAME_POLICY = {
+  MIN_LENGTH: 2,
+  MAX_LENGTH: 50,
+  PATTERN: /^[\p{L}\p{M}\p{Nd} ]+$/u,
+} as const;
+
+/** Chuẩn hoá ô tên trước khi kiểm và lưu: NFC + bỏ khoảng trắng đầu/cuối. */
+export function normalizeDisplayName(value: string): string {
+  return value.normalize('NFC').trim();
+}
+
+/**
  * Nhãn hiển thị. KHÔNG đi qua i18n: đây là tên thương hiệu, giống nhau ở mọi ngôn ngữ
  * (CLAUDE.md mục 5 — chỉ NHÃN nghiệp vụ mới dịch, tên riêng thì không).
  */

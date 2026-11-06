@@ -1,0 +1,40 @@
+/* Khối "Đã nhận xe / Đã trả xe" (ADR 0081) — cùng khung với `.block` của trang chuyến, viền tông THÔNG TIN. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-info-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-info-bg);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.dialogLead {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}

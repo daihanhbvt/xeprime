@@ -1,0 +1,541 @@
+/*
+ * "Xác nhận đã nhận lại xe" — Figma Partner-XePrime `23941:64008` / `23941:65305` (06/11/2026):
+ * design rộng 556 — nới lên `lg` (720) theo phản hồi 06/11 "to hơn cho thoáng, đỡ dài": năm góc ảnh
+ * nằm một hàng như trang chi tiết. Thân đệm 20 cách nhau 20; thẻ xe viền bo 16; hai ô giờ thực tế ·
+ * Odo cạnh nhau; khối
+ * "Tình trạng, ảnh & ghi chú" có đầu nền xám, thu gọn sẵn; khối tiền nền xám bo 16; chân hộp hai nút
+ * canh phải. Hẹp (< 560) thì hai ô và dòng phụ phí xếp chồng.
+ */
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+/* 18px/Semibold (Figma) — tiêu đề mặc định của hộp nhỏ hơn. */
+.title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.subtitle {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+/* ── Thẻ xe ─────────────────────────────────────────────────────────────── */
+
+.vehicleCard {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.vehicleImage {
+  flex: none;
+  width: 88px;
+  height: 56px;
+  border-radius: var(--xp-border-radius-chip);
+  object-fit: cover;
+}
+
+.vehicleImageEmpty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-placeholder);
+  font-size: 24px;
+}
+
+.vehicleInfo {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleNameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleName {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plate {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
+.scheduled {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.scheduled b {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.badge {
+  flex: none;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border: 1px solid;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
+.badgeOnTime {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.badgeLate {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/* ── Giờ thực tế · Odo ──────────────────────────────────────────────────── */
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+/*
+ * Nhân đôi class: AntD tiêm `.ant-input-number { width: 90px }` LÚC CHẠY, sau sheet này — hoà
+ * specificity thì AntD thắng (bẫy D19, xem `components/form/field.module.css`).
+ */
+.control.control {
+  width: 100%;
+  min-height: 40px;
+}
+
+.unit {
+  color: var(--xp-color-text-tertiary);
+}
+
+.hint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.hint b {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.timeHint {
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: var(--xp-line-height-body);
+}
+
+.hintSuccess {
+  color: var(--xp-color-success);
+}
+
+.hintDanger {
+  color: var(--xp-color-error);
+}
+
+/* ── Tình trạng, ảnh & ghi chú ──────────────────────────────────────────── */
+
+.details {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  padding: var(--xp-space-md);
+  border: none;
+  background: var(--xp-color-bg);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.detailsHeader:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+.detailsHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.chevron {
+  flex: none;
+  color: var(--xp-color-text);
+  font-size: 24px;
+  transition: transform 0.2s ease;
+}
+
+.chevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.detailsTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.optional {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
+.photoCount {
+  flex: none;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.detailsBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  padding: var(--xp-space-md);
+}
+
+.detailsBody[hidden] {
+  display: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.groupTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+}
+
+.choice {
+  min-height: 40px;
+  padding: var(--xp-space-12) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-sm);
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  text-align: center;
+  cursor: pointer;
+}
+
+.choice:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+.choiceActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+}
+
+/* Phụ phí: loại (320) · số tiền · nút bỏ dòng — cách nhau 12. */
+.surchargeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.surchargeCategory.surchargeCategory,
+.surchargeAmount.surchargeAmount {
+  width: 100%;
+  min-height: 40px;
+}
+
+.removeRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-error);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.removeRow:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.recorded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recordedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.recordedTag {
+  margin-left: var(--xp-space-sm);
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.recordedAmount {
+  flex: none;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Gợi ý của server: một dòng chữ + "Thêm" — không khung, để không thành thẻ lồng trong thẻ. */
+.suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.linkButton,
+.addRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-primary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+  cursor: pointer;
+}
+
+.addRow {
+  align-self: flex-start;
+}
+
+.addRow :global(svg) {
+  font-size: 20px;
+}
+
+.linkButton:focus-visible,
+.addRow:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Khối tiền ──────────────────────────────────────────────────────────── */
+
+.money {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
+}
+
+.moneyRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.moneyRowTotal {
+  align-items: center;
+}
+
+.moneyValue {
+  flex: none;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.moneyDanger {
+  color: var(--xp-color-error);
+}
+
+.moneyTotal {
+  flex: none;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.moneyLabelWithInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.collect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.collectRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.collectLabel {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.collectMethod.collectMethod {
+  min-width: 160px;
+}
+
+/* ── Chân hộp ───────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+  width: 100%;
+}
+
+@media (max-width: 559px) {
+  .fieldRow,
+  .choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .surchargeRow {
+    grid-template-columns: minmax(0, 1fr) 20px;
+  }
+
+  .surchargeCategory {
+    grid-column: 1 / -1;
+  }
+
+  .footer :global(.ant-btn) {
+    flex: 1 1 0;
+    min-height: var(--xp-touch-target-min);
+  }
+}

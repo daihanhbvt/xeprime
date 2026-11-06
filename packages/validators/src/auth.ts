@@ -2,8 +2,10 @@ import * as yup from 'yup';
 import {
   compactPhoneInput,
   detectLoginIdentifierKind,
+  DISPLAY_NAME_POLICY,
   isValidLoginIdentifier,
   LOGIN_IDENTIFIER_KIND,
+  normalizeDisplayName,
   VN_PHONE_PATTERN,
 } from '@xeprime/types';
 import { buildRequiredPhoneSchema, type PhoneSchemaLabels } from './phone';
@@ -44,6 +46,12 @@ export interface AuthSchemaLabels extends PhoneSchemaLabels {
    * cùng một ý.
    */
   identifierInvalid?: string;
+  /**
+   * Ô tên của form đăng ký sai độ dài / có ký hiệu (`DISPLAY_NAME_POLICY`). Tuỳ chọn như
+   * `identifierInvalid`: client chưa cấp bản dịch thì rơi về câu tiếng Việt mặc định.
+   */
+  nameLength?: string;
+  nameInvalid?: string;
 }
 
 /** Câu lỗi mặc định — TIẾNG VIỆT, cho client nào chưa cấp bản dịch của mình. */
@@ -59,6 +67,8 @@ const VI: Required<AuthSchemaLabels> = {
   identifierRequired: 'Vui lòng nhập email hoặc số điện thoại',
   identifierInvalid: 'Nhập email (vd ban@congty.vn) hoặc số điện thoại (vd 0901234567)',
   nameRequired: 'Vui lòng nhập họ tên',
+  nameLength: `Tên cần từ ${DISPLAY_NAME_POLICY.MIN_LENGTH} đến ${DISPLAY_NAME_POLICY.MAX_LENGTH} ký tự`,
+  nameInvalid: 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng',
   confirmRequired: 'Vui lòng nhập lại mật khẩu',
   confirmMismatch: 'Mật khẩu nhập lại không khớp',
 };
@@ -73,14 +83,17 @@ export type PasswordRuleKey = 'passwordTooShort' | 'passwordNeedsLetter' | 'pass
  * Bảng tick ✓/✗ theo từng quy tắc phải đánh giá đúng thứ schema sẽ từ chối. Nếu bảng tự viết lại
  * ba biểu thức của riêng nó thì sớm muộn hai bên lệch nhau, và người dùng thấy cả ba dòng xanh
  * nhưng bấm Lưu vẫn đỏ — lỗi khó chịu nhất vì màn hình đang nói dối họ.
+ *
+ * THỨ TỰ là thứ tự báo lỗi: form chỉ hiện lỗi ĐẦU TIÊN, nên mật khẩu sai nhiều luật báo theo
+ * độ dài → có số → có chữ (đặc tả BR-AUTH-03; `!!!!!!!!` báo "cần có số", không báo "cần có chữ").
  */
 export const PASSWORD_RULES: ReadonlyArray<{
   readonly key: PasswordRuleKey;
   readonly test: (value: string) => boolean;
 }> = [
   { key: 'passwordTooShort', test: (value) => value.length >= PASSWORD_MIN },
-  { key: 'passwordNeedsLetter', test: (value) => /[A-Za-z]/.test(value) },
   { key: 'passwordNeedsDigit', test: (value) => /\d/.test(value) },
+  { key: 'passwordNeedsLetter', test: (value) => /[A-Za-z]/.test(value) },
 ];
 
 /**
@@ -166,9 +179,27 @@ export const buildPhoneLoginSchema = (labels: AuthSchemaLabels) =>
 export const buildOtpLoginSchema = (labels: AuthSchemaLabels) =>
   yup.object({ phone: buildRequiredPhoneSchema(labels) });
 
+/**
+ * Ô tên của form đăng ký — `DISPLAY_NAME_POLICY`, cùng luật với `RegisterFields` của API. Chuẩn hoá
+ * (NFC + bỏ khoảng trắng đầu/cuối) TRƯỚC khi kiểm, nên "   A   " là một chữ và bị báo ngắn, còn
+ * "      " là ô trống. Thứ tự báo: trống → độ dài → ký tự — mỗi lần một câu.
+ */
+export const buildDisplayNameSchema = (labels: AuthSchemaLabels) => {
+  const lengthMessage = labels.nameLength ?? VI.nameLength;
+  return yup
+    .string()
+    .transform((value: unknown) =>
+      typeof value === 'string' ? normalizeDisplayName(value) : value,
+    )
+    .required(labels.nameRequired)
+    .min(DISPLAY_NAME_POLICY.MIN_LENGTH, lengthMessage)
+    .max(DISPLAY_NAME_POLICY.MAX_LENGTH, lengthMessage)
+    .matches(DISPLAY_NAME_POLICY.PATTERN, labels.nameInvalid ?? VI.nameInvalid);
+};
+
 export const buildRegisterSchema = (labels: AuthSchemaLabels) =>
   yup.object({
-    displayName: yup.string().trim().required(labels.nameRequired).max(255),
+    displayName: buildDisplayNameSchema(labels),
     phone: buildRequiredPhoneSchema(labels),
     password: buildPasswordSchema(labels),
     confirmPassword: buildConfirmSchema(labels),

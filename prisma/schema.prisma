@@ -2057,6 +2057,17 @@ model Booking {
   /// case, nên một đơn có tối đa một case loại này. Partial index viết tay
   /// `bookings_handover_overdue_sweep_idx` (migration 20261022130000) — `migrate dev` đòi DROP thì đừng nhận.
   handoverOverdueAt      DateTime? @map("handover_overdue_at") @db.Timestamptz(3)
+  /// Ba cột CLAIM của worker nhắc chuyến (ADR 0081): nhắc trước giờ nhận 60′ · nhắc trước giờ trả
+  /// 60′ · báo quá giờ trả 30′. Lật từ NULL cùng transaction với thông báo ⇒ mỗi mốc một lần. Partial
+  /// index viết tay `bookings_*_sweep_idx` (migration 20261105150000) — `migrate dev` đòi DROP thì đừng nhận.
+  pickupRemindedAt        DateTime? @map("pickup_reminded_at") @db.Timestamptz(3)
+  returnRemindedAt        DateTime? @map("return_reminded_at") @db.Timestamptz(3)
+  returnOverdueNotifiedAt DateTime? @map("return_overdue_notified_at") @db.Timestamptz(3)
+  /// Khách báo "Đã trả xe" (ADR 0081) — lời của khách, ghi MỘT lần; `returnAutoCompleteAt` là hạn chủ
+  /// xe xác nhận, server tính lúc khách bấm rồi lưu. Đi cùng nhau (CHECK `bookings_customer_return_pair_check`);
+  /// chủ xe báo "khách chưa trả xe" thì cả hai về NULL. Quá hạn mà vẫn `active` ⇒ API tự lập biên bản trả xe.
+  customerReturnedAt      DateTime? @map("customer_returned_at") @db.Timestamptz(3)
+  returnAutoCompleteAt    DateTime? @map("return_auto_complete_at") @db.Timestamptz(3)
   /// Hồ sơ khách trong SỔ KHÁCH của gian hàng (S-01). NULL với đơn lịch sử không có SĐT dùng
   /// được — snapshot `customer_name`/`customer_phone` ở trên vẫn là sự thật của đơn và KHÔNG
   /// bị hồ sơ khách ghi đè khi ai đó sửa tên khách về sau.
@@ -3211,6 +3222,10 @@ model VehicleHandover {
   /// Khi biên bản được GHI NHẬN — server sinh, không nhận từ client, không sửa được.
   confirmedAt            DateTime? @map("confirmed_at") @db.Timestamptz(3)
   confirmedBy            String?   @map("confirmed_by") @db.Char(26)
+  /// @xeprime/types → HandoverConfirmSource (ADR 0081): `host` nhân sự gian hàng · `customer` khách
+  /// bấm "Đã nhận xe" · `auto` biên bản trả xe tự lập khi chủ xe im lặng quá hạn sau lời báo của
+  /// khách. Hai nguồn sau mang `confirmedBy` = tài khoản KHÁCH. CHECK ở migration.
+  confirmSource          String    @default("host") @map("confirm_source") @db.VarChar(20)
   /// Khi việc giao/nhận THỰC SỰ xảy ra (Wave 10). Tách khỏi `confirmed_at` vì hai mốc này khác
   /// nhau thật: nhân viên giao xe lúc 9h rồi 9h20 mới vào ghi. Client chọn được mốc này (mặc
   /// định `Bây giờ`) nhưng KHÔNG chọn được `confirmed_at` — nhờ vậy vẫn còn một mốc bất biến

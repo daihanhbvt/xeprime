@@ -53,9 +53,9 @@ interface PendingUpload {
  *
  * Hai hình thái:
  *  - `grid` (mặc định — hộp bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM;
- *  - `row` (chi tiết đơn, Figma `23845:49956`): mọi góc của loại xe trên một hàng (ô tô 5, xe máy
- *    3 — `handoverPhotoSlotsFor`), nhãn dưới ảnh, ảnh đã có hiện THU NHỎ bằng URL ký ngắn hạn (tự
- *    làm mới — `useHandoverPhotoPreviews`).
+ *  - `row` (chi tiết đơn, Figma `23845:49956`; hộp nhận lại xe `23941:65305`): mọi góc của loại xe
+ *    trên một hàng (ô tô 5, xe máy 3 — `handoverPhotoSlotsFor`), nhãn dưới ảnh, ảnh đã có hiện THU
+ *    NHỎ bằng URL ký ngắn hạn (tự làm mới — `useHandoverPhotoPreviews`).
  *
  * Ảnh mới tải lên hiện preview cục bộ (blob của chính file vừa chọn) để có phản hồi ngay; mở
  * xem toàn màn hình luôn xin một URL ký MỚI cho lần bấm đó.

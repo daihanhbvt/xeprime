@@ -23,6 +23,7 @@ import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { BookingDriverSection } from '../BookingDriverSection';
 import { BookingStatusActions } from '../BookingStatusActions';
 import { useBookingDetailActions } from './BookingDetailActions';
+import { CustomerReturnReport } from './CustomerReturnReport';
 import styles from './BookingDetail.module.css';
 
 /** Thẻ xe — ảnh, biển số, hình thức, nơi nhận/trả, lộ trình (có tài xế), ghi chú đơn. */
@@ -288,6 +289,7 @@ export function SideActions() {
           pickupConfirmed={Boolean(handover?.pickup?.confirmedAt)}
         />
       </div>
+      <CustomerReturnReport booking={booking} canDispute={can.confirmHandover} />
       {primary && can.confirmHandover ? (
         <Button
           type="primary"

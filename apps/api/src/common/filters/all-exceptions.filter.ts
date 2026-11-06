@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import { API_ERROR_CODE, type ApiErrorCode } from '@xeprime/types';
 import type { Response } from 'express';
 import { NO_STORE_CACHE_CONTROL } from '../http-cache';
@@ -53,7 +54,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // công, nhưng dòng này là bảo hiểm cho MỌI đường set header khác (hiện tại và tương lai):
     // thiếu nó, một cú 500 thoáng qua mang `s-maxage` sẽ được CDN giữ làm bản "tốt" suốt TTL.
     res.setHeader('Cache-Control', NO_STORE_CACHE_CONTROL);
-    const { status, code, message, details } = this.translate(exception);
+    const { status, code, message, details } = this.translate(exception, res);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
@@ -71,12 +72,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
     });
   }
 
-  private translate(exception: unknown): {
+  private translate(
+    exception: unknown,
+    res: Response,
+  ): {
     status: number;
     code: ApiErrorCode | string;
     message: string;
     details?: unknown;
   } {
+    /*
+     * Vượt trần tần suất: nói rõ CÒN BAO LÂU. `ThrottlerGuard` đã đặt `Retry-After` (giây) lên
+     * response trước khi ném, nên số đó là của đúng khoá vừa chạm trần — không phải con số đoán.
+     * Thiếu nó, giao diện chỉ nói được "thử lại sau ít giây" trong khi thật ra phải chờ cả phút.
+     */
+    if (exception instanceof ThrottlerException) {
+      const retryAfterSeconds = retryAfterSecondsOf(res);
+      return {
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        code: API_ERROR_CODE.RATE_LIMITED,
+        message: 'Thao tác quá nhanh, vui lòng thử lại sau',
+        ...(retryAfterSeconds !== null ? { details: { retryAfterSeconds } } : {}),
+      };
+    }
+
     const prismaError = asPrismaKnownError(exception);
 
     /*
@@ -203,6 +222,13 @@ function postgresErrorText(exception: unknown): string {
     }
   }
   return parts.join(' ');
+}
+
+/** `Retry-After` (giây) mà `ThrottlerGuard` vừa đặt — `null` khi thiếu hoặc không đọc được. */
+function retryAfterSecondsOf(res: Response): number | null {
+  const raw = res.getHeader('Retry-After');
+  const seconds = Number(Array.isArray(raw) ? raw[0] : raw);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : null;
 }
 
 function isRawExclusionViolation(exception: unknown): boolean {

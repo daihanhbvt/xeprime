@@ -23,13 +23,22 @@ import {
   RECEIPT_SOURCE,
   RECEIPT_TYPE,
   SURCHARGE_CATEGORY,
+  SURCHARGE_CATEGORY_LABEL,
   isSingleEntrySurchargeCategory,
   surchargeCategoryBlock,
   SYSTEM_FINANCE_CATEGORY,
+  type SurchargeCategory,
   type BookingStatus,
   type DepositStatus,
   type PaymentMethod,
 } from '@xeprime/types';
+import {
+  bookingMoney,
+  counterDueAmount,
+  emptyMoneySides,
+  loadBookingMoneySides,
+  ownerShareHeldOnline,
+} from '../../../common/booking-money';
 import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
@@ -42,7 +51,10 @@ import {
   ExcessMileageSuggestionDto,
   CorrectDepositRefundDto,
   OvertimeSuggestionDto,
+  PreviewReturnSettlementDto,
   RecordDepositRefundDto,
+  ReturnSettlementPreviewDto,
+  ReturnSurchargeDraftDto,
   SaveSurchargeDto,
   VoidSurchargeDto,
 } from './dto/settlement.dto';
@@ -248,6 +260,171 @@ export class SettlementService {
   }
 
   // ── Hoàn cọc ──────────────────────────────────────────────────────────────
+
+  // ── Nhận lại xe (06/11/2026) ──────────────────────────────────────────────
+
+  /**
+   * Quyết toán XEM TRƯỚC cho hộp "Xác nhận đã nhận lại xe" (Figma `23941:65305`): các khoản nháp
+   * cộng vào như thể đã ghi, gợi ý quá giờ tính theo giờ đang chọn, gợi ý vượt km theo Odo đang nhập.
+   * Không ghi gì — hộp gọi lại mỗi lần người dùng đổi một con số, và chỉ HIỂN THỊ kết quả (ADR 0007).
+   */
+  async previewReturn(
+    tenantId: string,
+    bookingId: string,
+    dto: PreviewReturnSettlementDto,
+  ): Promise<ReturnSettlementPreviewDto> {
+    const booking = await this.requireBooking(tenantId, bookingId);
+    const draftTotal = draftSurchargeTotal(dto.surcharges ?? []);
+    const occurredAt = dto.occurredAt ? new Date(dto.occurredAt) : new Date();
+
+    const [snapshot, overtime, excessMileage, collectable] = await Promise.all([
+      this.moneySnapshot(tenantId, booking.id, booking.depositAmount),
+      this.overtimeSuggestion(tenantId, { ...booking, actualReturnAt: occurredAt }),
+      this.excessMileageSuggestion(
+        booking,
+        dto.odometerKm !== undefined ? { returnOdometerKm: dto.odometerKm } : undefined,
+      ),
+      this.collectableAmount(this.prisma, tenantId, booking.id, draftTotal),
+    ]);
+    const names = await this.actorNames(snapshot.surcharges.map((row) => row.createdBy));
+
+    const surchargeTotal = snapshot.surchargeTotal.plus(draftTotal);
+    // Cùng công thức với `build` (docs/design/14 §4.2) — kẹp sàn 0 ở cả hai chiều.
+    const proposedRefund = Prisma.Decimal.max(0, snapshot.depositReceived.minus(surchargeTotal));
+    const additionalDue = Prisma.Decimal.max(0, surchargeTotal.minus(snapshot.depositReceived));
+    return {
+      depositReceived: snapshot.depositReceived.toFixed(2),
+      surchargeTotal: surchargeTotal.toFixed(2),
+      proposedRefund: proposedRefund.toFixed(2),
+      additionalDue: additionalDue.toFixed(2),
+      collectableAmount: collectable.toFixed(2),
+      surcharges: snapshot.surcharges.map((row) => toSurchargeDto(row, names)),
+      overtime,
+      excessMileage,
+    };
+  }
+
+  /**
+   * Số khách còn phải đưa TẬN TAY gian hàng (`counterDueAmount`): công nợ của đơn — cộng thêm
+   * `extraSurcharge` như thể các khoản nháp đã ghi — trừ `D` đã nằm ở XePrime.
+   *
+   * `db` là client thường (xem trước) hoặc transaction của lượt nhận xe; trong transaction thì gọi
+   * SAU khi đã ghi các khoản phát sinh, với `extraSurcharge` = 0 — câu đọc thấy chính các dòng vừa ghi.
+   */
+  async collectableAmount(
+    db: Pick<Prisma.TransactionClient, 'booking' | 'bookingSurcharge' | 'receipt' | 'payment'>,
+    tenantId: string,
+    bookingId: string,
+    extraSurcharge: Prisma.Decimal = ZERO,
+  ): Promise<Prisma.Decimal> {
+    const booking = await db.booking.findFirst({
+      where: { id: bookingId, tenantId, deletedAt: null },
+      select: {
+        totalAmount: true,
+        paidAmount: true,
+        priceSnapshot: true,
+        hold: { select: { paidAmount: true } },
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy đơn',
+      });
+    }
+    const sides =
+      (await loadBookingMoneySides(db, [bookingId])).get(bookingId) ?? emptyMoneySides();
+    const money = bookingMoney({
+      totalAmount: booking.totalAmount,
+      paidAmount: booking.paidAmount,
+      ...sides,
+      surchargeTotal: sides.surchargeTotal.plus(extraSurcharge),
+    });
+    return counterDueAmount(
+      money.debtAmount,
+      ownerShareHeldOnline({
+        holdPaid: booking.hold?.paidAmount != null,
+        priceSnapshot: booking.priceSnapshot as unknown as BookingPriceSnapshot | null,
+      }),
+    );
+  }
+
+  /**
+   * Ghi các khoản phát sinh của lượt nhận lại xe TRONG transaction của người gọi — lượt xác nhận
+   * trả xe hỏng thì không khoản nào còn lại, và ngược lại (06/11/2026).
+   *
+   * Cùng luật với `addSurcharge`: danh mục phải còn ghi được trên đơn này, danh mục một-khoản không
+   * trùng (cả với khoản đã có lẫn giữa các dòng nháp), số tiền > 0. Lý do trống ⇒ tên loại phụ phí.
+   * Không báo khách (Wave 11.1) và không sinh giao dịch — y như ghi từ thẻ "Phát sinh".
+   */
+  async addSurchargesWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      tenantId: string;
+      bookingId: string;
+      serviceType: string;
+      userId: string;
+      items: readonly ReturnSurchargeDraftDto[];
+    },
+  ): Promise<void> {
+    const { tenantId, bookingId, userId } = input;
+    const singles = new Set<string>();
+    for (const item of input.items) {
+      assertSurchargeCategoryAllowed(item.category, input.serviceType);
+      if (!new Prisma.Decimal(item.amount).greaterThan(0)) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Số tiền phụ phí phải lớn hơn 0',
+          details: { fields: [{ field: 'surcharges', message: 'Nhập số tiền lớn hơn 0' }] },
+        });
+      }
+      if (isSingleEntrySurchargeCategory(item.category)) {
+        if (singles.has(item.category)) throw duplicateCategory(item.category);
+        singles.add(item.category);
+        await this.requireNoDuplicateCategory(tenantId, bookingId, item.category, tx);
+      }
+    }
+
+    try {
+      for (const item of input.items) {
+        const id = newId();
+        const reason =
+          item.reason?.trim() || SURCHARGE_CATEGORY_LABEL[item.category as SurchargeCategory];
+        await tx.bookingSurcharge.create({
+          data: {
+            id,
+            tenantId,
+            bookingId,
+            category: item.category,
+            amount: new Prisma.Decimal(item.amount),
+            reason,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: 'tenant',
+            action: 'booking.surcharge.create',
+            targetType: 'booking_surcharge',
+            targetId: id,
+            after: {
+              bookingId,
+              category: item.category,
+              amount: item.amount,
+              reason,
+              via: 'return_confirm',
+            },
+          },
+          tx,
+        );
+      }
+    } catch (err) {
+      throw SettlementService.translateDuplicate(err);
+    }
+  }
 
   async recordRefund(
     tenantId: string,
@@ -592,20 +769,17 @@ export class SettlementService {
     tenantId: string,
     bookingId: string,
     category: string,
+    db: Pick<Prisma.TransactionClient, 'bookingSurcharge'> = this.prisma,
   ): Promise<void> {
     if (!isSingleEntrySurchargeCategory(category)) return;
 
-    const existing = await this.prisma.bookingSurcharge.findFirst({
+    const existing = await db.bookingSurcharge.findFirst({
       where: { tenantId, bookingId, category, voidedAt: null },
       select: { id: true },
     });
     if (!existing) return;
 
-    throw new ConflictException({
-      code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
-      message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
-      details: { category, surchargeId: existing.id },
-    });
+    throw duplicateCategory(category, existing.id);
   }
 
   /**
@@ -751,11 +925,15 @@ export class SettlementService {
    * shop chạy, và là điều khoản khách chưa bao giờ được cho xem (trang xe và bước Xác nhận đều
    * chỉ công bố nó cho tự lái). Cổng này và cổng công bố đọc CÙNG một hàm để không lệch nhau.
    */
-  private async excessMileageSuggestion(booking: {
-    id: string;
-    serviceType: string;
-    priceSnapshot?: Prisma.JsonValue | null;
-  }): Promise<ExcessMileageSuggestionDto> {
+  private async excessMileageSuggestion(
+    booking: {
+      id: string;
+      serviceType: string;
+      priceSnapshot?: Prisma.JsonValue | null;
+    },
+    /** Hộp nhận lại xe: Odo ĐANG NHẬP thay cho số trên biên bản (chưa xác nhận). `null` = đã xoá ô. */
+    override?: { returnOdometerKm: number | null },
+  ): Promise<ExcessMileageSuggestionDto> {
     const empty: ExcessMileageSuggestionDto = {
       available: false,
       includedKmPerDay: null,
@@ -792,7 +970,9 @@ export class SettlementService {
     });
     const pickupKm =
       handovers.find((row) => row.type === HANDOVER_TYPE.PICKUP)?.odometerKm ?? null;
-    const returnKm = handovers.find((row) => row.type === HANDOVER_TYPE.RETURN)?.odometerKm ?? null;
+    const returnKm = override
+      ? override.returnOdometerKm
+      : (handovers.find((row) => row.type === HANDOVER_TYPE.RETURN)?.odometerKm ?? null);
     /*
      * Thiếu một đầu, hoặc đồng hồ lúc trả NHỎ HƠN lúc giao (gõ nhầm, đồng hồ thay/quay lại) —
      * không có quãng đường nào suy ra được. Trả về `available: false` kèm những gì đã biết để
@@ -996,6 +1176,22 @@ function depositStatusOf(input: {
   return input.proposedRefund.greaterThan(0)
     ? DEPOSIT_STATUS.AWAITING_REFUND
     : DEPOSIT_STATUS.SETTLED;
+}
+
+/** Tổng các khoản nháp của hộp nhận lại xe — dòng ≤ 0 không tính (lượt xác nhận từ chối chúng). */
+function draftSurchargeTotal(items: readonly ReturnSurchargeDraftDto[]): Prisma.Decimal {
+  return items.reduce((sum, item) => {
+    const amount = new Prisma.Decimal(item.amount);
+    return amount.greaterThan(0) ? sum.plus(amount) : sum;
+  }, ZERO);
+}
+
+function duplicateCategory(category: string, surchargeId?: string): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
+    message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
+    details: { category, ...(surchargeId ? { surchargeId } : {}) },
+  });
 }
 
 /**

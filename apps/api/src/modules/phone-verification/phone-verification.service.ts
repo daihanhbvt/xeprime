@@ -40,6 +40,9 @@ const REGISTER_VERIFIED_WINDOW_MINUTES = 30;
  */
 const PASSWORD_RESET_VERIFIED_WINDOW_MINUTES = 10;
 
+/** Cửa sổ của trần `OTP_POLICY.MAX_SENDS_PER_HOUR`. */
+const SEND_WINDOW_MS = 60 * 60 * 1000;
+
 @Injectable()
 export class PhoneVerificationService {
   constructor(
@@ -80,10 +83,15 @@ export class PhoneVerificationService {
     const now = Date.now();
 
     const cooldownSec = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
-    // Hàng của mã test không tốn tin nhắn nào nên không tính vào cooldown/trần gửi.
-    const notBypass = { not: OTP_BYPASS_PROVIDER };
+    /*
+     * Đếm mọi LƯỢT GỬI (`sent_count > 0`), kể cả lúc admin tắt SMS ở dev/staging: cooldown và trần
+     * gửi là luật người dùng NHÌN THẤY (nút "Gửi lại mã" đếm ngược, câu "đã gửi quá nhiều mã"), nên
+     * staging phải chạy y production thì QC mới kiểm được. Chỉ hàng tổng hợp của mã test gõ khi
+     * CHƯA gửi gì (`markVerified`, `sent_count = 0`) là đứng ngoài — không có lượt gửi nào để đếm.
+     */
+    const isSend = { sentCount: { gt: 0 } };
     const last = await this.prisma.phoneVerification.findFirst({
-      where: { phone, provider: notBypass },
+      where: { phone, ...isSend },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });
@@ -93,20 +101,35 @@ export class PhoneVerificationService {
         {
           code: API_ERROR_CODE.OTP_COOLDOWN,
           message: `Vui lòng đợi ${waitSec}s trước khi gửi lại mã`,
+          details: { retryAfterSeconds: waitSec },
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
     const maxPerHour = OTP_POLICY.MAX_SENDS_PER_HOUR;
-    const sentLastHour = await this.prisma.phoneVerification.count({
-      where: { phone, provider: notBypass, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
-    });
+    const hourAgo = new Date(now - SEND_WINDOW_MS);
+    const inWindow = { phone, ...isSend, createdAt: { gte: hourAgo } };
+    const sentLastHour = await this.prisma.phoneVerification.count({ where: inWindow });
     if (sentLastHour >= maxPerHour) {
+      /*
+       * Gửi lại được khi số lượt trong cửa sổ tụt xuống dưới trần, tức khi lượt thứ
+       * `sentLastHour − maxPerHour + 1` (tính từ cũ nhất) ra khỏi cửa sổ 1 giờ — nói đúng thời điểm
+       * đó thay vì "thử lại sau 1 giờ" cho mọi trường hợp.
+       */
+      const freeing = await this.prisma.phoneVerification.findFirst({
+        where: inWindow,
+        orderBy: { createdAt: 'asc' },
+        skip: sentLastHour - maxPerHour,
+        select: { createdAt: true },
+      });
+      const freesAt = (freeing?.createdAt.getTime() ?? now) + SEND_WINDOW_MS;
+      const waitSec = Math.max(1, Math.ceil((freesAt - now) / 1000));
       throw new HttpException(
         {
           code: API_ERROR_CODE.OTP_TOO_MANY,
-          message: 'Bạn đã yêu cầu mã quá nhiều lần. Thử lại sau 1 giờ.',
+          message: `Bạn đã yêu cầu mã quá nhiều lần. Thử lại sau ${Math.ceil(waitSec / 60)} phút.`,
+          details: { retryAfterSeconds: waitSec },
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
@@ -120,9 +143,9 @@ export class PhoneVerificationService {
 
     /*
      * Admin TẮT gửi SMS (Cấu hình ứng dụng) — chỉ có hiệu lực ngoài production: luồng chạy y hệt
-     * (kiểm trùng, hàng mã, hết hạn, đếm sai) nhưng KHÔNG gọi nhà mạng và mã cố định `123456`, để dev
-     * và test không tốn phí SMS. Hàng mang provider `bypass` nên không tính vào cooldown/trần gửi.
-     * Giao diện không biết gì về chế độ này (`devCode` = null).
+     * (kiểm trùng, hàng mã, hết hạn, đếm sai, cooldown, trần gửi) nhưng KHÔNG gọi nhà mạng và mã cố
+     * định `123456`, để dev và test không tốn phí SMS. Hàng mang provider `bypass` để phân biệt với
+     * mã gửi thật. Giao diện không biết gì về chế độ này (`devCode` = null).
      */
     const smsOff = await this.isSmsDisabled();
     const code = smsOff
@@ -131,6 +154,7 @@ export class PhoneVerificationService {
     const ttlMin = OTP_POLICY.TTL_MINUTES;
     const expiresAt = new Date(now + ttlMin * 60 * 1000);
 
+    const delivered = options.deliver !== false;
     await this.prisma.phoneVerification.create({
       data: {
         id: newId(),
@@ -138,14 +162,20 @@ export class PhoneVerificationService {
         phone,
         purpose,
         provider: smsOff ? OTP_BYPASS_PROVIDER : (this.config.get<string>('OTP_MODE') ?? 'mock'),
-        otpHash: this.hash(code, phone),
+        /*
+         * Mã KHÔNG nhắn đi (`deliver: false`) không lưu băm nào ⇒ không mã nào đối chiếu đúng, kể
+         * cả mã test `123456` lúc tắt SMS ở staging. Production vốn đã vậy (mã ngẫu nhiên không rời
+         * server); thiếu dòng này thì ở staging số chưa có tài khoản qua được bước "Nhập mã" — QC
+         * thấy một luồng production không bao giờ có. Lần đoán sai vẫn được đếm như mọi mã.
+         */
+        otpHash: delivered ? this.hash(code, phone) : null,
         status: PHONE_VERIFICATION_STATUS.PENDING,
         sentCount: 1,
         expiresAt,
       },
     });
 
-    if (!smsOff && options.deliver !== false) await this.provider.send(phone, code);
+    if (!smsOff && delivered) await this.provider.send(phone, code);
 
     /*
      * `devCode` trả mã 6 số THẲNG trong response — chỉ khi đây KHÔNG phải một triển khai
@@ -310,9 +340,10 @@ export class PhoneVerificationService {
    * Nhập sai được đếm (`attempt_count`); chạm OTP_MAX_ATTEMPTS → khoá mã (status=failed) và trả
    * OTP_LOCKED, buộc gửi mã mới. Kèm TTL ngắn + @Throttle ở controller để hãm brute-force.
    *
-   * Mã test (`resolveOtpBypassCode` — dev/staging, KHÔNG BAO GIỜ production) bỏ qua cả ba phép kiểm
-   * trên: có mã đang chờ thì đánh dấu chính hàng đó verified, chưa gửi mã nào thì tạo một hàng
-   * verified mới — để hàng mã luôn phản ánh đúng lượt xác thực vừa xảy ra.
+   * Mã test (`resolveOtpBypassCode` — dev/staging, KHÔNG BAO GIỜ production) thay cho phép so MÃ,
+   * không thay cho hạn và khoá: có mã đang chờ còn hạn thì đánh dấu chính hàng đó verified; mã đã
+   * hết hạn ⇒ `OTP_EXPIRED`; mã vừa bị khoá ⇒ `OTP_INVALID` cho tới khi gửi mã mới; chưa gửi mã nào
+   * thì tạo một hàng verified mới — để hàng mã luôn phản ánh đúng lượt xác thực vừa xảy ra.
    *
    * Trả id của hàng mã đã được đánh dấu verified.
    */
@@ -342,13 +373,18 @@ export class PhoneVerificationService {
     /*
      * Mã 123456 CHỈ được nhận khi admin TẮT gửi SMS (dev/staging). Bật SMS = kiểm thử thật: phải nhập
      * đúng mã trong tin nhắn, kể cả ở dev/staging.
+     *
+     * Mã test thay cho MÃ, không thay cho LUẬT: mã đã gửi mà hết hạn vẫn là `OTP_EXPIRED`, mã vừa bị
+     * khoá vì đoán sai vẫn chặn cho tới khi gửi mã mới — y như production, nếu không QC ở staging
+     * không bao giờ thấy được hai luật đó. Chưa gửi mã nào thì vẫn gõ mã test là qua.
      */
     const bypassCode = resolveOtpBypassCode(this.config);
-    if (bypassCode !== null && code === bypassCode && (await this.isSmsDisabled())) {
-      return this.markVerified({ rowId: row?.id ?? null, realm, phone, purpose, userId });
-    }
+    const bypass = bypassCode !== null && code === bypassCode && (await this.isSmsDisabled());
 
     if (!row) {
+      if (bypass && !(await this.isLockedOut(realm, phone, purpose))) {
+        return this.markVerified({ rowId: null, realm, phone, purpose, userId });
+      }
       throw new BadRequestException({
         code: API_ERROR_CODE.OTP_INVALID,
         message: 'Chưa có mã xác thực nào — hãy gửi mã trước',
@@ -364,6 +400,11 @@ export class PhoneVerificationService {
         code: API_ERROR_CODE.OTP_EXPIRED,
         message: 'Mã đã hết hạn — hãy gửi lại mã mới',
       });
+    }
+
+    // Hàng mã không nhắn đi (`otp_hash` NULL) thì mã test cũng không mở — xem `sendOtp`.
+    if (bypass && row.otpHash !== null) {
+      return this.markVerified({ rowId: row.id, realm, phone, purpose, userId });
     }
 
     if (row.otpHash !== this.hash(code, phone)) {
@@ -392,6 +433,23 @@ export class PhoneVerificationService {
     }
 
     return this.markVerified({ rowId: row.id, realm, phone, purpose, userId });
+  }
+
+  /**
+   * Mã mới nhất của (realm, SĐT, mục đích) vừa bị KHOÁ vì đoán sai (`failed`) và chưa có mã nào gửi
+   * sau đó — trạng thái mà production trả `OTP_INVALID` cho mọi mã, kể cả mã đúng.
+   */
+  private async isLockedOut(
+    realm: AccountRealm,
+    phone: string,
+    purpose: PhoneVerificationPurpose,
+  ): Promise<boolean> {
+    const latest = await this.prisma.phoneVerification.findFirst({
+      where: { realm, phone, purpose },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true },
+    });
+    return latest?.status === PHONE_VERIFICATION_STATUS.FAILED;
   }
 
   /**

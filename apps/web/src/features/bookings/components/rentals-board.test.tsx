@@ -378,6 +378,34 @@ describe('Tay nắm kéo — chỉ ở thẻ có bước kế mà người xem l
     const pickup = within(column('Chờ giao xe')).getByRole('link', { name: 'Xử lý giao xe' });
     expect(pickup.getAttribute('href')).toContain(bookingPath.detail('b-pick'));
   });
+
+  it('thẻ Kanban không có ô "Tiền thuê"; Giữ chỗ + viên trạng thái cùng MỘT hàng tiền', () => {
+    seedAll();
+    seed(BOOKING_LIST_PRESET.RENTING, [
+      booking({
+        id: 'b-market',
+        vehicleName: 'Hyundai Accent',
+        status: BOOKING_STATUS.ACTIVE,
+        pickupAt: new Date(Date.now() - 24 * HOUR).toISOString(),
+        customerTotalAmount: '1550000',
+        holdPaidAmount: '275000',
+        payAtPickupAmount: '1275000',
+      }),
+    ]);
+    renderPage();
+    const renting = column('Đang thuê');
+    expect(within(renting).queryByText('Tiền thuê')).toBeNull();
+    const row = within(renting).getByText('Khách trả').closest('dl')!;
+    for (const label of ['Khách trả', 'Trả khi nhận xe', 'Giữ chỗ', 'Đã thanh toán']) {
+      expect(within(row).getByText(label)).toBeTruthy();
+    }
+    // Đơn tự lập: khách trả · đã thu · còn phải thu — cũng không có "Tiền thuê".
+    const pickup = column('Chờ giao xe');
+    expect(within(pickup).queryByText('Tiền thuê')).toBeNull();
+    const own = within(pickup).getByText('Khách trả').closest('dl')!;
+    expect(within(own).getByText('Đã thu')).toBeTruthy();
+    expect(within(own).getByText('Còn phải thu')).toBeTruthy();
+  });
 });
 
 /*

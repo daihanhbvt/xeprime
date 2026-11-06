@@ -164,6 +164,7 @@
         "sendCode": "Send code",
         "resend": "Resend code",
         "resendIn": "Resend ({seconds}s)",
+        "resendInTime": "Resend ({time})",
         "sent": "Code sent to {phone}.",
         "phoneFirst": "Enter a valid phone number before requesting a code.",
         "verify": "Verify",

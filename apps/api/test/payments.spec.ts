@@ -19,6 +19,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
+import { BookingPaymentWriter } from '../src/modules/payments/booking-payment.writer';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -41,11 +42,13 @@ const bookings = makeBookingsService(asService, {
   notifications: makeNotificationService(asService),
   customers: makeCustomersService(asService, audit),
 });
+const receipts = new ReceiptsService(asService, audit);
 const payments = new PaymentsService(
   asService,
   audit,
   bookings,
-  new ReceiptsService(asService, audit),
+  receipts,
+  new BookingPaymentWriter(audit, receipts),
 );
 const overview = new FinanceOverviewService(asService);
 

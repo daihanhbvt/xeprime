@@ -36,6 +36,7 @@ export {
   CLIENT_ERROR_CODE,
   getErrorCode,
   getErrorDetails,
+  getRetryAfterSeconds,
   isRetriableError,
   isUnauthenticated,
   toApiClientError,

@@ -57,7 +57,13 @@ import {
   HANDOVER_PREP_ITEM,
   type HandoverPrepItem,
 } from '@xeprime/types';
-import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
+import {
+  bookingMoney,
+  counterDueAmount,
+  emptyMoneySides,
+  loadBookingMoneySides,
+  ownerShareHeldOnline,
+} from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
 import { ownerPayoutOf } from '../../common/owner-payout';
 import { accountPhoneIfDifferent } from '../../common/phone';
@@ -150,6 +156,9 @@ const LIST_SELECT = {
   // Mốc đổi tay THẬT — thẻ danh sách nói "đã trả đúng hạn / trễ" từ `actualReturnAt` (02/11/2026).
   actualPickupAt: true,
   actualReturnAt: true,
+  // Lời báo trả xe của khách đang chờ gian hàng (ADR 0081) — thẻ "Đang thuê" nói nó ra.
+  customerReturnedAt: true,
+  returnAutoCompleteAt: true,
   // Kết cục huỷ (ADR 0045) — thẻ nói "Khách đã huỷ" / "Gian hàng huỷ" thay vì một chữ "Đã huỷ" chung.
   cancellation: { select: { responsibleParty: true, reasonCategory: true } },
   ...BOOKING_DRIVER_SELECT,
@@ -506,16 +515,10 @@ export class BookingsService {
 
     return {
       documentsReady: verifiedDoc !== null || verifiedLicence !== null,
-      /*
-       * Phần khách đưa TAY lúc nhận xe. Đơn đi qua giữ chỗ: `D` (phần của chủ xe trong khoản online)
-       * đã nằm ở XePrime và vào ví chủ xe khi chuyến xong — công nợ của đơn vẫn tính nó (sổ chung
-       * với /debts), nhưng đòi khách lần nữa ở quầy là sai. Đơn lập tay: `D` = 0.
-       */
-      rentDueAmount: Prisma.Decimal.max(
-        0,
-        new Prisma.Decimal(detail.debtAmount).minus(
-          detail.holdPaidAmount != null ? (snapshot?.fees?.depositAmount ?? 0) : 0,
-        ),
+      // Phần khách đưa TAY lúc nhận xe — công nợ trừ `D` đã nằm ở XePrime (`counterDueAmount`).
+      rentDueAmount: counterDueAmount(
+        detail.debtAmount,
+        ownerShareHeldOnline({ holdPaid: detail.holdPaidAmount != null, priceSnapshot: snapshot }),
       ).toFixed(0),
       depositRequired: detail.depositAmount,
       depositReceived: (deposits._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
@@ -1092,7 +1095,8 @@ export class BookingsService {
       this.transitionWithinTx(tx, tenantId, id, userId, from, to, {
         actualPickupAt: dto.actualPickupAt,
         actualReturnAt: dto.actualReturnAt,
-        reason: dto.reason,
+        // Ghi chú tuỳ chọn để trống (DTO đã trim) là "không ghi" — không lưu chuỗi rỗng vào audit.
+        reason: dto.reason || undefined,
         reasonCategory: dto.reasonCategory as CancellationReasonCategory | undefined,
       }),
     );
@@ -1112,7 +1116,8 @@ export class BookingsService {
     tx: Prisma.TransactionClient,
     tenantId: string,
     id: string,
-    userId: string,
+    /** `null` = lượt của HỆ THỐNG (`actorScope: system`) — không gán bừa cho một người thật. */
+    userId: string | null,
     from: BookingStatus,
     to: BookingStatus,
     opts: {
@@ -1133,6 +1138,7 @@ export class BookingsService {
       actorScope?: AuditActorScope;
       /**
        * Lý do của quyết định — đi vào `afterJson` của audit CẠNH status, không vào `booking.note`.
+       * Lượt HUỶ còn gửi nguyên câu này cho khách trong thông báo huỷ.
        *
        * Tuỳ chọn ở tầng này có chủ đích: cửa bắt buộc nằm ở DTO của `POST /bookings/:id/transition`
        * (huỷ/no_show phải có lý do). Các đường gọi nội bộ — bàn giao xe, khách tự huỷ chuyến —
@@ -1350,6 +1356,14 @@ export class BookingsService {
           where: { bookingId: id },
           select: { customerUserId: true },
         });
+        /*
+         * Gian hàng HUỶ ⇒ khách đọc đúng câu chủ xe viết ("Ghi chú cho khách" của hộp huỷ đơn —
+         * Figma `23930:44688`, 06/11/2026), như lượt huỷ ở chặng chờ thanh toán. Chỉ lượt huỷ:
+         * lý do no-show vẫn là ghi chú nội bộ. Đặt trong ngoặc kép để dấu câu của chủ xe không
+         * dính vào câu của hệ thống.
+         */
+        const hostNote =
+          to === BOOKING_STATUS.CANCELLED && opts.reason?.trim() ? opts.reason.trim() : null;
         if (request?.customerUserId) {
           await this.notifications.emitToUser(
             request.customerUserId,
@@ -1357,7 +1371,9 @@ export class BookingsService {
               type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
               // Tên xe đứng ở TIÊU ĐỀ (người dùng chốt 28/10/2026) — thân là câu đầy đủ, không mẩu ghép.
               title: customerFacing.title.replace('{vehicle}', updated.vehicle.name),
-              body: customerFacing.body,
+              body: hostNote
+                ? `Chủ xe nhắn: “${hostNote}” ${CANCELLED_BY_HOST_REFUND_NOTE}`
+                : customerFacing.body,
               tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
               targetId: id,
@@ -1423,6 +1439,9 @@ export class BookingsService {
   }
 }
 
+/** Câu về tiền hoàn của lượt huỷ — dùng chung cho thân có và không có ghi chú của chủ xe. */
+const CANCELLED_BY_HOST_REFUND_NOTE = 'Khoản hoàn (nếu có) theo chính sách huỷ của chuyến.';
+
 /**
  * Chuyển trạng thái nào KHÁCH cần biết, và nói gì.
  *
@@ -1449,7 +1468,7 @@ const CUSTOMER_FACING_TRANSITIONS: Partial<Record<BookingStatus, { title: string
     },
     [BOOKING_STATUS.CANCELLED]: {
       title: 'Chuyến {vehicle} đã bị huỷ',
-      body: 'Liên hệ chủ xe nếu bạn cần biết thêm. Khoản hoàn (nếu có) theo chính sách huỷ của chuyến.',
+      body: `Liên hệ chủ xe nếu bạn cần biết thêm. ${CANCELLED_BY_HOST_REFUND_NOTE}`,
     },
     [BOOKING_STATUS.NO_SHOW]: {
       title: 'Chuyến {vehicle} đã đóng: không nhận xe',
@@ -1732,6 +1751,8 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     canMessageOnPlatform: b.bookingRequest?.customerUserId != null,
     actualPickupAt: b.actualPickupAt as unknown as string | null,
     actualReturnAt: b.actualReturnAt as unknown as string | null,
+    customerReturnedAt: b.customerReturnedAt as unknown as string | null,
+    returnAutoCompleteAt: b.returnAutoCompleteAt as unknown as string | null,
     cancellationParty: b.cancellation?.responsibleParty ?? null,
     pickupHandoverStatus: b.handovers[0]?.status ?? null,
     ...handoverPlaceOf(b),

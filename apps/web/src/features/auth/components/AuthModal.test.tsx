@@ -434,6 +434,58 @@ describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
     expect(nav.replace).not.toHaveBeenCalledWith('/', { scroll: false });
   });
 
+  it('mã bị KHOÁ vì sai quá số lần → câu báo đứng yên, ô mã và nút "Xác minh" khoá', async () => {
+    api.register.mockRejectedValueOnce(apiError(API_ERROR_CODE.OTP_LOCKED));
+    renderModal('auth=register');
+    await heading('Đăng ký');
+
+    await submitRegister('555555');
+    expect(await screen.findByText(/mã này đã bị huỷ/)).toBeTruthy();
+    expect((screen.getByLabelText('Mã xác thực gồm 6 số') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Xác minh' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(api.register).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['A'.repeat(51), 'Tên cần từ 2 đến 50 ký tự'],
+    ['   A   ', 'Tên cần từ 2 đến 50 ký tự'],
+    ['An@#', 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng'],
+    ['<script>alert(1)</script>', 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng'],
+  ])('tên hiển thị "%s" → báo tại ô, KHÔNG gửi mã', async (name, message) => {
+    renderModal('auth=register');
+    await heading('Đăng ký');
+
+    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
+    fireEvent.change(screen.getByLabelText('Tên hiển thị'), { target: { value: name } });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.change(screen.getByLabelText('Xác nhận mật khẩu'), {
+      target: { value: 'Abcd1234' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký' }));
+
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(api.sendOtp).not.toHaveBeenCalled();
+  });
+
+  it('tên tiếng Việt có dấu và chữ số vẫn hợp lệ', async () => {
+    renderModal('auth=register');
+    await heading('Đăng ký');
+
+    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
+    fireEvent.change(screen.getByLabelText('Tên hiển thị'), {
+      target: { value: 'Trần Văn Bảo 2' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.change(screen.getByLabelText('Xác nhận mật khẩu'), {
+      target: { value: 'Abcd1234' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký' }));
+
+    await waitFor(() => expect(api.sendOtp).toHaveBeenCalled());
+  });
+
   it('đóng popup ⇒ về form đăng ký, giữ nguyên thứ đã điền', async () => {
     renderModal('auth=register');
     await heading('Đăng ký');

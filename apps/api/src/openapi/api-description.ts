@@ -113,7 +113,7 @@ Mã dùng chung ở mọi endpoint:
 | 404 | \`${API_ERROR_CODE.NOT_FOUND}\` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |
 | 409 | \`${API_ERROR_CODE.CONFLICT}\` | Trùng bản ghi đã tồn tại. |
 | 409 | \`${API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT}\` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc \`EXCLUDE USING gist\` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |
-| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |
+| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. \`error.details.retryAfterSeconds\` (cùng giá trị header \`Retry-After\`) là số giây còn phải chờ — giao diện hiện con số này, không đoán. |
 | 500 | \`${API_ERROR_CODE.INTERNAL_ERROR}\` | Lỗi server. Ở production \`message\` được che, tra log theo request-id. |
 
 Toàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):

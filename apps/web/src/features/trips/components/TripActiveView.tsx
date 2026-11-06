@@ -22,6 +22,7 @@ import { TripEstimateCard } from './TripEstimateCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripExtensionPanel } from './TripExtensionPanel';
+import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOwnerActions';
 import { TripPageHeader } from './TripPageHeader';
@@ -127,6 +128,9 @@ export function TripActiveView({ trip, backHref }: { trip: CustomerTripDetail; b
       priority={
         <>
           {/* Khiếu nại "chưa nhận được xe" còn mở (ADR 0066) — ngoài ca đó khối tự im lặng. */}
+          {/* "Đã trả xe" (ADR 0081) — khách báo trả xe; chủ xe im lặng quá hạn thì chuyến tự hoàn thành. */}
+          <TripHandoverWord trip={trip} />
+
           <TripNotReceivedReport trip={trip} />
 
           {/* Quay về từ MoMo/VNPAY bằng liên kết CŨ (ADR 0058) — không có tham số thì im lặng. */}

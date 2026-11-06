@@ -10,6 +10,7 @@ import {
   BOOKING_HISTORY_OUTCOME,
   BOOKING_STATUS,
   CANCELLATION_PARTY,
+  HANDOVER_CONFIRM_SOURCE,
   HANDOVER_TYPE,
   PERMISSION,
   STATUS_COLOR,
@@ -75,12 +76,23 @@ type StepState = 'done' | 'current' | 'todo' | 'failed';
 export function BookingStepper() {
   const t = useTranslations('Bookings.detailPage');
   const fmt = useAppFormat();
-  const { booking } = useBookingDetailActions();
+  const { booking, handover } = useBookingDetailActions();
   const stage = bookingStageOf(booking.status);
   const ended = stage === 'cancelled' || stage === 'noShow';
   if (ended) return null;
+  // Biên bản do LỜI CỦA KHÁCH (ADR 0081) — thanh bước nói rõ không phải gian hàng đã kiểm xe.
+  const pickupByCustomer = handover?.pickup?.confirmSource === HANDOVER_CONFIRM_SOURCE.CUSTOMER;
+  const returnAuto = handover?.return?.confirmSource === HANDOVER_CONFIRM_SOURCE.AUTO;
   const at = (
-    key: 'confirmed' | 'holdPaid' | 'pickupDue' | 'pickedUp' | 'returnDue' | 'returned',
+    key:
+      | 'confirmed'
+      | 'holdPaid'
+      | 'pickupDue'
+      | 'pickedUp'
+      | 'pickedUpByCustomer'
+      | 'returnDue'
+      | 'returned'
+      | 'returnedAuto',
     iso: string,
   ) => t(`stepAt.${key}`, { time: fmt.shortDateTime(iso) });
 
@@ -101,14 +113,14 @@ export function BookingStepper() {
             key: 'renting',
             label: t('stage.renting'),
             hint: booking.actualPickupAt
-              ? at('pickedUp', booking.actualPickupAt)
+              ? at(pickupByCustomer ? 'pickedUpByCustomer' : 'pickedUp', booking.actualPickupAt)
               : at('pickupDue', booking.pickupAt),
           },
           {
             key: 'completed',
             label: t('stage.completed'),
             hint: booking.actualReturnAt
-              ? at('returned', booking.actualReturnAt)
+              ? at(returnAuto ? 'returnedAuto' : 'returned', booking.actualReturnAt)
               : at('returnDue', booking.returnAt),
           },
         ] as const

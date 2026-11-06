@@ -928,7 +928,8 @@
     "no_driver": "Không có tài xế rảnh cho khung giờ này",
     "hold_required_with_driver": "Chuyến có tài xế cần chủ xe xác nhận trước khi giữ chỗ",
     "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê",
-    "billing_not_configured": "Gian hàng chưa có chế độ tính phí hiệu lực"
+    "billing_not_configured": "Gian hàng chưa có chế độ tính phí hiệu lực",
+    "vehicle_still_out": "Xe chưa về từ một chuyến đã quá giờ trả"
   },
   "bookingRequestDecisionSource": {
     "host": "Chủ xe quyết định",

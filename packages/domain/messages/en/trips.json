@@ -666,5 +666,28 @@
     "direct": "Pay the owner directly",
     "deadline": "Pay by {time}. After that the extension is cancelled and the return time stays.",
     "activated": "Extended by {months, plural, one {# month} other {# months}} — new return {date}"
+  },
+  "handoverWord": {
+    "keep": "Go back",
+    "reportedTitle": "You reported the return at {time}",
+    "reportedBody": "The host is confirming they got the car back. If the host does not respond, the trip completes automatically at {deadline}.",
+    "pickup": {
+      "title": "Have you received the car?",
+      "lead": "Confirm once you have the keys — the trip starts right away, no need to wait for the host.",
+      "action": "I received the car",
+      "dialogTitle": "Confirm you received the car?",
+      "dialogBody": "The trip will start now. Check the car with the host and take photos of its condition before you drive off.",
+      "confirm": "I received the car",
+      "success": "Pickup confirmed — have a safe trip"
+    },
+    "return": {
+      "title": "Have you returned the car?",
+      "lead": "Report once the car and keys are back with the host. The host confirms within 24 hours; otherwise the trip completes automatically.",
+      "action": "I returned the car",
+      "dialogTitle": "Report that you returned the car?",
+      "dialogBody": "The host will be asked to confirm they got the car back. Only report once the car and keys are with the host — false reports are verified by XePrime.",
+      "confirm": "I returned the car",
+      "success": "Return reported — the host will confirm"
+    }
   }
 }

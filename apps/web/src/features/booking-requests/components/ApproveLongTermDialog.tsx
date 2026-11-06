@@ -19,9 +19,11 @@ import { useNow } from '@/hooks/use-now';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { appWallClockToIso, nowInAppTz, startOfAppDay, toAppTz, type Dayjs } from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
+import { fetchBookingRequest } from '../api';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../types';
 import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
 
+import { VehicleStillOutAlert } from './VehicleStillOutAlert';
 import styles from './ApproveLongTermDialog.module.css';
 
 interface Props {
@@ -107,6 +109,18 @@ function ApproveLongTermForm({
       }),
     );
   }, [preview, pickupAt, now]);
+
+  /*
+   * Đọc lại CHI TIẾT chỉ để lấy cảnh báo "xe chưa về" (`vehicleStillOut`) — dòng hộp thư không mang
+   * nó, vì đó là một truy vấn thêm cho mỗi dòng. Cùng khoá với hộp duyệt theo ngày.
+   */
+  const fresh = useQuery({
+    queryKey: queryKeys.bookingRequests.detail(request.id),
+    queryFn: () => fetchBookingRequest(request.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const stillOut = fresh.data?.id === request.id ? (fresh.data.vehicleStillOut ?? null) : null;
 
   const quoteQ = useQuery({
     queryKey: queryKeys.calendar.quote({
@@ -266,6 +280,8 @@ function ApproveLongTermForm({
             showMoney={requestPackage != null}
           />
         ) : null}
+
+        <VehicleStillOutAlert stillOut={stillOut} />
 
         {error ? <Alert type="error" showIcon title={error} /> : null}
       </div>

@@ -20,6 +20,7 @@ import { contractPath, receiptsPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
 import { ConfirmHandoverDialog } from '@/features/handovers/components/ConfirmHandoverDialog';
+import { ConfirmReturnDialog } from '@/features/handovers/components/ConfirmReturnDialog';
 import { useHandoverContext } from '@/features/handovers/hooks';
 import type { HandoverContext } from '@/features/handovers/types';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
@@ -168,16 +169,21 @@ export function BookingDetailActionsProvider({
   };
 
   function requestHandover(type: HandoverType) {
-    const prep =
-      type === HANDOVER_TYPE.PICKUP && booking.handoverPrep
-        ? prepRowStates(booking.handoverPrep, can)
-            .filter((row) => !row.done)
-            .map((row) => row.key)
-        : [];
-    const slots = missingPhotoSlots(
-      type === HANDOVER_TYPE.PICKUP ? handover?.pickup?.photos : handover?.return?.photos,
-      booking.vehicleType,
-    );
+    /*
+     * Nhận lại xe (06/11/2026): hộp "Xác nhận đã nhận lại xe" tự chụp ảnh và đếm x/N ảnh ngay trong
+     * thân — cảnh báo "còn thiếu" của trang chỉ còn cho chiều giao xe.
+     */
+    if (type === HANDOVER_TYPE.RETURN) {
+      setAlert(null);
+      setDialogType(type);
+      return;
+    }
+    const prep = booking.handoverPrep
+      ? prepRowStates(booking.handoverPrep, can)
+          .filter((row) => !row.done)
+          .map((row) => row.key)
+      : [];
+    const slots = missingPhotoSlots(handover?.pickup?.photos, booking.vehicleType);
     if (prep.length === 0 && slots.length === 0) {
       setAlert(null);
       setDialogType(type);
@@ -192,7 +198,7 @@ export function BookingDetailActionsProvider({
       className: styles.alertNotice,
       duration: 10,
       title: tAlert('title'),
-      description: tAlert(type === HANDOVER_TYPE.PICKUP ? 'bodyPickup' : 'bodyReturn'),
+      description: tAlert('bodyPickup'),
       actions: (
         <Button
           type="link"
@@ -244,13 +250,11 @@ export function BookingDetailActionsProvider({
         Dựng CÓ ĐIỀU KIỆN: mỗi lần mở là một instance mới, không mang state của lần trước. Hộp chỉ
         mở qua `requestHandover` (nút xác nhận) — vào trang, kể cả từ thẻ danh sách, không mở sẵn.
       */}
-      {dialogType && handover ? (
-        <ConfirmHandoverDialog
-          context={handover}
-          type={dialogType}
-          open
-          onClose={() => setDialogType(null)}
-        />
+      {dialogType === HANDOVER_TYPE.PICKUP && handover ? (
+        <ConfirmHandoverDialog context={handover} open onClose={() => setDialogType(null)} />
+      ) : null}
+      {dialogType === HANDOVER_TYPE.RETURN ? (
+        <ConfirmReturnDialog booking={booking} onClose={() => setDialogType(null)} />
       ) : null}
 
       <ResponsiveDialog

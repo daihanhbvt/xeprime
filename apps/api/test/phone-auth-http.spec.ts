@@ -211,6 +211,35 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       expect(cookie).toMatch(/^xp_session_customer=/);
     });
 
+    it.each([
+      ['A'.repeat(51), 'quá 50 ký tự'],
+      ['   A   ', 'còn 1 ký tự sau khi bỏ khoảng trắng'],
+      ['An@#', 'có ký hiệu'],
+      ['<script>alert(1)</script>', 'chuỗi dạng mã HTML'],
+    ])('tên hiển thị "%s" (%s) ⇒ 400, service không được gọi', async (displayName) => {
+      const res = await http()
+        .post('/auth/register')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, displayName, code: '123456' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(API_ERROR_CODE.VALIDATION_FAILED);
+      expect(auth.register).not.toHaveBeenCalled();
+    });
+
+    it('tên có dấu + chữ số được nhận, lưu ở dạng NFC đã bỏ khoảng trắng đầu/cuối', async () => {
+      // "Bảo" gõ kiểu tổ hợp (NFD): a + dấu hỏi tách rời — vẫn là 2 ký tự hiển thị, không "quá dài".
+      const decomposed = '  Trần Văn Bảo 2  '.normalize('NFD');
+      const res = await http()
+        .post('/auth/register')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, displayName: decomposed, code: '123456' });
+      expect(res.status).toBe(201);
+      expect(auth.register).toHaveBeenCalledWith(
+        expect.objectContaining({ displayName: 'Trần Văn Bảo 2' }),
+        ACCOUNT_REALM.CUSTOMER,
+      );
+    });
+
     it('mã không phải 6 chữ số ⇒ 400', async () => {
       const res = await http()
         .post('/auth/register')

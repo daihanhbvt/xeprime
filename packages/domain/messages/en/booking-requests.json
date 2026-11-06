@@ -141,7 +141,12 @@
     "subtitleHold": "Once confirmed, the request moves to <b>Awaiting payment</b>.",
     "subtitleNoHold": "Once confirmed, the rental is created right away and moves to <b>Awaiting pickup</b>.",
     "back": "Back",
-    "profitHeading": "Trip earnings"
+    "profitHeading": "Trip earnings",
+    "stillOut": {
+      "title": "Vehicle not back from trip #{code} — {duration} past return time",
+      "body": "The calendar only blocks the vehicle until the booked return time, so this trip can still be approved. Approve only if you are sure the vehicle will be back in time; instant booking is paused for this vehicle.",
+      "open": "Open the overdue trip"
+    }
   },
   "longTerm": {
     "title": "Approve & hold — long-term rental",

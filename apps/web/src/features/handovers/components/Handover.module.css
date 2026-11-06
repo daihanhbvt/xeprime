@@ -126,7 +126,6 @@
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
-
 /*
  * Góc còn thiếu khi người dùng bấm giao/nhận xe — viền đỏ NHẤP NHÁY vài nhịp rồi đứng yên
  * cho tới khi cảnh báo đóng. Viền nằm trên `outline` để không làm xô lệch lưới.

@@ -9,7 +9,7 @@ import type { RecordPaymentInput } from '../types';
  * Thu tiền/hoàn tiền ảnh hưởng đơn + công nợ + dashboard + lịch sử → invalidate hết. Sổ khách
  * cũng vậy: "Còn nợ", "Đã thu", đơn hiện tại và tab Thu chi của hồ sơ khách đều suy từ tiền đơn.
  */
-function invalidateAfterPayment(
+export function invalidateAfterPayment(
   queryClient: ReturnType<typeof useQueryClient>,
   bookingId: string,
 ): void {

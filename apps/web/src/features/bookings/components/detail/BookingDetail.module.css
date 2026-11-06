@@ -653,6 +653,15 @@ a.vehicleName:hover {
   gap: var(--xp-space-12);
 }
 
+/* Lời báo trả xe của khách đang chờ (ADR 0081) — ngay trên nút nhận xe. */
+.customerReturn {
+  border-radius: var(--xp-border-radius-control);
+}
+
+.customerReturnBody {
+  margin: 0 0 var(--xp-space-sm);
+}
+
 .sideActionsRow {
   display: flex;
   flex-wrap: wrap;

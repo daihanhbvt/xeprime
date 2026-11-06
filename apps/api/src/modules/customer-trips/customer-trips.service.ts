@@ -36,6 +36,8 @@ import {
   CUSTOMER_TRIP_FILTER_STAGES,
   CUSTOMER_TRIP_FILTER_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
+  customerCanReportReturn,
+  customerPickupConfirmState,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES,
@@ -443,12 +445,14 @@ export class CustomerTripsService {
       ? await this.hasOpenDispute(base.role as TripRole, booking.id, viewerUserId)
       : false;
     const notReceived = notReceivedReportState(base.role as TripRole, booking, openDispute, now);
+    const handover = customerHandoverState(base.role as TripRole, booking, now);
 
     return {
       ...base,
       openDispute,
       canReportNotReceived: notReceived.canReport,
       notReceivedReportUntil: notReceived.until,
+      ...handover,
       customerNote: row.note,
       // Liên hệ CHÍNH người thuê đã khai — phía chủ xe không cần (đã có `renter`, có gác).
       contact:
@@ -1254,6 +1258,10 @@ const BOOKING_SELECT = {
   returnAt: true,
   actualPickupAt: true,
   actualReturnAt: true,
+  // Lời báo trả xe đang chờ gian hàng + biên bản đã xác nhận — hai nút "Đã nhận / Đã trả xe" (ADR 0081).
+  customerReturnedAt: true,
+  returnAutoCompleteAt: true,
+  handovers: { where: { status: HANDOVER_STATUS.CONFIRMED }, select: { type: true } },
   baseAmount: true,
   discountAmount: true,
   deliveryFee: true,
@@ -1843,6 +1851,52 @@ function notReceivedReportState(
   return {
     canReport: phase === 'open',
     until: handoverGraceEndsAt(booking.pickupAt).toISOString(),
+  };
+}
+
+/**
+ * Hai nút của người đi thuê ở mốc giao/trả xe (ADR 0081) — CÙNG hàm thuần mà
+ * `CustomerHandoverService` dùng làm cổng, nên nút chỉ hiện khi lượt bấm sẽ được nhận.
+ */
+function customerHandoverState(
+  role: TripRole,
+  booking: BookingRow | null,
+  now: Date,
+): {
+  canConfirmPickup: boolean;
+  pickupConfirmOpensAt: string | null;
+  canReportReturn: boolean;
+  customerReturnedAt: string | null;
+  returnAutoCompleteAt: string | null;
+} {
+  if (role !== TRIP_ROLE.RENTER || !booking) {
+    return {
+      canConfirmPickup: false,
+      pickupConfirmOpensAt: null,
+      canReportReturn: false,
+      customerReturnedAt: null,
+      returnAutoCompleteAt: null,
+    };
+  }
+  const confirmed = new Set(booking.handovers.map((h) => h.type));
+  const pickup = customerPickupConfirmState({
+    status: booking.status,
+    serviceType: booking.serviceType,
+    pickupAt: booking.pickupAt,
+    pickupConfirmed: confirmed.has(HANDOVER_TYPE.PICKUP),
+    now,
+  });
+  return {
+    canConfirmPickup: pickup.allowed,
+    pickupConfirmOpensAt: pickup.opensAt?.toISOString() ?? null,
+    canReportReturn: customerCanReportReturn({
+      status: booking.status,
+      serviceType: booking.serviceType,
+      returnConfirmed: confirmed.has(HANDOVER_TYPE.RETURN),
+      customerReturnedAt: booking.customerReturnedAt,
+    }),
+    customerReturnedAt: booking.customerReturnedAt?.toISOString() ?? null,
+    returnAutoCompleteAt: booking.returnAutoCompleteAt?.toISOString() ?? null,
   };
 }
 

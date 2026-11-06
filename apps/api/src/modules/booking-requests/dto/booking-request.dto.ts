@@ -908,7 +908,8 @@ export class BookingRequestDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc',
+    description:
+      'ISO-8601 UTC — lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc',
   })
   paymentReminderAvailableAt!: string | null;
 
@@ -935,6 +936,25 @@ export class BookingRequestDto {
       'luật vắng mặt với `pricing` ở phiếu trả về của các thao tác.',
   })
   approvalPreview?: BookingRequestApprovalPreviewDto | null;
+
+  @ApiPropertyOptional({
+    type: () => BookingRequestVehicleStillOutDto,
+    nullable: true,
+    description:
+      'Chiếc xe của yêu cầu đang ở một chuyến ĐÃ QUÁ GIỜ TRẢ mà chưa được nhận về — chỉ có ở lượt ' +
+      'đọc CHI TIẾT một yêu cầu còn chờ duyệt (hộp duyệt đọc lại chi tiết mỗi lần mở). Lịch bận ' +
+      'chỉ chặn tới giờ trả gốc, nên đây là lời cảnh báo cho người duyệt; "Đặt ngay" cũng tạm dừng ' +
+      'với xe đó (`vehicle_still_out`).',
+  })
+  vehicleStillOut?: BookingRequestVehicleStillOutDto | null;
+}
+
+/** Chuyến đang giữ chiếc xe ở ngoài quá giờ trả — xem `BookingRequestDto.vehicleStillOut`. */
+export class BookingRequestVehicleStillOutDto {
+  @ApiProperty() bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty({ format: 'date-time', description: 'Giờ trả theo đơn — đã qua' })
+  returnAt!: string;
 }
 
 /**

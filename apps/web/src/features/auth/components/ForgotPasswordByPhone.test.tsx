@@ -117,4 +117,49 @@ describe('ForgotPasswordByPhone — một màn + popup OTP', () => {
     expect(screen.queryByText('Đã đặt lại mật khẩu')).toBeNull();
     expect(screen.getByLabelText(/^Mã xác thực gồm/)).toBeTruthy();
   });
+
+  it('mã bị KHOÁ vì sai quá số lần: ô mã khoá, câu báo đứng yên — chỉ còn gửi lại mã', async () => {
+    api.resetPasswordWithOtp.mockRejectedValueOnce(
+      new ApiClientError({ code: 'OTP_LOCKED', message: 'x', status: 400 }),
+    );
+    renderView();
+
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
+    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), {
+      target: { value: '555555' },
+    });
+
+    expect(await screen.findByText(/mã này đã bị huỷ/)).toBeTruthy();
+    expect((screen.getByLabelText(/^Mã xác thực gồm/) as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('mật khẩu mới TRÙNG mật khẩu cũ: báo ở ô mật khẩu, lần sau dùng lại CHÍNH mã đó (không xin mã mới)', async () => {
+    api.resetPasswordWithOtp.mockRejectedValueOnce(
+      new ApiClientError({ code: 'PASSWORD_UNCHANGED', message: 'x', status: 400 }),
+    );
+    renderView();
+
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
+    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), {
+      target: { value: '123456' },
+    });
+
+    expect(await screen.findByText('Mật khẩu mới phải khác mật khẩu hiện tại.')).toBeTruthy();
+
+    type(/^Mật khẩu mới/, 'matkhau456');
+    type(/^Nhập lại mật khẩu/, 'matkhau456');
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
+
+    await waitFor(() =>
+      expect(api.resetPasswordWithOtp).toHaveBeenLastCalledWith({
+        phone: '0901234567',
+        code: '123456',
+        password: 'matkhau456',
+      }),
+    );
+    expect(api.sendOtp).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Đã đặt lại mật khẩu')).toBeTruthy();
+  });
 });

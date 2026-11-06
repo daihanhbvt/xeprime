@@ -59,8 +59,13 @@ CHECK `native_auth_sessions_revoked_reason_check` nới thêm hai lý do trên.
 `LoginThrottleService` (writer duy nhất) đếm lần sai mật khẩu theo `(realm, sha256(định danh đã
 chuẩn hoá))` — SĐT `84…` hoặc email chữ thường; bảng không giữ định danh thô.
 
-- Chính sách ở `LOGIN_LOCKOUT_POLICY` (`@xeprime/types`): cửa sổ 15 phút, khoá 15 phút, trần 10 lần ở
-  site khách/partner và **5 lần ở site quản trị**.
+- Chính sách ở `LOGIN_LOCKOUT_POLICY` (`@xeprime/types`): cửa sổ 15 phút, trần 5 lần sai ở cả ba
+  site; khoá **5 phút** ở site khách/partner và **15 phút** ở site quản trị.
+  - *Sửa 05/11/2026:* bản đầu là trần 10 lần / khoá 15 phút ở site khách/partner. Đổi theo đặc tả QC
+    (BR-AUTH-08, TC-LOGIN-13): khoá sớm hơn nhưng nhả nhanh hơn. Kèm theo, trần `@Throttle` theo IP
+    của đăng nhập nới 5 → 20 lượt/phút (`AUTH_THROTTLE`): với 5 lượt/phút, cả văn phòng chung NAT
+    hay khách 4G chung CGNAT chặn lẫn nhau, và lớp IP chặn TRƯỚC khi bộ đếm theo định danh kịp
+    đếm đủ — QC thấy "lúc khoá lúc không".
 - Đang khoá ⇒ mọi lượt đăng nhập định danh đó (kể cả đúng mật khẩu) trả **429
   `LOGIN_TEMPORARILY_LOCKED`** kèm `details.retryAfterSeconds`, kiểm TRƯỚC bcrypt. Lượt sai chạm trần
   trả luôn mã này.
@@ -69,7 +74,7 @@ chuẩn hoá))` — SĐT `84…` hoặc email chữ thường; bảng không gi�
 - Đăng nhập đúng xoá bộ đếm; đặt lại mật khẩu xoá bộ đếm của SĐT + email của tài khoản (lối mở khoá
   của chủ thật là "Quên mật khẩu").
 
-Đổi chác có chủ đích: biết SĐT của ai đó là làm được người đó bị khoá đăng nhập 15 phút. Cái giá đó nhỏ
+Đổi chác có chủ đích: biết SĐT của ai đó là làm được người đó bị khoá đăng nhập vài phút. Cái giá đó nhỏ
 hơn để mật khẩu bị dò không giới hạn từ nhiều IP, và "Quên mật khẩu" mở khoá ngay.
 
 `@Throttle` theo IP giữ nguyên — hai lớp độc lập.
