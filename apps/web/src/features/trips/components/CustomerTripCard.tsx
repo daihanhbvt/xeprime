@@ -179,6 +179,7 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
             {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) ? (
               <ChatWithShopButton
                 vehicleId={trip.vehicle.id}
+                tripId={trip.id}
                 appearance="icon"
                 className={styles.chat}
                 label={t('confirmed.chatOwner')}

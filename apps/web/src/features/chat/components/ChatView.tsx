@@ -3,6 +3,7 @@
 import { Spin } from 'antd';
 import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { resolveChatInbox } from '../chat-inbox';
+import { CHAT_CONVERSATION_PARAM, CHAT_TRIP_PARAM, CHAT_VEHICLE_PARAM } from '../chat-links';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -17,10 +18,8 @@ import { ConversationList, type ConversationFilterKey } from './ConversationList
 import { ThreadPanel } from './ThreadPanel';
 import styles from './ChatView.module.css';
 
-/** Tham số URL giữ hội thoại đang mở — chia sẻ được, sống sót F5, và nút Back hoạt động. */
-const CONVERSATION_PARAM = 'c';
-/** Xe người dùng vừa bấm "Nhắn shop" từ tin đăng — ngữ cảnh chờ gắn vào câu đầu tiên. */
-const VEHICLE_PARAM = 'v';
+/** Ngữ cảnh chờ gắn vào câu đầu tiên — sống trên URL cho tới khi đã gắn hoặc bị bỏ. */
+const CONTEXT_PARAMS = [CHAT_VEHICLE_PARAM, CHAT_TRIP_PARAM] as const;
 
 /**
  * Màn chat hai cột (danh sách + thread), một cột trên màn hẹp.
@@ -57,8 +56,9 @@ export function ChatView({
    * Ba thứ có được miễn phí nhờ vậy: dán link mở đúng thread, F5 không mất chỗ, và trên màn hẹp
    * nút Back của trình duyệt đóng thread về danh sách thay vì rời hẳn khỏi trang chat.
    */
-  const selectedId = searchParams.get(CONVERSATION_PARAM) ?? initialConversationId ?? null;
-  const pendingVehicleId = searchParams.get(VEHICLE_PARAM);
+  const selectedId = searchParams.get(CHAT_CONVERSATION_PARAM) ?? initialConversationId ?? null;
+  const pendingVehicleId = searchParams.get(CHAT_VEHICLE_PARAM);
+  const pendingTripId = searchParams.get(CHAT_TRIP_PARAM);
 
   const listQuery = useConversationsInfinite(inbox, {
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
@@ -94,10 +94,10 @@ export function ChatView({
   const setSelectedId = useCallback(
     (id: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (id) params.set(CONVERSATION_PARAM, id);
-      else params.delete(CONVERSATION_PARAM);
-      // Đổi hội thoại thì ngữ cảnh xe cũ hết nghĩa — bỏ luôn, không mang sang thread khác.
-      params.delete(VEHICLE_PARAM);
+      if (id) params.set(CHAT_CONVERSATION_PARAM, id);
+      else params.delete(CHAT_CONVERSATION_PARAM);
+      // Đổi hội thoại thì ngữ cảnh xe/chuyến cũ hết nghĩa — bỏ luôn, không mang sang thread khác.
+      CONTEXT_PARAMS.forEach((p) => params.delete(p));
       const qs = params.toString();
       // `replace`, không `push`: mỗi lần bấm sang hội thoại khác mà thêm một mục lịch sử thì
       // người dùng phải bấm Back mười lần để rời khỏi màn chat.
@@ -106,11 +106,11 @@ export function ChatView({
     [pathname, router, searchParams],
   );
 
-  /** Gỡ `?v=` sau khi thẻ ngữ cảnh đã đi kèm câu đầu tiên (hoặc người dùng bỏ nó). */
-  const clearPendingVehicle = useCallback(() => {
+  /** Gỡ `?v=` / `?t=` sau khi thẻ ngữ cảnh đã đi kèm câu đầu tiên (hoặc người dùng bỏ nó). */
+  const clearPendingContext = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
-    if (!params.has(VEHICLE_PARAM)) return;
-    params.delete(VEHICLE_PARAM);
+    if (!CONTEXT_PARAMS.some((p) => params.has(p))) return;
+    CONTEXT_PARAMS.forEach((p) => params.delete(p));
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [pathname, router, searchParams]);
@@ -164,7 +164,8 @@ export function ChatView({
             conversation={selected}
             onBack={() => setSelectedId(null)}
             pendingVehicleId={pendingVehicleId}
-            onClearPendingVehicle={clearPendingVehicle}
+            pendingTripId={pendingTripId}
+            onClearPendingContext={clearPendingContext}
           />
         ) : resolvingSelected ? (
           <div className={styles.centerPane}>

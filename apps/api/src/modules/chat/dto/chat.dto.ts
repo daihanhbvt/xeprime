@@ -213,6 +213,19 @@ export class SendMessageDto {
   @MaxLength(26)
   vehicleId?: string;
 
+  /**
+   * CHUYẾN mà tin nhắn này nói về — id YÊU CẦU thuê (định danh chuyến ở cả hai phía).
+   *
+   * Client gửi kèm ở câu ĐẦU TIÊN sau khi mở chat từ một chuyến. Server kiểm yêu cầu thuộc đúng
+   * cặp (khách, gian hàng) của hội thoại; không hợp lệ thì bỏ thẻ chứ không chặn tin. Có chuyến thì
+   * thẻ xe là xe CỦA chuyến đó — `vehicleId` client gửi kèm bị bỏ qua.
+   */
+  @ApiPropertyOptional({ description: 'ID yêu cầu thuê (chuyến) làm ngữ cảnh cho tin nhắn này' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(26)
+  bookingRequestId?: string;
+
   @ApiPropertyOptional({ type: [AttachmentInputDto] })
   @IsOptional()
   @IsArray()
@@ -331,6 +344,29 @@ export class MessageVehicleDto {
   @ApiPropertyOptional({ type: String, nullable: true }) imageUrl!: string | null;
 }
 
+/**
+ * Thẻ CHUYẾN đính kèm một tin nhắn — bấm vào mở đúng chuyến ở site của người xem.
+ *
+ * `bookingId`/`code` đọc SỐNG lúc trả về chứ không đóng băng lúc gửi: câu hỏi gửi khi yêu cầu còn
+ * chờ duyệt, về sau thành đơn thì thẻ dẫn thẳng tới đơn.
+ */
+export class MessageTripDto {
+  @ApiProperty({ description: 'ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách)' })
+  id!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê — có khi đã thành đơn' })
+  bookingId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — có khi đã thành đơn' })
+  code!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)',
+  })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC — giờ trả' })
+  returnAt!: string | null;
+}
+
 export class MessageDto {
   @ApiProperty() id!: string;
   @ApiProperty() conversationId!: string;
@@ -355,6 +391,12 @@ export class MessageDto {
     description: 'Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào',
   })
   vehicle!: MessageVehicleDto | null;
+  @ApiPropertyOptional({
+    type: MessageTripDto,
+    nullable: true,
+    description: 'Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào',
+  })
+  trip!: MessageTripDto | null;
   @ApiProperty({ type: [MessageAttachmentDto] }) attachments!: MessageAttachmentDto[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) sentAt!: string;
 }

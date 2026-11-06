@@ -358,6 +358,69 @@ describe('Thời gian chết — đệm thật sự chiếm lịch', () => {
   });
 });
 
+describe('Thời gian chết mặc định của gian hàng (06/11/2026)', () => {
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.tenantOperationDefault.deleteMany({ where: { tenantId: { in: [tenantA, tenantB] } } });
+  });
+
+  maybe('xe chưa tự đặt theo mặc định của loại xe; số riêng (kể cả 0) thắng', async () => {
+    const saved = await settings.saveShopOperationDefaults(tenantA, VEHICLE_TYPE.CAR, ownerA, {
+      turnaroundBufferMinutes: 90,
+    });
+    expect(saved).toMatchObject({ turnaroundBufferMinutes: 90, inheritingVehicles: 1 });
+    expect(await settings.turnaroundBufferFor(prisma, vehicleA)).toBe(90);
+    expect(await settings.getOperation(tenantA, vehicleA)).toMatchObject({
+      turnaroundBufferMinutes: 90,
+      useShopDefault: true,
+      shopDefaultMinutes: 90,
+    });
+
+    await settings.saveOperation(tenantA, vehicleA, ownerA, { turnaroundBufferMinutes: 0 });
+    expect(await settings.turnaroundBufferFor(prisma, vehicleA)).toBe(0);
+    expect(await settings.getShopOperationDefaults(tenantA, VEHICLE_TYPE.CAR)).toMatchObject({
+      inheritingVehicles: 0,
+      overriddenVehicles: 1,
+    });
+
+    // Quay về theo gian hàng: số gửi kèm bị bỏ qua.
+    const back = await settings.saveOperation(tenantA, vehicleA, ownerA, {
+      turnaroundBufferMinutes: 15,
+      useShopDefault: true,
+    });
+    expect(back).toMatchObject({ turnaroundBufferMinutes: 90, useShopDefault: true });
+  });
+
+  maybe('mặc định của gian hàng này không chạm xe gian hàng khác, cũng không chạm loại xe khác', async () => {
+    await settings.saveShopOperationDefaults(tenantA, VEHICLE_TYPE.CAR, ownerA, {
+      turnaroundBufferMinutes: 60,
+    });
+    await settings.saveShopOperationDefaults(tenantB, VEHICLE_TYPE.MOTORBIKE, ownerB, {
+      turnaroundBufferMinutes: 30,
+    });
+    // Xe B là ô tô — mặc định xe máy của B không áp, mặc định ô tô của A càng không.
+    expect(await settings.turnaroundBufferFor(prisma, vehicleB)).toBe(0);
+  });
+
+  maybe('DB từ chối số ngoài dải và loại xe lạ', async () => {
+    await expect(
+      prisma.tenantOperationDefault.create({
+        data: { id: newId(), tenantId: tenantA, vehicleType: 'truck', turnaroundBufferMinutes: 10 },
+      }),
+    ).rejects.toThrow(/tenant_operation_defaults_vehicle_type_check/);
+    await expect(
+      prisma.tenantOperationDefault.create({
+        data: {
+          id: newId(),
+          tenantId: tenantA,
+          vehicleType: VEHICLE_TYPE.CAR,
+          turnaroundBufferMinutes: 1441,
+        },
+      }),
+    ).rejects.toThrow(/tenant_operation_defaults_buffer_check/);
+  });
+});
+
 describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () => {
   maybe('bắt đồng ý điều khoản thì phải có nội dung điều khoản', async () => {
     await expect(

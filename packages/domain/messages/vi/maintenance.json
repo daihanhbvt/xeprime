@@ -210,5 +210,31 @@
     "scheduled": "Đã lên lịch",
     "inProgressSince": "Đang bảo dưỡng | từ {date}",
     "inProgress": "Đang bảo dưỡng"
+  },
+  "missingKmQueue": {
+    "listLabel": "Việc thiếu KM trả",
+    "forbidden": "Không có quyền xem việc bàn giao",
+    "forbiddenHint": "Danh sách này thuộc biên bản bàn giao. Liên hệ quản trị viên nếu bạn cần quyền xem.",
+    "loadError": "Không tải được danh sách việc thiếu KM",
+    "loadErrorHint": "Kết nối có thể bị gián đoạn. Thử lại để xem việc còn tồn đọng.",
+    "empty": "Không còn việc thiếu KM trả",
+    "emptyHint": "Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ.",
+    "columns": {
+      "vehicle": "Xe",
+      "booking": "Đơn thuê",
+      "confirmedAt": "Xác nhận trả lúc",
+      "pickupKm": "KM lúc giao",
+      "actions": "Thao tác"
+    },
+    "noPlate": "Chưa có biển số",
+    "cardBooking": "Đơn <link>{code}</link> · {time}",
+    "cardPickupKm": "KM lúc giao: {km}",
+    "resolve": "Bổ sung KM",
+    "needPermission": "Cần quyền chỉnh KM",
+    "resolveForbidden": "Không có quyền mở biên bản bàn giao này",
+    "resolveForbiddenHint": "Bổ sung KM cần quyền xem bàn giao của đơn tương ứng.",
+    "resolveLoadError": "Không tải được biên bản để bổ sung KM",
+    "resolveLoadErrorHint": "Kết nối có thể bị gián đoạn. Việc này vẫn còn trong hàng đợi.",
+    "alreadyResolved": "Biên bản này đã có số KM — không còn việc phải làm."
   }
 }

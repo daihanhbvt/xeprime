@@ -5,7 +5,8 @@ import { App, Button, Pagination } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
@@ -32,7 +33,9 @@ import {
   type RentalView,
   type RequestStage,
 } from '@/constants/rental-stages';
-import { bookingHistoryPath, ROUTES } from '@/constants/routes';
+import { BOOKING_REQUEST_OPEN_PARAM, bookingHistoryPath, ROUTES } from '@/constants/routes';
+import { fetchBookingRequest } from '@/features/booking-requests/api';
+import { chatThreadHref } from '@/features/chat/chat-links';
 import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -62,6 +65,7 @@ import type { BookingListItem, BookingSort } from '@/features/bookings/types';
 import { CustomerDetailDialog } from '@/features/customers/components/CustomerDetailDialog';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { VehicleDetailDialog } from '@/features/vehicles/components/VehicleDetailDialog';
+import { queryKeys } from '@/services/query-keys';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -418,7 +422,8 @@ export function BookingsListView() {
 
   function openConversation(requestId: string) {
     startConversation.mutate(requestId, {
-      onSuccess: (conversation) => router.push(`${ROUTES.MANAGE.CHAT}?c=${conversation.id}`),
+      onSuccess: (conversation) =>
+        router.push(chatThreadHref(ROUTES.MANAGE.CHAT, conversation.id, { tripId: requestId })),
       onError: (err) => message.error(errorMessage(err)),
     });
   }
@@ -448,6 +453,47 @@ export function BookingsListView() {
   function openRequestDetail(row: BookingRequestItem) {
     if (row.bookingId && canViewBookings) setDetailBookingId(row.bookingId);
     else setDetailRequest(row);
+  }
+
+  /*
+   * `?request=<id>` — link từ nơi khác (thẻ chuyến trong tin nhắn) mở sẵn MỘT yêu cầu. Yêu cầu không
+   * có trang riêng nên tham số là một Ý ĐỊNH: hộp chi tiết dựng từ dữ liệu server (cùng quy tắc với
+   * `openRequestDetail` — đã thành đơn thì mở ĐƠN), đóng hộp là gỡ tham số. Yêu cầu không đọc được
+   * (sai id, của gian hàng khác) thì báo lỗi và gỡ tham số, không treo một hộp rỗng.
+   */
+  const requestIntentId = searchParams.get(BOOKING_REQUEST_OPEN_PARAM);
+  const requestIntent = useQuery({
+    queryKey: queryKeys.bookingRequests.detail(requestIntentId ?? ''),
+    queryFn: () => fetchBookingRequest(requestIntentId as string),
+    enabled: Boolean(requestIntentId) && canViewRequests,
+  });
+  const intentRequest =
+    requestIntentId && requestIntent.data?.id === requestIntentId ? requestIntent.data : null;
+  const intentBookingId =
+    intentRequest?.bookingId && canViewBookings ? intentRequest.bookingId : null;
+  const shownRequest = detailRequest ?? (intentRequest && !intentBookingId ? intentRequest : null);
+  const shownBookingId = detailBookingId ?? intentBookingId;
+
+  function clearRequestIntent() {
+    if (!requestIntentId) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(BOOKING_REQUEST_OPEN_PARAM);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  const intentFailed = Boolean(requestIntentId) && requestIntent.isError;
+  useEffect(() => {
+    if (!intentFailed) return;
+    message.error(errorMessage(requestIntent.error));
+    clearRequestIntent();
+    // Chỉ phản ứng lúc truy vấn ý định vừa hỏng — các hàm trên đổi danh tính mỗi lượt render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intentFailed]);
+
+  function closeRequestDetail() {
+    setDetailRequest(null);
+    clearRequestIntent();
   }
 
   /** Thẻ của một chuyến — CÙNG component, cùng hành động ở cả List lẫn Kanban (khác bố cục). */
@@ -770,29 +816,32 @@ export function BookingsListView() {
       )}
 
       {/* Chi tiết đơn của một yêu cầu đã thành đơn — CHÍNH modal của trang đơn. */}
-      {detailBookingId ? (
+      {shownBookingId ? (
         <BookingDetailDialog
-          bookingId={detailBookingId}
+          bookingId={shownBookingId}
           open
-          onClose={() => setDetailBookingId(null)}
+          onClose={() => {
+            setDetailBookingId(null);
+            clearRequestIntent();
+          }}
         />
       ) : null}
 
       <BookingRequestDetailDialog
-        request={detailRequest}
+        request={shownRequest}
         canApprove={canApprove}
-        pendingAction={detailRequest ? decisions.decisionActionFor(detailRequest.id) : null}
-        onClose={() => setDetailRequest(null)}
+        pendingAction={shownRequest ? decisions.decisionActionFor(shownRequest.id) : null}
+        onClose={closeRequestDetail}
         onApprove={(row) => {
-          setDetailRequest(null);
+          closeRequestDetail();
           decisions.openApprove(row);
         }}
         onReject={(row) => {
-          setDetailRequest(null);
+          closeRequestDetail();
           decisions.openReject(row);
         }}
         onCancel={(row) => {
-          setDetailRequest(null);
+          closeRequestDetail();
           decisions.openCancel(row);
         }}
         onOpenVehicle={(row) => setVehicleDetailId(row.vehicleId)}

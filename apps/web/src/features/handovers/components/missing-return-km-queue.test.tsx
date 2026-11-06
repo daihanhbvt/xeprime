@@ -319,6 +319,49 @@ describe('Bổ sung KM — trạng thái tải, lỗi và việc đã xử lý (
     expect(invalidateHandovers).toHaveBeenCalledTimes(1);
   });
 
+  it('link "Xử lý ngay" (?resolve=): mở thẳng hộp bổ sung KM, đóng thì dọn tham số URL', async () => {
+    handoverQuery.data = unresolvedContext;
+    const onRequestHandled = vi.fn();
+    renderQueue([item()], { requestedBookingId: 'booking-1', onRequestHandled });
+
+    expect(await screen.findByText('Bổ sung KM còn thiếu')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Hủy|Huỷ|Đóng/ }));
+    await waitFor(() => expect(onRequestHandled).toHaveBeenCalledTimes(1));
+  });
+
+  it('link "Xử lý ngay" tới biên bản KHÔNG ở trang đang xem (hàng đợi rỗng): vẫn mở hộp', async () => {
+    handoverQuery.data = unresolvedContext;
+    renderQueue([], { requestedBookingId: 'booking-1', onRequestHandled: vi.fn() });
+
+    expect(screen.getByText('Không còn việc thiếu KM trả')).toBeTruthy();
+    expect(await screen.findByText('Bổ sung KM còn thiếu')).toBeTruthy();
+  });
+
+  it('link "Xử lý ngay" khi thiếu quyền chỉnh KM: chỉ hiện hàng đợi, KHÔNG mở hộp', () => {
+    permissions.granted = new Set([PERMISSION.HANDOVER_VIEW]);
+    handoverQuery.data = unresolvedContext;
+    renderQueue([item()], { requestedBookingId: 'booking-1', onRequestHandled: vi.fn() });
+
+    expect(screen.getByText('Toyota Vios 2024')).toBeTruthy();
+    expect(screen.queryByText('Bổ sung KM còn thiếu')).toBeNull();
+  });
+
+  it('link "Xử lý ngay" tới biên bản đã có KM: báo lý do, dọn URL, làm mới một lần', async () => {
+    handoverQuery.data = {
+      ...unresolvedContext,
+      return: { ...unresolvedContext.return, odometerKm: 45_890, odometerMissing: false },
+    };
+    const onResolved = vi.fn();
+    const onRequestHandled = vi.fn();
+    renderQueue([item()], { requestedBookingId: 'booking-1', onRequestHandled, onResolved });
+
+    expect(
+      await screen.findByText('Biên bản này đã có số KM — không còn việc phải làm.'),
+    ).toBeTruthy();
+    expect(onRequestHandled).toHaveBeenCalledTimes(1);
+    expect(onResolved).toHaveBeenCalledTimes(1);
+  });
+
   it('không có gì lọt: openResolve nhiều lần vẫn không sinh cảnh báo render', () => {
     handoverQuery.data = unresolvedContext;
     openResolve();

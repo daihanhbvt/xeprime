@@ -27,6 +27,7 @@ export function TripOwnerActions({ trip }: { trip: CustomerTripDetail }) {
       {canChat ? (
         <ChatWithShopButton
           vehicleId={trip.vehicle.id}
+          tripId={trip.id}
           appearance="icon"
           className={styles.circleAction}
           label={t('chatOwner')}

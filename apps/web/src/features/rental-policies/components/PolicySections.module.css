@@ -323,6 +323,19 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * Bố cục phẳng đứng cạnh khung xem trước giá (màn sửa xe › Dài hạn): bề ngang chỉ còn ~550px nên
+ * cột hẹp lại và nút xoá chỉ còn icon — đo theo chỗ thật, không đợi viewport dưới 1000px.
+ */
+.flat .discountHead,
+.flat .discountRow {
+  grid-template-columns: minmax(110px, 1fr) 96px minmax(140px, 1.4fr) 56px;
+}
+
+.flat .deleteText {
+  display: none;
+}
+
 @media (max-width: 1000px) {
   .tierHead,
   .tierRow {

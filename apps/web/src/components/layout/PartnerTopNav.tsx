@@ -5,12 +5,13 @@ import type { MenuProps } from 'antd';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createElement, useState } from 'react';
+import { createElement, useState, type KeyboardEvent } from 'react';
 import { LineIcon } from '@/components/icons/LineIcon';
 import {
   flattenLeaves,
   leavesOfSection,
   matchSelectedKey,
+  sectionKeyOf,
   type NavLeaf,
   type NavSection,
 } from '@/constants/nav';
@@ -28,12 +29,17 @@ import styles from './PartnerTopNav.module.css';
  * nhãn + dấu "+" (mở thì thành "−", nền vàng nhạt). Khối `direct` ("Tổng quan") là liên kết thẳng.
  * Dropdown là danh sách PHẲNG các mục lá, mỗi dòng biểu tượng + nhãn + số "cần xử lý".
  *
+ * Nhãn khối cũng là một LIÊN KẾT tới mục lá đầu tiên nó còn hiện (06/11/2026 — "Vận hành" → "Đơn
+ * thuê xe"): rê chuột mở dropdown, bấm thì đi. Khối chứa trang đang mở được tô như lúc đang mở
+ * (06/11/2026, người dùng chốt — design không tô), để biết mình đang ở khu nào khi dropdown đóng.
+ *
  * Lọc quyền/sở hữu/cờ gói đi qua `useNavLeafAccess` — cùng vị từ với drawer mobile, nên một mục
  * không bao giờ hiện ở desktop mà biến mất ở mobile. Mục `hidden` không vẽ thành dòng; khối không
  * còn dòng nào thì vắng hẳn.
  *
  * Dropdown dựng bằng `Dropdown` + `menu` của AntD (không tự dựng popup) để có sẵn điều hướng bàn
- * phím, vai `menu`/`menuitem` và trả tiêu điểm. Mở bằng rê chuột hoặc bấm.
+ * phím, vai `menu`/`menuitem` và trả tiêu điểm. Mở bằng rê chuột; bàn phím mở bằng phím ↓ (Enter
+ * thuộc về liên kết).
  */
 export function PartnerTopNav() {
   const t = useTranslations('Navigation');
@@ -41,6 +47,7 @@ export function PartnerTopNav() {
   const access = useNavLeafAccess();
   const { sections } = useManageNavTree();
   const selectedKey = matchSelectedKey(pathname, flattenLeaves(sections));
+  const activeSectionKey = sectionKeyOf(sections, selectedKey);
 
   return (
     <nav className={styles.nav} aria-label={t('manage.menuLabel')}>
@@ -53,7 +60,7 @@ export function PartnerTopNav() {
           <Link
             key={section.key}
             href={access.hrefOf(first)}
-            className={styles.item}
+            className={cx(styles.item, section.key === activeSectionKey && styles.itemActive)}
             aria-current={first.href === selectedKey ? 'page' : undefined}
           >
             <SectionIcon section={section} />
@@ -65,6 +72,8 @@ export function PartnerTopNav() {
             section={section}
             label={label}
             leaves={leaves}
+            first={first}
+            active={section.key === activeSectionKey}
             selectedKey={selectedKey}
             access={access}
           />
@@ -82,12 +91,18 @@ function TopNavGroup({
   section,
   label,
   leaves,
+  first,
+  active,
   selectedKey,
   access,
 }: {
   section: NavSection;
   label: string;
   leaves: readonly NavLeaf[];
+  /** Dòng đầu tiên còn hiện — đích của nhãn khối. */
+  first: NavLeaf;
+  /** Trang đang mở thuộc khối này. */
+  active: boolean;
   selectedKey: string | undefined;
   access: NavLeafAccess;
 }) {
@@ -102,6 +117,12 @@ function TopNavGroup({
    * nào trong khối có việc trễ / sắp trễ.
    */
   const pending = access.badgeTotalOf(leaves);
+
+  function openWithKeyboard(event: KeyboardEvent<HTMLAnchorElement>) {
+    if (event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    setOpen(true);
+  }
 
   const items: MenuProps['items'] = leaves.map((leaf) => {
     const itemLabel = t(leaf.labelKey);
@@ -128,9 +149,10 @@ function TopNavGroup({
 
   return (
     <Dropdown
-      trigger={['hover', 'click']}
+      trigger={['hover']}
       placement="bottomLeft"
       arrow
+      autoFocus
       open={open}
       onOpenChange={setOpen}
       classNames={{ root: styles.dropdown }}
@@ -140,9 +162,13 @@ function TopNavGroup({
         onClick: () => setOpen(false),
       }}
     >
-      <button
-        type="button"
-        className={cx(styles.item, open && styles.itemOpen)}
+      <Link
+        href={access.hrefOf(first)}
+        className={cx(styles.item, active && styles.itemActive, open && styles.itemOpen)}
+        onKeyDown={openWithKeyboard}
+        onClick={() => setOpen(false)}
+        // Đang ở ĐÚNG trang đích của nhãn khối thì là "page"; ở trang khác trong khối thì là "true".
+        aria-current={first.href === selectedKey ? 'page' : active ? 'true' : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={
@@ -155,7 +181,7 @@ function TopNavGroup({
         <span className={styles.label}>{label}</span>
         {pending.count > 0 ? <CountBadge count={pending.count} urgent={pending.urgent} /> : null}
         <LineIcon name={open ? 'minus' : 'plus'} className={styles.toggle} />
-      </button>
+      </Link>
     </Dropdown>
   );
 }

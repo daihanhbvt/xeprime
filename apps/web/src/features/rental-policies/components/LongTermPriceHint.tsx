@@ -11,7 +11,9 @@ import {
 } from '@xeprime/types';
 import { useTranslations } from 'next-intl';
 import styles from './LongTermPriceHint.module.css';
+import { PolicyInfoTip } from './PolicyInfoTip';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
 
 /** Làm tròn gợi ý về trăm nghìn cho dễ đọc — gợi ý là con số tham khảo, không phải để khớp lẻ. */
 function roundSuggest(value: number): number {
@@ -35,6 +37,7 @@ export function LongTermPriceHint({
   monthlyPrice,
   discountTiers,
   discountEnabled,
+  compact = false,
 }: {
   /** Giá ngày thường đang nhập/đang có (VND, number từ form hoặc string từ API). */
   weekdayPrice: number | string | null | undefined;
@@ -47,6 +50,11 @@ export function LongTermPriceHint({
     { minMonths?: number | null; percent?: number | null; note?: string } | undefined
   )[];
   discountEnabled?: boolean;
+  /**
+   * Một dòng "Giá đề xuất: …" nhỏ ngay dưới ô giá — cho màn đã có khung xem trước giá gói riêng.
+   * Lý do của khoảng gợi ý nằm trong ⓘ; giá tháng không rẻ hơn thuê ngày thì dòng đổi màu cảnh báo.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations('Vehicles.pricing.longTermHint');
   const fmt = useAppFormat();
@@ -64,6 +72,25 @@ export function LongTermPriceHint({
   });
 
   const monthly = monthlyPrice == null ? null : Number(monthlyPrice);
+
+  if (compact) {
+    const notCheaper = monthly != null && Number.isFinite(monthly) && monthly >= monthReference;
+    return (
+      <span className={cx(styles.suggestLine, notCheaper && styles.suggestWarning)}>
+        <span>
+          {t('suggestedLine', {
+            min: fmt.money(String(suggestMin)),
+            max: fmt.money(String(suggestMax)),
+          })}
+          {notCheaper
+            ? ` · ${t('notCheaperShort', { reference: fmt.money(String(monthReference)) })}`
+            : null}
+        </span>
+        <PolicyInfoTip label={t('suggestTipLabel')}>{suggestion}</PolicyInfoTip>
+      </span>
+    );
+  }
+
   if (monthly == null || !Number.isFinite(monthly) || monthly <= 0) {
     return (
       <Alert

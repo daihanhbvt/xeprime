@@ -100,10 +100,21 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       values.mileageLimitEnabled && values.excessDistanceFeePerKm != null
         ? toMoneyString(values.excessDistanceFeePerKm)
         : null,
+    /*
+     * Công tắc quá giờ TẮT (chỉ form có công tắc mới đặt `false`) ⇒ gửi null cả hai, không giữ số cũ —
+     * cùng lý do với hạn mức quãng đường.
+     */
     overtimeFeePerHour:
-      values.overtimeFeePerHour == null ? null : toMoneyString(values.overtimeFeePerHour),
-    overtimeGraceMinutes: values.overtimeGraceMinutes ?? null,
-    overtimeRoundingMinutes: values.overtimeRoundingMinutes ?? null,
+      values.overtimeEnabled === false || values.overtimeFeePerHour == null
+        ? null
+        : toMoneyString(values.overtimeFeePerHour),
+    overtimeGraceMinutes:
+      values.overtimeEnabled === false ? null : (values.overtimeGraceMinutes ?? null),
+    /*
+     * Ô làm tròn đã gỡ khỏi web (06/11/2026): luôn null = làm tròn LÊN theo giờ, công thức mặc định
+     * của quyết toán (`SettlementService`). Số cũ không còn ai thấy thì không được tiếp tục áp.
+     */
+    overtimeRoundingMinutes: null,
     discountEnabled: values.discountEnabled,
     discountTiers: (values.discountTiers ?? []).map((t) => ({
       minMonths: (t.minMonths ?? 1) as LongTermPackageMonths,

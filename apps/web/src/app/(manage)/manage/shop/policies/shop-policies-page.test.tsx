@@ -3,17 +3,17 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEPOSIT_POLICY_REASON, PERMISSION, type Permission } from '@xeprime/types';
-import type { ShopRentalPolicy } from '@/features/rental-policies/types';
+import type { ShopOperationDefaults, ShopRentalPolicy } from '@/features/rental-policies/types';
 import type { PaymentSettings } from '@/features/shop/types';
 
 import ShopPoliciesPage from './page';
 
 /**
- * Đặc tả trang Chính sách thuê mặc định (Wave 2 — Figma `237:1557`).
+ * Đặc tả trang Cấu hình › Chính sách thuê (design `23874:63907`, ráp 06/11/2026).
  *
- * Khoá các hợp đồng: gate quyền, chip phạm vi áp dụng lấy số từ API, trạng thái null-policy,
- * thanh "thay đổi chưa lưu", validation chéo đúng CÂU CHỮ server ("khoảng trống cấu hình"),
- * và bước xác nhận nhạy cảm trước khi lưu (payload đã hoá chuỗi tiền — ADR 0007).
+ * Khoá các hợp đồng: gate quyền, tab Ô tô · Xe máy mang số xe từ API, null-policy, hai API một nút
+ * "Lưu thay đổi" (mỗi API chỉ gửi khi phần của nó đổi), bước xác nhận nhạy cảm, công tắc quá giờ, ưu
+ * đãi dài hạn không còn công tắc (có mốc = bật), và thẻ thanh toán giữ chỗ sống độc lập.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 vi.mock('@/hooks/use-permissions', () => ({
@@ -24,24 +24,35 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: nav.replace }),
+  usePathname: () => '/manage/shop/policies',
+  useSearchParams: () => nav.params,
+}));
+
 const query = vi.hoisted(() => ({
   data: undefined as ShopRentalPolicy | undefined,
   isLoading: false,
   isError: false,
   refetch: vi.fn(),
 }));
-const save = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+const defaultsQuery = vi.hoisted(() => ({
+  data: undefined as ShopOperationDefaults | undefined,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const save = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
+const saveDefaults = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
 
 vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
   useShopPolicy: () => query,
   useSaveShopPolicy: () => save,
+  useShopOperationDefaults: () => defaultsQuery,
+  useSaveShopOperationDefaults: () => saveDefaults,
 }));
 
-/*
- * Section "Thanh toán giữ chỗ qua XePrime" (16/09/2026) — trang `/manage/shop/payment-settings`
- * cũ đã gộp vào đây. Mock ở đúng ranh giới hook như phần chính sách phía trên; cả hai phần đọc
- * hai API khác nhau và phải sống độc lập trên cùng một trang.
- */
 const paymentQuery = vi.hoisted(() => ({
   data: undefined as unknown,
   isLoading: false,
@@ -57,8 +68,12 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   usePaymentSettings: () => paymentQuery,
   useUpdatePaymentSettings: () => updatePayment,
-  // Hoá đơn VAT (ADR 0059) — hành vi riêng ở `VatInvoiceSetting.test.tsx`; ở đây chỉ cần trang dựng được.
-  useVatInvoiceSetting: () => ({ data: { vatInvoiceSupported: false }, isError: false, refetch: vi.fn() }),
+  // Hoá đơn VAT (ADR 0059) — hành vi riêng ở `VatInvoiceSetting.test.tsx`.
+  useVatInvoiceSetting: () => ({
+    data: { vatInvoiceSupported: false },
+    isError: false,
+    refetch: vi.fn(),
+  }),
   useUpdateVatInvoiceSetting: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -87,9 +102,11 @@ function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
         { toKm: 5, fee: '30000' },
         { toKm: 10, fee: '50000' },
       ],
+      includedDistanceKmPerDay: null,
+      excessDistanceFeePerKm: null,
       overtimeFeePerHour: '100000',
       overtimeGraceMinutes: null,
-      overtimeRoundingMinutes: null,
+      overtimeRoundingMinutes: 15,
       discountEnabled: true,
       discountTiers: [{ minMonths: 1, percent: 5, note: 'Ưu đãi cam kết 1 tháng' }],
       legacyDiscountTiers: [],
@@ -97,6 +114,17 @@ function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
     },
     inheritingVehicles: 12,
     overriddenVehicles: 3,
+    ...over,
+  };
+}
+
+function defaultsFixture(over: Partial<ShopOperationDefaults> = {}): ShopOperationDefaults {
+  return {
+    vehicleType: 'car',
+    turnaroundBufferMinutes: null,
+    inheritingVehicles: 14,
+    overriddenVehicles: 1,
+    updatedAt: null,
     ...over,
   };
 }
@@ -113,19 +141,37 @@ function renderPage() {
   );
 }
 
+async function saveAndConfirm() {
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+  expect((await screen.findAllByText('Xác nhận thay đổi chính sách thuê?')).length).toBeGreaterThan(
+    0,
+  );
+  const ok = screen.getAllByRole('button', { name: 'Xác nhận thay đổi' });
+  fireEvent.click(ok[ok.length - 1]!);
+}
+
 beforeEach(() => {
   query.data = policyFixture();
-  query.isLoading = false;
   query.isError = false;
   query.refetch.mockReset();
-  save.mutate.mockReset();
+  defaultsQuery.data = defaultsFixture();
+  defaultsQuery.isError = false;
+  defaultsQuery.refetch.mockReset();
+  save.mutateAsync.mockReset().mockImplementation(async () => policyFixture());
   save.isPending = false;
+  saveDefaults.mutateAsync
+    .mockReset()
+    .mockImplementation(async (body: { turnaroundBufferMinutes: number }) =>
+      defaultsFixture({ turnaroundBufferMinutes: body.turnaroundBufferMinutes }),
+    );
+  saveDefaults.isPending = false;
+  nav.replace.mockReset();
+  nav.params = new URLSearchParams();
   paymentQuery.data = paymentFixture();
   paymentQuery.isLoading = false;
   paymentQuery.isError = false;
   paymentQuery.refetch.mockReset();
   updatePayment.mutate.mockReset();
-  updatePayment.isPending = false;
   grant(
     PERMISSION.TENANT_VIEW,
     PERMISSION.TENANT_UPDATE,
@@ -136,67 +182,69 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/shop/policies — quyền và trạng thái tải', () => {
+describe('Chính sách thuê — quyền, tải, loại xe', () => {
   it('thiếu tenant.view: thay TOÀN BỘ trang bằng khối quyền', () => {
     grant();
     renderPage();
     expect(screen.getByText('Không có quyền truy cập')).toBeTruthy();
-    expect(screen.queryByText('Chính sách thuê mặc định')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Chính sách thuê' })).toBeNull();
   });
 
-  it('lỗi tải: có nút thử lại gọi refetch', () => {
+  it('lỗi tải: thẻ thanh toán vẫn dùng được, nút thử lại gọi refetch', () => {
     query.data = undefined;
     query.isError = true;
     renderPage();
+    expect(screen.getByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
     expect(query.refetch).toHaveBeenCalledTimes(1);
   });
-});
 
-describe('/manage/shop/policies — hoá đơn VAT (ADR 0059)', () => {
-  it('một section cho MỌI xe, đứng ngoài tabs theo loại xe, có công tắc', () => {
+  it('tab Ô tô · Xe máy mang tổng số xe của loại; bấm Xe máy ghi ?type= vào URL', () => {
     renderPage();
-    const heading = screen.getByRole('heading', { level: 2, name: 'Hoá đơn VAT' });
-    const vat = heading.closest('section') as HTMLElement;
-    expect(within(vat).getByRole('switch', { name: /hỗ trợ xuất hoá đơn VAT cho mọi xe/ })).toBeTruthy();
-    expect(within(vat).queryByRole('tab')).toBeNull();
+    const car = screen.getByRole('tab', { name: /Ô tô/ });
+    expect(within(car).getByText('15')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /Xe máy/ }));
+    expect(nav.replace).toHaveBeenCalledWith('/manage/shop/policies?type=motorbike', {
+      scroll: false,
+    });
+  });
+
+  it('đang sửa dở mà đổi loại xe: hỏi trước khi bỏ thay đổi', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
+      target: { value: '4000000' },
+    });
+    fireEvent.click(screen.getByRole('tab', { name: /Xe máy/ }));
+    expect((await screen.findAllByText('Bỏ thay đổi chưa lưu?')).length).toBeGreaterThan(0);
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('mục lục cột phải có ba mục theo design', () => {
+    renderPage();
+    const toc = screen.getByRole('navigation', { name: 'Mục lục chính sách thuê' });
+    for (const label of ['Chính sách & Quy định cho thuê', 'Giao nhận xe', 'Ưu đãi dài hạn']) {
+      expect(within(toc).getByRole('link', { name: label })).toBeTruthy();
+    }
   });
 });
 
-describe('/manage/shop/policies — dữ liệu và null-policy', () => {
-  it('chip phạm vi lấy số từ API, đếm theo loại xe của tab: 12 kế thừa / 3 ghi đè', () => {
-    renderPage();
-    // Tab mặc định là Ô tô; số xe ghi đè nằm trong ghi chú để toolbar không bị quá tải.
-    expect(screen.getByText('Đã áp dụng cho 12 ô tô')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Giải thích phạm vi áp dụng chính sách' }));
-    expect(screen.getByText(/3 xe đang dùng chính sách riêng/)).toBeTruthy();
-    expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
-  });
-
-  it('có đủ hai tab Ô tô / Xe máy — mỗi loại một bộ chính sách riêng', () => {
-    renderPage();
-    expect(screen.getByRole('tab', { name: 'Ô tô' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Xe máy' })).toBeTruthy();
-  });
-
-  it('hiển thị đủ 4 khối chính sách với giá trị từ API', () => {
+describe('Chính sách thuê — dữ liệu', () => {
+  it('giá trị từ API: cọc, số xe dùng mức cọc, bậc giao xe, quá giờ đang bật', () => {
     renderPage();
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe(
       '5.000.000',
     );
-    expect(screen.getByText('Không có khoảng trống hoặc chồng lấn')).toBeTruthy();
-    expect(
-      screen.getByText(
-        '0–3 km: Miễn phí · >3–5 km: 30.000 ₫ · >5–10 km: 50.000 ₫ · >10 km: Báo giá thủ công theo thỏa thuận',
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
+    expect(screen.getByText('Không có khoảng cách nào trùng nhau')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Hạn mức & phí trả xe quá giờ' })).toHaveProperty(
+      'ariaChecked',
+      'true',
+    );
     expect((screen.getByLabelText('Phí mỗi giờ phát sinh') as HTMLInputElement).value).toBe(
       '100.000',
     );
-    // Hai ô quá giờ chưa cấu hình — placeholder đúng thiết kế, không bịa số 0.
-    expect(screen.getByLabelText('Thời gian miễn phí tối đa').getAttribute('placeholder')).toBe(
-      'Cần cấu hình',
-    );
+    // Ô làm tròn đã gỡ — chỉ còn công thức trong ⓘ.
+    expect(screen.queryByLabelText('Đơn vị làm tròn tối thiểu')).toBeNull();
   });
 
   it('chưa có chính sách (null-policy): thông báo + form trống, không bịa mặc định', () => {
@@ -205,189 +253,159 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
     expect(screen.getByText('Gian hàng chưa cấu hình chính sách thuê')).toBeTruthy();
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe('');
   });
+
+  it('ba chế độ thế chấp: chọn Cọc tài sản thì hiện danh mục tài sản, ẩn ô tiền cọc', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('radio', { name: /Cọc tài sản/ }));
+    expect(screen.queryByLabelText('Số tiền cọc mặc định')).toBeNull();
+    expect(screen.getByText('Loại tài sản nhận thế chấp')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Miễn thế chấp/ })).toBeTruthy();
+  });
 });
 
-describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
-  it('sửa một giá trị → thanh "thay đổi chưa lưu" hiện, Hủy bỏ thì biến mất', async () => {
+describe('Chính sách thuê — xem trước giá gói dài hạn', () => {
+  it('áp mốc đang nhập lên giá tháng ví dụ; sửa giá ví dụ thì số đổi theo', () => {
+    renderPage();
+    const preview = screen.getByRole('complementary', { name: 'Xem trước giá gói thuê dài hạn' });
+    // Ví dụ ô tô 15.000.000 ₫/tháng, mốc 1 tháng giảm 5% ⇒ 14.250.000 ₫.
+    expect(within(preview).getAllByText(/14.250.000/).length).toBeGreaterThan(0);
+    fireEvent.change(within(preview).getByRole('spinbutton'), { target: { value: '10000000' } });
+    expect(within(preview).getAllByText(/9.500.000/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Chính sách thuê — lưu', () => {
+  it('chưa sửa gì: Hủy và Lưu thay đổi đều khoá', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Lưu thay đổi' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Huỷ' })).toHaveProperty('disabled', true);
+  });
+
+  it('sửa cọc → xác nhận nêu phạm vi → chỉ gửi chính sách, tiền là CHUỖI, làm tròn về mặc định', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
       target: { value: '4000000' },
     });
-    expect(await screen.findByText('Bạn có các thay đổi chưa được áp dụng')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Hủy bỏ' }));
-    await waitFor(() =>
-      expect(screen.queryByText('Bạn có các thay đổi chưa được áp dụng')).toBeNull(),
-    );
-  });
-
-  it('bán kính lệch mốc cuối → đúng câu chữ server "khoảng trống cấu hình", KHÔNG gửi API', async () => {
-    renderPage();
-    fireEvent.change(screen.getByLabelText('Bán kính hỗ trợ tối đa tự giao'), {
-      target: { value: '12' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu chính sách' }));
-
-    expect(
-      await screen.findByText(/Có khoảng trống cấu hình giữa mốc 10 km và 12 km/),
-    ).toBeTruthy();
-    expect(save.mutate).not.toHaveBeenCalled();
-  });
-
-  it('lưu hợp lệ: xác nhận nêu phạm vi 12 xe kế thừa + cam kết đơn cũ giữ nguyên → gửi payload chuỗi tiền', async () => {
-    renderPage();
-    fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
-      target: { value: '4000000' },
-    });
-    // Chỉ còn nút sticky cuối form; không lặp một nút lưu ở toolbar phía trên.
-    const saveButton = screen.getByRole('button', { name: 'Lưu chính sách' });
-    expect(saveButton.getAttribute('form')).toBeNull();
-    fireEvent.click(saveButton);
-
-    // AntD render modal kèm bản sao motion → luôn dùng findAll/getAll khi soi nội dung modal.
-    expect(
-      (await screen.findAllByText('Xác nhận thay đổi chính sách thuê?')).length,
-    ).toBeGreaterThan(0);
+    await saveAndConfirm();
     expect(screen.getAllByText(/12 xe đang kế thừa/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/vẫn giữ nguyên mức giá và tiền cọc cũ/).length).toBeGreaterThan(0);
-
-    const okButtons = screen.getAllByRole('button', { name: 'Xác nhận thay đổi' });
-    fireEvent.click(okButtons[okButtons.length - 1]!);
-    await waitFor(() => expect(save.mutate).toHaveBeenCalledTimes(1));
-
-    const body = save.mutate.mock.calls[0]![0] as {
-      depositAmount: string;
-      deliveryTiers: unknown[];
-    };
-    // ADR 0007: tiền rời form là CHUỖI, tiers giữ nguyên cấu trúc.
+    await waitFor(() => expect(save.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = save.mutateAsync.mock.calls[0]![0] as Record<string, unknown>;
     expect(body.depositAmount).toBe('4000000');
+    expect(body.overtimeRoundingMinutes).toBeNull();
+    expect(body.discountEnabled).toBe(true);
     expect(body.deliveryTiers).toEqual([
       { toKm: 3, fee: '0' },
       { toKm: 5, fee: '30000' },
       { toKm: 10, fee: '50000' },
     ]);
+    expect(saveDefaults.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('thiếu tenant.update: xem được nhưng nút Lưu bị khoá', () => {
+  it('đổi thời gian chết → chỉ gửi mặc định gian hàng', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('radio', { name: '1 giờ' }));
+    await saveAndConfirm();
+    await waitFor(() =>
+      expect(saveDefaults.mutateAsync).toHaveBeenCalledWith({ turnaroundBufferMinutes: 60 }),
+    );
+    expect(save.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('tắt quá giờ → phí và thời gian miễn phí gửi null', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('switch', { name: 'Hạn mức & phí trả xe quá giờ' }));
+    expect(screen.queryByLabelText('Phí mỗi giờ phát sinh')).toBeNull();
+    await saveAndConfirm();
+    await waitFor(() => expect(save.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = save.mutateAsync.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.overtimeFeePerHour).toBeNull();
+    expect(body.overtimeGraceMinutes).toBeNull();
+  });
+
+  it('xoá hết mốc ưu đãi → ưu đãi tắt', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá mốc ưu đãi 1' }));
+    expect(
+      screen.getByText('Chưa có mốc ưu đãi — khách thuê dài hạn trả nguyên giá gói.'),
+    ).toBeTruthy();
+    await saveAndConfirm();
+    await waitFor(() => expect(save.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = save.mutateAsync.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.discountEnabled).toBe(false);
+    expect(body.discountTiers).toEqual([]);
+  });
+
+  it('bán kính lệch mốc cuối → đúng câu chữ server, KHÔNG gửi API', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Bán kính hỗ trợ tối đa tự giao'), {
+      target: { value: '12' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(
+      await screen.findByText(/Có khoảng trống cấu hình giữa mốc 10 km và 12 km/),
+    ).toBeTruthy();
+    expect(save.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('thiếu tenant.update: chỉ xem — ô bị khoá, có lời nói rõ', () => {
     grant(PERMISSION.TENANT_VIEW);
     renderPage();
-    expect(
-      screen
-        .getAllByRole('button', { name: 'Lưu chính sách' })
-        .every((button) => (button as HTMLButtonElement).disabled),
-    ).toBe(true);
+    expect(screen.getByText('Bạn chỉ có quyền xem chính sách thuê của gian hàng.')).toBeTruthy();
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).disabled).toBe(true);
-  });
-
-  it('các ghi chú section mở bằng click và đóng bằng Escape', async () => {
-    renderPage();
-    const infoButton = screen.getByRole('button', { name: 'Giải thích phí quá giờ' });
-
-    fireEvent.click(infoButton);
-    expect(infoButton.getAttribute('aria-expanded')).toBe('true');
-    expect(await screen.findByText(/Phí quá giờ được tính khi bàn trả xe/)).toBeTruthy();
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
-  });
-
-  it('ghi chú của field nằm ở label và không lặp lại thành khối mô tả dưới input', async () => {
-    renderPage();
-    const infoButton = screen.getByRole('button', { name: 'Giải thích số tiền cọc mặc định' });
-
-    expect(screen.queryByText(/Cọc thế chấp là số tiền cố định bằng VND/)).toBeNull();
-    fireEvent.click(infoButton);
-    expect(await screen.findByText(/Mức tiền cố định bằng VND/)).toBeTruthy();
-  });
-
-  it('ghi chú cũng mở khi hover hoặc focus bằng bàn phím', async () => {
-    renderPage();
-    const infoButton = screen.getByRole('button', { name: 'Giải thích yêu cầu bảo đảm' });
-
-    fireEvent.mouseEnter(infoButton);
-    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
-    fireEvent.mouseLeave(infoButton);
-    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
-
-    fireEvent.focus(infoButton);
-    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
-  });
-
-  it('select mốc ưu đãi chỉ có đúng sáu gói thuê dài hạn cố định', async () => {
-    renderPage();
-    fireEvent.mouseDown(screen.getByLabelText('Mốc gói của bậc 1'));
-
-    for (const label of ['1 tháng', '2 tháng', '3 tháng', '6 tháng', '9 tháng', '12 tháng']) {
-      expect((await screen.findAllByText(label)).length).toBeGreaterThan(0);
-    }
-    expect(screen.queryByText('4 tháng')).toBeNull();
-  });
-
-  it('bảng mobile có nhãn gộp khoảng cách và nút xoá vẫn có tên truy cập', () => {
-    renderPage();
-    expect(screen.getByText('Khoảng cách')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xoá bậc 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Lưu thay đổi' })).toHaveProperty('disabled', true);
   });
 });
 
-/**
- * Section "Thanh toán giữ chỗ qua XePrime" — gộp từ `/manage/shop/payment-settings` (16/09/2026).
- *
- * Điều bộ này khoá: hai KHÁI NIỆM TIỀN không được lẫn vào nhau trên cùng một trang, quyền sửa
- * là quyền RIÊNG (`seller_profile.*`) chứ không mượn quyền sửa chính sách, và thiếu quyền sửa
- * thì nói ra chứ không để lại một công tắc mờ không giải thích.
- */
-describe('/manage/shop/policies — thanh toán giữ chỗ qua XePrime', () => {
-  it('section có mặt, kèm anchor để route cũ redirect tới đúng chỗ', () => {
+describe('Chính sách thuê — thanh toán giữ chỗ (lưu ngay, quyền riêng)', () => {
+  it('thẻ có anchor để route cũ /shop/payment-settings tới đúng chỗ', () => {
     const { container } = renderPage();
-
-    const section = container.querySelector('#deposit-collection');
-    expect(section).toBeTruthy();
-    expect(section?.textContent).toContain('Thanh toán giữ chỗ qua XePrime');
+    const card = container.querySelector('#deposit-collection');
+    expect(card?.textContent).toContain('Thanh toán & hóa đơn');
+    expect(card?.textContent).toMatch(/Hỗ trợ xuất ho[áa] đơn VAT/);
   });
 
-  it('phân biệt rõ khoản giữ chỗ với tiền cọc/thế chấp nhận khi giao xe', () => {
+  it('giai đoạn nền tảng (không ai bật/tắt được): ẩn hẳn hàng giữ chỗ, VAT vẫn còn', () => {
+    paymentQuery.data = paymentFixture({
+      editable: false,
+      reason: DEPOSIT_POLICY_REASON.PLATFORM_MANDATORY,
+    });
     renderPage();
+    expect(screen.queryByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ })).toBeNull();
+    expect(screen.queryByText(/XePrime đang áp dụng thu tiền giữ chỗ/)).toBeNull();
+    expect(screen.getByRole('switch', { name: /hỗ trợ xuất hoá đơn VAT/ })).toBeTruthy();
+  });
 
-    // Câu mô tả phải nói ra là HAI khoản khác nhau — đây là thứ gây hiểu nhầm tốn tiền nhất.
-    expect(screen.getByText(/KHÔNG phải tiền cọc\/thế chấp/)).toBeTruthy();
+  it('tuyến/gói khoá công tắc: vẫn hiện, khoá, kèm lý do', () => {
+    paymentQuery.data = paymentFixture({
+      editable: false,
+      depositRequired: false,
+      reason: DEPOSIT_POLICY_REASON.PACKAGE_FEATURE_MISSING,
+    });
+    renderPage();
+    expect(screen.getByText('Gói hiện tại chưa có tính năng này')).toBeTruthy();
+    expect(
+      screen.getByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ }),
+    ).toHaveProperty('disabled', true);
   });
 
   it('có quyền sửa: bật/tắt gọi đúng mutation', () => {
     renderPage();
-
     fireEvent.click(screen.getByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ }));
-
-    expect(updatePayment.mutate).toHaveBeenCalledTimes(1);
     expect(updatePayment.mutate.mock.calls[0]?.[0]).toEqual({ depositCollectionEnabled: false });
   });
 
-  it('chỉ xem (thiếu seller_profile.manage): nói rõ là chỉ đọc và khoá công tắc', () => {
-    grant(PERMISSION.TENANT_VIEW, PERMISSION.SELLER_PROFILE_VIEW);
-    renderPage();
-
-    expect(screen.getByText(/chỉ có quyền xem cấu hình này/)).toBeTruthy();
-    const toggle = screen.getByRole('switch', {
-      name: /XePrime thu khoản giữ chỗ hộ tôi/,
-    }) as HTMLButtonElement;
-    expect(toggle.disabled).toBe(true);
-  });
-
-  it('không có seller_profile.view: ẩn hẳn section, KHÔNG chặn cả trang chính sách', () => {
+  it('không có seller_profile.view: vắng hàng giữ chỗ, KHÔNG chặn cả trang', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
-    const { container } = renderPage();
-
-    expect(container.querySelector('#deposit-collection')).toBeNull();
-    // Phần chính sách theo loại xe vẫn dùng được bình thường.
-    expect(screen.getByText('Chính sách thuê mặc định')).toBeTruthy();
+    renderPage();
+    expect(screen.queryByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ })).toBeNull();
+    expect(screen.getByLabelText('Số tiền cọc mặc định')).toBeTruthy();
   });
 
-  it('lỗi tải cấu hình giữ chỗ KHÔNG làm hỏng phần chính sách theo loại xe', () => {
+  it('lỗi tải cấu hình giữ chỗ KHÔNG làm hỏng phần chính sách', () => {
     paymentQuery.data = undefined;
     paymentQuery.isError = true;
     renderPage();
-
     expect(screen.getByText('Không tải được cấu hình thanh toán giữ chỗ')).toBeTruthy();
-    expect(screen.getByText('Chính sách thuê mặc định')).toBeTruthy();
+    expect(screen.getByLabelText('Số tiền cọc mặc định')).toBeTruthy();
   });
 });

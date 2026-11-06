@@ -311,3 +311,26 @@
 .termsGroup .subheading {
   margin-bottom: 8px;
 }
+
+/* ── Dài hạn: mốc ưu đãi + "Khách sẽ thấy trên sàn" (cùng khuôn khuyến mãi trực tiếp) ─────── */
+
+.longTermDiscount {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+.longTermDiscountSettings {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Cột nội dung hẹp: bảng mốc cần đủ chỗ — khung xem trước xuống dưới. */
+@container vehicle-edit (max-width: 1360px) {
+  .longTermDiscount {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,67 @@
+.root {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/*
+ * Nhóm nút kiểu "Horizontal tabs" của design: khung xám bo 12, nút đang chọn nền trắng có viền +
+ * bóng xs, các nút khác chữ xám không viền — cùng ngôn ngữ với `SegmentedTabs`.
+ */
+.options {
+  display: inline-flex;
+  max-width: 100%;
+  align-self: flex-start;
+  overflow-x: auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-layout);
+  scrollbar-width: none;
+}
+
+.options.options :global(.ant-radio-button-wrapper) {
+  height: 36px;
+  flex: none;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 34px;
+}
+
+.options.options :global(.ant-radio-button-wrapper::before) {
+  display: none;
+}
+
+.options.options :global(.ant-radio-button-wrapper:hover) {
+  color: var(--xp-color-text);
+}
+
+.options.options :global(.ant-radio-button-wrapper-checked),
+.options.options :global(.ant-radio-button-wrapper-checked:hover) {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  color: var(--xp-color-text);
+}
+
+.custom {
+  width: 270px;
+  max-width: 100%;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}

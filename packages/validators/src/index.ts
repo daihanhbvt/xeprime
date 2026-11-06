@@ -1613,7 +1613,16 @@ export const policyFormSchema = yup.object({
       is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.test('required', 'excessFeeRequired', (value) => value != null),
     }),
-  overtimeFeePerHour: optionalPolicyMoney(),
+  /*
+   * Công tắc "Hạn mức & phí trả xe quá giờ" (trang chính sách web, 06/11/2026) — trường của FORM như
+   * `mileageLimitEnabled`, API chỉ biết "phí null = không tính quá giờ". TUỲ CHỌN: form không có công
+   * tắc (app native) để trống thì không có luật nào đổi.
+   */
+  overtimeEnabled: yup.boolean().optional(),
+  overtimeFeePerHour: optionalPolicyMoney().when(['overtimeEnabled', '$policyEditable'], {
+    is: (enabled?: boolean, editable?: boolean) => enabled === true && editable !== false,
+    then: (s) => s.test('required', 'overtimeFeeRequired', (value) => value != null),
+  }),
   overtimeGraceMinutes: yup
     .number()
     .nullable()

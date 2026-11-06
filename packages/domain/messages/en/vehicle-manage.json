@@ -228,7 +228,9 @@
       "overlap": "Time slots must not overlap",
       "bufferRange": "Buffer must be between 0 and 1440 minutes",
       "maxWindows": "At most 4 slots per type"
-    }
+    },
+    "bufferUnit": "min",
+    "bufferShop": "Shop default ({value})"
   },
   "terms": {
     "selfDriveTitle": "Rental procedure & terms",

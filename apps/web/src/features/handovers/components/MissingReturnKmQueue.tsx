@@ -1,9 +1,10 @@
 'use client';
 
-import { Button, Pagination, Skeleton, Table } from 'antd';
+import { App, Button, Pagination, Skeleton, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { HANDOVER_TYPE, PERMISSION, type PaginationMeta } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
@@ -29,6 +30,11 @@ const TABLE_MIN_WIDTH = 980;
  *
  * Xem việc cần `handovers.view`; BỔ SUNG KM cần `vehicles.odometer.correct` — hàng đợi không
  * tự cấp thêm quyền nào, và backend vẫn là nơi chặn thật.
+ *
+ * `requestedBookingId` là đích của nút "Xử lý ngay" ở Hồ sơ xe (`?resolve=<bookingId>`): mở
+ * thẳng hộp bổ sung KM của biên bản đó, kể cả khi nó không nằm ở trang đang xem. Thiếu quyền
+ * chỉnh KM thì bỏ qua và chỉ hiện hàng đợi. Đóng hộp ⇒ `onRequestHandled` xoá tham số khỏi URL
+ * để F5 không bật lại hộp cũ.
  */
 export function MissingReturnKmQueue({
   items,
@@ -37,6 +43,8 @@ export function MissingReturnKmQueue({
   error,
   onPageChange,
   onResolved,
+  requestedBookingId,
+  onRequestHandled,
 }: {
   items: MissingOdometerItem[];
   meta: PaginationMeta;
@@ -44,74 +52,102 @@ export function MissingReturnKmQueue({
   error?: { onRetry: () => void } | null;
   onPageChange: (page: number, pageSize: number) => void;
   onResolved: () => void;
+  requestedBookingId?: string;
+  onRequestHandled?: () => void;
 }) {
+  const t = useTranslations('Maintenance.missingKmQueue');
   const fmt = useAppFormat();
 
   const { has } = usePermissions();
   const isMobile = useIsMobile();
-  const [resolving, setResolving] = useState<MissingOdometerItem | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
 
   const canView = has(PERMISSION.HANDOVER_VIEW);
   const canResolve = has(PERMISSION.VEHICLE_ODOMETER_CORRECT);
+
+  // Bấm một dòng thắng biên bản từ URL; đóng hộp thì dọn cả hai.
+  const openBookingId = resolving ?? (canResolve ? (requestedBookingId ?? null) : null);
+  const closeResolve = () => {
+    setResolving(null);
+    if (requestedBookingId) onRequestHandled?.();
+  };
 
   if (!canView) {
     return (
       <PermissionState
         kind="forbidden"
-        title="Không có quyền xem việc bàn giao"
-        description="Danh sách này thuộc biên bản bàn giao. Liên hệ quản trị viên nếu bạn cần quyền xem."
+        title={t('forbidden')}
+        description={t('forbiddenHint')}
         missingPermissions={[PERMISSION.HANDOVER_VIEW]}
       />
     );
   }
 
+  /*
+   * Hộp bổ sung KM đứng NGOÀI các nhánh rỗng/lỗi/đang tải của danh sách: biên bản mở từ link có
+   * thể không thuộc trang (hay chi nhánh) đang lọc, và nó tự tải ngữ cảnh của riêng nó.
+   */
+  const resolveDialog = openBookingId ? (
+    <ResolveQueueItem
+      key={openBookingId}
+      bookingId={openBookingId}
+      onClose={closeResolve}
+      onSaved={onResolved}
+    />
+  ) : null;
+
   if (error) {
     return (
-      <EmptyState
-        variant="error"
-        title="Không tải được danh sách việc thiếu KM"
-        description="Kết nối có thể bị gián đoạn. Thử lại để xem việc còn tồn đọng."
-        onRetry={error.onRetry}
-      />
+      <>
+        <EmptyState
+          variant="error"
+          title={t('loadError')}
+          description={t('loadErrorHint')}
+          onRetry={error.onRetry}
+        />
+        {resolveDialog}
+      </>
     );
   }
 
   if (loading && items.length === 0) {
-    return <Skeleton active paragraph={{ rows: 4 }} />;
+    return (
+      <>
+        <Skeleton active paragraph={{ rows: 4 }} />
+        {resolveDialog}
+      </>
+    );
   }
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        variant="empty"
-        title="Không còn việc thiếu KM trả"
-        description="Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ."
-      />
+      <>
+        <EmptyState variant="empty" title={t('empty')} description={t('emptyHint')} />
+        {resolveDialog}
+      </>
     );
   }
 
   const columns: ColumnsType<MissingOdometerItem> = [
     {
-      title: 'Xe',
+      title: t('columns.vehicle'),
       key: 'vehicle',
       width: 260,
       render: (_, row) => (
         <div className={styles.vehicleCell}>
           <Link href={vehiclePath.detail(row.vehicleId)}>{row.vehicleName}</Link>
-          <span className={styles.sub}>{row.plateNumber ?? 'Chưa có biển số'}</span>
+          <span className={styles.sub}>{row.plateNumber ?? t('noPlate')}</span>
         </div>
       ),
     },
     {
-      title: 'Đơn thuê',
+      title: t('columns.booking'),
       key: 'booking',
       width: 180,
-      render: (_, row) => (
-        <Link href={bookingPath.detail(row.bookingId)}>{row.bookingCode}</Link>
-      ),
+      render: (_, row) => <Link href={bookingPath.detail(row.bookingId)}>{row.bookingCode}</Link>,
     },
     {
-      title: 'Xác nhận trả lúc',
+      title: t('columns.confirmedAt'),
       key: 'confirmedAt',
       width: 220,
       render: (_, row) => (
@@ -122,7 +158,7 @@ export function MissingReturnKmQueue({
       ),
     },
     {
-      title: 'KM lúc giao',
+      title: t('columns.pickupKm'),
       key: 'pickupKm',
       width: 160,
       align: 'end',
@@ -130,53 +166,55 @@ export function MissingReturnKmQueue({
       render: (_, row) => fmt.km(row.pickupOdometerKm),
     },
     {
-      title: 'Thao tác',
+      title: t('columns.actions'),
       key: 'actions',
       width: 160,
       fixed: 'right',
       render: (_, row) =>
         canResolve ? (
-          <Button size="small" type="primary" onClick={() => setResolving(row)}>
-            Bổ sung KM
+          <Button size="small" type="primary" onClick={() => setResolving(row.bookingId)}>
+            {t('resolve')}
           </Button>
         ) : (
           // Không có quyền thì KHÔNG hiện nút chết — nói thẳng cần quyền gì.
-          <span className={styles.sub}>Cần quyền chỉnh KM</span>
+          <span className={styles.sub}>{t('needPermission')}</span>
         ),
     },
   ];
 
   return (
-    <section className={styles.root} aria-label="Việc thiếu KM trả">
+    <section className={styles.root} aria-label={t('listLabel')}>
       {isMobile ? (
-        <ul className={styles.cards} aria-label="Việc thiếu KM trả">
+        <ul className={styles.cards} aria-label={t('listLabel')}>
           {items.map((row) => (
             <li key={row.handoverId} className={styles.card}>
               <div className={styles.cardHead}>
                 <Link href={vehiclePath.detail(row.vehicleId)} className={styles.cardTitle}>
                   {row.vehicleName}
                 </Link>
-                <span className={styles.sub}>{row.plateNumber ?? 'Chưa có biển số'}</span>
+                <span className={styles.sub}>{row.plateNumber ?? t('noPlate')}</span>
               </div>
               <p className={styles.cardMeta}>
-                Đơn{' '}
-                <Link href={bookingPath.detail(row.bookingId)}>
-                  {row.bookingCode}
-                </Link>{' '}
-                · {fmt.dateTime(row.confirmedAt)}
+                {t.rich('cardBooking', {
+                  code: row.bookingCode,
+                  time: fmt.dateTime(row.confirmedAt),
+                  link: (chunks) => <Link href={bookingPath.detail(row.bookingId)}>{chunks}</Link>,
+                })}
               </p>
-              <p className={styles.cardMeta}>KM lúc giao: {fmt.km(row.pickupOdometerKm)}</p>
+              <p className={styles.cardMeta}>
+                {t('cardPickupKm', { km: fmt.km(row.pickupOdometerKm) })}
+              </p>
               {canResolve ? (
                 <Button
                   type="primary"
                   block
                   className={styles.cardButton}
-                  onClick={() => setResolving(row)}
+                  onClick={() => setResolving(row.bookingId)}
                 >
-                  Bổ sung KM
+                  {t('resolve')}
                 </Button>
               ) : (
-                <p className={styles.sub}>Cần quyền chỉnh KM</p>
+                <p className={styles.sub}>{t('needPermission')}</p>
               )}
             </li>
           ))}
@@ -205,31 +243,33 @@ export function MissingReturnKmQueue({
         />
       </div>
 
-      {resolving ? (
-        <ResolveQueueItem item={resolving} onClose={() => setResolving(null)} onSaved={onResolved} />
-      ) : null}
+      {resolveDialog}
     </section>
   );
 }
 
 /**
- * Mở hộp bổ sung KM cho một việc trong hàng đợi.
+ * Mở hộp bổ sung KM cho một biên bản trả xe, theo `bookingId` của đơn.
  *
  * Tải ngữ cảnh bàn giao của đúng đơn đó rồi dùng LẠI `ResolveOdometerDialog` của Wave 7 — cùng
  * luật lý do bắt buộc, cùng xử lý giảm KM và cùng UX 409. Dựng một hộp thoại thứ hai ở đây là
- * cách để hai chỗ trôi khỏi nhau.
+ * cách để hai chỗ trôi khỏi nhau. Chỉ cần `bookingId` (xe đọc từ ngữ cảnh) để mở được cả biên
+ * bản đến từ link "Xử lý ngay", vốn không chắc nằm trong trang hàng đợi đang tải.
  */
 function ResolveQueueItem({
-  item,
+  bookingId,
   onClose,
   onSaved,
 }: {
-  item: MissingOdometerItem;
+  bookingId: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { data, isLoading, isError, error, refetch } = useHandoverContext(item.bookingId);
-  const invalidate = useInvalidateHandovers(item.bookingId, item.vehicleId);
+  const t = useTranslations('Maintenance.missingKmQueue');
+  const tCommon = useTranslations('Common');
+  const { message } = App.useApp();
+  const { data, isLoading, isError, error, refetch } = useHandoverContext(bookingId);
+  const invalidate = useInvalidateHandovers(bookingId, data?.vehicleId);
   const handover = data?.return ?? null;
 
   /**
@@ -248,9 +288,11 @@ function ResolveQueueItem({
   useEffect(() => {
     if (!resolvedElsewhere || notified.current) return;
     notified.current = true;
+    // Nói ra lý do hộp không mở — nhất là khi người dùng đến từ link "Xử lý ngay" cũ.
+    message.info(t('alreadyResolved'));
     onClose();
     onSaved();
-  }, [resolvedElsewhere, onClose, onSaved]);
+  }, [resolvedElsewhere, onClose, onSaved, message, t]);
 
   if (isLoading) return <Skeleton active paragraph={{ rows: 2 }} />;
 
@@ -260,8 +302,8 @@ function ResolveQueueItem({
       return (
         <PermissionState
           kind="forbidden"
-          title="Không có quyền mở biên bản bàn giao này"
-          description="Bổ sung KM cần quyền xem bàn giao của đơn tương ứng."
+          title={t('resolveForbidden')}
+          description={t('resolveForbiddenHint')}
         />
       );
     }
@@ -269,10 +311,10 @@ function ResolveQueueItem({
     return (
       <EmptyState
         variant="error"
-        title="Không tải được biên bản để bổ sung KM"
-        description="Kết nối có thể bị gián đoạn. Việc này vẫn còn trong hàng đợi."
+        title={t('resolveLoadError')}
+        description={t('resolveLoadErrorHint')}
         onRetry={() => void refetch()}
-        secondaryAction={<Button onClick={onClose}>Đóng</Button>}
+        secondaryAction={<Button onClick={onClose}>{tCommon('actions.close')}</Button>}
       />
     );
   }

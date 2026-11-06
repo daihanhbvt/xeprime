@@ -1,14 +1,14 @@
 'use client';
 
-import { App, Form, Radio } from 'antd';
+import { App, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
-import { TURNAROUND_BUFFER_MAX_MINUTES, TURNAROUND_BUFFER_PRESET_MINUTES } from '@xeprime/types';
+import { TURNAROUND_BUFFER_MAX_MINUTES } from '@xeprime/types';
 
-import { NumberField } from '@/components/form/NumberField';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
+import { TurnaroundBufferField } from '@/features/rental-policies/components/TurnaroundBufferField';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import {
@@ -16,6 +16,7 @@ import {
   useVehicleOperationSettings,
 } from '@/features/vehicle-manage/hooks';
 import type { VehicleOperationSettings } from '@/features/vehicle-manage/types';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
@@ -30,6 +31,7 @@ const schema = yup.object({
     .min(0, 'bufferRange')
     .max(TURNAROUND_BUFFER_MAX_MINUTES, 'bufferRange')
     .required('bufferRange'),
+  useShopDefault: yup.boolean().defined(),
 });
 type FormValues = yup.InferType<typeof schema>;
 
@@ -72,17 +74,25 @@ function TurnaroundForm({
   const { message } = App.useApp();
   const save = useSaveVehicleOperationSettings(vehicleId);
   const resolver = useValidationResolver<FormValues>(schema, 'VehicleManage.handover.validation');
+  /*
+   * "Theo gian hàng" chỉ có ở gian hàng: chủ xe tuyến hoa hồng không có trang chính sách gian hàng,
+   * nên mặc định của họ luôn trống (0) — lưu ở đó luôn là số riêng của xe.
+   */
+  const { isManage } = useWorkspace();
 
   const values = useMemo<FormValues>(
-    () => ({ turnaroundBufferMinutes: settings.turnaroundBufferMinutes }),
-    [settings],
+    () => ({
+      turnaroundBufferMinutes: settings.turnaroundBufferMinutes,
+      useShopDefault: isManage && settings.useShopDefault,
+    }),
+    [settings, isManage],
   );
   const { control, handleSubmit, reset, formState, setValue } = useForm<FormValues>({
     resolver,
     values,
   });
-  const buffer = useWatch({ control, name: 'turnaroundBufferMinutes' });
-  const isPreset = (TURNAROUND_BUFFER_PRESET_MINUTES as readonly number[]).includes(buffer);
+  const useShopDefault = useWatch({ control, name: 'useShopDefault' });
+  const shopMinutes = settings.shopDefaultMinutes ?? 0;
 
   function submit(): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
@@ -91,8 +101,12 @@ function TurnaroundForm({
           try {
             const saved = await save.mutateAsync({
               turnaroundBufferMinutes: next.turnaroundBufferMinutes,
+              useShopDefault: next.useShopDefault,
             });
-            reset({ turnaroundBufferMinutes: saved.turnaroundBufferMinutes });
+            reset({
+              turnaroundBufferMinutes: saved.turnaroundBufferMinutes,
+              useShopDefault: isManage && saved.useShopDefault,
+            });
             message.success(t('handover.saved'));
             resolve(true);
           } catch (err) {
@@ -125,40 +139,35 @@ function TurnaroundForm({
         }
         subtitle={t('handover.bufferHint')}
       >
-        <Radio.Group
-          value={isPreset ? buffer : 'custom'}
+        <TurnaroundBufferField
+          control={control}
+          name="turnaroundBufferMinutes"
+          label={t('handover.bufferTitle')}
           disabled={!canEdit}
-          optionType="button"
-          onChange={(event) => {
-            const next = event.target.value as number | 'custom';
-            setValue('turnaroundBufferMinutes', next === 'custom' ? 30 : next, {
-              shouldDirty: true,
-              shouldValidate: true,
-            });
-          }}
-          className={styles.bufferOptions}
-        >
-          {TURNAROUND_BUFFER_PRESET_MINUTES.map((minutes) => (
-            <Radio.Button key={minutes} value={minutes}>
-              {minutes === 0
-                ? t('handover.bufferNone')
-                : t('common.hours', { count: minutes / 60 })}
-            </Radio.Button>
-          ))}
-          <Radio.Button value="custom">{t('handover.bufferCustom')}</Radio.Button>
-        </Radio.Group>
-        {!isPreset ? (
-          <div className={styles.bufferCustom}>
-            <NumberField
-              control={control}
-              name="turnaroundBufferMinutes"
-              label={t('handover.bufferCustomLabel')}
-              min={0}
-              max={TURNAROUND_BUFFER_MAX_MINUTES}
-            />
-          </div>
-        ) : null}
+          notice={false}
+          inherit={
+            isManage
+              ? {
+                  active: useShopDefault,
+                  label: t('handover.bufferShop', { value: formatBuffer(shopMinutes) }),
+                  onChange: (active) => {
+                    setValue('useShopDefault', active, { shouldDirty: true });
+                    // Rời "theo gian hàng" bắt đầu từ chính số đang áp — không nhảy về 0.
+                    if (!active && useShopDefault) {
+                      setValue('turnaroundBufferMinutes', shopMinutes, { shouldDirty: true });
+                    }
+                  },
+                }
+              : undefined
+          }
+        />
       </EditCard>
     </Form>
   );
+
+  function formatBuffer(minutes: number): string {
+    if (minutes === 0) return t('handover.bufferNone');
+    if (minutes % 60 === 0) return t('common.hours', { count: minutes / 60 });
+    return t('common.minutes', { count: minutes });
+  }
 }

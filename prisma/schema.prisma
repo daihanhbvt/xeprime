@@ -294,6 +294,7 @@ model Tenant {
   vehicleBlocks                 VehicleBlock[]
   vehicleDailyPrices            VehicleDailyPrice[]
   vehicleOperationSettings      VehicleOperationSetting[]
+  tenantOperationDefaults       TenantOperationDefault[]
   vehicleServiceSettings        VehicleServiceSetting[]
   vehicleDriverSurchargeRules   VehicleDriverSurchargeRule[]
   tenantCustomers               TenantCustomer[]
@@ -1563,7 +1564,9 @@ model VehicleOperationSetting {
   vehicleId               String   @unique @map("vehicle_id") @db.Char(26)
   /// Phút chuẩn bị giữa hai chuyến — COPY vào `vehicle_occupancies.buffer_minutes` lúc giữ chỗ
   /// hoặc dời lịch (ADR 0006). KHÔNG sửa occupancy đã có. CHECK 0..1440 ở migration.
-  turnaroundBufferMinutes Int      @default(0) @map("turnaround_buffer_minutes")
+  /// NULL = theo MẶC ĐỊNH GIAN HÀNG của loại xe (`tenant_operation_defaults`, 06/11/2026); không có
+  /// dòng nào cũng vậy. Số (kể cả 0) = xe tự đặt riêng.
+  turnaroundBufferMinutes Int?     @map("turnaround_buffer_minutes")
   updatedBy               String?  @map("updated_by") @db.Char(26)
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -1574,6 +1577,26 @@ model VehicleOperationSetting {
 
   @@index([tenantId])
   @@map("vehicle_operation_settings")
+}
+
+/// Thiết lập vận hành MẶC ĐỊNH của gian hàng theo LOẠI XE (06/11/2026) — hiện chỉ có thời gian chết
+/// giữa hai chuyến. Xe chưa tự đặt (`vehicle_operation_settings.turnaround_buffer_minutes` NULL hoặc
+/// không có dòng) dùng số này; chưa có dòng nào thì 0. Writer DUY NHẤT: `VehicleSettingsService`.
+model TenantOperationDefault {
+  id                      String   @id @db.Char(26)
+  tenantId                String   @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → VehicleType — CHECK IN ('car', 'motorbike').
+  vehicleType             String   @map("vehicle_type") @db.VarChar(50)
+  /// CHECK 0..1440 — cùng dải với thiết lập theo xe.
+  turnaroundBufferMinutes Int      @map("turnaround_buffer_minutes")
+  updatedBy               String?  @map("updated_by") @db.Char(26)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, vehicleType])
+  @@map("tenant_operation_defaults")
 }
 
 /// Thiết lập theo (xe, dịch vụ) — CHỈ self_drive | with_driver (CHECK). Thuê dài hạn luôn do gian
@@ -2361,6 +2384,8 @@ model BookingRequest {
   cancellation    BookingCancellation?
   supportCases    SupportCase[]
   salesFollowUp   SalesFollowUp?
+  /// Tin nhắn gắn thẻ chuyến này (`messages.booking_request_id`).
+  chatMessages    Message[]            @relation("message_trip_context")
 
   @@index([tenantId, status])
   @@index([vehicleId])
@@ -3850,6 +3875,11 @@ model Message {
   /// khách mở chat từ một tin đăng thì câu ĐẦU TIÊN mang theo `vehicle_id` đó, nên cùng một
   /// thread vẫn nói rõ đang hỏi chiếc nào mà không phải đẻ ra hội thoại thứ hai.
   vehicleId         String?  @map("vehicle_id") @db.Char(26)
+  /// CHUYẾN mà tin nhắn này nói về (= id YÊU CẦU thuê — định danh chuyến từ lúc gửi, trước cả khi
+  /// có đơn). Gắn ở câu ĐẦU TIÊN khi mở chat từ một chuyến (khách: "Chuyến của tôi"; gian hàng:
+  /// "Đơn thuê xe"). Server kiểm yêu cầu thuộc đúng cặp (khách, gian hàng) của hội thoại; sai thì
+  /// bỏ thẻ chứ không chặn tin. Có chuyến thì `vehicle_id` là xe CỦA chuyến đó.
+  bookingRequestId  String?  @map("booking_request_id") @db.Char(26)
   /// @xeprime/types → SenderType
   senderType        String   @map("sender_type") @db.VarChar(50)
   /// @xeprime/types → MessageType
@@ -3864,6 +3894,7 @@ model Message {
   /// Xe bị xoá thì tin nhắn Ở LẠI, chỉ mất thẻ ngữ cảnh — lịch sử trò chuyện không phải là dữ
   /// liệu phụ thuộc vòng đời của một tin đăng.
   vehicle      Vehicle?         @relation("message_vehicle_context", fields: [vehicleId], references: [id], onDelete: SetNull)
+  bookingRequest BookingRequest? @relation("message_trip_context", fields: [bookingRequestId], references: [id], onDelete: SetNull)
   attachments  ChatAttachment[]
   outbox       MessageOutbox?
 
@@ -3873,6 +3904,8 @@ model Message {
   @@index([conversationId, sentAt, id])
   /// "Khách này đã hỏi những xe nào" — tra ngược từ xe sang các câu nhắc tới nó.
   @@index([vehicleId])
+  /// Cho FK `ON DELETE SET NULL` — xoá một yêu cầu không phải quét cả bảng tin nhắn.
+  @@index([bookingRequestId])
   @@map("messages")
 }
 

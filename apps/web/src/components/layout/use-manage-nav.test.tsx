@@ -258,8 +258,8 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
 
     expect(itemLabels()).toEqual([
       'Tổng quan',
-      'Lịch thuê xe',
       'Đơn thuê xe',
+      'Lịch thuê xe',
       'Danh sách khách hàng',
       'Danh sách xe',
       'Quản lý tài xế',
@@ -861,8 +861,8 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
 
     expect(itemLabels()).toEqual([
       'Tổng quan',
-      'Lịch thuê xe',
       'Đơn thuê xe',
+      'Lịch thuê xe',
       'Danh sách xe',
       // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
       'Quản lý tài xế',

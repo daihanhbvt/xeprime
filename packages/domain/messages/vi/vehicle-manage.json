@@ -228,7 +228,9 @@
       "overlap": "Các mốc không được chồng lấn nhau",
       "bufferRange": "Thời gian chết từ 0 đến 1440 phút",
       "maxWindows": "Tối đa 4 mốc mỗi loại"
-    }
+    },
+    "bufferUnit": "phút",
+    "bufferShop": "Theo gian hàng ({value})"
   },
   "terms": {
     "selfDriveTitle": "Thủ tục & Điều khoản cho thuê",

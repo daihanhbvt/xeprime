@@ -45,6 +45,8 @@ export interface ThreadState {
     attachments?: SendAttachment[];
     /** Xe tin nhắn này nói về — thẻ ngữ cảnh, chỉ gắn ở câu đầu tiên mở từ tin đăng. */
     vehicleId?: string;
+    /** Chuyến (id yêu cầu) tin nhắn này nói về — câu đầu tiên mở từ chuyến đi / đơn thuê. */
+    bookingRequestId?: string;
   }) => Promise<void>;
   /** Gửi lại một tin `failed` — dùng lại đúng `clientMessageId` nên server nhận diện là một lần. */
   retry: (clientMessageId: string) => Promise<void>;
@@ -425,13 +427,19 @@ export function useThread(conversationId: string | null): ThreadState {
   );
 
   const send = useCallback(
-    async (input: { text?: string; attachments?: SendAttachment[]; vehicleId?: string }) => {
+    async (input: {
+      text?: string;
+      attachments?: SendAttachment[];
+      vehicleId?: string;
+      bookingRequestId?: string;
+    }) => {
       if (!conversationId) return;
       const clientMessageId = newClientMessageId();
       const attachments = input.attachments ?? [];
       const body: SendMessageInput = {
         clientMessageId,
         ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
+        ...(input.bookingRequestId ? { bookingRequestId: input.bookingRequestId } : {}),
         ...(input.text ? { text: input.text } : {}),
         ...(attachments.length ? { attachments } : {}),
       };
