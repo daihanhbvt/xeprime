@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  ArrowRightOutlined,
-  CompassOutlined,
-  ControlOutlined,
-  StarFilled,
-  TeamOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
+import { ArrowRightOutlined } from '@ant-design/icons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { isNewListing } from '@xeprime/domain';
@@ -32,6 +25,7 @@ import { HostMetrics } from './HostMetrics';
 import styles from './VehicleCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
+import { RatingStar } from '@/components/data-display/Stars';
 
 export interface VehicleCardProps {
   listing: PublicListing;
@@ -115,11 +109,14 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
     ? `${listingPath.detail(listing.id)}?${detailQs}`
     : listingPath.detail(listing.id);
 
+  // Figma "Vehicle Benefits": dấu tích = giao xe tận nơi, đồng tiền = miễn thế chấp, hoá đơn = xuất hoá đơn VAT.
   const amenities = [
-    listing.deliveryEnabled ? t('delivery') : null,
-    listing.noCollateral ? t('noCollateral') : null,
-    listing.vatInvoiceSupported ? t('vatInvoice') : null,
-  ].filter((label): label is string => label !== null);
+    listing.deliveryEnabled ? { label: t('delivery'), icon: '/home/amenity-check.svg' } : null,
+    listing.noCollateral ? { label: t('noCollateral'), icon: '/home/amenity-money.svg' } : null,
+    listing.vatInvoiceSupported
+      ? { label: t('vatInvoice'), icon: '/home/amenity-invoice.svg' }
+      : null,
+  ].filter((item): item is { label: string; icon: string } => item !== null);
 
   const specs = [
     listing.seatCount
@@ -159,17 +156,24 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
      */
     const listSpecs = [
       listing.seatCount
-        ? { key: 'seats', Icon: TeamOutlined, label: t('seats', { count: listing.seatCount }) }
+        ? {
+            key: 'seats',
+            iconClass: styles.specIconSeats,
+            label: t('seats', { count: listing.seatCount }),
+          }
         : null,
       listing.transmission
         ? {
             key: 'transmission',
-            Icon: ControlOutlined,
+            iconClass: styles.specIconTransmission,
             label: t(`transmissionFamily.${transmissionFamily(listing.transmission)}`),
           }
         : null,
-      fuel ? { key: 'fuel', Icon: ThunderboltOutlined, label: fuel } : null,
-      bodyTypeName ? { key: 'bodyType', Icon: CompassOutlined, label: bodyTypeName } : null,
+      fuel ? { key: 'fuel', iconClass: styles.specIconFuel, label: fuel } : null,
+      // Ô thứ 4 Figma là mức tiêu hao — DTO danh sách không có số đó nên hiện kiểu thân xe, cùng icon.
+      bodyTypeName
+        ? { key: 'bodyType', iconClass: styles.specIconBody, label: bodyTypeName }
+        : null,
     ].filter((spec): spec is NonNullable<typeof spec> => spec !== null);
 
     return (
@@ -221,13 +225,23 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
               </div>
 
               <div className={styles.listPriceAndRating}>
-                {hasRating ? (
-                  <span className={styles.listRating}>
-                    <StarFilled className={styles.starIcon} aria-hidden />
-                    <span>{fmt.rating(rating)}</span>
-                    <span className={styles.listRatingCount}>({listing.ratingCount})</span>
-                  </span>
-                ) : null}
+                {/* Luôn có ô sao: xe chưa có đánh giá ⇒ sao xám + "Chưa có đánh giá" (không bịa điểm 0). */}
+                <span className={styles.listRating}>
+                  <RatingStar size={16} className={hasRating ? undefined : styles.ratingStarEmpty} />
+                  {hasRating ? (
+                    <>
+                      <span>{fmt.rating(rating)}</span>
+                      <span className={styles.listRatingCount}>({listing.ratingCount})</span>
+                    </>
+                  ) : (
+                    <span className={styles.listRatingCount}>{t('noRating')}</span>
+                  )}
+                  {listing.completedTripCount > 0 ? (
+                    <span className={styles.listRatingCount}>
+                      · {t('rentals', { count: listing.completedTripCount })}
+                    </span>
+                  ) : null}
+                </span>
 
                 <div className={styles.listPrice}>
                   {showStrikethrough && listing.weekdayPrice ? (
@@ -254,16 +268,19 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
 
             {location ? (
               <p className={styles.listLocation}>
-                <Image src="/home/card-location.svg" alt="" width={14} height={17} unoptimized />
+                <span className={styles.icon20}>
+                  <Image src="/home/card-location.svg" alt="" width={15} height={19} unoptimized />
+                </span>
                 <span>{location}</span>
               </p>
             ) : null}
 
             {listSpecs.length > 0 ? (
               <ul className={styles.listSpecsRow} aria-label={t('specsLabel')}>
-                {listSpecs.map(({ key, Icon, label }) => (
+                {listSpecs.map(({ key, iconClass, label }) => (
                   <li key={key} className={styles.specBox}>
-                    <Icon className={styles.specBoxIcon} aria-hidden />
+                    {/* Icon nét Figma tô bằng mask + currentColor: xám khi thường, vàng khi thẻ hover. */}
+                    <span className={cx(styles.specIcon, iconClass)} aria-hidden="true" />
                     <span>{label}</span>
                   </li>
                 ))}
@@ -398,9 +415,17 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           ) : null}
           {amenities.length > 0 ? (
             <div className={styles.amenityRow}>
-              {amenities.map((label) => (
-                <span key={label} className={styles.amenityTag}>
-                  {label}
+              {amenities.map((item) => (
+                <span key={item.label} className={styles.amenityTag}>
+                  <Image
+                    src={item.icon}
+                    alt=""
+                    width={12}
+                    height={12}
+                    className={styles.amenityIcon}
+                    unoptimized
+                  />
+                  {item.label}
                 </span>
               ))}
             </div>

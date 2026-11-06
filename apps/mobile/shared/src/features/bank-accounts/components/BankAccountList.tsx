@@ -99,7 +99,7 @@ export function BankAccountList({
             <XStack ai="center" gap={space.sm} flexWrap="wrap">
               <IconDisc
                 icon="card-outline"
-                tone={colors.primaryActive}
+                tone={colors.accentText}
                 surface={colors.primaryLight}
               />
               <Text f={1} minWidth={120} col={colors.textMuted} fos={fontSize.bodySm}>

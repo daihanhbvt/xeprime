@@ -2,7 +2,7 @@ import { Pressable } from 'react-native';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { radius, sizing, space } from '@/theme/tokens';
 import { useFavoriteToggle } from '../hooks/use-favorite';
 
@@ -26,6 +26,8 @@ export type FavoriteButtonVariant = 'photo' | 'card' | 'action' | 'list';
  */
 const PHOTO_DISC_BG = 'rgba(255, 255, 255, 0.9)';
 const PHOTO_DISC_BORDER = 'rgba(0, 0, 0, 0.06)';
+/* Giao diện tối — web `[data-theme=dark] .favoriteBtn`: đĩa trắng 16% không viền, tim theo màu chữ (sáng). */
+const PHOTO_DISC_BG_DARK = 'rgba(255, 255, 255, 0.16)';
 
 /* Đĩa của thẻ ngang — web viết thẳng hai màu mờ này ở `.listFavoriteBtn` (không có token, không đổi theo theme). */
 const LIST_DISC_BG = 'rgba(0, 0, 0, 0.03)';
@@ -55,15 +57,19 @@ export function FavoriteButton({
   variant: FavoriteButtonVariant;
 }) {
   const colors = useColors();
+  const dark = useAppScheme().scheme === 'dark';
   const t = useTranslations('Favorites.button');
   const { isFavorite, toggle } = useFavoriteToggle(vehicleId);
   const label = isFavorite ? t('remove', { name: vehicleName }) : t('save', { name: vehicleName });
 
   const size = DISC[variant];
-  const iconColor = isFavorite ? colors.danger : colors.textMuted;
+  const photoDark = variant === 'photo' && dark;
+  const iconColor = isFavorite ? colors.danger : photoDark ? colors.text : colors.textMuted;
   const skin =
     variant === 'photo'
-      ? { bg: PHOTO_DISC_BG, bc: PHOTO_DISC_BORDER }
+      ? photoDark
+        ? { bg: PHOTO_DISC_BG_DARK, bc: 'transparent' }
+        : { bg: PHOTO_DISC_BG, bc: PHOTO_DISC_BORDER }
       : variant === 'list'
         ? { bg: LIST_DISC_BG, bc: LIST_DISC_BORDER }
         : variant === 'card'

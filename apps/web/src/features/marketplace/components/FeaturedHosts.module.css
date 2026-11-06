@@ -278,3 +278,22 @@
     transition: none;
   }
 }
+
+/*
+ * Giao diện tối (Figma `19879:66136`): thẻ gian hàng VẪN là thẻ SÁNG (nền trắng, chữ tối) nổi trên
+ * nền trang tối. Đặt lại bảng token sáng ngay trên thẻ để mọi thứ bên trong dùng màu sáng.
+ */
+:global([data-theme=dark]) .card {
+  --xp-color-bg: #fafafa;
+  --xp-color-bg-container: #ffffff;
+  --xp-color-text: #0e0f12;
+  --xp-color-text-secondary: #414651;
+  --xp-color-text-tertiary: #717680;
+  --xp-color-text-placeholder: #a4a7ae;
+  --xp-color-border: #e9eaeb;
+  --xp-color-primary-subtle: #fff9f0;
+  --xp-color-primary-strong: #946e1f;
+  --xp-color-primary-hover: #cb9115;
+
+  color: var(--xp-color-text);
+}

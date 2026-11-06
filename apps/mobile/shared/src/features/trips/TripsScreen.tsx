@@ -24,6 +24,7 @@ import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { IconButton } from '@/components/ui/IconButton';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
+import { Reveal, useListReveal } from '@/components/motion/Reveal';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { isUnauthenticated } from '@xeprime/api-client';
@@ -170,7 +171,7 @@ export function TripsScreen({
         // và vòng xoay ở đầu danh sách lúc đó đọc như trang đang tự nạp lại.
         refreshing={isRefetching}
         onRefresh={onRefresh}
-        tintColor={colors.primaryActive}
+        tintColor={colors.accentText}
       />
     ),
     [colors, isRefetching, onRefresh],
@@ -182,17 +183,23 @@ export function TripsScreen({
     setNarrow({});
   }, []);
 
-  const renderTrip = useCallback(
-    ({ item }: ListRenderItemInfo<CustomerTrip>) => <TripCard trip={item} onPress={openTrip} />,
-    [openTrip],
-  );
-
   /*
    * Có danh sách thì nhắc chuyến chưa trả cuộn CÙNG danh sách (ListHeaderComponent): ghim nó trên
    * một màn không cuộn là ăn mất nửa chiều cao điện thoại nhỏ khi có vài chuyến chờ tiền. Các
    * trạng thái khác (đang tải / lỗi / rỗng) còn chỗ thừa, nên nó đứng trên như web `TripsView`.
    */
   const rendersList = !query.isPending && !query.isError && items.length > 0;
+
+  // Thẻ chuyến so le khi danh sách về / đổi tab / đổi bộ lọc lịch sử — không chạy lại khi kéo làm mới.
+  const shouldReveal = useListReveal(rendersList, `${filter}|${JSON.stringify(narrow)}`);
+  const renderTrip = useCallback(
+    ({ item, index }: ListRenderItemInfo<CustomerTrip>) => (
+      <Reveal index={index} disabled={!shouldReveal(index)}>
+        <TripCard trip={item} onPress={openTrip} />
+      </Reveal>
+    ),
+    [openTrip, shouldReveal],
+  );
 
   return (
     <>
@@ -249,6 +256,7 @@ export function TripsScreen({
         ) : items.length === 0 ? (
           narrowed ? (
             /* Bộ lọc không khớp gì: lối ra là XOÁ bộ lọc, không phải lối thoát của tab trống. */
+            <Reveal variant="fade" fill key="narrow-empty">
             <ScreenMessage
               icon="search-outline"
               title={t('list.narrowEmptyTitle')}
@@ -256,17 +264,20 @@ export function TripsScreen({
               actionLabel={t('list.narrowClear')}
               onAction={() => setNarrow({})}
             />
+            </Reveal>
           ) : (
             /*
               Hai tab trống là hai tình huống khác nhau, nên hai lối thoát khác nhau (web `TripsView`):
               chưa có chuyến đang chạy ⇒ đi tìm xe; lịch sử trống ⇒ quay về tab đang có chuyến.
             */
+            <Reveal variant="fade" fill key={`empty-${filter}`}>
             <ScreenMessage
               icon="calendar-outline"
               title={history ? t('list.emptyHistoryTitle') : t('list.emptyCurrentTitle')}
               description={history ? t('list.emptyHistoryBody') : t('list.emptyCurrentBody')}
               // Màn trống dữ liệu chỉ mô tả, không nút tìm/chuyển (người dùng chốt 27/10/2026).
             />
+            </Reveal>
           )
         ) : (
           <FlatList

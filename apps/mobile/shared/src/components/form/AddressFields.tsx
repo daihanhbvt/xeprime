@@ -750,8 +750,8 @@ export function ConfirmedPlaceField<T extends FieldValues>({
         borderTopWidth={1}
         borderTopColor={colors.borderSubtle}
       >
-        <Ionicons name="create-outline" size={iconSize.sm} color={colors.primaryActive} />
-        <Text f={1} col={colors.primaryActive} fos={fontSize.label}>
+        <Ionicons name="create-outline" size={iconSize.sm} color={colors.accentText} />
+        <Text f={1} col={colors.accentText} fos={fontSize.label}>
           {t('useTypedAddress')}
         </Text>
       </XStack>
@@ -786,7 +786,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     >
       {suggestions.isFetching && items.length === 0 ? (
         <XStack ai="center" jc="center" gap={space.sm} px={space.md} py={space.md}>
-          <ActivityIndicator size="small" color={colors.primaryActive} />
+          <ActivityIndicator size="small" color={colors.accentText} />
         </XStack>
       ) : suggestions.isError || suggestions.data?.available === false ? (
         <XStack ai="center" gap={space.sm} px={space.md} py={space.md}>
@@ -821,7 +821,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
               py={space.sm}
               {...(index > 0 ? { borderTopWidth: 1, borderTopColor: colors.borderSubtle } : {})}
             >
-              <Ionicons name="location-outline" size={iconSize.sm} color={colors.primaryActive} />
+              <Ionicons name="location-outline" size={iconSize.sm} color={colors.accentText} />
               <YStack f={1} gap={space.xs}>
                 <Text col={colors.text} fos={fieldFontSize.value} numberOfLines={1}>
                   {item.primaryText}

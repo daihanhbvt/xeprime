@@ -275,7 +275,7 @@ export function WalletStatementPanel({
               hint={t('totals.appOwnerIncomeHint')}
               highlight
               value={
-                <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                <Text col={colors.accentText} fos={fontSize.h4} fow={fontWeight.semibold}>
                   {fmt.money(totals.ownerIncome)}
                 </Text>
               }
@@ -325,7 +325,7 @@ function TripCard({
         <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
           <XStack ai="flex-start" gap={space.sm}>
             <YStack f={1} minWidth={0} gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
+              <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
                 {trip.code}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>

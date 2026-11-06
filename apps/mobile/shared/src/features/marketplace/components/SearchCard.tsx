@@ -15,7 +15,7 @@ import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { GradientButton } from './home/GradientButton';
 import { elevation } from '@/theme/elevation';
 import { useDomainLabel } from '@/i18n/domain';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, market, space } from '@/theme/tokens';
 import { SERVICE_ICON, SERVICE_LABEL_KEY, VEHICLE_ICON } from '../search-items';
 import { useSearchExperience } from '../search-context';
@@ -63,6 +63,10 @@ export function SearchCard({
 }) {
   const sheet = variant === 'sheet';
   const colors = useColors();
+  // Figma dark (`19879:66137`): mục đang chọn vàng sáng `primary`, mục chưa chọn xám mờ.
+  const dark = useAppScheme().scheme === 'dark';
+  const activeFg = dark ? colors.primary : colors.primaryHover;
+  const idleFg = dark ? colors.textPlaceholder : colors.textMuted;
   const t = useTranslations('HomeSearch');
   const tService = useTranslations('HomeSearch.service');
   const domainLabel = useDomainLabel();
@@ -171,10 +175,10 @@ export function SearchCard({
                   <Ionicons
                     name={item.icon}
                     size={TAB_ICON}
-                    color={selected ? colors.primaryHover : colors.textMuted}
+                    color={selected ? activeFg : idleFg}
                   />
                   <Text
-                    col={selected ? colors.primaryHover : colors.textMuted}
+                    col={selected ? activeFg : idleFg}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
                     numberOfLines={1}
@@ -245,7 +249,7 @@ export function SearchCard({
                     px={withDriver ? space.xs : space.md}
                     br={RADIUS_CONTROL}
                     bw={1}
-                    bc={selected ? colors.borderInput : 'transparent'}
+                    bc={selected ? (dark ? colors.primary : colors.borderInput) : 'transparent'}
                     bg={selected ? colors.surface : 'transparent'}
                     style={selected ? elevation.xs : undefined}
                   >
@@ -253,7 +257,7 @@ export function SearchCard({
                       <Ionicons
                         name={item.icon}
                         size={18}
-                        color={selected ? colors.primaryHover : colors.textMuted}
+                        color={selected ? activeFg : idleFg}
                       />
                     ) : null}
                     {/*
@@ -261,7 +265,7 @@ export function SearchCard({
                       bề ngang THEO ĐỘ DÀI nhãn (flexBasis auto + flexGrow) nên "Liên tỉnh (1 chiều)" được ô rộng hơn.
                     */}
                     <Text
-                      col={selected ? colors.primaryHover : colors.textMuted}
+                      col={selected ? activeFg : idleFg}
                       fos={fontSize.bodyLg}
                       fow={fontWeight.medium}
                       numberOfLines={1}

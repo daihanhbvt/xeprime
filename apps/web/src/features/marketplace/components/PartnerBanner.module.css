@@ -121,7 +121,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
+  /* Dải đối tác LUÔN là tranh tối ⇒ đĩa mũi tên luôn trắng (không đảo theo giao diện tối). */
+  background: var(--xp-color-text-on-dark);
 }
 
 .benefit {

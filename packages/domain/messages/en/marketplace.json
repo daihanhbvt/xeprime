@@ -206,7 +206,7 @@
       "offers": "Offers",
       "offersHint": "Vehicles with an offer currently published by the owner.",
       "hasOffer": "Has an offer",
-      "instantBook": "No confirmation needed",
+      "instantBook": "Auto-approved",
       "instantBookHint": "Only show vehicles you can book instantly, without waiting for the owner to approve.",
       "policyNote": "These are search criteria, not a promise of no deposit, refunds or insurance. The actual policy is confirmed on the vehicle page.",
       "ratingFrom": "{rating, number, ::.0}+ stars",
@@ -215,7 +215,7 @@
       "chips": {
         "delivery": "Delivery",
         "discount": "Has an offer",
-        "instantBook": "No confirmation needed",
+        "instantBook": "Auto-approved",
         "noCollateral": "No asset collateral",
         "vatInvoice": "VAT invoice"
       }

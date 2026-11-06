@@ -26,6 +26,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { IconLine } from '@/components/ui/IconLine';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
+import { Reveal } from '@/components/motion/Reveal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
@@ -249,11 +250,13 @@ export function WalletScreen({
           pb={manageShell ? layout.section : 0}
           onLayout={onColumnLayout}
         >
-          <WalletSummaryCard
-            scope={scope}
-            onWithdraw={() => setWithdrawOpen(true)}
-            pageVariant={manageShell}
-          />
+          <Reveal>
+            <WalletSummaryCard
+              scope={scope}
+              onWithdraw={() => setWithdrawOpen(true)}
+              pageVariant={manageShell}
+            />
+          </Reveal>
 
           {/*
             TÀI KHOẢN NHẬN TIỀN — khối của trang số dư ở CẢ HAI phía: gian hàng từ PR #159 (web
@@ -301,6 +304,7 @@ export function WalletScreen({
 
           {showLedger ? (
             <>
+              <Reveal index={2}>
               <SectionCard>
                 <BlockTitle>{t('requests.title')}</BlockTitle>
                 {withdrawals.isPending ? (
@@ -313,7 +317,9 @@ export function WalletScreen({
                   ))
                 )}
               </SectionCard>
+              </Reveal>
 
+              <Reveal index={3}>
               <SectionCard>
                 <BlockTitle>{t('entries.title')}</BlockTitle>
                 {entries.isPending ? (
@@ -351,6 +357,7 @@ export function WalletScreen({
                   />
                 ) : null}
               </SectionCard>
+              </Reveal>
             </>
           ) : null}
 
@@ -493,7 +500,7 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
               </XStack>
 
               {/* Tiền về ĐÂU — mẩu người ta soát lại trước khi chờ hai ngày làm việc. */}
-              <IconLine icon="card-outline" iconTone={colors.primaryActive} strong>
+              <IconLine icon="card-outline" iconTone={colors.accentText} strong>
                 {`${bankDisplayName(request.bankCode)} · ${request.accountNumberMasked}`}
               </IconLine>
 

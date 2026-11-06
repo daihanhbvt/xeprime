@@ -226,13 +226,20 @@
 }
 
 :global([data-theme='dark']) .themeToggle {
-  background: #161f2c;
-  border-color: #333741;
-  color: #edbb4f;
+  background: var(--xp-color-bg-elevated);
+  border-color: var(--xp-color-border);
+  color: var(--xp-color-primary-bright);
+}
+
+/* Figma dark: mục menu đang chọn vàng sáng `Text/Brand/low` (#edbb4f), gạch chân cùng màu. */
+:global([data-theme='dark']) .navActive,
+:global([data-theme='dark']) .navActive:hover {
+  border-bottom-color: var(--xp-color-primary-bright);
+  color: var(--xp-color-primary-bright);
 }
 
 :global([data-theme='dark']) .themeToggle:hover {
-  background: #1f2a3a;
-  border-color: #edbb4f;
-  color: #f7dd91;
+  background: var(--xp-color-bg-muted);
+  border-color: var(--xp-color-primary-bright);
+  color: var(--xp-color-primary-hover);
 }

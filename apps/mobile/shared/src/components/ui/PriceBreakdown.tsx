@@ -212,13 +212,13 @@ export function PriceBreakdown({
           accessibilityState={{ expanded }}
         >
           <XStack ai="center" gap={space.xs}>
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {expanded ? tCommon('collapse') : tCommon('viewDetails')}
             </Text>
             <Ionicons
               name={expanded ? 'chevron-up' : 'chevron-down'}
               size={iconSize.sm}
-              color={colors.primaryActive}
+              color={colors.accentText}
             />
           </XStack>
         </Pressable>
@@ -400,7 +400,7 @@ export function PriceBreakdown({
                   {tCommon('holdAmount')}
                 </Text>
                 {/* Chuyển ngay — màu nhấn thương hiệu, đây là khoản cần hành động trước. */}
-                <Text col={colors.primaryActive} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+                <Text col={colors.accentText} fos={fontSize.bodyLg} fow={fontWeight.bold}>
                   {fmt.money(fees.holdAmount)}
                 </Text>
               </XStack>

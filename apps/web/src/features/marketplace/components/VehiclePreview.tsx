@@ -88,7 +88,8 @@ export function VehiclePreview() {
       <SectionHeading
         id="home-vehicles"
         kicker={tHome('kicker')}
-        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
+        // Người dùng 04/11/2026: bỏ dòng "Xe phù hợp cho mọi hành trình" — chỉ giữ dòng nhỏ "Xe tiêu biểu".
+        {...(serviceLabel ? { title: t('titleWithService', { service: serviceLabel }) } : {})}
         action={
           <CtaButton href={exploreHref} variant="outline">
             {tHome('viewAll')}

@@ -29,7 +29,7 @@ import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { elevation } from '@/theme/elevation';
 import { duration } from '@/theme/motion';
@@ -271,6 +271,8 @@ function TabIcon({
 
 export default function TabsLayout() {
   const colors = useColors();
+  // Giao diện tối (Figma 19879:66136): tab chưa chọn xám placeholder — `textMuted` tối gần trắng.
+  const inactiveTint = useAppScheme().scheme === 'dark' ? colors.textPlaceholder : colors.textMuted;
   const t = useTranslations('Navigation.public');
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
@@ -331,7 +333,7 @@ export default function TabsLayout() {
           // lại view) lộ nền TRẮNG của cửa sổ Android một nhịp: cú "nháy trắng". App Partner đã có.
           sceneStyle: { backgroundColor: colors.background },
           tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
+          tabBarInactiveTintColor: inactiveTint,
           /*
            * Khách chưa đăng nhập VẪN có thanh tab: họ có hai màn (Khám phá + Tìm xe), ba tab cần
            * phiên đã gỡ bằng `authOnly`. Ẩn thanh đi là kẹt ở Tìm xe, không còn đường về trang chủ.

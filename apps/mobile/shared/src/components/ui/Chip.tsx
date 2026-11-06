@@ -106,8 +106,8 @@ export function Chip({
         ? colors.border
         : colors.borderInput;
   const selBg = soft ? colors.primaryLight : colors.primary;
-  const selFg = soft ? colors.primaryActive : colors.onPrimary;
-  const idleFg = accent ? colors.primaryActive : colors.text;
+  const selFg = soft ? colors.accentText : colors.onPrimary;
+  const idleFg = accent ? colors.accentText : colors.text;
 
   /*
    * Nhận `pressed` để viên ĐỔI MÀU lúc ngón tay còn đặt trên nó.
@@ -132,7 +132,7 @@ export function Chip({
         <Ionicons
           name={icon}
           size={15}
-          color={selected ? selFg : accent ? colors.primaryActive : colors.textMuted}
+          color={selected ? selFg : accent ? colors.accentText : colors.textMuted}
         />
       ) : null}
       <Text

@@ -186,7 +186,7 @@ export const StepSlider = memo(function StepSlider({
             return (
               <Text
                 key={tick.value}
-                col={active ? colors.primaryActive : colors.textMuted}
+                col={active ? colors.accentText : colors.textMuted}
                 fos={fontSize.label}
                 fow={active ? fontWeight.bold : fontWeight.regular}
               >

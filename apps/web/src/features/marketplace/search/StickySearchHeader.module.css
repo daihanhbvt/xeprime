@@ -207,3 +207,8 @@
     flex: none;
   }
 }
+
+/* Giao diện tối: bóng đen 8% vô hình trên nền tối — dùng bóng header tối của token. */
+:global([data-theme='dark']) .stickyHeader {
+  box-shadow: var(--xp-elevation-header);
+}

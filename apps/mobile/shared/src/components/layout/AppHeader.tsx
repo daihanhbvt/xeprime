@@ -12,6 +12,7 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 const APP_HEADER_HEIGHT = 56;
+const APP_HEADER_COMPACT_HEIGHT = 44;
 /** Nhãn cạnh tiêu đề chiếm tối đa ngần này bề ngang hàng tiêu đề — phần còn lại luôn để cho tên. */
 const BADGE_MAX_WIDTH = '60%';
 
@@ -147,8 +148,10 @@ export function AppHeader({
       ai="center"
       gap={space.xs}
       px={space.sm}
-      py={space.xs}
-      minHeight={APP_HEADER_HEIGHT}
+      py={below ? 0 : space.xs}
+      // Khuôn trang (có prop below) gọn hơn: thanh 48 thay vì 56 — người dùng 04/11/2026 thấy header
+      // + khối tiến trình chiếm gần 1/3 màn chi tiết chuyến.
+      minHeight={below ? APP_HEADER_COMPACT_HEIGHT : APP_HEADER_HEIGHT}
       marginTop={overlay || flushTop ? 0 : insets.top}
       {...(overlay ? {} : { bg })}
     >
@@ -159,6 +162,8 @@ export function AppHeader({
           onPress={onBack}
           // Nền tròn ở biến thể nổi: mũi tên trần biến mất trên ảnh sáng.
           tone={overlay || below ? 'surface' : 'plain'}
+          // Khuôn trang: nút lui tròn nhỏ (compact) để không lấn hàng tiêu đề.
+          compact={Boolean(below) && !overlay}
         />
       ) : (
         (left ?? null)
@@ -190,7 +195,7 @@ export function AppHeader({
                 <Text
                   flexShrink={1}
                   col={fg}
-                  fos={below ? fontSize.h4 : fontSize.body}
+                  fos={fontSize.body}
                   fow={below ? fontWeight.bold : fontWeight.semibold}
                   numberOfLines={1}
                 >
@@ -237,7 +242,7 @@ export function AppHeader({
       <YStack bg={bg}>
         {bar}
         {below ? (
-          <YStack px={layout.screenX} pb={space.sm}>
+          <YStack px={layout.screenX} pb={space.xs}>
             {below}
           </YStack>
         ) : null}

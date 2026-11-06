@@ -10,7 +10,7 @@ interface HomeSectionHeadingProps {
   /** Dòng nhỏ viết hoa phía trên ("TẠI SAO LẠI CHỌN XEPRIME"). */
   kicker: string;
   /** Chuỗi, hoặc node có định dạng (`t.rich` — cụm chữ vàng của "Lý do nên chọn XePrime"). */
-  title: ReactNode;
+  title?: ReactNode;
   /** Mặc định `true` — bản vẽ mobile v2 canh giữa và kẻ gạch vàng dưới MỌI tiêu đề khối. */
   divider?: boolean;
 }
@@ -29,9 +29,11 @@ export function HomeSectionHeading({ kicker, title, divider = true }: HomeSectio
       <Text col={colors.primaryHover} fos={fontSize.label} lh={18} fow={fontWeight.semibold} ta="center">
         {kicker.toLocaleUpperCase()}
       </Text>
-      <Text col={colors.text} fos={fontSize.lead} lh={30} fow={fontWeight.semibold} ta="center">
-        {title}
-      </Text>
+      {title == null ? null : (
+        <Text col={colors.text} fos={fontSize.lead} lh={30} fow={fontWeight.semibold} ta="center">
+          {title}
+        </Text>
+      )}
       {divider ? <YStack w={DIVIDER_WIDTH} h={2} bg={colors.primary} /> : null}
     </YStack>
   );

@@ -117,7 +117,7 @@ export function StickySearchBar({
             px={space.sm}
             h={CONTROL_HEIGHT}
           >
-            <Ionicons name="location-outline" size={14} color={colors.primaryActive} />
+            <Ionicons name="location-outline" size={14} color={colors.accentText} />
             <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
               {locationValue}
             </Text>

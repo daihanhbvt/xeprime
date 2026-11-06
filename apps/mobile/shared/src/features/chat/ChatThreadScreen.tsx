@@ -401,7 +401,7 @@ function DaySeparator({ day }: { day: string }) {
         py={2}
         br={radius.pill}
         bg={colors.surfaceMuted}
-        col={colors.textMuted}
+        col={colors.placeholder}
         fos={fontSize.label}
       >
         {label}

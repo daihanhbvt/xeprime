@@ -366,7 +366,7 @@ export function Screen({
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.primaryActive}
+                tintColor={colors.accentText}
               />
             ),
           }

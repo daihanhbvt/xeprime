@@ -85,6 +85,10 @@ function ReviewCard({
   const colors = useColors();
   const highlightBorder = useCardHighlightBorder();
   const { scheme } = useAppScheme();
+  const dark = scheme === 'dark';
+  // Figma dark (`19879:66251`): thẻ nổi bằng nền elevated, nhận xét xám sáng.
+  const cardBg = dark ? colors.surfaceElevated : colors.surface;
+  const commentColor = dark ? XP_TOKENS['color-text-on-dark-muted'] : colors.textMuted;
   const t = useTranslations('Home.reviews');
   const fmt = useAppFormat();
   const initial = review.customerName.trim().charAt(0).toLocaleUpperCase() || '?';
@@ -96,9 +100,9 @@ function ReviewCard({
       gap={12}
       br={CARD_RADIUS}
       bw={1}
-      bc={highlighted ? highlightBorder : colors.surface}
-      bg={colors.surface}
-      style={scheme === 'dark' ? undefined : elevation.card}
+      bc={highlighted ? highlightBorder : cardBg}
+      bg={cardBg}
+      style={dark ? undefined : elevation.card}
     >
       {highlighted ? <CardHighlightOverlay radius={CARD_RADIUS} /> : null}
       <XStack
@@ -120,7 +124,7 @@ function ReviewCard({
       <Svg width={20} height={20} viewBox="0 0 20 20">
         <Path d={QUOTE_PATH} fill={QUOTE_FILL} />
       </Svg>
-      <Text col={colors.textMuted} fos={fontSize.body} lh={22} numberOfLines={5}>
+      <Text col={commentColor} fos={fontSize.body} lh={22} numberOfLines={5}>
         {review.comment}
       </Text>
       <XStack ai="center" gap={12} mt="auto">
@@ -133,7 +137,7 @@ function ReviewCard({
           jc="center"
           accessibilityElementsHidden
         >
-          <Text col={colors.primaryStrong} fos={fontSize.body} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={fontSize.body} fow={fontWeight.semibold}>
             {initial}
           </Text>
         </YStack>

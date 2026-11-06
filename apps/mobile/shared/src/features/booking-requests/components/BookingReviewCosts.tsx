@@ -177,7 +177,7 @@ export function BookingReviewCosts({
                 <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
                   {totalLabel}
                 </Text>
-                <Text col={colors.primaryHover} fos={fontSize.lead} fow={fontWeight.semibold}>
+                <Text col={colors.brandText} fos={fontSize.lead} fow={fontWeight.semibold}>
                   {fmt.money(total?.amount ?? breakdown.totalAmount)}
                 </Text>
               </XStack>

@@ -14,12 +14,14 @@
   text-align: left;
 }
 
+/* Figma ô ngày giờ (thẻ tìm kiếm): chữ THƯỜNG 14/22 — bản cũ 15px semibold đọc ra đậm quá (04/11/2026). */
 .endpoint {
   overflow: hidden;
   min-width: 0;
   color: var(--xp-color-text);
-  font-size: 15px;
-  font-weight: var(--xp-font-weight-semibold, 600);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular, 400);
+  line-height: var(--xp-line-height-body-relaxed);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

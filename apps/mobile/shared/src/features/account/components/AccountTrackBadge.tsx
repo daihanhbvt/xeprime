@@ -152,7 +152,7 @@ export function AccountTrackBadge({
  */
 const usePlainTone = themed<Readonly<Record<AccountTrack, string>>>((colors) => ({
   [ACCOUNT_TRACK.RENTER]: colors.textMuted,
-  [ACCOUNT_TRACK.SHOP_OWNER]: colors.primaryActive,
+  [ACCOUNT_TRACK.SHOP_OWNER]: colors.accentText,
   [ACCOUNT_TRACK.COMMISSION_OWNER]: colors.success,
   [ACCOUNT_TRACK.SHOP_MEMBER]: colors.textMuted,
   [ACCOUNT_TRACK.PACKAGE_PENDING]: colors.info,

@@ -131,7 +131,7 @@ export function DrivingTripsList({
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={onRefresh}
-              tintColor={colors.primaryActive}
+              tintColor={colors.accentText}
             />
           }
           ListFooterComponent={isFetchingNextPage ? TripCardSkeleton : null}

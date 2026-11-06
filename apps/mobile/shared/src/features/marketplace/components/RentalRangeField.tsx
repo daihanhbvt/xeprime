@@ -103,7 +103,7 @@ export function RentalRangeField({
               f={1}
               col={colors.text}
               fos={fontSize.body}
-              fow={fontWeight.semibold}
+              fow={fontWeight.regular}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.7}

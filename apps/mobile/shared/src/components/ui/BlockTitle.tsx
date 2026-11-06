@@ -106,7 +106,7 @@ export function BlockTitle({
                 <Ionicons
                   name={collapsed ? 'chevron-down' : 'chevron-up'}
                   size={iconSize.sm}
-                  color={colors.primaryActive}
+                  color={colors.accentText}
                   accessibilityElementsHidden
                   importantForAccessibility="no"
                 />
@@ -160,7 +160,7 @@ export function BlockLink({
       hitSlop={BLOCK_LINK_HIT_SLOP}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
-      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+      <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
         {label}
       </Text>
     </Pressable>

@@ -519,7 +519,7 @@ export function ListingBookingCard({
                   borderBottomColor={active ? market.accent : 'transparent'}
                 >
                   <Text
-                    col={active ? colors.primaryHover : colors.textMuted}
+                    col={active ? colors.brandText : colors.textMuted}
                     fos={fontSize.body}
                     fow={active ? fontWeight.semibold : fontWeight.medium}
                     numberOfLines={1}
@@ -1194,7 +1194,7 @@ function AddressCard({
         </Text>
         <Pressable onPress={onChange} accessibilityRole="button" hitSlop={space.sm}>
           <Text
-            col={colors.primaryHover}
+            col={colors.brandText}
             fos={fontSize.bodySm}
             fow={fontWeight.semibold}
             textDecorationLine="underline"
@@ -1229,8 +1229,8 @@ function ChooseAddress({ label, onPress }: { label: string; onPress: () => void 
         bc={colors.primary}
         bg={colors.primarySubtle}
       >
-        <Ionicons name="location-outline" size={iconSize.sm} color={colors.primaryHover} />
-        <Text col={colors.primaryHover} fos={13} fow={fontWeight.semibold}>
+        <Ionicons name="location-outline" size={iconSize.sm} color={colors.brandText} />
+        <Text col={colors.brandText} fos={13} fow={fontWeight.semibold}>
           {label}
         </Text>
       </XStack>

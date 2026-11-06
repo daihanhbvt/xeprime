@@ -206,7 +206,7 @@
       "offers": "Ưu đãi",
       "offersHint": "Lọc xe có ưu đãi đang được chủ xe công bố.",
       "hasOffer": "Có ưu đãi",
-      "instantBook": "Không cần xác nhận",
+      "instantBook": "Tự động duyệt",
       "instantBookHint": "Chỉ hiển thị xe đặt được ngay, không chờ chủ xe duyệt.",
       "policyNote": "Đây là tiêu chí tìm kiếm, không phải cam kết miễn cọc, hoàn tiền hay bảo hiểm. Chính sách thực tế được xác nhận tại chi tiết xe.",
       "ratingFrom": "Từ {rating, number, ::.0} sao",
@@ -215,7 +215,7 @@
       "chips": {
         "delivery": "Giao xe tận nơi",
         "discount": "Có ưu đãi",
-        "instantBook": "Không cần xác nhận",
+        "instantBook": "Tự động duyệt",
         "noCollateral": "Không cọc tài sản",
         "vatInvoice": "Xuất hoá đơn VAT"
       }

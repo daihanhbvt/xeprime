@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
 import { memo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
@@ -15,7 +16,7 @@ import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
   PALETTES,
   fontSize,
@@ -30,6 +31,9 @@ import { useSearchFilters } from '../search-context';
 import type { PublicListing } from '../api';
 import type { HostMetrics as HostMetricsShape } from '@xeprime/types';
 import { HostMetrics } from './HostMetrics';
+import { NewVehicleBadge } from './NewVehicleBadge';
+import { HighlightZoom } from '@/components/ui/HighlightZoom';
+import { CARD_ICON_XML } from './cardIcons';
 import { HomeCardAvatar } from './home/HomeCardAvatar';
 import { ShopLocationIcon } from './shop-icons';
 
@@ -52,6 +56,11 @@ const SHOP_AVATAR = 32;
 const DISCOUNT_BADGE = gradient('gradient-gold-soft');
 /** Nhãn "Không cần xác nhận" trên ẢNH thẻ lưới = `.badge` gradient của web (`--xp-gradient-instant-badge`). */
 const INSTANT_BADGE = gradient('gradient-instant-badge');
+/* Tối: gradient gốc trông bạc màu trên nền tối — đậm sắc hơn (= web [data-theme=dark] .badgeInstant). */
+const INSTANT_BADGE_DARK = {
+  colors: ['#53b1fd', '#a4dded'] as [string, string],
+  locations: [0, 1] as [number, number],
+};
 const INSTANT_TEXT = PALETTES.light.colors.text;
 
 /*
@@ -59,6 +68,12 @@ const INSTANT_TEXT = PALETTES.light.colors.text;
  * chuyền cao bằng nhau như web (`.footer { margin-top: auto }` + thẻ `height: 100%`).
  */
 const ROW_LOCATION = 22;
+// Icon thông số của Figma "Vehicle Card": khung 16, hình vẽ đặt giữa theo kích thước gốc của file.
+const SPEC_ICON_XML = {
+  seats: { xml: CARD_ICON_XML.seats, w: 12, h: 11 },
+  transmission: { xml: CARD_ICON_XML.transmission, w: 13, h: 13 },
+  fuel: { xml: CARD_ICON_XML.fuel, w: 16, h: 16 },
+} as const;
 const ROW_AMENITY = 22;
 const ROW_SPECS = 40;
 const ROW_FOOTER = 48;
@@ -124,6 +139,13 @@ function VehicleCardImpl({
   highlighted = false,
 }: VehicleCardProps) {
   const colors = useColors();
+  // Giao diện tối: tên gian hàng vàng chuẩn `primary` (người dùng chốt 04/11/2026).
+  const dark = useAppScheme().scheme === 'dark';
+  const shopNameColor = dark ? colors.primary : colors.primaryHover;
+  // Figma dark: thẻ có viền `#414651`; ô số ảnh đảo màu (nền trắng, chữ đen).
+  const darkBorder = dark ? { borderColor: colors.border } : {};
+  const photoChipBg = dark ? XP_TOKENS['color-bg-container'] : market.inverse;
+  const photoChipFg = dark ? XP_TOKENS['color-text'] : market.onDark;
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
   const navigateOnce = useNavigateOnce();
@@ -207,12 +229,18 @@ function VehicleCardImpl({
       ? t('locationLine', { ward: listing.wardName, province: listing.shopProvince })
       : listing.shopProvince
     : null;
+  // Figma "Vehicle Benefits": dấu tích = giao xe tận nơi, đồng tiền = miễn thế chấp, hoá đơn = xuất hoá đơn VAT.
   const amenities = [
-    listing.deliveryEnabled ? t('delivery') : null,
-    listing.noCollateral ? t('noCollateral') : null,
+    listing.deliveryEnabled ? { label: t('delivery'), icon: CARD_ICON_XML.check } : null,
+    listing.noCollateral ? { label: t('noCollateral'), icon: CARD_ICON_XML.money } : null,
     // Thẻ chỉ có chỗ cho nhãn ngắn — câu "ai xuất, cho khoản nào" ở trang xe (ADR 0059).
-    listing.vatInvoiceSupported ? t('vatInvoice') : null,
-  ].filter((label): label is string => label !== null);
+    listing.vatInvoiceSupported ? { label: t('vatInvoice'), icon: CARD_ICON_XML.invoice } : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  // Viên tiện ích tối: nền gray-50 #414651, viền gray-low200 #717680 (Figma 22110:44533).
+  const amenityBg = dark ? colors.border : colors.surfaceMuted;
+  const amenityBorder = dark ? XP_TOKENS['color-text-tertiary'] : colors.border;
+  // Kẻ hàng thông số tối: gray-100 #535862 (chưa có token tối).
+  const specDivider = dark ? '#535862' : colors.borderSubtle;
   const specs = [
     listing.seatCount
       ? { key: 'seats', icon: 'people-outline', label: t('seats', { count: listing.seatCount }) }
@@ -227,6 +255,21 @@ function VehicleCardImpl({
     fuel ? { key: 'fuel', icon: 'water-outline', label: fuel } : null,
   ].filter((spec): spec is { key: string; icon: IconName; label: string } => spec !== null);
 
+  // Thẻ NGANG (row + list): chỉ thông số XE CÓ khai (web #222 bỏ các giá trị điền bừa khi thiếu dữ liệu).
+  const bodyTypeName = listing.bodyType
+    ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType)
+    : null;
+  // Thẻ ngang web dùng `ThunderboltOutlined` cho nhiên liệu (thẻ lưới dùng `card-fuel.svg`).
+  const listSpecs = [
+    ...specs.map((spec) =>
+      spec.key === 'fuel' ? { ...spec, icon: 'flash-outline' as IconName } : spec,
+    ),
+    bodyTypeName
+      ? { key: 'bodyType', icon: 'compass-outline' as IconName, label: bodyTypeName }
+      : null,
+  ].filter((spec): spec is { key: string; icon: IconName; label: string } => spec !== null);
+  const specBoxBg = dark ? colors.surfaceElevated : colors.background;
+
   const open = onPress ? () => onPress(listing, activeService) : undefined;
 
   if (variant === 'row') {
@@ -239,6 +282,7 @@ function VehicleCardImpl({
       <Card
         padded={false}
         seamless
+        {...darkBorder}
         pressHighlight
         {...(open
           ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) }
@@ -252,9 +296,23 @@ function VehicleCardImpl({
               accessibilityLabel={listing.name}
               fallback={<Ionicons name="car-sport-outline" size={32} color={colors.border} />}
             />
-            {selfDrive && discount > 0 ? (
-              <XStack pos="absolute" top={space.xs} left={space.xs}>
-                <DiscountBadge percent={discount} />
+            {/* Figma List: "+N" ảnh ở góc dưới-phải ảnh, nền gray-high, bo 6. */}
+            {extraPhotos > 0 ? (
+              <XStack
+                pos="absolute"
+                right={space.xs}
+                bottom={space.xs}
+                ai="center"
+                gap={2}
+                px={space.xs}
+                py={2}
+                br={6}
+                bg={colors.overlay}
+              >
+                <Ionicons name="images-outline" size={11} color={colors.textInverse} />
+                <Text col={colors.textInverse} fos={fontSize.label}>
+                  {t('photoCount', { count: extraPhotos })}
+                </Text>
               </XStack>
             ) : null}
           </YStack>
@@ -273,8 +331,10 @@ function VehicleCardImpl({
               <FavoriteButton vehicleId={listing.id} vehicleName={listing.name} variant="list" />
             </XStack>
             {/* Ảnh thẻ ngang chỉ 128 — nhãn dài đặt dưới tên, MỘT hàng, cùng kiểu thẻ trang chủ. */}
-            {instantBook || !hasRating ? (
+            {/* Figma List: "% giảm" · "Không cần xác nhận" · "Xe mới" cạnh tên — thẻ hẹp nên xuống dưới tên. */}
+            {(selfDrive && discount > 0) || instantBook || !hasRating ? (
               <XStack ai="center" gap={space.xs} flexWrap="wrap">
+                {selfDrive && discount > 0 ? <DiscountBadge percent={discount} /> : null}
                 {instantBook ? <InstantBookBadge /> : null}
                 {!hasRating ? <NewVehicleBadge /> : null}
               </XStack>
@@ -288,19 +348,30 @@ function VehicleCardImpl({
               </XStack>
             ) : null}
             <XStack ai="baseline" jc="space-between" gap={space.xs}>
-              {hasRating ? (
-                <XStack ai="center" gap={2}>
-                  <Ionicons name="star" size={12} color={market.star} />
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {fmt.rating(rating)}
-                    <Text col={colors.placeholder}>{` (${listing.ratingCount ?? 0})`}</Text>
+              {/* = web thẻ ngang: luôn có ô sao — chưa có đánh giá ⇒ sao xám + "Chưa có đánh giá"; kèm lượt thuê. */}
+              <XStack ai="center" gap={2} flexShrink={1}>
+                <Ionicons name="star" size={12} color={hasRating ? market.star : colors.border} />
+                <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+                  {hasRating ? fmt.rating(rating) : null}
+                  <Text col={colors.placeholder}>
+                    {hasRating ? ` (${listing.ratingCount ?? 0})` : t('noRating')}
+                    {listing.completedTripCount > 0
+                      ? ` · ${t('rentals', { count: listing.completedTripCount })}`
+                      : ''}
                   </Text>
-                </XStack>
-              ) : (
-                <YStack />
-              )}
+                </Text>
+              </XStack>
               {displayPrice ? (
-                <XStack ai="baseline" gap={2}>
+                <XStack ai="baseline" gap={2} flexShrink={1} flexWrap="wrap" jc="flex-end">
+                  {selfDrive && discount > 0 && listing.weekdayPrice ? (
+                    <Text
+                      col={colors.textDisabled}
+                      fos={fontSize.bodySm}
+                      textDecorationLine="line-through"
+                    >
+                      {`${compactPrice(listing.weekdayPrice)} `}
+                    </Text>
+                  ) : null}
                   <Text col={colors.primary} fos={fontSize.h3} lh={30} fow={fontWeight.semibold}>
                     {compactPrice(displayPrice)}
                   </Text>
@@ -318,8 +389,43 @@ function VehicleCardImpl({
         </XStack>
 
         {/*
+          Figma List "Vehicle Specifications": ô nền xám, icon + nhãn MỘT hàng, chia đều. Thân phải
+          quá hẹp cho 4 ô nên hàng ô trải hết bề ngang thẻ, dưới ảnh.
+        */}
+        {listSpecs.length > 0 ? (
+          <XStack gap={space.xs} px={space.sm} pb={space.sm} accessibilityLabel={t('specsLabel')}>
+            {listSpecs.map((spec) => (
+              <XStack
+                key={spec.key}
+                flexBasis={0}
+                flexGrow={1}
+                minWidth={0}
+                ai="center"
+                jc="center"
+                gap={space.xs}
+                py={6}
+                br={radius.control}
+                bg={specBoxBg}
+              >
+                <Ionicons name={spec.icon} size={14} color={colors.primaryHover} />
+                <Text
+                  flexShrink={1}
+                  col={colors.textMuted}
+                  fos={fontSize.label}
+                  fow={fontWeight.medium}
+                  numberOfLines={1}
+                >
+                  {spec.label}
+                </Text>
+              </XStack>
+            ))}
+          </XStack>
+        ) : null}
+
+        {/*
           Khối chủ xe ĐẦY ĐỦ như thẻ lưới (người dùng chốt 27/10/2026): avatar + dấu xác minh, nhãn
-          "Gian hàng"/"Chủ xe", tên — một đích chạm riêng sang trang gian hàng.
+          "Gian hàng"/"Chủ xe", tên — một đích chạm riêng sang trang gian hàng. Figma List: "Xem chi
+          tiết →" ở cuối cùng hàng.
         */}
         <Pressable
           onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
@@ -349,7 +455,7 @@ function VehicleCardImpl({
                 {t(isShopTrack ? 'shop' : 'owner')}
               </Text>
               <Text
-                col={isShopTrack ? colors.primaryHover : colors.textMuted}
+                col={isShopTrack ? shopNameColor : colors.textMuted}
                 fos={fontSize.body}
                 lh={22}
                 fow={fontWeight.medium}
@@ -358,6 +464,16 @@ function VehicleCardImpl({
                 {listing.shopName}
               </Text>
             </YStack>
+            {open ? (
+              <Pressable onPress={open} accessibilityRole="link" hitSlop={space.sm}>
+                <XStack ai="center" gap={space.xs}>
+                  <Text col={colors.primary} fos={fontSize.body} lh={22} fow={fontWeight.semibold}>
+                    {tResults('viewDetail')}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+                </XStack>
+              </Pressable>
+            ) : null}
           </XStack>
         </Pressable>
       </Card>
@@ -365,25 +481,13 @@ function VehicleCardImpl({
   }
 
   if (variant === 'list') {
-    // Chỉ thông số XE CÓ khai (web #222 bỏ các giá trị điền bừa khi thiếu dữ liệu).
-    const bodyTypeName = listing.bodyType
-      ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType)
-      : null;
-    // Thẻ ngang web dùng `ThunderboltOutlined` cho nhiên liệu (thẻ lưới dùng `card-fuel.svg`).
-    const listSpecs = [
-      ...specs.map((spec) =>
-        spec.key === 'fuel' ? { ...spec, icon: 'flash-outline' as IconName } : spec,
-      ),
-      bodyTypeName
-        ? { key: 'bodyType', icon: 'compass-outline' as IconName, label: bodyTypeName }
-        : null,
-    ].filter((spec): spec is { key: string; icon: IconName; label: string } => spec !== null);
     const openShop = () => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug));
 
     return (
       <Card
         padded={false}
         seamless
+        {...darkBorder}
         pressHighlight
         {...(open
           ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) }
@@ -432,16 +536,19 @@ function VehicleCardImpl({
           </XStack>
 
           <XStack ai="center" gap={space.md}>
-            {hasRating ? (
-              <XStack ai="center" gap={space.xs}>
-                {/* Figma: sao 14px token market.star. */}
-                <Ionicons name="star" size={14} color={market.star} />
-                <Text col={colors.textMuted} fos={fontSize.body} lh={22}>
-                  {fmt.rating(rating)}
-                  <Text col={colors.textPlaceholder}>{` (${listing.ratingCount ?? 0})`}</Text>
+            {/* = web thẻ ngang: luôn có ô sao (xám khi chưa có đánh giá) + lượt thuê. */}
+            <XStack ai="center" gap={space.xs}>
+              <Ionicons name="star" size={14} color={hasRating ? market.star : colors.border} />
+              <Text col={colors.textMuted} fos={fontSize.body} lh={22}>
+                {hasRating ? fmt.rating(rating) : null}
+                <Text col={colors.textPlaceholder}>
+                  {hasRating ? ` (${listing.ratingCount ?? 0})` : t('noRating')}
+                  {listing.completedTripCount > 0
+                    ? ` · ${t('rentals', { count: listing.completedTripCount })}`
+                    : ''}
                 </Text>
-              </XStack>
-            ) : null}
+              </Text>
+            </XStack>
             <XStack f={1} ai="baseline" gap={6} flexWrap="wrap">
               {displayPrice ? (
                 <>
@@ -495,7 +602,7 @@ function VehicleCardImpl({
                   px={space.sm}
                   py={6}
                   br={radius.control}
-                  bg={colors.background}
+                  bg={dark ? colors.surfaceElevated : colors.background}
                 >
                   <Ionicons name={spec.icon} size={16} color={colors.primaryHover} />
                   <Text
@@ -537,7 +644,7 @@ function VehicleCardImpl({
                       {t(isShopTrack ? 'shop' : 'owner')}
                     </Text>
                     <Text
-                      col={isShopTrack ? colors.primaryHover : colors.textMuted}
+                      col={isShopTrack ? shopNameColor : colors.textMuted}
                       fos={fontSize.body}
                       lh={22}
                       fow={fontWeight.medium}
@@ -570,19 +677,22 @@ function VehicleCardImpl({
     <Card
       padded={false}
       seamless
+      {...darkBorder}
       pressHighlight
       highlighted={highlighted}
       {...(open
         ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) }
         : {})}
     >
-      <YStack aspectRatio={PHOTO_RATIO}>
-        <RemoteImage
-          uri={listing.mainImageUrl}
-          recyclingKey={listing.id}
-          accessibilityLabel={listing.name}
-          fallback={<Ionicons name="car-sport-outline" size={40} color={colors.border} />}
-        />
+      <YStack aspectRatio={PHOTO_RATIO} ov="hidden">
+        <HighlightZoom>
+          <RemoteImage
+            uri={listing.mainImageUrl}
+            recyclingKey={listing.id}
+            accessibilityLabel={listing.name}
+            fallback={<Ionicons name="car-sport-outline" size={40} color={colors.border} />}
+          />
+        </HighlightZoom>
 
         {/*
           Trái tim "Xe yêu thích" ở góc trên-phải ảnh — `.favoriteBtn` của web (12px từ mép). Nó
@@ -597,8 +707,10 @@ function VehicleCardImpl({
           top={space.sm}
           left={space.sm}
           right={HEART_INSET + HEART_DISC + space.sm}
-          fd="column"
-          ai="flex-start"
+          // Hai nhãn (Giảm % · Đặt ngay) nằm MỘT hàng như web; hẹp quá mới xuống dòng.
+          fd="row"
+          flexWrap="wrap"
+          ai="center"
           gap={5}
         >
           {/* % giảm là của giá TỰ LÁI — ngữ cảnh khác không mang nó (ADR 0011). */}
@@ -618,12 +730,12 @@ function VehicleCardImpl({
             px={space.xs}
             py={2}
             br={radius.sm}
-            bg={market.inverse}
+            bg={photoChipBg}
             accessible
             accessibilityLabel={t('photoCountAria', { count: listing.imageCount ?? 0 })}
           >
-            <Ionicons name="images-outline" size={iconSize.xs} color={market.onDark} />
-            <Text col={market.onDark} fos={fontSize.label}>
+            <Ionicons name="images-outline" size={iconSize.xs} color={photoChipFg} />
+            <Text col={photoChipFg} fos={fontSize.label}>
               {t('photoCount', { count: extraPhotos })}
             </Text>
           </XStack>
@@ -646,10 +758,17 @@ function VehicleCardImpl({
             {/* Chưa có đánh giá nào = xe mới lên chợ — cùng luật với web. */}
             {hasRating ? null : <NewVehicleBadge />}
           </XStack>
-          <XStack h={ROW_LOCATION} ai="center" gap={space.xs}>
+          <XStack h={ROW_LOCATION} ai="center" gap={space.sm}>
             {location ? (
               <>
-                <Ionicons name="location-outline" size={iconSize.lg} color={colors.textMuted} />
+                <YStack w={20} h={20} ai="center" jc="center">
+                  <SvgXml
+                    xml={CARD_ICON_XML.location}
+                    width={15}
+                    height={19}
+                    color={XP_TOKENS['color-text-placeholder']}
+                  />
+                </YStack>
                 <Text f={1} col={colors.textMuted} fos={fontSize.body} lh={22} numberOfLines={1}>
                   {location}
                 </Text>
@@ -658,41 +777,51 @@ function VehicleCardImpl({
           </XStack>
           {/* Một hàng nhãn duy nhất, không xuống dòng — giữ chiều cao thẻ cố định. */}
           <XStack h={ROW_AMENITY} gap={space.xs} ov="hidden">
-            {amenities.map((label) => (
+            {amenities.map((item) => (
               <XStack
-                key={label}
+                key={item.label}
                 flexShrink={0}
-                bg={colors.surfaceMuted}
-                br={radius.sm}
-                px={space.sm}
+                ai="center"
+                gap={2}
+                bg={amenityBg}
+                bw={1}
+                bc={amenityBorder}
+                br={radius.pill}
+                px={6}
                 py={2}
               >
-                <Text
-                  col={colors.textMuted}
-                  fos={fontSize.label}
-                  fow={fontWeight.medium}
-                  numberOfLines={1}
-                >
-                  {label}
+                <YStack w={12} h={12} ai="center" jc="center">
+                  <SvgXml xml={item.icon} width="100%" height="100%" />
+                </YStack>
+                <Text col={colors.textMuted} fos={10} lh={14} numberOfLines={1}>
+                  {item.label}
                 </Text>
               </XStack>
             ))}
           </XStack>
         </YStack>
 
-        <YStack h={1} bg={colors.borderSubtle} />
+        <YStack h={1} bg={specDivider} />
         <XStack h={ROW_SPECS} ai="center" jc="space-around" accessibilityLabel={t('specsLabel')}>
           {specs.map((spec) => (
-            <YStack key={spec.key} ai="center" gap={2}>
-              <Ionicons name={spec.icon} size={iconSize.sm} color={colors.textMuted} />
-              <Text col={colors.textMuted} fos={fontSize.body} lh={22} fow={fontWeight.medium}>
+            // Figma "Vehicle Specifications": icon + chữ cùng hàng, 12/18 thường.
+            <XStack key={spec.key} ai="center" gap={space.xs}>
+              <YStack w={16} h={16} ai="center" jc="center">
+                <SvgXml
+                  xml={SPEC_ICON_XML[spec.key as keyof typeof SPEC_ICON_XML].xml}
+                  width={SPEC_ICON_XML[spec.key as keyof typeof SPEC_ICON_XML].w}
+                  height={SPEC_ICON_XML[spec.key as keyof typeof SPEC_ICON_XML].h}
+                  color={XP_TOKENS['color-text-placeholder']}
+                />
+              </YStack>
+              <Text col={colors.textMuted} fos={fontSize.label} lh={18}>
                 {spec.label}
               </Text>
-            </YStack>
+            </XStack>
           ))}
         </XStack>
 
-        <YStack h={1} bg={colors.borderSubtle} />
+        <YStack h={1} bg={specDivider} />
 
         <XStack minHeight={ROW_FOOTER} ai="center" jc="space-between" gap={space.sm}>
           {hasRating ? (
@@ -786,7 +915,7 @@ function VehicleCardImpl({
               </Text>
               {/* Web: tên gian hàng primary-hover, chủ xe cá nhân text-secondary; dấu xác thực chỉ nằm trên avatar. */}
               <Text
-                col={isShopTrack ? colors.primaryHover : colors.textMuted}
+                col={isShopTrack ? shopNameColor : colors.textMuted}
                 fos={fontSize.body}
                 lh={22}
                 fow={fontWeight.medium}
@@ -809,13 +938,14 @@ function VehicleCardImpl({
  */
 function InstantBookBadge({ onImage = false }: { onImage?: boolean }) {
   const colors = useColors();
+  const badge = useAppScheme().scheme === 'dark' ? INSTANT_BADGE_DARK : INSTANT_BADGE;
   const t = useTranslations('Listings.card');
   // Như web: trên ảnh thẻ lưới là gradient xanh chữ đen; cạnh tên ở thẻ danh sách là viên xanh nhạt.
   if (onImage) {
     return (
       <LinearGradient
-        colors={INSTANT_BADGE.colors}
-        locations={INSTANT_BADGE.locations}
+        colors={badge.colors}
+        locations={badge.locations}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.badge}
@@ -835,17 +965,6 @@ function InstantBookBadge({ onImage = false }: { onImage?: boolean }) {
   );
 }
 
-function NewVehicleBadge() {
-  const colors = useColors();
-  const t = useTranslations('Listings.card');
-  return (
-    <XStack bg={colors.successSurface} br={radius.pill} px={space.sm} py={space.xs}>
-      <Text col={colors.success} fos={fontSize.label} lh={18} fow={fontWeight.medium}>
-        {t('newVehicle')}
-      </Text>
-    </XStack>
-  );
-}
 
 /**
  * Bọc `memo`: đây là hàng trong danh sách kết quả, và màn đó dựng lại vì đủ thứ không liên quan

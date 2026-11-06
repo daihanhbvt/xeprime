@@ -453,7 +453,7 @@ export function BookingTripCardView({
                   {tCard(owner.verified ? 'shop' : 'owner')}
                 </Text>
                 <Text
-                  col={owner.verified ? colors.primaryHover : colors.textMuted}
+                  col={owner.verified ? colors.shopName : colors.textMuted}
                   fos={fontSize.body}
                   fow={fontWeight.medium}
                 >
@@ -465,11 +465,11 @@ export function BookingTripCardView({
           {/* `.tripSummary` — body semibold `color-primary-hover` (Text/Brand/primary 2). */}
           {/* Mỗi hàng MỘT giá trị: "Thuê theo ngày" / "1 ngày" — không nối " · " (28/10/2026). */}
           <YStack ai="flex-end">
-            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
+            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
               {serviceText}
             </Text>
             {durationText ? (
-              <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
+              <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
                 {durationText}
               </Text>
             ) : null}

@@ -3,8 +3,9 @@ import { ImageBackground, useWindowDimensions } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { XP_TOKENS } from '@xeprime/ui';
 import { layout } from '@/theme/layout';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
 import { HomeSectionHeading } from './HomeSectionHeading';
 import { WHY_FLEET_ART, WHY_PRICE_ART, WHY_SUPPORT_ART, WHY_TIME_ART } from './why-art';
@@ -33,6 +34,9 @@ const STAT_RATIO = { width: 173 / 532, height: 124 / 488 };
  */
 export function WhyChooseUs() {
   const colors = useColors();
+  // Figma dark: tiêu đề mục vàng, mô tả xám sáng (`21965:6841`, `19879:66279`).
+  const dark = useAppScheme().scheme === 'dark';
+  const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
   const t = useTranslations('Home.why');
   const { width } = useWindowDimensions();
   const imageWidth = width - layout.screenX * 2;
@@ -48,7 +52,7 @@ export function WhyChooseUs() {
           })}
         />
         <YStack gap={space.sm}>
-          <Text col={colors.textMuted} fos={fontSize.bodyLg} lh={24} ta="center">
+          <Text col={dark ? onDarkMuted : colors.textMuted} fos={fontSize.bodyLg} lh={24} ta="center">
             {t('intro')}
           </Text>
           <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.medium} ta="center">
@@ -70,10 +74,10 @@ export function WhyChooseUs() {
               </YStack>
             </YStack>
             <YStack gap={2} ai="center">
-              <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} ta="center">
+              <Text col={dark ? colors.primary : colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} ta="center">
                 {t(`items.${item.key}.title`)}
               </Text>
-              <Text col={colors.text} fos={fontSize.body} lh={22} ta="center">
+              <Text col={dark ? onDarkMuted : colors.text} fos={fontSize.body} lh={22} ta="center">
                 {t(`items.${item.key}.desc`)}
               </Text>
             </YStack>

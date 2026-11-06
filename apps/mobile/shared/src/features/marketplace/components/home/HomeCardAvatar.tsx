@@ -54,7 +54,7 @@ export function HomeCardAvatar({
             cachePolicy="memory-disk"
           />
         ) : (
-          <Text col={colors.primaryStrong} fos={Math.round(size / 2.6)} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={Math.round(size / 2.6)} fow={fontWeight.semibold}>
             {initial}
           </Text>
         )}

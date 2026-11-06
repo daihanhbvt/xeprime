@@ -847,7 +847,16 @@ export function ListingBookingCard({
           <p className={styles.costNote}>{tFlow('price.loadError')}</p>
         )}
 
-        {/* Nút hành động chính */}
+        {/* Figma `22110:55767` (Shop Actions): Nhắn shop + Thuê xe chung MỘT hàng */}
+        <div className={styles.actionsRow}>
+        <div className={styles.chatBtnWrapper}>
+          <ShopChatButton
+            shopSlug={listing.shopSlug}
+            vehicleId={listing.id}
+            publicChatOpen={listing.shopChatOpen}
+            size="large"
+          />
+        </div>
         <div className={styles.ctaBtnWrapper}>
           <RequestBookingButton
             vehicleId={listing.id}
@@ -918,14 +927,6 @@ export function ListingBookingCard({
             block
           />
         </div>
-
-        <div className={styles.chatBtnWrapper}>
-          <ShopChatButton
-            shopSlug={listing.shopSlug}
-            vehicleId={listing.id}
-            publicChatOpen={listing.shopChatOpen}
-            size="large"
-          />
         </div>
       </section>
 

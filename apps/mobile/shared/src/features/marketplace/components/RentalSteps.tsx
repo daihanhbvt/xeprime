@@ -2,9 +2,10 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { XP_TOKENS } from '@xeprime/ui';
 import { images } from '@/assets';
 import { layout } from '@/theme/layout';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 
@@ -31,6 +32,9 @@ const ART_RATIO = 240 / 213;
  */
 export function RentalSteps() {
   const colors = useColors();
+  // Figma dark: tiêu đề mục vàng, mô tả xám sáng (`21965:6841`, `19879:66279`).
+  const dark = useAppScheme().scheme === 'dark';
+  const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
   const t = useTranslations('Home.steps');
   // Bề ngang ô đo một lần lúc dựng: vị trí cắt sprite tính theo số đo thật của ô.
   const [artWidth, setArtWidth] = useState(0);
@@ -68,10 +72,10 @@ export function RentalSteps() {
               ) : null}
             </YStack>
             <YStack gap={space.xs} ai="center">
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
+              <Text col={dark ? colors.primary : colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
                 {t(`items.${step.key}.title`)}
               </Text>
-              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+              <Text col={dark ? onDarkMuted : colors.textMuted} fos={fontSize.bodySm} ta="center">
                 {t(`items.${step.key}.desc`)}
               </Text>
             </YStack>

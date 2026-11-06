@@ -42,17 +42,18 @@
   gap: var(--xp-space-sm);
 }
 
+
 .avg {
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-lg);
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .count {
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-tertiary);
 }
 
@@ -63,33 +64,57 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Figma `21621:62139`: thẻ đánh giá lưới 2 cột (356px, khe 16), padding 16, bo thẻ. */
 .list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--xp-space-md);
 }
 
+/* Figma: thẻ trắng KHÔNG viền trên nền trang xám, bo 16, đệm 16, các dòng cách 12. */
 .item {
-  border-bottom: 1px solid var(--xp-color-border);
-  padding-bottom: var(--xp-space-md);
-}
-
-.item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border-radius: 16px;
+  background: var(--xp-color-bg-container);
 }
 
 .itemHead {
   display: flex;
   align-items: center;
-  gap: var(--xp-space-sm);
-  flex-wrap: wrap;
+  gap: var(--xp-space-12);
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
 }
 
 .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-lg);
@@ -97,14 +122,13 @@
 }
 
 .date {
-  margin-left: auto;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text-secondary);
 }
 
 .comment {
-  margin: var(--xp-space-xs) 0 0;
+  margin: 0;
   font-size: var(--xp-font-size-body);
   line-height: 22px;
   color: var(--xp-color-text-secondary);
@@ -114,6 +138,11 @@
 
 /* Mobile (≤640px): tiêu đề khối `18px/Semibold` như các khối khác của bản vẽ mobile. */
 @media (max-width: 640px) {
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
   .head {
     margin-bottom: var(--xp-space-sm);
   }

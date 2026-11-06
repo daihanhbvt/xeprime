@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import { CardHighlightOverlay, useCardHighlightBorder } from '@/components/ui/CardHighlight';
+import { CardHighlightContext } from '@/components/ui/HighlightZoom';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +13,7 @@ import type { ReactNode } from 'react';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { duration, easing } from '@/theme/motion';
-import { themed, useDarkAccentBorder } from '@/theme/ThemeProvider';
+import { themed, useAppScheme, useDarkAccentBorder } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
 
 type Tone = 'surface' | 'muted' | 'accent';
@@ -85,14 +86,19 @@ export function Card({
   const highlightBorder = useCardHighlightBorder();
   const TONE = useTone();
   const skin = TONE[tone];
-  const shadow: ViewStyle = lift === 'flat' ? {} : elevation[lift];
+  const darkScheme = useAppScheme().scheme === 'dark';
+  // Giao diện tối: không bóng đổ — thẻ tách nền bằng viền (Figma dark 19879:66136).
+  const shadow: ViewStyle = lift === 'flat' || darkScheme ? {} : elevation[lift];
   // Giao diện tối: thẻ nổi tách mục danh sách nhận viền vàng nhạt. Thẻ lồng (`flat`/`muted`),
-  // thẻ nhấn `accent` và thẻ `seamless` giữ nguyên — tránh vạch vàng khắp nơi.
+  // thẻ nhấn `accent` giữ nguyên, thẻ `seamless` lấy viền xám — tránh vạch vàng khắp nơi.
   const accentBorder = useDarkAccentBorder().borderColor;
   const borderColor = borderOverride
     ? borderOverride
     : seamless
-    ? skin.bg
+    ? // Giao diện tối (Figma 19879:66136): thẻ liền mạch vẫn có viền 1px `border` #414651.
+      accentBorder && tone === 'surface'
+      ? skin.border
+      : skin.bg
     : tone === 'surface' && lift !== 'flat' && accentBorder
       ? accentBorder
       : skin.border;
@@ -110,7 +116,8 @@ export function Card({
       {highlighted ? (
         <CardHighlightOverlay />
       ) : null}
-      {children}
+      {/* Ảnh trong thẻ (`HighlightZoom`) phóng nhẹ khi thẻ nổi — = hover ảnh của web. */}
+      <CardHighlightContext.Provider value={highlighted}>{children}</CardHighlightContext.Provider>
     </YStack>
   );
 

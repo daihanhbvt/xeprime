@@ -190,3 +190,19 @@
     animation-duration: 2.4s;
   }
 }
+
+/*
+ * Giao diện tối — nút viền "Xem tất cả" (Figma `19879:66181`): nền than #232323, viền xám
+ * `Stroke/gray-medium` #717680, chữ gold chính. Chưa có token tối cho hai màu này.
+ */
+:global([data-theme='dark']) .outline {
+  border-color: #717680;
+  background: #232323;
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .outline:hover {
+  border-color: var(--xp-color-primary);
+  background: #232323;
+  color: var(--xp-color-primary-bright);
+}

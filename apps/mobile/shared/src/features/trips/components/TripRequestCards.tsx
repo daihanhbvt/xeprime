@@ -38,6 +38,7 @@ import { layout } from '@/theme/layout';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
 import { tripRequestSteps, type TripRequestStep } from '../trip-flow';
+import { InfoHint } from '@/components/ui/InfoHint';
 
 /**
  * Các thẻ dùng chung của ba màn chuyến phía khách theo design v2 — bản native của
@@ -60,7 +61,7 @@ const usePillSkin = themed<Record<TripRequestTone, { bg: string; fg: string; bor
     return {
       warning: skin(colors.warningSurface, colors.warning),
       success: skin(colors.successSurface, colors.success),
-      primary: skin(colors.primaryLight, colors.primaryStrong),
+      primary: skin(colors.primaryLight, colors.accentStrongText),
       info: skin(colors.infoSurface, colors.info),
       // Web `.danger`: chữ = đỏ trộn 82% vào màu chữ chính, viền = đỏ trộn 45% vào nền thẻ.
       danger: {
@@ -112,11 +113,20 @@ export function TripRequestPill({
 }
 
 /** Tiêu đề thẻ — `.cardTitle` web (18 Semibold), cùng cỡ cho mọi thẻ để chúng đọc thành một bộ. */
-export function CardTitle({ children, icon }: { children: string; icon?: IoniconName }) {
+export function CardTitle({
+  children,
+  icon,
+  hint,
+}: {
+  children: string;
+  icon?: IoniconName;
+  /** Ghi chú phụ gói vào icon ⓘ cạnh tiêu đề thay vì một dòng chữ riêng — tiết kiệm chỗ dọc. */
+  hint?: string;
+}) {
   const colors = useColors();
-  const title = (
+  const text = (
     <Text
-      f={icon ? 1 : undefined}
+      flexShrink={1}
       col={colors.text}
       fos={fontSize.bodyLg}
       fow={fontWeight.semibold}
@@ -124,6 +134,16 @@ export function CardTitle({ children, icon }: { children: string; icon?: Ionicon
     >
       {children}
     </Text>
+  );
+  const title = hint ? (
+    <XStack f={icon ? 1 : undefined} ai="center" gap={space.xs}>
+      {text}
+      <InfoHint content={hint} label={hint} />
+    </XStack>
+  ) : icon ? (
+    <YStack f={1}>{text}</YStack>
+  ) : (
+    text
   );
   if (!icon) return title;
   // Icon trong vòng tròn 28 nền vàng nhạt, CÓ VIỀN (Figma "Requirement icon") — người dùng chốt 28/10/2026.
@@ -198,7 +218,7 @@ export function TripPageHeading({
                   </Text>
                 ) : null}
                 <Text
-                  col={last ? colors.primaryHover : colors.placeholder}
+                  col={last ? colors.brandText : colors.placeholder}
                   fos={fontSize.body}
                   fow={last ? fontWeight.medium : fontWeight.regular}
                   accessibilityRole={!last && crumb.onPress ? 'link' : undefined}
@@ -262,7 +282,8 @@ export function useTripFlowCrumbs(vehicleId: string) {
  * xanh. Huy hiệu là TRANG TRÍ (web dùng ảnh `request-sent.webp`; app chưa có ảnh đó nên dùng biểu
  * tượng cùng nghĩa) — tiêu đề ngay cạnh đã nói đúng điều nó nói.
  */
-const STATUS_BADGE_STYLE = { width: 48, height: 48 } as const;
+// Gọn (04/11/2026): huy hiệu 32 thay 48, đệm dọc 8 — header + thẻ trạng thái từng chiếm ~30% màn.
+const STATUS_BADGE_STYLE = { width: 32, height: 32 } as const;
 
 export function TripRequestStatusCard({
   tag,
@@ -287,15 +308,16 @@ export function TripRequestStatusCard({
   const confirmed = variant === 'confirmed';
   return (
     <YStack
-      gap={space.md}
-      p={layout.cardPad}
+      gap={space.sm}
+      px={layout.cardPad}
+      py={space.sm}
       br={radius.card}
       bw={1}
       // = web `.statusConfirmed`: viền LIỀN `success-accent`, nền `success-subtle`.
       bc={confirmed ? colors.successAccent : colors.border}
       bg={confirmed ? colors.successSubtle : colors.surface}
     >
-      <XStack ai="center" gap={space.md}>
+      <XStack ai="center" gap={space.sm}>
         {/* Huy hiệu TRANG TRÍ — web `TripRequestStatusCard.image` (mặc định `status-success`). */}
         <Image
           source={image}
@@ -303,7 +325,7 @@ export function TripRequestStatusCard({
           contentFit="contain"
           accessible={false}
         />
-        <YStack f={1} gap={space.sm}>
+        <YStack f={1} gap={2} ai="flex-start">
           <TripRequestPill tone={tone} size="label">
             {tag}
           </TripRequestPill>
@@ -693,7 +715,7 @@ export function TripRequestTripCard({
                     {tCard(ownerVerified ? 'shop' : 'owner')}
                   </Text>
                   <Text
-                    col={ownerVerified ? colors.primaryHover : colors.textMuted}
+                    col={ownerVerified ? colors.shopName : colors.textMuted}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
                     numberOfLines={1}
@@ -715,11 +737,11 @@ export function TripRequestTripCard({
           </XStack>
           {/* Mỗi hàng MỘT giá trị (người dùng chốt 28/10/2026): "Thuê theo ngày" / "1 ngày" — không nối " · ". */}
           <YStack ai="flex-end" maxWidth={120}>
-            <Text col={colors.primaryHover} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
+            <Text col={colors.brandText} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
               {serviceText}
             </Text>
             {durationText ? (
-              <Text col={colors.primaryHover} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
+              <Text col={colors.brandText} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
                 {durationText}
               </Text>
             ) : null}
@@ -963,7 +985,7 @@ export function TripPlanChangeCard({
             // Số tổng đài là dữ liệu — thẻ `tel` bọc nó thành liên kết gọi được.
             tel: (chunks) => (
               <Text
-                col={colors.primaryActive}
+                col={colors.accentText}
                 fow={fontWeight.semibold}
                 accessibilityRole="link"
                 onPress={() => void Linking.openURL(`tel:${SUPPORT_HOTLINE.tel}`)}

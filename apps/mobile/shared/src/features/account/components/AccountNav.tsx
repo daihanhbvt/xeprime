@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Reveal } from '@/components/motion/Reveal';
 import { Fragment, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -88,6 +89,9 @@ export function AccountNav() {
    * hai khối trên cùng một màn không bao giờ nói hai điều khác nhau về một con người.
    */
 
+  // Hàng menu hiện so le lúc mở màn (sau tiêu đề + thẻ hồ sơ, nên bắt đầu từ nhịp 2).
+  let rowIndex = 2;
+
   return (
     <>
       <Card padded={false}>
@@ -115,12 +119,13 @@ export function AccountNav() {
                   </Text>
                 ) : null}
                 {group.items.map((item) => (
-                  <AccountNavRow
-                    key={item.key}
-                    item={item}
-                    active={item.key === activeKey}
-                    badge={badgeCount(item)}
-                  />
+                  <Reveal key={item.key} index={rowIndex++}>
+                    <AccountNavRow
+                      item={item}
+                      active={item.key === activeKey}
+                      badge={badgeCount(item)}
+                    />
+                  </Reveal>
                 ))}
               </Fragment>
             ))}

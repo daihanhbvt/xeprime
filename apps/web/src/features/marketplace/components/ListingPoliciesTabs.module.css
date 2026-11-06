@@ -167,3 +167,8 @@
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body);
 }
+
+/* Giao diện tối: thẻ chỉ có viền `--xp-color-border`, không bóng (Figma dark). */
+:global([data-theme='dark']) .wrap {
+  box-shadow: none;
+}

@@ -87,7 +87,7 @@ export function TripDriverCard({
                 phone: SUPPORT_HOTLINE.display,
                 tel: (chunks) => (
                   <Text
-                    col={colors.primaryActive}
+                    col={colors.accentText}
                     fow={fontWeight.semibold}
                     accessibilityRole="link"
                     onPress={() => void Linking.openURL(`tel:${SUPPORT_HOTLINE.tel}`)}

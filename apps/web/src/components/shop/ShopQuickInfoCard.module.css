@@ -262,6 +262,11 @@
 }
 
 /* Figma Owner Section `20051:59570`: nhãn loại chủ xe `14/22 Regular` `Text/Gray/low`. */
+/* Figma "Text and supporting text": nhãn và tên cách 4. */
+.inlineCard .name {
+  margin-top: var(--xp-space-xs);
+}
+
 .inlineCard .shopTypeLabel {
   font-size: var(--xp-font-size-body);
   line-height: 22px;
@@ -296,8 +301,8 @@
 }
 
 .inlineCard .summary {
-  margin-top: 4px;
-  gap: 16px;
+  margin-top: var(--xp-space-12);
+  gap: var(--xp-space-40);
   font-size: 14px;
   color: var(--xp-color-text, #0e0f12);
 }
@@ -316,9 +321,8 @@
   color: var(--xp-color-text-placeholder);
 }
 
-.inlineCard .rating .star {
-  color: #f79009;
-  font-size: 15px;
+.inlineCard .rating {
+  gap: var(--xp-space-xs);
 }
 
 .ratingCount {
@@ -329,7 +333,7 @@
 .inlineCard .trips {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--xp-space-sm);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-regular);
   color: var(--xp-color-text);

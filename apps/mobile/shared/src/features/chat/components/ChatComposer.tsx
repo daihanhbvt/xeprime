@@ -344,7 +344,7 @@ export function ChatComposer({
           <Ionicons
             name="add-circle-outline"
             size={iconSize.lg}
-            color={disabled ? colors.textDisabled : colors.primaryActive}
+            color={disabled ? colors.textDisabled : colors.accentText}
           />
         </Pressable>
 
@@ -447,7 +447,7 @@ function PickerOption({
       <XStack ai="center" gap={space.md}>
         {/* Ô tròn gold: cùng ngôn ngữ hình với nút gửi, nên hai thứ đọc ra là cùng một bộ. */}
         <YStack style={styles.optionIcon}>
-          <Ionicons name={icon} size={iconSize.md} color={colors.primaryActive} />
+          <Ionicons name={icon} size={iconSize.md} color={colors.accentText} />
         </YStack>
 
         <YStack f={1} gap={1}>

@@ -56,7 +56,7 @@ function Row({
   return (
     <XStack ai="center" gap={space.sm} px={space.md} minHeight={sizing.touchTarget} py={space.xs}>
       <YStack style={styles.dot}>
-        <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} />
+        <Ionicons name={icon} size={iconSize.sm} color={colors.accentText} />
       </YStack>
       <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
         {label}

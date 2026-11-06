@@ -35,6 +35,7 @@ import { Stars } from '@/components/ui/Stars';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { Reveal } from '@/components/motion/Reveal';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -350,6 +351,7 @@ function TripDetailBody({
         <YStack gap={layout.section}>
           {/* Tiêu đề trang + câu phụ + nhãn chặng — `header` của `TripDetailView` web. */}
           {/* Khách đang thuê / đã khép có màn riêng ở trên (`TripActiveView`/`TripClosedView`). */}
+          <Reveal variant="fade">
           <TripPageHeading
             title={
               trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')
@@ -363,6 +365,7 @@ function TripDetailBody({
               />
             }
           />
+          </Reveal>
           {/*
             Thẻ còn đúng việc của nó: vẽ chuyến đang ở chặng nào trên cả hành trình.
 
@@ -372,9 +375,11 @@ function TripDetailBody({
             Chặng đó đã có `StageNotice` ngay dưới nói rõ đang chờ gì.
           */}
           {customerTripTimeline(stage).visible ? (
-            <Card>
-              <TripTimeline stage={stage} />
-            </Card>
+            <Reveal index={1}>
+              <Card>
+                <TripTimeline stage={stage} />
+              </Card>
+            </Reveal>
           ) : null}
 
           <StageNotice stage={stage} rejectReason={trip.rejectReason} />
@@ -398,7 +403,7 @@ function TripDetailBody({
                   {t('detail.activeTitle')}
                 </Text>
                 <XStack ai="center" gap={space.xs} flexWrap="wrap">
-                  <Ionicons name="time-outline" size={iconSize.sm} color={colors.primaryActive} />
+                  <Ionicons name="time-outline" size={iconSize.sm} color={colors.accentText} />
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>
                     {t('detail.activeReturn')}
                   </Text>
@@ -858,7 +863,7 @@ function ShopBlock({
           {highlightShop ? (
             // Dấu xác thực chỉ ở góc avatar (khuôn khối chủ xe trang chủ) — không lặp sau tên.
             <Text
-              col={isShop ? colors.primaryHover : colors.text}
+              col={isShop ? colors.shopName : colors.text}
               fos={fontSize.body}
               fow={fontWeight.semibold}
               numberOfLines={1}
