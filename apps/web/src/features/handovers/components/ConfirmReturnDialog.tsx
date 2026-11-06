@@ -90,15 +90,25 @@ interface CollectChangedDetails {
 }
 
 /**
- * Mốc mặc định = lúc khách BÁO đã trả xe (ADR 0081) nếu có, không thì BÂY GIỜ — hộp mở đúng lúc xe
- * về, ngay từ thẻ. Khác chiều giao (mặc định giờ hẹn): lấy giờ hẹn ở đây làm mọi lượt nhận xe trễ
- * hiện "Đúng giờ" và giấu luôn gợi ý phí quá giờ. Ghi muộn thì người nhận xe sửa ô giờ.
+ * Mốc mặc định (chốt lại 06/11/2026 theo người dùng, thay "bây giờ" của bản đầu):
+ *
+ *  1. lúc khách BÁO đã trả xe (ADR 0081) — giờ có ghi nhận thật;
+ *  2. không thì GIỜ HẸN TRẢ trên đơn, như chiều giao xe — nút "Hiện tại" cạnh nhãn đổi sang bây giờ
+ *     bằng một cú bấm khi xe về trễ;
+ *  3. giờ hẹn còn ở tương lai (nhận xe sớm) ⇒ bây giờ: không ghi được một mốc chưa tới.
+ *
+ * `now` là mốc ĐÓNG BĂNG lúc mở hộp (xem nơi gọi).
  */
-function defaultOccurredAt(customerReturnedAt: string | null | undefined): Dayjs {
-  const now = nowInAppTz();
-  if (!customerReturnedAt) return now;
-  const reported = toAppTz(customerReturnedAt);
-  return reported.isValid() && reported.isBefore(now) ? reported : now;
+function defaultOccurredAt(
+  customerReturnedAt: string | null | undefined,
+  scheduledReturnAt: string | null | undefined,
+  now: Dayjs,
+): Dayjs {
+  const reported = customerReturnedAt ? toAppTz(customerReturnedAt) : null;
+  if (reported?.isValid() && reported.isBefore(now)) return reported;
+  const scheduled = scheduledReturnAt ? toAppTz(scheduledReturnAt) : null;
+  if (scheduled?.isValid() && scheduled.isBefore(now)) return scheduled;
+  return now;
 }
 
 /**
@@ -166,7 +176,12 @@ export function ConfirmReturnDialog({
    * Đóng băng MỘT lần khi mở hộp: tính lại mỗi lượt render thì "bây giờ" nhích từng mili-giây,
    * bản xem trước đổi khoá liên tục và gọi server không dứt.
    */
-  const [defaultAt] = useState(() => defaultOccurredAt(booking.customerReturnedAt));
+  const [openedAt] = useState(nowInAppTz);
+  // Giờ hẹn đến từ ngữ cảnh bàn giao (tải sau) — tính lại khi có, trên CÙNG mốc mở hộp.
+  const defaultAt = useMemo(
+    () => defaultOccurredAt(booking.customerReturnedAt, ctx?.bookingReturnAt, openedAt),
+    [booking.customerReturnedAt, ctx?.bookingReturnAt, openedAt],
+  );
   const occurredAt = pickedAt ?? defaultAt;
   const draftOdometer = ctx?.return?.odometerKm ?? null;
   const odometerKm = odometerInput === undefined ? draftOdometer : odometerInput;
@@ -268,6 +283,16 @@ export function ConfirmReturnDialog({
     setExpandedChoice(true);
   }
 
+  /*
+   * Người dùng tự đổi giờ nhận (ô chọn giờ, nút "Hiện tại" / "Đúng giờ"): giờ mới có thể làm hiện
+   * gợi ý phí quá giờ, và vùng tình trạng tự bung ra dưới tay họ (phản hồi 06/11/2026). Chốt trạng
+   * thái mở/đóng đang thấy — gợi ý vẫn nằm trong vùng, mở là thấy.
+   */
+  function pickTime(next: Dayjs) {
+    setExpandedChoice((choice) => choice ?? expanded);
+    setPickedAt(next);
+  }
+
   function addEmptyRow() {
     const first = optionsFor(null)[0]?.value;
     if (first) addRow({ category: first, amount: null });
@@ -285,6 +310,13 @@ export function ConfirmReturnDialog({
   const scheduled = ctx ? toAppTz(ctx.bookingReturnAt) : null;
   const lateMinutes = occurredAt && scheduled ? occurredAt.diff(scheduled, 'minute') : 0;
   const late = lateMinutes > 0;
+  // Lối về giờ hẹn — chỉ khi giờ hẹn đã qua (không ghi được mốc tương lai) VÀ ô đang lệch nó.
+  const backToScheduled =
+    scheduled?.isValid() &&
+    scheduled.isBefore(openedAt) &&
+    !occurredAt.isSame(scheduled, 'minute')
+      ? scheduled
+      : null;
   // Viên đọc lướt: một đơn vị như câu "Quá giờ trả xe 7 ngày" của thẻ. Câu dưới ô giờ thì chính xác
   // tới phút khi còn dưới một ngày — đó là thứ tính phí quá giờ.
   const timeliness = late ? t('late', { duration: fmt.roughDuration(lateMinutes) }) : t('onTime');
@@ -470,13 +502,40 @@ export function ConfirmReturnDialog({
 
           {/* Giờ nhận thực tế · Odo. */}
           <div className={styles.fieldRow}>
-            <label className={styles.field}>
-              <span className={styles.label}>{t('timeLabel')}</span>
+            <div className={styles.field}>
+              <span className={styles.labelRow}>
+                <label htmlFor={`${sectionId}-time`} className={styles.label}>
+                  {t('timeLabel')}
+                </label>
+                {/* Bật qua lại: đang ở giờ hẹn ⇒ "Hiện tại"; đã khác giờ hẹn ⇒ "Đúng giờ" về lại. */}
+                {backToScheduled ? (
+                  <button
+                    type="button"
+                    className={styles.nowLink}
+                    aria-label={t('useScheduledAria', {
+                      time: fmt.shortDateTime(backToScheduled.toISOString()),
+                    })}
+                    onClick={() => pickTime(backToScheduled)}
+                  >
+                    {t('useScheduled')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.nowLink}
+                    aria-label={t('useNowAria')}
+                    onClick={() => pickTime(nowInAppTz())}
+                  >
+                    {t('useNow')}
+                  </button>
+                )}
+              </span>
               <DatePicker
+                id={`${sectionId}-time`}
                 showTime={{ format: 'HH:mm' }}
                 format={datePattern.dateTime}
                 value={occurredAt}
-                onChange={(next) => next && setPickedAt(next)}
+                onChange={(next) => next && pickTime(next)}
                 allowClear={false}
                 className={styles.control}
                 suffixIcon={<LineIcon name="calendar-2" />}
@@ -486,7 +545,7 @@ export function ConfirmReturnDialog({
               <span className={cx(styles.timeHint, late ? styles.hintDanger : styles.hintSuccess)}>
                 {late ? t('lateHint', { duration: lateDetail }) : t('onTime')}
               </span>
-            </label>
+            </div>
             <label className={styles.field}>
               <span className={styles.label}>{t('odoLabel')}</span>
               <InputNumber<number>

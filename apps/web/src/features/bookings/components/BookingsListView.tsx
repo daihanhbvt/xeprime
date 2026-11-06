@@ -33,6 +33,7 @@ import {
   type RequestStage,
 } from '@/constants/rental-stages';
 import { bookingHistoryPath, ROUTES } from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { BookingRequestCard } from '@/features/booking-requests/components/BookingRequestCard';
@@ -61,6 +62,7 @@ import type { BookingListItem, BookingSort } from '@/features/bookings/types';
 import { CustomerDetailDialog } from '@/features/customers/components/CustomerDetailDialog';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { VehicleDetailDialog } from '@/features/vehicles/components/VehicleDetailDialog';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -207,6 +209,9 @@ export function BookingsListView() {
   const { message } = App.useApp();
   const { has } = usePermissions();
   const { isManage: isManageWorkspace } = useWorkspace();
+  const { data: user } = useCurrentUser();
+  // Tuyến hoa hồng không lập đơn tay (`useCanCreateBooking`) — chuyến chỉ đến từ chợ.
+  const marketOnly = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
   const { filters, setFilters } = useRentalsFilters();
   // Kanban / List — `null` trong lượt hydrate đầu (chưa đọc được lựa chọn đã nhớ của trình duyệt).
   const { view: mode, boardAvailable } = useRentalsView(filters.view);
@@ -657,6 +662,17 @@ export function BookingsListView() {
       {tBoard('create')}
     </Button>
   ) : null;
+  /*
+   * Màn trống: gian hàng mời lập đơn tay. Chủ xe tuyến hoa hồng không lập đơn tay — chuyến chỉ đến
+   * từ chợ — nên lối có ích là xem lại xe (đã lên chợ chưa, giá, lịch).
+   */
+  const emptyAction =
+    createButton ??
+    (marketOnly && canViewVehicle ? (
+      <Button type="primary" onClick={() => router.push(ROUTES.MANAGE.VEHICLES)}>
+        {tBoard('viewVehicles')}
+      </Button>
+    ) : null);
 
   return (
     <div className={styles.page}>
@@ -736,7 +752,8 @@ export function BookingsListView() {
                 onOpenGroup={selectView}
                 filtered={filtered}
                 onClearFilters={clearFilters}
-                emptyAction={createButton}
+                emptyAction={emptyAction}
+                marketOnly={marketOnly}
               />
             ) : (
               <StageList
@@ -933,6 +950,7 @@ function AllGroups({
   filtered,
   onClearFilters,
   emptyAction,
+  marketOnly,
 }: {
   groups: readonly StageData[];
   countOf: (stage: RentalStage) => number | undefined;
@@ -941,6 +959,8 @@ function AllGroups({
   filtered: boolean;
   onClearFilters: () => void;
   emptyAction?: React.ReactNode;
+  /** Chuyến chỉ đến từ chợ (tuyến hoa hồng — không lập đơn tay): câu trống không nói "đơn bạn tạo". */
+  marketOnly: boolean;
 }) {
   const t = useTranslations('Bookings');
   const tBoard = useTranslations('Bookings.board');
@@ -972,8 +992,8 @@ function AllGroups({
     ) : (
       <EmptyState
         variant="empty"
-        title={tBoard('emptyAllTitle')}
-        description={tBoard('emptyAllBody')}
+        title={marketOnly ? tBoard('emptyAllMarketTitle') : tBoard('emptyAllTitle')}
+        description={marketOnly ? tBoard('emptyAllMarketBody') : tBoard('emptyAllBody')}
         action={emptyAction ?? undefined}
       />
     );

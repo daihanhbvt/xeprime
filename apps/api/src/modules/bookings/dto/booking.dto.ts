@@ -291,6 +291,19 @@ export class BookingListItemDto {
   /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
   @ApiPropertyOptional({ type: String, nullable: true })
   payAtPickupAmount!: string | null;
+  @ApiProperty({
+    description:
+      'Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví ' +
+      'khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / ' +
+      'chưa thu giữ chỗ (VND string)',
+  })
+  ownerShareOnlineAmount!: string;
+  @ApiProperty({
+    description:
+      'Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, ' +
+      'sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string)',
+  })
+  counterDueAmount!: string;
 }
 
 /**

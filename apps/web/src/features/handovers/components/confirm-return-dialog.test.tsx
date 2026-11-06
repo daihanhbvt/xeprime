@@ -175,13 +175,67 @@ describe('ConfirmReturnDialog', () => {
     expect(screen.getByTestId('photo-grid').textContent).toBe(HANDOVER_TYPE.RETURN);
   });
 
+  it('khách chưa báo trả ⇒ giờ nhận mặc định = GIỜ HẸN; "Hiện tại" ↔ "Đúng giờ" bật qua lại', async () => {
+    state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' }); // 09:00 giờ VN
+    const { onClose } = renderDialog();
+    expect(screen.getAllByText('Đúng giờ').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Đặt về giờ hẹn trả/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt về giờ hiện tại' }));
+    // Bây giờ đã qua 01/11 ⇒ trễ, câu đỏ dưới ô giờ; nút đổi thành "Đúng giờ" để về lại.
+    expect(screen.getByText(/so với giờ hẹn$/)).toBeTruthy();
+    const back = screen.getByRole('button', { name: /Đặt về giờ hẹn trả/ });
+    expect(back.textContent).toBe('Đúng giờ');
+
+    fireEvent.click(back);
+    expect(screen.queryByText(/so với giờ hẹn$/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Đặt về giờ hiện tại' })).toBeTruthy();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody().occurredAt).toBe('2026-11-01T02:00:00.000Z');
+  });
+
+  it('bấm "Hiện tại" làm hiện gợi ý quá giờ ⇒ vùng tình trạng KHÔNG tự bung ra', () => {
+    state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' });
+    renderDialog();
+    const header = () => screen.getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ });
+    expect(header().getAttribute('aria-expanded')).toBe('false');
+
+    // Giờ mới trễ ⇒ server trả gợi ý phí quá giờ ở lượt xem trước kế tiếp.
+    state.preview = preview({
+      overtime: {
+        available: true,
+        lateMinutes: 120,
+        chargedHours: 2,
+        feePerHour: '100000',
+        amount: '200000.00',
+        formula: null,
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt về giờ hiện tại' }));
+    expect(header().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('khách chưa báo trả, bấm xác nhận ngay ⇒ nộp đúng giờ hẹn', async () => {
+    state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' });
+    const { onClose } = renderDialog();
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody().occurredAt).toBe('2026-11-01T02:00:00.000Z');
+  });
+
   it('giờ nhận mặc định = lúc khách báo đã trả xe; sau giờ hẹn ⇒ viên "Trễ …" thay "Đúng giờ"', async () => {
     state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' }); // 09:00 giờ VN
     const { onClose } = renderDialog({ customerReturnedAt: '2026-11-01T03:30:00.000Z' }); // 10:30
     // Viên đọc lướt (một đơn vị); câu dưới ô giờ chính xác tới phút.
     expect(screen.getByText('Trễ 1 giờ')).toBeTruthy();
     expect(screen.getByText('Trễ 1 giờ 30 phút so với giờ hẹn')).toBeTruthy();
-    expect(screen.queryByText('Đúng giờ')).toBeNull();
+    // Viên / câu trạng thái không còn "Đúng giờ" — chữ đó giờ chỉ là NÚT về lại giờ hẹn.
+    expect(
+      screen.queryAllByText('Đúng giờ').filter((el) => el.tagName !== 'BUTTON'),
+    ).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /Đặt về giờ hẹn trả/ })).toBeTruthy();
 
     fireEvent.click(confirmButton());
     await waitFor(() => expect(onClose).toHaveBeenCalled());

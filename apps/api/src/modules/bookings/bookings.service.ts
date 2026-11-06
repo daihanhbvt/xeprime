@@ -386,6 +386,12 @@ export class BookingsService {
         otherCollected: money.otherCollected.toString(),
         collectedAmount: money.collectedAmount.toString(),
         debtAmount: money.debtAmount.toString(),
+        // Số khách còn đưa TẬN TAY gian hàng — cùng phép với dòng "Thu tiền thuê" của Chuẩn bị
+        // bàn giao và hộp nhận lại xe (`counterDueAmount`).
+        counterDueAmount: counterDueAmount(
+          money.debtAmount,
+          new Prisma.Decimal(item.ownerShareOnlineAmount),
+        ).toString(),
       };
     });
   }
@@ -1760,6 +1766,18 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
     payAtPickupAmount:
       (b.priceSnapshot as unknown as BookingPriceSnapshot | null)?.fees?.payAtPickupAmount ?? null,
+    ownerShareOnlineAmount: ownerShareHeldOnline({
+      holdPaid: b.hold?.paidAmount != null,
+      priceSnapshot: b.priceSnapshot as unknown as BookingPriceSnapshot | null,
+    }).toFixed(0),
+    // Mức nền — `withMoney` tính lại trên công nợ đầy đủ (phụ phí, phiếu tay, cọc).
+    counterDueAmount: counterDueAmount(
+      bookingDebt(b.totalAmount, b.paidAmount),
+      ownerShareHeldOnline({
+        holdPaid: b.hold?.paidAmount != null,
+        priceSnapshot: b.priceSnapshot as unknown as BookingPriceSnapshot | null,
+      }),
+    ).toFixed(0),
   };
 }
 
@@ -1782,7 +1800,9 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     ownerCommissionAmount: internalSnapshot?.fees?.ownerCommissionAmount ?? null,
     ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,
     ownerNetAmount: internalSnapshot?.fees?.ownerNetAmount ?? null,
-    ownerPayout: internalSnapshot?.fees ? ownerPayoutOf(internalSnapshot.fees) : null,
+    ownerPayout: internalSnapshot?.fees
+      ? ownerPayoutOf(internalSnapshot.fees, undefined, { pickupAt: b.pickupAt, returnAt: b.returnAt })
+      : null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
     pickupLocation: addressViewOf({

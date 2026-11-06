@@ -116,6 +116,8 @@ const BOOKING: BookingDetail = {
   customerTotalAmount: '477360',
   holdPaidAmount: '102960',
   payAtPickupAmount: '374400',
+  ownerShareOnlineAmount: '93600',
+  counterDueAmount: '374400',
   ownerCommissionAmount: null,
   ownerTaxAmount: null,
   ownerNetAmount: null,
@@ -162,21 +164,36 @@ beforeEach(() => {
 });
 
 describe('Thẻ "Thanh toán"', () => {
-  it('giữ đủ dòng tiền giữ chỗ qua XePrime và phần khách trả khi nhận xe', () => {
+  /*
+   * 06/11/2026: thẻ đọc như MỘT phép trừ — Tổng tiền chuyến − phần khách trả trước qua XePrime (`D`,
+   * không phải cả khoản giữ chỗ) − gian hàng đã thu = "Còn phải thu của khách", ô nổi bật.
+   */
+  it('trừ đúng phần tiền thuê khách đã trả trước (D), và số cuối nổi bật là số còn phải thu', () => {
     renderDetail();
     const card = screen.getByRole('region', { name: 'Thanh toán' });
-    expect(within(card).getByText('Giữ chỗ (XePrime đã thu)')).toBeTruthy();
-    expect(card.textContent).toContain('102.960');
-    expect(within(card).getByText('Khách trả khi nhận xe')).toBeTruthy();
-    expect(card.textContent).toContain('374.400');
-    expect(within(card).getByText('Khuyến mãi')).toBeTruthy();
-    expect(within(card).getByText('Còn lại (phải thu)')).toBeTruthy();
+    expect(within(card).getByText('Tổng tiền chuyến')).toBeTruthy();
+    expect(within(card).getByText('Khách trả trước qua XePrime')).toBeTruthy();
+    expect(card.textContent).toContain('−93.600');
+    // Cả khoản giữ chỗ (gồm phí đặt xe + bảo hiểm) không còn là một dòng trừ.
+    expect(within(card).queryByText('Giữ chỗ (XePrime đã thu)')).toBeNull();
+    const due = within(card).getByRole('status', { name: /Còn phải thu của khách/ });
+    expect(due.textContent).toContain('374.400');
+    expect(due.textContent).toContain('Thu trực tiếp khi giao xe cho khách.');
   });
 
-  it('đơn lập tay không có giữ chỗ ⇒ không có hai dòng giữ chỗ', () => {
-    renderDetail({ ...BOOKING, holdPaidAmount: null, payAtPickupAmount: null });
+  it('đơn lập tay (không trả trước) ⇒ không có dòng trả trước; thu đủ ⇒ ô nói đã thanh toán đủ', () => {
+    renderDetail({
+      ...BOOKING,
+      holdPaidAmount: null,
+      payAtPickupAmount: null,
+      ownerShareOnlineAmount: '0',
+      counterDueAmount: '0',
+    });
     const card = screen.getByRole('region', { name: 'Thanh toán' });
-    expect(within(card).queryByText('Giữ chỗ (XePrime đã thu)')).toBeNull();
+    expect(within(card).queryByText('Khách trả trước qua XePrime')).toBeNull();
+    expect(
+      within(card).getByRole('status', { name: /Còn phải thu của khách/ }).textContent,
+    ).toContain('Khách đã thanh toán đủ tiền thuê.');
   });
 });
 

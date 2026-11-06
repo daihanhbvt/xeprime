@@ -44,8 +44,9 @@ vi.mock('@/hooks/use-permissions', () => ({
     isLoading: false,
   }),
 }));
+const me = vi.hoisted(() => ({ billingMode: 'package' as string }));
 vi.mock('@/hooks/use-current-user', () => ({
-  useCurrentUser: () => ({ data: { tenant: { billingMode: BILLING_MODE.PACKAGE } } }),
+  useCurrentUser: () => ({ data: { tenant: { billingMode: me.billingMode } } }),
 }));
 vi.mock(
   '@/features/branches/hooks/use-branch-filter',
@@ -193,6 +194,7 @@ function column(name: string): HTMLElement {
 beforeEach(() => {
   window.localStorage.clear();
   media.mobile = false;
+  me.billingMode = BILLING_MODE.PACKAGE;
   permissions.granted = new Set([
     PERMISSION.BOOKING_REQUEST_VIEW,
     PERMISSION.BOOKING_REQUEST_APPROVE,
@@ -222,6 +224,25 @@ describe('Dạng xem nào được hiện', () => {
       screen.getByRole('button', { name: 'Xem dạng bảng Kanban' }).getAttribute('aria-pressed'),
     ).toBe('true');
     expect(screen.getByText('Chỉ kéo được sang bước tiếp theo')).toBeTruthy();
+  });
+
+  it('chủ xe tuyến hoa hồng lần đầu mở ⇒ List (vài chiếc xe), vẫn có nút sang Kanban', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    renderPage();
+    expect(screen.queryByRole('region', { name: 'Bảng đơn thuê theo chặng' })).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Lọc đơn thuê theo trạng thái' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Xem dạng danh sách' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Xem dạng bảng Kanban' }));
+    expect(window.localStorage.getItem('xp.rentals.view')).toBe('board');
+  });
+
+  it('chủ xe tuyến hoa hồng đã chọn Kanban ⇒ lựa chọn đã nhớ thắng mặc định của tuyến', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    window.localStorage.setItem('xp.rentals.view', 'board');
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Bảng đơn thuê theo chặng' })).toBeTruthy();
   });
 
   it('`?view=list` thắng lựa chọn đã nhớ; lựa chọn đã nhớ thắng mặc định', () => {

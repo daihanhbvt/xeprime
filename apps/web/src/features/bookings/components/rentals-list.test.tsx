@@ -9,7 +9,7 @@ import {
   PERMISSION,
   SERVICE_TYPE,
 } from '@xeprime/types';
-import { bookingPath } from '@/constants/routes';
+import { ROUTES, bookingPath } from '@/constants/routes';
 import { renderWithIntl } from '@/i18n/test-utils';
 import type { BookingRequestItem } from '@/features/booking-requests/types';
 import type { BookingFilters, BookingListItem } from '../types';
@@ -315,6 +315,23 @@ describe('Ô "Tất cả" — bốn truy vấn nhỏ, đúng thứ tự một ch
     me.billingMode = BILLING_MODE.COMMISSION;
     renderPage();
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
+  });
+
+  it('chủ xe tuyến hoa hồng, chưa có chuyến ⇒ câu của chuyến từ chợ + lối "Xem xe của tôi"', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    renderPage();
+    expect(screen.getByText('Chưa có chuyến thuê nào')).toBeTruthy();
+    expect(screen.queryByText('Gian hàng chưa có đơn thuê nào')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem xe của tôi' }));
+    expect(nav.push).toHaveBeenCalledWith(ROUTES.MANAGE.VEHICLES);
+  });
+
+  it('thiếu quyền xem xe ⇒ không mời sang một màn sẽ trả 403', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    permissions.granted.delete(PERMISSION.VEHICLE_VIEW);
+    renderPage();
+    expect(screen.getByText('Chưa có chuyến thuê nào')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xem xe của tôi' })).toBeNull();
   });
 });
 

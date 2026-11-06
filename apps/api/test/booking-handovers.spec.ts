@@ -978,7 +978,7 @@ describe('Nhận lại xe kèm phụ phí và thu tiền', () => {
       expect(collected).toHaveLength(1);
       expect(collected[0]?.amount.toFixed(0)).toBe('800000');
       expect(collected[0]?.kind).toBe(PAYMENT_KIND.RENTAL);
-      expect(collected[0]?.paidAt.toISOString()).toBe(occurredAt.toISOString());
+      expect(collected[0]?.paidAt?.toISOString()).toBe(occurredAt.toISOString());
 
       const detail = await bookings.getOne(tenantId, booking.id);
       expect(detail.debtAmount).toBe('0');

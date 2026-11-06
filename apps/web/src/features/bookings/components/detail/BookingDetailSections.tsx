@@ -107,7 +107,15 @@ export function BookingStepper() {
           {
             key: 'awaitingPickup',
             label: t('stage.awaitingPickup'),
-            hint: booking.holdPaidAt ? at('holdPaid', booking.holdPaidAt) : null,
+            // Kèm SỐ TIỀN đã về (06/11/2026) — số khách thực chuyển cho XePrime, đọc ở thẻ Thanh toán.
+            hint: booking.holdPaidAt
+              ? booking.holdPaidAmount
+                ? t('stepAt.holdPaidAmount', {
+                    amount: fmt.money(booking.holdPaidAmount),
+                    time: fmt.shortDateTime(booking.holdPaidAt),
+                  })
+                : at('holdPaid', booking.holdPaidAt)
+              : null,
           },
           {
             key: 'renting',

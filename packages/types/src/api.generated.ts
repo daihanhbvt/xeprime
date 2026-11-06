@@ -12939,6 +12939,10 @@ export interface components {
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
+            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
+            ownerShareOnlineAmount: string;
+            /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
+            counterDueAmount: string;
             driverIncident?: components["schemas"]["BookingDriverIncidentDto"] | null;
             tenantCustomerId?: string | null;
             /** @enum {string|null} */
@@ -13277,6 +13281,10 @@ export interface components {
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
+            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
+            ownerShareOnlineAmount: string;
+            /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
+            counterDueAmount: string;
         };
         BookingPageDto: {
             data: components["schemas"]["BookingListItemDto"][];
@@ -17378,7 +17386,7 @@ export interface components {
         OwnerPayoutDto: {
             /** @description Doanh thu cho thuê xe `R` — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt xe, bảo hiểm (VND string) */
             rentAmount: string;
-            /** @description Số ngày thuê tính phí */
+            /** @description Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận–trả của đơn; `0` = không còn nguồn nào để biết ⇒ hiện "Tiền thuê" không kèm số ngày */
             rentalDays: number;
             /** @description Đơn giá thuê / ngày — CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến 1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện "Tiền thuê N ngày" */
             unitAmount?: string | null;

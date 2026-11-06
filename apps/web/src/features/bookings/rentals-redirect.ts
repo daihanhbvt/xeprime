@@ -1,4 +1,9 @@
-import { BOOKING_HISTORY_TAB, BOOKING_STATUS, type BookingHistoryTab } from '@xeprime/types';
+import {
+  BOOKING_HISTORY_TAB,
+  BOOKING_STATUS,
+  CUSTOMER_TRIP_FILTER,
+  type BookingHistoryTab,
+} from '@xeprime/types';
 import {
   LEGACY_ENDED_TAB,
   LEGACY_REQUEST_TAB_STAGE,
@@ -72,6 +77,21 @@ export function legacyRequestsTarget(
   if (endedTab) return historyTarget(paths, endedTab, params);
   const stage = (status && LEGACY_REQUEST_TAB_STAGE[status]) || RENTAL_STAGE.NEEDS_ACTION;
   return stageTarget(paths, stage, params);
+}
+
+/**
+ * "Chuyến cho thuê" cũ của chủ xe tuyến hoa hồng (`/trips`, 07/10 → 06/11/2026): tab "Lịch sử chuyến"
+ * (`?filter=history`) → màn "Đơn đã kết thúc"; tab hiện tại → màn "Đơn thuê xe". Từ khoá đi theo.
+ */
+export function legacyOwnerTripsTarget(
+  searchParams: SearchParamsRecord,
+  paths: RentalsBasePaths,
+): string {
+  const params = carried(searchParams);
+  if (first(searchParams.filter) === CUSTOMER_TRIP_FILTER.HISTORY) {
+    return historyTarget(paths, BOOKING_HISTORY_TAB.ALL, params);
+  }
+  return withQuery(paths.bookings, params);
 }
 
 /**

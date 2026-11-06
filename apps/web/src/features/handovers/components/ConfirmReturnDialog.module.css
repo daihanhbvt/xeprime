@@ -159,6 +159,34 @@
   line-height: var(--xp-line-height-body);
 }
 
+/* Nhãn trái · lối tắt "Hiện tại" phải — cùng hàng, không đẩy ô giờ xuống. */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.nowLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  cursor: pointer;
+}
+
+.nowLink:hover {
+  text-decoration: underline;
+}
+
+.nowLink:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
 /*
  * Nhân đôi class: AntD tiêm `.ant-input-number { width: 90px }` LÚC CHẠY, sau sheet này — hoà
  * specificity thì AntD thắng (bẫy D19, xem `components/form/field.module.css`).

@@ -34,7 +34,7 @@ export interface NavLeafAccess {
  * hiện ở desktop mà biến mất ở mobile.
  *
  * BA trục độc lập kiểm NỐI TIẾP nhau: `permission` trả lời "anh là ai" (ADR 0027 điều 2),
- * `ownerOnly`/`memberOnly` trả lời "anh có phải CHỦ gian hàng này không" (ADR 0038 điều 3),
+ * `ownerOnly` trả lời "anh có phải CHỦ gian hàng này không" (ADR 0038 điều 3),
  * `feature` trả lời "gian hàng này có gì". Thiếu một trục trong phép dồn huy hiệu thì một khối đóng
  * sẽ đếm việc cho mục người dùng KHÔNG thấy — một con số chỉ vào hư không.
  *
@@ -56,7 +56,6 @@ export function useNavLeafAccess(): NavLeafAccess {
   const canSeeLeaf = (leaf: NavLeaf): boolean =>
     isNavPermissionGranted(leaf.permission, has) &&
     (leaf.ownerOnly !== true || isShopOwner) &&
-    (leaf.memberOnly !== true || !isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 

@@ -62,8 +62,6 @@ export type NavLabelKey = Parameters<ReturnType<typeof useTranslations<'Navigati
  * Nguồn số nằm ở `useNavBadges`; ở đây chỉ khai báo mục nào ĐƯỢC PHÉP mang huy hiệu.
  */
 export const NAV_BADGE = {
-  /** Yêu cầu đặt xe đang chờ gian hàng duyệt — đỏ khi có yêu cầu sắp hết hạn trả lời. */
-  BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
   /**
    * Mục "Đơn thuê xe" gộp (05/11/2026): yêu cầu CHỜ DUYỆT + lượt giao/trả ĐẾN HẠN (hẹn tới hết hôm
    * nay, gồm quá giờ) — hai việc của cùng một ca trực, cộng lại vì giờ chúng ở cùng một mục. Đỏ khi
@@ -73,13 +71,6 @@ export const NAV_BADGE = {
   RENTALS_WORK: 'rentalsWork',
   /** Tin nhắn chưa đọc. */
   CHAT_UNREAD: 'chatUnread',
-  /**
-   * Lượt giao + trả xe ĐẾN HẠN: hẹn tới hết hôm nay, gồm cả lượt đã quá giờ — đỏ khi có lượt quá
-   * giờ (04/11/2026, thay "chờ giao + đang thuê" của 02/11: một chuyến dài hạn đang chạy hay một
-   * lượt giao tuần sau không phải việc hôm nay). Gian hàng gắn ở "Quản lý đơn thuê xe"; chủ xe
-   * tuyến hoa hồng không có bảng đơn nên gắn ở "Lịch xe".
-   */
-  HANDOVERS_DUE: 'handoversDue',
   /**
    * Xe có việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu
    * KM trả xe — "Danh sách xe" (03/11/2026, `VEHICLE_ALERT_NEEDS_ACTION_KINDS`).
@@ -142,14 +133,6 @@ export interface NavLeaf {
    * KHÔNG phải nới guard cho khớp menu.
    */
   readonly ownerOnly?: true;
-  /**
-   * Nghịch đảo của `ownerOnly` trên CÙNG trục sở hữu: chỉ người KHÔNG phải chủ gian hàng thấy.
-   *
-   * Dùng khi chủ và thành viên làm cùng một việc ở hai màn khác nhau — Owner Lite: chủ xe đọc yêu
-   * cầu + đơn ở "Chuyến cho thuê" (`/trips` chỉ dựng phía chủ xe cho CHỦ), thành viên dùng hộp thư +
-   * bảng đơn. Luật chuyển trang tương ứng ở `partnerPageRedirect`.
-   */
-  readonly memberOnly?: true;
   /**
    * Chỉ sáng khi đường dẫn KHỚP TUYỆT ĐỐI, không nhận route con.
    *
@@ -758,33 +741,20 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: PARTNER_NAV_ICON.calendar,
-        badge: NAV_BADGE.HANDOVERS_DUE,
       },
       {
         /*
-         * MỘT mục cho cả yêu cầu lẫn đơn (07/10/2026). Chủ xe cá nhân có một tới ba xe: tách hai bảng
-         * của gian hàng là bắt họ mở hai nơi cho vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này.
+         * CÙNG màn "Đơn thuê xe" với gian hàng, cho cả chủ lẫn thành viên (06/11/2026, thay danh sách
+         * "Chuyến cho thuê" riêng của chủ xe). Màn gộp yêu cầu + đơn nên lý do tách màn cũ — chủ xe vài
+         * chiếc phải mở hai nơi — không còn; phần của gói (lập đơn tay, sổ khách, thu tiền) tự vắng.
+         * Huy hiệu như gian hàng: chờ duyệt + giao/trả đến hạn, nên Lịch xe không mang số nữa.
          */
-        key: 'trips',
-        labelKey: 'manage.ownerTrips',
-        href: ROUTES.MANAGE.TRIPS,
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: PARTNER_NAV_ICON.bookings,
-        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
-        ownerOnly: true,
-      },
-      /*
-       * THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói, ADR 0038 điều 5) không có danh sách phía
-       * chủ xe — họ dùng màn "Đơn thuê xe" gộp để còn bàn giao những chuyến đang chạy.
-       */
-      {
         key: 'bookings',
         labelKey: 'manage.rentals',
         href: ROUTES.MANAGE.BOOKINGS,
         permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
         icon: PARTNER_NAV_ICON.bookings,
-        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
-        memberOnly: true,
+        badge: NAV_BADGE.RENTALS_WORK,
       },
     ],
   },
@@ -1014,15 +984,16 @@ const OWNER_LITE_MOBILE_TABS: readonly MobileTab[] = [
     icon: CarOutlined,
   },
   {
-    key: 'trips',
-    labelKey: 'manage.ownerTripsShort',
-    href: ROUTES.MANAGE.TRIPS,
-    permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: FileTextOutlined,
-    badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+    // Cùng ô "Đơn thuê" với gian hàng (06/11/2026) — một màn, một nhãn, một biểu tượng.
+    key: 'bookings',
+    labelKey: 'manage.bookingsShort',
+    href: ROUTES.MANAGE.BOOKINGS,
+    permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
+    icon: FileDoneOutlined,
+    badge: NAV_BADGE.RENTALS_WORK,
   },
   {
-    // Yêu cầu + đơn đã gộp vào "Chuyến" — ô thứ tư nhường cho lịch xe, việc hằng ngày kế tiếp.
+    // Yêu cầu + đơn đã gộp vào "Đơn thuê" — ô thứ tư nhường cho lịch xe, việc hằng ngày kế tiếp.
     key: 'calendar',
     labelKey: 'manage.calendarShort',
     href: ROUTES.MANAGE.CALENDAR,

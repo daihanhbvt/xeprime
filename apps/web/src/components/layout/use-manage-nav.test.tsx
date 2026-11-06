@@ -82,13 +82,11 @@ vi.mock('@/hooks/use-feature', () => ({
 vi.mock('./use-nav-badges', () => ({
   useNavBadges: () => ({
     counts: {
-      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsPending,
-      // "Đơn thuê xe" gộp (05/11/2026) mang số "cần xử lý" của cả chuyến — cùng nguồn trong test.
+      // "Đơn thuê xe" gộp (05/11/2026) mang số "cần xử lý" của cả chuyến.
       [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsPending,
       [NAV_BADGE.CHAT_UNREAD]: badges.chatUnread,
     },
     urgent: {
-      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsUrgent,
       [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsUrgent,
     },
   }),
@@ -864,7 +862,7 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
     expect(itemLabels()).toEqual([
       'Tổng quan',
       'Lịch thuê xe',
-      'Chuyến cho thuê',
+      'Đơn thuê xe',
       'Danh sách xe',
       // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
       'Quản lý tài xế',
@@ -878,21 +876,20 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
   });
 
   /*
-   * Chủ xe cá nhân (1–3 xe) đọc yêu cầu + đơn gộp ở MỘT danh sách thẻ. Thành viên của gian hàng
-   * hoa hồng (nhân viên của shop vừa hết gói) không có danh sách đó — `/trips` chỉ dựng phía chủ
-   * xe cho CHỦ — nên giữ hộp thư + bảng đơn để còn bàn giao chuyến đang chạy.
+   * 06/11/2026: chủ xe tuyến hoa hồng dùng CHUNG màn "Đơn thuê xe" với gian hàng — "Chuyến cho
+   * thuê" riêng đã gỡ. Đúng MỘT mục, không phải hai mục cùng tên.
    */
-  it('chủ xe tuyến hoa hồng: "Chuyến cho thuê" thay cho hộp thư + bảng đơn', () => {
+  it('chủ xe tuyến hoa hồng: đúng một mục "Đơn thuê xe", không còn "Chuyến cho thuê"', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
     renderMenu();
 
     const labels = itemLabels();
-    expect(labels).toContain('Chuyến cho thuê');
-    expect(labels).not.toContain('Đơn thuê xe');
+    expect(labels.filter((label) => label === 'Đơn thuê xe')).toHaveLength(1);
+    expect(labels).not.toContain('Chuyến cho thuê');
   });
 
-  it('thành viên gian hàng tuyến hoa hồng: giữ màn "Đơn thuê xe", không có "Chuyến cho thuê"', () => {
+  it('thành viên gian hàng tuyến hoa hồng: cùng mục "Đơn thuê xe" với chủ', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.COMMISSION };
     renderMenu();

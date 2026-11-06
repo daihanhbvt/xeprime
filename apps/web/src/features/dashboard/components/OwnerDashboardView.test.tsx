@@ -1,7 +1,18 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CUSTOMER_TRIP_FILTER, PERMISSION, TENANT_ROLE } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import {
+  BOOKING_HISTORY_TAB,
+  BOOKING_LIST_PRESET,
+  PERMISSION,
+  TENANT_ROLE,
+} from '@xeprime/types';
+import { RENTAL_STAGE } from '@/constants/rental-stages';
+import {
+  ROUTES,
+  bookingHistoryPath,
+  bookingsGroupPath,
+  rentalStagePath,
+} from '@/constants/routes';
 import type { PartnerOverview } from '../types';
 import { OwnerDashboardView } from './OwnerDashboardView';
 
@@ -10,8 +21,8 @@ import { OwnerDashboardView } from './OwnerDashboardView';
  *
  *  1. Trước 09/10/2026 trang chủ của họ chỉ là danh sách xe — trùng mục "Xe của tôi". Nay nó trả
  *     lời bốn câu: ai đang hỏi thuê, hôm nay giao/nhận gì, tiền ở đâu, xe có lên chợ không.
- *  2. Chủ xe đọc yêu cầu + đơn gộp ở "Chuyến cho thuê" — mọi ô dẫn THẲNG vào đó, không đi vòng
- *     qua hộp thư rồi bị chuyển hướng.
+ *  2. Yêu cầu + đơn ở màn "Đơn thuê xe" dùng chung với gian hàng (06/11/2026) — mỗi ô dẫn THẲNG
+ *     vào đúng nhóm, không đi vòng qua một URL cũ rồi bị chuyển hướng.
  *  3. Không có báo cáo theo kỳ (ADR 0027 điều 1) — không biểu đồ, không ô chi nhánh.
  *  4. Ví chỉ của CHỦ: thành viên không thấy panel tiền.
  */
@@ -127,17 +138,17 @@ describe('Tổng quan chủ xe cá nhân', () => {
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
-  it('CHỦ xe: mọi ô dẫn thẳng vào "Chuyến cho thuê", chuyến hoàn thành vào tab lịch sử', async () => {
+  it('CHỦ xe: mỗi ô dẫn vào đúng nhóm của "Đơn thuê xe", chuyến hoàn thành vào "Đơn đã kết thúc"', async () => {
     await renderView();
 
     const requests = (await screen.findByText('Yêu cầu chờ duyệt')).closest('a')!;
-    expect(requests.getAttribute('href')).toBe(ROUTES.MANAGE.TRIPS);
+    expect(requests.getAttribute('href')).toBe(rentalStagePath(RENTAL_STAGE.NEEDS_ACTION));
     const pickups = screen.getByText('Chờ giao xe').closest('a')!;
-    expect(pickups.getAttribute('href')).toBe(ROUTES.MANAGE.TRIPS);
-    const completed = screen.getByText('Chuyến hoàn thành').closest('a')!;
-    expect(completed.getAttribute('href')).toBe(
-      `${ROUTES.MANAGE.TRIPS}?filter=${CUSTOMER_TRIP_FILTER.HISTORY}`,
+    expect(pickups.getAttribute('href')).toBe(
+      bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP),
     );
+    const completed = screen.getByText('Chuyến hoàn thành').closest('a')!;
+    expect(completed.getAttribute('href')).toBe(bookingHistoryPath(BOOKING_HISTORY_TAB.COMPLETED));
     expect(within(completed).getByText('Không đổi')).toBeTruthy();
   });
 
@@ -149,7 +160,7 @@ describe('Tổng quan chủ xe cá nhân', () => {
     expect(screen.getByTestId('owner-vehicles')).toBeTruthy();
   });
 
-  it('THÀNH VIÊN (không phải chủ): không có ví; ô dẫn về hộp thư + bảng đơn như tuyến gói', async () => {
+  it('THÀNH VIÊN (không phải chủ): không có ví; ô dẫn về CÙNG màn "Đơn thuê xe"', async () => {
     state.roleKey = TENANT_ROLE.SHOP_STAFF;
     await renderView();
 

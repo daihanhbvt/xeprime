@@ -13,12 +13,15 @@ import {
   STATUS_COLOR,
   TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
 } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { customerPath, vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { cx } from '@/lib/cx';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { BookingDriverSection } from '../BookingDriverSection';
 import { BookingStatusActions } from '../BookingStatusActions';
@@ -128,6 +131,10 @@ export function CustomerSideCard() {
   const t = useTranslations('Bookings.detailPage.side');
   const { has } = usePermissions();
   const { booking, can, openEdit, openDocuments } = useBookingDetailActions();
+  // Sổ khách là năng lực của GÓI (ADR 0027 điều 1) — chủ xe tuyến hoa hồng có quyền tenant đầy đủ
+  // nhưng không có trang đó (server chặn bằng `@SubscriptionTrackOnly`), nên không có link.
+  const { isManage } = useWorkspace();
+  const canViewCustomer = has(PERMISSION.CUSTOMER_VIEW) && isManage;
 
   return (
     <section className={styles.sideCard}>
@@ -155,9 +162,9 @@ export function CustomerSideCard() {
       ) : (
         <p className={styles.muted}>{t('noPhone')}</p>
       )}
-      {booking.tenantCustomerId && (has(PERMISSION.CUSTOMER_VIEW) || can.documents) ? (
+      {booking.tenantCustomerId && (canViewCustomer || can.documents) ? (
         <div className={styles.customerLinks}>
-          {has(PERMISSION.CUSTOMER_VIEW) ? (
+          {canViewCustomer ? (
             <Link href={customerPath.detail(booking.tenantCustomerId)} className={styles.textLink}>
               {t('viewProfile')}
             </Link>
@@ -175,7 +182,14 @@ export function CustomerSideCard() {
 
 /**
  * Thẻ "Thanh toán" — mọi con số do SERVER tính (ADR 0007); dòng phụ (khuyến mãi, phát sinh, thu
- * khác, thu vượt, giữ chỗ) chỉ hiện khi khác 0. Dòng cuối "Còn lại (phải thu)" tô vàng như design.
+ * khác, thu vượt, trả trước online) chỉ hiện khi khác 0.
+ *
+ * Đọc như MỘT phép trừ (06/11/2026, phản hồi "các nguồn tiền khó hiểu"): Tổng tiền chuyến − phần
+ * khách đã trả trước qua XePrime − đã thu tại quầy = **Còn phải thu của khách**, ô nổi bật cuối thẻ.
+ * Dòng trả trước là `D` (tiền thuê CỦA CHỦ XE trong tiền giữ chỗ), không phải cả khoản giữ chỗ:
+ * khoản đó còn gồm phí đặt xe và bảo hiểm — không thuộc tổng của gian hàng, trừ vào là các dòng
+ * không còn cộng ra nhau. Số cuối là `counterDueAmount` — cùng phép với "Thu tiền thuê" của Chuẩn bị
+ * bàn giao và hộp nhận lại xe.
  */
 export function PaymentSideCard() {
   const t = useTranslations('Bookings.detailPage.side');
@@ -184,7 +198,10 @@ export function PaymentSideCard() {
   const { booking, closed, openFee } = useBookingDetailActions();
   const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
-  const hold = booking.holdPaidAmount != null && booking.payAtPickupAmount != null;
+  const prepaid = isZeroMoney(booking.ownerShareOnlineAmount)
+    ? null
+    : booking.ownerShareOnlineAmount;
+  const settled = isZeroMoney(booking.counterDueAmount);
   const unit = booking.ownerPayout?.unitAmount ?? null;
   const days = booking.ownerPayout?.rentalDays ?? null;
 
@@ -233,17 +250,26 @@ export function PaymentSideCard() {
           <dt>{t('amountDue')}</dt>
           <dd>{fmt.money(booking.amountDue)}</dd>
         </div>
-        {hold ? (
-          <>
-            <div>
-              <dt>{t('holdPaid')}</dt>
-              <dd>{fmt.money(booking.holdPaidAmount)}</dd>
-            </div>
-            <div>
-              <dt>{t('payAtPickup')}</dt>
-              <dd>{fmt.money(booking.payAtPickupAmount)}</dd>
-            </div>
-          </>
+        {prepaid ? (
+          <div>
+            <dt>
+              <span className={styles.moneyLabel}>
+                {t('prepaidOnline')}
+                <InfoHint
+                  label={t('prepaidOnline')}
+                  content={
+                    booking.holdPaidAmount
+                      ? t('prepaidOnlineHint', {
+                          hold: fmt.money(booking.holdPaidAmount),
+                          share: fmt.money(prepaid),
+                        })
+                      : t('prepaidOnlineHintShort')
+                  }
+                />
+              </span>
+            </dt>
+            <dd>−{fmt.money(prepaid)}</dd>
+          </div>
         ) : null}
         <div>
           <dt>
@@ -254,26 +280,39 @@ export function PaymentSideCard() {
               </small>
             ) : null}
           </dt>
-          <dd>{fmt.money(booking.collectedAmount)}</dd>
+          <dd>
+            {isZeroMoney(booking.collectedAmount) ? '' : '−'}
+            {fmt.money(booking.collectedAmount)}
+          </dd>
         </div>
-        {!isZeroMoney(booking.depositAmount) ? (
-          <div>
-            <dt>{t('deposit')}</dt>
-            <dd>{fmt.money(booking.depositAmount)}</dd>
-          </div>
-        ) : null}
         {overCollected ? (
           <div>
             <dt>{t('overCollected')}</dt>
             <dd>{fmt.money(overCollected)}</dd>
           </div>
         ) : null}
-        <div className={styles.moneyRemaining}>
-          <dt>{t('remaining')}</dt>
-          <dd>{fmt.money(booking.debtAmount)}</dd>
-        </div>
       </dl>
-      {hold ? <p className={styles.moneyNote}>{t('holdNote')}</p> : null}
+      <div
+        className={cx(styles.moneyDue, settled && styles.moneyDueSettled)}
+        role="status"
+        aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
+      >
+        <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
+        <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
+        <span className={styles.moneyDueHint}>
+          {settled
+            ? t('dueSettled')
+            : booking.actualPickupAt
+              ? t('dueAfterPickup')
+              : t('dueAtPickup')}
+        </span>
+      </div>
+      {/* Cọc tài sản là tiền GIỮ rồi trả lại — không cộng vào số phải thu ở trên. */}
+      {!isZeroMoney(booking.depositAmount) ? (
+        <p className={styles.moneyNote}>
+          {t('depositNote', { amount: fmt.money(booking.depositAmount) })}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -283,25 +322,29 @@ export function SideActions() {
   const { booking, handover, primary, can, requestHandover } = useBookingDetailActions();
   return (
     <div className={styles.sideActions}>
+      <CustomerReturnReport booking={booking} canDispute={can.confirmHandover} />
+      {/*
+        MỘT hàng, cùng cỡ (06/11/2026): "Hủy đơn" trái · nút bàn giao phải. Chỉ còn một nút thì nó
+        chiếm cả hàng; "Khách không đến" (hiếm, sau ân hạn) xuống hàng dưới.
+      */}
       <div className={styles.sideActionsRow}>
         <BookingStatusActions
           booking={booking}
           pickupConfirmed={Boolean(handover?.pickup?.confirmedAt)}
-        />
-      </div>
-      <CustomerReturnReport booking={booking} canDispute={can.confirmHandover} />
-      {primary && can.confirmHandover ? (
-        <Button
-          type="primary"
           size="large"
-          block
-          icon={<CheckOutlined />}
-          className={styles.primaryCta}
-          onClick={() => requestHandover(primary.type)}
-        >
-          {primary.label}
-        </Button>
-      ) : null}
+        />
+        {primary && can.confirmHandover ? (
+          <Button
+            type="primary"
+            size="large"
+            icon={<CheckOutlined />}
+            className={styles.primaryCta}
+            onClick={() => requestHandover(primary.type)}
+          >
+            {primary.label}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

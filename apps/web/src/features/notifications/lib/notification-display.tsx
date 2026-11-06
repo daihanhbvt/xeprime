@@ -180,19 +180,11 @@ export function notificationHref(
     }
   }
   /*
-   * Owner Lite: "Hồ sơ chủ xe" thay cho trang Cửa hàng, và "Chuyến cho thuê" thay cho CẢ hộp thư
-   * yêu cầu lẫn bảng đơn (hai URL đó tự chuyển chủ xe sang đây — đi thẳng đỡ một lần chớp trang).
-   * Còn lại CÙNG màn với tuyến gói.
+   * Owner Lite: "Hồ sơ chủ xe" thay cho trang Cửa hàng. Còn lại CÙNG màn với tuyến gói — kể cả yêu
+   * cầu + đơn, ở "Đơn thuê xe" từ 06/11/2026.
    */
-  if (context === 'owner') {
-    if (target === NOTIFICATION_TARGET_TYPE.TENANT)
-      return accountSectionPath(ACCOUNT_SECTION.PROFILE);
-    if (
-      target === NOTIFICATION_TARGET_TYPE.BOOKING ||
-      target === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST
-    ) {
-      return ROUTES.MANAGE.TRIPS;
-    }
+  if (context === 'owner' && target === NOTIFICATION_TARGET_TYPE.TENANT) {
+    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
   }
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:

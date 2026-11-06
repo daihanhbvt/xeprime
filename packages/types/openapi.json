@@ -81646,6 +81646,14 @@
             "type": "string",
             "nullable": true
           },
+          "ownerShareOnlineAmount": {
+            "type": "string",
+            "description": "Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string)"
+          },
+          "counterDueAmount": {
+            "type": "string",
+            "description": "Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với \"Thu tiền thuê\" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string)"
+          },
           "driverIncident": {
             "nullable": true,
             "type": "object",
@@ -81816,6 +81824,8 @@
           "createdAt",
           "vehicleType",
           "canMessageOnPlatform",
+          "ownerShareOnlineAmount",
+          "counterDueAmount",
           "baseAmount",
           "deliveryFee",
           "discountAmount",
@@ -82741,6 +82751,14 @@
           "payAtPickupAmount": {
             "type": "string",
             "nullable": true
+          },
+          "ownerShareOnlineAmount": {
+            "type": "string",
+            "description": "Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string)"
+          },
+          "counterDueAmount": {
+            "type": "string",
+            "description": "Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với \"Thu tiền thuê\" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string)"
           }
         },
         "required": [
@@ -82766,7 +82784,9 @@
           "depositAmount",
           "createdAt",
           "vehicleType",
-          "canMessageOnPlatform"
+          "canMessageOnPlatform",
+          "ownerShareOnlineAmount",
+          "counterDueAmount"
         ]
       },
       "BookingPageDto": {
@@ -95484,7 +95504,7 @@
           },
           "rentalDays": {
             "type": "number",
-            "description": "Số ngày thuê tính phí"
+            "description": "Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận–trả của đơn; `0` = không còn nguồn nào để biết ⇒ hiện \"Tiền thuê\" không kèm số ngày"
           },
           "unitAmount": {
             "type": "string",
