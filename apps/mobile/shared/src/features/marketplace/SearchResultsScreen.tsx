@@ -17,6 +17,7 @@ import { type MarketplaceFilters, type PublicListing } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { ScreenError } from '@/components/state/ScreenError';
+import { images } from '@/assets';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
@@ -612,7 +613,7 @@ function Empty({
     return (
       <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
         <ScreenMessage
-          icon="search-outline"
+          art={images.listEmpty}
           title={t('emptyKeywordTitle', { q: keyword })}
           description={t('emptyKeywordDesc')}
           actionLabel={t('clearKeyword')}
@@ -633,7 +634,7 @@ function Empty({
     return (
       <YStack flexGrow={1} jc="center">
         <ScreenMessage
-          icon="car-outline"
+          art={images.listEmpty}
           title={t('emptySystemTitle')}
           description={t('emptySystemDesc')}
         />
@@ -644,7 +645,7 @@ function Empty({
   return (
     <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
       <ScreenMessage
-        icon="funnel-outline"
+        art={images.listEmpty}
         title={t('emptyFilteredTitle')}
         description={t('emptyFilteredDesc')}
         actionLabel={tFilters('clear')}

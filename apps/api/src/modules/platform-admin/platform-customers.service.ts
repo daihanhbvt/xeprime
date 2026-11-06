@@ -136,7 +136,7 @@ export class PlatformCustomersService {
       ...licenceWhere(query.licence as CustomerLicenceState | undefined),
       // SĐT/email khớp CHÍNH XÁC (unique trong realm khách): hỗ trợ đã có sẵn giá trị khách đọc cho.
       // Cho tìm gần đúng ở đây là biến ô tra cứu thành công cụ quét danh bạ khách hàng.
-      // `users.phone` lưu dạng `84…`, còn hỗ trợ gõ `09…` — so khớp mọi dạng lưu (common/phone).
+      // `users.phone` lưu `0…` (ADR 0082), hỗ trợ gõ `84…`/`+84…` — so khớp mọi dạng lưu (common/phone).
       ...(phone ? { phone: { in: phoneLookupVariants(phone) } } : {}),
       ...(email ? { email } : {}),
       ...(q ? { displayName: { contains: q, mode: 'insensitive' } } : {}),

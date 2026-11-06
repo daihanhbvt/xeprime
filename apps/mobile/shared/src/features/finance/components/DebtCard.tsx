@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, overdueDays } from '@xeprime/domain';
 import { metaColor, metaLabel } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
@@ -72,6 +72,8 @@ function DebtCardImpl({
   const domainLabel = useDomainLabel();
   const status = debt.status as BookingStatus;
   const percent = paidPercent(debt.paidAmount, debt.totalAmount);
+  // Số ngày trễ so với hạn trả — web cột Hạn trả (PR #276).
+  const late = overdueDays(debt.returnAt);
 
   const actions: CardAction[] = [
     ...(canView
@@ -139,7 +141,7 @@ function DebtCardImpl({
               <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
                 <Ionicons name="car-outline" size={iconSize.sm} color={colors.textMuted} />
                 <Text f={1} col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-                  {debt.vehicleName}
+                  {[debt.vehicleName, debt.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
                 </Text>
               </XStack>
               <XStack ai="center" gap={space.xs}>
@@ -147,6 +149,11 @@ function DebtCardImpl({
                 <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
                   {fmt.date(debt.returnAt)}
                 </Text>
+                {late > 0 ? (
+                  <Text col={colors.danger} fos={fontSize.label} fow={fontWeight.semibold}>
+                    {t('overdueDays', { count: late })}
+                  </Text>
+                ) : null}
               </XStack>
             </XStack>
 
@@ -164,7 +171,10 @@ function DebtCardImpl({
                   {t('columns.debt')}
                 </Text>
                 <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
-                  {fmt.money(debt.paidAmount)} / {fmt.money(debt.totalAmount)}
+                  {t('paidOf', {
+                    paid: fmt.money(debt.paidAmount),
+                    total: fmt.money(debt.totalAmount),
+                  })}
                 </Text>
               </YStack>
               <Text col={colors.danger} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1}>

@@ -938,7 +938,7 @@ function OptionRow({
             {label}
           </Text>
           {pill ? (
-            <YStack px={6} py={2} br={radius.pill} bg={colors.background} als="flex-start" maxWidth="100%">
+            <YStack px={6} py={2} br={radius.pill} bg={colors.background} alignSelf="flex-start" maxWidth="100%">
               <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
                 {pill}
               </Text>

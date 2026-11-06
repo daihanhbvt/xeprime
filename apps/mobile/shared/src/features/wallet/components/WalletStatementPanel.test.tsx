@@ -150,7 +150,8 @@ describe('WalletStatementPanel', () => {
     expect(view.getByText('13 chuyến')).toBeTruthy();
     expect(view.getByText('59%')).toBeTruthy();
     expect(view.getByText('DH-0001')).toBeTruthy();
-    expect(view.getAllByText('+810.000 ₫').length).toBeGreaterThanOrEqual(2);
+    // Tổng kỳ đã tách ra thẻ `WalletMonthSummary` (đứng trên dải tab) — panel chỉ còn dòng của chuyến.
+    expect(view.getAllByText('+810.000 ₫').length).toBeGreaterThanOrEqual(1);
     expect(view.getByText('Tự lái')).toBeTruthy();
   });
 });

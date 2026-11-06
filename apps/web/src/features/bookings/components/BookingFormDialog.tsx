@@ -12,7 +12,7 @@ import {
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
-  VN_PHONE_PATTERN,
+  isVnPhoneInput,
 } from '@xeprime/types';
 import { moneySchema } from '@xeprime/validators';
 import { DialogForm } from '@/components/form/DialogForm';
@@ -47,7 +47,7 @@ function buildEditSchema(labels: { name: string; phone: string }) {
       .string()
       .trim()
       .default('')
-      .matches(VN_PHONE_PATTERN, { message: labels.phone, excludeEmptyString: true }),
+      .test('vn-phone', labels.phone, isVnPhoneInput),
     depositAmount: moneySchema
       .transform((v, orig) => (orig === '' || orig === null ? null : v))
       .nullable()
@@ -209,6 +209,7 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
         <TextField
           control={control}
           name="customerPhone"
+          type="tel"
           label={tCreate('customer.phoneLabel')}
           placeholder={tCreate('customer.phonePlaceholder')}
         />

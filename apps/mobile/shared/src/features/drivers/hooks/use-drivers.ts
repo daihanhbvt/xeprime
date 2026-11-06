@@ -3,6 +3,7 @@ import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
   driverFiltersToParams,
+  driverSharedFilterParams,
   driversApi,
   type DriverFilters,
   type InviteDriverInput,
@@ -22,6 +23,17 @@ export function useDriversPage(filters: DriverFilters, enabled = true) {
     queryKey: queryKeys.drivers.list(params),
     queryFn: () => driversApi.list(withLimit),
     placeholderData: keepPageData<Awaited<ReturnType<typeof driversApi.list>>>(params),
+    enabled,
+  });
+}
+
+/** Dải số đếm đầu màn Tài xế — theo bộ lọc chung (tìm kiếm, hình thức, vận hành). Như web. */
+export function useDriverSummary(filters: DriverFilters, enabled = true) {
+  const params = driverSharedFilterParams(filters);
+  return useQuery({
+    queryKey: queryKeys.drivers.summary(params),
+    queryFn: () => driversApi.summary(filters),
+    placeholderData: (prev) => prev,
     enabled,
   });
 }

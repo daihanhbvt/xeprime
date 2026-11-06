@@ -11,6 +11,7 @@ import {
 import { buildPeriodRange, isZeroMoney } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { BlockTitle } from '@/components/ui/BlockTitle';
+import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -32,6 +33,11 @@ import { RevenueTrendChart } from './components/RevenueTrendChart';
 import { useBucketLabels } from './hooks/use-bucket-labels';
 import { VehicleProfitList } from './components/VehicleProfitList';
 import {
+  FINANCE_PERFORMANCE_VIEW,
+  FINANCE_PERFORMANCE_VIEW_VALUES,
+  type FinancePerformanceView,
+} from './constants';
+import {
   FINANCE_OVERVIEW_DEFAULT_PERIOD,
   FINANCE_OVERVIEW_PERIOD_VALUES,
   VEHICLE_PROFIT_PAGE_SIZE,
@@ -43,6 +49,7 @@ import {
   useFinanceSummary,
   useVehicleProfit,
 } from './hooks/use-finance';
+import type { FinanceCategoryBreakdown } from './api';
 
 const EMPTY_META = { page: FIRST_PAGE, limit: VEHICLE_PROFIT_PAGE_SIZE, total: 0, hasNext: false };
 
@@ -68,6 +75,11 @@ export function FinanceOverviewScreen() {
 
   const [range, setRange] = useState(() => buildPeriodRange(FINANCE_OVERVIEW_DEFAULT_PERIOD));
   const [granularity, setGranularity] = useState<FinanceGranularity>(FINANCE_GRANULARITY.DAY);
+  /*
+   * Tab của khối "Hiệu suất kinh doanh" (web `BusinessPerformanceCard`, PR #276): theo xe hoặc theo
+   * khách. Chỉ bảng của tab đang mở được gọi — tab kia không tốn một lượt truy vấn.
+   */
+  const [perf, setPerf] = useState<FinancePerformanceView>(FINANCE_PERFORMANCE_VIEW.VEHICLES);
   const [vehicleSort, setVehicleSort] = useState<string | undefined>(undefined);
   const [vehiclePage, setVehiclePage] = useState(FIRST_PAGE);
   const [customerSort, setCustomerSort] = useState<string | undefined>(undefined);
@@ -113,8 +125,14 @@ export function FinanceOverviewScreen() {
   const series = useFinanceSeries(period, undefined, canViewFinance);
   const income = useFinanceByCategory(period, RECEIPT_TYPE.INCOME, undefined, canViewFinance);
   const expense = useFinanceByCategory(period, RECEIPT_TYPE.EXPENSE, undefined, canViewFinance);
-  const vehicles = useVehicleProfit(rankingFilters, canViewFinance);
-  const customers = useCustomerRevenue(rankingFilters, canViewFinance);
+  const vehicles = useVehicleProfit(
+    rankingFilters,
+    canViewFinance && perf === FINANCE_PERFORMANCE_VIEW.VEHICLES,
+  );
+  const customers = useCustomerRevenue(
+    rankingFilters,
+    canViewFinance && perf === FINANCE_PERFORMANCE_VIEW.CUSTOMERS,
+  );
 
   const granularityOptions = useMemo(
     () => FINANCE_GRANULARITY_VALUES.map((value) => ({ value, label: t(`chart.every.${value}`) })),
@@ -209,6 +227,8 @@ export function FinanceOverviewScreen() {
           <FinanceOverviewCards
             data={summary.data}
             filters={period}
+            revenueReceipts={receiptCountOf(income.data)}
+            costReceipts={receiptCountOf(expense.data)}
             loading={summary.isFetching}
             error={summary.isError}
           />
@@ -275,42 +295,61 @@ export function FinanceOverviewScreen() {
             error={expense.isError}
           />
 
-          <VehicleProfitList
-            items={vehicles.data?.items ?? []}
-            meta={vehicles.data?.meta ?? EMPTY_META}
-            sort={vehicleSort}
-            unassignedCost={summary.data?.unassignedCost}
-            loading={vehicles.isFetching}
-            /* Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ dải đang đọc. */
-            error={
-              vehicles.isError && !vehicles.data
-                ? { error: vehicles.error, onRetry: () => void vehicles.refetch() }
-                : null
-            }
-            onSortChange={(next) => {
-              setVehicleSort(next);
-              setVehiclePage(FIRST_PAGE);
-            }}
-            onPageChange={setVehiclePage}
-          />
+          <Card lift="flat">
+            <YStack gap={space.sm}>
+              <BlockTitle>{t('performance.title')}</BlockTitle>
+              <XStack gap={space.xs} accessibilityLabel={t('performance.tabs.label')}>
+                {FINANCE_PERFORMANCE_VIEW_VALUES.map((value) => (
+                  <Chip
+                    key={value}
+                    label={t(`performance.tabs.${value}`)}
+                    selected={perf === value}
+                    size="sm"
+                    onPress={() => setPerf(value)}
+                  />
+                ))}
+              </XStack>
+            </YStack>
+          </Card>
 
-          <CustomerRevenueList
-            items={customers.data?.items ?? []}
-            meta={customers.data?.meta ?? EMPTY_META}
-            sort={customerSort}
-            unassignedRevenue={summary.data?.unassignedRevenue}
-            loading={customers.isFetching}
-            error={
-              customers.isError && !customers.data
-                ? { error: customers.error, onRetry: () => void customers.refetch() }
-                : null
-            }
-            onSortChange={(next) => {
-              setCustomerSort(next);
-              setCustomerPage(FIRST_PAGE);
-            }}
-            onPageChange={setCustomerPage}
-          />
+          {perf === FINANCE_PERFORMANCE_VIEW.VEHICLES ? (
+            <VehicleProfitList
+              items={vehicles.data?.items ?? []}
+              meta={vehicles.data?.meta ?? EMPTY_META}
+              sort={vehicleSort}
+              unassignedCost={summary.data?.unassignedCost}
+              loading={vehicles.isFetching}
+              /* Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ dải đang đọc. */
+              error={
+                vehicles.isError && !vehicles.data
+                  ? { error: vehicles.error, onRetry: () => void vehicles.refetch() }
+                  : null
+              }
+              onSortChange={(next) => {
+                setVehicleSort(next);
+                setVehiclePage(FIRST_PAGE);
+              }}
+              onPageChange={setVehiclePage}
+            />
+          ) : (
+            <CustomerRevenueList
+              items={customers.data?.items ?? []}
+              meta={customers.data?.meta ?? EMPTY_META}
+              sort={customerSort}
+              unassignedRevenue={summary.data?.unassignedRevenue}
+              loading={customers.isFetching}
+              error={
+                customers.isError && !customers.data
+                  ? { error: customers.error, onRetry: () => void customers.refetch() }
+                  : null
+              }
+              onSortChange={(next) => {
+                setCustomerSort(next);
+                setCustomerPage(FIRST_PAGE);
+              }}
+              onPageChange={setCustomerPage}
+            />
+          )}
 
           {/*
             Thuế đã khấu trừ trong kỳ (Phase 8 — ADR 0032 điều 3). Đứng ở sổ tài chính vì nó là một
@@ -321,4 +360,9 @@ export function FinanceOverviewScreen() {
       </Screen>
     </>
   );
+}
+
+/** Số phiếu của một chiều tiền trong kỳ — cộng từ bảng theo danh mục, như web. */
+function receiptCountOf(data: FinanceCategoryBreakdown | undefined): number | undefined {
+  return data?.items.reduce((sum, item) => sum + item.count, 0);
 }

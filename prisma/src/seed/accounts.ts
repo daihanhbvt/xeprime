@@ -72,9 +72,9 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
 
   const realm = input.realm;
   /*
-   * SĐT lưu ở DẠNG CHUẨN `84xxxxxxxxx` — đúng dạng `AuthService.register` ghi và `loginWithPassword`
-   * tra (ADR 0060: SĐT là định danh đăng nhập ở site khách/partner). Bản khai trong seed viết dạng
-   * nội địa `09…` cho dễ đọc; ghi nguyên dạng đó thì tài khoản demo không đăng nhập được bằng SĐT.
+   * SĐT lưu ở DẠNG CHUẨN `0xxxxxxxxx` (ADR 0082) — đúng dạng `AuthService.register` ghi và
+   * `loginWithPassword` tra. Vẫn đi qua `normalizeVnPhone` để bản khai có dấu cách/`+84` cũng ra
+   * đúng dạng.
    */
   const phone = input.phone ? normalizeVnPhone(input.phone) : null;
   const existing = await prisma.user.findUnique({

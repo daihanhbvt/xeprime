@@ -41,7 +41,12 @@ import {
 import { resolvePartnerTrack, type PartnerTrack } from './partner-track';
 import { ManageAccountSheet } from './ManageAccountSheet';
 import { useManageDrawer } from './ManageDrawerHost';
-import { useManageNavBadges, type ManageNavBadgeCounts } from './use-manage-nav-badges';
+import {
+  useManageNavBadgeUrgency,
+  useManageNavBadges,
+  type ManageNavBadgeCounts,
+  type ManageNavBadgeUrgency,
+} from './use-manage-nav-badges';
 
 /** Ba số đo của thang điều hướng, khai một chỗ — cùng giá trị `--xp-nav-*` của web. */
 const NAV_ITEM_HEIGHT = 40;
@@ -108,6 +113,8 @@ interface ResolvedLeaf {
   readonly kind: 'leaf';
   readonly leaf: ManageNavLeaf;
   readonly badge: number;
+  /** Huy hiệu đang khẩn (quá giờ / sắp hết hạn) — vẽ đỏ. */
+  readonly urgent?: boolean;
 }
 
 type ResolvedNode = ResolvedBranch | ResolvedLeaf;
@@ -147,6 +154,7 @@ export function ManageDrawer() {
   const featureStates = useFeatureStates();
   const identityLabel = useAccountIdentityLabel();
   const badges = useManageNavBadges();
+  const urgency = useManageNavBadgeUrgency();
   const drawer = useManageDrawer();
 
   const sections = useMemo(
@@ -157,8 +165,9 @@ export function ManageDrawer() {
         featureStates,
         badges,
         user.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER,
+        urgency,
       ),
-    [user, permissions, featureStates, badges],
+    [user, permissions, featureStates, badges, urgency],
   );
 
   const activeHref = useMemo(
@@ -291,6 +300,7 @@ export function ManageDrawer() {
                         label={labelOf(node.leaf)}
                         a11yLabel={a11yLabelOf(node.leaf, node.badge)}
                         badge={node.badge}
+                        urgent={node.urgent === true}
                         active={isLeafActive(node.leaf, activeHref)}
                         indent={0}
                         leaf={node.leaf}
@@ -407,8 +417,10 @@ export function resolveSections(
   featureStates: Partial<Record<PlanFeature, FeatureState>>,
   badges: ManageNavBadgeCounts,
   isShopOwner = false,
+  urgency: ManageNavBadgeUrgency = {},
 ): readonly ResolvedSection[] {
   const badgeOf = (key: ManageNavBadge | undefined) => (key ? badges[key] : 0);
+  const urgentOf = (key: ManageNavBadge | undefined) => (key ? urgency[key] === true : false);
 
   /*
    * BA trục độc lập kiểm NỐI TIẾP, đúng `canSeeLeaf` của web: `permission` trả lời "anh là ai"
@@ -433,7 +445,7 @@ export function resolveSections(
   const resolveNode = (node: ManageNavNode): ResolvedNode | null => {
     if (!isManageNavBranch(node)) {
       // Quyền/năng lực chỉ ẨN mục — chặn thật là guard backend (CLAUDE.md mục 6).
-      return canSeeLeaf(node) ? { kind: 'leaf', leaf: node, badge: badgeOf(node.badge) } : null;
+      return canSeeLeaf(node) ? { kind: 'leaf', leaf: node, badge: badgeOf(node.badge), urgent: urgentOf(node.badge) } : null;
     }
 
     /*
@@ -443,7 +455,12 @@ export function resolveSections(
      */
     const children = node.children
       .filter(canSeeLeaf)
-      .map<ResolvedLeaf>((child) => ({ kind: 'leaf', leaf: child, badge: badgeOf(child.badge) }));
+      .map<ResolvedLeaf>((child) => ({
+        kind: 'leaf',
+        leaf: child,
+        badge: badgeOf(child.badge),
+        urgent: urgentOf(child.badge),
+      }));
 
     if (children.length === 0) return null;
     return {
@@ -583,7 +600,9 @@ function Branch({
             {label}
           </Text>
           {/* Gập ⇒ mang số của mục con; bung ⇒ nhường số lại cho chính mục con đó. */}
-          {!open && node.badge > 0 ? <NavBadge count={node.badge} /> : null}
+          {!open && node.badge > 0 ? (
+            <NavBadge count={node.badge} urgent={node.children.some((child) => child.urgent && child.badge > 0)} />
+          ) : null}
           <Ionicons
             name={open ? 'chevron-up' : 'chevron-down'}
             size={iconSize.sm}
@@ -593,13 +612,14 @@ function Branch({
       </Pressable>
 
       {open
-        ? node.children.map(({ leaf, badge }) => (
+        ? node.children.map(({ leaf, badge, urgent }) => (
             <DrawerItem
               key={leaf.key}
               icon={leaf.icon}
               label={labelOf(leaf)}
               a11yLabel={a11yLabelOf(leaf, badge)}
               badge={badge}
+              urgent={urgent === true}
               active={isLeafActive(leaf, activeHref)}
               indent={CHILD_INDENT}
               leaf={leaf}
@@ -617,6 +637,7 @@ const DrawerItem = memo(function DrawerItem({
   label,
   a11yLabel,
   badge,
+  urgent = false,
   active,
   indent,
   onPress,
@@ -626,6 +647,7 @@ const DrawerItem = memo(function DrawerItem({
   label: string;
   a11yLabel: string;
   badge: number;
+  urgent?: boolean;
   active: boolean;
   indent: number;
   onPress: (leaf: ManageNavLeaf) => void;
@@ -685,7 +707,7 @@ const DrawerItem = memo(function DrawerItem({
         >
           {label}
         </Text>
-        {badge > 0 ? <NavBadge count={badge} /> : null}
+        {badge > 0 ? <NavBadge count={badge} urgent={urgent} /> : null}
       </XStack>
     </Pressable>
   );
@@ -706,10 +728,10 @@ const DrawerItem = memo(function DrawerItem({
  * hình khác nhau ở hai màn. Tông gold của `CountBadge` (`tone="primary"`) trùng đúng
  * `sidebar.active`, và trần 99+ cũng đã nằm sẵn trong đó.
  */
-function NavBadge({ count }: { count: number }) {
+function NavBadge({ count, urgent = false }: { count: number; urgent?: boolean }) {
   return (
     <YStack accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <CountBadge count={count} />
+      <CountBadge count={count} tone={urgent ? 'danger' : 'primary'} />
     </YStack>
   );
 }

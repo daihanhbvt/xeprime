@@ -57,6 +57,10 @@ describe('driverFiltersToParams', () => {
       q: 'Trần',
       linkStatus: null,
       driverType: null,
+      operation: null,
+      licenceCheck: null,
+      month: null,
+      sort: 'newest',
       page: 1,
       limit: 20,
     });

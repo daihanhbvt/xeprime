@@ -35,7 +35,7 @@ import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
-import { normalizePhone, toLocalPhone } from '../../common/phone';
+import { normalizePhone, phoneLookupVariants, toLocalPhone } from '../../common/phone';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
@@ -123,7 +123,7 @@ export class AuthService {
 
   /**
    * Đăng ký bằng SĐT + mật khẩu, TRONG một realm (ADR 0053). SĐT được chuẩn hoá về dạng
-   * `84xxxxxxxxx` trước khi lưu. Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
+   * `0xxxxxxxxx` trước khi lưu (ADR 0082). Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
    * Tạo user + identity(provider='password') trong một transaction.
    *
    * Từ ADR 0060 SĐT phải được CHỨNG MINH SỞ HỮU bằng OTP `purpose=register` (mã gửi qua
@@ -492,7 +492,8 @@ export class AuthService {
   async checkRegistration(rawPhone: string, realm: AccountRealm): Promise<void> {
     this.assertSelfRegistration(realm);
     const taken = await this.prisma.user.findFirst({
-      where: { realm, phone: normalizePhone(rawPhone), deletedAt: null },
+      // Mọi biến thể — hàng cũ đụng số mà migration ADR 0082 để nguyên có thể còn `84…`.
+      where: { realm, phone: { in: phoneLookupVariants(rawPhone) }, deletedAt: null },
       select: { id: true },
     });
     if (taken) throw phoneTaken();
@@ -871,8 +872,7 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       // Dạng nội địa `0xxxxxxxxx` — đây là số của CHÍNH người đang đăng nhập, dùng để điền sẵn ô
-      // liên hệ khi đặt xe. DB lưu `84xxxxxxxxx`; trả nguyên dạng đó thì người dùng nhìn vào
-      // tưởng số lạ.
+      // liên hệ khi đặt xe. DB đã lưu `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` không lộ ra.
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
       hasPassword: user.passwordHash !== null,

@@ -1,32 +1,22 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import { useFieldArray, useForm, useFormState, useWatch, type Control } from 'react-hook-form';
-import { Pressable } from 'react-native';
+import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import {
-  HANDOVER_WINDOW_MAX_PER_KIND,
-  TURNAROUND_BUFFER_MAX_MINUTES,
-  TURNAROUND_BUFFER_PRESET_MINUTES,
-  handoverTimeToMinute,
-  minuteToHandoverTime,
-} from '@xeprime/types';
+import { TURNAROUND_BUFFER_MAX_MINUTES, TURNAROUND_BUFFER_PRESET_MINUTES } from '@xeprime/types';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
-import { InlineAction } from '@/components/ui/InlineAction';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { NumberField } from '@/components/ui/NumberField';
-import { SelectField } from '@/components/ui/SelectField';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleOperationSettings } from './api';
 import {
@@ -34,44 +24,7 @@ import {
   useVehicleOperationSettings,
 } from './hooks/use-vehicle-settings';
 
-/** Mốc cách nhau 30 phút, 00:00 → 24:00 — nhãn là chính giá trị (HH:mm không cần dịch). */
-const TIME_OPTIONS = Array.from({ length: 49 }, (_, i) => {
-  const value = minuteToHandoverTime(i * 30);
-  return { value, label: value };
-});
-
-const windowSchema = yup.object({
-  start: yup.string().required('startEnd'),
-  end: yup
-    .string()
-    .required('startEnd')
-    .test('after', 'startEnd', (end, ctx) => {
-      const start = handoverTimeToMinute(String(ctx.parent.start ?? ''));
-      const finish = handoverTimeToMinute(String(end ?? ''));
-      return start != null && finish != null && finish > start;
-    }),
-});
-
-/** Cùng luật với server (`normalizeWindows`) và EXCLUDE ở DB: không chồng lấn, không qua nửa đêm. */
-const windowsSchema = yup
-  .array()
-  .of(windowSchema)
-  .defined()
-  .max(HANDOVER_WINDOW_MAX_PER_KIND, 'maxWindows')
-  .test('overlap', 'overlap', (windows) => {
-    if (!windows) return true;
-    const sorted = windows
-      .map((w) => ({ s: handoverTimeToMinute(w.start) ?? 0, e: handoverTimeToMinute(w.end) ?? 0 }))
-      .sort((a, b) => a.s - b.s);
-    for (let i = 1; i < sorted.length; i += 1) {
-      if (sorted[i]!.s < sorted[i - 1]!.e) return false;
-    }
-    return true;
-  });
-
 const schema = yup.object({
-  pickupWindows: windowsSchema,
-  returnWindows: windowsSchema,
   turnaroundBufferMinutes: yup
     .number()
     .integer('bufferRange')
@@ -82,14 +35,14 @@ const schema = yup.object({
 type FormValues = yup.InferType<typeof schema>;
 
 /**
- * Mục "Thời gian giao nhận": khung giờ giao / nhận trong ngày + thời gian chết giữa hai chuyến.
- * Bản native của `HandoverTimeSection`.
+ * Mục "Thời gian chết giữa hai chuyến" của nhóm Chính sách thuê — bản native của `TurnaroundCard` web.
+ * Khung giờ giao/nhận đã gỡ (ADR 0078): xe nhận và trả mọi giờ. Tên file/route giữ `handover-time`
+ * cho link cũ.
  *
- * Server enforce khung giờ lúc khách gửi yêu cầu; thời gian chết đi vào
- * `vehicle_occupancies.buffer_minutes` của lịch giữ MỚI (ADR 0006) — màn hình nói rõ phạm vi đó
- * thay vì để người dùng tưởng nó tính lại cho đơn đang có.
+ * Thời gian chết đi vào `vehicle_occupancies.buffer_minutes` của lịch giữ MỚI (ADR 0006) — màn hình
+ * nói rõ phạm vi đó thay vì để người dùng tưởng nó tính lại cho đơn đang có. Áp cho CẢ chiếc xe,
+ * không khoá theo dịch vụ nào.
  */
-/** Áp cho CẢ chiếc xe (web `HANDOVER_TIME`) — không khoá theo dịch vụ nào. */
 export function VehicleHandoverTimeScreen({
   vehicleId,
   workspace,
@@ -148,8 +101,6 @@ function HandoverForm({
 
   const values = useMemo<FormValues>(
     () => ({
-      pickupWindows: settings.pickupWindows,
-      returnWindows: settings.returnWindows,
       turnaroundBufferMinutes: settings.turnaroundBufferMinutes,
     }),
     [settings],
@@ -164,8 +115,6 @@ function HandoverForm({
   const submit = handleSubmit((next) => {
     save.mutate(
       {
-        pickupWindows: next.pickupWindows,
-        returnWindows: next.returnWindows,
         turnaroundBufferMinutes: next.turnaroundBufferMinutes,
       },
       {
@@ -173,8 +122,6 @@ function HandoverForm({
           // Reset theo bản SERVER trả về: nó chuẩn hoá và gộp mốc, nên form phải theo nó chứ
           // không theo thứ người dùng vừa gõ — nếu không, nút Lưu còn sáng sau một lần lưu thành công.
           reset({
-            pickupWindows: saved.pickupWindows,
-            returnWindows: saved.returnWindows,
             turnaroundBufferMinutes: saved.turnaroundBufferMinutes,
           });
           toast.showSuccess(t('handover.saved'));
@@ -186,26 +133,7 @@ function HandoverForm({
 
   return (
     <YStack gap={space.md}>
-      <Card>
-        <YStack gap={space.md}>
-          <WindowsEditor
-            control={control}
-            name="pickupWindows"
-            title={t('handover.pickupTitle')}
-            disabled={!canEdit}
-          />
-          <WindowsEditor
-            control={control}
-            name="returnWindows"
-            title={t('handover.returnTitle')}
-            disabled={!canEdit}
-          />
-          <Text col={colors.placeholder} fos={fontSize.label}>
-            {t('handover.allDay')}
-          </Text>
-        </YStack>
-      </Card>
-
+      {/* Khung giờ giao/nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ; chỉ còn thời gian chuẩn bị. */}
       <Card>
         <YStack gap={space.sm}>
           <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -291,89 +219,3 @@ function HandoverForm({
   );
 }
 
-function WindowsEditor({
-  control,
-  name,
-  title,
-  disabled,
-}: {
-  control: Control<FormValues>;
-  name: 'pickupWindows' | 'returnWindows';
-  title: string;
-  disabled: boolean;
-}) {
-  const colors = useColors();
-  const t = useTranslations('VehicleManage.handover');
-  const { fields, append, remove } = useFieldArray({ control, name });
-  const { errors } = useFormState({ control, name });
-  // Lỗi CHÉO của cả mảng (chồng lấn, quá số mốc) nằm ở root — lỗi từng ô do `SelectField` tự hiện.
-  const error = errors[name] as { root?: { message?: string }; message?: string } | undefined;
-  const crossMessage = error?.root?.message ?? error?.message;
-
-  return (
-    <YStack gap={space.sm}>
-      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-        {title}
-      </Text>
-
-      {fields.map((field, index) => (
-        <XStack key={field.id} ai="flex-end" gap={space.xs}>
-          <YStack f={1}>
-            <SelectField
-              control={control}
-              name={`${name}.${index}.start`}
-              label={t('from')}
-              required
-              options={TIME_OPTIONS}
-              disabled={disabled}
-            />
-          </YStack>
-          <YStack f={1}>
-            <SelectField
-              control={control}
-              name={`${name}.${index}.end`}
-              label={t('to')}
-              required
-              options={TIME_OPTIONS}
-              disabled={disabled}
-            />
-          </YStack>
-          <Pressable
-            onPress={() => remove(index)}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel={t('removeWindow', { index: index + 1 })}
-            hitSlop={space.xs}
-            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-          >
-            <YStack w={sizing.touchTarget} h={sizing.touchTarget} ai="center" jc="center">
-              <Ionicons
-                name="trash-outline"
-                size={iconSize.md}
-                color={disabled ? colors.textDisabled : colors.danger}
-              />
-            </YStack>
-          </Pressable>
-        </XStack>
-      ))}
-
-      {crossMessage ? (
-        <Text col={colors.danger} fos={fontSize.label} accessibilityRole="alert">
-          {crossMessage}
-        </Text>
-      ) : null}
-
-      {!disabled && fields.length < HANDOVER_WINDOW_MAX_PER_KIND ? (
-        <InlineAction
-          label={t('addWindow')}
-          onPress={() => append({ start: '06:00', end: '22:00' })}
-        />
-      ) : null}
-      {fields.length >= HANDOVER_WINDOW_MAX_PER_KIND ? (
-        <Text col={colors.placeholder} fos={fontSize.label}>
-          {t('maxWindows', { max: HANDOVER_WINDOW_MAX_PER_KIND })}
-        </Text>
-      ) : null}
-    </YStack>
-  );
-}

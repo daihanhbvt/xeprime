@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Text, YStack } from 'tamagui';
 import { useLocale, useTranslations } from 'use-intl';
 import { object, string, type InferType } from 'yup';
-import { VN_PHONE_PATTERN } from '@xeprime/types';
+import { isVnPhoneInput } from '@xeprime/types';
 import { appConfigApi, type PlanConsultationInput } from '@/api/app-config/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -27,7 +27,7 @@ export const planConsultationSchema = object({
   phone: string()
     .trim()
     .required('phoneRequired')
-    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true }),
+    .test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   email: string().trim().required('emailRequired').email('emailInvalid'),
   message: string().trim().max(PLAN_CONSULTATION_MESSAGE_MAX, 'messageTooLong').default(''),
 });

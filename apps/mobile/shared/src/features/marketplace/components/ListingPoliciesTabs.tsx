@@ -54,10 +54,6 @@ export function ListingPoliciesTabs({
 
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
-  const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`).join(', ');
-  const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
-  const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
   const requiredDocs =
     activeTerms?.requiredDocuments && activeTerms.requiredDocuments.length > 0
       ? activeTerms.requiredDocuments
@@ -160,16 +156,7 @@ export function ListingPoliciesTabs({
                 </Sub>
               ) : null}
 
-              {pickupWindows || returnWindows ? (
-                <Sub title={tDetail('handover.title')}>
-                  {pickupWindows ? (
-                    <Rule>{tDetail('handover.pickup', { windows: pickupWindows })}</Rule>
-                  ) : null}
-                  {returnWindows ? (
-                    <Rule>{tDetail('handover.return', { windows: returnWindows })}</Rule>
-                  ) : null}
-                </Sub>
-              ) : null}
+              {/* Khung giờ giao nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ, không có gì để công bố. */}
 
               {activeService === SERVICE_TYPE.WITH_DRIVER ? (
                 // Giá có tài xế là giá TRỌN GÓI (ADR 0075) — khách chỉ trả thêm phí cầu đường.

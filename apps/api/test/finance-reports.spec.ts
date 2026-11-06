@@ -233,7 +233,7 @@ async function seedCustomer(fullName: string) {
       tenantId,
       fullName,
       phone: `0${suffix}`,
-      normalizedPhone: `84${suffix}`,
+      normalizedPhone: `0${suffix}`,
     },
   });
   return id;

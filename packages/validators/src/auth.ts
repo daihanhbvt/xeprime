@@ -1,14 +1,12 @@
 import * as yup from 'yup';
 import {
-  compactPhoneInput,
   detectLoginIdentifierKind,
   DISPLAY_NAME_POLICY,
   isValidLoginIdentifier,
   LOGIN_IDENTIFIER_KIND,
   normalizeDisplayName,
-  VN_PHONE_PATTERN,
 } from '@xeprime/types';
-import { buildRequiredPhoneSchema, type PhoneSchemaLabels } from './phone';
+import { buildRequiredMobilePhoneSchema, type PhoneSchemaLabels } from './phone';
 
 /**
  * Yup schema cho đăng nhập/đăng ký bằng định danh + mật khẩu.
@@ -157,17 +155,9 @@ export const buildLoginSchema = (labels: AuthSchemaLabels) =>
 
 /**
  * Ô "Số điện thoại" của màn đăng nhập site khách / site partner — ADR 0060: định danh đăng nhập
- * CHỈ là SĐT. Nhận dấu cách/chấm/gạch/ngoặc như ô định danh cũ (`compactPhoneInput`) — đó là
- * cách người ta chép số từ danh bạ, không phải một số khác; backend bỏ chúng cùng một cách.
+ * CHỈ là SĐT. ADR 0082: di động 10 số, chỉ chữ số và `+` đầu — cùng luật với lúc đăng ký.
  */
-export const buildLoginPhoneSchema = (labels: AuthSchemaLabels) =>
-  yup
-    .string()
-    .trim()
-    .required(labels.required)
-    .test('login-phone', labels.invalid, (value) =>
-      value ? VN_PHONE_PATTERN.test(compactPhoneInput(value)) : true,
-    );
+export const buildLoginPhoneSchema = (labels: AuthSchemaLabels) => buildRequiredMobilePhoneSchema(labels);
 
 /** Đăng nhập site khách / site partner: SĐT + mật khẩu (ADR 0060). Site quản trị dùng `buildLoginSchema`. */
 export const buildPhoneLoginSchema = (labels: AuthSchemaLabels) =>
@@ -177,7 +167,7 @@ export const buildPhoneLoginSchema = (labels: AuthSchemaLabels) =>
   });
 
 export const buildOtpLoginSchema = (labels: AuthSchemaLabels) =>
-  yup.object({ phone: buildRequiredPhoneSchema(labels) });
+  yup.object({ phone: buildRequiredMobilePhoneSchema(labels) });
 
 /**
  * Ô tên của form đăng ký — `DISPLAY_NAME_POLICY`, cùng luật với `RegisterFields` của API. Chuẩn hoá
@@ -199,8 +189,7 @@ export const buildDisplayNameSchema = (labels: AuthSchemaLabels) => {
 
 export const buildRegisterSchema = (labels: AuthSchemaLabels) =>
   yup.object({
-    displayName: buildDisplayNameSchema(labels),
-    phone: buildRequiredPhoneSchema(labels),
+    displayName: buildDisplayNameSchema(labels),\n    phone: buildRequiredMobilePhoneSchema(labels),
     password: buildPasswordSchema(labels),
     confirmPassword: buildConfirmSchema(labels),
   });
@@ -213,7 +202,7 @@ export const buildForgotPasswordSchema = (labels: AuthSchemaLabels) =>
  * `buildResetPasswordSchema`. Không giả định tài khoản có email.
  */
 export const buildForgotPasswordPhoneSchema = (labels: AuthSchemaLabels) =>
-  yup.object({ phone: buildRequiredPhoneSchema(labels) });
+  yup.object({ phone: buildRequiredMobilePhoneSchema(labels) });
 
 export const buildResetPasswordSchema = (labels: AuthSchemaLabels) =>
   yup.object({

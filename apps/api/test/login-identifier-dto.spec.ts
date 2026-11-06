@@ -29,9 +29,9 @@ describe('LoginDto.identifier', () => {
     }
   });
 
-  it('nhận SĐT chép từ danh bạ, còn nguyên dấu cách/gạch', () => {
-    expect(identifierErrors('090 123 4567')).toEqual([]);
-    expect(identifierErrors('090-123-4567')).toEqual([]);
+  it('từ chối SĐT còn dấu cách/gạch — ô nhập đã tự lọc, chuỗi này không đi qua ô nhập (ADR 0082)', () => {
+    expect(identifierErrors('090 123 4567')).toContain('Số điện thoại không hợp lệ');
+    expect(identifierErrors('090-123-4567')).toContain('Số điện thoại không hợp lệ');
   });
 
   it('từ chối email sai định dạng và chỉ đúng "email"', () => {

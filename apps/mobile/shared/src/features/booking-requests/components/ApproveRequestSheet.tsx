@@ -38,6 +38,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
 import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
+import { DecisionFooter, DecisionLead, richBold } from './DecisionSheetParts';
 
 /** Giờ nhận mặc định khi điền sẵn từ một NGÀY nguyện vọng — cùng hằng với web. */
 const DEFAULT_PICKUP_HOUR = 9;
@@ -205,15 +206,32 @@ export function ApproveRequestSheet({
       onClose={onClose}
       title={longTerm ? t('longTerm.title') : t('approve.title')}
       footer={
-        <Button
-          label={longTerm ? t('longTerm.confirm') : t('approve.confirm')}
-          icon="checkmark-circle-outline"
-          loading={loading}
-          disabled={!ready}
-          onPress={confirm}
+        <DecisionFooter
+          backLabel={t('approve.back')}
+          onBack={onClose}
+          confirm={
+            <Button
+              label={longTerm ? t('longTerm.confirm') : t('approve.confirm')}
+              icon="checkmark-circle-outline"
+              loading={loading}
+              disabled={!ready}
+              onPress={confirm}
+            />
+          }
         />
       }
     >
+      {/*
+        Câu dẫn của web (05/11/2026): duyệt xong thẻ sang nhóm nào — "Chờ thanh toán" khi có thu
+        tiền giữ chỗ, "Chờ nhận xe" khi đơn có ngay. Dài hạn giữ lời dẫn riêng của tấm.
+      */}
+      {!longTerm && approvalPreview ? (
+        <DecisionLead>
+          {approvalPreview.collectsHold
+            ? t.rich('approve.subtitleHold', { b: richBold })
+            : t.rich('approve.subtitleNoHold', { b: richBold })}
+        </DecisionLead>
+      ) : null}
       {pastDue ? (
         <YStack bg={colors.dangerSurface} p={space.md} br={radius.md}>
           <Text col={colors.danger} fos={fontSize.bodySm}>
@@ -267,7 +285,10 @@ export function ApproveRequestSheet({
           {/* Như web `ApproveBookingRequestDialog` (#213): tiền thuê + tổng khách — số của server. */}
           {request.pricing ? (
             <>
-              <DataRow label={t('approve.rentalTotal')} value={fmt.money(request.pricing.rentalTotal)} />
+              <DataRow
+                label={t('approve.rentalTotal')}
+                value={fmt.money(request.pricing.rentalTotal)}
+              />
               <DataRow
                 label={t('approve.customerTotal')}
                 value={fmt.money(request.pricing.customerTotalAmount)}
@@ -381,16 +402,14 @@ export function ApproveRequestSheet({
             showMoney={requestPackage != null}
           />
         ) : (
-          <ApprovalPreviewSummary preview={approvalPreview} />
+          <ApprovalPreviewSummary preview={approvalPreview} heading={t('approve.profitHeading')} />
         )
       ) : null}
 
       <Text col={colors.textMuted} fos={fontSize.label}>
         {t('approve.effect')}
       </Text>
-      {request.deliveryRequested ? (
-        <Callout tone="info" title={t('approve.deliveryNote')} />
-      ) : null}
+      {request.deliveryRequested ? <Callout tone="info" title={t('approve.deliveryNote')} /> : null}
     </BottomSheet>
   );
 }

@@ -43,6 +43,7 @@ import {
 } from '../trip-flow';
 import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripDriverCard } from './TripDriverCard';
+import { TripExtensionPanel } from './TripExtensionPanel';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOutcomeViews';
@@ -464,6 +465,8 @@ export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) 
 
       {/* Việc chính (`priority` web): "Chưa nhận được xe" (ADR 0066) · khoản hoàn khi chuyển THỪA · lời nhắc thu cọc trực tiếp. */}
       <TripNotReceivedReport trip={trip} />
+      {/* Gia hạn chuyến dài hạn (ADR 0077) — QR của phụ lục đang chờ; không có thì im lặng. */}
+      <TripExtensionPanel tripId={trip.id} />
       {hold?.refund ? <TripHoldPanel hold={hold} tripId={trip.id} /> : null}
       <DirectDepositNotice trip={trip} />
 

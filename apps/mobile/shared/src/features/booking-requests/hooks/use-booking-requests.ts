@@ -168,6 +168,21 @@ export function useCancelBookingRequest() {
 }
 
 /**
+ * Nhắc khách chuyển tiền giữ chỗ (web `useRemindBookingRequestPayment`). Làm mới hộp thư để nút
+ * đọc lại `paymentReminderAvailableAt` server vừa ghi.
+ */
+export function useRemindBookingRequestPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingRequestsApi.remindPayment(id),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+    },
+  });
+}
+
+/**
  * Mở (hoặc lấy lại) hội thoại với khách của một yêu cầu — bản native của
  * `useStartBookingRequestConversation` bên web.
  *

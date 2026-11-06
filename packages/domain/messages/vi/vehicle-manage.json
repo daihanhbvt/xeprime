@@ -311,7 +311,9 @@
       "selfDrive": "Cho thuê tự lái",
       "withDriver": "Cho thuê có tài xế",
       "longTerm": "Cho thuê dài hạn",
-      "advanced": "Nâng cao"
+      "advanced": "Nâng cao",
+      "services": "Dịch vụ & giá",
+      "policy": "Chính sách thuê"
     },
     "items": {
       "information": "Thông tin xe & tiện ích",
@@ -323,7 +325,9 @@
       "bookingTerms": "Nhận chuyến & thủ tục",
       "surcharges": "Phụ phí",
       "source": "Nguồn xe & tài chính",
-      "maintenance": "Bảo dưỡng & KM"
+      "maintenance": "Bảo dưỡng & KM",
+      "services": "Dịch vụ & giá",
+      "turnaround": "Thời gian chết giữa hai chuyến"
     },
     "longTermNote": "Giá thuê tháng nằm ở Giá & chính sách"
   }

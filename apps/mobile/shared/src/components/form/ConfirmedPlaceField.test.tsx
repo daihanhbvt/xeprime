@@ -124,7 +124,7 @@ async function renderHarness(props?: Parameters<typeof Harness>[0]) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedPlacesApi.search.mockResolvedValue({ items: [SUGGESTION], available: true });
+  mockedPlacesApi.search.mockResolvedValue({ items: [SUGGESTION], outOfProvinceCount: 0, available: true });
 });
 
 describe('ConfirmedPlaceField', () => {
@@ -250,7 +250,7 @@ describe('ConfirmedPlaceField', () => {
   });
 
   it('dịch vụ gợi ý tắt (available: false) ⇒ gõ là dọn ghim + placeId, nguồn manual', async () => {
-    mockedPlacesApi.search.mockResolvedValue({ items: [], available: false });
+    mockedPlacesApi.search.mockResolvedValue({ items: [], outOfProvinceCount: 0, available: false });
     const view = await renderHarness({
       initial: { addressLine: '', latitude: 16.4, longitude: 107.5, placeId: 'old', locationSource: 'google_place' },
     });

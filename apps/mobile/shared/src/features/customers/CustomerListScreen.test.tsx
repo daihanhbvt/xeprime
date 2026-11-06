@@ -87,6 +87,7 @@ const SUMMARY: TenantCustomerSummary = {
   watchlistCustomers: 1,
   blockedCustomers: 0,
   archivedCustomers: 2,
+  totalRentals: 0,
   totalDebt: '2000000',
   debtCustomers: 1,
 };

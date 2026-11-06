@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -8,10 +8,12 @@ import { REASON_MAX } from '@/lib/reason';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { FieldLabel } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
+import { DecisionFooter, DecisionLead, richBold } from './DecisionSheetParts';
 
 const PRESET_KEYS = [
   'vehicleUnavailable',
@@ -19,6 +21,8 @@ const PRESET_KEYS = [
   'requirementsUnsuitable',
   'other',
 ] as const;
+
+type PresetKey = (typeof PRESET_KEYS)[number];
 
 // Không dùng schema của `@xeprime/validators`: nó mang sẵn câu tiếng Việt, còn câu lỗi ở đây
 // phải đổi theo ngôn ngữ đang chọn.
@@ -35,7 +39,11 @@ function useRejectSchema() {
 
 type RejectValues = { reason: string };
 
-/** Lý do BẮT BUỘC: khác với lý do huỷ đơn (chỉ vào nhật ký nội bộ), lý do từ chối đi thẳng tới khách. */
+/**
+ * Từ chối yêu cầu — bản native của web `RejectBookingRequestDialog` (05/11/2026): CHỌN MỘT lý do
+ * (bắt buộc) + ghi chú gửi khách (bắt buộc — lý do từ chối đi thẳng tới khách). Chọn lý do điền
+ * sẵn câu mẫu nhưng KHÔNG đè chữ người trực đã tự gõ.
+ */
 export function RejectRequestSheet({
   open,
   onClose,
@@ -53,12 +61,34 @@ export function RejectRequestSheet({
   const t = useTranslations('BookingRequests.reject');
 
   const schema = useRejectSchema();
-  const { control, handleSubmit, setValue } = useForm<RejectValues>({
+  const { control, handleSubmit, setValue, getValues } = useForm<RejectValues>({
     resolver: yupResolver(schema),
     defaultValues: { reason: '' },
   });
+  const [preset, setPreset] = useState<PresetKey | null>(null);
+  const [touched, setTouched] = useState(false);
 
-  const submit = handleSubmit((values) => onConfirm(values.reason));
+  const presetText = (key: PresetKey) => t(`presets.${key}` as 'presets.other');
+
+  function choosePreset(key: PresetKey) {
+    setPreset(key);
+    const current = getValues('reason').trim();
+    const presetTexts = PRESET_KEYS.filter((k) => k !== 'other').map((k) => presetText(k).trim());
+    if (current === '' || presetTexts.includes(current)) {
+      setValue('reason', key === 'other' ? '' : presetText(key), {
+        shouldValidate: current !== '',
+      });
+    }
+  }
+
+  const submit = handleSubmit(
+    (values) => {
+      setTouched(true);
+      if (preset === null) return;
+      onConfirm(values.reason.trim());
+    },
+    () => setTouched(true),
+  );
 
   return (
     <BottomSheet
@@ -67,33 +97,46 @@ export function RejectRequestSheet({
       title={t('title')}
       subtitle={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
       footer={
-        <Button
-          label={t('confirm')}
-          icon="close-circle-outline"
-          variant="danger"
-          loading={loading}
-          onPress={() => void submit()}
+        <DecisionFooter
+          backLabel={t('back')}
+          onBack={onClose}
+          confirm={
+            <Button
+              label={t('confirm')}
+              icon="close-circle-outline"
+              variant="danger"
+              loading={loading}
+              onPress={() => void submit()}
+            />
+          }
         />
       }
     >
-      <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-        <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {t('presetLabel')}
-        </Text>
+      <DecisionLead>{t.rich('subtitle', { b: richBold })}</DecisionLead>
+
+      <YStack gap={space.sm}>
+        <FieldLabel label={t('presetLabel')} required />
+        {preset === null ? (
+          <Text col={colors.placeholder} fos={fontSize.bodySm}>
+            {t('presetPlaceholder')}
+          </Text>
+        ) : null}
         <XStack gap={space.xs} flexWrap="wrap">
           {PRESET_KEYS.map((key) => (
             <Chip
               key={key}
-              label={t(`presets.${key}` as 'presets.other')}
+              label={presetText(key)}
               size="sm"
-              onPress={() =>
-                setValue('reason', t(`presets.${key}` as 'presets.other'), {
-                  shouldValidate: true,
-                })
-              }
+              selected={preset === key}
+              onPress={() => choosePreset(key)}
             />
           ))}
         </XStack>
+        {touched && preset === null ? (
+          <Text col={colors.danger} fos={fontSize.label}>
+            {t('presetRequired')}
+          </Text>
+        ) : null}
       </YStack>
 
       <TextField

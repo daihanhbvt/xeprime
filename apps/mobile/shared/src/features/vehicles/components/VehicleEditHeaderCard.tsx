@@ -1,11 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView } from 'react-native';
+import { Linking, Pressable, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  SERVICE_TYPE,
   STATUS_COLOR,
+  VEHICLE_PUBLIC_STATUS,
+  VEHICLE_TYPE,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_META,
@@ -13,6 +16,10 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
+import { publishCompleteness } from '../publication';
 import { vehicleDisplayMedia } from '../display-media';
 import { Card } from '@/components/ui/Card';
 import { ImageEditBadge } from '@/components/ui/ImageEditBadge';
@@ -59,8 +66,11 @@ export function VehicleEditHeaderCard({
   vehicle,
   onEditImages,
   statusEditable = false,
+  showOwnerStats = false,
   footer,
 }: {
+  /** Đánh giá + số chuyến — chỉ khu chủ xe (web `showOwnerStats={!isManage}`). */
+  showOwnerStats?: boolean;
   vehicle: VehicleDetail;
   onEditImages?: (() => void) | undefined;
   statusEditable?: boolean;
@@ -85,6 +95,35 @@ export function VehicleEditHeaderCard({
   const update = useUpdateVehicle(vehicle.id);
   const summary = useVehicleSummary(vehicle.id).data;
   const [picking, setPicking] = useState(false);
+  const tSummary = useTranslations('Vehicles.editor.summary');
+
+  /*
+   * Bản native của web `VehicleEditSummary`: giá đại diện kèm đơn vị (giá ngày của dịch vụ đầu tiên
+   * xe có, dài hạn thì giá tháng), loại xe · số ghế / hạng xe máy, đánh giá + số chuyến, mức hoàn
+   * thiện hồ sơ đăng chợ, và lối "Xem trang xe" khi xe đã công khai.
+   */
+  const services = vehicle.serviceTypes ?? [];
+  const price =
+    services.includes(SERVICE_TYPE.SELF_DRIVE) && vehicle.weekdayPrice
+      ? { value: fmt.money(vehicle.weekdayPrice), unit: tSummary('perDay') }
+      : services.includes(SERVICE_TYPE.WITH_DRIVER) && vehicle.withDriverDailyPrice
+        ? { value: fmt.money(vehicle.withDriverDailyPrice), unit: tSummary('perDay') }
+        : services.includes(SERVICE_TYPE.LONG_TERM) && vehicle.monthlyPrice
+          ? { value: fmt.money(vehicle.monthlyPrice), unit: tSummary('perMonth') }
+          : null;
+  const seatOrCategory =
+    vehicle.vehicleType === VEHICLE_TYPE.CAR
+      ? vehicle.seatCount
+        ? tSummary('seats', { count: vehicle.seatCount })
+        : null
+      : vehicle.motorbikeCategory
+        ? domainLabel('motorbikeCategory', vehicle.motorbikeCategory)
+        : null;
+  const completeness = publishCompleteness(vehicle);
+  const percent =
+    completeness.total > 0 ? Math.round((completeness.done / completeness.total) * 100) : 100;
+  const stats = summary?.stats;
+  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
   const operationStatus = vehicle.operationStatus as VehicleOperationStatus;
   const publicStatus = vehicle.publicStatus as VehiclePublicStatus;
@@ -204,6 +243,36 @@ export function VehicleEditHeaderCard({
             : ''}
         </Text>
 
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {[domainLabel('vehicleType', vehicle.vehicleType), seatOrCategory].filter(Boolean).join(' · ')}
+          {' • '}
+          {price ? tSummary('priceWithUnit', { unit: price.unit }) : tSummary('price')}
+          {': '}
+          <Strong>{price ? price.value : tLabels('notAvailable')}</Strong>
+        </Text>
+
+        {showOwnerStats && stats ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {tSummary('rating')}
+            {': '}
+            <Strong>{stats.ratingAvg ? fmt.rating(Number(stats.ratingAvg)) : tSummary('noRating')}</Strong>
+            {' · '}
+            {tSummary('trips', { count: stats.completedBookings })}
+          </Text>
+        ) : null}
+
+        <YStack gap={4} accessibilityLabel={tSummary('completenessValue', completeness)}>
+          <XStack jc="space-between">
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {tSummary('completeness')}
+            </Text>
+            <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+              {`${percent}%`}
+            </Text>
+          </XStack>
+          <ProgressBar percent={percent} />
+        </YStack>
+
         <XStack flexWrap="wrap" gap={space.md} rowGap={space.xs}>
           <XStack ai="center" gap={space.xs}>
             <Text col={colors.textMuted} fos={fontSize.label}>
@@ -252,6 +321,16 @@ export function VehicleEditHeaderCard({
         <YStack pt={space.xs} borderTopWidth={1} borderColor={colors.borderSubtle}>
           <MarketplaceVisibilityRow vehicle={vehicle} />
         </YStack>
+        {/* Trang xe trên chợ là trang WEB của site khách — app Partner mở ra trình duyệt. */}
+        {isPublic ? (
+          <Button
+            label={tSummary('viewListing')}
+            icon="open-outline"
+            variant="secondary"
+            size="sm"
+            onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/listings/${vehicle.id}`)}
+          />
+        ) : null}
 
         {footer}
       </YStack>

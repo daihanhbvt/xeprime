@@ -28,7 +28,7 @@ import {
  * Giữ dữ liệu cũ khi ĐỔI TRANG — thiếu nó thì mỗi cú bấm số làm danh sách trắng một nhịp rồi
  * mới có nội dung, và chiều cao nhảy theo. Nhưng KHÔNG giữ khi đổi bộ lọc: xem `keepPageData`.
  */
-export function useBookingsPage(filters: BookingFilters) {
+export function useBookingsPage(filters: BookingFilters, options?: { enabled?: boolean }) {
   // `branchId` là ô lọc của CHÍNH màn (ADR 0052), đi trong `filters` như mọi chiều khác.
   const scoped = filters;
   const params = bookingFiltersToParams(scoped);
@@ -37,6 +37,7 @@ export function useBookingsPage(filters: BookingFilters) {
     queryKey: queryKeys.bookings.list(params),
     queryFn: () => bookingsApi.list(scoped),
     placeholderData: keepPageData<Awaited<ReturnType<typeof bookingsApi.list>>>(params),
+    enabled: options?.enabled ?? true,
   });
 }
 

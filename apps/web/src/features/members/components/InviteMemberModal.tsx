@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import { TENANT_ROLE, TENANT_ROLE_VALUES } from '@xeprime/types';
-import { buildRequiredPhoneSchema } from '@xeprime/validators';
+import { buildRequiredMobilePhoneSchema } from '@xeprime/validators';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
@@ -65,7 +65,7 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
     () =>
       yup.object({
         // Cùng luật SĐT với form đăng nhập/đăng ký — người được mời vào bằng đúng số này.
-        phone: buildRequiredPhoneSchema({
+        phone: buildRequiredMobilePhoneSchema({
           required: t('form.errors.phoneRequired'),
           invalid: t('form.errors.phoneInvalid'),
         }),

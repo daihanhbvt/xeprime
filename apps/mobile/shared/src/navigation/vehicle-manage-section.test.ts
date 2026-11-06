@@ -27,22 +27,25 @@ const ALL_SECTIONS = VEHICLE_MANAGE_NAV.flatMap((group) => group.items.map((item
  * dẫn tới một địa chỉ RIÊNG trùng web.
  */
 describe('VEHICLE_MANAGE_NAV', () => {
-  it('năm nhóm, đúng thứ tự, đúng nhãn menu và đúng dịch vụ của từng nhóm', () => {
+  it('sáu nhóm, đúng thứ tự, đúng nhãn menu và đúng dịch vụ của từng nhóm', () => {
     expect(VEHICLE_MANAGE_NAV.map((g) => g.key)).toEqual([
       'info',
-      'pricingHandover',
+      'services',
+      'policy',
       'selfDrive',
       'withDriver',
       'longTerm',
     ]);
     expect(VEHICLE_MANAGE_NAV.map((g) => g.labelKey)).toEqual([
       'groups.info',
-      'groups.pricingHandover',
+      'groups.services',
+      'groups.policy',
       'groups.selfDrive',
       'groups.withDriver',
       'groups.longTerm',
     ]);
     expect(VEHICLE_MANAGE_NAV.map((g) => g.serviceType)).toEqual([
+      null,
       null,
       null,
       SERVICE_TYPE.SELF_DRIVE,
@@ -57,8 +60,8 @@ describe('VEHICLE_MANAGE_NAV', () => {
       [VEHICLE_MANAGE_SECTION.IMAGES, 'items.images'],
       [VEHICLE_MANAGE_SECTION.DOCUMENTS, 'items.documents'],
       [VEHICLE_MANAGE_SECTION.TRIP_HISTORY, 'items.tripHistory'],
-      [VEHICLE_MANAGE_SECTION.PRICING, 'items.pricing'],
-      [VEHICLE_MANAGE_SECTION.HANDOVER_TIME, 'items.handoverTime'],
+      [VEHICLE_MANAGE_SECTION.PRICING, 'items.services'],
+      [VEHICLE_MANAGE_SECTION.HANDOVER_TIME, 'items.turnaround'],
       [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION, 'items.bookingTerms'],
       [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION, 'items.bookingTerms'],
     ]);
@@ -81,8 +84,8 @@ describe('VEHICLE_MANAGE_NAV', () => {
   });
 
   it('nhãn tiêu đề của một mục là nhãn menu của nó', () => {
-    expect(sectionLabelKeyOf(VEHICLE_MANAGE_SECTION.PRICING)).toBe('items.pricing');
-    expect(sectionLabelKeyOf(VEHICLE_MANAGE_SECTION.HANDOVER_TIME)).toBe('items.handoverTime');
+    expect(sectionLabelKeyOf(VEHICLE_MANAGE_SECTION.PRICING)).toBe('items.services');
+    expect(sectionLabelKeyOf(VEHICLE_MANAGE_SECTION.HANDOVER_TIME)).toBe('items.turnaround');
   });
 });
 

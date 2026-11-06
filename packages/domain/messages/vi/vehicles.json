@@ -998,6 +998,7 @@
       "termMonthsMin": "Thời hạn vay phải lớn hơn 0",
       "termMonthsMax": "Thời hạn vay vượt quá giới hạn cho phép",
       "ownerNameRequired": "Nhập tên chủ xe / doanh nghiệp",
+      "phoneInvalid": "Số điện thoại không hợp lệ (chỉ chữ số, vd 0901234567)",
       "ownerEmailInvalid": "Email không hợp lệ",
       "monthlyRentRequired": "Nhập tiền thuê hàng tháng",
       "commissionTypeError": "Tỷ lệ phải là số",

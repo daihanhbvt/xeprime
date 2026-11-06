@@ -1,6 +1,7 @@
 'use client';
 
 import { Form, Input } from 'antd';
+import { sanitizePhoneInput } from '@xeprime/types';
 import { useId, type ChangeEvent, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import styles from './field.module.css';
@@ -66,10 +67,13 @@ export function TextField<T extends FieldValues>({
   const inputId = `${String(name)}-${useId()}`;
   const describedById = `${inputId}-help`;
   const helpText = fieldState.error?.message ?? help;
+  // Ô SĐT (ADR 0082): chỉ giữ chữ số và một `+` đầu, lúc gõ lẫn lúc dán — `099 222 2222` vào là
+  // `0992222222` ngay. Nơi gọi tự truyền `normalize` thì dùng bản đó.
+  const applyNormalize = normalize ?? (type === 'tel' ? sanitizePhoneInput : undefined);
   const shared = {
     ...field,
-    onChange: normalize
-      ? (event: ChangeEvent<HTMLInputElement>) => field.onChange(normalize(event.target.value))
+    onChange: applyNormalize
+      ? (event: ChangeEvent<HTMLInputElement>) => field.onChange(applyNormalize(event.target.value))
       : field.onChange,
     id: inputId,
     placeholder,

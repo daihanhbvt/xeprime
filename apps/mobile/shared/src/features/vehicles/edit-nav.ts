@@ -11,7 +11,7 @@ export interface EditNavItem {
 }
 
 export interface EditNavGroup {
-  readonly key: 'info' | 'pricingHandover' | 'selfDrive' | 'withDriver' | 'longTerm' | 'advanced';
+  readonly key: 'info' | 'services' | 'policy' | 'selfDrive' | 'withDriver' | 'longTerm' | 'advanced';
   readonly labelKey: VehicleManageMenuKey;
   /** Dịch vụ của nhóm — nhóm dịch vụ có công tắc bật/tắt trên tiêu đề; `null` = nhóm chung. */
   readonly serviceType: ServiceType | null;
@@ -78,18 +78,24 @@ export function vehicleEditNavGroups({
         item(VEHICLE_EDIT_TAB.INFORMATION, 'items.information', 'car-outline'),
         item(VEHICLE_EDIT_TAB.MEDIA, 'items.images', 'images-outline'),
         item(VEHICLE_EDIT_TAB.DOCUMENTS, 'items.documents', 'document-text-outline'),
+        item(VEHICLE_EDIT_TAB.TRIP_HISTORY, 'items.tripHistory', 'time-outline'),
       ],
     },
     {
-      // Giá và khung giờ giao nhận áp cho CẢ chiếc xe — không nằm dưới công tắc dịch vụ nào.
-      key: 'pricingHandover',
-      labelKey: 'groups.pricingHandover',
+      // "Dịch vụ & giá" và "Chính sách thuê" — hai mục của màn sửa xe web (Figma 03/11/2026). Áp
+      // cho CẢ chiếc xe, không nằm dưới công tắc dịch vụ nào. Khung giờ giao nhận đã gỡ (ADR 0078).
+      key: 'services',
+      labelKey: 'groups.services',
       serviceType: null,
       dimmed: false,
-      items: [
-        item(VEHICLE_EDIT_TAB.PRICING, 'items.pricing', 'cash-outline'),
-        item(VEHICLE_EDIT_TAB.HANDOVER_TIME, 'items.handoverTime', 'alarm-outline'),
-      ],
+      items: [item(VEHICLE_EDIT_TAB.PRICING, 'items.services', 'cash-outline')],
+    },
+    {
+      key: 'policy',
+      labelKey: 'groups.policy',
+      serviceType: null,
+      dimmed: false,
+      items: [item(VEHICLE_EDIT_TAB.HANDOVER_TIME, 'items.turnaround', 'hourglass-outline')],
     },
     service('selfDrive', 'groups.selfDrive', SERVICE_TYPE.SELF_DRIVE, [
       item(
@@ -114,8 +120,9 @@ export function vehicleEditNavGroups({
       serviceType: null,
       dimmed: false,
       items: [
-        item(VEHICLE_EDIT_TAB.SOURCE, 'items.source', 'wallet-outline'),
+        // Bảo dưỡng TRƯỚC nguồn xe — đúng thứ tự nhóm Nâng cao bên web.
         item(VEHICLE_EDIT_TAB.MAINTENANCE, 'items.maintenance', 'construct-outline'),
+        item(VEHICLE_EDIT_TAB.SOURCE, 'items.source', 'wallet-outline'),
       ],
     },
   ];

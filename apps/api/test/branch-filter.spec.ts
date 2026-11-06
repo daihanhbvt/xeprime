@@ -443,7 +443,7 @@ describe('/maintenance — bảng, dải đếm và tab thứ tư cùng một ph
         tenantId,
         fullName: 'Khách KM',
         phone: '0900000111',
-        normalizedPhone: '84900000111',
+        normalizedPhone: '0900000111',
       },
     });
     await prisma.booking.create({

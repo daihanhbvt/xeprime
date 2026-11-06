@@ -44,6 +44,8 @@ import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/t
 import { CustomerBookingHistory } from './components/CustomerBookingHistory';
 import { CustomerDocumentsPanel } from './components/CustomerDocumentsPanel';
 import { CustomerFinancePanel } from './components/CustomerFinancePanel';
+import { CustomerRevenueCard } from './components/CustomerRevenueCard';
+import { CustomerOverviewBlocks } from './components/CustomerOverviewBlocks';
 import { CustomerFormSheet } from './components/CustomerFormSheet';
 import { CustomerNotesPanel } from './components/CustomerNotesPanel';
 import { CustomerRiskSheet } from './components/CustomerRiskSheet';
@@ -735,6 +737,12 @@ function CustomerProfile({
 
           {activeSection === SECTION.OVERVIEW ? (
             <YStack gap={space.md}>
+              {/* Công nợ cũ nhất + chuyến hiện tại (web `CustomerOverviewTab`). */}
+              <CustomerOverviewBlocks
+                customer={customer}
+                canViewBookings={canViewBookings}
+                canViewFinance={canViewFinance}
+              />
               {profileCard}
               <XStack ai="center" gap={space.xs}>
                 <Ionicons name="time-outline" size={iconSize.md} color={colors.primaryActive} />
@@ -819,7 +827,11 @@ function CustomerProfile({
           ) : null}
 
           {activeSection === SECTION.FINANCE && canViewFinance ? (
-            <CustomerFinancePanel customerId={customer.id} />
+            <YStack gap={layout.section}>
+              {/* Doanh thu theo kỳ + khoản phải thu (02/11/2026) — server đòi thêm bookings.view. */}
+              {canViewBookings ? <CustomerRevenueCard customerId={customer.id} /> : null}
+              <CustomerFinancePanel customerId={customer.id} />
+            </YStack>
           ) : null}
 
           {activeSection === SECTION.NOTES ? (

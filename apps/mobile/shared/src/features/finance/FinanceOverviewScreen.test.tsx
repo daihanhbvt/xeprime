@@ -161,21 +161,25 @@ afterEach(() => {
  */
 describe('FinanceOverviewScreen — ba lớp tiền', () => {
   it('doanh thu KHÔNG gồm cọc, còn dòng tiền quỹ thì có', async () => {
-    const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
+    const { findByText, findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
-    expect(await findByText('KẾT QUẢ KINH DOANH')).toBeTruthy();
+    // Dải thẻ `Finance.overview.tiles` như web: doanh thu (đã trừ cọc) tách khỏi dòng tiền ròng (gồm cọc).
+    expect(await findByLabelText(/^Doanh thu: /)).toBeTruthy();
     expect(await findByText('82.500.000 ₫')).toBeTruthy();
-    expect(await findByText('DÒNG TIỀN QUỸ')).toBeTruthy();
-    expect(await findByText('96.500.000 ₫')).toBeTruthy();
+    // Ô dòng tiền ròng (gồm cọc) — tìm theo số của ô, nhãn có dấu ngoặc.
+    expect(await findByLabelText(/: 72\.400\.000 ₫$/)).toBeTruthy();
+    // Tiền vào (gồm cọc) nằm ở dòng phụ "Vào … · Ra …" của chính ô đó.
+    expect(await findByText(/96\.500\.000 ₫/)).toBeTruthy();
   });
 
   it('cọc đang giữ và công nợ nằm ở lớp "tại thời điểm này", tách khỏi số liệu kỳ', async () => {
-    const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
+    const { findByText, findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
-    expect(await findByText('TẠI THỜI ĐIỂM NÀY')).toBeTruthy();
+    // Hai ô "hiện tại" của dải thẻ: số đơn kèm nhãn "· hiện tại", không theo kỳ.
+    expect(await findByLabelText(/^Cọc đang giữ: /)).toBeTruthy();
     expect(await findByText('14.000.000 ₫')).toBeTruthy();
+    expect(await findByLabelText(/^Khách còn nợ: /)).toBeTruthy();
     expect(await findByText('37.025.000 ₫')).toBeTruthy();
-    expect(await findByText('Hai số này không phụ thuộc kỳ đã chọn.')).toBeTruthy();
   });
 
   it('chưa có doanh thu ⇒ nói "chưa có để tính biên", KHÔNG hiện 0%', async () => {
@@ -211,13 +215,13 @@ describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
     expect(href.params.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('ô Tiền vào KHÔNG lọc nhóm nguồn — nó cố ý gồm cả cọc', async () => {
-    const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
+  it('ô Dòng tiền ròng KHÔNG lọc nhóm nguồn — nó cố ý gồm cả cọc', async () => {
+    const { findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
-    await fireEvent.press(await findByText('Tiền vào'));
+    await fireEvent.press(await findByLabelText(/: 72\.400\.000 ₫$/));
 
     const href = mockPush.mock.calls[0]![0] as { params: Record<string, string> };
-    expect(href.params.type).toBe('income');
+    expect(href.params.type).toBeUndefined();
     expect(href.params.sourceGroup).toBeUndefined();
   });
 
@@ -266,6 +270,8 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       summary: summary({ unassignedRevenue: '900000' }),
     });
+    // Khối "Hiệu suất kinh doanh" mở tab Theo xe — dải khách chỉ tải khi chọn tab của nó (như web).
+    await fireEvent.press(await findByText('Theo khách'));
     expect(await findByText(/Chưa gắn khách nào: 900\.000 ₫/)).toBeTruthy();
   });
 
@@ -280,8 +286,10 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
   });
 
   it('hai dải phân trang ĐỘC LẬP — tham số của dải này không rơi vào dải kia', async () => {
-    const { byVehicleSpy, byCustomerSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
+    const { findByText, byVehicleSpy, byCustomerSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
+    await waitFor(() => expect(byVehicleSpy).toHaveBeenCalled());
+    await fireEvent.press(await findByText('Theo khách'));
     await waitFor(() => expect(byCustomerSpy).toHaveBeenCalled());
     const vehicleFilters = byVehicleSpy.mock.calls[0]![0];
     const customerFilters = byCustomerSpy.mock.calls[0]![0];
@@ -327,11 +335,12 @@ describe('FinanceOverviewScreen — quyền', () => {
   });
 
   it('có `customers.view`: thẻ khách mở hồ sơ khách', async () => {
-    const { findByLabelText } = await renderScreen([
+    const { findByText, findByLabelText } = await renderScreen([
       PERMISSION.FINANCE_VIEW,
       PERMISSION.CUSTOMER_VIEW,
     ]);
 
+    await fireEvent.press(await findByText('Theo khách'));
     await fireEvent.press(await findByLabelText('Nguyễn Văn A'));
 
     expect(mockPush).toHaveBeenCalledWith({

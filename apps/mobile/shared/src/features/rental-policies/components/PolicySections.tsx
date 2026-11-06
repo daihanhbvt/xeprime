@@ -16,7 +16,6 @@ import {
   COLLATERAL_MODE,
   type CollateralMode,
   COLLATERAL_MODE_VALUES,
-  DELIVERY_TIER_FEE_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
 } from '@xeprime/types';
@@ -733,56 +732,15 @@ function DeliverySection({
                       min={0}
                       editable={!disabled}
                     />
-                    {/*
-                      Hai cách tính LOẠI TRỪ nhau (ADR 0064): trọn gói cho cả bậc, hoặc đơn giá theo
-                      km nhân khoảng cách thật. Chỉ ô của cách đang chọn được dựng — như web.
-                    */}
-                    <Controller
+                    {/* Mỗi bậc MỘT phí trọn gói — phí theo km đã gỡ (ADR 0078), như web. */}
+                    <MoneyField
                       control={control}
-                      name={`deliveryTiers.${index}.feeMode`}
-                      render={({ field }) => (
-                        <YStack gap={space.xs}>
-                          <FieldLabel label={t('feeModeLabel', { index: index + 1 })} />
-                          <XStack gap={space.sm}>
-                            {[
-                              { value: DELIVERY_TIER_FEE_MODE.FLAT, label: t('feeModeFlat') },
-                              { value: DELIVERY_TIER_FEE_MODE.PER_KM, label: t('feeModePerKm') },
-                            ].map((option) => (
-                              <YStack key={option.value} f={1}>
-                                <RadioOption
-                                  label={option.label}
-                                  checked={
-                                    (field.value ?? DELIVERY_TIER_FEE_MODE.FLAT) === option.value
-                                  }
-                                  disabled={disabled}
-                                  onPress={() => field.onChange(option.value)}
-                                />
-                              </YStack>
-                            ))}
-                          </XStack>
-                        </YStack>
-                      )}
+                      name={`deliveryTiers.${index}.fee`}
+                      label={t('feeLabel')}
+                      // Cùng luật "miễn phí" với dòng tóm tắt khách thấy (@xeprime/domain) — y như web.
+                      hint={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
+                      editable={!disabled}
                     />
-                    {tiers[index]?.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM ? (
-                      <MoneyField
-                        key="perKm"
-                        control={control}
-                        name={`deliveryTiers.${index}.perKm`}
-                        label={`${t('tierPerKmLabel', { index: index + 1 })} (${t('perKmUnit')})`}
-                        hint={t('perKmHint')}
-                        editable={!disabled}
-                      />
-                    ) : (
-                      <MoneyField
-                        key="fee"
-                        control={control}
-                        name={`deliveryTiers.${index}.fee`}
-                        label={t('feeLabel')}
-                        // Cùng luật "miễn phí" với dòng tóm tắt khách thấy (@xeprime/domain) — y như web.
-                        hint={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
-                        editable={!disabled}
-                      />
-                    )}
                   </TierCard>
                 );
               })}
@@ -794,14 +752,7 @@ function DeliverySection({
                   disabled={false}
                   /* Bậc mới luôn RỖNG: mốc bắt đầu của nó là mốc kết thúc của bậc trước và được
                      suy ra lúc vẽ, nên không có gì để điền sẵn. Giống `append` của web. */
-                  onPress={() =>
-                    append({
-                      toKm: null,
-                      feeMode: DELIVERY_TIER_FEE_MODE.FLAT,
-                      fee: null,
-                      perKm: null,
-                    })
-                  }
+                  onPress={() => append({ toKm: null, fee: null })}
                 />
               )}
 
