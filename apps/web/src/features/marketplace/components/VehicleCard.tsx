@@ -3,6 +3,8 @@
 import { ArrowRightOutlined } from '@ant-design/icons';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 import { isNewListing } from '@xeprime/domain';
 import {
   SERVICE_TYPE,
@@ -26,6 +28,8 @@ import styles from './VehicleCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
 import { RatingStar } from '@/components/data-display/Stars';
+import { usePointerTilt } from '@/components/motion/use-pointer-tilt';
+import { navigateWithViewTransition } from '@/components/motion/view-transition';
 
 export interface VehicleCardProps {
   listing: PublicListing;
@@ -48,6 +52,10 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
   const fmt = useAppFormat();
+  const router = useRouter();
+  // Nghiêng 3D + vệt sáng theo chuột (thẻ đứng), và ảnh thẻ "bay" sang ảnh đầu trang chi tiết.
+  const tiltRef = usePointerTilt<HTMLElement>();
+  const mediaRef = useRef<HTMLDivElement>(null);
 
   const { filters } = useMarketplaceFilters();
   const { fuelTypeLabel, bodyTypeLabel } = useCatalogLabels();
@@ -352,14 +360,17 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
   // GRID VARIANT (default 4-column vertical card)
   // -------------------------
   return (
-    <article className={styles.card}>
+    <article ref={tiltRef} className={styles.card}>
       <Link
         href={detailHref}
         className={styles.stretch}
         aria-label={t('viewDetail', { name: listing.name })}
+        onClick={(event) => {
+          navigateWithViewTransition(event, mediaRef.current, () => router.push(detailHref));
+        }}
       />
 
-      <div className={styles.media}>
+      <div ref={mediaRef} className={styles.media}>
         {listing.mainImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

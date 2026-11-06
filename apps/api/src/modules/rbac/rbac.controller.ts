@@ -24,7 +24,7 @@ export class RbacController {
   @ApiOperation({
     summary: 'Quyền của user hiện tại theo từng scope',
     description:
-      'Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ — backend guard mới là nguồn.',
+      'Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ - backend guard mới là nguồn.',
   })
   @ApiOkResponse({ type: MyPermissionsDto })
   async myPermissions(@CurrentUser() user: AuthenticatedUser): Promise<MyPermissionsDto> {

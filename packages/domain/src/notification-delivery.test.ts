@@ -146,7 +146,7 @@ describe('notificationDeepLink', () => {
 });
 
 describe('pushCollapseKey', () => {
-  it('gộp theo hội thoại — mười tin là MỘT dòng trên khay', () => {
+  it('gộp theo hội thoại - mười tin là MỘT dòng trên khay', () => {
     expect(
       pushCollapseKey(NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED, {
         targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION,
@@ -176,7 +176,7 @@ describe('pushCollapseKey', () => {
     ).toBeNull();
   });
 
-  it('thiếu id thì không gộp — gộp theo một khoá rỗng là gộp mọi thứ vào nhau', () => {
+  it('thiếu id thì không gộp - gộp theo một khoá rỗng là gộp mọi thứ vào nhau', () => {
     expect(
       pushCollapseKey(NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED, {
         targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION,
@@ -222,7 +222,7 @@ describe('pushDataPayload', () => {
     for (const value of Object.values(data)) expect(typeof value).toBe('string');
   });
 
-  it('không có đích thì bỏ hẳn khoá url — FCM không nhận giá trị null', () => {
+  it('không có đích thì bỏ hẳn khoá url - FCM không nhận giá trị null', () => {
     const data = pushDataPayload({
       notificationId: 'N1',
       type: NOTIFICATION_TYPE.REVIEW_RECEIVED,

@@ -46,7 +46,7 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
   } as NonNullable<CurrentUser['tenant']>;
 }
 
-describe('resolveAccountNav — MỘT menu khách', () => {
+describe('resolveAccountNav - MỘT menu khách', () => {
   it('sáu mục, cùng thứ tự với ACCOUNT_NAV bên web (design Account 22/10/2026)', () => {
     const groups = resolveAccountNav(user(), { hasDriverLinks: true });
     expect(groups.map((g) => g.key)).toEqual(['account']);
@@ -71,7 +71,7 @@ describe('resolveAccountNav — MỘT menu khách', () => {
     expect(keys).toContain('trips');
   });
 
-  it('không phụ thuộc vai hay tuyến — kể cả khi một API cũ còn trả tenant', () => {
+  it('không phụ thuộc vai hay tuyến - kể cả khi một API cũ còn trả tenant', () => {
     for (const u of [
       user(),
       user({ tenant: tenant() }),

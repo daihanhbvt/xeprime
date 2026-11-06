@@ -46,9 +46,9 @@ export class PlatformInsuranceProductsController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Sửa một sản phẩm bảo hiểm — tên, quyền lợi, khấu trừ, mẫu URL GCN, bật/tắt',
+    summary: 'Sửa một sản phẩm bảo hiểm - tên, quyền lợi, khấu trừ, mẫu URL GCN, bật/tắt',
     description:
-      'Biểu phí NGÀY không sửa ở đây — nó có phiên bản ở chính sách phí. Hợp đồng đã bán giữ ' +
+      'Biểu phí NGÀY không sửa ở đây - nó có phiên bản ở chính sách phí. Hợp đồng đã bán giữ ' +
       'snapshot riêng, nên sửa danh mục không viết lại quyền lợi đã hứa. Có audit.',
   })
   @ApiOkResponse({ type: InsuranceProductDto })

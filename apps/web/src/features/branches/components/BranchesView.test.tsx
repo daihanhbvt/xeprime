@@ -128,7 +128,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('BranchesView — trạng thái', () => {
+describe('BranchesView - trạng thái', () => {
   it('đang tải: không dựng bảng rỗng gây hiểu nhầm "chưa có chi nhánh"', () => {
     state.data = undefined;
     state.isLoading = true;
@@ -161,7 +161,7 @@ describe('BranchesView — trạng thái', () => {
   });
 });
 
-describe('BranchesView — luật nghiệp vụ hiển thị', () => {
+describe('BranchesView - luật nghiệp vụ hiển thị', () => {
   it('chi nhánh mặc định có nhãn riêng và KHÔNG có hành động ngừng hoạt động khả dụng', async () => {
     renderView();
 
@@ -173,7 +173,7 @@ describe('BranchesView — luật nghiệp vụ hiển thị', () => {
     expect(stopButtons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
   });
 
-  it('cảnh báo khi có chi nhánh chưa gán tỉnh — xe ở đó không lên chợ', () => {
+  it('cảnh báo khi có chi nhánh chưa gán tỉnh - xe ở đó không lên chợ', () => {
     state.data = listOf(
       [{ ...DEFAULT_BRANCH, provinceCode: null, provinceName: null, needsLocationReview: true }],
       { needsReviewCount: 1 },

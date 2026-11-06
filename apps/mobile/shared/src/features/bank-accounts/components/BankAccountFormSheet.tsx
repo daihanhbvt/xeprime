@@ -104,7 +104,7 @@ export function BankAccountFormSheet({
         bank.fullName.toLowerCase().includes(needle),
     ).map((bank) => ({
       value: bank.code,
-      label: `${bank.shortName} — ${bank.fullName}`,
+      label: `${bank.shortName} - ${bank.fullName}`,
       // Logo trước tên — cùng danh sách chọn có logo của web (Figma `19973:52549`).
       leading: <BankLogo code={bank.code} size={BANK_OPTION_LOGO} radius={6} />,
     }));

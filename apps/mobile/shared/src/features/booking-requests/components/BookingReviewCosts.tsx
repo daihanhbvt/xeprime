@@ -8,6 +8,7 @@ import {
   type PublicListingDetail,
 } from '@xeprime/types';
 import { Card } from '@/components/ui/Card';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { useFeeLineSublabel, type PriceBreakdownFeesInput } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -98,6 +99,7 @@ export function BookingReviewCosts({
     deposit: costDeposit,
     total,
     costNote,
+    estimateNote,
   } = useCustomerCostView({ listing, breakdown, isDelivery, frozen });
   const deposit = showDeposit ? costDeposit : null;
   const totalLabel = total?.label ?? '';
@@ -111,13 +113,21 @@ export function BookingReviewCosts({
     key: string,
     label: string,
     amount: string,
-    opts: { sub?: string | null; tone?: 'discount' } = {},
+    opts: {
+      sub?: string | null;
+      tone?: 'discount';
+      /** Ghi chú giải thích — dấu "i" cạnh nhãn thay cho đoạn chữ hiện sẵn. */
+      hint?: { content: string; label: string } | null;
+    } = {},
   ) => (
     <XStack key={key} ai="flex-start" jc="space-between" gap={space.sm}>
       <YStack f={1} gap={2}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {label}
-        </Text>
+        <XStack ai="center" gap={4}>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+            {label}
+          </Text>
+          {opts.hint ? <InfoHint content={opts.hint.content} label={opts.hint.label} /> : null}
+        </XStack>
         {opts.sub ? (
           <Text col={colors.placeholder} fos={fontSize.label}>
             {opts.sub}
@@ -174,9 +184,14 @@ export function BookingReviewCosts({
               {promoSlot}
               {divider}
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
-                <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-                  {totalLabel}
-                </Text>
+                <XStack f={1} ai="center" gap={4}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+                    {totalLabel}
+                  </Text>
+                  {costNote ? (
+                    <InfoHint content={costNote} label={tPrice('totalHintLabel')} />
+                  ) : null}
+                </XStack>
                 <Text col={colors.brandText} fos={fontSize.lead} fow={fontWeight.semibold}>
                   {fmt.money(total?.amount ?? breakdown.totalAmount)}
                 </Text>
@@ -190,7 +205,7 @@ export function BookingReviewCosts({
                   })}
                 </Text>
               ) : null}
-              {note(costNote)}
+              {estimateNote ? note(estimateNote) : null}
             </>
           ) : listedRows.length > 0 ? (
             <>
@@ -215,9 +230,10 @@ export function BookingReviewCosts({
             {title(t('reviewPage.others.title'))}
             {holdAmount ? (
               <YStack gap={space.xs}>
-                {row('hold', tPrice('holdAmount'), fmt.money(holdAmount))}
+                {row('hold', tPrice('holdAmount'), fmt.money(holdAmount), {
+                  hint: { content: tPrice('holdHint'), label: tPrice('holdHintLabel') },
+                })}
                 {surface === 'trip' && holdTag ? <XStack>{holdTag}</XStack> : null}
-                {note(tPrice('holdHint'))}
                 {payAtPickup ? row('payAtPickup', tPrice('payAtHandover'), fmt.money(payAtPickup)) : null}
               </YStack>
             ) : null}
@@ -230,8 +246,8 @@ export function BookingReviewCosts({
                   deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
                     ? fmt.money(deposit.amount)
                     : dl('collateralMode', deposit.mode),
+                  { hint: { content: deposit.note, label: tPrice('depositHintLabel') } },
                 )}
-                {note(deposit.note)}
               </YStack>
             ) : null}
           </YStack>

@@ -6,17 +6,17 @@
     "breadcrumb": "Plan & invoices"
   },
   "current": {
-    "none": "No plan yet — this shop is on the per-trip commission track.",
+    "none": "No plan yet - this shop is on the per-trip commission track.",
     "noneHint": "Buy a slot-based plan to stop paying per trip.",
     "activeTag": "In use",
     "commissionSummary": "You are on the commission track. Commission is charged per completed trip.",
-    "packageSummary": "Prepaid per vehicle slot — nothing charged per trip.",
+    "packageSummary": "Prepaid per vehicle slot - nothing charged per trip.",
     "slotsSummary": "{car} car slots · {motorbike} motorbike slots",
     "purchaseButton": "Buy a plan",
     "renewButton": "Renew / change plan",
     "upgradeButton": "Upgrade to a shop",
     "packageTitle": "Shop plan",
-    "packageCount": "{count, plural, one {Using # plan by vehicle type} other {Using # plans by vehicle type}} — no fee per trip."
+    "packageCount": "{count, plural, one {Using # plan by vehicle type} other {Using # plans by vehicle type}} - no fee per trip."
   },
   "usage": {
     "fleetTotal": "Total vehicles",
@@ -43,7 +43,7 @@
     "title": "Free trips",
     "left": "{left, plural, =0 {No free trips left} other {# free trips left}}",
     "used": "Used {used}/{allowance}",
-    "explain": "Your first two bookings are completely free — the platform takes nothing. Once used up, new bookings pay a per-trip commission unless the shop has a slot-based plan."
+    "explain": "Your first two bookings are completely free - the platform takes nothing. Once used up, new bookings pay a per-trip commission unless the shop has a slot-based plan."
   },
   "features": {
     "title": "Plan features",
@@ -116,14 +116,14 @@
   },
   "payment": {
     "title": "Transfer to activate your plan",
-    "intro": "Your invoice is ready. Transfer the EXACT amount with the EXACT reference below — the plan activates when the platform receives the money, never before.",
+    "intro": "Your invoice is ready. Transfer the EXACT amount with the EXACT reference below - the plan activates when the platform receives the money, never before.",
     "amount": "Amount",
     "code": "Transfer reference (matching code)",
     "expires": "Transfer deadline: {date}",
     "copyAmount": "Copy amount",
     "copyCode": "Copy code",
     "done": "Got it",
-    "partialIntro": "We have received {paid}. Transfer the remaining amount below with the EXACT reference — the plan activates as soon as it is paid in full.",
+    "partialIntro": "We have received {paid}. Transfer the remaining amount below with the EXACT reference - the plan activates as soon as it is paid in full.",
     "qrAlt": "VietQR code for the plan payment transfer",
     "bank": "Bank",
     "accountNumber": "Account number",
@@ -131,9 +131,9 @@
     "copyBank": "Copy bank name",
     "copyAccount": "Copy account number",
     "copyAccountName": "Copy account holder",
-    "autoActivateNote": "The plan activates automatically once the money arrives — you can close this page; we will notify you.",
+    "autoActivateNote": "The plan activates automatically once the money arrives - you can close this page; we will notify you.",
     "pendingTitle": "Invoice awaiting payment",
-    "statusWaiting": "Waiting for your transfer. Use exactly the code below — the plan unlocks automatically once XePrime receives the money.",
+    "statusWaiting": "Waiting for your transfer. Use exactly the code below - the plan unlocks automatically once XePrime receives the money.",
     "statusPartial": "Part of the amount has arrived. Transfer the remainder using exactly the code below.",
     "buying": "What you are buying",
     "period": "Covers {from} → {to}",
@@ -154,7 +154,7 @@
     "submit": "Save details and create invoice",
     "shopInfo": {
       "title": "Shop details",
-      "intro": "This is the storefront guests see on the marketplace. We have filled in what you already have — check it, then create the invoice.",
+      "intro": "This is the storefront guests see on the marketplace. We have filled in what you already have - check it, then create the invoice.",
       "phoneHelp": "The number guests call to reach your shop. Saved on your default branch.",
       "logoHelp": "Not required to buy a plan, but your shop needs a logo before you can list a vehicle on the marketplace.",
       "missingTitle": "Your shop details are still missing something",
@@ -182,7 +182,7 @@
     "editInvoice": "Change plan",
     "backToInvoice": "Back to the pending code",
     "editWarnTitle": "Invoice {code} is still waiting for your transfer",
-    "editWarnBody": "The old code STAYS valid until you create a new invoice at step 3 — only then is it voided. If you have already transferred against it, go back and wait for the money instead of creating a new one.",
+    "editWarnBody": "The old code STAYS valid until you create a new invoice at step 3 - only then is it voided. If you have already transferred against it, go back and wait for the money instead of creating a new one.",
     "partialFailure": "Could not create the {scope} invoice: {error} The invoices already created are still valid.",
     "chosenPlans": "Selected: {plans} · Total {amount}",
     "chosenPlanItem": "{scope} {plan} ({months} months)",

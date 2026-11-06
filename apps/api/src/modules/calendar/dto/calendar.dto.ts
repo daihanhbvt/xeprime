@@ -112,7 +112,7 @@ export class CalendarResourceDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thuê theo giờ — null = không cho thuê giờ',
+    description: 'Giá thuê theo giờ - null = không cho thuê giờ',
   })
   hourlyPrice!: string | null;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
@@ -141,7 +141,7 @@ export class CalendarDailyPriceDto {
 
 export class CalendarEventDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'vehicleId — khớp CalendarResourceDto.id' }) resourceId!: string;
+  @ApiProperty({ description: 'vehicleId - khớp CalendarResourceDto.id' }) resourceId!: string;
   @ApiProperty({ enum: OCCUPANCY_SOURCE_TYPE_VALUES }) type!: string;
   @ApiProperty() title!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerName!: string | null;

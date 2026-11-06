@@ -87,6 +87,40 @@
   --motion-delay: 1.2s;
 }
 
+/*
+ * So le NHANH cho lưới kết quả/danh sách dài: mục n trễ n × `--xp-motion-stagger-step`, trượt ngắn
+ * hơn (một nửa khoảng reveal) và nhanh hơn để trang 48 xe không phải chờ 1.2s. Từ mục 13 đứng yên
+ * ở bậc 12. Mục mới (đổi bộ lọc, trang sau) tự chạy khi được gắn vào DOM.
+ */
+@keyframes xpFadeInUpShort {
+  from {
+    opacity: 0;
+    transform: translate3d(0, calc(var(--xp-motion-distance-reveal) / 2), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.staggerFast > * {
+  animation: xpFadeInUpShort calc(var(--xp-motion-duration-reveal) * 0.6) var(--xp-motion-ease-out)
+    calc(var(--stagger-index, 0) * var(--xp-motion-stagger-step)) both;
+}
+
+.staggerFast > :nth-child(2) { --stagger-index: 1; }
+.staggerFast > :nth-child(3) { --stagger-index: 2; }
+.staggerFast > :nth-child(4) { --stagger-index: 3; }
+.staggerFast > :nth-child(5) { --stagger-index: 4; }
+.staggerFast > :nth-child(6) { --stagger-index: 5; }
+.staggerFast > :nth-child(7) { --stagger-index: 6; }
+.staggerFast > :nth-child(8) { --stagger-index: 7; }
+.staggerFast > :nth-child(9) { --stagger-index: 8; }
+.staggerFast > :nth-child(10) { --stagger-index: 9; }
+.staggerFast > :nth-child(11) { --stagger-index: 10; }
+.staggerFast > :nth-child(n + 12) { --stagger-index: 11; }
+
 /* Độ trễ theo bậc của trang mẫu (0.1 · 0.2 · 0.4 · 0.6 · 0.9 · 1.2s). Chữ tách ký tự bên trong
    một khối có độ trễ cũng thừa hưởng độ trễ đó (biến tuỳ biến được kế thừa). */
 .delay100 {
@@ -111,6 +145,26 @@
 
 .delay1200 {
   --motion-delay: 1.2s;
+}
+
+/*
+ * Đổi nội dung tại chỗ (panel tab vừa mở, tổng tiền vừa đổi): hiện dần + trượt rất ngắn. Phần tử
+ * phải được gắn lại (đổi `key`) hoặc vừa bỏ `hidden` để hoạt cảnh chạy lại.
+ */
+@keyframes xpSwapIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.swap {
+  animation: xpSwapIn var(--xp-motion-duration-overlay) var(--xp-motion-ease-out) both;
 }
 
 /* ─── Tiêu đề tách ký tự ────────────────────────────────────────────────── */
@@ -168,6 +222,8 @@
   .kenBurns,
   .enter,
   .stagger > *,
+  .staggerFast > *,
+  .swap,
   .splitChar,
   .gate[data-reveal='pending'].enter,
   .gate[data-reveal='pending'] .enter,
@@ -177,5 +233,80 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ─── Parallax theo cuộn (CSS scroll-driven animations) ─────────────────────
+   Chỉ chạy ở trình duyệt hỗ trợ `animation-timeline`; nơi khác đứng yên (nội dung vẫn hiện đủ —
+   không ẩn gì trước khi có JS). Dùng thuộc tính RIÊNG `translate`/`scale` thay vì `transform` nên
+   cộng dồn được với `kenBurns` (đang chiếm `transform`) trên cùng phần tử.
+   Token cục bộ (chưa có ở @xeprime/ui): `--parallax-shift` quãng trôi, `--parallax-range` quãng cuộn. */
+@keyframes xpHeroParallax {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0.25;
+    scale: 1.08;
+    translate: 0 var(--parallax-shift, 30%);
+  }
+}
+
+@keyframes xpViewParallax {
+  from {
+    translate: 0 calc(var(--parallax-shift, 8%) * -1);
+  }
+
+  to {
+    translate: 0 var(--parallax-shift, 8%);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  /* Khối ở ĐẦU trang: ảnh trôi chậm xuống (≈ nửa tốc độ cuộn), phóng nhẹ và mờ dần khi cuộn qua. */
+  .heroParallax {
+    animation: xpHeroParallax linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 var(--parallax-range, 520px);
+    will-change: translate, scale, opacity;
+  }
+
+  /* Ảnh giữa trang: trôi ngược chiều cuộn suốt lúc khung còn trong viewport. Khung cha phải
+     `overflow: hidden` và ảnh nên dư mép (`scale` sẵn) để không lộ nền. */
+  .viewParallax {
+    animation: xpViewParallax linear both;
+    animation-timeline: view(block);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroParallax,
+  .viewParallax {
+    animation: none;
+    opacity: 1;
+    scale: none;
+    translate: none;
+  }
+}
+
+/* ─── Nút "magnetic" (`Magnetic.tsx`) ─────────────────────────────────────── */
+.magnetic {
+  display: inline-flex;
+  translate: var(--mag-x, 0) var(--mag-y, 0);
+  transition: translate 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.magneticBlock {
+  display: flex;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magnetic {
+    translate: none;
+    transition: none;
   }
 }

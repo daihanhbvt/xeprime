@@ -367,7 +367,7 @@ function AwaitingHold({
           <>
             <DataRow
               label={t('summary.package')}
-              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}
+              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '-'}
             />
             <DataRow label={t('summary.pickupWish')} value={fmt.pickupWish(trip)} />
           </>

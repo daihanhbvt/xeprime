@@ -6,7 +6,7 @@
     },
     "page": {
       "title": "Cash book",
-      "subtitle": "Every đồng that moves through your shop — booking payments, deposits, refunds and vehicle costs all land here automatically."
+      "subtitle": "Every đồng that moves through your shop - booking payments, deposits, refunds and vehicle costs all land here automatically."
     },
     "periods": {
       "label": "Quick period",
@@ -79,7 +79,7 @@
       "errorTitle": "Could not load the entry",
       "auto": {
         "title": "Automatic entry",
-        "body": "This entry came from {source}, so it cannot be edited or cancelled here — the book would drift from the booking. Reverse it in that flow instead",
+        "body": "This entry came from {source}, so it cannot be edited or cancelled here - the book would drift from the booking. Reverse it in that flow instead",
         "openBooking": "open the booking",
         "openVehicle": "open the vehicle"
       },
@@ -147,7 +147,7 @@
         "income": "Create income voucher",
         "expense": "Create expense voucher"
       },
-      "success": "Entry created — awaiting approval",
+      "success": "Entry created - awaiting approval",
       "linkMode": {
         "label": "Linked to",
         "none": "General item",
@@ -191,7 +191,7 @@
       "descriptionPlaceholder": "Enter a description"
     },
     "summary": {
-      "error": "Could not load the totals — the list below is still correct",
+      "error": "Could not load the totals - the list below is still correct",
       "income": "Total in",
       "expense": "Total out",
       "balance": "Net (in − out)",
@@ -223,7 +223,7 @@
       "renamed": "Category renamed",
       "deleted": "Category deleted",
       "deleteConfirm": "Delete category \"{name}\"?",
-      "systemHint": "System category — cannot be renamed or deleted",
+      "systemHint": "System category - cannot be renamed or deleted",
       "empty": "No categories yet",
       "done": "Close"
     },
@@ -245,8 +245,8 @@
       "debt": "Customer receivables",
       "debtHint": "{count, plural, =0 {No bookings owing} one {# booking owing} other {# bookings owing}}",
       "infoLabel": "How the totals are counted",
-      "infoFiltered": "Only APPROVED vouchers in the current filter count — pending vouchers are not real money yet.",
-      "infoWhole": "Only APPROVED vouchers across the whole ledger count — pending vouchers are not real money yet.",
+      "infoFiltered": "Only APPROVED vouchers in the current filter count - pending vouchers are not real money yet.",
+      "infoWhole": "Only APPROVED vouchers across the whole ledger count - pending vouchers are not real money yet.",
       "debtInfoLabel": "About customer receivables",
       "debtInfo": "A right-now figure, independent of the period filter. Click to open the Receivables tab."
     }
@@ -377,14 +377,14 @@
         "margin": "{value}% margin",
         "marginUnknown": "No revenue yet to compute a margin",
         "unassigned": "Of which {value} is not tied to a vehicle",
-        "note": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments."
+        "note": "Deposits are excluded from both sides. This is cash profit from the ledger - before depreciation, loan interest or vehicle lease payments."
       },
       "cash": {
         "title": "Cash flow",
         "in": "Cash in",
         "out": "Cash out",
         "balance": "Net",
-        "note": "Includes deposits taken and refunded — this is the money that actually changed hands this period."
+        "note": "Includes deposits taken and refunded - this is the money that actually changed hands this period."
       },
       "now": {
         "title": "Right now",
@@ -410,9 +410,9 @@
       "bookingsNow": "{count, plural, one {# booking} other {# bookings}} · right now",
       "bookings": "{count, plural, one {# booking} other {# bookings}}",
       "businessInfoLabel": "About revenue and costs",
-      "businessNote": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments.",
+      "businessNote": "Deposits are excluded from both sides. This is cash profit from the ledger - before depreciation, loan interest or vehicle lease payments.",
       "cashInfoLabel": "About net cash flow",
-      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included — this is the money that actually changed hands this period."
+      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included - this is the money that actually changed hands this period."
     },
     "chart": {
       "title": "Cash flow & profit over time",
@@ -431,7 +431,7 @@
       "tapHint": "Tap a point on the chart to see it in detail.",
       "yAxisUnit": "Unit: million VND",
       "legend": "Chart legend",
-      "weekRange": "{from} – {to}",
+      "weekRange": "{from} - {to}",
       "description": "Bars are revenue and costs, the line is profit. Deposits excluded."
     },
     "categories": {
@@ -517,7 +517,7 @@
     },
     "note": {
       "vehicle": "Summed from approved vouchers, deposits excluded. Before depreciation, loan interest or vehicle lease payments.",
-      "customer": "Summed from money ACTUALLY received in the period — different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
+      "customer": "Summed from money ACTUALLY received in the period - different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
     },
     "periods": {
       "label": "Quick period",
@@ -576,7 +576,7 @@
       "index": "#"
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
-    "notSplit": "Legacy row — not split",
+    "notSplit": "Legacy row - not split",
     "monthValue": "{month}"
   },
   "history": {

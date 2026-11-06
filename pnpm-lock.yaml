@@ -30,6 +30,9 @@ catalogs:
     '@hookform/resolvers':
       specifier: 5.4.0
       version: 5.4.0
+    '@react-native-community/netinfo':
+      specifier: 11.4.1
+      version: 11.4.1
     '@react-native-firebase/app':
       specifier: ^26.4.0
       version: 26.4.0
@@ -51,7 +54,13 @@ catalogs:
     '@tamagui/toast':
       specifier: 2.7.7
       version: 2.7.7
+    '@tanstack/query-async-storage-persister':
+      specifier: 5.101.4
+      version: 5.101.4
     '@tanstack/react-query':
+      specifier: 5.101.4
+      version: 5.101.4
+    '@tanstack/react-query-persist-client':
       specifier: 5.101.4
       version: 5.101.4
     '@testing-library/react-native':
@@ -90,6 +99,9 @@ catalogs:
     expo-document-picker:
       specifier: 14.0.8
       version: 14.0.8
+    expo-file-system:
+      specifier: ~19.0.24
+      version: 19.0.24
     expo-image:
       specifier: ~3.0.11
       version: 3.0.11
@@ -432,6 +444,9 @@ importers:
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 5.4.0(react-hook-form@7.82.0(react@19.1.0))
+      '@react-native-community/netinfo':
+        specifier: 'catalog:'
+        version: 11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       '@react-native-firebase/app':
         specifier: 'catalog:'
         version: 26.4.0(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -450,9 +465,15 @@ importers:
       '@tamagui/toast':
         specifier: 'catalog:'
         version: 2.7.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tanstack/query-async-storage-persister':
+        specifier: 'catalog:'
+        version: 5.101.4
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.4(react@19.1.0)
+      '@tanstack/react-query-persist-client':
+        specifier: 'catalog:'
+        version: 5.101.4(@tanstack/react-query@5.101.4(react@19.1.0))(react@19.1.0)
       '@xeprime/api-client':
         specifier: workspace:*
         version: link:../../../packages/api-client
@@ -498,6 +519,9 @@ importers:
       expo-document-picker:
         specifier: 'catalog:'
         version: 14.0.8(expo@54.0.37)
+      expo-file-system:
+        specifier: 'catalog:'
+        version: 19.0.24(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-font:
         specifier: 14.0.12
         version: 14.0.12(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -640,6 +664,9 @@ importers:
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 5.4.0(react-hook-form@7.82.0(react@19.1.0))
+      '@react-native-community/netinfo':
+        specifier: 'catalog:'
+        version: 11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       '@react-native-firebase/app':
         specifier: 'catalog:'
         version: 26.4.0(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -658,9 +685,15 @@ importers:
       '@tamagui/toast':
         specifier: 'catalog:'
         version: 2.7.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tanstack/query-async-storage-persister':
+        specifier: 'catalog:'
+        version: 5.101.4
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.4(react@19.1.0)
+      '@tanstack/react-query-persist-client':
+        specifier: 'catalog:'
+        version: 5.101.4(@tanstack/react-query@5.101.4(react@19.1.0))(react@19.1.0)
       '@xeprime/api-client':
         specifier: workspace:*
         version: link:../../../packages/api-client
@@ -706,6 +739,9 @@ importers:
       expo-document-picker:
         specifier: 'catalog:'
         version: 14.0.8(expo@54.0.37)
+      expo-file-system:
+        specifier: 'catalog:'
+        version: 19.0.24(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-font:
         specifier: 14.0.12
         version: 14.0.12(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -848,6 +884,9 @@ importers:
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 5.4.0(react-hook-form@7.82.0(react@19.1.0))
+      '@react-native-community/netinfo':
+        specifier: 'catalog:'
+        version: 11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       '@react-native-firebase/messaging':
         specifier: 'catalog:'
         version: 26.4.0(@react-native-firebase/app@26.4.0(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@54.0.37)
@@ -860,9 +899,15 @@ importers:
       '@tamagui/toast':
         specifier: 'catalog:'
         version: 2.7.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tanstack/query-async-storage-persister':
+        specifier: 'catalog:'
+        version: 5.101.4
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.4(react@19.1.0)
+      '@tanstack/react-query-persist-client':
+        specifier: 'catalog:'
+        version: 5.101.4(@tanstack/react-query@5.101.4(react@19.1.0))(react@19.1.0)
       '@xeprime/api-client':
         specifier: workspace:*
         version: link:../../../packages/api-client
@@ -902,6 +947,9 @@ importers:
       expo-document-picker:
         specifier: 'catalog:'
         version: 14.0.8(expo@54.0.37)
+      expo-file-system:
+        specifier: 'catalog:'
+        version: 19.0.24(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-font:
         specifier: 14.0.12
         version: 14.0.12(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -4897,6 +4945,11 @@ packages:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
+    peerDependencies:
+      react-native: '>=0.59'
+
   '@react-native-firebase/app@26.4.0':
     resolution: {integrity: sha512-lqs9vgPcniEw5a+NPRjGNXCQKwuGdVJoSB0iW0HvExR7aGEON/VZYOtSfElBCj3zTwQSiN732zREmqmKrW7Ixw==}
     peerDependencies:
@@ -6100,14 +6153,26 @@ packages:
     peerDependencies:
       react: '>=19'
 
+  '@tanstack/query-async-storage-persister@5.101.4':
+    resolution: {integrity: sha512-ROenNOVvxIZ1zKsBAiIvvslLo2xD8Me/vFz/tChdmuI7ciU+ET63yRrQ01W899Tx1ayQXdsGQJqYqjjVZk+OBQ==}
+
   '@tanstack/query-core@5.101.4':
     resolution: {integrity: sha512-gNwcvOJcRbLWPOLG/2OBm+zM+Yv+MKsXKEOWC57USuZDEsI71hEErQsiEGx5wX9rzWWkfwM0fVSPoiIFSsxfiw==}
 
   '@tanstack/query-devtools@5.101.4':
     resolution: {integrity: sha512-z5IPHnDX3aUWeTWlRKLyooBQekaCAw4xRpZqPQ390RiWTDBcTynjpPT221BArw0u2+pnQMdGvPQI9YNNubBcmA==}
 
+  '@tanstack/query-persist-client-core@5.101.4':
+    resolution: {integrity: sha512-Bmu+RfWhwYEyYZEwSeKC0gX4+KTkiEB3yO8oz9BfAY/Jfe3ndz9EnYVhihIZPmWIr8NXayF7JuraNQcrXQQCCg==}
+
   '@tanstack/react-query-devtools@5.101.4':
     resolution: {integrity: sha512-VeK2gtmfj7kvRBjtxS7TKxt/6qKhn8VzabY4UiYMr7NV9CddjSRYRgeYyld+NpjAkgMV9dd+2Qdr8ah5I03NeA==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.101.4
+      react: ^18 || ^19
+
+  '@tanstack/react-query-persist-client@5.101.4':
+    resolution: {integrity: sha512-CY5i7PPKS/5B8OR2zAs9nCbLpgqI4jN8eBhtAxKRMNHyGcQhmyOy4PkkJrAAXT+ecGj++fBJTgQw6OpyCt/2SQ==}
     peerDependencies:
       '@tanstack/react-query': ^5.101.4
       react: ^18 || ^19
@@ -17803,6 +17868,10 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
+  '@react-native-community/netinfo@11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))':
+    dependencies:
+      react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+
   '@react-native-firebase/app@26.4.0(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
     dependencies:
       firebase: 12.17.1
@@ -19728,15 +19797,30 @@ snapshots:
     dependencies:
       react: 19.1.0
 
+  '@tanstack/query-async-storage-persister@5.101.4':
+    dependencies:
+      '@tanstack/query-core': 5.101.4
+      '@tanstack/query-persist-client-core': 5.101.4
+
   '@tanstack/query-core@5.101.4': {}
 
   '@tanstack/query-devtools@5.101.4': {}
+
+  '@tanstack/query-persist-client-core@5.101.4':
+    dependencies:
+      '@tanstack/query-core': 5.101.4
 
   '@tanstack/react-query-devtools@5.101.4(@tanstack/react-query@5.101.4(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@tanstack/query-devtools': 5.101.4
       '@tanstack/react-query': 5.101.4(react@19.2.8)
       react: 19.2.8
+
+  '@tanstack/react-query-persist-client@5.101.4(@tanstack/react-query@5.101.4(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-persist-client-core': 5.101.4
+      '@tanstack/react-query': 5.101.4(react@19.1.0)
+      react: 19.1.0
 
   '@tanstack/react-query@5.101.4(react@19.1.0)':
     dependencies:

@@ -4,6 +4,8 @@ import { Alert, Pagination, Skeleton } from 'antd';
 import { Fragment, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { CustomerTripFilter } from '@xeprime/types';
+import { staggerFastClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import { TRIPS_DEFAULT_LIMIT, type TripsResult } from '../api';
 import type { CustomerTrip } from '../types';
 import styles from './TripList.module.css';
@@ -59,7 +61,7 @@ export function TripList({
       ) : (
         <>
           {/* `aria-busy` khi đang nạp trang/tab mới: nội dung cũ còn đó nhưng đã lỗi thời. */}
-          <div className={styles.list} aria-busy={isFetching}>
+          <div className={cx(styles.list, staggerFastClass)} aria-busy={isFetching}>
             {items.map((trip) => (
               <Fragment key={trip.id}>{renderTrip(trip)}</Fragment>
             ))}

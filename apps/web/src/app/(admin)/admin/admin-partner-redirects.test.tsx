@@ -50,7 +50,7 @@ describe('Route cũ của danh sách gian hàng vẫn tới nơi', () => {
     expect(url.searchParams.get('page')).toBe('2');
   });
 
-  it('?tenant=<id> KHÔNG đoán loại ở client — giao cho bộ tra loại phía server', async () => {
+  it('?tenant=<id> KHÔNG đoán loại ở client - giao cho bộ tra loại phía server', async () => {
     const element = await legacyTenantsPage({ tenant: '01HTENANT' });
 
     expect(redirect).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('Route cũ của danh sách gian hàng vẫn tới nơi', () => {
     expect((element as { props: { tenantId: string } }).props.tenantId).toBe('01HTENANT');
   });
 
-  it('?tenant= rỗng/trắng coi như không có — về danh sách mặc định', async () => {
+  it('?tenant= rỗng/trắng coi như không có - về danh sách mặc định', async () => {
     expect(await redirectTargetOf(() => legacyTenantsPage({ tenant: '  ' }))).toContain(
       '/admin/partners/shops',
     );

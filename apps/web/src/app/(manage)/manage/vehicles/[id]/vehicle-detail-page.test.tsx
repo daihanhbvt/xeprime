@@ -359,7 +359,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ quyền */
 
-describe('/manage/vehicles/[id] — quyền', () => {
+describe('/manage/vehicles/[id] - quyền', () => {
   it('không có `vehicles.view`: màn 403 và KHÔNG gọi API chi tiết lẫn tổng hợp', () => {
     revokeAll();
     renderPage();
@@ -414,7 +414,7 @@ describe('/manage/vehicles/[id] — quyền', () => {
 
 /* ------------------------------------------------------------------ trạng thái tải */
 
-describe('/manage/vehicles/[id] — tải, lỗi, không tìm thấy', () => {
+describe('/manage/vehicles/[id] - tải, lỗi, không tìm thấy', () => {
   it('đang tải: trạng thái tải dùng chung, chưa dựng nội dung', () => {
     detail.data = undefined;
     detail.isLoading = true;
@@ -457,7 +457,7 @@ describe('/manage/vehicles/[id] — tải, lỗi, không tìm thấy', () => {
 
 /* ------------------------------------------------------------------ hồ sơ */
 
-describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
+describe('/manage/vehicles/[id] - hồ sơ hiển thị', () => {
   it('tiêu đề trang là "Hồ sơ chi tiết xe"; tên xe nằm trong thẻ hồ sơ', () => {
     renderPage();
 
@@ -466,7 +466,7 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(screen.getByText('XE-014')).toBeTruthy();
   });
 
-  it('hiện hai trục trạng thái — vận hành và kiểm duyệt — trên thẻ xe', () => {
+  it('hiện hai trục trạng thái - vận hành và kiểm duyệt - trên thẻ xe', () => {
     renderPage();
 
     const card = panel('Hồ sơ xe');
@@ -507,14 +507,14 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(marketplaceSwitches()[0]!.getAttribute('aria-checked')).toBe('false');
   });
 
-  it('xe chưa duyệt: KHÔNG có công tắc "Trên chợ" — chỉ một thẻ trạng thái', () => {
+  it('xe chưa duyệt: KHÔNG có công tắc "Trên chợ" - chỉ một thẻ trạng thái', () => {
     renderPage();
 
     expect(marketplaceSwitches()).toHaveLength(0);
     expect(screen.getByText('Chưa hiển thị')).toBeTruthy();
   });
 
-  it('thông số kỹ thuật hiện đúng giá trị đang lưu — ở tab riêng', () => {
+  it('thông số kỹ thuật hiện đúng giá trị đang lưu - ở tab riêng', () => {
     renderPage();
     // Thông số kỹ thuật là một tab riêng (30/09/2026).
     fireEvent.click(screen.getByRole('tab', { name: 'Thông số kỹ thuật' }));
@@ -728,7 +728,7 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
 
 /* ------------------------------------------------------------------ khối tổng hợp */
 
-describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
+describe('/manage/vehicles/[id] - khối tổng hợp (summary)', () => {
   it('lịch thuê sắp tới và hoạt động gần đây dựng từ dữ liệu tổng hợp', () => {
     renderPage();
 
@@ -739,12 +739,12 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
     // Dòng thời gian (02/10/2026): tên khách là tiêu đề, mã đơn + khoảng ngày ở dòng phụ.
     const activity = panel('Hoạt động gần đây');
     expect(within(activity).getByText('Chị Thảo')).toBeTruthy();
-    expect(within(activity).getByText('Đơn DH0002 • 20/10 – 22/10')).toBeTruthy();
+    expect(within(activity).getByText('Đơn DH0002 • 20/10 - 22/10')).toBeTruthy();
     expect(within(activity).getByText('Hoàn thành')).toBeTruthy();
     expect(within(activity).getByText('2.550.000 ₫')).toBeTruthy();
   });
 
-  it('đánh giá chỉ hiện khi xe đã có lượt đánh giá — không dựng "0/5"', () => {
+  it('đánh giá chỉ hiện khi xe đã có lượt đánh giá - không dựng "0/5"', () => {
     summary.data = summaryOf({
       stats: {
         vehicleId: 'v1',
@@ -861,7 +861,7 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
 
 /* ------------------------------------------------------------------ khu vực wave sau */
 
-describe('/manage/vehicles/[id] — nguồn xe, bảo dưỡng, lối tắt', () => {
+describe('/manage/vehicles/[id] - nguồn xe, bảo dưỡng, lối tắt', () => {
   it('nguồn xe có thẻ thật, bảo dưỡng là tab, lối tắt chỉ chứa đích không có lối khác', () => {
     grant(
       PERMISSION.VEHICLE_UPDATE,
@@ -898,7 +898,7 @@ describe('/manage/vehicles/[id] — nguồn xe, bảo dưỡng, lối tắt', ()
 
 /* ------------------------------------------------------------------ thẻ tổng quan (02/10/2026) */
 
-describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
+describe('/manage/vehicles/[id] - thẻ tổng quan', () => {
   function galleryCard(): HTMLElement {
     return panel('Thư viện ảnh');
   }
@@ -1138,7 +1138,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     expect(within(panel('Mô tả xe')).getByText('Xe 16 chỗ đời 2021.')).toBeTruthy();
   });
 
-  it('việc lên chợ đứng đầu thì KHÔNG dựng thêm "Xử lý ngay" — việc đó có nút riêng', () => {
+  it('việc lên chợ đứng đầu thì KHÔNG dựng thêm "Xử lý ngay" - việc đó có nút riêng', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     summary.data = {
       ...emptyAlertSummary(),
@@ -1167,7 +1167,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
 
 /* ------------------------------------------------------------------ xoá + điều hướng */
 
-describe('/manage/vehicles/[id] — xoá và điều hướng', () => {
+describe('/manage/vehicles/[id] - xoá và điều hướng', () => {
   async function openDeleteConfirm() {
     fireEvent.click(screen.getByRole('button', { name: 'Xoá xe Ford Transit 2021' }));
     await screen.findByText('Xoá xe "Ford Transit 2021"?');
@@ -1189,7 +1189,7 @@ describe('/manage/vehicles/[id] — xoá và điều hướng', () => {
     expect(deleteVehicle.mutate.mock.calls[0]![0]).toBe('v1');
   });
 
-  it('xoá xong: về danh sách bằng `replace` — không quay lui vào bản ghi đã xoá', async () => {
+  it('xoá xong: về danh sách bằng `replace` - không quay lui vào bản ghi đã xoá', async () => {
     grant(PERMISSION.VEHICLE_DELETE);
     renderPage();
 
@@ -1213,7 +1213,7 @@ describe('/manage/vehicles/[id] — xoá và điều hướng', () => {
 
 /* ------------------------------------------------------------------ chủ xe tuyến hoa hồng */
 
-describe('/manage/vehicles/[id] — chủ xe tuyến hoa hồng (cùng giao diện, chốt 03/11)', () => {
+describe('/manage/vehicles/[id] - chủ xe tuyến hoa hồng (cùng giao diện, chốt 03/11)', () => {
   const OWNER_WORKSPACE = {
     workspace: WORKSPACE.ACCOUNT,
     paths: workspacePaths(WORKSPACE.ACCOUNT),

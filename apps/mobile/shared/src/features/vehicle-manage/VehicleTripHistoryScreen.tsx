@@ -166,7 +166,7 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
                 : (fmt.packageLabel(item.longTermPackageMonths) ?? fmt.dateTime(null))
             }
           />
-          <DataRow label={t('end')} value={item.returnAt ? fmt.dateTime(item.returnAt) : '—'} />
+          <DataRow label={t('end')} value={item.returnAt ? fmt.dateTime(item.returnAt) : '-'} />
           <DataRow
             label={t('total')}
             value={item.totalAmount ? fmt.money(item.totalAmount) : t('awaitingQuote')}

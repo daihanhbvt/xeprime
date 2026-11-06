@@ -272,3 +272,33 @@
     transition: none;
   }
 }
+
+/* Đích của View Transition từ thẻ xe (cùng tên với `.media[data-vt-source]` của VehicleCard). */
+.slide[data-vt-listing-target] {
+  view-transition-name: xp-listing-photo;
+}
+
+/*
+ * Ảnh lớn đầu trang trôi nhẹ ngược chiều cuộn (scroll-driven, chỉ khi hỗ trợ). Ảnh dư mép sẵn
+ * (`scale`) để lúc trôi không lộ nền khung. `--parallax-shift` cục bộ: 4% chiều cao ảnh.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .slide[data-vt-listing-target] .photo {
+      --parallax-shift: 4%;
+      animation: galleryDrift linear both;
+      animation-timeline: view(block);
+      scale: 1.1;
+    }
+  }
+}
+
+@keyframes galleryDrift {
+  from {
+    translate: 0 calc(var(--parallax-shift) * -1);
+  }
+
+  to {
+    translate: 0 var(--parallax-shift);
+  }
+}

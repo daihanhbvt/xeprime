@@ -368,7 +368,7 @@ export class VehiclesController {
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
   // Phiên hỗ trợ gửi DUYỆT thay chủ xe — phiếu vào hàng đợi của đội duyệt, không bao giờ tự duyệt.
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW)
-  @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)' })
+  @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng - ADR 0008)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   submitPublic(
     @CurrentTenant() tenant: TenantContext,
@@ -392,7 +392,7 @@ export class VehiclesController {
   @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Patch(':id/marketplace-visibility')
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
-  @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)' })
+  @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe - ADR 0048)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   setMarketplaceVisibility(
     @CurrentTenant() tenant: TenantContext,
@@ -414,7 +414,7 @@ export class VehiclesController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.LISTING_REPAIR)
-  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)' })
+  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ - ADR 0050)' })
   @ApiOkResponse({ type: ListingRepairResultDto })
   repairListing(
     @CurrentTenant() tenant: TenantContext,

@@ -51,7 +51,7 @@ export class PaymentGatewayCallbackController {
   @Public()
   @SkipThrottle()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'IPN MoMo — xác minh chữ ký, ghi kết quả, áp tiền vào hoá đơn/giữ chỗ' })
+  @ApiOperation({ summary: 'IPN MoMo - xác minh chữ ký, ghi kết quả, áp tiền vào hoá đơn/giữ chỗ' })
   @ApiNoContentResponse({ description: 'Đã nhận (kể cả khi đã nhận trước đó)' })
   async momoIpn(
     // `unknown` có chủ đích: pipe toàn cục `forbidNonWhitelisted` sẽ 400 mọi trường MoMo thêm sau
@@ -81,7 +81,7 @@ export class PaymentGatewayCallbackController {
   @Public()
   @SkipThrottle()
   @ApiExtension('x-xeprime-raw-response', true)
-  @ApiOperation({ summary: 'IPN VNPAY — xác minh chữ ký, ghi kết quả, trả RspCode theo tài liệu' })
+  @ApiOperation({ summary: 'IPN VNPAY - xác minh chữ ký, ghi kết quả, trả RspCode theo tài liệu' })
   @ApiOkResponse({ type: VnpayIpnAckDto })
   async vnpayIpn(
     // `unknown`: tham số `vnp_*` của VNPAY không đi qua DTO (cùng lý do với MoMo ở trên).

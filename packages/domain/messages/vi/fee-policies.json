@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Chính sách phí",
-    "subtitle": "Phí sàn, hoa hồng chủ xe, tiền giữ chỗ, bảo hiểm và thuế — có phiên bản, đóng băng vào từng đơn lúc tạo.",
+    "subtitle": "Phí sàn, hoa hồng chủ xe, tiền giữ chỗ, bảo hiểm và thuế - có phiên bản, đóng băng vào từng đơn lúc tạo.",
     "loadError": "Không tải được danh sách.",
     "empty": "Chưa có chính sách phí nào.",
     "createButton": "Tạo bản nháp",
@@ -42,10 +42,10 @@
     },
     "draftPending": "Có {count} bản nháp chưa kích hoạt.",
     "draftPendingAction": "Xem bản nháp",
-    "archivedHint": "Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ — đơn mới tính theo bản đang áp dụng: {name} (phiên bản {version}).",
+    "archivedHint": "Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ - đơn mới tính theo bản đang áp dụng: {name} (phiên bản {version}).",
     "archivedHintNoActive": "Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ.",
     "backToActive": "Xem bản đang áp dụng",
-    "emptyActive": "Chưa có chính sách đang áp dụng — tạo hoặc kích hoạt một bản nháp.",
+    "emptyActive": "Chưa có chính sách đang áp dụng - tạo hoặc kích hoạt một bản nháp.",
     "emptyDraft": "Không có bản nháp nào.",
     "emptyArchived": "Chưa có phiên bản nào được lưu trữ.",
     "taxRatesSummary": "{selfDrive} · {longTerm} · {withDriver}",
@@ -54,13 +54,13 @@
     "taxLegacy": "{value, number}% (một mức, chính sách cũ)"
   },
   "tiers": {
-    "dayRange": "Ngày {from}–{to}",
+    "dayRange": "Ngày {from}-{to}",
     "dayFrom": "Từ ngày {from}",
     "dayOne": "Ngày {from}",
     "item": "{range}: {percent, number}%"
   },
   "detail": {
-    "title": "{name} — phiên bản {version}",
+    "title": "{name} - phiên bản {version}",
     "sections": {
       "general": "Thông tin phiên bản",
       "platformFee": "Phí sàn phía khách (S)",
@@ -69,7 +69,7 @@
       "insurance": "Bảo hiểm",
       "tax": "Thuế khấu trừ",
       "legacy": "Số của mô hình cũ",
-      "withDriver": "Chuyến có tài xế — giới hạn số"
+      "withDriver": "Chuyến có tài xế - giới hạn số"
     },
     "facts": {
       "effectiveFrom": "Hiệu lực từ",
@@ -95,18 +95,18 @@
     "perDay": "{value}/ngày",
     "off": "Chưa áp dụng",
     "legacyHint": "Luồng tiền hiện hành không đọc các số này; chúng chỉ còn để đối chiếu đơn cũ.",
-    "rangePerDay": "{min} – {max}/ngày"
+    "rangePerDay": "{min} - {max}/ngày"
   },
   "form": {
     "titleCreate": "Tạo bản nháp chính sách phí",
-    "titleEdit": "Sửa bản nháp — phiên bản {version}",
+    "titleEdit": "Sửa bản nháp - phiên bản {version}",
     "titleDuplicate": "Nhân bản phiên bản {version} thành bản nháp",
     "duplicateName": "{name} (bản sao)",
     "name": "Tên",
     "note": "Ghi chú nội bộ",
     "sectionPlatformFee": "Phí sàn phía khách",
-    "platformFeeHint": "Số cố định mỗi đơn, khách trả, áp cho cả hai tuyến — không phụ thuộc số ngày thuê.",
-    "platformFeeFor": "Phí sàn — {type}",
+    "platformFeeHint": "Số cố định mỗi đơn, khách trả, áp cho cả hai tuyến - không phụ thuộc số ngày thuê.",
+    "platformFeeFor": "Phí sàn - {type}",
     "sectionCommission": "Hoa hồng chủ xe lũy tiến",
     "commissionHint": "Trừ vào tiền chủ xe. Mỗi ngày thuê tính theo % của nấc chứa ngày đó.",
     "tierHeadFrom": "Từ ngày",
@@ -136,9 +136,9 @@
     "vehicleProtectionEnabled": "Bảo hiểm vật chất xe (IV)",
     "tripInsuranceEnabled": "Bảo hiểm tai nạn người (IP)",
     "insuranceProductHint": "Khách tự chọn, trả theo ngày.",
-    "dailyRateFor": "Phí mỗi ngày — {type}",
+    "dailyRateFor": "Phí mỗi ngày - {type}",
     "insurancePartnerName": "Tên đối tác bảo hiểm",
-    "insurancePartnerNameHint": "Tên đối tác thật — bắt buộc khi một loại bảo hiểm bật.",
+    "insurancePartnerNameHint": "Tên đối tác thật - bắt buộc khi một loại bảo hiểm bật.",
     "sectionTax": "Thuế khấu trừ",
     "taxEnabled": "Bật khấu trừ, nộp thay thuế cho chủ xe",
     "taxEnabledHint": "Theo NĐ 117/2025/NĐ-CP, nền tảng khấu trừ và nộp thay thuế GTGT, TNCN cho hộ, cá nhân kinh doanh. Chỉ bật khi tư vấn thuế đã xác nhận phân loại. Thuế tính trên tiền thuê, không gồm phí giao xe; mỗi sắc thuế tính đúng tới đồng.",
@@ -160,7 +160,7 @@
       "suggestedInRange": "Mức gợi ý phải nằm trong khoảng tiền công/ngày"
     },
     "taxLegalBasis": "Căn cứ pháp lý",
-    "taxLegalBasisHint": "Số hiệu văn bản làm căn cứ khấu trừ — hiện cho chủ xe và in trên sổ thuế.",
+    "taxLegalBasisHint": "Số hiệu văn bản làm căn cứ khấu trừ - hiện cho chủ xe và in trên sổ thuế.",
     "taxRatesTitle": "Mức khấu trừ theo loại dịch vụ",
     "taxHeadService": "Loại dịch vụ",
     "taxHeadVat": "GTGT (%)",
@@ -174,14 +174,14 @@
     },
     "taxScope": "Áp dụng cho: cá nhân, hộ kinh doanh · Doanh nghiệp: không khấu trừ",
     "taxScopeValue": "Cá nhân, hộ kinh doanh · Doanh nghiệp đã xác minh: không khấu trừ",
-    "sectionWithDriver": "Chuyến có tài xế — giới hạn số",
+    "sectionWithDriver": "Chuyến có tài xế - giới hạn số",
     "withDriverLimitsHint": "Chặn số vô lý (gõ thừa/thiếu số 0), không phải điều tiết giá. Áp cho giá có tài xế/ngày của xe và tiền công tài xế/ngày gian hàng ghi nhận.",
-    "withDriverPriceMin": "Giá có tài xế/ngày — tối thiểu",
-    "withDriverPriceMax": "Giá có tài xế/ngày — tối đa",
-    "driverWageMin": "Tiền công tài xế/ngày — tối thiểu",
-    "driverWageMax": "Tiền công tài xế/ngày — tối đa",
+    "withDriverPriceMin": "Giá có tài xế/ngày - tối thiểu",
+    "withDriverPriceMax": "Giá có tài xế/ngày - tối đa",
+    "driverWageMin": "Tiền công tài xế/ngày - tối thiểu",
+    "driverWageMax": "Tiền công tài xế/ngày - tối đa",
     "driverWageSuggested": "Tiền công/ngày gợi ý",
-    "driverWageSuggestedHint": "Chỉ là lời nhắc theo thị trường cho gian hàng chưa đặt mức chung — không tự ghi vào gian hàng hay chuyến nào."
+    "driverWageSuggestedHint": "Chỉ là lời nhắc theo thị trường cho gian hàng chưa đặt mức chung - không tự ghi vào gian hàng hay chuyến nào."
   },
   "commissionScope": {
     "title": "Phạm vi áp dụng: Chủ xe cá nhân (Tuyến hoa hồng). Xe gói / Gian hàng: Miễn phí (H = 0).",

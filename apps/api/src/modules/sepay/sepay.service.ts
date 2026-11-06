@@ -160,7 +160,7 @@ export class SepayService {
        * cục nghiệp vụ bình thường.
        */
       this.logger.error(
-        `SePay ${tx.providerTxId}: khớp thất bại — giao dịch nằm lại hàng đợi đối soát`,
+        `SePay ${tx.providerTxId}: khớp thất bại - giao dịch nằm lại hàng đợi đối soát`,
         error instanceof Error ? error.stack : String(error),
       );
       return { received: true, duplicate: record.duplicate, matched: false, note: 'match_failed' };
@@ -293,7 +293,7 @@ export class SepayService {
           await this.noteUnmatched(
             db,
             tx.providerTxId,
-            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) — cần đối soát tay: khớp lại hoặc hoàn khách`,
+            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) - cần đối soát tay: khớp lại hoặc hoàn khách`,
           );
           return { matched: false, note: `hold_${applied.status}` };
         case 'partial':
@@ -328,7 +328,7 @@ export class SepayService {
           await this.noteUnmatched(
             db,
             tx.providerTxId,
-            `Tiền về khi phụ lục gia hạn ${referenceCode} không còn nhận tiền (${applied.status}) — cần đối soát tay: hoàn khách`,
+            `Tiền về khi phụ lục gia hạn ${referenceCode} không còn nhận tiền (${applied.status}) - cần đối soát tay: hoàn khách`,
           );
           return { matched: false, note: `extension_${applied.status}` };
         case 'partial':
@@ -397,7 +397,7 @@ export class SepayService {
       },
     });
     if (claimed.count !== 1) {
-      throw new Error(`Giao dịch ${providerTxId} đã có kết luận của admin — huỷ lượt khớp tự động`);
+      throw new Error(`Giao dịch ${providerTxId} đã có kết luận của admin - huỷ lượt khớp tự động`);
     }
   }
 }

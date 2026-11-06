@@ -262,7 +262,7 @@ export {
 } from './search-draft';
 
 /** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
-export { LIST_SEPARATOR, vehicleLabel } from './display';
+export { DATE_TIME_SEPARATOR, LIST_SEPARATOR, vehicleLabel } from './display';
 
 export {
   deliverySummaryText,
@@ -428,3 +428,15 @@ export {
 export { holderNameDiffers, normalizeHolderName } from './licence-holder-name';
 
 export { canShowHostChatOnTrip } from './trip-chat';
+
+export {
+  APP_UPDATE_LEVEL,
+  compareAppVersions,
+  NATIVE_APP_KEYS,
+  NATIVE_PLATFORMS,
+  parseAppVersion,
+  resolveAppUpdateLevel,
+  type AppUpdateLevel,
+  type NativeAppKey,
+  type NativePlatform,
+} from './app-version';

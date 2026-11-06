@@ -67,7 +67,7 @@ export function PromoCodePreviewCard({
       <div className={styles.ticket}>
         <div className={styles.ticketHead}>
           {/* Mã trống lúc mới mở form — giữ một chỗ để thẻ không nhảy kích cỡ khi bắt đầu gõ. */}
-          <span className={styles.ticketCode}>{code || '—'}</span>
+          <span className={styles.ticketCode}>{code || '-'}</span>
           <span className={styles.ticketType}>
             {domainLabel('promoDiscountType', discountType)}
           </span>
@@ -91,8 +91,8 @@ export function PromoCodePreviewCard({
           <span className={styles.ticketMeta}>
             <TagOutlined aria-hidden />{' '}
             {t('admin.form.preview.window', {
-              from: startsAt ? fmt.date(`${startsAt}T00:00:00+07:00`) : '—',
-              to: endsAt ? fmt.date(`${endsAt}T00:00:00+07:00`) : '—',
+              from: startsAt ? fmt.date(`${startsAt}T00:00:00+07:00`) : '-',
+              to: endsAt ? fmt.date(`${endsAt}T00:00:00+07:00`) : '-',
             })}
           </span>
         </div>

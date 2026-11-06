@@ -68,7 +68,7 @@ function mediaWidths(css: string): number[] {
   return [...css.matchAll(/@media[^{]*?(?:min|max)-width:\s*(\d+)px/g)].map((m) => Number(m[1]));
 }
 
-describe('vỏ portal — kiểm kê breakpoint', () => {
+describe('vỏ portal - kiểm kê breakpoint', () => {
   it('thang chính tắc là 640 / 1024 / 1440', () => {
     expect(XP_BREAKPOINTS).toEqual({ mobile: 640, tablet: 1024, desktop: 1440 });
   });
@@ -81,12 +81,12 @@ describe('vỏ portal — kiểm kê breakpoint', () => {
     }
   });
 
-  it('1024px là ranh DUY NHẤT của vỏ — không còn giá trị lạ nào', () => {
+  it('1024px là ranh DUY NHẤT của vỏ - không còn giá trị lạ nào', () => {
     const all = SHELL_STYLESHEETS.flatMap((file) => mediaWidths(read(file)));
     expect(new Set(all)).toEqual(new Set([XP_BREAKPOINTS.tablet]));
   });
 
-  it('CSS và JS nay gãy ở CÙNG một chỗ — dải 993–1024px hết mâu thuẫn', () => {
+  it('CSS và JS nay gãy ở CÙNG một chỗ - dải 993-1024px hết mâu thuẫn', () => {
     // CSS `max-width: 1024px` ⇒ tablet/mobile. JS `useIsDesktop()` = ≥1025 ⇒ desktop.
     // Hai vế bù khít nhau: 1024 thuộc về mobile ở cả hai hệ, 1025 thuộc desktop ở cả hai.
     const cssBoundary = [...new Set(SHELL_STYLESHEETS.flatMap((f) => mediaWidths(read(f))))][0];
@@ -125,7 +125,7 @@ describe('vỏ portal — kiểm kê breakpoint', () => {
  *
  * Luật: mọi override nhắm vào class của AntD phải có **ít nhất hai class** trong selector.
  */
-describe('vỏ portal — override AntD phải thắng được về độ đặc hiệu', () => {
+describe('vỏ portal - override AntD phải thắng được về độ đặc hiệu', () => {
   const ANTD_TARGETS = /\.(ant-menu|ant-btn|ant-avatar|ant-drawer)[a-z-]*/;
 
   /** Đếm số class trong một selector (đủ dùng cho bộ selector đơn giản của vỏ). */
@@ -175,7 +175,7 @@ describe('vỏ portal — override AntD phải thắng được về độ đặ
   });
 });
 
-describe('vỏ portal — vùng an toàn và kích thước lấy từ token', () => {
+describe('vỏ portal - vùng an toàn và kích thước lấy từ token', () => {
   it('thanh tab dưới đáy chừa safe-area của iOS', () => {
     expect(read('MobileNav.module.css')).toContain('env(safe-area-inset-bottom');
   });

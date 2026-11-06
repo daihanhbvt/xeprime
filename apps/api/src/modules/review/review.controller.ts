@@ -31,7 +31,7 @@ export class ReviewController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Chỉnh sửa đánh giá của chính mình — chỉ được MỘT lần' })
+  @ApiOperation({ summary: 'Chỉnh sửa đánh giá của chính mình - chỉ được MỘT lần' })
   @ApiOkResponse({ type: OwnReviewDto })
   update(
     @CurrentUser() user: AuthenticatedUser,

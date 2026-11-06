@@ -85,7 +85,7 @@ export function MissingReturnKmQueue({
       <EmptyState
         variant="empty"
         title="Không còn việc thiếu KM trả"
-        description="Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ."
+        description="Mọi biên bản trả xe đã có chỉ số KM - số KM của đội xe đang đầy đủ."
       />
     );
   }

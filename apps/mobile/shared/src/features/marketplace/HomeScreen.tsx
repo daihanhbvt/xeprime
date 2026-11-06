@@ -1,7 +1,15 @@
 import { draftToFilterPatch } from '@xeprime/domain';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigation } from 'expo-router';
-import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { RefreshControl, useWindowDimensions } from 'react-native';
 import { BANNER_PLACEMENT } from '@xeprime/types';
 import { useTabBarHide, useTabBarInset } from '@/components/layout/tab-bar-inset';
@@ -108,6 +116,26 @@ function HomeContent() {
    * hình, đẩy qua React là render lại cả trang chủ suốt quãng cuộn và thanh giật theo.
    */
   const progress = useSharedValue(0);
+  /** Offset cuộn dọc trên luồng UI — banner đầu trang parallax theo nó. */
+  const scrollY = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
+  /*
+   * Parallax banner (hằng cục bộ 06/11/2026 — hợp nhất vào `theme/motion` sau): ảnh trôi bằng
+   * `HERO_PARALLAX` tốc độ nội dung (tức chậm hơn), co còn `HERO_MIN_SCALE` và mờ tới
+   * `HERO_MIN_OPACITY` khi đã cuộn qua `HERO_FADE_DISTANCE`. Kéo quá đỉnh (y < 0) thì phóng nhẹ.
+   */
+  const heroStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return {};
+    const y = scrollY.value;
+    if (y < 0) return { transform: [{ scale: 1 + Math.min(-y / HERO_FADE_DISTANCE, 0.25) }] };
+    return {
+      opacity: interpolate(y, [0, HERO_FADE_DISTANCE], [1, HERO_MIN_OPACITY], Extrapolation.CLAMP),
+      transform: [
+        { translateY: y * HERO_PARALLAX },
+        { scale: interpolate(y, [0, HERO_FADE_DISTANCE], [1, HERO_MIN_SCALE], Extrapolation.CLAMP) },
+      ],
+    };
+  });
   const tabBarHide = useTabBarHide();
   const lastScrollY = useSharedValue(0);
   const tabBarTarget = useSharedValue(0);
@@ -156,6 +184,7 @@ function HomeContent() {
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
       const past = event.contentOffset.y - threshold;
       // Gán THẲNG, không `withTiming`: mỗi sự kiện cuộn khởi động lại một hoạt cảnh 120ms từ
       // vị trí hiện tại, nên thanh chỉ tiệm cận 0/1 chứ không bao giờ tới — nó đứng lưng chừng,
@@ -238,7 +267,9 @@ function HomeContent() {
       >
         {/* Các khối hiện lần lượt lúc mở trang (một lần — kéo làm mới không chạy lại). */}
         <Reveal variant="fade">
-          <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+          <Animated.View style={heroStyle}>
+            <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+          </Animated.View>
         </Reveal>
 
         {/*
@@ -315,6 +346,11 @@ function HomeContent() {
  * định: nền `bg` của `.testimonialsBand`. Khối bên trong vẫn canh lề nội dung, đệm trên/dưới 40 như
  * `.block` ở bề rộng điện thoại.
  */
+const HERO_PARALLAX = 0.45;
+const HERO_FADE_DISTANCE = 280;
+const HERO_MIN_SCALE = 0.92;
+const HERO_MIN_OPACITY = 0.35;
+
 function HomeBand({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
   const colors = useColors();
   return (

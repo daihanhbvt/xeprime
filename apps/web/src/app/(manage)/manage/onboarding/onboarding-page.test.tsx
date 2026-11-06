@@ -150,7 +150,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Bước 1 — chưa có gian hàng: form đăng ký một trang ở /register', () => {
+describe('Bước 1 - chưa có gian hàng: form đăng ký một trang ở /register', () => {
   /*
    * Form tạo hồ sơ không còn sống ở đây: nó gộp với phần tài khoản ở `/register?track=` để họ
    * tên/SĐT/email chỉ hỏi một lần. Trang này chỉ còn bước 2 của tuyến gói.
@@ -172,7 +172,7 @@ describe('Bước 1 — chưa có gian hàng: form đăng ký một trang ở /r
   });
 });
 
-describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
+describe('Bước 2 - đã tạo gian hàng, chưa thanh toán', () => {
   beforeEach(() => {
     signedIn({
       onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
@@ -249,7 +249,7 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
   });
 });
 
-describe('Bước 2 — gói theo loại xe (ADR 0065)', () => {
+describe('Bước 2 - gói theo loại xe (ADR 0065)', () => {
   const CAR_PLAN = { ...PLAN, id: 'PLAN-CAR', name: 'Ô tô 5 xe', vehicleScope: 'car' };
   const ENTERPRISE = {
     ...PLAN,
@@ -271,7 +271,7 @@ describe('Bước 2 — gói theo loại xe (ADR 0065)', () => {
     fireEvent.click(terms[terms.length - 1]!.querySelector('[role="radio"]') as HTMLElement);
   }
 
-  it('hai làn + thẻ doanh nghiệp "Liên hệ tư vấn" — doanh nghiệp không mua trực tiếp được', () => {
+  it('hai làn + thẻ doanh nghiệp "Liên hệ tư vấn" - doanh nghiệp không mua trực tiếp được', () => {
     renderPage();
     expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();

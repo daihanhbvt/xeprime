@@ -76,7 +76,7 @@ export class RegisterCheckDto extends RegisterFields {
   @ApiPropertyOptional({
     enum: MOBILE_CLIENT_APP_VALUES,
     description:
-      'Chỉ app native gửi — realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
+      'Chỉ app native gửi - realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
   })
   @IsOptional()
   @IsIn(MOBILE_CLIENT_APP_VALUES)
@@ -103,7 +103,7 @@ export class RegisterDto extends RegisterFields {
 export class LoginDto {
   @ApiProperty({
     description:
-      'Site khách / site partner / app: CHỈ SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx — email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060). Site quản trị: email hoặc SĐT.',
+      'Site khách / site partner / app: CHỈ SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx - email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060). Site quản trị: email hoặc SĐT.',
     example: '0901234567',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -182,7 +182,7 @@ export class ResetPasswordWithOtpDto extends PasswordField {
   @ApiPropertyOptional({
     enum: MOBILE_CLIENT_APP_VALUES,
     description:
-      'Chỉ app native gửi — realm của tài khoản theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
+      'Chỉ app native gửi - realm của tài khoản theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
   })
   @IsOptional()
   @IsIn(MOBILE_CLIENT_APP_VALUES)
@@ -310,7 +310,7 @@ export class CurrentTenantSummaryDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — băng hết hạn đọc ngày này',
+    description: 'ISO-8601 UTC - băng hết hạn đọc ngày này',
   })
   planEndsAt!: string | null;
 
@@ -329,7 +329,7 @@ export class CurrentTenantSummaryDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — hết ân hạn; null khi gói còn hạn hoặc chưa có gói',
+    description: 'ISO-8601 UTC - hết ân hạn; null khi gói còn hạn hoặc chưa có gói',
   })
   graceEndsAt!: string | null;
 
@@ -356,7 +356,7 @@ export class MeDto {
     enum: ACCOUNT_REALM_VALUES,
     required: false,
     description:
-      'Không gian tài khoản (ADR 0053) — customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.',
+      'Không gian tài khoản (ADR 0053) - customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.',
   })
   realm!: AccountRealm;
   @ApiProperty() displayName!: string;
@@ -370,16 +370,16 @@ export class MeDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ',
+    description: 'SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` - để điền sẵn ô liên hệ',
   })
   phone!: string | null;
 
-  @ApiProperty({ description: 'Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop' })
+  @ApiProperty({ description: 'Đã xác thực SĐT chưa - gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
 
   @ApiProperty({
     description:
-      'Đã có mật khẩu chưa — false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set',
+      'Đã có mật khẩu chưa - false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set',
   })
   hasPassword!: boolean;
 

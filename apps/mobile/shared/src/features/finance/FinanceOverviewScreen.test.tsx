@@ -159,7 +159,7 @@ afterEach(() => {
  *     không thẻ nói một số và danh sách nó dẫn tới nói số khác.
  *  3. **Phần chưa gắn xe / chưa gắn khách không bốc hơi.**
  */
-describe('FinanceOverviewScreen — ba lớp tiền', () => {
+describe('FinanceOverviewScreen - ba lớp tiền', () => {
   it('doanh thu KHÔNG gồm cọc, còn dòng tiền quỹ thì có', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
@@ -193,7 +193,7 @@ describe('FinanceOverviewScreen — ba lớp tiền', () => {
   });
 });
 
-describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
+describe('FinanceOverviewScreen - lối đi phải khớp thẻ', () => {
   it('ô Doanh thu mở sổ đã lọc theo nhóm nguồn + đã duyệt + đúng kỳ', async () => {
     const { findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
@@ -211,7 +211,7 @@ describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
     expect(href.params.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('ô Tiền vào KHÔNG lọc nhóm nguồn — nó cố ý gồm cả cọc', async () => {
+  it('ô Tiền vào KHÔNG lọc nhóm nguồn - nó cố ý gồm cả cọc', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await fireEvent.press(await findByText('Tiền vào'));
@@ -240,8 +240,8 @@ describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
   });
 });
 
-describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
-  it('kỳ mặc định luôn có hai đầu — biểu đồ không bao giờ chạy với khoảng rỗng', async () => {
+describe('FinanceOverviewScreen - hai dải xếp hạng', () => {
+  it('kỳ mặc định luôn có hai đầu - biểu đồ không bao giờ chạy với khoảng rỗng', async () => {
     const { byVehicleSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await waitFor(() => expect(byVehicleSpy).toHaveBeenCalled());
@@ -269,7 +269,7 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
     expect(await findByText(/Chưa gắn khách nào: 900\.000 ₫/)).toBeTruthy();
   });
 
-  it('xe chưa có doanh thu: biên là — chứ không phải 0%', async () => {
+  it('xe chưa có doanh thu: biên là - chứ không phải 0%', async () => {
     const { findByText, queryByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       vehicles: [{ ...VEHICLE, revenue: '0', cost: '0', profit: '0', profitMarginPercent: null }],
     });
@@ -279,7 +279,7 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
     expect(queryByText('Biên 0%')).toBeNull();
   });
 
-  it('hai dải phân trang ĐỘC LẬP — tham số của dải này không rơi vào dải kia', async () => {
+  it('hai dải phân trang ĐỘC LẬP - tham số của dải này không rơi vào dải kia', async () => {
     const { byVehicleSpy, byCustomerSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await waitFor(() => expect(byCustomerSpy).toHaveBeenCalled());
@@ -290,7 +290,7 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
   });
 });
 
-describe('FinanceOverviewScreen — quyền', () => {
+describe('FinanceOverviewScreen - quyền', () => {
   it('thiếu `finance.view`: thay TOÀN BỘ nội dung và KHÔNG gọi API nào', async () => {
     const { findByText, queryByText, summarySpy, byVehicleSpy, byCustomerSpy } = await renderScreen(
       [],

@@ -220,7 +220,7 @@ export function ShopQuickInfoCard({
       <Pressable
         accessibilityRole="button"
         /* Tên gian hàng + VIỆC sẽ xảy ra — xem `openLabel`. */
-        accessibilityLabel={openLabel ? `${shop.name} — ${openLabel}` : shop.name}
+        accessibilityLabel={openLabel ? `${shop.name} - ${openLabel}` : shop.name}
         onPress={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
       >
         {body}

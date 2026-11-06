@@ -218,7 +218,7 @@ function RenterContactValues({
       <div className={styles.contactField}>
         <dt>{t('reviewPage.renter.phone')}</dt>
         <dd className={cx(styles.contactValue, styles.contactPlain)}>
-          <span className={styles.contactText}>{contact.phone ?? '—'}</span>
+          <span className={styles.contactText}>{contact.phone ?? '-'}</span>
           {phoneNote}
         </dd>
       </div>

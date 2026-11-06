@@ -347,7 +347,7 @@ export class PaymentGatewayService {
         });
         throw new BadGatewayException({
           code: API_ERROR_CODE.PAYMENT_GATEWAY_PROVIDER_ERROR,
-          message: 'Không mở được phiên thanh toán của cổng — chưa có khoản tiền nào bị trừ',
+          message: 'Không mở được phiên thanh toán của cổng - chưa có khoản tiền nào bị trừ',
           details: { provider: request.provider },
         });
       }
@@ -461,7 +461,7 @@ export class PaymentGatewayService {
     if (hold.expiresAt.getTime() - now.getTime() < PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES * MINUTE_MS) {
       throw new ConflictException({
         code: API_ERROR_CODE.PAYMENT_HOLD_WINDOW_TOO_SHORT,
-        message: 'Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng — vui lòng chuyển khoản',
+        message: 'Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng - vui lòng chuyển khoản',
         details: {
           expiresAt: hold.expiresAt.toISOString(),
           minWindowMinutes: PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES,
@@ -1004,7 +1004,7 @@ export class PaymentGatewayService {
       });
     } catch (error) {
       this.logger.error(
-        `Lượt ${orderId}: áp tiền thất bại — tiền đã ghi nhận, chưa áp`,
+        `Lượt ${orderId}: áp tiền thất bại - tiền đã ghi nhận, chưa áp`,
         error instanceof Error ? error.stack : String(error),
       );
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 1000);
@@ -1164,7 +1164,7 @@ export class PaymentGatewayService {
       }
     } catch (error) {
       this.logger.error(
-        `IPN VNPAY ${verified.result.orderRef}: lỗi xử lý — VNPAY sẽ gọi lại`,
+        `IPN VNPAY ${verified.result.orderRef}: lỗi xử lý - VNPAY sẽ gọi lại`,
         error instanceof Error ? error.stack : String(error),
       );
       return VNPAY_IPN_RESPONSE.UNKNOWN_ERROR;

@@ -107,7 +107,7 @@ export function CustomerProfileCard({
         <div className={styles.profileFootGrid}>
           <div>
             <dt>{tProfile('lastRental')}</dt>
-            <dd>{customer.lastRentalAt ? fmt.date(customer.lastRentalAt) : '—'}</dd>
+            <dd>{customer.lastRentalAt ? fmt.date(customer.lastRentalAt) : '-'}</dd>
           </div>
           <div>
             <dt>{tProfile('since')}</dt>

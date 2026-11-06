@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
+  DATE_TIME_SEPARATOR,
   isLateReturn,
   isPositiveMoney,
   PICKUP_URGENCY,
@@ -535,7 +536,7 @@ function statusLine(
       if (urgency === PICKUP_URGENCY.TODAY)
         return { text: t('pickupToday', { time }), tone: 'warning' };
       return {
-        text: t('pickupUpcoming', { date: fmt.dayMonth(booking.pickupAt), time }),
+        text: t('pickupUpcoming', { date: fmt.dayMonth(booking.pickupAt), time, sep: DATE_TIME_SEPARATOR }),
         tone: 'muted',
       };
     }

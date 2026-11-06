@@ -5,6 +5,16 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
 import { XP_TOKENS } from '@xeprime/ui';
 import { layout } from '@/theme/layout';
@@ -25,6 +35,14 @@ const SHADOW_PAD = 12;
  * cửa sổ là khung rỗng cùng bề ngang nên snap/vị trí cuộn không đổi.
  */
 const MOUNT_WINDOW = 2;
+/*
+ * Coverflow (06/11/2026, hằng cục bộ — hợp nhất vào `theme/motion` sau): thẻ giữa scale 1, thẻ kề
+ * co còn `COVERFLOW_SIDE_SCALE`, mờ còn `COVERFLOW_SIDE_OPACITY` và hạ xuống `COVERFLOW_SIDE_DROP`px.
+ * Nội suy theo offset cuộn trên luồng UI — không qua React.
+ */
+const COVERFLOW_SIDE_SCALE = 0.9;
+const COVERFLOW_SIDE_OPACITY = 0.55;
+const COVERFLOW_SIDE_DROP = 12;
 /**
  * Màu chấm ở giao diện TỐI — web viết cứng #717680 / #fff5e5 trong CSS module; đó đúng là
  * `color-text-tertiary` và `color-primary-light` của bảng SÁNG, nên đọc thẳng hai token đó.
@@ -48,6 +66,36 @@ interface HomeCarouselProps {
   onActiveChange?: (index: number) => void;
   /** Thẻ có phần nhô lên khỏi mép trên (ảnh xe của thẻ gian hàng) — chừa 20px như `.overhang` web. */
   overhang?: boolean;
+  /** Thẻ hai bên co + mờ + hạ xuống theo offset cuộn (khối "Xe tiêu biểu"). */
+  coverflow?: boolean;
+}
+
+function CoverflowSlide({
+  index,
+  step,
+  scrollX,
+  enabled,
+  children,
+}: {
+  index: number;
+  step: number;
+  scrollX: SharedValue<number>;
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  const style = useAnimatedStyle(() => {
+    if (!enabled) return {};
+    const range = [(index - 1) * step, index * step, (index + 1) * step];
+    const clamp = Extrapolation.CLAMP;
+    return {
+      opacity: interpolate(scrollX.value, range, [COVERFLOW_SIDE_OPACITY, 1, COVERFLOW_SIDE_OPACITY], clamp),
+      transform: [
+        { translateY: interpolate(scrollX.value, range, [COVERFLOW_SIDE_DROP, 0, COVERFLOW_SIDE_DROP], clamp) },
+        { scale: interpolate(scrollX.value, range, [COVERFLOW_SIDE_SCALE, 1, COVERFLOW_SIDE_SCALE], clamp) },
+      ],
+    };
+  });
+  return <Animated.View style={style}>{children}</Animated.View>;
 }
 
 /**
@@ -66,7 +114,11 @@ export function HomeCarousel({
   accessibilityLabel,
   onActiveChange,
   overhang = false,
+  coverflow = false,
 }: HomeCarouselProps) {
+  const reduceMotion = useReducedMotion();
+  const scrollX = useSharedValue(0);
+  const lastRaw = useSharedValue(-1);
   const colors = useColors();
   const { scheme } = useAppScheme();
   const { width } = useWindowDimensions();
@@ -102,19 +154,33 @@ export function HomeCarousel({
     [step],
   );
 
-  const onScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const onIndex = useCallback(
+    (raw: number) => {
       // Trước khi đứng vào bản giữa, offset 0 (bản ĐẦU) hoặc offset bị kẹp vì nội dung chưa đo
       // xong cho ra chỉ số lệch — chấm cuối sáng trong khi đang xem thẻ đầu.
       if (loop && !placed.current) return;
-      const raw = Math.round(event.nativeEvent.contentOffset.x / Math.max(step, 1));
       const next = (((raw - base) % count) + count) % count;
       setActive(next);
       setPos(raw);
       onActiveChange?.(next);
     },
-    [base, count, loop, onActiveChange, step],
+    [base, count, loop, onActiveChange],
   );
+
+  /*
+   * Offset cuộn sống trên luồng UI (coverflow nội suy từ nó); React chỉ được gọi khi CHỈ SỐ thẻ
+   * đổi — không setState mỗi sự kiện cuộn.
+   */
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x;
+      const raw = Math.round(event.contentOffset.x / Math.max(step, 1));
+      if (raw !== lastRaw.value) {
+        lastRaw.value = raw;
+        runOnJS(onIndex)(raw);
+      }
+    },
+  });
 
   const onSettle = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -127,8 +193,8 @@ export function HomeCarousel({
 
   return (
     <YStack gap={space.md}>
-      <ScrollView
-        ref={scrollRef}
+      <Animated.ScrollView
+        ref={scrollRef as never}
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
@@ -148,7 +214,7 @@ export function HomeCarousel({
           setActive(0);
           onActiveChange?.(0);
         }}
-        scrollEventThrottle={32}
+        scrollEventThrottle={coverflow ? 16 : 32}
         accessibilityLabel={accessibilityLabel}
         // Vùng cuộn tràn ra mép màn (thẻ trượt dưới lề), nhưng thẻ đầu vẫn thẳng lề nội dung.
         style={{
@@ -165,10 +231,18 @@ export function HomeCarousel({
       >
         {slides.map((child, index) => (
           <YStack key={index} w={cardWidth}>
-            {Math.abs(index - pos) <= MOUNT_WINDOW ? child : null}
+            {Math.abs(index - pos) <= MOUNT_WINDOW ? (
+              coverflow && count > 1 ? (
+                <CoverflowSlide index={index} step={step} scrollX={scrollX} enabled={!reduceMotion}>
+                  {child}
+                </CoverflowSlide>
+              ) : (
+                child
+              )
+            ) : null}
           </YStack>
         ))}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {count > 1 ? (
         <XStack

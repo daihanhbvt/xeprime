@@ -231,7 +231,7 @@ export const CurrentPlatform = createParamDecorator(
       // Lỗi NỐI DÂY của controller (quên `@PlatformOnly()`), không phải lỗi của người gọi.
       throw new InternalServerErrorException({
         code: API_ERROR_CODE.INTERNAL_ERROR,
-        message: 'Request chưa có platform scope — thiếu @PlatformOnly() trên controller?',
+        message: 'Request chưa có platform scope - thiếu @PlatformOnly() trên controller?',
       });
     }
     return req.platform;
@@ -250,7 +250,7 @@ export const CurrentTenant = createParamDecorator(
     if (!req.tenant) {
       throw new UnauthorizedException({
         code: API_ERROR_CODE.NO_TENANT_SCOPE,
-        message: 'Request chưa có tenant scope — thiếu TenantScopeGuard trên controller?',
+        message: 'Request chưa có tenant scope - thiếu TenantScopeGuard trên controller?',
       });
     }
     return req.tenant;

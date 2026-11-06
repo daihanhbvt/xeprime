@@ -68,7 +68,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('CustomerFormModal — trùng số điện thoại', () => {
+describe('CustomerFormModal - trùng số điện thoại', () => {
   it('409 trùng SĐT: giải thích rõ và MỞ ĐƯỢC hồ sơ đang giữ số đó, không tự gộp', async () => {
     mutations.create = vi.fn((_body: unknown, handlers: { onError: (e: unknown) => void }) =>
       handlers.onError(duplicateError('cus-9')),

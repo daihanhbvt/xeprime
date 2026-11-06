@@ -126,7 +126,7 @@ export function BlockTitle({
       onPress={onToggleCollapsed}
       accessibilityRole="button"
       accessibilityState={{ expanded: !collapsed }}
-      accessibilityLabel={`${children} — ${collapsed ? tActions('expand') : tActions('collapse')}`}
+      accessibilityLabel={`${children} - ${collapsed ? tActions('expand') : tActions('collapse')}`}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
       {head}

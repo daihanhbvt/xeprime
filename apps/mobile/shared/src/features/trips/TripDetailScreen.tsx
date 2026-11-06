@@ -78,6 +78,7 @@ import { hasHoldStage, TRIP_FLOW_VIEW, tripFlowView, type TripFlowView } from '.
 import { closedNotice, stageNotice } from './stage-notice';
 import { TripNotReceivedReport } from './components/TripNotReceivedReport';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
+import { StaleDataNote } from '@/components/network/StaleDataNote';
 import type { CustomerTripDetail } from './api';
 
 /**
@@ -159,6 +160,7 @@ export function TripDetailScreen({
   return (
     <TripDetailBody
       trip={query.data}
+      dataUpdatedAt={query.dataUpdatedAt}
       listHref={listHref}
       refreshing={pull.refreshing}
       onRefresh={pull.onRefresh}
@@ -168,11 +170,14 @@ export function TripDetailScreen({
 
 function TripDetailBody({
   trip,
+  dataUpdatedAt,
   listHref,
   refreshing,
   onRefresh,
 }: {
   trip: CustomerTripDetail;
+  /** Mốc dữ liệu của query — offline thì hiện "Dữ liệu cập nhật lúc …" (StaleDataNote). */
+  dataUpdatedAt: number;
   listHref: Href;
   /** Vuốt xuống ⇒ đọc lại chuyến (chặng, tiền giữ chỗ, quyết định của chủ xe). */
   refreshing: boolean;
@@ -263,6 +268,7 @@ function TripDetailBody({
             : {})}
         >
           <YStack gap={space.md}>
+            <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
             {/* Lượt MoMo/VNPAY mở trước đó — trạng thái là câu trả lời người vừa quay về đang tìm. */}
             <TripGatewayNotice
               gateway={gateway}
@@ -321,6 +327,7 @@ function TripDetailBody({
         />
         <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
           <YStack gap={layout.section}>
+            <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
             {/* Quay về từ MoMo/VNPAY bằng liên kết CŨ (ADR 0058) — không có lượt nào thì im lặng. */}
             <TripGatewayNotice
               gateway={gateway}
@@ -349,6 +356,7 @@ function TripDetailBody({
       <AppHeader onBack={() => goBackOr(router, listHref)} />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
+          <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
           {/* Tiêu đề trang + câu phụ + nhãn chặng — `header` của `TripDetailView` web. */}
           {/* Khách đang thuê / đã khép có màn riêng ở trên (`TripActiveView`/`TripClosedView`). */}
           <Reveal variant="fade">
@@ -866,12 +874,12 @@ function ShopBlock({
               col={isShop ? colors.shopName : colors.text}
               fos={fontSize.body}
               fow={fontWeight.semibold}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {shop.name}
             </Text>
           ) : (
-            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={2}>
               {shop.name}
             </Text>
           )}

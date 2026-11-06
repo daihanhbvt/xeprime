@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Ứng dụng XePrime cho điện thoại",
-    "description": "Tìm xe, gửi yêu cầu thuê, nhắn tin với chủ xe và theo dõi chuyến — ngay trên điện thoại."
+    "description": "Tìm xe, gửi yêu cầu thuê, nhắn tin với chủ xe và theo dõi chuyến - ngay trên điện thoại."
   },
   "hero": {
     "eyebrow": "Ứng dụng di động",
     "title": "XePrime trong túi bạn",
-    "lead": "Toàn bộ hành trình thuê xe — tìm, hỏi, nhận xe, trả xe — gói trong một ứng dụng. Chủ xe quản lý lịch và đơn ngay trên cùng một app.",
+    "lead": "Toàn bộ hành trình thuê xe - tìm, hỏi, nhận xe, trả xe - gói trong một ứng dụng. Chủ xe quản lý lịch và đơn ngay trên cùng một app.",
     "status": "Sắp ra mắt"
   },
   "preview": {
@@ -29,7 +29,7 @@
     "heading": "Ứng dụng làm được gì",
     "notify": {
       "title": "Thông báo đúng lúc",
-      "desc": "Gian hàng nhận chuyến, cửa sổ thanh toán sắp hết, tới giờ nhận xe — báo ngay trên máy."
+      "desc": "Gian hàng nhận chuyến, cửa sổ thanh toán sắp hết, tới giờ nhận xe - báo ngay trên máy."
     },
     "chat": {
       "title": "Nhắn tin trong chuyến",
@@ -37,7 +37,7 @@
     },
     "handover": {
       "title": "Giao nhận có bằng chứng",
-      "desc": "Chụp hiện trạng xe, ký biên bản và lưu ngay vào chuyến — khỏi phải nhớ gửi qua kênh khác."
+      "desc": "Chụp hiện trạng xe, ký biên bản và lưu ngay vào chuyến - khỏi phải nhớ gửi qua kênh khác."
     },
     "host": {
       "title": "Dành cho chủ xe",

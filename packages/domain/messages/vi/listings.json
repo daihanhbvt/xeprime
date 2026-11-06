@@ -10,7 +10,7 @@
     "owner": "Chủ xe",
     "shop": "Gian hàng",
     "shopVerified": "Gian hàng đã được XePrime xác minh",
-    "shopVerifiedAria": "{name} — gian hàng đã được XePrime xác minh",
+    "shopVerifiedAria": "{name} - gian hàng đã được XePrime xác minh",
     "seats": "{count, plural, other {# chỗ}}",
     "delivery": "Giao tận nơi",
     "noCollateral": "Miễn thế chấp",
@@ -119,7 +119,7 @@
       "less": "Thu gọn"
     },
     "gallery": {
-      "photoAlt": "{name} — ảnh {index}",
+      "photoAlt": "{name} - ảnh {index}",
       "pager": "Chọn ảnh xe",
       "goTo": "Ảnh {index} / {total}",
       "counter": "{index} / {total}"
@@ -168,7 +168,7 @@
       },
       "documents": {
         "licenceRequired": "Dịch vụ này cần bằng lái đã xác thực trên tài khoản của bạn trước khi gửi yêu cầu thuê.",
-        "empty": "Chủ xe chưa công bố thủ tục riêng cho dịch vụ này — giấy tờ cần mang sẽ được nhắc khi bạn gửi yêu cầu."
+        "empty": "Chủ xe chưa công bố thủ tục riêng cho dịch vụ này - giấy tờ cần mang sẽ được nhắc khi bạn gửi yêu cầu."
       },
       "collateral": {
         "none": "<strong>Không yêu cầu đặt cọc hay thế chấp tài sản:</strong> xe này không cần thế chấp tài sản hay cọc khi nhận xe.",
@@ -231,6 +231,7 @@
         "free": "Miễn phí",
         "chooseDelivery": "Chọn địa chỉ giao xe & xem bản đồ",
         "note": "* Địa điểm cụ thể và số điện thoại chủ xe sẽ hiển thị sau khi hoàn tất thanh toán giữ chỗ.",
+        "noteLabel": "Khi nào thấy địa chỉ cụ thể",
         "distanceFeeLater": "Khoảng cách dự kiến: ~{distance} · Phí giao: chủ xe báo khi duyệt yêu cầu"
       },
       "insurance": {
@@ -282,7 +283,7 @@
     "withDriverPrice": {
       "title": "Giá thuê có tài xế",
       "included": "Đã gồm tài xế, xăng xe, chi phí qua đêm của tài xế và phục vụ chở khách tại điểm đến.",
-      "excluded": "Chưa gồm phí cầu đường — khách trả trực tiếp trong chuyến."
+      "excluded": "Chưa gồm phí cầu đường - khách trả trực tiếp trong chuyến."
     }
   },
   "reviews": {

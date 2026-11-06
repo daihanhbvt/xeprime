@@ -54,7 +54,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   [API_ERROR_CODE.FORBIDDEN]: 'Không có quyền truy cập',
   [API_ERROR_CODE.NO_TENANT_SCOPE]: 'Tài khoản không thuộc gian hàng nào',
   [API_ERROR_CODE.FEATURE_NOT_IN_PLAN]: 'Tính năng này thuộc gói dịch vụ mà gian hàng chưa có',
-  [API_ERROR_CODE.FEATURE_READ_ONLY]: 'Gói đã hết hạn — tính năng đang ở chế độ chỉ xem',
+  [API_ERROR_CODE.FEATURE_READ_ONLY]: 'Gói đã hết hạn - tính năng đang ở chế độ chỉ xem',
   [API_ERROR_CODE.NOT_FOUND]: 'Không tìm thấy dữ liệu',
   [API_ERROR_CODE.CONFLICT]: 'Dữ liệu đã tồn tại',
   [API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT]: 'Xe đã có lịch khác trùng khoảng thời gian này',
@@ -179,24 +179,24 @@ function applyAccess(operation: OperationObject, route: RouteAccess): void {
 
   const lines: string[] = [
     route.isPublic
-      ? '**Truy cập:** công khai — không cần đăng nhập.'
+      ? '**Truy cập:** công khai - không cần đăng nhập.'
       : '**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).',
   ];
 
   if (route.realms.length > 0) {
     const realms = route.realms.map((realm) => `\`${realm}\``).join(' · ');
-    lines.push(`**Không gian tài khoản (ADR 0053):** ${realms} — phiên của realm khác bị từ chối.`);
+    lines.push(`**Không gian tài khoản (ADR 0053):** ${realms} - phiên của realm khác bị từ chối.`);
   }
 
   if (route.tenantScoped) {
     lines.push(
-      '**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, ' +
+      '**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, ' +
         'KHÔNG nhận từ body/query.',
     );
   }
 
   if (route.platformOnly) {
-    lines.push('**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.');
+    lines.push('**Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.');
   }
 
   if (route.permissions.length > 0) {
@@ -255,7 +255,7 @@ function addErrorResponses(
     setResponse(
       operation,
       '409',
-      'Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác',
+      'Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác',
       [API_ERROR_CODE.CONFLICT, API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT],
     );
   }

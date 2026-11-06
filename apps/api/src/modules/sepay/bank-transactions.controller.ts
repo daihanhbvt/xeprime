@@ -35,7 +35,7 @@ export class BankTransactionsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Hàng đợi giao dịch tiền vào — mặc định chỉ những khoản CHƯA KHỚP',
+    summary: 'Hàng đợi giao dịch tiền vào - mặc định chỉ những khoản CHƯA KHỚP',
   })
   @ApiOkResponse({ type: BankTransactionPageDto })
   list(@Query() query: BankTransactionListQueryDto): Promise<BankTransactionPageDto> {
@@ -53,7 +53,7 @@ export class BankTransactionsController {
 
   @Post(':id/match')
   @ApiOperation({
-    summary: 'Khớp TAY vào một hoá đơn gói — cùng đường tiền với webhook, kèm audit và ghi chú',
+    summary: 'Khớp TAY vào một hoá đơn gói - cùng đường tiền với webhook, kèm audit và ghi chú',
   })
   @ApiOkResponse({ type: BankTransactionDetailDto })
   match(
@@ -65,7 +65,7 @@ export class BankTransactionsController {
   }
 
   @Post(':id/ignore')
-  @ApiOperation({ summary: 'Bỏ qua một giao dịch không thuộc luồng nào — giữ dòng, ghi lý do' })
+  @ApiOperation({ summary: 'Bỏ qua một giao dịch không thuộc luồng nào - giữ dòng, ghi lý do' })
   @ApiOkResponse({ type: BankTransactionDetailDto })
   ignore(
     @Param('id') id: string,

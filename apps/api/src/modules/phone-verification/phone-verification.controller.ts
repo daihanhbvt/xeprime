@@ -77,7 +77,7 @@ export class PhoneVerificationController {
   })
   @ApiOkResponse({ type: SendOtpResultDto })
   @ApiGoneResponse({
-    description: '`purpose=login` — đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`).',
+    description: '`purpose=login` - đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`).',
   })
   async sendOtp(@Body() dto: SendOtpDto, @Req() req: RequestContext): Promise<SendOtpResultDto> {
     const { realm } = await this.otpContext(req, dto.clientApp);
@@ -124,10 +124,10 @@ export class PhoneVerificationController {
   @Post('login')
   @HttpCode(HttpStatus.GONE)
   @ApiOperation({
-    summary: 'ĐÃ GỠ — đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
+    summary: 'ĐÃ GỠ - đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
     deprecated: true,
   })
-  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu.' })
+  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ - dùng SĐT + mật khẩu.' })
   login(): never {
     throw otpLoginRetired();
   }

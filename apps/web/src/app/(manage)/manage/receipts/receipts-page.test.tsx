@@ -276,7 +276,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ tải / lỗi */
 
-describe('/manage/receipts — tải và lỗi', () => {
+describe('/manage/receipts - tải và lỗi', () => {
   it('lần tải đầu hiện trạng thái chờ, chưa nói "chưa có phiếu"', () => {
     // ĐỔI CÓ CHỦ ĐÍCH ở Wave 1C-E: skeleton thay cho bảng rỗng + spinner (Figma `134:2011` R1).
     setQuery({ isFetching: true });
@@ -386,7 +386,7 @@ describe('/manage/receipts — tải và lỗi', () => {
 
 /* ------------------------------------------------------------------ rỗng vs không-kết-quả */
 
-describe('/manage/receipts — rỗng và không có kết quả', () => {
+describe('/manage/receipts - rỗng và không có kết quả', () => {
   it('không lọc và rỗng: "Chưa có phiếu thu/chi nào"', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -457,7 +457,7 @@ describe('/manage/receipts — rỗng và không có kết quả', () => {
 
 /* ------------------------------------------------------------------ tiền + dữ liệu */
 
-describe('/manage/receipts — hiển thị tiền', () => {
+describe('/manage/receipts - hiển thị tiền', () => {
   it('phiếu thu hiện dấu cộng trước số tiền đã định dạng', () => {
     setQuery({ data: { items: [receipt({ type: 'income', amount: '1500000' })], meta: META } });
     renderPage();
@@ -465,7 +465,7 @@ describe('/manage/receipts — hiển thị tiền', () => {
     expect(screen.getByText('+1.500.000 ₫')).toBeTruthy();
   });
 
-  it('phiếu chi hiện dấu trừ — dấu là NGHĨA nghiệp vụ, không phải trang trí', () => {
+  it('phiếu chi hiện dấu trừ - dấu là NGHĨA nghiệp vụ, không phải trang trí', () => {
     setQuery({ data: { items: [receipt({ type: 'expense', amount: '1500000' })], meta: META } });
     renderPage();
 
@@ -473,14 +473,14 @@ describe('/manage/receipts — hiển thị tiền', () => {
     expect(screen.getByText('−1.500.000 ₫')).toBeTruthy();
   });
 
-  it('số tiền rất lớn không mất chính xác (ADR 0007 — chuỗi, không phải number)', () => {
+  it('số tiền rất lớn không mất chính xác (ADR 0007 - chuỗi, không phải number)', () => {
     setQuery({ data: { items: [receipt({ amount: '999999999999' })], meta: META } });
     renderPage();
 
     expect(screen.getByText('+999.999.999.999 ₫')).toBeTruthy();
   });
 
-  it('hiện mã phiếu, danh mục và hình thức — diễn giải chỉ ở hộp chi tiết (design 04/11/2026)', () => {
+  it('hiện mã phiếu, danh mục và hình thức - diễn giải chỉ ở hộp chi tiết (design 04/11/2026)', () => {
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();
 
@@ -499,13 +499,13 @@ describe('/manage/receipts — hiển thị tiền', () => {
     });
     renderPage();
 
-    expect(within(bodyRows()[0]!).getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(within(bodyRows()[0]!).getAllByText('-').length).toBeGreaterThanOrEqual(2);
   });
 });
 
 /* ------------------------------------------------------------------ quyền + hành động tiền */
 
-describe('/manage/receipts — quyền và hành động ảnh hưởng tiền', () => {
+describe('/manage/receipts - quyền và hành động ảnh hưởng tiền', () => {
   it('KHÔNG có quyền duyệt: hàng chỉ còn "Xem chi tiết", không có thao tác tiền nào', () => {
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();
@@ -532,7 +532,7 @@ describe('/manage/receipts — quyền và hành động ảnh hưởng tiền',
     expect(within(bodyRows()[0]!).getByRole('button', { name: 'Duyệt' })).toBeTruthy();
   });
 
-  it('phiếu ĐÃ duyệt: trên dòng chỉ còn "Xem chi tiết" — huỷ nằm ở hộp chi tiết', () => {
+  it('phiếu ĐÃ duyệt: trên dòng chỉ còn "Xem chi tiết" - huỷ nằm ở hộp chi tiết', () => {
     grant(PERMISSION.RECEIPT_APPROVE);
     setQuery({ data: { items: [receipt({ status: 'approved' })], meta: META } });
     renderPage();
@@ -606,7 +606,7 @@ describe('/manage/receipts — quyền và hành động ảnh hưởng tiền',
 
 /* ------------------------------------------------------------------ filter + phân trang */
 
-describe('/manage/receipts — filter và phân trang', () => {
+describe('/manage/receipts - filter và phân trang', () => {
   it('filter từ URL truyền nguyên vẹn xuống lớp dữ liệu', () => {
     nav.params = new URLSearchParams(
       'type=income&status=approved&categoryId=c9&from=2026-01-01&to=2026-01-31&page=2&limit=50',
@@ -675,7 +675,7 @@ describe('/manage/receipts — filter và phân trang', () => {
     expect(screen.getByTestId('receipt-detail').textContent).toBe('r-42');
   });
 
-  it('phiếu TỰ ĐỘNG không có hành động Huỷ — đảo phải đi qua nghiệp vụ gốc', () => {
+  it('phiếu TỰ ĐỘNG không có hành động Huỷ - đảo phải đi qua nghiệp vụ gốc', () => {
     grant(PERMISSION.RECEIPT_APPROVE);
     setQuery({
       data: {
@@ -699,7 +699,7 @@ describe('/manage/receipts — filter và phân trang', () => {
  * `create` là ý định, không phải bộ lọc — nên nó không xuống lớp dữ liệu, không tính vào "đang
  * lọc", và bị gỡ khỏi URL ngay khi form đóng (F5 không được mở lại thứ người dùng vừa bỏ).
  */
-describe('/manage/receipts — mở form từ hồ sơ xe', () => {
+describe('/manage/receipts - mở form từ hồ sơ xe', () => {
   it('?vehicleId=…&create=1 mở sẵn form với xe đã chọn, vẫn giữ bộ lọc theo xe', () => {
     grant(PERMISSION.RECEIPT_CREATE);
     nav.params = new URLSearchParams('vehicleId=v-9&create=1&page=3');
@@ -712,7 +712,7 @@ describe('/manage/receipts — mở form từ hồ sơ xe', () => {
     expect(query.lastFilters).toMatchObject({ vehicleId: 'v-9', page: 3 });
   });
 
-  it('`create` KHÔNG đi xuống API — nó là ý định giao diện, không phải bộ lọc', () => {
+  it('`create` KHÔNG đi xuống API - nó là ý định giao diện, không phải bộ lọc', () => {
     grant(PERMISSION.RECEIPT_CREATE);
     nav.params = new URLSearchParams('create=1');
     setQuery({ data: { items: [receipt()], meta: META } });
@@ -763,7 +763,7 @@ describe('/manage/receipts — mở form từ hồ sơ xe', () => {
 
 /* ------------------------------------------------------------------ hai tab (design 04/11/2026) */
 
-describe('/manage/receipts — Lịch sử giao dịch: hai tab', () => {
+describe('/manage/receipts - Lịch sử giao dịch: hai tab', () => {
   it('tiêu đề mới + thẻ "Công nợ khách hàng" bấm sang tab Công nợ', () => {
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();

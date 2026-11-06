@@ -394,8 +394,7 @@ function PeriodCell({ row }: { row: BookingHistoryItem }) {
   return (
     <div className={styles.stack}>
       <span className={styles.strong}>
-        {fmt.dayMonth(row.pickupAt)} {fmt.time(row.pickupAt)} → {fmt.dayMonth(row.returnAt)}{' '}
-        {fmt.time(row.returnAt)}
+        {fmt.rentalPointCompact(pickup)} → {fmt.rentalPointCompact(dropoff)}
       </span>
       <span className={styles.sub}>{fmt.rentalDuration(pickup, dropoff)}</span>
     </div>

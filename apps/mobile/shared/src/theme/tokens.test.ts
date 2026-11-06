@@ -34,7 +34,7 @@ describe('kích thước native lấy từ token dùng chung', () => {
     expect(bad).toEqual([]);
   });
 
-  it('fontWeight là chuỗi — RN không nhận số ở đây', () => {
+  it('fontWeight là chuỗi - RN không nhận số ở đây', () => {
     for (const value of Object.values(fontWeight)) {
       expect(typeof value).toBe('string');
     }

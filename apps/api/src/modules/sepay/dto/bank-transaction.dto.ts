@@ -30,7 +30,7 @@ export { DEFAULT_LIMIT as BANK_TX_DEFAULT_LIMIT, MAX_LIMIT as BANK_TX_MAX_LIMIT 
 export class BankTransactionListQueryDto {
   @ApiPropertyOptional({
     enum: BANK_MATCH_STATUS_VALUES,
-    description: 'Bỏ trống = CHƯA KHỚP — hàng đợi việc cần làm, không phải toàn bộ lịch sử',
+    description: 'Bỏ trống = CHƯA KHỚP - hàng đợi việc cần làm, không phải toàn bộ lịch sử',
   })
   @IsOptional()
   @IsIn(BANK_MATCH_STATUS_VALUES)
@@ -52,7 +52,7 @@ export class BankTransactionListQueryDto {
   code?: BankTxCodeFilter;
 
   @ApiPropertyOptional({
-    description: 'Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng',
+    description: 'Từ ngày - `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng',
   })
   @IsOptional()
   @Matches(DATE_ONLY_PATTERN, { message: 'from phải theo dạng YYYY-MM-DD' })
@@ -61,7 +61,7 @@ export class BankTransactionListQueryDto {
   @IsISO8601({ strict: true }, { message: 'from không phải một ngày có thật' })
   from?: string;
 
-  @ApiPropertyOptional({ description: 'Đến hết ngày — cùng quy ước với `from`' })
+  @ApiPropertyOptional({ description: 'Đến hết ngày - cùng quy ước với `from`' })
   @IsOptional()
   @Matches(DATE_ONLY_PATTERN, { message: 'to phải theo dạng YYYY-MM-DD' })
   @IsISO8601({ strict: true }, { message: 'to không phải một ngày có thật' })
@@ -92,9 +92,9 @@ export class BankTransactionListQueryDto {
 export class BankTransactionDto {
   @ApiProperty() id!: string;
   @ApiProperty() provider!: string;
-  @ApiProperty({ description: 'Mã giao dịch phía nhà cung cấp — khoá chống ghi đôi' })
+  @ApiProperty({ description: 'Mã giao dịch phía nhà cung cấp - khoá chống ghi đôi' })
   providerTxId!: string;
-  @ApiProperty({ description: 'Tiền vào, string — ADR 0007' }) amountIn!: string;
+  @ApiProperty({ description: 'Tiền vào, string - ADR 0007' }) amountIn!: string;
   @ApiProperty({ description: 'Nội dung chuyển khoản NGUYÊN VĂN' }) content!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) referenceCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
@@ -109,7 +109,7 @@ export class BankTransactionDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên admin đã khớp tay / bỏ qua — `null` khi máy tự khớp',
+    description: 'Tên admin đã khớp tay / bỏ qua - `null` khi máy tự khớp',
   })
   matchedByName!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
@@ -122,7 +122,7 @@ export class BankTransactionDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền',
+    description: 'Mã giao dịch chuyển TRẢ người gửi - chỉ ở dòng `ignored` đã trả lại tiền',
   })
   refundReference!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
@@ -150,7 +150,7 @@ export class BankTransactionSuggestionDto {
   @ApiProperty({ description: 'Đã nhận, string' }) paidAmount!: string;
   @ApiProperty({ description: 'Còn thiếu = tổng − đã nhận, string' }) remainingAmount!: string;
   @ApiProperty({
-    description: 'Số tiền giao dịch KHỚP ĐÚNG phần còn thiếu — chỉ là gợi ý sắp xếp, không tự khớp',
+    description: 'Số tiền giao dịch KHỚP ĐÚNG phần còn thiếu - chỉ là gợi ý sắp xếp, không tự khớp',
   })
   amountMatches!: boolean;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
@@ -159,7 +159,7 @@ export class BankTransactionSuggestionDto {
 export class BankTransactionDetailDto extends BankTransactionDto {
   @ApiProperty({
     description:
-      'Payload webhook nguyên trạng — BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách.',
+      'Payload webhook nguyên trạng - BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách.',
     type: Object,
   })
   rawJson!: unknown;
@@ -182,7 +182,7 @@ export class BankTransactionDetailDto extends BankTransactionDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime',
+    description: 'Mã tham chiếu phía ngân hàng (SePay `referenceCode`) - khác mã đối soát XePrime',
   })
   bankReferenceNumber!: string | null;
   @ApiProperty({
@@ -199,7 +199,7 @@ export class MatchBankTransactionDto {
   invoiceId!: string;
 
   @ApiProperty({
-    description: 'Lý do/ghi chú — BẮT BUỘC: mỗi lần khớp tay là một người chịu trách nhiệm',
+    description: 'Lý do/ghi chú - BẮT BUỘC: mỗi lần khớp tay là một người chịu trách nhiệm',
   })
   @IsString()
   @MaxLength(500)
@@ -207,7 +207,7 @@ export class MatchBankTransactionDto {
 }
 
 export class IgnoreBankTransactionDto {
-  @ApiProperty({ description: 'Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được' })
+  @ApiProperty({ description: 'Lý do bỏ qua - bắt buộc, để dòng bị loại vẫn truy được' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
@@ -217,7 +217,7 @@ export class IgnoreBankTransactionDto {
   @ApiPropertyOptional({
     description:
       'Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; ' +
-      'không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai',
+      'không có mã thì không ghi "đã trả" - một lần chuyển không có bằng chứng chỉ là lời khai',
   })
   // Cắt khoảng trắng TRƯỚC khi kiểm độ dài: `"   "` không được lọt qua `MinLength(3)` rồi bị service
   // cắt thành rỗng — admin tưởng đã ghi "đã trả lại" mà dòng không có bằng chứng nào.

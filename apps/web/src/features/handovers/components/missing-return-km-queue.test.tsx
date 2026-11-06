@@ -212,7 +212,7 @@ describe('Hàng đợi "Thiếu KM trả" (Wave 8)', () => {
   });
 });
 
-describe('Bổ sung KM — trạng thái tải, lỗi và việc đã xử lý (Wave 8.1)', () => {
+describe('Bổ sung KM - trạng thái tải, lỗi và việc đã xử lý (Wave 8.1)', () => {
   /** Ngữ cảnh bàn giao còn việc thật (đang thiếu KM). */
   const unresolvedContext = {
     bookingId: 'booking-1',

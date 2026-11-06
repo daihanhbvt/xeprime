@@ -96,7 +96,7 @@ describe('ChatListScreen', () => {
     expect(api.list.mock.calls[0]?.[0]).toMatchObject({ side: 'customer' });
   });
 
-  it('inbox GIAN HÀNG hỏi server với `side=shop` — không trộn vai', async () => {
+  it('inbox GIAN HÀNG hỏi server với `side=shop` - không trộn vai', async () => {
     await renderScreen(CHAT_SIDE.SHOP);
 
     await waitFor(() => expect(api.list).toHaveBeenCalled());

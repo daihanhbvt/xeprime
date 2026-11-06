@@ -136,7 +136,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/shop/policies — quyền và trạng thái tải', () => {
+describe('/manage/shop/policies - quyền và trạng thái tải', () => {
   it('thiếu tenant.view: thay TOÀN BỘ trang bằng khối quyền', () => {
     grant();
     renderPage();
@@ -153,7 +153,7 @@ describe('/manage/shop/policies — quyền và trạng thái tải', () => {
   });
 });
 
-describe('/manage/shop/policies — hoá đơn VAT (ADR 0059)', () => {
+describe('/manage/shop/policies - hoá đơn VAT (ADR 0059)', () => {
   it('một section cho MỌI xe, đứng ngoài tabs theo loại xe, có công tắc', () => {
     renderPage();
     const heading = screen.getByRole('heading', { level: 2, name: 'Hoá đơn VAT' });
@@ -163,7 +163,7 @@ describe('/manage/shop/policies — hoá đơn VAT (ADR 0059)', () => {
   });
 });
 
-describe('/manage/shop/policies — dữ liệu và null-policy', () => {
+describe('/manage/shop/policies - dữ liệu và null-policy', () => {
   it('chip phạm vi lấy số từ API, đếm theo loại xe của tab: 12 kế thừa / 3 ghi đè', () => {
     renderPage();
     // Tab mặc định là Ô tô; số xe ghi đè nằm trong ghi chú để toolbar không bị quá tải.
@@ -173,7 +173,7 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
     expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
   });
 
-  it('có đủ hai tab Ô tô / Xe máy — mỗi loại một bộ chính sách riêng', () => {
+  it('có đủ hai tab Ô tô / Xe máy - mỗi loại một bộ chính sách riêng', () => {
     renderPage();
     expect(screen.getByRole('tab', { name: 'Ô tô' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Xe máy' })).toBeTruthy();
@@ -187,7 +187,7 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
     expect(screen.getByText('Không có khoảng trống hoặc chồng lấn')).toBeTruthy();
     expect(
       screen.getByText(
-        '0–3 km: Miễn phí · >3–5 km: 30.000 ₫ · >5–10 km: 50.000 ₫ · >10 km: Báo giá thủ công theo thỏa thuận',
+        '0-3 km: Miễn phí · >3-5 km: 30.000 ₫ · >5-10 km: 50.000 ₫ · >10 km: Báo giá thủ công theo thỏa thuận',
       ),
     ).toBeTruthy();
     expect((screen.getByLabelText('Phí mỗi giờ phát sinh') as HTMLInputElement).value).toBe(
@@ -207,7 +207,7 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
   });
 });
 
-describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
+describe('/manage/shop/policies - sửa, validate, xác nhận lưu', () => {
   it('sửa một giá trị → thanh "thay đổi chưa lưu" hiện, Hủy bỏ thì biến mất', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
@@ -337,7 +337,7 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
  * là quyền RIÊNG (`seller_profile.*`) chứ không mượn quyền sửa chính sách, và thiếu quyền sửa
  * thì nói ra chứ không để lại một công tắc mờ không giải thích.
  */
-describe('/manage/shop/policies — thanh toán giữ chỗ qua XePrime', () => {
+describe('/manage/shop/policies - thanh toán giữ chỗ qua XePrime', () => {
   it('section có mặt, kèm anchor để route cũ redirect tới đúng chỗ', () => {
     const { container } = renderPage();
 

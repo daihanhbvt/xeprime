@@ -134,7 +134,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/members — trạng thái', () => {
+describe('/manage/members - trạng thái', () => {
   it('lỗi khi chưa có dữ liệu: câu chữ riêng + Thử lại', () => {
     setQuery({ isError: true });
     render(
@@ -169,7 +169,7 @@ describe('/manage/members — trạng thái', () => {
   });
 });
 
-describe('/manage/members — định danh và vai trò', () => {
+describe('/manage/members - định danh và vai trò', () => {
   it('hiện tên và email', () => {
     renderWith([member()]);
 
@@ -186,7 +186,7 @@ describe('/manage/members — định danh và vai trò', () => {
   it('thiếu email hiện gạch ngang', () => {
     renderWith([member({ email: null })]);
 
-    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.getByText('-')).toBeTruthy();
   });
 
   it('KHÔNG có quyền đổi vai trò: vai trò hiển thị dạng nhãn, không phải ô chọn', () => {
@@ -218,7 +218,7 @@ describe('/manage/members — định danh và vai trò', () => {
   });
 });
 
-describe('/manage/members — gỡ thành viên', () => {
+describe('/manage/members - gỡ thành viên', () => {
   it('KHÔNG có quyền gỡ: không có nút gỡ', () => {
     renderWith([member()]);
 
@@ -254,7 +254,7 @@ describe('/manage/members — gỡ thành viên', () => {
   });
 });
 
-describe('/manage/members — lọc và phân trang', () => {
+describe('/manage/members - lọc và phân trang', () => {
   it('lọc là state cục bộ, không ghi URL', () => {
     renderWith([member()]);
 

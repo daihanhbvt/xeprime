@@ -892,6 +892,6 @@ const ONE_ACTIVE_MEMBERSHIP_INDEX = 'tenant_memberships_one_active_per_user';
 function alreadyInTenant(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
-    message: 'Tài khoản đã thuộc một gian hàng — mỗi tài khoản chỉ thuộc một gian hàng.',
+    message: 'Tài khoản đã thuộc một gian hàng - mỗi tài khoản chỉ thuộc một gian hàng.',
   });
 }

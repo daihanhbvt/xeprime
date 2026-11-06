@@ -856,10 +856,10 @@ export function mergePasses(
     `Tesseract ${passes.length} lượt đọc`,
     context.rotation ? `ảnh đã xoay ${context.rotation}°` : null,
     isVn && !backSide
-      ? `khớp giữa các lượt — số bằng ${number.agreement}, hạng ${classes.agreement}, hạn ${expiry.agreement}`
+      ? `khớp giữa các lượt - số bằng ${number.agreement}, hạng ${classes.agreement}, hạn ${expiry.agreement}`
       : null,
     !isVn && documentKind !== 'not_a_licence'
-      ? 'bằng quốc tế / nước ngoài — máy chỉ nhận dạng, chủ xe đối chiếu hạng và hạn trên bằng gốc khi giao xe'
+      ? 'bằng quốc tế / nước ngoài - máy chỉ nhận dạng, chủ xe đối chiếu hạng và hạn trên bằng gốc khi giao xe'
       : null,
   ].filter(Boolean);
 

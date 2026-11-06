@@ -374,7 +374,7 @@ const PhotoSlot = memo(function PhotoSlot({
         onPress={press}
         disabled={!press || busy}
         accessibilityRole="button"
-        accessibilityLabel={filled && canOpen ? `${label} — ${t('view')}` : label}
+        accessibilityLabel={filled && canOpen ? `${label} - ${t('view')}` : label}
         accessibilityState={{ checked: filled, disabled: !press || busy }}
       >
         <YStack

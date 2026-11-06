@@ -26,7 +26,7 @@ import {
  */
 export class PlatformWithdrawalDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Mã XPW… — ghi vào nội dung chuyển khoản' }) code!: string;
+  @ApiProperty({ description: 'Mã XPW… - ghi vào nội dung chuyển khoản' }) code!: string;
   @ApiProperty() amount!: string;
   @ApiProperty({ enum: WITHDRAWAL_STATUS_VALUES }) status!: WithdrawalStatus;
 
@@ -34,12 +34,12 @@ export class PlatformWithdrawalDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên chủ ví — người hoặc gian hàng',
+    description: 'Tên chủ ví - người hoặc gian hàng',
   })
   ownerName!: string | null;
 
   @ApiProperty() bankCode!: string;
-  @ApiProperty({ description: 'SỐ ĐẦY ĐỦ — admin phải gõ vào app ngân hàng' })
+  @ApiProperty({ description: 'SỐ ĐẦY ĐỦ - admin phải gõ vào app ngân hàng' })
   bankAccountNumber!: string;
   @ApiProperty() bankAccountName!: string;
 
@@ -55,7 +55,7 @@ export class PlatformWithdrawalDto {
     type: String,
     nullable: true,
     description:
-      'Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed`',
+      'Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) - chỉ ở trạng thái `reversed`',
   })
   reversedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Vì sao tiền quay lại' })
@@ -70,7 +70,7 @@ export class PlatformWithdrawalPageDto {
   @ApiProperty() page!: number;
   @ApiProperty() limit!: number;
   @ApiProperty() hasNext!: boolean;
-  @ApiProperty({ description: 'Số lệnh đang quá hạn cam kết — chỉ số vận hành, hiện ở đầu màn' })
+  @ApiProperty({ description: 'Số lệnh đang quá hạn cam kết - chỉ số vận hành, hiện ở đầu màn' })
   overdueCount!: number;
 }
 
@@ -106,13 +106,13 @@ export class PlatformWithdrawalQueryDto {
 }
 
 export class MarkWithdrawalPaidDto {
-  @ApiProperty({ description: 'Mã giao dịch ngân hàng — BẰNG CHỨNG đã chuyển' })
+  @ApiProperty({ description: 'Mã giao dịch ngân hàng - BẰNG CHỨNG đã chuyển' })
   @IsString()
   @MinLength(3)
   @MaxLength(100)
   bankReference!: string;
 
-  @ApiProperty({ description: 'Bản ghi đang cầm — chặn hai admin cùng bấm' })
+  @ApiProperty({ description: 'Bản ghi đang cầm - chặn hai admin cùng bấm' })
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -120,7 +120,7 @@ export class MarkWithdrawalPaidDto {
 }
 
 export class RejectWithdrawalDto {
-  @ApiProperty({ description: 'Lý do — chủ ví đọc được câu này' })
+  @ApiProperty({ description: 'Lý do - chủ ví đọc được câu này' })
   @IsString()
   @MinLength(3)
   @MaxLength(500)
@@ -129,7 +129,7 @@ export class RejectWithdrawalDto {
 
 export class ReverseWithdrawalDto {
   @ApiProperty({
-    description: 'Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được',
+    description: 'Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) - chủ ví đọc được',
   })
   @IsString()
   @MinLength(3)
@@ -138,7 +138,7 @@ export class ReverseWithdrawalDto {
 
   @ApiProperty({
     description:
-      'Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi',
+      'Bản ghi đang cầm - bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi',
   })
   @Type(() => Number)
   @IsInt()

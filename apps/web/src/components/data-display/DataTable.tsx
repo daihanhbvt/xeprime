@@ -161,9 +161,9 @@ function renderedColumn<T>(column: MobileColumnShape<T>, row: T, index: number):
     !isValidElement(rendered) &&
     'children' in rendered
   ) {
-    return (rendered as { children?: ReactNode }).children ?? '—';
+    return (rendered as { children?: ReactNode }).children ?? '-';
   }
-  return (rendered ?? '—') as ReactNode;
+  return (rendered ?? '-') as ReactNode;
 }
 
 function columnTitle<T>(column: MobileColumnShape<T>): ReactNode {

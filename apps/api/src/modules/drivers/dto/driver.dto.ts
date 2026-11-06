@@ -112,7 +112,7 @@ export class DriverListQueryDto extends DriverListFilterDto {
   sort?: string;
 
   @ApiPropertyOptional({
-    description: 'Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công — mặc định tháng hiện tại',
+    description: 'Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công - mặc định tháng hiện tại',
   })
   @IsOptional()
   @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
@@ -192,7 +192,7 @@ export class DriverLicenceSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Họ tên in trên bằng đã xác thực — để bên thuê đối chiếu với người được mời',
+    description: 'Họ tên in trên bằng đã xác thực - để bên thuê đối chiếu với người được mời',
   })
   fullName!: string | null;
   @ApiPropertyOptional({
@@ -223,7 +223,7 @@ export class DriverDto {
     enum: DRIVER_LINK_STATUS_VALUES,
     nullable: true,
     description:
-      'Chỉ ở dòng LỊCH SỬ (đã từ chối / đã kết thúc): trạng thái liên kết ĐANG MỞ hiện tại của cùng tài khoản với bên thuê này — null = chưa mời lại, hiện nút "Mời lại"',
+      'Chỉ ở dòng LỊCH SỬ (đã từ chối / đã kết thúc): trạng thái liên kết ĐANG MỞ hiện tại của cùng tài khoản với bên thuê này - null = chưa mời lại, hiện nút "Mời lại"',
   })
   currentOpenLinkStatus!: string | null;
   @ApiProperty({
@@ -236,7 +236,7 @@ export class DriverDto {
     type: String,
     nullable: true,
     description:
-      'Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ — null = không',
+      'Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ - null = không',
   })
   autoAssignCooldownUntil!: string | null;
   @ApiProperty({
@@ -283,24 +283,24 @@ export class BookingDriverSummaryDto {
     type: String,
     nullable: true,
     description:
-      'ID liên kết tài xế (`drivers.id`) — null khi `source = external`, và luôn null ở bề mặt khách',
+      'ID liên kết tài xế (`drivers.id`) - null khi `source = external`, và luôn null ở bề mặt khách',
   })
   id!: string | null;
   @ApiProperty() name!: string;
   @ApiProperty({ description: 'Dạng hiển thị `0xxxxxxxxx`' }) phone!: string;
   @ApiProperty({
     enum: DRIVER_ASSIGNMENT_STATUS_VALUES,
-    description: 'Tài xế ngoài hệ thống luôn `accepted` — không có lượt chờ',
+    description: 'Tài xế ngoài hệ thống luôn `accepted` - không có lượt chờ',
   })
   assignmentStatus!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC — mốc gán (hoặc mốc ghi tài xế ngoài hệ thống)' })
+  @ApiProperty({ description: 'ISO-8601 UTC - mốc gán (hoặc mốc ghi tài xế ngoài hệ thống)' })
   assignedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) respondedAt!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description:
-      'Hạn tài xế trả lời (ISO-8601, ADR 0066) — chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê.',
+      'Hạn tài xế trả lời (ISO-8601, ADR 0066) - chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê.',
   })
   respondBy!: string | null;
 }
@@ -310,9 +310,9 @@ export class BookingDriverSummaryDto {
  * nhận lại. `null` khi không có sự cố hoặc đã có tài xế nhận lại / đơn đã giao xe hay khép.
  */
 export class BookingDriverIncidentDto {
-  @ApiProperty({ description: 'ISO-8601 — lúc tài xế rút' }) droppedAt!: string;
+  @ApiProperty({ description: 'ISO-8601 - lúc tài xế rút' }) droppedAt!: string;
   @ApiProperty({
-    description: 'ISO-8601 — hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng)',
+    description: 'ISO-8601 - hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng)',
   })
   reassignBy!: string;
   @ApiProperty({ enum: DRIVER_INCIDENT_LEVEL_VALUES }) level!: string;
@@ -324,7 +324,7 @@ export class BookingDriverIncidentDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên tài xế đã rút — null khi sự cố đến từ lượt "trả lại" không lý do',
+    description: 'Tên tài xế đã rút - null khi sự cố đến từ lượt "trả lại" không lý do',
   })
   driverName!: string | null;
   @ApiPropertyOptional({ enum: DRIVER_DROP_REASON_VALUES, nullable: true })
@@ -338,7 +338,7 @@ export class TripDriverIncidentDto {
   @ApiProperty({
     enum: DRIVER_INCIDENT_LEVEL_VALUES,
     description:
-      '`arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ — cảnh báo + hỗ trợ',
+      '`arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ - cảnh báo + hỗ trợ',
   })
   level!: string;
   @ApiProperty({
@@ -361,7 +361,7 @@ export class DriverWageChangeDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Người sửa (thành viên bên thuê) — null khi tài khoản không còn',
+    description: 'Người sửa (thành viên bên thuê) - null khi tài khoản không còn',
   })
   changedByName!: string | null;
 }
@@ -377,7 +377,7 @@ export class DriverWageRangeDto {
  * dòng tiền khách/chủ xe ở đây). `amount` null chỉ ở lượt gán trước tính năng.
  */
 export class DriverWageDto {
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND — số hiện hành' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND - số hiện hành' })
   amount!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'Số ngày tính tiền lúc gán' })
   days!: number | null;
@@ -399,7 +399,7 @@ export class DriverWageDto {
     type: DriverWageRangeDto,
     nullable: true,
     description:
-      'Khoảng hợp lệ khi sửa (chính sách hiện hành × số ngày) — null khi lượt không có tiền công',
+      'Khoảng hợp lệ khi sửa (chính sách hiện hành × số ngày) - null khi lượt không có tiền công',
   })
   range!: DriverWageRangeDto | null;
   @ApiProperty({ type: [DriverWageChangeDto], description: 'Lịch sử sửa, mới nhất trước' })
@@ -411,7 +411,7 @@ export class DriverWageSettingsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tiền công/ngày mặc định (VND) — null = chưa đặt',
+    description: 'Tiền công/ngày mặc định (VND) - null = chưa đặt',
   })
   dailyWage!: string | null;
   @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng tiền công/ngày hợp lệ' })
@@ -420,7 +420,7 @@ export class DriverWageSettingsDto {
   priceDaily!: DriverWageRangeDto;
   @ApiProperty({
     type: String,
-    description: 'Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc, không phải mức của gian hàng',
+    description: 'Tiền công/ngày GỢI Ý của nền tảng - chỉ để nhắc, không phải mức của gian hàng',
   })
   suggestedDaily!: string;
 }
@@ -430,17 +430,17 @@ export class DriverWageSettingsDto {
  * tiền, tiền công gợi ý (mức mặc định × số ngày) và khoảng hợp lệ. Server tính, client chỉ đọc.
  */
 export class DriverWageQuoteDto {
-  @ApiProperty({ description: 'Số ngày tính tiền của đơn — mẫu số của tiền công' }) days!: number;
+  @ApiProperty({ description: 'Số ngày tính tiền của đơn - mẫu số của tiền công' }) days!: number;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tiền công/ngày mặc định của gian hàng — null = chưa đặt',
+    description: 'Tiền công/ngày mặc định của gian hàng - null = chưa đặt',
   })
   dailyWage!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Gợi ý = mức mặc định × số ngày — null khi chưa đặt mức mặc định',
+    description: 'Gợi ý = mức mặc định × số ngày - null khi chưa đặt mức mặc định',
   })
   suggestedAmount!: string | null;
   @ApiProperty({ type: DriverWageRangeDto, description: 'Khoảng hợp lệ khi gán chuyến này' })
@@ -449,12 +449,12 @@ export class DriverWageQuoteDto {
   wageDaily!: DriverWageRangeDto;
   @ApiProperty({
     type: String,
-    description: 'Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc khi gian hàng chưa đặt mức chung',
+    description: 'Tiền công/ngày GỢI Ý của nền tảng - chỉ để nhắc khi gian hàng chưa đặt mức chung',
   })
   suggestedDaily!: string;
   @ApiProperty({
     type: String,
-    description: 'Tiền thuê của đơn (VND) — để cảnh báo tiền công cao bất thường',
+    description: 'Tiền thuê của đơn (VND) - để cảnh báo tiền công cao bất thường',
   })
   rentAmount!: string;
 }
@@ -464,7 +464,7 @@ export class UpdateDriverWageSettingsDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Tiền công/ngày mặc định (VND, bội 1.000đ) — null = xoá mức mặc định',
+    description: 'Tiền công/ngày mặc định (VND, bội 1.000đ) - null = xoá mức mặc định',
   })
   @ValidateIf((o: UpdateDriverWageSettingsDto) => o.dailyWage !== null)
   @Matches(WAGE_PATTERN, { message: 'Tiền công không hợp lệ (số VND nguyên dương)' })
@@ -488,7 +488,7 @@ export class UpdateDriverWageDto {
 
 /** Truy vấn thống kê theo tháng (giờ Việt Nam). */
 export class DriverWageMonthQueryDto {
-  @ApiPropertyOptional({ description: 'Tháng YYYY-MM (giờ VN) — mặc định tháng hiện tại' })
+  @ApiPropertyOptional({ description: 'Tháng YYYY-MM (giờ VN) - mặc định tháng hiện tại' })
   @IsOptional()
   @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
   month?: string;
@@ -549,7 +549,7 @@ export class DriverMonthStatsDto {
     type: String,
     nullable: true,
     description:
-      'Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái',
+      'Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) - null khi chưa có ngày lái',
   })
   averageDailyWage!: string | null;
   @ApiProperty({ description: 'Số chuyến bên thuê đã SỬA tiền công ít nhất một lần' })
@@ -598,13 +598,13 @@ export class DriverReliabilityDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Tỉ lệ nhận (%, số nguyên) — null khi chưa có lượt nào để đo',
+    description: 'Tỉ lệ nhận (%, số nguyên) - null khi chưa có lượt nào để đo',
   })
   acceptRate!: number | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Trung vị thời gian trả lời (phút, gồm nhận và từ chối) — null khi chưa có',
+    description: 'Trung vị thời gian trả lời (phút, gồm nhận và từ chối) - null khi chưa có',
   })
   medianResponseMinutes!: number | null;
 }
@@ -623,14 +623,14 @@ export class DriverOverviewDto {
   @ApiProperty({
     type: [DriverCurrentTripDto],
     description:
-      'Các đơn đang gán, sớm nhất trước — tối đa 20; tổng nằm ở driver.activeBookingCount',
+      'Các đơn đang gán, sớm nhất trước - tối đa 20; tổng nằm ở driver.activeBookingCount',
   })
   current!: DriverCurrentTripDto[];
   @ApiProperty({ type: DriverReliabilityDto }) reliability!: DriverReliabilityDto;
   @ApiProperty({
     type: [DriverWageTrendPointDto],
     description:
-      'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt',
+      'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước - tháng trống vẫn có mặt',
   })
   trend!: DriverWageTrendPointDto[];
 }
@@ -651,7 +651,7 @@ export class BookingDriverHistoryItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Người gán — null = hệ thống ("Đặt ngay" tự gán)',
+    description: 'Người gán - null = hệ thống ("Đặt ngay" tự gán)',
   })
   assignedByName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) acceptedAt!: string | null;
@@ -659,13 +659,13 @@ export class BookingDriverHistoryItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Người kết thúc lượt (gỡ/từ chối) — null khi hệ thống khép theo trạng thái đơn',
+    description: 'Người kết thúc lượt (gỡ/từ chối) - null khi hệ thống khép theo trạng thái đơn',
   })
   endedByName!: string | null;
   @ApiPropertyOptional({
     enum: DRIVER_DROP_REASON_VALUES,
     nullable: true,
-    description: 'Chỉ lượt `dropped` — nhóm lý do tài xế rút (ADR 0074)',
+    description: 'Chỉ lượt `dropped` - nhóm lý do tài xế rút (ADR 0074)',
   })
   dropReasonCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú của tài xế khi rút' })
@@ -674,7 +674,7 @@ export class BookingDriverHistoryItemDto {
     enum: DRIVER_DROP_ZONE_VALUES,
     nullable: true,
     description:
-      'Chỉ lượt `dropped` — vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt',
+      'Chỉ lượt `dropped` - vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt',
   })
   dropZone!: string | null;
   @ApiProperty({ type: DriverWageDto, description: 'Tiền công của lượt gán (ADR 0075)' })
@@ -691,7 +691,7 @@ export class AssignableDriversQueryDto {
   returnAt!: string;
 
   /** Bỏ qua chính đơn đang gán — đổi tài xế của đơn không tự coi đơn đó là "bận". */
-  @ApiPropertyOptional({ description: 'ID đơn đang gán (ULID) — loại khỏi kiểm tra trùng' })
+  @ApiPropertyOptional({ description: 'ID đơn đang gán (ULID) - loại khỏi kiểm tra trùng' })
   @IsOptional()
   @IsString()
   @Length(26, 26)
@@ -833,7 +833,7 @@ export class DriverTripCustomerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mốc SĐT khách bắt đầu hiện (ISO-8601) — null khi đã hiện hoặc không bao giờ hiện',
+    description: 'Mốc SĐT khách bắt đầu hiện (ISO-8601) - null khi đã hiện hoặc không bao giờ hiện',
   })
   contactVisibleFrom!: string | null;
 }
@@ -854,7 +854,7 @@ export class DriverTripDto {
     type: String,
     nullable: true,
     description:
-      'Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê.',
+      'Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) - chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê.',
   })
   respondBy!: string | null;
   @ApiPropertyOptional({
@@ -867,7 +867,7 @@ export class DriverTripDto {
     type: String,
     nullable: true,
     description:
-      'Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua.',
+      'Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) - chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua.',
   })
   releaseUntil!: string | null;
   @ApiProperty({
@@ -885,7 +885,7 @@ export class DriverTripDto {
   @ApiProperty({ type: DriverTripCustomerDto }) customer!: DriverTripCustomerDto;
   @ApiProperty({
     type: DriverWageDto,
-    description: 'Tiền công chuyến này — chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075)',
+    description: 'Tiền công chuyến này - chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075)',
   })
   wage!: DriverWageDto;
 }
@@ -912,7 +912,7 @@ export class DropDriverTripDto {
 
   @ApiPropertyOptional({
     maxLength: DRIVER_DROP_NOTE_LENGTH.MAX,
-    description: `Mô tả sự cố — bắt buộc ${DRIVER_DROP_NOTE_LENGTH.MIN}–${DRIVER_DROP_NOTE_LENGTH.MAX} ký tự khi chọn \`other\` (422 \`DRIVER_DROP_NOTE_REQUIRED\`)`,
+    description: `Mô tả sự cố - bắt buộc ${DRIVER_DROP_NOTE_LENGTH.MIN}-${DRIVER_DROP_NOTE_LENGTH.MAX} ký tự khi chọn \`other\` (422 \`DRIVER_DROP_NOTE_REQUIRED\`)`,
   })
   @IsOptional()
   @IsString()

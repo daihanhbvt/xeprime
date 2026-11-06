@@ -79,7 +79,7 @@
   },
   "funnel": {
     "title": "Phễu kích hoạt đối tác",
-    "description": "Hiện trạng toàn thời gian — mỗi bước gồm cả điều kiện của bước trước.",
+    "description": "Hiện trạng toàn thời gian - mỗi bước gồm cả điều kiện của bước trước.",
     "registered": "Đã đăng ký",
     "withVehicle": "Có xe",
     "withListing": "Đang có xe trên chợ",

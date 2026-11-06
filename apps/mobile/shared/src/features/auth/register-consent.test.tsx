@@ -65,7 +65,7 @@ beforeEach(() => {
   jest.spyOn(otpApi, 'getOtpConfig').mockResolvedValue({ testCodeEnabled: false });
 });
 
-describe('RegisterScreen — cổng đồng ý điều khoản', () => {
+describe('RegisterScreen - cổng đồng ý điều khoản', () => {
   it('chưa tick: cả nút tạo tài khoản lẫn nút mạng xã hội đều khoá', async () => {
     const view = await renderScreen();
 
@@ -73,7 +73,7 @@ describe('RegisterScreen — cổng đồng ý điều khoản', () => {
     expect(disabledState(view.getByLabelText(GOOGLE_LABEL))).toBe(true);
   });
 
-  it('tick rồi thì nút mạng xã hội mở — nó cũng tạo tài khoản', async () => {
+  it('tick rồi thì nút mạng xã hội mở - nó cũng tạo tài khoản', async () => {
     const view = await renderScreen();
 
     await fireEvent.press(view.getByLabelText(CONSENT_LABEL));
@@ -93,7 +93,7 @@ describe('RegisterScreen — cổng đồng ý điều khoản', () => {
     expect(disabledState(view.getByLabelText(SUBMIT_LABEL))).toBe(true);
   });
 
-  it('bỏ tick thì khoá trở lại — không phải cửa một chiều', async () => {
+  it('bỏ tick thì khoá trở lại - không phải cửa một chiều', async () => {
     const view = await renderScreen();
 
     await fireEvent.press(view.getByLabelText(CONSENT_LABEL));

@@ -125,7 +125,7 @@ export class MaintenanceService {
         if (dto.expectedRowVersion == null) {
           throw new BadRequestException({
             code: API_ERROR_CODE.VALIDATION_FAILED,
-            message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+            message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
           });
         }
         // Optimistic concurrency: 0 dòng khớp = ai đó vừa lưu bản khác.
@@ -264,7 +264,7 @@ export class MaintenanceService {
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+        message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
       });
     }
 
@@ -272,7 +272,7 @@ export class MaintenanceService {
     if (isClosed(current.status as MaintenanceStatus)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Phiếu đã hoàn tất hoặc đã hủy — không sửa được nữa',
+        message: 'Phiếu đã hoàn tất hoặc đã hủy - không sửa được nữa',
       });
     }
 
@@ -481,7 +481,7 @@ export class MaintenanceService {
     if (current.status !== MAINTENANCE_STATUS.COMPLETED) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ sửa được chi phí của phiếu ĐÃ hoàn tất — phiếu đang mở thì sửa như thường',
+        message: 'Chỉ sửa được chi phí của phiếu ĐÃ hoàn tất - phiếu đang mở thì sửa như thường',
       });
     }
 
@@ -594,8 +594,8 @@ export class MaintenanceService {
         type: MAINTENANCE_TYPE.OIL_CHANGE,
         title:
           schedule.status === MAINTENANCE_DUE_STATUS.OVERDUE
-            ? `Quá hạn bảo dưỡng — ${args.reason}`
-            : `Sắp đến hạn bảo dưỡng — ${args.reason}`,
+            ? `Quá hạn bảo dưỡng - ${args.reason}`
+            : `Sắp đến hạn bảo dưỡng - ${args.reason}`,
         status: MAINTENANCE_STATUS.SCHEDULED,
         notes: schedule.nextMaintenanceKm
           ? `Mốc bảo dưỡng: ${schedule.nextMaintenanceKm} km · KM hiện tại: ${profile.currentOdometerKm} km`
@@ -1121,7 +1121,7 @@ export class MaintenanceService {
       vehicleId: input.vehicleId,
       occurredAt: input.occurredAt,
       referenceCode: input.receiptCode,
-      description: `${label} — ${vehicleLabel}`,
+      description: `${label} - ${vehicleLabel}`,
     });
 
     // `receipt_code` là ô chứng từ người dùng tự nhập (docblock Wave 6 đã chừa chỗ này). Chưa
@@ -1390,14 +1390,14 @@ function recordNotFound(): NotFoundException {
 function staleRecord(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Phiếu bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Phiếu bảo dưỡng vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 
 function staleProfile(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 

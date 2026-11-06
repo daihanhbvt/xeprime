@@ -5,13 +5,13 @@
   },
   "intro": {
     "title": "Xác thực bằng lái xe",
-    "body": "Chụp mặt trước bằng lái của bạn. Chỉ cần làm một lần — thường xong trong chưa đầy một phút.",
-    "bookingBody": "Thuê xe tự lái cần bằng lái hợp lệ. Chụp mặt trước bằng lái của bạn — chỉ cần làm một lần cho mọi chuyến sau."
+    "body": "Chụp mặt trước bằng lái của bạn. Chỉ cần làm một lần - thường xong trong chưa đầy một phút.",
+    "bookingBody": "Thuê xe tự lái cần bằng lái hợp lệ. Chụp mặt trước bằng lái của bạn - chỉ cần làm một lần cho mọi chuyến sau."
   },
   "accepted": {
     "title": "Giấy tờ được chấp nhận",
     "vn": "Bằng lái Việt Nam: thẻ PET, mẫu mới 2025 hoặc ảnh chụp từ ứng dụng VNeID",
-    "idp": "Giấy phép lái xe quốc tế (IDP): trang có ảnh và thông tin người lái — mang theo bằng gốc khi nhận xe",
+    "idp": "Giấy phép lái xe quốc tế (IDP): trang có ảnh và thông tin người lái - mang theo bằng gốc khi nhận xe",
     "foreign": "Bằng lái nước ngoài: mang theo bằng gốc (và IDP theo Công ước 1968) khi nhận xe để chủ xe đối chiếu"
   },
   "picker": {
@@ -23,8 +23,8 @@
   },
   "prepare": {
     "unsupported": "Không mở được ảnh này. Hãy chụp lại hoặc chọn ảnh JPG, PNG.",
-    "tooSmall": "Ảnh quá nhỏ để đọc rõ chữ — hãy chụp gần hơn.",
-    "tooLarge": "Ảnh quá lớn — hãy chọn ảnh khác."
+    "tooSmall": "Ảnh quá nhỏ để đọc rõ chữ - hãy chụp gần hơn.",
+    "tooLarge": "Ảnh quá lớn - hãy chọn ảnh khác."
   },
   "progress": {
     "uploading": "Đang tải ảnh lên… {percent}%",
@@ -66,8 +66,8 @@
     "note": "Lời nhắn từ XePrime: {note}"
   },
   "reasons": {
-    "not_a_licence": "Không nhận ra bằng lái xe trong ảnh. Hãy chụp rõ mặt trước bằng lái — không phải CCCD, hộ chiếu hay giấy tờ khác.",
-    "back_side": "Đây là mặt sau — hãy chụp mặt trước, mặt có ảnh và số bằng.",
+    "not_a_licence": "Không nhận ra bằng lái xe trong ảnh. Hãy chụp rõ mặt trước bằng lái - không phải CCCD, hộ chiếu hay giấy tờ khác.",
+    "back_side": "Đây là mặt sau - hãy chụp mặt trước, mặt có ảnh và số bằng.",
     "unreadable": "Ảnh chưa đủ rõ để đọc thông tin trên bằng.",
     "missing_fields": "Không đọc được đủ số bằng, họ tên, hạng và thời hạn trên ảnh.",
     "expired": "Bằng lái đã hết hạn.",
@@ -76,12 +76,12 @@
     "other": "XePrime chưa thể xác thực bằng lái này."
   },
   "issues": {
-    "blurry": "Ảnh bị mờ — giữ máy chắc tay và chạm vào bằng trên màn hình để lấy nét.",
-    "glare": "Ảnh bị loá — nghiêng nhẹ bằng hoặc tắt đèn flash.",
-    "cropped": "Bằng bị cắt góc — lùi máy ra một chút cho thấy đủ 4 góc.",
-    "too_dark": "Ảnh quá tối — chụp ở nơi đủ sáng.",
-    "obstructed": "Một phần bằng bị che — bỏ ngón tay hoặc vật che ra.",
-    "low_resolution": "Ảnh quá nhỏ — chụp gần hơn."
+    "blurry": "Ảnh bị mờ - giữ máy chắc tay và chạm vào bằng trên màn hình để lấy nét.",
+    "glare": "Ảnh bị loá - nghiêng nhẹ bằng hoặc tắt đèn flash.",
+    "cropped": "Bằng bị cắt góc - lùi máy ra một chút cho thấy đủ 4 góc.",
+    "too_dark": "Ảnh quá tối - chụp ở nơi đủ sáng.",
+    "obstructed": "Một phần bằng bị che - bỏ ngón tay hoặc vật che ra.",
+    "low_resolution": "Ảnh quá nhỏ - chụp gần hơn."
   },
   "tripIssue": {
     "expired": "Bằng lái của bạn hết hạn ngày {date}, trước khi chuyến kết thúc. Hãy cập nhật bằng còn hạn.",

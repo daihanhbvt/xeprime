@@ -173,7 +173,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/admin/plans — nạp dữ liệu', () => {
+describe('/manage/admin/plans - nạp dữ liệu', () => {
   it('luôn lấy TẤT CẢ gói từ API; lọc là việc phía client', () => {
     renderPageWith([plan()]);
     expect(query.lastStatus).toBe('all');
@@ -205,7 +205,7 @@ describe('/manage/admin/plans — nạp dữ liệu', () => {
   });
 });
 
-describe('/manage/admin/plans — thẻ số liệu', () => {
+describe('/manage/admin/plans - thẻ số liệu', () => {
   it('đếm trên TOÀN danh mục và cộng lượt đăng ký', () => {
     renderPageWith([
       COMMISSION,
@@ -220,8 +220,8 @@ describe('/manage/admin/plans — thẻ số liệu', () => {
   });
 });
 
-describe('/manage/admin/plans — bảng', () => {
-  it('KHÔNG dựng thanh phân trang — API trả cả danh sách', () => {
+describe('/manage/admin/plans - bảng', () => {
+  it('KHÔNG dựng thanh phân trang - API trả cả danh sách', () => {
     const { container } = renderPageWith([plan(), plan({ id: 'p2', name: 'Gói pro' })]);
     expect(container.querySelector('.ant-pagination')).toBeNull();
     expect(screen.getByText('Hiển thị 2 / 2 gói dịch vụ')).toBeTruthy();
@@ -285,14 +285,14 @@ describe('/manage/admin/plans — bảng', () => {
   });
 });
 
-describe('/manage/admin/plans — bộ lọc trên URL', () => {
+describe('/manage/admin/plans - bộ lọc trên URL', () => {
   const plans = [
     plan({ id: 'a', name: 'Gói A', status: 'active' }),
     plan({ id: 'b', name: 'Gói B', status: 'archived' }),
     COMMISSION,
   ];
 
-  it('mặc định là sổ ĐANG BÁN — gói đã tắt không lẫn vào', () => {
+  it('mặc định là sổ ĐANG BÁN - gói đã tắt không lẫn vào', () => {
     renderPageWith(plans);
     expect(bodyRows()).toHaveLength(2);
     expect(screen.queryByText('Gói B')).toBeNull();
@@ -333,7 +333,7 @@ describe('/manage/admin/plans — bộ lọc trên URL', () => {
   });
 });
 
-describe('/manage/admin/plans — tạo, sửa, nhân bản', () => {
+describe('/manage/admin/plans - tạo, sửa, nhân bản', () => {
   it('rỗng: mở lối tạo gói đầu tiên', () => {
     setQuery({ data: [] });
     renderPage();
@@ -364,7 +364,7 @@ describe('/manage/admin/plans — tạo, sửa, nhân bản', () => {
     expect(screen.getByTestId('plan-form').textContent).toBe('duplicate:p-7');
   });
 
-  it('tuyến hoa hồng KHÔNG nhân bản được — bậc thứ hai bị server từ chối', () => {
+  it('tuyến hoa hồng KHÔNG nhân bản được - bậc thứ hai bị server từ chối', () => {
     renderPageWith([COMMISSION]);
 
     expect(table().getByRole('button', { name: 'Chỉnh sửa' })).toBeTruthy();
@@ -372,7 +372,7 @@ describe('/manage/admin/plans — tạo, sửa, nhân bản', () => {
   });
 });
 
-describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
+describe('/manage/admin/plans - công tắc bật/tắt gói', () => {
   it('tắt gói: hỏi lại, nói rõ thuê bao KHÔNG bị huỷ, rồi mới gọi archive', async () => {
     renderPageWith([plan({ id: 'p-7', name: 'Gói nâng cao', status: 'active' })]);
 
@@ -391,7 +391,7 @@ describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
     expect(setStatus.mutate.mock.calls[0]![0]).toEqual({ id: 'p-7', status: 'archived' });
   });
 
-  it('gói đã tắt MỞ LẠI được — cũng qua hộp xác nhận', async () => {
+  it('gói đã tắt MỞ LẠI được - cũng qua hộp xác nhận', async () => {
     nav.params = new URLSearchParams('view=retired');
     renderPageWith([plan({ id: 'p-8', name: 'Gói cũ', status: 'archived' })]);
 
@@ -451,7 +451,7 @@ describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
   });
 });
 
-describe('/manage/admin/plans — nhóm theo phạm vi loại xe (ADR 0065)', () => {
+describe('/manage/admin/plans - nhóm theo phạm vi loại xe (ADR 0065)', () => {
   it('bốn nhóm theo thứ tự xe máy → ô tô → doanh nghiệp → hoa hồng, mỗi nhóm một bảng có tiêu đề', () => {
     renderPageWith([
       COMMISSION,
@@ -484,7 +484,7 @@ describe('/manage/admin/plans — nhóm theo phạm vi loại xe (ADR 0065)', ()
   });
 });
 
-describe('/manage/admin/plans — gói chưa mở bán (draft)', () => {
+describe('/manage/admin/plans - gói chưa mở bán (draft)', () => {
   it('sổ "Chưa mở bán": lời nhắc nhập giá + nút "Mở bán" đi qua hộp xác nhận rồi gọi activate', async () => {
     nav.params = new URLSearchParams('view=draft');
     renderPageWith([plan({ id: 'p-d', name: 'Ô tô 5 xe', status: 'draft' })]);

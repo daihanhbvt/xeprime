@@ -172,7 +172,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
+describe('/manage/maintenance - Trung tâm bảo dưỡng (Wave 6)', () => {
   it('thiếu quyền: hiện màn không có quyền và KHÔNG gọi API danh sách', () => {
     permissions.granted = new Set();
     renderPage();
@@ -220,7 +220,7 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
     );
   });
 
-  it('mỗi xe một hàng (Figma 23754:29574): Odo, mốc tiếp theo, chu kỳ, ô lịch — không còn bảng', () => {
+  it('mỗi xe một hàng (Figma 23754:29574): Odo, mốc tiếp theo, chu kỳ, ô lịch - không còn bảng', () => {
     const view = renderPage();
     expect(view.container.querySelector('table')).toBeNull();
     const list = screen.getByRole('list', { name: 'Danh sách xe cần bảo dưỡng' });
@@ -320,7 +320,7 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
   });
 });
 
-describe('/manage/maintenance — nhóm việc "Thiếu KM trả" theo quyền (Wave 8.1)', () => {
+describe('/manage/maintenance - nhóm việc "Thiếu KM trả" theo quyền (Wave 8.1)', () => {
   it('có handovers.view: tab hiện kèm số đếm', () => {
     permissions.granted.add(PERMISSION.HANDOVER_VIEW);
     renderPage();

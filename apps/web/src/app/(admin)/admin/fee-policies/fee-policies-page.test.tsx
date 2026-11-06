@@ -60,7 +60,7 @@ function policy(over: Partial<FeePolicy> = {}): FeePolicy {
     id: '01POLICY',
     version: 1,
     status: FEE_POLICY_STATUS.ACTIVE,
-    name: 'Pilot — phí dịch vụ 10%',
+    name: 'Pilot - phí dịch vụ 10%',
     note: null,
     serviceFeePercent: 0,
     depositPercent: 15,
@@ -134,11 +134,11 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/admin/fee-policies — bản đang hiệu lực', () => {
+describe('/manage/admin/fee-policies - bản đang hiệu lực', () => {
   it('hiện tóm tắt luồng tiền v2: phí sàn, nấc hoa hồng, cọc, bảo hiểm, thuế', () => {
     renderPage();
 
-    const row = rowOf('Pilot — phí dịch vụ 10%');
+    const row = rowOf('Pilot - phí dịch vụ 10%');
     expect(within(row).getByText('50.000 ₫ / 30.000 ₫')).toBeTruthy();
     expect(within(row).getByText('10% · 7% · 3%')).toBeTruthy();
     expect(within(row).getByText('15%')).toBeTruthy(); // phần giữ chỗ của chủ xe — ADR 0066
@@ -156,10 +156,10 @@ describe('/manage/admin/fee-policies — bản đang hiệu lực', () => {
   it('xem chi tiết mở panel đủ số v2', async () => {
     renderPage();
 
-    fireEvent.click(within(rowOf('Pilot — phí dịch vụ 10%')).getByRole('button', { name: 'Xem chi tiết' }));
+    fireEvent.click(within(rowOf('Pilot - phí dịch vụ 10%')).getByRole('button', { name: 'Xem chi tiết' }));
 
     expect(await screen.findByText('Hoa hồng chủ xe lũy tiến (H)')).toBeTruthy();
-    expect(screen.getByText('Ngày 1–2')).toBeTruthy();
+    expect(screen.getByText('Ngày 1-2')).toBeTruthy();
     expect(screen.getByText('Từ ngày 8')).toBeTruthy();
   });
 
@@ -174,7 +174,7 @@ describe('/manage/admin/fee-policies — bản đang hiệu lực', () => {
     ];
     renderPage();
 
-    const row = rowOf('Pilot — phí dịch vụ 10%');
+    const row = rowOf('Pilot - phí dịch vụ 10%');
     expect(within(row).getByText('7% · 7% · 4,5%')).toBeTruthy();
     expect(within(row).getByRole('button', { name: 'Chi tiết mức thuế khấu trừ' })).toBeTruthy();
 
@@ -190,16 +190,16 @@ describe('/manage/admin/fee-policies — bản đang hiệu lực', () => {
     expect(screen.getByText('10% (một mức, chính sách cũ)')).toBeTruthy();
   });
 
-  it('KHÔNG có lối sửa — bản đã hiệu lực là bất biến', () => {
+  it('KHÔNG có lối sửa - bản đã hiệu lực là bất biến', () => {
     renderPage();
 
-    const row = rowOf('Pilot — phí dịch vụ 10%');
+    const row = rowOf('Pilot - phí dịch vụ 10%');
     expect(within(row).queryByRole('button', { name: 'Sửa' })).toBeNull();
     expect(within(row).queryByRole('button', { name: 'Kích hoạt' })).toBeNull();
   });
 });
 
-describe('/manage/admin/fee-policies — phạm vi hoa hồng chủ xe', () => {
+describe('/manage/admin/fee-policies - phạm vi hoa hồng chủ xe', () => {
   /*
    * Nấc lũy tiến CHỈ áp cho tuyến hoa hồng; gian hàng có gói được miễn (H = 0 — ADR 0064 điều 3).
    * Thiếu chú thích, admin đọc cột "10% · 7% · 3%" thành phí của MỌI chủ xe.
@@ -218,7 +218,7 @@ describe('/manage/admin/fee-policies — phạm vi hoa hồng chủ xe', () => {
   it('panel chi tiết ghi phạm vi áp dụng ngay đầu mục hoa hồng', async () => {
     renderPage();
 
-    fireEvent.click(within(rowOf('Pilot — phí dịch vụ 10%')).getByRole('button', { name: 'Xem chi tiết' }));
+    fireEvent.click(within(rowOf('Pilot - phí dịch vụ 10%')).getByRole('button', { name: 'Xem chi tiết' }));
 
     expect(
       await screen.findByText(
@@ -228,7 +228,7 @@ describe('/manage/admin/fee-policies — phạm vi hoa hồng chủ xe', () => {
   });
 });
 
-describe('/manage/admin/fee-policies — ba sổ: đang áp dụng · nháp · lịch sử', () => {
+describe('/manage/admin/fee-policies - ba sổ: đang áp dụng · nháp · lịch sử', () => {
   const ARCHIVED = [
     policy({ id: 'A6', version: 6, name: 'Bản v6', status: FEE_POLICY_STATUS.ARCHIVED }),
     policy({ id: 'A7', version: 7, name: 'Bản v7', status: FEE_POLICY_STATUS.ARCHIVED }),
@@ -236,7 +236,7 @@ describe('/manage/admin/fee-policies — ba sổ: đang áp dụng · nháp · l
   const ACTIVE = policy({ id: 'V8', version: 8, name: 'Bản v8' });
   const DRAFT = policy({ id: 'D9', version: 9, name: 'Nháp v9', status: FEE_POLICY_STATUS.DRAFT });
 
-  it('mặc định CHỈ hiện bản đang áp dụng — bản lưu trữ và bản nháp không lẫn vào', () => {
+  it('mặc định CHỈ hiện bản đang áp dụng - bản lưu trữ và bản nháp không lẫn vào', () => {
     query.data = [...ARCHIVED, ACTIVE, DRAFT];
     renderPage();
 
@@ -281,7 +281,7 @@ describe('/manage/admin/fee-policies — ba sổ: đang áp dụng · nháp · l
     expect(screen.queryByText('Bản v8')).toBeNull();
     expect(
       screen.getByText(
-        'Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ — đơn mới tính theo bản đang áp dụng: Bản v8 (phiên bản 8).',
+        'Các phiên bản đã lưu trữ chỉ để đối chiếu đơn cũ - đơn mới tính theo bản đang áp dụng: Bản v8 (phiên bản 8).',
       ),
     ).toBeTruthy();
   });
@@ -291,7 +291,7 @@ describe('/manage/admin/fee-policies — ba sổ: đang áp dụng · nháp · l
     renderPage();
 
     expect(
-      screen.getByText('Chưa có chính sách đang áp dụng — tạo hoặc kích hoạt một bản nháp.'),
+      screen.getByText('Chưa có chính sách đang áp dụng - tạo hoặc kích hoạt một bản nháp.'),
     ).toBeTruthy();
   });
 
@@ -305,7 +305,7 @@ describe('/manage/admin/fee-policies — ba sổ: đang áp dụng · nháp · l
   });
 });
 
-describe('/manage/admin/fee-policies — bản nháp', () => {
+describe('/manage/admin/fee-policies - bản nháp', () => {
   beforeEach(() => {
     nav.params = new URLSearchParams('view=draft');
   });

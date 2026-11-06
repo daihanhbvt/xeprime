@@ -35,6 +35,10 @@ export const SECURE_KEY = {
   MARKETPLACE_VIEW_MODE: 'xp.marketplaceViewMode',
   /** Dấu tick "Checklist nhận xe" theo chuyến — ghi nhớ CÁ NHÂN, không gửi server (web `pickup-checklist-memory`). */
   PICKUP_CHECKLIST: 'xp.pickupChecklist',
+  /** "Để sau" của hộp nhắc cập nhật app khách — `features/app-update`. Không phải bí mật. */
+  APP_UPDATE_SNOOZE_CUSTOMER: 'xp.appUpdate.snooze.customer',
+  /** Như trên, cho app Partner. */
+  APP_UPDATE_SNOOZE_PARTNER: 'xp.appUpdate.snooze.partner',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

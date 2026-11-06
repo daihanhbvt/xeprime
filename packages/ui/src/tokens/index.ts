@@ -432,6 +432,19 @@ export const XP_TOKENS = {
   'motion-lift-hover': '-4px', // thẻ nhấc lên khi rê chuột (khung băng chuyền chừa đúng 4px)
   'motion-scale-media-hover': '1.05',
   'motion-scale-ambient': '1.08', // đỉnh nhịp thở hero
+  // Vi tương tác chợ khách (06/11/2026) — dùng chung web + app native.
+  'motion-duration-press': '0.12s', // nút lún xuống khi nhấn
+  'motion-duration-overlay': '0.24s', // modal/drawer/dropdown vào-ra
+  'motion-duration-shine': '0.8s', // vệt sáng quét qua nút chính
+  'motion-duration-ticker': '1.6s', // số liệu đếm lên
+  'motion-ease-out': 'cubic-bezier(0.22, 1, 0.36, 1)', // easeOutQuint: vào nhanh, đỗ êm
+  'motion-stagger-step': '0.08s', // bước so le giữa các mục lưới/danh sách dài
+  'motion-scale-press': '0.97', // nút khi nhấn
+  'motion-shadow-hover': '0 12px 28px -12px rgba(0, 0, 0, 0.22)', // bóng thẻ khi nhấc
+  'motion-scale-press-icon': '0.92', // icon, mục thanh tab khi nhấn — co sâu hơn thẻ
+  'motion-duration-shimmer': '1.3s', // một lượt quét shimmer của khung chờ
+  'motion-duration-count-up': '0.42s', // số tiền đếm tới giá trị mới (ngắn hơn `ticker`)
+  'motion-distance-step': '24px', // bước luồng đặt xe trượt ngang khi chuyển bước
 
   // ─── Focus ────────────────────────────────────────────────────────────────
   // Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 (ring 3px

@@ -152,7 +152,7 @@ describe('Header + nguồn đăng', () => {
     expect(screen.getByText('Gian hàng: Huế Rental')).toBeTruthy();
   });
 
-  it('xe máy cá nhân: chip chỉ "Cá nhân" — không kèm tên người', () => {
+  it('xe máy cá nhân: chip chỉ "Cá nhân" - không kèm tên người', () => {
     renderDrawer(motorbikeReview());
 
     expect(screen.queryByText(/^Cá nhân: /)).toBeNull();
@@ -277,7 +277,7 @@ describe('Không có giấy tờ nào chưa được thu thập', () => {
 });
 
 describe('Danh mục kiểm tra', () => {
-  it('tự động: chấm bằng cổng gửi duyệt — chỉ mục áp dụng, mục thiếu là "Chưa đạt"', () => {
+  it('tự động: chấm bằng cổng gửi duyệt - chỉ mục áp dụng, mục thiếu là "Chưa đạt"', () => {
     const base = carReview();
     renderDrawer({ ...base, vehicle: { ...base.vehicle, plateNumber: null } });
 
@@ -323,7 +323,7 @@ describe('Quyết định', () => {
     expect(within(alert).getByText('Biển số')).toBeTruthy();
     expect(within(alert).getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
     expect(
-      screen.getByText('Xe đã khác hồ sơ gửi duyệt — chỉ có thể yêu cầu bổ sung hoặc từ chối'),
+      screen.getByText('Xe đã khác hồ sơ gửi duyệt - chỉ có thể yêu cầu bổ sung hoặc từ chối'),
     ).toBeTruthy();
     // Lối đi tiếp vẫn mở.
     expect(screen.getByRole('button', { name: 'Yêu cầu bổ sung' })).toHaveProperty(

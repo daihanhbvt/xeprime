@@ -24,7 +24,7 @@ export interface ApiTagGroup {
 export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
   {
     title: 'Hạ tầng',
-    tags: [{ name: 'health', description: 'Liveness/readiness — có ping PostgreSQL thật.' }],
+    tags: [{ name: 'health', description: 'Liveness/readiness - có ping PostgreSQL thật.' }],
   },
   {
     title: 'Xác thực & tài khoản',
@@ -33,7 +33,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'auth',
         description:
           'Đăng nhập/đăng ký/đăng xuất và phiên làm việc. Session là httpOnly cookie do API phát ' +
-          '(ADR 0002) — client KHÔNG đọc được token bằng JavaScript và không tự gắn header `Authorization`.',
+          '(ADR 0002) - client KHÔNG đọc được token bằng JavaScript và không tự gắn header `Authorization`.',
       },
       { name: 'users', description: 'Hồ sơ người dùng đang đăng nhập.' },
       {
@@ -43,13 +43,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'uploads',
         description:
-          'Cấp presigned URL để client upload thẳng lên Cloudflare R2. File KHÔNG đi qua API — ' +
+          'Cấp presigned URL để client upload thẳng lên Cloudflare R2. File KHÔNG đi qua API - ' +
           'endpoint chỉ ký URL và xác nhận sau khi upload xong.',
       },
     ],
   },
   {
-    title: 'Công khai (marketplace — không cần đăng nhập)',
+    title: 'Công khai (marketplace - không cần đăng nhập)',
     tags: [
       {
         name: 'public-listings',
@@ -60,13 +60,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'public-booking-requests',
         description:
-          'Khách gửi yêu cầu thuê và tra cứu yêu cầu của mình. Yêu cầu CHƯA giữ chỗ lịch — gian ' +
+          'Khách gửi yêu cầu thuê và tra cứu yêu cầu của mình. Yêu cầu CHƯA giữ chỗ lịch - gian ' +
           'hàng duyệt mới sinh đơn (ADR 0006, ADR 0011).',
       },
       {
         name: 'public-promo-codes',
         description:
-          'Xem trước mã khuyến mãi cho chuyến đang chọn (ADR 0046) — ĐỌC THUẦN, không giữ lượt. ' +
+          'Xem trước mã khuyến mãi cho chuyến đang chọn (ADR 0046) - ĐỌC THUẦN, không giữ lượt. ' +
           'Danh tính đến từ phiên, không từ payload: endpoint này không nhận SĐT và không nói gì ' +
           'về lịch sử của một khách nào. Rate limit siết hơn mức chung để chặn dò mã.',
       },
@@ -82,13 +82,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'public-insurance',
         description:
           'Mô tả sản phẩm bảo hiểm chuyến (quyền lợi, khấu trừ, bồi thường tối đa) cho một loại ' +
-          'xe — ADR 0064. Phí ngày và việc có chào bảo hiểm hay không đến từ báo giá, không từ đây.',
+          'xe - ADR 0064. Phí ngày và việc có chào bảo hiểm hay không đến từ báo giá, không từ đây.',
       },
       {
         name: 'public-fee-policies',
         description:
           'Số liệu công khai của chính sách phí hiện hành dùng cho lời mời hợp tác (khoảng % hoa ' +
-          'hồng thấp nhất → cao nhất) — không có kinh tế từng chuyến.',
+          'hồng thấp nhất → cao nhất) - không có kinh tế từng chuyến.',
       },
       {
         name: 'catalog',
@@ -103,7 +103,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'places',
         description:
-          'Gợi ý địa điểm, chi tiết địa điểm và tra địa chỉ ngược từ toạ độ — proxy qua backend để ' +
+          'Gợi ý địa điểm, chi tiết địa điểm và tra địa chỉ ngược từ toạ độ - proxy qua backend để ' +
           'khoá bản đồ không bao giờ rời khỏi server (ADR 0018).',
       },
       {
@@ -115,12 +115,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
     ],
   },
   {
-    title: 'Gian hàng — thiết lập',
+    title: 'Gian hàng - thiết lập',
     tags: [
       {
         name: 'tenants',
         description:
-          'Hồ sơ gian hàng và trạng thái duyệt. Client KHÔNG tự đặt `status`/`approvedPublic` — ' +
+          'Hồ sơ gian hàng và trạng thái duyệt. Client KHÔNG tự đặt `status`/`approvedPublic` - ' +
           'phải đi qua `approval_tasks`.',
       },
       { name: 'members', description: 'Nhân sự của gian hàng: mời, đổi vai trò, vô hiệu hoá.' },
@@ -137,30 +137,30 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'pricing',
         description:
-          'Giá theo ngày và giá gói dài hạn. Gói dài hạn là gói CỐ ĐỊNH theo tháng lịch — không ' +
+          'Giá theo ngày và giá gói dài hạn. Gói dài hạn là gói CỐ ĐỊNH theo tháng lịch - không ' +
           'nhân `số tháng × 30` (ADR 0011).',
       },
     ],
   },
   {
-    title: 'Gian hàng — đội xe',
+    title: 'Gian hàng - đội xe',
     tags: [
       { name: 'vehicles', description: 'Đội xe của gian hàng: tạo, sửa, đăng/ẩn tin, trạng thái.' },
       {
         name: 'vehicle-documents',
-        description: 'Giấy tờ xe: đăng kiểm, bảo hiểm, đăng ký — kèm ngày hết hạn.',
+        description: 'Giấy tờ xe: đăng kiểm, bảo hiểm, đăng ký - kèm ngày hết hạn.',
       },
       { name: 'vehicle-maintenance', description: 'Phiếu bảo dưỡng/sửa chữa của một xe.' },
-      { name: 'maintenance', description: 'Bảng bảo dưỡng toàn đội xe — việc đến hạn và quá hạn.' },
+      { name: 'maintenance', description: 'Bảng bảo dưỡng toàn đội xe - việc đến hạn và quá hạn.' },
       {
         name: 'drivers',
         description:
-          'Tài xế liên kết của bên thuê (gian hàng / chủ xe) — mời theo SĐT tài khoản khách, gán vào chuyến có tài xế (ADR 0063).',
+          'Tài xế liên kết của bên thuê (gian hàng / chủ xe) - mời theo SĐT tài khoản khách, gán vào chuyến có tài xế (ADR 0063).',
       },
     ],
   },
   {
-    title: 'Gian hàng — vận hành thuê',
+    title: 'Gian hàng - vận hành thuê',
     tags: [
       {
         name: 'partner-dashboard',
@@ -176,7 +176,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'bookings',
         description:
-          'Đơn thuê. Chống trùng lịch nằm ở constraint `EXCLUDE USING gist` trong DB (ADR 0006) — ' +
+          'Đơn thuê. Chống trùng lịch nằm ở constraint `EXCLUDE USING gist` trong DB (ADR 0006) - ' +
           'tầng app KHÔNG tự quyết định lịch trống.',
       },
       { name: 'calendar', description: 'Lịch xe dạng resource-timeline và khoá xe thủ công.' },
@@ -187,7 +187,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'handover-queue', description: 'Hàng chờ giao/nhận xe trong ngày.' },
       {
         name: 'booking-settlement',
-        description: 'Tất toán đơn: phụ phí, đền bù, hoàn cọc — chốt số cuối cùng của chuyến.',
+        description: 'Tất toán đơn: phụ phí, đền bù, hoàn cọc - chốt số cuối cùng của chuyến.',
       },
       { name: 'contracts', description: 'Hợp đồng thuê sinh từ đơn và trạng thái ký.' },
       { name: 'customers', description: 'Khách hàng của gian hàng và giấy tờ tuỳ thân đã thu.' },
@@ -206,12 +206,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
     ],
   },
   {
-    title: 'Gian hàng — tài chính',
+    title: 'Gian hàng - tài chính',
     tags: [
       {
         name: 'payments',
         description:
-          'Giao dịch thu/chi của đơn. Giai đoạn này KHÔNG có thanh toán trực tuyến — toàn bộ là ' +
+          'Giao dịch thu/chi của đơn. Giai đoạn này KHÔNG có thanh toán trực tuyến - toàn bộ là ' +
           'ghi sổ thủ công (ADR 0013).',
       },
       { name: 'receipts', description: 'Phiếu thu/phiếu chi của sổ quỹ.' },
@@ -234,10 +234,10 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'payment-gateway',
         description:
-          'Thanh toán qua cổng MoMo · VNPAY (ADR 0058 — Proposed), BỔ SUNG cho chuyển khoản ' +
+          'Thanh toán qua cổng MoMo · VNPAY (ADR 0058 - Proposed), BỔ SUNG cho chuyển khoản ' +
           'VietQR/SePay: mở phiên cho hoá đơn gói (site partner) hoặc tiền giữ chỗ (site khách), ' +
           'đọc trạng thái ở trang quay về, và IPN công khai của cổng. Số tiền và đích luôn đọc từ ' +
-          'DB; chỉ IPN có chữ ký hoặc truy vấn do server gửi mới ghi kết quả. Mặc định TẮT — ' +
+          'DB; chỉ IPN có chữ ký hoặc truy vấn do server gửi mới ghi kết quả. Mặc định TẮT - ' +
           'thiếu cấu hình thì 503 `PAYMENT_GATEWAY_UNAVAILABLE`.',
       },
     ],
@@ -248,7 +248,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'badges',
         description:
-          'Huy hiệu của khung ứng dụng (chuông + chat) gộp trong MỘT request — con số hiện ở mọi ' +
+          'Huy hiệu của khung ứng dụng (chuông + chat) gộp trong MỘT request - con số hiện ở mọi ' +
           'trang nên tách thành nhiều endpoint là nhân số lần xác thực cho vài chục byte dữ liệu.',
       },
       {
@@ -264,14 +264,14 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'account-payments',
         description:
-          'Tiền KHÁCH đã trả cho chuyến đã thuê — đọc từ `payments`. KHÔNG phải ví điểm ' +
+          'Tiền KHÁCH đã trả cho chuyến đã thuê - đọc từ `payments`. KHÔNG phải ví điểm ' +
           '(`wallet`) và không phải khoản giữ chỗ chuyển cho XePrime (`customer-trips`): ba ' +
           'bảng, ba chủ nợ, ba màn hình. Khoá theo `customerUserId`, không theo tenant.',
       },
       {
         name: 'wallet',
         description:
-          'Sổ công nợ phải trả — hiển thị là "Ví điểm" (ADR 0033). Số dư là NGHĨA VỤ của ' +
+          'Sổ công nợ phải trả - hiển thị là "Ví điểm" (ADR 0033). Số dư là NGHĨA VỤ của ' +
           'XePrime với chủ ví, không phải ví điện tử: không nạp, không chuyển giữa người dùng, ' +
           'không thanh toán nội bộ, không hết hạn. Rút về ngân hàng do admin chuyển thủ công.',
       },
@@ -286,12 +286,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description:
           'Tài khoản ngân hàng NHẬN tiền của khách và của gian hàng (ADR 0033). Một bộ cho cả ' +
           'hai phía; số tài khoản trả ra màn hình luôn ở dạng che. Khác tài khoản THU của ' +
-          'gian hàng ở hồ sơ shop — chiều ngược lại, quyền xem khác.',
+          'gian hàng ở hồ sơ shop - chiều ngược lại, quyền xem khác.',
       },
       {
         name: 'platform-tax',
         description:
-          'Sổ thuế khấu trừ và tờ khai theo kỳ (ADR 0032 điều 3). Thuế do CHỦ XE chịu — khấu trừ ' +
+          'Sổ thuế khấu trừ và tờ khai theo kỳ (ADR 0032 điều 3). Thuế do CHỦ XE chịu - khấu trừ ' +
           'khỏi khoản XePrime phải trả, KHÔNG cộng vào tổng khách. Sổ chỉ-ghi-thêm: sửa sai bằng ' +
           'dòng đảo, không sửa số đã kê khai. Chuyển trạng thái theo KỲ vì cơ quan thuế làm việc ' +
           'theo tờ khai tháng.',
@@ -300,7 +300,7 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'platform-insurance',
         description:
           'Hàng đợi hợp đồng bảo hiểm chuyến `IV`/`IP` (ADR 0032 điều 4). Mỗi dòng đang lỗi là ' +
-          'một khoản phí khách đã trả mà chưa có chứng nhận nào được cấp — phí đó nằm ở vế GIỮ ' +
+          'một khoản phí khách đã trả mà chưa có chứng nhận nào được cấp - phí đó nằm ở vế GIỮ ' +
           'HỘ của đối soát ba vế cho tới khi quyết toán với đối tác.',
       },
       {
@@ -313,14 +313,14 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'shop-payment-settings',
         description:
           'Công tắc thu cọc của gian hàng (ADR 0032 điều 2). Tuyến hoa hồng luôn thu và không ' +
-          'tắt được — `GET` vẫn trả về để màn hình hiện công tắc ở trạng thái bật + khoá kèm ' +
+          'tắt được - `GET` vẫn trả về để màn hình hiện công tắc ở trạng thái bật + khoá kèm ' +
           'giải thích, `PATCH` trả 403. Tuyến gói cần cờ `escrow_hold` trong gói hiện hành.',
       },
       {
         name: 'seller-profile',
         description:
           'Hồ sơ người bán: danh tính pháp lý, thuế và tài khoản nhận tiền (ADR 0028 gate 1). ' +
-          'Bộ cơ bản — chủ xe nào cũng phải khai được, và xác minh đi qua hàng đợi duyệt chung.',
+          'Bộ cơ bản - chủ xe nào cũng phải khai được, và xác minh đi qua hàng đợi duyệt chung.',
       },
       {
         name: 'support',
@@ -339,8 +339,8 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       {
         name: 'chat',
         description:
-          'Tin nhắn và đánh dấu đã đọc. Firestore chỉ là bản chiếu realtime của ~30–50 tin gần ' +
-          'nhất — ghi luôn vào PostgreSQL trước rồi đồng bộ qua outbox (ADR 0009).',
+          'Tin nhắn và đánh dấu đã đọc. Firestore chỉ là bản chiếu realtime của ~30-50 tin gần ' +
+          'nhất - ghi luôn vào PostgreSQL trước rồi đồng bộ qua outbox (ADR 0009).',
       },
     ],
   },
@@ -390,34 +390,34 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'platform-promo-codes',
         description:
           'Mã khuyến mãi do NỀN TẢNG tài trợ (ADR 0046): tạo, sửa, bật/tắt, xem lượt sử dụng. ' +
-          'Khác khuyến mãi trực tiếp của chủ xe — mã ở đây giảm số khách trả mà không bớt một ' +
+          'Khác khuyến mãi trực tiếp của chủ xe - mã ở đây giảm số khách trả mà không bớt một ' +
           'đồng nào của gian hàng. Mã đã phát sinh lượt thì mức giảm và điều kiện bị khoá.',
       },
       {
         name: 'platform-money',
         description:
           'Vận hành tiền marketplace: hàng đợi khoản giữ chỗ, chuyển trả và đối chiếu ngày. ' +
-          'Không có đường nào sửa/xoá một dòng tiền — chỉ chốt kết cục và ghi bằng chứng.',
+          'Không có đường nào sửa/xoá một dòng tiền - chỉ chốt kết cục và ghi bằng chứng.',
       },
       {
         name: 'platform-driver-licences',
         description:
-          'Hàng đợi bằng lái của khách — duyệt/từ chối lượt máy không tự quyết được. Danh sách ' +
+          'Hàng đợi bằng lái của khách - duyệt/từ chối lượt máy không tự quyết được. Danh sách ' +
           'che liên hệ; ảnh mở qua URL sống ngắn và ghi audit mỗi lần mở.',
       },
       {
         name: 'platform-sellers',
-        description: 'Xác minh hồ sơ người bán — danh sách che PII, chi tiết mở đủ để đối chiếu.',
+        description: 'Xác minh hồ sơ người bán - danh sách che PII, chi tiết mở đủ để đối chiếu.',
       },
       {
         name: 'platform-support',
         description:
           'Hỗ trợ và tranh chấp toàn sàn. Kết luận tranh chấp là điều kiện để chốt kết cục ' +
-          'khoản giữ chỗ — hai bước tách rời, không trộn phán xét với thao tác kế toán.',
+          'khoản giữ chỗ - hai bước tách rời, không trộn phán xét với thao tác kế toán.',
       },
       {
         name: 'platform-audit',
-        description: 'Nhật ký `audit_logs` — mọi hành động quản trị quan trọng đều để lại vết.',
+        description: 'Nhật ký `audit_logs` - mọi hành động quản trị quan trọng đều để lại vết.',
       },
     ],
   },

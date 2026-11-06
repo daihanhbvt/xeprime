@@ -64,7 +64,7 @@ function review(overrides: Partial<FeaturedReview> = {}): FeaturedReview {
   };
 }
 
-describe('FeaturedLocations — số liệu tra theo MÃ tỉnh', () => {
+describe('FeaturedLocations - số liệu tra theo MÃ tỉnh', () => {
   it('thành phố có xe mang số xe + giá "chỉ từ"; thành phố chưa có xe vẫn hiện thẻ, không bịa số', () => {
     data.destinations = [
       {
@@ -140,7 +140,7 @@ describe('CustomerReviews', () => {
   });
 });
 
-describe('PromoBanners — banner khuyến mãi do admin quản lý', () => {
+describe('PromoBanners - banner khuyến mãi do admin quản lý', () => {
   function promo(overrides: Partial<PublicBanner> = {}): PublicBanner {
     return {
       id: 'P1',

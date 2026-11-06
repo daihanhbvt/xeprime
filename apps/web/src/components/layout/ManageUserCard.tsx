@@ -51,7 +51,7 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
 
   if (!user) return null;
 
-  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
+  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '-');
   /*
    * Nhãn danh tính đọc TUYẾN, không đọc bảng vai — xem `useAccountIdentityLabel`.
    *

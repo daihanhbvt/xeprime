@@ -248,8 +248,8 @@ export function TripPaymentCheckout({
                           <span className={styles.walletLimit}>
                             {tCheckout('wallet.outOfRange', {
                               provider: providerLabel(value),
-                              min: method.minAmount ? fmt.money(method.minAmount) : '—',
-                              max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
+                              min: method.minAmount ? fmt.money(method.minAmount) : '-',
+                              max: method.maxAmount ? fmt.money(method.maxAmount) : '-',
                             })}
                           </span>
                         ) : null}
@@ -444,7 +444,7 @@ function PaymentSummaryCard({
           <>
             <div className={styles.row}>
               <dt>{t('summary.package')}</dt>
-              <dd>{fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}</dd>
+              <dd>{fmt.packageLabel(trip.longTermPackageMonths) ?? '-'}</dd>
             </div>
             <div className={styles.row}>
               <dt>{t('summary.pickupWish')}</dt>

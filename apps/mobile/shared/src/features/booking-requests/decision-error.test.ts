@@ -8,7 +8,7 @@ import { cancelErrorKey, decisionErrorKey } from './decision-error';
  * Mất một nhánh ở đây KHÔNG làm gì đỏ: màn hình vẫn hiện một câu, chỉ là câu chung ("Có lỗi xảy
  * ra") thay cho câu chỉ đúng việc phải làm tiếp. Người trực bấm lại vài lần rồi gọi hỗ trợ.
  */
-describe('decisionErrorKey — duyệt và từ chối', () => {
+describe('decisionErrorKey - duyệt và từ chối', () => {
   it('trùng lịch ⇒ câu chỉ sang chọn giờ khác', () => {
     expect(decisionErrorKey(API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT)).toBe(
       'approve.scheduleConflict',
@@ -26,7 +26,7 @@ describe('decisionErrorKey — duyệt và từ chối', () => {
   });
 });
 
-describe('cancelErrorKey — huỷ chuyến đã nhận', () => {
+describe('cancelErrorKey - huỷ chuyến đã nhận', () => {
   /* Cuộc đua với đồng tiền: webhook thắng, yêu cầu đã thành đơn, lệnh huỷ không claim được gì. */
   it('409 ⇒ câu "khách vừa thanh toán xong"', () => {
     expect(cancelErrorKey(API_ERROR_CODE.CONFLICT)).toBe('cancel.raceLost');

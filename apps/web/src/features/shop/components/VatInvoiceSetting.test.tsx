@@ -105,7 +105,7 @@ describe('VatInvoiceSetting', () => {
       opts.onError?.(
         new ApiClientError({
           code: API_ERROR_CODE.FORBIDDEN,
-          message: 'MESSAGE TIẾNG VIỆT CỦA BACKEND — KHÔNG ĐƯỢC HIỆN',
+          message: 'MESSAGE TIẾNG VIỆT CỦA BACKEND - KHÔNG ĐƯỢC HIỆN',
           status: 403,
         }),
       ),

@@ -31,4 +31,6 @@ export const PUBLIC_CACHE_SECONDS = {
   catalog: 300,
   /** Danh mục tỉnh hành chính — chỉ đổi khi có nghị quyết sáp nhập, cache dài nhất. */
   provinces: 3600,
+  /** Phiên bản app native (env) — đổi lúc phát hành, vài phút trễ là chấp nhận được. */
+  appVersion: 300,
 } as const;

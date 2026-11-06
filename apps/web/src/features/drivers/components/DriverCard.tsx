@@ -231,7 +231,7 @@ function LicenceBox({ driver }: { driver: Driver }) {
       <dl className={styles.licenceRows}>
         <div>
           <dt>{t('holder')}</dt>
-          <dd className={styles.holder}>{licence.fullName ?? '—'}</dd>
+          <dd className={styles.holder}>{licence.fullName ?? '-'}</dd>
         </div>
         <div>
           <dt>{t('expiry')}</dt>
@@ -240,7 +240,7 @@ function LicenceBox({ driver }: { driver: Driver }) {
         </div>
         <div>
           <dt>{t('kind')}</dt>
-          <dd>{licence.kind ? domainLabel('driverLicenceKind', licence.kind) : '—'}</dd>
+          <dd>{licence.kind ? domainLabel('driverLicenceKind', licence.kind) : '-'}</dd>
         </div>
       </dl>
       {mismatch ? <p className={styles.licenceNote}>{t('nameMismatch')}</p> : null}

@@ -609,6 +609,8 @@ function InvoiceRow({
         fos={fontSize.bodyLg}
         fow={fontWeight.medium}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
       >
         {value}
       </Text>

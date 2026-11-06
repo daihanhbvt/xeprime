@@ -118,7 +118,7 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByRole('button', { name: 'Cập nhật bằng lái' })).toBeTruthy();
   });
 
-  it('đã xác thực: ảnh bằng nằm mờ trong khung, bấm mới mở trình xem — không có ảnh thứ hai dưới nền', async () => {
+  it('đã xác thực: ảnh bằng nằm mờ trong khung, bấm mới mở trình xem - không có ảnh thứ hai dưới nền', async () => {
     query.data = { verified: BASE, latest: BASE };
     photo.data = { url: 'https://r2.test/l1.jpg' };
     const { container } = renderVerifier();
@@ -267,7 +267,7 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
   });
 
-  it('chọn ảnh xong là GỬI NGAY — không có bước xem trước / bấm gửi', async () => {
+  it('chọn ảnh xong là GỬI NGAY - không có bước xem trước / bấm gửi', async () => {
     const prepared = new File(['y'], 'driver-licence.jpg', { type: 'image/jpeg' });
     prepare.fn.mockResolvedValue(prepared);
     const createObjectURL = vi.fn(() => 'blob:preview');

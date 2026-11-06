@@ -34,7 +34,7 @@ export class ShopTaxController {
     summary: 'Thuế đã khấu trừ của gian hàng trong một kỳ',
     description:
       'Thuế do CHỦ XE chịu: nó được trừ khỏi khoản XePrime phải trả (`D − T`), KHÔNG cộng vào ' +
-      'tổng khách. Chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU — chuyến huỷ trước giờ nhận không có ' +
+      'tổng khách. Chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU - chuyến huỷ trước giờ nhận không có ' +
       'dòng nào ở đây (ADR 0032 điều 3).',
   })
   @ApiQuery({

@@ -108,7 +108,7 @@ beforeEach(() => {
   mockPush.mockClear();
 });
 
-describe('SupportCenterScreen — hướng dẫn nhanh', () => {
+describe('SupportCenterScreen - hướng dẫn nhanh', () => {
   /*
    * MỘT cú chạm mỗi test: `useNavigateOnce` khoá 700ms sau lần điều hướng đầu, nên chạm thẻ thứ
    * hai trong cùng một test sẽ bị nuốt — đúng như trên máy thật, và đúng thứ nó sinh ra để chặn.
@@ -124,7 +124,7 @@ describe('SupportCenterScreen — hướng dẫn nhanh', () => {
     expect(mockPush).toHaveBeenCalledWith(href);
   });
 
-  it('lọc theo quyền — không dẫn người dùng vào màn họ sẽ nhận 403', async () => {
+  it('lọc theo quyền - không dẫn người dùng vào màn họ sẽ nhận 403', async () => {
     const view = await renderScreen([PERMISSION.TENANT_VIEW]);
 
     expect(view.queryByLabelText('Thêm xe cho thuê')).toBeNull();
@@ -156,7 +156,7 @@ describe('SupportCenterScreen — hướng dẫn nhanh', () => {
   });
 });
 
-describe('SupportCenterScreen — câu hỏi thường gặp', () => {
+describe('SupportCenterScreen - câu hỏi thường gặp', () => {
   it('trả lời đúng hai câu mà cấu trúc menu làm người dùng bối rối', async () => {
     const view = await renderScreen();
 
@@ -178,7 +178,7 @@ describe('SupportCenterScreen — câu hỏi thường gặp', () => {
     expect(view.getByText(/theo dõi cả đội xe/)).not.toBeNull();
   });
 
-  it('KHÔNG dựng form gửi yêu cầu hay số hotline — kênh thật sống ở màn khác', async () => {
+  it('KHÔNG dựng form gửi yêu cầu hay số hotline - kênh thật sống ở màn khác', async () => {
     const view = await renderScreen();
 
     expect(view.queryByLabelText('Gửi')).toBeNull();
@@ -186,7 +186,7 @@ describe('SupportCenterScreen — câu hỏi thường gặp', () => {
   });
 });
 
-describe('SupportCenterScreen — văn bản pháp lý', () => {
+describe('SupportCenterScreen - văn bản pháp lý', () => {
   it('đi tới màn WebView của đúng văn bản, cùng địa chỉ với web', async () => {
     const view = await renderScreen();
 
@@ -212,7 +212,7 @@ describe('SupportCenterScreen — văn bản pháp lý', () => {
   });
 });
 
-describe('SupportCenterScreen — yêu cầu hỗ trợ', () => {
+describe('SupportCenterScreen - yêu cầu hỗ trợ', () => {
   /*
    * Nút DẪN sang hàng đợi thật (`/manage/support/cases`), không mở một form thứ hai và cũng không
    * còn báo "đang phát triển": màn đó đã dựng xong, và một nút báo đang-phát-triển đứng trước một

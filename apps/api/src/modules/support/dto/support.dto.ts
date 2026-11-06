@@ -42,7 +42,7 @@ export class OpenSupportCaseDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Đơn thuê liên quan — bắt buộc với `dispute` (tranh chấp phải gắn một chuyến)',
+    description: 'Đơn thuê liên quan - bắt buộc với `dispute` (tranh chấp phải gắn một chuyến)',
   })
   @IsOptional()
   @IsString()
@@ -71,7 +71,7 @@ export class PostSupportEventDto {
 }
 
 export class ResolveSupportCaseDto {
-  @ApiProperty({ description: 'Kết luận — người mở case đọc câu này' })
+  @ApiProperty({ description: 'Kết luận - người mở case đọc câu này' })
   @IsString()
   @MinLength(5)
   @MaxLength(5000)
@@ -144,7 +144,7 @@ export class SupportCaseDto {
 }
 
 export class SupportCaseDetailDto extends SupportCaseDto {
-  @ApiProperty({ type: [SupportCaseEventDto], description: 'Dòng thời gian — append-only' })
+  @ApiProperty({ type: [SupportCaseEventDto], description: 'Dòng thời gian - append-only' })
   events!: SupportCaseEventDto[];
 }
 

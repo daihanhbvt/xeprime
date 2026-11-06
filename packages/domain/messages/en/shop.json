@@ -19,7 +19,7 @@
     "submit": "Submit for review",
     "resubmit": "Resubmit for review",
     "submitted": "Profile submitted for review",
-    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} — we moved the cursor to the first one.",
+    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} - we moved the cursor to the first one.",
     "reason": "The review team wrote: {reason}",
     "submitConfirm": {
       "title": "Submit this profile for review?",
@@ -52,7 +52,7 @@
     },
     "rejected": {
       "title": "Profile rejected",
-      "body": "Fix what the reason below mentions and send it again — you can still resubmit.",
+      "body": "Fix what the reason below mentions and send it again - you can still resubmit.",
       "shell": "Your shop profile was not approved. Read the reason, fix it and submit again."
     },
     "active": {
@@ -97,7 +97,7 @@
         "label": "Shop contact email",
         "placeholder": "contact@yourshop.vn"
       },
-      "contactHint": "Renters see this phone and email when they book. They are separate from the phone and email on your sign-in account — changing one does not change the other.",
+      "contactHint": "Renters see this phone and email when they book. They are separate from the phone and email on your sign-in account - changing one does not change the other.",
       "bio": {
         "label": "About the shop",
         "placeholder": "A short description of your shop…"
@@ -122,7 +122,7 @@
         "placeholder": "Select a province or city",
         "loading": "Loading provinces…",
         "loadError": "Couldn't load the list of provinces",
-        "help": "Where your default branch sits — vehicles at that branch are listed in this province.",
+        "help": "Where your default branch sits - vehicles at that branch are listed in this province.",
         "branchLink": "Manage branches"
       },
       "taxCode": {
@@ -141,7 +141,7 @@
     "requiredDone": "Ready to submit for review",
     "profileRequiredTitle": "Required details",
     "profileRequiredDone": "All required details are filled in",
-    "suggestedTitle": "Recommended — helps renters pick your shop",
+    "suggestedTitle": "Recommended - helps renters pick your shop",
     "goToField": "Fill in",
     "items": {
       "displayName": "Shop display name",
@@ -200,14 +200,14 @@
     "ariaLabel": "Turn VAT invoice support on or off for all vehicles",
     "on": "On for all vehicles",
     "off": "Off",
-    "note": "You issue the invoice for the rental — yourself, or through your company or a party you arrange — under a direct agreement with the renter. XePrime does not issue invoices on your behalf, and this setting does not change prices, fees, taxes or booking conditions.",
+    "note": "You issue the invoice for the rental - yourself, or through your company or a party you arrange - under a direct agreement with the renter. XePrime does not issue invoices on your behalf, and this setting does not change prices, fees, taxes or booking conditions.",
     "enabled": "VAT invoice support turned on for all vehicles",
     "disabled": "VAT invoice support turned off",
     "loadError": "Could not load the VAT invoice setting"
   },
   "paymentSettings": {
     "title": "Reservation payment through XePrime",
-    "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover — that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",
+    "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover - that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",
     "loadError": "Could not load reservation payment settings",
     "readOnly": "You can only view this setting. The shop owner is the one who turns it on or off.",
     "forbidden": {
@@ -224,7 +224,7 @@
       "onTitle": "Guests pay the reservation hold amount after you approve",
       "onBody": "After you approve the booking request, the customer scans a VietQR transfer to pay the reservation hold amount (platform fee + insurance + 15% rental hold) within the dynamic payment window. The booking is confirmed as soon as XePrime receives full payment. If you cancel after accepting, the guest receives a 100% refund and your reliability score is penalized.",
       "offTitle": "You arrange it with the guest yourself",
-      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup — XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
+      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup - XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
     },
     "locked": {
       "platform": {
@@ -330,9 +330,9 @@
     }
   },
   "personal": {
-    "provinceHelp": "Where renters pick up — your vehicles are listed in this province.",
+    "provinceHelp": "Where renters pick up - your vehicles are listed in this province.",
     "checklist": {
-      "suggestedTitle": "Recommended — helps renters feel confident choosing your cars",
+      "suggestedTitle": "Recommended - helps renters feel confident choosing your cars",
       "items": {
         "displayName": "Name shown on the marketplace",
         "province": "Pickup province",

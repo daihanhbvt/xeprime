@@ -11,7 +11,7 @@ import {
 const A = '01JQZX00000000000000000BRA';
 const B = '01JQZX00000000000000000BRB';
 
-describe('branch-scope (ADR 0052 — gương web MemberBranchScopeSelect)', () => {
+describe('branch-scope (ADR 0052 - gương web MemberBranchScopeSelect)', () => {
   it('toBranchScopeInput: "Tất cả" ⇒ all, danh sách ⇒ limited', () => {
     expect(toBranchScopeInput([BRANCH_SCOPE_ALL])).toEqual({
       branchScope: MEMBERSHIP_BRANCH_SCOPE.ALL,

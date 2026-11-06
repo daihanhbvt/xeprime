@@ -705,11 +705,11 @@ export class FinanceOverviewService {
       ids AS (
         SELECT tenant_customer_id FROM money UNION SELECT tenant_customer_id FROM trips
       ),
-      -- Mẫu số của tỷ trọng là doanh thu CẢ KỲ, kể cả phần chưa gắn khách — tức đúng con số trên
+      -- Mẫu số của tỷ trọng là doanh thu CẢ KỲ, kể cả phần chưa gắn khách - tức đúng con số trên
       -- thẻ "Doanh thu". Lấy tổng của các dòng làm mẫu số sẽ cho ra bộ % cộng lại tròn 100% ở mọi
       -- trang: nghe hợp lý và sai hoàn toàn khi có phiếu thu không gắn khách.
       -- Mẫu số theo CÙNG phạm vi chi nhánh với các dòng (ADR 0052): không lọc thì tỷ trọng sai
-      -- ngay khi đang lọc, và với người bị giới hạn nó còn LỘ tổng doanh thu toàn gian hàng —
+      -- ngay khi đang lọc, và với người bị giới hạn nó còn LỘ tổng doanh thu toàn gian hàng -
       -- revenue / sharePercent suy ngược ra được.
       period AS (
         SELECT COALESCE(SUM(r.amount), 0) AS revenue
@@ -802,7 +802,7 @@ function assertBucketsFit(granularity: FinanceGranularity, from: Date, to: Date)
   if (days / DAYS_PER_BUCKET[granularity] <= FINANCE_MAX_BUCKETS) return;
   throw new BadRequestException({
     code: API_ERROR_CODE.VALIDATION_FAILED,
-    message: 'Khoảng thời gian quá rộng để vẽ biểu đồ — hãy chọn kỳ ngắn hơn',
+    message: 'Khoảng thời gian quá rộng để vẽ biểu đồ - hãy chọn kỳ ngắn hơn',
     details: { maxBuckets: FINANCE_MAX_BUCKETS, granularity },
   });
 }

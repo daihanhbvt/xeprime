@@ -373,13 +373,13 @@ export class BranchesService {
     if (target.status !== BRANCH_STATUS.ACTIVE) {
       throw new ConflictException({
         code: API_ERROR_CODE.BRANCH_DEFAULT_IMMUTABLE,
-        message: 'Chi nhánh đang ngừng hoạt động — bật lại trước khi đặt làm mặc định',
+        message: 'Chi nhánh đang ngừng hoạt động - bật lại trước khi đặt làm mặc định',
       });
     }
     if (!target.provinceCode) {
       throw new ConflictException({
         code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
-        message: 'Chi nhánh chưa có tỉnh/thành — bổ sung trước khi đặt làm mặc định',
+        message: 'Chi nhánh chưa có tỉnh/thành - bổ sung trước khi đặt làm mặc định',
       });
     }
 
@@ -601,7 +601,7 @@ export class BranchesService {
     if (branch.status !== BRANCH_STATUS.ACTIVE) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chi nhánh đang ngừng hoạt động — chọn chi nhánh khác',
+        message: 'Chi nhánh đang ngừng hoạt động - chọn chi nhánh khác',
         details: { field: 'branchId' },
       });
     }

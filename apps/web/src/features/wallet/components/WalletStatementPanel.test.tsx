@@ -128,7 +128,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('WalletStatementPanel', () => {
-  it('KHÔNG có cột phí sàn — phí dịch vụ do khách trả thêm, không trừ vào doanh thu gian hàng', () => {
+  it('KHÔNG có cột phí sàn - phí dịch vụ do khách trả thêm, không trừ vào doanh thu gian hàng', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
     /*
@@ -204,7 +204,7 @@ describe('WalletStatementPanel', () => {
     expect(screen.getAllByText('Thay đổi SD').length).toBeGreaterThan(0);
   });
 
-  it('full vẫn đủ tám cột — compact là ngoại lệ của khu hẹp, không phải mặc định mới', () => {
+  it('full vẫn đủ tám cột - compact là ngoại lệ của khu hẹp, không phải mặc định mới', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
     expect(screen.getAllByText('Hình thức').length).toBeGreaterThan(0);
@@ -224,7 +224,7 @@ describe('WalletStatementPanel', () => {
     expect(screen.queryByText(/2026/)).toBeNull();
   });
 
-  it('kỳ có hoa hồng ⇒ cột "Phí dịch vụ – Chủ xe", hiện như khoản TRỪ', () => {
+  it('kỳ có hoa hồng ⇒ cột "Phí dịch vụ - Chủ xe", hiện như khoản TRỪ', () => {
     session.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
     query.data = statement({
       items: [trip({ ownerCommissionAmount: '140000', taxAmount: '200000' })],
@@ -240,14 +240,14 @@ describe('WalletStatementPanel', () => {
       <WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} variant="compact" />,
     );
 
-    expect(screen.getAllByText('Phí dịch vụ – Chủ xe').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Phí dịch vụ - Chủ xe').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^−140\.000\s*₫$/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('kỳ không có hoa hồng (tuyến gói) ⇒ không có cột toàn số 0', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
-    expect(screen.queryByText('Phí dịch vụ – Chủ xe')).toBeNull();
+    expect(screen.queryByText('Phí dịch vụ - Chủ xe')).toBeNull();
   });
 
   /**

@@ -20,7 +20,7 @@ import { IsOptional, IsString, Length } from 'class-validator';
 export function BranchIdQuery(): PropertyDecorator {
   return applyDecorators(
     ApiPropertyOptional({
-      description: 'Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại',
+      description: 'Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại',
     }),
     IsOptional(),
     IsString(),

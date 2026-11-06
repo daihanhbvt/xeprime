@@ -6,7 +6,7 @@ import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { serviceUsesRentalRange } from '@xeprime/domain';
 import type { Dayjs } from '@xeprime/domain';
-import { useDatePickerPattern } from '@/i18n/use-app-format';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
 import { useAppStyles } from '@/theme/styles';
 import { useColors } from '@/theme/ThemeProvider';
@@ -54,7 +54,7 @@ export function StickySearchBar({
   const appStyles = useAppStyles();
   const colors = useColors();
   const t = useTranslations('HomeSearch');
-  const pattern = useDatePickerPattern();
+  const fmt = useAppFormat();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   const { draft, setProvinceCode, setRentalRange, setRentalMode, provinceLabel } =
@@ -64,13 +64,11 @@ export function StickySearchBar({
   const usesRange = serviceUsesRentalRange(draft.serviceType);
 
   /**
-   * Chỉ NGÀY — bỏ thứ và giờ.
-   *
-   * Thanh thu gọn chỉ có một dòng cho cả hai mốc; giữ "T4, 26/08 · 10:00" thì cả hai đầu đều bị
-   * cắt thành "T4, 26/08 · 03:…", mất đúng phần cần liếc. Mẫu ngày lấy theo ngôn ngữ
-   * (`DD/MM` vi · `MM/DD` en), không gõ cứng.
+   * THỨ + NGÀY, bỏ giờ: "T7, 07/11" (`fmt.rentalPoint` không kèm giờ - cùng định dạng ô Nhận
+   * xe / Trả xe). Thanh thu gọn chỉ có một dòng cho cả hai mốc: thêm giờ thì cả hai đầu bị cắt,
+   * mất đúng phần cần liếc. Mẫu ngày theo ngôn ngữ (`DD/MM` vi · `MM/DD` en).
    */
-  const day = (value: Dayjs | null) => (value ? value.format(pattern.dayMonth) : '');
+  const day = (value: Dayjs | null) => (value ? fmt.rentalPoint(value, { withTime: false }) : '');
 
   // `progress` 0 = ẩn hoàn toàn phía trên, 1 = hiện đủ. Nội suy thẳng chứ không dùng cờ boolean:
   // thanh bám theo ngón tay thay vì nhảy nấc khi vượt ngưỡng.

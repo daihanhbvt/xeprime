@@ -638,7 +638,7 @@ export class PricingService {
       if (assets > 0) throw invalid('Chế độ "Cọc tiền" không nhận loại tài sản thế chấp');
     } else if (dto.collateralMode === COLLATERAL_MODE.ASSET) {
       if (assets === 0) throw invalid('Chọn "Cọc tài sản" thì phải chọn ít nhất một loại tài sản');
-      if (deposit !== 0) throw invalid('Chế độ "Cọc tài sản" không thu tiền cọc — để số tiền là 0');
+      if (deposit !== 0) throw invalid('Chế độ "Cọc tài sản" không thu tiền cọc - để số tiền là 0');
       if (new Set(dto.collateralAssetTypes).size !== assets) {
         throw invalid('Loại tài sản thế chấp bị trùng');
       }
@@ -661,7 +661,7 @@ export class PricingService {
       for (const tier of dto.deliveryTiers) {
         if (tier.perKm != null && tier.perKm !== '') {
           throw invalid(
-            `Phí giao xe theo km đã ngừng áp dụng — bậc ${formatKm(tier.toKm)} km cần một phí trọn gói`,
+            `Phí giao xe theo km đã ngừng áp dụng - bậc ${formatKm(tier.toKm)} km cần một phí trọn gói`,
           );
         }
         if (tier.fee == null || tier.fee === '') {
@@ -673,7 +673,7 @@ export class PricingService {
         const curr = dto.deliveryTiers[i]!.toKm;
         if (curr <= prev) {
           throw invalid(
-            `Các mốc khoảng cách phải tăng dần — mốc ${formatKm(curr)} km đứng sau mốc ${formatKm(prev)} km`,
+            `Các mốc khoảng cách phải tăng dần - mốc ${formatKm(curr)} km đứng sau mốc ${formatKm(prev)} km`,
           );
         }
       }
@@ -961,7 +961,7 @@ export class PricingService {
     const serviceType = input.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
     if (serviceType === SERVICE_TYPE.LONG_TERM) {
       // Bảo vệ lập trình: dài hạn tính theo GÓI; gọi nhầm vào đây sẽ ra con số theo ngày sai bản chất.
-      throw invalid('Thuê dài hạn tính theo gói tháng — dùng buildLongTermPackageQuote');
+      throw invalid('Thuê dài hạn tính theo gói tháng - dùng buildLongTermPackageQuote');
     }
 
     /*
@@ -987,13 +987,13 @@ export class PricingService {
         driverRate = interCity ?? basePrice;
         if (!interCity) {
           estimateNote =
-            'Giá lộ trình liên tỉnh chưa niêm yết — tạm tính theo giá cơ bản, gian hàng xác nhận giá chốt khi duyệt';
+            'Giá lộ trình liên tỉnh chưa niêm yết - tạm tính theo giá cơ bản, gian hàng xác nhận giá chốt khi duyệt';
         }
       } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
         driverRate = oneWay ?? interCity ?? basePrice;
         if (!oneWay) {
           estimateNote =
-            'Giá lộ trình 1 chiều chưa niêm yết — tạm tính theo bậc gần nhất, gian hàng xác nhận giá chốt khi duyệt';
+            'Giá lộ trình 1 chiều chưa niêm yết - tạm tính theo bậc gần nhất, gian hàng xác nhận giá chốt khi duyệt';
         }
       } else {
         driverRate = basePrice;
@@ -1015,10 +1015,10 @@ export class PricingService {
       // Máy giá ngày là FALLBACK cho dịch vụ chưa niêm yết giá chuyên biệt — tổng chỉ là
       // tạm tính, FE không được trưng như giá chốt của dịch vụ đó.
       if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
-        estimateNote = 'Chưa gồm phí tài xế — gian hàng báo giá chính thức khi duyệt';
+        estimateNote = 'Chưa gồm phí tài xế - gian hàng báo giá chính thức khi duyệt';
       }
       if (!input.weekdayPrice) {
-        throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
+        throw invalid('Xe chưa có giá thuê theo ngày - cấu hình giá trước khi báo giá');
       }
       const weekday = new Prisma.Decimal(input.weekdayPrice);
       const weekend = input.weekendPrice ? new Prisma.Decimal(input.weekendPrice) : weekday;
@@ -1213,7 +1213,7 @@ export class PricingService {
     }
     if (!input.monthlyPrice) {
       throw invalid(
-        'Xe chưa niêm yết giá thuê dài hạn theo tháng — cấu hình giá trước khi báo giá',
+        'Xe chưa niêm yết giá thuê dài hạn theo tháng - cấu hình giá trước khi báo giá',
       );
     }
     const months = input.packageMonths;

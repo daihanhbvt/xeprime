@@ -46,7 +46,7 @@
     "noteRequired": "A reason is required (at least 5 characters).",
     "submit": "Settle",
     "success": "Outcome settled.",
-    "disputeOpen": "This booking still has an open dispute or handover verification case — resolve it before settling the money.",
+    "disputeOpen": "This booking still has an open dispute or handover verification case - resolve it before settling the money.",
     "auditHint": "This action is written to the audit log and cannot be undone.",
     "received": "Amount received",
     "paidTotal": "Total received",
@@ -58,10 +58,10 @@
     "notePlaceholder": "e.g. the dispute was resolved in the customer's favour, refund in full",
     "vehicle": "Vehicle",
     "paidAt": "Paid at",
-    "chooseHint": "Pick an outcome on the right — preview who receives what before settling.",
+    "chooseHint": "Pick an outcome on the right - preview who receives what before settling.",
     "previewTotal": "Total allocated",
     "previewEmpty": "Choose an outcome to see who receives what.",
-    "noAllocation": "Legacy hold — this outcome is recorded only; no money is allocated.",
+    "noAllocation": "Legacy hold - this outcome is recorded only; no money is allocated.",
     "outcomeHelp": {
       "settled": "Trip completed: deposit to the owner (after tax), fee to XePrime, insurance to the insurer.",
       "split_late_cancel": "Late cancellation or no-show: the owner's share of the reservation payment to the owner, platform fee and commission to XePrime (less any promo funding), insurance refunded to the customer.",
@@ -77,7 +77,7 @@
   "refundPaid": {
     "title": "Record refund transfer",
     "account": "Payout account",
-    "noAccount": "The customer has not provided a refund account yet — cannot transfer.",
+    "noAccount": "The customer has not provided a refund account yet - cannot transfer.",
     "bankReference": "Bank transaction reference",
     "referenceRequired": "Enter the bank transaction reference.",
     "note": "Note",
@@ -97,7 +97,7 @@
     "retry": "Retry",
     "varianceHint": "The bank balance does not match the two sides. Check the unmatched incoming queue, manual transfers not yet recorded, and the balance you entered.",
     "walletDriftWarning": "Ledger drift in {count, plural, one {# wallet} other {# wallets}} · {amount} total",
-    "walletDriftHint": "Wallet ledger entries do not add up to the stored balance. That means something writes balances outside the ledger — stop payouts and investigate before spending further.",
+    "walletDriftHint": "Wallet ledger entries do not add up to the stored balance. That means something writes balances outside the ledger - stop payouts and investigate before spending further.",
     "bankBalanceEod": "End-of-day bank balance",
     "balancePlaceholder": "Enter balance (VND)",
     "saveBalance": "Save balance",
@@ -105,7 +105,7 @@
     "platformTitle": "XePrime's own money",
     "serviceFeeRecognized": "Service fees recognised",
     "subscriptionsCollected": "Subscription payments collected",
-    "custodiedTitle": "Money held for others — liabilities",
+    "custodiedTitle": "Money held for others - liabilities",
     "holdsUnsettled": "Holds not yet settled",
     "walletTotal": "Balances payable",
     "refundsPending": "Refunds awaiting manual transfer",
@@ -159,7 +159,7 @@
     },
     "unknownWarning": {
       "title": "Some obligations belong to shops with no seller profile",
-      "body": "These rows were still withheld at the individual rate — a missing profile never removes the obligation — but the return needs the seller’s entity type and tax ID or personal ID number. Ask those shops to complete their profile before closing the period — do not file them under individuals yourself, which would be guessing at a legal obligation on their behalf."
+      "body": "These rows were still withheld at the individual rate - a missing profile never removes the obligation - but the return needs the seller’s entity type and tax ID or personal ID number. Ask those shops to complete their profile before closing the period - do not file them under individuals yourself, which would be guessing at a legal obligation on their behalf."
     },
     "columns": {
       "booking": "Trip / shop",
@@ -180,17 +180,17 @@
     },
     "empty": {
       "title": "No obligations in this period",
-      "description": "Tax only accrues once a trip has started — trips cancelled before pickup have no row."
+      "description": "Tax only accrues once a trip has started - trips cancelled before pickup have no row."
     },
     "reverseModal": {
       "title": "Reverse a tax row",
-      "hint": "Reversing writes a NEGATIVE row pointing at the original; it never edits the old figure. Afterwards the booking can record the correct obligation again. Remitted rows cannot be reversed — use an amended return.",
+      "hint": "Reversing writes a NEGATIVE row pointing at the original; it never edits the old figure. Afterwards the booking can record the correct obligation again. Remitted rows cannot be reversed - use an amended return.",
       "reasonLabel": "Reason for reversing",
       "reasonPlaceholder": "Why this row is wrong",
       "done": "Tax row reversed"
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
-    "notSplit": "Legacy row — not split",
+    "notSplit": "Legacy row - not split",
     "category": {
       "service": "Services group",
       "transport": "Transport group"

@@ -458,7 +458,7 @@ function CustomerProfile({
         key: 'lastRental',
         icon: 'calendar-outline',
         label: t('stats.lastRental'),
-        value: customer.lastRentalAt ? fmt.date(customer.lastRentalAt) : '—',
+        value: customer.lastRentalAt ? fmt.date(customer.lastRentalAt) : '-',
         tone: colors.info,
         surface: colors.infoSurface,
       },

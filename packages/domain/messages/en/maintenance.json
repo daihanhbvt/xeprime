@@ -39,8 +39,8 @@
     "canceled": "Maintenance schedule canceled",
     "updated": "Maintenance record updated",
     "created": "Maintenance scheduled",
-    "staleRecord": "Someone else just updated this record — close the dialog and reload.",
-    "odometerTooLow": "The odometer you entered is below the vehicle's current reading — check the number."
+    "staleRecord": "Someone else just updated this record - close the dialog and reload.",
+    "odometerTooLow": "The odometer you entered is below the vehicle's current reading - check the number."
   },
   "table": {
     "columns": {
@@ -96,7 +96,7 @@
   "odometer": {
     "updated": "Odometer updated",
     "decreaseForbidden": "Lowering the odometer needs an administrator. Ask the shop owner for the permission, or have them approve it.",
-    "stale": "Someone else just updated the odometer — close the dialog and reload.",
+    "stale": "Someone else just updated the odometer - close the dialog and reload.",
     "title": "Adjust odometer",
     "okRequest": "Request approval",
     "okUpdate": "Update odometer",
@@ -123,8 +123,8 @@
     "title": "Maintenance & odometer",
     "loadError": "Couldn't load maintenance data",
     "manage": "Manage",
-    "overdue": "Service overdue — {value}",
-    "dueSoon": "Service due soon — {value}",
+    "overdue": "Service overdue - {value}",
+    "dueSoon": "Service due soon - {value}",
     "noOdometer": "No odometer data",
     "noOdometerHint": "Enter the current reading to start tracking the service schedule.",
     "currentKm": "Current km",
@@ -137,8 +137,8 @@
     "noPermissionHint": "You can't view this vehicle's maintenance and odometer data. Ask the shop owner for access.",
     "loadError": "Couldn't load the maintenance information",
     "profileSaved": "Maintenance settings saved",
-    "profileStale": "Someone else just updated this — reload the page before saving again.",
-    "readOnlyBanner": "View only — you can see maintenance data but can't change it.",
+    "profileStale": "Someone else just updated this - reload the page before saving again.",
+    "readOnlyBanner": "View only - you can see maintenance data but can't change it.",
     "odometerCard": "Current odometer",
     "adjustManually": "Adjust manually",
     "updatedAt": "Updated {at}",

@@ -56,7 +56,7 @@ export class TenantCustomerListQueryDto {
   @ApiPropertyOptional({
     enum: TENANT_CUSTOMER_RELATIONSHIP_VALUES,
     description:
-      'Nhóm quan hệ. `has_debt` là bộ lọc tài chính — thiếu `finance.view` sẽ bị từ chối, ' +
+      'Nhóm quan hệ. `has_debt` là bộ lọc tài chính - thiếu `finance.view` sẽ bị từ chối, ' +
       'không âm thầm trả về danh sách đầy đủ.',
   })
   @IsOptional()
@@ -65,7 +65,7 @@ export class TenantCustomerListQueryDto {
 
   @ApiPropertyOptional({
     enum: TENANT_CUSTOMER_SORT_VALUES,
-    description: '`total_value` và `debt` là sắp xếp tài chính — gate như bộ lọc trên.',
+    description: '`total_value` và `debt` là sắp xếp tài chính - gate như bộ lọc trên.',
   })
   @IsOptional()
   @IsIn(TENANT_CUSTOMER_SORT_VALUES)
@@ -101,7 +101,7 @@ export class TenantCustomerStatsDto {
   activeBookingCount!: number;
   @ApiProperty({ description: 'Số lần khách không tới nhận xe' }) noShowCount!: number;
   @ApiProperty({
-    description: 'Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán',
+    description: 'Số chuyến trả xe MUỘN - chỉ đếm khi có `actual_return_at` thật, không suy đoán',
   })
   lateReturnCount!: number;
   @ApiPropertyOptional({
@@ -139,7 +139,7 @@ export class TenantCustomerListItemDto extends TenantCustomerStatsDto {
   @ApiProperty({ enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES }) riskLevel!: string;
   @ApiProperty({ enum: TENANT_CUSTOMER_SOURCE_VALUES }) source!: string;
   @ApiProperty({ description: 'Đã liên kết tài khoản trên nền tảng' }) hasAccount!: boolean;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — null = đang hoạt động' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - null = đang hoạt động' })
   archivedAt!: string | null;
 }
 
@@ -151,7 +151,7 @@ export class TenantCustomerPageDto {
 /** Dải KPI đầu trang. `totalDebt` `null` khi thiếu `finance.view` (FE ẩn hẳn ô, không hiện 0). */
 export class TenantCustomerSummaryDto {
   @ApiProperty({ description: 'Khách đang hoạt động (chưa lưu trữ)' }) activeCustomers!: number;
-  @ApiProperty({ description: 'Khách quen — từ 2 chuyến hoàn tất trở lên' })
+  @ApiProperty({ description: 'Khách quen - từ 2 chuyến hoàn tất trở lên' })
   returningCustomers!: number;
   @ApiProperty() watchlistCustomers!: number;
   @ApiProperty() blockedCustomers!: number;
@@ -162,13 +162,13 @@ export class TenantCustomerSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tổng giá trị đơn (không tính đơn huỷ) — null khi thiếu finance.view',
+    description: 'Tổng giá trị đơn (không tính đơn huỷ) - null khi thiếu finance.view',
   })
   totalRevenue!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Số khách còn nợ · null khi thiếu finance.view — FE ẩn hẳn ô, không hiện 0',
+    description: 'Số khách còn nợ · null khi thiếu finance.view - FE ẩn hẳn ô, không hiện 0',
   })
   debtCustomers!: number | null;
 }
@@ -182,7 +182,7 @@ export class CreateTenantCustomerDto {
   @ApiProperty({
     example: '0901234567',
     description:
-      'Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.',
+      'Bắt buộc - SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.',
   })
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
@@ -295,7 +295,7 @@ export class UpdateCustomerRiskDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lý do NỘI BỘ — bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách.',
+    description: 'Lý do NỘI BỘ - bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách.',
   })
   @IsOptional()
   @IsString()
@@ -393,8 +393,8 @@ export class CustomerRevenueQueryDto {
 }
 
 export class CustomerRevenueBucketDto {
-  @ApiProperty({ description: 'ISO — đầu khoảng (giờ VN 00:00)' }) from!: string;
-  @ApiProperty({ description: 'ISO — đầu khoảng kế tiếp' }) to!: string;
+  @ApiProperty({ description: 'ISO - đầu khoảng (giờ VN 00:00)' }) from!: string;
+  @ApiProperty({ description: 'ISO - đầu khoảng kế tiếp' }) to!: string;
   @ApiProperty({ description: 'Giá trị đơn nhận xe trong khoảng (VND string)' }) amount!: string;
   @ApiProperty({ description: 'Số đơn nhận xe trong khoảng' }) count!: number;
 }
@@ -419,13 +419,13 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiProperty() id!: string;
   @ApiProperty() fullName!: string;
   @ApiProperty() phone!: string;
-  @ApiProperty({ description: 'Dạng chuẩn hoá — định danh khách trong gian hàng này' })
+  @ApiProperty({ description: 'Dạng chuẩn hoá - định danh khách trong gian hàng này' })
   normalizedPhone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn — dùng thẳng, đừng ghép lại ở client',
+    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn - dùng thẳng, đừng ghép lại ở client',
   })
   address!: string | null;
   @ApiPropertyOptional({
@@ -439,7 +439,7 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lý do rủi ro — NỘI BỘ, chỉ đi tới người trong gian hàng',
+    description: 'Lý do rủi ro - NỘI BỘ, chỉ đi tới người trong gian hàng',
   })
   riskReason!: string | null;
   @ApiProperty() hasAccount!: boolean;
@@ -454,13 +454,13 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiPropertyOptional({
     type: CustomerBookingItemDto,
     nullable: true,
-    description: 'Đơn đang chạy, hoặc đơn sắp nhận gần nhất — thẻ "Đơn thuê hiện tại"',
+    description: 'Đơn đang chạy, hoặc đơn sắp nhận gần nhất - thẻ "Đơn thuê hiện tại"',
   })
   currentBooking!: CustomerBookingItemDto | null;
   @ApiPropertyOptional({
     type: CustomerReceivableDto,
     nullable: true,
-    description: 'Khoản phải thu đang mở — null khi thiếu finance.view hoặc bookings.view',
+    description: 'Khoản phải thu đang mở - null khi thiếu finance.view hoặc bookings.view',
   })
   receivable!: CustomerReceivableDto | null;
 }
@@ -502,7 +502,7 @@ export class CustomerDocumentDto {
   holderName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Số CCCD / GPLX / hộ chiếu…' })
   documentNumber!: string | null;
-  @ApiProperty({ description: 'Tên file gốc (hiển thị) — KHÔNG phải đường dẫn lưu trữ' })
+  @ApiProperty({ description: 'Tên file gốc (hiển thị) - KHÔNG phải đường dẫn lưu trữ' })
   originalName!: string;
   @ApiProperty() mimeType!: string;
   @ApiProperty() sizeBytes!: number;
@@ -592,15 +592,15 @@ export class PresignCustomerDocumentDto {
 }
 
 export class CustomerDocumentPresignDto {
-  @ApiProperty({ description: 'ID bản ghi giấy tờ — dùng cho bước hoàn tất' }) documentId!: string;
+  @ApiProperty({ description: 'ID bản ghi giấy tờ - dùng cho bước hoàn tất' }) documentId!: string;
   @ApiProperty({ description: 'URL PUT lên bucket riêng tư (hết hạn ngắn)' }) uploadUrl!: string;
   @ApiProperty() expiresIn!: number;
 }
 
 export class CustomerDocumentDownloadDto {
-  @ApiProperty({ description: 'Signed GET URL ngắn hạn — không cache, không lưu' })
+  @ApiProperty({ description: 'Signed GET URL ngắn hạn - không cache, không lưu' })
   downloadUrl!: string;
-  @ApiProperty({ description: 'ISO — thời điểm URL hết hiệu lực' }) expiresAt!: string;
+  @ApiProperty({ description: 'ISO - thời điểm URL hết hiệu lực' }) expiresAt!: string;
 }
 
 /** Sửa phần CHỮ của một giấy tờ đã tải (02/11/2026) — file ảnh không đổi; thay ảnh là tải bản mới. */
@@ -619,7 +619,7 @@ export class UpdateCustomerDocumentDto {
   @MaxLength(60)
   documentNumber?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD — null = không thời hạn' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD - null = không thời hạn' })
   @IsOptional()
   @ValidateIf((_o, v) => v !== null)
   @Matches(DATE_ONLY_PATTERN)

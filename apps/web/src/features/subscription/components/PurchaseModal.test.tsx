@@ -121,7 +121,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('PurchaseModal — bậc nào được bán', () => {
+describe('PurchaseModal - bậc nào được bán', () => {
   it('bậc gian hàng hiện thẻ kèm trần xe và giá tháng', () => {
     renderModal();
     expect(screen.queryByText(/đang bán/)).toBeNull();
@@ -162,7 +162,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
     expect(terms[2]!.textContent).toContain('Tiết kiệm 33%');
   });
 
-  it('chưa chọn kỳ hạn thì không tạo được hoá đơn — không mặc định sẵn một cam kết', () => {
+  it('chưa chọn kỳ hạn thì không tạo được hoá đơn - không mặc định sẵn một cam kết', () => {
     renderModal();
     const submit = screen.getByRole('button', { name: /Tạo hoá đơn/ });
     expect(submit.getAttribute('disabled')).not.toBeNull();
@@ -211,7 +211,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
   });
 });
 
-describe('PurchaseModal — bậc bán qua tư vấn', () => {
+describe('PurchaseModal - bậc bán qua tư vấn', () => {
   /*
    * Giấu hẳn bậc doanh nghiệp là giấu luôn lối nâng cấp của gian hàng lớn nhất, và một bảng giá
    * dừng ở "10 xe" nói rằng nền tảng không phục vụ được đội xe lớn hơn (ADR 0041 điều 5).
@@ -246,7 +246,7 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
     expect(contact.getAttribute('href')).toBe('/support');
   });
 
-  it('không có thẻ radio nào cho bậc tư vấn — nó không chọn mua được', () => {
+  it('không có thẻ radio nào cho bậc tư vấn - nó không chọn mua được', () => {
     plans.data = [
       makePlan({
         id: 'plan-pro',
@@ -273,8 +273,8 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
   });
 });
 
-describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
-  it('chỉ bày bậc CỦA ĐÚNG loại xe đang mua — bậc ô tô không lọt vào hộp xe máy', () => {
+describe('PurchaseModal - một loại xe mỗi lần mua (ADR 0065)', () => {
+  it('chỉ bày bậc CỦA ĐÚNG loại xe đang mua - bậc ô tô không lọt vào hộp xe máy', () => {
     plans.data = [
       makePlan(),
       makePlan({ id: 'plan-car', code: 'car_5', name: 'Ô tô 5 xe', vehicleScope: 'car' }),
@@ -314,7 +314,7 @@ describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
   });
 });
 
-describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
+describe('PurchaseModal - Phương án B (Nâng gói ngay)', () => {
   it('đang có kỳ cùng loại xe: chọn nâng gói ngay hiển thị cảnh báo huỷ ngày còn lại và gửi timing: now', () => {
     renderModal(vi.fn(), {
       subscriptionId: 'S1',
@@ -358,7 +358,7 @@ describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
   });
 });
 
-describe('PurchaseModal — lỗi khi tạo hoá đơn', () => {
+describe('PurchaseModal - lỗi khi tạo hoá đơn', () => {
   it('bậc vừa về "chưa mở bán" (CONFLICT · planStatus=draft) ⇒ câu riêng mời chọn bậc khác', async () => {
     purchase.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
       opts.onError?.(

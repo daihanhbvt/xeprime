@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Keyboard, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion/PressableScale';
 import { Text, XStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import {
@@ -208,7 +209,7 @@ export function Button({
       không tìm được bằng vai thì trình đọc màn hình cũng không đọc ra là một nút. Bố cục bên
       trong vẫn là Tamagui — Tamagui cho HÌNH, primitive React Native cho THAO TÁC.
     */
-    <Pressable
+    <PressableScale
       onPress={press}
       disabled={blocked}
       accessibilityRole="button"
@@ -221,10 +222,8 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ busy: loading, disabled: blocked }}
       hitSlop={{ top: slop, bottom: slop }}
-      style={({ pressed }) => [
-        block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] },
-        pressed ? { opacity: 0.85 } : null,
-      ]}
+      // Nhấn: co nhẹ lò xo (luồng UI) thay cho chớp mờ 0.85 — `PressableScale`.
+      style={block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] }}
     >
       <XStack
         ai="center"
@@ -283,6 +282,6 @@ export function Button({
           </>
         )}
       </XStack>
-    </Pressable>
+    </PressableScale>
   );
 }

@@ -69,7 +69,7 @@ export class SocialAuthController {
   @Get(':provider')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Bắt đầu đăng nhập mạng xã hội — chuyển hướng sang Google/Facebook',
+    summary: 'Bắt đầu đăng nhập mạng xã hội - chuyển hướng sang Google/Facebook',
     description:
       'Trình duyệt điều hướng thẳng tới đây (không phải XHR). Luôn trả 302: sang provider nếu cấu hình đủ, hoặc về web kèm `?authError=SOCIAL_NOT_CONFIGURED`.',
   })
@@ -93,7 +93,7 @@ export class SocialAuthController {
     required: false,
     enum: ['web', 'native'],
     description:
-      'Bỏ trống = web (callback đặt cookie httpOnly). `native` = app (callback trả one-time code về deep link) — khi đó `code_challenge` và `redirect_uri` là BẮT BUỘC.',
+      'Bỏ trống = web (callback đặt cookie httpOnly). `native` = app (callback trả one-time code về deep link) - khi đó `code_challenge` và `redirect_uri` là BẮT BUỘC.',
   })
   @ApiQuery({
     name: 'code_challenge',
@@ -163,9 +163,9 @@ export class SocialAuthController {
   @Get(':provider/callback')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Provider gọi về sau khi người dùng đồng ý — phát session cookie rồi về web',
+    summary: 'Provider gọi về sau khi người dùng đồng ý - phát session cookie rồi về web',
     description:
-      'Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).',
+      'Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) - endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).',
   })
   @ApiParam({ name: 'provider', enum: AUTH_PROVIDER_VALUES })
   @ApiQuery({

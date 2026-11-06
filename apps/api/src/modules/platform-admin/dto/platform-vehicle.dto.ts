@@ -143,7 +143,7 @@ export class PlatformVehicleDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tỉnh/thành của chi nhánh gắn xe — vị trí công khai của xe',
+    description: 'Tỉnh/thành của chi nhánh gắn xe - vị trí công khai của xe',
   })
   provinceName!: string | null;
   @ApiPropertyOptional({

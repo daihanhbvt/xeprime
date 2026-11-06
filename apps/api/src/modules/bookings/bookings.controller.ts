@@ -178,7 +178,7 @@ export class BookingsController {
     if (dto.externalDriver !== undefined) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED,
-        message: 'XePrime không còn nhận tài xế ngoài hệ thống — gán tài xế liên kết',
+        message: 'XePrime không còn nhận tài xế ngoài hệ thống - gán tài xế liên kết',
       });
     }
     return this.bookings.assignDriver(

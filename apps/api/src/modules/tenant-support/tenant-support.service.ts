@@ -265,7 +265,7 @@ export class TenantSupportService {
     if (!isMeaningfulSupportReason(dto.reason)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Lý do chưa đủ cụ thể — ghi rõ vì sao hoặc mã yêu cầu của chủ xe',
+        message: 'Lý do chưa đủ cụ thể - ghi rõ vì sao hoặc mã yêu cầu của chủ xe',
         details: { field: 'reason' },
       });
     }

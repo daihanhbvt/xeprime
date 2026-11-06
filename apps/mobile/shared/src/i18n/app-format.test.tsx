@@ -24,14 +24,14 @@ async function format() {
   return result.current;
 }
 
-describe('useAppFormat — mốc thuê', () => {
+describe('useAppFormat - mốc thuê', () => {
   it('rentalPoint cho ra "T4, 26/08 · 10:00" như web', async () => {
     // 26/08/2026 là thứ Tư; Day.js `day()` trả 3 → khoá `Common.weekdayShort.3` = "T4".
     const point = dayjs('2026-08-26T10:00:00+07:00');
     expect((await format()).rentalPoint(point)).toBe('T4, 26/08 · 10:00');
   });
 
-  it('bỏ phần giờ khi withTime = false — dùng cho thanh tìm kiếm thu gọn', async () => {
+  it('bỏ phần giờ khi withTime = false - dùng cho thanh tìm kiếm thu gọn', async () => {
     const point = dayjs('2026-08-29T10:00:00+07:00');
     expect((await format()).rentalPoint(point, { withTime: false })).toBe('T7, 29/08');
   });
@@ -52,7 +52,7 @@ describe('useAppFormat — mốc thuê', () => {
  * `Tháng…` — nhãn mất đúng phần nói ra nó là tháng nào. Hai hàm, hai vai: trục lấy bản ngắn, thẻ
  * chi tiết giữ bản đầy đủ của web.
  */
-describe('useAppFormat — nhãn mốc biểu đồ', () => {
+describe('useAppFormat - nhãn mốc biểu đồ', () => {
   it('monthYearShort cho ra 09/2026, không phải "Tháng 9 năm 2026"', async () => {
     expect((await format()).monthYearShort(new Date('2026-09-01T12:00:00Z'))).toBe('09/2026');
   });
@@ -79,7 +79,7 @@ describe('useAppFormat — nhãn mốc biểu đồ', () => {
  */
 const YEAR = nowInAppTz().year();
 
-describe('useAppFormat — tóm tắt khoảng thuê', () => {
+describe('useAppFormat - tóm tắt khoảng thuê', () => {
   it('in NGÀY + GIỜ cả hai đầu kèm thời lượng', async () => {
     const from = dayjs(`${YEAR}-09-14T17:00:00+07:00`);
     const to = dayjs(`${YEAR}-09-15T17:00:00+07:00`);

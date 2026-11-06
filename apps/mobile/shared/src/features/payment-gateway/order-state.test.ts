@@ -91,7 +91,7 @@ describe('isOutOfRange / isHoldWindowTooShort', () => {
   });
 });
 
-describe('noTransaction — cổng xác nhận chưa có giao dịch (khách huỷ ở cổng)', () => {
+describe('noTransaction - cổng xác nhận chưa có giao dịch (khách huỷ ở cổng)', () => {
   it('không còn hỏi lại lượt đó', () => {
     expect(shouldPollGatewayOrder(order({ noTransaction: true }), NOW)).toBe(false);
   });

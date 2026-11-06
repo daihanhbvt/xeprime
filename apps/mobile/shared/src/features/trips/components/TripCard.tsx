@@ -262,10 +262,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
             )}
           </MoneyCell>
           <MoneyCell label={t('card.paid')}>
-            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
           </MoneyCell>
           <MoneyCell label={t('card.remaining')} highlight>
-            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
           </MoneyCell>
         </XStack>
 
@@ -386,7 +386,7 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
     return (
       <YStack gap={space.xs}>
         {packageLabel ? <SchedulePoint label={t('package')} value={packageLabel} /> : null}
-        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '—'} wrap />
+        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '-'} wrap />
       </YStack>
     );
   }

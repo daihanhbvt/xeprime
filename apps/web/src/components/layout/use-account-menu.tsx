@@ -43,8 +43,8 @@ export function useAccountMenuItems(): NonNullable<MenuProps['items']> {
 
   if (!user) return [];
 
-  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
-  const signedInAs = user.displayName || user.email || '—';
+  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '-');
+  const signedInAs = user.displayName || user.email || '-';
 
   return [
     {

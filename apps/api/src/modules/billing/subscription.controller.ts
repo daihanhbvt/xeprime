@@ -57,7 +57,7 @@ export class SubscriptionController {
   @Get('plan-catalog')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
-    summary: 'Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) — ADR 0065',
+    summary: 'Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) - ADR 0065',
   })
   @ApiOkResponse({ type: TenantPlanCatalogDto })
   planCatalog(): Promise<TenantPlanCatalogDto> {
@@ -67,7 +67,7 @@ export class SubscriptionController {
   @Get('payment-info')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
-    summary: 'Thông tin nhận chuyển khoản của nền tảng — web dựng VietQR từ đây (ADR 0016 điều 5)',
+    summary: 'Thông tin nhận chuyển khoản của nền tảng - web dựng VietQR từ đây (ADR 0016 điều 5)',
   })
   @ApiOkResponse({ type: PaymentInfoDto })
   paymentInfo(): PaymentInfoDto {
@@ -131,7 +131,7 @@ export class SubscriptionController {
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
     summary:
-      'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)',
+      'Mua / gia hạn gói - sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)',
   })
   @ApiOkResponse({ type: SubscriptionInvoiceDto })
   purchase(

@@ -4,6 +4,7 @@ import { CardHighlightOverlay, useCardHighlightBorder } from '@/components/ui/Ca
 import { CardHighlightContext } from '@/components/ui/HighlightZoom';
 import Animated, {
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
   Easing,
@@ -12,7 +13,7 @@ import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { duration, easing } from '@/theme/motion';
+import { duration, easing, pressScale } from '@/theme/motion';
 import { themed, useAppScheme, useDarkAccentBorder } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
 
@@ -135,7 +136,8 @@ export function Card({
 }
 
 /** Thẻ lún xuống bao nhiêu khi bị nhấn — đủ để cảm được, không đủ để thành một cú nảy. */
-const PRESS_SCALE_DELTA = 0.02;
+// Theo `pressScale.card` (0.97) — cùng độ co với `PressableScale` (06/11/2026).
+const PRESS_SCALE_DELTA = 1 - pressScale.card;
 const PRESS_OPACITY_DELTA = 0.12;
 
 /** Lún NHANH hơn lúc bật lại: ấn xuống phải bám ngón tay, thả ra thì thong thả hơn. */
@@ -160,9 +162,11 @@ function PressableCard({
   onPressedChange?: (pressed: boolean) => void;
 }) {
   const pressed = useSharedValue(0);
+  // "Giảm chuyển động": bỏ phần co, giữ phần mờ (phản hồi chạm vẫn còn, không có chuyển động).
+  const reduceMotion = useReducedMotion();
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - pressed.value * PRESS_SCALE_DELTA }],
+    transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * PRESS_SCALE_DELTA }],
     opacity: 1 - pressed.value * PRESS_OPACITY_DELTA,
   }));
 

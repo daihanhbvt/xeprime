@@ -202,7 +202,8 @@
 .listSegment {
   display: inline-flex;
   align-items: center;
-  height: 44px;
+  /* Theo thẻ tìm kiếm (`--search-field-h`); ngoài thẻ giữ 44 như cũ. */
+  height: var(--search-field-h, 44px);
   padding: 3px;
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-pill);
@@ -215,7 +216,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  /* Cao khung trừ đệm 3px hai bên và viền 1px hai bên. */
+  height: calc(var(--search-field-h, 44px) - 8px);
   min-height: 0;
   padding: 0 14px;
   border: 1px solid transparent;
@@ -236,7 +238,11 @@
 
 .listSegment .tabActive,
 .listSegment .tabActive:hover {
-  border-color: var(--xp-color-border);
+  /*
+   * KHÔNG viền riêng cho mục đang chọn: nó nằm sát viền ngoài của nhóm và đọc thành viền ĐÔI
+   * (06/11/2026). Mục chọn nổi nhờ nền + bóng + màu chữ; nhóm chỉ có một viền ngoài.
+   */
+  border-color: transparent;
   background: var(--xp-color-bg-container);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   color: var(--xp-color-primary-strong);
@@ -296,7 +302,7 @@
 
 :global([data-theme='dark']) .listSegment .tabActive,
 :global([data-theme='dark']) .listSegment .tabActive:hover {
-  border-color: var(--xp-color-primary);
+  border-color: transparent;
   background: var(--xp-color-bg-container);
   box-shadow: none;
   color: var(--xp-color-primary);

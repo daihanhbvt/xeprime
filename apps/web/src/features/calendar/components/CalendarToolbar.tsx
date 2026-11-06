@@ -65,8 +65,8 @@ export function CalendarToolbar() {
   const start = dayjs.tz(filters.from, APP_TIME_ZONE);
   const end = start.add(filters.days - 1, 'day');
   const rangeLabel = start.isSame(end, 'year')
-    ? `${start.format('DD/MM')} – ${end.format('DD/MM/YYYY')}`
-    : `${start.format('DD/MM/YYYY')} – ${end.format('DD/MM/YYYY')}`;
+    ? `${start.format('DD/MM')} - ${end.format('DD/MM/YYYY')}`
+    : `${start.format('DD/MM/YYYY')} - ${end.format('DD/MM/YYYY')}`;
 
   const shift = (direction: 1 | -1) =>
     setFilters({ from: start.add(direction * filters.days, 'day').format('YYYY-MM-DD') });

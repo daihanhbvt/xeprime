@@ -28,7 +28,7 @@ export class PlatformAppConfigController {
   }
 
   @Patch('partner')
-  @ApiOperation({ summary: 'Đổi cấu hình app Partner — audit, version +1' })
+  @ApiOperation({ summary: 'Đổi cấu hình app Partner - audit, version +1' })
   @ApiOkResponse({ type: PartnerAppConfigAdminDto })
   update(
     @CurrentUser() user: AuthenticatedUser,

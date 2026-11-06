@@ -11,7 +11,7 @@ describe('isNearBottom', () => {
     expect(isNearBottom({ scrollTop: 900, scrollHeight: 1000, clientHeight: 100 })).toBe(true);
   });
 
-  it('vẫn đúng trong ngưỡng dung sai — vài pixel dư là chuyện bình thường', () => {
+  it('vẫn đúng trong ngưỡng dung sai - vài pixel dư là chuyện bình thường', () => {
     expect(
       isNearBottom({ scrollTop: 900 - NEAR_BOTTOM_PX, scrollHeight: 1000, clientHeight: 100 }),
     ).toBe(true);
@@ -21,7 +21,7 @@ describe('isNearBottom', () => {
     expect(isNearBottom({ scrollTop: 200, scrollHeight: 5000, clientHeight: 400 })).toBe(false);
   });
 
-  it('khung chưa có nội dung tràn được coi là ở đáy — nếu không tin đầu tiên không tự cuộn', () => {
+  it('khung chưa có nội dung tràn được coi là ở đáy - nếu không tin đầu tiên không tự cuộn', () => {
     expect(isNearBottom({ scrollTop: 0, scrollHeight: 300, clientHeight: 300 })).toBe(true);
   });
 });

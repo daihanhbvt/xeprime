@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { Keyframe, ReduceMotion } from 'react-native-reanimated';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { motionMs } from '@/theme/motion';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
@@ -53,6 +56,8 @@ import {
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
+import { useIsOnline } from '@/hooks/use-is-online';
+import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
@@ -140,6 +145,22 @@ const PREPARE_TIMEOUT_MS = 15_000;
  * này, dựng lại bản nháp và tự đi tiếp (kiểm lại khung giờ → bằng lái → Xác nhận). KHÔNG bao giờ
  * tự gửi — khách tự bấm "Gửi yêu cầu thuê".
  */
+/** Thứ tự các bước — chỉ để suy hướng hiệu ứng chuyển bước. */
+const STEP_ORDER: Record<RequestStep, number> = { trip: 0, licence: 1, review: 2, done: 3 };
+const STEP_SHIFT = toPx(XP_TOKENS['motion-distance-step']);
+
+/** Bước mới vào: mờ dần + trượt ngang ngắn (dương = từ phải, âm = từ trái), thời lượng overlay. */
+function stepEnter(fromX: number) {
+  return new Keyframe({
+    0: { opacity: 0, transform: [{ translateX: fromX }] },
+    100: { opacity: 1, transform: [{ translateX: 0 }] },
+  })
+    .duration(motionMs.overlay)
+    .reduceMotion(ReduceMotion.System);
+}
+const STEP_ENTER_FORWARD = stepEnter(STEP_SHIFT);
+const STEP_ENTER_BACK = stepEnter(-STEP_SHIFT);
+
 export function RequestBookingScreen({
   vehicleId,
   initialServiceType,
@@ -205,6 +226,8 @@ function RequestBookingBody({
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
+  // Gửi yêu cầu phải tới server — offline thì khoá nút và nói lý do.
+  const online = useIsOnline();
   const tFormErrors = useTranslations('BookingRequests.form.errors');
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();
@@ -213,6 +236,18 @@ function RequestBookingBody({
 
   const flow = useBookingRequestFlow(listing.id);
   const { state, setStep: setStepRaw, setDuplicate, setBlocked, setError } = flow;
+  /*
+   * Hướng chuyển bước — bước mới trượt vào từ phải khi tiến, từ trái khi lùi (như web). Lưu cùng
+   * bước trước theo mẫu "thông tin từ lần render trước", không đụng các chỗ gọi `setStep`.
+   */
+  const [stepMotion, setStepMotion] = useState({ step: state.step, back: false });
+  if (stepMotion.step !== state.step) {
+    setStepMotion({
+      step: state.step,
+      back: STEP_ORDER[state.step] < STEP_ORDER[stepMotion.step],
+    });
+  }
+  const stepEntering = stepMotion.back ? STEP_ENTER_BACK : STEP_ENTER_FORWARD;
   const dispatch = useAppDispatch();
   const currentPath = useCurrentAppPath();
 
@@ -1197,6 +1232,7 @@ function RequestBookingBody({
         ) : null}
 
         {state.step === REQUEST_STEP.REVIEW ? (
+          <YStack>
           <XStack gap={space.sm}>
             {/*
               KHÔNG gắn icon cho nút lùi này: nó chỉ được f={1} cạnh một nút f={2}, tức ~104dp; trừ 48dp
@@ -1221,10 +1257,13 @@ function RequestBookingBody({
                 icon="send-outline"
                 size="lg"
                 loading={flow.submit.isPending}
+                disabled={!online}
                 onPress={() => void submitRequest()}
               />
             </YStack>
           </XStack>
+          <OfflineActionHint />
+          </YStack>
         ) : null}
       </>
     ) : undefined;
@@ -1263,6 +1302,7 @@ function RequestBookingBody({
           )}
 
           {state.step === REQUEST_STEP.TRIP ? (
+            <Animated.View key="step-trip" entering={stepEntering}>
             <RequestTripStep
               form={form}
               listing={listing}
@@ -1273,19 +1313,23 @@ function RequestBookingBody({
               onRentalModeChange={setRentalMode}
               quote={quote.data}
             />
+            </Animated.View>
           ) : null}
 
           {/* Bằng lái — giữa hai bước, chỉ khi thuê tự lái/dài hạn (ADR 0057). */}
           {state.step === REQUEST_STEP.LICENCE && licenceTrip ? (
+            <Animated.View key="step-licence" entering={stepEntering}>
             <YStack gap={space.sm}>
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
                 {t('licence.title')}
               </Text>
               <DriverLicenceVerifier trip={licenceTrip} />
             </YStack>
+            </Animated.View>
           ) : null}
 
           {state.step === REQUEST_STEP.REVIEW ? (
+            <Animated.View key="step-review" entering={stepEntering}>
             <RequestReviewStep
               values={form.getValues()}
               form={form}
@@ -1338,6 +1382,7 @@ function RequestBookingBody({
                 </>
               }
             />
+            </Animated.View>
           ) : null}
 
           {/* Bảng "chi tiết" của bước Chuyến đi — bước Xem lại có hai thẻ tiền riêng (`costs`). */}

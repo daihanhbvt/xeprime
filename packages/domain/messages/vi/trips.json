@@ -111,7 +111,7 @@
       "rearranging": "Đang điều phối lại tài xế cho chuyến của bạn",
       "urgentTitle": "Chuyến xe đang gặp sự cố điều phối",
       "urgentBody": "Chủ xe đang sắp xếp tài xế khác. Cần hỗ trợ ngay, gọi tổng đài <tel>{phone}</tel>.",
-      "freeCancelHint": "Chủ xe chưa bố trí kịp tài xế — bạn có thể huỷ và được hoàn 100% tiền giữ chỗ.",
+      "freeCancelHint": "Chủ xe chưa bố trí kịp tài xế - bạn có thể huỷ và được hoàn 100% tiền giữ chỗ.",
       "freeCancel": "Huỷ chuyến (hoàn 100%)"
     }
   },
@@ -141,12 +141,12 @@
   },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",
-    "awaiting_hold": "Chủ xe đã nhận chuyến — thanh toán tiền giữ chỗ để chốt",
+    "awaiting_hold": "Chủ xe đã nhận chuyến - thanh toán tiền giữ chỗ để chốt",
     "ready": "Yêu cầu thuê xe đã được chủ xe xác nhận thành công",
     "active": "Bạn đang trong thời gian thuê xe này. Vui lòng di chuyển an toàn",
     "completed": "Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!",
     "terminal": "Chuyến đi đã kết thúc sớm",
-    "pending_approval_paid": "Đã nhận tiền giữ chỗ của bạn. Đang chờ chủ xe xác nhận — nếu chủ xe từ chối, toàn bộ số tiền được hoàn ngay.",
+    "pending_approval_paid": "Đã nhận tiền giữ chỗ của bạn. Đang chờ chủ xe xác nhận - nếu chủ xe từ chối, toàn bộ số tiền được hoàn ngay.",
     "slot_taken": "Khung giờ này đã có khách khác đặt trước",
     "expired": "Chủ xe chưa kịp trả lời trong thời hạn, nên yêu cầu đã đóng. Bạn có thể chọn xe khác."
   },
@@ -169,8 +169,8 @@
     "ariaPending": "Tiến trình chuyến: đã nhận xe, chưa hoàn thành",
     "confirmed": "Đã nhận xe",
     "completed": "Hoàn thành",
-    "srDone": " — đã xong",
-    "srTodo": " — chưa hoàn thành"
+    "srDone": " - đã xong",
+    "srTodo": " - chưa hoàn thành"
   },
   "actions": {
     "title": "Cần hỗ trợ cho chuyến này?",
@@ -207,7 +207,7 @@
     "confirm": "Xác nhận hủy",
     "keep": "Quay lại",
     "preview": {
-      "error": "Chưa xem trước được số tiền được hoàn. Bạn vẫn có thể huỷ — số hoàn được tính theo chính sách huỷ & hoàn tiền tại thời điểm bấm.",
+      "error": "Chưa xem trước được số tiền được hoàn. Bạn vẫn có thể huỷ - số hoàn được tính theo chính sách huỷ & hoàn tiền tại thời điểm bấm.",
       "lateTitle": "Đã qua thời gian huỷ miễn phí",
       "noFreeCancelTitle": "Chuyến này không có thời gian huỷ miễn phí",
       "paid": "Tiền giữ chỗ đã chuyển",
@@ -215,7 +215,7 @@
       "forfeit": "Không được hoàn",
       "lateBody": "Tiền bảo hiểm {insurance} được hoàn đủ vì bảo hiểm chưa được phát hành. Phần còn lại của tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
       "lateBodyNoInsurance": "Tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
-      "deferred": "Chuyến đang có khiếu nại chưa xử lý xong — XePrime sẽ chốt khoản này sau khi có kết luận.",
+      "deferred": "Chuyến đang có khiếu nại chưa xử lý xong - XePrime sẽ chốt khoản này sau khi có kết luận.",
       "notAllowedTitle": "Chuyến này không huỷ được nữa",
       "notAllowedBody": "Chuyến đã bắt đầu hoặc đã kết thúc. Nếu muốn trả xe sớm, hãy liên hệ chủ xe để bàn giao và quyết toán.",
       "driverIncident": "Huỷ do sự cố tài xế: bạn được hoàn 100% tiền giữ chỗ, không mất phí huỷ."
@@ -254,7 +254,7 @@
     "depositDeducted": "Khấu trừ phụ phí",
     "refundActual": "Số tiền thực hoàn",
     "refundExpected": "Dự kiến hoàn lại",
-    "deductNote": "Phần khấu trừ nằm trong tổng thanh toán ở trên — đây là cách bạn đã trả cho khoản phụ phí đó, không phải một khoản bị trừ thêm.",
+    "deductNote": "Phần khấu trừ nằm trong tổng thanh toán ở trên - đây là cách bạn đã trả cho khoản phụ phí đó, không phải một khoản bị trừ thêm.",
     "refundedBy": "Đã hoàn bằng {method}",
     "refundMethodOther": "phương thức khác",
     "refundedAt": " ngày {date}",
@@ -327,7 +327,7 @@
     "expired": "Hết hạn thanh toán tiền giữ chỗ nên xe đã được mở lại cho khách khác. Bạn có thể đặt lại chuyến khác.",
     "refundPaid": "XePrime đã hoàn {amount} về tài khoản bạn khai.",
     "refundPending": "Đang chờ XePrime chuyển trả {amount}.",
-    "refundNeedsAccount": "Có {amount} chờ hoàn — khai tài khoản nhận để XePrime chuyển trả.",
+    "refundNeedsAccount": "Có {amount} chờ hoàn - khai tài khoản nhận để XePrime chuyển trả.",
     "countdownRemaining": "Còn lại để thanh toán:",
     "countdownSegment": "giờ {index}/{total}",
     "countdownExpired": "Đã hết hạn thanh toán",
@@ -335,12 +335,12 @@
     "freeCancelCountdownExpired": "Đã hết thời gian huỷ miễn phí",
     "freeCancelSoon": "Thời gian huỷ miễn phí tính từ lúc thanh toán thành công: nếu thanh toán ngay bây giờ, huỷ trước {time} được hoàn 100% số đã thanh toán.",
     "qrCaption": "Quét mã để chuyển khoản",
-    "vsDepositHint": "Tiền giữ chỗ chuyển cho XePrime để chốt chuyến và được trừ vào tiền thuê. Khác với cọc thế chấp — khoản bạn đặt lại cho chủ xe lúc nhận xe và lấy về khi trả xe nguyên vẹn.",
+    "vsDepositHint": "Tiền giữ chỗ chuyển cho XePrime để chốt chuyến và được trừ vào tiền thuê. Khác với cọc thế chấp - khoản bạn đặt lại cho chủ xe lúc nhận xe và lấy về khi trả xe nguyên vẹn.",
     "vsDepositHintLabel": "Tiền giữ chỗ khác cọc thế chấp thế nào",
     "codeHint": "Nội dung chuyển khoản là thứ giúp hệ thống khớp tiền vào đúng chuyến của bạn. Quét mã QR thì nó được điền sẵn; chuyển tay thì phải giữ nguyên từng ký tự.",
     "codeHintLabel": "Vì sao phải giữ đúng nội dung chuyển khoản",
     "checking": "Đang đối soát khoản chuyển của bạn",
-    "checkingBody": "Ngân hàng báo về XePrime thường trong vài phút. Trang này tự cập nhật khi tiền về — bạn không cần chuyển lại.",
+    "checkingBody": "Ngân hàng báo về XePrime thường trong vài phút. Trang này tự cập nhật khi tiền về - bạn không cần chuyển lại.",
     "declarePaid": "Tôi đã chuyển khoản",
     "qrFailed": "Không tải được mã QR. Dùng thông tin bên cạnh để chuyển khoản thủ công.",
     "qrUnavailable": "Chưa dựng được mã QR cho khoản này. Dùng số tiền và nội dung bên cạnh để chuyển khoản.",
@@ -349,7 +349,7 @@
     "lateCancelNoRefund": "Huỷ sau mốc này thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
     "noFreeCancelRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán: tiền bảo hiểm {amount} được hoàn đủ vào Ví điểm; phí đặt xe và phần tiền thuê trả trước không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
     "noFreeCancelNoRefund": "Chuyến này không có thời gian huỷ miễn phí. Huỷ sau khi thanh toán thì tiền giữ chỗ không được hoàn (chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime).",
-    "freeCancelFromPayment": "Huỷ miễn phí trong {duration} kể từ lúc thanh toán thành công — huỷ trong khoảng đó được hoàn 100% số đã thanh toán.",
+    "freeCancelFromPayment": "Huỷ miễn phí trong {duration} kể từ lúc thanh toán thành công - huỷ trong khoảng đó được hoàn 100% số đã thanh toán.",
     "freeCancelFromPaymentShort": "Huỷ miễn phí: {duration} kể từ lúc thanh toán thành công"
   },
   "sides": {
@@ -397,7 +397,7 @@
   },
   "hostList": {
     "heading": "Chuyến cho thuê",
-    "sub": "Yêu cầu và đơn thuê trên xe của bạn — duyệt, theo dõi và bàn giao ở cùng một nơi.",
+    "sub": "Yêu cầu và đơn thuê trên xe của bạn - duyệt, theo dõi và bàn giao ở cùng một nơi.",
     "emptyCurrentTitle": "Chưa có chuyến nào đang diễn ra",
     "emptyCurrentBody": "Khi khách gửi yêu cầu thuê xe của bạn, chuyến sẽ hiện ở đây để bạn duyệt.",
     "viewVehicles": "Xem xe của tôi",
@@ -469,9 +469,9 @@
     "pay": "Thanh toán",
     "payAria": "Thanh toán chuyến {vehicle}",
     "reminderTitle": "{count, plural, other {Bạn có # chuyến chờ thanh toán}}",
-    "reminderBody": "Thanh toán trước khi hết giờ để giữ xe — chuyến chưa thanh toán sẽ tự huỷ khi hết thời gian giữ chỗ.",
+    "reminderBody": "Thanh toán trước khi hết giờ để giữ xe - chuyến chưa thanh toán sẽ tự huỷ khi hết thời gian giữ chỗ.",
     "limitTitle": "Bạn đã giữ tối đa {limit} chuyến chưa thanh toán",
-    "limitBody": "Bạn chưa thể đặt thêm xe. Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc — thanh toán hoặc huỷ bớt một chuyến để tiếp tục đặt.",
+    "limitBody": "Bạn chưa thể đặt thêm xe. Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc - thanh toán hoặc huỷ bớt một chuyến để tiếp tục đặt.",
     "limitBodyBooking": "Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc. Thanh toán hoặc huỷ bớt một chuyến bên dưới, rồi quay lại đặt xe này.",
     "limitTitleFallback": "Bạn đang có quá nhiều chuyến chờ thanh toán",
     "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến đi, rồi quay lại đặt xe này.",
@@ -503,10 +503,10 @@
     "costs": {
       "holdTag": "Chưa cần thanh toán"
     },
-    "policyBody": "Bạn có thể huỷ yêu cầu trong lúc chủ xe chưa phản hồi — chưa có khoản tiền nào được thu. Xem chính sách huỷ & hoàn tiền để biết điều kiện ở các bước sau.",
+    "policyBody": "Bạn có thể huỷ yêu cầu trong lúc chủ xe chưa phản hồi - chưa có khoản tiền nào được thu. Xem chính sách huỷ & hoàn tiền để biết điều kiện ở các bước sau.",
     "page": {
       "title": "Đã gửi yêu cầu thuê xe",
-      "description": "Theo dõi phản hồi của chủ xe tại đây — chưa có khoản nào cần thanh toán."
+      "description": "Theo dõi phản hồi của chủ xe tại đây - chưa có khoản nào cần thanh toán."
     }
   },
   "awaitingHold": {
@@ -660,12 +660,12 @@
   },
   "extension": {
     "title": "Gia hạn chuyến",
-    "pendingLead": "Chủ xe gia hạn thêm {months} tháng — trả xe mới {date}. Chuyển khoản phần giữ chỗ để gia hạn có hiệu lực.",
+    "pendingLead": "Chủ xe gia hạn thêm {months} tháng - trả xe mới {date}. Chuyển khoản phần giữ chỗ để gia hạn có hiệu lực.",
     "rental": "Tiền thuê phần gia hạn",
     "online": "Chuyển qua XePrime",
     "direct": "Trả trực tiếp chủ xe",
     "deadline": "Hạn thanh toán {time}. Quá hạn, gia hạn tự huỷ và giờ trả xe giữ nguyên.",
-    "activated": "Đã gia hạn thêm {months} tháng — trả xe mới {date}"
+    "activated": "Đã gia hạn thêm {months} tháng - trả xe mới {date}"
   },
   "handoverWord": {
     "keep": "Quay lại",
@@ -673,21 +673,21 @@
     "reportedBody": "Chủ xe đang xác nhận nhận lại xe. Nếu chủ xe không phản hồi, chuyến tự hoàn thành lúc {deadline}.",
     "pickup": {
       "title": "Bạn đã nhận được xe?",
-      "lead": "Xác nhận khi đã cầm chìa khoá — chuyến chuyển sang đang thuê ngay, không cần chờ chủ xe.",
+      "lead": "Xác nhận khi đã cầm chìa khoá - chuyến chuyển sang đang thuê ngay, không cần chờ chủ xe.",
       "action": "Đã nhận xe",
       "dialogTitle": "Xác nhận đã nhận xe?",
       "dialogBody": "Chuyến sẽ chuyển sang đang thuê từ bây giờ. Hãy kiểm tra xe cùng chủ xe và chụp ảnh hiện trạng trước khi đi.",
       "confirm": "Đã nhận xe",
-      "success": "Đã xác nhận nhận xe — chúc bạn thượng lộ bình an"
+      "success": "Đã xác nhận nhận xe - chúc bạn thượng lộ bình an"
     },
     "return": {
       "title": "Bạn đã trả xe?",
       "lead": "Báo khi đã giao lại xe và chìa khoá cho chủ xe. Chủ xe xác nhận trong 24 giờ; nếu không, chuyến tự hoàn thành.",
       "action": "Đã trả xe",
       "dialogTitle": "Báo đã trả xe?",
-      "dialogBody": "Chủ xe sẽ được báo để xác nhận nhận lại xe. Chỉ báo khi xe và chìa khoá đã ở chỗ chủ xe — báo sai sẽ được XePrime xác minh.",
+      "dialogBody": "Chủ xe sẽ được báo để xác nhận nhận lại xe. Chỉ báo khi xe và chìa khoá đã ở chỗ chủ xe - báo sai sẽ được XePrime xác minh.",
       "confirm": "Đã trả xe",
-      "success": "Đã báo trả xe — chủ xe sẽ xác nhận"
+      "success": "Đã báo trả xe - chủ xe sẽ xác nhận"
     }
   }
 }

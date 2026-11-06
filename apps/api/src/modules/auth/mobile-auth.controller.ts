@@ -180,7 +180,7 @@ export class MobileAuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle(THROTTLE_PER_MINUTE.SOCIAL)
   @ApiOperation({
-    summary: 'Native iOS: đăng nhập bằng Apple — đổi identityToken lấy access + refresh token',
+    summary: 'Native iOS: đăng nhập bằng Apple - đổi identityToken lấy access + refresh token',
   })
   @ApiOkResponse({ type: MobileSessionDto })
   async appleLogin(@Body() dto: MobileAppleLoginDto): Promise<MobileSessionDto> {

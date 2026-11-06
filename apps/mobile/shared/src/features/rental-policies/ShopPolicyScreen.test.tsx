@@ -102,7 +102,7 @@ async function renderScreen(permissions: Permission[], data: ShopRentalPolicy = 
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('ShopPolicyScreen — quyền', () => {
+describe('ShopPolicyScreen - quyền', () => {
   it('thiếu `tenant.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const view = await renderScreen([PERMISSION.VEHICLE_VIEW]);
 
@@ -118,7 +118,7 @@ describe('ShopPolicyScreen — quyền', () => {
   });
 });
 
-describe('ShopPolicyScreen — chính sách theo LOẠI XE', () => {
+describe('ShopPolicyScreen - chính sách theo LOẠI XE', () => {
   it('mở màn: hỏi chính sách của Ô TÔ trước', async () => {
     const view = await renderScreen([PERMISSION.TENANT_VIEW]);
 
@@ -150,7 +150,7 @@ describe('ShopPolicyScreen — chính sách theo LOẠI XE', () => {
   });
 });
 
-describe('ShopPolicyScreen — lưu', () => {
+describe('ShopPolicyScreen - lưu', () => {
   const editor: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
   it('chưa sửa gì: nút Lưu bị khoá', async () => {
@@ -205,8 +205,8 @@ describe('ShopPolicyScreen — lưu', () => {
   });
 });
 
-describe('ShopPolicyScreen — mốc ưu đãi CŨ theo ngày', () => {
-  it('nói ra và KHÔNG tự quy đổi — quy đổi ngầm là đổi giá bán sau lưng chủ xe', async () => {
+describe('ShopPolicyScreen - mốc ưu đãi CŨ theo ngày', () => {
+  it('nói ra và KHÔNG tự quy đổi - quy đổi ngầm là đổi giá bán sau lưng chủ xe', async () => {
     const data = policy();
     const view = await renderScreen([PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE], {
       ...data,

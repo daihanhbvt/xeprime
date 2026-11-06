@@ -92,10 +92,10 @@ export class HandoverDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)',
+    description: 'ISO - khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)',
   })
   occurredAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — khi được GHI NHẬN' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - khi được GHI NHẬN' })
   confirmedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
   @ApiProperty({
@@ -109,7 +109,7 @@ export class HandoverDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   canceledAt!: string | null;
 
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi lưu/xác nhận' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi lưu/xác nhận' })
   rowVersion!: number;
   @ApiProperty({ description: 'ISO' }) updatedAt!: string;
 }
@@ -138,7 +138,7 @@ export class HandoverContextDto {
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
   @ApiProperty({
     description:
-      '@xeprime/types → VehicleType — quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải',
+      '@xeprime/types → VehicleType - quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải',
   })
   vehicleType!: string;
   @ApiProperty({ description: '@xeprime/types → HandoverEnergyKind' }) energyKind!: string;
@@ -156,7 +156,7 @@ export class HandoverContextDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận',
+    description: 'KM hiện tại của xe theo hệ thống - null = chưa từng ghi nhận',
   })
   vehicleOdometerKm!: number | null;
   /** KM chốt ở biên bản giao xe đã xác nhận — mốc sàn mà KM trả phải vượt qua. */
@@ -197,16 +197,16 @@ export class MissingOdometerItemDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
-  @ApiProperty({ description: 'ISO — thời điểm biên bản được xác nhận' })
+  @ApiProperty({ description: 'ISO - thời điểm biên bản được xác nhận' })
   confirmedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số',
+    description: 'KM chốt lúc giao xe - mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số',
   })
   pickupOdometerKm!: number | null;
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi bổ sung KM' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi bổ sung KM' })
   rowVersion!: number;
 }
 
@@ -252,7 +252,7 @@ export class SaveHandoverDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}`,
+    description: `KM đọc trên đồng hồ, 0-${ODOMETER_MAX_KM}`,
   })
   @IsOptional()
   @Type(() => Number)
@@ -266,7 +266,7 @@ export class SaveHandoverDto {
   @IsIn([...FUEL_LEVEL_VALUES, null])
   fuelLevel?: string | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, description: '% pin xe điện (0–100)' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: '% pin xe điện (0-100)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -318,7 +318,7 @@ export class SaveHandoverDto {
  * — người dùng không bao giờ ghi nhận đã thu một số mình chưa nhìn thấy.
  */
 export class ReturnCollectPaymentDto {
-  @ApiProperty({ description: 'VND (chuỗi — ADR 0007) — đúng số khách còn phải trả' })
+  @ApiProperty({ description: 'VND (chuỗi - ADR 0007) - đúng số khách còn phải trả' })
   @Matches(/^\d{1,12}(\.\d{1,2})?$/, { message: 'Số tiền không hợp lệ (số VND không âm)' })
   amount!: string;
 
@@ -370,7 +370,7 @@ export class ConfirmHandoverDto {
    * trước; thiếu thì chuyến vẫn hoàn tất, KM của xe không bị đụng và chiều trả sinh việc
    * `Thiếu KM trả`.
    */
-  @ApiPropertyOptional({ type: Number, nullable: true, description: `0–${ODOMETER_MAX_KM}` })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: `0-${ODOMETER_MAX_KM}` })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -445,7 +445,7 @@ export class PresignHandoverPhotoDto {
   @MaxLength(255)
   fileName!: string;
 
-  @ApiProperty({ enum: IMAGE_UPLOAD_MIME_TYPES, description: 'Chỉ ảnh — không nhận PDF' })
+  @ApiProperty({ enum: IMAGE_UPLOAD_MIME_TYPES, description: 'Chỉ ảnh - không nhận PDF' })
   @IsIn(IMAGE_UPLOAD_MIME_TYPES)
   contentType!: string;
 
@@ -477,7 +477,7 @@ export class AttachHandoverPhotoDto {
  * Lý do bắt buộc, giảm KM cần quyền cao hơn + xác nhận, mọi lần đều để lại audit.
  */
 export class ResolveHandoverOdometerDto {
-  @ApiProperty({ description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}` })
+  @ApiProperty({ description: `KM đọc trên đồng hồ, 0-${ODOMETER_MAX_KM}` })
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -488,7 +488,7 @@ export class ResolveHandoverOdometerDto {
   @IsIn(ODOMETER_CORRECTION_REASON_VALUES)
   reasonCode!: string;
 
-  @ApiProperty({ description: 'Lý do chi tiết — bắt buộc' })
+  @ApiProperty({ description: 'Lý do chi tiết - bắt buộc' })
   @IsString()
   @MaxLength(1000)
   reason!: string;
@@ -498,7 +498,7 @@ export class ResolveHandoverOdometerDto {
   @IsBoolean()
   confirmDecrease?: boolean;
 
-  @ApiProperty({ description: 'Bắt buộc — chống sửa đè' })
+  @ApiProperty({ description: 'Bắt buộc - chống sửa đè' })
   @Type(() => Number)
   @IsInt()
   @Min(1)

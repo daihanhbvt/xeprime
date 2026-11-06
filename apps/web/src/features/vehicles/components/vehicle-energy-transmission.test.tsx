@@ -55,7 +55,7 @@ const form = () => {
 const transmission = () => form().getValues('transmission');
 const select = () => document.querySelector('.ant-select') as HTMLElement;
 
-describe('VehicleEnergyFields — hộp số theo nguồn năng lượng', () => {
+describe('VehicleEnergyFields - hộp số theo nguồn năng lượng', () => {
   it('Xăng (AT) → Điện: tự thành 1 cấp (EV), ô khoá, có câu giải thích', async () => {
     render(
       <Harness

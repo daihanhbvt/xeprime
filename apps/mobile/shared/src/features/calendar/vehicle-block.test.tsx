@@ -115,8 +115,8 @@ beforeEach(() => {
   jest.spyOn(bookingsApi, 'checkConflict').mockResolvedValue({ hasConflict: false, conflicts: [] });
 });
 
-describe('CAL-02 — tạo lịch khoá', () => {
-  it('không dựng gì khi đóng — bộ khởi tạo của form đọc ngày, không có state thì không có ngày', async () => {
+describe('CAL-02 - tạo lịch khoá', () => {
+  it('không dựng gì khi đóng - bộ khởi tạo của form đọc ngày, không có state thì không có ngày', async () => {
     const view = await render(wrap(<VehicleBlockSheet state={null} onClose={jest.fn()} />));
     expect(view.queryByText('Khóa xe')).toBeNull();
   });
@@ -154,7 +154,7 @@ describe('CAL-02 — tạo lịch khoá', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it('hỏi PRE-CHECK trùng lịch trên đúng khoảng sắp ghi — cùng hai mốc gửi lên khi lưu', async () => {
+  it('hỏi PRE-CHECK trùng lịch trên đúng khoảng sắp ghi - cùng hai mốc gửi lên khi lưu', async () => {
     jest.spyOn(calendarApi, 'createBlock').mockResolvedValue(block());
 
     await render(
@@ -210,7 +210,7 @@ describe('CAL-02 — tạo lịch khoá', () => {
   });
 });
 
-describe('CAL-03 — 409 trùng lịch từ backend', () => {
+describe('CAL-03 - 409 trùng lịch từ backend', () => {
   it('hiện thông điệp nghiệp vụ tại chỗ và GIỮ form để người dùng đổi giờ', async () => {
     const create = jest.spyOn(calendarApi, 'createBlock').mockRejectedValue(conflictError());
     const onClose = jest.fn();
@@ -265,8 +265,8 @@ describe('CAL-03 — 409 trùng lịch từ backend', () => {
   });
 });
 
-describe('CAL-02 — sửa lịch khoá', () => {
-  it('gửi `expectedRowVersion` đang hiển thị — optimistic concurrency, không ghi đè âm thầm', async () => {
+describe('CAL-02 - sửa lịch khoá', () => {
+  it('gửi `expectedRowVersion` đang hiển thị - optimistic concurrency, không ghi đè âm thầm', async () => {
     const update = jest.spyOn(calendarApi, 'updateBlock').mockResolvedValue(block({ rowVersion: 4 }));
 
     const view = await render(
@@ -281,7 +281,7 @@ describe('CAL-02 — sửa lịch khoá', () => {
     expect(update.mock.calls[0]![1]).toMatchObject({ expectedRowVersion: 3 });
   });
 
-  it('sửa thì pre-check BỎ QUA chính khoá đang sửa — nếu không nó tự báo trùng với bản thân', async () => {
+  it('sửa thì pre-check BỎ QUA chính khoá đang sửa - nếu không nó tự báo trùng với bản thân', async () => {
     jest.spyOn(calendarApi, 'updateBlock').mockResolvedValue(block());
 
     await render(
@@ -324,7 +324,7 @@ describe('CAL-02 — sửa lịch khoá', () => {
   });
 });
 
-describe('CAL-02 — chi tiết & gỡ khoá', () => {
+describe('CAL-02 - chi tiết & gỡ khoá', () => {
   it('gỡ khoá là hành động PHÁ: luôn qua xác nhận, không gọi API ngay', async () => {
     jest.spyOn(calendarApi, 'block').mockResolvedValue(block());
     const remove = jest.spyOn(calendarApi, 'deleteBlock').mockResolvedValue(undefined);
@@ -394,7 +394,7 @@ describe('CAL-02 — chi tiết & gỡ khoá', () => {
     expect(view.queryByText('Sửa')).toBeNull();
   });
 
-  it('404 (khoá vừa bị gỡ ở thiết bị khác) là CÂU TRẢ LỜI, không phải lỗi tạm — không thử lại', async () => {
+  it('404 (khoá vừa bị gỡ ở thiết bị khác) là CÂU TRẢ LỜI, không phải lỗi tạm - không thử lại', async () => {
     const fetchBlock = jest
       .spyOn(calendarApi, 'block')
       .mockRejectedValue(new ApiClientError({ status: 404, code: 'NOT_FOUND', message: 'Không tìm thấy' }));

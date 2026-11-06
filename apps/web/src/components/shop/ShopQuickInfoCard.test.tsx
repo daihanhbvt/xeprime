@@ -34,7 +34,7 @@ const INSUFFICIENT_METRICS: HostMetricsShape = {
 
 afterEach(cleanup);
 
-describe('ShopQuickInfoCard — variant="full"', () => {
+describe('ShopQuickInfoCard - variant="full"', () => {
   it('hiện tên, dấu xác thực, vị trí, giới thiệu, rating + số chuyến làm tròn của GIAN HÀNG', () => {
     renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} />);
 
@@ -112,8 +112,8 @@ describe('ShopQuickInfoCard — variant="full"', () => {
   });
 });
 
-describe('ShopQuickInfoCard — variant="compact"', () => {
-  it('bỏ giới thiệu, ba chỉ số và dòng "Chủ xe … sao" — chỉ giữ danh tính + rating/số chuyến', () => {
+describe('ShopQuickInfoCard - variant="compact"', () => {
+  it('bỏ giới thiệu, ba chỉ số và dòng "Chủ xe … sao" - chỉ giữ danh tính + rating/số chuyến', () => {
     renderWithIntl(
       <ShopQuickInfoCard shop={SHOP} metrics={READY_GOOD_METRICS} variant="compact" />,
     );
@@ -139,7 +139,7 @@ describe('ShopQuickInfoCard — variant="compact"', () => {
   });
 });
 
-describe('ShopQuickInfoCard — variant="inline" (trang chi tiết xe)', () => {
+describe('ShopQuickInfoCard - variant="inline" (trang chi tiết xe)', () => {
   it('chưa đủ mẫu: nói "chưa có yêu cầu", KHÔNG vẽ ba con số mẫu của bản vẽ (ADR 0045 điều 3)', () => {
     renderWithIntl(
       <ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} variant="inline" />,

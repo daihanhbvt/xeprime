@@ -43,6 +43,12 @@ export const FONT_FAMILY = {
 } as const;
 
 /**
+ * Font còn được NHÚNG vào bản build qua config plugin `expo-font` (`app.json` của hai app). Lý do:
+ * chỉ nạp lúc chạy thì Android đo ô chữ bằng font hệ thống ở khung hình đầu và KHÔNG đo lại khi
+ * Be Vietnam Pro (rộng hơn) về — nhãn tab mất chữ, nút "Đăng nhập" cụt thành "Đăng", reload mới
+ * hết. Nhúng sẵn thì Android có font từ khung hình đầu (họ chữ = tên file, khớp `FONT_FAMILY`).
+ * iOS đăng ký font nhúng theo tên PostScript nên VẪN cần lượt nạp dưới đây cho các bí danh này.
+ *
  * Nạp font ở root. KHÔNG chặn render: chưa nạp xong thì React Native rơi về font hệ thống, chữ
  * hiện ngay rồi đổi mặt khi font sẵn sàng.
  *

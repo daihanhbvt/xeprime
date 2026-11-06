@@ -47,7 +47,7 @@ async function bootstrap(): Promise<void> {
       `OTP: ${config.getOrThrow<string>('OTP_MODE')}` +
         (config.getOrThrow<string>('OTP_MODE') === 'esms'
           ? ''
-          : ' (KHÔNG gửi SMS — mã in ra log và trả trong response)'),
+          : ' (KHÔNG gửi SMS - mã in ra log và trả trong response)'),
       config.get<string>('SMTP_HOST') ? 'SMTP: đã cấu hình' : 'SMTP: TRỐNG (email in ra log)',
       config.get<string>('R2_BUCKET') ? 'R2: đã cấu hình' : 'R2: TRỐNG (upload trả 503)',
       config.get<string>('VIETMAP_API_KEY')
@@ -57,7 +57,7 @@ async function bootstrap(): Promise<void> {
     console.warn(
       [
         '',
-        `⚠  APP_ENV=${appEnv} — KHÔNG phải production. Đang chạy suy giảm:`,
+        `⚠  APP_ENV=${appEnv} - KHÔNG phải production. Đang chạy suy giảm:`,
         ...degraded.map((line) => `   • ${line}`),
         '',
       ].join('\n'),

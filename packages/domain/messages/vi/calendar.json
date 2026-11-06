@@ -42,7 +42,7 @@
     "loadFailed": "Không tải được lịch",
     "retry": "Thử lại",
     "noEventsInRange": "Chưa có lịch trong khoảng này.",
-    "noEventsInRangeActionable": "Chưa có lịch trong khoảng này — chọn ngày trống để tạo lịch.",
+    "noEventsInRangeActionable": "Chưa có lịch trong khoảng này - chọn ngày trống để tạo lịch.",
     "noVehiclesTitle": "Chưa có xe nào",
     "noVehiclesDescription": "Thêm xe vào gian hàng để bắt đầu xếp lịch.",
     "noMatchTitle": "Không có xe nào khớp bộ lọc",
@@ -98,7 +98,7 @@
     "conflictTitle": "Xe đã bận trong khoảng này",
     "conflictDescription": "Đổi thời gian, hoặc xử lý đơn/lịch đang chiếm chỗ trước.",
     "previewConflictTitle": "Xe có thể đã bận khoảng này",
-    "previewConflictDescription": "Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu.",
+    "previewConflictDescription": "Cảnh báo sớm - hệ thống vẫn kiểm tra lại khi lưu.",
     "vehicle": "Xe",
     "period": "Thời gian khoá",
     "periodAriaLabel": "Thời gian khoá xe",
@@ -120,7 +120,7 @@
   "blockDetail": {
     "title": "Lịch khoá xe",
     "notFoundTitle": "Không tìm thấy lịch khoá",
-    "notFoundDescription": "Lịch khoá có thể vừa được gỡ — lưới lịch sẽ tự cập nhật.",
+    "notFoundDescription": "Lịch khoá có thể vừa được gỡ - lưới lịch sẽ tự cập nhật.",
     "vehicle": "Xe",
     "period": "Thời gian",
     "periodValue": "{start} → {end}",
@@ -158,7 +158,7 @@
       "priceRequired": "Nhập ít nhất một giá (theo ngày hoặc theo giờ)"
     },
     "confirmRestoreTitle": "Khôi phục giá mặc định?",
-    "confirmRestoreContent": "Xoá giá riêng của {vehicle} trong khoảng {from} – {to}. Giá thường/cuối tuần sẽ áp trở lại.",
+    "confirmRestoreContent": "Xoá giá riêng của {vehicle} trong khoảng {from} - {to}. Giá thường/cuối tuần sẽ áp trở lại.",
     "confirmRestoreOk": "Khôi phục",
     "restored": "Đã khôi phục giá mặc định ({count, plural, other {# ngày}})",
     "restoredNone": "Không có giá riêng nào trong khoảng này"
@@ -167,7 +167,7 @@
     "title": "Lịch bảo dưỡng",
     "forbiddenTitle": "Không có quyền xem bảo dưỡng",
     "notFoundTitle": "Không tìm thấy phiếu bảo dưỡng",
-    "notFoundDescription": "Phiếu có thể vừa bị hủy — lưới lịch sẽ tự cập nhật.",
+    "notFoundDescription": "Phiếu có thể vừa bị hủy - lưới lịch sẽ tự cập nhật.",
     "vehicle": "Xe",
     "type": "Hạng mục",
     "recordTitle": "Tiêu đề",
@@ -194,7 +194,7 @@
   "dayPanel": {
     "heading": "{weekday}, {date}",
     "trigger": "Thao tác cho ngày {date}",
-    "triggerHoliday": "Ngày lễ: {name}, ngày {date} — mở thao tác cho ngày này",
+    "triggerHoliday": "Ngày lễ: {name}, ngày {date} - mở thao tác cho ngày này",
     "blockAll": "Khóa xe nhanh",
     "priceAll": "Giá riêng toàn bộ xe",
     "priceAllHint": "Đặt giá riêng cho tất cả xe trong ngày",
@@ -210,7 +210,7 @@
     "modeSingle": "Ngày {date}",
     "modeRange": "Chọn nhiều ngày",
     "range": "Khoảng ngày",
-    "holidayRangeHint": "Gợi ý theo dịp lễ: {from} – {to}",
+    "holidayRangeHint": "Gợi ý theo dịp lễ: {from} - {to}",
     "reason": "Lý do",
     "note": "Ghi chú",
     "notePlaceholder": "Vd: Nghỉ lễ, không nhận đơn",
@@ -248,7 +248,7 @@
     "done": "Đã đặt giá {vehicles, plural, other {# xe}} · {days, plural, other {# lượt ngày}}",
     "restore": "Khôi phục giá mặc định",
     "confirmRestoreTitle": "Khôi phục giá mặc định?",
-    "confirmRestoreContent": "Xoá giá riêng của {count, plural, other {# xe}} trong khoảng {from} – {to}. Giá thường/cuối tuần sẽ áp trở lại.",
+    "confirmRestoreContent": "Xoá giá riêng của {count, plural, other {# xe}} trong khoảng {from} - {to}. Giá thường/cuối tuần sẽ áp trở lại.",
     "restored": "Đã khôi phục {count, plural, other {# lượt ngày}}",
     "tableMore": "…và {count, plural, other {# xe khác}}"
   }

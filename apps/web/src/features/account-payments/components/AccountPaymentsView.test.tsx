@@ -82,7 +82,7 @@ beforeEach(() => {
   cancelWithdrawal.mutate.mockReset();
 });
 
-describe('AccountPaymentsView — dòng giao dịch', () => {
+describe('AccountPaymentsView - dòng giao dịch', () => {
   it('tiền đi mang dấu "-", tiền về mang dấu "+", kèm nhãn trạng thái', () => {
     query.data = page([
       row(),
@@ -145,7 +145,7 @@ describe('AccountPaymentsView — dòng giao dịch', () => {
   });
 });
 
-describe('AccountPaymentsView — bộ lọc trên URL', () => {
+describe('AccountPaymentsView - bộ lọc trên URL', () => {
   it('đọc trạng thái, khoảng ngày và trang từ URL rồi gửi xuống server', () => {
     nav.params = new URLSearchParams('status=pending&from=2026-10-01&to=2026-10-27&page=3');
     query.data = page([row()]);
@@ -182,7 +182,7 @@ describe('AccountPaymentsView — bộ lọc trên URL', () => {
   });
 });
 
-describe('AccountPaymentsView — trạng thái màn', () => {
+describe('AccountPaymentsView - trạng thái màn', () => {
   it('chưa có giao dịch nào ⇒ lời giải thích, không phải lỗi', () => {
     query.data = page([]);
     renderView();

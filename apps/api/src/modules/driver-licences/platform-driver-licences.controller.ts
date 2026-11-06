@@ -26,7 +26,7 @@ export class PlatformDriverLicencesController {
   constructor(private readonly licences: DriverLicencesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lịch sử nộp bằng lái của một khách — mới nhất trước' })
+  @ApiOperation({ summary: 'Lịch sử nộp bằng lái của một khách - mới nhất trước' })
   @ApiOkResponse({ type: PlatformDriverLicencePageDto })
   list(@Query() query: PlatformDriverLicenceListQueryDto): Promise<PlatformDriverLicencePageDto> {
     return this.licences.listForPlatform(query) as Promise<PlatformDriverLicencePageDto>;
@@ -40,7 +40,7 @@ export class PlatformDriverLicencesController {
   }
 
   @Get(':id/image')
-  @ApiOperation({ summary: 'Mở ảnh bằng lái — URL sống ngắn, ghi audit mỗi lần mở' })
+  @ApiOperation({ summary: 'Mở ảnh bằng lái - URL sống ngắn, ghi audit mỗi lần mở' })
   @ApiOkResponse({ type: DriverLicenceImageDto })
   image(
     @Param('id') id: string,

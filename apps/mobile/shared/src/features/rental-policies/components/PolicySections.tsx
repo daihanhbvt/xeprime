@@ -711,15 +711,15 @@ function DeliverySection({
               <GroupLabel label={t('tiers')} hint={t('fromKmTip')} />
 
               {fields.map((row, index) => {
-                const from = index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '—'}`;
-                const to = tiers[index]?.toKm ?? '—';
+                const from = index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '-'}`;
+                const to = tiers[index]?.toKm ?? '-';
                 return (
                   <TierCard
                     key={row.id}
                     tone={TONE.delivery}
                     index={index}
                     title={t('tierName', { index: index + 1 })}
-                    badge={`${from} – ${to} ${t('unitKm')}`}
+                    badge={`${from} - ${to} ${t('unitKm')}`}
                     removeLabel={t('removeTierAt', { index: index + 1 })}
                     disabled={disabled}
                     onRemove={() => remove(index)}

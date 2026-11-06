@@ -83,7 +83,7 @@ afterEach(cleanup);
  */
 const renderHeader = async (value: PublicShop) => render(await ShopHeader({ shop: value }));
 
-describe('ShopHeader — mặt tiền gian hàng (tuyến gói)', () => {
+describe('ShopHeader - mặt tiền gian hàng (tuyến gói)', () => {
   it('có ảnh bìa, dấu xác thực, nhãn "Chủ gian hàng" và các điểm nổi bật ĐẾM ĐƯỢC', async () => {
     await renderHeader(
       shop({
@@ -131,7 +131,7 @@ describe('ShopHeader — mặt tiền gian hàng (tuyến gói)', () => {
  * ADR 0040 điều 5: trả tiền gói KHÔNG làm gian hàng thành "đã xác minh". Dấu xanh trên logo là dấu
  * gian hàng tuyến gói (cùng dấu ở thẻ xe); chip "Đã xác minh" chỉ có khi phiếu duyệt đã được duyệt.
  */
-describe('ShopHeader — chip "Đã xác minh" đọc phiếu duyệt, không đọc tuyến gói', () => {
+describe('ShopHeader - chip "Đã xác minh" đọc phiếu duyệt, không đọc tuyến gói', () => {
   it('gian hàng tuyến gói chưa được duyệt hồ sơ: có dấu logo, KHÔNG có chip', async () => {
     await renderHeader(shop({ storefrontKind: STOREFRONT_KIND.SHOP, verified: true }));
 
@@ -140,7 +140,7 @@ describe('ShopHeader — chip "Đã xác minh" đọc phiếu duyệt, không đ
   });
 });
 
-describe('ShopHeader — mặt tiền chủ xe cá nhân', () => {
+describe('ShopHeader - mặt tiền chủ xe cá nhân', () => {
   it('không dấu xác thực, không ảnh bìa, không ô chi nhánh', async () => {
     await renderHeader(shop({ coverUrl: 'https://img.example/cover.jpg' }));
 
@@ -154,7 +154,7 @@ describe('ShopHeader — mặt tiền chủ xe cá nhân', () => {
   });
 });
 
-describe('ShopHeader — giới thiệu và số liệu', () => {
+describe('ShopHeader - giới thiệu và số liệu', () => {
   it('có giới thiệu thì hiện khối "Thông tin" kèm địa chỉ; không có thì không dựng khối', async () => {
     await renderHeader(shop({ bio: 'Ba xe khu trung tâm.', address: '35 Lê Thánh Tôn' }));
     expect(screen.getByText('Thông tin')).toBeTruthy();
@@ -216,7 +216,7 @@ describe('ShopHeader — giới thiệu và số liệu', () => {
  * Số điện thoại KHÔNG được xuất hiện trên trang công khai, kể cả khi bản vẽ có — `PublicShopDto`
  * không trả nó. Bài dưới khoá điều đó ở tầng vẽ, vì đây là thứ rất dễ bị "tiện tay" thêm lại.
  */
-describe('ShopHeader — liên hệ', () => {
+describe('ShopHeader - liên hệ', () => {
   it('gian hàng mở hộp thư: có nút nhắn tin, KHÔNG có số điện thoại', async () => {
     await renderHeader(shop({ storefrontKind: STOREFRONT_KIND.SHOP, verified: true }));
 
@@ -226,7 +226,7 @@ describe('ShopHeader — liên hệ', () => {
   });
 });
 
-describe('ShopHeader — dữ liệu thiếu', () => {
+describe('ShopHeader - dữ liệu thiếu', () => {
   /*
    * Gian hàng chưa có xe công khai nào ⇒ `serviceProvinceNames` rỗng. Dòng địa bàn phải rơi về
    * tỉnh trong hồ sơ chứ không biến mất — một trang gian hàng không nói được mình ở đâu là một

@@ -134,7 +134,7 @@ describe('Xe phù hợp với bạn', () => {
     expect(lastQuery()).not.toHaveProperty('provinceCode');
   });
 
-  it('URL không có tỉnh thì dùng lựa chọn lượt trước — đúng chỗ trước đây rơi về toàn quốc', async () => {
+  it('URL không có tỉnh thì dùng lựa chọn lượt trước - đúng chỗ trước đây rơi về toàn quốc', async () => {
     window.localStorage.setItem(
       'xp.provinceCode',
       JSON.stringify({ provinceCode: '01', savedAt: new Date().toISOString() }),
@@ -165,7 +165,7 @@ describe('Xe phù hợp với bạn', () => {
     await renderPreview();
 
     expect(
-      await screen.findByText('Ưu tiên xe ở Hà Nội — chưa đủ nên có thêm xe tỉnh khác'),
+      await screen.findByText('Ưu tiên xe ở Hà Nội - chưa đủ nên có thêm xe tỉnh khác'),
     ).toBeTruthy();
   });
 
@@ -180,7 +180,7 @@ describe('Xe phù hợp với bạn', () => {
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('lỗi tải KHÔNG kéo đổ cả trang chủ — hiện cảnh báo gọn kèm lối sang trang tìm xe', async () => {
+  it('lỗi tải KHÔNG kéo đổ cả trang chủ - hiện cảnh báo gọn kèm lối sang trang tìm xe', async () => {
     api.request.mockRejectedValue(new Error('network'));
     await renderPreview();
 

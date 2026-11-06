@@ -221,7 +221,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/customers/[id] — hồ sơ khách', () => {
+describe('/manage/customers/[id] - hồ sơ khách', () => {
   it('hiện danh tính, SĐT bấm gọi được và liên kết tài khoản', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: /Nguyễn Văn An/ })).toBeTruthy();
@@ -300,7 +300,7 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
   });
 
-  it('"Tạo đơn thuê" đi tới LUỒNG ĐƠN ĐÃ CÓ kèm khách điền sẵn — không dựng form thứ hai', () => {
+  it('"Tạo đơn thuê" đi tới LUỒNG ĐƠN ĐÃ CÓ kèm khách điền sẵn - không dựng form thứ hai', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: /Tạo đơn thuê/ }));
     const target = nav.push.mock.calls.at(-1)?.[0] as string;

@@ -26,11 +26,15 @@
   display: flex;
   background: var(--xp-color-bg, #fafafa);
   border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
-  height: 50px;
+  min-height: 50px;
 }
 
+/* Chia bề ngang theo độ dài nhãn (không 3 phần bằng nhau); thiếu chỗ thì xuống dòng căn giữa. */
 .serviceTab {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,7 +47,7 @@
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
-  padding: 0 8px;
+  padding: 6px 8px;
 }
 
 .serviceTab:hover {
@@ -311,15 +315,6 @@
   margin-top: 1px;
 }
 
-/* 14/22 Light nghiêng `Text/Gray/low` — Light (300) chưa có token trọng lượng. */
-.addressNote {
-  margin: 0;
-  font-size: var(--xp-font-size-body);
-  font-weight: 300;
-  line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-tertiary, #717680);
-  font-style: italic;
-}
 
 /* Bảo hiểm chuyến đi MIC */
 .insuranceSection {
@@ -933,7 +928,7 @@
   }
 
   .serviceTab {
-    padding: 0 var(--xp-space-12);
+    padding: 6px var(--xp-space-12);
     border-radius: var(--xp-space-12) var(--xp-space-12) 0 0;
     font-size: var(--xp-font-size-body);
     line-height: var(--bk-line-height-14);
@@ -1074,4 +1069,11 @@
 :global([data-theme='dark']) .ctaBtnWrapper :global(.ant-btn),
 :global([data-theme='dark']) .routeBtnActive {
   box-shadow: none;
+}
+
+/* Nhãn + dấu "i" (InfoHint) cùng một hàng — ghi chú giải thích nằm trong tooltip. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

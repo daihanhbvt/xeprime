@@ -50,7 +50,7 @@ export function PartnerHeader({ user }: { user: CurrentUser }) {
   const { paths } = useWorkspace();
   const ownerProfile = isCommissionOwner(user);
 
-  const personName = user.displayName || '—';
+  const personName = user.displayName || '-';
   const role = identityLabel(user);
   /*
    * Chủ xe cá nhân: gian hàng mang chính tên họ — "Nguyễn Văn A · Chủ xe cá nhân" dưới "Nguyễn Văn A"

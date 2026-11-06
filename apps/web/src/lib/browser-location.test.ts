@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 describe('readBrowserCoords', () => {
-  it('bắt đầu đo NGAY trong lời gọi (đồng bộ) — Safari gắn hộp hỏi quyền với cú bấm', () => {
+  it('bắt đầu đo NGAY trong lời gọi (đồng bộ) - Safari gắn hộp hỏi quyền với cú bấm', () => {
     const geo = stubGeolocation([{ ok: true, accuracy: 20 }]);
     void readBrowserCoords();
     expect(geo.getCurrentPosition).toHaveBeenCalledTimes(1);

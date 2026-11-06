@@ -23,10 +23,10 @@ export class MobilePhoneAuthController {
   @Post('login')
   @HttpCode(HttpStatus.GONE)
   @ApiOperation({
-    summary: 'ĐÃ GỠ — Native: đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
+    summary: 'ĐÃ GỠ - Native: đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
     deprecated: true,
   })
-  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu.' })
+  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ - dùng SĐT + mật khẩu.' })
   login(): never {
     throw otpLoginRetired();
   }

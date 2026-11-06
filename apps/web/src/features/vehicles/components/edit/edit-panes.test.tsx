@@ -205,7 +205,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('Dịch vụ xe — ba tab dịch vụ', () => {
+describe('Dịch vụ xe - ba tab dịch vụ', () => {
   it('tab dịch vụ nói đúng bật/tắt; công tắc dịch vụ ghi đủ mảng serviceTypes', async () => {
     renderPane(
       <ServicesPane
@@ -326,7 +326,7 @@ describe('Dịch vụ xe — ba tab dịch vụ', () => {
     expect(screen.getAllByText(/chưa có tài xế/i).length).toBeGreaterThan(0);
   });
 
-  it('tab tự lái chỉ còn giá + khuyến mãi — cọc/km/công tắc chính sách ở mục Chính sách thuê', () => {
+  it('tab tự lái chỉ còn giá + khuyến mãi - cọc/km/công tắc chính sách ở mục Chính sách thuê', () => {
     renderPane(
       <ServicesPane
         vehicle={vehicle()}
@@ -340,7 +340,7 @@ describe('Dịch vụ xe — ba tab dịch vụ', () => {
     expect(screen.getByRole('region', { name: 'Giá thuê & Khuyến mãi' })).toBeTruthy();
   });
 
-  it('tải giá lỗi: chỉ phần giá báo lỗi — công tắc dịch vụ và tự nhận vẫn dùng được', () => {
+  it('tải giá lỗi: chỉ phần giá báo lỗi - công tắc dịch vụ và tự nhận vẫn dùng được', () => {
     pricing.isError = true;
     renderPane(
       <ServicesPane
@@ -415,7 +415,7 @@ function renderPolicy(over: Partial<Parameters<typeof PolicyPane>[0]> = {}) {
   );
 }
 
-describe('Chính sách thuê — mọi thứ áp cho cả xe', () => {
+describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
   it('công tắc chính sách gian hàng đứng TRƯỚC phần giao xe; đang theo gian hàng thì các ô khoá', () => {
     renderPolicy();
     const toggle = screen.getByRole('switch', { name: 'Áp dụng chính sách của gian hàng' });
@@ -432,7 +432,7 @@ describe('Chính sách thuê — mọi thứ áp cho cả xe', () => {
     expect(screen.getByRole('region', { name: 'Yêu cầu bảo đảm (thế chấp)' })).toBeTruthy();
   });
 
-  it('giao xe chỉ còn phí trọn gói — không có lựa chọn "Theo km"; bậc theo km còn sót hiện ô phí trống', () => {
+  it('giao xe chỉ còn phí trọn gói - không có lựa chọn "Theo km"; bậc theo km còn sót hiện ô phí trống', () => {
     (pricing.data as Record<string, unknown>).source = 'vehicle';
     (pricing.data as Record<string, unknown>).policy = VEHICLE_POLICY;
     renderPolicy();
@@ -443,7 +443,7 @@ describe('Chính sách thuê — mọi thứ áp cho cả xe', () => {
     expect(second.value).toBe('');
   });
 
-  it('thời gian chuẩn bị xe: lưu ở cột phải CHỈ gửi số phút — không còn khung giờ giao nhận', async () => {
+  it('thời gian chuẩn bị xe: lưu ở cột phải CHỈ gửi số phút - không còn khung giờ giao nhận', async () => {
     renderPolicy();
     expect(screen.queryByText(/Khung giờ giao/)).toBeNull();
     fireEvent.click(screen.getByRole('radio', { name: '1 giờ' }));
@@ -453,7 +453,7 @@ describe('Chính sách thuê — mọi thứ áp cho cả xe', () => {
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('điều khoản — hai khối: tự lái & dài hạn · có tài xế; mỗi khối ghi đúng thiết lập của nó', async () => {
+  it('điều khoản - hai khối: tự lái & dài hạn · có tài xế; mỗi khối ghi đúng thiết lập của nó', async () => {
     renderPolicy();
     expect(screen.getByRole('region', { name: 'Thuê xe tự lái & Thuê xe dài hạn' })).toBeTruthy();
     const driver = screen.getByRole('region', { name: 'Xe có tài xế' });

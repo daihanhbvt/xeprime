@@ -6,6 +6,7 @@ import { useTranslations } from 'use-intl';
 import { isPositiveMoney, isZeroMoney, payAtPickupAmount } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { InfoHint } from './InfoHint';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -286,23 +287,18 @@ export function PriceBreakdown({
         {depositAmount != null ? (
           <>
             <XStack ai="baseline" jc="space-between" gap={space.sm}>
-              <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                {tCommon('deposit')}
-              </Text>
+              <XStack f={1} ai="center" gap={4}>
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {tCommon('deposit')}
+                </Text>
+                <InfoHint content={tCommon('depositHint')} label={tCommon('depositHintLabel')} />
+              </XStack>
               <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                 {fmt.money(depositAmount)}
               </Text>
             </XStack>
-            {/*
-              Web treo `depositHint` trong một tooltip cạnh nhãn. Native không có hover, và một
-              biểu tượng "i" phải chạm mới nói được điều kiện hoàn cọc thì phần lớn khách sẽ
-              không chạm — nên câu đó nằm thẳng dưới dòng cọc, cùng chỗ với `depositNote`.
-            */}
             <Text col={colors.placeholder} fos={fontSize.label} fontStyle="italic">
               {tCommon('depositNote')}
-            </Text>
-            <Text col={colors.placeholder} fos={fontSize.label}>
-              {tCommon('depositHint')}
             </Text>
           </>
         ) : null}
@@ -396,9 +392,12 @@ export function PriceBreakdown({
           {fees.holdAmount ? (
             <YStack gap={6} px={space.md} py={space.sm} br={radius.sm} bg={colors.surfaceMuted}>
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
-                <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {tCommon('holdAmount')}
-                </Text>
+                <XStack f={1} ai="center" gap={4}>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                    {tCommon('holdAmount')}
+                  </Text>
+                  <InfoHint content={tCommon('holdHint')} label={tCommon('holdHintLabel')} />
+                </XStack>
                 {/* Chuyển ngay — màu nhấn thương hiệu, đây là khoản cần hành động trước. */}
                 <Text col={colors.accentText} fos={fontSize.bodyLg} fow={fontWeight.bold}>
                   {fmt.money(fees.holdAmount)}
@@ -415,13 +414,6 @@ export function PriceBreakdown({
                   </Text>
                 </XStack>
               ) : null}
-              {/*
-                Web treo `holdHint` trong tooltip cạnh nhãn. Native không có hover, nên câu giải
-                thích nằm thẳng dưới hai dòng tiền — cùng cách đã làm cho `depositHint`.
-              */}
-              <Text col={colors.placeholder} fos={fontSize.label}>
-                {tCommon('holdHint')}
-              </Text>
             </YStack>
           ) : null}
 

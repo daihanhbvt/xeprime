@@ -28,6 +28,12 @@ export function enterClass(delay?: MotionDelay): string {
 /** Các phần tử CON trượt lên lần lượt, mỗi mục trễ thêm 0.2s (≈ `data-wow-delay` 0.2 · 0.4 · 0.6). */
 export const staggerClass: string = styles.stagger ?? '';
 
+/** So le nhanh (n × `--xp-motion-stagger-step`) cho lưới kết quả/danh sách dài — không chờ cuộn. */
+export const staggerFastClass: string = styles.staggerFast ?? '';
+
+/** Hiện dần tại chỗ khi nội dung đổi (gắn lại bằng `key`, hoặc panel vừa bỏ `hidden`). */
+export const swapClass: string = styles.swap ?? '';
+
 /** Lớp bắt buộc cho phần tử gắn `useReveal()` — không có nó thì trạng thái chờ không ẩn được gì. */
 export const revealGateClass: string = styles.gate ?? '';
 
@@ -36,3 +42,13 @@ export const revealGateClass: string = styles.gate ?? '';
  * chứa ảnh, khung cha phải `overflow: hidden`; điểm neo do chỗ dùng đặt bằng `transform-origin`.
  */
 export const kenBurnsClass: string = styles.kenBurns ?? '';
+
+/**
+ * Parallax ĐẦU TRANG theo cuộn: ảnh trôi chậm + phóng nhẹ + mờ dần (CSS `animation-timeline:
+ * scroll()`, chỉ khi trình duyệt hỗ trợ). Khung cha phải `overflow: hidden`. Cộng dồn với
+ * `kenBurnsClass` được (dùng `translate`/`scale` riêng, không đè `transform`).
+ */
+export const heroParallaxClass: string = styles.heroParallax ?? '';
+
+/** Parallax GIỮA TRANG (`animation-timeline: view()`): ảnh trôi ngược chiều cuộn khi khung còn trong viewport. */
+export const viewParallaxClass: string = styles.viewParallax ?? '';

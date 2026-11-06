@@ -74,7 +74,7 @@ export class DriversController {
   @RequirePermissions(PERMISSION.DRIVER_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
   @ApiOperation({
-    summary: 'Tài xế cho bộ chọn gán đơn — kèm cờ bận (theo người, mọi bên thuê) và mức bằng lái',
+    summary: 'Tài xế cho bộ chọn gán đơn - kèm cờ bận (theo người, mọi bên thuê) và mức bằng lái',
   })
   @ApiOkResponse({ type: AssignableDriversDto })
   async assignable(
@@ -104,7 +104,7 @@ export class DriversController {
   @ApiOperation({
     summary: 'Đặt / xoá tiền công tài xế/ngày mặc định của gian hàng',
     description:
-      'Chỉ áp cho lượt gán tạo SAU lượt này — lượt đã có giữ số của nó. Ngoài giới hạn chính sách ⇒ 422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max). ' +
+      'Chỉ áp cho lượt gán tạo SAU lượt này - lượt đã có giữ số của nó. Ngoài giới hạn chính sách ⇒ 422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max). ' +
       'XePrime chỉ ghi nhận số thoả thuận; tiền công do chủ xe trả trực tiếp.',
   })
   @ApiOkResponse({ type: DriverWageSettingsDto })
@@ -121,7 +121,7 @@ export class DriversController {
   @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
   @ApiOperation({
     summary:
-      'Chi tiết một tài xế — tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng',
+      'Chi tiết một tài xế - tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng',
   })
   @ApiOkResponse({ type: DriverOverviewDto })
   overview(
@@ -136,7 +136,7 @@ export class DriversController {
   @RequirePermissions(PERMISSION.DRIVER_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
   @ApiOperation({
-    summary: 'Các chuyến tài xế đã nhận, kết thúc trong tháng — kèm tiền công (phân trang)',
+    summary: 'Các chuyến tài xế đã nhận, kết thúc trong tháng - kèm tiền công (phân trang)',
   })
   @ApiOkResponse({ type: DriverAssignmentPageDto })
   assignments(
@@ -152,7 +152,7 @@ export class DriversController {
   @ApiOperation({
     summary: 'Mời tài xế theo SĐT tài khoản khách',
     description:
-      'SĐT phải là tài khoản khách đã xác minh — không có thì 404 `DRIVER_ACCOUNT_NOT_FOUND`. ' +
+      'SĐT phải là tài khoản khách đã xác minh - không có thì 404 `DRIVER_ACCOUNT_NOT_FOUND`. ' +
       'Đã có lời mời / liên kết đang mở thì 409 `DRIVER_ALREADY_LINKED`.',
   })
   @ApiCreatedResponse({ type: DriverDto })
@@ -179,7 +179,7 @@ export class DriversController {
 
   @Post(':id/suspend')
   @RequirePermissions(PERMISSION.DRIVER_MANAGE)
-  @ApiOperation({ summary: 'Tạm khoá tài xế — giữ chuyến đã gán, chặn gán mới' })
+  @ApiOperation({ summary: 'Tạm khoá tài xế - giữ chuyến đã gán, chặn gán mới' })
   @ApiOkResponse({ type: DriverDto })
   suspend(
     @CurrentTenant() tenant: TenantContext,

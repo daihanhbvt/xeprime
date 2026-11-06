@@ -20,18 +20,18 @@ describe('buildVietQrUrl', () => {
     expect(url).toContain('template=compact');
   });
 
-  it('des PHẢI đúng mã đơn — đây là khoá SePay đối soát về đúng bản ghi (ADR 0022)', () => {
+  it('des PHẢI đúng mã đơn - đây là khoá SePay đối soát về đúng bản ghi (ADR 0022)', () => {
     const url = buildVietQrUrl(CONFIGURED, '500000', 'HOLD123');
     expect(url).toContain('des=HOLD123');
     expect(url).toContain('amount=500000');
   });
 
-  it('có transferPrefix: des = "<tiền tố> <mã>" — ngân hàng API Banking chỉ đẩy giao dịch có từ khoá', () => {
+  it('có transferPrefix: des = "<tiền tố> <mã>" - ngân hàng API Banking chỉ đẩy giao dịch có từ khoá', () => {
     const url = buildVietQrUrl({ ...CONFIGURED, transferPrefix: 'SEVQR' }, '500000', 'HOLD123');
     expect(url).toContain('des=SEVQR%20HOLD123');
   });
 
-  it('không đưa tên chủ tài khoản lên URL — ảnh SePay không dùng tới', () => {
+  it('không đưa tên chủ tài khoản lên URL - ảnh SePay không dùng tới', () => {
     const url = buildVietQrUrl({ ...CONFIGURED, accountName: 'NGUYEN VAN A' }, '500000', 'HOLD123');
     expect(url).not.toContain('NGUYEN');
   });

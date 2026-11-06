@@ -110,7 +110,7 @@ export class FeePoliciesService {
       select: SELECT,
     });
     if (!row) {
-      this.logger.warn('Không có chính sách phí nào đang hiệu lực — phụ phí chuyến tắt.');
+      this.logger.warn('Không có chính sách phí nào đang hiệu lực - phụ phí chuyến tắt.');
       return null;
     }
     return toSnapshot(row);
@@ -371,7 +371,7 @@ function activationBlockersOf(row: Row): string[] {
 function notDraft(status: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.FEE_POLICY_NOT_DRAFT,
-    message: 'Chỉ bản nháp mới sửa / kích hoạt / bỏ được — bản đã hiệu lực là bất biến',
+    message: 'Chỉ bản nháp mới sửa / kích hoạt / bỏ được - bản đã hiệu lực là bất biến',
     details: { status },
   });
 }

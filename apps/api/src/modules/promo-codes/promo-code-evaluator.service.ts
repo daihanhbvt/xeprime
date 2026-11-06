@@ -362,7 +362,7 @@ export class PromoCodeEvaluatorService {
        */
       throw new ConflictException({
         code: API_ERROR_CODE.PROMO_CODE_EXHAUSTED,
-        message: 'Mã khuyến mãi vừa hết lượt sử dụng — vui lòng xem lại giá',
+        message: 'Mã khuyến mãi vừa hết lượt sử dụng - vui lòng xem lại giá',
         details: { code: input.snapshot.code },
       });
     }

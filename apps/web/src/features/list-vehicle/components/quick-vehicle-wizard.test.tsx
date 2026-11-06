@@ -438,7 +438,7 @@ describe('Cửa vào', () => {
   });
 });
 
-describe('Ba bước — đúng ba, và nút cuối nói đúng việc', () => {
+describe('Ba bước - đúng ba, và nút cuối nói đúng việc', () => {
   it('thanh bước có đúng ba mục, không có bước "Xác nhận"', () => {
     render();
     expect(screen.getByText('1. Thông tin xe')).toBeTruthy();
@@ -690,7 +690,7 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
  * thì bắt buộc trường đó ⇒ không đăng nổi chiếc xe đầu tiên. Backend đã mở ba route đọc/sửa chi
  * nhánh của CHÍNH MÌNH cho cả hai tuyến; phần còn lại là hình dạng của bước này.
  */
-describe('Bước 2 — địa chỉ xe', () => {
+describe('Bước 2 - địa chỉ xe', () => {
   it('một chi nhánh: KHÔNG có bộ chọn, hiện thẳng địa chỉ kèm nút sửa', async () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_CREATE, PERMISSION.BRANCH_MANAGE]);
     render();

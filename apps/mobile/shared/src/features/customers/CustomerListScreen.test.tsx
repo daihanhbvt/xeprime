@@ -122,7 +122,7 @@ beforeEach(() => {
   mockPush.mockClear();
 });
 
-describe('CustomerListScreen — quyền', () => {
+describe('CustomerListScreen - quyền', () => {
   it('thiếu `customers.view`: màn thiếu quyền, KHÔNG gọi API danh sách hay chỉ số', async () => {
     const view = await renderScreen([PERMISSION.BOOKING_VIEW]);
 
@@ -144,7 +144,7 @@ describe('CustomerListScreen — quyền', () => {
   });
 });
 
-describe('CustomerListScreen — gate tài chính', () => {
+describe('CustomerListScreen - gate tài chính', () => {
   it('thiếu `finance.view`: thẻ khách KHÔNG có ô tiền nào', async () => {
     const view = await renderScreen([PERMISSION.CUSTOMER_VIEW]);
     await view.findByText('Nguyễn Văn An');
@@ -163,7 +163,7 @@ describe('CustomerListScreen — gate tài chính', () => {
    * Thẻ mang ĐÚNG bộ dữ kiện của thẻ mobile bên web. Hai thứ dưới đây là cột của BẢNG desktop —
    * nhét vào thẻ là mỗi dòng cao thêm hai hàng cho hai con số không ai quét khi lướt.
    */
-  it('thẻ KHÔNG mang "số đơn đang chạy" hay "tổng giá trị" — đó là cột của bảng desktop', async () => {
+  it('thẻ KHÔNG mang "số đơn đang chạy" hay "tổng giá trị" - đó là cột của bảng desktop', async () => {
     const view = await renderScreen(
       [PERMISSION.CUSTOMER_VIEW, PERMISSION.FINANCE_VIEW],
       [row({ activeBookingCount: 2 })],
@@ -197,7 +197,7 @@ describe('CustomerListScreen — gate tài chính', () => {
   });
 });
 
-describe('CustomerListScreen — trạng thái danh sách', () => {
+describe('CustomerListScreen - trạng thái danh sách', () => {
   it('sổ chưa có khách: mời thêm khách đầu tiên (khác hẳn "không khớp bộ lọc")', async () => {
     const view = await renderScreen([PERMISSION.CUSTOMER_VIEW, PERMISSION.CUSTOMER_MANAGE], []);
 
@@ -217,7 +217,7 @@ describe('CustomerListScreen — trạng thái danh sách', () => {
     );
   });
 
-  it('lọc/sắp xếp chạy ở SERVER — đổi nhóm là một request mới kèm đúng tham số', async () => {
+  it('lọc/sắp xếp chạy ở SERVER - đổi nhóm là một request mới kèm đúng tham số', async () => {
     const view = await renderScreen([PERMISSION.CUSTOMER_VIEW]);
     await view.findByText('Nguyễn Văn An');
 
@@ -249,7 +249,7 @@ describe('CustomerListScreen — trạng thái danh sách', () => {
   });
 });
 
-describe('CustomerListScreen — kéo xuống làm mới', () => {
+describe('CustomerListScreen - kéo xuống làm mới', () => {
   /*
    * Dải chỉ số là một truy vấn KHÁC danh sách. Buộc cú kéo vào `query.refetch()` của riêng danh
    * sách — thứ dễ viết nhất — thì bốn con số đầu trang đứng yên ở giá trị lúc mở màn, mà đó đúng

@@ -19,7 +19,7 @@
     "submit": "Gửi duyệt",
     "resubmit": "Gửi lại duyệt",
     "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
-    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} — con trỏ đã nhảy tới mục đầu tiên.",
+    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} - con trỏ đã nhảy tới mục đầu tiên.",
     "reason": "Đội duyệt ghi: {reason}",
     "submitConfirm": {
       "title": "Gửi hồ sơ cho nền tảng duyệt?",
@@ -52,7 +52,7 @@
     },
     "rejected": {
       "title": "Hồ sơ bị từ chối",
-      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại — hồ sơ vẫn gửi lại được.",
+      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại - hồ sơ vẫn gửi lại được.",
       "shell": "Hồ sơ gian hàng chưa được duyệt. Xem lý do rồi chỉnh lại và gửi lại."
     },
     "active": {
@@ -97,7 +97,7 @@
         "label": "Email liên hệ của gian hàng",
         "placeholder": "lienhe@tencuahang.vn"
       },
-      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT và email của tài khoản đăng nhập — đổi một bên không làm đổi bên kia.",
+      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT và email của tài khoản đăng nhập - đổi một bên không làm đổi bên kia.",
       "bio": {
         "label": "Giới thiệu",
         "placeholder": "Mô tả ngắn về gian hàng…"
@@ -122,7 +122,7 @@
         "placeholder": "Chọn tỉnh/thành",
         "loading": "Đang tải tỉnh/thành…",
         "loadError": "Không tải được danh sách tỉnh/thành",
-        "help": "Vị trí của chi nhánh mặc định — xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
+        "help": "Vị trí của chi nhánh mặc định - xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
         "branchLink": "Quản lý chi nhánh"
       },
       "taxCode": {
@@ -141,7 +141,7 @@
     "requiredDone": "Đã đủ điều kiện gửi duyệt",
     "profileRequiredTitle": "Thông tin bắt buộc",
     "profileRequiredDone": "Đã đủ thông tin bắt buộc",
-    "suggestedTitle": "Nên có — giúp khách chọn gian hàng của bạn",
+    "suggestedTitle": "Nên có - giúp khách chọn gian hàng của bạn",
     "goToField": "Điền",
     "items": {
       "displayName": "Tên hiển thị của gian hàng",
@@ -200,14 +200,14 @@
     "ariaLabel": "Bật hoặc tắt hỗ trợ xuất hoá đơn VAT cho mọi xe",
     "on": "Đang bật cho mọi xe",
     "off": "Đang tắt",
-    "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp — hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
+    "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp - hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
     "enabled": "Đã bật hỗ trợ xuất hoá đơn VAT cho mọi xe",
     "disabled": "Đã tắt hỗ trợ xuất hoá đơn VAT",
     "loadError": "Không tải được thiết lập hoá đơn VAT"
   },
   "paymentSettings": {
     "title": "Thanh toán giữ chỗ qua XePrime",
-    "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe — khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",
+    "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe - khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",
     "loadError": "Không tải được cấu hình thanh toán giữ chỗ",
     "readOnly": "Bạn chỉ có quyền xem cấu hình này. Chủ gian hàng là người bật/tắt.",
     "forbidden": {
@@ -224,12 +224,12 @@
       "onTitle": "Khách thanh toán tiền giữ chỗ sau khi bạn duyệt",
       "onBody": "Sau khi bạn duyệt yêu cầu thuê xe, khách quét VietQR thanh toán tiền giữ chỗ (phí sàn + bảo hiểm + 15% tiền thuê) trong cửa sổ thời gian quy định. Đơn thuê chính thức được kích hoạt ngay khi XePrime nhận đủ tiền. Nếu bạn hủy đơn sau khi nhận, khách được hoàn 100% và bạn bị trừ điểm uy tín.",
       "offTitle": "Bạn tự thoả thuận với khách",
-      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
+      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe - XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
     },
     "locked": {
       "platform": {
         "title": "XePrime đang thu khoản giữ chỗ cho mọi gian hàng",
-        "body": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước — không phân biệt gói dịch vụ. Công tắc tạm khoá và sẽ mở lại sau; lựa chọn của bạn được giữ nguyên để dùng lại đúng lúc đó."
+        "body": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước - không phân biệt gói dịch vụ. Công tắc tạm khoá và sẽ mở lại sau; lựa chọn của bạn được giữ nguyên để dùng lại đúng lúc đó."
       },
       "commission": {
         "title": "Gian hàng của bạn luôn thu cọc qua XePrime",
@@ -330,9 +330,9 @@
     }
   },
   "personal": {
-    "provinceHelp": "Nơi khách đến nhận xe — xe của bạn hiện ở tỉnh/thành này trên chợ.",
+    "provinceHelp": "Nơi khách đến nhận xe - xe của bạn hiện ở tỉnh/thành này trên chợ.",
     "checklist": {
-      "suggestedTitle": "Nên có — giúp khách yên tâm chọn xe của bạn",
+      "suggestedTitle": "Nên có - giúp khách yên tâm chọn xe của bạn",
       "items": {
         "displayName": "Tên hiển thị trên chợ",
         "province": "Tỉnh/thành nhận xe",

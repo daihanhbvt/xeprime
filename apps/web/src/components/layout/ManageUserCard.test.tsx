@@ -75,7 +75,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ManageUserCard — danh tính khu làm việc', () => {
+describe('ManageUserCard - danh tính khu làm việc', () => {
   it('hiện TÊN GIAN HÀNG, không phải tên người đăng nhập', () => {
     render(<ManageUserCard />);
 
@@ -114,7 +114,7 @@ describe('ManageUserCard — danh tính khu làm việc', () => {
   });
 });
 
-describe('ManageUserCard — ngữ cảnh vai trò', () => {
+describe('ManageUserCard - ngữ cảnh vai trò', () => {
   it('vai trò gian hàng hiện bằng nhãn tiếng Việt, không phải khoá kỹ thuật', () => {
     render(<ManageUserCard />);
 
@@ -180,7 +180,7 @@ describe('ManageUserCard — ngữ cảnh vai trò', () => {
   });
 });
 
-describe('ManageUserCard — thu gọn', () => {
+describe('ManageUserCard - thu gọn', () => {
   it('ẩn tên và huy hiệu vai trò để vừa cột 64px', () => {
     render(<ManageUserCard collapsed />);
 
@@ -188,7 +188,7 @@ describe('ManageUserCard — thu gọn', () => {
     expect(screen.queryByText('Chủ gian hàng')).toBeNull();
   });
 
-  it('nhưng danh tính vẫn đọc được — nút mang tên gian hàng và vai trò', () => {
+  it('nhưng danh tính vẫn đọc được - nút mang tên gian hàng và vai trò', () => {
     render(<ManageUserCard collapsed />);
 
     expect(
@@ -197,7 +197,7 @@ describe('ManageUserCard — thu gọn', () => {
   });
 });
 
-describe('ManageUserCard — menu tài khoản', () => {
+describe('ManageUserCard - menu tài khoản', () => {
   /** Mở menu và chờ nó dựng — menu của AntD chỉ dựng sau khi bấm. */
   async function openMenu(collapsed = false) {
     render(<ManageUserCard collapsed={collapsed} />);

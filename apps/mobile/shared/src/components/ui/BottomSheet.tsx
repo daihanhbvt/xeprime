@@ -8,7 +8,9 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { ReduceMotion, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spring } from '@/theme/motion';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -36,6 +38,13 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * Đo lấy thì chỉ có hai trạng thái: có bàn phím = chiều cao thật, không có = 0. Không còn phép
  * trừ nào để sai.
  */
+/** Tấm trượt trồi lên bằng lò xo (luồng UI). Tôn trọng "Giảm chuyển động". */
+const sheetEntering = SlideInDown.springify()
+  .damping(spring.sheet.damping)
+  .stiffness(spring.sheet.stiffness)
+  .mass(spring.sheet.mass)
+  .reduceMotion(ReduceMotion.System);
+
 /** Nhịp báo vị trí cuộn — chỉ ghi vào ref, đủ gần đúng cho lần cuộn tới ô đang gõ. */
 const SCROLL_REPORT_MS = 100;
 
@@ -171,7 +180,9 @@ export function BottomSheet({
     <Modal
       visible={open}
       transparent
-      animationType="slide"
+      // Nền mờ DẦN, tấm trượt lên bằng lò xo riêng (`sheetEntering`) — `slide` của Modal kéo cả
+      // lớp nền tối trượt theo, đọc ra như cả màn bị đẩy lên.
+      animationType="fade"
       onRequestClose={dismissable ? onClose : undefined}
       statusBarTranslucent
     >
@@ -192,6 +203,7 @@ export function BottomSheet({
               accessibilityRole="button"
               accessibilityLabel={t('close')}
             />
+            <Animated.View entering={sheetEntering}>
             <YStack
               maxHeight={ceiling}
               /*
@@ -284,6 +296,7 @@ export function BottomSheet({
                 </YStack>
               ) : null}
             </YStack>
+            </Animated.View>
           </KeyboardHoldProvider>
         </FocusRevealProvider>
       </View>

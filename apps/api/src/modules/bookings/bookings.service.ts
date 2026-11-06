@@ -1197,7 +1197,7 @@ export class BookingsService {
     if (claimed.count === 0) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
-        message: 'Đơn vừa được người khác cập nhật — tải lại rồi thử lại',
+        message: 'Đơn vừa được người khác cập nhật - tải lại rồi thử lại',
       });
     }
 
@@ -1439,7 +1439,7 @@ export class BookingsService {
     if (handedOver) {
       throw new ConflictException({
         code: API_ERROR_CODE.BOOKING_NO_SHOW_NOT_ALLOWED,
-        message: 'Đơn này đã có biên bản giao xe — khách đã nhận xe, không ghi nhận không đến được',
+        message: 'Đơn này đã có biên bản giao xe - khách đã nhận xe, không ghi nhận không đến được',
       });
     }
   }

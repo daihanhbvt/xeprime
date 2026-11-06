@@ -13,6 +13,8 @@ import {
 import { isZeroMoney, LEGAL_DOC } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { useIsOnline } from '@/hooks/use-is-online';
+import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
@@ -58,6 +60,8 @@ export function CancelTripSheet({
 }) {
   const colors = useColors();
   const t = useTranslations('Trips.cancel');
+  // Huỷ phải tới server — offline thì khoá nút và nói lý do (OfflineActionHint).
+  const online = useIsOnline();
   const fmt = useAppFormat();
   const openDoc = useOpenLegalDoc();
   const preview = useTripCancelPreview(trip.id, open);
@@ -133,9 +137,10 @@ export function CancelTripSheet({
               icon="close-circle-outline"
               variant="danger"
               loading={loading}
-              disabled={notAllowed}
+              disabled={notAllowed || !online}
               onPress={confirm}
             />
+            <OfflineActionHint />
           </YStack>
         </XStack>
       }

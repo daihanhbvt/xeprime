@@ -52,7 +52,7 @@ export class ReceiptsController {
   @Get('summary')
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
-    summary: 'Tổng thu/chi của ĐÚNG bộ lọc đang xem — thẻ tổng phải khớp danh sách bên dưới',
+    summary: 'Tổng thu/chi của ĐÚNG bộ lọc đang xem - thẻ tổng phải khớp danh sách bên dưới',
   })
   @ApiOkResponse({ type: ReceiptSummaryDto })
   summary(
@@ -65,7 +65,7 @@ export class ReceiptsController {
   /** Nguồn cho ô "Liên kết đơn thuê (auto-fill)" ở form tạo phiếu. Cũng phải trước `:id`. */
   @Get('booking-options')
   @RequirePermissions(PERMISSION.RECEIPT_CREATE)
-  @ApiOperation({ summary: 'Đơn thuê gợi ý để gắn phiếu — ưu tiên đơn còn nợ' })
+  @ApiOperation({ summary: 'Đơn thuê gợi ý để gắn phiếu - ưu tiên đơn còn nợ' })
   @ApiOkResponse({ type: ReceiptBookingOptionListDto })
   async bookingOptions(
     @CurrentTenant() tenant: TenantContext,

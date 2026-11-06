@@ -3,7 +3,7 @@
   "aboutVehicle": "Về xe",
   "attach": "Đính kèm",
   "attachFile": "Tệp PDF",
-  "attachFileHint": "Hợp đồng, giấy tờ — tối đa {size} MB mỗi tệp",
+  "attachFileHint": "Hợp đồng, giấy tờ - tối đa {size} MB mỗi tệp",
   "attachPhoto": "Ảnh",
   "attachPhotoHint": "Chọn tối đa {count} ảnh, tự nén trước khi gửi",
   "attachment": "Tệp đính kèm",

@@ -146,14 +146,14 @@ function ShopProfile({
                   label: t('legal.entityType'),
                   value: legal?.entityType
                     ? domainLabel('sellerEntityType', legal.entityType)
-                    : '—',
+                    : '-',
                 },
-                { key: 'legalName', label: t('legal.legalName'), value: legal?.legalName ?? '—' },
-                { key: 'tax', label: t('legal.taxId'), value: legal?.taxIdMasked ?? '—' },
+                { key: 'legalName', label: t('legal.legalName'), value: legal?.legalName ?? '-' },
+                { key: 'tax', label: t('legal.taxId'), value: legal?.taxIdMasked ?? '-' },
                 {
                   key: 'license',
                   label: t('legal.license'),
-                  value: legal?.businessLicenseNoMasked ?? '—',
+                  value: legal?.businessLicenseNoMasked ?? '-',
                 },
                 {
                   key: 'seller',
@@ -171,7 +171,7 @@ function ShopProfile({
                 {
                   key: 'verifiedAt',
                   label: t('legal.verifiedAt'),
-                  value: legal?.verifiedAt ? fmt.date(legal.verifiedAt) : '—',
+                  value: legal?.verifiedAt ? fmt.date(legal.verifiedAt) : '-',
                 },
               ]}
             />
@@ -224,17 +224,17 @@ function OwnerProfile({
                   {
                     key: 'phone',
                     label: t('owner.phone'),
-                    value: profile.owner.phoneMasked ?? '—',
+                    value: profile.owner.phoneMasked ?? '-',
                   },
                   {
                     key: 'email',
                     label: t('owner.email'),
-                    value: profile.owner.emailMasked ?? '—',
+                    value: profile.owner.emailMasked ?? '-',
                   },
                   {
                     key: 'areas',
                     label: t('areas'),
-                    value: profile.activityAreas.join(', ') || '—',
+                    value: profile.activityAreas.join(', ') || '-',
                   },
                   {
                     key: 'status',
@@ -246,7 +246,7 @@ function OwnerProfile({
                         group="userStatus"
                       />
                     ) : (
-                      '—'
+                      '-'
                     ),
                   },
                 ]}
@@ -273,7 +273,7 @@ function OwnerProfile({
                 {
                   key: 'id',
                   label: t('identity.idNumber'),
-                  value: identity?.idNumberMasked ?? '—',
+                  value: identity?.idNumberMasked ?? '-',
                 },
                 {
                   key: 'phone',
@@ -292,7 +292,7 @@ function OwnerProfile({
                 {
                   key: 'verifiedAt',
                   label: t('identity.verifiedAt'),
-                  value: identity?.verifiedAt ? fmt.date(identity.verifiedAt) : '—',
+                  value: identity?.verifiedAt ? fmt.date(identity.verifiedAt) : '-',
                 },
               ]}
             />
@@ -320,9 +320,9 @@ function OwnerPanel({ profile }: { profile: PartnerProfile }) {
     <DashboardPanel title={t('title')} icon={<UserOutlined />}>
       <KeyValues
         items={[
-          { key: 'name', label: t('name'), value: profile.owner.name ?? '—' },
-          { key: 'phone', label: t('phone'), value: profile.owner.phoneMasked ?? '—' },
-          { key: 'email', label: t('email'), value: profile.owner.emailMasked ?? '—' },
+          { key: 'name', label: t('name'), value: profile.owner.name ?? '-' },
+          { key: 'phone', label: t('phone'), value: profile.owner.phoneMasked ?? '-' },
+          { key: 'email', label: t('email'), value: profile.owner.emailMasked ?? '-' },
           {
             key: 'status',
             label: t('accountStatus'),
@@ -333,13 +333,13 @@ function OwnerPanel({ profile }: { profile: PartnerProfile }) {
                 group="userStatus"
               />
             ) : (
-              '—'
+              '-'
             ),
           },
           {
             key: 'joined',
             label: t('joined'),
-            value: profile.owner.joinedAt ? fmt.date(profile.owner.joinedAt) : '—',
+            value: profile.owner.joinedAt ? fmt.date(profile.owner.joinedAt) : '-',
           },
         ]}
       />
@@ -362,7 +362,7 @@ function ContactPanel({ profile, isPackage }: { profile: PartnerProfile; isPacka
                     {isPackage ? t('defaultBranch') : t('defaultPoint')}
                   </Tag>
                 ) : null}
-                <div className={styles.muted}>{branch.address ?? '—'}</div>
+                <div className={styles.muted}>{branch.address ?? '-'}</div>
               </li>
             ))}
           </ul>
@@ -371,8 +371,8 @@ function ContactPanel({ profile, isPackage }: { profile: PartnerProfile; isPacka
         )}
         <KeyValues
           items={[
-            { key: 'phone', label: t('publicPhone'), value: profile.publicPhoneMasked ?? '—' },
-            { key: 'email', label: t('publicEmail'), value: profile.publicEmailMasked ?? '—' },
+            { key: 'phone', label: t('publicPhone'), value: profile.publicPhoneMasked ?? '-' },
+            { key: 'email', label: t('publicEmail'), value: profile.publicEmailMasked ?? '-' },
           ]}
         />
       </div>
@@ -430,7 +430,7 @@ function VehicleDocuments({ documents }: { documents: PartnerProfile['vehicleDoc
             <li key={doc.id} className={styles.issue}>
               <span>
                 <strong>{doc.vehicleName}</strong>
-                <div className={styles.muted}>{doc.vehiclePlateNumber ?? '—'}</div>
+                <div className={styles.muted}>{doc.vehiclePlateNumber ?? '-'}</div>
               </span>
               <span>{domainLabel('vehicleDocumentType', doc.type)}</span>
               <StatusTag

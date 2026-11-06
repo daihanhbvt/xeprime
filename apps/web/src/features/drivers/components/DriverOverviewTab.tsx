@@ -74,7 +74,7 @@ export function DriverOverviewTab({
         />
         <StatCard
           label={t('stats.averageDaily')}
-          value={month.averageDailyWage == null ? '—' : fmt.money(month.averageDailyWage)}
+          value={month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage)}
           hint={
             shopDaily
               ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
@@ -193,7 +193,7 @@ export function DriverOverviewTab({
                 label: t('reliability.response'),
                 value:
                   reliability.medianResponseMinutes == null
-                    ? '—'
+                    ? '-'
                     : reliability.medianResponseMinutes === 0
                       ? t('reliability.underMinute')
                       : fmt.minutesDuration(reliability.medianResponseMinutes),

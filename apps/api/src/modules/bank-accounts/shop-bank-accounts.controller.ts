@@ -39,7 +39,7 @@ export class ShopBankAccountsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Tài khoản nhận tiền của gian hàng — số đã che',
+    summary: 'Tài khoản nhận tiền của gian hàng - số đã che',
     description: 'Mảng 0 hoặc 1 phần tử: mỗi chủ MỘT tài khoản nhận tiền đang dùng.',
   })
   @ApiOkResponse({ type: [BankAccountDto] })
@@ -70,7 +70,7 @@ export class ShopBankAccountsController {
   @Patch(':id/default')
   @ApiOperation({
     summary: 'Đặt làm tài khoản nhận tiền mặc định của gian hàng',
-    description: 'Tương thích ngược — tài khoản duy nhất luôn là mặc định; trả lại chính nó.',
+    description: 'Tương thích ngược - tài khoản duy nhất luôn là mặc định; trả lại chính nó.',
     deprecated: true,
   })
   @ApiOkResponse({ type: BankAccountDto })

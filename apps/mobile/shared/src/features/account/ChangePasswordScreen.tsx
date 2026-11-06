@@ -276,7 +276,7 @@ export function ChangePasswordScreen({
                       col={met ? colors.text : colors.textMuted}
                       fos={fontSize.bodySm}
                       // Trình đọc màn hình không "thấy" được biểu tượng tick — nói ra bằng chữ.
-                      accessibilityLabel={`${label} — ${
+                      accessibilityLabel={`${label} - ${
                         met ? t('requirementMet') : t('requirementUnmet')
                       }`}
                     >

@@ -390,7 +390,7 @@ export class InvitesService {
       if (limited && alive.length === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.INVITE_SCOPE_STALE,
-          message: 'Chi nhánh trong lời mời không còn tồn tại — hãy nhờ gian hàng gửi lời mời mới',
+          message: 'Chi nhánh trong lời mời không còn tồn tại - hãy nhờ gian hàng gửi lời mời mới',
         });
       }
       const scope: ResolvedBranchScope = limited
@@ -576,7 +576,7 @@ export class InvitesService {
 function memberInOtherTenant(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
-    message: 'Tài khoản này đang thuộc một gian hàng khác — mỗi tài khoản chỉ thuộc một gian hàng',
+    message: 'Tài khoản này đang thuộc một gian hàng khác - mỗi tài khoản chỉ thuộc một gian hàng',
   });
 }
 

@@ -98,7 +98,7 @@ beforeEach(() => {
   mockEnterApp.mockClear();
 });
 
-describe('PartnerSignupScreen — đăng ký đối tác một form', () => {
+describe('PartnerSignupScreen - đăng ký đối tác một form', () => {
   it('hiện lựa chọn tuyến TRƯỚC, chưa có form', async () => {
     const view = await renderScreen();
     expect(await view.findByText('Gian hàng chuyên nghiệp')).toBeTruthy();
@@ -167,7 +167,7 @@ describe('PartnerSignupScreen — đăng ký đối tác một form', () => {
   });
 });
 
-describe('PartnerSignupScreen — chưa xác thực SĐT mà bấm đăng ký', () => {
+describe('PartnerSignupScreen - chưa xác thực SĐT mà bấm đăng ký', () => {
   it('nút KHÔNG khoá: bấm thì mở sheet OTP, đúng mã là tự đăng ký luôn (một lần bấm)', async () => {
     const registerAccount = jest
       .spyOn(authApi, 'registerWithPassword')

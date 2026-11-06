@@ -60,14 +60,14 @@ describe('rental-range-memory', () => {
     expect(got?.mode).toBe('hourly');
   });
 
-  it('KHÔNG ghi khi khoảng mới có một đầu — một nửa khoảng không phải một lựa chọn', async () => {
+  it('KHÔNG ghi khi khoảng mới có một đầu - một nửa khoảng không phải một lựa chọn', async () => {
     rememberRentalRange({ pickupAt: PICKUP, returnAt: null, mode: 'daily' });
 
     expect(mockStore.size).toBe(0);
     expect(await readRememberedRentalRange(NOW)).toBeNull();
   });
 
-  it('bỏ khoảng có GIỜ NHẬN đã trôi qua — điền lại là mời gửi một yêu cầu chắc chắn bị từ chối', async () => {
+  it('bỏ khoảng có GIỜ NHẬN đã trôi qua - điền lại là mời gửi một yêu cầu chắc chắn bị từ chối', async () => {
     rememberRentalRange({ pickupAt: PICKUP, returnAt: RETURN, mode: 'daily' });
 
     // Đứng ở thời điểm SAU giờ nhận đã lưu.
@@ -87,7 +87,7 @@ describe('rental-range-memory', () => {
     expect(await readRememberedRentalRange(TOMORROW)).toBeNull();
   });
 
-  it('tầng PHIÊN không có cổng ngày — cùng một lượt dùng thì giữ nguyên', async () => {
+  it('tầng PHIÊN không có cổng ngày - cùng một lượt dùng thì giữ nguyên', async () => {
     rememberRentalRange({ pickupAt: PICKUP, returnAt: RETURN, mode: 'daily' });
     mockStore.clear(); // chỉ còn tầng phiên
 

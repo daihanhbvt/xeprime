@@ -14,7 +14,7 @@ describe('roundedCount', () => {
     expect(roundedCount(12345)).toEqual({ display: 12000, approximate: true });
   });
 
-  it('số tròn chẵn đúng bậc thì không cần dấu + — đó là con số thật, không phải ước lượng', () => {
+  it('số tròn chẵn đúng bậc thì không cần dấu + - đó là con số thật, không phải ước lượng', () => {
     expect(roundedCount(1000)).toEqual({ display: 1000, approximate: false });
     expect(roundedCount(100)).toEqual({ display: 100, approximate: false });
   });

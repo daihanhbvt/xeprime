@@ -60,7 +60,7 @@ export function TripRequestProgress({ current, hasHoldStage, className }: TripRe
               <div className={styles.text}>
                 <p className={styles.stepTitle}>
                   {t(`steps.${step}.title`)}
-                  <span className={styles.srOnly}>{` — ${t(`state.${state}`)}`}</span>
+                  <span className={styles.srOnly}>{` - ${t(`state.${state}`)}`}</span>
                 </p>
                 <p className={styles.stepBody}>
                   {/*

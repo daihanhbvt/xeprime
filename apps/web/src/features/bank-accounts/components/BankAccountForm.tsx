@@ -99,7 +99,7 @@ export function BankAccountForm({
     () =>
       VIETNAM_BANKS.map((bank) => ({
         value: bank.code,
-        label: `${bank.shortName} — ${bank.fullName}`,
+        label: `${bank.shortName} - ${bank.fullName}`,
       })),
     [],
   );

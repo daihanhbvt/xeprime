@@ -27,7 +27,7 @@ export class CreateInviteDto extends MemberBranchScopeDto {
   @ApiProperty({
     enum: TENANT_ROLE_VALUES,
     description:
-      'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. ' +
+      'Không nhận `shop_owner` - chủ gian hàng là người tạo gian hàng, không mời được. ' +
       'Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.',
   })
   // `TENANT_ROLE_VALUES` trọn vẹn, KHÔNG lọc bớt `shop_owner`: enum ở đây là danh sách vai trò
@@ -81,7 +81,7 @@ export class InviteDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Email được mời — CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null.',
+    description: 'Email được mời - CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null.',
   })
   email!: string | null;
   @ApiProperty({ enum: TENANT_ROLE_VALUES }) roleKey!: string;
@@ -103,7 +103,7 @@ export class InviteDto {
 export class CreateInviteResultDto extends InviteDto {
   @ApiProperty({
     description:
-      'Link nhận lời mời trên site partner — chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời.',
+      'Link nhận lời mời trên site partner - chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời.',
   })
   inviteUrl!: string;
 }
@@ -138,7 +138,7 @@ export class InvitePreviewDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Email được mời, ĐÃ che bớt — chỉ lời mời tạo trước ADR 0060.',
+    description: 'Email được mời, ĐÃ che bớt - chỉ lời mời tạo trước ADR 0060.',
   })
   invitedEmailMasked!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) expiresAt!: string;
@@ -150,7 +150,7 @@ export class InviteAnswerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Slug gian hàng vừa vào — `null` khi từ chối. FE dùng để điều hướng.',
+    description: 'Slug gian hàng vừa vào - `null` khi từ chối. FE dùng để điều hướng.',
   })
   tenantSlug!: string | null;
 }

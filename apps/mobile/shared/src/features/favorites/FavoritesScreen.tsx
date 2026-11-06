@@ -113,7 +113,7 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
   const shouldReveal = useListReveal(!list.isInitialLoading && list.items.length > 0);
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<FavoriteVehicle>) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      <Reveal listItem index={index} disabled={!shouldReveal(index)}>
         <FavoriteVehicleCard vehicle={item} />
       </Reveal>
     ),

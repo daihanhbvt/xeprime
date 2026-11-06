@@ -98,7 +98,11 @@ export function ListingGallery({
             onScroll={handleScroll}
           >
             {allImages.map((url, index) => (
-              <div key={`${index}:${url}`} className={styles.slide}>
+              <div
+                key={`${index}:${url}`}
+                className={styles.slide}
+                data-vt-listing-target={index === 0 ? '' : undefined}
+              >
                 <PreviewImage
                   src={url}
                   alt={index === 0 ? name : t('photoAlt', { name, index: index + 1 })}

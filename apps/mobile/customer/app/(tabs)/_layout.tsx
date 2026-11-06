@@ -6,11 +6,14 @@ import Animated, {
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -32,7 +35,7 @@ import { FONT_FAMILY } from '@/theme/fonts';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { elevation } from '@/theme/elevation';
-import { duration } from '@/theme/motion';
+import { duration, pressScale, spring } from '@/theme/motion';
 import { Avatar } from '@/components/ui/Avatar';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: space.sm,
   },
-  itemPressed: { transform: [{ scale: 0.92 }] },
+  itemPressed: { transform: [{ scale: pressScale.icon }] },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,7 +223,9 @@ function AppTabBar({
               layout={TAB_LAYOUT_TRANSITION}
               style={[styles.pill, focused ? { backgroundColor: colors.primarySubtle } : null]}
             >
-              {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              <TabIconPop focused={focused}>
+                {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              </TabIconPop>
               {focused ? (
                 <Animated.Text
                   entering={FadeIn.duration(320)}
@@ -240,6 +245,32 @@ function AppTabBar({
     </Animated.View>
   );
 }
+
+/**
+ * Icon NẢY nhẹ khi tab vừa được chọn: 1 → 1.18 → lò xo về 1 (luồng UI, chỉ `transform`).
+ * Lượt render đầu không nảy; "Giảm chuyển động" thì đứng yên.
+ */
+function TabIconPop({ focused, children }: { focused: boolean; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!focused || reduceMotion) return;
+    scale.value = withSequence(
+      withTiming(TAB_ICON_POP_SCALE, { duration: duration.fast }),
+      withSpring(1, spring.pop),
+    );
+  }, [focused, reduceMotion, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+/** Đỉnh nảy của icon tab vừa chọn. */
+const TAB_ICON_POP_SCALE = 1.18;
 
 /**
  * Biểu tượng tab, kèm huy hiệu đếm (nếu có) VẼ TĨNH ngay trong biểu tượng.

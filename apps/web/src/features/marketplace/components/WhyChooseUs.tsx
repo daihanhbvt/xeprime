@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
+import { NumberTicker } from '@/components/motion/NumberTicker';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './WhyChooseUs.module.css';
@@ -73,7 +74,9 @@ export async function WhyChooseUs() {
           className={styles.image}
         />
         <div className={styles.stat}>
-          <p className={styles.statValue}>{t('statValue')}</p>
+          <p className={styles.statValue}>
+            <NumberTicker value={t('statValue')} />
+          </p>
           <p className={styles.statLabel}>{t('statLabel')}</p>
         </div>
       </Reveal>

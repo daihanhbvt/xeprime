@@ -112,12 +112,21 @@ export function SearchResultsScreen({
 }) {
   return (
     <SearchExperienceProvider initial={initialFilters}>
-      <ResultsBody onBack={onBack} embedded={embedded} />
+      <ResultsBody onBack={onBack} embedded={embedded} contextKey={JSON.stringify(initialFilters)} />
     </SearchExperienceProvider>
   );
 }
 
-function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boolean }) {
+function ResultsBody({
+  onBack,
+  embedded,
+  contextKey,
+}: {
+  onBack: () => void;
+  embedded: boolean;
+  /** Nội dung ngữ cảnh màn trước gửi sang — đổi ⇒ kết quả mới, cuộn về đầu. */
+  contextKey: string;
+}) {
   const colors = useColors();
   const t = useTranslations('Marketplace.results');
   const compactRangeLabel = useRentalRangeLabel(true);
@@ -147,6 +156,16 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   /** Tấm "Tìm xe" (bộ chọn của thẻ tìm kiếm trang chủ) — Figma `19973:49063`. */
   const [contextOpen, setContextOpen] = useState(false);
   const listRef = useRef<FlatList<PublicListing>>(null);
+  /*
+   * Trang chủ gửi ngữ cảnh MỚI (màn không dựng lại nữa) ⇒ về đầu danh sách: kết quả mới mà giữ vị
+   * trí cuộn cũ là đọc giữa chừng một danh sách khác. Đổi lọc TRONG màn không đi qua đây.
+   */
+  const contextKeyRef = useRef(contextKey);
+  useEffect(() => {
+    if (contextKeyRef.current === contextKey) return;
+    contextKeyRef.current = contextKey;
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [contextKey]);
   const [locationOpen, setLocationOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   /**
@@ -219,7 +238,7 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   );
   const renderItem = useCallback(
     ({ item, index }: { item: PublicListing; index: number }) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      <Reveal listItem index={index} disabled={!shouldReveal(index)}>
         <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
       </Reveal>
     ),

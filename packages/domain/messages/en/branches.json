@@ -34,7 +34,7 @@
     "manage": "You do not have permission to manage branches",
     "inactive": "This branch is not active",
     "noProvince": "This branch has no province yet",
-    "isDefault": "The default branch cannot be deactivated — set another branch as default first"
+    "isDefault": "The default branch cannot be deactivated - set another branch as default first"
   },
   "confirmDeactivate": {
     "title": "Deactivate this branch?",

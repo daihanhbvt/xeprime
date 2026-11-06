@@ -365,7 +365,7 @@ export class BookingHoldsService {
       throw new BadRequestException({
         code: API_ERROR_CODE.HOLD_WINDOW_TOO_SHORT,
         message:
-          'Giờ nhận xe quá gần để kịp thu tiền giữ chỗ — liên hệ trực tiếp với khách để thoả thuận',
+          'Giờ nhận xe quá gần để kịp thu tiền giữ chỗ - liên hệ trực tiếp với khách để thoả thuận',
         details: {
           pickupAt: input.schedule.pickupAt.toISOString(),
           minWindowMinutes: HOLD_MIN_USABLE_WINDOW_MINUTES,
@@ -604,7 +604,7 @@ export class BookingHoldsService {
       throw new ConflictException({
         code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
         message:
-          'Khách này đang giữ tối đa số chỗ chưa thanh toán cho phép — chờ họ thanh toán hoặc ' +
+          'Khách này đang giữ tối đa số chỗ chưa thanh toán cho phép - chờ họ thanh toán hoặc ' +
           'huỷ bớt trước khi nhận thêm chuyến',
         details: { openHolds, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
       });
@@ -632,7 +632,7 @@ export class BookingHoldsService {
       throw new ConflictException({
         code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
         message:
-          'Bạn đang có tối đa số chuyến chờ thanh toán cho phép — thanh toán hoặc huỷ bớt một chuyến ' +
+          'Bạn đang có tối đa số chuyến chờ thanh toán cho phép - thanh toán hoặc huỷ bớt một chuyến ' +
           'trước khi đặt thêm xe',
         details: { openHolds, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
       });

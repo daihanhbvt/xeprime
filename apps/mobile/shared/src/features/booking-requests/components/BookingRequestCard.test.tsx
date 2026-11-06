@@ -116,7 +116,7 @@ beforeEach(() => {
  * khi inbox chat của gian hàng đã có. Web mở hội thoại qua `POST /booking-requests/:id/conversation`
  * rồi sang đúng thread đó.
  */
-describe('BookingRequestCard — Nhắn tin', () => {
+describe('BookingRequestCard - Nhắn tin', () => {
   it('khách có tài khoản: mở hội thoại của YÊU CẦU rồi sang đúng thread ở inbox gian hàng', async () => {
     const spy = jest
       .spyOn(bookingRequestsApi, 'conversation')
@@ -165,7 +165,7 @@ describe('BookingRequestCard — Nhắn tin', () => {
   });
 });
 
-describe('BookingRequestCard — lối vào hồ sơ khách / xe', () => {
+describe('BookingRequestCard - lối vào hồ sơ khách / xe', () => {
   it('có hồ sơ trong sổ khách + quyền xem khách: tên khách mở hồ sơ khách', async () => {
     const view = await renderCard(request());
 
@@ -203,7 +203,7 @@ describe('BookingRequestCard — lối vào hồ sơ khách / xe', () => {
   });
 });
 
-describe('BookingRequestCard — ghi chú của khách', () => {
+describe('BookingRequestCard - ghi chú của khách', () => {
   it('có nút Xem đầy đủ / Thu gọn như web', async () => {
     const view = await renderCard(request({ note: 'Giao xe trước 7 giờ sáng giúp mình nhé.' }));
 
@@ -217,7 +217,7 @@ describe('BookingRequestCard — ghi chú của khách', () => {
  * LUÔN là `trace.viewBooking`, kể cả khi yêu cầu chưa thành đơn. Yêu cầu đã thành đơn (và người
  * xem có quyền xem đơn) có thêm lối cùng nhãn ở chân thẻ (`hasBookingLink`).
  */
-describe('BookingRequestCard — lối mở chi tiết', () => {
+describe('BookingRequestCard - lối mở chi tiết', () => {
   it('yêu cầu CHƯA thành đơn: khối lịch trình vẫn nói "Xem chi tiết đơn thuê" và mở chi tiết', async () => {
     const onOpenDetail = jest.fn();
     const view = await renderCard(request(), ALL, onOpenDetail);

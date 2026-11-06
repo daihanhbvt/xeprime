@@ -142,7 +142,7 @@ describe('useConversationsInfinite', () => {
     await waitFor(() => expect(api.list).toHaveBeenCalledTimes(3));
   });
 
-  it('hai bề mặt dùng HAI queryKey khác nhau — không đè cache của nhau', async () => {
+  it('hai bề mặt dùng HAI queryKey khác nhau - không đè cache của nhau', async () => {
     const customer = await renderHook(
       () => readList(useConversationsInfinite(CHAT_SIDE.CUSTOMER)),
       { wrapper },

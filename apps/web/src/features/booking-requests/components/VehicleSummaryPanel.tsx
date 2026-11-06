@@ -126,7 +126,7 @@ export function VehicleSummaryPanel({
         listing.bodyType
           ? {
               label: t('panel.specBody'),
-              value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '—',
+              value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '-',
             }
           : null,
       ].filter(Boolean) as Array<{ label: string; value: string }>)

@@ -55,7 +55,7 @@ export function ListingPoliciesTabs({
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
   const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`).join(', ');
+    windows.map((window) => `${window.start}-${window.end}`).join(', ');
   const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
   const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
   const requiredDocs =

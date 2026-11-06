@@ -30,7 +30,7 @@
   "drawer": {
     "fallbackTitle": "Booking",
     "title": "Booking {code}",
-    "createdAt": "Created at {time} · {date}",
+    "createdAt": "Created at {time}{sep}{date}",
     "loadError": "Couldn't load booking details",
     "viewHistory": "View history"
   },
@@ -74,9 +74,9 @@
     "collateral": {
       "title": "Security deposit at pickup",
       "hintLabel": "About the security deposit",
-      "hint": "This is the deposit declared on the booking — it may not have been collected.",
+      "hint": "This is the deposit declared on the booking - it may not have been collected.",
       "none": "No cash deposit declared",
-      "note": "This is the security deposit taken at pickup — not the reservation payment, and not part of the total payable. It is refunded after the rental ends if there is no damage."
+      "note": "This is the security deposit taken at pickup - not the reservation payment, and not part of the total payable. It is refunded after the rental ends if there is no damage."
     }
   },
   "documents": {

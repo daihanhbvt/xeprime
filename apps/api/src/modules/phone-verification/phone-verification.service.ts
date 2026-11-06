@@ -283,7 +283,7 @@ export class PhoneVerificationService {
         if (fresh) return latest.id;
         throw new BadRequestException({
           code: API_ERROR_CODE.OTP_EXPIRED,
-          message: 'Mã đã hết hạn — hãy gửi lại mã mới',
+          message: 'Mã đã hết hạn - hãy gửi lại mã mới',
         });
       }
       if (fresh) {
@@ -295,7 +295,7 @@ export class PhoneVerificationService {
           });
           throw new BadRequestException({
             code: API_ERROR_CODE.OTP_LOCKED,
-            message: 'Bạn đã nhập sai quá nhiều lần — hãy gửi lại mã mới',
+            message: 'Bạn đã nhập sai quá nhiều lần - hãy gửi lại mã mới',
           });
         }
         await this.prisma.phoneVerification.update({
@@ -387,7 +387,7 @@ export class PhoneVerificationService {
       }
       throw new BadRequestException({
         code: API_ERROR_CODE.OTP_INVALID,
-        message: 'Chưa có mã xác thực nào — hãy gửi mã trước',
+        message: 'Chưa có mã xác thực nào - hãy gửi mã trước',
       });
     }
 
@@ -398,7 +398,7 @@ export class PhoneVerificationService {
       });
       throw new BadRequestException({
         code: API_ERROR_CODE.OTP_EXPIRED,
-        message: 'Mã đã hết hạn — hãy gửi lại mã mới',
+        message: 'Mã đã hết hạn - hãy gửi lại mã mới',
       });
     }
 
@@ -419,7 +419,7 @@ export class PhoneVerificationService {
         });
         throw new BadRequestException({
           code: API_ERROR_CODE.OTP_LOCKED,
-          message: 'Bạn đã nhập sai quá nhiều lần — hãy gửi lại mã mới',
+          message: 'Bạn đã nhập sai quá nhiều lần - hãy gửi lại mã mới',
         });
       }
       await this.prisma.phoneVerification.update({

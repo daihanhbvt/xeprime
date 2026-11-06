@@ -71,7 +71,7 @@ describe('OwnerPayoutTable', () => {
 
     expect(screen.getByText('Doanh thu cho thuê xe')).toBeTruthy();
     expect(screen.getByText(money('780.000'))).toBeTruthy();
-    expect(screen.getByText('Phí dịch vụ – Chủ xe')).toBeTruthy();
+    expect(screen.getByText('Phí dịch vụ - Chủ xe')).toBeTruthy();
     expect(screen.getByText(money('78.000', '−'))).toBeTruthy();
     expect(screen.getByText('Thuế khấu trừ (GTGT 5% + TNCN 2%)')).toBeTruthy();
     expect(screen.getByText(money('54.600', '−'))).toBeTruthy();
@@ -90,7 +90,7 @@ describe('OwnerPayoutTable', () => {
     expect(link.getAttribute('href')).toBe('/legal/owner-tax');
     expect(screen.getByText(/NĐ 117\/2025 và NĐ 68\/2026/)).toBeTruthy();
     // Mỗi dòng có giải thích mang một nút bấm được, có tên.
-    expect(screen.getByRole('button', { name: 'Giải thích: Phí dịch vụ – Chủ xe' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Giải thích: Phí dịch vụ - Chủ xe' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Giải thích: Thuế khấu trừ' })).toBeTruthy();
   });
 
@@ -98,13 +98,13 @@ describe('OwnerPayoutTable', () => {
     renderWithIntl(<OwnerPayoutTable payout={SELF_DRIVE} />);
     expect(
       screen.getByText(
-        'Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: Ngày 1–2: 10% · Ngày 3–7: 7% · Ngày 8–30: 3% · Từ ngày 31: 0%.',
+        'Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: Ngày 1-2: 10% · Ngày 3-7: 7% · Ngày 8-30: 3% · Từ ngày 31: 0%.',
       ),
     ).toBeTruthy();
     expect(screen.getByText(/^Gian hàng có gói: 0đ\./)).toBeTruthy();
   });
 
-  it('nấc đến từ dữ liệu, không viết cứng — chính sách khác thì câu khác', () => {
+  it('nấc đến từ dữ liệu, không viết cứng - chính sách khác thì câu khác', () => {
     renderWithIntl(
       <OwnerPayoutTable
         payout={{
@@ -118,7 +118,7 @@ describe('OwnerPayoutTable', () => {
     );
     expect(
       screen.getByText(
-        'Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: Ngày 1–3: 12% · Từ ngày 4: 5,5%.',
+        'Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: Ngày 1-3: 12% · Từ ngày 4: 5,5%.',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/Ngày 1–2: 10%/)).toBeNull();
@@ -160,7 +160,7 @@ describe('OwnerPayoutTable', () => {
   it('§6.3 tuyến gói, doanh nghiệp: ẩn phí dịch vụ, thuế "Không khấu trừ (doanh nghiệp)", cộng ví 450.000', () => {
     renderWithIntl(<OwnerPayoutTable payout={PACKAGE_COMPANY} />);
 
-    expect(screen.queryByText('Phí dịch vụ – Chủ xe')).toBeNull();
+    expect(screen.queryByText('Phí dịch vụ - Chủ xe')).toBeNull();
     expect(screen.getByText('Thuế khấu trừ')).toBeTruthy();
     expect(screen.getByText('Không khấu trừ (doanh nghiệp)')).toBeTruthy();
     expect(screen.queryByText(/^Thuế khấu trừ \(GTGT/)).toBeNull();
@@ -231,7 +231,7 @@ describe('OwnerPayoutTable', () => {
     expect(screen.getByText(/^62,400\s*₫$/)).toBeTruthy();
     expect(
       screen.getByText(
-        'Tiered by rental day under the fee policy applied to this trip: Days 1–2: 10% · Days 3–7: 7% · Days 8–30: 3% · From day 31: 0%.',
+        'Tiered by rental day under the fee policy applied to this trip: Days 1-2: 10% · Days 3-7: 7% · Days 8-30: 3% · From day 31: 0%.',
       ),
     ).toBeTruthy();
   });

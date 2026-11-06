@@ -26,7 +26,7 @@ export class VehicleBusyDaysQueryDto {
   from!: string;
 
   @ApiProperty({
-    description: `Ngày cuối cửa sổ (YYYY-MM-DD). Quá ${BUSY_DAYS_MAX_WINDOW} ngày kể từ \`from\` thì bị kẹp về trần — xem \`to\` trong kết quả`,
+    description: `Ngày cuối cửa sổ (YYYY-MM-DD). Quá ${BUSY_DAYS_MAX_WINDOW} ngày kể từ \`from\` thì bị kẹp về trần - xem \`to\` trong kết quả`,
   })
   @Matches(DATE_ONLY_PATTERN)
   to!: string;
@@ -44,7 +44,7 @@ export class VehicleBusyDayDto {
   @ApiProperty({ description: 'Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD' })
   date!: string;
 
-  @ApiProperty({ description: 'Bận trọn ngày — ngày này không nhận cũng không trả xe được' })
+  @ApiProperty({ description: 'Bận trọn ngày - ngày này không nhận cũng không trả xe được' })
   fullyBusy!: boolean;
 
   @ApiProperty({
@@ -66,6 +66,6 @@ export class VehicleBusyDaysDto {
   @ApiProperty({ description: 'Ngày đầu cửa sổ đã áp dụng (YYYY-MM-DD)' })
   from!: string;
 
-  @ApiProperty({ description: 'Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) — có thể bị kẹp về trần' })
+  @ApiProperty({ description: 'Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) - có thể bị kẹp về trần' })
   to!: string;
 }

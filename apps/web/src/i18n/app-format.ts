@@ -1,6 +1,6 @@
 import type { useFormatter, useTranslations } from 'next-intl';
 import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { DATE_TIME_SEPARATOR, LIST_SEPARATOR } from '@xeprime/domain';
 import { nowInAppTz, rentalDurationParts, toAppTz, type Dayjs } from '@/lib/datetime';
 import { pickupWishParts, type PickupWish } from '@/lib/long-term';
 import {
@@ -264,6 +264,7 @@ export function createAppFormat(
       ? t('units.dateTime', {
           date: format.dateTime(asDate(value), 'short'),
           time: format.dateTime(asDate(value), 'time'),
+          sep: DATE_TIME_SEPARATOR,
         })
       : empty;
 
@@ -277,6 +278,7 @@ export function createAppFormat(
     t('units.rentalPointCompact', {
       date: value.format(withYear ? pattern.date : pattern.dayMonth),
       time: value.format('HH:mm'),
+      sep: DATE_TIME_SEPARATOR,
     });
 
   const duration = (from: Dayjs, to: Dayjs) => {
@@ -306,6 +308,7 @@ export function createAppFormat(
     return t('units.shortDateTime', {
       time: toAppTz(value).format('HH:mm'),
       date: toAppTz(value).format(pattern.dayMonth),
+      sep: DATE_TIME_SEPARATOR,
     });
   };
 
@@ -348,7 +351,7 @@ export function createAppFormat(
       });
       return opts?.withTime === false
         ? base
-        : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm') });
+        : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm'), sep: DATE_TIME_SEPARATOR });
     },
     rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
     rentalDuration: duration,

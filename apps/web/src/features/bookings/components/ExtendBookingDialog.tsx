@@ -184,12 +184,12 @@ function ChooseStep({
             <span className={styles.periodValue}>{fmt.shortDateTime(booking.returnAt)}</span>
           </div>
           <span className={styles.periodDash} aria-hidden="true">
-            –
+            -
           </span>
           <div className={styles.periodCell}>
             <span className={styles.periodLabel}>{t('toLabel')}</span>
             <span className={cx(styles.periodValue, styles.periodNew)}>
-              {q ? fmt.shortDateTime(q.toAt) : '—'}
+              {q ? fmt.shortDateTime(q.toAt) : '-'}
             </span>
           </div>
         </div>

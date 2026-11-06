@@ -317,7 +317,7 @@ export class AuthService {
     if (!user.passwordHash) {
       throw new ConflictException({
         code: API_ERROR_CODE.PASSWORD_NOT_SET,
-        message: 'Tài khoản chưa có mật khẩu — hãy đặt mật khẩu lần đầu',
+        message: 'Tài khoản chưa có mật khẩu - hãy đặt mật khẩu lần đầu',
       });
     }
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);

@@ -327,6 +327,18 @@
   --xp-motion-lift-hover: -4px;
   --xp-motion-scale-media-hover: 1.05;
   --xp-motion-scale-ambient: 1.08;
+  --xp-motion-duration-press: 0.12s;
+  --xp-motion-duration-overlay: 0.24s;
+  --xp-motion-duration-shine: 0.8s;
+  --xp-motion-duration-ticker: 1.6s;
+  --xp-motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --xp-motion-stagger-step: 0.08s;
+  --xp-motion-scale-press: 0.97;
+  --xp-motion-shadow-hover: 0 12px 28px -12px rgba(0, 0, 0, 0.22);
+  --xp-motion-scale-press-icon: 0.92;
+  --xp-motion-duration-shimmer: 1.3s;
+  --xp-motion-duration-count-up: 0.42s;
+  --xp-motion-distance-step: 24px;
 
   /* ─── Focus ───────────────────────────────────────────────────────────── */
   --xp-focus-outline-width: 2px;

@@ -43,6 +43,7 @@ import {
 } from './components/TripHistoryFilters';
 import { UnpaidHoldsReminder } from './components/UnpaidHoldsReminder';
 import { useTripsInfinite } from './hooks/use-trips';
+import { StaleDataNote } from '@/components/network/StaleDataNote';
 import type { CustomerTrip, CustomerTripCounts } from './api';
 
 /** Số khung chờ dựng sẵn — bằng số thẻ vừa một màn, để nội dung về không đẩy trang. */
@@ -194,7 +195,7 @@ export function TripsScreen({
   const shouldReveal = useListReveal(rendersList, `${filter}|${JSON.stringify(narrow)}`);
   const renderTrip = useCallback(
     ({ item, index }: ListRenderItemInfo<CustomerTrip>) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      <Reveal listItem index={index} disabled={!shouldReveal(index)}>
         <TripCard trip={item} onPress={openTrip} />
       </Reveal>
     ),
@@ -213,6 +214,12 @@ export function TripsScreen({
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
         {header}
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
+        {/* Offline + đang xem bản lưu trên máy ⇒ nói rõ mốc cập nhật (tiền giữ chỗ có thể đã cũ). */}
+        {query.data ? (
+          <YStack px={layout.screenX}>
+            <StaleDataNote dataUpdatedAt={query.dataUpdatedAt} money />
+          </YStack>
+        ) : null}
         {/* Chuyến đang giữ chưa trả — CHỈ ở tab chuyến hiện tại (người dùng chốt 28/10/2026), thu gọn được. */}
         {rendersList || history ? null : (
           <YStack px={layout.screenX} pt={layout.inline}>

@@ -216,18 +216,18 @@ export function BookingTripCardView({
     {
       key: 'pickup',
       label: t('reviewPage.trip.pickupAt'),
-      value: trip.pickupAt ? fmt.dateTime(appWallClockToIso(trip.pickupAt)) : '—',
+      value: trip.pickupAt ? fmt.dateTime(appWallClockToIso(trip.pickupAt)) : '-',
     },
     {
       key: 'return',
       label: t('reviewPage.trip.returnAt'),
-      value: trip.returnAt ? fmt.dateTime(appWallClockToIso(trip.returnAt)) : '—',
+      value: trip.returnAt ? fmt.dateTime(appWallClockToIso(trip.returnAt)) : '-',
     },
   ];
   const packageRow = {
     key: 'package',
     label: t('reviewPage.trip.package'),
-    value: fmt.packageLabel(trip.packageMonths) ?? '—',
+    value: fmt.packageLabel(trip.packageMonths) ?? '-',
   };
   const timeRows: Array<{ key: string; label: string; value: string }> = !longTerm
     ? exactRows
@@ -269,7 +269,7 @@ export function BookingTripCardView({
             key: 'driverPickup',
             icon: 'location-outline',
             title: t('reviewPage.trip.driverPickup'),
-            body: trip.driverPickupAddress ?? '—',
+            body: trip.driverPickupAddress ?? '-',
           },
           ...(trip.routeType !== ROUTE_TYPE.IN_CITY && trip.destination
             ? [
@@ -288,7 +288,7 @@ export function BookingTripCardView({
               key: 'delivery',
               icon: 'location-outline',
               title: t('reviewPage.trip.delivery'),
-              body: trip.deliveryAddress ?? '—',
+              body: trip.deliveryAddress ?? '-',
             },
           ]
         : [

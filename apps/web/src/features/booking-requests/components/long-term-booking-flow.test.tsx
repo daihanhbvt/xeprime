@@ -279,7 +279,7 @@ afterEach(cleanup);
  * Gói + nguyện vọng được chọn ở THẺ ĐẶT XE của trang chi tiết (27/10/2026) — hộp không còn bước
  * "Chuyến đi" nào để chọn lại. Đặc tả ở đây khoá việc hộp nhận ĐÚNG gói/nguyện vọng thẻ đưa sang.
  */
-describe('Thuê dài hạn — hộp nhận gói từ thẻ đặt xe', () => {
+describe('Thuê dài hạn - hộp nhận gói từ thẻ đặt xe', () => {
   it('mở thẳng màn Xem lại: không có biểu mẫu chọn gói, không có ô khoảng thuê hay ngày trả', async () => {
     await openReview();
 
@@ -317,7 +317,7 @@ describe('Thuê dài hạn — hộp nhận gói từ thẻ đặt xe', () => {
   });
 });
 
-describe('Thuê dài hạn — gửi yêu cầu', () => {
+describe('Thuê dài hạn - gửi yêu cầu', () => {
   it('payload mang GÓI + nguyện vọng, KHÔNG mang ngày nhận/trả', async () => {
     api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
     await openReview();
@@ -374,7 +374,7 @@ describe('Thuê dài hạn — gửi yêu cầu', () => {
    * Chưa đăng nhập (ADR 0060): dài hạn không có khung giờ nào để kiểm, nên hộp đi thẳng tới việc GIỮ
    * bản nháp và mời đăng nhập. Thứ phải sống qua lượt đăng nhập là GÓI khách đã chọn ở thẻ.
    */
-  it('chưa đăng nhập: giữ GÓI vào bản nháp, mời đăng nhập — đăng nhập xong vào màn Xem lại với đúng gói', async () => {
+  it('chưa đăng nhập: giữ GÓI vào bản nháp, mời đăng nhập - đăng nhập xong vào màn Xem lại với đúng gói', async () => {
     me.data = undefined;
     const { rerenderTree } = renderModal();
 

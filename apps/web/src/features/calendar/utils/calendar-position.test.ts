@@ -89,7 +89,7 @@ describe('assignLanes', () => {
     expect(lanes.map((l) => l.lane)).toEqual([0, 1]);
   });
 
-  it('chạm biên nhau vẫn cùng tầng — trả 10:00, nhận 10:00 là hợp lệ', () => {
+  it('chạm biên nhau vẫn cùng tầng - trả 10:00, nhận 10:00 là hợp lệ', () => {
     const lanes = assignLanes([
       { startAt: '2026-07-01T10:00:00.000Z', endAt: '2026-07-02T10:00:00.000Z' },
       { startAt: '2026-07-02T10:00:00.000Z', endAt: '2026-07-03T10:00:00.000Z' },
@@ -107,7 +107,7 @@ describe('assignLanes', () => {
   });
 });
 
-describe('assignPixelLanes — xếp tầng theo vị trí PIXEL đã nới', () => {
+describe('assignPixelLanes - xếp tầng theo vị trí PIXEL đã nới', () => {
   it('hai thanh rời nhau trên màn hình cùng tầng', () => {
     expect(
       assignPixelLanes([

@@ -23,6 +23,23 @@ function optionalSecret() {
   return z.preprocess(emptyAsUndefined, z.string().trim().min(1).optional());
 }
 
+/** Phiên bản app dạng `x.y.z` (chỉ số) — rỗng = chưa khai. */
+function optionalSemver() {
+  return z.preprocess(
+    emptyAsUndefined,
+    z
+      .string()
+      .trim()
+      .regex(/^\d+\.\d+\.\d+$/, 'Phiên bản phải dạng x.y.z')
+      .optional(),
+  );
+}
+
+/** Apple ID của app trên App Store (dãy số) — rỗng = chưa khai. */
+function optionalNumericId() {
+  return z.preprocess(emptyAsUndefined, z.string().trim().regex(/^\d+$/).optional());
+}
+
 function optionalUrl() {
   return z.preprocess(
     emptyAsUndefined,
@@ -269,6 +286,30 @@ export const envSchema = z
     R2_PRIVATE_BUCKET: z.string().optional(),
 
     /*
+     * --- Thông báo cập nhật app native (`GET /app-versions/:app`) ---
+     * Tất cả TUỲ CHỌN: thiếu ⇒ endpoint trả `null` từng trường, app không nhắc cập nhật.
+     * Khoá theo app (`CUSTOMER` | `PARTNER`) × nền tảng — thêm app Partner chỉ là thêm env.
+     */
+    APP_CUSTOMER_IOS_LATEST_VERSION: optionalSemver(),
+    APP_CUSTOMER_IOS_MIN_VERSION: optionalSemver(),
+    APP_CUSTOMER_IOS_APP_STORE_ID: optionalNumericId(),
+    APP_CUSTOMER_ANDROID_LATEST_VERSION: optionalSemver(),
+    APP_CUSTOMER_ANDROID_MIN_VERSION: optionalSemver(),
+    APP_CUSTOMER_ANDROID_PACKAGE: z.preprocess(
+      emptyAsUndefined,
+      z.string().trim().regex(/^[a-zA-Z][\w]*(\.[a-zA-Z][\w]*)+$/).default('vn.xeprime.customerapp'),
+    ),
+    APP_PARTNER_IOS_LATEST_VERSION: optionalSemver(),
+    APP_PARTNER_IOS_MIN_VERSION: optionalSemver(),
+    APP_PARTNER_IOS_APP_STORE_ID: optionalNumericId(),
+    APP_PARTNER_ANDROID_LATEST_VERSION: optionalSemver(),
+    APP_PARTNER_ANDROID_MIN_VERSION: optionalSemver(),
+    APP_PARTNER_ANDROID_PACKAGE: z.preprocess(
+      emptyAsUndefined,
+      z.string().trim().regex(/^[a-zA-Z][\w]*(\.[a-zA-Z][\w]*)+$/).default('vn.xeprime.partnerapp'),
+    ),
+
+    /*
      * --- Bản đồ: gợi ý địa chỉ + khoảng cách giao xe (24/08/2026 · Vietmap — ADR 0061) ---
      *
      * **Services key** của Vietmap (autocomplete · search · place · reverse · route · static map),
@@ -405,7 +446,7 @@ export const envSchema = z
         )
         .refine(
           (value) => !value.includes('XP'),
-          'Không được chứa "XP" — trùng tiền tố mã đối soát',
+          'Không được chứa "XP" - trùng tiền tố mã đối soát',
         )
         .optional(),
     ),
@@ -502,7 +543,7 @@ export const envSchema = z
           ctx.addIssue({
             code: 'custom',
             path: [key],
-            message: `${key} thiếu — bốn biến SEPAY_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt)`,
+            message: `${key} thiếu - bốn biến SEPAY_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt)`,
           });
         }
       }
@@ -524,7 +565,7 @@ export const envSchema = z
             ctx.addIssue({
               code: 'custom',
               path: [key],
-              message: `${key} thiếu — bốn biến ${name}_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt cổng)`,
+              message: `${key} thiếu - bốn biến ${name}_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt cổng)`,
             });
           }
         }
@@ -599,7 +640,7 @@ export const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['SESSION_JWT_SECRET'],
-        message: 'SESSION_JWT_SECRET vẫn là giá trị mẫu — phải đổi trước khi lên production',
+        message: 'SESSION_JWT_SECRET vẫn là giá trị mẫu - phải đổi trước khi lên production',
       });
     }
 
@@ -620,7 +661,7 @@ export const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['OTP_PEPPER'],
-        message: 'OTP_PEPPER vẫn là giá trị mẫu — phải đổi trước khi lên production',
+        message: 'OTP_PEPPER vẫn là giá trị mẫu - phải đổi trước khi lên production',
       });
     }
 
@@ -631,7 +672,7 @@ export const envSchema = z
         code: 'custom',
         path: ['R2_PRIVATE_BUCKET'],
         message:
-          'R2_PRIVATE_BUCKET không được trùng R2_BUCKET — tài liệu riêng tư sẽ nằm trong bucket công khai',
+          'R2_PRIVATE_BUCKET không được trùng R2_BUCKET - tài liệu riêng tư sẽ nằm trong bucket công khai',
       });
     }
 
@@ -643,7 +684,7 @@ export const envSchema = z
         code: 'custom',
         path: ['SESSION_COOKIE_DOMAIN'],
         message:
-          'SESSION_COOKIE_DOMAIN không còn dùng (ADR 0053 — cookie phiên host-only theo từng site). Xoá dòng này khỏi env',
+          'SESSION_COOKIE_DOMAIN không còn dùng (ADR 0053 - cookie phiên host-only theo từng site). Xoá dòng này khỏi env',
       });
     }
 
@@ -661,7 +702,7 @@ export const envSchema = z
         code: 'custom',
         path: ['APP_ENV'],
         message:
-          'APP_ENV=development chỉ dành cho máy dev (NODE_ENV khác production) — môi trường đã triển khai dùng staging hoặc production',
+          'APP_ENV=development chỉ dành cho máy dev (NODE_ENV khác production) - môi trường đã triển khai dùng staging hoặc production',
       });
     }
 
@@ -672,7 +713,7 @@ export const envSchema = z
         code: 'custom',
         path: ['REALM_HEADER_FROM_CLIENT'],
         message:
-          'REALM_HEADER_FROM_CLIENT chỉ dành cho máy dev — môi trường đã triển khai phải để realm do Caddy gắn (ADR 0053)',
+          'REALM_HEADER_FROM_CLIENT chỉ dành cho máy dev - môi trường đã triển khai phải để realm do Caddy gắn (ADR 0053)',
       });
     }
     if (!env.REALM_PROXY_SECRET) {
@@ -680,7 +721,7 @@ export const envSchema = z
         code: 'custom',
         path: ['REALM_PROXY_SECRET'],
         message:
-          'REALM_PROXY_SECRET là bắt buộc ở môi trường đã triển khai — thiếu nó API không tin được header realm của Caddy (ADR 0053)',
+          'REALM_PROXY_SECRET là bắt buộc ở môi trường đã triển khai - thiếu nó API không tin được header realm của Caddy (ADR 0053)',
       });
     }
     for (const key of ['WEB_PARTNER_URL', 'WEB_ADMIN_URL'] as const) {
@@ -761,7 +802,7 @@ export const envSchema = z
         code: 'custom',
         path: ['INSURANCE_PARTNER'],
         message:
-          'INSURANCE_PARTNER=mic_mock chỉ dành cho dev/staging — production phải dùng none cho tới khi có adapter đối tác thật',
+          'INSURANCE_PARTNER=mic_mock chỉ dành cho dev/staging - production phải dùng none cho tới khi có adapter đối tác thật',
       });
     }
 
@@ -771,7 +812,7 @@ export const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['OTP_MODE'],
-        message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log — production phải dùng esms',
+        message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log - production phải dùng esms',
       });
     }
 
@@ -782,7 +823,7 @@ export const envSchema = z
         code: 'custom',
         path: ['OTP_BYPASS_CODE'],
         message:
-          'OTP_BYPASS_CODE chỉ dành cho dev/staging — production phải để trống (xoá Variable ở GitHub Environment production)',
+          'OTP_BYPASS_CODE chỉ dành cho dev/staging - production phải để trống (xoá Variable ở GitHub Environment production)',
       });
     }
 
@@ -792,7 +833,7 @@ export const envSchema = z
         ctx.addIssue({
           code: 'custom',
           path: [key],
-          message: `${key} là bắt buộc ở production — thiếu SMTP thì link đặt lại mật khẩu (kèm token) bị ghi ra log`,
+          message: `${key} là bắt buộc ở production - thiếu SMTP thì link đặt lại mật khẩu (kèm token) bị ghi ra log`,
         });
       }
     }
@@ -834,7 +875,7 @@ export const envSchema = z
         ctx.addIssue({
           code: 'custom',
           path: [flag],
-          message: `${flag}=on chưa được phép ở production — cổng thanh toán chưa vượt release gate (ADR 0058 còn Proposed)`,
+          message: `${flag}=on chưa được phép ở production - cổng thanh toán chưa vượt release gate (ADR 0058 còn Proposed)`,
         });
       }
     }

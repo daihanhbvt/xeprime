@@ -92,7 +92,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SupportCasesView — theo bề mặt', () => {
+describe('SupportCasesView - theo bề mặt', () => {
   it('khách mở được yêu cầu mới', () => {
     renderView(SUPPORT_SURFACE.CUSTOMER);
 
@@ -123,7 +123,7 @@ describe('SupportCasesView — theo bề mặt', () => {
   });
 });
 
-describe('SupportCasesView — bảng', () => {
+describe('SupportCasesView - bảng', () => {
   it('hiện mã, tiêu đề và nhãn loại đã dịch', () => {
     renderView(SUPPORT_SURFACE.CUSTOMER);
 

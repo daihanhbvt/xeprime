@@ -115,7 +115,7 @@ export function RecordPaymentModal({
           type="info"
           showIcon
           title="Cọc không trừ vào công nợ"
-          description="Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến — nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ."
+          description="Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến - nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ."
         />
       ) : null}
       <DialogForm onSubmit={submit} labelWidth="md">

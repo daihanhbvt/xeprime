@@ -98,7 +98,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Sidebar — trạng thái mở rộng', () => {
+describe('Sidebar - trạng thái mở rộng', () => {
   it('dựng vùng điều hướng CÓ TÊN', () => {
     renderSidebar();
 
@@ -131,7 +131,7 @@ describe('Sidebar — trạng thái mở rộng', () => {
     expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
   });
 
-  it('mục đứng thẳng trong khối của nó — menu partner không còn mục cha phải bấm mở', () => {
+  it('mục đứng thẳng trong khối của nó - menu partner không còn mục cha phải bấm mở', () => {
     renderSidebar();
 
     expect(within(menuRegion()).getByText('Xe & Tài xế')).toBeTruthy();
@@ -139,7 +139,7 @@ describe('Sidebar — trạng thái mở rộng', () => {
   });
 });
 
-describe('Sidebar — nút thu gọn', () => {
+describe('Sidebar - nút thu gọn', () => {
   it('có tên truy cập được và nói ra trạng thái bằng aria-expanded', () => {
     renderSidebar();
 
@@ -174,7 +174,7 @@ describe('Sidebar — nút thu gọn', () => {
   });
 });
 
-describe('Sidebar — trạng thái thu gọn', () => {
+describe('Sidebar - trạng thái thu gọn', () => {
   function renderCollapsed() {
     const result = renderSidebar();
     fireEvent.click(toggle());
@@ -197,7 +197,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
     ).toBe('page');
   });
 
-  it('vẫn lọc theo quyền — thu gọn không lộ thêm mục nào', () => {
+  it('vẫn lọc theo quyền - thu gọn không lộ thêm mục nào', () => {
     grant(PERMISSION.CALENDAR_VIEW);
     renderCollapsed();
 
@@ -211,7 +211,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
     expect(screen.queryByText('Thuê Xe Minh Anh')).toBeNull();
   });
 
-  it('cùng số mục như lúc mở rộng — không có cây menu thứ hai', () => {
+  it('cùng số mục như lúc mở rộng - không có cây menu thứ hai', () => {
     const expanded = renderSidebar();
     const before = within(menuRegion()).getAllByRole('link').length;
     expanded.unmount();
@@ -228,7 +228,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
   });
 });
 
-describe('Sidebar — hợp đồng token nền tối', () => {
+describe('Sidebar - hợp đồng token nền tối', () => {
   /** Bỏ comment trước khi khẳng định: docblock ở đây CỐ Ý nêu tên thứ bị loại trừ. */
   const code = (file: string) =>
     readFileSync(join(HERE, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

@@ -56,7 +56,7 @@ function type(value: string) {
 }
 
 describe('KeywordSearch', () => {
-  it('gõ là lọc theo nhịp — một lần ghi cho cả chuỗi phím', () => {
+  it('gõ là lọc theo nhịp - một lần ghi cho cả chuỗi phím', () => {
     const onApply = vi.fn();
     render(<KeywordSearch value={undefined} onApply={onApply} />);
 
@@ -69,7 +69,7 @@ describe('KeywordSearch', () => {
     expect(onApply).toHaveBeenCalledWith('vinfast');
   });
 
-  it('Enter áp ngay, không chờ nhịp gõ — và không ghi lần hai khi nhịp gõ tới hạn', () => {
+  it('Enter áp ngay, không chờ nhịp gõ - và không ghi lần hai khi nhịp gõ tới hạn', () => {
     const onApply = vi.fn();
     render(<KeywordSearch value={undefined} onApply={onApply} />);
 

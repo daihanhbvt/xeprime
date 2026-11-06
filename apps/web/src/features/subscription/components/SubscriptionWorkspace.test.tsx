@@ -263,7 +263,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
+describe('SubscriptionWorkspace - hai làn theo loại xe (ADR 0065)', () => {
   it('làn có gói: tên gói, mức dùng theo ĐÚNG loại xe, nút gia hạn của chính làn đó', () => {
     renderWorkspace();
 
@@ -277,7 +277,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
     renderWorkspace();
 
     const car = lane('Gói ô tô');
-    expect(within(car).getByText('Chưa có gói ô tô — ô tô chưa đăng lên chợ được.')).toBeTruthy();
+    expect(within(car).getByText('Chưa có gói ô tô - ô tô chưa đăng lên chợ được.')).toBeTruthy();
     expect(within(car).getByRole('button', { name: 'Mua gói ô tô' })).toBeTruthy();
     // Ô hạn mức ở đầu trang cũng nói "chưa có gói", không phải "0/0".
     expect(screen.getAllByText('Chưa có gói').length).toBeGreaterThan(0);
@@ -291,7 +291,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
     expect(await screen.findByText('Mua / gia hạn Gói ô tô')).toBeTruthy();
   });
 
-  it('hai ô hạn mức theo loại — mỗi ô một trần, không có ô "Tổng số xe"', () => {
+  it('hai ô hạn mức theo loại - mỗi ô một trần, không có ô "Tổng số xe"', () => {
     renderWorkspace();
 
     expect(screen.getByText('2/5')).toBeTruthy();
@@ -399,7 +399,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
   });
 });
 
-describe('SubscriptionWorkspace — ý định từ URL (?lane= · ?purchase=1)', () => {
+describe('SubscriptionWorkspace - ý định từ URL (?lane= · ?purchase=1)', () => {
   it('?lane=car&purchase=1 (CTA ở màn xe): mở hộp thoại của làn ô tô và gỡ tham số', async () => {
     url.purchase = true;
     url.lane = 'car';
@@ -430,7 +430,7 @@ describe('SubscriptionWorkspace — ý định từ URL (?lane= · ?purchase=1)'
   });
 });
 
-describe('SubscriptionWorkspace — quyền mua gói', () => {
+describe('SubscriptionWorkspace - quyền mua gói', () => {
   /*
    * `shop_manager` điển hình: xem được hạn mức để điều hành đội xe, nhưng mua là việc của chủ
    * gian hàng. Không CTA nào được dẫn họ vào luồng đó — kể cả CTA phụ trong danh sách tính năng.
@@ -455,7 +455,7 @@ describe('SubscriptionWorkspace — quyền mua gói', () => {
   });
 });
 
-describe('SubscriptionWorkspace — hoá đơn', () => {
+describe('SubscriptionWorkspace - hoá đơn', () => {
   it('chưa có hoá đơn nào: một dòng chữ gọn, KHÔNG dựng bảng lịch sử', () => {
     renderWorkspace();
 
@@ -487,7 +487,7 @@ describe('SubscriptionWorkspace — hoá đơn', () => {
   });
 });
 
-describe('SubscriptionWorkspace — tuyến hoa hồng', () => {
+describe('SubscriptionWorkspace - tuyến hoa hồng', () => {
   it('trần CHUNG Owner Lite: MỘT ô "Tổng số xe", không hai ô cùng in "3"', () => {
     me.data = commissionFixture(2);
     currentUser.data = commissionScope({ serviceFeePercent: 7 });
@@ -507,7 +507,7 @@ describe('SubscriptionWorkspace — tuyến hoa hồng', () => {
     expect(screen.queryByText(/10%/)).toBeNull();
   });
 
-  it('chủ xe chưa từng trả: KHÔNG có làn mua — luồng nâng cấp nằm ngay trên trang', () => {
+  it('chủ xe chưa từng trả: KHÔNG có làn mua - luồng nâng cấp nằm ngay trên trang', () => {
     me.data = commissionFixture();
     currentUser.data = commissionScope();
     renderWorkspace();

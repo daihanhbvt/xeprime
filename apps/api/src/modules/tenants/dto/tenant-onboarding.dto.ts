@@ -78,7 +78,7 @@ export class RegisterShopDto {
   @MaxLength(255)
   placeId?: string;
 
-  @ApiPropertyOptional({ description: 'Vĩ độ ghim đã xác nhận — thắng toạ độ server tự tra' })
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim đã xác nhận - thắng toạ độ server tự tra' })
   @IsOptional()
   @IsLatitude()
   latitude?: number;
@@ -97,7 +97,7 @@ export class RegisterShopDto {
    * @deprecated Dùng `addressLine`. Giữ lại vì `ValidationPipe` chạy `forbidNonWhitelisted`:
    * bỏ hẳn khiến mọi bản client đang chạy nhận 400 ngay lần đăng ký tiếp theo.
    */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -218,7 +218,7 @@ export class UpdateTenantProfileDto {
   coverUrl?: string;
 
   /** @deprecated Dùng `addressLine` — xem ghi chú ở `RegisterShopDto.address`. */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -297,7 +297,7 @@ export class TenantProfileDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích',
+    description: 'Tên hiển thị - chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích',
   })
   displayName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
@@ -306,7 +306,7 @@ export class TenantProfileDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ HIỂN THỊ đã ghép — bản sao của chi nhánh mặc định',
+    description: 'Địa chỉ HIỂN THỊ đã ghép - bản sao của chi nhánh mặc định',
   })
   address!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
@@ -318,7 +318,7 @@ export class TenantProfileDto {
     nullable: true,
     deprecated: true,
     description:
-      'Mã số thuế — chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích',
+      'Mã số thuế - chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích',
   })
   taxCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) businessLicenseNo!: string | null;
@@ -367,7 +367,7 @@ export class DefaultBranchDto {
     description: 'Địa chỉ hiển thị đã ghép của chi nhánh mặc định',
   })
   address!: string | null;
-  @ApiProperty({ description: 'Địa chỉ chưa khớp danh mục hành chính hiện hành — cần bổ sung' })
+  @ApiProperty({ description: 'Địa chỉ chưa khớp danh mục hành chính hiện hành - cần bổ sung' })
   needsLocationReview!: boolean;
 }
 
@@ -399,14 +399,14 @@ export class MyShopDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount`',
+    description: 'SĐT liên hệ của GIAN HÀNG (hiện cho khách) - khác SĐT đăng nhập ở `ownerAccount`',
   })
   phone!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description:
-      'Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`',
+      'Email liên hệ của GIAN HÀNG (hiện cho khách) - khác email đăng nhập ở `ownerAccount`',
   })
   email!: string | null;
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;

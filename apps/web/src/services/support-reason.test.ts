@@ -49,7 +49,7 @@ describe('recoverSupportReason', () => {
   });
 
   it('hỏi đúng capability server báo, mã hoá lý do vào header', async () => {
-    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ chuyển chi nhánh — ticket #9');
+    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ chuyển chi nhánh - ticket #9');
     unregister = registerSupportReasonPrompter(prompt);
     const headers = await recoverSupportReason(
       reasonRequired([SUPPORT_CAPABILITY.VEHICLE_BRANCH_REASSIGN]),
@@ -60,7 +60,7 @@ describe('recoverSupportReason', () => {
       invalid: false,
     });
     expect(headers).toEqual({
-      [SUPPORT_REASON_HEADER]: encodeURIComponent('Chủ xe nhờ chuyển chi nhánh — ticket #9'),
+      [SUPPORT_REASON_HEADER]: encodeURIComponent('Chủ xe nhờ chuyển chi nhánh - ticket #9'),
     });
   });
 
@@ -72,7 +72,7 @@ describe('recoverSupportReason', () => {
   });
 
   it('tải giấy tờ (nhiều request, CÙNG xe): hỏi MỘT lần; xe khác thì hỏi lại', async () => {
-    const prompt = vi.fn().mockResolvedValue('Chủ xe gửi giấy tờ qua Zalo — ticket #77');
+    const prompt = vi.fn().mockResolvedValue('Chủ xe gửi giấy tờ qua Zalo - ticket #77');
     unregister = registerSupportReasonPrompter(prompt);
     const cap = SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE;
     const [a, b] = await Promise.all([
@@ -86,7 +86,7 @@ describe('recoverSupportReason', () => {
   });
 
   it('gửi duyệt / thao tác một-request: KHÔNG bao giờ dùng lại lý do', async () => {
-    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ gửi duyệt — ticket #78');
+    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ gửi duyệt - ticket #78');
     unregister = registerSupportReasonPrompter(prompt);
     for (const cap of [
       SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW,
@@ -99,7 +99,7 @@ describe('recoverSupportReason', () => {
   });
 
   it('lý do bị server coi là chưa đủ cụ thể → không dùng lại, hỏi lại kèm cờ invalid', async () => {
-    const prompt = vi.fn().mockResolvedValue('Lý do đủ cụ thể lần hai — ticket #12');
+    const prompt = vi.fn().mockResolvedValue('Lý do đủ cụ thể lần hai - ticket #12');
     unregister = registerSupportReasonPrompter(prompt);
     const cap = SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE;
     await recoverSupportReason(reasonRequired([cap]), VEHICLE_A);
@@ -109,7 +109,7 @@ describe('recoverSupportReason', () => {
   });
 
   it('rời phiên xoá lý do đã nhớ', async () => {
-    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ khoá lịch bảo dưỡng — ticket #3');
+    const prompt = vi.fn().mockResolvedValue('Chủ xe nhờ khoá lịch bảo dưỡng - ticket #3');
     unregister = registerSupportReasonPrompter(prompt);
     const cap = SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE;
     await recoverSupportReason(reasonRequired([cap]), VEHICLE_A);

@@ -149,7 +149,7 @@ async function renderScreen(
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('MemberListScreen — ma trận quyền', () => {
+describe('MemberListScreen - ma trận quyền', () => {
   it('thiếu `members.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const view = await renderScreen([PERMISSION.TENANT_VIEW]);
 
@@ -181,7 +181,7 @@ describe('MemberListScreen — ma trận quyền', () => {
   });
 });
 
-describe('MemberListScreen — ba luật KHÔNG được phá', () => {
+describe('MemberListScreen - ba luật KHÔNG được phá', () => {
   const all: Permission[] = [
     PERMISSION.MEMBER_VIEW,
     PERMISSION.MEMBER_INVITE,
@@ -225,7 +225,7 @@ describe('MemberListScreen — ba luật KHÔNG được phá', () => {
   });
 });
 
-describe('MemberListScreen — gói dịch vụ tách khỏi quyền (ADR 0027 điều 2)', () => {
+describe('MemberListScreen - gói dịch vụ tách khỏi quyền (ADR 0027 điều 2)', () => {
   it('gói chỉ-đọc: VẪN xem được danh sách, chỉ không mời/đổi vai/gỡ', async () => {
     const view = await renderScreen(
       [
@@ -252,7 +252,7 @@ describe('MemberListScreen — gói dịch vụ tách khỏi quyền (ADR 0027 �
   });
 });
 
-describe('MemberListScreen — lời mời', () => {
+describe('MemberListScreen - lời mời', () => {
   const all: Permission[] = [
     PERMISSION.MEMBER_VIEW,
     PERMISSION.MEMBER_INVITE,
@@ -350,7 +350,7 @@ describe('MemberListScreen — lời mời', () => {
   });
 });
 
-describe('MemberListScreen — invalidation', () => {
+describe('MemberListScreen - invalidation', () => {
   it('gỡ thành viên: làm mới CẢ `/auth/me` (quyền của chính người đang đăng nhập có thể đổi)', async () => {
     const view = await renderScreen([PERMISSION.MEMBER_VIEW, PERMISSION.MEMBER_REMOVE]);
     const invalidate = jest.spyOn(view.queryClient, 'invalidateQueries');
@@ -367,7 +367,7 @@ describe('MemberListScreen — invalidation', () => {
 const BRANCH_A = { id: '01JQZX00000000000000000BRA', name: 'Quận 1', provinceName: 'TP HCM' } as Branch;
 const BRANCH_B = { id: '01JQZX00000000000000000BRB', name: 'Quận 5', provinceName: 'TP HCM' } as Branch;
 
-describe('MemberListScreen — chi nhánh phụ trách (ADR 0052)', () => {
+describe('MemberListScreen - chi nhánh phụ trách (ADR 0052)', () => {
   const all: Permission[] = [
     PERMISSION.MEMBER_VIEW,
     PERMISSION.MEMBER_INVITE,

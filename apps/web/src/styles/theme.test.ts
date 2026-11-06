@@ -265,7 +265,7 @@ describe('design token', () => {
      * `--xp-color-text-secondary` chỉ đạt 1.81 (v2; bộ cũ 2.99) và `--xp-gold-deep` 4.33 trên
      * `--xp-shell-sidebar-bg` — cả hai từng là màu chữ menu trước Wave 1D-B.
      */
-    describe('sidebar tối — bậc trạng thái dẫn xuất', () => {
+    describe('sidebar tối - bậc trạng thái dẫn xuất', () => {
       /** Giải `color-mix(in srgb, <token> N%, <token>)` ra hex để đo được. */
       function resolveMix(value: string): string {
         const match = value.match(
@@ -303,7 +303,7 @@ describe('design token', () => {
         expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('hai token nền SÁNG thật sự trượt trên nền tối — nên việc thay chúng là cần thiết', () => {
+      it('hai token nền SÁNG thật sự trượt trên nền tối - nên việc thay chúng là cần thiết', () => {
         expect(contrast(XP_TOKENS['color-text-secondary'], BG)).toBeLessThan(4.5);
         expect(contrast(XP_TOKENS['color-primary-active'], BG)).toBeLessThan(4.5);
       });
@@ -323,7 +323,7 @@ describe('design token', () => {
      * `#e9ac29` chỉ 2.02 trên trắng, hover 2.76, bậc nhấn `--xp-gold-deep` 3.97. Chúng hợp lệ khi
      * là NỀN (chữ `--xp-color-primary-contrast` lên trên) hoặc thành phần đồ hoạ (ngưỡng 3:1).
      */
-    describe('vỏ portal — bề mặt sáng', () => {
+    describe('vỏ portal - bề mặt sáng', () => {
       const WHITE = XP_TOKENS['color-bg-container'];
 
       it.each([
@@ -357,7 +357,7 @@ describe('design token', () => {
         expect(contrast(XP_TOKENS['color-primary-strong'], bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('primary-strong KHÔNG làm nền dưới chữ tối — lý do bậc nhấn không đổi sang nó', () => {
+      it('primary-strong KHÔNG làm nền dưới chữ tối - lý do bậc nhấn không đổi sang nó', () => {
         // Nếu ai đó trỏ `color-primary-active` (đang là nền dưới chữ tối ở web + native) về
         // Brand/high, chữ trên nền đó rơi xuống ~2.4:1.
         expect(
@@ -379,7 +379,7 @@ describe('design token', () => {
       expect(antdTheme.components?.Button?.primaryColor).toBe(XP_TOKENS['color-primary-contrast']);
     });
 
-    it('là ngoại lệ DUY NHẤT — không có override component nào khác', () => {
+    it('là ngoại lệ DUY NHẤT - không có override component nào khác', () => {
       expect(Object.keys(antdTheme.components ?? {})).toEqual(['Button']);
       expect(Object.keys(antdTheme.components?.Button ?? {})).toEqual(['primaryColor']);
     });

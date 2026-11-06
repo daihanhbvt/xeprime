@@ -51,7 +51,7 @@ beforeEach(() => {
 
 afterEach(() => setChatDebugEnabledForTest(false));
 
-describe('chatDebug — cổng bật/tắt', () => {
+describe('chatDebug - cổng bật/tắt', () => {
   it('không ghi dòng nào khi TẮT', () => {
     setChatDebugEnabledForTest(false);
 
@@ -74,10 +74,10 @@ describe('chatDebug — cổng bật/tắt', () => {
   });
 });
 
-describe('chatDebug — vệ sinh log', () => {
+describe('chatDebug - vệ sinh log', () => {
   beforeEach(() => setChatDebugEnabledForTest(true));
 
-  it('ghi khi BẬT — và chỉ mang event + số đo', () => {
+  it('ghi khi BẬT - và chỉ mang event + số đo', () => {
     chatDebug.refreshOk(CONVERSATION_ID, CHAT_DEBUG_SOURCE.REALTIME, 2, 137);
 
     expect(mockLogger.debug).toHaveBeenCalledTimes(1);

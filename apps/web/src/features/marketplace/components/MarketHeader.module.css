@@ -12,7 +12,26 @@
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 25px 50px -12px rgba(0, 0, 0, 0.05);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+/* Đã cuộn: nền kính mờ (kem trong 72%) + blur/saturate mạnh + bóng sâu hơn. Màu cục bộ tại đây —
+   chưa có token "glass" chung ở @xeprime/ui. */
+.headerScrolled {
+  background: rgba(254, 251, 246, 0.72);
+  backdrop-filter: saturate(180%) blur(18px);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 12px 32px -12px rgba(14, 15, 18, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    transition: none;
+  }
 }
 
 .headerHidden {
@@ -83,6 +102,35 @@
 
 .navLink:hover {
   color: var(--xp-color-primary);
+}
+
+/* Gạch chân trượt từ trái khi rê chuột (mục đang chọn đã có viền dưới cố định). */
+.navLink {
+  position: relative;
+}
+
+.navLink::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: var(--xp-color-primary);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--xp-motion-duration-fast) var(--xp-motion-ease-out);
+}
+
+.navLink:hover::after,
+.navLink:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink::after {
+    transition: none;
+  }
 }
 
 .navActive,
@@ -242,4 +290,13 @@
   background: var(--xp-color-bg-muted);
   border-color: var(--xp-color-primary-bright);
   color: var(--xp-color-primary-hover);
+}
+
+/* Đặt cuối file để thắng `[data-theme='dark'] .header` cùng độ đặc hiệu. */
+:global([data-theme='dark']) .headerScrolled {
+  background: rgba(14, 15, 18, 0.72);
+  backdrop-filter: saturate(160%) blur(18px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 16px 40px -14px rgba(0, 0, 0, 0.8);
 }

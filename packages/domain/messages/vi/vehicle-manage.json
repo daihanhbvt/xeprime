@@ -8,7 +8,7 @@
   "loadErrorBody": "Có lỗi khi lấy dữ liệu. Vui lòng thử lại.",
   "forbiddenTitle": "Không có quyền quản lý xe",
   "forbiddenBody": "Bạn cần quyền xem và sửa xe để dùng không gian này.",
-  "readOnlyNotice": "Bạn chỉ có quyền xem — mọi thay đổi ở đây sẽ không lưu được.",
+  "readOnlyNotice": "Bạn chỉ có quyền xem - mọi thay đổi ở đây sẽ không lưu được.",
   "header": {
     "brand": "Xe Prime",
     "portal": "Partner portal",
@@ -16,7 +16,7 @@
     "noRating": "Chưa có đánh giá",
     "trips": "{count, plural, =0 {Chưa có chuyến} other {# chuyến}}",
     "viewListing": "Xem trang xe",
-    "viewListingDisabled": "Xe chưa hiển thị công khai — trang xe chỉ có sau khi được duyệt lên chợ.",
+    "viewListingDisabled": "Xe chưa hiển thị công khai - trang xe chỉ có sau khi được duyệt lên chợ.",
     "viewProfile": "Xem hồ sơ xe"
   },
   "nav": {
@@ -39,7 +39,7 @@
     "withDriverTerms": "Thủ tục cho thuê (có tài)",
     "toggleLabel": "Bật hoặc tắt dịch vụ {service}",
     "toggleNotAllowed": "Xe máy không có dịch vụ có tài xế.",
-    "toggleLastService": "Xe phải giữ ít nhất một dịch vụ — bật dịch vụ khác trước khi tắt mục này.",
+    "toggleLastService": "Xe phải giữ ít nhất một dịch vụ - bật dịch vụ khác trước khi tắt mục này.",
     "toggleNoPermission": "Bạn không có quyền sửa xe."
   },
   "serviceToggle": {
@@ -82,13 +82,13 @@
     "addressTitle": "Địa chỉ xe hiện tại",
     "addressEdit": "Chỉnh sửa",
     "addressMissing": "Xe chưa gắn chi nhánh nào. Chọn chi nhánh ở cổng quản lý để xe có vị trí công khai.",
-    "addressNoStreet": "Chi nhánh chưa có địa chỉ chi tiết — bấm Chỉnh sửa để bổ sung.",
+    "addressNoStreet": "Chi nhánh chưa có địa chỉ chi tiết - bấm Chỉnh sửa để bổ sung.",
     "addressMapPending": "Chưa định vị được địa chỉ này trên bản đồ. Địa chỉ dạng chữ vẫn được dùng; vị trí sẽ có sau khi hệ thống tra được toạ độ.",
     "addressMapTitle": "Bản đồ vị trí xe",
     "addressSharedTitle": "Chi nhánh này đang giữ {count, plural, other {# xe}}",
     "addressSharedBody": "Sửa địa chỉ chi nhánh sẽ đổi vị trí công khai của tất cả các xe đó. Muốn đặt xe ở nơi khác, hãy tạo/chọn chi nhánh khác ở cổng quản lý.",
     "saved": "Đã lưu thông tin xe",
-    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
+    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác - gồm cả giá - sửa là có hiệu lực ngay.",
     "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi.",
     "addressBranchHint": "Địa chỉ chi nhánh quyết định xe này hiển thị ở khu vực nào trên chợ, và là điểm xuất phát để tính phí giao xe tận nơi."
   },
@@ -97,7 +97,7 @@
     "reorderLabel": "Bật kéo thả sắp xếp ảnh",
     "minimumHint": "Mỗi ô giữ một ảnh và không ô nào được để trống (tối đa {max} ảnh thư viện).",
     "galleryTitle": "Ảnh xe",
-    "coverFromFront": "Ảnh mặt trước được dùng làm ảnh bìa trên thẻ xe và trang xe — nên chọn tấm rõ nét nhất.",
+    "coverFromFront": "Ảnh mặt trước được dùng làm ảnh bìa trên thẻ xe và trang xe - nên chọn tấm rõ nét nhất.",
     "choose": "Chọn hình",
     "uploaded": "Đã tải lên",
     "missing": "Chưa đăng tải",
@@ -115,13 +115,13 @@
     "dropRemove": "Bỏ {name}",
     "uploading": "Đang tải {name}",
     "maxReached": "Tối đa {max} ảnh thư viện",
-    "legacyNotice": "{count, plural, other {# ảnh}} tải lên từ trước chưa gán vị trí — đang hiện ở \"Ảnh khác\". Kéo sang ô phù hợp hoặc giữ nguyên rồi bấm lưu.",
+    "legacyNotice": "{count, plural, other {# ảnh}} tải lên từ trước chưa gán vị trí - đang hiện ở \"Ảnh khác\". Kéo sang ô phù hợp hoặc giữ nguyên rồi bấm lưu.",
     "saved": "Đã lưu hình ảnh xe",
     "alt": "Ảnh {slot} của {vehicle}"
   },
   "documents": {
     "title": "Giấy tờ xe",
-    "subtitle": "Đăng ký, đăng kiểm, bảo hiểm và giấy tờ khác — lưu ở kho riêng tư, chỉ người có quyền mới mở được."
+    "subtitle": "Đăng ký, đăng kiểm, bảo hiểm và giấy tờ khác - lưu ở kho riêng tư, chỉ người có quyền mới mở được."
   },
   "tripHistory": {
     "title": "Lịch sử chuyến đi",
@@ -143,7 +143,7 @@
   },
   "pricing": {
     "title": "Giá & chính sách",
-    "subtitle": "Giá cho thuê theo từng dịch vụ của xe, cùng cọc, giao xe tận nơi và giới hạn quãng đường — lưu một lần.",
+    "subtitle": "Giá cho thuê theo từng dịch vụ của xe, cùng cọc, giao xe tận nơi và giới hạn quãng đường - lưu một lần.",
     "selfDriveTitle": "Đơn giá thuê mặc định",
     "selfDriveSubtitle": "Đơn giá thuê mặc định được áp dụng nếu ngày đó không có tuỳ chỉnh khác về giá.",
     "withDriverTitle": "Thiết lập bảng giá dịch vụ có tài xế",
@@ -155,7 +155,7 @@
     "activeTitle": "Tính năng Tối ưu nhận chuyến đang hoạt động",
     "activeBody": "Yêu cầu thuê đạt đủ điều kiện sẽ được xác nhận ngay, không cần bạn duyệt thủ công.",
     "inactiveTitle": "Đang duyệt thủ công",
-    "inactiveBody": "Mọi yêu cầu thuê sẽ chờ bạn duyệt — hạn trả lời từ 15 phút tới tối đa 4 giờ, tuỳ khoảng cách tới giờ nhận xe.",
+    "inactiveBody": "Mọi yêu cầu thuê sẽ chờ bạn duyệt - hạn trả lời từ 15 phút tới tối đa 4 giờ, tuỳ khoảng cách tới giờ nhận xe.",
     "toggleTitle": "Tự động đồng ý nhận chuyến",
     "toggleBody": "Tiết kiệm thời gian phản hồi khách hàng và gia tăng tỉ lệ chuyển đổi.",
     "toggleLabel": "Tự động nhận chuyến",
@@ -163,14 +163,14 @@
     "instantBody": "Khách hàng không cần đợi bạn duyệt chuyến thủ công. Hệ thống tự động xác nhận khi có tài xế rảnh.",
     "withDriverTitle": "Điều kiện riêng của chuyến có tài xế",
     "minRental": "Thời gian thuê tối thiểu",
-    "minRentalHint": "Phạm vi hỗ trợ cấu hình: 1 – 24 giờ",
+    "minRentalHint": "Phạm vi hỗ trợ cấu hình: 1 - 24 giờ",
     "routesTitle": "Phân khúc loại chuyến đi ưu tiên nhận",
     "routesHint": "Chỉ dùng để bạn ưu tiên xử lý; hệ thống vẫn nhận mọi lộ trình xe phục vụ.",
     "rulesTitle": "Điều kiện để hệ thống tự nhận",
     "rules": {
       "schedule": "Xe còn trống trong đúng khoảng thời gian, kể cả thời gian chết giữa hai chuyến.",
       "window": "Giờ nhận/trả nằm trong khung giờ giao nhận của xe.",
-      "quote": "Giá đã chốt — báo giá còn tạm tính thì vẫn chờ bạn.",
+      "quote": "Giá đã chốt - báo giá còn tạm tính thì vẫn chờ bạn.",
       "longTerm": "Thuê dài hạn không tự nhận: bạn luôn chốt lịch tay.",
       "driver": "Có tài xế đang hoạt động, GPLX còn hạn và rảnh trong khung giờ.",
       "hold": "Chuyến có tài xế trên tuyến hoa hồng vẫn chờ bạn duyệt trước khi khách chuyển giữ chỗ.",
@@ -178,12 +178,12 @@
     },
     "policyTitle": "* Lưu ý chính sách huỷ chuyến khi tự động nhận:",
     "policyBody": "Yêu cầu được tự động xác nhận vẫn tuân thủ chính sách huỷ chuyến chuẩn của Xe Prime. Chủ xe chủ động huỷ chuyến sau khi đã tự động xác nhận có thể dẫn đến điểm uy tín thấp hoặc hạn chế hiển thị xe.",
-    "capabilityNoFeature": "Gói hiện hành chưa có tính năng Tài xế — chưa bật được tự động nhận chuyến có tài xế.",
+    "capabilityNoFeature": "Gói hiện hành chưa có tính năng Tài xế - chưa bật được tự động nhận chuyến có tài xế.",
     "capabilityNoDriver": "Chưa có tài xế đang hoạt động. Thêm tài xế ở cổng quản lý trước khi bật.",
-    "capabilityOk": "{count, plural, other {# tài xế}} đang hoạt động — hệ thống gán tài xế rảnh ngay khi nhận chuyến.",
+    "capabilityOk": "{count, plural, other {# tài xế}} đang hoạt động - hệ thống gán tài xế rảnh ngay khi nhận chuyến.",
     "openDrivers": "Quản lý tài xế",
     "saved": "Đã lưu thiết lập nhận chuyến",
-    "appCapabilityNoFeature": "Tài khoản hiện tại chưa có tính năng Tài xế — chưa bật được tự động nhận chuyến có tài xế."
+    "appCapabilityNoFeature": "Tài khoản hiện tại chưa có tính năng Tài xế - chưa bật được tự động nhận chuyến có tài xế."
   },
   "delivery": {
     "title": "Giao nhận xe tận nơi",
@@ -196,14 +196,14 @@
     "noShopPolicyTitle": "Gian hàng chưa có chính sách thuê",
     "noShopPolicyBody": "Bạn có thể bật giao nhận riêng cho xe này; các mục còn lại (bảo đảm, quá giờ, ưu đãi) lấy mặc định an toàn và chỉnh được ở mục Thủ tục cho thuê.",
     "radiusTitle": "Quãng đường giao nhận tối đa",
-    "radiusHint": "Ngoài bán kính này khách thấy \"Chủ xe sẽ trao đổi phí trực tiếp\" — bạn báo giá tay trên đơn.",
+    "radiusHint": "Ngoài bán kính này khách thấy \"Chủ xe sẽ trao đổi phí trực tiếp\" - bạn báo giá tay trên đơn.",
     "tiersTitle": "Bậc phí theo khoảng cách (một chiều)",
     "tiersHint": "Nhập 0 cho khoảng cách miễn phí. Phí không tính theo km: mỗi bậc là một mức cố định để khách thấy trước con số.",
     "freeWithin": "Miễn phí trong {km} km đầu",
     "manualBeyond": "Ngoài {km} km: báo giá thủ công",
     "estimateNote": "Con số hiện với khách là DỰ KIẾN theo quãng đường đường bộ; bạn vẫn chốt phí trên đơn.",
     "saved": "Đã lưu thiết lập giao nhận",
-    "offNote": "Đang tắt — khách không thể yêu cầu giao xe tận nơi khi đặt."
+    "offNote": "Đang tắt - khách không thể yêu cầu giao xe tận nơi khi đặt."
   },
   "handover": {
     "title": "Thời gian giao nhận xe",
@@ -217,7 +217,7 @@
     "maxWindows": "Tối đa {max} mốc mỗi loại",
     "allDay": "Không đặt mốc nào = giao/nhận mọi giờ.",
     "bufferTitle": "Thời gian chết giữa hai chuyến",
-    "bufferHint": "Khoảng chuẩn bị (vệ sinh, sạc, kiểm tra) được cộng vào lịch xe sau mỗi chuyến — hai chuyến không thể đứng sát nhau hơn khoảng này.",
+    "bufferHint": "Khoảng chuẩn bị (vệ sinh, sạc, kiểm tra) được cộng vào lịch xe sau mỗi chuyến - hai chuyến không thể đứng sát nhau hơn khoảng này.",
     "bufferNone": "Không có",
     "bufferCustom": "Khác",
     "bufferCustomLabel": "Số phút",
@@ -236,7 +236,7 @@
     "withDriverTitle": "Thủ tục & Quy định bàn giao xe có tài xế",
     "withDriverSubtitle": "Quy trình ràng buộc giữa chủ xe, tài xế và khách hàng để bảo đảm tính an toàn tối đa cho dịch vụ.",
     "collateralTitle": "Tài sản thế chấp",
-    "collateralInherited": "Đang kế thừa từ chính sách gian hàng — đổi ở đây sẽ tạo bộ chính sách riêng cho xe.",
+    "collateralInherited": "Đang kế thừa từ chính sách gian hàng - đổi ở đây sẽ tạo bộ chính sách riêng cho xe.",
     "collateralNoneHint": "* Tạo điều kiện tối đa thu hút khách đặt thuê xe nhanh chóng.",
     "collateralOption": {
       "none": "Không yêu cầu khách thuê thế chấp tiền mặt hoặc xe máy",
@@ -268,9 +268,9 @@
     "termsPlaceholder": "Ví dụ: Không hút thuốc trong xe; không chở thú cưng khi không có lồng; trả xe đúng giờ và đúng lượng pin/nhiên liệu…",
     "termsHint": "Hiển thị cho khách trên trang xe và trong bước xác nhận đặt xe. Đơn đã chốt giữ nguyên điều khoản tại thời điểm đặt.",
     "depositTitle": "Yêu cầu đặt cọc giữ chuyến",
-    "depositUnsupported": "Chưa thu được qua hệ thống — sẽ mở khi nối vào luồng giữ chỗ và đối soát.",
+    "depositUnsupported": "Chưa thu được qua hệ thống - sẽ mở khi nối vào luồng giữ chỗ và đối soát.",
     "depositNote": "Khác với cọc thế chấp của tự lái: đây là tiền trả trước cho chính chuyến đi.",
-    "publicNotice": "Xe đang công khai — đổi hình thức bảo đảm chỉ cập nhật nhãn trên chợ, không cần duyệt lại.",
+    "publicNotice": "Xe đang công khai - đổi hình thức bảo đảm chỉ cập nhật nhãn trên chợ, không cần duyệt lại.",
     "saved": "Đã lưu thủ tục cho thuê",
     "collateralCustomize": "Tuỳ chỉnh riêng cho xe này",
     "mileageTitle": "Hạn mức quãng đường"
@@ -289,7 +289,7 @@
       "longDistanceField": "Số km mỗi ngày trước khi tính phí",
       "overnight": "Hỗ trợ tài xế lưu trú túc xá khi đi tỉnh qua đêm"
     },
-    "flowNote": "Mức này được công bố cho khách trước khi gửi yêu cầu và đóng băng vào đơn. Khoản thật được ghi ở bước quyết toán chuyến — không tự cộng vào giá ban đầu.",
+    "flowNote": "Mức này được công bố cho khách trước khi gửi yêu cầu và đóng băng vào đơn. Khoản thật được ghi ở bước quyết toán chuyến - không tự cộng vào giá ban đầu.",
     "saved": "Đã lưu phụ phí mặc định",
     "validation": {
       "amountRequired": "Bật phụ phí thì cần số tiền lớn hơn 0",

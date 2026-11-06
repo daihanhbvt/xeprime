@@ -33,7 +33,7 @@ function runAudit(): { stdout: string; code: number } {
 
 const audit = runAudit();
 
-describe('i18n:audit — dò được chuỗi giao diện thô', () => {
+describe('i18n:audit - dò được chuỗi giao diện thô', () => {
   it('thoát khác 0 khi còn chuỗi chưa dịch (đúng là một cổng CI, không phải một bản in)', () => {
     // Ngày nào bộ này về 0 thì đổi khẳng định này thành `toBe(0)` — lúc đó nó khoá chiều ngược lại.
     expect(audit.code).toBe(1);
@@ -52,8 +52,8 @@ describe('i18n:audit — dò được chuỗi giao diện thô', () => {
      */
     // `booking-requests` rời danh sách ngày 26/10/2026 (luồng đặt hộ đã i18n hoá) — canary thứ hai
     // chuyển sang `contracts`, khu còn nguyên chuỗi thô. Khu nào sạch thì đổi canary, đừng xoá nó.
-    expect(audit.stdout).toContain('  handovers —');
-    expect(audit.stdout).toContain('  contracts —');
+    expect(audit.stdout).toContain('  handovers -');
+    expect(audit.stdout).toContain('  contracts -');
   });
 
   it('phân loại được vị trí, không chỉ nói "có chữ tiếng Việt"', () => {
@@ -92,7 +92,7 @@ describe('allowlist của i18n:audit', () => {
     }
   });
 
-  it('danh sách ngắn — nó dài ra nghĩa là bộ dò sai, không phải ngoại lệ nhiều', () => {
+  it('danh sách ngắn - nó dài ra nghĩa là bộ dò sai, không phải ngoại lệ nhiều', () => {
     expect(AUDIT_ALLOWLIST.length).toBeLessThanOrEqual(15);
   });
 

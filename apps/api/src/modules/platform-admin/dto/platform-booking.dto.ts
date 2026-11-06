@@ -99,7 +99,7 @@ export class PlatformBookingDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiProperty({ description: 'Số tiền dạng string (ADR 0007)' }) totalAmount!: string;
   @ApiProperty({ description: 'Số tiền dạng string (ADR 0007)' }) paidAmount!: string;
-  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' })
+  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string - ADR 0007' })
   debtAmount!: string;
   @ApiProperty() tenantId!: string;
   @ApiProperty() tenantName!: string;

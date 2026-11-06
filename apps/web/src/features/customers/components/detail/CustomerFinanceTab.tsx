@@ -72,7 +72,7 @@ export function CustomerFinanceTab({
     const end = dayjs(bucket.to).subtract(1, 'day');
     return period === 'week' || start.isSame(end, 'day')
       ? fmt.dayMonth(bucket.from)
-      : `${start.format('DD')} – ${fmt.dayMonth(end.toISOString())}`;
+      : `${start.format('DD')} - ${fmt.dayMonth(end.toISOString())}`;
   };
   const oldestDebt = data?.receivables[0] ?? null;
 

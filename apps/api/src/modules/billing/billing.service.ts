@@ -367,7 +367,7 @@ export class BillingService {
         throw new ConflictException({
           code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
           message:
-            'Đây là bậc mặc định của TUYẾN HOA HỒNG — không đổi được sang gói thuê bao. ' +
+            'Đây là bậc mặc định của TUYẾN HOA HỒNG - không đổi được sang gói thuê bao. ' +
             'Muốn thêm lựa chọn cho gian hàng thì tạo một gói `package` mới.',
           details: { planCode: current.code, operation: 'change_billing_mode' },
         });
@@ -456,7 +456,7 @@ export class BillingService {
       throw new ConflictException({
         code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
         message:
-          'Không ngừng bán được bậc mặc định của TUYẾN HOA HỒNG — mọi chủ xe cá nhân vào cửa ' +
+          'Không ngừng bán được bậc mặc định của TUYẾN HOA HỒNG - mọi chủ xe cá nhân vào cửa ' +
           'bằng chính nó. Đây không phải một gói để khách chọn mua.',
         details: { planCode: current.code, operation: 'archive' },
       });
@@ -552,7 +552,7 @@ export class BillingService {
     if (current.billingMode === BILLING_MODE.COMMISSION) {
       throw new ConflictException({
         code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
-        message: 'Không xoá được bậc mặc định của TUYẾN HOA HỒNG — mọi chủ xe cá nhân vào cửa bằng nó.',
+        message: 'Không xoá được bậc mặc định của TUYẾN HOA HỒNG - mọi chủ xe cá nhân vào cửa bằng nó.',
         details: { planCode: current.code, operation: 'delete' },
       });
     }
@@ -571,7 +571,7 @@ export class BillingService {
       if (subscriptions > 0 || invoices > 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.PLAN_IN_USE,
-          message: 'Gói đã có thuê bao hoặc hoá đơn nên không xoá được — hãy ngừng bán thay vì xoá',
+          message: 'Gói đã có thuê bao hoặc hoá đơn nên không xoá được - hãy ngừng bán thay vì xoá',
           details: { planCode: current.code, subscriptions, invoices },
         });
       }
@@ -702,7 +702,7 @@ export class BillingService {
     if (plan.status === PLAN_STATUS.DRAFT && dto.price === undefined) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Gói chưa mở bán (giá đang là số tạm) — nhập giá cho lượt gán này, hoặc mở bán gói trước',
+        message: 'Gói chưa mở bán (giá đang là số tạm) - nhập giá cho lượt gán này, hoặc mở bán gói trước',
         details: { field: 'price', planStatus: plan.status },
       });
     }
@@ -733,8 +733,8 @@ export class BillingService {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message: limits.salesOnly
-          ? 'Bậc gói này bán bằng tư vấn — nhập giá đàm phán cho kỳ hạn đã chọn'
-          : `Bậc gói này không niêm yết giá cho kỳ ${dto.termMonths} tháng — nhập giá, hoặc chọn kỳ hạn có trong bảng giá`,
+          ? 'Bậc gói này bán bằng tư vấn - nhập giá đàm phán cho kỳ hạn đã chọn'
+          : `Bậc gói này không niêm yết giá cho kỳ ${dto.termMonths} tháng - nhập giá, hoặc chọn kỳ hạn có trong bảng giá`,
         details: { field: 'price', termMonths: dto.termMonths, salesOnly: limits.salesOnly },
       });
     }
@@ -908,7 +908,7 @@ export class BillingService {
           code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
           message:
             block === SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM
-              ? 'Dòng tuyến hoa hồng mặc định không huỷ được — đổi tuyến bằng cách gán gói'
+              ? 'Dòng tuyến hoa hồng mặc định không huỷ được - đổi tuyến bằng cách gán gói'
               : 'Chỉ huỷ được kỳ đang hiệu lực hoặc đang chờ đến kỳ',
         });
       }
@@ -1043,7 +1043,7 @@ export class BillingService {
           code: API_ERROR_CODE.SUBSCRIPTION_TERM_NOT_EDITABLE,
           message:
             block === SUBSCRIPTION_EDIT_BLOCK.COMMISSION_TERM
-              ? 'Dòng tuyến hoa hồng không sửa được — đổi tuyến bằng cách gán gói'
+              ? 'Dòng tuyến hoa hồng không sửa được - đổi tuyến bằng cách gán gói'
               : 'Chỉ sửa được kỳ đang hiệu lực hoặc đang chờ đến kỳ',
           details: { reason: block },
         });
@@ -1052,7 +1052,7 @@ export class BillingService {
       if (dto.price !== undefined && !adminOrigin) {
         throw new ConflictException({
           code: API_ERROR_CODE.SUBSCRIPTION_PRICE_NOT_EDITABLE,
-          message: 'Kỳ sinh từ hoá đơn gian hàng đã thanh toán — không sửa được giá',
+          message: 'Kỳ sinh từ hoá đơn gian hàng đã thanh toán - không sửa được giá',
         });
       }
       const endsAt = dto.endsAt === undefined ? target.endsAt : new Date(dto.endsAt);
@@ -1289,7 +1289,7 @@ export class BillingService {
     });
     if (!plan) {
       this.logger.error(
-        'Không có bậc gói tuyến hoa hồng nào đang bán — danh mục gói hỏng. ' +
+        'Không có bậc gói tuyến hoa hồng nào đang bán - danh mục gói hỏng. ' +
           'Chạy lại seed dữ liệu nền (SEED_MODE=system) hoặc tạo lại bậc mặc định ở màn quản trị gói.',
       );
       throw new ConflictException({
@@ -1793,7 +1793,7 @@ export class BillingService {
       throw new ConflictException({
         code: API_ERROR_CODE.PLAN_NOT_SELF_SERVE,
         message:
-          'Gói này được cấu hình riêng theo quy mô gian hàng — liên hệ XePrime để được tư vấn và báo giá.',
+          'Gói này được cấu hình riêng theo quy mô gian hàng - liên hệ XePrime để được tư vấn và báo giá.',
         details: { planCode: plan.code },
       });
     }
@@ -1910,7 +1910,7 @@ export class BillingService {
       if (partiallyPaid) {
         throw new ConflictException({
           code: API_ERROR_CODE.SUBSCRIPTION_INVOICE_PARTIALLY_PAID,
-          message: `Hoá đơn ${partiallyPaid.code} đã nhận một phần tiền — chuyển nốt phần còn thiếu theo đúng mã đó thay vì tạo hoá đơn mới`,
+          message: `Hoá đơn ${partiallyPaid.code} đã nhận một phần tiền - chuyển nốt phần còn thiếu theo đúng mã đó thay vì tạo hoá đơn mới`,
           details: { code: partiallyPaid.code },
         });
       }
@@ -2166,7 +2166,7 @@ export class BillingService {
     const vehicleScope = planVehicleScopeOf(plan.vehicleScope);
     if (snapshot.vehicleScope !== vehicleScope) {
       this.logger.warn(
-        `Hoá đơn ${args.invoiceId} ghi phạm vi ${snapshot.vehicleScope} nhưng bậc ${plan.code} là ${vehicleScope} — kích hoạt theo bậc.`,
+        `Hoá đơn ${args.invoiceId} ghi phạm vi ${snapshot.vehicleScope} nhưng bậc ${plan.code} là ${vehicleScope} - kích hoạt theo bậc.`,
       );
     }
 
@@ -2355,7 +2355,7 @@ export class BillingService {
         code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
         message:
           `Gian hàng chưa có gói dịch vụ hiệu lực nên tạm thời chỉ giữ được ${quota.limit} xe. ` +
-          'Liên hệ hỗ trợ XePrime — đây là lỗi cấu hình phía nền tảng, không phải hạn mức của bạn.',
+          'Liên hệ hỗ trợ XePrime - đây là lỗi cấu hình phía nền tảng, không phải hạn mức của bạn.',
         details,
       });
     }
@@ -2424,7 +2424,7 @@ export class BillingService {
     if (billingMode === BILLING_MODE.COMMISSION && scope !== PLAN_VEHICLE_SCOPE.ALL) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Bậc tuyến hoa hồng phủ mọi loại xe — phạm vi phải là "all"',
+        message: 'Bậc tuyến hoa hồng phủ mọi loại xe - phạm vi phải là "all"',
         details: { field: 'vehicleScope' },
       });
     }
@@ -2445,7 +2445,7 @@ export class BillingService {
       if (input.commissionPercent == null) {
         throw new BadRequestException({
           code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Bậc gói tuyến hoa hồng bắt buộc có commissionPercent (1–20)',
+          message: 'Bậc gói tuyến hoa hồng bắt buộc có commissionPercent (1-20)',
           details: { field: 'commissionPercent' },
         });
       }

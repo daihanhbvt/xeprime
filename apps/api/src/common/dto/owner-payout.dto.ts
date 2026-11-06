@@ -20,14 +20,14 @@ const TAX_EXEMPT_REASON_VALUES = Object.values(TAX_EXEMPT_REASON);
 export class OwnerPayoutDto {
   @ApiProperty({
     description:
-      'Doanh thu cho thuê xe `R` — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt ' +
+      'Doanh thu cho thuê xe `R` - tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt ' +
       'xe, bảo hiểm (VND string)',
   })
   rentAmount!: string;
 
   @ApiProperty({
     description:
-      'Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận–trả ' +
+      'Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận-trả ' +
       'của đơn; `0` = không còn nguồn nào để biết ⇒ hiện "Tiền thuê" không kèm số ngày',
   })
   rentalDays!: number;
@@ -36,13 +36,13 @@ export class OwnerPayoutDto {
     type: String,
     nullable: true,
     description:
-      'Đơn giá thuê / ngày — CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến ' +
+      'Đơn giá thuê / ngày - CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến ' +
       '1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện "Tiền thuê N ngày"',
   })
   unitAmount!: string | null;
 
   @ApiProperty({
-    description: '`H` — phí dịch vụ – chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string)',
+    description: '`H` - phí dịch vụ - chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string)',
   })
   ownerCommissionAmount!: string;
 
@@ -50,13 +50,13 @@ export class OwnerPayoutDto {
     type: () => [OwnerCommissionTierDto],
     nullable: true,
     description:
-      'Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) — đúng các nấc ' +
+      'Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) - đúng các nấc ' +
       'đã tính ra `H`. `null` ở tuyến gói, hoặc snapshot không mang nấc (trước luồng tiền v2) ⇒ ' +
       'màn hình giải thích chung, không có con số',
   })
   commissionTiers!: OwnerCommissionTierDto[] | null;
 
-  @ApiProperty({ description: '`T` = GTGT + TNCN — thuế khấu trừ, nộp thay (VND string)' })
+  @ApiProperty({ description: '`T` = GTGT + TNCN - thuế khấu trừ, nộp thay (VND string)' })
   taxAmount!: string;
 
   @ApiPropertyOptional({
@@ -100,7 +100,7 @@ export class OwnerPayoutDto {
     type: String,
     nullable: true,
     description:
-      'Vì sao KHÔNG khấu trừ dù cổng thuế mở — `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)',
+      'Vì sao KHÔNG khấu trừ dù cổng thuế mở - `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)',
   })
   taxExemptReason!: TaxExemptReason | null;
 
@@ -109,13 +109,13 @@ export class OwnerPayoutDto {
 
   @ApiProperty({
     description:
-      'Khách thanh toán trực tiếp (b) = `R − D − H` — phần TIỀN THUÊ khách trả tay lúc nhận xe, ' +
+      'Khách thanh toán trực tiếp (b) = `R − D − H` - phần TIỀN THUÊ khách trả tay lúc nhận xe, ' +
       'không gồm phí giao xe (VND string)',
   })
   payAtPickupRentAmount!: string;
 
   @ApiProperty({
-    description: 'Số tiền cộng ví (a − b) = `D − T` — ghi có khi chuyến hoàn thành (VND string)',
+    description: 'Số tiền cộng ví (a − b) = `D − T` - ghi có khi chuyến hoàn thành (VND string)',
   })
   ownerPayableAmount!: string;
 

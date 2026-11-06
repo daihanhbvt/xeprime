@@ -373,7 +373,7 @@ export function TripRequestProgress({
               ai="flex-start"
               gap={space.sm}
               accessible
-              accessibilityLabel={`${t(`steps.${step}.title`)} — ${t(`state.${state}`)}`}
+              accessibilityLabel={`${t(`steps.${step}.title`)} - ${t(`state.${state}`)}`}
               accessibilityState={{ selected: state === 'current' }}
             >
               <YStack
@@ -538,7 +538,7 @@ export function TripRequestTripCard({
         {
           key: 'package',
           label: t('reviewPage.trip.package'),
-          value: fmt.packageLabel(packageMonths) ?? '—',
+          value: fmt.packageLabel(packageMonths) ?? '-',
         },
         { key: 'wish', label: t('reviewPage.trip.pickupWish'), value: fmt.pickupWish(trip) },
         ...(expectedReturn
@@ -557,12 +557,12 @@ export function TripRequestTripCard({
         {
           key: 'pickup',
           label: t('reviewPage.trip.pickupAt'),
-          value: trip.pickupAt ? fmt.dateTime(trip.pickupAt) : '—',
+          value: trip.pickupAt ? fmt.dateTime(trip.pickupAt) : '-',
         },
         {
           key: 'return',
           label: t('reviewPage.trip.returnAt'),
-          value: trip.returnAt ? fmt.dateTime(trip.returnAt) : '—',
+          value: trip.returnAt ? fmt.dateTime(trip.returnAt) : '-',
         },
       ];
 
@@ -576,7 +576,7 @@ export function TripRequestTripCard({
             key: 'driverPickup',
             icon: 'location-outline',
             label: t('reviewPage.trip.driverPickup'),
-            value: trip.pickupAddress || '—',
+            value: trip.pickupAddress || '-',
           },
           ...(trip.routeType !== ROUTE_TYPE.IN_CITY && trip.destination
             ? [
@@ -595,7 +595,7 @@ export function TripRequestTripCard({
               key: 'delivery',
               icon: 'location-outline',
               label: t('reviewPage.trip.delivery'),
-              value: trip.deliveryAddress || '—',
+              value: trip.deliveryAddress || '-',
             },
           ]
         : [
@@ -718,7 +718,7 @@ export function TripRequestTripCard({
                     col={ownerVerified ? colors.shopName : colors.textMuted}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
-                    numberOfLines={1}
+                    numberOfLines={2}
                   >
                     {trip.shop.name}
                   </Text>
@@ -773,7 +773,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
         {contact ? (
           <>
             <DataRow label={t('name')} value={contact.name} />
-            <DataRow label={t('phone')} value={contact.phone || '—'} />
+            <DataRow label={t('phone')} value={contact.phone || '-'} />
             {/* Cùng `usePhoneNote` web: số TRÙNG số đã xác minh ⇒ "Đã xác thực"; KHÁC ⇒ nhắc. */}
             {me && contact.phone ? (
               isSameVnPhone(contact.phone, me.phone) ? (
@@ -799,7 +799,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
             {tView('noteLabel')}
           </Text>
           <Text col={colors.text} fos={fontSize.bodySm}>
-            {trip.customerNote?.trim() || '—'}
+            {trip.customerNote?.trim() || '-'}
           </Text>
         </YStack>
       </YStack>

@@ -111,7 +111,7 @@ describe('planQuotaGateHref', () => {
 });
 
 describe('plan-lanes', () => {
-  it('?lane= chỉ nhận hai làn tự mua — `all` và rác rơi về null', () => {
+  it('?lane= chỉ nhận hai làn tự mua - `all` và rác rơi về null', () => {
     expect(parsePlanLane('motorbike')).toBe('motorbike');
     expect(parsePlanLane('car')).toBe('car');
     expect(parsePlanLane('all')).toBeNull();

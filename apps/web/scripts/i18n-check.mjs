@@ -259,6 +259,11 @@ if (problems.length === 0) {
         fail(locale, `Khoá '${key}' để rỗng — bản dịch thiếu, không phải bản dịch trống.`);
         continue;
       }
+      // Quy ước chữ (skill `ui-text-style`): giao diện chỉ dùng gạch NGẮN "-". Dấu gạch dài
+      // "—" (U+2014) / "–" (U+2013) là thói quen của văn bản do AI viết, đã dọn sạch 06/11/2026.
+      if (/[–—]/.test(value)) {
+        fail(locale, `Khoá '${key}' chứa dấu gạch dài (— hoặc –) — dùng gạch ngắn "-".`);
+      }
       try {
         checkOtherClause(parse(value), locale, key);
       } catch (error) {

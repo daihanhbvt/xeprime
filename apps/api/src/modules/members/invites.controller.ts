@@ -42,7 +42,7 @@ export class InvitesController {
   @Get()
   @RequirePermissions(PERMISSION.MEMBER_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.MEMBER_VIEW)
-  @ApiOperation({ summary: 'Lời mời của gian hàng — mặc định chỉ những lời đang chờ' })
+  @ApiOperation({ summary: 'Lời mời của gian hàng - mặc định chỉ những lời đang chờ' })
   @ApiOkResponse({ type: InvitePageDto })
   list(
     @CurrentTenant() tenant: TenantContext,
@@ -61,7 +61,7 @@ export class InvitesController {
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
   @ApiOperation({
     summary:
-      'Tạo lời mời tham gia gian hàng (SĐT + vai trò) — trả link một lần để người mời tự gửi (ADR 0060)',
+      'Tạo lời mời tham gia gian hàng (SĐT + vai trò) - trả link một lần để người mời tự gửi (ADR 0060)',
   })
   @ApiCreatedResponse({ type: CreateInviteResultDto })
   create(
@@ -74,7 +74,7 @@ export class InvitesController {
 
   @Post(':id/revoke')
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
-  @ApiOperation({ summary: 'Thu hồi một lời mời đang chờ — link đã gửi hết giá trị ngay' })
+  @ApiOperation({ summary: 'Thu hồi một lời mời đang chờ - link đã gửi hết giá trị ngay' })
   @ApiOkResponse({ type: InviteDto })
   revoke(
     @CurrentTenant() tenant: TenantContext,

@@ -115,7 +115,7 @@ describe('cụm thu gọn ở trang kết quả', () => {
     expect(screen.getByRole('button', { name: 'Chỉnh sửa tìm kiếm' })).toBeTruthy();
   });
 
-  it('mở trang KHÔNG tự ghi filter nào — không có gì bị lọc thêm sau lưng người dùng', async () => {
+  it('mở trang KHÔNG tự ghi filter nào - không có gì bị lọc thêm sau lưng người dùng', async () => {
     nav.filters = { bodyType: ['suv'] };
     await renderResultsSearch();
     await scrollSearchBarOutOfView();
@@ -135,7 +135,7 @@ describe('cụm thu gọn ở trang kết quả', () => {
     expect(lastPatch().provinceCode).toBe('48');
   });
 
-  it('patch chỉ mang key của thẻ tìm kiếm — facet Bộ lọc không bị cuốn trôi', async () => {
+  it('patch chỉ mang key của thẻ tìm kiếm - facet Bộ lọc không bị cuốn trôi', async () => {
     nav.filters = {
       vehicleType: VEHICLE_TYPE.CAR,
       serviceType: SERVICE_TYPE.SELF_DRIVE,

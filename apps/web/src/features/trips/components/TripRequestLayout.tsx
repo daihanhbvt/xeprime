@@ -293,7 +293,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
     <BookingRenterCard renter={me} contact={trip.contact ?? null} headingLevel={2}>
       <div className={styles.noteField}>
         <span className={styles.noteLabel}>{t('noteLabel')}</span>
-        <p className={styles.noteValue}>{trip.customerNote?.trim() || '—'}</p>
+        <p className={styles.noteValue}>{trip.customerNote?.trim() || '-'}</p>
       </div>
     </BookingRenterCard>
   );

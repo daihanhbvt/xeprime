@@ -37,7 +37,7 @@ describe('setLocale', () => {
     expect(LOCALE_COOKIE_MAX_AGE).toBe(31_536_000);
   });
 
-  it('secure bám môi trường — bật ở production, tắt ở dev (http://localhost)', async () => {
+  it('secure bám môi trường - bật ở production, tắt ở dev (http://localhost)', async () => {
     await setLocale('vi');
     const [, , options] = store.set.mock.calls[0]!;
     expect(options.secure).toBe(process.env.NODE_ENV === 'production');
@@ -51,7 +51,7 @@ describe('setLocale', () => {
     },
   );
 
-  it('chỉ nhận MỘT tham số — không có tên cookie, không có đích chuyển hướng', () => {
+  it('chỉ nhận MỘT tham số - không có tên cookie, không có đích chuyển hướng', () => {
     // `length` = số tham số khai báo. Thêm tham số thứ hai là mở đúng cửa mà test này canh.
     expect(setLocale.length).toBe(1);
   });

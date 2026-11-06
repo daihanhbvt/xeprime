@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Fee policies",
-    "subtitle": "Platform fee, owner commission, booking hold, insurance and tax — versioned, frozen onto each order at creation.",
+    "subtitle": "Platform fee, owner commission, booking hold, insurance and tax - versioned, frozen onto each order at creation.",
     "loadError": "Could not load the list.",
     "empty": "No fee policies yet.",
     "createButton": "New draft",
@@ -42,10 +42,10 @@
     },
     "draftPending": "{count, plural, one {# draft is} other {# drafts are}} not activated yet.",
     "draftPendingAction": "View drafts",
-    "archivedHint": "Archived versions are kept only to reconcile past bookings — new bookings use the active policy: {name} (version {version}).",
+    "archivedHint": "Archived versions are kept only to reconcile past bookings - new bookings use the active policy: {name} (version {version}).",
     "archivedHintNoActive": "Archived versions are kept only to reconcile past bookings.",
     "backToActive": "View the active policy",
-    "emptyActive": "No policy is active yet — create or activate a draft.",
+    "emptyActive": "No policy is active yet - create or activate a draft.",
     "emptyDraft": "No drafts.",
     "emptyArchived": "No version has been archived yet.",
     "taxRatesSummary": "{selfDrive} · {longTerm} · {withDriver}",
@@ -54,13 +54,13 @@
     "taxLegacy": "{value, number}% (single rate, legacy policy)"
   },
   "tiers": {
-    "dayRange": "Days {from}–{to}",
+    "dayRange": "Days {from}-{to}",
     "dayFrom": "From day {from}",
     "dayOne": "Day {from}",
     "item": "{range}: {percent, number}%"
   },
   "detail": {
-    "title": "{name} — version {version}",
+    "title": "{name} - version {version}",
     "sections": {
       "general": "Version details",
       "platformFee": "Customer platform fee (S)",
@@ -69,7 +69,7 @@
       "insurance": "Insurance",
       "tax": "Withholding tax",
       "legacy": "Legacy model figures",
-      "withDriver": "With-driver trips — sanity limits"
+      "withDriver": "With-driver trips - sanity limits"
     },
     "facts": {
       "effectiveFrom": "Effective from",
@@ -95,18 +95,18 @@
     "perDay": "{value}/day",
     "off": "Not applied",
     "legacyHint": "The current money flow does not read these figures; they are kept only to reconcile older orders.",
-    "rangePerDay": "{min} – {max}/day"
+    "rangePerDay": "{min} - {max}/day"
   },
   "form": {
     "titleCreate": "Create fee policy draft",
-    "titleEdit": "Edit draft — version {version}",
+    "titleEdit": "Edit draft - version {version}",
     "titleDuplicate": "Duplicate version {version} as a draft",
     "duplicateName": "{name} (copy)",
     "name": "Name",
     "note": "Internal note",
     "sectionPlatformFee": "Customer platform fee",
-    "platformFeeHint": "A fixed amount per order, paid by the customer, on both tracks — independent of rental length.",
-    "platformFeeFor": "Platform fee — {type}",
+    "platformFeeHint": "A fixed amount per order, paid by the customer, on both tracks - independent of rental length.",
+    "platformFeeFor": "Platform fee - {type}",
     "sectionCommission": "Tiered owner commission",
     "commissionHint": "Deducted from the owner's payout. Each rental day uses the % of the tier it falls in.",
     "tierHeadFrom": "From day",
@@ -136,9 +136,9 @@
     "vehicleProtectionEnabled": "Vehicle damage insurance (IV)",
     "tripInsuranceEnabled": "Personal accident insurance (IP)",
     "insuranceProductHint": "Optional for the customer, charged per day.",
-    "dailyRateFor": "Daily rate — {type}",
+    "dailyRateFor": "Daily rate - {type}",
     "insurancePartnerName": "Insurance partner name",
-    "insurancePartnerNameHint": "The real partner's name — required when any insurance is on.",
+    "insurancePartnerNameHint": "The real partner's name - required when any insurance is on.",
     "sectionTax": "Withholding tax",
     "taxEnabled": "Withhold and remit tax on behalf of owners",
     "taxEnabledHint": "Under Decree 117/2025/ND-CP the platform withholds and remits VAT and PIT for household and individual sellers. Turn on only once a tax adviser has confirmed the classification. Tax is computed on the rental amount, excluding the delivery fee; each tax is exact to the dong.",
@@ -160,7 +160,7 @@
       "suggestedInRange": "The suggested rate must be within the wage-per-day range"
     },
     "taxLegalBasis": "Legal basis",
-    "taxLegalBasisHint": "The legal reference for the withholding — shown to owners and printed on the tax ledger.",
+    "taxLegalBasisHint": "The legal reference for the withholding - shown to owners and printed on the tax ledger.",
     "taxRatesTitle": "Withholding rates by service type",
     "taxHeadService": "Service type",
     "taxHeadVat": "VAT (%)",
@@ -174,14 +174,14 @@
     },
     "taxScope": "Applies to: individuals, household businesses · Companies: not withheld",
     "taxScopeValue": "Individuals, household businesses · Verified companies: not withheld",
-    "sectionWithDriver": "With-driver trips — sanity limits",
-    "withDriverLimitsHint": "Blocks unreasonable numbers (a missing or extra zero) — not price control. Applies to a vehicle's with-driver daily price and the driver wage per day shops record.",
-    "withDriverPriceMin": "With-driver price per day — minimum",
-    "withDriverPriceMax": "With-driver price per day — maximum",
-    "driverWageMin": "Driver wage per day — minimum",
-    "driverWageMax": "Driver wage per day — maximum",
+    "sectionWithDriver": "With-driver trips - sanity limits",
+    "withDriverLimitsHint": "Blocks unreasonable numbers (a missing or extra zero) - not price control. Applies to a vehicle's with-driver daily price and the driver wage per day shops record.",
+    "withDriverPriceMin": "With-driver price per day - minimum",
+    "withDriverPriceMax": "With-driver price per day - maximum",
+    "driverWageMin": "Driver wage per day - minimum",
+    "driverWageMax": "Driver wage per day - maximum",
     "driverWageSuggested": "Suggested wage per day",
-    "driverWageSuggestedHint": "Only a market reminder for shops that haven't set a rate — never written into a shop or a trip."
+    "driverWageSuggestedHint": "Only a market reminder for shops that haven't set a rate - never written into a shop or a trip."
   },
   "commissionScope": {
     "title": "Applies to: individual owners (commission track). Package vehicles / shops: exempt (H = 0).",

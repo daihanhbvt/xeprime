@@ -340,7 +340,7 @@ afterEach(cleanup);
 
 /* ─────────────────────────────── biến thể & tab ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — biến thể', () => {
+describe('Drawer chi tiết đối tác - biến thể', () => {
   it('gian hàng gói: đúng sáu tab, có "Gói & phí", không có "Hoa hồng & đối soát"', async () => {
     renderDrawer({ tenantId: 't-shop' });
     await screen.findAllByText('Việt Car Hà Nội');
@@ -408,7 +408,7 @@ const READ_ONLY_CASES = (
   ] as const
 ).flatMap(([tenantId, kind]) => PARTNER_DETAIL_TABS[kind].map((tab) => ({ tenantId, tab })));
 
-describe('Drawer chi tiết đối tác — chỉ đọc', () => {
+describe('Drawer chi tiết đối tác - chỉ đọc', () => {
   it.each(READ_ONLY_CASES)(
     '$tenantId · tab $tab: không nút mutation nào, không lời gọi ghi nào',
     async ({ tenantId, tab }) => {
@@ -482,7 +482,7 @@ describe('Drawer chi tiết đối tác — chỉ đọc', () => {
 
 /* ─────────────────────────────── hỗ trợ ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — mở chế độ hỗ trợ', () => {
+describe('Drawer chi tiết đối tác - mở chế độ hỗ trợ', () => {
   it('có quyền: nút mở ĐÚNG luồng phiên hỗ trợ hiện có, với đúng đối tác', async () => {
     renderDrawer({ tenantId: 't-shop' });
     fireEvent.click(await screen.findByRole('button', { name: /Mở chế độ hỗ trợ/ }));
@@ -500,7 +500,7 @@ describe('Drawer chi tiết đối tác — mở chế độ hỗ trợ', () => 
 
 /* ─────────────────────────────── tab URL & cache ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật', () => {
+describe('Drawer chi tiết đối tác - dữ liệu theo quyền và luật', () => {
   it('gian hàng hết gói: hạn mức là trần Owner Lite đang cưỡng chế, KHÔNG "không giới hạn"', async () => {
     const lapsed = overview(PLATFORM_PARTNER_KIND.PACKAGE_SHOP);
     lapsed.plan = {
@@ -559,7 +559,7 @@ describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật'
   });
 });
 
-describe('Drawer chi tiết đối tác — tab và cache', () => {
+describe('Drawer chi tiết đối tác - tab và cache', () => {
   it('deep-link tab hợp lệ mở đúng tab; tab không thuộc biến thể rơi về Tổng quan', async () => {
     const shop = renderDrawer({ tenantId: 't-shop', tab: 'bookings' });
     await screen.findByText('Sắp nhận xe');
@@ -588,7 +588,7 @@ describe('Drawer chi tiết đối tác — tab và cache', () => {
   });
 });
 
-describe('Drawer chi tiết đối tác — tiếng Anh', () => {
+describe('Drawer chi tiết đối tác - tiếng Anh', () => {
   it('tab, huy hiệu và nút đều đã dịch', async () => {
     renderWithIntl(
       <QueryClientProvider

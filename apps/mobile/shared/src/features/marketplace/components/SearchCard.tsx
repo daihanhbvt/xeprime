@@ -21,6 +21,7 @@ import { SERVICE_ICON, SERVICE_LABEL_KEY, VEHICLE_ICON } from '../search-items';
 import { useSearchExperience } from '../search-context';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeField } from './RentalRangeField';
+import { SEARCH_FIELD_HEIGHT } from './search-card-metrics';
 
 /**
  * Thẻ tìm kiếm của trang chủ. Ba tầng quyết định, đúng thứ tự của web:
@@ -34,9 +35,10 @@ import { RentalRangeField } from './RentalRangeField';
  */
 const RADIUS_CARD = toPx(XP_TOKENS['border-radius-card']);
 const RADIUS_CONTROL = toPx(XP_TOKENS['border-radius-control']);
-/** `.listTabs .icon` 22px · `.listSegment .tab` cao 44 · `.fields` khe 12 (≤640) · `space-2`. */
+/** `.listTabs .icon` 22px · ô điều khiển cao `SEARCH_FIELD_HEIGHT` · `.fields` khe 12 (≤640) · `space-2`. */
 const TAB_ICON = 22;
-const SEGMENT_HEIGHT = 44;
+/** Mục bên trong = chiều cao ô trừ viền 1px trên + dưới của khung nhóm ⇒ cả nhóm đúng `SEARCH_FIELD_HEIGHT`. */
+const SEGMENT_HEIGHT = SEARCH_FIELD_HEIGHT - 2;
 const FIELDS_GAP = toPx(XP_TOKENS['space-12']);
 const SPACE_2 = toPx(XP_TOKENS['space-2']);
 const tabStyles = StyleSheet.create({ tab: { flex: 1, height: 46 }, segment: { flex: 1 },
@@ -213,7 +215,7 @@ export function SearchCard({
         <Field label={withDriver ? t('route.label') : t('card.vehicleTypeLabel')}>
           {/*
             `.listSegment` — viền `color-border` 1px, bo control, nền `color-bg`, bóng xs, khe 2,
-            KHÔNG đệm; mỗi mục cao 44.
+            KHÔNG đệm; mỗi mục cao `SEARCH_FIELD_HEIGHT`.
           */}
           <XStack
             gap={SPACE_2}
@@ -236,8 +238,9 @@ export function SearchCard({
                   accessibilityState={{ selected }}
                 >
                   {/*
-                    `.listSegment .tab` — cao 44, đệm sm/md, viền trong suốt; đang chọn
-                    (`.tabActive`): viền `border-strong`, nền `bg-container`, bóng xs, chữ `primary-hover`.
+                    `.listSegment .tab` - đệm sm/md, KHÔNG viền riêng; đang chọn: nền `bg-container`,
+                    bóng xs, chữ `primary-hover`. Không viền vì viền của ô chọn đè đúng lên viền
+                    ngoài của nhóm thành viền ĐÔI (06/11/2026) - nhóm chỉ có một viền ngoài.
                   */}
                   <XStack
                     f={1}
@@ -248,8 +251,6 @@ export function SearchCard({
                     // Ba ô lộ trình chia một hàng: đệm hẹp hơn để nhãn dài vẫn đủ chỗ.
                     px={withDriver ? space.xs : space.md}
                     br={RADIUS_CONTROL}
-                    bw={1}
-                    bc={selected ? (dark ? colors.primary : colors.borderInput) : 'transparent'}
                     bg={selected ? colors.surface : 'transparent'}
                     style={selected ? elevation.xs : undefined}
                   >
@@ -286,7 +287,7 @@ export function SearchCard({
             accessibilityLabel={t('location.triggerLabel', { value: locationValue })}
           >
             <XStack
-              h={44}
+              h={SEARCH_FIELD_HEIGHT}
               ai="center"
               gap={space.sm}
               bg={colors.surface}
@@ -297,7 +298,7 @@ export function SearchCard({
               style={elevation.xs}
             >
               {/*
-                `LocationPicker .field` — cao 44, đệm 10/14, viền `border-strong` 1px, bo control,
+                `LocationPicker .field` - cao `SEARCH_FIELD_HEIGHT`, đệm 10/14, viền `border-strong` 1px, bo control,
                 nền `bg-container`, bóng xs, chữ body-lg.
               */}
               {/*
@@ -330,7 +331,9 @@ export function SearchCard({
           <GradientButton
             label={t('card.searchAction')}
             iconStart="search"
+            shine
             radius={RADIUS_CONTROL}
+            height={SEARCH_FIELD_HEIGHT}
             onPress={onSearch}
           />
         ) : null}

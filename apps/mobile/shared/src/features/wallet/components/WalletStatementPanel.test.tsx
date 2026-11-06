@@ -98,7 +98,7 @@ describe('WalletStatementPanel', () => {
    * Web chọn được MỌI tháng quá khứ (`DatePicker` + `maxDate` = hôm nay). Bản native trước chỉ có
    * 12 tháng gần nhất.
    */
-  it('‹ lùi một kỳ (về trang 1); › khoá ở tháng hiện tại — tháng sau chưa xảy ra', async () => {
+  it('‹ lùi một kỳ (về trang 1); › khoá ở tháng hiện tại - tháng sau chưa xảy ra', async () => {
     const onFiltersChange = jest.fn();
     const current = nowInAppTz().format('YYYY-MM');
     const view = await render(

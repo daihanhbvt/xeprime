@@ -45,7 +45,7 @@ export function FollowUpTable({
       render: (_, r) => (
         <div>
           <div className={styles.name}>{r.customerName}</div>
-          <div className={styles.meta}>{r.customerPhoneMasked ?? '—'}</div>
+          <div className={styles.meta}>{r.customerPhoneMasked ?? '-'}</div>
         </div>
       ),
     },
@@ -90,7 +90,7 @@ export function FollowUpTable({
       title: t('table.assignee'),
       key: 'assignee',
       width: 150,
-      render: (_, r) => r.assigneeName ?? '—',
+      render: (_, r) => r.assigneeName ?? '-',
     },
     actionColumn<FollowUp>((row) => [
       { key: 'open', label: t('table.open'), icon: <EyeOutlined />, onClick: () => onView(row.id) },

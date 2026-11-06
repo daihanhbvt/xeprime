@@ -9,7 +9,7 @@
     "shopViewer": "Người xem gian hàng",
     "shopMember": "Thành viên gian hàng",
     "unconfigured": "Chưa xác định gói",
-    "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime — liên hệ hỗ trợ trước khi nhận đơn mới.",
+    "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime - liên hệ hỗ trợ trước khi nhận đơn mới.",
     "verifiedHint": "Chủ gian hàng đã xác thực",
     "packagePending": "Chờ thanh toán gói",
     "packagePendingHint": "Gian hàng đã tạo xong nhưng chưa thanh toán gói đầu tiên. Hoàn tất chuyển khoản để mở bộ quản lý gian hàng.",
@@ -45,7 +45,7 @@
     "signOut": "Đăng xuất",
     "later": "Để sau",
     "reminderLead": "Thêm số điện thoại đã xác minh để gửi yêu cầu thuê xe, đăng nhập bằng mật khẩu và để chủ xe liên hệ với bạn. Bạn vẫn tìm và xem xe bình thường khi chưa thêm.",
-    "bookingLead": "Xác minh số điện thoại để gửi yêu cầu thuê xe — chủ xe dùng số này để liên hệ với bạn về chuyến đi.",
+    "bookingLead": "Xác minh số điện thoại để gửi yêu cầu thuê xe - chủ xe dùng số này để liên hệ với bạn về chuyến đi.",
     "changePhoneTitle": "Đổi số điện thoại",
     "currentValue": "Đang dùng:",
     "emailLabel": "Email mới",
@@ -61,7 +61,7 @@
     "resendIn": "Gửi lại sau {seconds}s",
     "editEmail": "Sửa email",
     "editPhone": "Sửa số",
-    "devCode": "Mã thử nghiệm: {code} — chỉ hiện ở môi trường không phải production.",
+    "devCode": "Mã thử nghiệm: {code} - chỉ hiện ở môi trường không phải production.",
     "emailUpdated": "Đã cập nhật email",
     "phoneUpdated": "Đã cập nhật số điện thoại",
     "phoneLead": "Nhập số điện thoại của bạn để nhận mã xác thực qua SMS.",
@@ -76,9 +76,9 @@
   },
   "partnerInvite": {
     "title": "Hợp tác với XePrime",
-    "commissionBadge": "Phí {min}–{max}%",
+    "commissionBadge": "Phí {min}-{max}%",
     "commissionBadgeFlat": "Phí {percent}%",
-    "body": "Biến xe của bạn thành nguồn thu nhập lên đến {min}–{max} triệu/tháng cùng XePrime",
+    "body": "Biến xe của bạn thành nguồn thu nhập lên đến {min}-{max} triệu/tháng cùng XePrime",
     "cta": "Trở thành đối tác",
     "dismiss": "Ẩn lời mời"
   },
@@ -130,7 +130,7 @@
     "emailRequired": "Vui lòng nhập email",
     "emailInvalid": "Địa chỉ email không hợp lệ",
     "emailMax": "Email tối đa 255 ký tự",
-    "avatarRequired": "Vui lòng chọn ảnh đại diện — khách thấy ảnh này trên trang chủ xe",
+    "avatarRequired": "Vui lòng chọn ảnh đại diện - khách thấy ảnh này trên trang chủ xe",
     "bioMax": "Lời giới thiệu tối đa 2000 ký tự"
   },
   "ownerGate": {
@@ -143,11 +143,11 @@
     "registeringTitle": "Hồ sơ chủ xe đang trong quá trình duyệt",
     "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở trang chủ.",
     "openRegistration": "Xem tiến trình đăng ký",
-    "bodyMemberPartner": "Bạn đang là thành viên của gian hàng {shop}. Gian hàng này dùng bộ công cụ chủ xe — các màn quản lý xe, lịch và tiền chỉ mở cho chủ gian hàng. Liên hệ chủ gian hàng nếu bạn cần quyền."
+    "bodyMemberPartner": "Bạn đang là thành viên của gian hàng {shop}. Gian hàng này dùng bộ công cụ chủ xe - các màn quản lý xe, lịch và tiền chỉ mở cho chủ gian hàng. Liên hệ chủ gian hàng nếu bạn cần quyền."
   },
   "vehicles": {
     "title": "Danh sách xe",
-    "subtitle": "Xe của bạn trên XePrime — trạng thái vận hành, giá và việc cần làm.",
+    "subtitle": "Xe của bạn trên XePrime - trạng thái vận hành, giá và việc cần làm.",
     "loading": "Đang tải danh sách xe…",
     "serviceFilterLabel": "Lọc theo dịch vụ",
     "statusFilterLabel": "Lọc theo trạng thái vận hành",
@@ -249,7 +249,7 @@
       "rights": "Bạn có quyền xem, sửa và yêu cầu xoá dữ liệu của mình."
     },
     "commitment": "XePrime cam kết bảo mật và sử dụng dữ liệu cá nhân của khách hàng một cách minh bạch, an toàn và đúng quy định.",
-    "consentNote": "Bản tóm tắt này chỉ để đọc. Việc bật/tắt từng mục sẽ có khi nền tảng lưu được lựa chọn của bạn — hiện chưa có.",
+    "consentNote": "Bản tóm tắt này chỉ để đọc. Việc bật/tắt từng mục sẽ có khi nền tảng lưu được lựa chọn của bạn - hiện chưa có.",
     "lastUpdated": "Bản đang hiệu lực từ {date}",
     "readPolicy": "Xem chính sách chi tiết"
   },
@@ -257,7 +257,7 @@
     "title": "Cập nhật bảo mật",
     "subtitle": "Cập nhật mật khẩu để bảo vệ tài khoản của bạn.",
     "firstTimeTitle": "Đặt mật khẩu lần đầu",
-    "firstTimeBody": "Tài khoản này được tạo bằng Google/Facebook nên chưa có mật khẩu. Đặt mật khẩu để đăng nhập được bằng số điện thoại — không cần mật khẩu hiện tại.",
+    "firstTimeBody": "Tài khoản này được tạo bằng Google/Facebook nên chưa có mật khẩu. Đặt mật khẩu để đăng nhập được bằng số điện thoại - không cần mật khẩu hiện tại.",
     "currentPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "confirmPassword": "Xác nhận mật khẩu mới",
@@ -339,7 +339,7 @@
     "retentionHeading": "Dữ liệu phải giữ lại",
     "retentionBody": "Hoá đơn, chứng từ thuế và nhật ký giao dịch có thể phải lưu theo thời hạn pháp luật quy định trước khi xoá hẳn. Đây là nghĩa vụ pháp lý, không phải lựa chọn của XePrime.",
     "inAppHeading": "Đang đăng nhập được?",
-    "inAppBody": "Nếu vẫn vào được tài khoản, bạn gửi yêu cầu ngay trong ứng dụng hoặc ở khu tài khoản trên web — ở đó bạn theo dõi được tiến trình và rút yêu cầu khi cần.",
+    "inAppBody": "Nếu vẫn vào được tài khoản, bạn gửi yêu cầu ngay trong ứng dụng hoặc ở khu tài khoản trên web - ở đó bạn theo dõi được tiến trình và rút yêu cầu khi cần.",
     "inAppLink": "Mở khu tài khoản"
   },
   "registration": {
@@ -350,7 +350,7 @@
     "steps": {
       "profile": {
         "title": "Hồ sơ chủ xe",
-        "description": "Họ tên, số điện thoại đã xác thực và địa chỉ nhận xe. Khai đủ là xong bước này — không phải chờ ai duyệt."
+        "description": "Họ tên, số điện thoại đã xác thực và địa chỉ nhận xe. Khai đủ là xong bước này - không phải chờ ai duyệt."
       },
       "vehicle": {
         "title": "Đăng xe & gửi duyệt",
@@ -359,7 +359,7 @@
       },
       "live": {
         "title": "Lên chợ",
-        "description": "XePrime duyệt xe — đây là bước duyệt duy nhất. Xe được duyệt là khách tìm thấy và đặt được, và toàn bộ công cụ chủ xe mở ra."
+        "description": "XePrime duyệt xe - đây là bước duyệt duy nhất. Xe được duyệt là khách tìm thấy và đặt được, và toàn bộ công cụ chủ xe mở ra."
       }
     },
     "noVehicle": {
@@ -389,7 +389,7 @@
     "pending": "Đang chờ chuyển",
     "withdrawals": "{count, plural, =0 {Không có yêu cầu rút nào đang treo} other {# yêu cầu rút đang treo}}",
     "openTrips": "{count, plural, =0 {Không còn chuyến đi thuê nào chưa khép} other {# chuyến đi thuê chưa khép}}",
-    "settleFirst": "Rút hết số dư và chờ các lệnh chuyển xong trước khi gửi yêu cầu — sau khi đóng tài khoản, việc đối chiếu sẽ chậm hơn nhiều.",
+    "settleFirst": "Rút hết số dư và chờ các lệnh chuyển xong trước khi gửi yêu cầu - sau khi đóng tài khoản, việc đối chiếu sẽ chậm hơn nhiều.",
     "bodyPersonal": "Yêu cầu này chỉ liên quan tới tài khoản cá nhân của bạn. XePrime vẫn phải xử lý xong những khoản dưới đây trước khi đóng được tài khoản."
   },
   "trackNotice": {
@@ -429,7 +429,7 @@
       "previewLabel": "Xem trước hồ sơ",
       "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
       "shopSettingsLink": "Mở Cài đặt gian hàng",
-      "storefrontFallback": "Tên và ảnh này cũng là thứ khách thấy khi xem xe của bạn — bạn cho thuê với tư cách cá nhân, không qua gian hàng."
+      "storefrontFallback": "Tên và ảnh này cũng là thứ khách thấy khi xem xe của bạn - bạn cho thuê với tư cách cá nhân, không qua gian hàng."
     }
   },
   "ownerHub": {

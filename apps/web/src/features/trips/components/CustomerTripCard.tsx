@@ -103,7 +103,7 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
               {packageLabel ? (
                 <ScheduleRow label={t('detail.package')} value={packageLabel} />
               ) : null}
-              <ScheduleRow label={t('detail.pickupWish')} value={wish || '—'} stacked />
+              <ScheduleRow label={t('detail.pickupWish')} value={wish || '-'} stacked />
             </>
           )}
         </dl>
@@ -200,11 +200,11 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
             )}
           </MoneyCell>
           <MoneyCell label={t('card.paid')}>
-            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
           </MoneyCell>
           <span className={styles.moneyDivider} aria-hidden="true" />
           <MoneyCell label={t('card.remaining')} highlight>
-            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
           </MoneyCell>
         </dl>
       </div>

@@ -45,7 +45,7 @@ describe('getServerLocale', () => {
     },
   );
 
-  it('KHÔNG đọc Accept-Language ở giai đoạn này — chỉ đúng một nguồn là cookie', () => {
+  it('KHÔNG đọc Accept-Language ở giai đoạn này - chỉ đúng một nguồn là cookie', () => {
     // Bảo vệ quyết định SEO ở ADR 0012: bot không mang cookie ⇒ HTML công khai luôn tiếng Việt.
     expect(LOCALE_COOKIE_NAME).toBe('XP_LOCALE');
   });

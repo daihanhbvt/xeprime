@@ -225,7 +225,7 @@ describe('ListingDetailView pricing', () => {
  * chữ phải nói rõ hai bên tự thoả thuận, XePrime không xuất hoá đơn thay chủ xe. `false` là "chưa công
  * bố", nên xe còn lại không mang câu phủ định nào.
  */
-describe('ListingDetailView — hoá đơn VAT', () => {
+describe('ListingDetailView - hoá đơn VAT', () => {
   it('chủ xe chưa bật: không badge, không khối giải thích', async () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
     expect(screen.queryByText('Hỗ trợ xuất hoá đơn VAT')).toBeNull();
@@ -257,7 +257,7 @@ describe('ListingDetailView — hoá đơn VAT', () => {
  * XẾ, "đối chiếu VNeID" là thao tác THỦ CÔNG (không hứa tra cứu tự động), và trang không được
  * vỡ khi API cũ chưa trả ba khối này.
  */
-describe('ListingDetailView — điều kiện thuê công bố', () => {
+describe('ListingDetailView - điều kiện thuê công bố', () => {
   const WITH_TERMS = {
     ...LISTING,
     serviceTypes: ['self_drive', 'with_driver'],
@@ -322,7 +322,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     expect(screen.queryByText(/chuẩn bị giữa hai chuyến/i)).toBeNull();
   });
 
-  it('giá có tài xế là giá TRỌN GÓI — chỉ hiện khi xem dịch vụ CÓ TÀI XẾ, không còn phụ phí', async () => {
+  it('giá có tài xế là giá TRỌN GÓI - chỉ hiện khi xem dịch vụ CÓ TÀI XẾ, không còn phụ phí', async () => {
     const { unmount } = renderWithIntl(
       await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }),
     );
@@ -381,7 +381,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
  * Thẻ gian hàng dùng chung (`ShopQuickInfoCard`) — số của GIAN HÀNG, không phải của riêng chiếc
  * xe đang xem, và dòng "Chủ xe … sao" chỉ được phép nói khi số liệu thật sự đủ tốt.
  */
-describe('ListingDetailView — thẻ gian hàng', () => {
+describe('ListingDetailView - thẻ gian hàng', () => {
   const READY_GOOD_METRICS = {
     sampleCount: 10,
     responseRatePercent: 95,
@@ -469,7 +469,7 @@ describe('ListingDetailView — thẻ gian hàng', () => {
  * nhất làm nó công bằng là được công bố ở đây. Hai điều bị khoá: nó chỉ thuộc chuyến TỰ LÁI, và
  * xe không đặt hạn mức thì khối biến mất hoàn toàn — không có dòng "không giới hạn" nào.
  */
-describe('ListingDetailView — hạn mức quãng đường', () => {
+describe('ListingDetailView - hạn mức quãng đường', () => {
   const WITH_MILEAGE = {
     ...LISTING,
     serviceTypes: ['self_drive', 'with_driver'],
@@ -487,7 +487,7 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
     expect(screen.getByText(/số ngày thuê có tính phí/)).toBeTruthy();
   });
 
-  it('có tài xế: KHÔNG hiện — đi xa là phụ phí đường dài, một khoản khác', async () => {
+  it('có tài xế: KHÔNG hiện - đi xa là phụ phí đường dài, một khoản khác', async () => {
     renderWithIntl(
       await ListingDetailView({
         listing: WITH_MILEAGE,
@@ -511,7 +511,7 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
  * Bản mobile (Figma `19771:71482`) dùng chung cây với PC — các luật dưới đây đúng ở mọi khổ.
  * Trang này là nơi khách QUYẾT thuê: không một con số nào được là số mẫu của bản vẽ.
  */
-describe('ListingDetailView — không có dữ liệu giả', () => {
+describe('ListingDetailView - không có dữ liệu giả', () => {
   it('gian hàng chưa đủ mẫu: hàng ba chỉ số nói "chưa có yêu cầu", không hiện 100% / 10 phút', async () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
@@ -585,7 +585,7 @@ describe('ListingDetailView — không có dữ liệu giả', () => {
  * in ba cam kết cho mọi xe, nhưng "không cần chờ chủ xe duyệt" là sai khi xe không bật Đặt ngay
  * (ADR 0044).
  */
-describe('ListingDetailView — thẻ "Tự nhận xe"', () => {
+describe('ListingDetailView - thẻ "Tự nhận xe"', () => {
   it('xe KHÔNG bật Đặt ngay: không hứa "không cần chờ duyệt"; có giá giờ thì vẫn nói gói giờ', async () => {
     const listing = { ...LISTING, instantBookServiceTypes: [] } as unknown as PublicListingDetail;
     renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
@@ -629,7 +629,7 @@ describe('ListingDetailView — thẻ "Tự nhận xe"', () => {
   });
 });
 
-describe('ListingDetailView — tab "Quy định & Chính sách"', () => {
+describe('ListingDetailView - tab "Quy định & Chính sách"', () => {
   it('điều khoản huỷ: miễn phí tính XUÔI từ lúc thanh toán thành công, cửa sổ giữ chỗ theo hằng số', async () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
     fireEvent.click(screen.getByRole('tab', { name: 'Điều khoản huỷ' }));
@@ -668,7 +668,7 @@ describe('ListingDetailView — tab "Quy định & Chính sách"', () => {
   });
 });
 
-describe('ListingDetailView — khuyến mãi trực tiếp chỉ của tự lái', () => {
+describe('ListingDetailView - khuyến mãi trực tiếp chỉ của tự lái', () => {
   it('đang xem CÓ TÀI XẾ: không nhãn giảm giá, không dòng "Khuyến mãi trực tiếp" (ADR 0011)', async () => {
     const listing = {
       ...LISTING,
@@ -685,7 +685,7 @@ describe('ListingDetailView — khuyến mãi trực tiếp chỉ của tự lá
   });
 });
 
-describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', () => {
+describe('ListingDetailView - thẻ "Thành tiền" đọc báo giá SERVER', () => {
   it('mọi con số là của báo giá: tiền thuê, phí dịch vụ, tiền giữ chỗ, phần trả chủ xe, tổng', async () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
@@ -728,7 +728,7 @@ describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', 
     expect(screen.queryByText('Cọc thế chấp khi nhận xe')).toBeNull();
   });
 
-  it('xe có cọc tiền mặt: thẻ "Thành tiền" KHÔNG nhắc lại cọc — tab Tài sản thế chấp đã nói', async () => {
+  it('xe có cọc tiền mặt: thẻ "Thành tiền" KHÔNG nhắc lại cọc - tab Tài sản thế chấp đã nói', async () => {
     const listing = {
       ...LISTING,
       noCollateral: false,
@@ -742,7 +742,7 @@ describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', 
     expect(costs.queryByText('5.000.000 ₫')).toBeNull();
   });
 
-  it('báo giá không về: nói thẳng, không bịa số — vẫn đặt được', async () => {
+  it('báo giá không về: nói thẳng, không bịa số - vẫn đặt được', async () => {
     fetchPublicQuote.mockRejectedValue(new Error('network'));
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
@@ -764,8 +764,8 @@ describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', 
   });
 });
 
-describe('ListingDetailView — thuê dài hạn chưa có gói', () => {
-  it('không bịa gói 1/3/6/12, không hiện 0 ₫, không hỏi báo giá — nói "Liên hệ báo giá"', async () => {
+describe('ListingDetailView - thuê dài hạn chưa có gói', () => {
+  it('không bịa gói 1/3/6/12, không hiện 0 ₫, không hỏi báo giá - nói "Liên hệ báo giá"', async () => {
     const listing = {
       ...LISTING,
       serviceTypes: ['self_drive', 'long_term'],
@@ -786,7 +786,7 @@ describe('ListingDetailView — thuê dài hạn chưa có gói', () => {
   });
 });
 
-describe('ListingDetailView — tiếng Anh', () => {
+describe('ListingDetailView - tiếng Anh', () => {
   it('nhãn dòng tiền dịch theo MÃ dòng, không lọt câu tiếng Việt của server', async () => {
     renderIntlOnly(
       <QueryClientProvider

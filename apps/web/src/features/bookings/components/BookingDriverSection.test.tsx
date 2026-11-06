@@ -237,7 +237,7 @@ describe('BookingDriverSection', () => {
   });
 });
 
-describe('BookingDriverSection — tiền công tài xế (ADR 0075)', () => {
+describe('BookingDriverSection - tiền công tài xế (ADR 0075)', () => {
   const LINKED = {
     source: DRIVER_SOURCE.LINKED,
     id: 'drv-1',

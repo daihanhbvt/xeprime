@@ -48,7 +48,7 @@
     "noExpiry": "Không thời hạn",
     "holder": "Tên trên bằng: {name}",
     "kind": "Loại: {kind}",
-    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập — hãy đối chiếu giấy tờ khi giao xe"
+    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập - hãy đối chiếu giấy tờ khi giao xe"
   },
   "activeBookings": "{count, plural, other {# chuyến}}",
   "actions": {
@@ -63,10 +63,10 @@
     "revoke": "Thu hồi lời mời",
     "revokeConfirm": "Thu hồi lời mời này?",
     "reinvite": "Mời lại",
-    "endConfirmWithTrips": "Tài xế này đang được gán {count, plural, other {# chuyến}} sắp tới. Ngừng hợp tác sẽ gỡ tài xế khỏi các chuyến đó — bạn cần gán người khác. Tiếp tục?"
+    "endConfirmWithTrips": "Tài xế này đang được gán {count, plural, other {# chuyến}} sắp tới. Ngừng hợp tác sẽ gỡ tài xế khỏi các chuyến đó - bạn cần gán người khác. Tiếp tục?"
   },
   "toast": {
-    "invited": "Đã gửi lời mời — tài xế sẽ nhận thông báo để đồng ý",
+    "invited": "Đã gửi lời mời - tài xế sẽ nhận thông báo để đồng ý",
     "updated": "Đã cập nhật tài xế",
     "suspended": "Đã tạm khoá tài xế",
     "resumed": "Đã mở khoá tài xế",
@@ -106,25 +106,25 @@
     "pickerLabel": "Chọn tài xế cho đơn",
     "pickerEmpty": "Chưa có tài xế nào đang liên kết",
     "busy": "Bận",
-    "assigned": "Đã gán tài xế — chờ tài xế nhận chuyến",
+    "assigned": "Đã gán tài xế - chờ tài xế nhận chuyến",
     "unassignedToast": "Đã bỏ gán tài xế",
     "assignedAt": "Gán lúc {time}",
     "respondedAt": "Nhận lúc {time}",
-    "respondBy": "Chờ tài xế nhận — hạn {time}",
+    "respondBy": "Chờ tài xế nhận - hạn {time}",
     "legacyHint": "Đơn này không phải chuyến có tài xế.",
     "externalTag": "Ngoài hệ thống",
     "externalSetAt": "Ghi lúc {time}",
-    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế — gán tài xế liên kết, hoặc huỷ chuyến nếu không bố trí được.",
-    "externalLegacy": "Tài xế ngoài hệ thống (đơn cũ) — XePrime không còn nhận cách này. Gán tài xế liên kết để thay.",
+    "missingSoon": "Còn dưới {hours} giờ tới giờ nhận mà chuyến chưa có tài xế - gán tài xế liên kết, hoặc huỷ chuyến nếu không bố trí được.",
+    "externalLegacy": "Tài xế ngoài hệ thống (đơn cũ) - XePrime không còn nhận cách này. Gán tài xế liên kết để thay.",
     "incident": {
       "titleNamed": "Tài xế {name} đã rút khỏi chuyến",
       "titleReleased": "Tài xế đã trả lại chuyến",
       "reason": "Lý do: {reason}",
-      "reasonWithNote": "Lý do: {reason} — “{note}”",
+      "reasonWithNote": "Lý do: {reason} - “{note}”",
       "droppedAt": "Rút lúc {time}",
       "reassignBy": "Gán tài xế liên kết khác trước {time}",
       "overdue": "Đã quá hạn điều phối ({time}). Khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.",
-      "urgent": "Còn dưới 2 giờ tới giờ đón — khách đang được huỷ hoàn 100% bất cứ lúc nào.",
+      "urgent": "Còn dưới 2 giờ tới giờ đón - khách đang được huỷ hoàn 100% bất cứ lúc nào.",
       "cancelForDriver": "Huỷ chuyến do thiếu tài xế"
     }
   },
@@ -166,7 +166,7 @@
       "dialogTitle": "Tiền công tài xế · mức chung",
       "field": "Tiền công/ngày",
       "range": "Từ {min} đến {max} mỗi ngày",
-      "appliesNext": "Áp cho các lượt gán từ bây giờ, mọi xe — chuyến đã gán giữ nguyên tiền công.",
+      "appliesNext": "Áp cho các lượt gán từ bây giờ, mọi xe - chuyến đã gán giữ nguyên tiền công.",
       "clear": "Xoá mức chung",
       "saved": "Đã lưu mức chung",
       "cleared": "Đã xoá mức chung",
@@ -195,10 +195,10 @@
     "form": {
       "daily": "Tiền công/ngày",
       "placeholder": "Gợi ý {amount}",
-      "help": "Mức chung: {current} · khoảng {min} – {max}/ngày",
-      "helpNoDefault": "Chưa có mức chung · khoảng {min} – {max}/ngày",
+      "help": "Mức chung: {current} · khoảng {min} - {max}/ngày",
+      "helpNoDefault": "Chưa có mức chung · khoảng {min} - {max}/ngày",
       "total": "Tổng chuyến: {daily} × {days, plural, other {# ngày}}",
-      "aboveRent": "Tiền công cao hơn tiền thuê của chuyến ({rent}) — kiểm tra lại số.",
+      "aboveRent": "Tiền công cao hơn tiền thuê của chuyến ({rent}) - kiểm tra lại số.",
       "rangeAgreed": "Từ 0 đến {max}",
       "savedWithDefault": "Đã lưu và cập nhật mức chung cho các chuyến sau",
       "scope": {
@@ -236,7 +236,7 @@
       "saved": "Đã lưu tiền công",
       "editableUntil": "Sửa được tới {time}",
       "fieldAgreed": "Số tiền hai bên thoả thuận",
-      "daysChanged": "Đơn đã đổi từ {from} sang {to} ngày — tổng mới tính theo {to} ngày."
+      "daysChanged": "Đơn đã đổi từ {from} sang {to} ngày - tổng mới tính theo {to} ngày."
     },
     "changes": {
       "title": "Lịch sử sửa tiền công",
@@ -245,11 +245,11 @@
       "at": "{time}",
       "reason": "Lý do: {reason}"
     },
-    "daysChanged": "Số ngày của đơn đã đổi ({from} → {to} ngày) — kiểm tra lại tiền công tài xế.",
+    "daysChanged": "Số ngày của đơn đã đổi ({from} → {to} ngày) - kiểm tra lại tiền công tài xế.",
     "monthTrips": "{count, plural, other {# chuyến xong}}",
     "note": {
       "set": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe: {amount}/ngày.",
-      "unset": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe — chưa đặt.",
+      "unset": "Giá trên là tiền khách trả, đã gồm tài xế. Tiền công trả tài xế dùng mức chung của gian hàng cho mọi xe - chưa đặt.",
       "link": "Cấu hình ở trang Tài xế"
     }
   },
@@ -258,7 +258,7 @@
     "fallbackTitle": "Chi tiết tài xế",
     "previous": "Tài xế trước",
     "next": "Tài xế sau",
-    "notFound": "Không tìm thấy tài xế này — có thể liên kết đã bị gỡ.",
+    "notFound": "Không tìm thấy tài xế này - có thể liên kết đã bị gỡ.",
     "loadError": "Không tải được thông tin tài xế.",
     "edit": "Sửa thông tin",
     "tabs": {
@@ -290,7 +290,7 @@
         "total": "Tổng ghi nhận",
         "edited": "Chuyến đã sửa tiền công",
         "editedValue": "{count, plural, other {# chuyến}}",
-        "note": "XePrime chỉ ghi nhận số hai bên thoả thuận — gian hàng trả trực tiếp cho tài xế."
+        "note": "XePrime chỉ ghi nhận số hai bên thoả thuận - gian hàng trả trực tiếp cho tài xế."
       },
       "reliability": {
         "title": "Độ tin cậy · {days} ngày gần nhất",
@@ -362,7 +362,7 @@
     }
   },
   "summary": {
-    "ariaLabel": "Số liệu tài xế — bấm một ô để lọc",
+    "ariaLabel": "Số liệu tài xế - bấm một ô để lọc",
     "all": "Tất cả tài xế",
     "active": "Đang liên kết",
     "invited": "Đang chờ xác nhận",
@@ -382,7 +382,7 @@
     "expiry": "Thời hạn",
     "noExpiry": "Không thời hạn",
     "kind": "Loại",
-    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập — đối chiếu giấy tờ khi giao xe.",
+    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập - đối chiếu giấy tờ khi giao xe.",
     "pendingTitle": "Đang đọc ảnh bằng lái",
     "pendingHint": "Tài xế vừa nộp bằng lái, kết quả có sau ít phút.",
     "noneTitle": "Chưa cập nhật",

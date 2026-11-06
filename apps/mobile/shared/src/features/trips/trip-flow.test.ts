@@ -17,7 +17,7 @@ import {
 } from './trip-flow';
 
 /** Luật của các màn chuyến design v2 — chép từ web PR #207, khoá ở đây để hai client không lệch. */
-describe('tripFlowView — chặng → màn', () => {
+describe('tripFlowView - chặng → màn', () => {
   it.each([
     [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL, TRIP_FLOW_VIEW.PENDING],
     [CUSTOMER_TRIP_STAGE.AWAITING_HOLD, TRIP_FLOW_VIEW.AWAITING_HOLD],
@@ -36,13 +36,13 @@ describe('tripFlowView — chặng → màn', () => {
     expect(tripFlowView(TRIP_ROLE.RENTER, stage)).toBeNull();
   });
 
-  it('CHỦ XE luôn ở bố cục chung — nơi có cụm Duyệt/Từ chối', () => {
+  it('CHỦ XE luôn ở bố cục chung - nơi có cụm Duyệt/Từ chối', () => {
     expect(tripFlowView(TRIP_ROLE.HOST, CUSTOMER_TRIP_STAGE.PENDING_APPROVAL)).toBeNull();
     expect(tripFlowView(TRIP_ROLE.HOST, CUSTOMER_TRIP_STAGE.READY)).toBeNull();
   });
 });
 
-describe('tripRequestSteps — tiến trình yêu cầu', () => {
+describe('tripRequestSteps - tiến trình yêu cầu', () => {
   it('có khoản giữ chỗ: bốn mốc, đang chờ phản hồi', () => {
     expect(tripRequestSteps('response', true)).toEqual([
       { step: 'sent', state: 'done' },
@@ -72,7 +72,7 @@ describe('tripRequestSteps — tiến trình yêu cầu', () => {
   });
 });
 
-describe('canStartHoldPayment — ô xác nhận chính sách gác nút thanh toán', () => {
+describe('canStartHoldPayment - ô xác nhận chính sách gác nút thanh toán', () => {
   it('chỉ mở khi đã tích VÀ chưa hết hạn', () => {
     expect(canStartHoldPayment(false, false)).toBe(false);
     expect(canStartHoldPayment(true, false)).toBe(true);
@@ -80,7 +80,7 @@ describe('canStartHoldPayment — ô xác nhận chính sách gác nút thanh to
   });
 });
 
-describe('pickupChecklistItems — checklist nhận xe', () => {
+describe('pickupChecklistItems - checklist nhận xe', () => {
   const base = {
     serviceType: SERVICE_TYPE.SELF_DRIVE,
     fuelType: FUEL_TYPE.GASOLINE,
@@ -147,7 +147,7 @@ describe('pickupChecklistItems — checklist nhận xe', () => {
   });
 });
 
-describe('isPaymentSuccessFresh — khối "Thanh toán thành công"', () => {
+describe('isPaymentSuccessFresh - khối "Thanh toán thành công"', () => {
   const now = Date.parse('2026-10-20T03:00:00.000Z');
 
   it('vừa trả trong 30′ ⇒ mở; quá 30′ ⇒ không chúc mừng lần hai', () => {

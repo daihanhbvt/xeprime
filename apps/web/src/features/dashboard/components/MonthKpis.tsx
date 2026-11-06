@@ -48,7 +48,7 @@ export function MonthKpis({
           <>
             <StatCard
               label={t('newBookings')}
-              value={month ? fmt.count(month.newBookings) : '—'}
+              value={month ? fmt.count(month.newBookings) : '-'}
               icon={FileAddOutlined}
               tone="blue"
               loading={pending}
@@ -61,7 +61,7 @@ export function MonthKpis({
             />
             <StatCard
               label={t('completedTrips')}
-              value={month ? fmt.count(month.completedTrips) : '—'}
+              value={month ? fmt.count(month.completedTrips) : '-'}
               icon={CheckCircleOutlined}
               tone="green"
               loading={pending}
@@ -81,7 +81,7 @@ export function MonthKpis({
                   ? month.utilizationPercent === null
                     ? t('utilizationEmpty')
                     : t('utilizationValue', { value: month.utilizationPercent })
-                  : '—'
+                  : '-'
               }
               hint={t('utilizationHint')}
               icon={PieChartOutlined}

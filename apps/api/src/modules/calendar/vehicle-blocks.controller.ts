@@ -91,7 +91,7 @@ export class VehicleBlocksController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
-  @ApiOperation({ summary: 'Gỡ khoá — NHẢ chỗ trên lịch xe trong cùng transaction' })
+  @ApiOperation({ summary: 'Gỡ khoá - NHẢ chỗ trên lịch xe trong cùng transaction' })
   @ApiNoContentResponse()
   async remove(
     @CurrentTenant() tenant: TenantContext,

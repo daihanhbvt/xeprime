@@ -108,7 +108,7 @@ export function PhoneVerifyControl<T extends FieldValues>({
 
       {vp.devCode && vp.status === 'code_sent' ? (
         <div className={styles.devHint}>
-          Mã dev: <b>{vp.devCode}</b> — chỉ hiện ở môi trường phát triển.
+          Mã dev: <b>{vp.devCode}</b> - chỉ hiện ở môi trường phát triển.
         </div>
       ) : null}
 

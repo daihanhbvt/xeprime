@@ -7,7 +7,7 @@ import { Alert, App, Button, Spin } from 'antd';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   API_ERROR_CODE,
@@ -145,6 +145,9 @@ export type RequestBookingResult = 'sent' | 'notice';
  */
 type BookingStepKey = 'check' | 'licence' | 'review' | 'done';
 
+/** Thứ tự các bước — chỉ để suy hướng hiệu ứng chuyển bước. */
+const BOOKING_STEP_ORDER: Record<BookingStepKey, number> = { check: 0, licence: 1, review: 2, done: 3 };
+
 /**
  * Luồng "Yêu cầu thuê xe" của khách — **một bước**: `Xem lại` (Figma `19727:55409`, dựng ở
  * `BookingReviewStep`) — thẻ chuyến, người thuê + lời nhắn, giấy tờ, chi phí, ô đồng ý và nút gửi.
@@ -212,6 +215,17 @@ export function RequestBookingFlow({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<BookingStepKey>('check');
+  /*
+   * Hướng chuyển bước — bước mới trượt vào từ phải khi tiến, từ trái khi lùi. Lưu cùng bước trước
+   * theo mẫu "thông tin từ lần render trước" của React, không cần sửa từng chỗ gọi `setStep`.
+   */
+  const [stepMotion, setStepMotion] = useState<{ step: BookingStepKey; back: boolean }>({
+    step: 'check',
+    back: false,
+  });
+  if (stepMotion.step !== step) {
+    setStepMotion({ step, back: BOOKING_STEP_ORDER[step] < BOOKING_STEP_ORDER[stepMotion.step] });
+  }
   /** Dịch vụ mở đầu — từ ngữ cảnh tìm kiếm; đối chiếu với năng lực xe ở effect phía dưới. */
   const initialServiceType =
     serviceTypeContext && (SERVICE_TYPE_VALUES as string[]).includes(serviceTypeContext)
@@ -1570,13 +1584,23 @@ export function RequestBookingFlow({
     destination: getValues('destination')?.trim() || null,
   };
 
+  /** Khung chuyển bước: `key` theo bước để hiệu ứng vào chạy lại mỗi lần đổi bước. */
+  const stepFrame = (node: ReactNode) => (
+    <div
+      key={step}
+      className={`${styles.stepEnter} ${stepMotion.back ? styles.stepEnterBack : styles.stepEnterForward}`}
+    >
+      {node}
+    </div>
+  );
+
   // --- Đã gửi xong (Figma `19759:22026`): kết quả, không phải một bước biểu mẫu ----------------
   if (step === 'done' && receipt) {
     /*
      * Màn này chỉ còn cho yêu cầu KHÔNG cần trả tiền giữ chỗ ngay: chuyến được nhận ngay mà có tiền
      * giữ chỗ đã sang trang thanh toán `/payment/:id` từ `onSuccess`.
      */
-    return (
+    return stepFrame(
       <BookingSuccessStep
         vehicleId={vehicleId}
         listing={listing}
@@ -1602,7 +1626,7 @@ export function RequestBookingFlow({
 
   // --- Màn Xem lại (Figma `19727:55409`) — chiếm trọn thân hộp thoại, hai cột riêng ---------
   if (step === 'review') {
-    return (
+    return stepFrame(
       <BookingReviewStep
         listing={listing}
         vehicleName={vehicleName}
@@ -1653,7 +1677,7 @@ export function RequestBookingFlow({
 
   // --- Bằng lái chưa hợp lệ cho chuyến (ADR 0057) — trước màn Xem lại ---------------------
   if (step === 'licence' && licenceTrip) {
-    return (
+    return stepFrame(
       <div className={styles.layout}>
         <div className={styles.left}>{summaryPanel}</div>
 

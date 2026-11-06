@@ -82,7 +82,7 @@ describe('BulkDayPriceDialog', () => {
     );
   }
 
-  it('dựng xong và DỪNG LẠI — không vòng lặp render', () => {
+  it('dựng xong và DỪNG LẠI - không vòng lặp render', () => {
     expect(() => open()).not.toThrow();
     expect(screen.getByText('Đặt giá riêng toàn bộ xe')).toBeTruthy();
   });
@@ -159,7 +159,7 @@ describe('BulkDayBlockDialog', () => {
     );
   }
 
-  it('dựng xong và DỪNG LẠI — không vòng lặp render', () => {
+  it('dựng xong và DỪNG LẠI - không vòng lặp render', () => {
     expect(() => open()).not.toThrow();
     expect(screen.getByText('Khóa toàn bộ xe')).toBeTruthy();
   });

@@ -1,6 +1,7 @@
 import type { useFormatter, useTranslations } from 'use-intl';
 import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xeprime/types';
 import {
+  DATE_TIME_SEPARATOR,
   compactMoneyParts,
   formatMoneyVnd,
   nowInAppTz,
@@ -223,6 +224,7 @@ export function createAppFormat(
       ? t('units.dateTime', {
           date: format.dateTime(asDate(value), 'short'),
           time: format.dateTime(asDate(value), 'time'),
+          sep: DATE_TIME_SEPARATOR,
         })
       : empty;
 
@@ -236,6 +238,7 @@ export function createAppFormat(
     t('units.rentalPointCompact', {
       date: value.format(withYear ? pattern.date : pattern.dayMonth),
       time: value.format('HH:mm'),
+      sep: DATE_TIME_SEPARATOR,
     });
 
   const duration = (from: Dayjs, to: Dayjs) => {
@@ -258,6 +261,7 @@ export function createAppFormat(
     return t('units.shortDateTime', {
       time: toAppTz(value).format('HH:mm'),
       date: toAppTz(value).format(pattern.dayMonth),
+      sep: DATE_TIME_SEPARATOR,
     });
   };
 
@@ -302,7 +306,7 @@ export function createAppFormat(
       });
       return opts?.withTime === false
         ? base
-        : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm') });
+        : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm'), sep: DATE_TIME_SEPARATOR });
     },
     rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
     rentalDuration: duration,

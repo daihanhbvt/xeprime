@@ -358,7 +358,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Trang Cửa hàng — bốn section trong một trang', () => {
+describe('Trang Cửa hàng - bốn section trong một trang', () => {
   it('chủ gian hàng thấy đủ bốn mục trong mục lục, đúng thứ tự', () => {
     renderPage();
 
@@ -380,7 +380,7 @@ describe('Trang Cửa hàng — bốn section trong một trang', () => {
    * DOM, `?section=` chỉ quyết định mục nào sáng và cuộn tới đâu — nếu không thì form hồ sơ bị
    * tháo ra mỗi lần người dùng bấm sang xem hạn gói.
    */
-  it('cả bốn khối cùng nằm trong DOM — chọn section không tháo khối nào ra', () => {
+  it('cả bốn khối cùng nằm trong DOM - chọn section không tháo khối nào ra', () => {
     const { container } = renderPage();
 
     for (const id of [
@@ -441,7 +441,7 @@ describe('Trang Cửa hàng — bốn section trong một trang', () => {
   });
 });
 
-describe('Trang Cửa hàng — chủ gian hàng', () => {
+describe('Trang Cửa hàng - chủ gian hàng', () => {
   it('hiện tên/email/SĐT từ TÀI KHOẢN CHỦ, kèm cờ đã xác minh', () => {
     renderPage();
 
@@ -473,7 +473,7 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
     ).toBe('/manage/account?section=login');
   });
 
-  it('quản lý gian hàng KHÔNG thấy nút đó — nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
+  it('quản lý gian hàng KHÔNG thấy nút đó - nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
     scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
     renderPage();
 
@@ -486,7 +486,7 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
  * Trang Cửa hàng không còn khối đó, nhưng link `?section=payout` cũ (thông báo, bookmark) vẫn phải
  * tới được nơi tiền về — với đúng người section cũ từng hiện cho.
  */
-describe('Trang Cửa hàng — tài khoản nhận tiền đã về trang số dư', () => {
+describe('Trang Cửa hàng - tài khoản nhận tiền đã về trang số dư', () => {
   it('không còn khối hay mục lục "Tài khoản nhận tiền" trên trang Cửa hàng', () => {
     renderPage();
 
@@ -522,7 +522,7 @@ describe('Trang Cửa hàng — tài khoản nhận tiền đã về trang số 
  * ở "Địa chỉ & pháp lý" ghi vào một bản sao không ai tính thuế từ đó — nó rời trang, và section
  * "Thông tin khai thuế" (CÙNG component với "Hồ sơ chủ xe") vào thay.
  */
-describe('Trang Cửa hàng — thông tin khai thuế', () => {
+describe('Trang Cửa hàng - thông tin khai thuế', () => {
   it('"Địa chỉ & pháp lý" không còn ô mã số thuế; giấy phép kinh doanh vẫn ở đó', () => {
     renderPage();
 
@@ -557,7 +557,7 @@ describe('Trang Cửa hàng — thông tin khai thuế', () => {
   });
 });
 
-describe('Trang Cửa hàng — gói & hạn mức', () => {
+describe('Trang Cửa hàng - gói & hạn mức', () => {
   it('hiện gói hiện hành, hạn và trần của loại xe gói phủ', () => {
     renderPage();
 
@@ -602,7 +602,7 @@ describe('Trang Cửa hàng — gói & hạn mức', () => {
   });
 });
 
-describe('Trang Cửa hàng — hoá đơn thanh toán', () => {
+describe('Trang Cửa hàng - hoá đơn thanh toán', () => {
   it('chưa có hoá đơn: một dòng chữ gọn, KHÔNG dựng bảng lịch sử', () => {
     renderPage();
 
@@ -611,7 +611,7 @@ describe('Trang Cửa hàng — hoá đơn thanh toán', () => {
   });
 });
 
-describe('Trang Cửa hàng — tiêu đề và quyền', () => {
+describe('Trang Cửa hàng - tiêu đề và quyền', () => {
   it('tiêu đề mang tên gian hàng, nhãn trạng thái và lối xem trang công khai', () => {
     renderPage();
 

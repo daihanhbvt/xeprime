@@ -40,7 +40,7 @@ export class PlatformSupportController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Hàng đợi toàn sàn — ưu tiên cao trước, rồi cũ nhất trước' })
+  @ApiOperation({ summary: 'Hàng đợi toàn sàn - ưu tiên cao trước, rồi cũ nhất trước' })
   @ApiOkResponse({ type: SupportCasePageDto })
   list(
     @CurrentUser() user: AuthenticatedUser,

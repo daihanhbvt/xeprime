@@ -73,7 +73,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Hãng xe — CSV, multi-select (vd: Toyota,Kia)',
+    description: 'Hãng xe - CSV, multi-select (vd: Toyota,Kia)',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -82,7 +82,7 @@ export class PublicListingQueryDto {
   @IsString({ each: true })
   brand?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Kiểu dáng thân xe — CSV (BODY_TYPE)' })
+  @ApiPropertyOptional({ type: String, description: 'Kiểu dáng thân xe - CSV (BODY_TYPE)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
@@ -92,7 +92,7 @@ export class PublicListingQueryDto {
   @ApiPropertyOptional({
     type: [String],
     enum: MOTORBIKE_CATEGORY_VALUES,
-    description: 'Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô',
+    description: 'Phân khúc xe máy - chiều lọc đối xứng với bodyType của ô tô',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -100,14 +100,14 @@ export class PublicListingQueryDto {
   @IsIn(MOTORBIKE_CATEGORY_VALUES, { each: true })
   motorbikeCategory?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ — CSV (4,5,7,8plus)' })
+  @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ - CSV (4,5,7,8plus)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
   @IsIn(SEAT_BUCKET_VALUES, { each: true })
   seats?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Nhiên liệu — CSV (FUEL_TYPE)' })
+  @ApiPropertyOptional({ type: String, description: 'Nhiên liệu - CSV (FUEL_TYPE)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
@@ -116,7 +116,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn',
+    description: 'Tiện ích xe - CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -126,7 +126,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES)',
+    description: 'Hộp số - CSV (TRANSMISSION_TYPE_EXT_VALUES)',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -162,7 +162,7 @@ export class PublicListingQueryDto {
     type: Boolean,
     description:
       'Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của ' +
-      'tenant — XePrime không xuất hoá đơn thay chủ xe)',
+      'tenant - XePrime không xuất hoá đơn thay chủ xe)',
   })
   @IsOptional()
   @Transform(toBool)
@@ -183,14 +183,14 @@ export class PublicListingQueryDto {
   @ApiPropertyOptional({
     type: Number,
     enum: LISTING_MIN_RATING_VALUES,
-    description: 'Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại',
+    description: 'Điểm đánh giá tối thiểu - chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại',
   })
   @IsOptional()
   @Type(() => Number)
   @IsIn(LISTING_MIN_RATING_VALUES)
   minRating?: number;
 
-  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)' })
+  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ - mới dùng `seats`)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -202,7 +202,7 @@ export class PublicListingQueryDto {
   // (facets dùng query làm khoá) vừa là chi phí LIKE vô ích. Luật khớp: `keywordTokenWhere`.
   @ApiPropertyOptional({
     description:
-      'Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt ' +
+      'Từ khoá - khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt ' +
       'dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng ' +
       'thứ tự hay cùng một trường.',
     maxLength: SEARCH_QUERY_MAX_LENGTH,
@@ -219,7 +219,7 @@ export class PublicListingQueryDto {
    * ("TP.HCM"/"Hồ Chí Minh"), còn URL đã phát ra ngoài thì sống rất lâu.
    */
   @ApiPropertyOptional({
-    description: 'Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)',
+    description: 'Mã tỉnh 2 ký tự - tham số chuẩn (GET /public/destinations)',
   })
   @IsOptional()
   @IsString()
@@ -234,7 +234,7 @@ export class PublicListingQueryDto {
    */
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh',
+    description: 'Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh',
   })
   @IsOptional()
   @IsString()
@@ -254,12 +254,12 @@ export class PublicListingQueryDto {
   @Min(0)
   priceMax?: number;
 
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng' })
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng' })
   @IsOptional()
   @IsISO8601()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - dùng cùng pickupAt' })
   @IsOptional()
   @IsISO8601()
   returnAt?: string;
@@ -313,19 +313,19 @@ export class RecommendedListingQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Mã tỉnh 2 ký tự khách đang quan tâm — ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác',
+      'Mã tỉnh 2 ký tự khách đang quan tâm - ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác',
   })
   @IsOptional()
   @IsString()
   @IsIn(PROVINCE_CODES)
   nearProvinceCode?: string;
 
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — loại xe đã bận trong khoảng' })
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) - loại xe đã bận trong khoảng' })
   @IsOptional()
   @IsISO8601()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - dùng cùng pickupAt' })
   @IsOptional()
   @IsISO8601()
   returnAt?: string;
@@ -364,7 +364,7 @@ export class HostMetricsDto {
     required: true,
     type: Number,
     nullable: true,
-    description: 'Tỉ lệ phản hồi trong hạn (0–100). Null = chưa đủ mẫu, KHÔNG phải 0.',
+    description: 'Tỉ lệ phản hồi trong hạn (0-100). Null = chưa đủ mẫu, KHÔNG phải 0.',
   })
   responseRatePercent!: number | null;
 
@@ -373,7 +373,7 @@ export class HostMetricsDto {
     type: Number,
     nullable: true,
     description:
-      'Tỉ lệ NHẬN VÀ GIỮ chuyến (0–100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng ' +
+      'Tỉ lệ NHẬN VÀ GIỮ chuyến (0-100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng ' +
       'huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu.',
   })
   acceptKeepRatePercent!: number | null;
@@ -383,14 +383,14 @@ export class HostMetricsDto {
     type: Number,
     nullable: true,
     description:
-      'Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này — xem ' +
+      'Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này - xem ' +
       'instantBook. Null = chưa đủ mẫu do người quyết.',
   })
   responseMinutesMedian!: number | null;
 
   @ApiProperty({
     description:
-      'Gian hàng có xe bật "Đặt ngay" trong cửa sổ — giao diện hiện nhãn thay cho số phút, ' +
+      'Gian hàng có xe bật "Đặt ngay" trong cửa sổ - giao diện hiện nhãn thay cho số phút, ' +
       'thay vì quảng cáo một tốc độ trả lời thủ công không có thật.',
   })
   instantBook!: boolean;
@@ -420,12 +420,12 @@ export class PublicListingDto {
     type: String,
     nullable: true,
     enum: MOTORBIKE_CATEGORY_VALUES,
-    description: 'Phân khúc — chỉ xe máy',
+    description: 'Phân khúc - chỉ xe máy',
   })
   motorbikeCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
-  @ApiProperty({ description: 'Tổng số ảnh của xe — thẻ hiện "+N" ảnh', minimum: 0 })
+  @ApiProperty({ description: 'Tổng số ảnh của xe - thẻ hiện "+N" ảnh', minimum: 0 })
   imageCount!: number;
 
   @ApiProperty({
@@ -433,7 +433,7 @@ export class PublicListingDto {
     nullable: true,
     enum: TRANSMISSION_TYPE_EXT_VALUES,
     description:
-      'Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai',
+      'Hộp số (TRANSMISSION_TYPE_EXT - cùng bộ mã với hồ sơ xe) - null khi chủ xe chưa khai',
   })
   transmission!: string | null;
 
@@ -441,12 +441,12 @@ export class PublicListingDto {
     enum: SERVICE_TYPE_VALUES,
     isArray: true,
     description:
-      'Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách ' +
+      'Dịch vụ đang bật tự động nhận chuyến - thẻ hiện "Không cần xác nhận" khi dịch vụ khách ' +
       'đang xem nằm trong mảng này',
   })
   instantBookServiceTypes!: string[];
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string - ADR 0007' })
   weekdayPrice!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
@@ -455,35 +455,35 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ.',
+    description: 'Giá thuê giờ (string - ADR 0007). Null = xe không cho thuê theo giờ.',
   })
   hourlyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá tháng tham chiếu thuê dài hạn (string — ADR 0007).',
+    description: 'Giá tháng tham chiếu thuê dài hạn (string - ADR 0007).',
   })
   monthlyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt.',
+    description: 'Giá/ngày đã gồm tài xế (string - ADR 0007). Null = gian hàng báo khi duyệt.',
   })
   withDriverDailyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)',
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007)',
   })
   withDriverInterCityPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)',
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007)',
   })
   withDriverOneWayPrice!: string | null;
 
@@ -499,7 +499,7 @@ export class PublicListingDto {
    */
   @ApiProperty({
     description:
-      'Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime ' +
+      'Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách - XePrime ' +
       'không xuất hoá đơn thay chủ xe',
   })
   vatInvoiceSupported!: boolean;
@@ -507,7 +507,7 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)',
+    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0-100)',
   })
   discountPercent!: number | null;
 
@@ -528,7 +528,7 @@ export class PublicListingDto {
    * thì có ngày lệch nhau.
    */
   @ApiProperty({
-    description: 'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront)',
+    description: 'Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront)',
   })
   shopVerified!: boolean;
 
@@ -548,14 +548,14 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng',
+    description: 'Mã tỉnh nơi xe đang đỗ (theo chi nhánh) - dùng để lọc/điều hướng',
   })
   provinceCode!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ',
+    description: 'Tên xã/phường của chi nhánh đang giữ xe - chỉ để HIỂN THỊ',
   })
   wardName!: string | null;
 
@@ -587,7 +587,7 @@ export class PickupPointDto {
   @ApiProperty({
     description:
       'Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" ' +
-      '— địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress).',
+      '- địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress).',
   })
   address!: string;
 
@@ -621,7 +621,7 @@ export class PickupPointDto {
 export class ListingCollateralDto {
   @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) mode!: string;
   @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true }) assetTypes!: string[];
-  @ApiProperty({ description: 'VND string — chỉ khác 0 khi mode = cash' }) depositAmount!: string;
+  @ApiProperty({ description: 'VND string - chỉ khác 0 khi mode = cash' }) depositAmount!: string;
 }
 
 /**
@@ -631,10 +631,10 @@ export class ListingCollateralDto {
  */
 export class ListingRentalTermsDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC' })
+  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE - bộ HIỆU LỰC' })
   requiredDocuments!: string[];
   @ApiProperty({
-    description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách',
+    description: 'IDENTITY_VERIFY_METHOD - đối chiếu TAY, kể cả qua app VNeID của khách',
   })
   identityVerifyMethod!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
@@ -644,7 +644,7 @@ export class ListingRentalTermsDto {
     nullable: true,
     deprecated: true,
     description:
-      'NGỪNG DÙNG (29/10/2026) — DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị',
+      'NGỪNG DÙNG (29/10/2026) - DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị',
   })
   depositMode!: string | null;
   @ApiProperty({
@@ -682,14 +682,14 @@ export class ListingHandoverDto {
 export class ListingDriverSurchargeRuleDto {
   @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
   @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
-  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'VND string - ADR 0007' }) amount!: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
 }
 
 /** Hạn mức km/ngày đã công bố + tiền mỗi km vượt (ADR 0007: tiền là chuỗi). */
 export class ListingMileagePolicyDto {
   @ApiProperty({ description: 'Số km/ngày đã nằm trong giá thuê' }) includedKmPerDay!: number;
-  @ApiProperty({ description: 'VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá' })
+  @ApiProperty({ description: 'VND mỗi km vượt - ghi nhận lúc quyết toán, không cộng vào báo giá' })
   excessFeePerKm!: string;
 }
 
@@ -739,7 +739,7 @@ export class PublicListingDetailDto extends PublicListingDto {
    * (không phải một truy vấn tổng hợp mới) — `ratingCount === 0` nghĩa là chưa có đánh giá, đọc
    * `shopRatingAvg` (mặc định 0) lúc đó là bịa một điểm số.
    */
-  @ApiProperty({ description: 'Điểm đánh giá trung bình CỦA GIAN HÀNG, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình CỦA GIAN HÀNG, string - ADR 0007' })
   shopRatingAvg!: string;
 
   @ApiProperty({ description: 'Số lượt đánh giá của gian hàng' })
@@ -765,7 +765,7 @@ export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({
     type: PickupPointDto,
     nullable: true,
-    description: 'Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng.',
+    description: 'Chỗ nhận xe khi khách tự tới lấy - chi nhánh giữ xe, fallback hồ sơ gian hàng.',
   })
   pickupPoint!: PickupPointDto | null;
 
@@ -842,14 +842,14 @@ export class PriceBoundsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thấp nhất — string tiền (ADR 0007)',
+    description: 'Giá thấp nhất - string tiền (ADR 0007)',
   })
   min!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá cao nhất — string tiền (ADR 0007)',
+    description: 'Giá cao nhất - string tiền (ADR 0007)',
   })
   max!: string | null;
 }
@@ -869,7 +869,7 @@ export class AmenityFacetsDto {
  * `total` là số xe khớp TẤT CẢ filter — nuôi nút "Áp dụng (N xe)".
  */
 export class ListingFacetsDto {
-  @ApiProperty({ description: 'Số xe khớp toàn bộ filter — nút "Áp dụng (N xe)"' }) total!: number;
+  @ApiProperty({ description: 'Số xe khớp toàn bộ filter - nút "Áp dụng (N xe)"' }) total!: number;
   @ApiProperty({ type: PriceBoundsDto }) price!: PriceBoundsDto;
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo kiểu dáng (BODY_TYPE key)' })
   bodyType!: FacetBucketDto[];
@@ -909,7 +909,7 @@ export class RecommendedListingsMetaDto {
   nearProvinceCode!: string | null;
 
   @ApiProperty({
-    description: 'Kết quả có lẫn xe ngoài tỉnh được ưu tiên — UI cần nói rõ thay vì ngụ ý',
+    description: 'Kết quả có lẫn xe ngoài tỉnh được ưu tiên - UI cần nói rõ thay vì ngụ ý',
   })
   mixedProvinces!: boolean;
 }
@@ -929,7 +929,7 @@ export class PublicListingPageDto {
 
 /** Một tỉnh/thành gian hàng đang có xe công khai — tab lọc "Xe đang cho thuê". */
 export class PublicShopProvinceDto {
-  @ApiProperty({ description: 'Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode`' })
+  @ApiProperty({ description: 'Mã tỉnh 2 ký tự - giá trị của tham số `provinceCode`' })
   code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() vehicleCount!: number;
@@ -949,14 +949,14 @@ export class PublicShopBranchDto {
     type: String,
     nullable: true,
     description:
-      'Địa chỉ đầy đủ của chi nhánh — CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077)',
+      'Địa chỉ đầy đủ của chi nhánh - CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077)',
   })
   address!: string | null;
   @ApiProperty({ description: 'Số xe công khai đang ở chi nhánh' }) vehicleCount!: number;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá',
+    description: 'Điểm trung bình (string - ADR 0007); null khi chưa có đánh giá',
   })
   ratingAvg!: string | null;
   @ApiProperty() ratingCount!: number;
@@ -990,7 +990,7 @@ export class ShopTrustDto {
     enum: [SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS, SELLER_ENTITY_TYPE.COMPANY],
     nullable: true,
     description:
-      'Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy ' +
+      'Hộ kinh doanh / doanh nghiệp - CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy ' +
       'phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null',
   })
   legalEntityType!: string | null;
@@ -1049,12 +1049,12 @@ export class PublicShopDto {
 
   @ApiProperty({
     enum: STOREFRONT_KIND_VALUES,
-    description: 'Mặt tiền cần vẽ — suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)',
+    description: 'Mặt tiền cần vẽ - suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)',
   })
   storefrontKind!: string;
 
   @ApiProperty({
-    description: 'Đeo dấu xác thực XePrime — CHỈ gian hàng tuyến gói (hasVerifiedStorefront)',
+    description: 'Đeo dấu xác thực XePrime - CHỈ gian hàng tuyến gói (hasVerifiedStorefront)',
   })
   verified!: boolean;
 
@@ -1081,10 +1081,10 @@ export class PublicShopDto {
   })
   chatOpen!: boolean;
 
-  @ApiProperty({ description: 'Ngày mở gian hàng (ISO-8601 UTC) — "Tham gia từ …"' })
+  @ApiProperty({ description: 'Ngày mở gian hàng (ISO-8601 UTC) - "Tham gia từ …"' })
   joinedAt!: string;
 
-  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string - ADR 0007' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
@@ -1110,19 +1110,19 @@ export class PublicShopDto {
 
   @ApiProperty({
     type: [String],
-    description: 'Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần',
+    description: 'Tên các tỉnh/thành đang có xe công khai - theo số xe giảm dần',
   })
   serviceProvinceNames!: string[];
 
   @ApiProperty({
     type: [PublicShopProvinceDto],
-    description: 'Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần',
+    description: 'Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc - theo số xe giảm dần',
   })
   serviceProvinces!: PublicShopProvinceDto[];
 
   @ApiProperty({
     type: [PublicShopBranchDto],
-    description: 'Chi nhánh đang giữ xe công khai — theo số xe giảm dần',
+    description: 'Chi nhánh đang giữ xe công khai - theo số xe giảm dần',
   })
   branches!: PublicShopBranchDto[];
 
@@ -1141,10 +1141,10 @@ export class PublicShopDto {
  * `public_listings` (không hardcode danh sách tỉnh ở FE).
  */
 export class PublicDestinationDto {
-  @ApiProperty({ description: 'Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode`' })
+  @ApiProperty({ description: 'Mã tỉnh - giá trị đi vào URL và bộ lọc `provinceCode`' })
   provinceCode!: string;
 
-  @ApiProperty({ description: 'Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc' })
+  @ApiProperty({ description: 'Tên tỉnh chuẩn - chỉ để HIỂN THỊ, không dùng để lọc' })
   provinceName!: string;
 
   @ApiProperty({ description: 'Số xe đang hiển thị công khai ở tỉnh/thành này' })
@@ -1157,7 +1157,7 @@ export class PublicDestinationDto {
     type: String,
     nullable: true,
     description:
-      'Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. ' +
+      'Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string - ADR 0007. ' +
       'Null khi tỉnh không có xe tự lái nào có giá ngày.',
   })
   minDailyPrice!: string | null;
@@ -1182,14 +1182,14 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
   @ApiProperty({ description: 'Số xe đang hiển thị công khai' }) vehicleCount!: number;
 
-  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string - ADR 0007' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
 
   @ApiProperty({
     description:
-      'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy ' +
+      'Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy ' +
       'với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân.',
   })
   verified!: boolean;
@@ -1197,7 +1197,7 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lời giới thiệu ngắn của gian hàng (hồ sơ) — null khi chưa viết',
+    description: 'Lời giới thiệu ngắn của gian hàng (hồ sơ) - null khi chưa viết',
   })
   bio!: string | null;
 
@@ -1207,19 +1207,19 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ',
+    description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai - ảnh đại diện trên thẻ',
   })
   featuredVehicleImageUrl!: string | null;
 
   @ApiProperty({
     type: () => [PublicShopBrandDto],
     description:
-      'Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng — dãy logo trên thẻ "Gian hàng nổi bật"',
+      'Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng - dãy logo trên thẻ "Gian hàng nổi bật"',
   })
   brands!: PublicShopBrandDto[];
 
   @ApiProperty({
-    description: 'Tổng số hãng xe đang công khai — phần dư so với `brands` hiện "+N"',
+    description: 'Tổng số hãng xe đang công khai - phần dư so với `brands` hiện "+N"',
   })
   brandCount!: number;
 }
@@ -1234,7 +1234,7 @@ export class PublicShopBrandDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Logo hãng từ danh mục `vehicle_brand` — null khi hãng không có trong danh mục',
+    description: 'Logo hãng từ danh mục `vehicle_brand` - null khi hãng không có trong danh mục',
   })
   iconUrl!: string | null;
 }
@@ -1264,7 +1264,7 @@ export class PublicShopListQueryDto {
   /** Gợi ý chủ xe ở ô từ khoá của `/search` — CÙNG luật tên công khai với `q` của danh sách xe. */
   @ApiPropertyOptional({
     description:
-      'Từ khoá — chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của ' +
+      'Từ khoá - chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của ' +
       '`GET /public/listings`: không dấu, khớp đầu từ).',
     maxLength: SEARCH_QUERY_MAX_LENGTH,
   })

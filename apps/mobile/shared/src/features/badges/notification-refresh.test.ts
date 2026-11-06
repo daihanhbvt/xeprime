@@ -30,7 +30,7 @@ describe('refreshForNotification', () => {
       });
   });
 
-  describe('biết loại — làm mới hẹp', () => {
+  describe('biết loại - làm mới hẹp', () => {
     /**
      * Trường hợp người dùng báo: huỷ chuyến. Một chuyến có BA bề mặt nhìn vào nó, và cùng một
      * tài khoản có thể đang mở bất kỳ bề mặt nào — chủ xe tự thuê xe của người khác là chuyện
@@ -82,7 +82,7 @@ describe('refreshForNotification', () => {
     });
   });
 
-  describe('không biết loại — làm mới rộng', () => {
+  describe('không biết loại - làm mới rộng', () => {
     /**
      * Bản chiếu `user_badges/{uid}` chỉ nói "có thêm một thông báo chưa đọc". Loại chỉ đọc được
      * từ `GET /notifications`, mà danh sách đó chỉ tải khi người dùng MỞ chuông — tới lúc biết

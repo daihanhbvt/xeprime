@@ -6,7 +6,7 @@ import '@/lib/crypto-polyfill';
 
 import { patchDayjsTimezone } from '@/i18n/dayjs-timezone-fix';
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -15,6 +15,7 @@ import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
+import { AppUpdatePrompt } from '@/features/app-update/AppUpdatePrompt';
 import { AccountPhoneReminderProvider } from '@/features/auth/AccountPhoneGate';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
@@ -24,6 +25,8 @@ import { registerPushBackgroundHandler } from '@/features/notifications/messagin
 import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
+import { queryPersistOptions } from '@/queries/query-persist';
+import { NetworkBanner } from '@/components/network/NetworkBanner';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
@@ -102,7 +105,8 @@ export default function RootLayout() {
       <AppThemeProvider>
         <ReduxProvider store={store}>
           <I18nProvider>
-            <QueryClientProvider client={queryClient}>
+            {/* Cache chọn lọc ghi xuống máy để offline vẫn xem bản gần nhất — danh sách trắng ở `query-persist.ts`. */}
+            <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
               {/*
                 Trong `SafeAreaProvider` (viewport cần inset thật) và BAO NGOÀI `Stack`: toast
                 phải sống sót qua điều hướng — bắn một thông báo rồi `router.replace` mà provider
@@ -111,6 +115,8 @@ export default function RootLayout() {
               <AppToastProvider>
                 <PushBootstrap />
                 <ThemeBootstrap />
+                {/* Nhắc cập nhật app — cấu hình ở env API (`APP_CUSTOMER_*`). */}
+                <AppUpdatePrompt app="customer" />
                 {/*
                   Máy ảnh TRONG app, mount một lần ở đây vì nơi gọi là `pickImages` — một hàm
                   async trong `src/lib`, không phải component (xem `in-app-camera.ts`). Bọc cả
@@ -177,8 +183,10 @@ export default function RootLayout() {
                     </BadgeRealtimeProvider>
                   </ChatRealtimeProvider>
                 </SessionBoundary>
+                {/* Sau mọi màn để phủ lên trên — dải offline/kết nối lại ở đầu màn. */}
+                <NetworkBanner />
               </AppToastProvider>
-            </QueryClientProvider>
+            </PersistQueryClientProvider>
           </I18nProvider>
         </ReduxProvider>
       </AppThemeProvider>

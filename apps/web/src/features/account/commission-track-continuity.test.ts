@@ -77,7 +77,7 @@ const DAILY_PAGES = [
   ROUTES.MANAGE.BALANCE,
 ];
 
-describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', () => {
+describe('Tuyến hoa hồng - đi qua mốc hết kỳ không đổi gì', () => {
   it('menu Owner Lite giữ nguyên ở cả ba pha', () => {
     for (const phase of PHASES) {
       const track = resolvePartnerTrack(ownerAt(phase));
@@ -115,7 +115,7 @@ describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', ()
  * Nếu không có nửa này, một bản sửa "cho chắc" trong tương lai có thể làm mọi pha đều vô hại và
  * xoá luôn ranh giới hạ cấp của tuyến gói (ADR 0038 điều 5).
  */
-describe('Đối chứng — tuyến gói VẪN đổi khi hết ân hạn', () => {
+describe('Đối chứng - tuyến gói VẪN đổi khi hết ân hạn', () => {
   it('current/grace dùng menu Full Manage; lapsed rơi về Owner Lite', () => {
     // `resolveEffectiveBilling` đã đổi `billingMode` sang `commission` TRƯỚC khi giá trị lên dây
     // ở pha `lapsed` — nên web chỉ cần đọc `billingMode`, không phải tự suy từ pha.

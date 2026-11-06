@@ -49,7 +49,7 @@ afterEach(cleanup);
 
 const operations = () => screen.getByRole('button', { name: /^Vận hành/ });
 
-describe('PartnerTopNav — huy hiệu khối "Vận hành"', () => {
+describe('PartnerTopNav - huy hiệu khối "Vận hành"', () => {
   it('cộng yêu cầu chờ duyệt + lượt giao/trả đến hạn, màu cam khi chưa có gì trễ', () => {
     // Mục "Đơn thuê xe" gộp mang tổng chờ duyệt (2) + giao/trả đến hạn (3) — useNavBadges cộng.
     badges.counts = { [NAV_BADGE.RENTALS_WORK]: 5 };

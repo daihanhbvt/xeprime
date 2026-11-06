@@ -49,7 +49,7 @@ describe('recommendedParams', () => {
     expect(a).toEqual(b);
   });
 
-  it('đổi tỉnh ƯU TIÊN thì khoá phải KHÁC — nếu không danh sách cũ ở lại', () => {
+  it('đổi tỉnh ƯU TIÊN thì khoá phải KHÁC - nếu không danh sách cũ ở lại', () => {
     const hanoi = recommendedParams({ nearProvinceCode: '01', limit: 8 });
     const danang = recommendedParams({ nearProvinceCode: '48', limit: 8 });
 

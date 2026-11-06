@@ -27,6 +27,9 @@ export { XP_TOKENS, XP_METRICS, XP_BREAKPOINTS, cssVar, toPx, type XpTokenName }
  */
 export const antdTheme: ThemeConfig = {
   token: {
+    // Chuyển động modal/drawer/dropdown — cùng nhịp với token `motion-*` của chợ khách.
+    motionDurationMid: XP_TOKENS['motion-duration-overlay'],
+    motionEaseOut: XP_TOKENS['motion-ease-out'],
     // Seed: gốc để AntD dẫn xuất các bậc chữ/nền còn lại.
     colorTextBase: XP_TOKENS['color-text'],
     colorBgBase: XP_TOKENS['color-bg-elevated'],

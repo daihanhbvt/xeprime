@@ -57,7 +57,7 @@ export class VehicleDailyPricesController {
 
   @Delete()
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
-  @ApiOperation({ summary: 'Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè' })
+  @ApiOperation({ summary: 'Khôi phục giá mặc định cho [from, to] - xoá bản ghi đè' })
   @ApiOkResponse({ type: DeletedCountDto })
   async remove(
     @CurrentTenant() tenant: TenantContext,

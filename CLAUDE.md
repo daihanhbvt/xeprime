@@ -43,6 +43,7 @@ Kỷ luật code đã đóng gói thành skill/agent — **dùng chúng, đừng
 | skill | `backend-endpoint` | Trước khi thêm/sửa endpoint/module/DTO ở `apps/api` (tài liệu Swagger đi kèm: `docs/api-docs.md` §6) |
 | skill | `database-change` | Trước khi đụng `schema.prisma`/migration/seed |
 | skill | `i18n` | Trước khi viết BẤT KỲ chữ nào hiện cho người dùng — và khi mở màn hình còn chuỗi tiếng Việt thô thì chuyển luôn màn đó |
+| skill | `ui-text-style` | Trước khi viết BẤT KỲ chữ nào hiện cho người dùng (web, app, chữ server soạn): chỉ gạch ngắn `-`, không `—`/`–`; ngày + giờ ghép bằng `DATE_TIME_SEPARATOR`, mục khác nhau bằng `LIST_SEPARATOR`. `i18n:check` chặn gạch dài trong message |
 | skill | `shared-code` | Khi thấy logic/giá trị lặp lần 2, hoặc code cross-tuyến web↔api |
 | skill | `figma-redesign` | Người dùng gửi link Figma cho một màn/menu ĐÃ CÓ (đợt chuẩn hoá site partner — sổ cái `docs/design/09_PARTNER_REDESIGN.md`): kiểm kê tính năng ↔ design, hỏi trước mọi chỗ lệch, không để mất tính năng |
 | skill | `verify-changes` | Trước khi chạy build/lint/test/typecheck — chỉ xác minh phần vừa sửa, không quét cả workspace |

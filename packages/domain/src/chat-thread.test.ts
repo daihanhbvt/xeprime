@@ -39,7 +39,7 @@ describe('compareMessages', () => {
     expect(compareMessages(a, b)).toBeLessThan(0);
   });
 
-  it('trùng sentAt thì id phân định — cùng quy tắc với cursor keyset ở server', () => {
+  it('trùng sentAt thì id phân định - cùng quy tắc với cursor keyset ở server', () => {
     const a = msg({ id: 'A', sentAt: '2026-01-01T10:00:00.000Z' });
     const b = msg({ id: 'B', sentAt: '2026-01-01T10:00:00.000Z' });
     expect(compareMessages(a, b)).toBeLessThan(0);

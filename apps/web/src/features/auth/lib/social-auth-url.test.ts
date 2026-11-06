@@ -45,7 +45,7 @@ describe('nextWithoutAuthParams', () => {
     );
   });
 
-  it('bỏ cả `authError` — lỗi cũ không được mang sang lần thử mới', () => {
+  it('bỏ cả `authError` - lỗi cũ không được mang sang lần thử mới', () => {
     expect(nextWithoutAuthParams('/', '?auth=login&authError=SOCIAL_CANCELLED')).toBe('/');
   });
 

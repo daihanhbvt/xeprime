@@ -79,7 +79,7 @@ export class BookingExtensionsController {
   @Post(':extensionId/cancel')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
-    summary: 'Huỷ phụ lục còn chờ thanh toán — nhả phần lịch kéo thêm, hoàn phần khách đã chuyển',
+    summary: 'Huỷ phụ lục còn chờ thanh toán - nhả phần lịch kéo thêm, hoàn phần khách đã chuyển',
   })
   @ApiOkResponse({ type: BookingExtensionDto })
   cancel(

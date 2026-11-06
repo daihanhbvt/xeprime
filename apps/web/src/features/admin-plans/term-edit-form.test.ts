@@ -15,7 +15,7 @@ const term = (over: Partial<Subscription> = {}) =>
     ...over,
   }) as Subscription;
 
-describe('toUpdateTermBody — chỉ gửi trường đã đổi', () => {
+describe('toUpdateTermBody - chỉ gửi trường đã đổi', () => {
   it('mở rồi lưu ngay ⇒ payload rỗng (ngày giữ đủ mili giây khi đi vòng qua ô chọn)', () => {
     expect(toUpdateTermBody(term(), termEditDefaults(term()))).toEqual({});
   });

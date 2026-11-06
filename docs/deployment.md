@@ -967,6 +967,23 @@ Việc cần làm, một lần, trước đợt bật `on`:
 Khai **cả hai** kể cả khi giá trị trùng fallback: một biến không khai trông giống hệt một biến bị
 xoá nhầm, và người vận hành không phân biệt được.
 
+### 9.4c Thông báo cập nhật app native (`APP_<APP>_<PLATFORM>_*`)
+
+App khách (và sau này app Partner) gọi `GET /app-versions/<customer|partner>?platform=ios|android` lúc mở
+và lúc trở lại foreground. Cấu hình CHỈ ở env (không bảng DB, không màn admin) — khai là **Variables**
+(không phải Secret) ở GitHub Environment, đều tuỳ chọn; trống ⇒ app không nhắc.
+
+| Biến | Ví dụ | Ý nghĩa |
+| --- | --- | --- |
+| `APP_CUSTOMER_IOS_LATEST_VERSION` / `..._ANDROID_LATEST_VERSION` | `1.4.0` | Dưới bản này ⇒ hộp "Cập nhật / Để sau" (Để sau nhớ 3 ngày theo phiên bản) |
+| `APP_CUSTOMER_IOS_MIN_VERSION` / `..._ANDROID_MIN_VERSION` | `1.2.0` | Dưới bản này ⇒ hộp BẮT BUỘC. MIN > LATEST bị bỏ qua (log warn) |
+| `APP_CUSTOMER_IOS_APP_STORE_ID` | `6831492287` | ⇒ `https://apps.apple.com/app/id<ID>` |
+| `APP_CUSTOMER_ANDROID_PACKAGE` | `vn.xeprime.customerapp` (mặc định) | ⇒ link Google Play |
+
+Quy trình phát hành: đợi bản mới DUYỆT XONG trên cả hai store rồi mới nâng `LATEST`; chỉ nâng `MIN`
+khi bản cũ thật sự không chạy được với API. Đổi biến xong chạy lại deploy (env sinh lại); response
+có `s-maxage=300` nên chậm tối đa ~5 phút. App Partner: cùng bộ khoá với tiền tố `APP_PARTNER_`.
+
 ### 9.5 App native KHÔNG deploy lên VPS
 
 Mobile là **hai Expo project mỏng** + một package dùng chung (ADR 0051 §5):

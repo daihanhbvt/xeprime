@@ -55,7 +55,7 @@ function item(at: string, id: string): PartnerAgendaItem {
   };
 }
 
-describe('answerParts — câu trả lời đầu trang', () => {
+describe('answerParts - câu trả lời đầu trang', () => {
   it('chỉ các vế khác 0, theo thứ tự việc phải làm: quá giờ → yêu cầu → giao → nhận', () => {
     const parts = answerParts(
       overview({
@@ -82,12 +82,12 @@ describe('answerParts — câu trả lời đầu trang', () => {
     expect(answerParts(overview())).toEqual([]);
   });
 
-  it('không được xem đơn lẫn yêu cầu ⇒ null — không có gì để khẳng định', () => {
+  it('không được xem đơn lẫn yêu cầu ⇒ null - không có gì để khẳng định', () => {
     expect(answerParts(overview({ today: null, requests: null }))).toBeNull();
   });
 });
 
-describe('groupAgenda — nhóm theo ngày lịch VN', () => {
+describe('groupAgenda - nhóm theo ngày lịch VN', () => {
   // 10:00 sáng 09/10/2026 giờ Việt Nam.
   const now = dayjs('2026-10-09T03:00:00.000Z');
 
@@ -119,7 +119,7 @@ describe('groupAgenda — nhóm theo ngày lịch VN', () => {
   });
 });
 
-describe('greetingKey — theo giờ Việt Nam', () => {
+describe('greetingKey - theo giờ Việt Nam', () => {
   it('sáng < 12:00 ≤ chiều < 18:00 ≤ tối', () => {
     expect(greetingKey(dayjs('2026-10-09T04:59:00.000Z'))).toBe('morning'); // 11:59 VN
     expect(greetingKey(dayjs('2026-10-09T05:00:00.000Z'))).toBe('afternoon'); // 12:00 VN
@@ -128,7 +128,7 @@ describe('greetingKey — theo giờ Việt Nam', () => {
   });
 });
 
-describe('utilizationPointChange — điểm phần trăm, không phải % của %', () => {
+describe('utilizationPointChange - điểm phần trăm, không phải % của %', () => {
   it('40% → 50% là +10 điểm', () => {
     expect(utilizationPointChange(50, 40)).toBe(10);
     expect(utilizationPointChange(35.5, 40)).toBe(-4.5);
@@ -140,7 +140,7 @@ describe('utilizationPointChange — điểm phần trăm, không phải % của
   });
 });
 
-describe('daysUntil — ngày lịch VN, không chia 24 giờ', () => {
+describe('daysUntil - ngày lịch VN, không chia 24 giờ', () => {
   const now = dayjs('2026-10-09T15:00:00.000Z'); // 22:00 09/10 VN
 
   it('hạn 08:00 sáng mai là còn 1 ngày', () => {

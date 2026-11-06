@@ -10,7 +10,7 @@ import { manageInformationValuesToInput } from './mappers';
  * `Checkbox.Group` của AntD tự rụng khoá ẩn khi người dùng chạm vào ô bất kỳ; app native giữ
  * nguyên mảng nên lưu là lỗi. Lọc ở mapper để hai client cư xử giống nhau.
  */
-describe('manageInformationValuesToInput — tiện ích theo loại xe', () => {
+describe('manageInformationValuesToInput - tiện ích theo loại xe', () => {
   const base = {
     vehicleType: VEHICLE_TYPE.MOTORBIKE,
     plateNumber: '',
