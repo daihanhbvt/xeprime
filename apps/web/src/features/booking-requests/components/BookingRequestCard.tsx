@@ -797,8 +797,9 @@ function requestBoardSchedule(
 }
 
 /**
- * Lưới tiền ba cột + hàng giữ chỗ của thẻ Kanban — CÙNG phép tính `requestPaymentRows` với thẻ List
- * và popup, chỉ đổi nhãn ngắn. Ô "Khách trả" luôn có (lưới cố định ba cột như design).
+ * MỘT hàng tiền của thẻ Kanban: khách trả · trả khi nhận xe · giữ chỗ + viên trạng thái — CÙNG phép
+ * tính `requestPaymentRows` với thẻ List và popup, chỉ đổi nhãn ngắn. Không có ô "Tiền thuê"
+ * (05/11/2026 — tiền thuê ở popup chi tiết và thẻ List); ô "Khách trả" luôn có.
  */
 function requestBoardMoney(
   request: BookingRequestItem,
@@ -811,7 +812,6 @@ function requestBoardMoney(
   const payAtPickup = rows.find((row) => row.key === 'payAtPickup');
   const holdRow = rows.find((row) => row.key === 'hold');
   const money: RentalBoardMoney[] = [
-    { key: 'rental', label: tKanban('money.rental'), amount: pricing.rentalTotal },
     { key: 'customer', label: tKanban('money.customerTotal'), amount: pricing.customerTotalAmount },
     ...(payAtPickup
       ? [{ key: 'payAtPickup', label: tKanban('money.payAtPickup'), amount: payAtPickup.amount }]

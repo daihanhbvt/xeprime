@@ -5,6 +5,7 @@ import { AccountPaymentsController } from './account-payments.controller';
 import { AccountPaymentsService } from './account-payments.service';
 import { AccountTransactionsController } from './account-transactions.controller';
 import { AccountTransactionsService } from './account-transactions.service';
+import { BookingPaymentWriterModule } from './booking-payment-writer.module';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
@@ -19,7 +20,7 @@ import { PaymentsService } from './payments.service';
  * rò dữ liệu của phía kia.
  */
 @Module({
-  imports: [FinanceModule, BookingsModule],
+  imports: [FinanceModule, BookingsModule, BookingPaymentWriterModule],
   controllers: [PaymentsController, AccountPaymentsController, AccountTransactionsController],
   providers: [PaymentsService, AccountPaymentsService, AccountTransactionsService],
 })

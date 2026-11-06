@@ -928,7 +928,8 @@
     "no_driver": "No driver is available for this window",
     "hold_required_with_driver": "Chauffeured trips need host confirmation before a hold",
     "terms_not_accepted": "The renter has not accepted the rental terms",
-    "billing_not_configured": "The shop has no effective billing mode"
+    "billing_not_configured": "The shop has no effective billing mode",
+    "vehicle_still_out": "The vehicle is not back from an overdue trip"
   },
   "bookingRequestDecisionSource": {
     "host": "Decided by host",

@@ -11,7 +11,7 @@
     "INVALID_CREDENTIALS": "Số điện thoại hoặc mật khẩu không đúng.",
     "INVALID_RESET_TOKEN": "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
     "ACCOUNT_LOCKED": "Tài khoản đang bị khoá. Liên hệ hỗ trợ để mở lại.",
-    "LOGIN_TEMPORARILY_LOCKED": "Bạn đã nhập sai quá nhiều lần. Đăng nhập tạm khoá — thử lại sau ít phút, hoặc dùng \"Quên mật khẩu\".",
+    "LOGIN_TEMPORARILY_LOCKED": "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút hoặc dùng \"Quên mật khẩu\".",
     "CURRENT_PASSWORD_INCORRECT": "Mật khẩu hiện tại không đúng.",
     "PASSWORD_NOT_SET": "Tài khoản chưa có mật khẩu. Hãy đặt mật khẩu lần đầu thay vì đổi.",
     "PASSWORD_UNCHANGED": "Mật khẩu mới phải khác mật khẩu hiện tại.",
@@ -55,8 +55,8 @@
     "OTP_INVALID": "Mã xác minh không đúng.",
     "OTP_EXPIRED": "Mã xác minh đã hết hạn. Gửi lại mã mới.",
     "OTP_COOLDOWN": "Vui lòng đợi một chút trước khi gửi lại mã.",
-    "OTP_TOO_MANY": "Đã gửi quá nhiều mã. Thử lại sau ít phút.",
-    "OTP_LOCKED": "Đã nhập sai quá nhiều lần. Thử lại sau.",
+    "OTP_TOO_MANY": "Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau ít phút.",
+    "OTP_LOCKED": "Bạn đã nhập sai mã quá nhiều lần nên mã này đã bị huỷ. Vui lòng gửi lại mã để nhận mã mới.",
     "DRIVER_LICENCE_IMAGE_INVALID": "Tệp tải lên không phải ảnh hợp lệ — hãy chọn ảnh JPG, PNG hoặc WEBP.",
     "DRIVER_LICENCE_SUBMISSION_LIMIT": "Bạn đã gửi ảnh bằng lái nhiều lần trong 24 giờ qua. Vui lòng thử lại vào ngày mai, hoặc liên hệ XePrime nếu cần hỗ trợ.",
     "DRIVER_LICENCE_STATE_CONFLICT": "Lượt nộp bằng lái vừa thay đổi — vui lòng tải lại trang.",
@@ -72,6 +72,7 @@
     "HANDOVER_ODOMETER_BELOW_PICKUP": "Số KM trả xe không được nhỏ hơn số KM lúc giao.",
     "HANDOVER_ODOMETER_SUSPICIOUS": "Số KM chênh lệch bất thường. Kiểm tra lại giúp mình nhé.",
     "HANDOVER_NOT_ELIGIBLE": "Đơn thuê chưa ở trạng thái bàn giao được.",
+    "HANDOVER_COLLECT_AMOUNT_CHANGED": "Số tiền còn phải thu vừa thay đổi. Kiểm tra lại số mới rồi xác nhận.",
     "VEHICLE_CODE_DUPLICATE": "Mã xe này đã được dùng trong gian hàng (kể cả xe đã xoá). Đổi mã khác hoặc để trống để hệ thống tự sinh.",
     "CUSTOMER_PHONE_DUPLICATE": "Số điện thoại này đã có trong sổ khách.",
     "CUSTOMER_ARCHIVED": "Khách này đã được lưu trữ.",
@@ -82,7 +83,7 @@
     "BRANCH_HAS_DEPENDENCIES": "Chi nhánh còn dữ liệu liên quan nên chưa xoá được.",
     "BRANCH_DEFAULT_IMMUTABLE": "Không sửa/xoá được chi nhánh mặc định.",
     "BRANCH_LOCATION_REQUIRED": "Chi nhánh cần có địa chỉ trước khi dùng.",
-    "RATE_LIMITED": "Thao tác quá nhanh. Thử lại sau ít giây.",
+    "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng đợi một chút rồi thử lại.",
     "INTERNAL_ERROR": "Máy chủ gặp sự cố. Thử lại sau giúp mình nhé.",
     "UPLOADS_NOT_CONFIGURED": "Chức năng tải tệp chưa được cấu hình.",
     "INSURANCE_PARTNER_NOT_CONFIGURED": "Môi trường này chưa cắm đối tác bảo hiểm — thử phát hành lại sẽ không cấp được giấy chứng nhận.",
@@ -91,6 +92,10 @@
     "TRIP_NOT_RECEIVED_NOT_ALLOWED": "Chuyến này không còn báo chưa nhận được xe được nữa. Vui lòng liên hệ hỗ trợ.",
     "TRIP_NOT_RECEIVED_TOO_EARLY": "Chưa tới giờ nhận xe nên chưa báo chưa nhận được xe được.",
     "TRIP_NOT_RECEIVED_WINDOW_CLOSED": "Đã quá thời hạn báo chưa nhận được xe cho chuyến này. Vui lòng gửi yêu cầu hỗ trợ.",
+    "TRIP_PICKUP_CONFIRM_NOT_ALLOWED": "Chuyến này không xác nhận nhận xe được nữa — có thể chủ xe đã xác nhận giao xe. Hãy tải lại trang.",
+    "TRIP_PICKUP_CONFIRM_TOO_EARLY": "Chưa tới giờ nhận xe nên chưa xác nhận đã nhận xe được.",
+    "TRIP_RETURN_REPORT_NOT_ALLOWED": "Chuyến này không báo đã trả xe được nữa — có thể chủ xe đã xác nhận nhận xe. Hãy tải lại trang.",
+    "BOOKING_RETURN_REPORT_NOT_PENDING": "Không còn lời báo trả xe nào đang chờ xác nhận ở chuyến này. Hãy tải lại trang.",
     "PROFILE_INCOMPLETE": "Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.",
     "SHOP_LISTING_REQUIREMENTS_MISSING": "Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi xe duyệt được.",
     "RECEIPT_BOOKING_VEHICLE_MISMATCH": "Đơn thuê đã chọn không chạy chiếc xe đã chọn. Bỏ chọn một trong hai giúp mình nhé.",
@@ -228,6 +233,15 @@
     "BOOKING_EXTENSION_PENDING": "Đơn này đang có một lần gia hạn chờ khách thanh toán.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "Lần gia hạn này không còn huỷ được.",
     "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn — kiểm tra giá thuê theo tháng của xe."
+  },
+  "codeWithWait": {
+    "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",
+    "LOGIN_TEMPORARILY_LOCKED": "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau {wait} hoặc dùng \"Quên mật khẩu\".",
+    "OTP_COOLDOWN": "Vui lòng đợi {wait} rồi gửi lại mã.",
+    "OTP_TOO_MANY": "Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau {wait}."
+  },
+  "wait": {
+    "seconds": "{count, plural, other {# giây}}"
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

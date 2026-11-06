@@ -16,6 +16,7 @@ import type { AuthenticatedUser } from '../../common/types/request-context';
 import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
+import { CustomerHandoverService } from '../bookings/handovers/customer-handover.service';
 import { CustomerBookingExtensionDto } from '../booking-extensions/dto/booking-extension.dto';
 import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
@@ -47,6 +48,7 @@ export class CustomerTripsController {
   constructor(
     private readonly trips: CustomerTripsService,
     private readonly extensions: BookingExtensionsService,
+    private readonly customerHandover: CustomerHandoverService,
   ) {}
 
   @Get()
@@ -221,6 +223,55 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.reportNotReceived(user.id, id);
+  }
+
+  /**
+   * "Đã nhận xe" — khách xác nhận chuyến đã bắt đầu (ADR 0081). Chỉ realm khách, chỉ chuyến tự lái /
+   * dài hạn: đơn sang `active` ngay, biên bản giao xe nguồn `customer`.
+   */
+  @Post(':id/confirm-pickup')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách xác nhận đã nhận xe — đơn chuyển sang đang thuê',
+    description:
+      'Được khi đơn `reserved`, chuyến tự lái/dài hạn, chưa có biên bản giao xe đã xác nhận và đã ' +
+      'tới `pickupAt − CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES`. Lập biên bản giao xe nguồn `customer` ' +
+      '(không KM/hiện trạng), chuyển đơn qua đúng đường bàn giao, kết luận case ' +
+      '`handover_unconfirmed`, báo gian hàng. Lỗi: 409 `TRIP_PICKUP_CONFIRM_NOT_ALLOWED`, ' +
+      '`TRIP_PICKUP_CONFIRM_TOO_EARLY` (`details.opensAt`); chuyến của người khác 404. Trả về ' +
+      'chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  async confirmPickup(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    await this.customerHandover.confirmPickup(user.id, id);
+    return this.trips.detail(user.id, id);
+  }
+
+  /**
+   * "Đã trả xe" — khách báo đã trả xe (ADR 0081). KHÔNG đổi trạng thái: chủ xe có
+   * `CUSTOMER_RETURN_CONFIRM_WINDOW_HOURS` để xác nhận hoặc phản đối, im lặng thì đơn tự hoàn thành.
+   */
+  @Post(':id/report-returned')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách báo đã trả xe — chủ xe xác nhận trong hạn, quá hạn tự hoàn thành',
+    description:
+      'Được khi đơn `active`, chuyến tự lái/dài hạn, chưa có biên bản trả xe và chưa báo lần nào. ' +
+      'Ghi `customerReturnedAt` + `returnAutoCompleteAt` (server tính), báo gian hàng. Lỗi: 409 ' +
+      '`TRIP_RETURN_REPORT_NOT_ALLOWED`; chuyến của người khác 404. Trả về chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  async reportReturned(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    await this.customerHandover.reportReturn(user.id, id);
+    return this.trips.detail(user.id, id);
   }
 
   @Post(':id/refund-account')

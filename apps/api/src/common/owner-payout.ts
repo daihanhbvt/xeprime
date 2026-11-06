@@ -25,10 +25,13 @@ import type { OwnerPayoutDto } from './dto/owner-payout.dto';
  * @param dayAmounts giá thuê TỪNG ngày (sau khuyến mãi trực tiếp). Bỏ trống ⇒ đọc giá từng ngày
  *   đã đóng băng trong chính bảng phí (`dayPricesOf`). Không biết (`null`) ⇒ đơn giá chỉ biết được
  *   ở chuyến 1 ngày.
+ * @param period giờ nhận / trả của ĐƠN — nguồn dự phòng của số ngày khi bảng phí đời cũ thiếu
+ *   `rentalDays` (xem `rentalDaysOfFees`).
  */
 export function ownerPayoutOf(
   fees: CustomerFeeBreakdown,
   dayAmounts: readonly string[] | null = dayPricesOf(fees),
+  period?: { pickupAt: Date; returnAt: Date },
 ): OwnerPayoutDto {
   const tax = feeTaxDetailOf(fees);
   const rent = new Prisma.Decimal(tax.rentAmount);
@@ -39,11 +42,13 @@ export function ownerPayoutOf(
 
   const ownerNet = rent.minus(commission).minus(taxAmount);
   const payAtPickupRent = rent.minus(deposit).minus(commission);
+  const rentalDays = rentalDaysOfFees(fees, period);
 
   return {
     rentAmount: rent.toFixed(0),
-    rentalDays: fees.rentalDays,
-    unitAmount: uniformDayAmount(rent, fees.rentalDays, dayAmounts),
+    // `0` = không biết (DTO giữ `number` cho client cũ — app native đọc thẳng trường này).
+    rentalDays: rentalDays ?? 0,
+    unitAmount: uniformDayAmount(rent, rentalDays, dayAmounts),
     ownerCommissionAmount: commission.toFixed(0),
     commissionTiers: commissionTiersOf(fees),
     taxAmount: taxAmount.toFixed(0),
@@ -58,6 +63,30 @@ export function ownerPayoutOf(
     ownerPayableAmount: ownerNet.minus(payAtPickupRent).toFixed(0),
     collectsHold: fees.holdAmount != null,
   };
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Số ngày tính tiền của bảng phí. Kiểu đọc nói `rentalDays` luôn có, nhưng snapshot đóng băng
+ * trước khi trường đó vào bảng phí thì không — đọc thẳng là gửi `undefined` lên dây và màn hình in
+ * "Tiền thuê NaN ngày" (06/11/2026). Dự phòng theo thứ tự: độ dài mảng giá từng ngày đã đóng
+ * băng → giờ nhận/trả của đơn, cùng công thức `PricingService.chargedDays` (mỗi 24h kể cả lẻ là
+ * một ngày, tối thiểu 1). Không còn nguồn nào ⇒ `null`: không bịa một số ngày.
+ */
+export function rentalDaysOfFees(
+  fees: Pick<CustomerFeeBreakdown, 'rentalDays' | 'dayAmounts'>,
+  period?: { pickupAt: Date; returnAt: Date },
+): number | null {
+  if (Number.isInteger(fees.rentalDays) && fees.rentalDays > 0) return fees.rentalDays;
+  if (fees.dayAmounts && fees.dayAmounts.length > 0) return fees.dayAmounts.length;
+  if (period) {
+    return Math.max(
+      1,
+      Math.ceil((period.returnAt.getTime() - period.pickupAt.getTime()) / MS_PER_DAY),
+    );
+  }
+  return null;
 }
 
 /**
@@ -99,7 +128,7 @@ function commissionTiersOf(fees: CustomerFeeBreakdown): OwnerCommissionTier[] | 
  */
 export function uniformDayAmount(
   rent: Prisma.Decimal,
-  rentalDays: number,
+  rentalDays: number | null,
   dayAmounts: readonly string[] | null | undefined,
 ): string | null {
   if (dayAmounts && dayAmounts.length === rentalDays && dayAmounts.length > 0) {

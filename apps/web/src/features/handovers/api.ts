@@ -46,6 +46,10 @@ export const confirmHandover = (
 ): Promise<HandoverContext> =>
   apiPost<HandoverContext>(`${base(bookingId)}/${type}/confirm`, body);
 
+/** "Khách chưa trả xe" — phản đối lời báo trả xe của khách (ADR 0081): huỷ lời báo, mở tranh chấp. */
+export const rejectCustomerReturn = (bookingId: string): Promise<HandoverContext> =>
+  apiPost<HandoverContext>(`${base(bookingId)}/return/customer-report/reject`, {});
+
 export const cancelHandover = (
   bookingId: string,
   type: HandoverType,

@@ -41,6 +41,7 @@ import type { TenantContext } from '../src/common/types/request-context';
 import {
   makeBookingsService,
   makeCustomersService,
+  makeHandoverMoneyServices,
   makeNotificationService,
   makePricingService,
   makeVehiclesService,
@@ -102,7 +103,15 @@ const bookings = makeBookingsService(asService, {
   notifications: makeNotificationService(asService),
   customers: makeCustomersService(asService, audit),
 });
-const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
+const handovers = new HandoversService(
+  asService,
+  bookings,
+  odometer,
+  maintenance,
+  files,
+  audit,
+  ...makeHandoverMoneyServices(asService, audit),
+);
 const receipts = new ReceiptsService(asService, audit);
 const finance = new FinanceOverviewService(asService);
 

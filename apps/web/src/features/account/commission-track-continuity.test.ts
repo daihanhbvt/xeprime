@@ -69,8 +69,10 @@ const DAILY_PAGES = [
   ROUTES.MANAGE.ROOT,
   ROUTES.MANAGE.VEHICLES,
   ROUTES.MANAGE.CALENDAR,
-  // Yêu cầu + đơn gộp ở "Chuyến cho thuê" (07/10/2026); hộp thư + bảng đơn chuyển về đây.
-  ROUTES.MANAGE.TRIPS,
+  // Yêu cầu + đơn ở màn "Đơn thuê xe" dùng chung với gian hàng (06/11/2026).
+  ROUTES.MANAGE.BOOKINGS,
+  `${ROUTES.MANAGE.BOOKINGS}/01B`,
+  ROUTES.MANAGE.BOOKINGS_ENDED,
   ROUTES.MANAGE.CHAT,
   ROUTES.MANAGE.BALANCE,
 ];

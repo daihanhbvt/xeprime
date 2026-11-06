@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CANCELLATION_REASON_CATEGORY_VALUES,
+  cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
@@ -29,8 +30,9 @@ interface Props {
  *
  *  1. **Hệ quả nói thẳng, không trong tooltip** — ô đỏ: tính vào uy tín, khách được hoàn phần đã
  *     chuyển. Dấu "i" chỉ giữ phần giải thích chỉ số.
- *  2. **Nhóm lý do BẮT BUỘC** (đi thẳng vào `booking_cancellations.reason_category`) và **ghi chú cho
- *     khách BẮT BUỘC** (design) — khách đọc đúng câu này trong thông báo.
+ *  2. **Nhóm lý do BẮT BUỘC** (đi thẳng vào `booking_cancellations.reason_category`); **ghi chú cho
+ *     khách** chỉ bắt buộc khi chọn "Lý do khác" (chốt 06/11/2026, cùng luật với API) — có ghi chú
+ *     thì khách đọc đúng câu đó trong thông báo, không có thì nhận câu chung.
  *  3. **Không có nhóm "bất khả kháng"**: trách nhiệm do hệ thống suy (ADR 0045 điều 2).
  */
 function CancelForm({
@@ -50,14 +52,16 @@ function CancelForm({
 
   const trimmed = reason.trim();
   const categoryMissing = category === null;
-  const reasonMissing = trimmed.length === 0;
+  // Ghi chú chỉ bắt buộc với "Lý do khác" — cùng luật với API `cancelByHost` (chốt 06/11/2026).
+  const reasonNeeded = category !== null && cancellationReasonNeedsText(category);
+  const reasonMissing = reasonNeeded && trimmed.length === 0;
   // Màn "Đơn thuê xe" truyền nguyên dòng yêu cầu; nơi gọi hẹp hơn thì không có mốc này.
   const holdExpiresAt = (request as Partial<BookingRequestItem>).holdExpiresAt ?? null;
 
   function submit() {
     setTouched(true);
     if (submitting || category === null || reasonMissing) return;
-    onConfirm({ reasonCategory: category, reason: trimmed });
+    onConfirm({ reasonCategory: category, ...(trimmed ? { reason: trimmed } : {}) });
   }
 
   return (
@@ -122,7 +126,8 @@ function CancelForm({
 
         <label className={styles.field}>
           <span className={styles.label}>
-            {t('reasonLabel')} <span className={styles.required}>*</span>
+            {t('reasonLabel')}
+            {reasonNeeded ? <span className={styles.required}> *</span> : null}
           </span>
           <Input.TextArea
             value={reason}
@@ -135,13 +140,12 @@ function CancelForm({
             status={touched && reasonMissing ? 'error' : undefined}
             aria-invalid={touched && reasonMissing ? true : undefined}
           />
+          {/* Không có dòng gợi ý dưới ô (người dùng bỏ 06/11/2026) — nhãn đã nói ai sẽ đọc. */}
           {touched && reasonMissing ? (
             <span className={styles.error} role="alert">
               {t('reasonRequired')}
             </span>
-          ) : (
-            <span className={styles.hint}>{t('reasonHint')}</span>
-          )}
+          ) : null}
         </label>
 
         {/* Hệ quả là chữ chính — người bấm nút đỏ cần biết tiền đi đâu TRƯỚC khi bấm. */}

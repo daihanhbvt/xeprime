@@ -36,7 +36,11 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 
 **eSMS.vn ở staging là tuỳ chọn.** Staging gửi SMS thật (`OTP_MODE=esms` + ba `ESMS_*`) và nhận
 thêm mã test `OTP_BYPASS_CODE` (vd `123456`) — gõ mã thật hay mã test đều qua, gửi mã hay không
-cũng vậy. Không có eSMS thì `OTP_MODE=mock` in mã ra log và trả kèm `devCode`. Máy dev không khai
+cũng vậy. Mã test thay cho MÃ chứ không thay cho LUẬT (05/11/2026): mã đã gửi mà hết hạn vẫn
+`OTP_EXPIRED`, mã vừa bị khoá vì sai 5 lần vẫn chặn tới khi gửi mã mới, cooldown 60 giây và trần
+5 mã/giờ vẫn tính (cả khi admin tắt SMS), và mã quên mật khẩu của số chưa có tài khoản không mở
+được bằng mã test — staging chạy y production để QC kiểm được các luật đó. Không có eSMS thì
+`OTP_MODE=mock` in mã ra log và trả kèm `devCode`. Máy dev không khai
 `OTP_BYPASS_CODE` thì mặc định `123456`. Production bắt buộc eSMS và CẤM `OTP_BYPASS_CODE` (workflow
 dừng, API từ chối boot).
 

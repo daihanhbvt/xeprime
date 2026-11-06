@@ -31,6 +31,7 @@ import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { sweepBookingExtensionExpiry } from './jobs/booking-extension-expiry';
 import { sweepHandoverOverdue } from './jobs/handover-overdue';
+import { sweepTripReminders } from './jobs/booking-trip-reminders';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
@@ -347,6 +348,13 @@ async function main(): Promise<void> {
         const overdue = await sweepHandoverOverdue(prisma);
         if (overdue.flagged) {
           console.log(`bàn giao: ${overdue.flagged} chuyến quá ân hạn — đã mở case xác minh`);
+        }
+        // Nhắc giờ nhận / giờ trả / quá giờ trả (ADR 0081) — cùng họ "chuyến theo đồng hồ", cùng nhịp.
+        const trips = await sweepTripReminders(prisma);
+        if (trips.pickupReminders || trips.returnReminders || trips.overdueAlerts) {
+          console.log(
+            `nhắc chuyến: nhận ${trips.pickupReminders}, trả ${trips.returnReminders}, quá giờ trả ${trips.overdueAlerts}`,
+          );
         }
       },
       { critical: true },

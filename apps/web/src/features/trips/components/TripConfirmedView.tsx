@@ -28,6 +28,7 @@ import type { CustomerTripDetail } from '../types';
 import { TripDriverCard } from './TripDriverCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOwnerActions';
 import { TripPageHeader, useTripDetailCrumbs } from './TripPageHeader';
@@ -143,6 +144,9 @@ export function TripConfirmedView({
             "Chưa nhận được xe" (ADR 0066, lớp 1) — chặng `ready` là đúng lúc khách cần nó nhất: đã
             quá giờ hẹn mà chưa ai bàn giao. Ngoài cửa sổ 120′ (do server tính) khối tự im lặng.
           */}
+          {/* "Đã nhận xe" (ADR 0081) — khách tự khép mốc giao xe khi chủ xe quên bấm. Ngoài cửa sổ server cho thì khối tự im lặng. */}
+          <TripHandoverWord trip={trip} />
+
           <TripNotReceivedReport trip={trip} />
 
           {/*

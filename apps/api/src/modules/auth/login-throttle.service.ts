@@ -14,7 +14,8 @@ import { PrismaService } from '../../prisma/prisma.service';
  * vì thế không tố cáo ai có tài khoản. Khoá theo `(realm, sha256(định danh đã chuẩn hoá))`: bảng
  * không giữ SĐT/email thô.
  *
- * Đổi chác có chủ đích: kẻ xấu biết SĐT của ai đó có thể làm người đó bị khoá đăng nhập 15 phút.
+ * Đổi chác có chủ đích: kẻ xấu biết SĐT của ai đó có thể làm người đó bị khoá đăng nhập vài phút
+ * (`LOGIN_LOCKOUT_POLICY.LOCK_MINUTES`).
  * Đó là cái giá nhỏ hơn hẳn việc để mật khẩu của họ bị dò không giới hạn, và "Quên mật khẩu" (OTP về
  * chính máy họ) mở khoá ngay (`clear`).
  */
@@ -52,7 +53,7 @@ export class LoginThrottleService {
   async recordFailure(realm: AccountRealm, normalizedIdentifier: string): Promise<void> {
     const max = LOGIN_LOCKOUT_POLICY.MAX_FAILURES[realm];
     const window = `${LOGIN_LOCKOUT_POLICY.WINDOW_MINUTES} minutes`;
-    const lock = `${LOGIN_LOCKOUT_POLICY.LOCK_MINUTES} minutes`;
+    const lock = `${LOGIN_LOCKOUT_POLICY.LOCK_MINUTES[realm]} minutes`;
     const hash = LoginThrottleService.hashIdentifier(normalizedIdentifier);
 
     const [row] = await this.prisma.$queryRaw<{ locked_until: Date | null }[]>(Prisma.sql`

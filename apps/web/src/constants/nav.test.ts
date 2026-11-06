@@ -823,7 +823,7 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.VEHICLES,
       ROUTES.MANAGE.DRIVERS,
       ROUTES.MANAGE.CALENDAR,
-      ROUTES.MANAGE.TRIPS,
+      ROUTES.MANAGE.BOOKINGS,
       ROUTES.MANAGE.BALANCE,
       ROUTES.MANAGE.ACCOUNT,
       ROUTES.MANAGE.HOST_GUIDE,
@@ -836,26 +836,35 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
   });
 
   /*
-   * Chủ xe cá nhân có một tới ba xe (07/10/2026): yêu cầu và đơn gộp vào MỘT danh sách thẻ
-   * "Chuyến cho thuê". Hộp thư sáu tab + bảng đơn là bề mặt của đội xe tuyến gói.
+   * 06/11/2026: chủ xe tuyến hoa hồng dùng CHUNG màn "Đơn thuê xe" với gian hàng — "Chuyến cho
+   * thuê" riêng (07/10) đã gỡ, vì màn của gian hàng nay cũng gộp yêu cầu + đơn vào một nơi.
    */
-  it('menu hoa hồng: CHỦ thấy "Chuyến cho thuê" (kèm huy hiệu), thành viên giữ màn "Đơn thuê xe"', () => {
+  it('menu hoa hồng: MỘT mục "Đơn thuê xe" cho cả chủ lẫn thành viên, huy hiệu như gian hàng', () => {
     const leaves = flattenLeaves(commissionNav);
-    const byHref = (href: string) => leaves.find((leaf) => leaf.href === href);
-    const trips = byHref(ROUTES.MANAGE.TRIPS);
-    expect(trips?.ownerOnly).toBe(true);
-    expect(trips?.badge).toBe(NAV_BADGE.BOOKING_REQUESTS_PENDING);
-    // Hai trục loại trừ nhau: không ai thấy cả "Chuyến cho thuê" lẫn hộp thư cùng lúc.
-    expect(byHref(ROUTES.MANAGE.BOOKING_REQUESTS)).toBeUndefined();
-    expect(byHref(ROUTES.MANAGE.BOOKINGS)?.memberOnly).toBe(true);
-    expect(byHref(ROUTES.MANAGE.BOOKINGS)?.badge).toBe(NAV_BADGE.BOOKING_REQUESTS_PENDING);
-    expect(
-      mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION).map((tab) => tab.href),
-    ).toContain(ROUTES.MANAGE.TRIPS);
+    const bookings = leaves.filter((leaf) => leaf.href === ROUTES.MANAGE.BOOKINGS);
+    expect(bookings).toHaveLength(1);
+    expect(bookings[0]?.ownerOnly).toBeUndefined();
+    expect(bookings[0]?.badge).toBe(NAV_BADGE.RENTALS_WORK);
+    expect(leaves.some((leaf) => leaf.href === ROUTES.MANAGE.TRIPS)).toBe(false);
+    expect(leaves.some((leaf) => leaf.href === ROUTES.MANAGE.BOOKING_REQUESTS)).toBe(false);
+    // Lượt giao/trả đến hạn đã nằm trong số của "Đơn thuê xe" — Lịch xe mang số là đếm đôi.
+    expect(leaves.find((leaf) => leaf.href === ROUTES.MANAGE.CALENDAR)?.badge).toBeUndefined();
+
+    const tabs = mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION);
+    const tab = tabs.find((item) => item.href === ROUTES.MANAGE.BOOKINGS);
+    expect(tab?.badge).toBe(NAV_BADGE.RENTALS_WORK);
+    expect(tabs.some((item) => item.href === ROUTES.MANAGE.TRIPS)).toBe(false);
   });
 
-  it('menu tuyến gói KHÔNG có "Chuyến cho thuê" — họ có hộp thư + bảng đơn', () => {
-    expect(new Set(hrefsOf(SHOP_NAV)).has(ROUTES.MANAGE.TRIPS)).toBe(false);
+  it('cùng một câu hỏi "ai được thấy mục" cho mục đơn của hai tuyến', () => {
+    const shopBookings = flattenLeaves(SHOP_NAV).find(
+      (leaf) => leaf.href === ROUTES.MANAGE.BOOKINGS,
+    );
+    const ownerBookings = flattenLeaves(commissionNav).find(
+      (leaf) => leaf.href === ROUTES.MANAGE.BOOKINGS,
+    );
+    expect(ownerBookings?.permission).toEqual(shopBookings?.permission);
+    expect(ownerBookings?.labelKey).toBe(shopBookings?.labelKey);
   });
 
   /*

@@ -152,12 +152,12 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   { href: ROUTES.MANAGE.VEHICLES, exact: true },
   { href: ROUTES.MANAGE.VEHICLE_REGISTER },
   { href: ROUTES.MANAGE.CALENDAR },
-  { href: ROUTES.MANAGE.TRIPS },
-  // Hộp thư + bảng đơn vẫn là trang của tuyến: THÀNH VIÊN không phải chủ làm việc ở đó, còn CHỦ xe
-  // được `ownerTripsRedirect` đưa sang `TRIPS`. `/bookings/[id]` là chi tiết đơn dùng chung.
-  { href: ROUTES.MANAGE.BOOKING_REQUESTS },
+  // "Đơn thuê xe" (+ chi tiết `/bookings/[id]`, "Đơn đã kết thúc") là màn của CẢ hai tuyến, cho chủ
+  // lẫn thành viên (06/11/2026). Ba URL cũ — hộp thư, "Chờ giao xe", "Chuyến cho thuê" `/trips` của
+  // chủ xe — là ALIAS: trang của chúng tự chuyển tiếp ở server, mang theo nhóm / tab lịch sử.
   { href: ROUTES.MANAGE.BOOKINGS },
-  { href: ROUTES.MANAGE.BOOKINGS_ENDED },
+  { href: ROUTES.MANAGE.BOOKING_REQUESTS },
+  { href: ROUTES.MANAGE.TRIPS },
   { href: ROUTES.MANAGE.CHAT },
   { href: ROUTES.MANAGE.BALANCE },
   // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
@@ -247,34 +247,7 @@ function packageEquivalent(pathname: string): string | null {
     return withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN));
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return balancePayoutPath();
-  if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKINGS;
   return null;
-}
-
-/**
- * Hộp thư yêu cầu + bảng đơn của tuyến gói — CHỦ xe tuyến hoa hồng đọc chúng gộp ở "Chuyến cho
- * thuê" (`TRIPS`). Chi tiết `/bookings/<id>` KHÔNG nằm đây: đó là màn đơn dùng chung, nơi bàn giao.
- */
-const OWNER_TRIPS_REPLACES: readonly string[] = [
-  ROUTES.MANAGE.BOOKING_REQUESTS,
-  ROUTES.MANAGE.BOOKINGS,
-  ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
-  ROUTES.MANAGE.BOOKINGS_ENDED,
-];
-
-/**
- * Tuyến hoa hồng: yêu cầu + đơn ở đâu tuỳ người xem là CHỦ hay THÀNH VIÊN (`null` = ở lại).
- *
- *  - CHỦ xe (1–3 xe) → "Chuyến cho thuê", danh sách thẻ gộp; hộp thư + bảng đơn chuyển sang đó.
- *  - THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói — ADR 0038 điều 5) → hộp thư + bảng đơn
- *    như cũ. `GET /trips` chỉ dựng phía chủ xe cho CHỦ gian hàng, nên `TRIPS` với họ là một trang
- *    rỗng — trong khi họ vẫn phải bàn giao những chuyến đang chạy.
- */
-function ownerTripsRedirect(user: AuthScope | null | undefined, pathname: string): string | null {
-  if (isCommissionOwner(user)) {
-    return OWNER_TRIPS_REPLACES.includes(pathname) ? ROUTES.MANAGE.TRIPS : null;
-  }
-  return pathname === ROUTES.MANAGE.TRIPS ? ROUTES.MANAGE.BOOKINGS : null;
 }
 
 /**
@@ -347,8 +320,6 @@ export function partnerPageRedirect(
     case PARTNER_TRACK.COMMISSION: {
       // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
       if (pathname === ROUTES.MANAGE.ONBOARDING) return null;
-      const trips = ownerTripsRedirect(user, pathname);
-      if (trips) return trips;
       if (isCommissionPage(pathname)) return null;
       return commissionEquivalent(user, pathname) ?? ROUTES.MANAGE.ROOT;
     }

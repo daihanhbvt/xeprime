@@ -609,6 +609,20 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true }) notReceivedReportUntil!: string | null;
 
+  /**
+   * Người đi thuê bấm được "Đã nhận xe" NGAY BÂY GIỜ (ADR 0081): đơn `reserved`, tự lái/dài hạn,
+   * chưa có biên bản giao xe, đã tới `pickupAt − CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES`.
+   */
+  @ApiProperty() canConfirmPickup!: boolean;
+  /** Mốc MỞ nút "Đã nhận xe" khi chỉ còn thiếu thời điểm (ISO-8601 UTC); `null` khi không áp dụng. */
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupConfirmOpensAt!: string | null;
+  /** Người đi thuê bấm được "Đã trả xe": đơn `active`, tự lái/dài hạn, chưa có biên bản trả, chưa báo. */
+  @ApiProperty() canReportReturn!: boolean;
+  /** Lúc người đi thuê báo đã trả xe, khi gian hàng CHƯA trả lời (ISO-8601 UTC). */
+  @ApiPropertyOptional({ type: String, nullable: true }) customerReturnedAt!: string | null;
+  /** Quá mốc này mà gian hàng im lặng thì chuyến tự hoàn thành (ISO-8601 UTC). */
+  @ApiPropertyOptional({ type: String, nullable: true }) returnAutoCompleteAt!: string | null;
+
   /** `null` khi chuyến chưa được nhận — chưa có đơn thì chưa có tiền. */
   @ApiPropertyOptional({ type: CustomerTripFinanceDto, nullable: true })
   finance!: CustomerTripFinanceDto | null;

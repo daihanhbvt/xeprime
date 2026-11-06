@@ -368,7 +368,9 @@ function rentOf(row: Pick<TripRow, 'totalAmount' | 'deliveryFee'>): Prisma.Decim
  */
 function toTripDto(row: TripRow, balanceChange: Prisma.Decimal): WalletStatementTripDto {
   const snapshot = row.priceSnapshot as BookingPriceSnapshot | null;
-  const payout = snapshot?.fees ? ownerPayoutOf(snapshot.fees) : null;
+  const payout = snapshot?.fees
+    ? ownerPayoutOf(snapshot.fees, undefined, { pickupAt: row.pickupAt, returnAt: row.returnAt })
+    : null;
   const rent = rentOf(row);
   const unit = unitPriceOf(snapshot, payout, rent);
 

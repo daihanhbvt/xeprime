@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   FUEL_LEVEL_VALUES,
   HANDOVER_CONDITION_VALUES,
+  HANDOVER_CONFIRM_SOURCE_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS_VALUES,
   HANDOVER_TYPE_VALUES,
@@ -9,21 +10,28 @@ import {
   IMAGE_UPLOAD_MIME_TYPES,
   ODOMETER_CORRECTION_REASON_VALUES,
   ODOMETER_MAX_KM,
+  PAYMENT_METHOD_VALUES,
+  RETURN_SURCHARGE_DRAFT_MAX,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../../common/dto/api-response.dto';
 import { BranchIdQuery } from '../../../../common/dto/branch-scope';
+import { ReturnSurchargeDraftDto } from '../../settlement/dto/settlement.dto';
 
 // ── Ảnh hiện trạng ──────────────────────────────────────────────────────────
 
@@ -90,6 +98,14 @@ export class HandoverDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — khi được GHI NHẬN' })
   confirmedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
+  @ApiProperty({
+    enum: HANDOVER_CONFIRM_SOURCE_VALUES,
+    description:
+      '@xeprime/types → HandoverConfirmSource (ADR 0081): `host` nhân sự gian hàng · `customer` ' +
+      'khách bấm "Đã nhận xe" · `auto` tự lập sau lời báo trả xe của khách. Hai nguồn sau: ' +
+      '`confirmedByName` là tên KHÁCH, biên bản không có KM/hiện trạng do gian hàng kiểm',
+  })
+  confirmSource!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   canceledAt!: string | null;
 
@@ -297,6 +313,21 @@ export class SaveHandoverDto {
 }
 
 /**
+ * "Đã thu tiền" của lượt nhận lại xe. `amount` là số hộp đang HIỂN THỊ (`collectableAmount` của bản
+ * xem trước): server tính lại trong transaction và từ chối khi lệch (`HANDOVER_COLLECT_AMOUNT_CHANGED`)
+ * — người dùng không bao giờ ghi nhận đã thu một số mình chưa nhìn thấy.
+ */
+export class ReturnCollectPaymentDto {
+  @ApiProperty({ description: 'VND (chuỗi — ADR 0007) — đúng số khách còn phải trả' })
+  @Matches(/^\d{1,12}(\.\d{1,2})?$/, { message: 'Số tiền không hợp lệ (số VND không âm)' })
+  amount!: string;
+
+  @ApiProperty({ enum: PAYMENT_METHOD_VALUES })
+  @IsIn(PAYMENT_METHOD_VALUES)
+  method!: string;
+}
+
+/**
  * Xác nhận — thao tác duy nhất có hệ quả thật.
  *
  * Hai cờ xác nhận có ý thức, mặc định TẮT: không bao giờ âm thầm bỏ qua cảnh báo hay âm thầm
@@ -370,6 +401,34 @@ export class ConfirmHandoverDto {
   @IsOptional()
   @IsBoolean()
   acknowledgeSuspicious?: boolean;
+
+  /**
+   * CHỈ chiều TRẢ (06/11/2026): các khoản phát sinh gõ trong hộp nhận lại xe — ghi CÙNG transaction
+   * với biên bản, qua `SettlementService` (writer của `booking_surcharges`). Cần `payments.record`.
+   */
+  @ApiPropertyOptional({
+    type: [ReturnSurchargeDraftDto],
+    description: `Chỉ chiều trả, tối đa ${RETURN_SURCHARGE_DRAFT_MAX} khoản. Cần payments.record`,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(RETURN_SURCHARGE_DRAFT_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => ReturnSurchargeDraftDto)
+  surcharges?: ReturnSurchargeDraftDto[];
+
+  /**
+   * CHỈ chiều TRẢ (06/11/2026): ô "Đã thu tiền" — mặc định bật ở hộp. Có mặt ⇒ ghi MỘT phiếu thu
+   * tiền thuê cho số khách còn phải trả, cùng transaction. Vắng ⇒ đơn hoàn thành với khoản còn nợ.
+   */
+  @ApiPropertyOptional({
+    type: ReturnCollectPaymentDto,
+    description: 'Chỉ chiều trả. Cần payments.record',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ReturnCollectPaymentDto)
+  collectPayment?: ReturnCollectPaymentDto;
 }
 
 export class CancelHandoverDto {

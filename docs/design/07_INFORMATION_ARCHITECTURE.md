@@ -192,7 +192,7 @@ CÙNG header và sáu khối với tuyến gói (02/11/2026); khối không còn
 | Khối | Mục | Route |
 | --- | --- | --- |
 | Tổng quan (liên kết thẳng) | Tổng quan | `/` |
-| Vận hành | Lịch thuê xe · Chuyến cho thuê (chủ; thành viên thấy Yêu cầu đặt xe + Quản lý đơn thuê xe) | `/calendar`, `/trips` (`/booking-requests`, `/bookings`) |
+| Vận hành | Lịch thuê xe · Đơn thuê xe (CÙNG màn với gian hàng, cho chủ lẫn thành viên — 06/11/2026; `/trips` "Chuyến cho thuê" cũ chỉ còn chuyển tiếp) | `/calendar`, `/bookings` |
 | Xe & Tài xế | Danh sách xe · Quản lý tài xế | `/vehicles`, `/drivers` |
 | Doanh thu | Quản lý ví — số dư, rút tiền, tài khoản nhận tiền, thuế đã khấu trừ | `/balance` |
 | Cấu hình | Hồ sơ chủ xe — hồ sơ, trang chủ xe, khai thuế, gói (phễu nâng cấp) | `/account` |

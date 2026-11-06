@@ -9,6 +9,7 @@ import { useState } from 'react';
 import {
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
   isBookingRequestPastDue,
   PERMISSION,
   SERVICE_TYPE_VALUES,
@@ -32,6 +33,7 @@ import {
   type RequestStage,
 } from '@/constants/rental-stages';
 import { bookingHistoryPath, ROUTES } from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { BookingRequestCard } from '@/features/booking-requests/components/BookingRequestCard';
@@ -60,6 +62,7 @@ import type { BookingListItem, BookingSort } from '@/features/bookings/types';
 import { CustomerDetailDialog } from '@/features/customers/components/CustomerDetailDialog';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { VehicleDetailDialog } from '@/features/vehicles/components/VehicleDetailDialog';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -72,6 +75,8 @@ import { RentalStageHeading, STAGE_TONE } from './RentalStageHeading';
 import { RentalsBoard, type BoardColumn } from './board/RentalsBoard';
 import { RentalsViewToggle } from './board/RentalsViewToggle';
 import type { RentalCardLayout } from './rental-card/RentalCard';
+import { ConfirmReturnDialog } from '@/features/handovers/components/ConfirmReturnDialog';
+import { BookingStatusTransitionDialog } from './BookingStatusTransitionDialog';
 import { ExtendBookingDialog } from './ExtendBookingDialog';
 import styles from './BookingsListView.module.css';
 
@@ -204,6 +209,9 @@ export function BookingsListView() {
   const { message } = App.useApp();
   const { has } = usePermissions();
   const { isManage: isManageWorkspace } = useWorkspace();
+  const { data: user } = useCurrentUser();
+  // Tuyến hoa hồng không lập đơn tay (`useCanCreateBooking`) — chuyến chỉ đến từ chợ.
+  const marketOnly = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
   const { filters, setFilters } = useRentalsFilters();
   // Kanban / List — `null` trong lượt hydrate đầu (chưa đọc được lựa chọn đã nhớ của trình duyệt).
   const { view: mode, boardAvailable } = useRentalsView(filters.view);
@@ -242,6 +250,8 @@ export function BookingsListView() {
   const canMessage = canViewRequests && !chatHidden;
   // Gia hạn (ADR 0077) là tiền của chuyến — phiên hỗ trợ không mở.
   const canExtend = has(PERMISSION.BOOKING_UPDATE) && !settlementHidden;
+  // "Khách không đến" là một kết cục bàn giao — phiên hỗ trợ không ghi thay gian hàng.
+  const canNoShow = has(PERMISSION.BOOKING_UPDATE) && !hidesHandover;
   const canRemind = canApprove && !chatHidden;
 
   /** Chỗ đang đứng kèm nhóm + trang — link "Xem lịch xe" quay về đúng đây. */
@@ -403,6 +413,8 @@ export function BookingsListView() {
   const [vehicleDetailId, setVehicleDetailId] = useState<string | null>(null);
   const [customerDetail, setCustomerDetail] = useState<{ id: string; name: string } | null>(null);
   const [extending, setExtending] = useState<BookingListItem | null>(null);
+  const [noShowFor, setNoShowFor] = useState<BookingListItem | null>(null);
+  const [receiving, setReceiving] = useState<BookingListItem | null>(null);
 
   function openConversation(requestId: string) {
     startConversation.mutate(requestId, {
@@ -483,6 +495,8 @@ export function BookingsListView() {
         canHandle={canHandle}
         onMessage={canMessage && requestId ? () => openConversation(requestId) : undefined}
         onExtend={canExtend ? () => setExtending(booking) : undefined}
+        onNoShow={canNoShow ? () => setNoShowFor(booking) : undefined}
+        onReceive={canHandle ? () => setReceiving(booking) : undefined}
         messagePending={pending}
         busy={pending}
         backHref={backHref}
@@ -648,6 +662,17 @@ export function BookingsListView() {
       {tBoard('create')}
     </Button>
   ) : null;
+  /*
+   * Màn trống: gian hàng mời lập đơn tay. Chủ xe tuyến hoa hồng không lập đơn tay — chuyến chỉ đến
+   * từ chợ — nên lối có ích là xem lại xe (đã lên chợ chưa, giá, lịch).
+   */
+  const emptyAction =
+    createButton ??
+    (marketOnly && canViewVehicle ? (
+      <Button type="primary" onClick={() => router.push(ROUTES.MANAGE.VEHICLES)}>
+        {tBoard('viewVehicles')}
+      </Button>
+    ) : null);
 
   return (
     <div className={styles.page}>
@@ -727,7 +752,8 @@ export function BookingsListView() {
                 onOpenGroup={selectView}
                 filtered={filtered}
                 onClearFilters={clearFilters}
-                emptyAction={createButton}
+                emptyAction={emptyAction}
+                marketOnly={marketOnly}
               />
             ) : (
               <StageList
@@ -813,6 +839,21 @@ export function BookingsListView() {
 
       {extending ? (
         <ExtendBookingDialog booking={extending} onClose={() => setExtending(null)} />
+      ) : null}
+
+      {/* Dựng có điều kiện: mỗi lần mở là một form mới, không còn lý do của lần bấm trước. */}
+      {noShowFor ? (
+        <BookingStatusTransitionDialog
+          booking={noShowFor}
+          target={BOOKING_STATUS.NO_SHOW}
+          open
+          onClose={() => setNoShowFor(null)}
+        />
+      ) : null}
+
+      {/* "Nhận xe" ở thẻ (List + Kanban) — cùng hộp với nút xác nhận ở trang chi tiết. */}
+      {receiving ? (
+        <ConfirmReturnDialog booking={receiving} onClose={() => setReceiving(null)} />
       ) : null}
     </div>
   );
@@ -909,6 +950,7 @@ function AllGroups({
   filtered,
   onClearFilters,
   emptyAction,
+  marketOnly,
 }: {
   groups: readonly StageData[];
   countOf: (stage: RentalStage) => number | undefined;
@@ -917,6 +959,8 @@ function AllGroups({
   filtered: boolean;
   onClearFilters: () => void;
   emptyAction?: React.ReactNode;
+  /** Chuyến chỉ đến từ chợ (tuyến hoa hồng — không lập đơn tay): câu trống không nói "đơn bạn tạo". */
+  marketOnly: boolean;
 }) {
   const t = useTranslations('Bookings');
   const tBoard = useTranslations('Bookings.board');
@@ -948,8 +992,8 @@ function AllGroups({
     ) : (
       <EmptyState
         variant="empty"
-        title={tBoard('emptyAllTitle')}
-        description={tBoard('emptyAllBody')}
+        title={marketOnly ? tBoard('emptyAllMarketTitle') : tBoard('emptyAllTitle')}
+        description={marketOnly ? tBoard('emptyAllMarketBody') : tBoard('emptyAllBody')}
         action={emptyAction ?? undefined}
       />
     );

@@ -77,7 +77,7 @@ function renderDialog(ctx: HandoverContext = context()) {
   const onClose = vi.fn();
   render(
     <App>
-      <ConfirmHandoverDialog context={ctx} type={HANDOVER_TYPE.PICKUP} open onClose={onClose} />
+      <ConfirmHandoverDialog context={ctx} open onClose={onClose} />
     </App>,
   );
   return { onClose };

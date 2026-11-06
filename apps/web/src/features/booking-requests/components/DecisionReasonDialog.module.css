@@ -1,7 +1,8 @@
 /*
  * Hai hộp có lý do của chặng yêu cầu — "Từ chối yêu cầu thuê xe" (`23919:39682`) và "Huỷ yêu cầu
  * thuê xe" (`23930:44688`), Figma Partner-XePrime 05/11/2026: rộng 450, viên tóm tắt khách · xe nền
- * xám, hai ô bắt buộc, (huỷ) ô cảnh báo đỏ, hai nút cuối.
+ * xám, hai ô bắt buộc, (huỷ) ô cảnh báo đỏ, hai nút cuối. Hộp huỷ ĐƠN / ghi nhận khách không đến
+ * (`BookingStatusTransitionDialog`) dùng lại cùng khuôn này (06/11/2026).
  */
 .titleBlock {
   display: flex;
@@ -28,32 +29,67 @@
 
 /* "Nguyễn Bình An · Honda City 2020" — nền gray-50, bo 12, cao 40. */
 .summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-12);
   margin: 0;
   padding: var(--xp-space-sm) var(--xp-space-md);
   border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-layout);
+}
+
+/*
+ * Tên • xe trên MỘT hàng KHÔNG gói: tên xe dài xuống dòng trong cột của chính nó. Gói cả hàng
+ * (bản trước) để lại "Tên •" một mình ở dòng trên và xe rơi xuống dòng dưới (06/11/2026).
+ * `.summary` tự là hàng ở hai hộp yêu cầu; hộp đơn thuê xếp hàng `.summaryLine` + dòng phụ.
+ */
+.summary,
+.summaryLine {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
   font-size: var(--xp-font-size-body);
   line-height: 24px;
 }
 
-.summaryName {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
+.summaryStack {
+  flex-direction: column;
+  gap: 2px;
 }
 
+.summaryLine {
+  margin: 0;
+}
+
+.summaryName {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60%;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+/* Giữa dòng chữ đầu: (24 − 6) / 2. */
 .summaryDot {
+  flex: none;
   width: 6px;
   height: 6px;
+  margin-top: 9px;
   border-radius: 50%;
   background: var(--xp-color-border-strong);
 }
 
 .summaryVehicle {
+  flex: 1 1 0;
+  min-width: 0;
   color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Dòng phụ dưới hàng tên • xe (khung giờ thuê của hộp đơn thuê). */
+.summaryMeta {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
 }
 
 .field {

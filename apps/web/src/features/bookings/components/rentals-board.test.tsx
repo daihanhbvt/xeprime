@@ -44,8 +44,9 @@ vi.mock('@/hooks/use-permissions', () => ({
     isLoading: false,
   }),
 }));
+const me = vi.hoisted(() => ({ billingMode: 'package' as string }));
 vi.mock('@/hooks/use-current-user', () => ({
-  useCurrentUser: () => ({ data: { tenant: { billingMode: BILLING_MODE.PACKAGE } } }),
+  useCurrentUser: () => ({ data: { tenant: { billingMode: me.billingMode } } }),
 }));
 vi.mock(
   '@/features/branches/hooks/use-branch-filter',
@@ -193,6 +194,7 @@ function column(name: string): HTMLElement {
 beforeEach(() => {
   window.localStorage.clear();
   media.mobile = false;
+  me.billingMode = BILLING_MODE.PACKAGE;
   permissions.granted = new Set([
     PERMISSION.BOOKING_REQUEST_VIEW,
     PERMISSION.BOOKING_REQUEST_APPROVE,
@@ -222,6 +224,25 @@ describe('Dạng xem nào được hiện', () => {
       screen.getByRole('button', { name: 'Xem dạng bảng Kanban' }).getAttribute('aria-pressed'),
     ).toBe('true');
     expect(screen.getByText('Chỉ kéo được sang bước tiếp theo')).toBeTruthy();
+  });
+
+  it('chủ xe tuyến hoa hồng lần đầu mở ⇒ List (vài chiếc xe), vẫn có nút sang Kanban', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    renderPage();
+    expect(screen.queryByRole('region', { name: 'Bảng đơn thuê theo chặng' })).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Lọc đơn thuê theo trạng thái' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Xem dạng danh sách' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Xem dạng bảng Kanban' }));
+    expect(window.localStorage.getItem('xp.rentals.view')).toBe('board');
+  });
+
+  it('chủ xe tuyến hoa hồng đã chọn Kanban ⇒ lựa chọn đã nhớ thắng mặc định của tuyến', () => {
+    me.billingMode = BILLING_MODE.COMMISSION;
+    window.localStorage.setItem('xp.rentals.view', 'board');
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Bảng đơn thuê theo chặng' })).toBeTruthy();
   });
 
   it('`?view=list` thắng lựa chọn đã nhớ; lựa chọn đã nhớ thắng mặc định', () => {
@@ -377,6 +398,34 @@ describe('Tay nắm kéo — chỉ ở thẻ có bước kế mà người xem l
     expect(within(needs).getAllByRole('button', { name: 'Từ chối' }).length).toBeGreaterThan(0);
     const pickup = within(column('Chờ giao xe')).getByRole('link', { name: 'Xử lý giao xe' });
     expect(pickup.getAttribute('href')).toContain(bookingPath.detail('b-pick'));
+  });
+
+  it('thẻ Kanban không có ô "Tiền thuê"; Giữ chỗ + viên trạng thái cùng MỘT hàng tiền', () => {
+    seedAll();
+    seed(BOOKING_LIST_PRESET.RENTING, [
+      booking({
+        id: 'b-market',
+        vehicleName: 'Hyundai Accent',
+        status: BOOKING_STATUS.ACTIVE,
+        pickupAt: new Date(Date.now() - 24 * HOUR).toISOString(),
+        customerTotalAmount: '1550000',
+        holdPaidAmount: '275000',
+        payAtPickupAmount: '1275000',
+      }),
+    ]);
+    renderPage();
+    const renting = column('Đang thuê');
+    expect(within(renting).queryByText('Tiền thuê')).toBeNull();
+    const row = within(renting).getByText('Khách trả').closest('dl')!;
+    for (const label of ['Khách trả', 'Trả khi nhận xe', 'Giữ chỗ', 'Đã thanh toán']) {
+      expect(within(row).getByText(label)).toBeTruthy();
+    }
+    // Đơn tự lập: khách trả · đã thu · còn phải thu — cũng không có "Tiền thuê".
+    const pickup = column('Chờ giao xe');
+    expect(within(pickup).queryByText('Tiền thuê')).toBeNull();
+    const own = within(pickup).getByText('Khách trả').closest('dl')!;
+    expect(within(own).getByText('Đã thu')).toBeTruthy();
+    expect(within(own).getByText('Còn phải thu')).toBeTruthy();
   });
 });
 

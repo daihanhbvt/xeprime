@@ -185,12 +185,18 @@ a.vehicleName:hover {
   font-size: 16px;
 }
 
-/* ── Lưới tiền ba cột: nhãn 12/400 xám trên, số 12/500 dưới, cách 2 ────────── */
+/*
+ * ── MỘT hàng tiền: nhãn 12/400 xám trên, số 12/500 dưới, cách 2 ────────────
+ * Ô rộng theo nội dung, dàn đều hai mép (ô "Giữ chỗ" mang thêm viên trạng thái nên rộng hơn ô
+ * khác — chia ba cột bằng nhau thì viên tràn). Thẻ hẹp hơn tổng ba ô thì ô cuối xuống hàng.
+ */
 
 .money {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--xp-space-12);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-12);
   margin: 0;
 }
 
@@ -222,10 +228,9 @@ a.vehicleName:hover {
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.hold {
+.holdState {
   display: flex;
-  align-items: center;
-  gap: var(--xp-space-12);
+  margin: var(--xp-space-xs) 0 0;
 }
 
 /* Viên trạng thái giữ chỗ — bo 16, đệm 2/8, chữ 12/500. */
@@ -279,10 +284,16 @@ a.vehicleName:hover {
   background: var(--xp-color-error);
 }
 
-/* ── Chân thẻ: viền gray-100 trên, đệm trên 12; đồng hồ nghiêng trái, nút phải ── */
+/*
+ * ── Chân thẻ: viền gray-100 trên, đệm trên 12; câu tình trạng nghiêng trái, nút phải ──
+ * Câu tình trạng giữ bề rộng TỰ NHIÊN của nó (`flex-basis: auto`): vừa chỗ thì cùng hàng với nút,
+ * không vừa (câu dài, hoặc hai nút "Khách không đến" + "Xử lý giao xe") thì cả cụm nút xuống hàng
+ * dưới, canh phải — không bao giờ bóp câu còn vài chữ mỗi dòng.
+ */
 
 .foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-sm);
@@ -291,16 +302,22 @@ a.vehicleName:hover {
 }
 
 .status {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
   font-size: var(--xp-font-size-body);
   font-style: italic;
   line-height: 20px;
 }
 
-/* Câu tình trạng dài ("Quá giờ trả xe 6 ngày") xuống dòng trong chính nó, nút luôn ở cùng hàng. */
 .status > p {
+  align-items: flex-start;
   white-space: normal;
+}
+
+/* Biểu tượng đồng hồ đứng ở dòng ĐẦU khi câu xuống dòng (cao 16 trong dòng 20). */
+.status > p > :first-child {
+  flex: none;
+  margin-top: 2px;
 }
 
 .actions {
@@ -308,6 +325,7 @@ a.vehicleName:hover {
   flex: none;
   align-items: center;
   gap: var(--xp-space-sm);
+  margin-left: auto;
 }
 
 .hintList {

@@ -7,6 +7,8 @@ import {
   BOOKING_STATUS_VALUES,
   CANCELLATION_PARTY_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
+  cancellationReasonNeedsText,
+  type CancellationReasonCategory,
   MOTORBIKE_CATEGORY_VALUES,
   VEHICLE_TYPE_VALUES,
   HANDOVER_STATUS_VALUES,
@@ -254,6 +256,18 @@ export class BookingListItemDto {
   actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Trả xe thật — ISO-8601 UTC' })
   actualReturnAt!: string | null;
+  /**
+   * Khách đã báo "Đã trả xe" ở trang chuyến (ADR 0081) và gian hàng chưa trả lời — ISO-8601 UTC.
+   * Đi cùng `returnAutoCompleteAt`: quá mốc đó mà gian hàng vẫn im lặng thì đơn tự hoàn thành.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  customerReturnedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Hạn gian hàng xác nhận — ISO-8601 UTC',
+  })
+  returnAutoCompleteAt!: string | null;
   /** Phía chịu trách nhiệm của lượt huỷ (`booking_cancellations`, ADR 0045) — null khi đơn không bị huỷ. */
   @ApiPropertyOptional({ type: String, nullable: true, enum: CANCELLATION_PARTY_VALUES })
   cancellationParty!: string | null;
@@ -277,6 +291,19 @@ export class BookingListItemDto {
   /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
   @ApiPropertyOptional({ type: String, nullable: true })
   payAtPickupAmount!: string | null;
+  @ApiProperty({
+    description:
+      'Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví ' +
+      'khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / ' +
+      'chưa thu giữ chỗ (VND string)',
+  })
+  ownerShareOnlineAmount!: string;
+  @ApiProperty({
+    description:
+      'Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, ' +
+      'sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string)',
+  })
+  counterDueAmount!: string;
 }
 
 /**
@@ -782,18 +809,27 @@ export class AssignBookingDriverDto {
  *
  * Cả hai giá trị còn lại đều là kết thúc tiêu cực, khép đơn vĩnh viễn và nhả lịch xe ngay — sáu
  * tháng sau, khi khách gọi hỏi "vì sao đơn của tôi bị huỷ", thứ duy nhất còn lại là dòng audit.
- * Nên cả hai đều BẮT BUỘC nêu lý do (`TRANSITION_REASON_REQUIRED` trùng chính danh sách này —
- * không phải trùng hợp, mà vì đây giờ là hai kết thúc DUY NHẤT endpoint này còn làm được).
+ * Nên cả hai đều phải nói được VÌ SAO (`transitionNeedsReason`).
  */
 const BOOKING_TRANSITION_ALLOWED_VALUES: readonly string[] = [
   BOOKING_STATUS.CANCELLED,
   BOOKING_STATUS.NO_SHOW,
 ];
 
-const TRANSITION_REASON_REQUIRED: readonly string[] = BOOKING_TRANSITION_ALLOWED_VALUES;
-
-function transitionNeedsReason(status: string): boolean {
-  return TRANSITION_REASON_REQUIRED.includes(status);
+/**
+ * Khi nào chữ tự do BẮT BUỘC (người dùng chốt 06/11/2026):
+ *  - `no_show` — luôn: nó không có nhóm lý do, chữ là lời giải thích duy nhất;
+ *  - `cancelled` — chỉ khi nhóm là "Lý do khác": các nhóm còn lại đã tự nói vì sao, và ép gõ thêm
+ *    chỉ sinh ra chữ cho có. Cùng luật với lượt huỷ ở chặng chờ thanh toán
+ *    (`BookingRequestsService.cancelByHost`).
+ */
+function transitionNeedsReason(o: TransitionBookingDto): boolean {
+  if (o.status === BOOKING_STATUS.NO_SHOW) return true;
+  return (
+    o.status === BOOKING_STATUS.CANCELLED &&
+    (CANCELLATION_REASON_CATEGORY_VALUES as readonly string[]).includes(o.reasonCategory ?? '') &&
+    cancellationReasonNeedsText(o.reasonCategory as CancellationReasonCategory)
+  );
 }
 
 /** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */
@@ -806,30 +842,36 @@ export class TransitionBookingDto {
   status!: string;
 
   /**
-   * Lý do — BẮT BUỘC khi huỷ đơn hoặc ghi nhận khách không đến, tuỳ chọn ở các bước khác.
+   * Lý do — BẮT BUỘC khi ghi nhận khách không đến, và khi huỷ với nhóm "Lý do khác"
+   * (`transitionNeedsReason`); tuỳ chọn ở các ca còn lại.
    *
    * Trim TRƯỚC khi kiểm: một ô toàn dấu cách là ô trống, và để nó lọt qua thì luật này chỉ còn
-   * chặn được người dùng cẩu thả chứ không chặn được cái nó sinh ra để chặn.
+   * chặn được người dùng cẩu thả chứ không chặn được cái nó sinh ra để chặn. Ở ca tuỳ chọn, chuỗi
+   * rỗng sau trim là "không ghi" — bỏ qua, service nhận như vắng mặt.
    *
-   * Điều kiện `|| reason !== undefined` giữ trần 500 ký tự có hiệu lực cả ở bước KHÔNG bắt
-   * buộc — `@ValidateIf` sai là bỏ qua TOÀN BỘ validator của trường, nên nếu chỉ đặt điều kiện
-   * "đang huỷ" thì một `reason` dài 100k ký tự đi kèm `confirmed` sẽ không ai kiểm.
+   * Điều kiện "có chữ" giữ trần 500 ký tự có hiệu lực cả ở ca KHÔNG bắt buộc — `@ValidateIf`
+   * sai là bỏ qua TOÀN BỘ validator của trường, nên nếu chỉ đặt điều kiện bắt buộc thì một
+   * `reason` dài 100k ký tự đi kèm nhóm "xe hỏng" sẽ không ai kiểm.
    *
    * Lý do KHÔNG vào `booking.note`: `note` là nội dung của đơn (nhân viên viết cho nhau đọc khi
    * phục vụ chuyến), còn đây là lịch sử của một quyết định. Trộn hai thứ là để lời giải thích
    * cho việc huỷ bị người sau sửa đè mất.
+   *
+   * Khi HUỶ, câu này còn là "Ghi chú cho khách": thông báo huỷ gửi tài khoản khách mang đúng nó
+   * (06/11/2026). Lý do no-show thì chỉ ở audit.
    */
   @ApiPropertyOptional({
     description:
-      'Lý do — BẮT BUỘC khi status = cancelled/no_show. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn',
+      'Lý do — BẮT BUỘC khi status = no_show, hoặc cancelled với reasonCategory = other. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn. Khi cancelled, câu này cũng vào thông báo huỷ gửi tài khoản khách',
     maxLength: 500,
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @ValidateIf(
-    (o: TransitionBookingDto) => transitionNeedsReason(o.status) || o.reason !== undefined,
+    (o: TransitionBookingDto) =>
+      transitionNeedsReason(o) || (o.reason !== undefined && o.reason !== ''),
   )
   @IsString()
-  @IsNotEmpty({ message: 'Cần nêu lý do khi huỷ đơn hoặc ghi nhận khách không đến' })
+  @IsNotEmpty({ message: 'Cần nêu lý do khi ghi nhận khách không đến hoặc chọn "Lý do khác"' })
   @MaxLength(500)
   reason?: string;
 
@@ -837,8 +879,8 @@ export class TransitionBookingDto {
    * NHÓM lý do — bắt buộc khi `status = cancelled` (ADR 0045 điều 1).
    *
    * Có nhóm vì ô văn xuôi không thống kê được: vận hành cần biết "xe hỏng" chiếm bao nhiêu phần
-   * trăm để sửa đúng chỗ, và chỉ số uy tín cần một khoá để lọc. Ô chữ tự do (`reason`) vẫn còn
-   * và vẫn bắt buộc — nhóm đứng CẠNH nó, không thay nó.
+   * trăm để sửa đúng chỗ, và chỉ số uy tín cần một khoá để lọc. Ô chữ tự do (`reason`) đứng CẠNH
+   * nó, bắt buộc khi nhóm là "Lý do khác".
    *
    * `no_show` KHÔNG cần nhóm: nó tự nó đã là một phân loại, và phía chịu trách nhiệm ở đó là
    * khách chứ không phải gian hàng.

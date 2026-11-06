@@ -253,6 +253,20 @@ export const API_ERROR_CODE = {
    */
   TRIP_NOT_RECEIVED_WINDOW_CLOSED: 'TRIP_NOT_RECEIVED_WINDOW_CLOSED',
   /**
+   * Khách bấm "Đã nhận xe" (ADR 0081) ở chuyến không xác nhận được — chưa có đơn, đơn không còn
+   * `reserved`, đã có biên bản giao xe, hoặc chuyến có tài xế. 409.
+   */
+  TRIP_PICKUP_CONFIRM_NOT_ALLOWED: 'TRIP_PICKUP_CONFIRM_NOT_ALLOWED',
+  /** "Đã nhận xe" sớm hơn `CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES` trước giờ nhận. `details.opensAt`. 409. */
+  TRIP_PICKUP_CONFIRM_TOO_EARLY: 'TRIP_PICKUP_CONFIRM_TOO_EARLY',
+  /**
+   * Khách bấm "Đã trả xe" (ADR 0081) ở chuyến không báo được — đơn không `active`, đã có biên bản
+   * trả xe, đã báo rồi, hoặc chuyến có tài xế. 409.
+   */
+  TRIP_RETURN_REPORT_NOT_ALLOWED: 'TRIP_RETURN_REPORT_NOT_ALLOWED',
+  /** Gian hàng phản đối lời báo trả xe khi không còn lời báo nào đang chờ (đã xử lý / đã tự hoàn thành). 409. */
+  BOOKING_RETURN_REPORT_NOT_PENDING: 'BOOKING_RETURN_REPORT_NOT_PENDING',
+  /**
    * Đơn đã có một khoản phát sinh còn hiệu lực ở danh mục CHỈ ĐƯỢC GHI MỘT LẦN (hiện là phí
    * vượt km). `details` mang `{ category, surchargeId }` để FE chỉ thẳng vào khoản đang có.
    *
@@ -769,6 +783,12 @@ export const API_ERROR_CODE = {
    * người khác vừa xác nhận). FE tải lại đơn thay vì hiện lỗi chung.
    */
   HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
+  /**
+   * Ô "Đã thu tiền" của lượt nhận lại xe nộp một số KHÁC số khách còn phải trả server vừa tính
+   * (người khác vừa ghi thu / phụ phí giữa chừng). Không ghi gì; `details.collectableAmount` là số
+   * mới để hộp hiện lại cho người dùng xác nhận lần nữa.
+   */
+  HANDOVER_COLLECT_AMOUNT_CHANGED: 'HANDOVER_COLLECT_AMOUNT_CHANGED',
 
   // Sổ khách của gian hàng (S-01)
   /**

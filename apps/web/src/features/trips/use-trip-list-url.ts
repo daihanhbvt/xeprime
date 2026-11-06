@@ -12,9 +12,8 @@ import type { TripListNarrow } from './api';
  * Tab + trang của một danh sách chuyến, sống trên URL (ADR 0004) — tab đang mở gửi link được, F5
  * không mất, nút Back quay đúng tab trước đó.
  *
- * Dùng chung cho HAI danh sách: chuyến đi thuê của khách (`/trips` site khách) và chuyến cho thuê
- * của chủ xe tuyến hoa hồng (`/trips` site partner). `basePath` là KHU chứa danh sách — hai site,
- * hai gốc đường dẫn, cùng một phép ghi.
+ * Danh sách chuyến đi thuê của khách (`/trips` site khách). `basePath` là gốc đường dẫn của danh
+ * sách — phép ghi không tự đoán site.
  */
 export function useTripListUrl(basePath: string) {
   const router = useRouter();

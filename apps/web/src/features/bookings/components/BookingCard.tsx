@@ -15,10 +15,14 @@ import {
   BOOKING_HANDOVER_PLACE_VALUES,
   BOOKING_LIST_PRESET,
   BOOKING_STATUS,
+  canTransitionBooking,
+  HANDOVER_STATUS,
   isCancellationParty,
+  isNoShowGracePassed,
   PERMISSION,
   SERVICE_TYPE,
   type BookingHandoverPlace,
+  type BookingStatus,
   type BookingListPreset,
 } from '@xeprime/types';
 import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
@@ -70,8 +74,8 @@ export function bookingCardDetailHref(bookingId: string, branchId: string | unde
  * quá giờ giao · còn bao lâu tới giờ trả + thanh tiến độ) và hành động. Thân: xe · khách · ô lịch ·
  * ô tiền (tiền thuê · khách trả · đã giữ chỗ · trả chủ xe khi nhận xe).
  *
- * "Xử lý giao xe" / "Nhận xe" mở TRANG CHI TIẾT — nơi soát việc còn thiếu (Chuẩn bị bàn giao) rồi mới
- * bấm xác nhận; KHÔNG mở sẵn hộp xác nhận (03/11/2026, sổ cái §3.2).
+ * "Xử lý giao xe" mở TRANG CHI TIẾT — nơi soát việc còn thiếu (Chuẩn bị bàn giao) rồi mới bấm xác
+ * nhận (03/11/2026, sổ cái §3.2). "Nhận xe" mở thẳng hộp "Xác nhận đã nhận lại xe" (06/11/2026).
  */
 export function BookingCard({
   booking,
@@ -80,6 +84,8 @@ export function BookingCard({
   canHandle,
   onMessage,
   onExtend,
+  onNoShow,
+  onReceive,
   messagePending,
   busy,
   backHref,
@@ -99,6 +105,16 @@ export function BookingCard({
    * Nút chỉ hiện ở đơn DÀI HẠN đang thuê — server vẫn chặn mọi trường hợp khác.
    */
   onExtend?: () => void;
+  /**
+   * Mở hộp ghi nhận "Khách không đến". Vắng ⇒ không có quyền sửa đơn / đang trong phiên hỗ trợ. Nút
+   * chỉ hiện ở thẻ "Chờ giao xe" đã qua ân hạn mà chưa giao xe — cùng ba điều kiện server kiểm.
+   */
+  onNoShow?: () => void;
+  /**
+   * Mở hộp "Xác nhận đã nhận lại xe" (06/11/2026). Chỉ dùng khi `canHandle` ở thẻ "Đang thuê"; vắng ⇒
+   * nút "Nhận xe" về trang chi tiết như trước.
+   */
+  onReceive?: () => void;
   messagePending: boolean;
   busy: boolean;
   /** Đường quay lại đúng chỗ đang đứng, gắn vào link "Xem lịch xe". */
@@ -128,6 +144,17 @@ export function BookingCard({
     booking.serviceType === SERVICE_TYPE.LONG_TERM &&
     // Chỉ đơn đặt qua chợ: đơn tự lập không có tài khoản khách nhận QR / tiền hoàn (ADR 0077).
     booking.bookingRequestId != null;
+  /*
+   * "Khách không đến" ngay trên thẻ (05/11/2026) — trước chỉ ở trang chi tiết, nên đơn quá giờ giao
+   * nằm mãi ở "Chờ giao xe". Đúng bộ điều kiện của `BookingStatusActions`: máy trạng thái còn cạnh
+   * `→ no_show`, đã qua ân hạn, chưa có biên bản giao xe đã xác nhận.
+   */
+  const noShowable =
+    onNoShow !== undefined &&
+    group === BOOKING_LIST_PRESET.AWAITING_PICKUP &&
+    canTransitionBooking(booking.status as BookingStatus, BOOKING_STATUS.NO_SHOW) &&
+    isNoShowGracePassed(booking.pickupAt) &&
+    booking.pickupHandoverStatus !== HANDOVER_STATUS.CONFIRMED;
 
   const pickup = toAppTz(booking.pickupAt);
   const dropoff = toAppTz(booking.returnAt);
@@ -151,8 +178,8 @@ export function BookingCard({
   );
 
   /*
-   * Hành động là LINK có hình nút (một `<button>` nằm trong `<a>` là HTML sai). Cả hai đường bàn
-   * giao mở trang chi tiết.
+   * Hành động đổi trang là LINK có hình nút (một `<button>` nằm trong `<a>` là HTML sai); hành động
+   * mở hộp là `<button>`.
    */
   const statusNode = (
     <p className={cx(styles.status, styles[status.tone])}>
@@ -163,6 +190,16 @@ export function BookingCard({
 
   const actions = (
     <>
+      {noShowable ? (
+        <button
+          type="button"
+          className={cx(styles.action, styles.detail)}
+          onClick={onNoShow}
+          disabled={busy}
+        >
+          {t('noShowAction')}
+        </button>
+      ) : null}
       {group === BOOKING_LIST_PRESET.AWAITING_PICKUP ? (
         canHandle ? (
           <Link href={detailHref} className={cx(styles.action, styles.handle)}>
@@ -193,10 +230,25 @@ export function BookingCard({
               {tExtension('action')}
             </button>
           ) : null}
+          {/*
+            "Nhận xe" mở THẲNG hộp "Xác nhận đã nhận lại xe" (Figma `23941:65305`, 06/11/2026) — hộp tự
+            chụp ảnh, ghi phụ phí và thu tiền. Không có hộp (nơi gọi không cấp) thì về trang chi tiết.
+          */}
           {canHandle && group === BOOKING_LIST_PRESET.RENTING ? (
-            <Link href={detailHref} className={cx(styles.action, styles.receive)}>
-              {t('receiveBack')}
-            </Link>
+            onReceive ? (
+              <button
+                type="button"
+                className={cx(styles.action, styles.receive)}
+                onClick={onReceive}
+                disabled={busy}
+              >
+                {t('receiveBack')}
+              </button>
+            ) : (
+              <Link href={detailHref} className={cx(styles.action, styles.receive)}>
+                {t('receiveBack')}
+              </Link>
+            )
           ) : null}
         </>
       )}
@@ -404,23 +456,24 @@ function bookingPaymentRows(
 }
 
 /**
- * Lưới tiền + hàng giữ chỗ của thẻ Kanban — cùng số với `bookingPaymentRows`. Đơn qua chợ: tiền thuê
- * · khách trả · trả khi nhận xe, giữ chỗ "Đã thanh toán" (đơn chỉ ra đời khi tiền về ĐỦ — ADR 0044).
- * Đơn tự lập: tiền thuê · đã thu · còn phải thu (tô đậm khi còn nợ), không có hàng giữ chỗ.
+ * Hàng tiền của thẻ Kanban — cùng số với `bookingPaymentRows`, KHÔNG có ô "Tiền thuê" (05/11/2026:
+ * thẻ hẹp chỉ giữ số người trực cần lúc giao/nhận xe; tiền thuê ở trang chi tiết và thẻ List). Đơn
+ * qua chợ: khách trả · trả khi nhận xe · giữ chỗ "Đã thanh toán" (đơn chỉ ra đời khi tiền về ĐỦ —
+ * ADR 0044). Đơn tự lập: khách trả · đã thu · còn phải thu (tô đậm khi còn nợ), không có ô giữ chỗ.
  */
 function bookingBoardMoney(
   booking: BookingListItem,
   t: ReturnType<typeof useTranslations<'Bookings.board.kanban'>>,
 ): { money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
+  const customer: RentalBoardMoney = {
+    key: 'customer',
+    label: t('money.customerTotal'),
+    amount: booking.customerTotalAmount ?? booking.totalAmount,
+  };
   if (booking.payAtPickupAmount != null) {
     return {
       money: [
-        { key: 'rental', label: t('money.rental'), amount: booking.totalAmount },
-        {
-          key: 'customer',
-          label: t('money.customerTotal'),
-          amount: booking.customerTotalAmount ?? booking.totalAmount,
-        },
+        customer,
         { key: 'pickup', label: t('money.payAtPickup'), amount: booking.payAtPickupAmount },
       ],
       hold:
@@ -436,7 +489,7 @@ function bookingBoardMoney(
   }
   return {
     money: [
-      { key: 'rental', label: t('money.rental'), amount: booking.totalAmount },
+      customer,
       { key: 'collected', label: t('money.collected'), amount: booking.collectedAmount },
       {
         key: 'debt',
@@ -467,6 +520,14 @@ function statusLine(
 ): { text: string; tone: Tone } {
   switch (group) {
     case BOOKING_LIST_PRESET.AWAITING_PICKUP: {
+      // Đã qua cả giờ TRẢ mà chưa ai xác nhận giao xe: chuyến hoặc đã diễn ra (quên lập biên bản),
+      // hoặc khách không đến — cả hai đều phải được khép, không được nằm im ở cột này.
+      if (Date.now() >= new Date(booking.returnAt).getTime()) {
+        return {
+          text: t('pickupNeverConfirmed', { date: fmt.rentalPoint(toAppTz(booking.returnAt)) }),
+          tone: 'danger',
+        };
+      }
       const urgency = pickupUrgency(booking.pickupAt);
       const time = fmt.time(booking.pickupAt);
       if (urgency === PICKUP_URGENCY.OVERDUE)
@@ -479,6 +540,16 @@ function statusLine(
       };
     }
     case BOOKING_LIST_PRESET.RENTING: {
+      // Khách đã báo trả xe ở trang chuyến (ADR 0081) — việc của gian hàng là xác nhận trước hạn.
+      if (booking.customerReturnedAt && booking.returnAutoCompleteAt) {
+        return {
+          text: t('customerReturned', {
+            time: fmt.time(booking.customerReturnedAt),
+            deadline: fmt.rentalPoint(toAppTz(booking.returnAutoCompleteAt)),
+          }),
+          tone: 'warning',
+        };
+      }
       const { remainingMinutes, overdueMinutes } = rentalProgress(
         booking.actualPickupAt ?? booking.pickupAt,
         booking.returnAt,

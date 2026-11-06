@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { legacyEndedBookingsTarget, legacyRequestsTarget } from './rentals-redirect';
+import {
+  legacyEndedBookingsTarget,
+  legacyOwnerTripsTarget,
+  legacyRequestsTarget,
+} from './rentals-redirect';
 
 const PATHS = { bookings: '/manage/bookings', ended: '/manage/bookings/ended' };
 
@@ -54,5 +58,28 @@ describe('legacyEndedBookingsTarget — ngăn đã kết thúc của bảng đơ
     expect(legacyEndedBookingsTarget({ preset: 'renting' }, PATHS)).toBeNull();
     expect(legacyEndedBookingsTarget({ preset: 'needs_action' }, PATHS)).toBeNull();
     expect(legacyEndedBookingsTarget({}, PATHS)).toBeNull();
+  });
+});
+
+/** "Chuyến cho thuê" cũ của chủ xe tuyến hoa hồng (`/trips`) → màn "Đơn thuê xe" (06/11/2026). */
+describe('legacyOwnerTripsTarget — "Chuyến cho thuê" cũ', () => {
+  it('tab hiện tại (hoặc không tham số) ⇒ màn Đơn thuê xe, mang theo từ khoá', () => {
+    expect(legacyOwnerTripsTarget({}, PATHS)).toBe('/manage/bookings');
+    expect(legacyOwnerTripsTarget({ filter: 'current', page: '2', q: 'Vios' }, PATHS)).toBe(
+      '/manage/bookings?q=Vios',
+    );
+  });
+
+  it('tab "Lịch sử chuyến" ⇒ màn Đơn đã kết thúc (ô Tất cả)', () => {
+    expect(legacyOwnerTripsTarget({ filter: 'history' }, PATHS)).toBe('/manage/bookings/ended');
+    expect(
+      legacyOwnerTripsTarget({ filter: 'history', q: 'Vios', from: '2026-10-01' }, PATHS),
+    ).toBe('/manage/bookings/ended?q=Vios');
+  });
+
+  it('`?role=` của bản hai phía rất cũ không làm vỡ', () => {
+    expect(legacyOwnerTripsTarget({ role: 'host', filter: ['history', 'current'] }, PATHS)).toBe(
+      '/manage/bookings/ended',
+    );
   });
 });

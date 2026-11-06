@@ -11,10 +11,12 @@ import {
 import { Transform } from 'class-transformer';
 import {
   ACCOUNT_REALM_VALUES,
+  DISPLAY_NAME_POLICY,
   FEATURE_STATE_VALUES,
   MEMBERSHIP_BRANCH_SCOPE_VALUES,
   MOBILE_CLIENT_APP_VALUES,
   PLAN_FEATURE_VALUES,
+  normalizeDisplayName,
   VN_PHONE_PATTERN,
   type AccountRealm,
   type MobileClientApp,
@@ -38,11 +40,25 @@ class PasswordField {
 
 /** Bốn ô của form đăng ký (trừ "nhập lại") — dùng chung cho `register` và `register/check`. */
 class RegisterFields extends PasswordField {
-  @ApiProperty({ example: 'Nguyễn Văn A' })
+  /** `DISPLAY_NAME_POLICY` — cùng luật với `buildDisplayNameSchema` của form. */
+  @ApiProperty({
+    example: 'Nguyễn Văn A',
+    minLength: DISPLAY_NAME_POLICY.MIN_LENGTH,
+    maxLength: DISPLAY_NAME_POLICY.MAX_LENGTH,
+    description:
+      'Chữ cái (kể cả có dấu), chữ số và khoảng trắng; tính sau khi bỏ khoảng trắng đầu/cuối và chuẩn hoá NFC.',
+  })
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @MinLength(1, { message: 'Vui lòng nhập họ tên' })
-  @MaxLength(255)
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeDisplayName(value) : value))
+  @MinLength(DISPLAY_NAME_POLICY.MIN_LENGTH, {
+    message: `Tên cần từ ${DISPLAY_NAME_POLICY.MIN_LENGTH} đến ${DISPLAY_NAME_POLICY.MAX_LENGTH} ký tự`,
+  })
+  @MaxLength(DISPLAY_NAME_POLICY.MAX_LENGTH, {
+    message: `Tên cần từ ${DISPLAY_NAME_POLICY.MIN_LENGTH} đến ${DISPLAY_NAME_POLICY.MAX_LENGTH} ký tự`,
+  })
+  @Matches(DISPLAY_NAME_POLICY.PATTERN, {
+    message: 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng',
+  })
   displayName!: string;
 
   @ApiProperty({ example: '0901234567' })

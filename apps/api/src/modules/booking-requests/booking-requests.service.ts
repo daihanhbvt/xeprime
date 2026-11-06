@@ -1040,6 +1040,15 @@ export class BookingRequestsService {
         await this.recordAutoAcceptSkip(tenantId, id, blocker);
         return null;
       }
+      /*
+       * Xe còn ở ngoài với một chuyến quá giờ trả ⇒ KHÔNG tự nhận: lịch nói xe rảnh nhưng chìa khoá
+       * chưa về, và một chuyến tự nhận rồi mới biết xe không có là hai khách cùng chờ một chiếc xe.
+       * Yêu cầu ở lại "Cần xử lý"; hộp duyệt hiện lời cảnh báo (`vehicleStillOut`).
+       */
+      if (await vehicleStillOut(this.prisma, tenantId, req.vehicleId, new Date())) {
+        await this.recordAutoAcceptSkip(tenantId, id, AUTO_ACCEPT_BLOCKER.VEHICLE_STILL_OUT);
+        return null;
+      }
 
       /*
        * Chuyến có tài xế chỉ tự nhận khi bên thuê có ít nhất một tài xế liên kết RẢNH khung giờ
@@ -1545,6 +1554,8 @@ export class BookingRequestsService {
       ...vehicleBranchWhere(resolveBranchScope(query.branchId, allowedBranchIds)),
       ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       ...searchWhere(query.q),
+      // Trong `scope` (không chỉ `where`): con số trên từng nhóm cũng không được đếm thẻ chết.
+      ...liveRequestWhere(new Date()),
     };
     const where: Prisma.BookingRequestWhereInput = {
       ...scope,
@@ -1610,9 +1621,20 @@ export class BookingRequestsService {
       select: SELECT,
     });
     if (!row) throw notFound();
+    const stillOut =
+      row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+        ? await vehicleStillOut(this.prisma, tenantId, row.vehicleId, new Date())
+        : null;
     return {
       ...toDto(row, await this.isPackageTrack(tenantId)),
       ...(await this.resolveMoney(tenantId, row)),
+      vehicleStillOut: stillOut
+        ? {
+            bookingId: stillOut.id,
+            bookingCode: stillOut.code,
+            returnAt: stillOut.returnAt.toISOString(),
+          }
+        : null,
     };
   }
 
@@ -2990,6 +3012,57 @@ function requestOrderBy(
   return onlyAwaitingHold
     ? [{ hold: { expiresAt: 'asc' } }, { id: 'asc' }]
     : [{ respondBy: 'asc' }, { id: 'asc' }];
+}
+
+/**
+ * Bỏ những yêu cầu ĐÃ CHẾT THEO ĐỒNG HỒ nhưng cột `status` chưa kịp đổi — chờ duyệt đã quá
+ * `respond_by`, chờ tiền đã quá `booking_holds.expires_at`.
+ *
+ * Worker là writer duy nhất của `expired`/`hold_expired` và chạy mỗi phút; giữa hạn và nhịp quét
+ * (hoặc suốt lúc worker dừng) yêu cầu vẫn mang trạng thái sống. Hiện nó ở "Cần xử lý" là bày một thẻ
+ * không bấm được gì — duyệt/từ chối đều bị chặn (`isBookingRequestPastDue`) — và vì sort `urgent`
+ * đi theo hạn gần nhất, thẻ chết luôn đứng TRÊN CÙNG. Cùng luật với chỗ nhận tiền: tin mốc, không
+ * tin cột `status` (ADR 0044 điều 7). Export cho Tổng quan partner (huy hiệu menu đọc từ đó).
+ */
+export function liveRequestWhere(now: Date): Prisma.BookingRequestWhereInput {
+  return {
+    NOT: {
+      OR: [
+        { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, respondBy: { lte: now } },
+        {
+          status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+          hold: { is: { expiresAt: { lte: now } } },
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * Chuyến `active` đã QUÁ GIỜ TRẢ trên chiếc xe này — xe đang ở ngoài đường dù lịch nói nó đã rảnh.
+ *
+ * Lịch bận (`vehicle_occupancies`) chỉ chặn tới `return_at` gốc và KHÔNG tự kéo dài (đổi luật chống
+ * trùng lịch là việc của một ADR riêng — ADR 0006), nên một yêu cầu cho khung ngay sau đó vẫn duyệt
+ * được. Hàm này là lời cảnh báo cho người duyệt và là cổng tạm dừng "Đặt ngay" (`vehicle_still_out`);
+ * nó KHÔNG chặn duyệt tay — chủ xe có thể biết xe sẽ về kịp. Lấy chuyến trễ LÂU nhất.
+ */
+async function vehicleStillOut(
+  db: Pick<Prisma.TransactionClient, 'booking'>,
+  tenantId: string,
+  vehicleId: string,
+  now: Date,
+): Promise<{ id: string; code: string; returnAt: Date } | null> {
+  return db.booking.findFirst({
+    where: {
+      tenantId,
+      vehicleId,
+      status: BOOKING_STATUS.ACTIVE,
+      returnAt: { lte: now },
+      deletedAt: null,
+    },
+    orderBy: { returnAt: 'asc' },
+    select: { id: true, code: true, returnAt: true },
+  });
 }
 
 function searchWhere(q: string | undefined): Prisma.BookingRequestWhereInput {

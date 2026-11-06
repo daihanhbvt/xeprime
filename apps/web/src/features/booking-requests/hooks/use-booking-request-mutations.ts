@@ -15,9 +15,9 @@ import type { ApproveBookingRequestInput, CancelBookingRequestInput } from '../t
  * Duyệt yêu cầu tạo Booking (giữ chỗ lịch) → invalidate cả bookings/calendar/dashboard ngoài
  * booking-requests. Từ chối chỉ đổi trạng thái yêu cầu.
  *
- * Cả ba quyết định làm mới thêm `trips`: chủ xe tuyến hoa hồng duyệt ngay trên danh sách chuyến
- * cho thuê (`OwnerTripsView`, đọc `/trips`) — thiếu nhánh đó thì thẻ vừa duyệt vẫn mang nút
- * "Xác nhận" cho tới lần tải lại kế tiếp.
+ * Cả ba quyết định làm mới thêm `trips`: màn chi tiết chuyến phía chủ xe (`TripHostDecisions`, đọc
+ * `/trips/:id`) duyệt ngay tại chỗ — thiếu nhánh đó thì chuyến vừa duyệt vẫn mang nút "Xác nhận"
+ * cho tới lần tải lại kế tiếp.
  *
  * Wave 9: KHÔNG còn bước báo giá giao nhận trước khi duyệt — yêu cầu có giao tận nơi duyệt
  * được ngay và đơn sinh ra với phí `0đ`.

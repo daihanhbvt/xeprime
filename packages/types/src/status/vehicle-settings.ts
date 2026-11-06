@@ -240,6 +240,12 @@ export const AUTO_ACCEPT_BLOCKER = {
    * rõ phải sửa gì.
    */
   BILLING_NOT_CONFIGURED: 'billing_not_configured',
+  /**
+   * Chiếc xe còn ở ngoài với một chuyến `active` ĐÃ QUÁ GIỜ TRẢ (05/11/2026). Lịch bận chỉ chặn tới
+   * giờ trả gốc, nên lịch nói xe rảnh trong khi chìa khoá chưa về — tự nhận lúc đó là hứa một chiếc
+   * xe không có. Yêu cầu ở lại chờ duyệt tay; hộp duyệt hiện cảnh báo.
+   */
+  VEHICLE_STILL_OUT: 'vehicle_still_out',
 } as const;
 
 export type AutoAcceptBlocker = (typeof AUTO_ACCEPT_BLOCKER)[keyof typeof AUTO_ACCEPT_BLOCKER];

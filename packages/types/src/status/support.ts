@@ -209,6 +209,8 @@ export const SUPPORT_CASE_OPEN_REASON = {
   TRIP_NOT_RECEIVED: 'trip_not_received',
   /** Lớp 3: worker — quá ân hạn bàn giao mà cả hai bên im lặng. */
   HANDOVER_OVERDUE: 'handover_overdue',
+  /** ADR 0081: khách báo "Đã trả xe" nhưng gian hàng báo chưa nhận lại được xe. */
+  RETURN_DISPUTED: 'return_disputed',
 } as const;
 
 /**

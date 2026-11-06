@@ -195,20 +195,37 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
     }
   }
 
-  /** Bước 2: mã đúng ⇒ tài khoản ra đời và phiên được cấp trong CÙNG một lượt gọi. */
+  /**
+   * Bước 2: mã đúng ⇒ tài khoản ra đời và phiên được cấp trong CÙNG một lượt gọi. Mã bị khoá / hết
+   * hạn được báo về `registerOtp` (`codeDead`) để màn nhập mã khoá ô mã tới khi có mã mới.
+   */
   function confirmRegistration(submitted: string): Promise<boolean> {
-    if (!registration) return Promise.resolve(false);
+    if (!registration || registerOtp.codeDead) return Promise.resolve(false);
     return run(
       'register',
-      () =>
-        registerWithPassword({
-          displayName: registration.displayName,
-          phone: registration.phone.trim(),
-          password: registration.password,
-          code: submitted,
-        }),
+      async () => {
+        try {
+          return await registerWithPassword({
+            displayName: registration.displayName,
+            phone: registration.phone.trim(),
+            password: registration.password,
+            code: submitted,
+          });
+        } catch (err) {
+          registerOtp.noteCodeError(err);
+          throw err;
+        }
+      },
       { justRegistered: true },
     );
+  }
+
+  /** Gửi lại mã cho lượt đăng ký đang chờ — câu lỗi của mã cũ không còn đúng với mã mới. */
+  function resendRegistrationCode(): void {
+    if (!registration || busy) return;
+    setError(null);
+    setCode('');
+    registerOtp.send(registration.phone.trim());
   }
 
   /** Quay lại form đăng ký — giữ nguyên thứ đã điền; mã đã gửi vẫn tính cooldown ở server. */
@@ -260,6 +277,7 @@ export function useAuthFlow({ onAuthenticated, initialErrorCode = null }: UseAut
     loginWithIdentifier,
     startRegistration,
     confirmRegistration,
+    resendRegistrationCode,
     editRegistration,
     signIn,
   };

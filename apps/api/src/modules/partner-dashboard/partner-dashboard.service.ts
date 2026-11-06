@@ -27,6 +27,7 @@ import {
 } from '../../common/dto/branch-scope';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
+import { liveRequestWhere } from '../booking-requests/booking-requests.service';
 import { presetWhere } from '../bookings/bookings.service';
 import { HostMetricsService } from '../host-metrics/host-metrics.service';
 import { completedTripsInPeriodWhere } from '../wallet/wallet-statement.service';
@@ -208,7 +209,13 @@ export class PartnerDashboardService {
     scope: BranchScope,
     now: Date,
   ): Promise<PartnerDashboardRequestsDto> {
-    const base: Prisma.BookingRequestWhereInput = { tenantId, ...vehicleBranchWhere(scope) };
+    // Thẻ chết theo đồng hồ (quá hạn phản hồi / quá hạn chuyển tiền) không phải việc chờ ai — cùng
+    // điều kiện với danh sách "Cần xử lý" để huy hiệu menu và cột không bao giờ lệch nhau.
+    const base: Prisma.BookingRequestWhereInput = {
+      tenantId,
+      ...vehicleBranchWhere(scope),
+      ...liveRequestWhere(now),
+    };
     const pending: Prisma.BookingRequestWhereInput = {
       ...base,
       status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,

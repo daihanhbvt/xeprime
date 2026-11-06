@@ -26,6 +26,7 @@ import {
   WebRealm,
 } from '../../common/decorators';
 import type { AuthenticatedUser, RequestContext } from '../../common/types/request-context';
+import { AUTH_THROTTLE } from './auth-throttle';
 import { AuthService } from './auth.service';
 import { SessionService, WEB_REVOKE_REASON } from './session.service';
 import {
@@ -47,13 +48,12 @@ import {
  * header proxy đã qua khoá), không bao giờ từ body. Cùng một số điện thoại đăng ký ở site khách và
  * site partner là hai tài khoản, hai mật khẩu, hai cookie khác tên.
  *
- * `@Throttle` trên bốn route công khai dưới đây siết chặt hơn hẳn mức chung 120 req/phút của app
- * (`app.module.ts`), và đặt **bằng đúng** mức của cặp song sinh native ở `MobileAuthController`:
- * hai controller gọi CÙNG `AuthService.loginWithPassword` / `AuthService.register`, nên để web
- * rộng hơn nghĩa là cửa dò mật khẩu chặt nhất của hệ thống chính là cửa lỏng nhất — kẻ dò chỉ
- * việc đổi URL.
+ * `@Throttle` trên các route công khai dưới đây siết chặt hơn mức chung 120 req/phút của app
+ * (`app.module.ts`). Đăng nhập/đăng ký đọc mức từ `AUTH_THROTTLE` — CÙNG hằng số với cặp song sinh
+ * native ở `MobileAuthController`, vì hai controller gọi chung `AuthService`.
  *
- * Hai lớp hãm dò mật khẩu: rate limit theo IP ở đây, và khoá theo ĐỊNH DANH ở `LoginThrottleService`
+ * Hai lớp hãm dò mật khẩu: rate limit theo IP ở đây (chỉ chống spam theo máy — đủ rộng để người
+ * dùng chung một NAT/4G không chặn lẫn nhau), và khoá theo ĐỊNH DANH ở `LoginThrottleService`
  * (ADR 0076 — chặn dò một tài khoản từ nhiều IP). `loginWithPassword` trả cùng một lỗi cho "không
  * có tài khoản" và "sai mật khẩu", so bcrypt với hash giả khi không tìm thấy user, và khoá cả định
  * danh không tồn tại — không lớp nào tố cáo *ai tồn tại*.
@@ -73,9 +73,9 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  // 5/phút — bằng `POST /auth/mobile/register`. Mã OTP sai được đếm và khoá ở
-  // `PhoneVerificationService`; mức này hãm phần còn lại (băm mật khẩu tốn ~250ms mỗi lượt).
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  // Bằng `POST /auth/mobile/register`. Mã OTP sai được đếm và khoá ở `PhoneVerificationService`;
+  // mức này hãm phần còn lại (băm mật khẩu tốn ~250ms mỗi lượt).
+  @Throttle(AUTH_THROTTLE.REGISTER)
   @ApiOperation({
     summary:
       'Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` — tài khoản thuộc realm của site đang gọi',
@@ -102,8 +102,8 @@ export class AuthController {
   @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
   @Post('register/check')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // 10/phút — bằng `send-otp`: cùng một câu trả lời "số đã có tài khoản", cùng mức chặn dò số.
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  // Bằng `send-otp`: cùng một câu trả lời "số đã có tài khoản", cùng mức chặn dò số.
+  @Throttle(AUTH_THROTTLE.PHONE_PROBE)
   @ApiOperation({
     summary:
       'Kiểm thông tin đăng ký (SĐT, mật khẩu, họ tên, SĐT chưa có tài khoản) trước bước nhập mã OTP',
@@ -121,9 +121,9 @@ export class AuthController {
   @VerifiesCredentials()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  // 5/phút theo IP — bằng `POST /auth/mobile/login`. Lớp thứ hai (theo ĐỊNH DANH, mọi IP) nằm ở
-  // `LoginThrottleService` (ADR 0076).
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  // Theo IP — bằng `POST /auth/mobile/login`. Lớp thứ hai (theo ĐỊNH DANH, mọi IP, chỉ đếm lượt
+  // sai) nằm ở `LoginThrottleService` (ADR 0076).
+  @Throttle(AUTH_THROTTLE.LOGIN)
   @ApiOperation({
     summary:
       'Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) — ADR 0060',
@@ -219,9 +219,9 @@ export class AuthController {
   @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
   @Post('password/reset-otp')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // 10/phút — bằng `verify-otp`: mã 6 số là cửa dò. Lần đoán sai được đếm trên CHÍNH hàng mã (đang
-  // chờ hay đã qua bước "Nhập mã OTP"), chạm `OTP_POLICY.MAX_ATTEMPTS` là mã bị khoá.
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  // Bằng `verify-otp`: mã 6 số là cửa dò. Lần đoán sai được đếm trên CHÍNH hàng mã (đang chờ hay
+  // đã qua bước "Nhập mã OTP"), chạm `OTP_POLICY.MAX_ATTEMPTS` là mã bị khoá.
+  @Throttle(AUTH_THROTTLE.OTP_CODE)
   @ApiOperation({
     summary:
       'Quên mật khẩu bằng SĐT: mã OTP `purpose=password_reset` + mật khẩu mới (không cấp phiên)',

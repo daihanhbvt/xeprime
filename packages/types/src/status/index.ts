@@ -30,6 +30,7 @@ export * from './tenant-customer';
 export * from './driver-licence';
 export * from './driver';
 export * from './handover';
+export * from './trip-handover-confirm';
 export * from './settlement';
 export * from './hold';
 export * from './hold-refund';

@@ -297,6 +297,12 @@ export const queryKeys = {
      */
     settlement: (id: string) => ['bookings', 'settlement', id] as const,
     /**
+     * Quyết toán XEM TRƯỚC của hộp "Xác nhận đã nhận lại xe" (06/11/2026) — khoá theo nguyên bộ số
+     * đang gõ (giờ, Odo, phụ phí nháp): mỗi bộ một câu trả lời của server, client không tự tính.
+     */
+    returnPreview: (id: string, input: unknown) =>
+      ['bookings', 'return-preview', id, input] as const,
+    /**
      * Báo giá NỘI BỘ cho luồng đặt hộ tại quầy. Khoá theo nguyên bộ tham số vì giá đổi theo
      * xe, dịch vụ, lộ trình VÀ khoảng thời gian — bỏ sót một chiều là hiện lại giá của lần
      * chọn trước.

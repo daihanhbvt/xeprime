@@ -480,6 +480,24 @@ describe('Quên mật khẩu bằng SĐT (ADR 0060)', () => {
   });
 
   maybe(
+    'mật khẩu mới TRÙNG mật khẩu đang dùng ⇒ PASSWORD_UNCHANGED, mã chưa bị tiêu — đổi mật khẩu khác là xong',
+    async () => {
+      const phone = mkPhone();
+      const userId = await register(phone, C, 'matkhau-cu-1');
+      const code = await otpFor(phone, RESET, C);
+
+      await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-cu-1', C)).rejects.toMatchObject(
+        {
+          response: { code: API_ERROR_CODE.PASSWORD_UNCHANGED },
+        },
+      );
+      // Không xin mã mới: CÙNG mã (giờ đã ở trạng thái đã xác minh) vẫn mở được lượt đặt lại.
+      await auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C);
+      expect((await auth.loginWithPassword(phone, 'matkhau-moi-2', C)).userId).toBe(userId);
+    },
+  );
+
+  maybe(
     'web hai bước: xác minh mã ở màn "Nhập mã OTP" rồi đặt mật khẩu bằng CÙNG mã — một lần duy nhất',
     async () => {
       const phone = mkPhone();
@@ -714,11 +732,17 @@ describe('Khoá đăng nhập theo định danh (ADR 0076)', () => {
         response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
       });
     }
-    // Lần sai CHẠM trần trả ngay mã khoá — người dùng biết vì sao lần sau bị từ chối.
-    await expect(auth.loginWithPassword(phone, 'saibet123', C)).rejects.toMatchObject({
+    // Lần sai CHẠM trần trả ngay mã khoá — người dùng biết vì sao lần sau bị từ chối, và còn bao lâu.
+    const locked = await auth.loginWithPassword(phone, 'saibet123', C).catch((e: unknown) => e);
+    expect(locked).toMatchObject({
       status: 429,
       response: { code: API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED },
     });
+    const lockSeconds = LOGIN_LOCKOUT_POLICY.LOCK_MINUTES[C] * 60;
+    const retryAfter = (locked as { response: { details: { retryAfterSeconds: number } } }).response
+      .details.retryAfterSeconds;
+    expect(retryAfter).toBeGreaterThan(lockSeconds - 10);
+    expect(retryAfter).toBeLessThanOrEqual(lockSeconds);
     await expect(auth.loginWithPassword(phone, 'matkhau123', C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED },
     });

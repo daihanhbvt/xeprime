@@ -272,33 +272,38 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
   });
 
   /*
-   * "Chuyến cho thuê" (07/10/2026): CHỦ xe tuyến hoa hồng đọc yêu cầu + đơn gộp ở một danh sách
-   * thẻ. Hộp thư và bảng đơn vẫn là trang của tuyến — cho THÀNH VIÊN, những người `/trips` không
-   * dựng phía chủ xe cho — và chi tiết đơn là màn dùng chung, nơi bàn giao.
+   * 06/11/2026: "Đơn thuê xe" là màn của CẢ hai tuyến, cho chủ lẫn thành viên. `/trips` ("Chuyến
+   * cho thuê" cũ) và hộp thư cũ là ALIAS mà CHÍNH trang của chúng chuyển tiếp ở server (giữ tab /
+   * nhóm) — cổng tuyến để chúng đi qua, không tự chuyển rồi đánh rơi tham số.
    */
-  it('chủ xe tuyến hoa hồng: hộp thư + bảng đơn → "Chuyến cho thuê"; chi tiết đơn ở lại', () => {
-    for (const user of [commission, lapsed, unconfigured]) {
-      for (const path of [M.BOOKING_REQUESTS, M.BOOKINGS, M.BOOKINGS_AWAITING_PICKUP]) {
-        expect(partnerPageRedirect(user, `${path}?status=closed`), path).toBe(M.TRIPS);
-      }
-      expect(partnerPageRedirect(user, M.TRIPS)).toBeNull();
-      expect(partnerPageRedirect(user, `${M.BOOKINGS}/01B`)).toBeNull();
-    }
-  });
-
-  it('THÀNH VIÊN của gian hàng hết gói giữ màn "Đơn thuê xe", /trips đưa về đó', () => {
+  it('tuyến hoa hồng — chủ lẫn thành viên — ở lại "Đơn thuê xe", chi tiết đơn và đơn đã kết thúc', () => {
     const staff: AuthScope = {
       tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
     };
-    expect(partnerPageRedirect(staff, M.BOOKING_REQUESTS)).toBeNull();
-    expect(partnerPageRedirect(staff, M.BOOKINGS)).toBeNull();
-    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKINGS);
+    for (const user of [commission, lapsed, unconfigured, staff]) {
+      for (const path of [
+        M.BOOKINGS,
+        `${M.BOOKINGS}?preset=awaiting_pickup`,
+        `${M.BOOKINGS}/01B`,
+        M.BOOKINGS_ENDED,
+        M.BOOKINGS_AWAITING_PICKUP,
+        `${M.BOOKING_REQUESTS}?status=closed`,
+        `${M.TRIPS}?filter=history`,
+      ]) {
+        expect(partnerPageRedirect(user, path), path).toBeNull();
+      }
+    }
   });
 
-  it('tuyến gói mở /trips → màn "Đơn thuê xe" gộp yêu cầu + đơn (05/11/2026)', () => {
-    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKINGS);
+  it('tuyến gói: /trips và hộp thư cũ cũng để trang tự chuyển tiếp', () => {
+    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBeNull();
     expect(partnerPageRedirect(packageCurrent, M.BOOKING_REQUESTS)).toBeNull();
     expect(partnerPageRedirect(packageCurrent, M.BOOKINGS)).toBeNull();
+  });
+
+  it('next=/trips cũ sau đăng nhập không bị đá về trang chủ — trang tự chuyển tiếp kèm tab', () => {
+    const next = `${M.TRIPS}?filter=history`;
+    expect(resolvePartnerDestination({ user: commission, next })).toBe(next);
   });
 });
 

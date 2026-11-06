@@ -170,6 +170,7 @@ export function MarketAuthForms({
           code={flow.code}
           onCodeChange={flow.changeCode}
           onSubmit={(submitted) => void flow.confirmRegistration(submitted)}
+          onResend={flow.resendRegistrationCode}
           submitting={pending === 'register'}
           error={error}
           onClose={flow.editRegistration}

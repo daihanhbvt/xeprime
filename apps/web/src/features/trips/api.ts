@@ -182,6 +182,25 @@ export function reportTripNotReceived(id: string): Promise<CustomerTripDetail> {
 }
 
 /**
+ * Khách xác nhận "Đã nhận xe" — ADR 0081. Đơn sang đang thuê ngay; server trả về chính chuyến đó.
+ */
+export function confirmTripPickup(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/confirm-pickup`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
+ * Khách báo "Đã trả xe" — ADR 0081. Chủ xe xác nhận trong hạn, im lặng quá hạn thì chuyến tự hoàn
+ * thành; server trả về chính chuyến đó với `customerReturnedAt`.
+ */
+export function reportTripReturned(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/report-returned`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
  * Khách khai tài khoản nhận tiền hoàn khoản giữ chỗ — ADR 0033.
  *
  * Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích.

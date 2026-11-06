@@ -164,6 +164,7 @@
         "sendCode": "Gửi mã",
         "resend": "Gửi lại mã",
         "resendIn": "Gửi lại ({seconds}s)",
+        "resendInTime": "Gửi lại ({time})",
         "sent": "Đã gửi mã tới {phone}.",
         "phoneFirst": "Nhập số điện thoại hợp lệ trước khi gửi mã.",
         "verify": "Xác thực",

@@ -206,10 +206,9 @@ export const ROUTES = {
      */
     BOOKINGS_ENDED: partner('/bookings/ended'),
     /**
-     * CHUYẾN CHO THUÊ — chỉ CHỦ xe tuyến HOA HỒNG (Owner Lite): MỘT danh sách thẻ gộp yêu cầu thuê
-     * và đơn thuê trên xe của chủ xe cá nhân (vài chiếc), đọc `GET /trips?role=host`. Với họ,
-     * `BOOKING_REQUESTS`/`BOOKINGS` chuyển về đây; tuyến gói và thành viên không phải chủ đi ngược
-     * lại về hộp thư — luật ở `partnerPageRedirect`.
+     * "Chuyến cho thuê" CŨ của chủ xe tuyến hoa hồng (07/10 → 06/11/2026) — nay chỉ CHUYỂN TIẾP về
+     * `BOOKINGS` (tab lịch sử → `BOOKINGS_ENDED`) cho link cũ trong thông báo, email, bookmark.
+     * Không trỏ link mới vào đây.
      */
     TRIPS: partner('/trips'),
     CUSTOMERS: partner('/customers'),
@@ -563,10 +562,8 @@ export type Workspace = (typeof WORKSPACE)[keyof typeof WORKSPACE];
  * cổng quản lý qua bất kỳ cái nào trong 19 đường đó.
  *
  * Không phải mọi mục đều có bản `/account` một-đối-một, và chỗ khác nhau là chỗ có chủ đích:
- *  - `bookings`/`bookingRequests` của Owner Lite GIỮ URL hộp thư + bảng đơn dù CHỦ xe đọc chúng ở
- *    "Chuyến cho thuê" (`TRIPS`): bảng này còn là gốc của phiên hỗ trợ gian hàng (ánh xạ qua
- *    `tenantSupportHref`, nơi không có `TRIPS`), và thành viên không phải chủ vẫn dùng hai màn đó.
- *    Chủ xe tới `TRIPS` qua `partnerPageRedirect`.
+ *  - `bookings`/`bookingRequests` của Owner Lite là CHÍNH màn "Đơn thuê xe" của tuyến gói, cho chủ
+ *    lẫn thành viên (06/11/2026 — "Chuyến cho thuê" `TRIPS` cũ chỉ còn chuyển tiếp về đây).
  *  - `branches` không có bản `/account`: chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định, và địa
  *    chỉ của nó sửa ngay trong hồ sơ chủ xe. Chi nhánh là tính năng của gói (ADR 0027 điều 1).
  *  - `sellerProfile` và `subscription` của Owner Lite là hai SECTION của "Hồ sơ chủ xe" (07/10/2026)
@@ -609,7 +606,7 @@ export function workspacePaths(workspace: Workspace): {
   /*
    * Owner Lite ở site partner (ADR 0051 điều 3): trang cùng ý nghĩa dùng CHUNG URL với tuyến gói
    * (xe, lịch, hộp thư, đơn, yêu cầu, gói, hỗ trợ) — chỉ những mục không có bản tuyến gói một-đối-
-   * một mới trỏ sang trang riêng của tuyến hoa hồng. Đơn + yêu cầu: xem docblock ở trên.
+   * một mới trỏ sang trang riêng của tuyến hoa hồng.
    */
   return {
     home: ROUTES.MANAGE.ROOT,

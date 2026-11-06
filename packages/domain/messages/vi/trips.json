@@ -666,5 +666,28 @@
     "direct": "Trả trực tiếp chủ xe",
     "deadline": "Hạn thanh toán {time}. Quá hạn, gia hạn tự huỷ và giờ trả xe giữ nguyên.",
     "activated": "Đã gia hạn thêm {months} tháng — trả xe mới {date}"
+  },
+  "handoverWord": {
+    "keep": "Quay lại",
+    "reportedTitle": "Bạn đã báo trả xe lúc {time}",
+    "reportedBody": "Chủ xe đang xác nhận nhận lại xe. Nếu chủ xe không phản hồi, chuyến tự hoàn thành lúc {deadline}.",
+    "pickup": {
+      "title": "Bạn đã nhận được xe?",
+      "lead": "Xác nhận khi đã cầm chìa khoá — chuyến chuyển sang đang thuê ngay, không cần chờ chủ xe.",
+      "action": "Đã nhận xe",
+      "dialogTitle": "Xác nhận đã nhận xe?",
+      "dialogBody": "Chuyến sẽ chuyển sang đang thuê từ bây giờ. Hãy kiểm tra xe cùng chủ xe và chụp ảnh hiện trạng trước khi đi.",
+      "confirm": "Đã nhận xe",
+      "success": "Đã xác nhận nhận xe — chúc bạn thượng lộ bình an"
+    },
+    "return": {
+      "title": "Bạn đã trả xe?",
+      "lead": "Báo khi đã giao lại xe và chìa khoá cho chủ xe. Chủ xe xác nhận trong 24 giờ; nếu không, chuyến tự hoàn thành.",
+      "action": "Đã trả xe",
+      "dialogTitle": "Báo đã trả xe?",
+      "dialogBody": "Chủ xe sẽ được báo để xác nhận nhận lại xe. Chỉ báo khi xe và chìa khoá đã ở chỗ chủ xe — báo sai sẽ được XePrime xác minh.",
+      "confirm": "Đã trả xe",
+      "success": "Đã báo trả xe — chủ xe sẽ xác nhận"
+    }
   }
 }

@@ -25,7 +25,9 @@ import {
   fetchTripHandoverPhotoUrl,
   fetchTrips,
   provideRefundAccount,
+  confirmTripPickup,
   reportTripNotReceived,
+  reportTripReturned,
   tripsToParams,
   type TripListNarrow,
 } from './api';
@@ -262,6 +264,31 @@ export function useReportTripNotReceived(id: string) {
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED ||
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY ||
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED
+      ) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
+      }
+    },
+  });
+}
+
+/**
+ * "Đã nhận xe" / "Đã trả xe" (ADR 0081) — cùng khuôn với `useReportTripNotReceived`: server trả về
+ * chính chuyến nên ghi thẳng vào cache; bị từ chối vì chuyến đã đổi (chủ xe vừa xác nhận) thì đọc lại.
+ */
+export function useTripHandoverWord(id: string, word: 'pickup' | 'return') {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => (word === 'pickup' ? confirmTripPickup(id) : reportTripReturned(id)),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (
+        code === API_ERROR_CODE.TRIP_PICKUP_CONFIRM_NOT_ALLOWED ||
+        code === API_ERROR_CODE.TRIP_PICKUP_CONFIRM_TOO_EARLY ||
+        code === API_ERROR_CODE.TRIP_RETURN_REPORT_NOT_ALLOWED
       ) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
       }

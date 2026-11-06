@@ -44,7 +44,7 @@ interface Props {
   onOpenVehicle: (request: BookingRequestItem) => void;
   /**
    * Mở hồ sơ khách trong sổ khách hàng. Vắng mặt ⇒ không có nút: sổ khách là năng lực của gói
-   * (ADR 0027 điều 1), nên "Chuyến cho thuê" của Owner Lite không truyền.
+   * (ADR 0027 điều 1), nên màn "Đơn thuê xe" không truyền khi đang ở tuyến hoa hồng.
    */
   onOpenCustomer?: (request: BookingRequestItem) => void;
   /** Đường quay lại đúng chỗ đang đứng, gắn vào link sang màn lịch. */

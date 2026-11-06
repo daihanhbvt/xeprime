@@ -25,7 +25,11 @@ export class OwnerPayoutDto {
   })
   rentAmount!: string;
 
-  @ApiProperty({ description: 'Số ngày thuê tính phí' })
+  @ApiProperty({
+    description:
+      'Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận–trả ' +
+      'của đơn; `0` = không còn nguồn nào để biết ⇒ hiện "Tiền thuê" không kèm số ngày',
+  })
   rentalDays!: number;
 
   @ApiPropertyOptional({
