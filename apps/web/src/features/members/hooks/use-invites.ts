@@ -1,24 +1,12 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
   acceptInvite,
   declineInvite,
   fetchInvitePreview,
-  fetchInvites,
-  inviteFiltersToParams,
 } from '../api';
-import type { InviteFilters } from '../types';
-
-/** Lời mời của gian hàng — phân trang server-side, mặc định chỉ những lời đang chờ. */
-export function useInvites(filters: InviteFilters) {
-  return useQuery({
-    queryKey: queryKeys.members.invites(inviteFiltersToParams(filters)),
-    queryFn: () => fetchInvites(filters),
-    placeholderData: keepPreviousData,
-  });
-}
 
 /**
  * Xem trước một lời mời — dùng ở trang `/invites/[token]`.

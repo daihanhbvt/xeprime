@@ -313,6 +313,45 @@ describe('AuthPanel - site quản trị (passwordOnly)', () => {
   });
 });
 
+describe('AuthPanel - site partner (ADR 0087)', () => {
+  function renderPartner() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithIntl(
+      <QueryClientProvider client={queryClient}>
+        <AuthPanel mode={AUTH_MODE.LOGIN} onAuthenticated={vi.fn()} />
+      </QueryClientProvider>,
+    );
+  }
+
+  it('một ô nhận cả tên đăng nhập nhân viên — gửi nguyên văn làm định danh', async () => {
+    api.login.mockReset();
+    api.login.mockRejectedValue(apiError(API_ERROR_CODE.INVALID_CREDENTIALS, 401));
+    renderPartner();
+
+    fireEvent.change(screen.getByLabelText('Số điện thoại hoặc tên đăng nhập'), {
+      target: { value: 'kim.le' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+    await waitFor(() => expect(api.login).toHaveBeenCalled());
+    expect(JSON.stringify(api.login.mock.calls[0])).toContain('kim.le');
+  });
+
+  it('email bị chặn ngay ở ô, câu lỗi nêu hai lựa chọn còn lại', async () => {
+    api.login.mockReset();
+    renderPartner();
+    fireEvent.change(screen.getByLabelText('Số điện thoại hoặc tên đăng nhập'), {
+      target: { value: 'ban@congty.vn' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+    expect(await screen.findByText(/tên đăng nhập nhân viên/)).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+});
+
 describe('AuthModal - "Ghi nhớ tài khoản"', () => {
   it('tick + đăng nhập thành công ⇒ lần mở sau điền sẵn SĐT (không bao giờ mật khẩu)', async () => {
     renderModal('auth=login');

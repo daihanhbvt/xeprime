@@ -2,9 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PhoneInput } from '../../../common/phone';
 import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES, VN_MOBILE_PHONE_PATTERN } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
-import { MemberBranchScopeDto } from './member.dto';
+import { MEMBER_NICKNAME_MAX, MemberBranchScopeDto } from './member.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -37,6 +37,16 @@ export class CreateInviteDto extends MemberBranchScopeDto {
   // còn lại của lời mời (đã là thành viên, đã có lời mời đang chờ).
   @IsIn(TENANT_ROLE_VALUES)
   roleKey!: string;
+
+  /**
+   * "Tên gợi nhớ" (ADR 0086 điều 4) — để dòng "Chờ xác nhận" có một cái tên thay vì chỉ một số
+   * điện thoại. Nhận lời mời thì chép sang tên trong gian hàng; tên tài khoản không bị đổi.
+   */
+  @ApiPropertyOptional({ maxLength: MEMBER_NICKNAME_MAX, example: 'Hạnh - quầy Bình Chánh' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MEMBER_NICKNAME_MAX)
+  nickname?: string;
 }
 
 export class InviteListQueryDto {
@@ -91,6 +101,8 @@ export class InviteDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên người gửi lời mời' })
   createdByName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên gợi nhớ người mời đặt' })
+  nickname!: string | null;
 }
 
 /**

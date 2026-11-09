@@ -351,6 +351,11 @@
     "locked": "Bị khoá",
     "removed": "Đã gỡ"
   },
+  "memberRosterStatus": {
+    "active": "Đang hoạt động",
+    "pending": "Chờ xác nhận",
+    "locked": "Đã khoá"
+  },
   "notificationType": {
     "booking_created": "Đơn thuê mới",
     "booking_status_changed": "Cập nhật đơn thuê",
@@ -585,8 +590,8 @@
   "tenantRole": {
     "shop_owner": "Chủ gian hàng",
     "shop_manager": "Quản lý gian hàng",
-    "shop_staff": "Nhân viên gian hàng",
-    "shop_viewer": "Chỉ xem"
+    "shop_staff": "Nhân viên",
+    "shop_viewer": "Quan sát viên"
   },
   "tenantStatus": {
     "draft": "Nháp",
@@ -1309,7 +1314,11 @@
       "invite_decline": "Từ chối lời mời",
       "invite_revoke": "Thu hồi lời mời",
       "update_role": "Đổi vai trò thành viên",
-      "remove": "Gỡ thành viên"
+      "remove": "Gỡ thành viên",
+      "lock": "Tạm khoá thành viên",
+      "unlock": "Mở khoá thành viên",
+      "create_account": "Cấp tài khoản nhân viên",
+      "reset_password": "Đặt lại mật khẩu nhân viên"
     },
     "membership": {
       "lock_after_plan_lapse": "Khoá thành viên vì gian hàng hết gói",

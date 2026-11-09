@@ -19,8 +19,15 @@ describe('detectLoginIdentifierKind — ý định của người nhập', () =>
     }
   });
 
-  it('không đoán được thì trả UNKNOWN — đó là lúc câu lỗi phải nói cả hai lựa chọn', () => {
-    for (const value of ['nguyenvana', 'abc123', '']) {
+  // ADR 0087: tên đăng nhập của tài khoản nhân viên — bắt đầu bằng chữ cái, a-z 0-9 . _ , 4-32.
+  it('đúng hình dạng tên đăng nhập là đường USERNAME (không phân biệt hoa thường)', () => {
+    for (const value of ['nguyenvana', 'abc123', 'Kim.Le', 'quay_q5', '  ban.thu  ']) {
+      expect(detectLoginIdentifierKind(value)).toBe(LOGIN_IDENTIFIER_KIND.USERNAME);
+    }
+  });
+
+  it('không đoán được thì trả UNKNOWN — đó là lúc câu lỗi phải nói mọi lựa chọn', () => {
+    for (const value of ['', 'abc', 'kim le', '1kim', 'kim.', 'kim-le', 'x'.repeat(33)]) {
       expect(detectLoginIdentifierKind(value)).toBe(LOGIN_IDENTIFIER_KIND.UNKNOWN);
     }
   });
@@ -66,8 +73,14 @@ describe('isValidLoginIdentifier', () => {
   });
 
   it('từ chối chuỗi rỗng, chuỗi trắng và chuỗi không ra hình gì', () => {
-    for (const value of ['', '   ', 'nguyenvana']) {
+    for (const value of ['', '   ', 'ab', 'kim le', '1kim']) {
       expect(isValidLoginIdentifier(value)).toBe(false);
+    }
+  });
+
+  it('nhận tên đăng nhập nhân viên — site nào nhận nó là việc của backend (ADR 0087)', () => {
+    for (const value of ['nguyenvana', 'kim.le', 'Quay_Q5']) {
+      expect(isValidLoginIdentifier(value)).toBe(true);
     }
   });
 

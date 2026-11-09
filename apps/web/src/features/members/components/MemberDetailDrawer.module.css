@@ -1,0 +1,145 @@
+/* Ngăn "Xem chi tiết" nhân viên — các thẻ InfoCard như trang Thông tin cửa hàng (ADR 0087). */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.profile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.plainList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: right;
+}
+
+/* Công tắc "Cho phép truy cập gian hàng". */
+.access {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-sm);
+  padding: 12px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.accessText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.accessTitle {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.accessOff {
+  color: var(--xp-color-error);
+}
+
+.permList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.permItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--xp-color-text);
+}
+
+.permIcon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: 11px;
+}
+
+.permIcon[data-level='limited'] {
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-warning-strong);
+}
+
+.permIcon[data-level='view'] {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.link {
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timelineItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0 10px 16px;
+  border-left: 2px solid var(--xp-color-border);
+}
+
+.timelineAction {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}

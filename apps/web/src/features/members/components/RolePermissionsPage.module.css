@@ -1,0 +1,160 @@
+/* Vai trò & quyền — design `24035:69513` (Partner-XePrime, 09/11/2026). */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Bảng 5 cột rộng 1560 ở design: màn hẹp cuộn ngang trong khung, không đẩy cả trang. */
+.scroller {
+  overflow-x: auto;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.table {
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--xp-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table tr:last-child td,
+.table tr:last-child th {
+  border-bottom: 0;
+}
+
+.corner {
+  width: 28%;
+  vertical-align: top;
+}
+
+.heading {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roleHead {
+  border-left: 1px solid var(--xp-color-border);
+  vertical-align: top;
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.roleTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.count {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+.roleHint {
+  display: block;
+  color: var(--xp-color-text-secondary);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Dải nhóm: "VẬN HÀNH", "XE & TÀI XẾ"… */
+.groupRow th {
+  padding: 12px 16px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rowHead {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.cell {
+  border-left: 1px solid var(--xp-color-border);
+}
+
+.cellBody {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.note {
+  color: var(--xp-color-text-secondary);
+}
+
+.icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+.full {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.limited {
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-warning-strong);
+}
+
+.view {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.none {
+  color: var(--xp-color-text-disabled);
+}
+
+.scopeNote {
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--xp-color-border);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}

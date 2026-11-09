@@ -156,7 +156,13 @@ afterAll(async () => {
 });
 
 const invite = (phone = INVITEE_PHONE) =>
-  invites.create(tenantId, ownerId, { phone, roleKey: TENANT_ROLE.SHOP_STAFF }, null);
+  invites.create(
+    tenantId,
+    ownerId,
+    { phone, roleKey: TENANT_ROLE.SHOP_STAFF },
+    null,
+    TENANT_ROLE.SHOP_OWNER,
+  );
 
 describe('Lời mời — tạo', () => {
   it('KHÔNG tạo membership nào lúc mời: người được mời chưa đồng ý', async () => {
@@ -232,6 +238,7 @@ describe('Lời mời — tạo', () => {
         ownerId,
         { phone: INVITEE_PHONE, roleKey: TENANT_ROLE.SHOP_OWNER },
         null,
+        TENANT_ROLE.SHOP_OWNER,
       ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });

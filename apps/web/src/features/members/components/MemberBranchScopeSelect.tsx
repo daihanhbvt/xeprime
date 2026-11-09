@@ -1,14 +1,12 @@
 'use client';
 
-import { Select } from 'antd';
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { MEMBERSHIP_BRANCH_SCOPE } from '@xeprime/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import type { Member, UpdateMemberRoleInput } from '../types';
+import type { MemberRosterItem, UpdateMemberRoleInput } from '../types';
 
 /**
  * Ô chi nhánh phụ trách LUÔN có giá trị — không có trạng thái "bỏ trống".
@@ -50,7 +48,7 @@ export function normalizeBranchSelection(next: readonly string[], allowAll = tru
 export function canManageMemberScope(
   allowAll: boolean,
   actorBranchIds: readonly string[],
-  member: Pick<Member, 'branchScope' | 'branchIds'>,
+  member: Pick<MemberRosterItem, 'branchScope' | 'branchIds'>,
 ): boolean {
   if (allowAll) return true;
   return (
@@ -85,6 +83,10 @@ export function useBranchScopeOptions() {
   const allowAll = user?.tenant?.branchScope !== MEMBERSHIP_BRANCH_SCOPE.LIMITED;
   const items = branches.data?.items ?? [];
   const branchIds = items.map((b) => b.id);
+  const branchOptions = items.map((b) => ({
+    value: b.id,
+    label: branchLabel(b, tBranches('labels.noProvince')),
+  }));
   return {
     isLoading: branches.isLoading,
     count: items.length,
@@ -93,88 +95,25 @@ export function useBranchScopeOptions() {
     defaultSelection: allowAll ? [ALL_FILTER] : branchIds,
     options: [
       { value: ALL_FILTER, label: t('branchScope.all'), disabled: !allowAll },
-      ...items.map((b) => ({
-        value: b.id,
-        label: branchLabel(b, tBranches('labels.noProvince')),
-      })),
+      ...branchOptions,
     ],
+    /** Tên chi nhánh theo id — cột "Chi nhánh phụ trách" của danh sách và ngăn chi tiết. */
+    labelById: new Map(branchOptions.map((o) => [o.value, o.label])),
   };
 }
 
 /**
- * Ô chọn chi nhánh phụ trách của MỘT thành viên, nằm ngay trong bảng — ADR 0052.
- *
- * Commit khi ĐÓNG dropdown chứ không phải mỗi lần tick: một người phụ trách ba chi nhánh là ba
- * cú tick, và ba lượt PATCH giữa chừng sẽ có hai lượt mang trạng thái nửa vời (kèm hai toast).
- * Người dùng chọn xong, đóng dropdown, MỘT lượt ghi đi. Ngoại lệ là nút `×` trên tag: nó đổi giá
- * trị khi dropdown đang ĐÓNG, nên không có lượt đóng nào tới sau để ghi hộ — ca đó ghi ngay.
+ * Tên các chi nhánh của một thành viên, theo thứ tự danh sách chi nhánh. Phạm vi `all` ⇒ `null`
+ * (nơi gọi hiện "Tất cả chi nhánh"). Id không còn trong danh sách (chi nhánh đã ngừng, hoặc ngoài
+ * phần người xem phụ trách) đi ra `unknownLabel` thay vì biến mất — "phụ trách 2 chi nhánh" mà chỉ
+ * hiện 1 là nói sai về quyền của người đó.
  */
-export function MemberBranchScopeSelect({
-  member,
-  className,
-  disabled,
-  onCommit,
-  loading,
-}: {
-  member: Member;
-  className?: string;
-  disabled?: boolean;
-  /** Nhận giá trị ĐÃ chuẩn hoá (có thể là `["all"]`) — map sang API bằng `toBranchScopeInput`. */
-  onCommit: (selection: string[]) => void;
-  loading?: boolean;
-}) {
-  const t = useTranslations('Members');
-  const { options, isLoading, allowAll, branchIds } = useBranchScopeOptions();
-  // Thành viên rộng hơn phần của mình thì không phải của mình để sửa — khoá luôn ô (ADR 0052).
-  const locked = !canManageMemberScope(allowAll, branchIds, member);
-  const [draft, setDraft] = useState<string[] | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const saved = toBranchSelection(member.branchIds);
-  const value = draft ?? saved;
-
-  /** So sánh theo TẬP: mở ra rồi đóng lại mà không đổi gì thì không có lượt ghi nào đi. */
-  const commit = (next: string[]) => {
-    setDraft(null);
-    // Người bị giới hạn gỡ hết chi nhánh: không có "Tất cả" để rơi về, nên KHÔNG ghi gì — ô trở
-    // lại giá trị đã lưu. Gửi đi một phạm vi rỗng là xin "toàn gian hàng", backend sẽ từ chối.
-    if (next.length === 0) return;
-    if ([...saved].sort().join(',') !== [...next].sort().join(',')) onCommit(next);
-  };
-
-  return (
-    <Select
-      mode="multiple"
-      size="small"
-      className={className}
-      aria-label={t('branchScope.selectAria', { name: member.displayName })}
-      /*
-       * Số tag CỐ ĐỊNH, không `"responsive"`: trong ô bảng hẹp, phép đo của AntD trả về 0 tag vừa
-       * chỗ và dồn tất cả vào "+N" — người quản lý nhìn "+ 2 ..." mà không biết là chi nhánh nào,
-       * và không còn nút × nào để gỡ. Hai tag đầu luôn hiện tên, phần dư mới gom thành "+N".
-       */
-      maxTagCount={2}
-      value={value}
-      options={options}
-      disabled={disabled || locked}
-      loading={loading || isLoading}
-      open={open}
-      onChange={(next: string[]) => {
-        const normalized = normalizeBranchSelection(next, allowAll);
-        /*
-         * Dropdown ĐÓNG mà giá trị vẫn đổi được: đó là nút `×` trên tag. Lúc đó sẽ không có lượt
-         * `onOpenChange` nào tới sau để commit hộ, nên bản nháp sẽ nằm lại trên màn hình trông
-         * như đã lưu — người quản lý tưởng vừa thu hẹp quyền của nhân viên mà thật ra không có
-         * gì đổi. Đóng thì ghi ngay; mở thì vẫn gom cả loạt tick vào MỘT lượt ghi lúc đóng.
-         */
-        if (open) setDraft(normalized);
-        else commit(normalized);
-      }}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-        if (nextOpen || draft === null) return;
-        commit(draft);
-      }}
-    />
-  );
+export function memberBranchNames(
+  member: Pick<MemberRosterItem, 'branchScope' | 'branchIds'>,
+  labelById: ReadonlyMap<string, string>,
+  unknownLabel: string,
+): string[] | null {
+  if (member.branchScope !== MEMBERSHIP_BRANCH_SCOPE.LIMITED) return null;
+  return member.branchIds.map((id) => labelById.get(id) ?? unknownLabel);
 }
+

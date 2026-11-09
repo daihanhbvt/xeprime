@@ -61,9 +61,31 @@ export const ASSIGNABLE_TENANT_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES
 export const TENANT_ROLE_LABEL: Readonly<Record<TenantRole, string>> = {
   [TENANT_ROLE.SHOP_OWNER]: 'Chủ gian hàng',
   [TENANT_ROLE.SHOP_MANAGER]: 'Quản lý gian hàng',
-  [TENANT_ROLE.SHOP_STAFF]: 'Nhân viên gian hàng',
-  [TENANT_ROLE.SHOP_VIEWER]: 'Chỉ xem',
+  [TENANT_ROLE.SHOP_STAFF]: 'Nhân viên',
+  [TENANT_ROLE.SHOP_VIEWER]: 'Quan sát viên',
 };
+
+/** Thứ bậc vai — sắp xếp danh sách nhân sự (chủ đứng đầu) và cột của ma trận quyền. */
+export const TENANT_ROLE_RANK: Readonly<Record<TenantRole, number>> = {
+  [TENANT_ROLE.SHOP_OWNER]: 0,
+  [TENANT_ROLE.SHOP_MANAGER]: 1,
+  [TENANT_ROLE.SHOP_STAFF]: 2,
+  [TENANT_ROLE.SHOP_VIEWER]: 3,
+};
+
+/**
+ * Vai mà một người được MỜI vào gian hàng (ADR 0086 điều 2).
+ *
+ * Quyền `members.invite` nói "được mời", không nói "được mời ai". Không có trần này thì một quản lý
+ * mời số thứ hai của chính mình làm quản lý là nhân đôi được quyền của mình mà chủ không hề quyết.
+ * Chủ mời mọi vai trừ chủ; quản lý chỉ mời Nhân viên. Server là chốt (`MEMBER_ROLE_NOT_INVITABLE`),
+ * giao diện chỉ lọc ô chọn theo cùng hàm này.
+ */
+export function invitableTenantRoles(actorRole: string | null | undefined): readonly TenantRole[] {
+  if (actorRole === TENANT_ROLE.SHOP_OWNER) return ASSIGNABLE_TENANT_ROLES;
+  if (actorRole === TENANT_ROLE.SHOP_MANAGER) return [TENANT_ROLE.SHOP_STAFF];
+  return [];
+}
 
 /**
  * Role nền tảng.
@@ -431,6 +453,9 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.HANDOVER_MANAGE,
       PERMISSION.HANDOVER_CONFIRM,
       PERMISSION.BOOKING_REQUEST_VIEW,
+      // Nhân viên quầy duyệt / từ chối yêu cầu đặt xe (ADR 0086 điều 2) — người trực chi nhánh là
+      // người biết xe có sẵn không. Phạm vi chi nhánh của từng người vẫn giới hạn yêu cầu họ thấy.
+      PERMISSION.BOOKING_REQUEST_APPROVE,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.SUPPORT_VIEW,
       PERMISSION.BOOKING_CREATE,
@@ -446,8 +471,12 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.CUSTOMER_MANAGE,
       PERMISSION.CUSTOMER_DOCUMENT_MANAGE,
       PERMISSION.CALENDAR_VIEW,
+      // Thu tiền và quyết toán lúc giao / nhận xe — giữ dù ma trận design ghi "—" cho sổ thu chi:
+      // không có chúng thì nhân viên nhận xe về mà không quyết toán được (ADR 0086 điều 2).
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.PAYMENT_RECORD,
+      // Xem gói và số suất còn lại để biết vì sao một xe không lên chợ được. Mua vẫn là việc của chủ.
+      PERMISSION.SUBSCRIPTION_VIEW,
     ],
     [TENANT_ROLE.SHOP_VIEWER]: [
       PERMISSION.TENANT_VIEW,
@@ -466,8 +495,171 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       // mở được giấy tờ tuỳ thân của khách.
       PERMISSION.CUSTOMER_VIEW,
       PERMISSION.CALENDAR_VIEW,
+      // Quan sát viên là vai của kế toán / đối tác (ADR 0086 điều 2): đọc doanh thu, sổ thu chi,
+      // công nợ và tổng hợp thuế. Không kèm khoá ghi nào; ví vẫn chỉ của chủ (ADR 0038).
+      PERMISSION.FINANCE_VIEW,
     ],
   };
+
+/**
+ * ── MA TRẬN "VAI TRÒ & QUYỀN" (ADR 0086 điều 1) ────────────────────────────────────────────────
+ *
+ * Bảng CHỈ XEM giải thích mỗi vai làm được gì. Một dòng là một CHÙM khoá quyền, ô được TÍNH từ
+ * quyền thật của vai (server trả `GET /members/roles`) — không có bảng chép tay nào để lệch khỏi
+ * guard. Không phải nơi cấp quyền: "có giới hạn" có khi là phạm vi theo NGƯỜI (chi nhánh) hoặc một
+ * luật (`invitableTenantRoles`), không biểu diễn được bằng một ô tick.
+ */
+export const ROLE_MATRIX_LEVEL = {
+  FULL: 'full',
+  LIMITED: 'limited',
+  VIEW: 'view',
+  NONE: 'none',
+} as const;
+
+export type RoleMatrixLevel = (typeof ROLE_MATRIX_LEVEL)[keyof typeof ROLE_MATRIX_LEVEL];
+
+export const ROLE_MATRIX_GROUP = {
+  OPERATIONS: 'operations',
+  FLEET: 'fleet',
+  REVENUE: 'revenue',
+  SETTINGS: 'settings',
+  HELP: 'help',
+} as const;
+
+export type RoleMatrixGroup = (typeof ROLE_MATRIX_GROUP)[keyof typeof ROLE_MATRIX_GROUP];
+
+export interface RoleMatrixRow {
+  /** Khoá ổn định — cũng là khoá nhãn i18n của dòng. */
+  readonly key: string;
+  readonly group: RoleMatrixGroup;
+  /** Có ĐỦ các khoá này (và không có khoá `manage` nào) ⇒ "Chỉ xem". */
+  readonly view: readonly Permission[];
+  /** Có đủ ⇒ "Toàn quyền"; có một phần ⇒ "Có giới hạn". Rỗng ⇒ có `view` là toàn quyền. */
+  readonly manage: readonly Permission[];
+  /** Không phải permission mà là SỞ HỮU (ví gian hàng — ADR 0038): chỉ chủ. */
+  readonly ownerOnly?: boolean;
+}
+
+export const ROLE_MATRIX_ROWS: readonly RoleMatrixRow[] = [
+  {
+    key: 'rentals',
+    group: ROLE_MATRIX_GROUP.OPERATIONS,
+    view: [PERMISSION.BOOKING_VIEW, PERMISSION.CALENDAR_VIEW],
+    manage: [PERMISSION.BOOKING_UPDATE],
+  },
+  {
+    key: 'requests',
+    group: ROLE_MATRIX_GROUP.OPERATIONS,
+    view: [],
+    manage: [PERMISSION.BOOKING_REQUEST_APPROVE],
+  },
+  {
+    key: 'handovers',
+    group: ROLE_MATRIX_GROUP.OPERATIONS,
+    view: [],
+    manage: [PERMISSION.HANDOVER_MANAGE, PERMISSION.HANDOVER_CONFIRM],
+  },
+  {
+    key: 'cancelSettle',
+    group: ROLE_MATRIX_GROUP.OPERATIONS,
+    view: [],
+    manage: [PERMISSION.BOOKING_CANCEL, PERMISSION.PAYMENT_RECORD],
+  },
+  {
+    key: 'customers',
+    group: ROLE_MATRIX_GROUP.OPERATIONS,
+    view: [PERMISSION.CUSTOMER_VIEW],
+    manage: [
+      PERMISSION.CUSTOMER_MANAGE,
+      PERMISSION.CUSTOMER_MANAGE_RISK,
+      PERMISSION.CUSTOMER_DOCUMENT_MANAGE,
+    ],
+  },
+  {
+    key: 'fleetView',
+    group: ROLE_MATRIX_GROUP.FLEET,
+    view: [PERMISSION.VEHICLE_VIEW, PERMISSION.DRIVER_VIEW],
+    manage: [PERMISSION.VEHICLE_UPDATE, PERMISSION.DRIVER_MANAGE],
+  },
+  {
+    key: 'fleetManage',
+    group: ROLE_MATRIX_GROUP.FLEET,
+    view: [],
+    manage: [PERMISSION.VEHICLE_CREATE, PERMISSION.VEHICLE_UPDATE, PERMISSION.DRIVER_MANAGE],
+  },
+  {
+    key: 'maintenance',
+    group: ROLE_MATRIX_GROUP.FLEET,
+    view: [PERMISSION.VEHICLE_MAINTENANCE_VIEW],
+    manage: [PERMISSION.VEHICLE_MAINTENANCE_MANAGE, PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW],
+  },
+  {
+    key: 'revenue',
+    group: ROLE_MATRIX_GROUP.REVENUE,
+    view: [PERMISSION.FINANCE_VIEW],
+    manage: [],
+  },
+  {
+    key: 'ledger',
+    group: ROLE_MATRIX_GROUP.REVENUE,
+    view: [PERMISSION.FINANCE_VIEW],
+    manage: [PERMISSION.RECEIPT_CREATE, PERMISSION.RECEIPT_APPROVE, PERMISSION.PAYMENT_VOID],
+  },
+  { key: 'wallet', group: ROLE_MATRIX_GROUP.REVENUE, view: [], manage: [], ownerOnly: true },
+  {
+    key: 'shopInfo',
+    group: ROLE_MATRIX_GROUP.SETTINGS,
+    view: [PERMISSION.TENANT_VIEW],
+    manage: [PERMISSION.TENANT_UPDATE, PERMISSION.SELLER_PROFILE_MANAGE],
+  },
+  {
+    key: 'branches',
+    group: ROLE_MATRIX_GROUP.SETTINGS,
+    view: [PERMISSION.BRANCH_VIEW],
+    manage: [PERMISSION.BRANCH_MANAGE],
+  },
+  {
+    key: 'policies',
+    group: ROLE_MATRIX_GROUP.SETTINGS,
+    view: [PERMISSION.TENANT_VIEW],
+    manage: [PERMISSION.TENANT_UPDATE],
+  },
+  {
+    key: 'plan',
+    group: ROLE_MATRIX_GROUP.SETTINGS,
+    view: [PERMISSION.SUBSCRIPTION_VIEW],
+    manage: [PERMISSION.SUBSCRIPTION_PURCHASE],
+  },
+  {
+    key: 'members',
+    group: ROLE_MATRIX_GROUP.SETTINGS,
+    view: [PERMISSION.MEMBER_VIEW],
+    manage: [PERMISSION.MEMBER_INVITE, PERMISSION.MEMBER_UPDATE_ROLE, PERMISSION.MEMBER_REMOVE],
+  },
+  {
+    key: 'support',
+    group: ROLE_MATRIX_GROUP.HELP,
+    view: [PERMISSION.SUPPORT_VIEW],
+    manage: [PERMISSION.SUPPORT_MANAGE],
+  },
+];
+
+/** Mức của MỘT ô — hàm thuần, web và app native gọi chung. */
+export function roleMatrixLevel(
+  row: RoleMatrixRow,
+  roleKey: string,
+  permissions: ReadonlySet<string>,
+): RoleMatrixLevel {
+  if (row.ownerOnly) {
+    return canAccessShopWallet(roleKey) ? ROLE_MATRIX_LEVEL.FULL : ROLE_MATRIX_LEVEL.NONE;
+  }
+  const managed = row.manage.filter((p) => permissions.has(p)).length;
+  if (row.manage.length > 0 && managed === row.manage.length) return ROLE_MATRIX_LEVEL.FULL;
+  if (managed > 0) return ROLE_MATRIX_LEVEL.LIMITED;
+  const sees = row.view.length > 0 && row.view.every((p) => permissions.has(p));
+  if (!sees) return ROLE_MATRIX_LEVEL.NONE;
+  return row.manage.length === 0 ? ROLE_MATRIX_LEVEL.FULL : ROLE_MATRIX_LEVEL.VIEW;
+}
 
 export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
   Record<PlatformRole, readonly Permission[]>

@@ -950,6 +950,24 @@ export const API_ERROR_CODE = {
    * (ADR 0053 điều 6). DB giữ luật bằng unique index một phần; mã này là câu trả lời đọc được.
    */
   MEMBER_ALREADY_IN_OTHER_TENANT: 'MEMBER_ALREADY_IN_OTHER_TENANT',
+  /** Người mời không được cấp vai này — quản lý chỉ mời Nhân viên (ADR 0086 điều 2). */
+  MEMBER_ROLE_NOT_INVITABLE: 'MEMBER_ROLE_NOT_INVITABLE',
+  /**
+   * Thành viên bị HỆ THỐNG khoá (gian hàng hết gói — ADR 0085 điều 6), không mở tay được: gói
+   * kích hoạt lại thì tự mở. Cho mở tay là để nhân viên dùng tiếp một gian hàng đã về tuyến hoa hồng.
+   */
+  MEMBER_LOCKED_BY_SYSTEM: 'MEMBER_LOCKED_BY_SYSTEM',
+  /** Tên đăng nhập đã có tài khoản khác dùng (unique toàn site partner — ADR 0087). */
+  USERNAME_TAKEN: 'USERNAME_TAKEN',
+  /**
+   * Tài khoản nhân viên do gian hàng cấp đang bị gian hàng đó tạm khoá — mật khẩu đúng nhưng không có
+   * gì để vào (ADR 0087).
+   */
+  STAFF_ACCOUNT_SUSPENDED: 'STAFF_ACCOUNT_SUSPENDED',
+  /** Thao tác chỉ áp cho tài khoản do gian hàng cấp (đặt lại mật khẩu, sửa họ tên — ADR 0087). */
+  MEMBER_ACCOUNT_NOT_MANAGED: 'MEMBER_ACCOUNT_NOT_MANAGED',
+  /** Mời bằng SĐT đã gỡ — gian hàng cấp tài khoản cho nhân viên (ADR 0087). */
+  MEMBER_INVITE_RETIRED: 'MEMBER_INVITE_RETIRED',
   /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.

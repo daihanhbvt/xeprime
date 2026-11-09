@@ -1,0 +1,8 @@
+/* "Đang trực tuyến" — chữ xanh như design `24035:69458`. */
+.online {
+  color: var(--xp-color-success);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}

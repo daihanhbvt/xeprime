@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  MEMBER_ONLINE_WINDOW_MS,
   SESSION_TTL_DAYS,
   resolveSessionCookieName,
   type AccountRealm,
@@ -37,6 +38,11 @@ export const WEB_REVOKE_REASON = {
 export type WebRevokeReason = (typeof WEB_REVOKE_REASON)[keyof typeof WEB_REVOKE_REASON];
 
 const SESSION_TTL_MS = SESSION_TTL_DAYS * 24 * 60 * 60 * 1000;
+/**
+ * Nhịp ghi `last_seen_at` — NỬA cửa sổ "Đang trực tuyến": người đang dùng liên tục luôn có mốc
+ * mới hơn cửa sổ đó, kể cả ngay trước lượt ghi kế tiếp.
+ */
+const LAST_SEEN_THROTTLE_MS = MEMBER_ONLINE_WINDOW_MS / 2;
 
 /**
  * Phiên cookie của web — ADR 0002, thu hồi được từ ADR 0076.
@@ -121,7 +127,28 @@ export class SessionService {
       where: { id: sessionId, userId, revokedAt: null, expiresAt: { gt: new Date() } },
       select: { id: true },
     });
+    if (session) this.touch(sessionId);
     return session !== null;
+  }
+
+  /**
+   * Ghi "phiên vừa được dùng" — tối đa một lần mỗi `LAST_SEEN_THROTTLE_MS` (ADR 0086 điều 6).
+   *
+   * Điều kiện nằm TRONG câu UPDATE nên mọi request trong 5 phút sau đó không ghi gì, kể cả khi chạy
+   * song song. Không chờ và không ném: đây là số liệu hiển thị ("Hoạt động gần nhất"), một lần ghi
+   * hỏng không được làm hỏng request đang xác thực.
+   */
+  private touch(sessionId: string): void {
+    const threshold = new Date(Date.now() - LAST_SEEN_THROTTLE_MS);
+    // Bọc trong `then` để cả lỗi NÉM ĐỒNG BỘ (client lạ, mock thiếu hàm) cũng chỉ thành promise bị nuốt.
+    void Promise.resolve()
+      .then(() =>
+        this.prisma.webSession.updateMany({
+          where: { id: sessionId, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: threshold } }] },
+          data: { lastSeenAt: new Date() },
+        }),
+      )
+      .catch(() => undefined);
   }
 
   /**

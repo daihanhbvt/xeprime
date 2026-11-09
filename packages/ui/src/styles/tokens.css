@@ -238,6 +238,10 @@
   --xp-color-pink: #dd2590;
   --xp-color-pink-bg: #fdf2fa;
   --xp-color-pink-border: #faa7e0;
+  /* Viên vai "Quan sát viên" (`Status/purple-*`, Partner-XePrime 09/11/2026). */
+  --xp-color-purple: #6938ef;
+  --xp-color-purple-bg: #f4f3ff;
+  --xp-color-purple-border: #bdb4fe;
   --xp-color-warning-strong: #ec4a0a;
   --xp-color-warning-high: #dc6803;
   --xp-color-info-strong: #1570ef;
@@ -530,6 +534,9 @@
   --xp-color-pink: #f670c7;
   --xp-color-pink-bg: rgba(221, 37, 144, 0.12);
   --xp-color-pink-border: rgba(250, 167, 224, 0.45);
+  --xp-color-purple: #9b8afb;
+  --xp-color-purple-bg: rgba(105, 56, 239, 0.14);
+  --xp-color-purple-border: rgba(189, 180, 254, 0.45);
   --xp-color-warning-strong: #fb6514;
   --xp-color-info-strong: #53b1fd;
   --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);
