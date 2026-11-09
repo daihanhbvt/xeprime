@@ -41,6 +41,11 @@ import { normalizeTaxId, SellerProfileService } from '../seller-profile/seller-p
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
 import {
+  SHOP_BIO_TEXT_MAX_LENGTH,
+  sanitizeShopBioHtml,
+  shopBioPlainText,
+} from '../../common/shop-bio-html';
+import {
   DefaultBranchDto,
   MyShopDto,
   RegisterShopDto,
@@ -56,6 +61,7 @@ import type { VatInvoiceSettingDto } from './dto/vat-invoice-setting.dto';
  */
 const PROFILE_SELECT = {
   bio: true,
+  bioHtml: true,
   logoUrl: true,
   coverUrl: true,
   address: true,
@@ -83,6 +89,7 @@ const SELLER_TAX_SELECT = { taxId: true } satisfies Prisma.SellerProfileSelect;
 const OWNER_SELECT = {
   id: true,
   displayName: true,
+  avatarUrl: true,
   email: true,
   phone: true,
   emailVerifiedAt: true,
@@ -95,6 +102,7 @@ function toOwnerAccount(owner: OwnerRow): ShopOwnerAccountDto {
   return {
     userId: owner.id,
     displayName: owner.displayName,
+    avatarUrl: owner.avatarUrl,
     email: owner.email,
     phone: owner.phone,
     // Đi trên dây là BOOLEAN, không phải mốc thời gian: màn hình chỉ hỏi "đã xác minh chưa",
@@ -501,8 +509,10 @@ export class TenantsService {
       phone,
       email,
       taxCode,
+      bioHtml,
       ...profile
     } = dto;
+    const bio = resolveBioWrite(profile.bio, bioHtml);
 
     if (taxCode !== undefined && !access.canManageSellerProfile) {
       const seller = await this.prisma.sellerProfile.findUnique({
@@ -541,7 +551,7 @@ export class TenantsService {
           })
         : null;
 
-    const data = normalizeProfileWrite(profile);
+    const data = { ...normalizeProfileWrite({ ...profile, bio: bio.bio }), ...bio.html };
     await this.prisma.$transaction(async (tx) => {
       if (branchPlan) await this.branches.applyUpdate(tx, tenantId, userId, branchPlan);
       if (Object.keys(tenantData).length > 0) {
@@ -842,6 +852,33 @@ function slugify(value: string): string {
  * `IS NULL`, và các bộ đếm "hồ sơ đã điền gì" của khu duyệt. Chuẩn hoá đúng một lần tại biên ghi
  * để không có cột nào giữ hai cách nói "chưa có".
  */
+/**
+ * Hai bản giới thiệu (chữ thuần `bio` + HTML `bio_html`) đi CÙNG nhau ở mọi lượt ghi:
+ *  - có `bioHtml` ⇒ lọc ở server, chữ thuần RÚT TỪ HTML đã lọc (bỏ qua `bio` gửi kèm);
+ *  - chỉ có `bio` (app native, form chủ xe) ⇒ bản HTML bị gỡ — không thì trang công khai hiện
+ *    đoạn văn cũ trong khi chủ vừa sửa sang đoạn mới;
+ *  - không có cả hai ⇒ không đụng.
+ * Chữ thuần rút ra vượt trần cột `bio` ⇒ 400 thay vì cắt ngầm.
+ */
+function resolveBioWrite(
+  bio: string | undefined,
+  bioHtml: string | undefined,
+): { bio: string | undefined; html: { bioHtml?: string | null } } {
+  if (bioHtml === undefined) {
+    return { bio, html: bio === undefined ? {} : { bioHtml: null } };
+  }
+  const clean = sanitizeShopBioHtml(bioHtml);
+  const text = clean ? shopBioPlainText(clean) : '';
+  if (text.length > SHOP_BIO_TEXT_MAX_LENGTH) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: `Giới thiệu tối đa ${SHOP_BIO_TEXT_MAX_LENGTH} ký tự`,
+      details: { field: 'bioHtml', maxLength: SHOP_BIO_TEXT_MAX_LENGTH },
+    });
+  }
+  return { bio: text, html: { bioHtml: clean } };
+}
+
 function normalizeProfileWrite<T extends Record<string, string | undefined>>(
   dto: T,
 ): { [K in keyof T]: string | null | undefined } {
@@ -866,6 +903,7 @@ function emptyProfileIfNull(
   return {
     displayName: tenantName,
     bio: profile?.bio ?? null,
+    bioHtml: profile?.bioHtml ?? null,
     logoUrl: profile?.logoUrl ?? null,
     coverUrl: profile?.coverUrl ?? null,
     address: profile?.address ?? null,

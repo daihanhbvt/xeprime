@@ -1,0 +1,782 @@
+/* Hộp "Mua hoặc gia hạn gói" — design `24024:26537` (1430 × 986, thẻ bậc 450, cách 20). */
+
+/*
+ * Bề rộng NỘI DUNG của hộp `size="fit"`: 1430 trừ lề 2 × 24 của AntD, co theo màn hình (AntD giữ
+ * hộp trong `100vw − 32px`). Chỉ desktop — trên mobile hộp là drawer toàn màn hình.
+ */
+@media (min-width: 641px) {
+  .dialogBody {
+    width: min(1382px, calc(100vw - 80px));
+  }
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.laneHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.laneIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: 22px;
+  place-items: center;
+}
+
+.laneText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.laneTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.laneMeta {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 16px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.tiers {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.tier {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  filter: drop-shadow(0 0 3px rgba(10, 13, 18, 0.04));
+}
+
+.tierSelected {
+  border-color: var(--xp-color-primary-glow);
+  background: var(--xp-gradient-card-highlight, var(--xp-color-primary-subtle));
+}
+
+/* Viên "Gói đề xuất" — xanh, đè lên mép trên của thẻ (design: top −13, right 21). */
+.recommended {
+  position: absolute;
+  top: -13px;
+  right: 21px;
+  padding: 2px 12px;
+  border-radius: 16px;
+  background: var(--xp-color-info-strong);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.tierHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.tierBadge {
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+
+.tierText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tierName {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+  text-transform: uppercase;
+}
+
+.tierDesc {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.tierPrice {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.price {
+  color: var(--xp-color-text);
+  font-size: 24px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 32px;
+}
+
+/* Giá của bậc đề xuất — chữ vàng chuyển sắc như design (#e3b85c → #d2a70a). */
+.priceRecommended {
+  background: var(--xp-gradient-text-gold);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.perMonth {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.saving {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tierFoot {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tierAction {
+  display: inline-flex;
+  min-width: 140px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.tierAction:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.tierAction:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tierActionSelected,
+.tierActionSelected:hover {
+  border-color: transparent;
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-text);
+}
+
+/* "Gói hiện tại" — nhạt như design, vẫn là nút (gia hạn đúng bậc đang dùng). */
+.tierActionCurrent {
+  border-color: var(--xp-color-border);
+  color: var(--xp-color-text-placeholder);
+}
+
+/* ── Doanh nghiệp ───────────────────────────────────────────────────────── */
+
+.enterprise {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-inverse) url('/shops/plans/enterprise-bg.png') center / cover
+    no-repeat;
+}
+
+.enterpriseIcon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: var(--xp-border-radius-control);
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--xp-color-primary-bright);
+  font-size: 28px;
+  place-items: center;
+}
+
+.enterpriseText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 280px;
+  flex-direction: column;
+}
+
+.enterpriseTitle {
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.enterpriseHint {
+  margin: 0;
+  color: var(--xp-color-text-on-dark-muted);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+/* ── Bước 2: kỳ hạn · xác nhận ─────────────────────────────────────────── */
+
+.optionBox {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.optionHead {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.optionHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.confirm {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Một gói: thẻ chiếm nửa hộp (đọc như một phiếu); hai gói: hai cột ngang hàng. */
+.confirmGrid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 680px);
+  transition: opacity 0.15s ease;
+}
+
+.confirmGridPair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Đang tải bản xem trước của kỳ hạn mới — số cũ còn hiện nhưng nhạt đi, nút tạo hoá đơn đã khoá. */
+.stale {
+  opacity: 0.55;
+}
+
+.confirmCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  filter: drop-shadow(0 0 3px rgba(10, 13, 18, 0.04));
+}
+
+.confirmTitle {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.confirmRows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.confirmRow {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.confirmRow dt {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.confirmRow dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+  text-align: right;
+}
+
+.confirmRow dd strong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.confirmAmount {
+  padding-top: 12px;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.confirmAmount dd {
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.paymentNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.paymentNote :global(.anticon) {
+  color: var(--xp-color-primary-strong);
+  font-size: 16px;
+}
+
+.choices {
+  display: grid;
+  gap: 12px;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.choice {
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 1px rgba(10, 13, 18, 0.05);
+  cursor: pointer;
+  text-align: left;
+}
+
+.choiceCenter {
+  align-items: center;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.choice:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.choice:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.choicePicked {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+}
+
+.choiceTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.choicePicked .choiceTitle {
+  color: var(--xp-color-primary-hover);
+}
+
+.choiceHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.consent {
+  margin: 0;
+}
+
+/*
+ * MỘT gói (09/11/2026): kỳ hạn | phiếu gói, hai cột ngang nhau. Cả hai cột cùng khuôn "tiêu đề +
+ * nội dung", nên khung viền của khối kỳ hạn bỏ đi để hai tiêu đề thẳng hàng.
+ */
+.confirmSplit {
+  display: grid;
+  align-items: start;
+  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.confirmSplit .optionBox {
+  padding: 0;
+  border: none;
+}
+
+.confirmSplit .confirmGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.termList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Một dòng kỳ hạn: ◉ · "6 tháng" · "Tiết kiệm 10%" · tổng tiền (đẩy về phải). */
+.termRow {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+}
+
+.termRadio {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+}
+
+.choicePicked .termRadio {
+  border-color: var(--xp-color-primary);
+}
+
+.choicePicked .termRadio::after {
+  position: absolute;
+  inset: 3px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  content: '';
+}
+
+.termSaving {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.termSaving.saving {
+  color: var(--xp-color-success);
+}
+
+.termTotal {
+  flex: none;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.choicePicked .termTotal {
+  color: var(--xp-color-primary-hover);
+}
+
+/* Nhãn lượt mua + ⓘ hệ quả, đứng cuối hàng tiêu đề của phiếu. */
+.confirmKind {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Chân hộp ──────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+}
+
+.summary {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 360px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryPlans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 40px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.summaryPrice {
+  color: var(--xp-color-text-placeholder);
+}
+
+.summaryLine {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.pay {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.totalLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+  text-transform: uppercase;
+}
+
+.totalAmount {
+  color: var(--xp-color-primary);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+@media (max-width: 720px) {
+  .confirmGridPair,
+  .confirmSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .choices {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Gạch đầu dòng của thẻ bậc — 14/20 xám vừa, dấu tích vàng 16px cách 6. */
+.benefits {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+  list-style: none;
+}
+
+.benefits li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.benefits :global(.anticon) {
+  flex: none;
+  color: var(--xp-color-primary);
+  font-size: 16px;
+}
+
+.benefits strong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Thanh bước ─────────────────────────────────────────────────────────── */
+
+.stepper {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepItem {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+/* Vạch nối giữa hai bước. */
+.stepItem + .stepItem::before {
+  width: 48px;
+  height: 1px;
+  margin-right: 4px;
+  background: var(--xp-color-border-strong);
+  content: '';
+}
+
+.stepNumber {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 1;
+  place-items: center;
+}
+
+.stepActive {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stepActive .stepNumber {
+  border-color: transparent;
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-text);
+}
+
+.stepDone {
+  color: var(--xp-color-text-secondary);
+}
+
+.stepDone .stepNumber {
+  border-color: var(--xp-color-primary-glow);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+}
+
+.stepLabel {
+  white-space: nowrap;
+}
+
+.stepHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}

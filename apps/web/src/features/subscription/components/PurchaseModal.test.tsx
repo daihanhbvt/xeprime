@@ -45,9 +45,20 @@ vi.mock('next/navigation', async (importOriginal) => ({
   }),
 }));
 
+/** Bản xem trước của server (ADR 0084) — loại lượt mua do SERVER suy, hộp chỉ nói lại. */
+const preview = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isSuccess: false,
+  isPlaceholderData: false,
+  isFetching: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+
 vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => plans,
   usePendingInvoices: () => pending,
+  usePurchasePreview: () => preview,
   usePurchaseSubscription: () => purchase,
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
@@ -115,6 +126,8 @@ function pickTier(name: string) {
 beforeEach(() => {
   plans.data = [makePlan()];
   pending.data = [];
+  preview.data = undefined;
+  preview.isSuccess = false;
   purchase.mutate.mockReset();
   nav.push.mockReset();
 });
@@ -314,47 +327,63 @@ describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
   });
 });
 
-describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
-  it('đang có kỳ cùng loại xe: chọn nâng gói ngay hiển thị cảnh báo huỷ ngày còn lại và gửi timing: now', () => {
-    renderModal(vi.fn(), {
-      subscriptionId: 'S1',
-      planId: 'plan-basic',
-      planCode: 'moto_5',
-      planName: 'Xe máy 5 xe',
-      vehicleScope: 'motorbike',
-      phase: 'current',
-      endsAt: '2026-12-01T00:00:00.000Z',
-    });
+describe('PurchaseModal — thời điểm áp dụng do server suy (ADR 0084)', () => {
+  const current = {
+    subscriptionId: 'S1',
+    planId: 'plan-small',
+    planCode: 'moto_1',
+    planName: 'Xe máy 1 xe',
+    vehicleScope: 'motorbike',
+    phase: 'current',
+    endsAt: '2026-12-01T00:00:00.000Z',
+  } as const;
+
+  it('không còn lựa chọn "nối tiếp / nâng ngay" — body gửi lên không mang timing', () => {
+    renderModal(vi.fn(), current);
+    expect(screen.queryByRole('radio', { name: /ngay hôm nay/ })).toBeNull();
 
     pickTier('Chọn gói');
     fireEvent.click(termCards()[1]!);
-
-    // Ban đầu mặc định nối tiếp sau khi hết hạn, nút ghi "Tạo hoá đơn"
-    expect(screen.queryByText(/Kỳ hiện tại kết thúc ngay hôm nay/)).toBeNull();
-    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ })).toBeTruthy();
-
-    // Chọn "Nâng gói ngay hôm nay"
-    const radioNow = screen.getByRole('radio', { name: /Nâng gói ngay hôm nay/ });
-    fireEvent.click(radioNow);
-
-    // Cảnh báo không hoàn tiền ngày còn lại xuất hiện
-    expect(
-      screen.getByText(
-        /Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại./,
-      ),
-    ).toBeTruthy();
-
-    // Nút đổi thành "Nâng gói ngay"
-    const submitBtn = screen.getByRole('button', { name: /Nâng gói ngay/ });
-    expect(submitBtn).toBeTruthy();
-
-    fireEvent.click(submitBtn);
-
-    // Gửi đúng body kèm timing: 'now'
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
     expect(purchase.mutate).toHaveBeenCalledWith(
-      { planId: 'plan-basic', termMonths: 3, timing: 'now' },
+      { planId: 'plan-basic', termMonths: 3 },
       expect.anything(),
     );
+  });
+
+  it('server báo nâng bậc ⇒ nhãn "Nâng cấp ngay" + cảnh báo kỳ cũ kết thúc, không hoàn', () => {
+    preview.isSuccess = true;
+    preview.data = {
+      total: '250000',
+      items: [
+        {
+          planId: 'plan-basic',
+          planName: 'Gói cơ bản',
+          vehicleScope: 'motorbike',
+          termMonths: 3,
+          kind: 'upgrade',
+          startsAt: '2026-11-09T00:00:00.000Z',
+          endsAt: '2027-02-09T00:00:00.000Z',
+          maxVehicles: 3,
+          amount: '250000',
+          replacedTerms: [
+            {
+              planName: 'Xe máy 1 xe',
+              startsAt: '2026-11-01T00:00:00.000Z',
+              endsAt: '2026-12-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    };
+    renderModal(vi.fn(), current);
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+
+    expect(screen.getByText('Nâng cấp ngay')).toBeTruthy();
+    expect(
+      screen.getByText(/Xe máy 1 xe \(đến .*\) sẽ kết thúc ngay khi thanh toán xong/),
+    ).toBeTruthy();
   });
 });
 

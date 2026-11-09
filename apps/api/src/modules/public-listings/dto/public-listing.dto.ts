@@ -1062,6 +1062,13 @@ export class PublicShopDto {
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giới thiệu ĐÃ ĐỊNH DẠNG — HTML đã lọc ở server (danh sách thẻ cho phép); null thì hiện `bio`',
+  })
+  bioHtml!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
 
   /*

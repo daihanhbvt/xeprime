@@ -463,8 +463,20 @@ export const queryKeys = {
      * một lượt làm mới theo tiền tố đó phải lật cả trang thanh toán đang mở.
      */
     invoice: (id: string) => ['subscription', 'invoices', 'detail', id] as const,
+    /**
+     * MỘT phiếu thanh toán gộp nhiều gói (ADR 0083) — `GET /subscription/checkouts/:id`. Cùng tiền
+     * tố `['subscription','invoices']` vì cùng lý do với `invoice`: tiền về lật cả hoá đơn con lẫn
+     * phiếu, và một lượt làm mới theo tiền tố đó phải tới được trang thanh toán của phiếu.
+     */
+    checkout: (id: string) => ['subscription', 'invoices', 'checkout', id] as const,
     /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
+    /**
+     * Xem trước một lượt mua (ADR 0084) — khoá theo đúng các gói + kỳ hạn đang chọn. Nằm dưới
+     * `['subscription']`, nên tiền về / mua xong (làm mới cả nhánh) cũng tính lại bản xem trước.
+     */
+    purchasePreview: (items: readonly { planId: string; termMonths: number }[]) =>
+      ['subscription', 'purchase-preview', items] as const,
   },
   /**
    * Xe yêu thích của tài khoản khách — `/account/favorites`. Trạng thái trái tim khoá THEO TỪNG XE

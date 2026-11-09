@@ -1,0 +1,131 @@
+/*
+ * Thẻ danh tính của menu hồ sơ site partner — Figma Partner-XePrime `24051:85101`. Vỏ, dòng, nút
+ * gạt, đăng xuất: `components/account-menu/AccountMenuParts.module.css`.
+ */
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  /* Design: thẻ đứng riêng một nhóm, cách nhóm lối đi 8px trước khi nhóm sau bắt đầu. */
+  margin-bottom: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-tertiary);
+  gap: 10px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.identity:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-primary);
+}
+
+.identity:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/* Gian hàng tuyến gói: nền vàng của design (ảnh Figma nén webp, 4KB). Rê chuột giữ nền, chỉ đổi màu mũi tên. */
+.identityShop,
+.identityShop:hover {
+  background: url('/partner/account-card-bg.webp') center / cover no-repeat;
+}
+
+.identityShop:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.identityMain {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.avatarWrap {
+  position: relative;
+  flex: none;
+  line-height: 0;
+}
+
+/*
+ * Ghép hai lớp để thắng nền xám mặc định của AntD: style CSS-in-JS của nó (`:where(.css-…)
+ * .ant-avatar`) cùng độ ưu tiên với một lớp đơn và được chèn SAU CSS Modules.
+ */
+.identity .avatar {
+  flex: none;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+/* Dấu tích xanh "_Avatar company icon": nền trắng 14px, biểu tượng lọt lòng 8.33%. */
+.shopMark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container) url('/partner/verified-shop.svg') center / 11.67px
+    11.17px no-repeat;
+}
+
+.identityText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+/* Tên người và tên gian hàng là DỮ LIỆU nhập tay — cắt bằng ellipsis, không đẩy mũi tên ra ngoài. */
+.name,
+.subtitle,
+.shopName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.subtitle {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.chevron {
+  flex: none;
+  font-size: 20px;
+}
+
+.shopLine {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+  line-height: 18px;
+}
+
+.shopLabel {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+}
+
+.shopName {
+  min-width: 0;
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-semibold);
+}

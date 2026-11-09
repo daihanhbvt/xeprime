@@ -1504,6 +1504,9 @@
       "activate": "Phụ lục gia hạn có hiệu lực",
       "cancel": "Huỷ phụ lục gia hạn",
       "expire": "Phụ lục gia hạn hết hạn thanh toán"
+    },
+    "subscription_checkout": {
+      "issue": "Phát hành phiếu thanh toán gộp"
     }
   },
   "auditTargetType": {
@@ -1558,7 +1561,8 @@
     "vehicle_handover": "Biên bản bàn giao",
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
-    "withdrawal_request": "Yêu cầu rút điểm"
+    "withdrawal_request": "Yêu cầu rút điểm",
+    "subscription_checkout": "Phiếu thanh toán gộp"
   },
   "auditField": {
     "planCode": "Mã gói",

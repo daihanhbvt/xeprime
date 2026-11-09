@@ -381,7 +381,12 @@ describe('design token', () => {
 
     it('là ngoại lệ DUY NHẤT — không có override component nào khác', () => {
       expect(Object.keys(antdTheme.components ?? {})).toEqual(['Button']);
-      expect(Object.keys(antdTheme.components?.Button ?? {})).toEqual(['primaryColor']);
+      expect(Object.keys(antdTheme.components?.Button ?? {})).toEqual([
+        'primaryColor',
+        // Bảng nút v2: chữ 14px/Semibold, nút viền chữ Text/Gray/medium (partner redesign 11/2026).
+        'fontWeight',
+        'defaultColor',
+      ]);
     });
 
     it('mặc định của AntD (chữ trắng) thật sự trượt AA nên ngoại lệ là cần thiết', () => {

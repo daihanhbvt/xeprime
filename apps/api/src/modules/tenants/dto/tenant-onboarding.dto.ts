@@ -12,6 +12,7 @@ import {
   TENANT_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform } from 'class-transformer';
+import { SHOP_BIO_HTML_MAX_LENGTH } from '../../../common/shop-bio-html';
 import {
   IsEmail,
   IsIn,
@@ -199,11 +200,25 @@ export class UpdateTenantProfileDto {
   @MaxLength(255)
   email?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Giới thiệu CHỮ THUẦN. Gửi `bio` mà không kèm `bioHtml` (app native, form cũ) thì bản định ' +
+      'dạng bị gỡ — hai bản không bao giờ nói hai điều khác nhau',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   bio?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (đậm · nghiêng · gạch chân · căn lề). Server lọc theo danh ' +
+      'sách thẻ cho phép và tự rút chữ thuần ghi vào `bio` (bỏ qua `bio` gửi kèm). Chuỗi rỗng = gỡ',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(SHOP_BIO_HTML_MAX_LENGTH)
+  bioHtml?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -301,6 +316,13 @@ export class TenantProfileDto {
   })
   displayName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giới thiệu đã định dạng (HTML đã lọc ở server); null = chỉ có bản chữ thuần `bio`',
+  })
+  bioHtml!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
   @ApiPropertyOptional({
@@ -337,6 +359,8 @@ export class TenantProfileDto {
 export class ShopOwnerAccountDto {
   @ApiProperty({ description: 'Id user chủ gian hàng' }) userId!: string;
   @ApiProperty() displayName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện tài khoản chủ' })
+  avatarUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Dạng lưu 84…' })
   phone!: string | null;

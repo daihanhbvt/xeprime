@@ -363,7 +363,8 @@
     "noPhone": "No phone number yet",
     "verified": "Verified",
     "unverified": "Not verified",
-    "manageLogin": "Manage sign-in details"
+    "manageLogin": "Manage sign-in details",
+    "manageAccount": "Manage account"
   },
   "welcome": {
     "logo": {
@@ -404,6 +405,44 @@
         "address": "Pickup address",
         "cover": "Cover image"
       }
+    }
+  },
+  "info": {
+    "legal": {
+      "title": "Address & legal",
+      "hint": "Vehicle pickup location & legal details",
+      "dialogHint": "Update the vehicle pickup location & legal details",
+      "edit": "Edit address & legal details",
+      "province": "Province/City",
+      "ward": "Ward/Commune",
+      "address": "Address",
+      "businessLicenseNo": "Business licence no.",
+      "defaultBranchNote": "Taken from the default branch.",
+      "manageBranches": "Manage"
+    },
+    "tax": {
+      "hint": "Information used for tax filing",
+      "edit": "Edit tax information",
+      "entityType": "Entity type",
+      "legalNameBusiness": "Household business / company name",
+      "note": "How tax is paid or withheld depends on your entity type and current tax advice. Rates will be announced before they apply."
+    },
+    "display": {
+      "title": "Display information",
+      "hint": "What customers see on the marketplace",
+      "mediaHint": "Logo 800x800px · Cover 1600x600",
+      "changeLogo": "Change logo",
+      "changeCover": "Change cover",
+      "removeLogo": "Remove logo",
+      "removeCover": "Remove cover",
+      "edit": "Edit information",
+      "dialogTitle": "Edit display information",
+      "displayName": "Display name",
+      "phone": "Contact phone",
+      "phoneField": "Displayed phone number",
+      "email": "Contact email",
+      "bio": "About",
+      "bioPlaceholder": "Introduce your shop"
     }
   }
 }

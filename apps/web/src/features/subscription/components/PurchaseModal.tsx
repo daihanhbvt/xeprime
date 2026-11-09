@@ -1,9 +1,8 @@
 'use client';
 
-import { Alert, App, Button, Radio, Spin } from 'antd';
+import { Alert, App, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { SUBSCRIPTION_CHANGE_TIMING } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { paymentPath } from '@/constants/routes';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
@@ -14,10 +13,12 @@ import { packagePlansForScope, pendingInvoiceForScope, type PlanLaneScope } from
 import { usePlanPurchase } from '../plan-purchase';
 import {
   usePendingInvoices,
+  usePurchasePreview,
   usePurchaseSubscription,
   useTenantPlans,
 } from '../hooks/use-subscription';
 import type { CurrentPlan } from '../types';
+import { PurchaseKindTag, PurchaseOutcomeNotes, usePurchasePeriodText } from './PurchaseOutcome';
 import styles from './PurchaseModal.module.css';
 
 /**
@@ -25,9 +26,9 @@ import styles from './PurchaseModal.module.css';
  * kèm mã đối soát. Gói chỉ kích hoạt khi tiền về (ADR 0026 điều 4), nên hoá đơn tạo xong là modal
  * đóng và người dùng sang thẳng TRANG THANH TOÁN của hoá đơn đó (`/payment/:invoiceId`).
  *
- * Kỳ mới bắt đầu lúc nào là việc của SERVER (`planSubscriptionChain` theo phạm vi): còn kỳ cùng loại
- * xe ⇒ nối sau nó; chưa có ⇒ bắt đầu ngay khi tiền về — kể cả khi loại xe kia đang có gói. Modal chỉ
- * NÓI trước điều đó; kỳ thật in trên hoá đơn (`periodFrom`).
+ * Kỳ mới bắt đầu lúc nào là việc của SERVER (ADR 0084): cùng bậc = gia hạn nối tiếp, trần cao hơn =
+ * nâng ngay, còn lại = nối tiếp — người mua không chọn. Modal đọc bản xem trước của server cho bậc
+ * đang chọn (`usePurchasePreview`) để NÓI trước điều đó; kỳ thật in trên hoá đơn (`periodFrom`).
  *
  * Bảng giá và toàn bộ phép đọc giá nằm ở `usePlanPurchase` + `PlanPricingTable`. Modal này chỉ còn
  * là VỎ: quyền, hộp thoại, nút, và chuyển màn sau khi hoá đơn tạo xong. Nơi gọi KHÔNG dựng nó khi
@@ -56,6 +57,12 @@ export function PurchaseModal({
   const pending = usePendingInvoices(open);
   const purchase = usePurchaseSubscription();
   const selection = usePlanPurchase(packagePlansForScope(plans.data ?? [], scope));
+  const preview = usePurchasePreview(
+    selection.selection ? [selection.selection.body] : [],
+    open && Boolean(selection.selection),
+  );
+  const outcome = selection.selection ? preview.data?.items[0] : undefined;
+  const periodText = usePurchasePeriodText();
   const router = useRouter();
 
   /** Hoá đơn còn chờ ở CÙNG loại xe — tạo hoá đơn mới sẽ huỷ nó (server void hoá đơn `issued` cũ). */
@@ -106,45 +113,27 @@ export function PurchaseModal({
         <div className={styles.empty}>{t('purchase.emptyFor', { scope: laneTitle })}</div>
       ) : (
         <>
-          {current ? (
-            <div className={styles.timingSection}>
-              <div className={styles.timingLabel}>{t('purchase.timingLabel')}</div>
-              <Radio.Group
-                value={selection.timing}
-                onChange={(e) => selection.setTiming(e.target.value)}
-                className={styles.timingGroup}
-              >
-                <Radio value={SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM}>
-                  <span className={styles.timingOptionText}>
-                    <strong>{t('purchase.timingNextTerm')}</strong>
-                    <span className={styles.timingOptionDesc}>
-                      {t('purchase.chainsAfter', {
-                        plan: current.planName,
-                        date: fmt.date(current.endsAt),
-                      })}
-                    </span>
-                  </span>
-                </Radio>
-                <Radio value={SUBSCRIPTION_CHANGE_TIMING.NOW}>
-                  <span className={styles.timingOptionText}>
-                    <strong>{t('purchase.timingNow')}</strong>
-                    <span className={styles.timingOptionDesc}>
-                      {t('purchase.timingNowDesc')}
-                    </span>
-                  </span>
-                </Radio>
-              </Radio.Group>
-              {selection.timing === SUBSCRIPTION_CHANGE_TIMING.NOW ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  className={styles.timingAlert}
-                  title={t('purchase.timingNowWarning')}
-                />
-              ) : null}
+          {/*
+            Lượt mua này làm gì với gói hiện tại — từ bản xem trước của server, không phải một lựa
+            chọn của người mua (ADR 0084). Chưa chọn bậc thì nói luật chung.
+          */}
+          {outcome ? (
+            <div className={styles.outcome} aria-live="polite">
+              <div className={styles.outcomeHead}>
+                <PurchaseKindTag kind={outcome.kind} />
+                <span className={styles.outcomePeriod}>{periodText(outcome)}</span>
+              </div>
+              <PurchaseOutcomeNotes item={outcome} usedVehicles={null} />
             </div>
           ) : (
-            <p className={styles.context}>{t('purchase.startsOnPayment')}</p>
+            <p className={styles.context}>
+              {current
+                ? t('purchase.currentPlanRule', {
+                    plan: current.planName,
+                    date: fmt.date(current.endsAt),
+                  })
+                : t('purchase.startsOnPayment')}
+            </p>
           )}
 
           {pendingSameScope ? (
@@ -180,9 +169,7 @@ export function PurchaseModal({
               disabled={!selection.selection}
               onClick={submit}
             >
-              {selection.timing === SUBSCRIPTION_CHANGE_TIMING.NOW
-                ? t('purchase.submitNow')
-                : t('purchase.submit')}
+              {t('purchase.submit')}
             </Button>
           </div>
         </>

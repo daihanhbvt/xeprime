@@ -57,6 +57,8 @@ export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues 
     phone: shop.phone ? toLocalVnPhone(shop.phone) : '',
     email: shop.email ?? '',
     bio: p.bio ?? '',
+    // Chưa từng dùng editor ⇒ mở editor với chính đoạn chữ thuần cũ, mỗi dòng một đoạn.
+    bioHtml: p.bioHtml ?? plainTextToHtml(p.bio),
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
     wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
     /*
@@ -124,4 +126,59 @@ export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileWithC
      */
     resetOptions: { keepDirtyValues: true },
   });
+}
+
+/**
+ * NHÓM Ô của trang Thông tin cửa hàng (design 06/11/2026) — mỗi hộp thoại "Cập nhật" lưu đúng nhóm
+ * của nó, không gửi lại ô của hộp khác (một lượt lưu địa chỉ không được viết lại tên hiển thị mà
+ * người khác vừa đổi ở tab khác).
+ */
+export const SHOP_PROFILE_GROUP = {
+  DISPLAY: 'display',
+  LEGAL: 'legal',
+  MEDIA: 'media',
+} as const;
+
+export type ShopProfileGroup = (typeof SHOP_PROFILE_GROUP)[keyof typeof SHOP_PROFILE_GROUP];
+
+/** Ô cần kiểm (`trigger`) trước khi lưu một nhóm. */
+export const SHOP_PROFILE_GROUP_FIELDS = {
+  [SHOP_PROFILE_GROUP.DISPLAY]: ['displayName', 'phone', 'email', 'bioHtml'],
+  [SHOP_PROFILE_GROUP.LEGAL]: ['provinceCode', 'wardCode', 'addressLine', 'businessLicenseNo'],
+  [SHOP_PROFILE_GROUP.MEDIA]: ['logoUrl', 'coverUrl'],
+} as const satisfies Record<ShopProfileGroup, readonly (keyof ShopProfileWithContactValues)[]>;
+
+/** Thân request của MỘT nhóm — cùng quy ước rỗng/gỡ với `toShopProfileBody`. */
+export function toShopProfilePatch(
+  v: ShopProfileWithContactValues,
+  group: ShopProfileGroup,
+): UpdateProfileInput {
+  switch (group) {
+    case SHOP_PROFILE_GROUP.DISPLAY:
+      // `bioHtml` thay `bio`: server lọc thẻ và tự rút chữ thuần cho app native.
+      return { displayName: v.displayName, phone: v.phone, email: v.email, bioHtml: v.bioHtml };
+    case SHOP_PROFILE_GROUP.LEGAL:
+      return {
+        provinceCode: v.provinceCode,
+        wardCode: v.wardCode || undefined,
+        addressLine: v.addressLine,
+        businessLicenseNo: v.businessLicenseNo,
+      };
+    case SHOP_PROFILE_GROUP.MEDIA:
+      return { logoUrl: v.logoUrl ?? '', coverUrl: v.coverUrl ?? '' };
+  }
+}
+
+/** Chữ thuần (giới thiệu cũ) → HTML tối thiểu cho editor: mỗi dòng một đoạn, ký tự đặc biệt được thoát. */
+export function plainTextToHtml(text: string | null | undefined): string {
+  const lines = (text ?? '').split(/\r?\n/).filter((line) => line.trim() !== '');
+  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

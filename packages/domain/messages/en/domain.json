@@ -1504,6 +1504,9 @@
       "activate": "Rental extension took effect",
       "cancel": "Cancel rental extension",
       "expire": "Rental extension payment expired"
+    },
+    "subscription_checkout": {
+      "issue": "Issue combined payment"
     }
   },
   "auditTargetType": {
@@ -1558,7 +1561,8 @@
     "vehicle_handover": "Handover record",
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
-    "withdrawal_request": "Withdrawal request"
+    "withdrawal_request": "Withdrawal request",
+    "subscription_checkout": "Combined payment"
   },
   "auditField": {
     "planCode": "Plan code",

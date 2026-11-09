@@ -875,6 +875,7 @@ export class PublicListingsService {
             logoUrl: true,
             coverUrl: true,
             bio: true,
+            bioHtml: true,
             address: true,
             wardName: true,
           },
@@ -909,6 +910,7 @@ export class PublicListingsService {
       logoUrl: storefront.avatarUrl,
       coverUrl: t.profile?.coverUrl ?? null,
       bio: t.profile?.bio ?? null,
+      bioHtml: t.profile?.bioHtml ?? null,
       // Tuyến gói: địa chỉ đủ; tuyến hoa hồng: chỉ KHU VỰC (`customerSeesPickupAddress`, ADR 0077).
       address: !t.profile?.address?.trim()
         ? null

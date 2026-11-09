@@ -20,7 +20,7 @@ import { ThemeProvider, useTheme, type ThemeMode } from '@/lib/theme';
 import { usePrefersReducedMotion } from '@/hooks/use-media-query';
 import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
-import { antdDarkTokens, antdTheme } from '@/styles/theme';
+import { antdDarkComponents, antdDarkTokens, antdTheme } from '@/styles/theme';
 import type { Zone } from '@/zones';
 
 /**
@@ -50,6 +50,7 @@ const ANTD_THEME: Readonly<Record<ThemeMode, ThemeConfig>> = {
     ...antdTheme,
     algorithm: antdThemeEngine.darkAlgorithm,
     token: { ...antdTheme.token, ...antdDarkTokens },
+    components: { ...antdTheme.components, ...antdDarkComponents },
   },
 };
 

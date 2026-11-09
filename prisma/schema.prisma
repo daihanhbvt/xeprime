@@ -277,6 +277,7 @@ model Tenant {
   contracts                     Contract[]
   subscriptions                 TenantSubscription[]
   subscriptionInvoices          SubscriptionInvoice[]
+  subscriptionCheckouts         SubscriptionCheckout[]
   rentalPolicies                RentalPolicy[]
   vehicleSourceDetails          VehicleSourceDetail[]
   vehiclePrivateFiles           VehiclePrivateFile[]
@@ -1076,7 +1077,14 @@ model TenantBranch {
 /// `profile.displayName` cho tương thích client, đọc từ `tenants.name`.
 model TenantProfile {
   tenantId          String   @id @map("tenant_id") @db.Char(26)
+  /// Giới thiệu dạng CHỮ THUẦN — app native, thẻ chủ xe và mô tả SEO đọc cột này. Khi gian hàng
+  /// soạn bằng editor (`bio_html` có giá trị) thì server tự rút chữ thuần từ HTML ghi vào đây, nên
+  /// hai cột không bao giờ nói hai điều khác nhau.
   bio               String?  @db.Text
+  /// Giới thiệu ĐÃ ĐỊNH DẠNG (editor ở site partner, 06/11/2026) — HTML đã lọc ở SERVER theo danh
+  /// sách thẻ cho phép (`sanitizeShopBioHtml`). NULL = gian hàng chưa dùng editor ⇒ nơi hiển thị
+  /// đọc `bio`. Ghi `bio` mà không kèm `bioHtml` (app native, form cũ) xoá cột này về NULL.
+  bioHtml           String?  @map("bio_html") @db.Text
   logoUrl           String?  @map("logo_url") @db.Text
   coverUrl          String?  @map("cover_url") @db.Text
   /// Địa chỉ HIỂN THỊ đã ghép — mirror của chi nhánh mặc định, ghi bởi
@@ -4313,16 +4321,61 @@ model SubscriptionInvoice {
   paidAt         DateTime? @map("paid_at") @db.Timestamptz(3)
   /// Hạn chuyển khoản của hoá đơn `issued`; quá hạn job lật `void`. NULL = không hết hạn (đã trả).
   expiresAt      DateTime? @map("expires_at") @db.Timestamptz(3)
+  /// Phiếu THANH TOÁN GỘP chứa hoá đơn này (ADR 0083) — NULL = hoá đơn trả riêng bằng `code` của
+  /// nó. Hoá đơn thuộc phiếu gộp nhận tiền QUA phiếu: tiền về theo mã của chính hoá đơn cũng được
+  /// chuyển sang phiếu, nên một khoản không bao giờ kích hoạt một nửa lượt mua.
+  checkoutId     String?   @map("checkout_id") @db.Char(26)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   subscription  TenantSubscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  checkout      SubscriptionCheckout? @relation(fields: [checkoutId], references: [id], onDelete: NoAction)
   gatewayOrders PaymentGatewayOrder[]
 
   @@index([tenantId, createdAt])
   @@index([status, expiresAt])
+  @@index([checkoutId])
   @@map("subscription_invoices")
+}
+
+/// PHIẾU THANH TOÁN GỘP của một lượt mua nhiều gói (ADR 0083 — gói ô tô + gói xe máy trong MỘT
+/// lần chuyển khoản, MỘT mã `XPC…`).
+///
+/// Không thay hoá đơn: mỗi loại xe vẫn là MỘT hàng `subscription_invoices` riêng (ADR 0065 điều 6
+/// — chuỗi kỳ, hạn mức, unique "một hoá đơn trả được mỗi phạm vi" giữ nguyên). Phiếu chỉ là ĐÍCH
+/// NHẬN TIỀN của cả cụm: tiền cộng dồn ở đây; đủ tổng thì MỌI hoá đơn trong phiếu lật `paid` và
+/// kích hoạt trong CÙNG transaction — không bao giờ một nửa.
+///
+/// Trạng thái dùng chung tập `SubscriptionInvoiceStatus` (issued · partially_paid · paid · void),
+/// CHECK ở DB. Vòng đời đi CÙNG các hoá đơn con: một hoá đơn con bị void (mua lại cùng loại xe,
+/// hết hạn, bị bậc khác thay) ⇒ phiếu và mọi hoá đơn còn lại cùng void.
+///
+/// Writer: `BillingService`, và job `subscription-lifecycle` của worker cho lượt void khi hết hạn
+/// (cùng ngoại lệ có tên của `subscription_invoices`).
+model SubscriptionCheckout {
+  id          String    @id @db.Char(26)
+  tenantId    String    @map("tenant_id") @db.Char(26)
+  /// Mã đối soát `XPC` + 8 ký tự — CÙNG không gian tên với XPG/XPH/XPE (ADR 0022 điều 3).
+  code        String    @unique @db.VarChar(20)
+  totalAmount Decimal   @map("total_amount") @db.Decimal(14, 2)
+  /// Cộng dồn tiền đã về. Thiếu ⇒ `partially_paid` (cả cụm hoá đơn cùng lật theo), thừa ⇒ giữ
+  /// phần dư làm bằng chứng như hoá đơn đơn lẻ (ADR 0016 điều 6).
+  paidAmount  Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → SubscriptionInvoiceStatus; DB canh bằng CHECK.
+  status      String    @default("issued") @db.VarChar(50)
+  paidAt      DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// Hạn chuyển khoản — bằng hạn của các hoá đơn con. NULL khi đã có tiền thật hoặc đã trả.
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices SubscriptionInvoice[]
+
+  @@index([tenantId, createdAt])
+  @@index([status, expiresAt])
+  @@map("subscription_checkouts")
 }
 
 /// Sổ giao dịch tiền VÀO tài khoản nền tảng — MỘT bảng cho mọi nguồn (ADR 0022 điều 2).

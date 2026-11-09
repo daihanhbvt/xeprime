@@ -32,6 +32,7 @@ export {
   subtractMoney,
   payAtPickupAmount,
   sumMoney,
+  moneyPerPart,
   absoluteMoney,
   isNegativeMoney,
   isPositiveMoney,

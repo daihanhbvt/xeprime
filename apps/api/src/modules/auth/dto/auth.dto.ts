@@ -17,7 +17,8 @@ import {
   MEMBERSHIP_BRANCH_SCOPE_VALUES,
   MOBILE_CLIENT_APP_VALUES,
   PLAN_FEATURE_VALUES,
-  VN_MOBILE_PHONE_PATTERN,\n  normalizeDisplayName,
+  VN_MOBILE_PHONE_PATTERN,
+  normalizeDisplayName,
   type AccountRealm,
   type MobileClientApp,
 } from '@xeprime/types';

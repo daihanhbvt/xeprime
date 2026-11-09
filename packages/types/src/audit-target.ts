@@ -39,6 +39,8 @@ export const AUDIT_TARGET_TYPE = {
   RENTAL_POLICY: 'rental_policy',
   SELLER_PROFILE: 'seller_profile',
   SUBSCRIPTION_INVOICE: 'subscription_invoice',
+  /** Phiếu thanh toán gộp nhiều gói (ADR 0083). */
+  SUBSCRIPTION_CHECKOUT: 'subscription_checkout',
   SUPPORT_CASE: 'support_case',
   TAX_PERIOD: 'tax_period',
   TAX_WITHHOLDING: 'tax_withholding',

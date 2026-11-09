@@ -145,6 +145,12 @@
     "viShort": "VI",
     "enShort": "EN"
   },
+  "theme": {
+    "label": "Giao diện",
+    "switchLabel": "Đổi giao diện sáng/tối",
+    "light": "Giao diện sáng",
+    "dark": "Giao diện tối"
+  },
   "weekdayShort": {
     "0": "CN",
     "1": "T2",
@@ -257,6 +263,18 @@
     "dateRange": {
       "fromDate": "Từ ngày",
       "toDate": "Đến ngày"
+    },
+    "richText": {
+      "toolbar": "Định dạng văn bản",
+      "undo": "Hoàn tác",
+      "redo": "Làm lại",
+      "italic": "In nghiêng",
+      "bold": "In đậm",
+      "underline": "Gạch chân",
+      "alignLeft": "Căn trái",
+      "alignCenter": "Căn giữa",
+      "alignRight": "Căn phải",
+      "count": "{count}/{max}"
     }
   },
   "filters": {

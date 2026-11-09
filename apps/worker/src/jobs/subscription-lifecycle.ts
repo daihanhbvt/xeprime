@@ -556,13 +556,41 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
   return handled;
 }
 
-/** Hoá đơn `issued` quá hạn chuyển khoản → `void` — mã đối soát chết theo (ADR 0015 điều 5). */
+/**
+ * Hoá đơn `issued` quá hạn chuyển khoản → `void` — mã đối soát chết theo (ADR 0015 điều 5).
+ *
+ * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) đi theo PHIẾU, không tự void: phiếu void TRƯỚC bằng một
+ * `UPDATE` có điều kiện trạng thái — nó chờ khoá hàng nếu lượt tiền về đang cầm `FOR UPDATE` trên
+ * phiếu (`BillingService.applyCheckoutPaymentWithinTx`), rồi đọc lại trạng thái. Tiền về đủ đúng
+ * phút hết hạn thì lượt nào cầm khoá trước thắng trọn: hoặc cả cụm `paid`, hoặc cả cụm `void` —
+ * không bao giờ phiếu `paid` với hoá đơn con đã void.
+ */
 async function voidExpiredInvoices(prisma: PrismaClient, now: Date): Promise<number> {
   const voided = await prisma.subscriptionInvoice.updateMany({
-    where: { status: SUBSCRIPTION_INVOICE_STATUS.ISSUED, expiresAt: { lte: now } },
+    where: {
+      status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      expiresAt: { lte: now },
+      checkoutId: null,
+    },
     data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
   });
-  return voided.count;
+  const members = await prisma.$transaction(async (tx) => {
+    const checkouts = await tx.$queryRaw<{ id: string }[]>`
+      UPDATE subscription_checkouts
+         SET status = ${SUBSCRIPTION_INVOICE_STATUS.VOID}, updated_at = now()
+       WHERE status = ${SUBSCRIPTION_INVOICE_STATUS.ISSUED} AND expires_at <= ${now}
+      RETURNING id`;
+    if (checkouts.length === 0) return 0;
+    const result = await tx.subscriptionInvoice.updateMany({
+      where: {
+        checkoutId: { in: checkouts.map((row) => row.id) },
+        status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      },
+      data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+    });
+    return result.count;
+  });
+  return voided.count + members;
 }
 
 /**

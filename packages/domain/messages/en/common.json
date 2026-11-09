@@ -145,6 +145,12 @@
     "viShort": "VI",
     "enShort": "EN"
   },
+  "theme": {
+    "label": "Appearance",
+    "switchLabel": "Switch light/dark theme",
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
   "weekdayShort": {
     "0": "Sun",
     "1": "Mon",
@@ -257,6 +263,18 @@
     "dateRange": {
       "fromDate": "From date",
       "toDate": "To date"
+    },
+    "richText": {
+      "toolbar": "Text formatting",
+      "undo": "Undo",
+      "redo": "Redo",
+      "italic": "Italic",
+      "bold": "Bold",
+      "underline": "Underline",
+      "alignLeft": "Align left",
+      "alignCenter": "Align centre",
+      "alignRight": "Align right",
+      "count": "{count}/{max}"
     }
   },
   "filters": {

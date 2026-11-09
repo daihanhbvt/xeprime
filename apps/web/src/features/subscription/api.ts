@@ -1,10 +1,13 @@
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiGet, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type {
+  CreateSubscriptionCheckoutInput,
   MySubscription,
   PaymentInfo,
   PendingSubscriptionInvoice,
   PurchaseSubscriptionInput,
+  SubscriptionCheckout,
+  SubscriptionPurchasePreview,
   SubscriptionInvoice,
   TenantPlan,
 } from './types';
@@ -59,3 +62,18 @@ export const fetchInvoices = (page = 1): Promise<InvoiceListResult> =>
 export const purchaseSubscription = (
   body: PurchaseSubscriptionInput,
 ): Promise<SubscriptionInvoice> => apiPost<SubscriptionInvoice>('/subscription/purchase', body);
+
+/** Mua gói ô tô + gói xe máy trong MỘT lần chuyển khoản — phiếu `XPC…` (ADR 0083). */
+export const createSubscriptionCheckout = (
+  body: CreateSubscriptionCheckoutInput,
+): Promise<SubscriptionCheckout> =>
+  apiPost<SubscriptionCheckout>('/subscription/checkouts', body);
+
+/** Xem trước một lượt mua (ADR 0084) — server suy gia hạn / nâng ngay / đổi từ kỳ sau. Không ghi gì. */
+export const previewSubscriptionPurchase = (
+  items: readonly PurchaseSubscriptionInput[],
+): Promise<SubscriptionPurchasePreview> =>
+  apiPost<SubscriptionPurchasePreview>('/subscription/purchase/preview', { items });
+
+export const fetchSubscriptionCheckout = (id: string): Promise<SubscriptionCheckout> =>
+  apiGet<SubscriptionCheckout>(`/subscription/checkouts/${encodeURIComponent(id)}`);

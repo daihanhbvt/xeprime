@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   absoluteMoney,
+  moneyPerPart,
   applyDiscountPercent,
   compactMoneyParts,
   formatMoneyVnd,
@@ -317,5 +318,17 @@ describe('applyDiscountPercent — khoản giảm làm tròn LÊN 1.000đ (ADR 0
     expect(applyDiscountPercent('652000', null)).toBe('652000');
     expect(applyDiscountPercent('652000', 120)).toBe('652000');
     expect(applyDiscountPercent(null, 10)).toBeNull();
+  });
+});
+
+describe('moneyPerPart', () => {
+  it('quy giá cả kỳ ra mỗi tháng, làm tròn tới đồng', () => {
+    expect(moneyPerPart('419000', 3)).toBe('139667');
+    expect(moneyPerPart('1490000', 12)).toBe('124167');
+    expect(moneyPerPart('149000', 1)).toBe('149000');
+  });
+
+  it('số phần không hợp lệ thì trả nguyên số tiền', () => {
+    expect(moneyPerPart('149000', 0)).toBe('149000');
   });
 });

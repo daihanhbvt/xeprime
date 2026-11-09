@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
-import { paymentPath } from '@/constants/routes';
+import { invoicePaymentHref } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { SubscriptionInvoice } from '../types';
 import { InvoicePlanSummary } from './InvoicePlanSummary';
@@ -61,7 +61,7 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
             </span>
           ) : null}
         </div>
-        <Link href={paymentPath.invoice(invoice.id)} className={styles.payLink}>
+        <Link href={invoicePaymentHref(invoice)} className={styles.payLink}>
           <Button type="primary" size="large" icon={<CreditCardOutlined aria-hidden />}>
             {t('payNow')}
           </Button>

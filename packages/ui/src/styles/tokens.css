@@ -219,6 +219,7 @@
   --xp-color-text-on-dark: #ffffff;
   --xp-color-text-on-dark-muted: #d5d7da;
   --xp-color-primary-bright: #edbb4f;
+  --xp-color-gold-on-dark: #fcd34d;
   --xp-color-primary-pale: #f0ddb7;
   --xp-color-primary-accent: #d3a94d;
   --xp-color-primary-glow: #e9c336;
@@ -238,6 +239,7 @@
   --xp-color-pink-bg: #fdf2fa;
   --xp-color-pink-border: #faa7e0;
   --xp-color-warning-strong: #ec4a0a;
+  --xp-color-warning-high: #dc6803;
   --xp-color-info-strong: #1570ef;
   --xp-color-star: #fec84b;
   --xp-color-warning-subtle: #fffaeb;

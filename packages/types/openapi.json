@@ -32999,6 +32999,7 @@
                 "subscription_invoice",
                 "booking_hold",
                 "booking_extension",
+                "subscription_checkout",
                 "no_code"
               ]
             }
@@ -64245,6 +64246,289 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/subscription/checkouts": {
+      "post": {
+        "operationId": "SubscriptionController_createCheckout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubscriptionCheckoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SubscriptionCheckoutDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mua nhiều gói một lần — sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)",
+        "tags": [
+          "subscription"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/subscription/checkouts/{id}": {
+      "get": {
+        "operationId": "SubscriptionController_checkout",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SubscriptionCheckoutDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Một phiếu thanh toán gộp của gian hàng, kèm hoá đơn con (ADR 0083)",
+        "tags": [
+          "subscription"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/subscription/invoices": {
       "get": {
         "operationId": "SubscriptionController_invoices",
@@ -65469,7 +65753,149 @@
             }
           }
         },
-        "summary": "Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)",
+        "summary": "Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)",
+        "tags": [
+          "subscription"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/subscription/purchase/preview": {
+      "post": {
+        "operationId": "SubscriptionController_previewPurchase",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewSubscriptionPurchaseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SubscriptionPurchasePreviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem trước một lượt mua gói — loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)",
         "tags": [
           "subscription"
         ],
@@ -81435,7 +81861,8 @@
               "subscription_invoice",
               "booking_hold",
               "withdrawal_request",
-              "booking_extension"
+              "booking_extension",
+              "subscription_checkout"
             ],
             "nullable": true
           },
@@ -81464,7 +81891,7 @@
           "matchedInvoiceCode": {
             "type": "string",
             "nullable": true,
-            "description": "Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)"
+            "description": "Mã hoá đơn / phiếu gộp đã khớp (khi `matchedType` là `subscription_invoice` hoặc `subscription_checkout`)"
           },
           "refundReference": {
             "type": "string",
@@ -81560,7 +81987,8 @@
               "subscription_invoice",
               "booking_hold",
               "withdrawal_request",
-              "booking_extension"
+              "booking_extension",
+              "subscription_checkout"
             ],
             "nullable": true
           },
@@ -81589,7 +82017,7 @@
           "matchedInvoiceCode": {
             "type": "string",
             "nullable": true,
-            "description": "Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)"
+            "description": "Mã hoá đơn / phiếu gộp đã khớp (khi `matchedType` là `subscription_invoice` hoặc `subscription_checkout`)"
           },
           "refundReference": {
             "type": "string",
@@ -86028,7 +86456,7 @@
           "customerPhone": {
             "type": "string",
             "maxLength": 32,
-            "pattern": "^(0|\\+84)\\d{9}$",
+            "pattern": "^(?:0|\\+?84)(?:[35789]\\d{8}|2\\d{9})$",
             "description": "SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063)"
           },
           "client": {
@@ -86799,6 +87227,23 @@
         "required": [
           "bookingId",
           "rating"
+        ]
+      },
+      "CreateSubscriptionCheckoutDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Hai gói của HAI loại xe khác nhau (ô tô + xe máy). Gói doanh nghiệp không mua ở đây",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseSubscriptionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "CreateTenantCustomerDto": {
@@ -91514,8 +91959,8 @@
           "phone": {
             "type": "string",
             "example": "0901234567",
-            "pattern": "^(0|\\+84)\\d{9}$",
-            "description": "SĐT di động VN (`0xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua) — khách gọi số này để gặp người đón"
+            "pattern": "^(?:0|\\+?84)(?:[35789]\\d{8}|2\\d{9})$",
+            "description": "SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) — khách gọi số này để gặp người đón"
           }
         },
         "required": [
@@ -103545,6 +103990,22 @@
           }
         }
       },
+      "PreviewSubscriptionPurchaseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseSubscriptionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "PriceBoundsDto": {
         "type": "object",
         "properties": {
@@ -105268,6 +105729,11 @@
             "type": "string",
             "nullable": true
           },
+          "bioHtml": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giới thiệu ĐÃ ĐỊNH DẠNG — HTML đã lọc ở server (danh sách thẻ cho phép); null thì hiện `bio`"
+          },
           "address": {
             "type": "string",
             "nullable": true
@@ -105463,6 +105929,27 @@
           "brandCount"
         ]
       },
+      "PurchaseReplacedTermDto": {
+        "type": "object",
+        "properties": {
+          "planName": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "planName",
+          "startsAt",
+          "endsAt"
+        ]
+      },
       "PurchaseSubscriptionDto": {
         "type": "object",
         "properties": {
@@ -105486,7 +105973,8 @@
               "next_term",
               "now"
             ],
-            "description": "Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay"
+            "deprecated": true,
+            "description": "Bị bỏ qua — server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)"
           }
         },
         "required": [
@@ -107829,7 +108317,7 @@
           },
           "ownerPhone": {
             "type": "string",
-            "description": "Số điện thoại liên hệ của chủ xe",
+            "description": "SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)",
             "nullable": true
           },
           "ownerEmail": {
@@ -108297,6 +108785,11 @@
           "displayName": {
             "type": "string"
           },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện tài khoản chủ"
+          },
           "email": {
             "type": "string",
             "nullable": true
@@ -108744,6 +109237,70 @@
           "provider"
         ]
       },
+      "SubscriptionCheckoutDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Mã đối soát chuyển khoản, tiền tố XPC (ADR 0083)"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Tổng các hoá đơn con — VND, chuỗi (ADR 0007)"
+          },
+          "paidAmount": {
+            "type": "string",
+            "description": "Tiền đã về, cộng dồn — VND, chuỗi"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "issued",
+              "partially_paid",
+              "paid",
+              "void"
+            ]
+          },
+          "paidAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn chuyển khoản — quá hạn thì phiếu và mọi hoá đơn con cùng void"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "invoices": {
+            "description": "Hoá đơn con, theo thứ tự hiển thị loại xe (PLAN_VEHICLE_SCOPE_DISPLAY_ORDER)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionInvoiceDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "code",
+          "totalAmount",
+          "paidAmount",
+          "status",
+          "createdAt",
+          "invoices"
+        ]
+      },
       "SubscriptionDto": {
         "type": "object",
         "properties": {
@@ -108964,6 +109521,16 @@
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
+          },
+          "checkoutId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phiếu thanh toán GỘP chứa hoá đơn này (ADR 0083) — null = hoá đơn trả riêng bằng `code`. Có phiếu thì chuyển khoản bằng `checkoutCode`, không bằng `code`"
+          },
+          "checkoutCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã đối soát `XPC…` của phiếu gộp — mã để chuyển khoản khi có"
           }
         },
         "required": [
@@ -109020,6 +109587,97 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "SubscriptionPurchasePreviewDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionPurchasePreviewItemDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Tổng phải trả (VND, chuỗi)"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "SubscriptionPurchasePreviewItemDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "vehicleScope": {
+            "type": "string",
+            "enum": [
+              "all",
+              "car",
+              "motorbike"
+            ]
+          },
+          "termMonths": {
+            "type": "number",
+            "enum": [
+              1,
+              3,
+              6,
+              12
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "new",
+              "renew",
+              "upgrade",
+              "change_next"
+            ],
+            "description": "new = mua mới · renew = gia hạn nối tiếp · upgrade = nâng ngay · change_next = đổi gói từ kỳ sau"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Ngày bắt đầu DỰ KIẾN (ISO-8601 UTC). new/upgrade = lúc xem trước — kỳ thật bắt đầu khi tiền về"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Ngày kết thúc DỰ KIẾN (ISO-8601 UTC)"
+          },
+          "maxVehicles": {
+            "type": "number",
+            "nullable": true,
+            "description": "Trần xe; null = không giới hạn"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Số tiền của gói này (VND, chuỗi)"
+          },
+          "replacedTerms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseReplacedTermDto"
+            }
+          }
+        },
+        "required": [
+          "planId",
+          "planName",
+          "vehicleScope",
+          "termMonths",
+          "kind",
+          "startsAt",
+          "endsAt",
+          "amount",
+          "replacedTerms"
         ]
       },
       "SupportCaseDetailDto": {
@@ -110543,6 +111201,11 @@
             "type": "string",
             "nullable": true
           },
+          "bioHtml": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giới thiệu đã định dạng (HTML đã lọc ở server); null = chỉ có bản chữ thuần `bio`"
+          },
           "logoUrl": {
             "type": "string",
             "nullable": true
@@ -111487,7 +112150,12 @@
             "description": "Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ."
           },
           "bio": {
-            "type": "string"
+            "type": "string",
+            "description": "Giới thiệu CHỮ THUẦN. Gửi `bio` mà không kèm `bioHtml` (app native, form cũ) thì bản định dạng bị gỡ — hai bản không bao giờ nói hai điều khác nhau"
+          },
+          "bioHtml": {
+            "type": "string",
+            "description": "Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (đậm · nghiêng · gạch chân · căn lề). Server lọc theo danh sách thẻ cho phép và tự rút chữ thuần ghi vào `bio` (bỏ qua `bio` gửi kèm). Chuỗi rỗng = gỡ"
           },
           "logoUrl": {
             "type": "string"

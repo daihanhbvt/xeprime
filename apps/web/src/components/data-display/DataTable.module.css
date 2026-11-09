@@ -232,3 +232,16 @@
   display: flex;
   justify-content: center;
 }
+
+/*
+ * Ô tiêu đề cột — component "Table header cell" của design partner (mọi bảng redesign 11/2026,
+ * vd Thông tin cửa hàng `23999:111355`): `12px/Medium`, `Text/Gray/medium`. Mặc định AntD là chữ
+ * thân 14px đậm 600 màu chữ chính — to và nặng hơn design. Thêm `.ant-table-container` để độ đặc
+ * hiệu (0,3,2) thắng luật (0,2,2) của AntD mà không phụ thuộc thứ tự chèn style.
+ */
+.tableRoot :global(.ant-table-container) :global(.ant-table-thead) > tr > th {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
+}

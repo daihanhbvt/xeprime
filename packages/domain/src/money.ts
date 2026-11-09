@@ -85,6 +85,21 @@ export function sumMoney(values: readonly (MoneyString | null | undefined)[]): M
   return fromCents(values.reduce<bigint>((sum, value) => sum + toCents(value || '0'), 0n));
 }
 
+/**
+ * Số tiền QUY RA MỖI PHẦN — chỉ để HIỂN THỊ (vd giá một kỳ nhiều tháng quy ra "/tháng" trên bảng
+ * giá gói). Phép `bigint` trên xu như `sumMoney`, làm tròn tới ĐỒNG (nửa lên — ADR 0069: khoản tính
+ * ra đúng tới đồng, không tới 1.000đ). Không bao giờ vào một dòng tiền: hoá đơn ghi giá cả kỳ.
+ */
+export function moneyPerPart(value: MoneyString, parts: number): MoneyString {
+  if (!Number.isInteger(parts) || parts <= 0) return value;
+  const cents = toCents(value);
+  const divisor = BigInt(parts) * 100n;
+  const negative = cents < 0n;
+  const absolute = negative ? -cents : cents;
+  const dong = (absolute + divisor / 2n) / divisor;
+  return fromCents((negative ? -dong : dong) * 100n);
+}
+
 /** Số tiền có âm không — đọc trên chuỗi, cùng lý do như `isZeroMoney`. */
 export function isNegativeMoney(value: MoneyString | null | undefined): boolean {
   return Boolean(value) && toCents(value as MoneyString) < 0n;

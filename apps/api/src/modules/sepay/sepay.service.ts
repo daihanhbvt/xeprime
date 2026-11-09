@@ -247,7 +247,8 @@ export class SepayService {
   }
 
   /**
-   * Áp một giao dịch đã ghi vào đích của nó — hold (`XPH…`) hoặc hoá đơn gói (`XPG…`).
+   * Áp một giao dịch đã ghi vào đích của nó — hold (`XPH…`), phụ lục gia hạn (`XPE…`), phiếu gộp
+   * gói (`XPC…`) hoặc hoá đơn gói (`XPG…`).
    *
    * Lượt cập nhật `match_status` nằm TRONG chính transaction này, cùng với lượt cộng tiền: đó là
    * thứ làm cho `unmatched` có nghĩa "chưa áp gì" ở lần webhook sau.
@@ -337,6 +338,41 @@ export class SepayService {
           await this.markMatched(db, tx.providerTxId, {
             type: BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
             refId: applied.extensionId,
+            overpaid: applied.outcome === 'already_paid',
+          });
+          return { matched: true, note: applied.outcome };
+      }
+    }
+
+    // `XPC…` — PHIẾU GỘP nhiều gói (ADR 0083). Đủ tổng ⇒ mọi gói trong phiếu bật trong
+    // transaction này; tiền về cho phiếu đã void nằm lại hàng đợi như hoá đơn đơn lẻ.
+    if (target === BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT) {
+      const applied = await this.billing.applyCheckoutPaymentWithinTx(db, {
+        code: referenceCode,
+        amount: tx.amount,
+        providerTxId: tx.providerTxId,
+      });
+      switch (applied.outcome) {
+        case 'checkout_not_found':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Không tìm thấy phiếu thanh toán gói mang mã ${referenceCode}`,
+          );
+          return { matched: false, note: 'checkout_not_found' };
+        case 'checkout_closed':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Tiền về khi phiếu thanh toán gói ${referenceCode} không còn nhận tiền (${applied.status}) — cần đối soát tay: hoàn gian hàng`,
+          );
+          return { matched: false, note: `checkout_${applied.status}` };
+        case 'partial':
+        case 'already_paid':
+        case 'activated':
+          await this.markMatched(db, tx.providerTxId, {
+            type: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
+            refId: applied.checkoutId,
             overpaid: applied.outcome === 'already_paid',
           });
           return { matched: true, note: applied.outcome };

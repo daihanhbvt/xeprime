@@ -1,49 +1,20 @@
 'use client';
 
-import { Alert, App, Button, Skeleton } from 'antd';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Alert, Button, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
-  PERMISSION,
-  SELLER_ENTITY_TYPE,
-  SELLER_ENTITY_TYPE_VALUES,
   SELLER_PROFILE_STATUS,
   SELLER_PROFILE_STATUS_META,
   type SellerProfileStatus,
 } from '@xeprime/types';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { SelectField } from '@/components/form/SelectField';
-import { TextField } from '@/components/form/TextField';
 import { SectionCard } from '@/components/layout/SectionCard';
-import { usePermissions } from '@/hooks/use-permissions';
-import { useDomainLabel } from '@/i18n/use-domain-label';
-import { useErrorMessage } from '@/i18n/use-error-message';
 
-import { useSaveSellerProfile, useSellerProfile } from '../hooks/use-seller-profile';
-import { profileToSaveInput } from '../mappers';
-import { buildSellerProfileSchema, type SellerProfileFormValues } from '../schema';
-import type { SellerProfile } from '../types';
+import { useSellerProfile } from '../hooks/use-seller-profile';
+import { useSellerTaxForm } from '../hooks/use-seller-tax-form';
+import { SellerTaxFields } from './SellerTaxFields';
 import styles from './SellerTaxSection.module.css';
-
-/** Bốn trường màn này sửa — phần còn lại của hồ sơ đi qua `profileToSaveInput`. */
-type TaxFormValues = Pick<
-  SellerProfileFormValues,
-  'entityType' | 'legalName' | 'taxId' | 'idNumber'
->;
-
-const FIELDS: readonly (keyof TaxFormValues)[] = ['entityType', 'legalName', 'taxId', 'idNumber'];
-
-function toValues(profile: SellerProfile): TaxFormValues {
-  return {
-    entityType: profile.entityType as TaxFormValues['entityType'],
-    legalName: profile.legalName ?? '',
-    taxId: profile.taxId ?? '',
-    idNumber: profile.idNumber ?? '',
-  };
-}
 
 /**
  * "Thông tin khai thuế" — MỘT section, dựng ở trang hồ sơ của CẢ hai tuyến (07/10/2026): "Hồ sơ chủ
@@ -74,32 +45,10 @@ export function SellerTaxSection({ id }: { id: string }) {
   const t = useTranslations('Account.tax');
   const tSeller = useTranslations('SellerProfile');
   const tCommon = useTranslations('Common');
-  const { message } = App.useApp();
-  const domainLabel = useDomainLabel();
-  const errorMessage = useErrorMessage();
-  const { has } = usePermissions();
-
-  const canManage = has(PERMISSION.SELLER_PROFILE_MANAGE);
 
   const profileQuery = useSellerProfile();
-  const save = useSaveSellerProfile();
-
-  const schema = useMemo(
-    () =>
-      buildSellerProfileSchema({
-        taxId: tSeller('form.validation.taxId'),
-        idNumber: tSeller('form.validation.idNumber'),
-      }).pick(FIELDS),
-    [tSeller],
-  );
   const profile = profileQuery.data;
-
-  const { control, handleSubmit, formState, reset } = useForm<TaxFormValues>({
-    resolver: yupResolver(schema),
-    values: profile ? toValues(profile) : undefined,
-  });
-  const entityType = useWatch({ control, name: 'entityType' });
-  const isIndividual = entityType === SELLER_ENTITY_TYPE.INDIVIDUAL;
+  const { form, isIndividual, readOnly, dirty, saving, submit } = useSellerTaxForm(profile);
 
   if (profileQuery.isLoading) {
     return (
@@ -126,28 +75,7 @@ export function SellerTaxSection({ id }: { id: string }) {
     );
   }
 
-  const readOnly = !profile.editable || !canManage;
-  const dirty = formState.isDirty && !readOnly;
-
-  const onSave = handleSubmit((values) => {
-    // Enter vẫn submit form khi nút Lưu đang quay — chặn lượt thứ hai ở đây.
-    if (save.isPending) return;
-    save.mutate(
-      {
-        // Bản đầy đủ trước, bốn trường của màn này sau — không xoá phần màn này không hiện.
-        ...profileToSaveInput(profile),
-        entityType: values.entityType,
-        legalName: values.legalName || null,
-        taxId: values.taxId || null,
-        idNumber: values.idNumber || null,
-      },
-      {
-        onSuccess: () => message.success(t('saved')),
-        // Câu lỗi tra từ MÃ (ADR 0012), không hiện `message` tiếng Việt của backend.
-        onError: (err) => message.error(errorMessage(err)),
-      },
-    );
-  });
+  const onSave = submit();
 
   return (
     <SectionCard
@@ -193,62 +121,28 @@ export function SellerTaxSection({ id }: { id: string }) {
       ) : null}
       {!profile.editable ? (
         <Alert type="info" showIcon className={styles.alert} title={tSeller('page.readOnly')} />
-      ) : !canManage ? (
+      ) : readOnly ? (
         <Alert type="info" showIcon className={styles.alert} title={t('viewOnly')} />
       ) : null}
 
       <form onSubmit={onSave} noValidate>
-        <fieldset disabled={readOnly || save.isPending} className={styles.fieldset}>
-          {/*
-            `fieldset[disabled]` khoá ô NATIVE; ô CHỌN của AntD dựng bằng div nên phải nhận `disabled`
-            tường minh — không thì hồ sơ đã khoá vẫn đổi được loại chủ thể (và đổi luôn ô CCCD ↔ MST).
-          */}
-          <SelectField
-            control={control}
-            name="entityType"
-            label={t('entityType')}
-            disabled={readOnly || save.isPending}
-            required
-            options={SELLER_ENTITY_TYPE_VALUES.map((value) => ({
-              value,
-              label: domainLabel('sellerEntityType', value),
-            }))}
-            help={t('entityHint')}
+        <fieldset disabled={readOnly || saving} className={styles.fieldset}>
+          <SellerTaxFields
+            control={form.control}
+            isIndividual={isIndividual}
+            disabled={readOnly || saving}
           />
-
-          <TextField
-            control={control}
-            name="legalName"
-            label={isIndividual ? t('legalName') : t('legalNameBusiness')}
-            autoComplete="name"
-          />
-
-          {isIndividual ? (
-            <TextField
-              control={control}
-              name="idNumber"
-              label={t('idNumber')}
-              help={t('idNumberHint')}
-            />
-          ) : (
-            <TextField
-              control={control}
-              name="taxId"
-              label={t('taxId')}
-              help={tSeller('form.taxIdHint')}
-            />
-          )}
         </fieldset>
 
         {!readOnly ? (
           <div className={styles.actions}>
             {/* Chưa sửa gì thì không có gì để huỷ — nút không tồn tại, chứ không phải mờ đi. */}
             {dirty ? (
-              <Button onClick={() => reset()} disabled={save.isPending}>
+              <Button onClick={() => form.reset()} disabled={saving}>
                 {tCommon('actions.cancel')}
               </Button>
             ) : null}
-            <Button type="primary" htmlType="submit" loading={save.isPending} disabled={!dirty}>
+            <Button type="primary" htmlType="submit" loading={saving} disabled={!dirty}>
               {t('save')}
             </Button>
           </div>

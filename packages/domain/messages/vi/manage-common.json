@@ -16,9 +16,12 @@
     "account": "Tài khoản & bảo mật",
     "renterTrips": "Chuyến tôi đi thuê",
     "partnerHome": "Về trang chủ XePrime Partner",
-    "ownerProfile": "Hồ sơ chủ xe",
     "breadcrumb": "Vị trí trang",
-    "homeLink": "Về Tổng quan"
+    "homeLink": "Về Tổng quan",
+    "shopManage": "Quản lý gian hàng",
+    "rentalManage": "Quản lý cho thuê",
+    "workspace": "Gian hàng",
+    "upgradeToShop": "Nâng cấp gian hàng"
   },
   "permission": {
     "deniedTitle": "Bạn không có quyền truy cập",

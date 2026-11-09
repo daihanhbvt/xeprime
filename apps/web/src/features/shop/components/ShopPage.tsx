@@ -14,7 +14,6 @@ import {
   SHOP_WELCOME_PARAM,
   balancePayoutPath,
   shopSectionOf,
-  type ShopSection,
 } from '@/constants/routes';
 import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
@@ -30,17 +29,15 @@ import styles from './ShopPage.module.css';
 /**
  * Route lo năm việc: quyền, dữ liệu, mutation, các trạng thái chưa-có-dữ-liệu, và `?section=`.
  *
- * Tiêu đề, mục lục, dải trạng thái, checklist và nút Lưu nằm trong `ShopWorkspace` chứ không ở
- * đây: tất cả chỉ có nghĩa khi biết form CÓ THAY ĐỔI HAY CHƯA và CÒN THIẾU GÌ — hai câu hỏi mà chỉ
- * form trả lời được.
+ * Tiêu đề, các thẻ, hộp thoại sửa và checklist nằm trong `ShopWorkspace` chứ không ở đây: chúng
+ * dùng chung MỘT form hồ sơ, và chỉ form biết nhóm nào đang sửa dở.
  *
  * Không còn nút "Gửi xác minh" (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, và màn duyệt
  * của nền tảng chỉ nhận phiếu XE — một phiếu xác minh gửi lúc này không có ai xử lý.
  *
- * `?section=` đọc và ghi ở ĐÂY (ADR 0004: filter/điều hướng trong trang sống ở URL), rồi truyền
- * xuống như một giá trị đã phân giải — workspace không bao giờ phải nghĩ về chuỗi rác trong query.
- * `resetPage: false` vì đổi section KHÔNG đổi tập dữ liệu nào; nó chỉ cuộn. Để mặc định thì mỗi
- * lần bấm mục lục sẽ xoá `?page=` của bảng lịch sử hoá đơn đang mở ngay bên dưới.
+ * `?section=` đọc ở ĐÂY (ADR 0004: điều hướng trong trang sống ở URL), rồi truyền xuống như một giá
+ * trị đã phân giải — workspace không bao giờ phải nghĩ về chuỗi rác trong query. Trang không còn
+ * mục lục (design 06/11/2026), nên tham số chỉ còn là ĐÍCH CUỘN của link/redirect cũ.
  */
 export function ShopPage() {
   const t = useTranslations('Shop');
@@ -50,7 +47,7 @@ export function ShopPage() {
   const { has } = usePermissions();
   const { tenant } = useTenantScope();
 
-  const { filters, setFilters } = useUrlFilters((params) => ({
+  const { filters } = useUrlFilters((params) => ({
     section: shopSectionOf(params.get(SECTION_PARAM)),
     // Dẫn xuất, KHÔNG bao giờ ghi ngược lên URL — xem `ShopWorkspaceProps.sectionInUrl`.
     sectionInUrl: params.has(SECTION_PARAM),
@@ -137,7 +134,6 @@ export function ShopPage() {
         shop={shop}
         canEdit={canEdit}
         saving={updateProfile.isPending}
-        errorMessage={updateProfile.isError ? errorMessage(updateProfile.error) : null}
         section={filters.section}
         sectionInUrl={filters.sectionInUrl}
         /*
@@ -155,12 +151,16 @@ export function ShopPage() {
          * BIẾT.
          */
         hasVehicle={vehicles.isLoading || (vehicles.data?.items.length ?? 0) > 0}
-        onSectionChange={(section: ShopSection) => setFilters({ section }, { resetPage: false })}
         onSave={(body) =>
-          updateProfile.mutate(body, {
-            onSuccess: () => message.success(t('form.saved')),
-            onError: (error) => message.error(errorMessage(error)),
-          })
+          updateProfile.mutateAsync(body).then(
+            () => {
+              message.success(t('form.saved'));
+            },
+            (error: unknown) => {
+              message.error(errorMessage(error));
+              throw error;
+            },
+          )
         }
       />
     </div>

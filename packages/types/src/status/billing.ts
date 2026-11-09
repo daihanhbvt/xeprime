@@ -307,6 +307,11 @@ export const BANK_MATCH_TARGET_TYPE = {
   WITHDRAWAL_REQUEST: 'withdrawal_request',
   /** Khoản online của một phụ lục gia hạn đơn dài hạn — mã `XPE…` (ADR 0077). */
   BOOKING_EXTENSION: 'booking_extension',
+  /**
+   * PHIẾU THANH TOÁN GỘP nhiều hoá đơn gói (ô tô + xe máy trong một lần chuyển) — mã `XPC…`
+   * (ADR 0083). Đủ tổng thì mọi hoá đơn con kích hoạt cùng lúc.
+   */
+  SUBSCRIPTION_CHECKOUT: 'subscription_checkout',
 } as const;
 
 export type BankMatchTargetType =
@@ -337,6 +342,8 @@ export const REFERENCE_CODE_PREFIX = {
   [BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST]: 'XPW',
   /** Phụ lục gia hạn đơn dài hạn (ADR 0077) — cùng không gian tên, unique toàn sàn. */
   [BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION]: 'XPE',
+  /** Phiếu thanh toán gộp gói (ADR 0083) — CHECK ở DB đòi đúng tiền tố này. */
+  [BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT]: 'XPC',
 } as const;
 
 /**
@@ -350,6 +357,7 @@ export const BANK_TX_CODE_FILTER = {
   SUBSCRIPTION_INVOICE: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
   BOOKING_HOLD: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
   BOOKING_EXTENSION: BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
+  SUBSCRIPTION_CHECKOUT: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
   NO_CODE: 'no_code',
 } as const;
 

@@ -331,19 +331,35 @@ export class BankTransactionsService {
         paidAmount: true,
         createdAt: true,
         tenant: { select: { name: true } },
+        checkout: {
+          select: { id: true, code: true, status: true, totalAmount: true, paidAmount: true },
+        },
       },
     });
 
+    /*
+     * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) nhận tiền qua phiếu, nên gợi ý nói bằng con số của PHIẾU
+     * — mã XPC, tổng và phần còn thiếu của cả cụm — và chỉ MỘT dòng cho mỗi phiếu. `invoiceId` vẫn
+     * là một hoá đơn con: khớp tay vào nó tự chuyển sang phiếu (`applyBankPaymentWithinTx`).
+     */
+    const seenCheckouts = new Set<string>();
     return rows
+      .filter((r) => {
+        if (!r.checkout) return true;
+        if (seenCheckouts.has(r.checkout.id)) return false;
+        seenCheckouts.add(r.checkout.id);
+        return true;
+      })
       .map((r) => {
-        const remaining = r.totalAmount.sub(r.paidAmount);
+        const source = r.checkout ?? r;
+        const remaining = source.totalAmount.sub(source.paidAmount);
         return {
           invoiceId: r.id,
-          code: r.code,
+          code: source.code,
           tenantName: r.tenant.name,
-          status: r.status,
-          totalAmount: r.totalAmount.toString(),
-          paidAmount: r.paidAmount.toString(),
+          status: source.status,
+          totalAmount: source.totalAmount.toString(),
+          paidAmount: source.paidAmount.toString(),
           remainingAmount: remaining.toString(),
           amountMatches: remaining.equals(amount),
           createdAt: r.createdAt.toISOString(),
@@ -365,16 +381,18 @@ export class BankTransactionsService {
     rows: Array<Prisma.BankTransactionGetPayload<{ select: typeof SELECT }>>,
   ): Promise<BankTransactionDto[]> {
     const actorIds = [...new Set(rows.map((r) => r.matchedBy).filter((v): v is string => !!v))];
-    const invoiceIds = [
+    const refIdsOf = (type: string) => [
       ...new Set(
         rows
-          .filter((r) => r.matchedType === BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE)
+          .filter((r) => r.matchedType === type)
           .map((r) => r.matchedRefId)
           .filter((v): v is string => !!v),
       ),
     ];
+    const invoiceIds = refIdsOf(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE);
+    const checkoutIds = refIdsOf(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT);
 
-    const [actors, invoices] = await Promise.all([
+    const [actors, invoices, checkouts] = await Promise.all([
       actorIds.length
         ? this.prisma.user.findMany({
             where: { id: { in: actorIds } },
@@ -387,9 +405,16 @@ export class BankTransactionsService {
             select: { id: true, code: true },
           })
         : Promise.resolve([]),
+      checkoutIds.length
+        ? this.prisma.subscriptionCheckout.findMany({
+            where: { id: { in: checkoutIds } },
+            select: { id: true, code: true },
+          })
+        : Promise.resolve([]),
     ]);
     const actorName = new Map(actors.map((a) => [a.id, a.displayName]));
-    const invoiceCode = new Map(invoices.map((i) => [i.id, i.code]));
+    // Mã hoá đơn HOẶC mã phiếu gộp — id là ULID nên hai tập không đụng nhau.
+    const invoiceCode = new Map([...invoices, ...checkouts].map((i) => [i.id, i.code]));
 
     return rows.map((r) => ({
       id: r.id,
@@ -433,6 +458,7 @@ function codeFilterWhere(code: BankTxCodeFilter | undefined): Prisma.BankTransac
     case BANK_TX_CODE_FILTER.SUBSCRIPTION_INVOICE:
     case BANK_TX_CODE_FILTER.BOOKING_HOLD:
     case BANK_TX_CODE_FILTER.BOOKING_EXTENSION:
+    case BANK_TX_CODE_FILTER.SUBSCRIPTION_CHECKOUT:
       return {
         referenceCode: { startsWith: REFERENCE_CODE_PREFIX[code], mode: 'insensitive' },
       };

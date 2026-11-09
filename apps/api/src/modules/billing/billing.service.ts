@@ -25,6 +25,7 @@ import {
   type VehicleQuotaKind,
   packageTermCovering,
   planScopesConflict,
+  planVehicleScopeDisplayRank,
   planVehicleScopeOf,
   resolveActivePackageTerms,
   resolveEffectiveBilling,
@@ -42,13 +43,13 @@ import {
   type PlanStatus,
   SUBSCRIPTION_INVOICE_PAYABLE_STATUSES,
   SUBSCRIPTION_INVOICE_STATUS,
+  isSubscriptionInvoicePayable,
   SUBSCRIPTION_INVOICE_TTL_HOURS,
   SUBSCRIPTION_ASSIGN_KIND,
   SUBSCRIPTION_ASSIGN_KIND_ACTION,
   SUBSCRIPTION_AUDIT_ACTION,
   SUBSCRIPTION_CANCEL_BLOCK,
   SUBSCRIPTION_CANCEL_REASON,
-  SUBSCRIPTION_CHANGE_TIMING,
   SUBSCRIPTION_EDIT_BLOCK,
   SUBSCRIPTION_EDIT_MAX_END_MONTHS,
   SUBSCRIPTION_ORIGIN,
@@ -56,6 +57,7 @@ import {
   AUDIT_TARGET_TYPE,
   laterChainTermsOf,
   planSubscriptionChain,
+  selfServePurchaseTiming,
   subscriptionCancelBlockOf,
   subscriptionChainLockKey,
   subscriptionEditBlockOf,
@@ -64,6 +66,8 @@ import {
   subscriptionShiftPlan,
   subscriptionTermStateOf,
   type SubscriptionChainPlan,
+  type PlanPurchaseKind,
+  type SubscriptionCapTerm,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
   addCalendarMonthsVn,
@@ -85,18 +89,22 @@ import { NotificationService } from '../notification/notification.service';
 import {
   AssignSubscriptionDto,
   CreatePlanDto,
+  CreateSubscriptionCheckoutDto,
   CurrentPlanDto,
   MySubscriptionDto,
   PaymentInfoDto,
   PendingSubscriptionInvoiceDto,
   PlanDto,
   PlanListQueryDto,
+  PreviewSubscriptionPurchaseDto,
   PurchaseSubscriptionDto,
   SUBSCRIPTION_DEFAULT_LIMIT,
   SUBSCRIPTION_MAX_LIMIT,
+  SubscriptionCheckoutDto,
   SubscriptionDto,
   SubscriptionInvoiceDto,
   SubscriptionListQueryDto,
+  SubscriptionPurchasePreviewDto,
   TenantPlanCatalogDto,
   TenantPlanDto,
   UpdatePlanDto,
@@ -144,6 +152,7 @@ const INVOICE_SELECT = {
   paidAt: true,
   expiresAt: true,
   createdAt: true,
+  checkout: { select: { id: true, code: true } },
 } satisfies Prisma.SubscriptionInvoiceSelect;
 
 const SUB_SELECT = {
@@ -189,6 +198,27 @@ const TERM_SNAPSHOT_SELECT = {
 type TermSnapshotRow = Prisma.TenantSubscriptionGetPayload<{
   select: typeof TERM_SNAPSHOT_SELECT;
 }>;
+
+/** Kỳ kèm thứ đủ để đọc TRẦN XE — đầu vào của `selfServePurchaseTiming` (ADR 0084). */
+const CAP_TERM_SELECT = {
+  ...TERM_SNAPSHOT_SELECT,
+  quotaJson: true,
+  plan: { select: { code: true, name: true, limitsJson: true } },
+} satisfies Prisma.TenantSubscriptionSelect;
+
+type CapTermRow = Prisma.TenantSubscriptionGetPayload<{ select: typeof CAP_TERM_SELECT }> &
+  SubscriptionCapTerm;
+
+/** Trần xe của một kỳ: `quota_json` trước, bậc gói sau — biểu thức TƯỜNG MINH (ADR 0041 điều 3). */
+function withCap(
+  row: Prisma.TenantSubscriptionGetPayload<{ select: typeof CAP_TERM_SELECT }>,
+): CapTermRow {
+  const quota = parsePlanQuota(row.quotaJson);
+  return {
+    ...row,
+    maxVehicles: quota ? quota.maxVehicles : parsePlanLimits(row.plan.limitsJson).maxVehicles,
+  };
+}
 
 /** Đủ để sửa một kỳ (ADR 0080): snapshot cho audit + giá, hạn mức, ghi chú, nguồn gốc. */
 const EDIT_SELECT = {
@@ -1369,25 +1399,47 @@ export class BillingService {
       planId: string;
       /** Phạm vi loại xe của bậc được gán (ADR 0065) — chỉ kỳ ở phạm vi XUNG ĐỘT bị nối/huỷ. */
       vehicleScope: PlanVehicleScope;
-      timing?: string | null;
+      /**
+       * Admin gán: thời điểm admin chọn. Gian hàng tự mua: `{ selfServe }` — thời điểm SUY từ trần xe
+       * của bậc so với các kỳ còn hạn, đọc SAU khoá (ADR 0084).
+       */
+      timing: string | null | undefined | { selfServe: { maxVehicles: number | null } };
       /** `null` = hệ thống (webhook) — không có lượt "đổi gói ngay" nào từ đường đó. */
       actorUserId: string | null;
       now: Date;
     },
-  ): Promise<SubscriptionChainPlan<TermSnapshotRow>> {
+  ): Promise<SubscriptionChainPlan<TermSnapshotRow> & { purchaseKind: PlanPurchaseKind | null }> {
     await lockSubscriptionChain(tx, args.tenantId);
-    const live = await tx.tenantSubscription.findMany({
-      where: {
-        tenantId: args.tenantId,
-        status: SUBSCRIPTION_STATUS.ACTIVE,
-        endsAt: { gt: args.now },
-      },
-      orderBy: { startsAt: 'asc' },
-      select: TERM_SNAPSHOT_SELECT,
-    });
+    const live = (
+      await tx.tenantSubscription.findMany({
+        where: {
+          tenantId: args.tenantId,
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+          endsAt: { gt: args.now },
+        },
+        orderBy: { startsAt: 'asc' },
+        select: CAP_TERM_SELECT,
+      })
+    ).map(withCap);
+    const decision =
+      args.timing && typeof args.timing === 'object'
+        ? selfServePurchaseTiming(
+            live,
+            {
+              planId: args.planId,
+              vehicleScope: args.vehicleScope,
+              maxVehicles: args.timing.selfServe.maxVehicles,
+            },
+            args.now,
+          )
+        : null;
     const chain = planSubscriptionChain(
       live,
-      { planId: args.planId, timing: args.timing, vehicleScope: args.vehicleScope },
+      {
+        planId: args.planId,
+        timing: decision ? decision.timing : (args.timing as string | null | undefined),
+        vehicleScope: args.vehicleScope,
+      },
       args.now,
     );
     if (chain.cancel.length > 0) {
@@ -1419,7 +1471,7 @@ export class BillingService {
         tx,
       );
     }
-    return chain;
+    return { ...chain, purchaseKind: decision?.kind ?? null };
   }
 
   /**
@@ -1471,14 +1523,7 @@ export class BillingService {
     const others = PLAN_VEHICLE_SCOPE_VALUES.filter(
       (other) => other !== scope && planScopesConflict(scope, other),
     );
-    await tx.subscriptionInvoice.updateMany({
-      where: {
-        tenantId,
-        status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
-        vehicleScope: { in: others },
-      },
-      data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
-    });
+    await this.voidIssuedInvoicesWithinTx(tx, { tenantId, vehicleScope: { in: others } });
   }
 
   async assignDefaultPlanWithinTx(
@@ -1746,6 +1791,258 @@ export class BillingService {
     dto: PurchaseSubscriptionDto,
   ): Promise<SubscriptionInvoiceDto> {
     await this.assertTenant(tenantId);
+    const prepared = await this.preparePurchase(dto);
+    const now = new Date();
+    const live = await this.liveTermsOf(tenantId, now);
+    const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await this.lockTenantPurchasesWithinTx(tx, tenantId);
+      return this.issuePurchaseWithinTx(tx, {
+        tenantId,
+        actorUserId,
+        prepared,
+        live,
+        now,
+        expiresAt,
+        checkoutId: null,
+      });
+    });
+    return toInvoiceDto(row);
+  }
+
+  /**
+   * Mua NHIỀU gói trong MỘT lần chuyển khoản (ADR 0083): gói ô tô + gói xe máy → hai hoá đơn (mỗi
+   * loại xe một hoá đơn, ADR 0065 điều 6 giữ nguyên) gom dưới MỘT phiếu `XPC…`.
+   *
+   * Mọi luật của lượt mua đơn lẻ áp NGUYÊN cho từng phần tử — cùng `preparePurchase` +
+   * `issuePurchaseWithinTx`, cùng advisory lock theo tenant: hoá đơn `issued` cũ cùng phạm vi bị void
+   * (kèm phiếu chứa nó), hoá đơn đã nhận một phần tiền chặn lượt mua. Hai phần tử phải là HAI phạm
+   * vi không xung đột — trùng loại xe hay có bậc doanh nghiệp (`all`) là một lượt mua vô nghĩa:
+   * phần tử sau sẽ void phần tử trước ngay trong cùng transaction.
+   *
+   * Cả phiếu ra đời hoặc không gì cả: một phần tử hỏng (bậc ngừng bán, kỳ không bán…) thì không có
+   * hoá đơn nào — khác với chuỗi gọi `purchase` lần lượt, nơi hoá đơn đầu vẫn sống khi lượt sau hỏng.
+   */
+  async createCheckout(
+    tenantId: string,
+    actorUserId: string,
+    dto: CreateSubscriptionCheckoutDto,
+  ): Promise<SubscriptionCheckoutDto> {
+    await this.assertTenant(tenantId);
+    const prepared: PreparedPurchase[] = [];
+    for (const item of dto.items) prepared.push(await this.preparePurchase(item));
+    assertCombinableScopes(prepared);
+
+    const now = new Date();
+    const live = await this.liveTermsOf(tenantId, now);
+    const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
+    const total = prepared.reduce(
+      (sum, item) => sum.add(item.pricing.total),
+      new Prisma.Decimal(0),
+    );
+    // Thứ tự hoá đơn con = thứ tự hiển thị loại xe, không phụ thuộc thứ tự client gửi.
+    const ordered = [...prepared].sort(
+      (a, b) =>
+        planVehicleScopeDisplayRank(a.vehicleScope) - planVehicleScopeDisplayRank(b.vehicleScope),
+    );
+
+    const checkoutId = await this.prisma.$transaction(async (tx) => {
+      await this.lockTenantPurchasesWithinTx(tx, tenantId);
+      const checkout = await tx.subscriptionCheckout.create({
+        data: {
+          id: newId(),
+          tenantId,
+          code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT),
+          totalAmount: total,
+          expiresAt,
+        },
+        select: { id: true, code: true },
+      });
+      const invoiceIds: string[] = [];
+      for (const item of ordered) {
+        const invoice = await this.issuePurchaseWithinTx(tx, {
+          tenantId,
+          actorUserId,
+          prepared: item,
+          live,
+          now,
+          expiresAt,
+          checkoutId: checkout.id,
+        });
+        invoiceIds.push(invoice.id);
+      }
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId,
+          actorScope: 'tenant',
+          action: 'subscription_checkout.issue',
+          targetType: AUDIT_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
+          targetId: checkout.id,
+          after: {
+            code: checkout.code,
+            invoiceIds,
+            totalAmount: total.toString(),
+            expiresAt: expiresAt.toISOString(),
+          },
+        },
+        tx,
+      );
+      return checkout.id;
+    });
+    return this.checkoutForTenant(tenantId, checkoutId);
+  }
+
+  /**
+   * XEM TRƯỚC một lượt mua (ADR 0084) — bước "Kỳ hạn & xác nhận" của hộp mua gói đọc ở đây, không tự
+   * suy ở client (client chỉ thấy kỳ ĐANG CHẠY, không thấy kỳ đã xếp lịch). Cùng `preparePurchase`,
+   * cùng `selfServePurchaseTiming` + `planSubscriptionChain` mà lượt mua thật dùng; không ghi gì.
+   *
+   * Ngày là DỰ KIẾN: lượt mua mới / nâng bậc bắt đầu lúc tiền về, và lúc đó server suy lại.
+   */
+  async previewPurchase(
+    tenantId: string,
+    dto: PreviewSubscriptionPurchaseDto,
+  ): Promise<SubscriptionPurchasePreviewDto> {
+    await this.assertTenant(tenantId);
+    const prepared: PreparedPurchase[] = [];
+    for (const item of dto.items) prepared.push(await this.preparePurchase(item));
+    assertCombinableScopes(prepared);
+
+    const now = new Date();
+    const live = await this.liveTermsOf(tenantId, now);
+    const items = [...prepared]
+      .sort(
+        (a, b) =>
+          planVehicleScopeDisplayRank(a.vehicleScope) - planVehicleScopeDisplayRank(b.vehicleScope),
+      )
+      .map((item) => {
+        const decision = selfServePurchaseTiming(
+          live,
+          {
+            planId: item.plan.id,
+            vehicleScope: item.vehicleScope,
+            maxVehicles: item.limits.maxVehicles,
+          },
+          now,
+        );
+        const chain = planSubscriptionChain(
+          live,
+          { planId: item.plan.id, vehicleScope: item.vehicleScope, timing: decision.timing },
+          now,
+        );
+        return {
+          planId: item.plan.id,
+          planName: item.plan.name,
+          vehicleScope: item.vehicleScope,
+          termMonths: item.termMonths,
+          kind: decision.kind,
+          startsAt: chain.startsAt.toISOString(),
+          endsAt: addCalendarMonthsVn(chain.startsAt, item.termMonths).toISOString(),
+          maxVehicles: item.limits.maxVehicles,
+          amount: item.pricing.total.toString(),
+          replacedTerms: chain.cancel
+            .filter(isPaidRow)
+            .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+            .map((term) => ({
+              planName: term.plan.name,
+              startsAt: term.startsAt.toISOString(),
+              endsAt: term.endsAt.toISOString(),
+            })),
+        };
+      });
+    return {
+      items,
+      total: prepared
+        .reduce((sum, item) => sum.add(item.pricing.total), new Prisma.Decimal(0))
+        .toString(),
+    };
+  }
+
+  /**
+   * MỘT phiếu thanh toán gộp của chính gian hàng, kèm hoá đơn con — nguồn của trang thanh toán
+   * `/payment/checkout/:id`. Lọc theo tenant trong câu truy vấn: id của gian hàng khác là 404.
+   */
+  async checkoutForTenant(tenantId: string, checkoutId: string): Promise<SubscriptionCheckoutDto> {
+    const row = await this.prisma.subscriptionCheckout.findFirst({
+      where: { id: checkoutId, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        code: true,
+        totalAmount: true,
+        paidAmount: true,
+        status: true,
+        paidAt: true,
+        expiresAt: true,
+        createdAt: true,
+        invoices: { select: INVOICE_SELECT },
+      },
+    });
+    if (!row) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy phiếu thanh toán',
+      });
+    }
+    const invoices = row.invoices
+      .map(toInvoiceDto)
+      .sort(
+        (a, b) =>
+          planVehicleScopeDisplayRank(a.vehicleScope) - planVehicleScopeDisplayRank(b.vehicleScope),
+      );
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      code: row.code,
+      totalAmount: row.totalAmount.toString(),
+      paidAmount: row.paidAmount.toString(),
+      status: row.status,
+      paidAt: row.paidAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      invoices,
+    };
+  }
+
+  /**
+   * KHOÁ THEO TENANT cho mọi lượt phát hành hoá đơn gói, giữ tới hết transaction.
+   *
+   * Không có unique nào chặn được "hai hoá đơn payable của cùng một tenant": `code` là chuỗi
+   * ngẫu nhiên nên hai dòng luôn hợp lệ với DB. Ở Read Committed, hai lần bấm "Tạo hoá đơn"
+   * song song (hai tab, hay một cú double-click) cùng đọc tập hoá đơn cũ như nhau, cùng void
+   * nó, rồi mỗi bên INSERT một dòng mới — kết quả là hai mã XPG cùng sống, và hai lần chuyển
+   * khoản đều kích hoạt gói.
+   *
+   * Advisory lock thay vì `SELECT … FOR UPDATE`: thứ cần bảo vệ là sự VẮNG MẶT của một hàng
+   * (chưa có hoá đơn nào), mà khoá hàng thì không khoá được hàng chưa tồn tại.
+   */
+  private async lockTenantPurchasesWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+  ): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`;
+  }
+
+  /**
+   * Kỳ ĐANG CÒN HẠN của tenant — đầu vào của phép tính kỳ DỰ KIẾN in trên hoá đơn
+   * (`planSubscriptionChain`). Kỳ thật chốt lại lúc tiền về (`activateFromInvoiceWithinTx`).
+   */
+  private async liveTermsOf(tenantId: string, now: Date): Promise<CapTermRow[]> {
+    const rows = await this.prisma.tenantSubscription.findMany({
+      where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
+      select: CAP_TERM_SELECT,
+    });
+    return rows.map(withCap);
+  }
+
+  /**
+   * Phần KIỂM + TÍNH GIÁ của một lượt mua — mọi thứ không cần transaction: bậc còn bán, tự mua
+   * được, kỳ hạn có trong bảng giá, tổng khác 0. Lớp chặn thật của cả `purchase` lẫn
+   * `createCheckout`; ẩn thẻ ở màn mua chỉ là UX.
+   */
+  private async preparePurchase(dto: PurchaseSubscriptionDto): Promise<PreparedPurchase> {
     const plan = await this.loadPlan(dto.planId);
     /*
      * Bậc CHƯA MỞ BÁN có mã riêng (`PLAN_NOT_PUBLISHED`): người đang xem bảng giá cần câu "chọn
@@ -1825,8 +2122,36 @@ export class BillingService {
       });
     }
 
-    const now = new Date();
-    const vehicleScope = planVehicleScopeOf(plan.vehicleScope);
+    return {
+      plan,
+      limits,
+      pricing,
+      termMonths: dto.termMonths,
+      vehicleScope: planVehicleScopeOf(plan.vehicleScope),
+    };
+  }
+
+  /**
+   * Phần GHI của một lượt mua — chạy TRONG transaction của nơi gọi, sau
+   * `lockTenantPurchasesWithinTx`. Void hoá đơn `issued` cùng phạm vi (kèm phiếu gộp chứa nó), chặn
+   * khi có hoá đơn đã nhận một phần tiền, rồi phát hành hoá đơn mới (gắn `checkoutId` khi là phần
+   * tử của một phiếu gộp).
+   */
+  private async issuePurchaseWithinTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      tenantId: string;
+      actorUserId: string;
+      prepared: PreparedPurchase;
+      live: CapTermRow[];
+      now: Date;
+      expiresAt: Date;
+      checkoutId: string | null;
+    },
+  ) {
+    const { tenantId, actorUserId, now, expiresAt } = args;
+    const { plan, limits, pricing, vehicleScope } = args.prepared;
+    const termMonths = args.prepared.termMonths;
     /*
      * Hoá đơn của mọi phạm vi XUNG ĐỘT (ADR 0065): mua gói ô tô ⇒ {car, all}; mua bậc `all` ⇒ cả ba.
      * Unique ở DB chỉ giữ "một hoá đơn trả được mỗi phạm vi" theo phạm vi CHÍNH XÁC, nên phần xung
@@ -1841,34 +2166,19 @@ export class BillingService {
      * (`planSubscriptionChain`, theo phạm vi): mua gói xe máy khi đang có gói ô tô thì bắt đầu
      * NGAY, không nối sau kỳ ô tô. Kỳ thật chốt lại lúc tiền về (`activateFromInvoiceWithinTx`).
      */
-    const live = await this.prisma.tenantSubscription.findMany({
-      where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
-      select: TERM_SNAPSHOT_SELECT,
-    });
-    const timing = dto.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
+    const { timing } = selfServePurchaseTiming(
+      args.live,
+      { planId: plan.id, vehicleScope, maxVehicles: limits.maxVehicles },
+      now,
+    );
     const periodFrom = planSubscriptionChain(
-      live,
+      args.live,
       { planId: plan.id, vehicleScope, timing },
       now,
     ).startsAt;
-    const periodTo = addCalendarMonthsVn(periodFrom, dto.termMonths);
-    const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
+    const periodTo = addCalendarMonthsVn(periodFrom, termMonths);
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      /*
-       * KHOÁ THEO TENANT, giữ tới hết transaction.
-       *
-       * Không có unique nào chặn được "hai hoá đơn payable của cùng một tenant": `code` là chuỗi
-       * ngẫu nhiên nên hai dòng luôn hợp lệ với DB. Ở Read Committed, hai lần bấm "Tạo hoá đơn"
-       * song song (hai tab, hay một cú double-click) cùng đọc tập hoá đơn cũ như nhau, cùng void
-       * nó, rồi mỗi bên INSERT một dòng mới — kết quả là hai mã XPG cùng sống, và hai lần chuyển
-       * khoản đều kích hoạt gói.
-       *
-       * Advisory lock thay vì `SELECT … FOR UPDATE`: thứ cần bảo vệ là sự VẮNG MẶT của một hàng
-       * (chưa có hoá đơn nào), mà khoá hàng thì không khoá được hàng chưa tồn tại.
-       */
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`;
-
+    {
       /*
        * GIỮ hàng `plans` tới hết transaction (`FOR KEY SHARE`) — hoá đơn trỏ tới bậc gói qua
        * `lines_json.planId`, không có FK nào khiến DB tự chặn `deletePlan` chạy song song. Không
@@ -1905,31 +2215,30 @@ export class BillingService {
           status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
         },
         orderBy: { createdAt: 'desc' },
-        select: { code: true },
+        select: { code: true, checkout: { select: { code: true } } },
       });
       if (partiallyPaid) {
+        // Hoá đơn thuộc phiếu gộp nhận tiền QUA phiếu — mã cần chuyển bù là mã của phiếu.
+        const code = partiallyPaid.checkout?.code ?? partiallyPaid.code;
         throw new ConflictException({
           code: API_ERROR_CODE.SUBSCRIPTION_INVOICE_PARTIALLY_PAID,
-          message: `Hoá đơn ${partiallyPaid.code} đã nhận một phần tiền — chuyển nốt phần còn thiếu theo đúng mã đó thay vì tạo hoá đơn mới`,
-          details: { code: partiallyPaid.code },
+          message: `Hoá đơn ${code} đã nhận một phần tiền — chuyển nốt phần còn thiếu theo đúng mã đó thay vì tạo hoá đơn mới`,
+          details: { code },
         });
       }
 
-      await tx.subscriptionInvoice.updateMany({
-        where: {
-          tenantId,
-          vehicleScope: { in: conflictingScopes },
-          status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
-        },
-        data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+      await this.voidIssuedInvoicesWithinTx(tx, {
+        tenantId,
+        vehicleScope: { in: conflictingScopes },
       });
       const invoice = await this.createInvoiceWithinTx(tx, {
         tenantId,
         subscriptionId: null,
+        checkoutId: args.checkoutId,
         snapshot: {
           planId: plan.id,
           planCode: plan.code,
-          termMonths: dto.termMonths,
+          termMonths,
           vehicleScope,
           timing,
           quota: quotaOf(limits),
@@ -1952,8 +2261,9 @@ export class BillingService {
           targetId: invoice.id,
           after: {
             code: invoice.code,
+            checkoutId: args.checkoutId,
             planCode: plan.code,
-            termMonths: dto.termMonths,
+            termMonths,
             vehicleScope,
             quota: quotaOf(limits),
             totalAmount: invoice.totalAmount.toString(),
@@ -1963,8 +2273,55 @@ export class BillingService {
         tx,
       );
       return invoice;
+    }
+  }
+
+  /**
+   * VOID mọi hoá đơn `issued` khớp `where` — và PHIẾU GỘP chứa chúng cùng mọi hoá đơn anh em
+   * (ADR 0083). Đường void duy nhất của các lượt mua / kích hoạt trong service này.
+   *
+   * Vì sao kéo cả phiếu: tổng của phiếu là tổng các hoá đơn con. Void một con mà phiếu còn sống thì
+   * khách chuyển đủ tổng cũ cho một phiếu không còn kích hoạt được phần đã void — tiền về một nơi
+   * không có hàng để giao.
+   *
+   * Phiếu bị void TRƯỚC (một `UPDATE` có điều kiện trạng thái — chờ khoá hàng nếu lượt tiền về đang
+   * cầm `FOR UPDATE` trên phiếu, rồi đọc lại trạng thái), con void SAU theo đúng tập phiếu vừa void.
+   * Phiếu đã có tiền (`partially_paid`) không void — cùng luật với hoá đơn đơn lẻ.
+   */
+  private async voidIssuedInvoicesWithinTx(
+    tx: Prisma.TransactionClient,
+    where: Prisma.SubscriptionInvoiceWhereInput,
+  ): Promise<void> {
+    const issued = await tx.subscriptionInvoice.findMany({
+      where: { ...where, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
+      select: { id: true, checkoutId: true },
     });
-    return toInvoiceDto(row);
+    if (issued.length === 0) return;
+    const standalone = issued.filter((row) => row.checkoutId === null).map((row) => row.id);
+    if (standalone.length) {
+      await tx.subscriptionInvoice.updateMany({
+        where: { id: { in: standalone }, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
+        data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+      });
+    }
+    const checkoutIds = [
+      ...new Set(issued.map((row) => row.checkoutId).filter((id): id is string => id !== null)),
+    ];
+    if (checkoutIds.length === 0) return;
+    const voided = await tx.$queryRaw<{ id: string }[]>`
+      UPDATE subscription_checkouts
+         SET status = ${SUBSCRIPTION_INVOICE_STATUS.VOID}, updated_at = now()
+       WHERE id = ANY(${checkoutIds}::char(26)[])
+         AND status = ${SUBSCRIPTION_INVOICE_STATUS.ISSUED}
+      RETURNING id`;
+    if (voided.length === 0) return;
+    await tx.subscriptionInvoice.updateMany({
+      where: {
+        checkoutId: { in: voided.map((row) => row.id) },
+        status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      },
+      data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+    });
   }
 
   /**
@@ -2020,9 +2377,57 @@ export class BillingService {
   > {
     const invoice = await tx.subscriptionInvoice.findUnique({
       where: { code: args.code.toUpperCase() },
-      select: { id: true, tenantId: true, status: true, totalAmount: true, linesJson: true },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+        totalAmount: true,
+        linesJson: true,
+        checkout: { select: { code: true } },
+      },
     });
     if (!invoice) return { outcome: 'invoice_not_found' };
+
+    /*
+     * Hoá đơn thuộc PHIẾU GỘP nhận tiền QUA phiếu (ADR 0083) — kể cả khi khách (hay admin khớp tay)
+     * dùng mã của chính hoá đơn. Cộng vào hoá đơn con thì một khoản kích hoạt MỘT gói trong khi
+     * khách đã mua hai, và tổng của phiếu không bao giờ khớp nữa.
+     */
+    if (invoice.checkout) {
+      const applied = await this.applyCheckoutPaymentWithinTx(tx, {
+        code: invoice.checkout.code,
+        amount: args.amount,
+        providerTxId: args.providerTxId,
+      });
+      switch (applied.outcome) {
+        case 'checkout_not_found':
+          return { outcome: 'invoice_not_found' };
+        case 'checkout_closed':
+          return {
+            outcome: 'invoice_closed',
+            invoiceId: invoice.id,
+            tenantId: invoice.tenantId,
+            status: applied.status,
+          };
+        case 'partial':
+          return {
+            outcome: 'partial',
+            invoiceId: invoice.id,
+            tenantId: invoice.tenantId,
+            paid: applied.paid,
+            total: applied.total,
+          };
+        case 'already_paid':
+          return { outcome: 'already_paid', invoiceId: invoice.id, tenantId: invoice.tenantId };
+        case 'activated':
+          return {
+            outcome: 'activated',
+            invoiceId: invoice.id,
+            tenantId: invoice.tenantId,
+            subscriptionId: applied.subscriptionIds[0] ?? '',
+          };
+      }
+    }
 
     // string[] tường minh: cột status là String (ADR 0005) nên phép includes so với giá trị DB.
     const payable: string[] = [...SUBSCRIPTION_INVOICE_PAYABLE_STATUSES];
@@ -2122,6 +2527,140 @@ export class BillingService {
   }
 
   /**
+   * Áp MỘT khoản tiền ngân hàng vào PHIẾU THANH TOÁN GỘP theo mã `XPC…` (ADR 0083) — cùng hợp
+   * đồng với `applyBankPaymentWithinTx`: `SepayService` gọi TRONG transaction của dòng
+   * `bank_transactions`.
+   *
+   * ## Khoá hàng phiếu, không claim từng bước
+   *
+   * Phiếu có nhiều hoá đơn con, và lượt "đủ tiền" phải lật TẤT CẢ cùng lúc. `SELECT … FOR UPDATE`
+   * trên hàng phiếu tuần tự hoá mọi lượt chạm vào nó: hai khoản tiền song song, lượt void của job
+   * hết hạn, lượt void do mua lại — tất cả đều `UPDATE` hàng phiếu trước, nên chờ nhau thay vì đan
+   * xen. Sau khoá, trạng thái đọc lại là trạng thái thật.
+   *
+   * ## Thiếu / đủ / thừa — cùng luật hoá đơn đơn lẻ (ADR 0016 điều 6)
+   *
+   *  - thiếu ⇒ phiếu VÀ mọi hoá đơn con cùng `partially_paid`, thôi hạn void (`expires_at` NULL):
+   *    các luật đã có (chặn mua mới cùng loại xe, job không void) tự áp lên từng hoá đơn con;
+   *  - đủ ⇒ phiếu `paid`; mỗi hoá đơn con `paid` với `paid_amount` = đúng tổng của nó (phân bổ),
+   *    rồi kích hoạt LẦN LƯỢT — một kỳ hỏng thì cả transaction đổ, SePay gửi lại, không nửa vời;
+   *  - thừa / tiền về lần nữa ⇒ cộng vào `paid_amount` của PHIẾU làm bằng chứng chênh lệch.
+   */
+  async applyCheckoutPaymentWithinTx(
+    tx: Prisma.TransactionClient,
+    args: { code: string; amount: Prisma.Decimal; providerTxId: string },
+  ): Promise<
+    | { outcome: 'checkout_not_found' }
+    | { outcome: 'checkout_closed'; checkoutId: string; tenantId: string; status: string }
+    | { outcome: 'partial'; checkoutId: string; tenantId: string; paid: string; total: string }
+    | { outcome: 'already_paid'; checkoutId: string; tenantId: string }
+    | { outcome: 'activated'; checkoutId: string; tenantId: string; subscriptionIds: string[] }
+  > {
+    const locked = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM subscription_checkouts WHERE code = ${args.code.toUpperCase()} FOR UPDATE`;
+    const [lockedRow] = locked;
+    if (!lockedRow) return { outcome: 'checkout_not_found' };
+    const checkout = await tx.subscriptionCheckout.findUniqueOrThrow({
+      where: { id: lockedRow.id },
+      select: { id: true, tenantId: true, status: true, totalAmount: true, paidAmount: true },
+    });
+    const base = { checkoutId: checkout.id, tenantId: checkout.tenantId };
+
+    if (checkout.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
+      await tx.subscriptionCheckout.update({
+        where: { id: checkout.id },
+        data: { paidAmount: { increment: args.amount } },
+      });
+      return { outcome: 'already_paid', ...base };
+    }
+    if (!isSubscriptionInvoicePayable(checkout.status)) {
+      // `void`: tiền về cho một mã đã chết — nằm lại hàng đợi đối soát để admin quyết (hoàn khách).
+      return { outcome: 'checkout_closed', ...base, status: checkout.status };
+    }
+
+    const members = await tx.subscriptionInvoice.findMany({
+      where: { checkoutId: checkout.id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, status: true, totalAmount: true, linesJson: true },
+    });
+    /*
+     * Bất biến của `voidIssuedInvoicesWithinTx`: con void thì phiếu void theo. Một phiếu còn mở mà
+     * có con không nhận tiền được là dữ liệu sai lệch (sửa tay?) — KHÔNG kích hoạt một phần; để
+     * admin xử ở hàng đợi.
+     */
+    const broken = members.find((member) => !isSubscriptionInvoicePayable(member.status));
+    if (members.length === 0 || broken) {
+      this.logger.warn(
+        `Phiếu ${checkout.id} còn mở nhưng có hoá đơn con không nhận tiền được — chuyển hàng đợi đối soát.`,
+      );
+      return {
+        outcome: 'checkout_closed',
+        ...base,
+        status: broken?.status ?? SUBSCRIPTION_INVOICE_STATUS.VOID,
+      };
+    }
+
+    const paid = checkout.paidAmount.add(args.amount);
+    if (paid.lt(checkout.totalAmount)) {
+      await tx.subscriptionCheckout.update({
+        where: { id: checkout.id },
+        data: {
+          paidAmount: paid,
+          status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+          expiresAt: null,
+        },
+      });
+      await tx.subscriptionInvoice.updateMany({
+        where: { checkoutId: checkout.id, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
+        data: { status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID, expiresAt: null },
+      });
+      return {
+        outcome: 'partial',
+        ...base,
+        paid: paid.toString(),
+        total: checkout.totalAmount.toString(),
+      };
+    }
+
+    const paidAt = new Date();
+    await tx.subscriptionCheckout.update({
+      where: { id: checkout.id },
+      data: {
+        paidAmount: paid,
+        status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+        paidAt,
+        expiresAt: null,
+      },
+    });
+    // Lật HẾT trước, kích hoạt SAU: lượt kích hoạt con đầu void hoá đơn `issued` xung đột — con
+    // thứ hai đã `paid` nên không bao giờ bị cuốn theo.
+    for (const member of members) {
+      await tx.subscriptionInvoice.update({
+        where: { id: member.id },
+        data: {
+          status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+          paidAmount: member.totalAmount,
+          paidAt,
+          expiresAt: null,
+        },
+      });
+    }
+    const subscriptionIds: string[] = [];
+    for (const member of members) {
+      subscriptionIds.push(
+        await this.activateFromInvoiceWithinTx(tx, {
+          invoiceId: member.id,
+          tenantId: checkout.tenantId,
+          totalAmount: member.totalAmount,
+          linesJson: member.linesJson,
+          providerTxId: args.providerTxId,
+        }),
+      );
+    }
+    return { outcome: 'activated', ...base, subscriptionIds };
+  }
+
+  /**
    * Mở gói từ SNAPSHOT của hoá đơn đã trả đủ — kỳ THẬT chốt tại đây (nối đuôi gói còn hạn,
    * đúng phép tính của `assign`), không phải kỳ "dự kiến" in trên hoá đơn lúc phát hành.
    *
@@ -2171,12 +2710,16 @@ export class BillingService {
     }
 
     const now = new Date();
-    const timing = snapshot.timing ?? SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM;
-    const { startsAt } = await this.planChainWithinTx(tx, {
+    /*
+     * Thời điểm SUY LẠI lúc tiền về (ADR 0084), không đọc `snapshot.timing`: giữa lúc phát hành và lúc
+     * trả, chuỗi kỳ có thể đã đổi (admin gán, một hoá đơn khác về trước), và hoá đơn cũ còn mang
+     * `now` do người mua tự chọn — gia hạn cùng bậc với `now` từng huỷ cả kỳ đang chạy.
+     */
+    const { startsAt, purchaseKind } = await this.planChainWithinTx(tx, {
       tenantId: args.tenantId,
       planId: plan.id,
       vehicleScope,
-      timing,
+      timing: { selfServe: { maxVehicles: snapshot.quota.maxVehicles } },
       actorUserId: null,
       now,
     });
@@ -2241,6 +2784,7 @@ export class BillingService {
           planName: plan.name,
           termMonths: snapshot.termMonths,
           vehicleScope,
+          purchaseKind,
           quota: snapshot.quota,
           price: args.totalAmount.toString(),
           startsAt: sub.startsAt.toISOString(),
@@ -2524,6 +3068,8 @@ export class BillingService {
     args: {
       tenantId: string;
       subscriptionId: string | null;
+      /** Phiếu gộp chứa hoá đơn này (ADR 0083) — chỉ lượt mua gộp truyền. */
+      checkoutId?: string | null;
       snapshot: PlanInvoiceSnapshot;
       subtotal: Prisma.Decimal;
       discountAmount: Prisma.Decimal;
@@ -2539,6 +3085,7 @@ export class BillingService {
         id: newId(),
         tenantId: args.tenantId,
         subscriptionId: args.subscriptionId,
+        checkoutId: args.checkoutId ?? null,
         code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE),
         periodFrom: args.periodFrom,
         periodTo: args.periodTo,
@@ -2718,6 +3265,48 @@ export class BillingService {
 type PlanRow = Prisma.PlanGetPayload<{ select: typeof PLAN_SELECT }>;
 type SubRow = Prisma.TenantSubscriptionGetPayload<{ select: typeof SUB_SELECT }>;
 type InvoiceRow = Prisma.SubscriptionInvoiceGetPayload<{ select: typeof INVOICE_SELECT }>;
+
+/** Một lượt mua đã KIỂM và TÍNH GIÁ xong (`preparePurchase`), chờ ghi trong transaction. */
+interface PreparedPurchase {
+  plan: PlanRow;
+  limits: PlanLimitsJson;
+  pricing: {
+    lines: PlanInvoiceLine[];
+    subtotal: Prisma.Decimal;
+    discountAmount: Prisma.Decimal;
+    total: Prisma.Decimal;
+  };
+  termMonths: number;
+  vehicleScope: PlanVehicleScope;
+}
+
+/**
+ * Các gói của MỘT lượt mua gộp / xem trước phải thuộc các loại xe KHÔNG xung đột (ADR 0083): trùng
+ * loại xe thì phần tử sau void phần tử trước trong cùng transaction; gói mọi loại xe (`all`) chỉ mua
+ * riêng.
+ */
+function assertCombinableScopes(prepared: readonly PreparedPurchase[]): void {
+  for (const [index, item] of prepared.entries()) {
+    if (prepared.length > 1 && item.vehicleScope === PLAN_VEHICLE_SCOPE.ALL) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Gói cho mọi loại xe không mua gộp được — mua riêng gói đó',
+        details: { field: `items.${index}.planId` },
+      });
+    }
+    const clash = prepared.find(
+      (other, otherIndex) =>
+        otherIndex < index && planScopesConflict(other.vehicleScope, item.vehicleScope),
+    );
+    if (clash) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Mỗi loại xe chỉ chọn một gói trong một lần thanh toán',
+        details: { field: `items.${index}.planId`, vehicleScope: item.vehicleScope },
+      });
+    }
+  }
+}
 
 /** Xe đang chiếm suất trên chợ — chờ duyệt công khai hoặc đã công khai. */
 const MARKETPLACE_SLOT_STATUSES = [
@@ -2915,6 +3504,8 @@ function toInvoiceDto(row: InvoiceRow): SubscriptionInvoiceDto {
     paidAt: row.paidAt === null ? null : (row.paidAt as Date).toISOString(),
     expiresAt: row.expiresAt === null ? null : (row.expiresAt as Date).toISOString(),
     createdAt: (row.createdAt as Date).toISOString(),
+    checkoutId: row.checkout?.id ?? null,
+    checkoutCode: row.checkout?.code ?? null,
   };
 }
 

@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { BILLING_PHASE, type BillingPhase } from '@xeprime/types';
 
 import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
-import { paymentPath } from '@/constants/routes';
+import { invoicePaymentHref } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 
@@ -171,8 +171,8 @@ function PlanLaneCard({
 
       {pendingInvoice ? (
         <div className={styles.pending}>
-          <span>{t('pendingInvoice', { code: pendingInvoice.code })}</span>
-          <Link href={paymentPath.invoice(pendingInvoice.id)}>
+          <span>{t('pendingInvoice', { code: pendingInvoice.checkoutCode ?? pendingInvoice.code })}</span>
+          <Link href={invoicePaymentHref(pendingInvoice)}>
             <Button size="small" icon={<CreditCardOutlined aria-hidden />}>
               {tPayment('payNow')}
             </Button>

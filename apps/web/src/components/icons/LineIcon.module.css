@@ -185,3 +185,8 @@
 .arrow-sm {
   mask-image: url('/icons/menu/arrow-sm.svg');
 }
+
+/* Huy chương "Award 2" — dòng "Nâng cấp gian hàng" của menu hồ sơ partner (`24051:85746`). */
+.award {
+  mask-image: url('/icons/menu/award.svg');
+}

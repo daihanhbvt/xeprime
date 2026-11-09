@@ -1,17 +1,11 @@
 'use client';
 
-import {
-  CheckOutlined,
-  ExclamationCircleFilled,
-  MailOutlined,
-  PhoneOutlined,
-} from '@ant-design/icons';
-import { Button, Tag, Tooltip } from 'antd';
+import { CheckOutlined, ExclamationCircleFilled, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Tag, Tooltip } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { TENANT_ROLE, STATUS_COLOR, toLocalVnPhone } from '@xeprime/types';
+import { STATUS_COLOR, TENANT_ROLE, toLocalVnPhone } from '@xeprime/types';
 
-import { SectionCard } from '@/components/layout/SectionCard';
 import {
   ACCOUNT_SECTION,
   accountSectionPath,
@@ -19,8 +13,10 @@ import {
   shopSectionDomId,
 } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { initialOf } from '@/lib/initials';
 
 import type { MyShop } from '../types';
+import { InfoCard, InfoRow, InfoRows } from '@/components/layout/InfoCard';
 import styles from './ShopOwnerSection.module.css';
 
 /**
@@ -46,6 +42,11 @@ import styles from './ShopOwnerSection.module.css';
  *
  * XePrime không kiểm tra điều đó ở đâu cả. Người đại diện pháp luật (nếu có) được khai ở hồ sơ
  * pháp lý và do nền tảng xác minh; ở đây chỉ là tài khoản sở hữu gian hàng.
+ *
+ * ## Bố cục (design 06/11/2026, `23999:111299`)
+ *
+ * Một thẻ trong hàng ba thẻ đầu trang: ảnh đại diện + tên, hai dòng liên hệ có dấu xác minh, nút
+ * "Quản lý tài khoản". Ảnh là ảnh TÀI KHOẢN chủ (`users.avatar_url`), không phải logo gian hàng.
  */
 export function ShopOwnerSection({ shop }: { shop: MyShop }) {
   const t = useTranslations('Shop.owner');
@@ -60,77 +61,71 @@ export function ShopOwnerSection({ shop }: { shop: MyShop }) {
   const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
 
   return (
-    <SectionCard id={shopSectionDomId(SHOP_SECTION.OWNER)} title={t('title')} hint={t('hint')}>
+    <InfoCard id={shopSectionDomId(SHOP_SECTION.OWNER)} title={t('title')} hint={t('hint')}>
       <div className={styles.identity}>
+        <Avatar size={40} src={owner.avatarUrl ?? undefined} icon={<UserOutlined />}>
+          {initialOf(owner.displayName)}
+        </Avatar>
         <p className={styles.name}>{owner.displayName}</p>
       </div>
 
-      <dl className={styles.rows}>
+      <InfoRows>
         <ContactRow
-          icon={<MailOutlined aria-hidden />}
           label={t('email')}
           value={owner.email ?? null}
           emptyLabel={t('noEmail')}
           verified={owner.emailVerified}
         />
         <ContactRow
-          icon={<PhoneOutlined aria-hidden />}
           label={t('phone')}
-          // SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng.
           value={owner.phone ? toLocalVnPhone(owner.phone) : null}
           emptyLabel={t('noPhone')}
           verified={owner.phoneVerified}
         />
-      </dl>
+      </InfoRows>
 
       {isOwner ? (
         <div className={styles.actions}>
           <Link href={accountSectionPath(ACCOUNT_SECTION.LOGIN)}>
-            <Button>{t('manageLogin')}</Button>
+            <Button icon={<UserOutlined aria-hidden />}>{t('manageAccount')}</Button>
           </Link>
         </div>
       ) : null}
-    </SectionCard>
+    </InfoCard>
   );
 }
 
 function ContactRow({
-  icon,
   label,
   value,
   emptyLabel,
   verified,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string | null;
   emptyLabel: string;
   verified: boolean;
 }) {
   const t = useTranslations('Shop.owner');
-
   return (
-    <div className={styles.row}>
-      <dt className={styles.rowLabel}>
-        {icon}
-        {label}
-      </dt>
-      <dd className={styles.rowValue}>
-        <span className={value ? styles.value : styles.empty}>{value ?? emptyLabel}</span>
-        {value && verified ? (
+    <InfoRow
+      label={label}
+      value={value}
+      emptyLabel={emptyLabel}
+      suffix={
+        verified ? (
           <Tooltip title={t('verified')}>
             {/* Màu nằm ở `background`, không ở `color` — `color` kế thừa và bị nuốt mất. */}
             <span className={styles.verifiedMark} role="img" aria-label={t('verified')}>
               <CheckOutlined aria-hidden />
             </span>
           </Tooltip>
-        ) : null}
-        {value && !verified ? (
+        ) : (
           <Tag color={STATUS_COLOR.WARNING} icon={<ExclamationCircleFilled />}>
             {t('unverified')}
           </Tag>
-        ) : null}
-      </dd>
-    </div>
+        )
+      }
+    />
   );
 }

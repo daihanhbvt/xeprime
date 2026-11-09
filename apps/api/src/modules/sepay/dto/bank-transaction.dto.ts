@@ -116,7 +116,8 @@ export class BankTransactionDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)',
+    description:
+      'Mã hoá đơn / phiếu gộp đã khớp (khi `matchedType` là `subscription_invoice` hoặc `subscription_checkout`)',
   })
   matchedInvoiceCode!: string | null;
   @ApiPropertyOptional({

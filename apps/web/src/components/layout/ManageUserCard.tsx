@@ -7,6 +7,9 @@ import { workspaceAvatar } from '@/features/account/workspace-avatar';
 import { cx } from '@/lib/cx';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
+import { ZONE } from '@/zones';
+import { useZone } from '@/zones/ZoneProvider';
+import { PartnerAccountMenu } from './PartnerAccountMenu';
 import { useAccountMenuItems } from './use-account-menu';
 import styles from './ManageUserCard.module.css';
 import { useTranslations } from 'next-intl';
@@ -40,14 +43,15 @@ export interface ManageUserCardProps {
  * Chỉ hiện tên và nhãn vai trò — KHÔNG hiện email hay số điện thoại. Vỏ portal nằm trên mọi
  * trang, kể cả lúc chia sẻ màn hình.
  *
- * Menu là `useAccountMenuItems` — CÙNG bộ mục với khối hồ sơ ở header site partner và avatar ở
- * thanh trên site quản trị.
+ * Menu theo SITE: site partner là `PartnerAccountMenu` — cùng bảng với khối hồ sơ ở header (Figma
+ * `24051:85101`); site quản trị giữ `useAccountMenuItems`, cùng bộ với avatar ở thanh trên.
  */
 export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUserCardProps) {
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
   const menuItems = useAccountMenuItems();
   const identityLabel = useAccountIdentityLabel();
+  const isPartner = useZone() === ZONE.PARTNER;
 
   if (!user) return null;
 
@@ -99,7 +103,11 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
     </button>
   );
 
-  return (
+  return isPartner ? (
+    <PartnerAccountMenu user={user} placement="topRight">
+      {trigger}
+    </PartnerAccountMenu>
+  ) : (
     <Dropdown trigger={['click']} placement="topRight" menu={{ items: menuItems }}>
       {trigger}
     </Dropdown>

@@ -9,11 +9,15 @@ import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, 
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
 import {
+  CreateSubscriptionCheckoutDto,
+  SubscriptionCheckoutDto,
   MySubscriptionDto,
   PaymentInfoDto,
   PendingSubscriptionInvoiceDto,
+  PreviewSubscriptionPurchaseDto,
   PurchaseSubscriptionDto,
   SubscriptionInvoiceDto,
+  SubscriptionPurchasePreviewDto,
   SubscriptionInvoicePageDto,
   SubscriptionListQueryDto,
   TenantPlanCatalogDto,
@@ -126,12 +130,30 @@ export class SubscriptionController {
     return this.billing.invoiceForTenant(tenant.tenantId, id);
   }
 
+  /**
+   * Bước xác nhận của hộp mua gói (ADR 0084): mỗi gói là mua mới / gia hạn / nâng ngay / đổi từ kỳ
+   * sau, kỳ dự kiến và các kỳ sẽ kết thúc. Không ghi gì — cùng quyền với lượt mua thật.
+   */
+  @Post('purchase/preview')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
+  @ApiOperation({
+    summary: 'Xem trước một lượt mua gói — loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)',
+  })
+  @ApiOkResponse({ type: SubscriptionPurchasePreviewDto })
+  previewPurchase(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: PreviewSubscriptionPurchaseDto,
+  ): Promise<SubscriptionPurchasePreviewDto> {
+    return this.billing.previewPurchase(tenant.tenantId, dto);
+  }
+
   @Post('purchase')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
     summary:
-      'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)',
+      'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)',
   })
   @ApiOkResponse({ type: SubscriptionInvoiceDto })
   purchase(
@@ -140,5 +162,37 @@ export class SubscriptionController {
     @Body() dto: PurchaseSubscriptionDto,
   ): Promise<SubscriptionInvoiceDto> {
     return this.billing.purchase(tenant.tenantId, user.id, dto);
+  }
+
+  /**
+   * Mua gói ô tô + gói xe máy trong MỘT lần chuyển khoản (ADR 0083) — hai hoá đơn gom dưới một
+   * phiếu `XPC…`; đủ tổng thì cả hai gói bật cùng lúc. Cùng quyền mua với `purchase`.
+   */
+  @Post('checkouts')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
+  @ApiOperation({
+    summary: 'Mua nhiều gói một lần — sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)',
+  })
+  @ApiOkResponse({ type: SubscriptionCheckoutDto })
+  createCheckout(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSubscriptionCheckoutDto,
+  ): Promise<SubscriptionCheckoutDto> {
+    return this.billing.createCheckout(tenant.tenantId, user.id, dto);
+  }
+
+  /** Một phiếu thanh toán gộp của gian hàng — trang `/payment/checkout/:id` đọc nó. */
+  @Get('checkouts/:id')
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)
+  @ApiOperation({ summary: 'Một phiếu thanh toán gộp của gian hàng, kèm hoá đơn con (ADR 0083)' })
+  @ApiOkResponse({ type: SubscriptionCheckoutDto })
+  checkout(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<SubscriptionCheckoutDto> {
+    return this.billing.checkoutForTenant(tenant.tenantId, id);
   }
 }

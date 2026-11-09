@@ -6,6 +6,7 @@ import {
   hostMetricState,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { RichText } from '@/components/data-display/RichText';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 import { getAppFormat } from '@/i18n/server-format';
@@ -241,10 +242,11 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
             ) : null}
           </div>
 
-          {shop.bio || (isShop && shop.address) ? (
+          {shop.bioHtml || shop.bio || (isShop && shop.address) ? (
             <section className={styles.about}>
               <h2 className={styles.aboutTitle}>{t('profile.aboutTitle')}</h2>
-              {shop.bio ? <p className={styles.bio}>{shop.bio}</p> : null}
+              {/* Bản định dạng (đã lọc ở server) khi chủ gian hàng soạn bằng editor; không thì chữ thuần. */}
+              <RichText html={shop.bioHtml} text={shop.bio} className={styles.bio} />
               {isShop && shop.address ? (
                 <p className={styles.address}>{t('profile.address', { address: shop.address })}</p>
               ) : null}
