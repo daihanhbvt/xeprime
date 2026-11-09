@@ -147,6 +147,8 @@ export const AUDIT_ACTION_CATEGORY_PREFIXES: ReadonlyArray<
   ['contract.', AUDIT_ACTION_CATEGORY.BOOKING],
   ['branch.', AUDIT_ACTION_CATEGORY.BRANCH],
   ['member.', AUDIT_ACTION_CATEGORY.MEMBER],
+  // Khoá / mở thành viên theo vòng đời gói (ADR 0085 điều 6) — `member.` không khớp `membership.`.
+  ['membership.', AUDIT_ACTION_CATEGORY.MEMBER],
   ['driver.', AUDIT_ACTION_CATEGORY.MEMBER],
   ['subscription_invoice.', AUDIT_ACTION_CATEGORY.SUBSCRIPTION],
   ['subscription.', AUDIT_ACTION_CATEGORY.SUBSCRIPTION],

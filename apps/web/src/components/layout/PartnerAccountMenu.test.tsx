@@ -121,23 +121,25 @@ describe('PartnerAccountMenu - chủ xe cá nhân (tuyến hoa hồng)', () => {
     expect(dialog.querySelector('[class*="identityShop"]')).toBeNull();
   });
 
-  it('"Quản lý cho thuê" là Hồ sơ chủ xe; "Tài khoản & bảo mật" vào thẳng phần đăng nhập', async () => {
+  // ADR 0085 điều 2: Hồ sơ chủ xe là CÙNG trang `/shop` với gian hàng; `/account` chỉ còn là
+  // "Tài khoản & bảo mật" của mọi tài khoản partner.
+  it('"Quản lý cho thuê" là Hồ sơ chủ xe ở /shop; "Tài khoản & bảo mật" là /account', async () => {
     await open(owner());
 
     expect(screen.getByRole('link', { name: 'Quản lý cho thuê' }).getAttribute('href')).toBe(
-      '/manage/account',
+      '/manage/shop',
     );
     expect(screen.getByRole('link', { name: 'Tài khoản & bảo mật' }).getAttribute('href')).toBe(
-      '/manage/account?section=login',
+      '/manage/account',
     );
     expect(screen.queryByRole('link', { name: 'Quản lý gian hàng' })).toBeNull();
   });
 
-  it('"Nâng cấp gian hàng" dẫn vào phễu nâng cấp ở Gói dịch vụ', async () => {
+  it('"Nâng cấp gian hàng" dẫn vào phễu nâng cấp ở thẻ Gói của /shop', async () => {
     await open(owner());
 
     expect(screen.getByRole('link', { name: 'Nâng cấp gian hàng' }).getAttribute('href')).toBe(
-      '/manage/account?section=plan',
+      '/manage/shop?section=plan',
     );
   });
 

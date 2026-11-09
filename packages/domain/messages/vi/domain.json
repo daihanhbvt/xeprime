@@ -1311,6 +1311,10 @@
       "update_role": "Đổi vai trò thành viên",
       "remove": "Gỡ thành viên"
     },
+    "membership": {
+      "lock_after_plan_lapse": "Khoá thành viên vì gian hàng hết gói",
+      "restore_after_plan": "Mở lại thành viên khi gói kích hoạt lại"
+    },
     "payment": {
       "record": "Ghi thanh toán",
       "void": "Huỷ thanh toán"
@@ -1421,6 +1425,7 @@
       "marketplace_visibility": {
         "update": "Đổi hiển thị xe trên chợ"
       },
+      "marketplace_paused_by_plan": "Tạm ẩn xe khỏi chợ vì hết suất gói",
       "operation_settings": {
         "update": "Cập nhật cài đặt vận hành xe"
       },
