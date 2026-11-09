@@ -1,23 +1,13 @@
+/* Figma "Hero Banner" (19956:44092): ảnh nền tối có vệt vàng, cao 158 ở desktop, đệm 24 dọc. */
 .banner {
   position: relative;
-  background: linear-gradient(135deg, #0e1014 0%, #1a1712 50%, #0e1014 100%);
+  background-color: var(--xp-market-footer-bg);
+  background-image: url('/search/hero-banner.webp');
+  background-repeat: no-repeat;
+  background-size: 102% 240%;
+  background-position: 0 22.5%;
   padding: var(--xp-space-lg) 0;
   overflow: hidden;
-  box-shadow: inset 0 -1px 0 rgba(233, 172, 41, 0.2);
-}
-
-/* Golden ambient streak overlay */
-.banner::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 80% 30%,
-    rgba(233, 172, 41, 0.18) 0%,
-    rgba(233, 172, 41, 0.04) 45%,
-    transparent 70%
-  );
-  pointer-events: none;
 }
 
 .inner {
@@ -56,8 +46,9 @@
   border: 1px solid var(--xp-color-border);
   background: var(--xp-color-bg-container);
   border-radius: 9999px;
-  padding: 4px 6px 4px var(--xp-space-12);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: var(--xp-space-12) var(--xp-space-6) var(--xp-space-12) var(--xp-space-12);
+  gap: var(--xp-space-12);
+  box-shadow: var(--xp-elevation-xs);
   flex: 1;
   max-width: 920px;
   min-width: 0;
@@ -66,7 +57,7 @@
 .inputGroup {
   display: flex;
   align-items: center;
-  gap: var(--xp-space-12);
+  gap: var(--xp-space-sm);
   flex: 1;
   min-width: 130px;
 }
@@ -76,8 +67,8 @@
 }
 
 .searchIcon {
-  font-size: 16px;
-  color: var(--xp-color-text-placeholder);
+  font-size: 20px;
+  color: var(--xp-color-primary);
 }
 
 .keywordInput {
@@ -86,8 +77,10 @@
   outline: none !important;
   box-shadow: none !important;
   background: transparent;
-  font-size: var(--xp-font-size-body);
+  font-size: 16px;
+  line-height: 24px;
   color: var(--xp-color-text);
+  text-overflow: ellipsis;
 }
 
 .keywordInput:focus,
@@ -103,15 +96,16 @@
 
 .divider {
   width: 1px;
-  height: 24px;
+  height: 16px;
   background: var(--xp-color-border-strong);
-  margin: 0 10px;
+  margin: 0;
   flex: none;
 }
 
+/* Figma: mục địa điểm co theo chữ (shrink-0); phần co là ô từ khoá. */
 .locationWrap {
-  flex: 0.9;
-  min-width: 130px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* Ô ngày KHÔNG co: định dạng chuẩn mốc nhận/trả (`T2, 09/11  17h00 → …`) phải hiện đủ, cắt mất giờ
@@ -125,21 +119,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 9999px;
-  background: var(--xp-color-primary);
+  background: var(--xp-gradient-special);
   border: none;
-  color: var(--xp-color-primary-contrast);
-  font-size: 18px;
+  color: var(--xp-color-text);
+  font-size: 20px;
   cursor: pointer;
   flex: none;
-  margin-left: 8px;
-  transition: all 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
 }
 
 .searchSubmitBtn:hover {
-  background: var(--xp-color-primary-hover);
+  filter: brightness(1.05);
   transform: scale(1.04);
 }
 
@@ -167,7 +162,54 @@
 }
 
 .calendarIcon {
+  font-size: 20px;
   color: var(--xp-color-primary);
+}
+
+/*
+ * Figma 19707:80489 › "Search Filter" (20063:45992): loại xe · địa điểm · ngày giờ là chữ PHẲNG
+ * (icon vàng 20 + chữ 16/24 regular, gap 6), không viền/nền riêng; ngăn bằng vạch #d5d7da.
+ * Ngày giờ mang màu text/gray/medium (#414651), hai mục còn lại text/gray/high.
+ */
+.searchBar .inlinePicker {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  gap: var(--xp-space-6);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.searchBar .inlinePicker[aria-expanded='true'] {
+  background: transparent;
+}
+
+.locationWrap .inlinePicker > span:last-child,
+.dateWrap .inlinePicker span {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.dateWrap .inlinePicker,
+.dateWrap .inlinePicker span {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Icon lịch vàng như icon loại xe / địa điểm / tìm kiếm (Figma "Calender 2" #e9ac29). */
+.dateWrap .inlinePicker .calendarIcon {
+  color: var(--xp-color-primary);
+}
+
+.mobileRowIcon {
+  display: none;
 }
 
 /* Nút lọc vuông + huy hiệu số bộ lọc — chỉ hiện ở điện thoại (xem khối ≤640px). */
@@ -184,6 +226,7 @@
 @media (max-width: 640px) {
   .banner {
     background: var(--xp-color-bg-container);
+    background-image: none;
     box-shadow: var(--xp-elevation-xs);
     padding: var(--xp-space-md) 0;
   }
@@ -349,4 +392,82 @@
     line-height: var(--xp-line-height-label);
     color: var(--xp-color-text-secondary);
   }
+}
+
+/*
+ * Figma "List - MB" (22185:115217): hàng 2 là MỘT dòng chữ 12/18 medium #414651
+ * "Ô tô | Hồ Chí Minh | 08:00 T3, 13/10 - …" mở đầu bằng icon địa điểm 16 vàng, cắt "…" ở cuối;
+ * icon riêng của từng mục ẩn đi. Nút lọc vuông 36 (đệm 8, icon 20).
+ */
+@media (max-width: 640px) {
+  .searchBar {
+    flex-wrap: wrap;
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    row-gap: var(--xp-space-sm);
+  }
+
+  .searchBar .inlinePicker {
+    gap: 0;
+  }
+
+  .searchBar .inlinePicker > :first-child:not(:only-child) {
+    display: none;
+  }
+
+  .mobileRowIcon {
+    display: inline-block;
+    flex: none;
+    margin-right: var(--xp-space-6);
+    color: var(--xp-color-primary);
+    font-size: 16px;
+  }
+
+  .divider,
+  .locationWrap + .divider {
+    display: block;
+    width: 1px;
+    height: 12px;
+    margin: 0 var(--xp-space-xs);
+  }
+
+  .dateWrap {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Cả dòng ngày cắt "…" MỘT lần ở cuối (không cắt từng mốc). */
+  .dateWrap .inlinePicker {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dateWrap .inlinePicker span {
+    display: inline;
+    overflow: visible;
+  }
+
+  /* Dòng inline mất `gap` của flex - chừa lại khoảng hai bên mũi tên giữa hai mốc. */
+  .dateWrap .inlinePicker span[aria-hidden] {
+    margin: 0 var(--xp-space-xs);
+  }
+
+  .locationWrap .inlinePicker > span:last-child,
+  .dateWrap .inlinePicker span,
+  .vehicleTypeWrap .inlinePicker span {
+    font-size: var(--xp-font-size-label);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-label);
+    color: var(--xp-color-text-secondary);
+  }
+
+  .mobileFilterBtn {
+    width: 36px;
+    height: 36px;
+    color: var(--xp-color-text-secondary);
+  }
+
 }

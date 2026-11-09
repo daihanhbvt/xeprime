@@ -108,7 +108,7 @@
     "mediaDescriptionPromo": "Kích thước khuyến nghị theo thiết kế: máy tính 584×220, tablet 480×180, mobile 340×140. Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung. Tablet và mobile bỏ trống sẽ dùng ảnh máy tính.",
     "titleCreatePartner": "Thêm ảnh nền dải đối tác",
     "introPartner": "Ảnh nền của dải \"Đăng ký trở thành đối tác độc quyền\" trên trang chủ. Chữ, nút và lớp phủ tối do trang tự dựng đè lên - ảnh không nên chứa chữ.",
-    "mediaDescriptionPartner": "Kích thước khuyến nghị theo thiết kế: máy tính 1440×600, tablet 1024×448, mobile 390×448. Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung. Tablet và mobile bỏ trống sẽ dùng ảnh máy tính."
+    "mediaDescriptionPartner": "Kích thước khuyến nghị theo thiết kế: máy tính 1440×1500, tablet 1024×1400, mobile 390×1300. Ảnh cao hơn dải để trôi khi cuộn - đặt xe ở GIỮA ảnh, chừa trời và mặt đường phía trên/dưới. Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung. Tablet và mobile bỏ trống sẽ dùng ảnh máy tính."
   },
   "media": {
     "slots": {

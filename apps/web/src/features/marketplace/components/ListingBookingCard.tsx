@@ -852,7 +852,10 @@ export function ListingBookingCard({
                 key={cost.total?.amount ?? quote.breakdown.totalAmount}
                 className={cx(styles.totalAmount, swapClass)}
               >
-                <NumberTicker value={fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)} />
+                <NumberTicker
+                  value={fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)}
+                  durationMs={550}
+                />
               </span>
             </div>
             {cost.estimateNote ? <p className={styles.costNote}>{cost.estimateNote}</p> : null}

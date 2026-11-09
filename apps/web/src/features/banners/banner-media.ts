@@ -47,15 +47,16 @@ export const PROMO_BANNER_SLOTS = {
 } as const;
 
 /**
- * ẢNH NỀN dải "Đăng ký trở thành đối tác" (`placement = partner`): PC 1440×600 (Figma `21965:5337`),
- * tablet 1024×448, mobile 390×448 (Figma MB `19771:51743`) — khổ 1x, khuyến nghị (không chặn), khung
+ * ẢNH NỀN dải "Đăng ký trở thành đối tác" (`placement = partner`): PC 1440×1500, tablet 1024×1400,
+ * mobile 390×1300 (đổi 09/11/2026: dải cao 600/448 nhưng ảnh DƯ trên/dưới để trôi parallax kiểu
+ * jarallax - `ParallaxBackdrop`; đặt xe ở giữa ảnh) - khổ 1x, khuyến nghị (không chặn), khung
  * cắt `cover`. Chữ, nút và lớp phủ tối do trang dựng đè lên — ảnh KHÔNG chứa chữ. Tablet/mobile
  * bỏ trống thì dùng ảnh máy tính.
  */
 export const PARTNER_BANNER_SLOTS = {
-  desktop: { width: 1440, height: 600 },
-  tablet: { width: 1024, height: 448 },
-  mobile: { width: 390, height: 448 },
+  desktop: { width: 1440, height: 1500 },
+  tablet: { width: 1024, height: 1400 },
+  mobile: { width: 390, height: 1300 },
 } as const;
 
 /** Bộ khổ ảnh của một vị trí — `desktop` luôn có, `tablet`/`mobile` tuỳ vị trí. */

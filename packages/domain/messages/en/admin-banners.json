@@ -108,7 +108,7 @@
     "mediaDescriptionPromo": "Recommended sizes from the design: desktop 584×220, tablet 480×180, mobile 340×140. Images with a different ratio can still be uploaded but will be cropped to fit. Leave tablet and mobile empty to use the desktop image.",
     "titleCreatePartner": "Add partner band background",
     "introPartner": "Background image of the \"Become an exclusive partner\" band on the home page. The page draws its own text, button and dark overlay on top - the image should not contain text.",
-    "mediaDescriptionPartner": "Recommended sizes from the design: desktop 1440×600, tablet 1024×448, mobile 390×448. Images with a different ratio can still be uploaded but will be cropped to fit. Leave tablet and mobile empty to use the desktop image."
+    "mediaDescriptionPartner": "Recommended sizes from the design: desktop 1440×1500, tablet 1024×1400, mobile 390×1300. Images are taller than the strip so they can drift while scrolling - keep the car in the MIDDLE, with sky and road above and below. Images with a different ratio can still be uploaded but will be cropped to fit. Leave tablet and mobile empty to use the desktop image."
   },
   "media": {
     "slots": {

@@ -15,7 +15,6 @@
     "delivery": "Giao tận nơi",
     "noCollateral": "Miễn thế chấp",
     "vatInvoice": "Xuất hoá đơn VAT",
-    "includesDriver": "đã gồm tài xế",
     "contactForQuote": "Liên hệ báo giá",
     "extraServices": "+{count}",
     "priceDaily": "<amount>{value}</amount><unit>/ngày</unit>",
@@ -25,6 +24,7 @@
     "instantBook": "Tự động duyệt",
     "photoCount": "+{count}",
     "photoCountAria": "{count, plural, other {Xe có # ảnh}}",
+    "amenitiesLabel": "Tiện ích của xe",
     "locationLine": "{ward}, {province}",
     "specsLabel": "Thông số xe",
     "ratingValue": "{rating} <muted>({count})</muted>",
@@ -119,6 +119,7 @@
       "less": "Thu gọn"
     },
     "gallery": {
+      "amenitiesLabel": "Tiện ích của xe",
       "photoAlt": "{name} - ảnh {index}",
       "pager": "Chọn ảnh xe",
       "goTo": "Ảnh {index} / {total}",

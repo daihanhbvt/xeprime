@@ -190,3 +190,43 @@
 .award {
   mask-image: url('/icons/menu/award.svg');
 }
+
+.search {
+  mask-image: url('/icons/menu/search.svg');
+}
+
+.chart {
+  mask-image: url('/icons/menu/chart.svg');
+}
+
+.filter-4 {
+  mask-image: url('/icons/menu/filter-4.svg');
+}
+
+.location {
+  mask-image: url('/icons/menu/location.svg');
+}
+
+.password {
+  mask-image: url('/icons/menu/password.svg');
+}
+
+.like {
+  mask-image: url('/icons/menu/like.svg');
+}
+
+.users-2 {
+  mask-image: url('/icons/menu/users-2.svg');
+}
+
+.menu-list {
+  mask-image: url('/icons/menu/menu-list.svg');
+}
+
+.graph {
+  mask-image: url('/icons/menu/graph.svg');
+}
+
+.rotate-right {
+  mask-image: url('/icons/menu/rotate-right.svg');
+}

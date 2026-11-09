@@ -99,15 +99,14 @@ export function RentalRangeField({
           px={14}
         >
           {value.pickupAt || value.returnAt || !placeholder ? (
-            /* MỘT dòng, tự co chữ cho vừa máy hẹp — web hiện đủ cả hai mốc, không cắt bằng dấu ba chấm. */
+            /* MỘT dòng, giữ cỡ chữ; thiếu chỗ thì cắt "…" (tự co chữ làm chữ quá nhỏ trên máy thật - 09/11/2026). */
             <Text
               f={1}
               col={colors.text}
               fos={fontSize.body}
               fow={fontWeight.regular}
               numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              ellipsizeMode="tail"
             >
               {rangeLabel(value.pickupAt, value.returnAt)}
             </Text>

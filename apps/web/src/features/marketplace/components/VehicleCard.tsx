@@ -25,6 +25,7 @@ import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import { HostMetrics } from './HostMetrics';
 import styles from './VehicleCard.module.css';
+import { AmenityChips, PhotoAmenityPills, listingAmenityItems } from './PhotoAmenityPills';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
 import { RatingStar } from '@/components/data-display/Stars';
@@ -48,7 +49,11 @@ export interface VehicleCardProps {
  * - 'grid' (mặc định): dạng thẻ đứng 4 cột
  * - 'list': dạng thẻ ngang 1200x206px
  */
-export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleCardProps) {
+export function VehicleCard({
+  listing,
+  variant = 'grid',
+  hostMetrics,
+}: VehicleCardProps) {
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
   const fmt = useAppFormat();
@@ -58,7 +63,7 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
   const mediaRef = useRef<HTMLDivElement>(null);
 
   const { filters } = useMarketplaceFilters();
-  const { fuelTypeLabel, bodyTypeLabel } = useCatalogLabels();
+  const { fuelTypeLabel } = useCatalogLabels();
 
   const serviceTypes: string[] = listing.serviceTypes ?? [];
   const serviceContext =
@@ -92,8 +97,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
     activeService && (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
   );
 
-  const extraPhotos = Math.max(0, (listing.imageCount ?? 0) - 1);
-
   const location = listing.shopProvince
     ? listing.wardName
       ? t('locationLine', { ward: listing.wardName, province: listing.shopProvince })
@@ -117,14 +120,8 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
     ? `${listingPath.detail(listing.id)}?${detailQs}`
     : listingPath.detail(listing.id);
 
-  // Figma "Vehicle Benefits": dấu tích = giao xe tận nơi, đồng tiền = miễn thế chấp, hoá đơn = xuất hoá đơn VAT.
-  const amenities = [
-    listing.deliveryEnabled ? { label: t('delivery'), icon: '/home/amenity-check.svg' } : null,
-    listing.noCollateral ? { label: t('noCollateral'), icon: '/home/amenity-money.svg' } : null,
-    listing.vatInvoiceSupported
-      ? { label: t('vatInvoice'), icon: '/home/amenity-invoice.svg' }
-      : null,
-  ].filter((item): item is { label: string; icon: string } => item !== null);
+  // Nhãn đè góc dưới-trái ảnh (Figma "List - MB" `22185:115247`).
+  const amenities = listingAmenityItems(listing, instantBook, (key) => t(key));
 
   const specs = [
     listing.seatCount
@@ -155,9 +152,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
   // LIST VARIANT (Figma 1200x206 horizontal card)
   // -------------------------
   if (variant === 'list') {
-    const bodyTypeName = listing.bodyType
-      ? (bodyTypeLabel(listing.bodyType) ?? listing.bodyType)
-      : null;
     /*
      * Chỉ hiện thông số XE CÓ khai. Trước đây thẻ ngang tự điền "4 chỗ", "Xăng", "Số tự động",
      * "60 kwh/100km" khi thiếu dữ liệu — tức là in một thông tin sai về chiếc xe của người khác.
@@ -178,10 +172,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           }
         : null,
       fuel ? { key: 'fuel', iconClass: styles.specIconFuel, label: fuel } : null,
-      // Ô thứ 4 Figma là mức tiêu hao — DTO danh sách không có số đó nên hiện kiểu thân xe, cùng icon.
-      bodyTypeName
-        ? { key: 'bodyType', iconClass: styles.specIconBody, label: bodyTypeName }
-        : null,
     ].filter((spec): spec is NonNullable<typeof spec> => spec !== null);
 
     return (
@@ -204,97 +194,93 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           ) : (
             <CarGlyph type={listing.vehicleType as VehicleType} />
           )}
-
-          {extraPhotos > 0 ? (
-            <span className={styles.photoCount}>
-              <span className={styles.srOnly}>
-                {t('photoCountAria', { count: listing.imageCount ?? 0 })}
-              </span>
-              <span className={styles.icon14}>
-                <Image src="/home/card-photos.svg" alt="" width={11} height={11} unoptimized />
-              </span>
-              <span aria-hidden="true">{t('photoCount', { count: extraPhotos })}</span>
-            </span>
-          ) : null}
         </div>
 
         <div className={styles.listBody}>
-          <div>
-            <div className={styles.listTopRow}>
-              <div className={styles.listTitleGroup}>
-                <h3 className={styles.listTitle}>{listing.name}</h3>
-                {showStrikethrough ? <DiscountTag percent={discount} variant="badge" /> : null}
-                {instantBook ? (
-                  <span className={styles.badgeInstantBlue}>{t('instantBook')}</span>
-                ) : null}
-                {!hasRating ? (
-                  <span className={styles.badgeNewGreen}>{t('newVehicle')}</span>
-                ) : null}
-              </div>
-
-              <div className={styles.listPriceAndRating}>
-                {/* Luôn có ô sao: xe chưa có đánh giá ⇒ sao xám + "Chưa có đánh giá" (không bịa điểm 0). */}
-                <span className={styles.listRating}>
-                  <RatingStar size={16} className={hasRating ? undefined : styles.ratingStarEmpty} />
-                  {hasRating ? (
-                    <>
-                      <span>{fmt.rating(rating)}</span>
-                      <span className={styles.listRatingCount}>({listing.ratingCount})</span>
-                    </>
-                  ) : (
-                    <span className={styles.listRatingCount}>{t('noRating')}</span>
-                  )}
-                  {listing.completedTripCount > 0 ? (
-                    <span className={styles.listRatingCount}>
-                      · {t('rentals', { count: listing.completedTripCount })}
-                    </span>
-                  ) : null}
-                </span>
-
-                <div className={styles.listPrice}>
-                  {showStrikethrough && listing.weekdayPrice ? (
-                    <s className={styles.listOldPrice}>{compactPrice(listing.weekdayPrice)}</s>
-                  ) : null}
-                  {displayPrice ? (
-                    <>
-                      <span className={styles.listCurrentPrice}>{compactPrice(displayPrice)}</span>
-                      <span className={styles.priceUnit}>{t('perDayUnit')}</span>
-                    </>
-                  ) : (
-                    <span className={styles.listCurrentPrice}>{t('contactForQuote')}</span>
-                  )}
-                </div>
-
-                <FavoriteButton
-                  vehicleId={listing.id}
-                  vehicleName={listing.name}
-                  className={styles.listFavoriteBtn}
-                  activeClassName={styles.heartActive}
-                />
-              </div>
+          {/* Figma "Vehicle Header" (20053:66594): tên + nhãn bên trái; sao · giá · tim bên phải. */}
+          <div className={styles.listTopRow}>
+            <div className={styles.listTitleGroup}>
+              <h3 className={styles.listTitle}>{listing.name}</h3>
+              {!hasRating ? (
+                <span className={styles.badgeNewGreen}>{t('newVehicle')}</span>
+              ) : null}
+              {showStrikethrough ? <DiscountTag percent={discount} variant="badge" /> : null}
             </div>
 
-            {location ? (
-              <p className={styles.listLocation}>
-                <span className={styles.icon20}>
-                  <Image src="/home/card-location.svg" alt="" width={15} height={19} unoptimized />
+            <div className={styles.listPriceAndRating}>
+              {hasRating ? (
+                <span
+                  className={styles.listRating}
+                  title={t('ratingCount', { count: listing.ratingCount })}
+                >
+                  <RatingStar size={16} />
+                  <span>
+                    {t.rich('ratingValue', {
+                      rating: fmt.rating(rating),
+                      count: listing.ratingCount,
+                      muted: (chunks) => <span className={styles.listRatingCount}>{chunks}</span>,
+                    })}
+                  </span>
                 </span>
-                <span>{location}</span>
-              </p>
-            ) : null}
+              ) : null}
 
-            {listSpecs.length > 0 ? (
-              <ul className={styles.listSpecsRow} aria-label={t('specsLabel')}>
-                {listSpecs.map(({ key, iconClass, label }) => (
-                  <li key={key} className={styles.specBox}>
-                    {/* Icon nét Figma tô bằng mask + currentColor: xám khi thường, vàng khi thẻ hover. */}
-                    <span className={cx(styles.specIcon, iconClass)} aria-hidden="true" />
-                    <span>{label}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+              <div className={styles.listPrice}>
+                {displayPrice ? (
+                  <>
+                    {showStrikethrough && listing.weekdayPrice ? (
+                      <s className={styles.listOldPrice}>{compactPrice(listing.weekdayPrice)}</s>
+                    ) : null}
+                    <span className={styles.listCurrentPrice}>
+                      {t.rich(priceMessage, {
+                        value: compactPrice(displayPrice),
+                        amount: (chunks) => <b>{chunks}</b>,
+                        unit: (chunks) => <span className={styles.priceUnit}>{chunks}</span>,
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  <b className={styles.listContact}>{t('contactForQuote')}</b>
+                )}
+              </div>
+
+              <FavoriteButton
+                vehicleId={listing.id}
+                vehicleName={listing.name}
+                className={styles.listFavoriteBtn}
+                activeClassName={styles.heartActive}
+              />
+            </div>
           </div>
+
+          {location ? (
+            <p className={styles.listLocation}>
+              <span className={styles.icon20}>
+                <Image src="/home/card-location.svg" alt="" width={15} height={19} unoptimized />
+              </span>
+              <span className={styles.listLocationText}>{location}</span>
+            </p>
+          ) : null}
+
+          {/* Figma "Vehicle Specifications" (22185:124602): thông số bên trái, nhãn tiện ích màu bên phải. */}
+          {listSpecs.length > 0 || amenities.length > 0 ? (
+            <div className={styles.listSpecsRow}>
+              {listSpecs.length > 0 ? (
+                <ul className={styles.listSpecs} aria-label={t('specsLabel')}>
+                  {listSpecs.map(({ key, iconClass, label }) => (
+                    <li key={key} className={styles.specBox}>
+                      <span className={cx(styles.specIcon, iconClass)} aria-hidden="true" />
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span />
+              )}
+              {amenities.length > 0 ? (
+                <AmenityChips items={amenities} label={t('amenitiesLabel')} />
+              ) : null}
+            </div>
+          ) : null}
 
           <div className={styles.listBottomRow}>
             <Link
@@ -333,14 +319,19 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
               </span>
               <span className={styles.shopCopy}>
                 <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
-                <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
+                <span
+                  className={cx(
+                    styles.listShopName,
+                    isShopTrack && styles.shopNameShop,
+                  )}
+                >
                   {listing.shopName}
                 </span>
               </span>
             </Link>
 
             {/*
-              Thẻ ở trang KẾT QUẢ không mang chỉ số uy tín (ADR 0045 điều 3 — một trang 48 xe là 48
+              Thẻ ở trang KẾT QUẢ không mang chỉ số uy tín (ADR 0045 điều 3 - một trang 48 xe là 48
               phép gộp); chỉ trang gian hàng truyền `hostMetrics` (một chủ, một phép gộp có sẵn).
             */}
             {hostMetrics ? (
@@ -360,7 +351,10 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
   // GRID VARIANT (default 4-column vertical card)
   // -------------------------
   return (
-    <article ref={tiltRef} className={styles.card}>
+    <article
+      ref={tiltRef}
+      className={styles.card}
+    >
       <Link
         href={detailHref}
         className={styles.stretch}
@@ -383,12 +377,11 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
 
-        <div className={styles.badges}>
-          {showStrikethrough ? <DiscountTag percent={discount} variant="badge" /> : null}
-          {instantBook ? (
-            <span className={cx(styles.badge, styles.badgeInstant)}>{t('instantBook')}</span>
-          ) : null}
-        </div>
+        {showStrikethrough ? (
+          <div className={styles.badges}>
+            <DiscountTag percent={discount} variant="badge" />
+          </div>
+        ) : null}
 
         <FavoriteButton
           vehicleId={listing.id}
@@ -397,24 +390,32 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           activeClassName={styles.heartActive}
         />
 
-        {extraPhotos > 0 ? (
-          <span className={styles.photoCount}>
-            <span className={styles.srOnly}>
-              {t('photoCountAria', { count: listing.imageCount ?? 0 })}
-            </span>
-            <span className={styles.icon14}>
-              <Image src="/home/card-photos.svg" alt="" width={11} height={11} unoptimized />
-            </span>
-            <span aria-hidden="true">{t('photoCount', { count: extraPhotos })}</span>
-          </span>
-        ) : null}
+        <PhotoAmenityPills items={amenities} label={t('amenitiesLabel')} />
+
       </div>
 
       <div className={styles.body}>
         <div className={styles.info}>
-          <div className={styles.nameRow}>
-            <h3 className={styles.title}>{listing.name}</h3>
-            {!hasRating ? <span className={styles.newBadge}>{t('newVehicle')}</span> : null}
+          <div className={styles.topRow}>
+            <div className={styles.nameRow}>
+              <h3 className={styles.title}>{listing.name}</h3>
+              {!hasRating ? <span className={styles.newBadge}>{t('newVehicle')}</span> : null}
+            </div>
+            {hasRating ? (
+              <span
+                className={styles.rating}
+                title={t('ratingCount', { count: listing.ratingCount })}
+              >
+                <Image src="/home/star-16.svg" alt="" width={16} height={16} unoptimized />
+                <span>
+                  {t.rich('ratingValue', {
+                    rating: fmt.rating(rating),
+                    count: listing.ratingCount,
+                    muted: (chunks) => <span className={styles.ratingCount}>{chunks}</span>,
+                  })}
+                </span>
+              </span>
+            ) : null}
           </div>
           {location ? (
             <p className={styles.location}>
@@ -423,23 +424,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
               </span>
               <span className={styles.locationText}>{location}</span>
             </p>
-          ) : null}
-          {amenities.length > 0 ? (
-            <div className={styles.amenityRow}>
-              {amenities.map((item) => (
-                <span key={item.label} className={styles.amenityTag}>
-                  <Image
-                    src={item.icon}
-                    alt=""
-                    width={12}
-                    height={12}
-                    className={styles.amenityIcon}
-                    unoptimized
-                  />
-                  {item.label}
-                </span>
-              ))}
-            </div>
           ) : null}
         </div>
 
@@ -463,24 +447,37 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
         ) : null}
 
         <div className={styles.footer}>
-          {hasRating ? (
+          <Link
+            href={shopPath.detail(listing.shopSlug)}
+            className={styles.shop}
+            title={listing.shopName}
+            aria-label={
+              isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
+            }
+          >
             <span
-              className={styles.rating}
-              title={t('ratingCount', { count: listing.ratingCount })}
+              className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
+              aria-hidden="true"
             >
-              <Image src="/home/star-16.svg" alt="" width={16} height={16} unoptimized />
-              <span>
-                {t.rich('ratingValue', {
-                  rating: fmt.rating(rating),
-                  count: listing.ratingCount,
-                  muted: (chunks) => <span className={styles.ratingCount}>{chunks}</span>,
-                })}
+              {listing.shopLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
+              ) : (
+                initialOf(listing.shopName)
+              )}
+              {isShopTrack ? (
+                <span className={styles.shopMark}>
+                  <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
+                </span>
+              ) : null}
+            </span>
+            <span className={styles.shopCopy}>
+              <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
+              <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
+                {listing.shopName}
               </span>
             </span>
-          ) : (
-            <span />
-          )}
-
+          </Link>
           <div className={styles.price}>
             {displayPrice ? (
               <>
@@ -494,9 +491,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
                     unit: (chunks) => <span>{chunks}</span>,
                   })}
                 </span>
-                {driverContext ? (
-                  <span className={styles.priceNote}>{t('includesDriver')}</span>
-                ) : null}
               </>
             ) : (
               <b className={styles.priceContact}>{t('contactForQuote')}</b>
@@ -504,37 +498,6 @@ export function VehicleCard({ listing, variant = 'grid', hostMetrics }: VehicleC
           </div>
         </div>
 
-        <Link
-          href={shopPath.detail(listing.shopSlug)}
-          className={styles.shop}
-          title={listing.shopName}
-          aria-label={
-            isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
-          }
-        >
-          <span
-            className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
-            aria-hidden="true"
-          >
-            {listing.shopLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
-            ) : (
-              initialOf(listing.shopName)
-            )}
-            {isShopTrack ? (
-              <span className={styles.shopMark}>
-                <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
-              </span>
-            ) : null}
-          </span>
-          <span className={styles.shopCopy}>
-            <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
-            <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
-              {listing.shopName}
-            </span>
-          </span>
-        </Link>
       </div>
     </article>
   );

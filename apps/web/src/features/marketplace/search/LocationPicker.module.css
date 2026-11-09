@@ -79,9 +79,10 @@
 }
 
 /* Viên trong thanh thu gọn nhỏ hơn ô của thẻ — icon theo đó cũng nhỏ lại. */
+/* Figma "Icon / Location" 20px vàng #e9ac29. */
 .chip .triggerIcon {
-  font-size: inherit;
-  color: var(--xp-color-primary-active);
+  font-size: 20px;
+  color: var(--xp-color-primary);
 }
 
 .triggerValue {

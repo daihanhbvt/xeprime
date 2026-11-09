@@ -4,7 +4,7 @@
  */
 .wrap {
   width: 100%;
-  max-width: var(--xp-market-container-max-width, 1200px);
+  max-width: var(--xp-market-container-max-width, 1320px);
   margin: 0 auto 32px;
 }
 
@@ -78,26 +78,7 @@
   transform: scale(1.02);
 }
 
-.overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 500;
-  border-radius: 12px;
-  user-select: none;
-  pointer-events: none;
-  backdrop-filter: blur(2px);
-  transition: background 0.2s ease;
-}
 
-.slide:hover .overlay {
-  background: rgba(0, 0, 0, 0.6);
-}
 
 .placeholder {
   width: 100%;
@@ -162,10 +143,6 @@
 
   .slide:hover .photo {
     transform: none;
-  }
-
-  .overlay {
-    display: none;
   }
 
   /* Bộ đếm "n / N" nổi góc dưới phải ảnh — nền tối cố định vì nó nằm trên ẢNH, không trên nền trang. */

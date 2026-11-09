@@ -1,0 +1,58 @@
+/* Figma 22230:32079: khung nền gray-50, viền #e9eaeb, bo 12, cao theo hàng (38). Nút tắt cao 32,
+   đệm 6/12, icon 24 #a4a7ae; nút đang chọn cao 38, nền trắng, viền #d5d7da, icon vàng. */
+.group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  align-self: stretch;
+  gap: 2px;
+  height: 38px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 12px;
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 var(--xp-space-12);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--xp-color-text-placeholder);
+  cursor: pointer;
+  font-size: 24px;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.btn:hover {
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-hover);
+}
+
+.btn:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.active,
+.active:hover {
+  height: 38px;
+  margin: -1px;
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+  color: var(--xp-color-primary);
+}
+
+@media (max-width: 640px) {
+  .group {
+    display: none;
+  }
+}

@@ -228,9 +228,10 @@ export function FeaturedLocations({
                     accessibilityElementsHidden
                   />
                 ) : null}
-                {/* Ảnh minh hoạ Ken Burns chậm (scale 1→1.04, 12s) — khung ngoài clip (`ov="hidden"`). */}
+                {/* Ảnh minh hoạ Ken Burns rất nhẹ (scale 1→1.02, 20s - user chốt 09/11/2026) — khung ngoài clip (`ov="hidden"`). */}
                 <KenBurns
-                  to={1.04}
+                  to={1.02}
+                  duration={20000}
                   style={{
                     position: 'absolute',
                     width: cardWidth * ART_SCALE.width,

@@ -5,7 +5,7 @@ import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import type { PublicBanner } from '@/features/banners/types';
 import { CtaButton } from './CtaButton';
 import { Magnetic } from '@/components/motion/Magnetic';
-import { sectionParallaxClass } from '@/components/motion/motion-classes';
+import { ParallaxBackdrop } from '@/components/motion/ParallaxBackdrop';
 import { cx } from '@/lib/cx';
 import styles from './PartnerBanner.module.css';
 
@@ -28,7 +28,7 @@ export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }
   return (
     <section className={styles.banner} aria-labelledby="home-partner">
       {/* Ảnh nền trôi theo vị trí của dải (parallax `view()`), CSS thuần nên an toàn với SSR. */}
-      <span className={cx(styles.backdrop, sectionParallaxClass)} aria-hidden="true">
+      <ParallaxBackdrop className={styles.backdrop} speed={0.3}>
         {banner ? (
           // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
           <picture>
@@ -43,16 +43,23 @@ export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }
           </picture>
         ) : (
           <>
+        {/* Ảnh mặc định MỘT xe theo ba khổ (dư trên/dưới cho hiệu ứng trôi): PC 1440×900, tablet 1024×768, mobile 390×585. */}
         <Image
-          src="/home/partner-bg.webp"
+          src="/home/partner-v7-desktop.webp"
           alt=""
           fill
           sizes="100vw"
           className={cx(styles.backdropImage, styles.backdropDesktop)}
         />
-        {/* Mobile có vùng cắt riêng của bản vẽ MB (`19771:51743`) — thấy trọn hai xe. */}
         <Image
-          src="/home/partner-bg-mobile.webp"
+          src="/home/partner-v7-tablet.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className={cx(styles.backdropImage, styles.backdropTablet)}
+        />
+        <Image
+          src="/home/partner-v7-mobile.webp"
           alt=""
           fill
           sizes="100vw"
@@ -60,7 +67,7 @@ export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }
         />
           </>
         )}
-      </span>
+      </ParallaxBackdrop>
 
       <div className={styles.inner}>
         <Image

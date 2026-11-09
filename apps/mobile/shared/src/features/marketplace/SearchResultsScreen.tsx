@@ -2,7 +2,7 @@ import Animated from 'react-native-reanimated';
 import { ScrollReveal, ScrollRevealProvider, useScrollRevealList } from '@/components/motion/ScrollReveal';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -32,6 +32,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useInfinitePublicListings } from './hooks/use-search-results';
@@ -64,6 +65,9 @@ const FACET_KEYS = [
   'priceMin',
   'priceMax',
   'sort',
+  // Nhu cầu cũng hiện thành chip (khớp web) — "Xoá bộ lọc" gỡ cả nó lẫn lộ trình đi kèm.
+  'serviceType',
+  'routeType',
 ] as const;
 
 /**
@@ -72,7 +76,7 @@ const FACET_KEYS = [
  */
 const MODAL_DISMISS_MS = 350;
 /** Ô vuông bộ lọc cạnh khung tìm kiếm — Figma `20043:57783`: 36, icon 20. */
-const FILTER_BUTTON_SIZE = 36;
+const FILTER_BUTTON_SIZE = 38;
 
 function afterModalDismiss(run: () => void) {
   if (Platform.OS === 'ios') setTimeout(run, MODAL_DISMISS_MS);
@@ -227,7 +231,11 @@ function ResultsBody({
     ({ item, index }: { item: PublicListing; index: number }) => (
       // Thẻ có bóng: CHỈ trượt lên khi cuộn tới (ScrollReveal), không mờ.
       <ScrollReveal index={index}>
-        <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
+        <VehicleCard
+          listing={item}
+          onPress={openListing}
+          variant={viewMode === 'list' ? 'row' : 'grid'}
+        />
       </ScrollReveal>
     ),
     [openListing, viewMode],
@@ -247,6 +255,15 @@ function ResultsBody({
   /** Chip cho từng giá trị đang lọc — bấm × là gỡ đúng giá trị đó, không xoá cả chiều. */
   const activeChips = useMemo(() => {
     const chips: { id: string; label: string; clear: () => void }[] = [];
+
+    // Nhu cầu (Tự lái / Có tài xế / Thuê dài hạn) — chip đầu hàng, khớp web.
+    if (filters.serviceType) {
+      chips.push({
+        id: `serviceType:${filters.serviceType}`,
+        label: domainLabel('serviceType', filters.serviceType),
+        clear: () => setFilters({ serviceType: undefined, routeType: undefined }),
+      });
+    }
 
     const listChip = (
       dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features' | 'transmission',
@@ -340,8 +357,11 @@ function ResultsBody({
       {/* Viên lọc nhanh hai hàng — Figma `20043:57771`; mỗi hàng cuộn ngang riêng. */}
       <QuickFilterPills filters={filters} onChange={setFilters} />
 
-      {/* Số kết quả — Figma không có, người dùng chốt GIỮ (27/10/2026). */}
-      <Text numberOfLines={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+      {/* Số kết quả: bỏ khỏi màn (09/11/2026, như web ≤640px) - chỉ còn cho trình đọc màn hình. */}
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+      >
         {results.isInitialLoading
           ? t('searching')
           : filters.q
@@ -349,9 +369,17 @@ function ResultsBody({
             : t('foundCount', { count: results.total })}
       </Text>
 
-      {/* "Điều kiện đang chọn" — Figma `19771:64221`. */}
+      {/* "Điều kiện đang chọn" - Figma `22230:58296`: MỘT dòng chip cuộn ngang (không mũi tên),
+          nút xoá icon "Rotate Right" 20 vàng ghim ở mép phải. */}
       {activeChips.length > 0 ? (
-        <XStack gap={space.sm} rowGap={space.sm} flexWrap="wrap" ai="center">
+        <XStack ai="center" gap={space.sm}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            // Co theo nội dung: ít chip thì nút xoá đứng ngay sau chip cuối; tràn thì bị đẩy ra mép phải.
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            contentContainerStyle={{ gap: 8, alignItems: 'center', paddingHorizontal: 2, paddingVertical: 1 }}
+          >
           {activeChips.map((chip) => (
             <Pressable
               key={chip.id}
@@ -361,25 +389,30 @@ function ResultsBody({
             >
               <XStack
                 ai="center"
-                gap={space.xs}
+                gap={4}
                 bg={colors.primaryLight}
                 bw={1}
-                bc={colors.primary}
+                bc={colors.primaryBright}
                 br={radius.pill}
-                px={space.sm}
-                minHeight={28}
+                // Đệm viết bằng `style` (shorthand `pl` không áp trong cấu hình Tamagui này - chữ dính viền trái).
+                style={{ paddingLeft: 10, paddingRight: 8, paddingVertical: 3, minHeight: 26 }}
               >
-                <Text col={colors.accentStrongText} fos={fontSize.body}>
+                {/* Như web ≤640px: chữ 12/18 thường (không đậm - đậm trên Android dính chữ), đệm 3/10, x 12. */}
+                <Text col={colors.brandText} fos={fontSize.label} lh={18} numberOfLines={1}>
                   {chip.label}
                 </Text>
-                <Ionicons name="close" size={iconSize.xs} color={colors.accentStrongText} />
+                <Ionicons name="close" size={12} color={colors.brandText} />
               </XStack>
             </Pressable>
           ))}
-          <Pressable onPress={clearFacets} accessibilityRole="button" hitSlop={space.xs}>
-            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.medium}>
-              {t('clearAll')}
-            </Text>
+          </ScrollView>
+          <Pressable
+            onPress={clearFacets}
+            accessibilityRole="button"
+            accessibilityLabel={t('clearAllAria')}
+            hitSlop={space.sm}
+          >
+            <LineIcon name="rotate-right" size={20} color={colors.primary} />
           </Pressable>
         </XStack>
       ) : null}
@@ -437,8 +470,8 @@ function ResultsBody({
             accessibilityLabel={`${tNav('searchCars')}: ${contextSummary}`}
           >
             <XStack ai="center" gap={6} h={18}>
-              <Ionicons name="location-outline" size={iconSize.sm} color={colors.primary} />
-              <Text f={1} col={colors.text} fos={fontSize.bodySm} lh={18} numberOfLines={1}>
+              <LineIcon name="location" size={16} color={colors.primary} />
+              <Text f={1} col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium} lh={18} numberOfLines={1}>
                 {contextSummary}
               </Text>
             </XStack>
@@ -450,12 +483,12 @@ function ResultsBody({
             h={FILTER_BUTTON_SIZE}
             ai="center"
             jc="center"
-            bg={colors.surface}
+            bg={colors.surfaceMuted}
             bw={1}
-            bc={colors.borderInput}
-            br={radius.control}
+            bc={colors.placeholder}
+            br={12}
           >
-            <Ionicons name="options-outline" size={iconSize.lg} color={colors.text} />
+            <LineIcon name="filter-5" size={20} color={colors.textMuted} />
             {filterCount > 0 ? (
               <YStack
                 position="absolute"

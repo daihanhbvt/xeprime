@@ -1,10 +1,10 @@
 'use client';
 
-import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
@@ -80,7 +80,7 @@ export function StickySearchHeader({
 
           <div className={styles.searchBar}>
             <div className={styles.inputGroup}>
-              <SearchOutlined className={styles.searchIcon} aria-hidden />
+              <LineIcon name="search" className={styles.searchIcon} />
               <input
                 type="text"
                 className={styles.keywordInput}
@@ -95,13 +95,13 @@ export function StickySearchHeader({
             <span className={styles.divider} aria-hidden />
 
             <div className={styles.vehicleTypeWrap}>
-              <VehicleTypePicker />
+              <VehicleTypePicker variant="select" className={styles.inlinePicker} popupContainer={popupContainer} />
             </div>
 
             <span className={styles.divider} aria-hidden />
 
             <div className={styles.locationWrap}>
-              <LocationPicker variant="chip" popupContainer={popupContainer} />
+              <LocationPicker variant="chip" className={styles.inlinePicker} popupContainer={popupContainer} />
             </div>
 
             <span className={styles.divider} aria-hidden />
@@ -112,9 +112,10 @@ export function StickySearchHeader({
                 onChange={setRentalRange}
                 mode={draft.rental.mode}
                 onModeChange={setRentalMode}
-                prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
+                prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
                 compactPoint
                 getPopupContainer={popupContainer}
+                className={styles.inlinePicker}
               />
             </div>
 
@@ -124,7 +125,7 @@ export function StickySearchHeader({
               onClick={handleSearchSubmit}
               aria-label={t('title')}
             >
-              <SearchOutlined />
+              <LineIcon name="search" />
             </button>
           </div>
         </div>
@@ -133,6 +134,7 @@ export function StickySearchHeader({
           <QuickFilterPills
             onOpenFilterModal={onOpenFilterModal}
             appliedCount={appliedCount}
+            showViewToggle
             popupContainer={popupContainer}
           />
         </div>

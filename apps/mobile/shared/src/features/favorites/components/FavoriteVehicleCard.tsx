@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
@@ -100,9 +101,6 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
   const amenities = [
     vehicle.deliveryEnabled ? { label: tCard('delivery'), icon: CARD_ICON_XML.check } : null,
     vehicle.noCollateral ? { label: tCard('noCollateral'), icon: CARD_ICON_XML.money } : null,
-    vehicle.vatInvoiceSupported
-      ? { label: tCard('vatInvoice'), icon: CARD_ICON_XML.invoice }
-      : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null);
   const amenityBg = dark ? colors.border : colors.surfaceMuted;
   const amenityBorder = dark ? XP_TOKENS['color-text-tertiary'] : colors.border;
@@ -377,7 +375,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                 bc={colors.border}
                 bg={colors.surface}
               >
-                <Ionicons name="heart" size={iconSize.sm} color={colors.danger} />
+                <LineIcon name="heart-filled" size={iconSize.sm} color={colors.danger} />
                 <Text col={colors.text} fos={fontSize.body}>
                   {t('remove')}
                 </Text>

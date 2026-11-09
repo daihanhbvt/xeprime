@@ -118,27 +118,16 @@
   z-index: 2;
   max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
   padding: 0 var(--xp-space-md);
-  margin: -102px auto 0;
+  margin: -64px auto 0;
 }
 
-/* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
+/*
+ * Khung giữ chỗ CÙNG KHỔ với `SearchCard` (cùng `margin-top` -64px và chiều cao 115px ở desktop)
+ * để lúc thẻ thật thay vào không có layout shift. Không nhấp nháy opacity: nhịp mờ-rõ chính là
+ * cái "ô trắng chớp" người dùng thấy sau F5.
+ */
 .searchFallbackInner {
-  height: 170px;
-  border-radius: var(--xp-border-radius-card);
-  animation: search-fallback-pulse 1.4s ease-in-out infinite;
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-elevation-panel);
-}
-
-@keyframes search-fallback-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
+  height: 115px;
 }
 
 /* Từ tablet trở xuống thẻ không còn đè lên hero (chữ hero xếp dưới ảnh) — khung chờ cũng vậy. */

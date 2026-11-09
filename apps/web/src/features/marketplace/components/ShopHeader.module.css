@@ -30,7 +30,7 @@
 }
 
 .inner {
-  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  max-width: calc(var(--xp-market-container-max-width, 1320px) + 2 * var(--xp-space-md));
   margin: 0 auto;
   padding: var(--xp-space-40) var(--xp-space-md) 0;
 }
